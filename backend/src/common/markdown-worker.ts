@@ -779,15 +779,14 @@ type NormalizeOptions = MarkdownWorkOptions & {
   storedContent?: boolean;
   /**
    * The text the field holds now, on an update. A write that repeats it is
-   * processed as stored content: a text saved before a rule of the writes stays
-   * savable with the rest of its record.
+   * accepted as it is: a text saved before a rule of the writes stays savable
+   * with the rest of its record.
    */
   storedValue?: string | null;
 };
 
-/** Whether the text is processed as stored content: said so, or the same as the stored value. */
-function isStoredContent(text: string, opts?: NormalizeOptions): boolean {
-  if (opts?.storedContent === true) return true;
+/** Whether the text is the one the field holds already. */
+function repeatsStoredValue(text: string, opts?: NormalizeOptions): boolean {
   return typeof opts?.storedValue === 'string' && opts.storedValue.trim() === text;
 }
 
@@ -801,8 +800,9 @@ export async function normalizeMarkdownRichText(value: unknown, opts?: Normalize
   if (value == null) return null;
   const text = String(value).trim();
   if (!text) return null;
+  if (repeatsStoredValue(text, opts)) return text;
   const fieldName = opts?.fieldName || 'content';
-  const storedContent = isStoredContent(text, opts);
+  const storedContent = opts?.storedContent === true;
   if (!storedContent) {
     // Checked here first: a text over the limit is never sent to a worker.
     assertMarkdownSize(text, fieldName);
@@ -830,7 +830,8 @@ export async function normalizeMarkdownWithSearchText(
   const text = value == null ? '' : String(value).trim();
   if (!text) return { content: null, searchText: '' };
   const fieldName = opts?.fieldName || 'content';
-  const storedContent = isStoredContent(text, opts);
+  // A text that repeats the stored one is indexed as stored content.
+  const storedContent = opts?.storedContent === true || repeatsStoredValue(text, opts);
   if (!storedContent) assertMarkdownSize(text, fieldName);
   try {
     // The work of two calls (normalization, then search text), with the budget of two: a document

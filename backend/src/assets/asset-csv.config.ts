@@ -9,6 +9,7 @@ import {
   CsvImportRow,
 } from '../common/csv';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
+import { richTextCell } from '../common/csv/rich-text-cell';
 import { AuditLog } from '../audit/audit.entity';
 import { AuditService } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
@@ -667,6 +668,8 @@ export const assetCsvConfig: CsvEntityConfig = {
       defaultExport: false,
       label: 'Notes',
       group: 'Overview',
+      // The notes are rich text: same rules as on the page.
+      importTransformFn: richTextCell('notes'),
     },
     {
       csvColumn: 'kind',

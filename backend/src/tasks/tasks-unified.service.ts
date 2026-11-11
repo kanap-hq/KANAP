@@ -896,7 +896,7 @@ export class TasksUnifiedService {
     if (!existing) throw new NotFoundException('Task not found');
 
     const normalizedDescription = this.hasOwn(payload, 'description')
-      ? await normalizeMarkdownRichText(payload.description, { fieldName: 'description' })
+      ? await normalizeMarkdownRichText(payload.description, { fieldName: 'description', storedValue: existing.description })
       : undefined;
 
     // Capture "before" state for notification comparison
@@ -1053,7 +1053,10 @@ export class TasksUnifiedService {
     }
 
     if (this.hasOwn(nextPayload, 'description')) {
-      nextPayload.description = await normalizeMarkdownRichText(nextPayload.description, { fieldName: 'description' }) as any;
+      nextPayload.description = await normalizeMarkdownRichText(nextPayload.description, {
+        fieldName: 'description',
+        storedValue: existing.description,
+      }) as any;
     }
 
     delete nextPayload.related_object_type;

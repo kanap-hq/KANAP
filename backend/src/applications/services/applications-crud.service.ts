@@ -7,7 +7,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException, 
 import { requestContextMissing, businessContributorScope } from '../../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { assertMarkdownSize } from '../../common/markdown-limits';
+import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { assertWebLinkUrl } from '../../common/web-link-url';
 import { Application } from '../application.entity';
 import { ApplicationOwner } from '../application-owner.entity';
@@ -229,8 +229,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
    * Create a new application.
    */
   private async createLocked(body: Partial<Application>, userId?: string | null, opts?: ServiceOpts) {
-    // The description is the source of the overview document (integrated documents): Markdown size limit.
-    assertMarkdownSize(body.description, 'description');
+    // The description is the source of the overview document (integrated documents): rich text.
+    const description = await normalizeMarkdownRichText(body.description, { fieldName: 'description' });
     const mg = this.getManager(opts);
     const repo = mg.getRepository(Application);
     const tenantId = await this.getCurrentTenantId(mg);
@@ -246,7 +246,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const entity = repo.create({
       name,
       supplier_id: body.supplier_id ?? null,
-      description: body.description ?? null,
+      description,
       editor: (body.editor ?? null) as any,
       environment: ((body as any).environment || 'prod') as any,
       category,
@@ -295,13 +295,14 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     await mg.query('SELECT id FROM applications WHERE id = $1 AND tenant_id = $2 FOR UPDATE', [appId, tenantId]);
     const existing = await repo.findOne({ where: { id: appId, tenant_id: tenantId } });
     if (!existing) throw new NotFoundException('Application not found');
-    // A changed description gets the Markdown size limit; a stored one is kept as it is.
-    if (body.description !== undefined && body.description !== existing.description) {
-      assertMarkdownSize(body.description, 'description');
-    }
+    // Rich text: a changed description is checked as a write; a stored one is kept as it is.
+    const description = body.description === undefined
+      ? undefined
+      : await normalizeMarkdownRichText(body.description, { fieldName: 'description', storedValue: existing.description });
     const before = { ...existing };
     const classification = classificationPatch(body, existing, catalog);
     const patch: any = { ...body, ...classification };
+    if (description !== undefined) patch.description = description;
     for (const key of ['id', 'tenant_id', 'created_at', 'sequential_id']) delete patch[key];
     if (patch.last_dr_test !== undefined) patch.last_dr_test = patch.last_dr_test ? new Date(patch.last_dr_test as any) : null;
     if (patch.retired_date !== undefined) patch.retired_date = patch.retired_date ? new Date(patch.retired_date as any) : null;

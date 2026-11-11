@@ -2490,7 +2490,10 @@ export class IntegratedDocumentsService {
     await this.knowledge.assertDocumentUnlockedForUser(documentId, normalizedUserId, manager);
 
     const existing = await this.getDocumentOrThrow(documentId, manager);
-    const nextContent = await normalizeMarkdownRichText(content, { fieldName: 'content_markdown' }) || '';
+    const nextContent = await normalizeMarkdownRichText(content, {
+      fieldName: 'content_markdown',
+      storedValue: existing.content_markdown,
+    }) || '';
     if (existing.content_markdown === nextContent) {
       return { document_id: documentId, changed: false, version_number: null, revision: null };
     }
@@ -2559,7 +2562,10 @@ export class IntegratedDocumentsService {
     }
 
     const existingDocument = await this.getDocumentOrThrow(existingBinding.document_id, manager);
-    const nextContent = await normalizeMarkdownRichText(content, { fieldName: 'content_markdown' }) || '';
+    const nextContent = await normalizeMarkdownRichText(content, {
+      fieldName: 'content_markdown',
+      storedValue: existingDocument.content_markdown,
+    }) || '';
     if (existingDocument.content_markdown === nextContent) {
       return {
         documentId: existingBinding.document_id,
@@ -3731,7 +3737,10 @@ export class IntegratedDocumentsService {
     const existing = await this.getDocumentOrThrow(documentId, manager);
     const nextContent = body?.content_markdown === undefined
       ? existing.content_markdown
-      : (await normalizeMarkdownRichText(body?.content_markdown, { fieldName: 'content_markdown' }) || '');
+      : (await normalizeMarkdownRichText(body?.content_markdown, {
+        fieldName: 'content_markdown',
+        storedValue: existing.content_markdown,
+      }) || '');
 
     const sourceContext = await this.buildSourceAccessContext(
       sourceEntityType, sourceEntityId, slotKey, normalizedUserId, manager,

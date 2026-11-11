@@ -58,6 +58,7 @@ import { isStoragePathReferencedInAnyTable } from '../common/storage-path-refs';
 import { detectChanges, REQUEST_TRACKED_FIELDS, resolveDisplayNames } from '../common/change-detection';
 import { MarkdownWorkBudget, markdownWorkBudget, normalizeMarkdownRichText } from '../common/markdown-worker';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
+import { loadSlotBodies } from '../knowledge/integrated-document-bodies';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import { Task } from '../tasks/task.entity';
 import { requestInvolvesUsersSql, requestLinkedToProjectsSql } from './services/portfolio-report-filters';
@@ -1436,8 +1437,16 @@ export class PortfolioRequestsService {
     const before = { ...existing };
     const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
     const markdownBudget = markdownWorkBudget();
-    const nextPurpose = has('purpose') ? await this.normalizeNullable(body.purpose, markdownBudget) : undefined;
-    const nextRisks = has('risks') ? await this.normalizeNullable(body.risks, markdownBudget) : undefined;
+    // The purpose and the risks live in bound documents. A text that repeats what is stored is kept as it is.
+    const storedBodies = has('purpose') || has('risks')
+      ? (await loadSlotBodies(mg, existing.tenant_id, 'requests', [existing.id], ['purpose', 'risks_mitigations'])).get(existing.id)
+      : undefined;
+    const nextPurpose = has('purpose')
+      ? await this.normalizeNullable(body.purpose, markdownBudget, storedBodies?.get('purpose'))
+      : undefined;
+    const nextRisks = has('risks')
+      ? await this.normalizeNullable(body.risks, markdownBudget, storedBodies?.get('risks_mitigations'))
+      : undefined;
 
     // Overview fields
     if (has('name')) {
@@ -1476,8 +1485,12 @@ export class PortfolioRequestsService {
     // Note: Effort estimation is now derived from Time estimation criteria values
 
     // Analysis
-    if (has('current_situation')) existing.current_situation = await this.normalizeNullable(body.current_situation, markdownBudget);
-    if (has('expected_benefits')) existing.expected_benefits = await this.normalizeNullable(body.expected_benefits, markdownBudget);
+    if (has('current_situation')) {
+      existing.current_situation = await this.normalizeNullable(body.current_situation, markdownBudget, existing.current_situation);
+    }
+    if (has('expected_benefits')) {
+      existing.expected_benefits = await this.normalizeNullable(body.expected_benefits, markdownBudget, existing.expected_benefits);
+    }
     if (has('feasibility_review')) {
       existing.feasibility_review = this.normalizeFeasibilityReview(body.feasibility_review);
     }
@@ -2509,7 +2522,7 @@ export class PortfolioRequestsService {
     }
 
     const oldContent = activity.content;
-    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content' });
+    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content', storedValue: oldContent });
     activity.updated_at = new Date();
 
     const saved = await activityRepo.save(activity);
@@ -2838,9 +2851,12 @@ export class PortfolioRequestsService {
     }
   }
 
-  /** @param budget time budget shared by the rich-text fields of one write (Markdown workers) */
-  private async normalizeNullable(value: unknown, budget?: MarkdownWorkBudget): Promise<string | null> {
-    return await normalizeMarkdownRichText(value, { budget });
+  /**
+   * @param budget time budget shared by the rich-text fields of one write (Markdown workers)
+   * @param storedValue the text the field holds now, on an update: a write that repeats it is kept as it is
+   */
+  private async normalizeNullable(value: unknown, budget?: MarkdownWorkBudget, storedValue?: string | null): Promise<string | null> {
+    return await normalizeMarkdownRichText(value, { budget, storedValue });
   }
 
   private normalizeOriginTaskUrl(

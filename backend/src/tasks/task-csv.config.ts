@@ -7,7 +7,7 @@ import {
   CsvImportRow,
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
-import { assertMarkdownSize } from '../common/markdown-limits';
+import { richTextCell } from '../common/csv/rich-text-cell';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 
@@ -189,11 +189,8 @@ export const taskCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Description',
       group: 'Basic',
-      // The description is Markdown: same size limit as in the task editor.
-      importTransformFn: (value: string) => {
-        assertMarkdownSize(value, 'description');
-        return value;
-      },
+      // The description is rich text: same rules as in the task editor.
+      importTransformFn: richTextCell('description'),
     },
 
     // === SIDEBAR: CONTEXT ===

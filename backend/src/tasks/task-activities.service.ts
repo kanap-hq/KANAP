@@ -473,7 +473,7 @@ export class TaskActivitiesService {
       throw codedForbidden('OWN_COMMENTS_ONLY', 'You can only edit your own comments');
     }
 
-    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content' });
+    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content', storedValue: activity.content });
     activity.updated_at = new Date();
 
     return repo.save(activity);
