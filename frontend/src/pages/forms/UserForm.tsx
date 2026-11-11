@@ -109,18 +109,14 @@ const UserForm = forwardRef<UserFormHandle, {
     const d: any = { ...(defaultValues ?? {}) };
     if (typeof d.status === 'string') d.status = d.status === 'enabled';
     if (typeof d.status !== 'boolean') d.status = true;
-    // Handle multi-role: convert from roles array or legacy role_id
-    if (!d.role_ids || !Array.isArray(d.role_ids) || d.role_ids.length === 0) {
-      // Try to get from roles array (from API)
-      if (Array.isArray(d.roles) && d.roles.length > 0) {
-        d.role_ids = d.roles.map((r: any) => r.id);
-      } else if (d.role_id || d.role?.id) {
-        // Legacy single role
-        const roleId = d.role_id || d.role?.id;
-        d.role_ids = roleId ? [roleId] : [];
-      } else {
-        d.role_ids = [];
-      }
+    // `roles` is the list from GET /users/:id/roles. An empty list is a user
+    // with no role: the legacy role_id column still holds Contact (NOT NULL)
+    // and must not become a chip. That column is used only when `roles` is absent.
+    if (Array.isArray(d.roles)) {
+      d.role_ids = d.roles.map((r: any) => r?.id).filter(Boolean);
+    } else if (!Array.isArray(d.role_ids) || d.role_ids.length === 0) {
+      const legacyId = d.role_id || d.role?.id;
+      d.role_ids = legacyId ? [legacyId] : [];
     }
     return d;
   }, [defaultValues]);
