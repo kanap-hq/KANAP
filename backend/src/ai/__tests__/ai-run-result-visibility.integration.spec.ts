@@ -235,7 +235,7 @@ async function seed(): Promise<Seed> {
   };
 }
 
-// Every path that returns what a tool call kept. A new one is added here and to RESULT_COLUMN_FILES.
+// Every path that returns what a tool call kept. A new one is added here and to KEPT_COLUMN_FILES.
 type Ctx = { tenantId: string; userId: string; manager: EntityManager };
 const RESULT_READS: Array<{ name: string; read: (ctx: Ctx, seed: Seed) => Promise<Record<keyof Runs, unknown>> }> = [
   {
@@ -481,19 +481,38 @@ async function testAnAdministratorReadsEveryResult(s: Seed) {
   await assertReadsEveryResult(s, s.people.administrator, 'the Administrator');
 }
 
-// The non-test sources that name a kept result. Each one either withholds it by the run's origin,
-// only writes it, or reads it for the agent's own work.
-const RESULT_COLUMN_FILES: Record<string, 'withheld by run origin' | 'writes' | 'agent work'> = {
+// The non-test sources that name what a run keeps of a call: its result, its input and the
+// message of its failure. Each one either withholds it by the run's origin, only writes it, reads
+// it for the agent's own work, or names another record that has columns of the same names (a
+// write preview, an action request, an approval, a tool definition, a provider's answer). An
+// entry that ends with `/` stands for every source below it.
+type KeptColumnUse = 'withheld by run origin' | 'writes' | 'agent work' | 'another record';
+const KEPT_COLUMNS = /\b(payload_json|output_summary|input_summary|input_hash|error_message)\b/;
+const KEPT_COLUMN_FILES: Record<string, KeptColumnUse> = {
   'ai/control-plane/agent-control/agent-control-serializers.util.ts': 'withheld by run origin',
   'ai/control-plane/mcp/ai-mcp-audit.service.ts': 'withheld by run origin',
   'ai/control-plane/dispatcher/ai-capability-dispatcher.service.ts': 'writes',
   'ai/control-plane/evidence/ai-evidence.service.ts': 'writes',
   'ai/control-plane/agent-control/ai-agent-control.service.ts': 'writes',
   'ai/control-plane/automation/ai-automation-job-catalog.service.ts': 'agent work',
+  'ai/ai.types.ts': 'another record',
+  'ai/ai-tool.registry.ts': 'another record',
+  'ai/ai-chat-orchestrator.service.ts': 'another record',
+  'ai/ai-mutation-preview.service.ts': 'another record',
+  'ai/mutation/': 'another record',
+  'ai/glpi/glpi.service.ts': 'another record',
+  'ai/control-plane/action-request/ai-action-request.service.ts': 'another record',
+  'ai/control-plane/approval/ai-approval.service.ts': 'another record',
+  'ai/control-plane/capability/ai-capability.registry.ts': 'another record',
+  'ai/control-plane/agent/ai-agent-work-queue.service.ts': 'another record',
+  'ai/control-plane/agent/ai-agent-approval-lifecycle-sweeper.service.ts': 'another record',
+  'ai/control-plane/agent-control/agent-control-constants.util.ts': 'another record',
+  'ai/control-plane/agent-control/ai-agent-attention.util.ts': 'another record',
 };
 
-function testEverySourceThatNamesAKeptResultIsClassified() {
+function testEverySourceThatNamesAKeptColumnIsClassified() {
   const root = backendPath('src');
+  const folders = Object.keys(KEPT_COLUMN_FILES).filter((entry) => entry.endsWith('/'));
   const found = new Set<string>();
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir)) {
@@ -501,16 +520,18 @@ function testEverySourceThatNamesAKeptResultIsClassified() {
       if (statSync(full).isDirectory()) {
         if (entry !== '__tests__' && entry !== 'migrations') walk(full);
       } else if (entry.endsWith('.ts') && !entry.endsWith('.entity.ts')) {
-        if (/\b(payload_json|output_summary)\b/.test(readFileSync(full, 'utf8'))) found.add(relative(root, full).split('\\').join('/'));
+        if (!KEPT_COLUMNS.test(readFileSync(full, 'utf8'))) continue;
+        const file = relative(root, full).split('\\').join('/');
+        found.add(folders.find((folder) => file.startsWith(folder)) ?? file);
       }
     }
   };
   walk(root);
-  assert.deepEqual(Array.from(found).sort(), Object.keys(RESULT_COLUMN_FILES).sort());
-  for (const [file, kind] of Object.entries(RESULT_COLUMN_FILES)) {
+  assert.deepEqual(Array.from(found).sort(), Object.keys(KEPT_COLUMN_FILES).sort());
+  for (const [file, kind] of Object.entries(KEPT_COLUMN_FILES)) {
     if (kind !== 'withheld by run origin') continue;
     const source = readFileSync(join(root, file), 'utf8');
-    assert.match(source, /resultsReadable/, `${file} returns a kept result without asking who reads it`);
+    assert.match(source, /resultsReadable/, `${file} returns what a run kept without asking who reads it`);
   }
 }
 
@@ -524,7 +545,7 @@ async function main() {
     ['an agent run stays readable in full', testAnAgentRunStaysReadableInFull],
     ['the author reads their own results', testTheAuthorReadsTheirOwnResults],
     ['an Administrator reads every result', testAnAdministratorReadsEveryResult],
-    ['every source that names a kept result is classified', testEverySourceThatNamesAKeptResultIsClassified],
+    ['every source that names what a run keeps of a call is classified', testEverySourceThatNamesAKeptColumnIsClassified],
   ];
   let failed = 0;
   let s: Seed | null = null;
