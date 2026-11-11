@@ -783,6 +783,11 @@ type NormalizeOptions = MarkdownWorkOptions & {
    * with the rest of its record.
    */
   storedValue?: string | null;
+  /**
+   * True for a text an automatic import reads from another system (a ticket):
+   * a tag outside the accepted list is kept as text instead of refusing the write.
+   */
+  thirdPartyText?: boolean;
 };
 
 /** Whether the text is the one the field holds already. */
@@ -808,7 +813,11 @@ export async function normalizeMarkdownRichText(value: unknown, opts?: Normalize
     assertMarkdownSize(text, fieldName);
   }
   try {
-    return await submit('normalize', [text, { fieldName, storedContent }], { ...opts, fieldName });
+    return await submit(
+      'normalize',
+      [text, { fieldName, storedContent, thirdPartyText: opts?.thirdPartyText === true }],
+      { ...opts, fieldName },
+    );
   } catch (error) {
     if (storedContent && isMarkdownTooComplex(error)) {
       // A stored content the workers cannot process in time stays as it is.

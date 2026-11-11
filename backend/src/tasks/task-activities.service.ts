@@ -246,7 +246,8 @@ export class TaskActivitiesService {
     }
 
     const repo = mg.getRepository(PortfolioActivity);
-    const normalizedContent = await normalizeMarkdownRichText(dto.content, { fieldName: 'content' });
+    // The text comes from another system: a tag it holds is kept as text.
+    const normalizedContent = await normalizeMarkdownRichText(dto.content, { fieldName: 'content', thirdPartyText: true });
     const createdAt = parseImportedCreatedAt(dto.created_at);
     const activity = repo.create({
       task_id: taskId,

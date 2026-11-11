@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { inspectMarkdownContent } from './html-to-markdown';
+import { escapeRefusedHtml, inspectMarkdownContent } from './html-to-markdown';
 import { assertMarkdownSize, MARKDOWN_MAX_BYTES, markdownHtmlNotAllowedError, markdownTooLargeError } from './markdown-limits';
 
 /**
@@ -16,6 +16,12 @@ type NormalizeMarkdownRichTextOptions = {
    * they had. Only a write is held to the size limit and to the accepted tags.
    */
   storedContent?: boolean;
+  /**
+   * True for a text an automatic import reads from another system (a ticket):
+   * nobody is there to correct it, so a tag outside the accepted list is kept as
+   * text (`escapeRefusedHtml`) instead of refusing the write.
+   */
+  thirdPartyText?: boolean;
 };
 
 export function normalizeMarkdownRichText(
@@ -23,7 +29,7 @@ export function normalizeMarkdownRichText(
   opts?: NormalizeMarkdownRichTextOptions,
 ): string | null {
   if (value == null) return null;
-  const text = String(value).trim();
+  let text = String(value).trim();
   if (!text) return null;
   const field = opts?.fieldName || 'content';
 
@@ -32,7 +38,11 @@ export function normalizeMarkdownRichText(
     assertMarkdownSize(text, field);
   }
 
-  const { refusedHtml, hasInlineDataImage } = inspectMarkdownContent(text);
+  let { refusedHtml, hasInlineDataImage } = inspectMarkdownContent(text);
+  if (isWrite && refusedHtml.length > 0 && opts?.thirdPartyText === true) {
+    text = escapeRefusedHtml(text);
+    ({ refusedHtml, hasInlineDataImage } = inspectMarkdownContent(text));
+  }
   if (isWrite && refusedHtml.length > 0) {
     throw markdownHtmlNotAllowedError(field, refusedHtml[0]);
   }

@@ -8,7 +8,13 @@ import {
 } from '../knowledge/integrated-document-markdown';
 import { InterfaceSpecificationSource } from '../knowledge/interface-specification-markdown';
 import { findImportedImageReferences, sanitizeForMdxEditor } from './document-import-markdown';
-import { containsInlineDataImage, htmlToMarkdown, isHtmlContent, resolveHtmlContentSource } from './html-to-markdown';
+import {
+  containsInlineDataImage,
+  escapeRefusedHtml,
+  htmlToMarkdown,
+  isHtmlContent,
+  resolveHtmlContentSource,
+} from './html-to-markdown';
 import { normalizeMarkdownRichText } from './markdown-rich-text';
 import { markdownToSearchText } from './markdown-search-text';
 import { renderMarkdownToHtml } from './markdown-to-html';
@@ -22,7 +28,8 @@ import { renderCommentForEmail } from '../notifications/comment-email-renderer';
  */
 
 export const MARKDOWN_WORKER_OPERATIONS = {
-  normalize: (text: string, opts: { fieldName: string; storedContent: boolean }) => normalizeMarkdownRichText(text, opts),
+  normalize: (text: string, opts: { fieldName: string; storedContent: boolean; thirdPartyText?: boolean }) =>
+    normalizeMarkdownRichText(text, opts),
   normalizeWithSearchText: (text: string, opts: { fieldName: string; storedContent: boolean }) => {
     const content = normalizeMarkdownRichText(text, opts);
     return { content, searchText: markdownToSearchText(content || '') };
@@ -36,7 +43,8 @@ export const MARKDOWN_WORKER_OPERATIONS = {
   commentEmail: (text: string, tenantBaseUrl: string, tenantSlug: string | null) =>
     renderCommentForEmail({ commentHtml: renderMarkdownToHtml(text), tenantBaseUrl, tenantSlug }),
   importedMarkdown: (raw: string) => {
-    const markdown = sanitizeForMdxEditor(raw);
+    // What the cleaning leaves of a tag is kept as text: the document saves as it was imported.
+    const markdown = escapeRefusedHtml(sanitizeForMdxEditor(raw));
     return { markdown, images: findImportedImageReferences(markdown) };
   },
   importedImages: (markdown: string) => findImportedImageReferences(markdown),

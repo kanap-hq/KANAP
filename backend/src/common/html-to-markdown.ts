@@ -294,6 +294,121 @@ export function findRefusedHtml(content: string): string[] {
   return tokens ? collectRefusedHtml(tokens) : findRefusedHtmlInText(text);
 }
 
+// What stays as written in prose: a tag of the list in its accepted form (an image is
+// checked with its attributes), an automatic link, an automatic e-mail link.
+const KEPT_IN_PROSE_REGEX = new RegExp(
+  [
+    `</?(?:${RICH_TEXT_ALLOWED_HTML.paired.join('|')})>`,
+    `<${RICH_TEXT_ALLOWED_HTML.lineBreak}(?: ?/)?>`,
+    IMAGE_TAG_REGEX.source.slice(1, -1),
+    '<[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\\s<>]*>',
+    '<[^\\s<>@]+@[^\\s<>]+>',
+  ].join('|'),
+  'y',
+);
+const FENCE_OPENING_REGEX = /^(?:[ \t>]|(?:[-*+]|\d{1,9}[.)])[ \t])*(`{3,}|~{3,})(.*)$/;
+const FENCE_CLOSING_REGEX = /^[ \t>]*(`{3,}|~{3,})[ \t]*$/;
+
+/** The index of the run of exactly `length` backticks that closes a code span opened before `from`, or -1. */
+function closingBacktickRun(text: string, from: number, length: number): number {
+  for (let index = from; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '\n') {
+      // A code span ends with its paragraph.
+      let next = index + 1;
+      while (text[next] === ' ' || text[next] === '\t') next += 1;
+      if (next >= text.length || text[next] === '\n') return -1;
+    }
+    if (char !== '`') continue;
+    let end = index;
+    while (text[end] === '`') end += 1;
+    if (end - index === length) return index;
+    index = end - 1;
+  }
+  return -1;
+}
+
+/** Puts a backslash before each "<" of `prose` that starts a tag, outside its inline code spans. */
+function escapeTagsInProse(prose: string): string {
+  let result = '';
+  let index = 0;
+  while (index < prose.length) {
+    const char = prose[index];
+    if (char === '\\') {
+      result += prose.slice(index, index + 2);
+      index += 2;
+    } else if (char === '`') {
+      let end = index;
+      while (prose[end] === '`') end += 1;
+      const closing = closingBacktickRun(prose, end, end - index);
+      const next = closing === -1 ? end : closing + (end - index);
+      result += prose.slice(index, next);
+      index = next;
+    } else if (char === '<' && /[A-Za-z/!?]/.test(prose.charAt(index + 1))) {
+      KEPT_IN_PROSE_REGEX.lastIndex = index;
+      const kept = KEPT_IN_PROSE_REGEX.exec(prose)?.[0];
+      if (kept && (!kept.startsWith('<img') || isAllowedMarkdownHtmlSnippet(kept))) {
+        result += kept;
+        index += kept.length;
+      } else {
+        result += '\\<';
+        index += 1;
+      }
+    } else {
+      result += char;
+      index += 1;
+    }
+  }
+  return result;
+}
+
+/** `escapeTagsInProse` on the text outside its fenced blocks, which are found line by line. */
+function escapeTagsOutsideCode(text: string): string {
+  const parts: string[] = [];
+  let prose: string[] = [];
+  let fence: { mark: string; length: number } | null = null;
+  const endProse = () => {
+    if (prose.length > 0) parts.push(escapeTagsInProse(prose.join('\n')));
+    prose = [];
+  };
+
+  for (const line of text.split('\n')) {
+    if (fence) {
+      parts.push(line);
+      const closing = FENCE_CLOSING_REGEX.exec(line)?.[1];
+      if (closing && closing[0] === fence.mark && closing.length >= fence.length) fence = null;
+      continue;
+    }
+    const opening = FENCE_OPENING_REGEX.exec(line);
+    if (opening && !(opening[1][0] === '`' && opening[2].includes('`'))) {
+      endProse();
+      parts.push(line);
+      fence = { mark: opening[1][0], length: opening[1].length };
+    } else {
+      prose.push(line);
+    }
+  }
+  endProse();
+  return parts.join('\n');
+}
+
+/**
+ * The same text with every tag outside `RICH_TEXT_ALLOWED_HTML` written as text: a
+ * backslash goes before its "<", and nothing is removed. For a text read from another
+ * system, which nobody is there to correct. Code keeps its text. When the parser still
+ * reads a tag (it does not cut the code where the scan does), every "<" that starts a
+ * tag takes the backslash, in code too.
+ */
+export function escapeRefusedHtml(content: string): string {
+  const text = String(content || '');
+  if (findRefusedHtml(text).length === 0) return text;
+  const escaped = escapeTagsOutsideCode(text);
+  if (findRefusedHtml(escaped).length === 0) return escaped;
+  return text.replace(/(\\*)<(?=[A-Za-z/!?])/g, (match, backslashes: string) => (
+    backslashes.length % 2 === 1 ? match : `${backslashes}\\<`
+  ));
+}
+
 function tokensContainDataImage(tokens: MarkdownToken[]): boolean {
   let found = false;
   walkMarkedToken(tokens, (current) => {

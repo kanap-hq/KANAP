@@ -212,16 +212,75 @@ function testStoredContentKeepsWhatItHolds() {
   assert.throws(() => normalizeMarkdownRichText(image), /inline base64 images/);
 }
 
+/**
+ * A text read from another system by an automatic import has nobody to correct it: a tag
+ * outside the list stays in the text, written as text, and the result passes the rule.
+ */
+function testThirdPartyTextKeepsItsTagsAsText() {
+  const kept = (text: string) => String(normalizeMarkdownRichText(text, { fieldName: 'description', thirdPartyText: true }));
+  const assertKeptAsText = (name: string, text: string, ...holds: string[]) => {
+    const stored = kept(text);
+    assert.equal(refusalOf(stored), null, `${name}: the stored text passes the rule`);
+    assert.equal(stored.replace(/\\</g, '<'), text.trim(), `${name}: nothing is lost`);
+    for (const part of holds) assert.ok(stored.includes(part), `${name}: holds ${part} (${stored})`);
+  };
+
+  const trace = [
+    'The service stops when it starts:', '',
+    '    at com.example.Service.<init>(Service.java:12)',
+    '    at java.util.HashMap.<clinit>(HashMap.java:3)', '',
+    'The page shows <form action="/search"><input name="q"></form> twice.',
+  ].join('\n');
+  assert.equal(refusalOf(trace)?.code, MARKDOWN_HTML_NOT_ALLOWED);
+  assertKeptAsText('a stack trace and a form', trace, '\\<init>', '\\<clinit>', '\\<form action="/search">', '\\</form>');
+
+  assertKeptAsText('a tag in a cell', table('<details open>More</details>'), '\\<details open>');
+  assertKeptAsText('a comment', 'Before <!-- a note --> after.', '\\<!-- a note -->');
+  assertKeptAsText('a tag left open', 'Introduction.\n\n<div class="note"\n', '\\<div');
+  assertKeptAsText('a listed tag in another form', 'An <u class="x">underlined</u> word.', '\\<u class="x">');
+  assertKeptAsText('a listed tag with an attribute the parser does not read', 'An <u $a="`"> <form></form> ` end', '\\<u $a=');
+  // Backticks that close no code span for the parser: the tag between them is prose.
+  assertKeptAsText('a tag between the backticks of two list items', '- one `a\n- <b>bold</b>` end', '\\<b>bold\\</b>');
+
+  // What the rule accepts stays as it is written.
+  const accepted = [
+    'An <u>underlined</u> word, H<sub>2</sub>O, x<sup>2</sup>, a line<br>and <br /> another.',
+    'See <https://example.com/page?a=1> or write to <support@example.com>.',
+    'Use `<form>` or ``a ` <meta charset="utf-8">``.',
+    '```html\n<form action="/search">\n\n<input name="q"></form>\n```',
+    '- item\n\n  ```xml\n  <config a="1">\n\n  </config>\n  ```',
+    '<img height="40" width="60" alt="Diagram" src="/api/files/1" />',
+    'Keep it if a<b, or if x <y then stop. Already \\<escaped>.',
+  ];
+  for (const text of accepted) assert.equal(kept(text), text, `${text} is kept as written`);
+  const mixed = kept(`${accepted[2]} Then <b>bold</b>.\n\n${accepted[3]}\n\n${accepted[0]}`);
+  assert.equal(mixed, `${accepted[2]} Then \\<b>bold\\</b>.\n\n${accepted[3]}\n\n${accepted[0]}`);
+
+  // A person's write of the same text is refused, and an inline image is refused in both.
+  assert.equal(refusalOf('Then <b>bold</b>.')?.code, MARKDOWN_HTML_NOT_ALLOWED);
+  assert.throws(
+    () => normalizeMarkdownRichText('![x](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA)', { thirdPartyText: true }),
+    /inline base64 images/,
+  );
+}
+
 function testTimeIsBoundedOnLongTexts() {
   const cases: Array<[string, string]> = [
     ['opening characters', '<a'.repeat(100_000)],
     ['open quotes', '<u>\n' + '<a "'.repeat(50_000)],
     ['accepted tags', '<u>x</u><br>'.repeat(15_000)],
     ['indented blocks', 'Text\n\n' + '        a<b\n'.repeat(15_000)],
+    ['backtick runs', Array.from({ length: 400 }, (_, i) => '`'.repeat(i + 1) + ' <b>').join(' ')],
+    ['open fences', '```\n<b>\n'.repeat(10_000)],
   ];
   for (const [name, text] of cases) {
     const start = process.hrtime.bigint();
     refusalOf(text);
+    try {
+      normalizeMarkdownRichText(text, { thirdPartyText: true });
+    } catch (error) {
+      if (!(error instanceof BadRequestException)) throw error;
+    }
     const ms = Number(process.hrtime.bigint() - start) / 1e6;
     assert.ok(ms < 1500, `${name}: ${ms.toFixed(0)} ms`);
   }
@@ -280,6 +339,7 @@ function run() {
   testMarkdownAndCodeAreAccepted();
   testTheRefusalNamesTheFieldAndTheTag();
   testStoredContentKeepsWhatItHolds();
+  testThirdPartyTextKeepsItsTagsAsText();
   testTimeIsBoundedOnLongTexts();
   testSampleDataIsAccepted();
   console.log('rich-text-html-rule.spec: ok');
