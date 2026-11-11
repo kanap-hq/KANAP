@@ -22,6 +22,7 @@ import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
 import { DemoDataService } from '../../demo-data/demo-data.service';
 import { FxRateService } from '../../currency/fx-rate.service';
 import { NvdFeedService } from '../../vulnerabilities/nvd-feed.service';
+import { WorldBankClient } from '../../currency/world-bank-client';
 
 // The list filter contract, server side. `frontend/src/pages/listFilterContract.json` lists, per
 // list endpoint, every column its screen lets the user filter and the kind of filter model the grid
@@ -173,6 +174,20 @@ async function testEveryOfferedFilterReachesTheDatabase() {
   // fell inside later recordings and made the same request look different (#625). The lists read
   // rates the same way without it.
   app.get(FxRateService).onMissingRates(null);
+  // The sample data load asks for the rates of four years, and that refresh outlives the load. Over
+  // the network it downloaded the World Bank annual file: three attempts of up to 60 s each, 2 s
+  // and 4 s apart, so a slow source kept it running past the wait below and failed the spec. The
+  // rate sources answer at once here (units per US dollar: the euro at 0.9, the others at 2; a
+  // rate set where every currency equals the base is refused).
+  const worldBank = app.get(WorldBankClient);
+  const perDollar = (currency: string) => ({ USD: 1, EUR: 0.9 })[currency.toUpperCase()] ?? 2;
+  worldBank.fetchAnnualRates = async (currency: string, startYear: number, endYear: number) => {
+    const rates = new Map<number, number>();
+    for (let year = Math.min(startYear, endYear); year <= Math.max(startYear, endYear); year += 1) rates.set(year, perDollar(currency));
+    return rates;
+  };
+  worldBank.fetchSpotRate = async (currency: string) => perDollar(currency);
+  worldBank.refreshAnnualDatasetIfOlderThan = async () => false;
   const port = (app.getHttpServer().address() as AddressInfo).port;
 
   let tenant: ActivatedTenant | undefined;
@@ -211,7 +226,7 @@ async function testEveryOfferedFilterReachesTheDatabase() {
     // The matching that follows the sample technologies' commit is over before the first recording.
     await feed.whenIdle(60_000);
     // The sample data load starts an exchange-rate refresh that can outlive it (a refresh request
-    // stops waiting after 20 s, the run goes on, network calls included). Its statements fell
+    // stops waiting after 20 s, the run goes on). Its statements fell
     // inside later recordings: a rate-set lock in /connections, new rates in /contracts. Every
     // tracked background work is over before the first recording.
     assert.equal(await waitForBackgroundWork(Date.now() + 120_000), 0, 'the background work of the sample data load ends');
