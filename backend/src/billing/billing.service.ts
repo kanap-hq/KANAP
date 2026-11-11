@@ -522,27 +522,29 @@ export class BillingService {
 
     // GTC art. 6.3: annual to monthly takes effect at the end of the annual period, never refunded.
     if (currentPrice?.recurring?.interval === 'year' && interval === 'monthly') {
-      const previousChange = await this.resolveScheduledChange(stripeSub);
+      // Read for the audit entry only: a failure leaves it unknown and the change goes on.
+      const previousChange = await this.resolveScheduledChange(stripeSub).catch((error) => {
+        this.logger.warn(`Unable to read the schedule of subscription ${subscriptionId}: ${(error as Error).message}`);
+        return null;
+      });
       const { effectiveAt, scheduleId } = await this.scheduleSwitchAtPeriodEnd(stripeSub, targetPriceId);
+      const planned: ScheduledChange = { interval: 'monthly', effective_at: effectiveAt };
       await this.audit.log(
         {
           table: 'subscriptions',
           recordId: sub.id,
           action: 'update',
           before: { stripe_subscription_id: sub.stripe_subscription_id, scheduled_change: previousChange },
-          after: {
-            stripe_subscription_id: sub.stripe_subscription_id,
-            scheduled_change: { interval: 'monthly', effective_at: effectiveAt } satisfies ScheduledChange,
-          },
+          after: { stripe_subscription_id: sub.stripe_subscription_id, scheduled_change: planned },
           userId: userId ?? null,
           sourceRef: scheduleId,
         },
         { manager: mg },
       );
-      // Refreshed from Stripe: the answer carries the planned switch.
-      const summary = await this.getSubscriptionSummary({ manager: mg, forceStripeRefresh: true });
+      // The answer carries the switch just planned, without another read from Stripe.
+      const summary = await this.getSubscriptionSummary({ manager: mg });
       const change: PlanChange = { status: 'scheduled', effective_at: effectiveAt };
-      return { ...summary, change };
+      return { ...summary, scheduled_change: planned, change };
     }
 
     // Any other change (monthly to annual) takes effect at once: a new period starts today, the

@@ -86,6 +86,8 @@ function createService(opts: {
   retrievedInvoice?: Record<string, unknown>;
   /** What `subscriptions.retrieve` throws (a subscription Stripe no longer has). */
   subscriptionRetrieveError?: unknown;
+  /** How many first `subscriptionSchedules.retrieve` calls fail. */
+  scheduleRetrieveFailures?: number;
 }) {
   const calls: Call[] = [];
   const record = (method: string, impl: (...args: any[]) => unknown) => async (...args: unknown[]) => {
@@ -96,6 +98,7 @@ function createService(opts: {
     ? JSON.parse(JSON.stringify(opts.stripeSubscription))
     : null;
   const schedule = opts.schedule ?? null;
+  let scheduleRetrieveFailures = opts.scheduleRetrieveFailures ?? 0;
   const client = {
     customers: {
       retrieve: record('customers.retrieve', () => opts.retrievedCustomer ?? { id: 'cus_1' }),
@@ -124,7 +127,13 @@ function createService(opts: {
     },
     subscriptionSchedules: {
       create: record('subscriptionSchedules.create', () => schedule),
-      retrieve: record('subscriptionSchedules.retrieve', () => schedule),
+      retrieve: record('subscriptionSchedules.retrieve', () => {
+        if (scheduleRetrieveFailures > 0) {
+          scheduleRetrieveFailures -= 1;
+          throw new Error('Stripe is slow');
+        }
+        return schedule;
+      }),
       update: record('subscriptionSchedules.update', (id: string, params: Record<string, any>) => {
         if (schedule && opts.onScheduleUpdate) opts.onScheduleUpdate(params, schedule);
         return { id };
@@ -902,39 +911,56 @@ async function testSelectingAnnualWhileASwitchIsPlannedKeepsIt() {
   assert.equal(audits.filter((a) => a.entry.table === 'subscriptions' && a.entry.sourceRef === 'sub_sched_1').length, 1);
 }
 
-/** Planning annual to monthly is audited on the subscription, and the answer carries the planned switch. */
+/**
+ * Planning annual to monthly is audited on the subscription, and the answer carries the planned
+ * switch as the change just made it, without another read from Stripe. The read of the switch
+ * planned before, which only serves the audit entry, cannot fail the change.
+ */
 async function testScheduledSwitchIsAuditedAndReturned() {
-  const schedule = {
-    id: 'sub_sched_1',
-    status: 'active',
-    current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
-    phases: [{ start_date: PERIOD.start, end_date: PERIOD.end, items: [{ price: 'price_annual', quantity: 1 }] }],
-  };
-  const { service, manager, audits } = createService({
-    tenant: createTenant(COMPLETE_FR_INVOICE),
-    subscription: runningOn('annual'),
-    priceIds: PRICE_IDS,
-    stripeSubscription: stripeSubscription(ANNUAL_PRICE, { schedule: 'sub_sched_1' }),
-    schedule,
-    onScheduleUpdate: (params, current) => {
-      current.phases = [params.phases[0], { start_date: PERIOD.end, end_date: SWITCH_END, items: params.phases[1].items }];
-    },
-  });
-  const result: any = await service.changePlan('tenant-1', 'max', 'monthly', 'user-1', manager as any, GTC_VERSION);
+  for (const scheduleRetrieveFailures of [0, 1]) {
+    const schedule = {
+      id: 'sub_sched_1',
+      status: 'active',
+      current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
+      phases: [{ start_date: PERIOD.start, end_date: PERIOD.end, items: [{ price: 'price_annual', quantity: 1 }] }],
+    };
+    const { service, manager, audits, calls } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      // A row the summary does not need to refresh.
+      subscription: {
+        ...runningOn('annual'),
+        current_period_end: new Date(PERIOD.end * 1000),
+        amount: 249000,
+        currency: 'EUR',
+        default_payment_method_id: 'pm_card',
+        last_synced_at: new Date(),
+      } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(ANNUAL_PRICE, { schedule: 'sub_sched_1' }),
+      schedule,
+      onScheduleUpdate: (params, current) => {
+        current.phases = [params.phases[0], { start_date: PERIOD.end, end_date: SWITCH_END, items: params.phases[1].items }];
+      },
+      scheduleRetrieveFailures,
+    });
+    (service as any).logger = { warn: () => undefined };
+    const result: any = await service.changePlan('tenant-1', 'max', 'monthly', 'user-1', manager as any, GTC_VERSION);
 
-  assert.deepEqual(result.change, { status: 'scheduled', effective_at: SWITCH_TO_MONTHLY.effective_at });
-  assert.deepEqual(result.scheduled_change, SWITCH_TO_MONTHLY, 'the answer carries the planned switch');
-  const entries = audits.filter((a) => a.entry.table === 'subscriptions');
-  assert.deepEqual(entries.map((a) => a.entry), [{
-    table: 'subscriptions',
-    recordId: 'local-sub',
-    action: 'update',
-    before: { stripe_subscription_id: 'sub_1', scheduled_change: null },
-    after: { stripe_subscription_id: 'sub_1', scheduled_change: SWITCH_TO_MONTHLY },
-    userId: 'user-1',
-    sourceRef: 'sub_sched_1',
-  }]);
-  assert.equal(entries[0].opts?.manager, manager);
+    assert.deepEqual(result.change, { status: 'scheduled', effective_at: SWITCH_TO_MONTHLY.effective_at });
+    assert.deepEqual(result.scheduled_change, SWITCH_TO_MONTHLY, 'the answer carries the planned switch');
+    assert.equal(calls.filter((call) => call.method === 'subscriptions.retrieve').length, 1, 'no refresh from Stripe for the answer');
+    const entries = audits.filter((a) => a.entry.table === 'subscriptions');
+    assert.deepEqual(entries.map((a) => a.entry), [{
+      table: 'subscriptions',
+      recordId: 'local-sub',
+      action: 'update',
+      before: { stripe_subscription_id: 'sub_1', scheduled_change: null },
+      after: { stripe_subscription_id: 'sub_1', scheduled_change: SWITCH_TO_MONTHLY },
+      userId: 'user-1',
+      sourceRef: 'sub_sched_1',
+    }]);
+    assert.equal(entries[0].opts?.manager, manager);
+  }
 }
 
 /*
