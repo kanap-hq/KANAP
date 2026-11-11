@@ -186,7 +186,7 @@ Die Prüfung fügt die neuen Versionen, CPE-Produktkennungen und CVE.org-Namen d
 Die Gruppe **Schwachstellenkennungen** unter den Versionen fasst die CPE-Produktkennungen und die CVE.org-Namen zusammen. Über sie findet Kadratis die Schwachstellen einer Technologie.
 
 - **Eingeklappt**: Hat die Technologie mindestens eine Kennung, ist die Gruppe eingeklappt, mit einer Zusammenfassung in ihrer Titelzeile, zum Beispiel `2 CPE-Kennungen · 3 CVE.org-Namen`. Klicken Sie auf den Titel, um sie zu öffnen.
-- **Geöffnet**: Hat die Technologie keine, ist die Gruppe geöffnet, mit einem Warnhinweis: Für diese Technologie wird nach keiner Schwachstelle gesucht. Der Abschnitt **Versionen** weist ebenfalls darauf hin. Mit der Stufe Mitglied für die Infrastruktur öffnet **Kennung hinzufügen** neben diesem Hinweis die Gruppe.
+- **Geöffnet**: Hat die Technologie keine, ist die Gruppe geöffnet, mit einem Warnhinweis: Für diese Technologie wird nach keiner Schwachstelle gesucht.
 
 Der Abgleich erfolgt auf Ebene der Technologie. Jede Version der Technologie wird mit den Schwachstellen ihrer Kennungen verglichen, und eine Version, die Sie hinzufügen, wird sofort abgeglichen. Ohne Kennung sucht Kadratis für keine Version nach Schwachstellen.
 

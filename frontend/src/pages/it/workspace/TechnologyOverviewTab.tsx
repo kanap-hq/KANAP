@@ -634,14 +634,11 @@ const catalogSourceLinkSx = {
   '&:hover': { color: 'kanap.teal', textDecoration: 'underline', textUnderlineOffset: '2px' },
 } as const;
 
-function VersionsTable({ technology, canManage, onChanged, onError, unmatched, onAddIdentifier }: {
+function VersionsTable({ technology, canManage, onChanged, onError }: {
   technology: TechnologyDetail;
   canManage: boolean;
   onChanged: () => Promise<void>;
   onError: (message: string) => void;
-  /** No identifier: no version is matched to a vulnerability. */
-  unmatched?: boolean;
-  onAddIdentifier?: () => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
   const theme = useTheme();
@@ -851,19 +848,6 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
       >
         {t('workspace.technology.versions.title')}
       </SectionLabel>
-      {unmatched && (
-        <Typography sx={{ mt: -0.5, mb: 1, fontSize: 12, lineHeight: 1.4, color: 'kanap.text.tertiary' }}>
-          {t('workspace.technology.identifiers.versionsUnmatched')}
-          {canManage && onAddIdentifier ? (
-            <>
-              {' '}
-              <Box component="button" type="button" onClick={onAddIdentifier} sx={tealLinkSx}>
-                {t('workspace.technology.identifiers.add')}
-              </Box>
-            </>
-          ) : null}
-        </Typography>
-      )}
       <Table
         size="small"
         aria-label={t('workspace.technology.versions.title')}
@@ -1012,17 +996,16 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
   );
 }
 
-/** The group of the CPE product identifiers and the CVE.org names, so the Versions section can bring it into view. */
+/** The group of the CPE product identifiers and the CVE.org names. */
 export const TECHNOLOGY_IDENTIFIERS_ANCHOR = 'technology-vulnerability-identifiers';
 
 /**
  * The identifiers vulnerabilities are matched on, in one group. Folded by default when the technology
  * has one; its title then says what it holds. Open with a warning when it has none.
  */
-function VulnerabilityIdentifiers({ open, onToggle, toggleRef, cpeCount, cveNameCount, cveNamesShown, warn, children }: {
+function VulnerabilityIdentifiers({ open, onToggle, cpeCount, cveNameCount, cveNamesShown, warn, children }: {
   open: boolean;
   onToggle: () => void;
-  toggleRef: React.Ref<HTMLButtonElement>;
   cpeCount: number;
   cveNameCount: number;
   cveNamesShown: boolean;
@@ -1043,7 +1026,6 @@ function VulnerabilityIdentifiers({ open, onToggle, toggleRef, cpeCount, cveName
         <Box
           component="button"
           type="button"
-          ref={toggleRef}
           aria-expanded={open}
           aria-controls={contentId}
           onClick={onToggle}
@@ -1120,17 +1102,6 @@ export default function TechnologyOverviewTab({ technology, canManage, onPatch, 
   const [openState, setOpenState] = React.useState(() => ({ id: technology.id, open: !hasIdentifiers }));
   if (openState.id !== technology.id) setOpenState({ id: technology.id, open: !hasIdentifiers });
   const identifiersOpen = openState.id === technology.id ? openState.open : !hasIdentifiers;
-  const toggleRef = React.useRef<HTMLButtonElement>(null);
-  const [scrollRequest, setScrollRequest] = React.useState(0);
-  React.useEffect(() => {
-    if (scrollRequest === 0) return;
-    document.getElementById(TECHNOLOGY_IDENTIFIERS_ANCHOR)?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
-    toggleRef.current?.focus({ preventScroll: true });
-  }, [scrollRequest]);
-  const showIdentifiers = () => {
-    setOpenState({ id: technology.id, open: true });
-    setScrollRequest((current) => current + 1);
-  };
   return (
     <Stack spacing={3.5}>
       <Box>
@@ -1150,13 +1121,10 @@ export default function TechnologyOverviewTab({ technology, canManage, onPatch, 
         canManage={canManage}
         onChanged={onVersionsChanged}
         onError={onError}
-        unmatched={vulnerabilityFeed && !hasIdentifiers}
-        onAddIdentifier={showIdentifiers}
       />
       <VulnerabilityIdentifiers
         open={identifiersOpen}
         onToggle={() => setOpenState({ id: technology.id, open: !identifiersOpen })}
-        toggleRef={toggleRef}
         cpeCount={cpeCount}
         cveNameCount={cveNameCount}
         cveNamesShown={cveNamesShown}
