@@ -60,7 +60,7 @@ const MOCK_ACTION_PLANNER_PROFILE: ProviderActionPlannerProfile = {
   validation_notes: [
     'Use internal_note for operator-only audit notes.',
     'Use requester_reply only when a bounded requester-facing answer is appropriate.',
-    'For requester_reply sourced_answer, the backend writes the reply from the sourced synthesis.',
+    'For requester_reply sourced_answer, do not provide a body; the backend will use sourced synthesis.',
     'If no source appears sufficient for a sourced answer, prefer internal_note over requester_reply sourced_answer.',
     'Use status_update only when the mock lifecycle context exposes an allowed transition; transition_key must exactly match one key in allowed_status_transitions.',
   ],

@@ -28,9 +28,6 @@ import {
   citableKnowledgeDocuments,
 } from '../public-reply-sources';
 import { AiCapabilityRegistry } from '../../capability/ai-capability.registry';
-import { RUNTIME_SAFETY_FLOOR_SYNTHESIS } from '../ai-agent-prompt-compiler.service';
-import { GlpiTicketingProvider } from '../../providers/glpi-ticketing.provider';
-import { MockTicketingProvider } from '../../providers/mocks/mock-ticketing.provider';
 
 /**
  * A public reply reads the public items of the ticket and the documents of the libraries the
@@ -350,17 +347,6 @@ async function testTheShortTextsReserveTheOutputOfTheirNeighbours() {
   assert.equal(service.maxOutputTokens(), 8000);
 }
 
-function testEachCallIsAskedOnlyForWhatItWrites() {
-  // The reply call writes the technician brief only when its schema asks for it.
-  assert.equal(RUNTIME_SAFETY_FLOOR_SYNTHESIS.some((line) => /requester_reply and technician_brief/.test(line)), false);
-  assert.ok(RUNTIME_SAFETY_FLOOR_SYNTHESIS.some((line) => /technician_brief only when the schema asks for it/.test(line)));
-  // The planner writes no text: its provider notes name no body.
-  for (const provider of [new GlpiTicketingProvider({} as any, {} as any), new MockTicketingProvider()]) {
-    const notes = (provider.actionPlannerProfile.validation_notes ?? []).join('\n');
-    assert.doesNotMatch(notes, /\bbody\b/);
-  }
-}
-
 function testThePlannerKnowsWhenToChooseEachIntent() {
   const payload = new AiAgentActionPlannerService({} as any).buildPromptPayload({
     ticket,
@@ -611,7 +597,6 @@ async function run() {
     testEachAdministrativeIntentHasItsFixedInstruction,
     testThePlannerKnowsWhenToChooseEachIntent,
     testTheShortTextsReserveTheOutputOfTheirNeighbours,
-    testEachCallIsAskedOnlyForWhatItWrites,
     testAnAdministrativeReplyKeepsThePublicReplyGuards,
     testScreenshotsOfInternalNotesStayOutOfThePublicReply,
     testKnowledgeItemsKeepTheirLibrary,

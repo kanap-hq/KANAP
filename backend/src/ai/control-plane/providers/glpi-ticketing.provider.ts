@@ -79,7 +79,7 @@ const GLPI_ACTION_PLANNER_PROFILE: ProviderActionPlannerProfile = {
     'participant_update',
   ],
   validation_notes: [
-    'For requester_reply sourced_answer, the backend writes the reply from the sourced synthesis.',
+    'For requester_reply sourced_answer, do not provide a body; the backend will use sourced synthesis.',
     'For requester_reply administrative close notices, set reply_kind=administrative and administrative_intent=close_reply.',
     'For close instructions, propose BOTH the administrative requester_reply and a status_update when a terminal transition is allowed.',
     'If no source appears sufficient for a sourced answer, prefer internal_note over requester_reply sourced_answer.',
