@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
+import { AiPolicyService } from '../../ai-policy.service';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { redirectHost } from '../../oauth/mcp-oauth.util';
 import { redactSensitiveValue } from '../evidence/ai-evidence.service';
+import { runResultAccess } from '../evidence/run-result-visibility';
 
 /**
  * The MCP journal: every tool call a client made through `POST /ai/mcp`, completed, refused or
@@ -16,6 +18,10 @@ import { redactSensitiveValue } from '../evidence/ai-evidence.service';
  * in the same two tables, with the cause in `metadata_json.refusal_reason`. The same goes for a
  * request made with a known key that is revoked or expired, or whose owner may no longer use it.
  * Argument values are kept redacted and truncated; a key or a token never enters the journal.
+ *
+ * A line says who called which tool, when, with which arguments and how it ended. What the tool
+ * returned is read by the person who made the call and by an Administrator whose access to data
+ * is not limited (evidence/run-result-visibility.ts).
  */
 
 /** Why a call was refused: the client could not run this tool, or not with these arguments. */
@@ -203,6 +209,8 @@ function resultOf(status: string): McpAuditResult {
 
 @Injectable()
 export class AiMcpAuditService {
+  constructor(@Optional() private readonly policy?: AiPolicyService) {}
+
   /** Writes one refused or failed call. The caller runs it in a transaction of its own. */
   async recordCall(
     context: { tenantId: string; manager: EntityManager },
@@ -292,6 +300,8 @@ export class AiMcpAuditService {
           tool.tenant_id::text AS tenant_id,
           run.ai_api_key_id::text AS ai_api_key_id,
           run.user_id::text AS user_id,
+          run.invocation_channel,
+          run.trigger_kind,
           COALESCE(NULLIF(btrim(concat_ws(' ', person.first_name, person.last_name)), ''), person.email) AS user_name,
           api_key.label AS key_label,
           api_key.credential_kind AS key_kind,
@@ -336,6 +346,16 @@ export class AiMcpAuditService {
     );
 
     const page = rows.slice(0, normalized.limit);
+    const readable = runResultAccess(context.userId, async () =>
+      (this.policy ? this.policy.readsEveryRunResult(context, context.manager) : false));
+    const resultsReadable = new Map<string, boolean>();
+    for (const row of page) {
+      resultsReadable.set(String(row.tool_execution_id), await readable({
+        invocation_channel: String(row.invocation_channel),
+        trigger_kind: String(row.trigger_kind),
+        user_id: row.user_id ? String(row.user_id) : null,
+      }));
+    }
     return {
       items: page.map((row: any) => ({
         run_id: String(row.run_id),
@@ -362,7 +382,7 @@ export class AiMcpAuditService {
         tool_created_at: new Date(row.tool_created_at).toISOString(),
         completed_at: row.completed_at ? new Date(row.completed_at).toISOString() : null,
         input_summary: row.input_summary ?? null,
-        output_summary: row.output_summary ?? null,
+        output_summary: resultsReadable.get(String(row.tool_execution_id)) ? row.output_summary ?? null : null,
         evidence_ids: Array.isArray(row.evidence_ids) ? row.evidence_ids.map(String) : [],
       })),
       limit: normalized.limit,

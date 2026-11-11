@@ -6,6 +6,7 @@ import { FindOptionsWhere, In, ObjectLiteral, SelectQueryBuilder } from 'typeorm
 import { Features } from '../../../config/features';
 import { decodeNumericHtmlEntities } from '../../../common/html-entities';
 import { AiExecutionContextWithManager } from '../../ai.types';
+import { AiPolicyService } from '../../ai-policy.service';
 import {
   AGENT_AUTONOMY_POLICY_SOURCE,
   AgentAutonomyMode,
@@ -92,6 +93,7 @@ import { AiReadonlyDiagnosticWorkflowService } from '../diagnostics/ai-readonly-
 import { AiTenantExecutionService } from '../../execution/ai-tenant-execution.service';
 import { AiActionRequest } from '../entities/ai-action-request.entity';
 import { hashStableJson } from '../evidence/ai-evidence.service';
+import { RunResultAccess, runResultAccess } from '../evidence/run-result-visibility';
 import { AiAgentAuditEvent } from '../entities/ai-agent-audit-event.entity';
 import { AiModelConfig } from '../../ai-model-config.entity';
 import { AiAgentLlmClient } from './ai-agent-llm-client';
@@ -786,7 +788,14 @@ export class AiAgentControlService {
     private readonly tenantExecutor?: AiTenantExecutionService,
     private readonly diagnosticBriefSynthesis?: AiDiagnosticBriefSynthesisService,
     private readonly llmClient?: AiAgentLlmClient,
+    private readonly policy?: AiPolicyService,
   ) {}
+
+  /** Who, in this request, reads what the tools of a run returned (evidence/run-result-visibility.ts). */
+  private runResultAccess(context: AiExecutionContextWithManager): RunResultAccess {
+    return runResultAccess(context.userId, async () =>
+      (this.policy ? this.policy.readsEveryRunResult(context, context.manager) : false));
+  }
 
   private async actionPlannerProfileForProvider(
     context: AiExecutionContextWithManager,
@@ -1499,6 +1508,7 @@ export class AiAgentControlService {
       order: { created_at: 'DESC' },
       take: limit,
     });
+    const resultsReadable = this.runResultAccess(context);
 
     // One after the other, including across runs: the request's single connection runs its queries in turn anyway.
     const items: Array<ReturnType<typeof serializeRun> & {
@@ -1527,7 +1537,7 @@ export class AiAgentControlService {
         : directActionRequests;
       const pendingActionCount = linkedActions.filter((action) => actionIsActivePending(action)).length;
       items.push({
-        ...serializeRun(run),
+        ...serializeRun(run, await resultsReadable(run)),
         counts: {
           tool_executions: runToolExecutions.length,
           evidence: runEvidence.length,
@@ -1619,11 +1629,12 @@ export class AiAgentControlService {
 
     const readiness = await this.executionReadinessForActions(context, mergedActionRequests);
     const agentLinks = await this.agentLinksForActions(context, mergedActionRequests);
+    const resultsReadable = await this.runResultAccess(context)(run);
     return {
-      run: serializeRun(run),
-      run_steps: runSteps.map(serializeRunStep),
-      tool_executions: toolExecutions.map(serializeToolExecution),
-      evidence: evidence.map(serializeEvidence),
+      run: serializeRun(run, resultsReadable),
+      run_steps: runSteps.map((step) => serializeRunStep(step, resultsReadable)),
+      tool_executions: toolExecutions.map((tool) => serializeToolExecution(tool, resultsReadable)),
+      evidence: evidence.map((row) => serializeEvidence(row, resultsReadable)),
       observations: observations.map(serializeObservation),
       recommendations: recommendations.map(serializeRecommendation),
       decisions: decisions.map(serializeDecision),

@@ -24,9 +24,13 @@ import { auditActivityType } from './ai-agent-activity-timeline';
  *
  * Extracted verbatim from the module-level header of ai-agent-control.service.ts, together
  * with the activity-detail types and bounds they use.
+ *
+ * A run, its steps, its tool executions and its evidence carry what the tools returned. Their
+ * serialisers take `resultsReadable` (evidence/run-result-visibility.ts): without it the line
+ * stays and the result is left out.
  */
 
-export function serializeRun(run: AiRun) {
+export function serializeRun(run: AiRun, resultsReadable: boolean) {
   return {
     id: run.id,
     tenant_id: run.tenant_id,
@@ -38,7 +42,7 @@ export function serializeRun(run: AiRun) {
     trigger_kind: run.trigger_kind,
     status: run.status,
     input_summary: run.input_summary,
-    output_summary: run.output_summary,
+    output_summary: resultsReadable ? run.output_summary : null,
     usage_json: run.usage_json,
     cost_json: run.cost_json,
     metadata_json: run.metadata_json,
@@ -49,7 +53,7 @@ export function serializeRun(run: AiRun) {
   };
 }
 
-export function serializeToolExecution(tool: AiToolExecution) {
+export function serializeToolExecution(tool: AiToolExecution, resultsReadable: boolean) {
   return {
     id: tool.id,
     tenant_id: tool.tenant_id,
@@ -64,7 +68,7 @@ export function serializeToolExecution(tool: AiToolExecution) {
     status: tool.status,
     input_hash: tool.input_hash,
     input_summary: tool.input_summary,
-    output_summary: tool.output_summary,
+    output_summary: resultsReadable ? tool.output_summary : null,
     error_message: tool.error_message,
     duration_ms: tool.duration_ms,
     usage_json: tool.usage_json,
@@ -76,7 +80,7 @@ export function serializeToolExecution(tool: AiToolExecution) {
   };
 }
 
-export function serializeRunStep(step: AiRunStep) {
+export function serializeRunStep(step: AiRunStep, resultsReadable: boolean) {
   return {
     id: step.id,
     run_id: step.run_id,
@@ -86,7 +90,7 @@ export function serializeRunStep(step: AiRunStep) {
     capability_name: step.capability_name,
     capability_version: step.capability_version,
     input_summary: step.input_summary,
-    output_summary: step.output_summary,
+    output_summary: resultsReadable ? step.output_summary : null,
     error_message: step.error_message,
     started_at: toIso(step.started_at),
     completed_at: toIso(step.completed_at),
@@ -207,7 +211,7 @@ export function activityActionDetail(action: AiActionRequest): ActivityActionDet
   };
 }
 
-export function serializeEvidence(evidence: AiEvidence) {
+export function serializeEvidence(evidence: AiEvidence, resultsReadable: boolean) {
   return {
     id: evidence.id,
     tenant_id: evidence.tenant_id,
@@ -220,9 +224,10 @@ export function serializeEvidence(evidence: AiEvidence) {
     source_uri: evidence.source_uri,
     trust_level: evidence.trust_level,
     redaction_status: evidence.redaction_status,
-    content_hash: evidence.content_hash,
-    summary: evidence.summary,
-    payload_json: evidence.payload_json,
+    // The summary quotes the result and the hash is its fingerprint.
+    content_hash: resultsReadable ? evidence.content_hash : null,
+    summary: resultsReadable ? evidence.summary : null,
+    payload_json: resultsReadable ? evidence.payload_json : null,
     retention_class: evidence.retention_class,
     collected_at: toIso(evidence.collected_at),
     created_at: toIso(evidence.created_at),
