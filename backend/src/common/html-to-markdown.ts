@@ -419,13 +419,16 @@ function escapeTagsOutsideCode(text: string): string {
 /**
  * The same text with every tag outside `RICH_TEXT_ALLOWED_HTML` written as text: a
  * backslash goes before its "<", and nothing is removed. For a text read from another
- * system, which nobody is there to correct. Code keeps its text. When the parser still
+ * system, which nobody is there to correct. Code keeps its text, and a text that is
+ * rewritten takes Unix line ends. When the parser still
  * reads a tag (it does not cut the code where the scan does), every "<" that starts a
  * tag takes the backslash, in code too.
  */
 export function escapeRefusedHtml(content: string): string {
-  const text = String(content || '');
-  if (findRefusedHtml(text).length === 0) return text;
+  const written = String(content || '');
+  if (findRefusedHtml(written).length === 0) return written;
+  // Rewritten with Unix line ends, as the parser reads a text: a line that ends a fence ends there.
+  const text = written.replace(/\r\n?/g, '\n');
   const escapeEvery = (marks: RegExp) => text.replace(marks, (match, backslashes: string, mark: string) => (
     backslashes.length % 2 === 1 ? match : `${backslashes}\\${mark}`
   ));

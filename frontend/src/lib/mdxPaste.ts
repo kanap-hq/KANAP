@@ -165,7 +165,9 @@ export function sanitizeMarkdownForMdxPaste(
   markdown: string,
   { keepRichTextElements = false }: { keepRichTextElements?: boolean } = {},
 ): string {
-  const { text: withoutFences, blocks: fencedCodeBlocks } = stashFencedCodeBlocks(String(markdown || ''));
+  // Read with Unix line ends, as the editor reads a text: a line that ends a fence ends there.
+  const source = String(markdown || '').replace(/\r\n?/g, '\n');
+  const { text: withoutFences, blocks: fencedCodeBlocks } = stashFencedCodeBlocks(source);
   const { text: sanitizedBase, spans: inlineCodeSpans } = stashInlineCodeSpans(withoutFences);
 
   // The result, in pieces: the text between two rewritten places is copied as it is.

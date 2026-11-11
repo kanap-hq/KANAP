@@ -256,6 +256,19 @@ function testThirdPartyTextKeepsItsTagsAsText() {
   const mixed = kept(`${accepted[2]} Then <b>bold</b>.\n\n${accepted[3]}\n\n${accepted[0]}`);
   assert.equal(mixed, `${accepted[2]} Then \\<b>bold\\</b>.\n\n${accepted[3]}\n\n${accepted[0]}`);
 
+  // Windows line ends: a fenced block keeps its code, and a text the rule accepts keeps its line ends.
+  assert.equal(
+    kept('A <meta name="note">\r\n\r\n~~~\r\n<form action="/search">\r\n\r\n</form>\r\n~~~\r\nEnd'),
+    'A \\<meta name="note">\n\n~~~\n<form action="/search">\n\n</form>\n~~~\nEnd',
+  );
+  assert.equal(
+    kept('- item\r\n\r\n  ```xml\r\n  <config a="1">\r\n  ```\r\n\r\nThen <b>bold</b>.'),
+    '- item\n\n  ```xml\n  <config a="1">\n  ```\n\nThen \\<b>bold\\</b>.',
+  );
+  const windows = 'Line one\r\nline two\r\n\r\n```html\r\n<form action="/search">\r\n```';
+  assert.equal(kept(windows), windows);
+  assertAccepted('a fenced block with Windows line ends', windows);
+
   // A person's write of the same text is refused, and an inline image is refused in both.
   assert.equal(refusalOf('Then <b>bold</b>.')?.code, MARKDOWN_HTML_NOT_ALLOWED);
   assert.throws(

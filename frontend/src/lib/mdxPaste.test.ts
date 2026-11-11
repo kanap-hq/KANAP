@@ -103,6 +103,18 @@ describe('mdxPaste', () => {
     }
   });
 
+  it('reads the fenced blocks of a text with Windows line ends', () => {
+    const blocks = [
+      '~~~\r\n<div>x</div>\r\n\r\n<p>y</p>\r\n~~~',
+      '```html\r\n<div>x</div>\r\n\r\n<p>y</p>\r\n```',
+      '- a\r\n\r\n  ````\r\n  <div>x</div>\r\n  ````',
+    ];
+    for (const block of blocks) {
+      expect(toEditorDisplayMarkdown(`avant\r\n\r\n${block}\r\n\r\naprès <section>`))
+        .toBe(`avant\n\n${block.replace(/\r\n/g, '\n')}\n\naprès \\<section>`);
+    }
+  });
+
   it('reads a fence left open as code to the end of the text', () => {
     const markdown = 'avant <section>\n\n```html\n<div>x</div>\n\n<p>y</p>';
 

@@ -307,6 +307,19 @@ describe('MarkdownEditor: ordinary Markdown', () => {
     });
   }
 
+  it('saves the code of a text with Windows line ends as it is written', async () => {
+    const editor = await mountEditor('avant\r\n\r\n~~~\r\n<div>x</div>\r\n~~~\r\n\r\nfin');
+
+    expect(editor.showsRichText()).toBe(true);
+    expect(editor.onChange).not.toHaveBeenCalled();
+
+    await editor.appendParagraph('ajout');
+
+    expect(editor.lastChange()).toBe('avant\n\n```\n<div>x</div>\n```\n\nfin\n\najout');
+
+    editor.unmount();
+  });
+
   it('reports no change in read-only mode', async () => {
     const editor = await mountEditor('<u>souligné</u> et <section>texte</section>', { disabled: true });
 
