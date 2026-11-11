@@ -1,10 +1,17 @@
 import { matchRichTextHtmlTag } from './richTextHtmlElements';
+import { RICH_TEXT_LINK_SCHEMES } from './richTextLinkAddress';
 
 // The line that opens a fenced block: the fence may sit in a list item or a quote, at any indent.
 const FENCE_OPENING_REGEX = /^(?:[ \t>]|(?:[-*+]|\d{1,9}[.)])[ \t])*(`{3,}|~{3,})(.*)$/;
 const FENCE_CLOSING_REGEX = /^[ \t>]*(`{3,}|~{3,})[ \t]*$/;
 // What may be an automatic link: no space and no angle bracket between its angle brackets.
 const AUTOLINK_CANDIDATE_REGEX = /<([^\s<>]+)>/y;
+// The start of an automatic link the editor reads as a link: a scheme of `RICH_TEXT_LINK_SCHEMES`,
+// with its two slashes for a web address, then an address.
+const AUTOLINK_ADDRESS_REGEX = new RegExp(
+  `^(?:${RICH_TEXT_LINK_SCHEMES.map((scheme) => (scheme.startsWith('http') ? `${scheme}://` : `${scheme}:`)).join('|')}).`,
+  'i',
+);
 // A link destination between angle brackets, with its optional title, up to the closing parenthesis.
 const ANGLE_BRACKET_DESTINATION_REGEX = /<[^<>\n]*>(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'))?[ \t]*\)/y;
 
@@ -149,10 +156,11 @@ function shouldSkipAngleBracketSanitization(text: string, index: number): boolea
 
 /**
  * The Markdown link of an automatic link, from the text between its angle brackets: a web
- * address, a mail address with or without its scheme. Null for anything else, which is text.
+ * address, a phone number, a mail address with or without its scheme. Null for anything else,
+ * which is text.
  */
 function autolinkAsMarkdownLink(target: string): string | null {
-  if (/^(?:https?:\/\/|mailto:)./i.test(target)) return `[${target}](${target})`;
+  if (AUTOLINK_ADDRESS_REGEX.test(target)) return `[${target}](${target})`;
   // An e-mail address: a name without a scheme, an at sign, then a domain with a dot inside it.
   const at = target.indexOf('@');
   if (at < 1 || target.lastIndexOf(':', at) !== -1) return null;

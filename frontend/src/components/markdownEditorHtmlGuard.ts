@@ -22,6 +22,7 @@ import type {
   MdxJsxTextElement,
 } from 'mdast-util-mdx-jsx';
 import { isRichTextBareElementName, isRichTextImageAttribute } from '../lib/richTextHtmlElements';
+import { richTextLinkAddress } from '../lib/richTextLinkAddress';
 
 type HtmlElementNode = MdxJsxFlowElement | MdxJsxTextElement;
 
@@ -136,3 +137,33 @@ export const htmlAsTextPlugin = realmPlugin({
     realm.pub(createActiveEditorSubscription$, registerHtmlAsTextTransform);
   },
 });
+
+/**
+ * Keeps the links of the text shown in `container`, table cells included, to the addresses a
+ * rich text opens (`richTextLinkAddress`): any other address gets `about:blank` in the page, as
+ * the editor gives the schemes it does not know. The text keeps the address as it is written.
+ * Returns the function that stops the watch.
+ */
+export function watchLinkAddresses(container: HTMLElement): () => void {
+  const check = (link: Element) => {
+    const address = link.getAttribute('href');
+    if (address && address !== 'about:blank' && richTextLinkAddress(address) === null) {
+      link.setAttribute('href', 'about:blank');
+    }
+  };
+  const checkWithin = (node: Node) => {
+    if (!(node instanceof Element)) return;
+    if (node.tagName === 'A') check(node);
+    node.querySelectorAll('a[href]').forEach(check);
+  };
+
+  checkWithin(container);
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      if (record.type === 'attributes') checkWithin(record.target);
+      else record.addedNodes.forEach(checkWithin);
+    }
+  });
+  observer.observe(container, { subtree: true, childList: true, attributes: true, attributeFilter: ['href'] });
+  return () => observer.disconnect();
+}

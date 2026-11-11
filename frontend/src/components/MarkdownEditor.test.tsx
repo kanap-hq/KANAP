@@ -55,11 +55,31 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
     });
   }
 
-  it('gives a Markdown link with a script scheme no address', async () => {
-    const editor = await mountEditor('[lien](javascript:void%200)');
+  it.each([
+    ['a script scheme', '[lien](javascript:void%200)'],
+    ['a message scheme', '[lien](sms:+33123456789)'],
+    ['a file transfer scheme', '[lien](ftp://exemple.test/a)'],
+    ['a message scheme in a table cell', '| a |\n| - |\n| [lien](sms:+33123456789) |'],
+  ])('gives a Markdown link with %s no address and reports no change', async (_name, text) => {
+    const editor = await mountEditor(text);
 
     expect(unexpectedMarkup({ built: ['a'] })).toEqual([]);
     expect(editor.content().querySelector('a')?.getAttribute('href')).toBe('about:blank');
+    expect(editor.onChange).not.toHaveBeenCalled();
+
+    editor.unmount();
+  });
+
+  it('keeps the address of a Markdown link with a phone number, and saves it unchanged with an edit', async () => {
+    const editor = await mountEditor('[appeler](tel:+33123456789)');
+
+    expect(unexpectedMarkup({ built: ['a'] })).toEqual([]);
+    expect(editor.content().querySelector('a')?.getAttribute('href')).toBe('tel:+33123456789');
+    expect(editor.onChange).not.toHaveBeenCalled();
+
+    await editor.appendParagraph('ajout');
+
+    expect(editor.lastChange()).toBe('[appeler](tel:+33123456789)\n\najout');
 
     editor.unmount();
   });
@@ -84,11 +104,24 @@ describe('MarkdownEditor: a stored text with HTML elements', () => {
     editor.unmount();
   });
 
-  it('reads an automatic link as a link', async () => {
-    const editor = await mountEditor('voir <https://exemple.test/a>');
+  it.each([
+    ['a web address', 'https://exemple.test/a'],
+    ['a phone number', 'tel:+33123456789'],
+  ])('reads an automatic link to %s as a link', async (_name, address) => {
+    const editor = await mountEditor(`voir <${address}>`);
 
     expect(editor.showsRichText()).toBe(true);
-    expect(editor.content().querySelector('a')?.getAttribute('href')).toBe('https://exemple.test/a');
+    expect(editor.content().querySelector('a')?.getAttribute('href')).toBe(address);
+    expect(editor.onChange).not.toHaveBeenCalled();
+
+    editor.unmount();
+  });
+
+  it('shows an automatic link with a message scheme as text', async () => {
+    const editor = await mountEditor('écrire à <sms:+33123456789>');
+
+    expect(editor.content().querySelector('a')).toBeNull();
+    expect(editor.content().textContent).toBe('écrire à <sms:+33123456789>');
     expect(editor.onChange).not.toHaveBeenCalled();
 
     editor.unmount();
@@ -226,6 +259,7 @@ describe('MarkdownEditor: the preview of a link', () => {
     ['a mail address', 'mailto:equipe@exemple.test'],
     ['a path of the application', '/portfolio/tasks/T-1/overview'],
     ['an anchor', '#suite'],
+    ['a phone number', 'tel:+33123456789'],
   ])('opens %s', async (_name, address) => {
     const editor = await mountEditor(`voir [le lien](${address}) ici`);
 
@@ -239,7 +273,7 @@ describe('MarkdownEditor: the preview of a link', () => {
 
   it.each([
     ['a file transfer address', 'ftp://exemple.test/a'],
-    ['a phone number', 'tel:+33123456789'],
+    ['a message address', 'sms:+33123456789'],
     ['a script scheme', 'javascript:void%200'],
     ['a relative address', 'page.md'],
   ])('shows %s as text, without a link', async (_name, address) => {

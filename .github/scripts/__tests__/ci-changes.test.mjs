@@ -74,6 +74,8 @@ test('files read across the two trees bring the other suite', (t) => {
     'frontend/src/locales/en/admin.json',
     // The HTML tags of a rich text, compared with the list of the server (`rich-text-html-rule.spec.ts`).
     'frontend/src/lib/richTextHtmlElements.ts',
+    // The schemes of the links of a rich text, compared with the list of the server (same spec).
+    'frontend/src/lib/richTextLinkAddress.ts',
     // Coded 403 messages (`coded-forbidden.inventory.spec.ts`).
     'frontend/src/locales/en/errors.json',
     'frontend/src/locales/de/errors.json']) {

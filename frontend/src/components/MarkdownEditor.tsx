@@ -60,7 +60,7 @@ import {
   looksLikeMarkdown,
   shouldHandleRichClipboardImport,
 } from '../lib/richClipboardMarkdown';
-import { htmlAsTextPlugin } from './markdownEditorHtmlGuard';
+import { htmlAsTextPlugin, watchLinkAddresses } from './markdownEditorHtmlGuard';
 import MarkdownLinkDialog from './MarkdownLinkDialog';
 import { markdownEditorTranslation } from './markdownEditorTranslation';
 
@@ -584,6 +584,8 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
     if (!mdxRef.current || disabled || focusNonce === undefined || focusNonce < 1) return;
     mdxRef.current.focus();
   }, [focusNonce, disabled]);
+
+  React.useEffect(() => (containerRef.current ? watchLinkAddresses(containerRef.current) : undefined), []);
 
   React.useEffect(() => {
     const container = containerRef.current;

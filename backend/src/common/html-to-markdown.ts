@@ -31,6 +31,18 @@ export const RICH_TEXT_ALLOWED_HTML = {
   imageAttributes: ['src', 'alt', 'title', 'width', 'height'],
 } as const;
 
+/**
+ * The schemes of the addresses a link opens, in lower case. An image opens the same addresses
+ * without the phone number. The editor holds the same list, `RICH_TEXT_LINK_SCHEMES` in
+ * `frontend/src/lib/richTextLinkAddress.ts`, and shows a link of another scheme as text:
+ * `rich-text-html-rule.spec.ts` reads the editor's file and compares the two lists.
+ */
+export const RICH_TEXT_LINK_SCHEMES = ['http', 'https', 'mailto', 'tel'] as const;
+
+const schemeRegex = (schemes: readonly string[]) => new RegExp(`^(?:${schemes.join('|')}):`, 'i');
+const LINK_SCHEME_REGEX = schemeRegex(RICH_TEXT_LINK_SCHEMES);
+const IMAGE_SCHEME_REGEX = schemeRegex(RICH_TEXT_LINK_SCHEMES.filter((scheme) => scheme !== 'tel'));
+
 const PAIRED_TAG_REGEX = new RegExp(`^</?(?:${RICH_TEXT_ALLOWED_HTML.paired.join('|')})>$`);
 const LINE_BREAK_TAG_REGEX = new RegExp(`^<${RICH_TEXT_ALLOWED_HTML.lineBreak}(?: ?/)?>$`);
 // An image tag on one line whose attributes all have a quoted value.
@@ -105,13 +117,14 @@ function isAllowedImageAttribute(name: string, value: string): boolean {
 }
 
 /**
- * Whether a link or an image may have this address: an `http`, `https` or `mailto` address, or
- * an address without a scheme (a path, a query, an anchor). An address whose first segment
- * holds a colon, or a character reference that may stand for one, has a scheme.
+ * Whether a link, or an image, may have this address: an address with a scheme of
+ * `RICH_TEXT_LINK_SCHEMES` (an image has no phone number), or an address without a scheme (a
+ * path, a query, an anchor). An address whose first segment holds a colon, or a character
+ * reference that may stand for one, has a scheme.
  */
-function isAllowedLinkAddress(value: string): boolean {
+function isAllowedLinkAddress(value: string, image = false): boolean {
   const address = String(value || '').trim().replace(/\\([!-/:-@[-`{-~])/g, '$1');
-  if (/^(?:https?|mailto):/i.test(address)) return true;
+  if ((image ? IMAGE_SCHEME_REGEX : LINK_SCHEME_REGEX).test(address)) return true;
   // Up to the first "/" or "?", without its anchor (a "#" after "&" starts a character reference).
   const firstSegment = (/^[^/?]*/.exec(address)?.[0] ?? '').replace(/(?<!&)#.*$/s, '');
   return !/:|&(?:#x?[0-9a-f]+|[a-z][a-z0-9]*);/i.test(firstSegment);
@@ -282,7 +295,7 @@ type RefusedContent = { written: string; address: boolean };
 /**
  * What a parsed text holds that a write refuses, one entry per token, each once: a tag outside
  * `RICH_TEXT_ALLOWED_HTML`, in the text of a link definition too, and a link, an image or a
- * link definition whose address is neither a web or mail address nor a relative one
+ * link definition whose address is neither one of `RICH_TEXT_LINK_SCHEMES` nor a relative one
  * (`isAllowedLinkAddress`), as it is written.
  */
 function collectRefusedContent(tokens: MarkdownToken[]): RefusedContent[] {
@@ -302,7 +315,7 @@ function collectRefusedContent(tokens: MarkdownToken[]): RefusedContent[] {
       // An address written in a sentence, without brackets, is text. An inline base64 image has
       // its own refusal (`tokensContainDataImage`).
       const checked = /^[[!<]/.test(written) && !(current.type === 'image' && isDataImageUri(href));
-      address = checked && !isAllowedLinkAddress(href);
+      address = checked && !isAllowedLinkAddress(href, current.type === 'image');
       if (address) tag = written;
       else if (current.type === 'def') tag = firstRefusedHtmlTag(definitionText(current));
     }

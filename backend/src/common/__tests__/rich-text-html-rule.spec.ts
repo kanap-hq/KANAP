@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { BadRequestException } from '@nestjs/common';
 import { parse } from 'csv-parse/sync';
 import { backendPath } from './backend-root';
-import { isAllowedMarkdownHtmlSnippet, RICH_TEXT_ALLOWED_HTML } from '../html-to-markdown';
+import { isAllowedMarkdownHtmlSnippet, RICH_TEXT_ALLOWED_HTML, RICH_TEXT_LINK_SCHEMES } from '../html-to-markdown';
 import { MARKDOWN_HTML_NOT_ALLOWED, MARKDOWN_LINK_NOT_ALLOWED } from '../markdown-limits';
 import { normalizeMarkdownRichText } from '../markdown-rich-text';
 
@@ -143,6 +143,20 @@ function testTheEditorHoldsTheSameList() {
     literal.replace(/'/g, '"').replace(/([A-Za-z]+):/g, '"$1":').replace(/,(\s*[}\]])/g, '$1'),
   );
   assert.deepEqual(editorList, RICH_TEXT_ALLOWED_HTML, 'the editor and the server hold the same list of HTML tags');
+}
+
+/**
+ * The schemes of the addresses a link opens, read in the editor's own file:
+ * `RICH_TEXT_LINK_SCHEMES` of `frontend/src/lib/richTextLinkAddress.ts` is the list of the
+ * server. `ci-changes.sh` runs the backend suite when that file changes.
+ */
+function testTheEditorHoldsTheSameLinkSchemes() {
+  const file = path.join(backendPath(), '..', 'frontend', 'src', 'lib', 'richTextLinkAddress.ts');
+  const literal = /export const RICH_TEXT_LINK_SCHEMES = (\[[^\]]*\]) as const;/.exec(fs.readFileSync(file, 'utf8'))?.[1];
+  assert.ok(literal, 'the editor declares RICH_TEXT_LINK_SCHEMES as one list');
+  const editorSchemes = JSON.parse(literal.replace(/'/g, '"').replace(/,(\s*\])/g, '$1'));
+  assert.deepEqual(editorSchemes, [...RICH_TEXT_LINK_SCHEMES], 'the editor and the server hold the same list of link schemes');
+  assert.deepEqual([...RICH_TEXT_LINK_SCHEMES], ['http', 'https', 'mailto', 'tel']);
 }
 
 /**
@@ -320,9 +334,10 @@ function testDefinitionsAreChecked() {
 }
 
 /**
- * A link or an image opens an `http`, `https` or `mailto` address, or an address without a
- * scheme (a path, a query, an anchor). Any other address is refused on a write, with a code of
- * its own and a message that names the addresses a link opens.
+ * A link opens an `http`, `https`, `mailto` or `tel` address (`RICH_TEXT_LINK_SCHEMES`), or an
+ * address without a scheme (a path, a query, an anchor); an image, the same without the phone
+ * number. Any other address is refused on a write, with a code of its own and a message that
+ * names the addresses a link opens.
  */
 function testLinksAndImagesOpenWebMailOrRelativeAddresses() {
   const accepted: Array<[string, string]> = [
@@ -332,6 +347,10 @@ function testLinksAndImagesOpenWebMailOrRelativeAddresses() {
     ['a mail link', '[write](mailto:support@example.com)'],
     ['an automatic web link', 'See <https://example.com/a>.'],
     ['an automatic mail link', 'Write to <support@example.com>.'],
+    ['a phone link', '[call](tel:+33123456789)'],
+    ['a phone link in capitals', '[call](TEL:+33123456789)'],
+    ['an automatic phone link', 'Call <tel:+33123456789>.'],
+    ['a phone link by reference', '[call][desk]\n\n[desk]: tel:+33123456789'],
     ['a web address in a sentence', 'See https://example.com/a or www.example.com for more.'],
     ['a path of the application', '[task](/portfolio/tasks/T-1/overview)'],
     ['an anchor', '[section](#deployment)'],
@@ -350,7 +369,10 @@ function testLinksAndImagesOpenWebMailOrRelativeAddresses() {
 
   const refused: Array<[string, string, string]> = [
     ['a file transfer link', 'Read [the file](ftp://example.com/a).', '[the file](ftp://example.com/a)'],
-    ['a phone link', '[call](tel:+33123456789)', '[call](tel:+33123456789)'],
+    ['a message link', '[write](sms:+33123456789)', '[write](sms:+33123456789)'],
+    ['an automatic message link', 'Write to <sms:+33123456789>.', '<sms:+33123456789>'],
+    ['an image with a phone number', '![Diagram](tel:+33123456789)', '![Diagram](tel:+33123456789)'],
+    ['an image by reference with a phone number', '![Diagram][desk]\n\n[desk]: tel:+33123456789', '![Diagram][desk]'],
     ['a local file link', '[hosts](file:///etc/hosts)', '[hosts](file:///etc/hosts)'],
     ['a link of another application', '[open](x-app:open?id=1)', '[open](x-app:open?id=1)'],
     ['a scheme in capitals', '[page](FTP://EXAMPLE.COM)', '[page](FTP://EXAMPLE.COM)'],
@@ -372,7 +394,11 @@ function testLinksAndImagesOpenWebMailOrRelativeAddresses() {
     assert.deepEqual(Object.keys(refusal ?? {}).sort(), ['code', 'example', 'field', 'message'], name);
     assert.equal(refusal?.field, 'notes', name);
     assert.equal(refusal?.example, example, name);
-    assert.match(String(refusal?.message), /^notes holds a link or an image whose address is not accepted\. Use a web address/, name);
+    assert.match(
+      String(refusal?.message),
+      /^notes holds a link or an image whose address is not accepted\. Use a web address \(http, https\), a mail address \(mailto\), a phone number \(tel\), /,
+      name,
+    );
   }
 
   // The first thing a text holds that a write refuses gives the refusal its code.
@@ -507,6 +533,7 @@ function run() {
   testAcceptedElementsTakeNoAttribute();
   testTheListAndItsFormsAreThoseOfTheEditor();
   testTheEditorHoldsTheSameList();
+  testTheEditorHoldsTheSameLinkSchemes();
   testAnAcceptedNameInAnotherFormIsRefusedInProse();
   testTheAcceptedListIsAccepted();
   testMarkdownAndCodeAreAccepted();

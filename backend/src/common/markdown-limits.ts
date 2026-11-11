@@ -139,7 +139,8 @@ export function markdownLinkNotAllowedError(fieldName: string, link: string): Ba
   return new BadRequestException({
     code: MARKDOWN_LINK_NOT_ALLOWED,
     message: `${fieldName} holds a link or an image whose address is not accepted. Use a web address (http, https), `
-      + `a mail address (mailto), a path of the application or an anchor, or write the address as text. Example: ${example}`,
+      + `a mail address (mailto), a phone number (tel), a path of the application or an anchor, or write the address as text. `
+      + `Example: ${example}`,
     field: fieldName,
     example,
   });

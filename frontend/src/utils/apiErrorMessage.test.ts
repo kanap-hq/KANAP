@@ -726,17 +726,17 @@ describe('a rich text refused for the address of a link', () => {
 
   it('says which addresses a link opens, in each language', () => {
     expect(getApiErrorMessage(refused, t, 'fallback'))
-      .toBe('This link is not accepted. Use a web address, an email address or a page of the application.');
+      .toBe('This link is not accepted. Use a web address, an email address, a phone number or a page of the application.');
     expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback'))
-      .toBe("Ce lien n'est pas accepté. Utilisez une adresse web, une adresse e-mail ou une page de l'application.");
+      .toBe("Ce lien n'est pas accepté. Utilisez une adresse web, une adresse e-mail, un numéro de téléphone ou une page de l'application.");
     expect(getApiErrorMessage(refused, i18n.getFixedT('de'), 'fallback'))
-      .toBe('Dieser Link wird nicht akzeptiert. Verwenden Sie eine Webadresse, eine E-Mail-Adresse oder eine Seite der Anwendung.');
+      .toBe('Dieser Link wird nicht akzeptiert. Verwenden Sie eine Webadresse, eine E-Mail-Adresse, eine Telefonnummer oder eine Seite der Anwendung.');
     expect(getApiErrorMessage(refused, i18n.getFixedT('es'), 'fallback'))
-      .toBe('Este enlace no se acepta. Utilice una dirección web, una dirección de correo electrónico o una página de la aplicación.');
+      .toBe('Este enlace no se acepta. Utilice una dirección web, una dirección de correo electrónico, un número de teléfono o una página de la aplicación.');
   });
 
   it('says the same for a document', () => {
     expect(getDocumentSaveErrorMessage(refused, t, 'fallback'))
-      .toBe('This link is not accepted. Use a web address, an email address or a page of the application.');
+      .toBe('This link is not accepted. Use a web address, an email address, a phone number or a page of the application.');
   });
 });

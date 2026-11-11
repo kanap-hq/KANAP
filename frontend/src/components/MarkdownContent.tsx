@@ -17,6 +17,7 @@ import nginx from 'highlight.js/lib/languages/nginx';
 import powershell from 'highlight.js/lib/languages/powershell';
 import properties from 'highlight.js/lib/languages/properties';
 import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormalization';
+import { RICH_TEXT_LINK_SCHEMES, richTextLinkAddress } from '../lib/richTextLinkAddress';
 
 interface MarkdownContentProps {
   content: string;
@@ -35,6 +36,7 @@ const sanitizeSchema = {
   ...defaultSchema,
   protocols: {
     ...defaultSchema.protocols,
+    href: [...RICH_TEXT_LINK_SCHEMES],
     src: [...(defaultSchema.protocols?.src || []), 'data', 'blob'],
   },
   attributes: {
@@ -136,11 +138,7 @@ function sanitizeUrl(url: string, key?: string): string {
   if (!value) return '';
   if (value.startsWith('#')) return value;
 
-  if (key === 'href') {
-    if (/^(https?:|mailto:)/i.test(value)) return value;
-    if (value.startsWith('/')) return value;
-    return '';
-  }
+  if (key === 'href') return richTextLinkAddress(value) ?? '';
 
   if (key === 'src') {
     if (/^(https?:|blob:)/i.test(value) || /^data:image\//i.test(value)) return value;

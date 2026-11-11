@@ -142,6 +142,18 @@ describe('isKanapImageSource', () => {
 });
 
 describe('MarkdownContent links', () => {
+  it('opens a phone number', () => {
+    renderMarkdown('[appeler](tel:+33123456789)');
+
+    expect(screen.getByRole('link', { name: 'appeler' })).toHaveAttribute('href', 'tel:+33123456789');
+  });
+
+  it.each(['sms:+33123456789', 'ftp://exemple.test/a'])('gives a link to %s no address', (address) => {
+    const { container } = renderMarkdown(`[lien](${address})`);
+
+    expect(container.querySelector('a')?.getAttribute('href') ?? '').toBe('');
+  });
+
   it('keeps a relative link to a page of the application', () => {
     // How the assistant cites a record without a business reference (its `page_url`).
     renderMarkdown('Renew [SAP Maintenance & Support](/ops/contracts/11111111-1111-4111-8111-111111111111) before May.', {

@@ -257,10 +257,9 @@ const EXPECTED_STYLE_PROPERTIES = new Set([
 function unexpectedAttribute(tag: string, name: string, value: string): boolean {
   if (name.startsWith('aria-') || name.startsWith('data-')) return false;
   if (!EXPECTED_ATTRIBUTES.has(name)) return true;
-  // A link opens an address of a rich text; the editor's own links also keep a phone or message
-  // address, and get `about:blank` for any other scheme.
+  // A link opens an address of a rich text, and gets `about:blank` for any other address.
   if (name === 'href') {
-    return tag !== 'a' || (richTextLinkAddress(value) === null && !/^(?:about:blank$|tel:|sms:)/i.test(value));
+    return tag !== 'a' || (richTextLinkAddress(value) === null && value !== 'about:blank');
   }
   if (name === 'src') return !isRichTextImageAttribute('src', value);
   if (name === 'target') return value !== '_blank';
