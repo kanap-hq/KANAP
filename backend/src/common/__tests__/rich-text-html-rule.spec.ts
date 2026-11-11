@@ -411,6 +411,29 @@ function testTimeIsBoundedOnLongTexts() {
   }
 }
 
+/** The rule reads a text of the size limit once, whatever it holds: 200 KB in less than 300 ms. */
+function testTheRuleReadsALongTextOnce() {
+  const size = 200 * 1024;
+  const cases: Array<[string, string]> = [
+    ['a deeply indented tag', `Text\n\n${' '.repeat(size - 20)}<form a="b">`],
+    ['a deeply indented word', `Text\n\n${' '.repeat(size - 20)}word`],
+    ['indented lines of growing depth', Array.from({ length: 600 }, (_, depth) => `${' '.repeat(depth + 4)}a<b`).join('\n')],
+    ['less-than signs', '<'.repeat(size)],
+    ['the start of a mail address followed by dots', `<a@${'.'.repeat(size - 3)}`],
+    ['openings of a tag', '<a'.repeat(size / 2)],
+    ['openings of a link address', '](<'.repeat(Math.floor(size / 3))],
+    ['underline tags that are never closed', '<u>'.repeat(Math.floor(size / 3))],
+  ];
+  for (const [name, text] of cases) {
+    const start = process.hrtime.bigint();
+    refusalOf(text);
+    const ms = Number(process.hrtime.bigint() - start) / 1e6;
+    assert.ok(ms < 300, `${name}: ${ms.toFixed(0)} ms`);
+  }
+  assert.equal(refusalOf(cases[0][1])?.example, '<form a="b">');
+  assert.equal(refusalOf(cases[1][1]), null);
+}
+
 /** Every text of the sample data: CSV cells, documents, translated values. */
 function sampleDataTexts(): Array<{ name: string; text: string }> {
   const root = backendPath('fixtures', 'fromage-co');
@@ -469,6 +492,7 @@ function run() {
   testLinksAndImagesOpenWebMailOrRelativeAddresses();
   testThirdPartyTextKeepsItsOtherAddressesAsText();
   testTimeIsBoundedOnLongTexts();
+  testTheRuleReadsALongTextOnce();
   testSampleDataIsAccepted();
   console.log('rich-text-html-rule.spec: ok');
 }

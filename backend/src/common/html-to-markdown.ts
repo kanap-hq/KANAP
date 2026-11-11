@@ -196,7 +196,8 @@ function walkMarkedToken(value: unknown, visit: (token: MarkdownToken) => void):
     if (token.type === 'codespan') return;
     if (token.type === 'code') {
       if (token.codeBlockStyle !== 'indented') return;
-      const prose = String(token.text ?? '');
+      // Read again without any indent, in one pass: the parser takes one level off at a time.
+      const prose = String(token.text ?? '').replace(/^[ \t]+/gm, '');
       // A block the parser cannot read again is checked as a whole, like the text of a tag.
       walkMarkedToken(parseTokens(prose) ?? [{ type: 'html', raw: prose }], visit);
       return;
