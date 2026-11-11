@@ -14318,6 +14318,7 @@ async function runTriageWithSimulatedModel(input: {
   manager?: ReturnType<typeof createMemoryManager>['manager'];
   runId?: string;
   administrativeReply?: () => unknown;
+  technicianBrief?: () => unknown;
 }) {
   const manager = input.manager ?? createMemoryManager().manager;
   const context = createContext(manager);
@@ -14466,6 +14467,7 @@ async function runTriageWithSimulatedModel(input: {
         case 'reply_synthesis':
           return structuredJsonSuccess(input.reply ?? {});
         case 'technician_brief':
+          if (input.technicianBrief) return input.technicianBrief();
           return structuredJsonSuccess({ technician_brief: `Synthèse technicien ${TRIAGE_BRIEF_MARKER}.` });
         case 'administrative_reply':
           if (input.administrativeReply) return input.administrativeReply();
@@ -14706,6 +14708,18 @@ async function testAFailedDraftKeepsThePendingReplyOfTheSameDecision() {
   });
   assert.equal(withdrawn?.status, 'expired');
   assert.equal((withdrawn?.metadata_json as Record<string, unknown>)?.withdrawn_reason, 'superseded_by_new_plan');
+}
+
+async function testTheInternalNoteSaysWhyItHasNoBrief() {
+  const result = await runTriageWithSimulatedModel({
+    notes: triageNotes(true),
+    plan: TRIAGE_SOURCED_PLAN,
+    reply: TRIAGE_SOURCED_REPLY,
+    technicianBrief: () => {
+      throw new Error('model timeout');
+    },
+  });
+  assert.match(result.internalNote ?? '', /No synthesis brief was produced \(reason: technician_brief_error\)\./);
 }
 
 async function testTriageWithoutInternalNoteKeepsOneReplyCall() {
@@ -17385,6 +17399,7 @@ async function run() {
   await testTriageWritesAnAdministrativeReplyOnlyWhenItIsPrepared();
   await testAPlanWithoutItsCloseReplyDoesNotClose();
   await testAFailedDraftKeepsThePendingReplyOfTheSameDecision();
+  await testTheInternalNoteSaysWhyItHasNoBrief();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
   testSynthesisPayloadIncludesScreenshotEvidence();

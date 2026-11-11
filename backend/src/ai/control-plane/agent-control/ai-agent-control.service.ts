@@ -6448,6 +6448,7 @@ export class AiAgentControlService {
     // The technician brief reads every item of the ticket. The reply call writes it when every
     // item is public; otherwise a call of its own writes it, only when an internal note carries it.
     const synthesizedNoteResult = replySynthesisResult;
+    let technicianBriefMissingReason: string | null = null;
     if (
       synthesizedNoteResult
       && !isPlannerEscalation
@@ -6486,6 +6487,7 @@ export class AiAgentControlService {
           || baseUsageEstimate.estimatedCostEur + projection.estimatedCostEur > guardrails.maxEstimatedCostEur
         )
       ) {
+        technicianBriefMissingReason = 'technician_brief_projected_over_per_run_cap';
         await this.recordStageRunStep(context, RUN_STEP_STAGES.technicianBrief, {
           runId: ticketResult.run_id,
           stepIndex: briefStepIndex,
@@ -6515,6 +6517,7 @@ export class AiAgentControlService {
           const reason = error instanceof Error
             ? `technician_brief_error:${error.message.slice(0, 180)}`
             : 'technician_brief_error';
+          technicianBriefMissingReason = 'technician_brief_error';
           await this.recordStageRunStep(context, RUN_STEP_STAGES.technicianBrief, {
             runId: ticketResult.run_id,
             stepIndex: briefStepIndex,
@@ -6536,7 +6539,7 @@ export class AiAgentControlService {
     const noteBody = isPlannerEscalation
       ? buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason })
       : (replySynthesisResult
-        ? renderSynthesizedTriageNote(ticket, ticketTimeline, replySynthesisResult)
+        ? renderSynthesizedTriageNote(ticket, ticketTimeline, replySynthesisResult, technicianBriefMissingReason)
         : (isPlannerAdministrativeReply
           ? buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, { kind: 'administrative_reply', reason: administrativeReason })
           : buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, null)));

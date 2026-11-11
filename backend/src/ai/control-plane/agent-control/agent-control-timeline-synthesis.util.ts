@@ -612,6 +612,8 @@ export function renderSynthesizedTriageNote(
   ticket: TicketLike,
   timeline: TicketTimelineEntry[],
   synthesis: ReplySynthesisResult,
+  // Why no technician brief was written, as a code (for example over the run cap).
+  briefMissingReason: string | null = null,
 ): string {
   const used = limitedSourceLines(synthesis.used_sources.map(synthesisSourceLine), MAX_SYNTHESIS_NOTE_SOURCES, 'used source(s)');
   const rejected = limitedSourceLines(
@@ -620,7 +622,10 @@ export function renderSynthesizedTriageNote(
     'rejected source(s)',
   );
   const technicianBrief = sanitizeForProvider(
-    synthesis.technician_brief || 'No synthesis brief was produced.',
+    synthesis.technician_brief
+      || (briefMissingReason
+        ? `No synthesis brief was produced (reason: ${briefMissingReason.split(':')[0]}).`
+        : 'No synthesis brief was produced.'),
     MAX_INTERNAL_SYNTHESIS_BRIEF_CHARS,
   );
   const recommendedReply = synthesis.usable
