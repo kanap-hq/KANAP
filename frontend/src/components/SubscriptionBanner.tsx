@@ -89,7 +89,7 @@ export default function SubscriptionBanner() {
   }
 
   // Unpaid invoice during its grace: the workspace stays usable until the freeze date.
-  if (subscription.access_allowed !== false) {
+  if (subscription.access_allowed === true) {
     const freezeAt = subscription.freeze_effective_at;
     const date = freezeAt ? formatShortDate(freezeAt, locale, { year: 'always' }) : null;
     const amount = formatAmount(locale, subscription.latest_invoice_amount, subscription.latest_invoice_currency);
@@ -117,7 +117,8 @@ export default function SubscriptionBanner() {
     );
   }
 
-  // Frozen subscription
+  // Frozen subscription, or a summary that does not say (access_allowed absent): the error
+  // banner, as before the grace was shown.
   if (isBillingAdmin) {
     return (
       <Alert

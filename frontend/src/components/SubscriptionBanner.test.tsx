@@ -74,6 +74,16 @@ describe('SubscriptionBanner', () => {
     expect(alert.className).toMatch(/Error/);
   });
 
+  it('keeps the banner of before the grace when the summary does not say whether access is allowed', () => {
+    // An older summary (no access_allowed): the error of a subscription that needs attention.
+    renderBanner({ status: 'past_due', is_subscription_healthy: false });
+    expect(screen.getByRole('alert')).toHaveTextContent('Your subscription needs attention.');
+    expect(screen.getByRole('alert').className).toMatch(/Error/);
+    renderBanner({ status: 'past_due', is_subscription_healthy: false, freeze_effective_at: '2099-11-24T00:00:00.000Z' }, false);
+    expect(screen.getAllByRole('alert')[1]).toHaveTextContent('Account access is limited. Contact your billing admin.');
+    expect(screen.getAllByRole('alert')[1].className).toMatch(/Error/);
+  });
+
   it('shows nothing for a healthy subscription', () => {
     renderBanner({ status: 'active', is_subscription_healthy: true, access_allowed: true });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
