@@ -2230,13 +2230,14 @@ export class AiAgentControlService {
     }
     if (Object.prototype.hasOwnProperty.call(input, 'scope_policy_json')) {
       // The libraries the agent may cite change only when the input gives them: a scope policy
-      // without knowledge_sources keeps the stored ones. So does the internal notes setting.
+      // without knowledge_sources keeps the stored ones, and knowledge_sources that is not an
+      // object counts as missing. So does the internal notes setting.
       const nextScopePolicy = normalizedPolicyObject(input.scope_policy_json, 'Scope policy');
       const storedKnowledgeSources = isRecord(definition.scope_policy_json) ? definition.scope_policy_json.knowledge_sources : undefined;
       const nextKnowledgeSources = nextScopePolicy?.knowledge_sources;
       definition.scope_policy_json = normalizeScopePolicyForAgentType(
         definition.agent_type,
-        storedKnowledgeSources !== undefined && !(nextScopePolicy && Object.prototype.hasOwnProperty.call(nextScopePolicy, 'knowledge_sources'))
+        storedKnowledgeSources !== undefined && !isRecord(nextKnowledgeSources)
           ? { ...(nextScopePolicy ?? {}), knowledge_sources: storedKnowledgeSources }
           : isRecord(nextKnowledgeSources)
             ? {

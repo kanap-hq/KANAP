@@ -16565,6 +16565,33 @@ async function testTheInternalNotesSettingIsKeptUnlessAnUpdateGivesIt() {
   assert.equal(await stored(), 'used');
 }
 
+// A scope policy whose knowledge_sources is not an object counts as one without them: the stored
+// setting and libraries are kept.
+async function testAScopePolicyWithoutAKnowledgeSourcesObjectKeepsTheStoredOnes() {
+  const LIBRARY_ID = '6f1c2b0e-8d4a-4c1e-9b7a-3e5d2c1f0a94';
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const service = new AiAgentControlService({} as any, {} as any, {} as any, {} as any, {} as any, queue);
+  const created = await service.createAgentDefinition(context, { name: 'Desk kept sources' });
+  const id = created.agent_definition.id;
+  const reload = async () => (await manager.getRepository(AiAgentDefinition).findOne({ where: { id, tenant_id: context.tenantId } }))!;
+  await service.updateAgentDefinition(context, id, {
+    knowledge_sources: { knowledge: { enabled: true, all_libraries: false, library_ids: [LIBRARY_ID] }, internal_notes: 'ignored' },
+  });
+  const before = ((await reload()).scope_policy_json as any).knowledge_sources;
+  assert.equal(before.internal_notes, 'ignored');
+  assert.deepEqual(readAgentKnowledgeSources(await reload()).knowledgeLibraryIds, [LIBRARY_ID]);
+
+  for (const value of [null, 'all', 3, [], ['used']]) {
+    await service.updateAgentDefinition(context, id, { scope_policy_json: { mode: 'manual_safe_target', knowledge_sources: value } });
+    const after = ((await reload()).scope_policy_json as any).knowledge_sources;
+    assert.equal(after.internal_notes, 'ignored', `knowledge_sources ${JSON.stringify(value)} keeps the setting`);
+    assert.deepEqual(after, before, `knowledge_sources ${JSON.stringify(value)} keeps the stored sources`);
+    assert.deepEqual(readAgentKnowledgeSources(await reload()).knowledgeLibraryIds, [LIBRARY_ID]);
+  }
+}
+
 async function testAnAgentUpdateKeepsItsLibrariesUnlessItGivesThem() {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
@@ -17216,6 +17243,7 @@ async function run() {
   await testCreateHelpdeskAgentFromCodeDefaultsBindsProviderAndCapabilities();
   await testAnAgentUpdateKeepsItsLibrariesUnlessItGivesThem();
   await testTheInternalNotesSettingIsKeptUnlessAnUpdateGivesIt();
+  await testAScopePolicyWithoutAKnowledgeSourcesObjectKeepsTheStoredOnes();
   await testCreateSreAgentFromCodeDefaultsUsesA1AndCapabilities();
   await testManualTicketingTriageRequiresAgentDefinitionId();
   await testMockTicketingInternalNoteWriteScenarios();
