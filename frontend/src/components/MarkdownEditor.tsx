@@ -60,6 +60,7 @@ import {
   looksLikeMarkdown,
   shouldHandleRichClipboardImport,
 } from '../lib/richClipboardMarkdown';
+import { htmlAsTextPlugin } from './markdownEditorHtmlGuard';
 import MarkdownLinkDialog from './MarkdownLinkDialog';
 import { markdownEditorTranslation } from './markdownEditorTranslation';
 
@@ -639,6 +640,7 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
     const toolbarConfig = getMarkdownEditorToolbarConfig(fullToolbar);
     const basePlugins = [
       captureRootEditorPlugin({ editorRef: lexicalEditorRef }),
+      htmlAsTextPlugin(),
       headingsPlugin({ allowedHeadingLevels: toolbarConfig.allowedHeadingLevels }),
       listsPlugin(),
       quotePlugin(),
