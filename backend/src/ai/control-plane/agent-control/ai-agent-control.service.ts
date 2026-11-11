@@ -762,6 +762,28 @@ export const RUN_STEP_STAGES = {
   evidenceExtraction: { kind: 'evidence_extraction', capabilityName: 'ticket_image_evidence_extraction' },
 } as const;
 
+/**
+ * The internal note a sample triage proposes, read on the Approvals page. The alert is named only
+ * when the caller chose one: the default sample alert is an internal identifier.
+ */
+export function triageNoteBody(input: {
+  alertId: string | null;
+  ticketId: string;
+  runId: string;
+  recommendationId: string;
+  preparedAt: Date;
+}): string {
+  return [
+    `[${PRODUCT_NAME} triage]`,
+    ...(input.alertId ? [`Alert: ${input.alertId}`] : []),
+    `Ticket: ${input.ticketId}`,
+    `Run: ${input.runId}`,
+    `Recommendation: ${input.recommendationId}`,
+    `Prepared at: ${input.preparedAt.toISOString()}`,
+    'This internal note was prepared by the Agent Control Center and requires human approval before posting.',
+  ].join('\n');
+}
+
 @Injectable()
 export class AiAgentControlService {
   private readonly logger = new Logger(AiAgentControlService.name);
@@ -3630,7 +3652,8 @@ export class AiAgentControlService {
     if (providerKey !== 'mock') {
       throw new BadRequestException('The Agent Control Center mock triage endpoint is mock-only.');
     }
-    const alertId = trimmedString(input.alert_id) ?? 'mock-alert-001';
+    const chosenAlertId = trimmedString(input.alert_id);
+    const alertId = chosenAlertId ?? 'mock-alert-001';
     const ticketId = trimmedString(input.ticket_id) ?? 'mock-ticket-1001';
     const includeDirectory = input.include_directory !== false;
 
@@ -3653,15 +3676,13 @@ export class AiAgentControlService {
     if (!runId) {
       throw new BadRequestException('Mock diagnostic did not create an AI run.');
     }
-    const noteBody = trimmedString(input.note_body) ?? [
-      `[${PRODUCT_NAME} mock triage]`,
-      `Alert: ${alertId}`,
-      `Ticket: ${ticketId}`,
-      `Run: ${runId}`,
-      `Recommendation: ${diagnostic.recommendation_id}`,
-      `Prepared at: ${new Date().toISOString()}`,
-      'This internal note was prepared by the Agent Control Center and requires human approval before posting.',
-    ].join('\n');
+    const noteBody = trimmedString(input.note_body) ?? triageNoteBody({
+      alertId: chosenAlertId ?? null,
+      ticketId,
+      runId,
+      recommendationId: diagnostic.recommendation_id,
+      preparedAt: new Date(),
+    });
 
     const proposal = await this.diagnostics.proposeInternalNoteForRecommendation(context, {
       recommendation_id: diagnostic.recommendation_id,
