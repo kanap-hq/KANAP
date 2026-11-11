@@ -14169,6 +14169,17 @@ async function testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale() {
     synthesizeTicketReply: async () => {
       throw new Error('Synthesis must not run for a planner-authored administrative reply.');
     },
+    buildAdministrativeReplyPayload: () => ({ prompt: 'unused' }),
+    draftAdministrativeReply: async () => ({
+      language: 'fr',
+      requester_reply: 'Bonjour, votre demande concernant l\'application a bien été reçue. Nous analysons le problème et revenons vers vous rapidement.',
+      fallback_reason: null,
+      model: 'test:administrative-reply',
+      usage: { input_tokens: 10, output_tokens: 6 },
+      estimated_tokens: 16,
+      estimated_cost_eur: 0.00003,
+      latency_ms: 1,
+    }),
   };
   const actionPlanner = {
     maxOutputTokens: () => 1600,
@@ -14183,8 +14194,8 @@ async function testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale() {
         {
           action_type: 'requester_reply',
           reply_kind: 'administrative',
+          administrative_intent: 'acknowledgement',
           reason: 'Accuser réception; aucune source fiable ne couvre le problème de lancement.',
-          body: 'Bonjour, votre demande concernant l\'application a bien été reçue. Nous analysons le problème et revenons vers vous rapidement.',
         },
       ],
       rationale: 'Réponse administrative en attendant un diagnostic technicien.',
@@ -14239,6 +14250,221 @@ async function testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale() {
   } finally {
     (Features as any).AI_WEB_SEARCH_READY = previousWebReady;
   }
+}
+
+// Decisions and technician texts read every item of the ticket; a text for the requester is
+// written by a call that reads the public items of the ticket and no free text of those calls.
+const TRIAGE_INTERNAL_MARKER = 'marker-echo-5150';
+const TRIAGE_PLANNER_MARKER = 'marker-foxtrot-7321';
+const TRIAGE_BRIEF_MARKER = 'marker-golf-8846';
+
+function triageNotes(withInternalNote: boolean) {
+  return [
+    {
+      id: '1',
+      visibility: 'public',
+      authorRole: 'requester',
+      body: 'L\'application ne démarre toujours pas après redémarrage.',
+      createdAt: '2026-06-02T08:00:00.000Z',
+    },
+    ...(withInternalNote
+      ? [{
+        id: '2',
+        visibility: 'internal',
+        authorRole: 'support',
+        body: `Note du technicien ${TRIAGE_INTERNAL_MARKER} : licence expirée.`,
+        createdAt: '2026-06-02T09:00:00.000Z',
+      }]
+      : []),
+  ];
+}
+
+async function runTriageWithSimulatedModel(input: {
+  notes: Array<Record<string, unknown>>;
+  plan: Record<string, unknown>;
+  reply?: Record<string, unknown>;
+}) {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const previousWebReady = Features.AI_WEB_SEARCH_READY;
+  (Features as any).AI_WEB_SEARCH_READY = true;
+  const queue = new AiAgentWorkQueueService();
+  const definitionBundle = await seedTestHelpdeskDefinition(context);
+  definitionBundle.definition.scope_policy_json = {
+    ...(definitionBundle.definition.scope_policy_json ?? {}),
+    knowledge_sources: {
+      knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+      web: { enabled: true },
+      precedence: 'knowledge_first',
+    },
+  };
+  await manager.getRepository(AiAgentDefinition).save(definitionBundle.definition);
+  const prepared: { publicReply: string | null; internalNote: string | null } = { publicReply: null, internalNote: null };
+  let toolIndex = 0;
+  const runId = 'run-two-calls';
+  const dispatcher = {
+    execute: async (_context: unknown, request: any) => {
+      toolIndex += 1;
+      const toolExecutionId = `two-calls-tool-${toolIndex}`;
+      const ok = (data: unknown) => ({ run_id: runId, step_id: `step-${toolIndex}`, tool_execution_id: toolExecutionId, output: { ok: true, data, evidence: [] } });
+      switch (request.capabilityName) {
+        case 'ticketing.ticket.get':
+          return ok({
+            id: '64',
+            title: 'Mon app ne se lance pas',
+            status: 'processing_assigned',
+            priority: 'medium',
+            description: 'Je clique ici et il ne se passe rien. Je dois faire quoi ?',
+          });
+        case TICKETING_TICKET_NOTES_LIST_CAPABILITY:
+          return ok({ notes: input.notes });
+        case TICKETING_CLASSIFICATION_CONTEXT_CAPABILITY:
+          return ok({ type: 'Incident', priority: 'Medium', urgency: 'Medium' });
+        case TICKETING_LIFECYCLE_CONTEXT_CAPABILITY:
+          return ok({ allowedTransitions: [] });
+        case TICKETING_ROUTING_CONTEXT_CAPABILITY:
+        case TICKETING_PARTICIPANT_CONTEXT_CAPABILITY:
+          return ok({});
+        case 'search_knowledge':
+          return {
+            run_id: runId,
+            step_id: 'step-search',
+            tool_execution_id: toolExecutionId,
+            output: {
+              items: [{
+                id: 'doc-64',
+                ref: 'DOC-64',
+                title: 'Démarrage de l\'application',
+                summary: 'Relancer le service de licence.',
+                snippet: 'Relancer le service de licence.',
+                status: 'published',
+                updated_at: '2026-06-01T08:00:00.000Z',
+              }],
+              total: 1,
+              returned: 1,
+              truncated: false,
+              complete: false,
+            },
+          };
+        case 'get_document':
+          return {
+            run_id: runId,
+            step_id: 'step-document',
+            tool_execution_id: toolExecutionId,
+            output: { id: 'doc-64', ref: 'DOC-64', title: 'Démarrage de l\'application', summary: 'Relancer le service de licence.', status: 'published', content_markdown: 'Relancer le service de licence depuis le portail.', updated_at: '2026-06-01T08:00:00.000Z' },
+          };
+        case 'web_search':
+          return {
+            run_id: runId,
+            step_id: 'step-web',
+            tool_execution_id: toolExecutionId,
+            output: { items: [], total: null, returned: 0, truncated: false, complete: true },
+          };
+        case TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY:
+          prepared.internalNote = request.input.note_body;
+          await savePreparedTicketingAction(context, {
+            id: 'two-calls-internal-action',
+            runId,
+            toolExecutionId,
+            capabilityName: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY,
+            body: request.input.note_body,
+            visibility: 'internal',
+            providerKey: 'glpi',
+          });
+          return ok({ action_request_id: 'two-calls-internal-action' });
+        case TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY:
+          prepared.publicReply = request.input.reply_body;
+          await savePreparedTicketingAction(context, {
+            id: 'two-calls-public-action',
+            runId,
+            toolExecutionId,
+            capabilityName: TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY,
+            body: request.input.reply_body,
+            visibility: 'public',
+            providerKey: 'glpi',
+          });
+          return ok({ action_request_id: 'two-calls-public-action' });
+        default:
+          throw new Error(`Unexpected capability ${request.capabilityName}`);
+      }
+    },
+  };
+  const calls: Array<{ taskName: string; payload: unknown }> = [];
+  const llmClient = {
+    callStructuredJsonModel: async (_context: unknown, request: any) => {
+      calls.push({ taskName: request.taskName, payload: request.userPayload });
+      switch (request.taskName) {
+        case 'action_planner':
+          return structuredJsonSuccess(input.plan);
+        case 'reply_synthesis':
+          return structuredJsonSuccess(input.reply ?? {});
+        case 'technician_brief':
+          return structuredJsonSuccess({ technician_brief: `Synthèse technicien ${TRIAGE_BRIEF_MARKER}.` });
+        case 'administrative_reply':
+          return structuredJsonSuccess({ language: 'fr', requester_reply: 'Bonjour, votre demande a bien été reçue.' });
+        default:
+          throw new Error(`Unexpected model call ${request.taskName}`);
+      }
+    },
+  };
+  const service = new AiAgentControlService(
+    {} as any,
+    {} as any,
+    dispatcher as any,
+    {} as any,
+    { getApplicability: async () => ({ available: true }) } as any,
+    queue,
+    undefined,
+    new AiReplySynthesisService(llmClient as any),
+    undefined,
+    undefined,
+    new AiAgentActionPlannerService(llmClient as any),
+  ) as any;
+  service.getRunDetail = async () => ({ action_requests: [] });
+  try {
+    await service.runTicketingTriage(context, {
+      provider_key: 'glpi',
+      target_key: '#64',
+      agent_definition_id: definitionBundle.definition.id,
+    });
+  } finally {
+    (Features as any).AI_WEB_SEARCH_READY = previousWebReady;
+  }
+  return { calls, ...prepared };
+}
+
+function payloadOf(calls: Array<{ taskName: string; payload: unknown }>, taskName: string): string {
+  const call = calls.find((candidate) => candidate.taskName === taskName);
+  assert.ok(call, `${taskName} is called`);
+  return JSON.stringify(call.payload);
+}
+
+async function testTriagePlannerDecidesOnEveryItemAndAPublicCallWritesTheAdministrativeReply() {
+  const result = await runTriageWithSimulatedModel({
+    notes: triageNotes(true),
+    plan: {
+      actions: [
+        { action_type: 'internal_note', reason: `Documenter ${TRIAGE_PLANNER_MARKER}.` },
+        {
+          action_type: 'requester_reply',
+          reply_kind: 'administrative',
+          administrative_intent: 'acknowledgement',
+          reason: `Accuser réception ${TRIAGE_PLANNER_MARKER}.`,
+          body: `Texte du planificateur ${TRIAGE_PLANNER_MARKER}.`,
+        },
+      ],
+      rationale: `Raisonnement ${TRIAGE_PLANNER_MARKER}.`,
+      confidence: 0.8,
+    },
+  });
+  assert.deepEqual(result.calls.map((call) => call.taskName), ['action_planner', 'administrative_reply']);
+  assert.ok(payloadOf(result.calls, 'action_planner').includes(TRIAGE_INTERNAL_MARKER), 'the planner reads the internal note');
+  const administrativePayload = payloadOf(result.calls, 'administrative_reply');
+  assert.ok(!administrativePayload.includes(TRIAGE_INTERNAL_MARKER), 'the administrative reply reads no internal note');
+  assert.ok(!administrativePayload.includes(TRIAGE_PLANNER_MARKER), 'the administrative reply reads no planner text');
+  assert.ok(administrativePayload.includes('acknowledgement'));
+  assert.equal(result.publicReply, 'Bonjour, votre demande a bien été reçue.');
+  assert.ok(result.internalNote?.includes(TRIAGE_PLANNER_MARKER), 'the internal note keeps the planner reasoning');
 }
 
 // Fix B (regression #33): the synthesis prompt must genuinely prefer relevant internal KANAP
@@ -16887,6 +17113,7 @@ async function run() {
   await testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis();
   await testGlpiTriageSynthesisRejectsOffTopicKnowledgeAndUsesWeb();
   await testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale();
+  await testTriagePlannerDecidesOnEveryItemAndAPublicCallWritesTheAdministrativeReply();
   testSynthesisPromptPrefersInternalKnowledgeSources();
   testSynthesisPromptCarriesValidationStatus();
   testSynthesisPayloadIncludesScreenshotEvidence();

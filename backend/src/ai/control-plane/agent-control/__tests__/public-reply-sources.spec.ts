@@ -17,7 +17,7 @@ import type { TicketNoteLike, TicketTimelineEntry } from '../ai-agent-control.se
 import { AiTicketNeedRepresentationService } from '../ai-ticket-need-representation.service';
 import { AiKnowledgeSearchPlannerService } from '../ai-knowledge-search-planner.service';
 import { readAgentKnowledgeSources } from '../agent-control-definition.util';
-import { citableKnowledgeDocuments } from '../public-reply-sources';
+import { ADMINISTRATIVE_REPLY_INTENTS, administrativeReplyIntent, citableKnowledgeDocuments } from '../public-reply-sources';
 import { AiCapabilityRegistry } from '../../capability/ai-capability.registry';
 
 /**
@@ -131,7 +131,7 @@ function testAnInternalNoteReadsEveryItemOfTheTicket() {
   assert.ok(note.includes(INTERNAL_MARKER));
 }
 
-function testTheActionPlannerReadsThePublicItemsOfTheTicket() {
+function testTheActionPlannerReadsEveryItemOfTheTicket() {
   const payload = new AiAgentActionPlannerService({} as any).buildPromptPayload({
     ticket,
     timeline: timeline(),
@@ -144,8 +144,76 @@ function testTheActionPlannerReadsThePublicItemsOfTheTicket() {
   } as any);
   const text = JSON.stringify(payload);
   assert.ok(text.includes('I restarted the printer this morning.'));
+  assert.ok(text.includes(INTERNAL_MARKER));
+  assert.ok(text.includes(UNMARKED_MARKER));
+  // The planner decides; it writes no text for the requester.
+  const [actionSchema] = (payload.schema as { actions: Array<Record<string, unknown>> }).actions;
+  assert.equal('body' in actionSchema, false);
+}
+
+const PLANNER_TEXT_MARKER = 'marker-hotel-3390';
+
+async function testAnAdministrativeReplyReadsThePublicItemsOfTheTicket() {
+  const payloads: unknown[] = [];
+  const service = new AiReplySynthesisService({
+    callStructuredJsonModel: async (_context: unknown, options: { taskName: string; userPayload: unknown }) => {
+      payloads.push(options.userPayload);
+      assert.equal(options.taskName, 'administrative_reply');
+      return structuredJson({ language: 'en', requester_reply: 'Your request is in our queue.' });
+    },
+  } as any);
+  const draft = await service.draftAdministrativeReply({} as any, {
+    ticket,
+    timeline: timeline(),
+    language: 'en',
+    intent: 'acknowledgement',
+    // A caller handing over free text of the planner: the payload leaves it out.
+    reason: `Planner reasoning ${PLANNER_TEXT_MARKER}`,
+  } as any);
+  assert.equal(draft.requester_reply, 'Your request is in our queue.');
+  const text = JSON.stringify(payloads[0]);
+  assert.ok(text.includes('I restarted the printer this morning.'));
   assert.ok(!text.includes(INTERNAL_MARKER));
   assert.ok(!text.includes(UNMARKED_MARKER));
+  assert.ok(!text.includes(PLANNER_TEXT_MARKER));
+  assert.equal((payloads[0] as Record<string, unknown>).reply_intent, 'acknowledgement');
+}
+
+function testAnAdministrativeReplyKindComesFromAClosedList() {
+  assert.deepEqual([...ADMINISTRATIVE_REPLY_INTENTS], ['close_reply', 'acknowledgement', 'other']);
+  assert.equal(administrativeReplyIntent('close_reply'), 'close_reply');
+  assert.equal(administrativeReplyIntent(`Tell the requester ${PLANNER_TEXT_MARKER}`), 'other');
+  assert.equal(administrativeReplyIntent(null), 'other');
+  const payload = new AiReplySynthesisService({} as any).buildAdministrativeReplyPayload({
+    ticket,
+    timeline: timeline(),
+    language: 'en',
+    intent: `Tell the requester ${PLANNER_TEXT_MARKER}`,
+  });
+  assert.equal(payload.reply_intent, 'other');
+  assert.ok(!JSON.stringify(payload).includes(PLANNER_TEXT_MARKER));
+}
+
+async function testAnAdministrativeReplyKeepsThePublicReplyGuards() {
+  const service = new AiReplySynthesisService({
+    callStructuredJsonModel: async () => structuredJson({
+      language: 'en',
+      requester_reply: 'Note that the escalation desk works only on weekdays from 8 to 18.',
+    }),
+  } as any);
+  const draft = await service.draftAdministrativeReply({} as any, {
+    ticket,
+    timeline: timeline(),
+    language: 'en',
+    intent: 'acknowledgement',
+    profile: {
+      task: 'synthesis',
+      operating_context: { profile_id: 'p', name: 'Desk', lines: ['the escalation desk works only on weekdays from 8 to 18'] },
+      bounds_applied: [],
+    },
+  });
+  assert.equal(draft.requester_reply, '');
+  assert.equal(draft.fallback_reason, 'operating_context_leak');
 }
 
 function testScreenshotsOfInternalNotesStayOutOfThePublicReply() {
@@ -350,7 +418,10 @@ async function run() {
     testAPublicReplyReadsThePublicItemsOfTheTicket,
     testAMessageNotMarkedPublicIsInternal,
     testAnInternalNoteReadsEveryItemOfTheTicket,
-    testTheActionPlannerReadsThePublicItemsOfTheTicket,
+    testTheActionPlannerReadsEveryItemOfTheTicket,
+    testAnAdministrativeReplyReadsThePublicItemsOfTheTicket,
+    testAnAdministrativeReplyKindComesFromAClosedList,
+    testAnAdministrativeReplyKeepsThePublicReplyGuards,
     testScreenshotsOfInternalNotesStayOutOfThePublicReply,
     testKnowledgeItemsKeepTheirLibrary,
     testAPublicReplyCitesTheLibrariesTheAgentMayCite,
