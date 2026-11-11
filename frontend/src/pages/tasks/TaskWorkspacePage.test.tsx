@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { KanapDialogProvider } from '../../components/design';
 import { createAppTheme } from '../../config/ThemeContext';
 import api from '../../api';
@@ -35,12 +35,14 @@ const translationMock = vi.hoisted(() => {
 
 const queryClientMock = vi.hoisted(() => ({
   invalidateQueries: vi.fn(),
+  removeQueries: vi.fn(),
 }));
 
 const taskQueryMock = vi.hoisted(() => ({
   task: undefined as any,
   isLoading: false,
   refetch: vi.fn(async () => undefined),
+  queryFn: null as null | (() => Promise<unknown>),
 }));
 
 vi.mock('react-i18next', async () => {
@@ -68,8 +70,9 @@ vi.mock('react-i18next', async () => {
 });
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
+  useQuery: ({ queryKey, queryFn }: { queryKey: unknown[]; queryFn?: () => Promise<unknown> }) => {
     if (Array.isArray(queryKey) && queryKey[0] === 'tasks' && queryKey.length === 2 && queryKey[1] !== 'new') {
+      taskQueryMock.queryFn = queryFn ?? null;
       return {
         data: taskQueryMock.task,
         isLoading: taskQueryMock.isLoading,
@@ -153,6 +156,8 @@ vi.mock('./components/TaskDetailHeader', () => ({
     onOriginClick,
     onParentClick,
     onNavigateToProject,
+    onDelete,
+    canDelete,
     projectId,
     crumbs,
     tabs,
@@ -166,6 +171,8 @@ vi.mock('./components/TaskDetailHeader', () => ({
     onOriginClick?: () => void;
     onParentClick?: (href: string) => void;
     onNavigateToProject?: (projectId: string) => void;
+    onDelete?: () => void;
+    canDelete?: boolean;
     projectId?: string | null;
     crumbs?: Array<{ key: string; href: string }>;
   }) => {
@@ -174,6 +181,7 @@ vi.mock('./components/TaskDetailHeader', () => ({
       <div data-testid="task-detail-header">
         <button type="button" onClick={() => onClose?.()}>close-task</button>
         <button type="button" onClick={() => onOriginClick?.()}>back-task</button>
+        {canDelete ? <button type="button" onClick={() => onDelete?.()}>delete-task</button> : null}
         {parent ? (
           <button type="button" onClick={() => onParentClick?.(parent.href)}>parent-breadcrumb</button>
         ) : null}
@@ -344,6 +352,95 @@ function makeTask(overrides: Record<string, any> = {}) {
     ...overrides,
   };
 }
+
+/** Same prefix match as `invalidateQueries`: a filter of `['tasks']` hits `['tasks', id]`. */
+function invalidateWouldRefetch(
+  filters: { queryKey?: readonly unknown[]; exact?: boolean; predicate?: (query: { queryKey: readonly unknown[] }) => boolean } | undefined,
+  recordKey: string,
+): boolean {
+  const recordKeyParts = ['tasks', recordKey] as const;
+  const key = filters?.queryKey;
+  if (key) {
+    if (filters?.exact) {
+      if (key.length !== recordKeyParts.length || key.some((part, index) => part !== recordKeyParts[index])) return false;
+    } else if (key.some((part, index) => part !== recordKeyParts[index])) {
+      return false;
+    }
+  }
+  if (typeof filters?.predicate === 'function' && !filters.predicate({ queryKey: recordKeyParts })) return false;
+  return true;
+}
+
+describe('TaskWorkspacePage delete', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    translationMock.reset();
+    taskQueryMock.task = makeTask({ id: 'task-uuid', item_number: 1, title: 'Close the gate' });
+    taskQueryMock.isLoading = false;
+    taskQueryMock.queryFn = null;
+    taskQueryMock.refetch.mockReset();
+    taskQueryMock.refetch.mockResolvedValue(undefined);
+    vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['task-uuid'], failed: [] } } as any);
+
+    const localStorageMock = createLocalStorageMock();
+    vi.stubGlobal('localStorage', localStorageMock);
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      configurable: true,
+    });
+
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  afterEach(() => {
+    queryClientMock.invalidateQueries.mockReset();
+    queryClientMock.removeQueries.mockReset();
+  });
+
+  it('does not request the deleted task again', async () => {
+    const routeRef = 'T-1';
+    // react-query refetches an active query whose key the invalidation matches.
+    queryClientMock.invalidateQueries.mockImplementation((filters) => {
+      if (invalidateWouldRefetch(filters, routeRef) || invalidateWouldRefetch(filters, 'task-uuid')) {
+        return taskQueryMock.queryFn?.();
+      }
+      return undefined;
+    });
+    renderEditPage(`/portfolio/tasks/${routeRef}/overview`);
+    await screen.findByLabelText('Task description');
+    const loadsBefore = vi.mocked(api.get).mock.calls.filter(([url]) => url === `/tasks/${routeRef}` || url === '/tasks/task-uuid').length;
+
+    fireEvent.click(screen.getByRole('button', { name: 'delete-task' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete__0' }));
+
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/tasks/bulk', { data: { ids: ['task-uuid'] } }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks'));
+    expect(queryClientMock.removeQueries).toHaveBeenCalledWith({ queryKey: ['tasks', routeRef], exact: true });
+    expect(vi.mocked(api.get).mock.calls.filter(([url]) => url === `/tasks/${routeRef}` || url === '/tasks/task-uuid')).toHaveLength(loadsBefore);
+
+    const listQuery = { queryKey: ['tasks', 'list'] as const };
+    const listsRefreshed = queryClientMock.invalidateQueries.mock.calls.some(([filters]) => {
+      const key = filters?.queryKey as readonly unknown[] | undefined;
+      if (!key || key[0] !== 'tasks') return false;
+      if (key.length >= 2 && key[1] !== 'list') return false;
+      return typeof filters?.predicate !== 'function' || filters.predicate(listQuery);
+    });
+    expect(listsRefreshed).toBe(true);
+  });
+});
 
 describe('TaskWorkspacePage relation changes', () => {
   beforeEach(() => {
