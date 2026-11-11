@@ -113,6 +113,12 @@ export function invoiceHasPaymentIntent(invoice: any, paymentIntentId: string): 
   return invoicePaymentIntents(invoice).some((intent) => idOf(intent) === paymentIntentId);
 }
 
+/** Whether the invoice's latest PaymentIntent (expanded) is accepted but not settled yet (`processing`). */
+export function invoicePaymentProcessing(invoice: any): boolean {
+  const latest = invoicePaymentIntents(invoice)[0];
+  return typeof latest === 'object' && latest?.status === 'processing';
+}
+
 /** The latest refusal on the invoice's PaymentIntents (they must be expanded), else null. */
 export function invoicePaymentFailure(invoice: any): PaymentFailure | null {
   for (const intent of invoicePaymentIntents(invoice)) {

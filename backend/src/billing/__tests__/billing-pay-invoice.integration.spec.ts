@@ -54,10 +54,14 @@ function stripeAccount(seed: Seed, opts: {
   subscriptionCard?: string | null;
   customerCard?: string | null;
   collectionMethod?: string;
-  pay?: 'paid' | 'declined' | 'requires_action';
+  /**
+   * `already_paid`: Stripe's own retry paid the invoice meanwhile, `pay` is refused as such;
+   * `processing`: the payment is accepted but not settled yet, the invoice stays open.
+   */
+  pay?: 'paid' | 'declined' | 'requires_action' | 'already_paid' | 'processing';
   payDelay?: number;
 }) {
-  const state = { invoiceStatus: 'open', subscriptionStatus: 'past_due' };
+  const state = { invoiceStatus: 'open', subscriptionStatus: 'past_due', processing: false };
   const pays: Array<{ id: string; params: unknown; options: any }> = [];
   const client = {
     subscriptions: {
@@ -88,13 +92,27 @@ function stripeAccount(seed: Seed, opts: {
         total: 24900,
         currency: 'eur',
         created: Math.floor(Date.now() / 1000) - 20 * 86400,
-        payments: { data: [{ created: 1, payment: { type: 'payment_intent', payment_intent: { id: 'pi_1', last_payment_error: DECLINED } } }] },
+        payments: {
+          data: [
+            { created: 1, payment: { type: 'payment_intent', payment_intent: { id: 'pi_1', status: 'requires_payment_method', last_payment_error: DECLINED } } },
+            ...(state.processing ? [{ created: 2, payment: { type: 'payment_intent', payment_intent: { id: 'pi_2', status: 'processing' } } }] : []),
+          ],
+        },
       }),
       pay: async (id: string, params: unknown, options: unknown) => {
         pays.push({ id, params, options });
         await delay(opts.payDelay ?? 0);
         if (opts.pay === 'declined') {
           throw Object.assign(new Error('Your card was declined.'), { type: 'StripeCardError', code: 'card_declined' });
+        }
+        if (opts.pay === 'already_paid') {
+          state.invoiceStatus = 'paid';
+          state.subscriptionStatus = 'active';
+          throw Object.assign(new Error('Invoice is already paid'), { type: 'StripeInvalidRequestError', rawType: 'invalid_request_error' });
+        }
+        if (opts.pay === 'processing') {
+          state.processing = true;
+          return { id, status: 'open' };
         }
         if (opts.pay === 'requires_action') {
           throw Object.assign(new Error('Payment requires action'), { type: 'StripeInvalidRequestError', code: 'invoice_payment_intent_requires_action' });
@@ -186,6 +204,23 @@ async function testRefusalAndAuthenticationAreAnswered() {
   }
 }
 
+/**
+ * Stripe's answers that are no refusal: an invoice paid meanwhile (Stripe's retry at the same
+ * moment) is answered `paid`; a payment accepted but not settled yet, `processing`.
+ */
+async function testPaidMeanwhileAndProcessingAreNotRefusals() {
+  for (const [pay, status] of [['already_paid', 'paid'], ['processing', 'processing']] as const) {
+    const seed = await seedTenant(pay.replace('_', '-'));
+    try {
+      const { service, pays } = stripeAccount(seed, { pay });
+      assert.equal((await payInvoice(service, seed)).payment.status, status, pay);
+      assert.equal(pays.length, 1);
+    } finally {
+      await removeTenant(seed.tenantId);
+    }
+  }
+}
+
 async function testBankTransferIsNotCharged() {
   const seed = await seedTenant('transfer');
   try {
@@ -216,6 +251,7 @@ async function main() {
     await testCustomerCardWhenTheSubscriptionHasNone();
     await testRefusedCardIsNotChargedAgain();
     await testRefusalAndAuthenticationAreAnswered();
+    await testPaidMeanwhileAndProcessingAreNotRefusals();
     await testBankTransferIsNotCharged();
     await testTwoCallsTogetherPayOnce();
     // eslint-disable-next-line no-console

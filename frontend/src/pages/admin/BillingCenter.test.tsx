@@ -419,6 +419,12 @@ describe('BillingCenter unpaid invoice', () => {
     expect(await screen.findByText('The card has not changed. Update it, then pay.')).toBeInTheDocument();
   });
 
+  it('says a payment accepted but not settled yet is being processed', async () => {
+    await returnFromPortal({ ...CARD_REFUSED, payment: { status: 'processing' } });
+    expect(await screen.findByText('Payment is being processed.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Payment is being processed.');
+  });
+
   it('opens the invoice page when the bank asks to confirm the payment', async () => {
     await returnFromPortal({ ...CARD_REFUSED, payment: { status: 'requires_action' } });
     expect(await screen.findByText('Your bank asks you to confirm the payment.')).toBeInTheDocument();

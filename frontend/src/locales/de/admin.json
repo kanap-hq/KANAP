@@ -1756,6 +1756,7 @@
       "failed": "Zahlung abgelehnt: {{reason}}.",
       "openInvoice": "Rechnung öffnen",
       "paid": "Rechnung bezahlt.",
+      "processing": "Die Zahlung wird bearbeitet.",
       "requiresAction": "Ihre Bank verlangt eine Bestätigung der Zahlung."
     }
   },

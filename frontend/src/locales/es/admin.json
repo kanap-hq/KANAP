@@ -1756,6 +1756,7 @@
       "failed": "Pago rechazado: {{reason}}.",
       "openInvoice": "Abrir la factura",
       "paid": "Factura pagada.",
+      "processing": "El pago se está procesando.",
       "requiresAction": "Su banco solicita confirmar el pago."
     }
   },

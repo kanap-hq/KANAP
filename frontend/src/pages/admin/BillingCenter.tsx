@@ -264,8 +264,8 @@ function unpaidLines(subscription: BillingSubscription | null | undefined, t: Tr
 }
 
 /** The outcome of `POST /billing/pay-invoice`, called on the return from the portal. */
-type InvoicePaymentStatus = 'paid' | 'payment_failed' | 'requires_action' | 'card_unchanged' | 'nothing_to_pay';
-type PaymentNotice = { tone: 'success' | 'error'; text: string; invoiceUrl?: string | null };
+type InvoicePaymentStatus = 'paid' | 'payment_failed' | 'processing' | 'requires_action' | 'card_unchanged' | 'nothing_to_pay';
+type PaymentNotice = { tone: 'success' | 'info' | 'error'; text: string; invoiceUrl?: string | null };
 
 /** The line the page shows after paying the open invoice, or null when there was nothing to pay. */
 function paymentNotice(
@@ -281,6 +281,8 @@ function paymentNotice(
       const reason = t(`billing.unpaid.reasons.${PAYMENT_ERROR_REASONS.includes(code) ? code : 'other'}`);
       return { tone: 'error', text: t('billing.payment.failed', { reason }) };
     }
+    case 'processing':
+      return { tone: 'info', text: t('billing.payment.processing') };
     case 'requires_action':
       return { tone: 'error', text: t('billing.payment.requiresAction'), invoiceUrl: subscription?.latest_invoice_url ?? null };
     case 'card_unchanged':

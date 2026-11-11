@@ -10,6 +10,7 @@ import {
   cancellationEffectiveAt,
   invoicePaymentFailure,
   invoicePaymentIntentsExpand,
+  invoicePaymentProcessing,
   subscriptionDaysUntilDue,
   subscriptionPeriod,
   type PaymentFailure,
@@ -96,7 +97,7 @@ export type PlanChange = {
 
 /** The outcome of `POST /billing/pay-invoice` (see `BillingService.payOpenInvoice`). */
 export type InvoicePayment = {
-  status: 'paid' | 'payment_failed' | 'requires_action' | 'card_unchanged' | 'nothing_to_pay';
+  status: 'paid' | 'payment_failed' | 'processing' | 'requires_action' | 'card_unchanged' | 'nothing_to_pay';
 };
 
 /** A change of interval a Stripe subscription schedule applies at `effective_at` (ISO date). */
@@ -774,7 +775,8 @@ export class BillingService {
    * one last refused (no card was changed: no second refusal), and once: the call takes the
    * tenant's lock shared with the webhook (held until the request commits, so a second call then
    * finds the invoice paid), and Stripe's idempotency key names the invoice and the card. Returns
-   * the summary read again from Stripe, plus `payment.status`: `paid`, `payment_failed`,
+   * the summary read again from Stripe, plus `payment.status`: `paid` (also when Stripe's retry
+   * paid it meanwhile), `payment_failed`, `processing` (accepted, not settled yet),
    * `requires_action` (the bank asks for authentication: the invoice page takes it),
    * `card_unchanged`, or `nothing_to_pay` (no open invoice, or a subscription paid by transfer).
    */
@@ -809,12 +811,16 @@ export class BillingService {
     let status: InvoicePayment['status'];
     try {
       const paid: any = await client.invoices.pay(invoiceId, { payment_method: card }, { idempotencyKey: `invoice-pay-${invoiceId}-${card}` });
-      status = paid?.status === 'paid' ? 'paid' : 'payment_failed';
+      status = paid?.status === 'paid' ? 'paid' : await this.unsettledInvoicePayment(invoiceId);
     } catch (error: any) {
       if (error?.code === 'invoice_payment_intent_requires_action') {
         status = 'requires_action';
       } else if (error?.type === 'StripeCardError' || error?.rawType === 'card_error') {
         status = 'payment_failed';
+      } else if ((error?.type === 'StripeInvalidRequestError' || error?.rawType === 'invalid_request_error')
+        && (await client.invoices.retrieve(invoiceId))?.status === 'paid') {
+        // Refused because Stripe's own retry paid the invoice meanwhile.
+        status = 'paid';
       } else {
         throw error;
       }
@@ -832,6 +838,14 @@ export class BillingService {
       { manager },
     );
     return { status };
+  }
+
+  /** An invoice `invoices.pay` left unpaid without an error: `processing` while its payment is not settled yet, else refused. */
+  private async unsettledInvoicePayment(invoiceId: string): Promise<InvoicePayment['status']> {
+    const invoice: any = await this.getStripeClientOrThrow().invoices.retrieve(invoiceId, {
+      expand: [invoicePaymentIntentsExpand(this.stripeConfig.getApiVersion?.())],
+    });
+    return invoicePaymentProcessing(invoice) ? 'processing' : 'payment_failed';
   }
 
   /**

@@ -1756,6 +1756,7 @@
       "failed": "Payment refused: {{reason}}.",
       "openInvoice": "Open invoice",
       "paid": "Invoice paid.",
+      "processing": "Payment is being processed.",
       "requiresAction": "Your bank asks you to confirm the payment."
     }
   },
