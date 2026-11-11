@@ -725,6 +725,21 @@ export class AiPolicyService {
     throw moduleRightRequired('ai_agents', minimumLevel, `Missing required permission ai_agents:${minimumLevel}.`);
   }
 
+  /**
+   * Whether the person reads what a tool returned to another person, in a conversation or through
+   * MCP (control-plane/evidence/run-result-visibility.ts): an Administrator, who reads all data
+   * (the access of an Administrator is never limited, `data_access_apply`). `manager` is the
+   * request's connection, under the tenant.
+   */
+  async readsEveryRunResult(
+    context: Pick<AiPolicyAccessContext, 'userId'>,
+    manager: EntityManager,
+  ): Promise<boolean> {
+    if (!context.userId) return false;
+    const state = await this.getEffectivePermissionStateOrNull(context.userId, manager);
+    return state?.isAdmin === true;
+  }
+
   async assertAgentRead(
     context: AiPolicyAccessContext,
     manager: EntityManager,

@@ -101,7 +101,7 @@ export function RunAuditDetail({ detail }: { detail: AiAgentControlRunDetail }) 
           <Stack spacing={0.5}>
             {evidence.map((item) => (
               <Typography key={item.id} variant="caption" color="text.secondary">
-                {item.summary} · {humanize(item.source_object_type)}
+                {item.summary ? `${item.summary} · ${humanize(item.source_object_type)}` : humanize(item.source_object_type)}
               </Typography>
             ))}
           </Stack>

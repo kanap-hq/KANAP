@@ -15,6 +15,12 @@ import { AiRecommendation } from '../entities/ai-recommendation.entity';
 import { AiRunStep } from '../entities/ai-run-step.entity';
 import { AiRun } from '../entities/ai-run.entity';
 import { AiToolExecution } from '../entities/ai-tool-execution.entity';
+import {
+  actionInputWithoutValues,
+  actionMetadataWithoutValues,
+  inputWithoutValues,
+  metadataWithoutErrorMessage,
+} from '../evidence/run-result-visibility';
 import { cleanAgentPriority, metadataObject, stringFromMetadata, toIso } from './agent-control-util';
 import { auditActivityType } from './ai-agent-activity-timeline';
 
@@ -24,9 +30,17 @@ import { auditActivityType } from './ai-agent-activity-timeline';
  *
  * Extracted verbatim from the module-level header of ai-agent-control.service.ts, together
  * with the activity-detail types and bounds they use.
+ *
+ * A run, its steps, its tool executions and its evidence carry what the tools returned. Their
+ * serialisers take `resultsReadable` (evidence/run-result-visibility.ts): without it the line
+ * stays (the tool, the names of its arguments, its status and the code of a failure) and the
+ * result is left out, with the values of the arguments and their fingerprint, and the message of
+ * a failure, which quotes the same data. An action request and its approvals follow the run that
+ * prepared the action: without `resultsReadable` they keep the tool, the target, the status, who
+ * and when.
  */
 
-export function serializeRun(run: AiRun) {
+export function serializeRun(run: AiRun, resultsReadable: boolean) {
   return {
     id: run.id,
     tenant_id: run.tenant_id,
@@ -37,8 +51,8 @@ export function serializeRun(run: AiRun) {
     invocation_channel: run.invocation_channel,
     trigger_kind: run.trigger_kind,
     status: run.status,
-    input_summary: run.input_summary,
-    output_summary: run.output_summary,
+    input_summary: resultsReadable ? run.input_summary : inputWithoutValues(run.input_summary),
+    output_summary: resultsReadable ? run.output_summary : null,
     usage_json: run.usage_json,
     cost_json: run.cost_json,
     metadata_json: run.metadata_json,
@@ -49,7 +63,7 @@ export function serializeRun(run: AiRun) {
   };
 }
 
-export function serializeToolExecution(tool: AiToolExecution) {
+export function serializeToolExecution(tool: AiToolExecution, resultsReadable: boolean) {
   return {
     id: tool.id,
     tenant_id: tool.tenant_id,
@@ -62,21 +76,21 @@ export function serializeToolExecution(tool: AiToolExecution) {
     surface: tool.surface,
     effect: tool.effect,
     status: tool.status,
-    input_hash: tool.input_hash,
-    input_summary: tool.input_summary,
-    output_summary: tool.output_summary,
-    error_message: tool.error_message,
+    input_hash: resultsReadable ? tool.input_hash : null,
+    input_summary: resultsReadable ? tool.input_summary : inputWithoutValues(tool.input_summary),
+    output_summary: resultsReadable ? tool.output_summary : null,
+    error_message: resultsReadable ? tool.error_message : null,
     duration_ms: tool.duration_ms,
     usage_json: tool.usage_json,
     cost_json: tool.cost_json,
-    metadata_json: tool.metadata_json,
+    metadata_json: resultsReadable ? tool.metadata_json : metadataWithoutErrorMessage(tool.metadata_json),
     started_at: toIso(tool.started_at),
     completed_at: toIso(tool.completed_at),
     created_at: toIso(tool.created_at),
   };
 }
 
-export function serializeRunStep(step: AiRunStep) {
+export function serializeRunStep(step: AiRunStep, resultsReadable: boolean) {
   return {
     id: step.id,
     run_id: step.run_id,
@@ -85,9 +99,9 @@ export function serializeRunStep(step: AiRunStep) {
     status: step.status,
     capability_name: step.capability_name,
     capability_version: step.capability_version,
-    input_summary: step.input_summary,
-    output_summary: step.output_summary,
-    error_message: step.error_message,
+    input_summary: resultsReadable ? step.input_summary : inputWithoutValues(step.input_summary),
+    output_summary: resultsReadable ? step.output_summary : null,
+    error_message: resultsReadable ? step.error_message : null,
     started_at: toIso(step.started_at),
     completed_at: toIso(step.completed_at),
     created_at: toIso(step.created_at),
@@ -207,7 +221,7 @@ export function activityActionDetail(action: AiActionRequest): ActivityActionDet
   };
 }
 
-export function serializeEvidence(evidence: AiEvidence) {
+export function serializeEvidence(evidence: AiEvidence, resultsReadable: boolean) {
   return {
     id: evidence.id,
     tenant_id: evidence.tenant_id,
@@ -220,9 +234,10 @@ export function serializeEvidence(evidence: AiEvidence) {
     source_uri: evidence.source_uri,
     trust_level: evidence.trust_level,
     redaction_status: evidence.redaction_status,
-    content_hash: evidence.content_hash,
-    summary: evidence.summary,
-    payload_json: evidence.payload_json,
+    // The summary quotes the result and the hash is its fingerprint.
+    content_hash: resultsReadable ? evidence.content_hash : null,
+    summary: resultsReadable ? evidence.summary : null,
+    payload_json: resultsReadable ? evidence.payload_json : null,
     retention_class: evidence.retention_class,
     collected_at: toIso(evidence.collected_at),
     created_at: toIso(evidence.created_at),
@@ -366,6 +381,7 @@ export type ActionAgentLink = { agent_definition_id: string | null; agent_exists
 
 export function serializeActionRequest(
   action: AiActionRequest,
+  resultsReadable: boolean,
   executionReadiness?: ActionExecutionReadiness | null,
   agentLink?: ActionAgentLink | null,
 ) {
@@ -384,19 +400,20 @@ export function serializeActionRequest(
     target_type: action.target_type,
     target_id: action.target_id,
     target_ref: action.target_ref,
-    idempotency_key: action.idempotency_key,
-    action_payload_json: action.action_payload_json,
+    // The key, the payload and the metadata carry the arguments, or what a failure said of them.
+    idempotency_key: resultsReadable ? action.idempotency_key : null,
+    action_payload_json: resultsReadable ? action.action_payload_json : null,
     provider_kind: action.provider_kind,
     provider_key: action.provider_key,
-    input_hash: action.input_hash,
-    input_summary: action.input_summary,
+    input_hash: resultsReadable ? action.input_hash : null,
+    input_summary: resultsReadable ? action.input_summary : actionInputWithoutValues(action.input_summary),
     evidence_ids: action.evidence_ids,
     expires_at: toIso(action.expires_at),
     approved_at: toIso(action.approved_at),
     rejected_at: toIso(action.rejected_at),
     executed_at: toIso(action.executed_at),
-    error_message: action.error_message,
-    metadata_json: action.metadata_json,
+    error_message: resultsReadable ? action.error_message : null,
+    metadata_json: resultsReadable ? action.metadata_json : actionMetadataWithoutValues(action.metadata_json),
     execution_readiness: executionReadiness ?? null,
     // The agent is only linked through metadata (no FK), so it can outlive the
     // agent's deletion; the UI needs to know whether it still resolves.
@@ -407,7 +424,7 @@ export function serializeActionRequest(
   };
 }
 
-export function serializeApproval(approval: AiApproval) {
+export function serializeApproval(approval: AiApproval, resultsReadable: boolean) {
   return {
     id: approval.id,
     tenant_id: approval.tenant_id,
@@ -418,12 +435,12 @@ export function serializeApproval(approval: AiApproval) {
     status: approval.status,
     actor_user_id: approval.actor_user_id,
     actor_label: approval.actor_label,
-    input_hash: approval.input_hash,
+    input_hash: resultsReadable ? approval.input_hash : null,
     evidence_ids: approval.evidence_ids,
     reason: approval.reason,
     matched_policy_id: approval.matched_policy_id,
     matched_policy_version: approval.matched_policy_version,
-    decision_json: approval.decision_json,
+    decision_json: resultsReadable ? approval.decision_json : null,
     expires_at: toIso(approval.expires_at),
     decided_at: toIso(approval.decided_at),
     created_at: toIso(approval.created_at),
