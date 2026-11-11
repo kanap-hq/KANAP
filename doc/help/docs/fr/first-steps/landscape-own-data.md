@@ -44,7 +44,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Cliquez sur **Ajouter un actif**, ou **Importer** un fichier pour de nombreux serveurs. Choisissez le type d'actif et le site, puis **Créer**. Pour relier un serveur à une application, ouvrez l'application, onglet **Déploiements** : **Ajouter un déploiement** pour l'environnement, puis **Ajouter un serveur**.
 
-**Ce que vous lisez.** Le bloc de déploiement de l'application liste ses serveurs, et le serveur liste l'application sous **Applications hébergées** dans son onglet **Exploitation**. Les fins de support de ses technologies remontent désormais jusqu'au serveur. Les vulnérabilités d'un système d'exploitation démarrent hors des alertes, car Kadratis ne connaît pas le niveau de correctifs d'un serveur : **Cartographie SI > Vulnérabilités** les montre sous **Alertes**, **Exclues**, ou avec **Afficher les exclues** quand la liste est vide.
+**Ce que vous lisez.** Le bloc de déploiement de l'application liste ses serveurs, et le serveur liste l'application sous **Applications hébergées** dans son onglet **Exploitation**. Les fins de support de ses technologies remontent désormais jusqu'au serveur. Les vulnérabilités d'un système d'exploitation ne figurent pas dans les alertes au départ, car Kadratis ne connaît pas le niveau de correctifs d'un serveur. Pour les voir, ouvrez **Cartographie SI > Vulnérabilités** et choisissez **Exclues** dans le filtre **Alertes**, ou **Afficher les exclues** quand la liste est vide.
 
 ## 5. Un collègue
 
