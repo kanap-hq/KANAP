@@ -14,7 +14,7 @@ Ten minutes per path, with the Fromage & Co example or with your own data:
 
 - IT budget: [explore with the example](first-steps/budget-example.md), [start with my own data](first-steps/budget-own-data.md)
 - IT landscape map: [explore with the example](first-steps/landscape-example.md), [start with my own data](first-steps/landscape-own-data.md)
-- Projects and requests: [explore with the example](first-steps/portfolio-example.md), [start with my own data](first-steps/portfolio-own-data.md)
+- Portfolio: [explore with the example](first-steps/portfolio-example.md), [start with my own data](first-steps/portfolio-own-data.md)
 
 ## Fast Track Guides
 

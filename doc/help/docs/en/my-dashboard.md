@@ -44,7 +44,7 @@ In a cloud workspace that is empty and has never held sample data, Administrator
 
 In a trial workspace, a dialog opens the first time you open Kadratis. It asks one question per screen:
 
-1. **What brings you to Kadratis?** **The IT budget**, **The IT landscape map**, **Projects and requests**, or **Just looking**.
+1. **What brings you to Kadratis?** **The IT budget**, **The IT landscape map**, **The portfolio**, or **Just looking**.
 2. **How do you want to start?** **Explore with the complete example**, or **Start with my own data**.
 
 Starting with your own data erases the example. When items were created since the example was loaded, a confirmation gives their number before anything is erased. Only an administrator can choose your own data while the workspace holds the example. The example loads only into an empty workspace. During the trial, an administrator who chooses the example while the workspace holds data is asked to erase it first: the confirmation asks for the workspace name and offers **See what the workspace holds**. The workspace is erased, then the example loads. After the trial, the choice is refused and your path does not change.
@@ -67,8 +67,8 @@ During the trial, the tile also offers **Book a discovery call**: a 30-minute vi
 | Path | With the example | With your own data |
 |---|---|---|
 | IT budget | The overview, A budget line, A report, A question for Kad, Your data | Your company, Your budget lines, A linked contract, Your first report, A colleague |
-| IT landscape map | The application list, An application record, The servers, Technologies, end of support and vulnerabilities, Your data | Your locations, Your applications, Your technologies, Your servers, A colleague |
-| Projects and requests | A request and its score, The project born from the request, Tasks, The reports, Your data | Your first request, Your project, The first tasks, The project's budget, Your contributor profile |
+| IT landscape map | The application list, An application record, The assets, Technologies, end of support and vulnerabilities, Your data | Your locations, Your applications, Your technologies, Your assets, A colleague |
+| Portfolio | A request and its score, The project born from the request, Tasks, The reports, Your data | Your first request, Your project, The first tasks, The project's budget, Your contributor profile |
 
 ### The home page follows your path
 
@@ -76,7 +76,7 @@ During a trial, the section of your path comes first, led by the first steps til
 
 - **IT budget**: **Budget management**.
 - **IT landscape map**: **IT landscape**.
-- **Projects and requests**: **Portfolio**.
+- **Portfolio**: **Portfolio**.
 
 Without a path, the sections keep their default order. Once you order the sections yourself, your order applies.
 

@@ -46,7 +46,7 @@ Quand un parcours a été choisi pour l'espace de travail à sa première ouvert
 |---|---|
 | Budget IT | *Quelles sont les principales opportunités d'économies dans les OPEX IT ?*, *Quelles lignes n'ont pas de responsable ?* |
 | Cartographie du SI | *Quelles technologies arrivent en fin de support dans les six mois ?*, *Quelles applications critiques n'ont pas de plan de reprise ?* |
-| Projets et demandes | *Quels projets dépassent leur budget ?*, *Quelles demandes attendent un arbitrage ?* |
+| Portefeuille | *Quels projets dépassent leur budget ?*, *Quelles demandes attendent un arbitrage ?* |
 
 Saisissez un message et appuyez sur **Entrée** pour l'envoyer. **Maj+Entrée** insère un retour à la ligne. Le bouton d'envoi est désactivé lorsqu'il n'y a rien à envoyer et se transforme en bouton rouge **Arrêter** pendant que Kad répond.
 

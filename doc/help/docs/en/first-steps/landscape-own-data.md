@@ -1,13 +1,13 @@
 ---
 title: "Your IT landscape in Kadratis in ten minutes: start with your own data"
-description: The five steps of the IT landscape path on your own data, from your locations to your servers, then a colleague.
+description: The five steps of the IT landscape path on your own data, from your locations to your assets, then a colleague.
 ---
 
 # Your IT landscape in Kadratis in ten minutes
 
 [Explore with the example](landscape-example.md) · **Start with my own data**
 
-In ten minutes, your locations, your applications, their technologies and your servers are in Kadratis, your first end of support dates show, and a colleague can keep the map up to date. Starting with your own data erases the example: what you see at the end comes from you.
+In ten minutes, your locations, your applications, their technologies and your assets are in Kadratis, your first end of support dates show, and a colleague can keep the map up to date. Starting with your own data erases the example: what you see at the end comes from you.
 
 These are the five steps of the **Your first five steps** tile on the home page, for the path **The IT landscape map** with **Start with my own data**. Each step in the tile opens its screen with a short hint. Each step creates something and is marked done as soon as it exists in the workspace. To mark a step you skip as done, click the mark next to it. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
 
@@ -17,7 +17,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Click **Add location** and create your server rooms, data centers or clouds: a code, a name and a hosting type.
 
-**What you see.** Every server belongs to a location, which gives it its provider, hosting type and country. A location missing later can also be created from the **Location** field of a server.
+**What you see.** Every asset belongs to a location, which gives it its provider, hosting type and country. A location missing later can also be created from the **Location** field of an asset.
 
 ## 2. Your applications
 
@@ -38,13 +38,13 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What you see.** Your workspace already holds Windows Server and Ubuntu. A technology taken from the catalog comes with its versions and their end of support dates, kept up to date by Kadratis. The end of support then shows on the application, and **IT landscape > End of support** lists what reaches it.
 
-## 4. Your servers
+## 4. Your assets
 
 **IT landscape > Assets**
 
-**What to do.** Click **Add asset**, or **Import** a file for many servers. Choose the asset type and the location, then **Create**. To link a server to an application, open the application, **Deployments** tab: **Add deployment** for the environment, then **Add server**.
+**What to do.** Click **Add asset**, or **Import** a file for many assets. Choose the asset type and the location, then **Create**. To link an asset to an application, open the application, **Deployments** tab: **Add deployment** for the environment, then **Add server**.
 
-**What you see.** The application's deployment block lists its servers, and the server lists the application under **Hosted applications** in its **Operations** tab. The end of support and the vulnerabilities of its technologies now reach the server.
+**What you see.** The application's deployment block lists its servers, and the asset lists the application under **Hosted applications** in its **Operations** tab. The end of support and the vulnerabilities of its technologies now reach the asset.
 
 ## 5. A colleague
 

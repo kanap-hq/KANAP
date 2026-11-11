@@ -31,15 +31,15 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie sehen.** Der Eigenschaftenbereich nennt den Hersteller, die Daten ihres Lebenszyklus und die Verantwortlichen. **Bereitstellungen** zeigt einen Block je Umgebung mit den Servern, auf denen sie läuft. **Schnittstellen** listet die eingehenden und ausgehenden Datenflüsse. **Betrieb** listet die Technologien, von denen die Anwendung abhängt, mit ihrem Supportende. **Beziehungen** verbindet sie mit Budgetzeilen, Verträgen und Projekten.
 
-## 3. Die Server
+## 3. Die Assets
 
 **IT-Landschaft > Assets**
 
-![Die Server](images/landscape-example-3.webp)
+![Die Assets](images/landscape-example-3.webp)
 
-**Was Sie tun.** Öffnen Sie einen Server.
+**Was Sie tun.** Öffnen Sie ein Asset.
 
-**Was Sie sehen.** Jeder Server sagt, wo die Anwendungen laufen: seine Umgebung, sein Standort und die darauf installierten Technologien. Sein Reiter **Betrieb** listet die Anwendungen, die er hostet.
+**Was Sie sehen.** Jedes Asset sagt, wo die Anwendungen laufen: seine Umgebung, sein Standort und die darauf installierten Technologien. Sein Reiter **Betrieb** listet die Anwendungen, die es hostet.
 
 ## 4. Technologien, Supportende und Schwachstellen
 

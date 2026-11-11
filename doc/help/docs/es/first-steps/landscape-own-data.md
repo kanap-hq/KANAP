@@ -1,13 +1,13 @@
 ---
 title: "Su panorama IT en Kadratis en diez minutos: empezar con sus datos"
-description: Los cinco pasos del recorrido mapa del SI con sus propios datos, de sus ubicaciones a sus servidores, y después un colega.
+description: Los cinco pasos del recorrido mapa del SI con sus propios datos, de sus ubicaciones a sus activos, y después un colega.
 ---
 
 # Su panorama IT en Kadratis en diez minutos
 
 [Descubrir con el ejemplo](landscape-example.md) · **Empezar con mis datos**
 
-En diez minutos, sus ubicaciones, sus aplicaciones, sus tecnologías y sus servidores están en Kadratis, aparecen sus primeras fechas de fin de soporte, y un colega puede mantener el mapa al día. Empezar con sus datos borra el ejemplo: lo que ve al final procede de usted.
+En diez minutos, sus ubicaciones, sus aplicaciones, sus tecnologías y sus activos están en Kadratis, aparecen sus primeras fechas de fin de soporte, y un colega puede mantener el mapa al día. Empezar con sus datos borra el ejemplo: lo que ve al final procede de usted.
 
 Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **El mapa del SI** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Cada paso crea algo y queda marcado como hecho en cuanto ese elemento existe en el espacio de trabajo. Para marcar como hecho un paso que omite, haga clic en la marca junto a él. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
 
@@ -17,7 +17,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué hacer.** Haga clic en **Añadir ubicación** y cree sus salas de servidores, centros de datos o nubes: un código, un nombre y un tipo de alojamiento.
 
-**Qué ve.** Cada servidor pertenece a una ubicación, que le da su proveedor, su tipo de alojamiento y su país. Una ubicación que falte más adelante también se crea desde el campo **Ubicación** de un servidor.
+**Qué ve.** Cada activo pertenece a una ubicación, que le da su proveedor, su tipo de alojamiento y su país. Una ubicación que falte más adelante también se crea desde el campo **Ubicación** de un activo.
 
 ## 2. Sus aplicaciones
 
@@ -38,13 +38,13 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué ve.** Su espacio de trabajo ya contiene Windows Server y Ubuntu. Una tecnología tomada del catálogo llega con sus versiones y sus fechas de fin de soporte, que Kadratis mantiene al día. El fin de soporte aparece entonces en la aplicación, y **Panorama IT > Fin de soporte** lista lo que lo alcanza.
 
-## 4. Sus servidores
+## 4. Sus activos
 
 **Panorama IT > Activos**
 
-**Qué hacer.** Haga clic en **Añadir activo**, o **importe** un archivo para muchos servidores. Elija el tipo de activo y la ubicación, y luego **Crear**. Para vincular un servidor con una aplicación, abra la aplicación, pestaña **Despliegues**: **Añadir despliegue** para el entorno, y luego **Añadir servidor**.
+**Qué hacer.** Haga clic en **Añadir activo**, o **importe** un archivo para muchos activos. Elija el tipo de activo y la ubicación, y luego **Crear**. Para vincular un activo con una aplicación, abra la aplicación, pestaña **Despliegues**: **Añadir despliegue** para el entorno, y luego **Añadir servidor**.
 
-**Qué ve.** El bloque de despliegue de la aplicación lista sus servidores, y el servidor lista la aplicación en **Aplicaciones alojadas**, en su pestaña **Operaciones**. El fin de soporte y las vulnerabilidades de sus tecnologías llegan ahora hasta el servidor.
+**Qué ve.** El bloque de despliegue de la aplicación lista sus servidores, y el activo lista la aplicación en **Aplicaciones alojadas**, en su pestaña **Operaciones**. El fin de soporte y las vulnerabilidades de sus tecnologías llegan ahora hasta el activo.
 
 ## 5. Un colega
 

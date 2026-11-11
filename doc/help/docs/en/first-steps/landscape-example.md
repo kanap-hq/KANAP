@@ -31,15 +31,15 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What you see.** The properties panel gives the publisher, the dates of its lifecycle and its owners. **Deployments** shows one block per environment with the servers that run it. **Interfaces** lists the data flows in and out. **Operations** lists the technologies the application depends on, with their end of support. **Relations** links it to budget lines, contracts and projects.
 
-## 3. The servers
+## 3. The assets
 
 **IT landscape > Assets**
 
-![The servers](images/landscape-example-3.webp)
+![The assets](images/landscape-example-3.webp)
 
-**What to do.** Open a server.
+**What to do.** Open an asset.
 
-**What you see.** Each server says where the applications run: its environment, its location and the technologies installed on it. Its **Operations** tab lists the applications it hosts.
+**What you see.** Each asset says where the applications run: its environment, its location and the technologies installed on it. Its **Operations** tab lists the applications it hosts.
 
 ## 4. Technologies, end of support and vulnerabilities
 
