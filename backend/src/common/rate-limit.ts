@@ -60,6 +60,12 @@ export const RATE_LIMITS = {
   publicStartTrial: { limit: 5, ttl: 10 * 60_000 },
   publicContact: { limit: 5, ttl: 10 * 60_000 },
   publicRequestSupportInvoice: { limit: 3, ttl: 10 * 60_000 },
+  /**
+   * The workspace logo (`GET /public/branding/logo`, light and dark together), per client address.
+   * The sign-in page shows it and each browser keeps it 300 seconds, so 600 a minute serves several
+   * hundred people of one organisation opening the app behind one outbound address in the same minute.
+   */
+  publicBrandingLogo: { limit: 600, ttl: 60_000 },
   documentExport: { limit: 5, ttl: 60_000 },
   documentImport: { limit: 5, ttl: 60_000 },
   /**

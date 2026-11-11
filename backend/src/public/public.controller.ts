@@ -295,6 +295,8 @@ export class PublicController {
 
   /** The light-mode logo, or the dark-mode one with `variant=dark`. */
   @Get('branding/logo')
+  @UseGuards(RateLimitGuard)
+  @Throttle({ default: RATE_LIMITS.publicBrandingLogo })
   async serveBrandingLogo(
     @Req() req: any,
     @Res() res: Response,
