@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../i18n';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -35,7 +35,7 @@ const SQL: DeadlineRow = {
   date: '2026-07-14',
   state: 'out_of_support',
   server_count: 1,
-  servers: [{ id: 'asset-1', name: 'SRV-SQL-01' }],
+  servers: [{ id: 'asset-1', name: 'SRV-SQL-01', reference: 'AST-4' }],
   application_count: 1,
   applications: [{ id: 'app-1', name: 'ERP', reference: 'APP-3' }],
 };
@@ -44,13 +44,13 @@ const HARDWARE: DeadlineRow = {
   type: 'hardware',
   item_id: 'asset-9',
   item_name: 'ESX-09',
-  item_reference: null,
+  item_reference: 'AST-9',
   version: null,
   milestone: 'end_of_life',
   date: '2027-01-31',
   state: 'upcoming',
   server_count: 2,
-  servers: [{ id: 'asset-9', name: 'ESX-09' }, { id: 'asset-10', name: 'VM-APP-10' }],
+  servers: [{ id: 'asset-9', name: 'ESX-09', reference: 'AST-9' }, { id: 'asset-10', name: 'VM-APP-10', reference: 'AST-10' }],
   application_count: 1,
   applications: [{ id: 'app-2', name: 'CRM', reference: 'APP-5' }],
 };
@@ -80,9 +80,21 @@ const OS: DeadlineRow = {
   date: '2023-10-10',
   state: 'extended_support',
   server_count: 1,
-  servers: [{ id: 'asset-1', name: 'SRV-SQL-01' }],
+  servers: [{ id: 'asset-1', name: 'SRV-SQL-01', reference: 'AST-4' }],
   application_count: 0,
   applications: [],
+};
+const GAP_BARE: GapRow = {
+  key: 'database_server_without_dbms:asset-6',
+  gap: 'database_server_without_dbms',
+  subject_type: 'asset',
+  subject_id: 'asset-6',
+  subject_name: 'DB-EMPTY',
+  subject_reference: null,
+  related_type: null,
+  related_id: null,
+  related_name: null,
+  version: null,
 };
 const GAP: GapRow = {
   key: 'vm_without_host:asset-5',
@@ -90,7 +102,7 @@ const GAP: GapRow = {
   subject_type: 'asset',
   subject_id: 'asset-5',
   subject_name: 'VM-ORPHAN',
-  subject_reference: null,
+  subject_reference: 'AST-20',
   related_type: null,
   related_id: null,
   related_name: null,
@@ -100,12 +112,17 @@ const GAP: GapRow = {
 function respond({ applicationsVisible = true } = {}) {
   getMock.mockImplementation(async (url: string, config?: any) => {
     if (url.endsWith('/export')) return { data: new Blob(['a;b']), headers: { 'content-disposition': 'attachment; filename="eos.csv"' } } as any;
-    if (url.endsWith('/gaps')) return { data: { applications_visible: applicationsVisible, items: [GAP] } } as any;
+    if (url.endsWith('/gaps')) return { data: { applications_visible: applicationsVisible, items: [GAP, GAP_BARE] } } as any;
     const rows = applicationsVisible
       ? [SQL, HARDWARE, APPLICATION, OS]
       : [SQL, HARDWARE, OS].map((row) => ({ ...row, application_count: null, applications: null }));
     return { data: { horizon_months: config?.params?.horizon_months ?? 12, today: '2026-10-16', until: '2027-10-16', applications_visible: applicationsVisible, items: rows } } as any;
   });
+}
+
+function Opened({ label }: { label: string }) {
+  const { id } = useParams();
+  return <div>{label} {id}</div>;
 }
 
 function renderPage(path = '/it/technologies/end-of-support') {
@@ -116,8 +133,9 @@ function renderPage(path = '/it/technologies/end-of-support') {
         <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/it/technologies/end-of-support" element={<EndOfSupportReportPage />} />
-            <Route path="/it/assets/:id" element={<div>Asset page</div>} />
-            <Route path="/it/technologies/:id" element={<div>Technology page</div>} />
+            <Route path="/it/assets/:id" element={<Opened label="Asset page" />} />
+            <Route path="/it/technologies/:id" element={<Opened label="Technology page" />} />
+            <Route path="/it/applications/:id" element={<Opened label="Application page" />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -162,34 +180,34 @@ describe('EndOfSupportReportPage', () => {
     respond();
     renderPage();
     const item = await screen.findByRole('link', { name: /SQL Server/ });
-    expect(item.getAttribute('href')).toBe('/it/technologies/tech-1');
-    expect(screen.getByRole('link', { name: /Legacy HR/ }).getAttribute('href')).toBe('/it/applications/app-7');
-    expect(screen.getByRole('link', { name: 'ESX-09' }).getAttribute('href')).toBe('/it/assets/asset-9');
-    expect(screen.getByRole('link', { name: /Windows Server/ }).getAttribute('href')).toBe('/it/technologies/tech-os');
+    expect(item.getAttribute('href')).toBe('/it/technologies/TEC-1');
+    expect(screen.getByRole('link', { name: /Legacy HR/ }).getAttribute('href')).toBe('/it/applications/APP-7');
+    expect(screen.getByRole('link', { name: /ESX-09/ }).getAttribute('href')).toBe('/it/assets/AST-9');
+    expect(screen.getByRole('link', { name: /Windows Server/ }).getAttribute('href')).toBe('/it/technologies/TEC-12');
     expect(screen.queryByText(/^Open the/)).toBeNull();
 
     const row = item.closest('tr')!;
     expect(row.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(row);
     expect(row.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByRole('link', { name: 'SRV-SQL-01' }).getAttribute('href')).toBe('/it/assets/asset-1');
-    expect(screen.getByRole('link', { name: /ERP/ }).getAttribute('href')).toBe('/it/applications/app-1');
+    expect(screen.getByRole('link', { name: 'SRV-SQL-01' }).getAttribute('href')).toBe('/it/assets/AST-4');
+    expect(screen.getByRole('link', { name: /ERP/ }).getAttribute('href')).toBe('/it/applications/APP-3');
     fireEvent.click(row);
     expect(screen.queryByRole('link', { name: 'SRV-SQL-01' })).toBeNull();
 
     fireEvent.click(item);
-    expect(await screen.findByText('Technology page')).toBeTruthy();
+    expect(await screen.findByText('Technology page TEC-1')).toBeTruthy();
   });
 
   it('never shows the item itself in its detail, and opens nothing empty', async () => {
     respond();
     renderPage();
-    const hardware = (await screen.findByRole('link', { name: 'ESX-09' })).closest('tr')!;
+    const hardware = (await screen.findByRole('link', { name: /ESX-09/ })).closest('tr')!;
     fireEvent.click(hardware);
     const detail = hardware.nextElementSibling as HTMLElement;
-    expect(within(detail).getByRole('link', { name: 'VM-APP-10' })).toBeTruthy();
-    expect(within(detail).getByRole('link', { name: /CRM/ })).toBeTruthy();
-    expect(within(detail).queryByRole('link', { name: 'ESX-09' })).toBeNull();
+    expect(within(detail).getByRole('link', { name: 'VM-APP-10' }).getAttribute('href')).toBe('/it/assets/AST-10');
+    expect(within(detail).getByRole('link', { name: /CRM/ }).getAttribute('href')).toBe('/it/applications/APP-5');
+    expect(within(detail).queryByRole('link', { name: /ESX-09/ })).toBeNull();
 
     const application = screen.getByRole('link', { name: /Legacy HR/ }).closest('tr')!;
     expect(application.hasAttribute('aria-expanded')).toBe(false);
@@ -236,8 +254,11 @@ describe('EndOfSupportReportPage', () => {
     const gap = await screen.findByText('Virtual machine without a host');
     expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support/gaps');
     expect(screen.queryByRole('combobox', { name: 'Horizon' })).toBeNull();
+    expect(gap.closest('tr')!.getAttribute('data-href')).toBe('/it/assets/AST-20');
+    const bare = screen.getByText('Database server without a database technology').closest('tr')!;
+    expect(bare.getAttribute('data-href')).toBe('/it/assets/asset-6');
     fireEvent.click(within(gap.closest('tr')!).getByText('VM-ORPHAN'));
-    expect(await screen.findByText('Asset page')).toBeTruthy();
+    expect(await screen.findByText('Asset page AST-20')).toBeTruthy();
   });
 
   it('exports the list on screen', async () => {

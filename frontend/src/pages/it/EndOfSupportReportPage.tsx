@@ -14,6 +14,7 @@ import { RelationRef } from '../../components/workspace/RelationsTable';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
 import { drawerMenuItemSx, textTabSx, textTabsSx } from '../../theme/formSx';
+import { buildItemPath } from '../../utils/item-ref';
 import { type SupportState, supportStateColor } from '../../utils/supportState';
 import ForbiddenPage from '../ForbiddenPage';
 
@@ -22,7 +23,7 @@ export const DEADLINE_TYPES = ['technology', 'operating_system', 'application', 
 type DeadlineType = (typeof DEADLINE_TYPES)[number];
 type View = 'deadlines' | 'gaps';
 
-type ServerRef = { id: string; name: string };
+type ServerRef = { id: string; name: string; reference: string | null };
 type ApplicationRef = { id: string; name: string; reference: string | null };
 
 export type DeadlineRow = {
@@ -56,18 +57,20 @@ export type GapRow = {
 
 const ENDPOINT = '/technologies/reports/end-of-support';
 
-const RECORD_PATHS: Record<string, string> = {
-  technology: '/it/technologies',
-  operating_system: '/it/technologies',
-  application: '/it/applications',
-  asset: '/it/assets',
-  hardware: '/it/assets',
-};
+/** Report types that share a record page: an operating system is a technology, hardware is an asset. */
+const RECORD_ITEM = {
+  technology: 'technology',
+  operating_system: 'technology',
+  application: 'application',
+  asset: 'asset',
+  hardware: 'asset',
+} as const;
 
-/** The page of a record of the report. An operating system is a technology. */
-function recordPath(type: string, id: string | null): string | null {
-  const base = RECORD_PATHS[type];
-  return base && id ? `${base}/${id}` : null;
+/** The page of a record. The business reference when the record has one, the id otherwise. */
+function recordPath(type: string, id: string | null, reference?: string | null): string | null {
+  const itemType = RECORD_ITEM[type as keyof typeof RECORD_ITEM];
+  const key = reference || id;
+  return itemType && key ? buildItemPath(itemType, key) : null;
 }
 
 /** Dense table chrome, as `RelationsTable`: 12/500 tertiary headers, 13px cells, horizontal borders only. */
@@ -166,13 +169,13 @@ function DeadlineDetail({ servers, applications }: ReturnType<typeof touchedBy>)
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
       {servers.length > 0 && (
         <DetailList title={t('pages.endOfSupport.detail.servers')}>
-          {servers.map((server) => <RecordLink key={server.id} to={`/it/assets/${server.id}`}>{server.name}</RecordLink>)}
+          {servers.map((server) => <RecordLink key={server.id} to={recordPath('asset', server.id, server.reference)!}>{server.name}</RecordLink>)}
         </DetailList>
       )}
       {applications.length > 0 && (
         <DetailList title={t('pages.endOfSupport.detail.applications')}>
           {applications.map((app) => (
-            <RecordLink key={app.id} to={`/it/applications/${app.id}`}>
+            <RecordLink key={app.id} to={recordPath('application', app.id, app.reference)!}>
               {app.reference && <><RelationRef>{app.reference}</RelationRef>{' '}</>}
               {app.name}
             </RecordLink>
@@ -223,7 +226,7 @@ function DeadlinesTable({ rows, applicationsVisible }: { rows: DeadlineRow[]; ap
           const touched = touchedBy(row);
           const expandable = touched.servers.length > 0 || touched.applications.length > 0;
           const expanded = expandable && open.has(row.key);
-          const own = recordPath(row.type, row.item_id);
+          const own = recordPath(row.type, row.item_id, row.item_reference);
           const item = <>{row.item_reference && <><RelationRef>{row.item_reference}</RelationRef>{' '}</>}{row.item_name}</>;
           return (
             <React.Fragment key={row.key}>
@@ -287,7 +290,7 @@ function GapsTable({ rows }: { rows: GapRow[] }) {
       </thead>
       <tbody>
         {rows.map((row) => {
-          const href = recordPath(row.subject_type, row.subject_id)!;
+          const href = recordPath(row.subject_type, row.subject_id, row.subject_reference)!;
           return (
             <tr
               key={row.key}
