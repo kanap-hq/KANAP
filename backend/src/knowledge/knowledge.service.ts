@@ -747,8 +747,10 @@ const KNOWLEDGE_SOURCE_SCOPES = {
   tasks: 'tasks',
 } as const;
 
+type KnowledgeSourceFamily = keyof typeof KNOWLEDGE_SOURCE_SCOPES;
+
 /** The participation condition of each family a Business Contributor reads inside their participation. */
-function knowledgeSourceCondition(family: keyof typeof KNOWLEDGE_SOURCE_SCOPES, alias: string, userRef: string): string {
+function knowledgeSourceCondition(family: KnowledgeSourceFamily, alias: string, userRef: string): string {
   switch (family) {
     case 'projects': return projectParticipantCondition(alias, userRef);
     case 'requests': return requestParticipantCondition(alias, userRef);
@@ -2171,6 +2173,7 @@ export class KnowledgeService {
     documentId: string,
     relations: unknown,
     manager: EntityManager,
+    userId?: string | null,
   ): Promise<void> {
     if (!relations || typeof relations !== 'object' || Array.isArray(relations)) {
       return;
@@ -2180,7 +2183,7 @@ export class KnowledgeService {
     for (const key of Object.keys(RELATION_TABLE_MAP) as RelationEntityType[]) {
       const relationValues = relationBody[key];
       if (Array.isArray(relationValues)) {
-        await this.replaceDocumentRelationsByEntity(documentId, key, relationValues, manager);
+        await this.replaceDocumentRelationsByEntity(documentId, key, relationValues, manager, { userId });
       }
     }
   }
@@ -4084,6 +4087,20 @@ export class KnowledgeService {
     const workflow = await this.getActiveWorkflow(id, manager);
     const latestApprovedWorkflow = await this.getLatestApprovedWorkflowSummary(id, manager);
     const integratedBinding = await this.getIntegratedBinding(id, manager);
+    // A Business Contributor reads the projects, requests, applications and tasks they take part
+    // in, as on those records' pages: the others leave the lists, and their counts with them.
+    const familyIds = (family: KnowledgeSourceFamily, rows: any[], column: string): string[] =>
+      (linkedReads[family] ? rows.map((row) => String(row[column])) : []);
+    const inScope = await this.linkedIdsInParticipation(manager, opts?.userId || null, {
+      applications: familyIds('applications', relations[0], 'application_id'),
+      projects: familyIds('projects', relations[2], 'project_id'),
+      requests: familyIds('requests', relations[3], 'request_id'),
+      tasks: familyIds('tasks', relations[4], 'task_id'),
+    }, opts?.tenantId ?? document.tenant_id);
+    const readable = (family: KnowledgeSourceFamily, column: string) => (row: any): boolean => {
+      const visible = inScope.get(family);
+      return !visible || visible.has(String(row[column]));
+    };
 
     const validationInfo = this.getValidationInfo(document, latestApprovedWorkflow);
 
@@ -4102,11 +4119,11 @@ export class KnowledgeService {
       // Each family only for a reader of its module, as on the linked record's page: the key is
       // absent otherwise, so the screen neither shows nor saves it.
       relations: readableDocumentRelations({
-        applications: relations[0].map((row: any) => ({ id: row.application_id, name: row.name })),
+        applications: relations[0].filter(readable('applications', 'application_id')).map((row: any) => ({ id: row.application_id, name: row.name })),
         assets: relations[1].map((row: any) => ({ id: row.asset_id, name: row.name })),
-        projects: relations[2].map((row: any) => ({ id: row.project_id, name: row.item_number ? `PRJ-${row.item_number} - ${row.name}` : row.name })),
-        requests: relations[3].map((row: any) => ({ id: row.request_id, name: row.item_number ? `REQ-${row.item_number} - ${row.name}` : row.name })),
-        tasks: relations[4].map((row: any) => ({ id: row.task_id, name: row.item_number ? `T-${row.item_number} - ${row.title || 'Untitled task'}` : (row.title || 'Untitled task') })),
+        projects: relations[2].filter(readable('projects', 'project_id')).map((row: any) => ({ id: row.project_id, name: row.item_number ? `PRJ-${row.item_number} - ${row.name}` : row.name })),
+        requests: relations[3].filter(readable('requests', 'request_id')).map((row: any) => ({ id: row.request_id, name: row.item_number ? `REQ-${row.item_number} - ${row.name}` : row.name })),
+        tasks: relations[4].filter(readable('tasks', 'task_id')).map((row: any) => ({ id: row.task_id, name: row.item_number ? `T-${row.item_number} - ${row.title || 'Untitled task'}` : (row.title || 'Untitled task') })),
         interfaces: relations[5].map((row: any) => ({
           id: row.interface_id,
           name: [row.interface_reference || row.interface_code, row.name].filter(Boolean).join(' - ') || row.name || row.interface_id,
@@ -4892,7 +4909,7 @@ export class KnowledgeService {
       await this.bulkReplaceClassifications(saved.id, body.classifications, { manager });
     }
 
-    await this.applyDocumentRelations(saved.id, body?.relations, manager);
+    await this.applyDocumentRelations(saved.id, body?.relations, manager, userId);
 
     await this.syncReferences(saved.id, saved.content_markdown, manager);
 
@@ -5909,11 +5926,17 @@ export class KnowledgeService {
     }
   }
 
+  /**
+   * Replaces the records of one family linked to a document. With `userId`, the links that person
+   * does not see on the document (`get`: a Business Contributor's records outside their
+   * participation) stay as they are.
+   */
   async replaceDocumentRelationsByEntity(
     documentId: string,
     entity: RelationEntityType,
     ids: string[],
     manager: EntityManager,
+    opts?: { userId?: string | null },
   ) {
     const map = RELATION_TABLE_MAP[entity];
     if (!map) throw new BadRequestException('Unsupported relation entity');
@@ -5922,18 +5945,43 @@ export class KnowledgeService {
 
     await this.assertTenantScopedIdsExist(manager, map.targetTable as any, values, `related ${map.label}`);
 
+    const kept = await this.linksOutsideParticipation(documentId, entity, manager, opts?.userId ?? null);
+    const stored = dedupeStrings([...values, ...kept]);
     await manager.query(`DELETE FROM ${map.table} WHERE document_id = $1`, [documentId]);
-    if (values.length > 0) {
+    if (stored.length > 0) {
       await manager.query(
         `INSERT INTO ${map.table} (tenant_id, document_id, ${map.idColumn})
          SELECT app_current_tenant(), $1, value
          FROM unnest($2::uuid[]) AS value
          ON CONFLICT DO NOTHING`,
-        [documentId, values],
+        [documentId, stored],
       );
     }
 
     return { ok: true, count: values.length };
+  }
+
+  /** The records of `entity` linked to the document that a Business Contributor does not see there. */
+  private async linksOutsideParticipation(
+    documentId: string,
+    entity: RelationEntityType,
+    manager: EntityManager,
+    userId: string | null,
+  ): Promise<string[]> {
+    const map = RELATION_TABLE_MAP[entity];
+    if (!userId || !map || !isKnowledgeSourceFamily(entity)) return [];
+    const scope = await resolveBusinessContributorScopeForUser({ manager, userId }, KNOWLEDGE_SOURCE_SCOPES[entity], 'reader');
+    if (!scope) return [];
+    const linked: Array<{ id: string }> = await manager.query(
+      `SELECT ${map.idColumn}::text AS id
+       FROM ${map.table}
+       WHERE document_id = $1
+         AND tenant_id = app_current_tenant()`,
+      [documentId],
+    );
+    const ids = linked.map((row) => row.id);
+    const visible = await idsInScope(manager, entity, ids, scope);
+    return ids.filter((id) => !visible.has(id));
   }
 
   async addDocumentRelationByEntity(
@@ -7523,6 +7571,28 @@ export class KnowledgeService {
   }
 
   /**
+   * For a Business Contributor, the ids among `idsByFamily` they may read in each participation
+   * family (the projects, requests, applications and tasks they take part in), one query per family
+   * with linked ids. A family absent from the answer is read whole, as by everyone else.
+   */
+  private async linkedIdsInParticipation(
+    manager: EntityManager,
+    userId: string | null,
+    idsByFamily: Partial<Record<KnowledgeSourceFamily, string[]>>,
+    tenantId?: string | null,
+  ): Promise<Map<KnowledgeSourceFamily, Set<string>>> {
+    const inScope = new Map<KnowledgeSourceFamily, Set<string>>();
+    if (!userId) return inScope;
+    for (const [family, resource] of Object.entries(KNOWLEDGE_SOURCE_SCOPES) as Array<[KnowledgeSourceFamily, string]>) {
+      const ids = idsByFamily[family] ?? [];
+      if (ids.length === 0) continue;
+      const scope = await resolveBusinessContributorScopeForUser({ manager, userId, tenantId: tenantId ?? null }, resource, 'reader');
+      if (scope) inScope.set(family, await idsInScope(manager, family, ids, scope));
+    }
+    return inScope;
+  }
+
+  /**
    * The context groups without the linked records the reader may not see, as on those records'
    * pages: each family on its module's read, a Business Contributor's projects, requests,
    * applications and tasks inside their participation. The record itself (`direct`) stays.
@@ -7535,15 +7605,14 @@ export class KnowledgeService {
     const linked = definitions.filter((definition) => definition.key !== 'direct' && definition.sources.length > 0);
     if (linked.length === 0) return definitions;
     const reads = await loadLinkedReads(manager, userId);
-    const inScope = new Map<string, Set<string>>();
-    for (const [family, resource] of Object.entries(KNOWLEDGE_SOURCE_SCOPES) as Array<[keyof typeof KNOWLEDGE_SOURCE_SCOPES, string]>) {
-      const ids = linked.flatMap((definition) => definition.sources
+    const idsByFamily: Partial<Record<KnowledgeSourceFamily, string[]>> = {};
+    for (const family of Object.keys(KNOWLEDGE_SOURCE_SCOPES) as KnowledgeSourceFamily[]) {
+      if (!reads[family]) continue;
+      idsByFamily[family] = linked.flatMap((definition) => definition.sources
         .filter((source) => source.entity_type === family)
         .map((source) => source.entity_id));
-      if (!userId || ids.length === 0 || !reads[family]) continue;
-      const scope = await resolveBusinessContributorScopeForUser({ manager, userId }, resource, 'reader');
-      if (scope) inScope.set(family, await idsInScope(manager, family, ids, scope));
     }
+    const inScope = await this.linkedIdsInParticipation(manager, userId, idsByFamily);
     return definitions.map((definition) => (definition.key === 'direct'
       ? definition
       : {
@@ -7551,7 +7620,7 @@ export class KnowledgeService {
         sources: definition.sources.filter((source) => {
           const module = DOCUMENT_RELATION_MODULES[source.entity_type];
           if (module && !reads[module]) return false;
-          const visible = inScope.get(source.entity_type);
+          const visible = isKnowledgeSourceFamily(source.entity_type) ? inScope.get(source.entity_type) : undefined;
           return !visible || visible.has(source.entity_id);
         }),
       }));

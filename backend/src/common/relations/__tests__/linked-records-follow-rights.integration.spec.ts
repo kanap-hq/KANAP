@@ -41,6 +41,10 @@ import { DataSource, QueryRunner } from 'typeorm';
 //      changes and the list's covered application filter: the applications for their readers (a
 //      Business Contributor's inside their participation), the assets for readers of the
 //      infrastructure; a write on a family the person does not read is refused, even empty.
+//  17. A document page lists the linked records the person may read: a Business Contributor's
+//      projects and requests inside their participation (page, get_document), the count follows,
+//      a member of the modules reads them all, and a replacement keeps the links the person
+//      does not see.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -71,9 +75,10 @@ type Harness = {
  * A: portfolio and tasks, no IT, no contracts. B: applications only. C: knowledge only (a writer).
  * D: incidents only. E: Business Contributor (projects, requests, tasks, applications, knowledge; no IT).
  * K: knowledge writer and projects reader, no applications.
+ * M: knowledge reader and member of projects and requests.
  * P: projects only. Q: requests only. U: users reader. Full: Administrator.
  */
-type Profile = 'a' | 'b' | 'c' | 'd' | 'e' | 'k' | 'p' | 'q' | 'u' | 'full';
+type Profile = 'a' | 'b' | 'c' | 'd' | 'e' | 'k' | 'm' | 'p' | 'q' | 'u' | 'full';
 
 const PERMISSIONS: Record<Exclude<Profile, 'full'>, Record<string, string>> = {
   a: { portfolio_projects: 'reader', portfolio_requests: 'reader', tasks: 'reader' },
@@ -82,6 +87,7 @@ const PERMISSIONS: Record<Exclude<Profile, 'full'>, Record<string, string>> = {
   d: { incidents: 'reader' },
   e: { portfolio_projects: 'contributor', portfolio_requests: 'contributor', tasks: 'contributor', applications: 'reader', knowledge: 'member' },
   k: { knowledge: 'member', portfolio_projects: 'reader' },
+  m: { knowledge: 'reader', portfolio_projects: 'member', portfolio_requests: 'member' },
   p: { portfolio_projects: 'reader' },
   q: { portfolio_requests: 'reader' },
   u: { users: 'reader' },
@@ -89,7 +95,7 @@ const PERMISSIONS: Record<Exclude<Profile, 'full'>, Record<string, string>> = {
 
 const ROLE_NAMES: Record<Profile, string> = {
   a: 'Portfolio and tasks', b: 'Applications only', c: 'Knowledge only', d: 'Incidents only',
-  e: 'Business Contributor', k: 'Knowledge and projects', p: 'Projects only', q: 'Requests only', u: 'Users reader', full: 'Administrator',
+  e: 'Business Contributor', k: 'Knowledge and projects', m: 'Portfolio members', p: 'Projects only', q: 'Requests only', u: 'Users reader', full: 'Administrator',
 };
 
 type Seed = {
@@ -716,6 +722,58 @@ async function testRelationOptions(h: Harness, runner: QueryRunner, s: Seed) {
   has(await options('full', 'incidents'), ['Outage'], 'full: incidents');
 }
 
+// 17. A document page lists the linked records the person may read.
+async function testDocumentPageParticipation(h: Harness, runner: QueryRunner, s: Seed) {
+  // E takes part in the main project and in a request they made; not in the dependency project
+  // nor in the source request. One document links all four.
+  const ownRequest = await insertId(runner,
+    `INSERT INTO portfolio_requests (tenant_id, item_number, name, status, criteria_values, feasibility_review, priority_override, requestor_id)
+     VALUES ($1, 3, 'Own request', 'approved', '{}'::jsonb, '{}'::jsonb, false, $2)`, [s.tenantId, s.users.e]);
+  const document = await insertId(runner,
+    `INSERT INTO documents (tenant_id, library_id, title, item_number, status)
+     SELECT tenant_id, library_id, 'Shared notes', 2, 'published' FROM documents WHERE id = $1`, [s.document]);
+  for (const [table, column, id] of [
+    ['document_projects', 'project_id', s.project],
+    ['document_projects', 'project_id', s.dependency],
+    ['document_requests', 'request_id', ownRequest],
+    ['document_requests', 'request_id', s.request],
+  ]) {
+    await runner.query(`INSERT INTO ${table} (tenant_id, document_id, ${column}) VALUES ($1, $2, $3)`, [s.tenantId, document, id]);
+  }
+  const names = (doc: any, family: string) => (doc.relations[family] ?? []).map((row: { name: string }) => row.name).sort();
+  const page = (profile: Profile) => h.knowledge.get('DOC-2', { manager: runner.manager, userId: s.users[profile], tenantId: s.tenantId });
+
+  const e = await page('e');
+  assert.deepEqual(names(e, 'projects'), [`PRJ-1 - ${PROJECT}`], 'E: the project they take part in, and only it');
+  assert.deepEqual(names(e, 'requests'), ['REQ-3 - Own request'], 'E: the request they made, and only it');
+  hasNot(e.relations, [DEPENDENCY, REQUEST], 'E, document page');
+  for (const surface of ['chat', 'mcp'] as const) {
+    const tool = await h.tools.execute(ctx(runner, s, 'e', surface), 'get_document', { document_id: 'DOC-2' });
+    assert.equal(tool.relations.projects.length, 1, `E (${surface}): one project`);
+    assert.equal(tool.relations.requests.length, 1, `E (${surface}): one request`);
+    hasNot(tool, [DEPENDENCY, REQUEST], `E (${surface}), get_document`);
+  }
+
+  // A member of the modules, and an administrator, read every linked project and request.
+  for (const profile of ['m', 'full'] as const) {
+    const doc = await page(profile);
+    assert.deepEqual(names(doc, 'projects'), [`PRJ-1 - ${PROJECT}`, `PRJ-2 - ${DEPENDENCY}`], `${profile}: both projects`);
+    assert.deepEqual(names(doc, 'requests'), ['REQ-1 - Source request', 'REQ-3 - Own request'], `${profile}: both requests`);
+  }
+
+  // E saves what the page shows: the links they do not see stay as they are.
+  const write = (body: any) => h.knowledgeController.bulkReplaceRelationSets('DOC-2', body, tenantRequest(runner, s, 'e'));
+  await write({ projects: [s.project], requests: [ownRequest] });
+  assert.equal(await linkCount(runner, 'document_projects', document), 2, 'E: the project they do not see stays');
+  assert.equal(await linkCount(runner, 'document_requests', document), 2, 'E: the request they do not see stays');
+  await write({ projects: [], requests: [] });
+  const kept = await page('m');
+  assert.deepEqual(names(kept, 'projects'), [`PRJ-2 - ${DEPENDENCY}`], 'E removed their project, the other stays');
+  assert.deepEqual(names(kept, 'requests'), ['REQ-1 - Source request'], 'E removed their request, the other stays');
+  const emptied = await page('e');
+  assert.deepEqual([emptied.relations.projects, emptied.relations.requests], [[], []], 'E: nothing left they may read');
+}
+
 const contractLinks = async (runner: QueryRunner, table: string, contractId: string) =>
   (await runner.query(`SELECT * FROM ${table} WHERE contract_id = $1`, [contractId])).length;
 
@@ -837,6 +895,7 @@ async function run() {
       await testHiddenFamilyCounters(harness, runner, s);
       await testRelationOptions(harness, runner, s);
       await testContractRelations(harness, runner, s);
+      await testDocumentPageParticipation(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
