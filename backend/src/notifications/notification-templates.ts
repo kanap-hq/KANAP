@@ -8,6 +8,7 @@ import { DEFAULT_EMAIL_PRIMARY_COLOR, getDefaultEmailBranding } from '../email/e
 import { getEmailStrings, interpolate, resolveEmailLocale } from '../i18n/email-i18n';
 import { PRODUCT_NAME } from '../config/product';
 import type { EmailStrings } from '../i18n/email-locales/en';
+import { inertLinks } from './share-message';
 
 export interface EmailContent {
   subject: string;
@@ -729,10 +730,12 @@ export function buildShareEmail(params: {
   const preferencesUrl = getBaseUrl(params.itemUrl) + '/settings/notifications';
   const buttons = [{ label: typeLabel.view, url: params.itemUrl }];
 
-  const messageBlock = params.message
+  // Free text sent under the platform's name: its web addresses are not clickable.
+  const message = params.message ? inertLinks(params.message) : '';
+  const messageBlock = message
     ? buildSurfacePanel({
       marginTop: 20,
-      contentHtml: `<div style="white-space:pre-wrap;">${escapeHtml(params.message)}</div>`,
+      contentHtml: `<div style="white-space:pre-wrap;">${escapeHtml(message)}</div>`,
     })
     : '';
 
@@ -749,8 +752,8 @@ export function buildShareEmail(params: {
 
   const text = joinTextBlocks([
     shared.text,
-    params.message
-      ? interpolate(strings.common.labels.message, { message: quoted(strings, params.message) })
+    message
+      ? interpolate(strings.common.labels.message, { message: quoted(strings, message) })
       : null,
     buttonsText(strings, buttons),
     buildManagePreferencesText(params.locale, preferencesUrl),

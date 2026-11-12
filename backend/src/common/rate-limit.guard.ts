@@ -1,7 +1,27 @@
+import { createHash } from 'crypto';
 import { ExecutionContext, Injectable } from '@nestjs/common';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerException, ThrottlerGuard, ThrottlerStorage } from '@nestjs/throttler';
 import { clientAddress } from './client-address';
 import { isRateLimitEnabled } from './rate-limit';
+
+/**
+ * Counts one request against a budget that is not the route's own count (per tenant, per billing
+ * address, for the whole platform), in the storage of the guards: this process's memory with one
+ * API process, `rate_limit_hits` with several (app.module.ts). Past the limit the request gets the
+ * guards' 429 for the rest of the window. Off with the other limits (`RATE_LIMIT_ENABLED=false`).
+ * `name` keeps budgets apart; the key is a SHA-256, nothing of the tracker is kept in clear.
+ */
+export async function consumeRateLimit(
+  storage: ThrottlerStorage,
+  name: string,
+  budget: { limit: number; ttl: number },
+  tracker: string,
+): Promise<void> {
+  if (!isRateLimitEnabled()) return;
+  const key = createHash('sha256').update(`${name}-${tracker}`).digest('hex');
+  const { isBlocked } = await storage.increment(key, budget.ttl, budget.limit, budget.ttl, name);
+  if (isBlocked) throw new ThrottlerException();
+}
 
 /** The limits, counted per client address (common/client-address.ts). */
 @Injectable()

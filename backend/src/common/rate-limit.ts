@@ -81,4 +81,9 @@ export const RATE_LIMITS = {
    * (`ShareRateLimit`, notifications/share-rate-limit.ts).
    */
   shareLink: { limit: 30, ttl: 60 * 60_000 },
+  /**
+   * "Send link" e-mails of one tenant, all its users together, counted after the per-user limit
+   * (`ShareRateLimitGuard`). Multi-tenant mode only: on-premise the tenant is the whole installation.
+   */
+  shareLinkTenant: { limit: 200, ttl: 60 * 60_000 },
 };
