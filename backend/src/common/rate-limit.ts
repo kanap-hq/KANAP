@@ -63,12 +63,15 @@ export const RATE_LIMITS = {
   /**
    * Support invoice requests per billing address, whatever the client address, over a day. Counted
    * once the request has passed its checks and the CAPTCHA, before anything is created
-   * (`consumeRateLimit`): a buyer retrying a few times stays under it.
+   * (`takeRateLimit`), with the forms of one mailbox together (public/billing-email-key.ts). A
+   * request that fails afterwards (Stripe unreachable) is taken back: a buyer retrying a few times
+   * stays under it.
    */
   publicSupportInvoiceBillingEmail: { limit: 3, ttl: 24 * 60 * 60_000 },
   /**
-   * Support invoice requests of the whole platform over a day, counted like the one above. Real
-   * requests come a few times a month.
+   * Support invoice requests of the whole platform over a day, counted like the one above, failed
+   * requests included; a request refused by either budget takes nothing from the other. The first
+   * refusal of a window is logged once. Real requests come a few times a month.
    */
   publicSupportInvoicePlatform: { limit: 20, ttl: 24 * 60 * 60_000 },
   /**

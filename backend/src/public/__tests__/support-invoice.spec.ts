@@ -6,6 +6,7 @@ import { BadRequestException, HttpStatus, ValidationPipe } from '@nestjs/common'
 import { ThrottlerStorageService } from '@nestjs/throttler';
 import { RATE_LIMITS } from '../../common/rate-limit';
 import { PublicController, RequestSupportInvoiceDto } from '../public.controller';
+import { billingEmailRateLimitKey } from '../billing-email-key';
 import { Features } from '../../config/features';
 import { GTC_VERSION } from '../../billing/terms';
 import { BACKEND_ROOT } from '../../common/__tests__/backend-root';
@@ -86,7 +87,7 @@ function buildController() {
     {} as any,
     {} as any,
   );
-  // Nest injects the rate limit counts as a property (ThrottlerModule's storage).
+  // Nest injects the rate limit storage as a property (ThrottlerModule's).
   Object.assign(controller, { rateLimitStorage: new ThrottlerStorageService() });
   return { controller, calls, state };
 }
@@ -315,6 +316,83 @@ async function testRefusedRequestsAreNotCounted() {
   assert.equal(await statusOf(submit(controller, VALID_BODY)), 200, 'refused requests leave both budgets untouched');
 }
 
+function testBillingKeyFunction() {
+  const key = billingEmailRateLimitKey('victim@gmail.com');
+  for (const email of ['victim+1@gmail.com', 'v.ictim@googlemail.com', '"victim"@gmail.com', ' Vic.Tim+invoices @GMAIL.com']) {
+    assert.equal(billingEmailRateLimitKey(email), key, email);
+  }
+  assert.equal(billingEmailRateLimitKey('first.last+x@example.com'), 'first.last@example.com', 'dots stay outside Gmail');
+  assert.notEqual(billingEmailRateLimitKey('victim@example.com'), key, 'another domain is another address');
+}
+
+async function testBillingKeyIsNormalised() {
+  const { controller, calls } = buildController();
+  const variants = ['victim+1@gmail.com', 'v.ictim@googlemail.com', '"victim"@gmail.com'];
+  for (const email of variants) {
+    assert.equal(await statusOf(submit(controller, { ...VALID_BODY, billing_email: email })), 200, `${email} goes`);
+  }
+  assert.equal(
+    await statusOf(submit(controller, { ...VALID_BODY, billing_email: 'Victim@Gmail.com' })),
+    HttpStatus.TOO_MANY_REQUESTS,
+    'the variants of one address share one budget',
+  );
+  const sent = callsOf(calls, 'customers.create').map((call) => call.args[0].email);
+  assert.deepEqual(sent, variants, 'Stripe receives the address as typed');
+}
+
+async function testPlatformRefusalSparesTheBuyer() {
+  const realNow = Date.now;
+  let offset = 0;
+  Date.now = () => realNow() + offset;
+  try {
+    const { controller } = buildController();
+    const warnings: string[] = [];
+    (controller as any).logger.warn = (message: unknown) => warnings.push(String(message));
+    const { limit, ttl } = RATE_LIMITS.publicSupportInvoicePlatform;
+    const buyer = { ...VALID_BODY, billing_email: 'returning@example.invalid' };
+    for (let i = 0; i < limit - 2; i += 1) {
+      assert.equal(await statusOf(submit(controller, { ...VALID_BODY, billing_email: `early${i}@example.invalid` })), 200);
+    }
+    offset = ttl / 2;
+    assert.equal(await statusOf(submit(controller, buyer)), 200);
+    assert.equal(await statusOf(submit(controller, buyer)), 200, 'the platform budget is now spent');
+    for (let i = 0; i < 3; i += 1) assert.equal(await statusOf(submit(controller, buyer)), HttpStatus.TOO_MANY_REQUESTS);
+    assert.equal(warnings.length, 1, 'one warning when the platform budget first refuses, not one per refusal');
+    assert.ok(!/@|returning|early/.test(warnings[0]), `no address in the warning: ${warnings[0]}`);
+    // The platform window ends, the buyer's (opened half a day later) does not.
+    offset = ttl + 1_000;
+    assert.equal(await statusOf(submit(controller, buyer)), 200, 'the refusals took nothing from the buyer: a third request goes');
+    assert.equal(await statusOf(submit(controller, buyer)), HttpStatus.TOO_MANY_REQUESTS, 'then the buyer budget refuses');
+    assert.equal(warnings.length, 1, 'a refusal of the buyer budget does not warn');
+  } finally {
+    Date.now = realNow;
+  }
+}
+
+async function testStripeFailuresAreNotCounted() {
+  const { controller, calls } = buildController();
+  const stripe = (controller as any).stripeClient.getClient();
+  let configured = false;
+  (controller as any).stripeClient = { getClient: () => (configured ? stripe : null) };
+  const { limit } = RATE_LIMITS.publicSupportInvoiceBillingEmail;
+  for (let i = 0; i < limit + 2; i += 1) {
+    assert.equal(await statusOf(submit(controller, VALID_BODY)), HttpStatus.INTERNAL_SERVER_ERROR, 'Stripe is not configured');
+  }
+  configured = true;
+  const create = stripe.customers.create;
+  stripe.customers.create = async () => {
+    throw Object.assign(new Error('Connection to Stripe failed'), { type: 'StripeConnectionError' });
+  };
+  for (let i = 0; i < limit + 2; i += 1) {
+    const status = await statusOf(submit(controller, VALID_BODY));
+    assert.ok(status !== 200 && status !== HttpStatus.TOO_MANY_REQUESTS, `a Stripe error is no success and no 429: ${status}`);
+  }
+  stripe.customers.create = create;
+  for (let i = 0; i < limit; i += 1) assert.equal(await statusOf(submit(controller, VALID_BODY)), 200, 'failed requests left the buyer budget whole');
+  assert.equal(await statusOf(submit(controller, VALID_BODY)), HttpStatus.TOO_MANY_REQUESTS);
+  assert.ok(callsOf(calls, 'invoices.sendInvoice').length >= 1);
+}
+
 async function testClosedOnPremise() {
   const { controller, calls } = buildController();
   (Features as any).SINGLE_TENANT = true;
@@ -364,6 +442,10 @@ async function main() {
     await testPlatformBudget();
     await testRefusedRequestsAreNotCounted();
     await testClosedOnPremise();
+    testBillingKeyFunction();
+    await testBillingKeyIsNormalised();
+    await testPlatformRefusalSparesTheBuyer();
+    await testStripeFailuresAreNotCounted();
     testMarketingSendsTheCurrentVersion();
   } finally {
     if (savedPrice === undefined) delete process.env.STRIPE_PRICE_ENTERPRISE_SUPPORT_ANNUAL;
