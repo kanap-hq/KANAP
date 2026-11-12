@@ -1342,9 +1342,9 @@ export class PortfolioProjectsController {
     @Req() req: { isAdmin?: boolean },
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     const isAdmin = req?.isAdmin === true;
-    return this.svc.updateTimeEntry(entryId, body, ctx.userId || null, isAdmin, {
+    return this.svc.updateTimeEntry(id, entryId, body, ctx.userId || null, isAdmin, {
       manager: ctx.manager,
     });
   }
@@ -1358,9 +1358,9 @@ export class PortfolioProjectsController {
     @Req() req: { isAdmin?: boolean },
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     const isAdmin = req?.isAdmin === true;
-    return this.svc.deleteTimeEntry(entryId, ctx.userId || null, isAdmin, {
+    return this.svc.deleteTimeEntry(id, entryId, ctx.userId || null, isAdmin, {
       manager: ctx.manager,
     });
   }

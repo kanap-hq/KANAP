@@ -392,6 +392,7 @@ export class PortfolioProjectsService {
   }
 
   updateTimeEntry(
+    projectId: string,
     entryId: string,
     body: {
       category?: TimeEntryCategory;
@@ -404,16 +405,17 @@ export class PortfolioProjectsService {
     isAdmin: boolean,
     opts?: ServiceOpts,
   ) {
-    return this.timesheetService.updateTimeEntry(entryId, body, userId, isAdmin, opts);
+    return this.timesheetService.updateTimeEntry(projectId, entryId, body, userId, isAdmin, opts);
   }
 
   deleteTimeEntry(
+    projectId: string,
     entryId: string,
     userId: string | null,
     isAdmin: boolean,
     opts?: ServiceOpts,
   ) {
-    return this.timesheetService.deleteTimeEntry(entryId, userId, isAdmin, opts);
+    return this.timesheetService.deleteTimeEntry(projectId, entryId, userId, isAdmin, opts);
   }
 
   recalculateActualEffort(projectId: string, mg: EntityManager) {

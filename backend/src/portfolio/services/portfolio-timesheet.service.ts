@@ -137,6 +137,7 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
    * Update a time entry.
    */
   async updateTimeEntry(
+    projectId: string,
     entryId: string,
     body: {
       category?: TimeEntryCategory;
@@ -152,7 +153,8 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
     const mg = this.getManager(opts);
     const timeEntryRepo = mg.getRepository(PortfolioProjectTimeEntry);
 
-    const entry = await timeEntryRepo.findOne({ where: { id: entryId } });
+    // An entry of the project of the address: one of another project is not found.
+    const entry = await timeEntryRepo.findOne({ where: { id: entryId, project_id: projectId } });
     if (!entry) throw new NotFoundException('Time entry not found');
 
     // Permission check: admin OR logger OR target user
@@ -220,6 +222,7 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
    * Delete a time entry.
    */
   async deleteTimeEntry(
+    projectId: string,
     entryId: string,
     userId: string | null,
     isAdmin: boolean,
@@ -228,7 +231,8 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
     const mg = this.getManager(opts);
     const timeEntryRepo = mg.getRepository(PortfolioProjectTimeEntry);
 
-    const entry = await timeEntryRepo.findOne({ where: { id: entryId } });
+    // An entry of the project of the address: one of another project is not found.
+    const entry = await timeEntryRepo.findOne({ where: { id: entryId, project_id: projectId } });
     if (!entry) throw new NotFoundException('Time entry not found');
 
     // Permission check: admin OR logger OR target user
@@ -239,8 +243,6 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
     if (!canDelete) {
       throw codedForbidden('TIME_ENTRY_DELETE_OWN_OR_ASSIGNED', 'You can only delete your own or assigned time entries');
     }
-
-    const projectId = entry.project_id;
 
     await timeEntryRepo.delete({ id: entryId });
 
