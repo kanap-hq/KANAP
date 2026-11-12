@@ -2734,6 +2734,7 @@
     }
   },
   "integrations": {
+    "secretAddressChanged": "The address changed: enter it again.",
     "netbox": {
       "title": "Netbox inventory",
       "description": "Import your Netbox inventory as assets. Netbox stays the reference for the equipment it describes.",

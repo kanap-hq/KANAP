@@ -2734,6 +2734,7 @@
     }
   },
   "integrations": {
+    "secretAddressChanged": "Die Adresse hat sich geändert: Geben Sie den Wert erneut ein.",
     "netbox": {
       "title": "Netbox-Inventar",
       "description": "Übernehmen Sie Ihr Netbox-Inventar als Assets. Netbox bleibt die Referenz für die dort beschriebenen Geräte.",

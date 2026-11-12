@@ -29,6 +29,7 @@ import KanapDialog from '../../components/design/KanapDialog';
 import { useFeatures } from '../../config/FeaturesContext';
 import { useLocale } from '../../i18n/useLocale';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
+import { secretAddressKey } from '../../utils/secretAddress';
 import {
   AiModelConfig,
   AiModelConfigInput,
@@ -122,6 +123,11 @@ const cellSx = {
 
 const API_KEY_MASK = '••••••••';
 
+/** Where a model key goes: the provider and its custom address (some providers ignore the address). */
+function keyDestination(provider: string, endpointUrl: string | null | undefined): string {
+  return `${provider}|${secretAddressKey(endpointUrl) ?? ''}`;
+}
+
 function LabelWithInfo({ label, info }: { label: string; info: string }) {
   return (
     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
@@ -198,7 +204,10 @@ export default function AdminAiModelsPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<DraftState>(EMPTY_DRAFT);
-  const [hasStoredKey, setHasStoredKey] = React.useState(false);
+  const [savedKey, setSavedKey] = React.useState<{ present: boolean; destination: string | null }>({
+    present: false,
+    destination: null,
+  });
   const [error, setError] = React.useState<string | null>(null);
   const [testResult, setTestResult] = React.useState<AiProviderTestResult | null>(null);
 
@@ -297,7 +306,7 @@ export default function AdminAiModelsPage() {
   const openCreate = () => {
     setEditingId(null);
     setDraft(EMPTY_DRAFT);
-    setHasStoredKey(false);
+    setSavedKey({ present: false, destination: null });
     setError(null);
     setTestResult(null);
     setDialogOpen(true);
@@ -305,7 +314,10 @@ export default function AdminAiModelsPage() {
   const openEdit = (modelConfig: AiModelConfig) => {
     setEditingId(modelConfig.id);
     setDraft(draftFromConfig(modelConfig, locale));
-    setHasStoredKey(modelConfig.has_api_key);
+    setSavedKey({
+      present: modelConfig.has_api_key,
+      destination: keyDestination(modelConfig.provider, modelConfig.endpoint_url),
+    });
     setError(null);
     setTestResult(null);
     setDialogOpen(true);
@@ -327,8 +339,15 @@ export default function AdminAiModelsPage() {
   const priceCacheRead = parsePriceInput(draft.price_cache_read);
   const timeoutSeconds = draft.timeout_seconds.trim() === '' ? null : Number.parseInt(draft.timeout_seconds, 10);
   const timeoutInvalid = timeoutSeconds != null && (!Number.isInteger(timeoutSeconds) || timeoutSeconds <= 0);
+  // The saved key only goes to its saved destination: a new address or provider service
+  // empties it on save.
+  const keyEmptiedByDestination = Boolean(editingId && savedKey.present)
+    && keyDestination(draft.provider, draft.endpoint_url) !== savedKey.destination;
+  const hasStoredKey = savedKey.present && !keyEmptiedByDestination;
+  const keyRequired = keyEmptiedByDestination && (selectedProvider?.capabilities.requiresApiKey ?? true);
   const showingStoredKey = Boolean(editingId && hasStoredKey && draft.api_key === '');
   const saveDisabled = draft.name.trim() === ''
+    || (keyRequired && draft.api_key.trim() === '')
     || draft.model.trim() === ''
     || priceInput === undefined
     || priceOutput === undefined
@@ -597,7 +616,10 @@ export default function AdminAiModelsPage() {
                 autoComplete="new-password"
                 value={showingStoredKey ? API_KEY_MASK : draft.api_key}
                 placeholder={showingStoredKey ? undefined : t('aiModels.dialog.apiKeyPlaceholder')}
-                helperText={editingId && hasStoredKey ? t('aiModels.dialog.apiKeyKeepHint') : undefined}
+                required={keyRequired}
+                helperText={keyEmptiedByDestination
+                  ? t('integrations.secretAddressChanged')
+                  : editingId && hasStoredKey ? t('aiModels.dialog.apiKeyKeepHint') : undefined}
                 onFocus={(event) => {
                   if (showingStoredKey) event.target.select();
                 }}

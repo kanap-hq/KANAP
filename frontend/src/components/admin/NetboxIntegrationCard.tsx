@@ -32,6 +32,7 @@ import { useLocale } from '../../i18n/useLocale';
 import InfoHint from '../workspace/InfoHint';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
+import { isNewSecretAddress } from '../../utils/secretAddress';
 
 type NetboxForm = {
   enabled: boolean;
@@ -221,14 +222,20 @@ export default function NetboxIntegrationCard() {
     })
     : null;
   const sessionOnly = !!lastTest && !!sessionTest && lastTest.tested_at === sessionTest.tested_at && !sessionTest.persisted;
-  const hasStoredToken = integration?.credential?.present ?? false;
+  // The saved token only goes to the saved address: a new one empties it on save.
+  const tokenEmptiedByAddress = (integration?.credential?.present ?? false)
+    && isNewSecretAddress(form.base_url, integration?.base_url);
+  const hasStoredToken = (integration?.credential?.present ?? false) && !tokenEmptiedByAddress;
+  const tokenMissingForAddress = tokenEmptiedByAddress && !form.api_token.trim();
   const secretWritable = integration?.secret_writable !== false;
 
-  const tokenHelperText = [
-    t('integrations.netbox.hints.apiToken'),
-    hasStoredToken ? t('integrations.netbox.hints.apiTokenExisting') : '',
-    secretWritable ? '' : t('aiAdmin.provider.apiKey.storageUnavailable'),
-  ].filter(Boolean).join(' ');
+  const tokenHelperText = tokenEmptiedByAddress
+    ? t('integrations.secretAddressChanged')
+    : [
+      t('integrations.netbox.hints.apiToken'),
+      hasStoredToken ? t('integrations.netbox.hints.apiTokenExisting') : '',
+      secretWritable ? '' : t('aiAdmin.provider.apiKey.storageUnavailable'),
+    ].filter(Boolean).join(' ');
 
   return (
     <Card>
@@ -289,6 +296,7 @@ export default function NetboxIntegrationCard() {
               label={t('integrations.netbox.fields.apiToken')}
               type="password"
               autoComplete="new-password"
+              required={tokenEmptiedByAddress}
               value={form.api_token}
               onChange={(event) => editForm({ api_token: event.target.value })}
               placeholder={
@@ -375,14 +383,14 @@ export default function NetboxIntegrationCard() {
               <Button
                 variant="contained"
                 onClick={() => saveMutation.mutate(form)}
-                disabled={saveMutation.isPending}
+                disabled={saveMutation.isPending || (tokenMissingForAddress && form.enabled)}
               >
                 {saveMutation.isPending ? t('common:status.saving') : t('integrations.netbox.actions.save')}
               </Button>
               <Button
                 variant="outlined"
                 onClick={() => testMutation.mutate(form)}
-                disabled={testMutation.isPending}
+                disabled={testMutation.isPending || tokenMissingForAddress}
               >
                 {testMutation.isPending
                   ? t('integrations.netbox.actions.testing')

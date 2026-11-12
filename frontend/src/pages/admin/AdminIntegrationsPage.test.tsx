@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -146,5 +146,71 @@ describe('AdminIntegrationsPage', () => {
     expect(await screen.findByText('Netbox inventory')).toBeInTheDocument();
     expect(screen.queryByText('GLPI integration')).not.toBeInTheDocument();
     expect(await screen.findAllByText('Test connection')).toHaveLength(1);
+  });
+
+  it('empties the saved GLPI tokens when the address changes and asks for the user token again', async () => {
+    renderPage();
+    const card = (await screen.findByText('GLPI integration')).closest('.MuiCard-root') as HTMLElement;
+    const address = within(card).getByLabelText('GLPI URL');
+    const save = within(card).getByText('Save settings').closest('button')!;
+    const test = within(card).getByText('Test connection').closest('button')!;
+
+    // Another spelling of the saved address, or its API route, keeps the tokens.
+    for (const same of ['https://GLPI.internal', 'https://glpi.internal/apirest.php']) {
+      fireEvent.change(address, { target: { value: same } });
+      expect(within(card).queryByText('The address changed: enter it again.')).not.toBeInTheDocument();
+      expect(save).toBeEnabled();
+    }
+
+    fireEvent.change(address, { target: { value: 'https://glpi2.internal' } });
+    expect(within(card).getByLabelText(/^User token/)).toBeRequired();
+    expect(within(card).getAllByText('The address changed: enter it again.')).toHaveLength(2);
+    expect(save).toBeDisabled();
+    expect(test).toBeDisabled();
+
+    fireEvent.change(within(card).getByLabelText(/^User token/), { target: { value: 'new-token' } });
+    expect(save).toBeEnabled();
+    expect(test).toBeEnabled();
+  });
+
+  it('empties the saved PRTG key when the address changes and asks for it again', async () => {
+    const settingsGet = (api.get as any).getMockImplementation();
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === '/ai/admin/integrations/monitoring') {
+        return Promise.resolve({
+          data: {
+            integrations: [{
+              provider_key: 'prtg',
+              implementation: 'prtg',
+              enabled: true,
+              environment: 'production',
+              base_url: 'https://prtg.internal',
+              server_timezone: 'UTC',
+              request_timeout_seconds: null,
+              credential: { present: true, shape: 'api_token' },
+              updated_at: '2026-09-18T10:00:00.000Z',
+            }],
+          },
+        });
+      }
+      return settingsGet(url);
+    });
+    renderPage();
+    const card = (await screen.findByText('Monitoring: PRTG')).closest('.MuiCard-root') as HTMLElement;
+    const save = within(card).getByText('Save settings').closest('button')!;
+    const test = within(card).getByText('Test connection').closest('button')!;
+
+    fireEvent.change(within(card).getByLabelText('Server address'), { target: { value: 'https://prtg.internal/' } });
+    expect(within(card).queryByText('The address changed: enter it again.')).not.toBeInTheDocument();
+
+    fireEvent.change(within(card).getByLabelText('Server address'), { target: { value: 'https://prtg2.internal' } });
+    expect(within(card).getByLabelText(/^API key/)).toBeRequired();
+    expect(within(card).getByText('The address changed: enter it again.')).toBeInTheDocument();
+    expect(save).toBeDisabled();
+    expect(test).toBeDisabled();
+
+    fireEvent.change(within(card).getByLabelText(/^API key/), { target: { value: 'new-key' } });
+    expect(save).toBeEnabled();
+    expect(test).toBeEnabled();
   });
 });

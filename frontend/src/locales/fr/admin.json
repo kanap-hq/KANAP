@@ -2734,6 +2734,7 @@
     }
   },
   "integrations": {
+    "secretAddressChanged": "L'adresse a changé : saisissez de nouveau cette valeur.",
     "netbox": {
       "title": "Inventaire Netbox",
       "description": "Importez l'inventaire Netbox en tant qu'actifs. Netbox reste la référence pour les équipements qu'il décrit.",

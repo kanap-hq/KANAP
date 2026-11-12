@@ -349,4 +349,30 @@ describe('AdminAiModelsPage model dialog', () => {
       .toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Reasoning effort' })).toHaveTextContent('Maximum');
   });
+
+  it('empties the saved key when the address changes and asks for it again', async () => {
+    await openEditDialog();
+    const save = screen.getByRole('button', { name: 'Save' });
+    const endpoint = screen.getByPlaceholderText('e.g., https://ai.example.com');
+
+    // Another spelling of the saved address keeps the key.
+    fireEvent.change(endpoint, { target: { value: 'https://API.mistral.ai/v1/' } });
+    expect(screen.queryByText('The address changed: enter it again.')).not.toBeInTheDocument();
+    expect(save).toBeEnabled();
+
+    fireEvent.change(endpoint, { target: { value: 'https://ai.example.com/v1' } });
+    expect(screen.getByText('The address changed: enter it again.')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^API key/)).toBeRequired();
+    expect(screen.getByLabelText(/^API key/)).toHaveValue('');
+    expect(save).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/^API key/), { target: { value: 'sk-new' } });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect((api.patch as any).mock.calls[0][1]).toMatchObject({
+      endpoint_url: 'https://ai.example.com/v1',
+      api_key: 'sk-new',
+    });
+  });
 });
