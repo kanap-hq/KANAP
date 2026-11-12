@@ -70,7 +70,7 @@ export function extractTriage(response, dataset) {
   const toKeys = (refs) => refs.map((ref) => refToKey.get(ref) ?? ref);
 
   const usage = run.usage_json ?? {};
-  const stages = ['need_representation', 'knowledge_interpretation', 'action_planner', 'synthesis'];
+  const stages = ['need_representation', 'knowledge_interpretation', 'action_planner', 'synthesis', 'technician_brief', 'administrative_reply'];
   const tokens = {};
   let costUsd = 0;
   for (const stage of stages) {
