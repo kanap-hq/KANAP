@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, IconButton, Stack, Typography } from '@mui/material';
-import { CreationActions, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, changedFields, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
@@ -110,13 +110,6 @@ const DRAFT_FIELDS = [
   'supplier_id', 'company_id', 'cost_center_id', 'owner_user_id', 'start_date', 'duration_months', 'notice_period_months',
   'auto_renewal', 'yearly_amount_at_signature', 'currency', 'billing_frequency', 'notes', 'status', 'disabled_at',
 ] as const;
-
-/** What changed in the draft after it was sent: the edits to save on the contract it created. */
-function editsSince(sent: ContractForm, now: ContractForm): ContractPatch | null {
-  const late: Record<string, unknown> = {};
-  for (const field of DRAFT_FIELDS) if (!Object.is(sent[field], now[field])) late[field] = now[field];
-  return Object.keys(late).length > 0 ? late as ContractPatch : null;
-}
 
 /** The list's sort, search, filters and scope, kept in every address of the page. */
 function useListContext() {
@@ -434,7 +427,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
         // draft was sent (the next field, while the contract was written): saved on the contract.
         await queryClient.fetchQuery({ queryKey: ['contracts', created.id], queryFn: () => fetchContract(created.id) }).catch(() => undefined);
         const now = formRef.current;
-        const late = now ? editsSince(draft, now) : null;
+        const late = now ? changedFields(draft, now, DRAFT_FIELDS) as ContractPatch | null : null;
         if (late && patchBuffer.add(created.id, late)) autosave.schedule(flushPending);
         setForm((prev) => (prev ? { ...prev, id: created.id, name: creationTitle.current().trim() } : prev));
         return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
