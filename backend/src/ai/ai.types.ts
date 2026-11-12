@@ -337,6 +337,8 @@ export type AiKnowledgeSearchResultDto = {
   status: string;
   snippet: string | null;
   score: number | null;
+  /** Found by one whole word of the query only (the main search found nothing): a lead, not a source. */
+  fallback: boolean;
   library: {
     id: string | null;
     name: string | null;

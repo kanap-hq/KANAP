@@ -199,6 +199,8 @@ Le statut n'est pas décoratif. Il indique aux lecteurs avec quel sérieux ils d
 | **Archivé** | Conservé pour archive | Souvent encore utile pour l'historique, pas pour les recommandations actives |
 | **Obsolète** | Remplacé ou plus valide | Les lecteurs ne devraient pas le suivre comme pratique actuelle |
 
+Les agents IA ne lisent et ne citent que les documents publiés. Kad lit tous les documents que vous pouvez ouvrir et indique le statut d'un document non publié qu'il cite.
+
 La base de connaissances permet la publication directe même sans workflow de revue formel. C'est utile pour le matériel à faible risque, mais cela signifie aussi que les équipes ont besoin de discipline sur le moment où la revue est optionnelle et celui où elle devrait être attendue.
 
 ## Écriture, verrous et sauvegarde automatique

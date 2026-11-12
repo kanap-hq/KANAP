@@ -314,6 +314,7 @@
   "WORKFLOW_STAGE_NOT_ASSIGNED": "Sie sind der aktuellen Stufe dieser Prüfung nicht zugewiesen.",
   "DOCUMENT_SHARE_EXTERNAL_REFUSED": "Dieses Dokument gehört zur Vorfallanalyse und kann nicht extern geteilt werden.",
   "DOCUMENT_RECIPIENT_NOT_ALLOWED": "Einer der Empfänger kann dieses Dokument nicht öffnen, daher wurde nichts geteilt.",
+  "DOCUMENT_NOT_PUBLISHED": "Ein KI-Agent liest nur veröffentlichte Dokumente: {{ref}} ist nicht veröffentlicht.",
   "FEATURE_DISABLED": "Diese Funktion ist in dieser Installation deaktiviert.",
   "AI_USER_NOT_ALLOWED": "Ihr Konto kann {{agent}} nicht nutzen. Fragen Sie einen Administrator Ihres Arbeitsbereichs.",
   "AI_PLATFORM_HOST": "{{agent}} ist nur innerhalb eines Arbeitsbereichs verfügbar. Öffnen Sie einen Arbeitsbereich, um es zu nutzen.",

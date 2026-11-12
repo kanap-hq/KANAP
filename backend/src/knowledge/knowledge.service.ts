@@ -244,6 +244,77 @@ export type DocumentSourceGrant = {
 
 export type { DocumentSourceAccessContext };
 
+/** Passages of one document's body for a search (`KnowledgeService.getDocumentSearchPassages`). */
+export type DocumentSearchPassages = {
+  id: string;
+  ref: string;
+  title: string;
+  status: string;
+  /** True when words of the query fall in the body; false: the single passage is the start of the body. */
+  matched: boolean;
+  passages: string[];
+};
+
+const DOCUMENT_BODY_LEAD_CHARS = 1200;
+/** A passage: whole sentences, up to this many words (a longer sentence is cut into pieces). */
+const DOCUMENT_PASSAGE_MAX_WORDS = 70;
+
+/** The sentences of a plain-text body: cut after `.`, `!`, `?`, `;`, `:` and at line breaks. */
+function documentSentences(body: string): string[] {
+  const sentences: string[] = [];
+  for (const piece of String(body || '').split(/(?<=[.!?;:])\s+|\n+/)) {
+    const words = piece.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+    for (let start = 0; start < words.length; start += DOCUMENT_PASSAGE_MAX_WORDS) {
+      sentences.push(words.slice(start, start + DOCUMENT_PASSAGE_MAX_WORDS).join(' '));
+    }
+  }
+  return sentences;
+}
+
+/**
+ * The passages of a body for the words of a query, from the query stems each sentence holds
+ * (`hits[i]`): a window of whole sentences starts at every sentence, up to 70 words, and scores
+ * the stems it holds, each weighted by how rare it is in the body (a word of almost every
+ * sentence, such as "laptop" in a laptop handbook, weighs little). The best windows that do not
+ * overlap are kept, best first, wherever they are in the body.
+ */
+function selectDocumentPassages(sentences: string[], hits: string[][], maxPassages: number): string[] {
+  const frequency = new Map<string, number>();
+  for (const stems of hits) for (const stem of new Set(stems)) frequency.set(stem, (frequency.get(stem) ?? 0) + 1);
+  const weight = (stem: string) => Math.log(1 + sentences.length / (frequency.get(stem) ?? 1));
+  const windows: Array<{ start: number; end: number; score: number }> = [];
+  for (let start = 0; start < sentences.length; start += 1) {
+    if ((hits[start] ?? []).length === 0) continue;
+    let end = start;
+    let words = sentences[start].split(' ').length;
+    while (end + 1 < sentences.length && words + sentences[end + 1].split(' ').length <= DOCUMENT_PASSAGE_MAX_WORDS) {
+      end += 1;
+      words += sentences[end].split(' ').length;
+    }
+    const stems = new Set<string>();
+    for (let index = start; index <= end; index += 1) for (const stem of hits[index] ?? []) stems.add(stem);
+    windows.push({ start, end, score: [...stems].reduce((total, stem) => total + weight(stem), 0) });
+  }
+  windows.sort((left, right) => right.score - left.score || left.start - right.start);
+  const kept: Array<{ start: number; end: number }> = [];
+  for (const window of windows) {
+    if (kept.length >= maxPassages) break;
+    if (kept.some((other) => window.start <= other.end && other.start <= window.end)) continue;
+    kept.push(window);
+  }
+  return kept.map((window) => sentences.slice(window.start, window.end + 1).join(' '));
+}
+
+/** The start of a body, cut at a word boundary: one passage, or none for an empty body. */
+function documentBodyLead(body: string): string[] {
+  const text = body.replace(/\s+/g, ' ').trim();
+  if (!text) return [];
+  if (text.length <= DOCUMENT_BODY_LEAD_CHARS) return [text];
+  const cut = text.slice(0, DOCUMENT_BODY_LEAD_CHARS);
+  const lastSpace = cut.lastIndexOf(' ');
+  return [`${(lastSpace > DOCUMENT_BODY_LEAD_CHARS / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`];
+}
+
 /** `%`, `_` and `\` are LIKE metacharacters: escaped so the fragment matches literally. */
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, '\\$&');
@@ -1914,6 +1985,12 @@ export class KnowledgeService {
       .toLowerCase();
   }
 
+  /**
+   * The words of the fallback search, run only when the main search finds nothing: each word of
+   * four letters or more, matched as a whole word. It lets a phrased query (`and` mode) find a
+   * document that holds one of its words; a short word or a part of a word matched anything
+   * ("par" found "Paris", "Parma" and "spare"), so neither counts.
+   */
   private getDocumentSearchFallbackTerms(term: string): string[] {
     const normalized = this.normalizeDocumentSearchTerm(term);
     if (!normalized) return [];
@@ -1930,13 +2007,10 @@ export class KnowledgeService {
       'une',
       'with',
     ]);
-    const values = [
-      normalized,
-      ...normalized.split(/\s+/)
-        .flatMap((token) => token.split(/['-]/))
-        .map((token) => token.trim())
-        .filter((token) => token.length >= 3 && !stopWords.has(token)),
-    ];
+    const values = normalized.split(/\s+/)
+      .flatMap((token) => token.split(/['-]/))
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 4 && /^[\p{L}\p{N}]+$/u.test(token) && !stopWords.has(token));
     const result: string[] = [];
     const seen = new Set<string>();
     for (const value of values) {
@@ -6094,7 +6168,15 @@ export class KnowledgeService {
     return repo.save(existing);
   }
 
-  async search(query: any, opts?: { manager?: EntityManager; userId?: string | null; tenantId?: string | null }) {
+  /**
+   * `publishedOnly` (server side only, never read from the query): the AI agents search published
+   * documents only (Fried, 12/11); Kad, the MCP server and the screens keep every status.
+   * Items found by the fallback (one whole word of the query, score 0) carry `fallback: true`.
+   */
+  async search(
+    query: any,
+    opts?: { manager?: EntityManager; userId?: string | null; tenantId?: string | null; publishedOnly?: boolean },
+  ) {
     const manager = this.getManager(opts);
     const search = this.getDocumentSearchState(query?.q);
     if (!search) throw new BadRequestException('q is required');
@@ -6110,8 +6192,9 @@ export class KnowledgeService {
       : null;
     const accessibleLibraries = await this.listAccessibleLibraryIds(manager, opts?.userId || null, 'reader');
     if (accessibleLibraries && accessibleLibraries.length === 0) {
-      return { items: [], total: 0, offset, limit, truncated: false };
+      return { items: [], total: 0, offset, limit, truncated: false, fallback: false };
     }
+    const publishedOnly = opts?.publishedOnly === true;
 
     const matchMode = query?.matchMode === 'any' ? 'any' : 'and';
     const tsQueryTerm = matchMode === 'any' ? normalizeDocumentAnyTermQuery(search.term) : search.term;
@@ -6147,6 +6230,7 @@ export class KnowledgeService {
       params.push(accessibleLibraries);
       whereClauses.push(`d.library_id = ANY($${params.length}::uuid[])`);
     }
+    if (publishedOnly) whereClauses.push(`d.status = 'published'`);
     whereClauses.push(documentIncidentVisibilitySql('d', incidentViewer, params).replace(/^\s*AND\s/, ''));
     params.push(limit);
     params.push(offset);
@@ -6176,20 +6260,22 @@ export class KnowledgeService {
       params,
     );
 
+    let usedFallback = false;
     if (rows.length === 0) {
       const fallbackTerms = this.getDocumentSearchFallbackTerms(search.term);
       if (fallbackTerms.length > 0) {
+        usedFallback = true;
         const fallbackParams: Array<string | number | string[]> = [];
-        const fallbackClauses: string[] = [];
-        for (const term of fallbackTerms) {
-          fallbackParams.push(`%${term}%`);
-          const index = fallbackParams.length;
-          fallbackClauses.push(
-            `d.title ILIKE $${index}`,
-            `COALESCE(d.summary, '') ILIKE $${index}`,
-            `COALESCE(d.content_plain, '') ILIKE $${index}`,
-          );
-        }
+        // One pass over title, summary and body with one pattern: any of the words, as a whole
+        // word. The terms hold letters and digits only (getDocumentSearchFallbackTerms); they go
+        // through unaccent like the columns ("Straße" and "cœur" find themselves), and whatever
+        // unaccent turns into something else than a letter or a digit (it maps the modifier letter
+        // "ˆ" to "^") is dropped before the pattern is built, once per query.
+        fallbackParams.push(fallbackTerms.join('|'));
+        const fallbackClauses: string[] = [
+          `public.unaccent(concat_ws(' ', d.title, d.summary, d.content_plain))
+             ~* (SELECT '\\m(' || regexp_replace(public.unaccent($${fallbackParams.length}::text), '[^[:alnum:]|]', '', 'g') || ')\\M')`,
+        ];
         if (search.itemNumber != null) {
           fallbackParams.push(search.itemNumber);
           fallbackClauses.unshift(`d.item_number = $${fallbackParams.length}`);
@@ -6207,6 +6293,7 @@ export class KnowledgeService {
           fallbackParams.push(accessibleLibraries);
           fallbackWhereClauses.push(`d.library_id = ANY($${fallbackParams.length}::uuid[])`);
         }
+        if (publishedOnly) fallbackWhereClauses.push(`d.status = 'published'`);
         fallbackWhereClauses.push(
           documentIncidentVisibilitySql('d', incidentViewer, fallbackParams).replace(/^\s*AND\s/, ''),
         );
@@ -6239,17 +6326,98 @@ export class KnowledgeService {
     }
 
     const total = rows.length > 0 ? Math.max(Number(rows[0].total_count) || 0, rows.length) : 0;
+    const fallback = usedFallback && rows.length > 0;
 
     return {
       items: rows.map((row: any) => ({
         ...row,
         item_ref: `DOC-${row.item_number}`,
         score: Number(row.rank ?? row.score ?? 0),
+        fallback,
       })),
       total,
       offset,
       limit,
       truncated: offset + rows.length < total,
+      fallback,
+    };
+  }
+
+  /**
+   * Long passages of one document's body around the words of `query`, for a model that judges the
+   * document on its text: up to `maxPassages` (default 4, at most 8) passages of whole sentences,
+   * 70 words at most, plain text, best first (`selectDocumentPassages`), the stems compared under
+   * the configuration (French or English) that finds more of them in the body. When no word of the
+   * query is in the body, `matched` is false and the single passage is the start of the body. Null when the document does not
+   * exist, the person may not read it, it is not published under `publishedOnly`, or it is in no
+   * library of `libraryIds`.
+   */
+  async getDocumentSearchPassages(
+    idOrRef: string,
+    query: string,
+    opts?: {
+      manager?: EntityManager;
+      userId?: string | null;
+      tenantId?: string | null;
+      publishedOnly?: boolean;
+      maxPassages?: number;
+      /** Only a document of one of these libraries (an agent's list); null or absent: any. */
+      libraryIds?: string[] | null;
+    },
+  ): Promise<DocumentSearchPassages | null> {
+    const manager = this.getManager(opts);
+    let documentId: string;
+    try {
+      documentId = await this.resolveDocumentId(idOrRef, manager);
+      await this.assertDocumentReadable(documentId, manager, opts?.userId || null, { tenantId: opts?.tenantId ?? null });
+    } catch (error) {
+      if (error instanceof HttpException) return null;
+      throw error;
+    }
+    const maxPassages = Math.min(Math.max(Math.trunc(Number(opts?.maxPassages) || 4), 1), 8);
+    const rows = await manager.query(
+      `SELECT d.id, d.item_number, d.title, d.status, coalesce(d.content_plain, '') AS body
+       FROM documents d
+       WHERE d.id = $1
+         AND d.tenant_id = app_current_tenant()
+         ${opts?.publishedOnly === true ? `AND d.status = 'published'` : ''}
+         ${opts?.libraryIds ? 'AND d.library_id = ANY($2::uuid[])' : ''}
+       LIMIT 1`,
+      [documentId, ...(opts?.libraryIds ? [opts.libraryIds] : [])],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    // The query stems each sentence holds, under both configurations, in one statement.
+    const sentences = documentSentences(String(row.body));
+    const queryText = normalizeDocumentAnyTermQuery(String(query || ''));
+    const stemRows: Array<{ ord: string | number; fr: string[] | null; en: string[] | null }> = sentences.length > 0 && queryText
+      ? await manager.query(
+        `SELECT s.ord,
+                ARRAY(SELECT unnest(tsvector_to_array(to_tsvector('kanap_fr', s.sentence)))
+                      INTERSECT SELECT unnest(tsvector_to_array(to_tsvector('kanap_fr', $2)))) AS fr,
+                ARRAY(SELECT unnest(tsvector_to_array(to_tsvector('kanap_en', s.sentence)))
+                      INTERSECT SELECT unnest(tsvector_to_array(to_tsvector('kanap_en', $2)))) AS en
+         FROM unnest($1::text[]) WITH ORDINALITY AS s(sentence, ord)`,
+        [sentences, queryText],
+      )
+      : [];
+    const hitsFor = (key: 'fr' | 'en') => {
+      const hits: string[][] = sentences.map(() => []);
+      for (const stemRow of stemRows) hits[Number(stemRow.ord) - 1] = stemRow[key] ?? [];
+      return hits;
+    };
+    const frHits = hitsFor('fr');
+    const enHits = hitsFor('en');
+    const count = (hits: string[][]) => hits.reduce((total, stems) => total + stems.length, 0);
+    const passages = selectDocumentPassages(sentences, count(enHits) > count(frHits) ? enHits : frHits, maxPassages);
+    const matched = passages.length > 0;
+    return {
+      id: String(row.id),
+      ref: `DOC-${row.item_number}`,
+      title: String(row.title ?? ''),
+      status: String(row.status),
+      matched,
+      passages: matched ? passages : documentBodyLead(String(row.body)),
     };
   }
 

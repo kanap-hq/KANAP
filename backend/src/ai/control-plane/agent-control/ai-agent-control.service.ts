@@ -165,6 +165,10 @@ import {
   KnowledgePlannerCandidate,
   KnowledgeResultInterpretation,
   KnowledgeSearchPlan,
+  MAX_INTERPRETER_PASSAGE_CANDIDATES,
+  MAX_INTERPRETER_PASSAGES_PER_CANDIDATE,
+  MAX_INTERPRETER_PASSAGE_CHARS,
+  MAX_INTERPRETER_BODY_LEAD_CHARS,
 } from './ai-knowledge-search-planner.service';
 import {
   AiReplySynthesisService,
@@ -192,6 +196,8 @@ import {
 } from './ai-ticket-need-representation.service';
 import { KnowledgeQueryDerivation } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
+import { Tenant } from '../../../tenants/tenant.entity';
+import { tenantSeedLanguage } from '../../../analytics/recommended-dimensions.seed';
 import {
   normalizeKnowledgeText,
   cleanKnowledgeCandidate,
@@ -221,6 +227,7 @@ import {
   filterKnowledgeItemsByRelevance,
   plannerKnowledgeSummary,
   plannerWebSummary,
+  plannerSourcedReplySummary,
   buildFallbackKnowledgeInterpretation,
   serializeKnowledgeSearchPlan,
   serializeKnowledgeNeedRepresentation,
@@ -228,7 +235,10 @@ import {
   serializeTicketImageExtraction,
   serializeKnowledgeInterpretation,
   ticketLooksFrench,
+  knowledgePassagesFromOutput,
+  knowledgePassageQuery,
   MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY,
+  MAX_KNOWLEDGE_SEARCH_QUERIES,
 } from './agent-control-knowledge.util';
 import {
   summarizeMonitoringHistory,
@@ -375,6 +385,7 @@ import {
   limitedSourceLines,
   renderSynthesizedRequesterReply,
   renderSynthesizedTriageNote,
+  triageNoteLanguage,
   buildRequesterReply,
   buildStatusUpdateProposal,
   MAX_SYNTHESIZED_REQUESTER_BODY_CHARS,
@@ -664,6 +675,13 @@ export type KnowledgeSearchItem = {
   // for the reply; absent for raw search/merge candidates. See applyKnowledgeInterpretation (#3).
   validation_status?: 'selected' | 'unvalidated' | null;
   library_id?: string | null;
+  // Found by the whole-word fallback of the search only (no relevance rank): a candidate the
+  // interpreter may select after reading its passages, never a source without that judgment.
+  fallback?: boolean;
+  // Passages of the body around the words of the queries that found the document; `passages_matched`
+  // false: the single passage is the start of the body.
+  passages?: string[] | null;
+  passages_matched?: boolean | null;
 };
 
 export type KnowledgeSearchAttempt = {
@@ -4515,6 +4533,9 @@ export class AiAgentControlService {
       const seenKnowledgeRefs = new Set<string>();
       for (const attempt of knowledgeAttempts) {
         for (const item of attempt.items) {
+          // No interpreter judges the documents here: a result of the whole-word fallback is
+          // never a source of the diagnosis.
+          if (item.fallback === true) continue;
           if (knowledgeItems.length >= MAX_MONITORING_KNOWLEDGE_DOCUMENTS) break;
           const ref = knowledgeDocumentRef(item);
           if (!ref || seenKnowledgeRefs.has(ref.toLocaleLowerCase())) continue;
@@ -5468,6 +5489,7 @@ export class AiAgentControlService {
       source: 'deterministic_fallback',
       queries: shortFallbackKnowledgeQueries,
       exact_queries: [],
+      language_queries: [],
       facet_queries: [],
       fallback_queries: shortFallbackKnowledgeQueries,
       dropped_queries: [],
@@ -5614,11 +5636,11 @@ export class AiAgentControlService {
       knowledgeSearchPlan = {
         ...plannedKnowledgeSearch,
         queries: this.ticketNeedBuilder
-          ? uniqueKnowledgeCandidates(plannedKnowledgeSearch.queries)
+          ? uniqueKnowledgeCandidates(plannedKnowledgeSearch.queries, MAX_KNOWLEDGE_SEARCH_QUERIES)
           : uniqueKnowledgeCandidates([
             ...plannedKnowledgeSearch.queries,
             ...deterministicKnowledgeQueries,
-          ]),
+          ], MAX_KNOWLEDGE_SEARCH_QUERIES),
       };
       knowledgeQueryCandidates = knowledgeSearchPlan.queries;
       for (const [candidateIndex, knowledgeQuery] of knowledgeQueryCandidates.entries()) {
@@ -5654,6 +5676,49 @@ export class AiAgentControlService {
         });
       }
       mergedKnowledgeCandidates = mergeKnowledgeAttempts(knowledgeAttempts);
+      // The interpreter judges the first candidates on passages of their body where the words of
+      // the queries that found them fall (the start of the body when none does), read through the
+      // same governed surface as the search: published documents of the agent's libraries only.
+      for (const [passageIndex, candidate] of mergedKnowledgeCandidates.slice(0, MAX_INTERPRETER_PASSAGE_CANDIDATES).entries()) {
+        const documentId = knowledgeDocumentRef(candidate);
+        const passagesQuery = knowledgePassageQuery(candidate.search_queries, 600);
+        if (!documentId || !passagesQuery) continue;
+        try {
+          const result = await this.dispatcher.execute<Record<string, unknown>>(context, {
+            capabilityName: 'get_document',
+            input: {
+              document_id: documentId,
+              passages_query: passagesQuery,
+              max_passages: MAX_INTERPRETER_PASSAGES_PER_CANDIDATE,
+              ...(knowledgeSources.knowledgeLibraryIds ? { library_ids: knowledgeSources.knowledgeLibraryIds } : {}),
+            },
+            execution: {
+              surface: 'internal',
+              trigger_kind: 'internal',
+              runId: ticketResult.run_id,
+              stepIndex: stepIndex++,
+              metadata: {
+                ...baseMetadata,
+                knowledge_passages_source: 'ticket',
+                knowledge_passages_index: passageIndex + 1,
+                knowledge_document_ref: documentId,
+              },
+            },
+          });
+          allEvidenceIds.push(...await this.evidenceIdsForTool(context, result.tool_execution_id));
+          const passages = knowledgePassagesFromOutput(
+            result.output,
+            MAX_INTERPRETER_PASSAGES_PER_CANDIDATE,
+            Math.max(MAX_INTERPRETER_PASSAGE_CHARS, MAX_INTERPRETER_BODY_LEAD_CHARS),
+          );
+          if (passages) {
+            candidate.passages = passages.passages;
+            candidate.passages_matched = passages.matched;
+          }
+        } catch (error) {
+          this.logger.debug(`Knowledge passages skipped for ${documentId}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
       knowledgeInterpretation = this.knowledgePlanner
         ? await this.knowledgePlanner.interpretKnowledgeResults(context, {
           plan: knowledgeSearchPlan,
@@ -5962,6 +6027,13 @@ export class AiAgentControlService {
       synthesis_latency_ms: null,
     };
 
+    // As soon as the interpreter retains a document, the reply synthesis reads its body and says
+    // whether it answers the request; the action planner decides afterwards, knowing that answer.
+    const knowledgeRetained = knowledgeItems.some((item) => item.validation_status === 'selected');
+    if (knowledgeRetained && (conversationGate.can_prepare_sourced_answer || conversationGate.can_prepare_internal_note)) {
+      await runReplySynthesis();
+    }
+
     const actionPlannerGuidanceHash = guidanceHash(promptRuntime.actionPlannerGuidance);
     const assignmentWriteCapable = !!agentDefinition
       && definitionAllowsCapability(agentDefinition, TICKETING_ASSIGNMENT_UPDATE_PREPARE_CAPABILITY)
@@ -6020,6 +6092,7 @@ export class AiAgentControlService {
       reply_language: synthesisLanguage,
       knowledge_summary: plannerKnowledgeSummary(knowledgeItems, knowledgeLowRelevance.length, knowledgeInterpretation, knowledgeSearchPlan, knowledgeQueryDerivation),
       web_summary: plannerWebSummary(webSearchResults, webSearchStatus, webSearchQuery),
+      sourced_reply: plannerSourcedReplySummary(replySynthesisResult),
       image_evidence: ticketImageExtraction.evidence,
       granted_capabilities: allowedCapabilityNames(agentDefinition),
       owned_action_types: plannerOwnedActionTypes,
@@ -6405,13 +6478,23 @@ export class AiAgentControlService {
         effectiveInternalNoteAction.action.reason,
       ])
       : null;
+    // The note's frame is in the tenant's language, as the reply is in the ticket's.
+    const noteLanguage = triageNoteLanguage(tenantSeedLanguage(
+      (await context.manager.getRepository(Tenant).findOne({ where: { id: context.tenantId } }))?.metadata,
+    ));
+    // The synthesis runs as soon as a document is retained, before the planner decides: its note
+    // describes the reply only when a sourced answer is what goes out (or the planner is
+    // unavailable). With an administrative reply, the note is the administrative one.
+    const sourcedAnswerPrepared = effectivePlannerActions.some((entry) =>
+      entry.action.action_type === 'requester_reply' && entry.action.reply_kind === 'sourced_answer');
+    const noteFromSynthesis = !!replySynthesisResult && (!actionPlannerResult || sourcedAnswerPrepared);
     const noteBody = isPlannerEscalation
-      ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason })
-      : (replySynthesisResult
-        ? renderSynthesizedTriageNote(ticket, agentTimeline, replySynthesisResult)
+      ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason }, noteLanguage)
+      : (noteFromSynthesis && replySynthesisResult
+        ? renderSynthesizedTriageNote(ticket, agentTimeline, replySynthesisResult, noteLanguage)
         : (isPlannerAdministrativeReply
-          ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'administrative_reply', reason: administrativeReason })
-          : buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, null)));
+          ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'administrative_reply', reason: administrativeReason }, noteLanguage)
+          : buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, null, noteLanguage)));
 
     const plannerClassificationUpdate = effectivePlannerActions.find((entry) => entry.action.action_type === PLANNER_CLASSIFICATION_ACTION_TYPE) ?? null;
     const classificationUpdateInput = plannerClassificationUpdate?.action.proposed

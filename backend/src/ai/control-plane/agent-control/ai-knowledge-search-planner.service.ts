@@ -37,6 +37,11 @@ export type KnowledgePlannerCandidate = {
   search_queries: string[];
   match_count?: number | null;
   score?: number | null;
+  // Found by the whole-word fallback of the search only, without a relevance rank.
+  fallback?: boolean;
+  // Passages of the body around the search words; `passages_matched` false: the start of the body.
+  passages?: string[] | null;
+  passages_matched?: boolean | null;
 };
 
 export type KnowledgeSearchPlan = {
@@ -63,7 +68,6 @@ export type KnowledgeResultInterpretation = {
     same_error_code?: boolean | null;
     doc_type_fit?: 'procedure' | 'reference' | 'spec' | 'recipe' | 'unknown' | null;
   } | null;
-  needs_human_review: boolean;
   confidence: number | null;
   rationale: string | null;
   model: string | null;
@@ -74,10 +78,28 @@ export type KnowledgeResultInterpretation = {
   warnings: string[];
 };
 
-const MAX_PLAN_QUERIES = 10;
+// The model may give 8 queries (one at least per document language) and the deterministic ones
+// follow: 12 searches in all, one SQL query each.
+const MAX_PLAN_QUERIES = 12;
+const MAX_MODEL_PLAN_QUERIES = 8;
 const MAX_QUERY_CHARS = 120;
 const MAX_TERMS = 10;
-const MAX_INTERPRETER_CANDIDATES = 16;
+// Bounds of what the interpreter reads of the candidates. Every candidate (16 at most) shows its
+// title and its summary (280 characters). The first 8 by rank also show up to 3 passages of their
+// body where the search words fall (480 characters each, a passage being 30 to 70 words); when no
+// search word falls in the body, the first 3 such candidates show the start of the body instead
+// (600 characters). A candidate without passages keeps its search snippet (280 characters).
+// Worst case of document text: 8 x (280 + 3 x 480) + 8 x (280 + 280) = 18,240 characters. Not
+// counted: the titles (not cut) and the search queries of each candidate (4 x 120 characters at
+// most, 7,680 for 16 candidates).
+export const MAX_INTERPRETER_CANDIDATES = 16;
+export const MAX_INTERPRETER_PASSAGE_CANDIDATES = 8;
+export const MAX_INTERPRETER_PASSAGES_PER_CANDIDATE = 3;
+export const MAX_INTERPRETER_PASSAGE_CHARS = 480;
+export const MAX_INTERPRETER_BODY_LEAD_CANDIDATES = 3;
+export const MAX_INTERPRETER_BODY_LEAD_CHARS = 600;
+const MAX_INTERPRETER_SUMMARY_CHARS = 280;
+const MAX_INTERPRETER_SNIPPET_CHARS = 280;
 // Background stage: give reasoning models room to think before emitting JSON.
 // Override per deployment via AI_AGENT_KNOWLEDGE_LLM_TIMEOUT_MS.
 const DEFAULT_LLM_TIMEOUT_MS = 120_000;
@@ -114,7 +136,6 @@ const ResultInterpretationSchema = z.object({
     same_error_code: z.boolean().nullable().optional(),
     doc_type_fit: z.enum(['procedure', 'reference', 'spec', 'recipe', 'unknown']).nullable().optional(),
   }).nullable().optional(),
-  needs_human_review: z.boolean().optional(),
   confidence: z.number().min(0).max(1).nullable().optional(),
   rationale: z.string().trim().max(420).nullable().optional(),
 });
@@ -285,7 +306,44 @@ function normalizedCandidateText(candidate: KnowledgePlannerCandidate): string {
     candidate.title,
     candidate.summary,
     candidate.snippet,
+    ...(candidate.passages ?? []),
   ].filter(Boolean).join(' ')).toLocaleLowerCase();
+}
+
+/**
+ * What the interpreter reads of each candidate, within the bounds above: passages of the body for
+ * the first candidates by rank, the start of the body for a few of those where no search word
+ * falls, the search snippet for the others.
+ */
+export function interpreterCandidatePayload(candidates: KnowledgePlannerCandidate[]): Array<Record<string, unknown>> {
+  let bodyLeads = 0;
+  return sortPlannerCandidates(candidates).slice(0, MAX_INTERPRETER_CANDIDATES).map((candidate, index) => {
+    const passages = index < MAX_INTERPRETER_PASSAGE_CANDIDATES ? (candidate.passages ?? []) : [];
+    let bodyPassages: string[] = [];
+    let bodyStart: string | null = null;
+    if (passages.length > 0 && candidate.passages_matched !== false) {
+      bodyPassages = passages
+        .slice(0, MAX_INTERPRETER_PASSAGES_PER_CANDIDATE)
+        .map((passage) => compact(passage, MAX_INTERPRETER_PASSAGE_CHARS))
+        .filter(Boolean);
+    } else if (passages.length > 0 && bodyLeads < MAX_INTERPRETER_BODY_LEAD_CANDIDATES) {
+      bodyLeads += 1;
+      bodyStart = compact(passages[0], MAX_INTERPRETER_BODY_LEAD_CHARS) || null;
+    }
+    return {
+      ref: candidate.ref,
+      title: candidate.title,
+      summary: compact(candidate.summary, MAX_INTERPRETER_SUMMARY_CHARS),
+      ...(bodyPassages.length > 0 ? { body_passages: bodyPassages } : {}),
+      ...(bodyStart ? { body_start: bodyStart } : {}),
+      ...(bodyPassages.length === 0 && !bodyStart ? { snippet: compact(candidate.snippet, MAX_INTERPRETER_SNIPPET_CHARS) } : {}),
+      status: candidate.status,
+      ...(candidate.fallback ? { fallback: true } : {}),
+      search_queries: candidate.search_queries.slice(0, 4),
+      match_count: candidate.match_count ?? candidate.search_queries.length,
+      score: candidate.score ?? null,
+    };
+  });
 }
 
 function normalizedSearchText(value: string | null | undefined): string {
@@ -377,13 +435,14 @@ export class AiKnowledgeSearchPlannerService {
             'Retrieve knowledge that directly answers the requester need.',
             'Do not generate policy, off-topic handling, or helpdesk procedure queries unless the requester explicitly asks for those.',
             'Prefer short keyword queries over full natural-language sentences.',
+            'The documents may be written in English, French, German or Spanish, whatever the ticket language: give at least one query in each of these four languages, with the key terms translated.',
           ],
           schema: {
             intent: 'short natural-language interpretation of the current requester need',
             language: 'ticket language such as fr or en',
             positive_terms: ['concepts to search for'],
             negative_terms: ['concepts explicitly refused or to avoid'],
-            queries: ['1-8 short search strings, ordered from most specific to fallback'],
+            queries: ['4-8 short search strings, ordered from most specific to fallback, covering en, fr, de and es'],
             rationale: 'one short audit sentence, no hidden reasoning',
             confidence: '0..1',
           },
@@ -421,7 +480,7 @@ export class AiKnowledgeSearchPlannerService {
       }
       const parsed = result.value;
       const queries = normalizeQueries([
-        ...(parsed.queries ?? []).slice(0, 5),
+        ...(parsed.queries ?? []).slice(0, MAX_MODEL_PLAN_QUERIES),
         ...fallback.queries,
       ]);
       if (queries.length === 0) return fallback;
@@ -465,7 +524,6 @@ export class AiKnowledgeSearchPlannerService {
     if (input.candidates.length === 0 || process.env.AI_AGENT_KNOWLEDGE_LLM_PLANNER === '0') {
       return fallback;
     }
-    const rankedCandidates = sortPlannerCandidates(input.candidates);
     const userPayload = {
       task: 'Select relevant knowledge documents from retrieved candidates.',
       schema: {
@@ -477,7 +535,6 @@ export class AiKnowledgeSearchPlannerService {
           same_error_code: 'true when selected docs match an exact requested code/ref',
           doc_type_fit: 'procedure | reference | spec | recipe | unknown',
         },
-        needs_human_review: 'true when no reliable candidate exists or confidence is low',
         confidence: '0..1',
         rationale: 'one short audit sentence, no hidden reasoning',
       },
@@ -494,17 +551,11 @@ export class AiKnowledgeSearchPlannerService {
         latest_requester_message: compact(latestRequesterMessage(input.timeline), 700),
         previous_agent_answer: compact(previousAgentAnswer(input.timeline), 700),
       },
-      candidates: rankedCandidates.slice(0, MAX_INTERPRETER_CANDIDATES).map((candidate) => ({
-        ref: candidate.ref,
-        title: candidate.title,
-        summary: compact(candidate.summary, 280),
-        snippet: compact(candidate.snippet, 280),
-        status: candidate.status,
-        search_queries: candidate.search_queries.slice(0, 4),
-        match_count: candidate.match_count ?? candidate.search_queries.length,
-        score: candidate.score ?? null,
-      })),
+      candidates: interpreterCandidatePayload(input.candidates),
       ranking_notes: [
+        '`body_passages` are excerpts of the document body where the search words fall; `body_start` is the start of the body when none falls in it. Judge a document on its body, not only on its title and summary.',
+        'A document may be written in another language than the ticket (English, French, German or Spanish): judge its meaning, not its words.',
+        '`fallback: true` marks a document found by a whole-word match only, without relevance rank: select it only when its body shows that it answers the need.',
         '`score` is the lexical relevance rank; treat it as a strong signal, but judge final relevance from the content.',
         '`match_count` is the number of generated/planned queries that retrieved the document.',
         'Exact-code, same-application, and same-symptom facet matches are strong validation signals.',
@@ -554,13 +605,11 @@ export class AiKnowledgeSearchPlannerService {
         selected_refs: selectedRefs,
         rejected,
         facet_match: parsed.facet_match ?? null,
-        needs_human_review: parsed.needs_human_review ?? selectedRefs.length === 0,
         confidence: boundedConfidence(parsed.confidence),
         rationale: parsed.rationale ?? null,
         ...usageFields,
-        warnings: result.metadata.retry_attempted
-          ? [...fallback.warnings, 'LLM interpreter JSON was repaired after one retry.']
-          : fallback.warnings,
+        // The warnings of the deterministic interpretation only when it served (below).
+        warnings: result.metadata.retry_attempted ? ['LLM interpreter JSON was repaired after one retry.'] : [],
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error || 'LLM interpretation failed.');
@@ -657,7 +706,6 @@ export class AiKnowledgeSearchPlannerService {
       selected_refs: selected,
       rejected,
       facet_match: null,
-      needs_human_review: selected.length === 0 || selectedEntries.some((entry) => entry.score < 4),
       confidence: selected.length > 0 ? 0.58 : 0.34,
       rationale: selected.length > 0
         ? 'Deterministic ranking selected candidates that matched positive search terms and avoided explicit negative terms.'
@@ -669,7 +717,7 @@ export class AiKnowledgeSearchPlannerService {
       estimated_tokens: 0,
       estimated_cost_eur: 0,
       latency_ms: null,
-      warnings: weakBestCandidate ? ['Deterministic fallback withheld weak lexical candidates for human review.'] : [],
+      warnings: weakBestCandidate ? ['Deterministic fallback withheld weak lexical candidates.'] : [],
     };
   }
 

@@ -7,6 +7,7 @@ import {
   seedManagedDocsKnowledgeAssets,
 } from '../integrated-document-seed';
 import { INCIDENT_REVIEW_SLOT } from '../integrated-document.constants';
+import { markdownToSearchText } from '../../common/markdown-search-text';
 import {
   INCIDENT_REVIEW_SLOT_KEY,
   INCIDENT_REVIEW_SOURCE_ENTITY_TYPE,
@@ -194,6 +195,61 @@ async function testReSeedKeepsACustomisedIncidentTemplate() {
   }
 }
 
+const TEMPLATES_QUERY = `
+  SELECT d.id, d.title, d.content_markdown, d.content_plain,
+         d.search_vector @@ to_tsquery('kanap_en', 'lessons') AS body_indexed
+  FROM documents d
+  JOIN document_libraries dl ON dl.id = d.library_id AND dl.tenant_id = d.tenant_id
+  WHERE d.tenant_id = app_current_tenant()
+    AND dl.slug = 'templates'
+  ORDER BY d.title`;
+
+/**
+ * A seeded template is a published document of the Templates library: its body is indexed for the
+ * search like any document's, so the seed derives `content_plain` from the Markdown it writes, on
+ * insert and on the update of a template found by its title.
+ */
+async function testSeededTemplatesHaveAnIndexedBody() {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    const tenantId = randomUUID();
+    await runner.query(
+      `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+       VALUES ($1, $2, $3, 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+      [tenantId, `seed-plain-${tenantId.slice(0, 8)}`, 'Integrated document seed plain text spec'],
+    );
+
+    await seedManagedDocsKnowledgeAssets(runner, tenantId);
+
+    const templates = await runner.query(TEMPLATES_QUERY);
+    assert.ok(templates.length >= 2, 'the Templates library holds the seeded templates');
+    for (const template of templates) {
+      assert.equal(template.content_plain, markdownToSearchText(template.content_markdown), `${template.title}: plain text derived`);
+    }
+    const incident = templates.find((template: any) => template.title === 'Incident Review Template');
+    assert.ok(incident, 'the incident review template is seeded');
+    assert.notEqual(incident.content_plain, '');
+    assert.equal(incident.body_indexed, true, 'a word of the body only is found by the search vector');
+
+    // A template found again by its title (its slot no longer points at it) is rewritten with its plain text.
+    await runner.query(`UPDATE documents SET content_plain = '' WHERE id = $1`, [incident.id]);
+    await runner.query(
+      `UPDATE integrated_document_slot_settings SET template_document_id = NULL
+       WHERE tenant_id = app_current_tenant() AND template_document_id = $1`,
+      [incident.id],
+    );
+    await seedManagedDocsKnowledgeAssets(runner, tenantId);
+    const [reseeded] = (await runner.query(TEMPLATES_QUERY)).filter((template: any) => template.id === incident.id);
+    assert.equal(reseeded.content_plain, markdownToSearchText(reseeded.content_markdown));
+    assert.equal(reseeded.body_indexed, true);
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
 /**
  * `incident-review-provisioning.ts` deliberately keeps its own copies of the
  * slot identity: the migration runs it on a frozen schema and must not change
@@ -217,6 +273,7 @@ async function run() {
   await dataSource.initialize();
   try {
     await testReSeedKeepsACustomisedIncidentTemplate();
+    await testSeededTemplatesHaveAnIndexedBody();
   } finally {
     await dataSource.destroy();
   }

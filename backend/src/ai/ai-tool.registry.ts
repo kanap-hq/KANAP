@@ -571,7 +571,7 @@ export class AiToolRegistry {
         {
           name: 'search_knowledge',
           category: 'discovery',
-          description: 'Full-text search over the knowledge base documents the user can read, by words or by DOC reference (DOC-14). Returns each match\'s reference, title, summary, status, a text snippet, a relevance score, its library and its last update, with the `total` number of matches; `truncated` is true when more matches exist past offset + limit. get_document returns a document\'s full content.',
+          description: 'Full-text search over the knowledge base documents the user can read, by words or by DOC reference (DOC-14). Returns each match\'s reference, title, summary, status, a text snippet, a relevance score, its library and its last update, with the `total` number of matches; `truncated` is true when more matches exist past offset + limit. get_document returns a document\'s full content. Documents may be written in English, French, German or Spanish whatever the language of the question: search in those languages too before concluding that no document matches. A match with `fallback: true` contains only one word of the query: a lead to check, not a source. When citing a document that is not published, say its status.',
           inputSchema: SearchKnowledgeInputSchema,
           inputSummary: fieldDescriptions(SearchKnowledgeInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -593,6 +593,7 @@ export class AiToolRegistry {
                 score: Number.isFinite(Number(item.score ?? item.rank))
                   ? Number(item.score ?? item.rank)
                   : null,
+                fallback: item.fallback === true,
                 library: {
                   id: item.library_id ?? null,
                   name: item.library_name ?? null,
@@ -605,6 +606,7 @@ export class AiToolRegistry {
               returned: Array.isArray(result.items) ? result.items.length : 0,
               truncated: result.truncated === true,
               complete: false,
+              fallback: result.fallback === true,
             };
           },
         },
