@@ -92,7 +92,7 @@ Kadratis reads a spreadsheet when you send the message:
 
 - A file can hold up to 5 MB and 20,000 rows. Only the first sheet of a workbook is read.
 - A file that cannot be read (damaged, empty, old .xls format, too large) is refused at once with the reason. The message is not sent.
-- Kad receives a summary of the file: the column headers, the type of each column (text, number or date), the first ten rows and the number of rows. It can describe the file, say what each column holds and spot problems in the first rows. It cannot answer about the rows after the first ten.
+- Kad receives a summary of the file: the column headers, the type of each column (text, number or date), the first ten rows with their line numbers in your file, and the number of rows. It can describe the file, say what each column holds and spot problems in the first rows. It cannot answer about the rows after the first ten.
 - The summary stays attached to the message for the rest of the conversation.
 
 ### Importing a spreadsheet
@@ -277,7 +277,7 @@ For pending change previews, the panel offers two buttons:
 - **Approve**: confirms the change and lets Kad apply it
 - **Reject**: cancels the change. Kad says the change was rejected and prepares nothing in its place. When your request asked for several changes, it goes on with the others.
 
-A preview, and the message Kad writes after you approve or reject it, are in the language of your profile, with the field names and values the screens use. A budget line asked for with an amount comes as one preview: one approval creates the line, its budget version for the year and the amount.
+A preview, and the message Kad writes after you approve or reject it, are in the language of your profile (of your browser when your profile sets none), with the field names and values the screens use. A budget line asked for with an amount comes as one preview: one approval creates the line, its budget version for the year and the amount.
 
 When you ask for a change Kad cannot make, such as deleting a project or running the vulnerability matching again, it says so and names the screen where you can make it. It prepares no other change in its place.
 

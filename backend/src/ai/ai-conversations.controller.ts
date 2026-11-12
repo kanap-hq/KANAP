@@ -28,6 +28,7 @@ import { AiMutationPreviewService } from './ai-mutation-preview.service';
 import { AiPolicyService } from './ai-policy.service';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
 import { AiExecutionContext } from './ai.types';
+import { screenLanguageOf } from './ai-write-texts';
 import { publicMessageUsage } from './ai-message-usage.util';
 
 @Controller('ai/conversations')
@@ -52,6 +53,7 @@ export class AiConversationsController {
       authMethod: 'jwt',
       requestId: req?.id ?? null,
       aiApiKeyId: null,
+      screenLanguage: screenLanguageOf(req?.headers?.['accept-language']),
     };
   }
 

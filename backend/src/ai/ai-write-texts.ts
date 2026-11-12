@@ -20,11 +20,30 @@ export function aiWriteLanguage(locale: string | null | undefined): AiWriteLangu
   return code === 'fr' || code === 'de' || code === 'es' ? code : 'en';
 }
 
-/** The language of the person a write belongs to, read from their stored locale. */
+/**
+ * The language of the screen a request comes from when the person's profile sets none: the screen
+ * then follows the browser, whose languages arrive in `Accept-Language`. The first one the interface
+ * has, in the browser's order, as the screen picks it (`it, de` reads as `de`); null when none is.
+ */
+export function screenLanguageOf(acceptLanguage: string | readonly string[] | null | undefined): AiWriteLanguage | null {
+  const raw = Array.isArray(acceptLanguage) ? acceptLanguage.join(',') : String(acceptLanguage ?? '');
+  for (const part of raw.split(',')) {
+    const tag = part.split(';', 1)[0]?.trim().toLowerCase() ?? '';
+    const code = tag.split(/[-_]/)[0];
+    if (code === 'en' || code === 'fr' || code === 'de' || code === 'es') return code;
+  }
+  return null;
+}
+
+/**
+ * The language of the person a write belongs to: their stored locale, else the language of the screen
+ * they act from (`AiExecutionContext.screenLanguage`), else English.
+ */
 export async function personWriteLanguage(
   manager: EntityManager,
   tenantId: string,
   userId: string | null | undefined,
+  screenLanguage?: string | null,
 ): Promise<AiWriteLanguage> {
   if (!userId) return 'en';
   const rows: unknown = await manager.query(
@@ -32,7 +51,7 @@ export async function personWriteLanguage(
     [tenantId, userId],
   );
   const row = Array.isArray(rows) ? rows[0] as { locale?: string | null } | undefined : undefined;
-  return aiWriteLanguage(row?.locale ?? null);
+  return aiWriteLanguage(row?.locale || screenLanguage || null);
 }
 
 type Texts = Record<AiWriteLanguage, string>;

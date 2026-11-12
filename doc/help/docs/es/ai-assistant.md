@@ -92,7 +92,7 @@ Kadratis lee una hoja de cálculo cuando usted envía el mensaje:
 
 - Un archivo puede tener hasta 5 MB y 20 000 filas. Solo se lee la primera hoja de un libro.
 - Un archivo que no se puede leer (dañado, vacío, formato .xls antiguo, demasiado grande) se rechaza de inmediato, con el motivo. El mensaje no se envía.
-- Kad recibe un resumen del archivo: los encabezados de columna, el tipo de cada columna (texto, número o fecha), las diez primeras filas y el número de filas. Puede describir el archivo, decir qué contiene cada columna y detectar problemas en las primeras filas. No puede responder sobre las filas posteriores a las diez primeras.
+- Kad recibe un resumen del archivo: los encabezados de columna, el tipo de cada columna (texto, número o fecha), las diez primeras filas con su número de línea en su archivo, y el número de filas. Puede describir el archivo, decir qué contiene cada columna y detectar problemas en las primeras filas. No puede responder sobre las filas posteriores a las diez primeras.
 - El resumen queda adjunto al mensaje durante el resto de la conversación.
 
 ### Importar una hoja de cálculo
@@ -277,7 +277,7 @@ Para las vistas previas de cambios pendientes, el panel ofrece dos botones:
 - **Aprobar**: confirma el cambio y permite que Kad lo aplique
 - **Rechazar**: cancela el cambio. Kad indica que el cambio se ha rechazado y no prepara nada en su lugar. Si su solicitud pedía varios cambios, continúa con los demás.
 
-Una vista previa, y el mensaje que Kad escribe después de que usted la apruebe o la rechace, están en el idioma de su perfil, con los nombres de campo y los valores de las pantallas. Una línea presupuestaria pedida con un importe llega como una sola vista previa: una sola aprobación crea la línea, su versión presupuestaria del año y el importe.
+Una vista previa, y el mensaje que Kad escribe después de que usted la apruebe o la rechace, están en el idioma de su perfil (el de su navegador si su perfil no fija ninguno), con los nombres de campo y los valores de las pantallas. Una línea presupuestaria pedida con un importe llega como una sola vista previa: una sola aprobación crea la línea, su versión presupuestaria del año y el importe.
 
 Cuando usted pide un cambio que Kad no puede hacer, como eliminar un proyecto o volver a lanzar el cotejo de las vulnerabilidades, Kad lo dice e indica la pantalla donde puede hacerlo. No prepara ningún otro cambio en su lugar.
 

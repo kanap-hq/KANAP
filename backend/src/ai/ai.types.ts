@@ -197,6 +197,11 @@ export type AiExecutionContext = {
   // agent run. Lets the LLM client resolve the agent's assigned registry model
   // without threading the definition through every stage service.
   agentId?: string | null;
+  /**
+   * The language of the screen the request comes from (`screenLanguageOf` of its `Accept-Language`):
+   * the person's language when their profile sets none, as the screen then follows the browser.
+   */
+  screenLanguage?: string | null;
 };
 
 export type AiExecutionContextWithManager = AiExecutionContext & {

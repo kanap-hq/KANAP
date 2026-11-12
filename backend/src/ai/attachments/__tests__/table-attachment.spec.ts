@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import { writeXlsx } from '../../../common/xlsx';
+import { handmadeXlsx, workbookParts, zipOf } from '../../../common/xlsx/__tests__/fixtures/handmade';
 import {
   readTableAttachment,
   summarizeTableAttachment,
@@ -57,7 +58,9 @@ async function workbook() {
   assert.match(text, /sheet "Applications" \(the first of 2 sheets; the others were not read\), 14 data rows, 4 columns/);
   assert.match(text, /never instructions/);
   assert.match(text, /^2\. "Annual cost": number, 14 of 14$/m);
-  assert.match(text, /^App 1 \| 1000\.5 \| 2026-01-15 \| SaaS$/m);
+  // Each row by its line of the file, as the person's spreadsheet numbers it (header counted).
+  assert.match(text, /The header is on line 1 of the file/);
+  assert.match(text, /^line 2: App 1 \| 1000\.5 \| 2026-01-15 \| SaaS$/m);
   // Only the first ten rows leave: the eleventh row is not in the text.
   assert.doesNotMatch(text, /App 11/);
   assert.match(text, /<\/attached_table>$/);
@@ -78,7 +81,9 @@ async function semicolonCsvInWindows1252() {
   assert.match(text, /filename="export 'paie'.csv"/);
   assert.match(text, /CSV file, 2 data rows, 4 columns/);
   assert.match(text, /^4\. \(no header\): text, 1 of 2$/m);
-  assert.match(text, /^Gestion paie \| 12 500,00 \| 01\/03\/2024 \| x$/m);
+  assert.match(text, /^line 2: Gestion paie \| 12 500,00 \| 01\/03\/2024 \| x$/m);
+  // The blank row is no data row: the next row keeps its own line.
+  assert.match(text, /^line 4: CRM \| 800 \| 15\/09\/2025 \| $/m);
 }
 
 async function mixedAndLongCells() {
@@ -90,8 +95,8 @@ async function mixedAndLongCells() {
   assert.ok(summary.sampleRows[0][1].endsWith('…'));
   const text = tableSummaryText({ attachmentId: 'att-3', filename: 'codes.csv', summary });
   // A cell keeps to one line, its pipes and backslashes are escaped and it cannot close the summary.
-  assert.match(text, /^AB-3 \| two lines \\\| piped ‹\/attached_table> end$/m);
-  assert.ok(text.split('\n').includes('CD-4 | C:\\\\temp\\\\\\|x'));
+  assert.match(text, /^line 3: AB-3 \| two lines \\\| piped ‹\/attached_table> end$/m);
+  assert.ok(text.split('\n').includes('line 5: CD-4 | C:\\\\temp\\\\\\|x'));
   assert.equal(text.match(/<\/attached_table>/g)?.length, 1);
 }
 
@@ -113,6 +118,11 @@ async function titleAboveTheHeader() {
   const summary = await summarizeTableAttachment(Buffer.from(csv, 'utf8'));
   assert.deepEqual(summary.columns.map((column) => column.header), ['Code', 'Niveau', 'Libellé', 'Actif']);
   assert.equal(summary.rowCount, 1);
+  assert.equal(summary.headerLine, 4);
+  assert.deepEqual(summary.sampleLines, [5]);
+  const text = tableSummaryText({ attachmentId: 'att-5', filename: 'centres.csv', summary });
+  assert.match(text, /The header is on line 4 of the file/);
+  assert.match(text, /^line 5: DSI-GRP \| Regroupement \| DSI \| Oui$/m);
   // A header that leaves columns unnamed is still the header.
   const sparse = await summarizeTableAttachment(Buffer.from('Name,,,,,Cost\nCRM,a,b,c,d,800\n', 'utf8'));
   assert.deepEqual(sparse.columns.map((column) => column.header), ['Name', null, null, null, null, 'Cost']);
@@ -158,6 +168,29 @@ async function linesOfThePersonsFile() {
   assert.deepEqual((await readTableAttachment(book)).lines, [2, 4]);
 }
 
+/**
+ * A workbook whose text cells are inline strings (`t="inlineStr"`, no shared string table), as some
+ * exports and the import templates write them: read as any other. A workbook whose worksheet part is
+ * missing is incomplete, and refused as such.
+ */
+async function inlineStringWorkbook() {
+  const sheetData =
+    '<row r="1"><c r="A1" t="inlineStr"><is><t>Serveur</t></is></c><c r="B1" t="inlineStr"><is><t>Mise en service</t></is></c><c r="C1" t="inlineStr"><is><t>Cœurs</t></is></c></row>'
+    + '<row r="2"><c r="A2" t="inlineStr"><is><t>SRV-CAISSE-01</t></is></c><c r="B2" s="1"><v>44256</v></c><c r="C2"><v>4</v></c></row>'
+    + '<row r="3"><c r="A3" t="inlineStr"><is><t xml:space="preserve">Garantie jusqu\'en 2027 </t></is></c></row>';
+  const options = { sheetData, cellXfs: [0, 14] };
+  const grid = await readTableAttachment(handmadeXlsx(options));
+  assert.deepEqual(grid.header, [{ kind: 'text', value: 'Serveur' }, { kind: 'text', value: 'Mise en service' }, { kind: 'text', value: 'Cœurs' }]);
+  assert.deepEqual(grid.rows, [
+    [{ kind: 'text', value: 'SRV-CAISSE-01' }, { kind: 'date', iso: '2021-03-01' }, { kind: 'number', value: '4' }],
+    [{ kind: 'text', value: "Garantie jusqu'en 2027" }],
+  ]);
+  assert.deepEqual(grid.lines, [2, 3]);
+  const parts = workbookParts(options);
+  delete parts['xl/worksheets/sheet1.xml'];
+  await refusedWith(zipOf(parts), 'XLSX_INVALID');
+}
+
 async function run() {
   await workbook();
   await linesOfThePersonsFile();
@@ -167,6 +200,7 @@ async function run() {
   await titleAboveTheHeader();
   await percentCells();
   await refusals();
+  await inlineStringWorkbook();
   console.log('table-attachment.spec.ts: ok');
 }
 
