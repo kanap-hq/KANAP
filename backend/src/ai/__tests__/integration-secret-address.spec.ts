@@ -111,6 +111,29 @@ async function testGlpiNewAddressWithNewTokenKeepsTheNewOne() {
   assert.equal(saved.glpi_app_token_encrypted, null);
 }
 
+// The GLPI trace says whether each token is stored, on both sides, like the PRTG, Netbox
+// and model traces, and never holds a token. A field the save did not change (a token
+// typed again at a new address is still present) shows no change in the audit viewer.
+async function testGlpiTraceKeepsTokenPresence() {
+  const { service, audits } = settingsService(settingsRow());
+  await service.update(TENANT_ID, {
+    glpi_url: 'https://glpi2.example.com',
+    glpi_user_token: 'new-user-token',
+    glpi_app_token: 'new-app-token',
+  });
+  await service.update(TENANT_ID, { glpi_app_token: '' });
+  const [moved, appTokenEmptied] = audits;
+  for (const side of [moved.before, moved.after]) {
+    assert.equal(side.has_glpi_user_token, true);
+    assert.equal(side.has_glpi_app_token, true);
+  }
+  assert.equal(moved.after.glpi_url, 'https://glpi2.example.com/');
+  assert.equal(appTokenEmptied.before.has_glpi_app_token, true);
+  assert.equal(appTokenEmptied.after.has_glpi_app_token, false);
+  assert.equal(appTokenEmptied.after.has_glpi_user_token, true);
+  assert.doesNotMatch(JSON.stringify(audits), /new-user-token|new-app-token|stored-user-token|stored-app-token|enc:/);
+}
+
 async function testGlpiSameAddressKeepsTokens() {
   for (const input of [
     { glpi_enabled: true },
@@ -482,6 +505,7 @@ async function run() {
   const tests: Array<[string, () => Promise<void>]> = [
     ['GLPI: a new address without tokens empties them, with a trace', testGlpiNewAddressWithoutTokensEmptiesThem],
     ['GLPI: a new address with a new token keeps the new one', testGlpiNewAddressWithNewTokenKeepsTheNewOne],
+    ['GLPI: the trace keeps the presence of each token, never a token', testGlpiTraceKeepsTokenPresence],
     ['GLPI: the same address, however spelled, keeps the tokens', testGlpiSameAddressKeepsTokens],
     ['GLPI: an address stored in an older form keeps the tokens', testGlpiAddressStoredInAnOlderFormKeepsTokens],
     ['GLPI: an enabled connection moved without its token is refused', testGlpiEnabledNewAddressAsksForTheToken],
