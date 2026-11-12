@@ -72,6 +72,15 @@ describe('useBudgetLineBulkFields', () => {
     expect(axes.scopes).toEqual(['capex', null]);
   });
 
+  it('turns every picker off while the change is written', () => {
+    for (const field of fieldsOf('all')) {
+      const props = { value: null, onChange: () => {}, label: field.label, disabled: true };
+      const picker = field.render({ ...props, first: 'free' }) as { props: { disabled?: boolean } };
+      expect(picker.props.disabled, field.key).toBe(true);
+      if (field.first) expect((field.first.render(props) as { props: { disabled?: boolean } }).props.disabled, `${field.key} first`).toBe(true);
+    }
+  });
+
   it('offers no dimension value without a dimension', () => {
     const saved = axes.list.splice(0, axes.list.length);
     try {

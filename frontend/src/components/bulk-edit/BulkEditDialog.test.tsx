@@ -16,9 +16,9 @@ import BulkEditDialog, { BULK_EDIT_TIMEOUT_MS, type BulkEditField } from './Bulk
 const post = vi.mocked(api.post);
 
 /** A picker: one button per value. */
-const picker = (values: string[]) => ({ value, onChange, label }: { value: string | null; onChange: (v: string | null) => void; label: string }) => (
+const picker = (values: string[]) => ({ value, onChange, label, disabled }: { value: string | null; onChange: (v: string | null) => void; label: string; disabled?: boolean }) => (
   <div aria-label={label} data-value={value ?? ''}>
-    {values.map((v) => <button type="button" key={v} onClick={() => onChange(v)}>{`pick ${v}`}</button>)}
+    {values.map((v) => <button type="button" key={v} disabled={disabled} onClick={() => onChange(v)}>{`pick ${v}`}</button>)}
   </div>
 );
 
@@ -198,7 +198,7 @@ describe('BulkEditDialog', () => {
     expect(save()).toBeDisabled();
   });
 
-  it('shows the wait while counting and while writing; the dialog can be closed meanwhile', async () => {
+  it('shows the wait while counting and while writing; the dialog stays open and its pickers off while it writes', async () => {
     let answerCount: (value: unknown) => void = () => {};
     post.mockImplementationOnce(() => new Promise((resolve) => { answerCount = resolve; }));
     const { onClose, onDone } = renderDialog();
@@ -214,10 +214,67 @@ describe('BulkEditDialog', () => {
     await waitFor(() => expect(screen.getByText('Saving the change…')).toBeInTheDocument());
     expect(save()).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(onClose).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'pick s-2' })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Field' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Empty the field' })).toBeDisabled();
+    expect(post).toHaveBeenCalledTimes(2);
     await act(async () => { answerWrite({ data: { dry_run: false, rows: 10, changed: 6, unchanged: 4, refused: {} } }); });
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(notify).toHaveBeenCalledWith({ message: '6 rows changed' });
+  });
+
+  it.each([
+    ['the proxy cut it (524)', { response: { status: 524, data: '' } }],
+    ['a bad gateway', { response: { status: 502, data: '' } }],
+    ['a gateway time out', { response: { status: 504, data: {} } }],
+    ['a 503 without a code', { response: { status: 503, data: {} } }],
+  ])('says that a write the proxy answered for may have gone through: %s', async (_case, failure) => {
+    post.mockResolvedValueOnce({ data: COUNT });
+    post.mockRejectedValueOnce(failure);
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(save()).toBeEnabled());
+    fireEvent.click(save());
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('The server did not answer. Reload the list to see whether the rows changed.'));
+  });
+
+  it('gives the reason of a 503 the server words itself', async () => {
+    post.mockResolvedValueOnce({ data: COUNT });
+    post.mockRejectedValueOnce({ response: { status: 503, data: { code: 'busy', message: 'Another change is running. Try again in a moment.' } } });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(save()).toBeEnabled());
+    fireEvent.click(save());
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('This data is busy with another operation.'));
+    expect(screen.getByRole('alert')).not.toHaveTextContent('The server did not answer');
+  });
+
+  it('counts one value at a time: the values picked meanwhile wait, only the last one is counted, and an outdated count never shows', async () => {
+    const answers: Array<(value: unknown) => void> = [];
+    post.mockImplementation(() => new Promise((resolve) => { answers.push(resolve); }));
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Empty the field' }));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    // Still the first count alone.
+    expect(post).toHaveBeenCalledTimes(1);
+    await act(async () => { answers[0]({ data: { ...COUNT, changes: 3 } }); });
+    // Its answer is not the value shown: never shown, and the last value is counted (s-2 is dropped).
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(post.mock.calls[1][1]).toMatchObject({ changes: { supplier_id: null }, dry_run: true });
+    expect(status()).toHaveTextContent('Counting the rows…');
+    expect(status().textContent).not.toContain('3 rows will change');
+    expect(save()).toBeDisabled();
+    await act(async () => { answers[1]({ data: { ...COUNT, changes: 8 } }); });
+    await waitFor(() => expect(status().textContent).toContain('8 rows will change'));
+    expect(save()).toHaveTextContent('Change 8 rows');
+    expect(save()).toBeEnabled();
+    expect(post).toHaveBeenCalledTimes(2);
   });
 
   it('says that a write without an answer may have gone through', async () => {

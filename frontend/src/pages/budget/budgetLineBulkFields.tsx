@@ -15,10 +15,11 @@ import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import type { BudgetNatureScope } from './listPreferences';
 
 /** A plain select of the dialog (run or build, the dimension): flat items, the drawer's look. */
-function FlatSelect({ value, onChange, label, options }: {
+function FlatSelect({ value, onChange, label, disabled, options }: {
   value: string | null;
   onChange: (next: string | null) => void;
   label: string;
+  disabled: boolean;
   options: Array<{ value: string; label: string }>;
 }) {
   return (
@@ -30,6 +31,7 @@ function FlatSelect({ value, onChange, label, options }: {
       onChange={(event) => onChange(event.target.value || null)}
       SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': label } }}
       sx={drawerSelectSx}
+      disabled={disabled}
     >
       {options.map((option) => (
         <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>{option.label}</MenuItem>
@@ -66,7 +68,7 @@ export function useBudgetLineBulkFields(scope: BudgetNatureScope): BulkEditField
         key: 'cost_center_id',
         label: t('opex.fields.costCenter'),
         optional: true,
-        render: ({ value, onChange, label }) => (
+        render: ({ value, onChange, label, disabled }) => (
           <CostCenterSelect
             hideLabel
             label={label}
@@ -74,6 +76,7 @@ export function useBudgetLineBulkFields(scope: BudgetNatureScope): BulkEditField
             value={value}
             onChange={(id) => onChange(id)}
             isAllowed={placement?.isCostCenterAllowed}
+            disabled={disabled}
           />
         ),
         changes: (value) => ({ cost_center_id: value }),
@@ -84,10 +87,10 @@ export function useBudgetLineBulkFields(scope: BudgetNatureScope): BulkEditField
         optional: false,
         first: {
           label: t('budget.bulkEdit.chartOf'),
-          render: ({ value, onChange, label }) => <CompanySelect hideLabel label={label} value={value} onChange={(id) => onChange(id)} />,
+          render: ({ value, onChange, label, disabled }) => <CompanySelect hideLabel disabled={disabled} label={label} value={value} onChange={(id) => onChange(id)} />,
         },
-        render: ({ value, onChange, label, first }) => (
-          <AccountSelect hideLabel label={label} nature={nature} companyId={first} value={value} onChange={onChange} />
+        render: ({ value, onChange, label, disabled, first }) => (
+          <AccountSelect hideLabel disabled={disabled} label={label} nature={nature} companyId={first} value={value} onChange={onChange} />
         ),
         changes: (value) => ({ account_id: value }),
       },
@@ -95,8 +98,8 @@ export function useBudgetLineBulkFields(scope: BudgetNatureScope): BulkEditField
         key: 'paying_company_id',
         label: t('opex.fields.payingCompany'),
         optional: false,
-        render: ({ value, onChange, label }) => (
-          <CompanySelect hideLabel label={label} value={value} onChange={(id) => onChange(id)} allowedCompanyIds={placement?.companyIds} />
+        render: ({ value, onChange, label, disabled }) => (
+          <CompanySelect hideLabel disabled={disabled} label={label} value={value} onChange={(id) => onChange(id)} allowedCompanyIds={placement?.companyIds} />
         ),
         changes: (value) => ({ paying_company_id: value }),
       },
@@ -104,21 +107,21 @@ export function useBudgetLineBulkFields(scope: BudgetNatureScope): BulkEditField
         key: 'supplier_id',
         label: t('opex.fields.supplier'),
         optional: true,
-        render: ({ value, onChange, label }) => <SupplierSelect hideLabel label={label} value={value} onChange={onChange} />,
+        render: ({ value, onChange, label, disabled }) => <SupplierSelect hideLabel disabled={disabled} label={label} value={value} onChange={onChange} />,
         changes: (value) => ({ supplier_id: value }),
       },
       {
         key: 'owner_it_id',
         label: t('opex.metadata.itOwner'),
         optional: true,
-        render: ({ value, onChange, label }) => <UserSelect hideLabel label={label} value={value} onChange={(id) => onChange(id)} />,
+        render: ({ value, onChange, label, disabled }) => <UserSelect hideLabel disabled={disabled} label={label} value={value} onChange={(id) => onChange(id)} />,
         changes: (value) => ({ owner_it_id: value }),
       },
       {
         key: 'owner_business_id',
         label: t('opex.metadata.businessOwner'),
         optional: true,
-        render: ({ value, onChange, label }) => <UserSelect hideLabel label={label} value={value} onChange={(id) => onChange(id)} />,
+        render: ({ value, onChange, label, disabled }) => <UserSelect hideLabel disabled={disabled} label={label} value={value} onChange={(id) => onChange(id)} />,
         changes: (value) => ({ owner_business_id: value }),
       },
     ];
@@ -131,10 +134,10 @@ export function useBudgetLineBulkFields(scope: BudgetNatureScope): BulkEditField
         optional: (axisId) => !required(axisId),
         first: {
           label: t('budget.bulkEdit.dimension'),
-          render: ({ value, onChange, label }) => <FlatSelect value={value} onChange={onChange} label={label} options={dimensionOptions} />,
+          render: ({ value, onChange, label, disabled }) => <FlatSelect value={value} onChange={onChange} label={label} disabled={disabled} options={dimensionOptions} />,
         },
-        render: ({ value, onChange, label, first }) => (
-          <AnalyticsCategorySelect axisId={first!} hideLabel label={label} lineType={nature} value={value} onChange={onChange} />
+        render: ({ value, onChange, label, disabled, first }) => (
+          <AnalyticsCategorySelect axisId={first!} disabled={disabled} hideLabel label={label} lineType={nature} value={value} onChange={onChange} />
         ),
         changes: (value, axisId) => ({ analytics_values: { [axisId!]: value } }),
       });
@@ -143,11 +146,12 @@ export function useBudgetLineBulkFields(scope: BudgetNatureScope): BulkEditField
       key: 'run_build',
       label: t('opex.fields.runBuild'),
       optional: true,
-      render: ({ value, onChange, label }) => (
+      render: ({ value, onChange, label, disabled }) => (
         <FlatSelect
           value={value}
           onChange={onChange}
           label={label}
+          disabled={disabled}
           options={[{ value: 'run', label: t('opex.runBuild.run') }, { value: 'build', label: t('opex.runBuild.build') }]}
         />
       ),
