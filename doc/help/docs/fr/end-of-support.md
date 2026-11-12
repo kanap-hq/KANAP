@@ -35,7 +35,7 @@ Les actifs retirés, les applications désactivées et les versions que personne
 **Ce que touche un élément** : cliquez sur une ligne pour déplier les serveurs et les applications derrière ses compteurs. Chaque nom ouvre sa fiche.
 
 - Une version de technologie touche les serveurs sur lesquels elle est installée, et les applications qui la déclarent ou sont hébergées sur un serveur qui la porte (y compris les machines virtuelles d'un tel serveur).
-- Un système d'exploitation touche les serveurs qui utilisent cette version, et les applications déployées sur eux et sur ce qu'ils contiennent. Sa ligne ouvre la technologie.
+- Un système d'exploitation touche les serveurs qui utilisent cette version, les applications déployées sur eux et sur ce qu'ils contiennent, et les applications qui le déclarent dans leur onglet **Exploitation**. Sa ligne ouvre la technologie.
 - Un matériel touche ses serveurs, ce qu'ils contiennent, et les applications déployées sur l'ensemble. Le matériel lui-même n'est pas l'un de ses serveurs.
 - Une application touche les serveurs sur lesquels elle est déployée. Sur un cluster, ce sont le cluster et ses membres en service.
 

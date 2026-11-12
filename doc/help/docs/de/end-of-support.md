@@ -35,7 +35,7 @@ Ausgemusterte Assets, deaktivierte Anwendungen und Versionen, die niemand nutzt,
 **Was ein Element betrifft**: Klicken Sie auf eine Zeile, um die Server und Anwendungen hinter ihren Zählern aufzuklappen. Jeder Name öffnet seinen Datensatz.
 
 - Eine Technologieversion betrifft die Server, auf denen sie installiert ist, und die Anwendungen, die sie deklarieren oder auf einem Server gehostet werden, der sie trägt (einschließlich der virtuellen Maschinen in einem solchen Server).
-- Ein Betriebssystem betrifft die Server, die diese Version nutzen, und die Anwendungen, die auf ihnen und auf dem, was sie enthalten, bereitgestellt sind. Seine Zeile öffnet die Technologie.
+- Ein Betriebssystem betrifft die Server, die diese Version nutzen, die Anwendungen, die auf ihnen und auf dem, was sie enthalten, bereitgestellt sind, und die Anwendungen, die es in ihrem Reiter **Betrieb** angeben. Seine Zeile öffnet die Technologie.
 - Eine Hardware betrifft ihre Server, was diese enthalten, und die Anwendungen, die auf all diesen bereitgestellt sind. Die Hardware selbst ist keiner ihrer Server.
 - Eine Anwendung betrifft die Server, auf denen sie bereitgestellt ist. Bei einem Cluster sind das der Cluster und seine Mitglieder in Betrieb.
 

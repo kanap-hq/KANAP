@@ -262,12 +262,12 @@ The Operations tab holds, in this order, how users access the application (**Tec
 - **Data integration / ETL**: whether the application participates in data integration pipelines (also flips this app into "middleware" mode for the Interfaces and Connections views)
 - **Can have child apps**: turn this application into a Suite that groups other applications. You cannot uncheck it while applications are included in the suite: remove them from the suite first
 
-**Technologies** lists what the application depends on, from two sources shown in the **Link** column. Columns: reference (`TEC-4`), name, family, versions, link, servers it comes through (**Via**), end of standard support.
+**Technologies** lists what the application depends on, from two sources shown in the **Link** column. Columns: reference (`TEC-4`), name, family, versions, link, servers it comes through (**Via**), end of support.
 
 - **Declared**: someone linked the technology to the application, for example Entra ID for an application that signs users in through it.
 - **Hosted**: a server of one of its deployments carries the technology, a member of a cluster it is assigned to included. **Via** names the server, and the host when the technology runs on the host of a virtual machine. Disabled deployments do not count.
 
-A technology can be both. A dash in the version column means the version is not known. The end of standard support turns orange once it has passed. The section needs `infrastructure:reader`.
+A technology can be both. A dash in the version column means the version is not known. **End of support** gives the date the [End of support](end-of-support.md) report gives for the most urgent of its versions: the end that has passed, or the next one to come. It turns orange within 12 months of that end or once only extended support remains, and red once every end has passed. Hover it to see the state and the end of standard and extended support. The section needs `infrastructure:reader`.
 
 **Adding a technology**: click **Add**, choose the technology, then its version: an existing one, a new one you type, or **Version unknown**. When the application has deployment servers in service, a last step offers to record the technology at the same version on them, for example "Also record PHP 8.2 on". Each server shows its environments and roles. Nothing is ticked: tick the servers that run it, then click **Add**. A server that already has the technology shows **Already recorded** and keeps its own version. An operating system is not offered here: set it on the server's page. Closing the list adds nothing.
 
@@ -284,7 +284,7 @@ To add, change or remove a declared technology, and to record it on servers, you
 | **Crit.**, **High**, **Med.**, **Low**, **N/R** | One column per severity (Critical, High, Medium, Low, Not rated, the full name in a tooltip on the header): the vulnerabilities still to review. A vulnerability rated **None** counts with **Low** |
 | **Total** | The distinct vulnerabilities still to review on this line |
 
-**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the application and the technology. When nothing is left to review, the section says so in one line. While the first read of a product from the NVD, or the match of a technology just recorded on this application or on one of its deployment servers, is still running, the section says "Searching for vulnerabilities…" and fills in on its own. When the search cannot be completed, the section says so. A disabled application has no section.
+**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the application and the technology. When nothing is left to review, the section says so in one line. Vulnerabilities out of the alerts, such as those of an operating system at first, are not counted: a line under the table gives their number, for example "12 vulnerabilities excluded from alerts", and opens the Vulnerabilities page on them. While the first read of a product from the NVD, or the match of a technology just recorded on this application or on one of its deployment servers, is still running, the section says "Searching for vulnerabilities…" and fills in on its own. When the search cannot be completed, the section says so. A disabled application has no section.
 
 The section counts direct links only. A technology the **Technologies** section shows through the host of a virtual machine does not count here: it counts on the host. See [What Kadratis counts](vulnerabilities.md#what-kanap-counts).
 
