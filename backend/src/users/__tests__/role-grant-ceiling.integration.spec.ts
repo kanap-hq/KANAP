@@ -176,6 +176,11 @@ async function testCsvImport(h: Harness, runner: QueryRunner, s: Seed) {
   const loaded = await h.users.import(csv([[`csv-b-${s.tenantId.slice(0, 8)}@example.test`, 'Budget reader']]), 'false', 'en', undefined, undefined, ua);
   assert.equal(loaded.ok, true, 'import within own rights');
   assert.equal(loaded.inserted, 1);
+  // A role the person already holds becomes their main role.
+  await runner.query(`INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, false)`, [s.tenantId, s.users.target, s.roles.budgetReader]);
+  const main = await h.users.import(csv([[targetEmail, 'Budget reader']]), 'false', 'en', undefined, undefined, ua);
+  assert.equal(main.ok, true, 'import: a held role as main role');
+  assert.equal((await runner.query(`SELECT role_id FROM users WHERE id = $1`, [s.users.target]))[0].role_id, s.roles.budgetReader);
 }
 
 async function permissionsOf(runner: QueryRunner, roleId: string): Promise<Record<string, string>> {

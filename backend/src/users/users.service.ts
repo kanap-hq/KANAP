@@ -1177,12 +1177,13 @@ export class UsersService {
       }
     }
     // A role the file gives (a new person, or a main role that changes) stays within the rights of
-    // the person importing. A role the load creates gives no right yet.
+    // the person importing, unless the person already holds it. A role the load creates gives no
+    // right yet.
     if (roleGrant) {
-      const given = toWrite
-        .filter(({ item, existing }) => item.role.id && item.role.id !== existing?.role_id)
-        .map(({ item }) => item.role.id);
-      await assertRoleGrantWithinActorRights(opts?.manager ?? repo.manager, roleGrant, null, given);
+      for (const { item, existing } of toWrite) {
+        if (!item.role.id || item.role.id === existing?.role_id) continue;
+        await assertRoleGrantWithinActorRights(opts?.manager ?? repo.manager, roleGrant, existing?.id ?? null, [item.role.id]);
+      }
     }
     if (dryRun) {
       return {
