@@ -26,6 +26,10 @@ import { waitForBackgroundWork } from '../../common/background-work';
 // - requests and confirmations of one account run one after the other: two requests at once leave
 //   one link, two confirmations at once link once, and one Microsoft account confirmed for two
 //   accounts at once links one of them;
+// - an invited account without a local password is linked at its first Microsoft sign-in, without
+//   a confirmation, and enabled; an invited account with a password, an enabled account without
+//   one and a disabled account are not; two sign-ins at once link it once; an account of another
+//   workspace is never found;
 // - an account linked to another Microsoft account keeps that link;
 // - linking writes only the link: the local password and the two-step secret stay;
 // - without an e-mail service an existing account is not linked this way;
@@ -98,6 +102,10 @@ function controller(email: unknown = recordMail) {
       return row;
     },
     findById: (id: string, { manager }: any) => manager.getRepository(User).findOne({ where: { id }, relations: ['role'] }),
+    // The end of an invitation, as UsersService.enableUser does within the seats.
+    enableUser: async (id: string, _actor: string | null, { manager }: any) => {
+      await manager.query(`UPDATE users SET status = 'enabled' WHERE tenant_id = $1 AND id = $2`, [TENANT_ID, id]);
+    },
   };
   // The directory side is not reached: no Graph profile, no reporting line.
   const directorySync = new EntraDirectorySyncService(dataSource, null as any, null as any, null as any, null as any, null as any);
@@ -419,14 +427,74 @@ async function testConfirmationIsRefusedWhenTheMicrosoftAccountIsTaken() {
   assert.equal((await account(person.id)).external_auth_provider, null);
 }
 
-async function testInvitedAccountAlsoWaitsForConfirmation() {
+async function testInvitedAccountWithoutPasswordIsLinkedAtSignIn() {
   const person = await seedAccount({ status: 'invited', password: false });
+  const oid = `oid-${randomUUID()}`;
   mails.length = 0;
-  assert.match(await signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: person.email }), /ssoNotice=ENTRA_LINK_SENT/);
+  assert.match(await signInWithMicrosoft({ oid, email: person.email.toUpperCase() }), /\/login\/callback#handoff=/);
   const row = await account(person.id);
-  assert.equal(row.external_auth_provider, null);
-  assert.equal(row.status, 'invited');
-  assert.equal(mails.length, 1);
+  assert.equal(row.external_auth_provider, 'entra');
+  assert.equal(row.external_subject, oid);
+  assert.equal(row.status, 'enabled', 'the invitation ends, as after an accepted invitation');
+  assert.equal(row.password_hash, null);
+  assert.equal(mails.length, 0, 'no confirmation');
+  assert.equal((await linkRows(person.id)).length, 0);
+  const audit = await inTenant((manager) => manager.query(
+    `SELECT count(*)::int AS n FROM audit_log WHERE record_id = $1 AND source_ref = 'entra-auto-link'`,
+    [person.id],
+  ));
+  assert.equal(audit[0].n, 1);
+}
+
+async function testOtherAccountsStillNeedConfirmation() {
+  for (const opts of [{ status: 'invited', password: true }, { status: 'enabled', password: false }]) {
+    const person = await seedAccount(opts);
+    mails.length = 0;
+    assert.match(await signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: person.email }), /ssoNotice=ENTRA_LINK_SENT/, JSON.stringify(opts));
+    const row = await account(person.id);
+    assert.equal(row.external_auth_provider, null, JSON.stringify(opts));
+    assert.equal(row.status, opts.status);
+    assert.equal(mails.length, 1);
+  }
+  const disabled = await seedAccount({ status: 'disabled', password: false });
+  mails.length = 0;
+  assert.equal(await refusedSignIn({ oid: `oid-${randomUUID()}`, email: disabled.email }), 'Entra user is not allowed to sign in');
+  assert.equal((await account(disabled.id)).external_auth_provider, null);
+  assert.equal(mails.length, 0);
+}
+
+async function testInvitedAccountTwoSignInsAtOnce() {
+  const person = await seedAccount({ status: 'invited', password: false });
+  const attempt = (oid: string) => signInWithMicrosoft({ oid, email: person.email }).catch((error) => String(error?.message));
+  const results = await whileLocked([person.id], 2, () => [attempt(`oid-${randomUUID()}`), attempt(`oid-${randomUUID()}`)]);
+  assert.equal(results.filter((result) => /\/login\/callback#handoff=/.test(result)).length, 1, results.join(' | '));
+  assert.equal(results.filter((result) => result === 'ENTRA_ACCOUNT_LINKED').length, 1, results.join(' | '));
+}
+
+async function testInvitedAccountOfAnotherWorkspaceIsNotFound() {
+  const email = `invited-${randomUUID().slice(0, 8)}@example.invalid`;
+  await dataSource.query(
+    `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+     VALUES ($1, $2, 'Entra link other', 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+    [OTHER_TENANT_ID, `entra-link-other-${OTHER_TENANT_ID.slice(0, 8)}`],
+  );
+  const otherId = await inTenant(async (manager) => {
+    const [role] = await manager.query(`INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Budget Reader') RETURNING id`, [OTHER_TENANT_ID]);
+    const [user] = await manager.query(
+      `INSERT INTO users (tenant_id, role_id, email, status) VALUES ($1, $2, $3, 'invited') RETURNING id`,
+      [OTHER_TENANT_ID, role.id, email],
+    );
+    return user.id as string;
+  }, OTHER_TENANT_ID);
+  const oid = `oid-${randomUUID()}`;
+  assert.match(await signInWithMicrosoft({ oid, email }), /\/login\/callback#handoff=/);
+  const [other] = await inTenant(
+    (manager) => manager.query(`SELECT status, external_subject FROM users WHERE id = $1`, [otherId]),
+    OTHER_TENANT_ID,
+  );
+  assert.deepEqual({ ...other }, { status: 'invited', external_subject: null }, 'the other workspace is untouched');
+  const [created] = await inTenant((manager) => manager.query(`SELECT external_subject FROM users WHERE email = $1`, [email]));
+  assert.equal(created.external_subject, oid, 'an account created at sign-in in this workspace');
 }
 
 async function testWithoutEmailServiceNoLink() {
@@ -464,7 +532,11 @@ async function cleanup() {
     await manager.query(`DELETE FROM users WHERE tenant_id = $1`, [TENANT_ID]);
     await manager.query(`DELETE FROM roles WHERE tenant_id = $1`, [TENANT_ID]);
   }).catch((error) => console.error('cleanup', error));
-  await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [TENANT_ID]).catch(() => undefined);
+  await inTenant(async (manager) => {
+    await manager.query(`DELETE FROM users WHERE tenant_id = $1`, [OTHER_TENANT_ID]);
+    await manager.query(`DELETE FROM roles WHERE tenant_id = $1`, [OTHER_TENANT_ID]);
+  }, OTHER_TENANT_ID).catch(() => undefined);
+  await dataSource.query(`DELETE FROM tenants WHERE id = ANY($1::uuid[])`, [[TENANT_ID, OTHER_TENANT_ID]]).catch(() => undefined);
 }
 
 async function main() {
@@ -493,7 +565,10 @@ async function main() {
       testOneMicrosoftAccountForTwoAccountsAtOnce,
       testLinkedAccountKeepsItsLink,
       testConfirmationIsRefusedWhenTheMicrosoftAccountIsTaken,
-      testInvitedAccountAlsoWaitsForConfirmation,
+      testInvitedAccountWithoutPasswordIsLinkedAtSignIn,
+      testOtherAccountsStillNeedConfirmation,
+      testInvitedAccountTwoSignInsAtOnce,
+      testInvitedAccountOfAnotherWorkspaceIsNotFound,
       testWithoutEmailServiceNoLink,
       testUnknownAddressStillCreatesAnAccount,
     ];

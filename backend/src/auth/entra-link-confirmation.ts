@@ -25,9 +25,10 @@ export async function lockAccountForLink(
   manager: EntityManager,
   tenantId: string,
   userId: string,
-): Promise<{ id: string; email: string; status: string; external_auth_provider: string | null } | null> {
+): Promise<{ id: string; email: string; status: string; external_auth_provider: string | null; has_password: boolean } | null> {
   const rows = await manager.query(
-    `SELECT id, email, status, external_auth_provider FROM users WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+    `SELECT id, email, status, external_auth_provider, COALESCE(password_hash, '') <> '' AS has_password
+     FROM users WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
     [tenantId, userId],
   );
   return rows[0] ?? null;

@@ -48,12 +48,13 @@ const LINKABLE_STATUSES = new Set(['enabled', 'invited']);
 
 /**
  * Whether a Microsoft sign-in whose account is not linked yet links the existing account that
- * carries its address right away. Every existing account waits for the confirmation e-mailed to
- * its address: no exception so far. An exception (an account prepared by an administrator, for
- * instance) is decided here, from the account as read at sign-in.
+ * carries its address right away. Only an invited account that has no local password yet does:
+ * an administrator prepared it (an invitation to sign in with Microsoft, a password invitation not
+ * accepted yet, an import), and it has no other way in. Every other account waits for the
+ * confirmation e-mailed to its address. Decided from the account as locked at sign-in.
  */
-export function linksWithoutConfirmation(_account: Pick<User, 'status' | 'external_auth_provider'>): boolean {
-  return false;
+export function linksWithoutConfirmation(account: { status: string; has_password: boolean }): boolean {
+  return account.status === 'invited' && !account.has_password;
 }
 
 /** The confirmation e-mail of a link request, sent once the sign-in transaction is committed. */
@@ -717,7 +718,13 @@ export class EntraController {
         if (local?.external_auth_provider) {
           throw new BadRequestException('ENTRA_ACCOUNT_LINKED');
         }
-        if (local && !linksWithoutConfirmation(local)) {
+        // Sign-ins and confirmations of one account run one after the other: the account is read
+        // again once locked, so two sign-ins at once never both link it.
+        const locked = local ? await lockAccountForLink(manager, tenantId, local.id) : null;
+        if (local && (!locked || locked.external_auth_provider)) {
+          throw new BadRequestException('ENTRA_ACCOUNT_LINKED');
+        }
+        if (local && locked && !linksWithoutConfirmation(locked)) {
           // An existing account is linked only once its owner confirms from the link e-mailed to it.
           pending.link = await this.requestLinkConfirmation(manager, tenantId, local, claims, req, tenantSlug);
           return null;
