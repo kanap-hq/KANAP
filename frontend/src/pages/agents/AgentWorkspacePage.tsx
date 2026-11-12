@@ -1457,8 +1457,11 @@ function sharedContextProfileLines(profile: AiSharedContextProfile | null | unde
   return [];
 }
 
-// The libraries an agent may cite: none, the chosen ones, or all it can access.
-type LibraryScope = 'none' | 'some' | 'all';
+// The libraries an agent may cite when it searches the knowledge base: the chosen ones (none
+// until some are chosen), or all it can access.
+type LibraryScope = 'some' | 'all';
+// The choice shown when the search is turned on for an agent that has no library yet.
+const LIBRARY_SCOPE_WHEN_TURNED_ON: LibraryScope = 'some';
 // Whether a ticket agent reads the internal notes of a ticket.
 type InternalNotesSetting = 'used' | 'ignored';
 
@@ -1483,7 +1486,7 @@ function knowledgeFormFromDefinition(definition: AiAgentControlAgentDefinition):
   const libraryIds = Array.isArray(k.library_ids) ? k.library_ids.filter((id): id is string => typeof id === 'string') : [];
   return {
     enabled: k.enabled !== false,
-    libraryScope: k.all_libraries !== false ? 'all' : libraryIds.length > 0 ? 'some' : 'none',
+    libraryScope: k.all_libraries !== false ? 'all' : 'some',
     libraryIds,
     webEnabled: web.enabled === true,
     kanapData: kanapDataRaw
@@ -2003,6 +2006,10 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
     setKnowledgeForm((current) => ({ ...current, ...patch }));
     knowledgeAutosave.schedule(persistKnowledge);
   };
+  const switchKnowledgeSearch = (enabled: boolean) => {
+    const noLibraryYet = knowledgeForm.libraryScope === 'some' && knowledgeForm.libraryIds.length === 0;
+    updateKnowledge(enabled && noLibraryYet ? { enabled, libraryScope: LIBRARY_SCOPE_WHEN_TURNED_ON } : { enabled });
+  };
   // Displayed KANAP-data state: an absent block reads as the backend default
   // (disabled, all domains on). The block is only materialized (and therefore
   // persisted) once the user actually touches a toggle.
@@ -2404,7 +2411,7 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
         <Stack spacing={1.5} sx={{ p: 1.5 }}>
           <FormControlLabel
             sx={featureSwitchRowSx}
-            control={<Switch size="small" checked={knowledgeForm.enabled} onChange={(event) => updateKnowledge({ enabled: event.target.checked })} />}
+            control={<Switch size="small" checked={knowledgeForm.enabled} onChange={(event) => switchKnowledgeSearch(event.target.checked)} />}
             label={t('settings.knowledgeEnabled')}
           />
           <Typography variant="caption" color="text.secondary">{t('settings.knowledgeHint')}</Typography>
@@ -2417,7 +2424,7 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
                 onChange={(_event, value) => updateKnowledge({ libraryScope: value as LibraryScope })}
                 sx={{ columnGap: 2 }}
               >
-                {(['none', 'some', 'all'] as const).map((scope) => (
+                {(['some', 'all'] as const).map((scope) => (
                   <FormControlLabel
                     key={scope}
                     value={scope}
@@ -2427,11 +2434,8 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
                   />
                 ))}
               </RadioGroup>
-              {(knowledgeForm.libraryScope === 'none' || (knowledgeForm.libraryScope === 'some' && knowledgeForm.libraryIds.length === 0)) && (
-                <Typography variant="caption" color="text.secondary">{t('settings.libraryScope.noneHint')}</Typography>
-              )}
               {knowledgeForm.libraryScope === 'some' && (
-                <SettingsField label={t('settings.specificLibraries')} hint={t('settings.librariesHint')}>
+                <SettingsField label={t('settings.specificLibraries')}>
                   <Select
                     multiple
                     variant="standard"
@@ -2496,9 +2500,9 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
             )}
             label={t('settings.webEnabled')}
           />
-          <Typography variant="caption" color="text.secondary">
-            {webSearchAvailable ? t('settings.webHint') : t('settings.webUnavailableHint')}
-          </Typography>
+          {!webSearchAvailable && (
+            <Typography variant="caption" color="text.secondary">{t('settings.webUnavailableHint')}</Typography>
+          )}
           {isSre && (
             <>
               <FormControlLabel

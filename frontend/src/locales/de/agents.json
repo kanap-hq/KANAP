@@ -677,14 +677,11 @@
     "knowledgeEnabled": "Wissensdatenbank durchsuchen",
     "knowledgeHint": "Wenn aus, antwortet der Agent aus dem Wissen des Modells (und aus dem Web, falls aktiviert).",
     "libraryScope": {
-      "none": "Keine Bibliothek",
       "some": "Ausgewählte Bibliotheken",
-      "all": "Alle Bibliotheken",
-      "noneHint": "Der Agent zitiert keine Dokumente in seinen Antworten."
+      "all": "Alle Bibliotheken"
     },
     "specificLibraries": "Bibliotheken",
     "librariesPlaceholder": "Bibliotheken auswählen",
-    "librariesHint": "Der Agent durchsucht nur diese Bibliotheken, im Rahmen seiner Zugriffsrechte. Bibliotheksnamen finden Sie im Wissensbereich.",
     "internalNotes": "Interne Notizen des Tickets",
     "internalNotesChoice": {
       "used": "Verwendet",
@@ -695,7 +692,6 @@
       "ignored": "Der Agent liest nur die öffentlichen Nachrichten des Tickets."
     },
     "webEnabled": "Im Web suchen",
-    "webHint": "Wenn aktiviert, kann der Agent auch das öffentliche Web durchsuchen. Die Wissensdatenbank hat immer Vorrang, und Web-Ergebnisse werden in Antworten als Quelle angegeben.",
     "webUnavailableHint": "Die Websuche ist auf dieser Plattform noch nicht verfügbar. Wenden Sie sich an Ihren Administrator, um sie zu aktivieren.",
     "saveKnowledge": "Quellen speichern",
     "capabilities": "Fähigkeiten",

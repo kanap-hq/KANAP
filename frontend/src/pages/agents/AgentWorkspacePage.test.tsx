@@ -16,8 +16,20 @@ const harness = vi.hoisted(() => ({
   canAdmin: true,
   updateAgent: vi.fn(),
   listKnowledgeLibraries: vi.fn(),
+  webSearch: false,
   snapshot: (): Record<string, unknown> => ({}),
 }));
+
+vi.mock('../../config/FeaturesContext', async () => {
+  const actual = await vi.importActual<typeof import('../../config/FeaturesContext')>('../../config/FeaturesContext');
+  return {
+    ...actual,
+    useFeatures: () => {
+      const features = actual.useFeatures();
+      return { ...features, config: { ...features.config, features: { ...features.config.features, aiWebSearch: harness.webSearch } } };
+    },
+  };
+});
 
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -181,11 +193,15 @@ describe('AgentWorkspacePage header', () => {
   });
 });
 
-// The libraries an agent may cite: none, chosen ones or all. A new agent starts with none,
-// and the settings say what that means without opening anything.
+// The knowledge base search of an agent: off on a new agent, with no library option shown.
+// Turned on, the agent cites the chosen libraries (none chosen yet) or all of them.
 describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
   const LIBRARY_ID = '11111111-1111-4111-8111-111111111111';
-  const NO_DOCUMENT = 'The agent cites no document in its replies.';
+  const REMOVED_TEXTS = [
+    /cites no document/,
+    /searches only these libraries/,
+    /may also search the public web/,
+  ];
 
   function withKnowledge(knowledge: Record<string, unknown> | null): AiAgentControlAgentDefinition {
     return {
@@ -194,8 +210,13 @@ describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
     };
   }
 
+  function expectNoRemovedText() {
+    for (const text of REMOVED_TEXTS) expect(screen.queryByText(text)).not.toBeInTheDocument();
+  }
+
   beforeEach(async () => {
     harness.canAdmin = true;
+    harness.webSearch = true;
     harness.updateAgent.mockReset();
     harness.updateAgent.mockImplementation(async () => ({ agent_definition: shownDefinition, diff: {} }));
     harness.listKnowledgeLibraries.mockReset();
@@ -203,33 +224,64 @@ describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
     await i18n.changeLanguage('en');
   });
 
-  it('shows a new agent with no library and what it means', async () => {
+  it('shows a new agent with the search off and no library option', async () => {
+    shownDefinition = withKnowledge({ enabled: false, all_libraries: false, library_ids: [] });
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('Search the knowledge base', {}, { timeout: 5000 })).not.toBeChecked();
+    expect(screen.queryByRole('radio', { name: 'Chosen libraries' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'All libraries' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Select libraries')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Search the web')).toBeInTheDocument();
+    expectNoRemovedText();
+  });
+
+  it('turns the search on with chosen libraries and an empty menu, and saves what it shows', async () => {
+    shownDefinition = withKnowledge({ enabled: false, all_libraries: false, library_ids: [] });
+    renderPage('/agents/payroll?tab=settings');
+    fireEvent.click(await screen.findByLabelText('Search the knowledge base', {}, { timeout: 5000 }));
+    expect(screen.getAllByRole('radio').filter((radio) => radio.closest('[aria-label="Libraries"]'))).toHaveLength(2);
+    expect(screen.getByRole('radio', { name: 'Chosen libraries' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'All libraries' })).not.toBeChecked();
+    expect(screen.queryByRole('radio', { name: 'No library' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Select libraries')).toHaveTextContent('Select libraries');
+    expectNoRemovedText();
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenLastCalledWith('agent-1', {
+        knowledge_sources: {
+          knowledge: { enabled: true, all_libraries: false, library_ids: [] },
+          web: { enabled: false },
+          internal_notes: 'used',
+        },
+      });
+    }, { timeout: 3000 });
+  });
+
+  it('reads an agent saved with the search on and no library as chosen libraries, menu empty', async () => {
     shownDefinition = withKnowledge({ enabled: true, all_libraries: false, library_ids: [] });
     renderPage('/agents/payroll?tab=settings');
-    expect(await screen.findByLabelText('No library', {}, { timeout: 5000 })).toBeChecked();
-    expect(screen.getByLabelText('Chosen libraries')).not.toBeChecked();
-    expect(screen.getByLabelText('All libraries')).not.toBeChecked();
-    expect(screen.getByText(NO_DOCUMENT)).toBeInTheDocument();
+    expect(await screen.findByRole('radio', { name: 'Chosen libraries' }, { timeout: 5000 })).toBeChecked();
+    expect(screen.getByLabelText('Select libraries')).toHaveTextContent('Select libraries');
+    expectNoRemovedText();
   });
 
   it('keeps an agent saved with all libraries on all libraries', async () => {
     shownDefinition = withKnowledge({ enabled: true, all_libraries: true, library_ids: [] });
     renderPage('/agents/payroll?tab=settings');
-    expect(await screen.findByLabelText('All libraries', {}, { timeout: 5000 })).toBeChecked();
-    expect(screen.queryByText(NO_DOCUMENT)).not.toBeInTheDocument();
+    expect(await screen.findByRole('radio', { name: 'All libraries' }, { timeout: 5000 })).toBeChecked();
+    expect(screen.getByLabelText('Search the knowledge base')).toBeChecked();
   });
 
-  it('reads an agent saved without a library setting as all libraries', async () => {
+  it('reads an agent saved without a library setting as searching all libraries', async () => {
     shownDefinition = withKnowledge(null);
     renderPage('/agents/payroll?tab=settings');
-    expect(await screen.findByLabelText('All libraries', {}, { timeout: 5000 })).toBeChecked();
-    expect(screen.queryByText(NO_DOCUMENT)).not.toBeInTheDocument();
+    expect(await screen.findByRole('radio', { name: 'All libraries' }, { timeout: 5000 })).toBeChecked();
+    expect(screen.getByLabelText('Search the knowledge base')).toBeChecked();
   });
 
   it('saves chosen libraries, then all libraries', async () => {
     shownDefinition = withKnowledge({ enabled: true, all_libraries: false, library_ids: [] });
     renderPage('/agents/payroll?tab=settings');
-    fireEvent.click(await screen.findByLabelText('Chosen libraries', {}, { timeout: 5000 }));
+    await screen.findByRole('radio', { name: 'Chosen libraries' }, { timeout: 5000 });
     fireEvent.mouseDown(screen.getByLabelText('Select libraries'));
     fireEvent.click(await screen.findByText('Service desk docs', { selector: 'li' }));
     await waitFor(() => {
@@ -241,10 +293,9 @@ describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
         },
       });
     }, { timeout: 3000 });
-    expect(screen.queryByText(NO_DOCUMENT)).not.toBeInTheDocument();
 
     fireEvent.keyDown(screen.getByText('Service desk docs', { selector: 'li' }), { key: 'Escape' });
-    fireEvent.click(screen.getByLabelText('All libraries'));
+    fireEvent.click(screen.getByRole('radio', { name: 'All libraries' }));
     await waitFor(() => {
       expect(harness.updateAgent).toHaveBeenLastCalledWith('agent-1', {
         knowledge_sources: {
@@ -254,6 +305,13 @@ describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
         },
       });
     }, { timeout: 3000 });
+  });
+
+  it('says why the web search is unavailable when the platform has none', async () => {
+    harness.webSearch = false;
+    shownDefinition = withKnowledge({ enabled: false, all_libraries: false, library_ids: [] });
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByText(/Web search isn't available on this platform yet/, {}, { timeout: 5000 })).toBeInTheDocument();
   });
 });
 

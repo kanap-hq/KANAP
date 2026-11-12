@@ -171,8 +171,8 @@ function newSreAgentPolicies(form: NewAgentWizardForm) {
       automatic_writes_enabled: false,
     },
     scope_policy_json: {
+      // No knowledge setting: the API starts a new agent with the knowledge base search off.
       knowledge_sources: {
-        knowledge: { enabled: true, all_libraries: false, library_ids: [] },
         web: { enabled: false },
         precedence: 'knowledge_first',
         kanap_data: {
