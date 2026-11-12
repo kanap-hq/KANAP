@@ -26,7 +26,7 @@ While the connection is being created, its header shows **Create** and **Cancel*
 - **Create** checks that the connection has at least one protocol and both endpoints, or two servers for a multi-server connection. A message names what is missing, and the first missing field gets the focus. When nothing is missing, Kadratis keeps the connection and closes it. You go back to where you started
 - **Cancel** deletes the connection. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete connections
 
-Leaving the connection another way while something is missing asks what to do. **Complete it** keeps you on the connection, on the first missing field. **Delete it** deletes the connection.
+Leaving the connection another way while something is missing asks what to do. **Complete it** keeps you on the connection, on the first missing field. **Delete it** deletes the connection. Reloading the page or closing the tab while the new connection still lacks a field asks your browser to confirm. If you leave anyway, the connection is deleted.
 
 ---
 

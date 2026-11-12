@@ -20,7 +20,7 @@ While the line is being created, its header shows **Create** and **Cancel** in p
 - **Create** checks the required fields below. When one is missing, a message lists them, they are marked in the **Properties** panel, and the cursor goes to the first one. Otherwise the line closes and you go back to where you started: the previous screen, else the list
 - **Cancel** deletes the line and everything entered on it, amounts included. If you entered more than the title, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete lines. A line with amounts in a frozen column cannot be cancelled
 
-Leaving the line another way while a required field is missing asks you to complete it or delete it. A line left without a paying company shows a warning that lists the missing fields, and asks again each time you leave it. Press Escape on the empty title to leave without creating anything.
+Leaving the line another way while a required field is missing asks you to complete it or delete it. Reloading the page or closing the tab while the new line still lacks a required field asks your browser to confirm, and the line is deleted if you leave anyway. A line left without a paying company shows a warning that lists the missing fields, and asks again each time you leave it. Press Escape on the empty title to leave without creating anything.
 
 **Required fields**:
 

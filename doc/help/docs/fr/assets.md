@@ -39,7 +39,7 @@ Tant que l'actif est en cours de création, son en-tête affiche **Créer** et *
 - **Créer** vérifie que l'actif a un site. Sans site, un message nomme le site manquant et le champ **Site** du tiroir des propriétés prend le focus. L'actif reste ouvert. Avec un site, Kadratis conserve l'actif et le ferme. Vous revenez à votre point de départ
 - **Annuler** supprime l'actif. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des actifs
 
-Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, Kadratis vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif.
+Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, Kadratis vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif. Recharger la page ou fermer l'onglet alors que le nouvel actif n'a pas de site fait demander une confirmation par votre navigateur. Si vous partez quand même, l'actif est supprimé.
 
 ---
 

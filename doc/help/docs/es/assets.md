@@ -39,7 +39,7 @@ Mientras el activo se está creando, su encabezado muestra **Crear** y **Cancela
 - **Crear** comprueba que el activo tenga una ubicación. Sin ella, un mensaje indica la ubicación que falta y el campo **Ubicación** del panel de propiedades recibe el foco. El activo sigue abierto. Con una ubicación, Kadratis conserva el activo y lo cierra. Vuelve al punto de partida
 - **Cancelar** elimina el activo. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar activos
 
-Si sale del activo de otra forma (la flecha de retroceso, el menú, otro activo) mientras no tiene ubicación, Kadratis le pregunta qué hacer. **Completarlo** le deja en el activo, en el campo **Ubicación**. **Eliminarlo** elimina el activo.
+Si sale del activo de otra forma (la flecha de retroceso, el menú, otro activo) mientras no tiene ubicación, Kadratis le pregunta qué hacer. **Completarlo** le deja en el activo, en el campo **Ubicación**. **Eliminarlo** elimina el activo. Si recarga la página o cierra la pestaña mientras el activo nuevo no tiene ubicación, su navegador pide confirmación. Si sale de todos modos, el activo se elimina.
 
 ---
 

@@ -26,7 +26,7 @@ Tant que la connexion est en cours de création, son en-tête affiche **Créer**
 - **Créer** vérifie que la connexion a au moins un protocole et ses deux endpoints, ou deux serveurs pour une connexion multi-serveur. Un message nomme ce qui manque, et le premier champ manquant prend le focus. Quand rien ne manque, Kadratis conserve la connexion et la ferme. Vous revenez à votre point de départ
 - **Annuler** supprime la connexion. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des connexions
 
-Si vous quittez la connexion autrement alors qu'il manque quelque chose, Kadratis vous demande quoi faire. **La compléter** vous garde sur la connexion, sur le premier champ manquant. **La supprimer** supprime la connexion.
+Si vous quittez la connexion autrement alors qu'il manque quelque chose, Kadratis vous demande quoi faire. **La compléter** vous garde sur la connexion, sur le premier champ manquant. **La supprimer** supprime la connexion. Recharger la page ou fermer l'onglet alors qu'il manque encore un champ à la nouvelle connexion fait demander une confirmation par votre navigateur. Si vous partez quand même, la connexion est supprimée.
 
 ---
 

@@ -20,7 +20,7 @@ Tant que la ligne est en cours de création, son en-tête affiche **Créer** et 
 - **Créer** vérifie les champs obligatoires ci-dessous. S'il en manque, un message les liste, ils sont signalés dans le panneau **Propriétés** et le curseur va au premier. Sinon, la ligne se ferme et vous revenez à votre point de départ : l'écran précédent, sinon la liste
 - **Annuler** supprime la ligne et tout ce qui y a été saisi, montants compris. Si vous avez saisi plus que le titre, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des lignes. Une ligne qui a des montants dans une colonne gelée ne peut pas être annulée
 
-Quitter la ligne autrement alors qu'un champ obligatoire manque vous demande de la compléter ou de la supprimer. Une ligne laissée sans société payeuse affiche un avertissement qui liste les champs manquants, et repose la question chaque fois que vous la quittez. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+Quitter la ligne autrement alors qu'un champ obligatoire manque vous demande de la compléter ou de la supprimer. Recharger la page ou fermer l'onglet alors qu'il manque encore un champ obligatoire à la nouvelle ligne fait demander une confirmation par votre navigateur, et la ligne est supprimée si vous partez quand même. Une ligne laissée sans société payeuse affiche un avertissement qui liste les champs manquants, et repose la question chaque fois que vous la quittez. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
 
 **Champs obligatoires** :
 
