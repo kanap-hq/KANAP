@@ -256,7 +256,7 @@ In einem Arbeitsbereich, in dem [Microsoft Entra ID](#microsoft-entra-id) verbun
 
 | Auswahl | Die Einladung |
 |--------|----------------|
-| **Mit Microsoft** (Standard) | Bittet die Person, den Arbeitsbereich zu öffnen und **Mit Microsoft anmelden** zu wählen. Sie enthält keinen Passwort-Link. Bei der ersten Anmeldung mit Microsoft sendet Kadratis ihr einen Bestätigungslink per E-Mail. Nach der Bestätigung aktiviert die nächste Anmeldung mit Microsoft das Konto. |
+| **Mit Microsoft** (Standard) | Bittet die Person, den Arbeitsbereich zu öffnen und **Mit Microsoft anmelden** zu wählen. Sie enthält keinen Passwort-Link. Die erste Anmeldung mit Microsoft verknüpft das Konto mit ihrer Microsoft-Identität und aktiviert es. |
 | **Mit einem Passwort** | Enthält den Link zum Festlegen eines Passworts, 7 Tage gültig, wie in einem Arbeitsbereich ohne Microsoft-Anmeldung. Für Personen außerhalb Ihres Verzeichnisses, etwa Berater. |
 
 Das Konto zeigt **Eingeladen** bis zur ersten Anmeldung der Person. Ein Link zum Zurücksetzen des Passworts, gesendet über **Passwort-Zurücksetzung senden** oder von der Anmeldeseite, bleibt 1 Stunde gültig.
@@ -297,7 +297,7 @@ Wenn jemand aus Ihrem Verzeichnis entfernt wird oder sein Verzeichniskonto deakt
 
 ### Just-in-time-Anmeldung mit Microsoft
 
-Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal mit Microsoft anmeldet, automatisch ein Kadratis-Konto. Existiert bereits ein Konto mit derselben E-Mail-Adresse, sendet Kadratis stattdessen einen Bestätigungslink an diese Adresse. Die E-Mail nennt das Microsoft-Konto, das ihn angefordert hat, und eine weitere Anmeldung innerhalb von 5 Minuten sendet keinen neuen Link. Das Konto wird mit der Microsoft-Identität verknüpft, sobald die Person über diesen Link bestätigt, innerhalb von 1 Stunde, und behält sein Passwort. Ein Konto mit dem Status **Eingeladen** wird bei der nächsten Anmeldung mit Microsoft aktiviert. Ein Konto, das bereits mit einer anderen Microsoft-Identität verknüpft ist, behält diese Verknüpfung. Ohne E-Mail-Dienst kann ein bestehendes Konto auf diese Weise nicht verknüpft werden.
+Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal mit Microsoft anmeldet, automatisch ein Kadratis-Konto. Existiert bereits ein Konto mit derselben E-Mail-Adresse, sendet Kadratis stattdessen einen Bestätigungslink an diese Adresse. Die E-Mail nennt das Microsoft-Konto, das ihn angefordert hat, und eine weitere Anmeldung innerhalb von 5 Minuten sendet keinen neuen Link. Das Konto wird mit der Microsoft-Identität verknüpft, sobald die Person über diesen Link bestätigt, innerhalb von 1 Stunde, und behält sein Passwort. Ein Konto mit dem Status **Eingeladen**, das noch kein Passwort hat, wird bei der ersten Anmeldung mit Microsoft ohne Bestätigungslink verknüpft und aktiviert. Ein anderes Konto mit dem Status **Eingeladen** wird bei der nächsten Anmeldung mit Microsoft aktiviert. Ein Konto, das bereits mit einer anderen Microsoft-Identität verknüpft ist, behält diese Verknüpfung. Ohne E-Mail-Dienst kann ein bestehendes Konto auf diese Weise nicht verknüpft werden.
 
 Ein neues Konto startet mit der Systemrolle **Kontakt** und ohne Berechtigungen. Die Person sieht eine Seite mit dem Hinweis:
 
