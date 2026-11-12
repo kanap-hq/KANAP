@@ -506,9 +506,11 @@ export class EntraController {
           .getOne();
 
         if (found) {
+          // Saved once, below, with the profile. The account is read without its password and
+          // two-step secret: after a save TypeORM holds them as null, and a second save of the
+          // same object would write that null.
           found.external_auth_provider = 'entra' as any;
           found.external_subject = oid;
-          found = await repo.save(found);
           await this.audit.log(
             {
               table: 'users',
