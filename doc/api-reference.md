@@ -1483,6 +1483,13 @@ What a contract is expected to hold, and what was recorded (`backend/src/contrac
 - Contracts side: GET `/contracts/:id/capex-items` and POST `/contracts/:id/capex-items/bulk-replace` with `{ capex_item_ids: string[] }` (no screen calls them since the contract page uses `/contracts/:id/budget-lines`; kept until the CAPEX aliases go)
 - CAPEX side: GET `/capex-items/:id/contracts` and POST `/capex-items/:id/contracts/bulk-replace` with `{ contract_ids: string[] }`
 
+### Replacing linked records needs a read of their module
+A POST that replaces the links to records of another module, even with an empty list, needs a read of that module, as the Relations tab: otherwise `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and `reader`), before anything is read or written. An administrator passes. The assistant's relation writes follow the same rule.
+- `/applications/:id/spend-items|capex-items/bulk-replace` and `/assets/:id/spend-items|capex-items`: `budget`.
+- `/applications/:id/contracts/bulk-replace`, `/assets/:id/contracts`, `/spend-items/:id/contracts/bulk-replace` and `/capex-items/:id/contracts/bulk-replace`: `contracts`.
+- `/applications/:id/projects/bulk-replace`, `/assets/:id/projects/bulk-replace`, `/spend-items/:id/projects/bulk-replace` and `/capex-items/:id/projects/bulk-replace`: `portfolio_projects`.
+- `/spend-items/:id/applications/bulk-replace` and `/capex-items/:id/applications/bulk-replace`: `applications`.
+
 ### Contract tasks, URLs, attachments
 - Tasks: GET `/contracts/:id/tasks`, POST `/contracts/:id/tasks`, PATCH `/contracts/:id/tasks`
 - URLs: GET `/contracts/:id/links`, POST `/contracts/:id/links`, PATCH `/contracts/:id/links/:linkId`
@@ -1727,9 +1734,10 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
   - `technologies` also needs `infrastructure:reader` (`403` `You cannot read technologies.` before the service). One row on `technology_projects` and one audit row: `table` `technology_projects`, `recordId` the project, `before` and `after` the sorted ids. A missing technology is `400` `One or more technologies not found.`.
 - POST `/portfolio/projects/:id/dependencies` — add dependency (logs `dependency: [null, "PRJ-<n>: <name>"]`) **[Requires: portfolio_projects:contributor]**
 - DELETE `/portfolio/projects/:id/dependencies/:targetType/:targetId` — remove dependency (logs `dependency: [label, null]`) **[Requires: portfolio_projects:contributor]**
-- POST `/portfolio/projects/:id/phases` — create phase (logs `phase: [null, <name>]`) **[Requires: portfolio_projects:contributor]**
-- PATCH `/portfolio/projects/:id/phases/:phaseId` — update phase (logs `phase.<phaseId>.name|planned_start|planned_end|status`) **[Requires: portfolio_projects:contributor]**
-- DELETE `/portfolio/projects/:id/phases/:phaseId` — delete phase (logs `phase: [<name>, null]`) **[Requires: portfolio_projects:contributor]**
+- POST `/portfolio/projects/:id/phases` — create phase (logs `phase: [null, <name>]`) **[Requires: portfolio_projects:member]**
+- PATCH `/portfolio/projects/:id/phases/:phaseId` — update phase (logs `phase.<phaseId>.name|planned_start|planned_end|status`) **[Requires: portfolio_projects:member]**
+- DELETE `/portfolio/projects/:id/phases/:phaseId` — delete phase (logs `phase: [<name>, null]`) **[Requires: portfolio_projects:member]**
+- A phase or a milestone is changed by the address of its own project: `PATCH|DELETE /portfolio/projects/:id/phases/:phaseId`, POST `/portfolio/projects/:id/phases/:phaseId/toggle-milestone` and `PATCH|DELETE /portfolio/projects/:id/milestones/:milestoneId` answer `404` for a phase or a milestone of another project, and change nothing **[Requires: portfolio_projects:member]**
 - Priority override history:
   - `POST /portfolio/criteria/requests/:requestId/override` **[Requires: portfolio_requests:admin]** and `POST /portfolio/criteria/projects/:projectId/override` **[Requires: portfolio_projects:admin]** write `priority_override`, `override_value`, `override_justification`, and `priority_score` changes into activity history.
 - POST `/portfolio/criteria/reorder` — reorder evaluation criteria; body `{ criterion_ids: string[] }` reassigns `display_order` in the given order **[Requires: portfolio_settings:admin]**
@@ -1961,7 +1969,8 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 ## Users (Admin)
 - POST `/users` → create user `{ email, first_name?, last_name?, role_id?, status? }`
   - Password is optional; most flows leave it empty and rely on the invite/password-reset pipeline.
-  - `role_id` preferred; falls back to `role_name` (defaults to system `Contact`).
+  - `role_id` preferred; falls back to `role_name` (defaults to system `Contact`). A `role_name` that is a system role's name in another case (`administrator`) names that system role.
+  - A person who is not an administrator gives only the rights they hold: on POST `/users`, PATCH `/users/:id` (`role_id`), PUT `/users/:id/roles` and the users import, a role that is not already the person's and grants a module level above the caller's is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level), and the Administrator role is `403` `administrator_required`. Nothing is written.
   - `status` defaults to `enabled`; a user limit, when set on the tenant's plan, is enforced when saving with `status='enabled'`.
 - POST `/users/:id/enable` → sets user `status='enabled'`
   - Requires: users:admin level
@@ -1985,11 +1994,13 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 ## Roles (Admin)
 - GET `/roles` → `{ items: Role[] }` (includes `user_count` and `is_system`)
 - POST `/roles` → create role `{ role_name, role_description }` (admin only)
+  - The names of the system roles (`Administrator`, `Contact`) are theirs: another role named so in any case or with surrounding spaces, by POST `/roles`, a duplicate or PUT `/roles/:id`, is `400` `Role name must be unique` and nothing is written. The exact name returns the system role.
 - DELETE `/roles/:id` → delete role (no users assigned, not system)
 - GET `/roles/:id/permissions` → returns per-page permission levels for the role
   - Example: `{ companies: 'manager', suppliers: null, ... }`
 - PUT `/roles/:id/permissions` → sets per-page permission levels for the role
   - Body: `{ permissions: { [resource]: 'reader'|'manager'|'admin'|null } }`
+  - A caller who is not an administrator raises a level only up to their own: a higher one is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level) and nothing is written. Lowering a level is not limited.
   - `budget` covers every budget line, OPEX and CAPEX alike (lot R, migration `1853990000000`, which gave each role the higher of its former effective `opex` and `capex` levels: a `manager` row, which opened nothing, still opens nothing). The former names are aliases of `budget`: a row still named `opex` or `capex` (a tenant export or a database of before) is read as `budget` at the higher level; in a PUT, the keys that name `budget` are merged at the highest level given, a `null` removes the right only when every key naming it is `null`, and the rows of the former names are replaced. `GET /roles/:id/permissions` and `GET /auth/me` answer `budget`, never `opex` or `capex`
   - Note: `Administrator` and `Contact` are system-locked; the former is always full access, the latter cannot be granted access or login
 
