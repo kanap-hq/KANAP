@@ -10,7 +10,7 @@ export type PermissionLevel = 'reader' | 'contributor' | 'member' | 'admin';
 // Permission level ranking for union logic (higher = more permissive)
 const LEVEL_RANK: Record<PermissionLevel, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 
-function normalizePermissionLevel(resource: string, level: PermissionLevel): PermissionLevel {
+export function normalizePermissionLevel(resource: string, level: PermissionLevel): PermissionLevel {
   // Knowledge does not use a contributor tier. Preserve legacy data by folding it down to reader.
   if (normalizeResource(resource) === 'knowledge' && level === 'contributor') {
     return 'reader';
@@ -65,7 +65,7 @@ const RESOURCE_ALIASES: Record<string, string[]> = {
   budget_ops: ['budget-ops', 'budget_operations', 'budget-admin', 'budget_admin'],
 };
 
-function normalizeResource(resource: string): string {
+export function normalizeResource(resource: string): string {
   const entry = Object.entries(RESOURCE_ALIASES).find(([canonical, aliases]) =>
     canonical === resource || aliases.includes(resource)
   );
@@ -76,6 +76,28 @@ function aliasGroup(resource: string): string[] {
   const canonical = normalizeResource(resource);
   const aliases = RESOURCE_ALIASES[canonical] ?? [];
   return [canonical, ...aliases];
+}
+
+/** The rights a role gives, by resource (aliases folded, the derived contacts right included). */
+export async function readRolePermissions(manager: EntityManager, roleId: string): Promise<Map<string, PermissionLevel>> {
+  const items = await manager.getRepository(RolePermission).find({ where: { role_id: roleId } });
+  const map = new Map<string, PermissionLevel>();
+  for (const i of items) {
+    const key = normalizeResource(i.resource);
+    const level = normalizePermissionLevel(key, i.level);
+    // Prefer explicitly mapped resource; do not overwrite higher privilege with lower
+    const existing = map.get(key);
+    if (!existing || (LEVEL_RANK[level] ?? 0) > (LEVEL_RANK[existing] ?? 0)) {
+      map.set(key, level);
+    }
+  }
+  // Derived: if role has suppliers:member or suppliers:admin, grant contacts:reader unless explicitly set
+  const suppliersLevel = map.get('suppliers');
+  const contactsLevel = map.get('contacts');
+  if (!contactsLevel && suppliersLevel && (LEVEL_RANK[suppliersLevel] ?? 0) >= LEVEL_RANK.contributor) {
+    map.set('contacts', 'reader');
+  }
+  return map;
 }
 
 @Injectable()
@@ -90,25 +112,7 @@ export class PermissionsService {
   // Role-derived permissions (RBAC)
 
   async listForRole(roleId: string, opts?: { manager?: EntityManager }) {
-    const repo = (opts?.manager ?? this.rolePermissionRepo.manager).getRepository(RolePermission);
-    const items = await repo.find({ where: { role_id: roleId } });
-    const map = new Map<string, PermissionLevel>();
-    for (const i of items) {
-      const key = normalizeResource(i.resource);
-      const level = normalizePermissionLevel(key, i.level);
-      // Prefer explicitly mapped resource; do not overwrite higher privilege with lower
-      const existing = map.get(key);
-      if (!existing || (LEVEL_RANK[level] ?? 0) > (LEVEL_RANK[existing] ?? 0)) {
-        map.set(key, level);
-      }
-    }
-    // Derived: if role has suppliers:member or suppliers:admin, grant contacts:reader unless explicitly set
-    const suppliersLevel = map.get('suppliers');
-    const contactsLevel = map.get('contacts');
-    if (!contactsLevel && suppliersLevel && (LEVEL_RANK[suppliersLevel] ?? 0) >= LEVEL_RANK.contributor) {
-      map.set('contacts', 'reader');
-    }
-    return map;
+    return readRolePermissions(opts?.manager ?? this.rolePermissionRepo.manager, roleId);
   }
 
   async getRolePermissionsMap(roleId: string, opts?: { manager?: EntityManager }) {
@@ -130,7 +134,15 @@ export class PermissionsService {
     return out;
   }
 
-  async setRolePermissionsMap(roleId: string, permissions: Record<string, PermissionLevel | null>, opts?: { manager?: EntityManager }) {
+  /**
+   * `autoTasksRead` (default true): whether a role with a right on budget, projects or contracts also
+   * gets `tasks: reader` when the call does not set tasks. False for a person who does not read tasks.
+   */
+  async setRolePermissionsMap(
+    roleId: string,
+    permissions: Record<string, PermissionLevel | null>,
+    opts?: { manager?: EntityManager; autoTasksRead?: boolean },
+  ) {
     // Upsert/delete
     const mgr = opts?.manager ?? this.rolePermissionRepo.manager;
     const repo = mgr.getRepository(RolePermission);
@@ -175,7 +187,7 @@ export class PermissionsService {
     });
 
     // If user has any operations access and tasks is not explicitly set, auto-grant tasks:reader
-    if (hasAnyOpsAccess && !merged.has('tasks')) {
+    if (opts?.autoTasksRead !== false && hasAnyOpsAccess && !merged.has('tasks')) {
       toSave.push({ resource: 'tasks', level: 'reader' });
     }
     for (const r of toSave) {

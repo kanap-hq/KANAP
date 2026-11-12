@@ -314,16 +314,6 @@ export class IncidentsController {
   // Linked assets / applications / technologies
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('incidents', 'reader')
-  @Get(':id/assets')
-  async listAssets(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
-    // The assets are the infrastructure's: neither listed nor replaced without the right to read it.
-    if (!canReadResource(ctx, 'infrastructure')) throw moduleRightRequired('infrastructure', 'reader', 'You cannot read assets.');
-    const id = await this.visibleId(idOrRef, ctx);
-    return this.relations.listAssets(id, this.opts(ctx));
-  }
-
-  @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'contributor')
   @Post(':id/assets/bulk-replace')
   async bulkReplaceAssets(
@@ -359,15 +349,6 @@ export class IncidentsController {
     if (!canReadResource(ctx, 'infrastructure')) throw moduleRightRequired('infrastructure', 'reader', 'You cannot read technologies.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.bulkReplaceTechnologies(id, body?.technology_ids ?? [], ctx.userId || null, this.opts(ctx));
-  }
-
-  @UseGuards(PermissionGuard)
-  @RequireLevel('incidents', 'reader')
-  @Get(':id/applications')
-  async listApplications(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
-    if (!canReadResource(ctx, 'applications')) throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
-    const id = await this.visibleId(idOrRef, ctx);
-    return this.relations.listApplications(id, this.opts(ctx));
   }
 
   @UseGuards(PermissionGuard)

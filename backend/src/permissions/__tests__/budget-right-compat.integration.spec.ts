@@ -100,7 +100,7 @@ async function testOldKeysAreWrittenAsBudget() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'budget-compat-write');
     const { controller } = servicesFor(runner);
-    const req = { queryRunner: runner, user: { sub: randomUUID() }, tenant: { id: tenantId } };
+    const req = { queryRunner: runner, user: { sub: randomUUID() }, tenant: { id: tenantId }, isAdmin: true };
     const role = await controller.createRole({ role_name: 'Compat writer', role_description: 'Writes old keys' }, req);
 
     // Both keys: the higher level, stored once as `budget`.

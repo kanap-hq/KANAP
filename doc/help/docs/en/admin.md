@@ -224,7 +224,7 @@ The columns:
 | `department_name` | The department, by name. It needs a `company_name` |
 | `status` | `contact`, `invited`, `enabled` or `disabled`. A blank cell gives `contact` |
 
-A role the file names and your workspace does not have is created by the load, with a default description. The check lists it and creates nothing, so a file you only check changes no role. A name that appears twice in the file is kept once, the first row winning.
+A role the file names and your workspace does not have is created by the load, with a default description. The check lists it and creates nothing, so a file you only check changes no role. A name that appears twice in the file is kept once, the first row winning. A name the page shows for a system or built-in role, in any of its languages, is refused for that row.
 
 The file holds no date and no amount. An import sets no password: a new user signs in after an invitation or a password reset.
 
@@ -443,7 +443,7 @@ The Roles page has a two-panel layout:
 - **Right panel**: Details and permissions for the selected role
 
 **Actions**:
-- **New Role**: Create a custom role from scratch
+- **New Role**: Create a custom role from scratch. A new or renamed role cannot take a name the page shows for a system or built-in role, in any of its languages.
 - **Duplicate**: Copy an existing role (including built-in roles) as a starting point. Not available for System roles.
 - **Delete**: Remove a custom role. A role given to users cannot be deleted: give them another role first. The window says so before any confirmation.
 - **Save Details**: Update the role name and description

@@ -1,4 +1,4 @@
-import { LINKED_MODULE_RESOURCES, LinkedModule, LinkedReads, loadLinkedReads } from '../common/relations/linked-reads';
+import { LINKED_MODULE_RESOURCES, LinkedModule, LinkedReads, linksOutsideScope, loadLinkedReads } from '../common/relations/linked-reads';
 import {
   applicationParticipantCondition,
   projectParticipantCondition,
@@ -5984,9 +5984,7 @@ export class KnowledgeService {
          AND tenant_id = app_current_tenant()`,
       [documentId],
     );
-    const ids = linked.map((row) => row.id);
-    const visible = await idsInScope(manager, entity, ids, scope);
-    return ids.filter((id) => !visible.has(id));
+    return linksOutsideScope(manager, entity, linked.map((row) => row.id), scope);
   }
 
   async addDocumentRelationByEntity(

@@ -47,7 +47,7 @@ async function testRoleChangesAreLogged() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'role-audit');
     const actorId = randomUUID();
-    const req = { queryRunner: runner, user: { sub: actorId }, tenant: { id: tenantId } };
+    const req = { queryRunner: runner, user: { sub: actorId }, tenant: { id: tenantId }, isAdmin: true };
     const controller = controllerFor(runner);
 
     const created = await controller.createRole({ role_name: 'Budget reviewer', role_description: 'Reads budgets' }, req);

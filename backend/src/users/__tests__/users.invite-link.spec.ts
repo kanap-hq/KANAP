@@ -73,6 +73,8 @@ async function testInvitationLinkOpensTheTenantAddress() {
       tenant: { slug: 'acme' },
       headers: { host: 'acme.kanap.net' },
       user: { sub: 'admin-1' },
+      // An administrator: the invited person's rights are not compared with theirs.
+      isAdmin: true,
       queryRunner: { manager, isReleased: false, isTransactionActive: false, release: async () => undefined },
     });
     assert.equal(sent.length, 1);

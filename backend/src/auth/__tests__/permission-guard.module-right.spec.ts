@@ -96,7 +96,7 @@ async function run() {
     (error: unknown) => {
       assert.ok(error instanceof ForbiddenException, 'a ForbiddenException');
       assert.equal(error.getStatus(), 403, 'status');
-      assert.equal((error.getResponse() as { error?: string }).error, 'NO_ACCESS', 'code');
+      assert.equal((error.getResponse() as { code?: string }).code, 'NO_ACCESS', 'code');
       return true;
     },
     'no right at all is NO_ACCESS',

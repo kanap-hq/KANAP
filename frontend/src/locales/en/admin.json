@@ -2230,7 +2230,8 @@
       "contactLocked": "Contact roles are system-managed for directory visibility and cannot be modified.",
       "duplicated": "Role duplicated.",
       "permissionsSaved": "Role permissions saved.",
-      "deleteFailed": "The role could not be deleted."
+      "deleteFailed": "The role could not be deleted.",
+      "saveFailed": "The role could not be saved."
     },
     "resources": {
       "accounts": "Accounts",

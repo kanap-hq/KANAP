@@ -224,7 +224,7 @@ Las columnas:
 | `department_name` | El departamento, por su nombre. Necesita un `company_name` |
 | `status` | `contact`, `invited`, `enabled` o `disabled`. Una celda vacía da `contact` |
 
-La carga crea un rol que el archivo nombra y que su espacio de trabajo no tiene, con una descripción por defecto. La verificación lo lista y no crea nada: un archivo que solo comprueba no cambia ningún rol. Un nombre que aparece dos veces en el archivo se conserva una vez, gana la primera fila.
+La carga crea un rol que el archivo nombra y que su espacio de trabajo no tiene, con una descripción por defecto. La verificación lo lista y no crea nada: un archivo que solo comprueba no cambia ningún rol. Un nombre que aparece dos veces en el archivo se conserva una vez, gana la primera fila. Un nombre que la página muestra para un rol del sistema o integrado, en cualquiera de sus idiomas, se rechaza para esa fila.
 
 El archivo no contiene ninguna fecha ni ningún importe. Una importación no define ninguna contraseña: un usuario nuevo inicia sesión tras una invitación o un restablecimiento de contraseña.
 
@@ -443,7 +443,7 @@ La página de Roles tiene un diseño de dos paneles:
 - **Panel derecho**: Detalles y permisos del rol seleccionado
 
 **Acciones**:
-- **Nuevo rol**: Crear un rol personalizado desde cero
+- **Nuevo rol**: Crear un rol personalizado desde cero. Un rol nuevo o renombrado no puede llevar un nombre que la página muestra para un rol del sistema o integrado, en cualquiera de sus idiomas.
 - **Duplicar**: Copiar un rol existente (incluyendo roles integrados) como punto de partida. No disponible para roles de Sistema.
 - **Eliminar**: Eliminar un rol personalizado. Un rol asignado a usuarios no se puede eliminar: asígneles primero otro rol. La ventana lo indica antes de cualquier confirmación.
 - **Guardar detalles**: Actualizar nombre y descripción del rol

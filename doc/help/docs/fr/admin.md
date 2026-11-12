@@ -224,7 +224,7 @@ Les colonnes :
 | `department_name` | Le département, par son nom. Il nécessite un `company_name` |
 | `status` | `contact`, `invited`, `enabled` ou `disabled`. Une cellule vide donne `contact` |
 
-Un rôle nommé par le fichier et absent de votre espace de travail est créé par le chargement, avec une description par défaut. La vérification le liste et ne crée rien : un fichier que vous vous contentez de vérifier ne change aucun rôle. Un nom présent deux fois dans le fichier n'est gardé qu'une fois, la première ligne l'emportant.
+Un rôle nommé par le fichier et absent de votre espace de travail est créé par le chargement, avec une description par défaut. La vérification le liste et ne crée rien : un fichier que vous vous contentez de vérifier ne change aucun rôle. Un nom présent deux fois dans le fichier n'est gardé qu'une fois, la première ligne l'emportant. Un nom que la page affiche pour un rôle système ou intégré, dans l'une de ses langues, est refusé pour cette ligne.
 
 Le fichier ne contient ni date ni montant. Un import ne définit aucun mot de passe : un nouvel utilisateur se connecte après une invitation ou une réinitialisation de mot de passe.
 
@@ -443,7 +443,7 @@ La page Rôles a une disposition à deux panneaux :
 - **Panneau droit** : Détails et autorisations pour le rôle sélectionné
 
 **Actions** :
-- **Nouveau rôle** : Créer un rôle personnalisé de zéro
+- **Nouveau rôle** : Créer un rôle personnalisé de zéro. Un rôle créé ou renommé ne peut pas prendre un nom que la page affiche pour un rôle système ou intégré, dans l'une de ses langues.
 - **Dupliquer** : Copier un rôle existant (y compris les rôles intégrés) comme point de départ. Non disponible pour les rôles Système.
 - **Supprimer** : Supprimer un rôle personnalisé. Un rôle attribué à des utilisateurs ne peut pas être supprimé : attribuez-leur d'abord un autre rôle. La fenêtre l'indique avant toute confirmation.
 - **Enregistrer les détails** : Mettre à jour le nom et la description du rôle

@@ -42,6 +42,7 @@ import {
 } from '../../assets/placement-rules';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
+import { LINKED_MODULE_RESOURCES } from '../../common/relations/linked-reads';
 
 export const AI_RELATION_ENTITY_TYPES = [
   'applications',
@@ -111,6 +112,15 @@ type SpecialRelationConfig = {
 };
 
 type RelationConfig = SimpleRelationConfig | SpecialRelationConfig;
+
+/** The module whose read a link to a record of the target family asks for (`common/relations/linked-reads.ts`). */
+const RELATION_TARGET_READ_RESOURCES: Partial<Record<string, string>> = {
+  applications: LINKED_MODULE_RESOURCES.applications,
+  assets: LINKED_MODULE_RESOURCES.assets,
+  budget_lines: LINKED_MODULE_RESOURCES.budget,
+  contracts: LINKED_MODULE_RESOURCES.contracts,
+  projects: LINKED_MODULE_RESOURCES.projects,
+};
 
 type ResolvedReference = {
   id: string;
@@ -325,13 +335,15 @@ export class AiRelationMutationSupportService {
   ) {}
 
   /**
-   * A Plaid write of a contract's budget lines needs the budget reader level besides the
-   * contracts member level, for everyone (spec §4.3, lot 5).
+   * A Plaid write of linked records needs a read of their module besides the source's own level,
+   * as the Relations tab and its routes: a contract's budget lines need the budget reader level
+   * (spec §4.3, lot 5), an application's projects the projects reader level, and so on.
    */
-  private async assertContractLineBudgetRead(context: AiExecutionContextWithManager, config: RelationConfig): Promise<void> {
-    if (config.kind !== 'simple' || config.sourceEntity !== 'contracts') return;
-    if (config.relation !== 'budget_lines') return;
-    await this.policy?.assertBusinessPermission(context, 'budget', 'reader', context.manager);
+  private async assertLinkedModuleRead(context: AiExecutionContextWithManager, config: RelationConfig): Promise<void> {
+    if (config.kind !== 'simple') return;
+    const resource = RELATION_TARGET_READ_RESOURCES[config.target];
+    if (!resource) return;
+    await this.policy?.assertBusinessPermission(context, resource, 'reader', context.manager);
   }
 
   getSupportedRelationDescriptions(): string[] {
@@ -350,7 +362,7 @@ export class AiRelationMutationSupportService {
   ): Promise<AiPreparedMutationPreview> {
     const config = getRelationConfig(input.entity_type, input.relation);
     const target = await this.resolveSource(context, config.sourceEntity, input.ref);
-    await this.assertContractLineBudgetRead(context, config);
+    await this.assertLinkedModuleRead(context, config);
     const currentItems = await this.loadRelationItems(context, config, target.id);
     const askedItems = await this.computeNextItems(context, config, target.id, currentItems, input);
     if (relationItemSignature(currentItems) === relationItemSignature(askedItems)) {
@@ -386,7 +398,7 @@ export class AiRelationMutationSupportService {
     const config = getRelationConfig(preview.target_entity_type || preview.mutation_input?.entity_type, preview.mutation_input?.relation);
     if (!preview.target_entity_id) throw new BadRequestException('Original preview is missing the target record.');
     const target = await this.resolveSource(context, config.sourceEntity, preview.target_entity_id);
-    await this.assertContractLineBudgetRead(context, config);
+    await this.assertLinkedModuleRead(context, config);
     const currentItems = await this.loadRelationItems(context, config, target.id);
     const originalItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
     if (relationItemSignature(currentItems) === relationItemSignature(originalItems)) {
@@ -487,7 +499,7 @@ export class AiRelationMutationSupportService {
   async executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {
     const config = getRelationConfig(preview.target_entity_type || preview.mutation_input?.entity_type, preview.mutation_input?.relation);
     if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the target record.');
-    await this.assertContractLineBudgetRead(context, config);
+    await this.assertLinkedModuleRead(context, config);
     const expectedItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
     const nextItems = this.coerceRelationItems(preview.mutation_input?.next_items, 'mutation_input.next_items');
     // A budget line is locked, by its stored nature, before its relations are compared and

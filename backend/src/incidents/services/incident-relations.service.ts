@@ -128,16 +128,8 @@ export class IncidentRelationsService extends IncidentsBaseService {
     super(incidentRepo);
   }
 
-  listAssets(incidentId: string, opts?: ServiceOpts): Promise<IncidentLinkedObject[]> {
-    return this.listLinked(ASSET_LINK, incidentId, opts);
-  }
-
   bulkReplaceAssets(incidentId: string, assetIds: string[], userId: string | null, opts?: ServiceOpts) {
     return this.bulkReplace(ASSET_LINK, incidentId, assetIds, userId, opts);
-  }
-
-  listApplications(incidentId: string, opts?: ServiceOpts): Promise<IncidentLinkedObject[]> {
-    return this.listLinked(APPLICATION_LINK, incidentId, opts);
   }
 
   bulkReplaceApplications(incidentId: string, applicationIds: string[], userId: string | null, opts?: ServiceOpts) {

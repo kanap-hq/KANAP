@@ -858,7 +858,7 @@ The Relations tab of an incident, one round trip (`backend/src/incidents/service
   - `technologies: [{ id, reference, name, family, vendor }] | null`. `reference` is `TEC-n`. `vendor` is the editor. `null` without a read of `infrastructure`.
   - `editable`: `false` when the incident is closed or cancelled.
   - `suggestions`: up to 20 technologies carried by a linked asset (`asset_technologies`) or, for a caller who reads `applications`, by a linked application they can see (`application_technologies`), that the incident does not list yet. Each item is `{ type: 'technology', id, reference, name, family, vendor, via: { kind, label } }`. `kind` is `asset_technology` or `application_technology`. `label` is the source reference (`AST-n` or `APP-n`). Several sources for one technology keep the first reference in alphabetical order. A source with no reference is left out. Suggestions are returned to a reader of `infrastructure`, on an incident that can still be edited.
-- The older GET `/incidents/:id/assets` and `/incidents/:id/applications` (`incidents:reader`) and POST `/incidents/:id/assets/bulk-replace` `{ asset_ids }` and `/incidents/:id/applications/bulk-replace` `{ application_ids }` (`incidents:contributor`) also need the read of the module they list (`infrastructure` for assets, `applications` for applications): `403` `You cannot read assets.` or `You cannot read applications.`, before anything is read or written.
+- The older POST `/incidents/:id/assets/bulk-replace` `{ asset_ids }` and `/incidents/:id/applications/bulk-replace` `{ application_ids }` (`incidents:contributor`) also need the read of the module they replace (`infrastructure` for assets, `applications` for applications): `403` `You cannot read assets.` or `You cannot read applications.`, before anything is read or written. The linked assets and applications are read through GET `/incidents/:id/relations`.
 - POST `/incidents/:id/relations/:kind` with `{ id }` and DELETE `/incidents/:id/relations/:kind/:targetId` → `{ ok: true, changed }`. `kind` is `assets`, `applications` or `technologies`. Anything else is `404` `Unknown relation type.`, before the module check and before the id is read. `assets` need a read of `infrastructure` (`403` `You cannot read this module.`). `technologies` need the same read (`403` `You cannot read technologies.`). `applications` need a read of `applications` (`403` `You cannot read this module.`). The module check comes before the id is parsed and before the incident is read. An id that is not a uuid is `400` `Invalid id.`. A uuid that is not a row of the tenant is `404` (`Asset not found.`, `Application not found.` or `Technology not found.`). A closed or cancelled incident refuses the write (`403` `This incident is closed. Reopen it to make changes.`), and that answer comes before the missing-target check. Linking a row that is already linked, or unlinking a row that is not, answers `changed: false` and writes nothing. A change locks the incident (`FOR NO KEY UPDATE`), appends one `link_change` journal entry (the business references, for example `Assets linked: AST-n.`) and one audit row on the link table (`incident_assets`, `incident_applications` or `incident_technologies`): `recordId` the incident, `action` `update`, `before` and `after` the target ids in name order.
 
 ### Sample-data journal import
@@ -874,8 +874,6 @@ GET `/locations/:id/relations` (`locations:reader`) returns the Relations tab of
 | `applications` | `applications` | Applications with an instance on one of those assets: `{ id, reference, name, lifecycle, status, environments }` (`reference` is `APP-n`, `environments` the sorted environments of those instances). A Business Contributor sees the applications they take part in |
 
 GET `/locations/:id/relation-counts` (`locations:reader`) → `{ relations }`: the tab badge. It counts the assets for a reader of `infrastructure`, the applications for a reader of `applications` (inside a Business Contributor's participation), and the web links.
-
-The older GET `/locations/:id/servers` (assets) and `/locations/:id/applications` stay, under `locations:reader`, and also need the read of the module they list (`infrastructure`, `applications`): `403` `You cannot read assets.` or `You cannot read applications.` otherwise.
 
 ## IT Ops Settings
 Tenant-scoped configuration for IT Landscape dropdowns and enums.
@@ -1492,6 +1490,13 @@ What a contract is expected to hold, and what was recorded (`backend/src/contrac
 - Contracts side: GET `/contracts/:id/capex-items` and POST `/contracts/:id/capex-items/bulk-replace` with `{ capex_item_ids: string[] }` (no screen calls them since the contract page uses `/contracts/:id/budget-lines`; kept until the CAPEX aliases go)
 - CAPEX side: GET `/capex-items/:id/contracts` and POST `/capex-items/:id/contracts/bulk-replace` with `{ contract_ids: string[] }`
 
+### Replacing linked records needs a read of their module
+A POST that replaces the links to records of another module, even with an empty list, needs a read of that module, as the Relations tab: otherwise `403` `LINKED_MODULE_NOT_READABLE` (`params.resources`: the module), as on a document's links, before anything is read or written. An administrator passes. The assistant's relation writes follow the same rule. A Business Contributor links only projects they take part in (`403` `OUTSIDE_PARTICIPATION`), and a replacement of an application's projects keeps the links to projects they do not see; its answer lists the projects they read.
+- `/applications/:id/spend-items|capex-items/bulk-replace` and `/assets/:id/spend-items|capex-items`: `budget`.
+- `/applications/:id/contracts/bulk-replace`, `/assets/:id/contracts`, `/spend-items/:id/contracts/bulk-replace` and `/capex-items/:id/contracts/bulk-replace`: `contracts`.
+- `/applications/:id/projects/bulk-replace`, `/assets/:id/projects/bulk-replace`, `/spend-items/:id/projects/bulk-replace` and `/capex-items/:id/projects/bulk-replace`: `portfolio_projects`.
+- `/spend-items/:id/applications/bulk-replace` and `/capex-items/:id/applications/bulk-replace`: `applications`.
+
 ### Contract tasks, URLs, attachments
 - Tasks: GET `/contracts/:id/tasks`, POST `/contracts/:id/tasks`, PATCH `/contracts/:id/tasks`
 - URLs: GET `/contracts/:id/links`, POST `/contracts/:id/links`, PATCH `/contracts/:id/links/:linkId`
@@ -1592,6 +1597,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - POST `/portfolio/projects/:projectId/tasks/:taskId/time-entries` — create project-task time entry **[Requires: portfolio_projects:contributor]**
 - PATCH `/portfolio/projects/:projectId/tasks/:taskId/time-entries/:entryId` — update project-task time entry **[Requires: portfolio_projects:contributor]**
 - DELETE `/portfolio/projects/:projectId/tasks/:taskId/time-entries/:entryId` — delete project-task time entry **[Requires: portfolio_projects:contributor]**
+- A time entry is changed by the address of its own project or task: PATCH and DELETE of `/portfolio/projects/:id/time-entries/:entryId` and of `/portfolio/projects/:projectId/tasks/:taskId/time-entries/:entryId` answer `404` for an entry of another project or task, and change nothing.
 - DELETE `/tasks/bulk` — bulk delete `{ ids: string[] }` → `{ deleted: string[], failed: { id, name, reason }[] }` **[Requires: tasks:admin]**
 
 ## Portfolio Requests
@@ -1736,9 +1742,10 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
   - `technologies` also needs `infrastructure:reader` (`403` `You cannot read technologies.` before the service). One row on `technology_projects` and one audit row: `table` `technology_projects`, `recordId` the project, `before` and `after` the sorted ids. A missing technology is `400` `One or more technologies not found.`.
 - POST `/portfolio/projects/:id/dependencies` — add dependency (logs `dependency: [null, "PRJ-<n>: <name>"]`) **[Requires: portfolio_projects:contributor]**
 - DELETE `/portfolio/projects/:id/dependencies/:targetType/:targetId` — remove dependency (logs `dependency: [label, null]`) **[Requires: portfolio_projects:contributor]**
-- POST `/portfolio/projects/:id/phases` — create phase (logs `phase: [null, <name>]`) **[Requires: portfolio_projects:contributor]**
-- PATCH `/portfolio/projects/:id/phases/:phaseId` — update phase (logs `phase.<phaseId>.name|planned_start|planned_end|status`) **[Requires: portfolio_projects:contributor]**
-- DELETE `/portfolio/projects/:id/phases/:phaseId` — delete phase (logs `phase: [<name>, null]`) **[Requires: portfolio_projects:contributor]**
+- POST `/portfolio/projects/:id/phases` — create phase (logs `phase: [null, <name>]`) **[Requires: portfolio_projects:member]**
+- PATCH `/portfolio/projects/:id/phases/:phaseId` — update phase (logs `phase.<phaseId>.name|planned_start|planned_end|status`) **[Requires: portfolio_projects:member]**
+- DELETE `/portfolio/projects/:id/phases/:phaseId` — delete phase (logs `phase: [<name>, null]`) **[Requires: portfolio_projects:member]**
+- A phase or a milestone is changed by the address of its own project: `PATCH|DELETE /portfolio/projects/:id/phases/:phaseId`, POST `/portfolio/projects/:id/phases/:phaseId/toggle-milestone` and `PATCH|DELETE /portfolio/projects/:id/milestones/:milestoneId` answer `404` for a phase or a milestone of another project, and change nothing **[Requires: portfolio_projects:member]**
 - Priority override history:
   - `POST /portfolio/criteria/requests/:requestId/override` **[Requires: portfolio_requests:admin]** and `POST /portfolio/criteria/projects/:projectId/override` **[Requires: portfolio_projects:admin]** write `priority_override`, `override_value`, `override_justification`, and `priority_score` changes into activity history.
 - POST `/portfolio/criteria/reorder` — reorder evaluation criteria; body `{ criterion_ids: string[] }` reassigns `display_order` in the given order **[Requires: portfolio_settings:admin]**
@@ -1970,7 +1977,10 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 ## Users (Admin)
 - POST `/users` → create user `{ email, first_name?, last_name?, role_id?, status? }`
   - Password is optional; most flows leave it empty and rely on the invite/password-reset pipeline.
-  - `role_id` preferred; falls back to `role_name` (defaults to system `Contact`).
+  - `role_id` preferred; falls back to `role_name` (defaults to system `Contact`). A `role_name` that is a system role's name in another case (`administrator`) names that system role.
+  - A person who is not an administrator gives only the rights they hold: on POST `/users`, PATCH `/users/:id` (`role_id`), PUT `/users/:id/roles` and the users import, a role that is not already the person's and grants a module level above the caller's is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level), and the Administrator role is `403` `administrator_required`. Nothing is written.
+  - A person who is not an administrator changes no person who has more rights than they do (the Administrator role, or a module level above theirs, all roles counted): PATCH `/users/:id`, PUT `/users/:id/roles`, POST `/users/:id/enable|disable|invite`, PUT `/users/:id/data-access` are `403` `PERSON_ABOVE_OWN_RIGHTS`; DELETE `/users/:id`, DELETE `/users/bulk` and POST `/users/delete-check` report the refusal `PERSON_ABOVE_OWN_RIGHTS`; a row of POST `/users/import` or POST `/data-access/import` about such a person is refused with that code. One's own profile is not limited.
+  - A workspace keeps at least one enabled Administrator: taking the role away from the last one (PUT `/users/:id/roles`, PATCH `/users/:id` `role_id`), disabling them (POST `/users/:id/disable`, PATCH `status`), deleting them, or an import row doing so is `409` `LAST_ADMINISTRATOR` (a delete refusal, an import row error) and nothing is written.
   - `status` defaults to `enabled`; a user limit, when set on the tenant's plan, is enforced when saving with `status='enabled'`.
 - POST `/users/:id/enable` → sets user `status='enabled'`
   - Requires: users:admin level
@@ -1994,11 +2004,13 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 ## Roles (Admin)
 - GET `/roles` → `{ items: Role[] }` (includes `user_count` and `is_system`)
 - POST `/roles` → create role `{ role_name, role_description }` (admin only)
+  - The names of the system and built-in roles are theirs, as stored and as the screen shows them in its four languages (`SHIPPED_ROLE_NAMES`, `roles/system-roles.ts`, a copy of `roles.builtIn.<slug>.name` in the locale files): another role named so in any case or with surrounding spaces, by POST `/roles`, a duplicate, PUT `/roles/:id`, POST `/users` with `role_name` or a users file, is `400` `ROLE_NAME_RESERVED` (a row error in a users file) and nothing is written. A role already stored under such a name keeps it. PUT `/roles/:id` to the name of another role is `400` `ROLE_NAME_TAKEN`. The exact name of another role on POST `/roles` returns it.
 - DELETE `/roles/:id` → delete role (no users assigned, not system)
 - GET `/roles/:id/permissions` → returns per-page permission levels for the role
   - Example: `{ companies: 'manager', suppliers: null, ... }`
 - PUT `/roles/:id/permissions` → sets per-page permission levels for the role
   - Body: `{ permissions: { [resource]: 'reader'|'manager'|'admin'|null } }`
+  - A caller who is not an administrator raises a level only up to their own: a higher one is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level) and nothing is written. Lowering a level is not limited. The `tasks: reader` added with a right on budget, projects or contracts is added only when the caller reads tasks.
   - `budget` covers every budget line, OPEX and CAPEX alike (lot R, migration `1853990000000`, which gave each role the higher of its former effective `opex` and `capex` levels: a `manager` row, which opened nothing, still opens nothing). The former names are aliases of `budget`: a row still named `opex` or `capex` (a tenant export or a database of before) is read as `budget` at the higher level; in a PUT, the keys that name `budget` are merged at the highest level given, a `null` removes the right only when every key naming it is `null`, and the rows of the former names are replaced. `GET /roles/:id/permissions` and `GET /auth/me` answer `budget`, never `opex` or `capex`
   - Note: `Administrator` and `Contact` are system-locked; the former is always full access, the latter cannot be granted access or login
 

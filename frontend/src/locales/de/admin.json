@@ -2230,7 +2230,8 @@
       "contactLocked": "Kontaktrollen werden vom System für die Verzeichnissichtbarkeit verwaltet und können nicht geändert werden.",
       "duplicated": "Rolle dupliziert.",
       "permissionsSaved": "Rollenberechtigungen gespeichert.",
-      "deleteFailed": "Die Rolle konnte nicht gelöscht werden."
+      "deleteFailed": "Die Rolle konnte nicht gelöscht werden.",
+      "saveFailed": "Die Rolle konnte nicht gespeichert werden."
     },
     "resources": {
       "accounts": "Konten",

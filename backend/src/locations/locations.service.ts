@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, FindOperator, ILike, In, Raw, Repository } from 'typeorm';
-import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { Location } from './location.entity';
 import { LocationUserContact } from './location-user-contact.entity';
 import { LocationContactLink } from './location-contact.entity';
@@ -919,65 +918,6 @@ export class LocationsService {
       { manager: mg },
     );
     return { ok: true };
-  }
-
-  async listAssets(locationId: string, opts?: { manager?: EntityManager }) {
-    await this.loadLocationOrThrow(locationId, opts?.manager);
-    const mg = opts?.manager ?? this.repo.manager;
-    const rows: Array<Record<string, any>> = await mg.query(
-      `SELECT a.id, a.name, a.kind, a.provider, a.environment,
-              a.region, a.zone, a.status, a.created_at,
-              a.sub_location_id,
-              sl.name AS sub_location_name
-       FROM assets a
-       LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
-       WHERE a.location_id = $1
-       ORDER BY a.name ASC`,
-      [locationId],
-    );
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      kind: r.kind,
-      provider: r.provider,
-      environment: r.environment,
-      region: r.region,
-      zone: r.zone,
-      status: r.status,
-      created_at: r.created_at,
-      sub_location_id: r.sub_location_id ?? null,
-      sub_location_name: r.sub_location_name ?? null,
-    }));
-  }
-
-  async listApplications(locationId: string, opts?: { manager?: EntityManager }) {
-    await this.loadLocationOrThrow(locationId, opts?.manager);
-    const mg = opts?.manager ?? this.repo.manager;
-    const rows: Array<{ id: string; name: string; environments: string[] | null }> = await mg.query(
-      `
-        SELECT a.id, a.name,
-          ARRAY_AGG(DISTINCT ai.environment ORDER BY ai.environment) AS environments
-        FROM assets s
-        -- The deployments running on the assets here (effective: a member lists what its clusters carry).
-        INNER JOIN (${effectiveAssignmentsSql({
-          tenant: 'app_current_tenant()',
-          assets: 'ARRAY(SELECT ls.id FROM assets ls WHERE ls.tenant_id = app_current_tenant() AND ls.location_id = $1)',
-        })}) asa ON asa.asset_id = s.id AND asa.tenant_id = s.tenant_id
-        INNER JOIN app_instances ai ON ai.id = asa.app_instance_id AND ai.tenant_id = asa.tenant_id
-        INNER JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
-        WHERE s.location_id = $1
-        GROUP BY a.id, a.name
-        ORDER BY a.name
-      `,
-      [locationId],
-    );
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      environments: Array.isArray(row.environments)
-        ? row.environments.filter((env) => env && env.length > 0)
-        : [],
-    }));
   }
 
   /** The Relations tab (`location-relations.ts`). `id` is a uuid or a `LOC-n` reference. */

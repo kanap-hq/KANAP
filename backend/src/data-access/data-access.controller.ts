@@ -84,6 +84,9 @@ export class DataAccessController {
     if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
     const language = await languageOf(ctx.manager, ctx.tenantId, ctx.userId || null, languageRaw);
-    return this.svc.importCsv(ctx.manager, { file, dryRun, language, callerId: ctx.userId || null });
+    return this.svc.importCsv(ctx.manager, {
+      file, dryRun, language, callerId: ctx.userId || null,
+      callerRights: { isAdmin: ctx.isAdmin === true, permissions: { ...(ctx.permissions ?? {}) } },
+    });
   }
 }

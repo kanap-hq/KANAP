@@ -36,6 +36,7 @@ import {
   assetRelationKindOrThrow,
   type AssetRelationsContext,
 } from './asset-relations-tab.service';
+import { assertLinkedModuleRead, assertLinkedRecordsReadable } from '../common/relations/linked-reads';
 
 @UseGuards(JwtAuthGuard)
 @Controller('assets')
@@ -453,6 +454,7 @@ export class AssetsController {
   @RequireLevel('infrastructure', 'member')
   @Post(':id/spend-items')
   replaceLinkedSpendItems(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    assertLinkedModuleRead(req, 'budget');
     const tenantId: string | undefined = req?.tenant?.id;
     return this.svc.bulkReplaceLinkedSpendItems(id, body?.spend_item_ids ?? [], tenantId ?? '', req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
@@ -472,6 +474,7 @@ export class AssetsController {
   @RequireLevel('infrastructure', 'member')
   @Post(':id/capex-items')
   replaceLinkedCapexItems(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    assertLinkedModuleRead(req, 'budget');
     const tenantId: string | undefined = req?.tenant?.id;
     return this.svc.bulkReplaceLinkedCapexItems(id, body?.capex_item_ids ?? [], tenantId ?? '', req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
@@ -490,6 +493,7 @@ export class AssetsController {
   @RequireLevel('infrastructure', 'member')
   @Post(':id/contracts')
   replaceLinkedContracts(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    assertLinkedModuleRead(req, 'contracts');
     const tenantId: string | undefined = req?.tenant?.id;
     return this.svc.bulkReplaceLinkedContracts(id, body?.contract_ids ?? [], tenantId ?? '', req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
@@ -527,7 +531,8 @@ export class AssetsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Post(':id/projects/bulk-replace')
-  bulkReplaceProjects(@Param('id') id: string, @Body() body: { project_ids: string[] }, @Req() req: any) {
+  async bulkReplaceProjects(@Param('id') id: string, @Body() body: { project_ids: string[] }, @Req() req: any) {
+    await assertLinkedRecordsReadable(req, 'projects', body?.project_ids ?? []);
     const tenantId: string | undefined = req?.tenant?.id;
     return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], tenantId ?? '', req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,

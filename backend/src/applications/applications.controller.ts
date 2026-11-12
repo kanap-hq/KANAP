@@ -54,6 +54,7 @@ import { ApplicationDataResidency } from './application-data-residency.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 import type { CreationChanges } from '../common/creation/creation-changes';
+import { assertLinkedModuleRead, assertLinkedRecordsReadable } from '../common/relations/linked-reads';
 
 @UseGuards(JwtAuthGuard)
 @Controller('applications')
@@ -1012,6 +1013,7 @@ export class ApplicationsController {
     @Body() body: { spend_item_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ): Promise<BulkOperationResponse> {
+    assertLinkedModuleRead(ctx, 'budget');
     return this.svc.bulkReplaceLinkedSpendItems(id, body?.spend_item_ids ?? [], ctx.userId || null, { manager: ctx.manager });
   }
 
@@ -1035,6 +1037,7 @@ export class ApplicationsController {
     @Body() body: { capex_item_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ): Promise<BulkOperationResponse> {
+    assertLinkedModuleRead(ctx, 'budget');
     return this.svc.bulkReplaceLinkedCapexItems(id, body?.capex_item_ids ?? [], ctx.userId || null, { manager: ctx.manager });
   }
 
@@ -1057,6 +1060,7 @@ export class ApplicationsController {
     @Body() body: { contract_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ): Promise<BulkOperationResponse> {
+    assertLinkedModuleRead(ctx, 'contracts');
     return this.svc.bulkReplaceLinkedContracts(id, body?.contract_ids ?? [], ctx.userId || null, { manager: ctx.manager });
   }
 
@@ -1077,12 +1081,17 @@ export class ApplicationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Post(':id/projects/bulk-replace')
-  bulkReplaceProjects(
+  async bulkReplaceProjects(
     @Param('id') id: string,
     @Body() body: { project_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ): Promise<{ items: Array<{ id: string; name: string }> }> {
-    return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], ctx.userId || null, { manager: ctx.manager });
+    await assertLinkedRecordsReadable(ctx, 'projects', body?.project_ids ?? []);
+    // The answer lists the projects the person reads, as `GET :id/projects`.
+    return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], ctx.userId || null, {
+      manager: ctx.manager,
+      projectAccessScope: await this.readProjectScope(ctx),
+    });
   }
 
   // Structure — Suites and Components

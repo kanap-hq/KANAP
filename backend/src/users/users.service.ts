@@ -4,6 +4,7 @@ import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { User } from './user.entity';
 import { Role } from '../roles/role.entity';
 import { RolesService } from '../roles/roles.service';
+import { isReservedRoleName, isSystemRoleName } from '../roles/system-roles';
 import { UserRole } from './user-role.entity';
 import * as argon2 from 'argon2';
 import { parsePagination, parseExportPagination } from '../common/pagination';
@@ -57,6 +58,16 @@ import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { uploadedBytes } from '../common/upload';
 import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import {
+  assertKeepsAnActiveAdministrator,
+  assertPersonWithinActorRights,
+  LAST_ADMINISTRATOR_MESSAGE,
+  lastActiveAdministratorsLeaving,
+  assertRoleGrantWithinActorRights,
+  PERSON_ABOVE_OWN_RIGHTS_MESSAGE,
+  personAboveActorRights,
+  RoleGrantActor,
+} from '../roles/role-grant-ceiling';
 
 const SUPPORTED_USER_LOCALES = ['en', 'fr', 'de', 'es'] as const;
 const SELF_SERVICE_FIELDS = ['first_name', 'last_name', 'job_title', 'business_phone', 'mobile_phone', 'locale'] as const;
@@ -741,7 +752,7 @@ export class UsersService {
     department_id?: string | null;
     status?: string | null;
     tenant_id?: string;
-  }, opts?: { manager?: EntityManager }) {
+  }, opts?: { manager?: EntityManager; roleGrant?: RoleGrantActor }) {
     const repo = this.getRepo(opts?.manager);
     const existing = await repo.findOne({ where: { email: params.email } });
     if (existing) return existing;
@@ -753,7 +764,11 @@ export class UsersService {
     }
     const roleName = params.role_name ?? 'Contact';
     if (!role) {
-      role = await this.rolesService.findByName(roleName, { manager: opts?.manager });
+      role = await this.rolesService.findByNameOrSystemName(roleName, { manager: opts?.manager });
+    }
+    // A person created from a request gets a role within the rights of the one who creates them.
+    if (role && opts?.roleGrant) {
+      await assertRoleGrantWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, null, [role.id]);
     }
     if (!role) {
       role = await this.rolesService.createRole({
@@ -940,6 +955,7 @@ export class UsersService {
       language,
       dateOrder,
       decimalMark,
+      roleGrant,
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -947,6 +963,8 @@ export class UsersService {
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /** The person importing: a role the file gives stays within their rights. */
+      roleGrant?: RoleGrantActor;
     },
     opts?: { manager?: EntityManager },
   ) {
@@ -984,7 +1002,7 @@ export class UsersService {
       const key = name.toLowerCase();
       const known = roleByName.get(key);
       if (known) return known;
-      const existing = await this.rolesService.findByName(name, { manager: opts?.manager });
+      const existing = await this.rolesService.findByNameOrSystemName(name, { manager: opts?.manager });
       const role: FileRole = { name, id: existing ? existing.id : null };
       if (!existing) rolesToCreate.push(name);
       roleByName.set(key, role);
@@ -1018,6 +1036,8 @@ export class UsersService {
       department_id: string | null;
     };
     const normalized: Normalized[] = [];
+    /** The file line of each row, for the errors found once the rows are read. */
+    const lineOf = new Map<Normalized, number>();
     for (const row of read.rows) {
       const line = row.line;
       const problems = rowProblemErrors(row);
@@ -1042,6 +1062,11 @@ export class UsersService {
       let role: FileRole | null = null;
       if (!roleName) roleName = 'Contact';
       if (roleName) role = await resolveRole(roleName);
+      // A role the file would create keeps clear of the names of the system and built-in roles (a
+      // system role the workspace lacks is created as that role).
+      if (role && !role.id && isReservedRoleName(roleName) && !isSystemRoleName(roleName)) {
+        errors.push(rowError(line, 'role', 'ROLE_NAME_RESERVED', 'This name belongs to a system or built-in role.', { value: roleName }));
+      }
 
       let company: Company | null = null;
       if (companyName) {
@@ -1060,7 +1085,7 @@ export class UsersService {
       }
 
       if (role) {
-        normalized.push({
+        const item: Normalized = {
           email,
           first_name,
           last_name,
@@ -1068,7 +1093,9 @@ export class UsersService {
           company_id: company ? company.id : null,
           department_id: department ? department.id : null,
           status: (['enabled','disabled','contact','invited'].includes(statusRaw) ? (statusRaw as any) : 'contact'),
-        });
+        };
+        normalized.push(item);
+        lineOf.set(item, line);
       }
     }
 
@@ -1123,6 +1150,46 @@ export class UsersService {
         updated += 1;
       }
       toWrite.push({ item, existing });
+    }
+    // A row changes no person who has more rights than the one importing, and leaves an enabled
+    // Administrator: the row is refused.
+    if (roleGrant) {
+      const refused: { row: number; message: string }[] = [];
+      for (const { item, existing } of toWrite) {
+        if (existing && await personAboveActorRights(opts?.manager ?? repo.manager, roleGrant, existing.id)) {
+          refused.push(rowError(lineOf.get(item) ?? 0, 'email', 'PERSON_ABOVE_OWN_RIGHTS', PERSON_ABOVE_OWN_RIGHTS_MESSAGE));
+        }
+      }
+      // The workspace keeps an enabled Administrator: a row that disables the last ones or takes
+      // their role away is refused.
+      const leaving = new Set(await lastActiveAdministratorsLeaving(
+        opts?.manager ?? repo.manager,
+        toWrite.filter(({ existing }) => !!existing).map(({ item, existing }) => ({
+          userId: existing!.id,
+          status: item.status as string,
+          mainRoleId: item.role.id,
+        })),
+      ));
+      for (const { item, existing } of toWrite) {
+        if (existing && leaving.has(existing.id)) {
+          refused.push(rowError(lineOf.get(item) ?? 0, 'email', 'LAST_ADMINISTRATOR', LAST_ADMINISTRATOR_MESSAGE));
+        }
+      }
+      if (refused.length > 0) {
+        return {
+          ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, unchanged: 0, errors: refused,
+          rolesToCreate: [], ignoredColumns: read.ignoredColumns, notices: read.notices,
+        };
+      }
+    }
+    // A role the file gives (a new person, or a main role that changes) stays within the rights of
+    // the person importing, unless the person already holds it. A role the load creates gives no
+    // right yet.
+    if (roleGrant) {
+      for (const { item, existing } of toWrite) {
+        if (!item.role.id || item.role.id === existing?.role_id) continue;
+        await assertRoleGrantWithinActorRights(opts?.manager ?? repo.manager, roleGrant, existing?.id ?? null, [item.role.id]);
+      }
     }
     if (dryRun) {
       return {
@@ -1191,10 +1258,11 @@ export class UsersService {
     return sameStoredValues(existing as unknown as Record<string, unknown>, { ...rest, role_id: role.id });
   }
 
-  async enableUser(id: string, actorId?: string | null, opts?: { manager?: EntityManager }) {
+  async enableUser(id: string, actorId?: string | null, opts?: { manager?: EntityManager; roleGrant?: RoleGrantActor }) {
     const repo = this.getRepo(opts?.manager);
     const user = await repo.findOne({ where: { id } });
     if (!user) throw new BadRequestException('User not found');
+    if (opts?.roleGrant) await assertPersonWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, id);
     if (user.status === 'enabled') return user;
     const summary = await this.billingService.getSubscriptionSummary({ manager: opts?.manager });
     if (summary.seat_limit !== null && summary.seats_used >= summary.seat_limit) {
@@ -1215,12 +1283,15 @@ export class UsersService {
   async disableUser(
     id: string,
     actorId?: string | null,
-    opts?: { manager?: EntityManager; sourceRef?: string },
+    opts?: { manager?: EntityManager; sourceRef?: string; roleGrant?: RoleGrantActor },
   ) {
     const repo = this.getRepo(opts?.manager);
     const user = await repo.findOne({ where: { id } });
     if (!user) throw new BadRequestException('User not found');
+    if (opts?.roleGrant) await assertPersonWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, id);
     if (user.status === 'disabled') return user;
+    // A person does not disable the workspace's last enabled Administrator.
+    if (opts?.roleGrant) await assertKeepsAnActiveAdministrator(opts?.manager ?? repo.manager, [{ userId: id, status: 'disabled' }]);
     const before = userAuditSnapshot(user);
     user.status = 'disabled' as any;
     const saved = await repo.save(user);
@@ -1266,11 +1337,13 @@ export class UsersService {
     id: string,
     actorId?: string | null,
     baseUrl?: string,
-    opts?: { manager?: EntityManager; commitThenRun?: CommitThenRunFn; signIn?: InviteSignIn },
+    opts?: { manager?: EntityManager; commitThenRun?: CommitThenRunFn; signIn?: InviteSignIn; roleGrant?: RoleGrantActor },
   ) {
     const repo = this.getRepo(opts?.manager);
     const user = await repo.findOne({ where: { id }, relations: ['role'] });
     if (!user) throw new BadRequestException('User not found');
+    // The invitation opens the account: not for a person who has more rights than the one inviting.
+    if (opts?.roleGrant) await assertPersonWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, id);
     if (!user.email) throw new BadRequestException('User email is missing');
     if (user.external_auth_provider) {
       throw new BadRequestException(

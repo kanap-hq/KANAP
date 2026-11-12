@@ -224,7 +224,7 @@ Die Spalten:
 | `department_name` | Die Abteilung, über ihren Namen. Sie benötigt einen `company_name` |
 | `status` | `contact`, `invited`, `enabled` oder `disabled`. Eine leere Zelle ergibt `contact` |
 
-Eine Rolle, die die Datei nennt und die Ihr Arbeitsbereich nicht hat, wird beim Laden angelegt, mit einer Standardbeschreibung. Die Prüfung listet sie auf und legt nichts an: Eine Datei, die Sie nur prüfen, ändert keine Rolle. Ein Name, der zweimal in der Datei steht, wird einmal behalten, die erste Zeile gewinnt.
+Eine Rolle, die die Datei nennt und die Ihr Arbeitsbereich nicht hat, wird beim Laden angelegt, mit einer Standardbeschreibung. Die Prüfung listet sie auf und legt nichts an: Eine Datei, die Sie nur prüfen, ändert keine Rolle. Ein Name, der zweimal in der Datei steht, wird einmal behalten, die erste Zeile gewinnt. Ein Name, den die Seite für eine System- oder integrierte Rolle anzeigt, in einer ihrer Sprachen, wird für diese Zeile abgelehnt.
 
 Die Datei enthält kein Datum und keinen Betrag. Ein Import setzt kein Passwort: Ein neuer Benutzer meldet sich nach einer Einladung oder einer Passwort-Zurücksetzung an.
 
@@ -443,7 +443,7 @@ Die Rollenseite hat ein zweispaltiges Layout:
 - **Rechte Spalte**: Details und Berechtigungen für die ausgewählte Rolle
 
 **Aktionen**:
-- **Neue Rolle**: Benutzerdefinierte Rolle von Grund auf erstellen
+- **Neue Rolle**: Benutzerdefinierte Rolle von Grund auf erstellen. Eine neue oder umbenannte Rolle kann keinen Namen tragen, den die Seite für eine System- oder integrierte Rolle anzeigt, in einer ihrer Sprachen.
 - **Duplizieren**: Bestehende Rolle (einschließlich integrierter Rollen) als Ausgangspunkt kopieren. Nicht verfügbar für Systemrollen.
 - **Löschen**: Benutzerdefinierte Rolle entfernen. Eine Rolle, die Benutzern zugewiesen ist, kann nicht gelöscht werden: Weisen Sie ihnen zuerst eine andere Rolle zu. Das Fenster weist vor jeder Bestätigung darauf hin.
 - **Details speichern**: Rollenname und -beschreibung aktualisieren

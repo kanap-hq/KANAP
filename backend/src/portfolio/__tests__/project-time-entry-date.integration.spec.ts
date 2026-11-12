@@ -101,7 +101,7 @@ async function testBackdatedEntryIsCountedInItsMonth() {
     assert.deepEqual(await months(runner, userId), [{ month: monthOf(day), hours: 4 }]);
 
     const moved = previousMonthMid(day);
-    await svc.updateTimeEntry(created.id, { logged_at: moved }, userId, false, opts);
+    await svc.updateTimeEntry(projectId, created.id, { logged_at: moved }, userId, false, opts);
     assert.equal(await storedDay(runner, created.id), moved);
     assert.deepEqual(await months(runner, userId), [{ month: monthOf(moved), hours: 4 }]);
   });
@@ -138,6 +138,7 @@ async function testInvalidOrFutureDateIsRefused() {
     const future = await refusal(() => create(addDays(localTodayYmd(), 1)));
     assert.match(future.message, /future/);
     const moved = await refusal(() => svc.updateTimeEntry(
+      projectId,
       created.id,
       { logged_at: addDays(localTodayYmd(), 1) },
       userId,

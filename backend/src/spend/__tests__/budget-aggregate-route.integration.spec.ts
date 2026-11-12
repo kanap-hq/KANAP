@@ -170,7 +170,7 @@ async function main() {
     const shareRoute: Route = { ...opex, name: 'POST /spend-items/:id/share', handler: 'share' };
     await assert.rejects(
       frozenGuard.canActivate(executionContext(shareRoute, { method: 'POST', user: { sub: budgetReader }, tenant: { id: tenantId }, queryRunner: runner })),
-      (error: any) => error instanceof HttpException && error.getStatus() === 403 && (error.getResponse() as any).error === 'SUBSCRIPTION_FROZEN',
+      (error: any) => error instanceof HttpException && error.getStatus() === 403 && (error.getResponse() as any).code === 'SUBSCRIPTION_FROZEN',
       'a POST that writes is still frozen',
     );
     console.log('ok - a frozen tenant keeps the aggregate read; a POST that writes stays frozen');

@@ -99,9 +99,10 @@ export class PortfolioPhasesService extends PortfolioProjectsBaseService {
   }
 
   /**
-   * Update a phase.
+   * Update a phase of `projectId`; a phase of another project reads as missing.
    */
   async updatePhase(
+    projectId: string,
     phaseId: string,
     body: { name?: string; planned_start?: string; planned_end?: string; status?: PhaseStatus },
     userId: string | null,
@@ -112,7 +113,7 @@ export class PortfolioPhasesService extends PortfolioProjectsBaseService {
     const milestoneRepo = mg.getRepository(PortfolioProjectMilestone);
     if (!userId) throw new BadRequestException('userId is required for change activity logging');
 
-    const phase = await phaseRepo.findOne({ where: { id: phaseId } });
+    const phase = await phaseRepo.findOne({ where: { id: phaseId, project_id: projectId } });
     if (!phase) throw new NotFoundException('Phase not found');
 
     const before = { ...phase };
@@ -209,9 +210,10 @@ export class PortfolioPhasesService extends PortfolioProjectsBaseService {
   }
 
   /**
-   * Delete a phase.
+   * Delete a phase of `projectId`; a phase of another project reads as missing.
    */
   async deletePhase(
+    projectId: string,
     phaseId: string,
     userId: string | null,
     opts?: ServiceOpts,
@@ -220,7 +222,7 @@ export class PortfolioPhasesService extends PortfolioProjectsBaseService {
     const phaseRepo = mg.getRepository(PortfolioProjectPhase);
     if (!userId) throw new BadRequestException('userId is required for change activity logging');
 
-    const phase = await phaseRepo.findOne({ where: { id: phaseId } });
+    const phase = await phaseRepo.findOne({ where: { id: phaseId, project_id: projectId } });
     if (!phase) throw new NotFoundException('Phase not found');
 
     // CASCADE will delete linked milestones
@@ -371,9 +373,10 @@ export class PortfolioPhasesService extends PortfolioProjectsBaseService {
   }
 
   /**
-   * Toggle milestone for a phase.
+   * Toggle milestone for a phase of `projectId`; a phase of another project reads as missing.
    */
   async togglePhaseMilestone(
+    projectId: string,
     phaseId: string,
     enabled: boolean,
     milestoneName: string | null,
@@ -385,7 +388,7 @@ export class PortfolioPhasesService extends PortfolioProjectsBaseService {
     const phaseRepo = mg.getRepository(PortfolioProjectPhase);
     const milestoneRepo = mg.getRepository(PortfolioProjectMilestone);
 
-    const phase = await phaseRepo.findOne({ where: { id: phaseId } });
+    const phase = await phaseRepo.findOne({ where: { id: phaseId, project_id: projectId } });
     if (!phase) throw new NotFoundException('Phase not found');
 
     // Find existing phase-linked milestone

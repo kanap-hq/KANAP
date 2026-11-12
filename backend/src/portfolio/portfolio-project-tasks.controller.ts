@@ -1,5 +1,5 @@
 import {
-  BadRequestException, Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards,
+  BadRequestException, Body, NotFoundException, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
@@ -296,10 +296,10 @@ export class PortfolioProjectTasksController {
   ) {
     const projectId = await this.resolveProjectForAccess(projectIdOrRef, req, 'contributor');
     const taskId = await this.resolveProjectTaskForAccess(projectId, taskIdOrRef, req);
-    // Verify entry belongs to task
+    // An entry of the task of the address: one of another task is not found.
     const entryTaskId = await this.timeEntriesSvc.getTaskIdForEntry(entryId, { manager: req?.queryRunner?.manager });
     if (entryTaskId !== taskId) {
-      throw new BadRequestException('Time entry does not belong to this task');
+      throw new NotFoundException('Time entry not found');
     }
 
     const isAdmin = req?.isAdmin === true;
@@ -329,10 +329,10 @@ export class PortfolioProjectTasksController {
   ) {
     const projectId = await this.resolveProjectForAccess(projectIdOrRef, req, 'contributor');
     const taskId = await this.resolveProjectTaskForAccess(projectId, taskIdOrRef, req);
-    // Verify entry belongs to task
+    // An entry of the task of the address: one of another task is not found.
     const entryTaskId = await this.timeEntriesSvc.getTaskIdForEntry(entryId, { manager: req?.queryRunner?.manager });
     if (entryTaskId !== taskId) {
-      throw new BadRequestException('Time entry does not belong to this task');
+      throw new NotFoundException('Time entry not found');
     }
 
     await this.timeEntriesSvc.delete(entryId, req.user?.sub ?? null, {

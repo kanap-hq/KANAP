@@ -35,7 +35,7 @@ vi.mock('react-i18next', () => ({
 }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../api', () => ({ default: api }));
-vi.mock('../../components/PageHeader', () => ({ default: () => null }));
+vi.mock('../../components/PageHeader', () => ({ default: ({ actions }: { actions?: React.ReactNode }) => <>{actions}</> }));
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -129,5 +129,52 @@ describe('RolesPage built-in names', () => {
     expect((await screen.findAllByText('Budget desk')).length).toBeGreaterThan(0);
     expect(screen.getByText('Ancienne description')).toBeTruthy();
     expect(screen.queryByText('Administrateur budget')).toBeNull();
+  });
+});
+
+describe('RolesPage refused writes', () => {
+  beforeEach(() => {
+    i18nState.language = 'en';
+    i18nState.text = () => undefined;
+    api.get.mockReset();
+    api.post.mockReset();
+    api.put.mockReset();
+  });
+
+  it('keeps the new role dialog open with the refusal in the interface language', async () => {
+    roles.items = [{ id: 'r1', role_name: 'Buyers', role_description: '', user_count: 0 }];
+    api.get.mockImplementation(async (url: string) => (url === '/roles' ? { data: roles } : { data: {} }));
+    api.post.mockRejectedValueOnce({
+      response: { status: 400, data: { code: 'ROLE_NAME_RESERVED', message: 'This name is the name of a built-in role.' } },
+    });
+    renderPage();
+    await screen.findAllByText('Buyers');
+    fireEvent.click(screen.getByRole('button', { name: 'roles.actions.newRole' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('roles.fields.roleName'), { target: { value: 'Administrateur' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.create' }));
+    expect(await within(dialog).findByText('errors:ROLE_NAME_RESERVED')).toBeTruthy();
+    expect(screen.queryByText(/name of a built-in role/)).toBeNull();
+  });
+
+  it('says why a right was refused and shows the saved level again', async () => {
+    roles.items = [{ id: 'r1', role_name: 'Buyers', role_description: '', user_count: 0 }];
+    api.get.mockImplementation(async (url: string) => {
+      if (url === '/roles') return { data: roles };
+      if (url === '/roles/r1/permissions') return { data: { budget: 'reader' } };
+      return { data: {} };
+    });
+    api.put.mockRejectedValueOnce({
+      response: { status: 403, data: { code: 'administrator_required', message: 'Only an Administrator can do this.' } },
+    });
+    renderPage();
+    const budget = await screen.findByRole('combobox', { name: 'roles.resources.budget' });
+    await within(budget).findByText('roles.levels.reader');
+    fireEvent.mouseDown(budget);
+    fireEvent.click(await screen.findByRole('option', { name: 'roles.levels.admin' }));
+    expect(within(budget).getByText('roles.levels.admin')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'roles.actions.savePermissions' }));
+    expect(await screen.findByText('errors:administrator_required')).toBeTruthy();
+    expect(within(screen.getByRole('combobox', { name: 'roles.resources.budget' })).getByText('roles.levels.reader')).toBeTruthy();
   });
 });

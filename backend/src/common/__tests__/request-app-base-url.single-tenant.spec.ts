@@ -108,7 +108,8 @@ async function testInviteLink() {
       const email = { sendUserInviteEmail: async (params: any) => { sent.push(params); } };
       const service = new UsersService(repo as any, {} as any, {} as any, {} as any, {} as any, email as any, { log: async () => undefined } as any);
       const controller = new UsersController(service, {} as any, {} as any, {} as any, {} as any, {} as any);
-      await controller.invite('u-1', { ...onPremRequest('app.acme-corp.com'), user: { sub: 'admin-1' }, queryRunner: {
+      // An Administrator invites: the rights of the invited person are not compared with theirs.
+      await controller.invite('u-1', { ...onPremRequest('app.acme-corp.com'), user: { sub: 'admin-1' }, isAdmin: true, queryRunner: {
         manager, isReleased: false, isTransactionActive: false, release: async () => undefined,
       } });
       assert.equal(sent.length, 1);
