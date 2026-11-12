@@ -408,7 +408,9 @@ export class LocationsService {
       region,
       additional_info: additionalInfo,
     });
-    const saved = await repo.save(entity);
+    const inserted = await repo.save(entity);
+    // The reference (`LOC-n`) is given by a trigger after the insert: read the stored row.
+    const saved = await repo.findOneOrFail({ where: { id: inserted.id } });
     await this.audit.log(
       {
         table: 'locations',

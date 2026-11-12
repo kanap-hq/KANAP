@@ -7,6 +7,7 @@ import CompanySelect from '../../../components/fields/CompanySelect';
 import type { CountryOption } from '../../../constants/isoOptions';
 import { filterCountryOptions, useCountryOptions } from '../../../i18n/countries';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import CommitTextField from './CommitTextField';
 
 export type LocationDrawerData = {
   hosting_type: string;
@@ -103,12 +104,9 @@ export default function LocationPropertiesDrawer({
               </TextField>
             </PropertyRow>
             <PropertyRow label={t('workspace.location.fields.region')}>
-              <TextField
+              <CommitTextField
                 value={data.region || ''}
-                onChange={(e) => onRegionChange(e.target.value)}
-                onBlur={(e) => onRegionChange(e.target.value)}
-                variant="standard"
-                sx={drawerFieldValueSx}
+                onCommit={onRegionChange}
                 placeholder={t('workspace.location.fields.regionPlaceholder')}
                 disabled={disabled}
               />
@@ -138,12 +136,9 @@ export default function LocationPropertiesDrawer({
           />
         </PropertyRow>
         <PropertyRow label={t('pages.locations.columns.city')}>
-          <TextField
+          <CommitTextField
             value={data.city || ''}
-            onChange={(e) => onCityChange(e.target.value)}
-            onBlur={(e) => onCityChange(e.target.value)}
-            variant="standard"
-            sx={drawerFieldValueSx}
+            onCommit={onCityChange}
             placeholder={t('workspace.location.fields.cityPlaceholder')}
             disabled={disabled}
           />

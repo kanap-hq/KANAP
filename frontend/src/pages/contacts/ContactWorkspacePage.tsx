@@ -35,7 +35,7 @@ import { ContactNameDraft, ContactNameTitle, ContactPhoneField, ContactRoleSelec
 import RecordUsagesSection, { recordUsagesKey, scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { SUPPLIERS_PATH } from '../suppliers/supplierModel';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
-import { CreationActions, useCreationLeave, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useDraftCreation } from '../../components/workspace/creation';
 
 const LIST_PATH = '/master-data/contacts';
 const DRAWER_KEY = 'kanap.contacts.drawerOpen';
@@ -67,18 +67,36 @@ function withGuessedCountry(patch: ContactPatch, phone: string | null, country: 
   return guess ? { ...patch, country: guess } : patch;
 }
 
+/** The draft's fields that Create sends and a patch can change. */
+const DRAFT_FIELDS = [
+  'email', 'first_name', 'last_name', 'job_title', 'phone', 'mobile', 'country', 'supplier_id', 'supplier_role', 'notes', 'active',
+] as const;
+
+/** A contact as Create sends it: the names trimmed, the type only with a supplier. */
+const asSent = (values: Contact): Contact => ({
+  ...values,
+  first_name: values.first_name?.trim() || null,
+  last_name: values.last_name?.trim() || null,
+  supplier_role: values.supplier_id ? values.supplier_role : null,
+});
+
+const fetchContact = async (contactId: string) => (await api.get<Contact>(`/contacts/${contactId}`)).data;
+
 export default function ContactWorkspacePage() {
   const params = useParams();
   const location = useLocation();
   const id = String(params.id || '');
+  // The contact the draft has just created: the page stays the draft's, so that what is typed
+  // while it is written, and the field being typed in, are kept.
+  const fromDraft = useCreatedFromDraft('contacts', id);
   // One tab: any other address of the former page (or the former Used by tab) opens it.
   if (params.tab && params.tab !== 'overview') {
     return <Navigate replace to={`${LIST_PATH}/${id}/overview${location.search}`} />;
   }
   // The new page is the contact's own page on a draft, sent by Create.
-  if (id === 'new') return <ContactEditor key="new" id="new" />;
+  if (id === 'new') return <ContactEditor key="draft" id="new" />;
   // Keyed by contact: drafts and pending saves belong to the contact they were typed on.
-  return <ContactEditor key={id} id={id} />;
+  return <ContactEditor key={fromDraft ? 'draft' : id} id={id} />;
 }
 
 function ContactEditor({ id }: { id: string }) {
@@ -179,6 +197,10 @@ function ContactEditor({ id }: { id: string }) {
     return result;
   }, [canEdit, detailKey, id, isCreate, queryClient, t]);
 
+  // The notes scheduled on the draft are saved by the contact's page once the draft has created it.
+  const saveRef = React.useRef(save);
+  saveRef.current = save;
+
   const saveNow = (patch: ContactPatch, field: FieldKey, optimistic?: Partial<Contact>) => {
     void save(patch, field, optimistic).catch(() => undefined);
   };
@@ -278,23 +300,47 @@ function ContactEditor({ id }: { id: string }) {
     ready: () => Object.keys(missingFields()).length === 0,
     post: async () => {
       await autosave.flush();
-      const values = draftRef.current;
+      const sent = asSent(draftRef.current);
       setPageError(null);
       try {
         const { data: created } = await api.post<Contact & { creation_token: string }>('/contacts', {
-          email: values.email,
-          first_name: values.first_name?.trim() || null,
-          last_name: values.last_name?.trim() || null,
-          job_title: values.job_title,
-          phone: values.phone,
-          mobile: values.mobile,
-          country: values.country,
-          supplier_id: values.supplier_id,
-          supplier_role: values.supplier_id ? values.supplier_role : null,
-          notes: values.notes,
-          active: values.active,
+          email: sent.email,
+          first_name: sent.first_name,
+          last_name: sent.last_name,
+          job_title: sent.job_title,
+          phone: sent.phone,
+          mobile: sent.mobile,
+          country: sent.country,
+          supplier_id: sent.supplier_id,
+          supplier_role: sent.supplier_role,
+          notes: sent.notes,
+          active: sent.active,
         });
         void queryClient.invalidateQueries({ queryKey: ['supplier-contacts'] });
+        // The page moves to the contact with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the contact was written): saved on the contact.
+        const createdKey = ['contacts', created.id] as const;
+        await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => fetchContact(created.id) }).catch(() => undefined);
+        try {
+          await saveEditsSince({
+            sent,
+            now: () => asSent(draftRef.current),
+            fields: DRAFT_FIELDS,
+            save: async (edits) => {
+              // A contact is saved with its email, and a supplier with its type.
+              const now = asSent(draftRef.current);
+              const withType = 'supplier_id' in edits || 'supplier_role' in edits ? { supplier_id: now.supplier_id, supplier_role: now.supplier_role } : {};
+              const res = await api.patch<Contact>(`/contacts/${created.id}`, { email: created.email, ...edits, ...withType });
+              queryClient.setQueryData<Contact>(createdKey, (prev) => ({
+                ...(prev as Contact),
+                ...res.data,
+                supplier_name: res.data.supplier_id === prev?.supplier_id ? prev?.supplier_name ?? null : null,
+              }));
+            },
+          });
+        } catch (e) {
+          setPageError(getApiErrorMessage(e, t, t('contacts.messages.saveFailed')));
+        }
         // Its back arrow still leads to the supplier it came from.
         const back = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '';
         const path = returnTo ? `${LIST_PATH}/${created.id}/overview${back}` : withContext(`${LIST_PATH}/${created.id}/overview`);
@@ -584,7 +630,7 @@ function ContactEditor({ id }: { id: string }) {
               disabled={disabled}
               error={errors.notes}
               onTyped={(notes) => {
-                autosave.schedule(() => save({ notes: notes.trim() ? notes : null }, 'notes'));
+                autosave.schedule(() => saveRef.current({ notes: notes.trim() ? notes : null }, 'notes'));
               }}
               onCommit={() => { void autosave.flush(); }}
             />

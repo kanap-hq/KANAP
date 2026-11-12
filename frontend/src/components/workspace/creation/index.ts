@@ -9,3 +9,4 @@ export { followCreationFields, useCreationFieldFocus, clearCreationFieldFocus } 
 export { default as useCreationLeave } from './useCreationLeave';
 export { default as useDraftCreation, type DraftCreated } from './useDraftCreation';
 export { default as useCreatedFromDraft } from './useCreatedFromDraft';
+export { changedFields, saveEditsSince } from './draftEdits';
