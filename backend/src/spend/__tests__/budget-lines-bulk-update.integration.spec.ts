@@ -239,6 +239,20 @@ const tests: Array<[string, () => Promise<void>]> = [
     await assert.rejects(svc.bulkUpdate({ ids: ids(s, 0), changes: {} }, undefined, { manager: runner.manager }), /at least one field/);
   })],
 
+  ['a dry_run that is not a boolean is refused, nothing written', () => withSeed(async (runner, s) => {
+    const svc = service();
+    const runBuild = async () => (await runner.query(`SELECT run_build FROM spend_items WHERE id = $1`, [s.lines[0].id]))[0].run_build;
+    const before = await runBuild();
+    const next = before === 'build' ? 'run' : 'build';
+    for (const dryRun of ['true', 1]) {
+      await assert.rejects(
+        svc.bulkUpdate({ ids: ids(s, 0), changes: { run_build: next }, dry_run: dryRun }, undefined, { manager: runner.manager }),
+        (err: any) => err?.getStatus?.() === 400 && /dry_run must be true or false/.test(err.message),
+      );
+    }
+    assert.equal(await runBuild(), before, 'the line is left as it was');
+  })],
+
   ['an unknown id is refused as not found, like a line the person cannot read', () => withSeed(async (runner, s) => {
     const svc = service();
     const done = await svc.bulkUpdate({ ids: [s.lines[0].id, randomUUID()], changes: { run_build: 'run' } }, undefined, { manager: runner.manager });

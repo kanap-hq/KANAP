@@ -63,6 +63,14 @@ async function main() {
   assert.throws(() => parseBulkConfirmation({ as_of: 'soon', expected_rows: 1 }, true), /as_of must be/);
   assert.throws(() => parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z', expected_rows: -1 }, true), /expected_rows must be/);
   assert.deepEqual(parseBulkConfirmation({}, false), { dryRun: false, asOf: null, expectedRows: null });
+  assert.deepEqual(parseBulkConfirmation({ dry_run: false }, false), { dryRun: false, asOf: null, expectedRows: null });
+  // dry_run, when given, is a boolean: "true" or 1 would otherwise write without a count. Refused by
+  // the first parse a route makes, before it reads anything.
+  for (const dryRun of ['true', 'false', 1, 0, {}]) {
+    const isBadRequest = (err: unknown) => err instanceof BadRequestException && /dry_run must be true or false/.test((err as Error).message);
+    assert.throws(() => parseBulkSelection({ ids: [a], dry_run: dryRun }), isBadRequest, String(dryRun));
+    assert.throws(() => parseBulkConfirmation({ dry_run: dryRun }, false), isBadRequest, String(dryRun));
+  }
 
   // Changes: declared fields only, their type, null only when optional; map entries lower-cased.
   const fields = [

@@ -8,7 +8,7 @@ import { UUID_RE } from '../relations/relation-target';
  * (`vulnerabilities.service.ts`, `bulkState`), shared:
  * - the rows: `ids` (the chosen rows, taken as they are), or `all: true` with `filters` (the
  *   list's parameters) and `exclude_ids`;
- * - `dry_run: true` counts without writing and returns `as_of`, the instant of the count; the write
+ * - `dry_run: true` (a boolean, else a 400) counts without writing and returns `as_of`, the instant of the count; the write
  *   sends it back with `expected_rows`, the rows of the count (both required with `all`): rows that
  *   are more than counted refuse the write whole with a 409 `bulk_list_changed`;
  * - at most `BULK_MAX_ROWS` rows (400 `bulk_too_many`).
@@ -49,8 +49,19 @@ export type BulkSelection = {
   filters: Record<string, unknown>;
 };
 
+/**
+ * `dry_run`, when given, is a boolean: a text "true" read as anything but a count would write without
+ * one. Checked by both parses, so a route refuses it at its first one, before it reads anything.
+ */
+function assertDryRunFlag(body: Record<string, unknown>): void {
+  if (body.dry_run !== undefined && body.dry_run !== null && typeof body.dry_run !== 'boolean') {
+    throw new BadRequestException('dry_run must be true or false.');
+  }
+}
+
 /** The rows of a change in bulk: `ids`, or `all` with `filters` less `exclude_ids`. */
 export function parseBulkSelection(body: Record<string, unknown>): BulkSelection {
+  assertDryRunFlag(body);
   const all = body.all === true;
   const rowIds = (name: 'ids' | 'exclude_ids'): string[] => {
     const raw = body[name];
@@ -80,6 +91,7 @@ export type BulkConfirmation = {
 
 /** `dry_run`, and the `as_of` and `expected_rows` of the count the write confirms (required with `all`). */
 export function parseBulkConfirmation(body: Record<string, unknown>, all: boolean): BulkConfirmation {
+  assertDryRunFlag(body);
   const dryRun = body.dry_run === true;
   // Every one of the filter: only what the user confirmed, so the count's instant is required.
   if (all && !dryRun && (body.as_of === undefined || body.as_of === null)) {
