@@ -15,6 +15,7 @@ import type { AiAgentControlAgentDefinition } from '../../ai/aiApi';
 const harness = vi.hoisted(() => ({
   canAdmin: true,
   updateAgent: vi.fn(),
+  listKnowledgeLibraries: vi.fn(),
   snapshot: (): Record<string, unknown> => ({}),
 }));
 
@@ -31,6 +32,7 @@ vi.mock('../../ai/aiApi', async () => {
     aiAgentControlApi: {
       ...actual.aiAgentControlApi,
       updateAgent: harness.updateAgent,
+      listKnowledgeLibraries: harness.listKnowledgeLibraries,
     },
   };
 });
@@ -72,9 +74,11 @@ const definition: AiAgentControlAgentDefinition = {
   updated_at: null,
 };
 
+let shownDefinition: AiAgentControlAgentDefinition = definition;
+
 harness.snapshot = () => ({
   queueQuery: {
-    data: { definitions: [definition] },
+    data: { definitions: [shownDefinition] },
     isLoading: false,
   },
   actionPool: [],
@@ -86,12 +90,12 @@ harness.snapshot = () => ({
   invalidate: vi.fn(),
 });
 
-function renderPage() {
+function renderPage(path = '/agents/payroll') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/agents/payroll']}>
+        <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/agents/:agentKey" element={<AgentWorkspacePage />} />
           </Routes>
@@ -103,6 +107,7 @@ function renderPage() {
 
 describe('AgentWorkspacePage header', () => {
   beforeEach(async () => {
+    shownDefinition = definition;
     harness.canAdmin = true;
     harness.updateAgent.mockReset();
     harness.updateAgent.mockResolvedValue({ agent_definition: definition, diff: {} });
@@ -173,5 +178,175 @@ describe('AgentWorkspacePage header', () => {
     expect(screen.getByText('Payroll agent')).toBeInTheDocument();
     expect(screen.getByText('Drafts first replies')).toBeInTheDocument();
     expect(document.querySelector('.editable-title-cue')).toBeNull();
+  });
+});
+
+// The libraries an agent may cite: none, chosen ones or all. A new agent starts with none,
+// and the settings say what that means without opening anything.
+describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
+  const LIBRARY_ID = '11111111-1111-4111-8111-111111111111';
+  const NO_DOCUMENT = 'The agent cites no document in its replies.';
+
+  function withKnowledge(knowledge: Record<string, unknown> | null): AiAgentControlAgentDefinition {
+    return {
+      ...definition,
+      scope_policy_json: knowledge ? { knowledge_sources: { knowledge, web: { enabled: false } } } : null,
+    };
+  }
+
+  beforeEach(async () => {
+    harness.canAdmin = true;
+    harness.updateAgent.mockReset();
+    harness.updateAgent.mockImplementation(async () => ({ agent_definition: shownDefinition, diff: {} }));
+    harness.listKnowledgeLibraries.mockReset();
+    harness.listKnowledgeLibraries.mockResolvedValue([{ id: LIBRARY_ID, name: 'Service desk docs', slug: null }]);
+    await i18n.changeLanguage('en');
+  });
+
+  it('shows a new agent with no library and what it means', async () => {
+    shownDefinition = withKnowledge({ enabled: true, all_libraries: false, library_ids: [] });
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('No library', {}, { timeout: 5000 })).toBeChecked();
+    expect(screen.getByLabelText('Chosen libraries')).not.toBeChecked();
+    expect(screen.getByLabelText('All libraries')).not.toBeChecked();
+    expect(screen.getByText(NO_DOCUMENT)).toBeInTheDocument();
+  });
+
+  it('keeps an agent saved with all libraries on all libraries', async () => {
+    shownDefinition = withKnowledge({ enabled: true, all_libraries: true, library_ids: [] });
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('All libraries', {}, { timeout: 5000 })).toBeChecked();
+    expect(screen.queryByText(NO_DOCUMENT)).not.toBeInTheDocument();
+  });
+
+  it('reads an agent saved without a library setting as all libraries', async () => {
+    shownDefinition = withKnowledge(null);
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('All libraries', {}, { timeout: 5000 })).toBeChecked();
+    expect(screen.queryByText(NO_DOCUMENT)).not.toBeInTheDocument();
+  });
+
+  it('saves chosen libraries, then all libraries', async () => {
+    shownDefinition = withKnowledge({ enabled: true, all_libraries: false, library_ids: [] });
+    renderPage('/agents/payroll?tab=settings');
+    fireEvent.click(await screen.findByLabelText('Chosen libraries', {}, { timeout: 5000 }));
+    fireEvent.mouseDown(screen.getByLabelText('Select libraries'));
+    fireEvent.click(await screen.findByText('Service desk docs', { selector: 'li' }));
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenLastCalledWith('agent-1', {
+        knowledge_sources: {
+          knowledge: { enabled: true, all_libraries: false, library_ids: [LIBRARY_ID] },
+          web: { enabled: false },
+          internal_notes: 'used',
+        },
+      });
+    }, { timeout: 3000 });
+    expect(screen.queryByText(NO_DOCUMENT)).not.toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByText('Service desk docs', { selector: 'li' }), { key: 'Escape' });
+    fireEvent.click(screen.getByLabelText('All libraries'));
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenLastCalledWith('agent-1', {
+        knowledge_sources: {
+          knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+          web: { enabled: false },
+          internal_notes: 'used',
+        },
+      });
+    }, { timeout: 3000 });
+  });
+});
+
+// A ticket agent uses the internal notes of a ticket, or ignores them. An agent saved without
+// the setting uses them.
+describe('AgentWorkspacePage internal notes', { timeout: 20000 }, () => {
+  const USED_STATE = 'The agent uses them to decide and to reply.';
+  const IGNORED_STATE = 'The agent reads only the public messages of the ticket.';
+
+  function withInternalNotes(internalNotes: string | undefined, agentType = 'helpdesk'): AiAgentControlAgentDefinition {
+    return {
+      ...definition,
+      agent_type: agentType,
+      scope_policy_json: {
+        knowledge_sources: {
+          knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+          web: { enabled: false },
+          ...(internalNotes === undefined ? {} : { internal_notes: internalNotes }),
+        },
+      },
+    };
+  }
+
+  beforeEach(async () => {
+    harness.canAdmin = true;
+    harness.updateAgent.mockReset();
+    harness.updateAgent.mockImplementation(async () => ({ agent_definition: shownDefinition, diff: {} }));
+    harness.listKnowledgeLibraries.mockReset();
+    harness.listKnowledgeLibraries.mockResolvedValue([]);
+    await i18n.changeLanguage('en');
+  });
+
+  it('shows an agent saved without the setting as using them', async () => {
+    shownDefinition = withInternalNotes(undefined);
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('Used', {}, { timeout: 5000 })).toBeChecked();
+    expect(screen.getByLabelText('Ignored')).not.toBeChecked();
+    expect(screen.getByText('Internal notes of the ticket')).toBeInTheDocument();
+    expect(screen.getByText(USED_STATE)).toBeInTheDocument();
+  });
+
+  it('saves ignored, then used', async () => {
+    shownDefinition = withInternalNotes('used');
+    renderPage('/agents/payroll?tab=settings');
+    fireEvent.click(await screen.findByLabelText('Ignored', {}, { timeout: 5000 }));
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenLastCalledWith('agent-1', {
+        knowledge_sources: {
+          knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+          web: { enabled: false },
+          internal_notes: 'ignored',
+        },
+      });
+    }, { timeout: 3000 });
+    expect(screen.getByText(IGNORED_STATE)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Used'));
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenLastCalledWith('agent-1', {
+        knowledge_sources: expect.objectContaining({ internal_notes: 'used' }),
+      });
+    }, { timeout: 3000 });
+  });
+
+  it('shows the stored choice', async () => {
+    shownDefinition = withInternalNotes('ignored');
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('Ignored', {}, { timeout: 5000 })).toBeChecked();
+    expect(screen.getByText(IGNORED_STATE)).toBeInTheDocument();
+  });
+
+  it('keeps ignored when another setting of the page is saved', async () => {
+    shownDefinition = {
+      ...withInternalNotes('ignored'),
+      provider_bindings_json: { ticketing: { provider_kind: 'ticketing', provider_key: 'glpi' } },
+    };
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('Ignored', {}, { timeout: 5000 })).toBeChecked();
+    let row: HTMLElement | null = screen.getByText('Tickets per check');
+    while (row && !row.querySelector('input')) row = row.parentElement;
+    fireEvent.change(row!.querySelector('input')!, { target: { value: '7' } });
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenCalled();
+    }, { timeout: 3000 });
+    // The operating settings send the whole scope policy, the stored internal notes setting included.
+    const [, payload] = harness.updateAgent.mock.lastCall!;
+    expect(payload.scope_policy_json.knowledge_sources.internal_notes).toBe('ignored');
+    expect(payload).not.toHaveProperty('knowledge_sources');
+  });
+
+  it('is not shown for a monitoring agent', async () => {
+    shownDefinition = withInternalNotes(undefined, 'sre');
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByLabelText('All libraries', {}, { timeout: 5000 })).toBeChecked();
+    expect(screen.queryByText('Internal notes of the ticket')).not.toBeInTheDocument();
   });
 });

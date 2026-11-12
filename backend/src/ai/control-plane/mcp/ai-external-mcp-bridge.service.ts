@@ -10,18 +10,13 @@ import { AiExecutionContextWithManager } from '../../ai.types';
 import { CapabilityContract, CapabilityContractSchema, CapabilityExecutionContext } from '../capability/capability-contract';
 import { AiExternalMcpServer } from '../entities/ai-external-mcp-server.entity';
 import { AiExternalMcpToolSnapshot } from '../entities/ai-external-mcp-tool-snapshot.entity';
-import { hashStableJson } from '../evidence/ai-evidence.service';
+import { hashStableJson, redactSensitiveText, redactSensitiveValue } from '../evidence/ai-evidence.service';
 import { parseCredentialRef } from '../providers/adapter-config.service';
 import { AdapterErrorCode, AdapterEvidenceSeed, AdapterResult } from '../providers/provider.types';
 import { AiExternalMcpMockTransport, ExternalMcpMockToolDefinition } from './ai-external-mcp-mock-transport.service';
-import { EMAIL_ADDRESSES } from '../../../common/text-scan';
 import { codedForbidden, requestContextMissing } from '../../../auth/module-right-required';
 
 const SECRET_KEY_RE = /(api[-_]?key|token|secret|password|authorization|cookie|session|client_secret)/i;
-const EMAIL_RE = EMAIL_ADDRESSES;
-const IPV4_RE = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
-const BEARER_RE = /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/gi;
-const SECRET_ASSIGNMENT_RE = /\b(password|token|secret|api[-_]?key)\s*[:=]\s*[^ \n\r\t]+/gi;
 const SERVER_KEY_RE = /^[a-z0-9][a-z0-9_.-]{1,126}$/;
 const VALID_TRANSPORTS = new Set(['mock', 'stdio', 'sse', 'streamable_http']);
 const ADAPTER_ERROR_CODES = new Set<AdapterErrorCode>([
@@ -154,37 +149,6 @@ function isBridgeResult(value: unknown): value is ExternalMcpBridgeResult {
   return typeof record.errorCode === 'string'
     && typeof record.message === 'string'
     && typeof record.retryable === 'boolean';
-}
-
-function pathMatches(path: string, redactFields: Set<string>): boolean {
-  return redactFields.has(path) || redactFields.has(path.replace(/^\//, ''));
-}
-
-function redactString(value: string): string {
-  return value
-    .replace(BEARER_RE, 'Bearer [REDACTED]')
-    .replace(SECRET_ASSIGNMENT_RE, '$1=[REDACTED]')
-    .replace(EMAIL_RE, '[REDACTED_EMAIL]')
-    .replace(IPV4_RE, '[REDACTED_IP]');
-}
-
-function redactExternalValue(value: unknown, redactFields: Set<string>, path = ''): unknown {
-  if (typeof value === 'string') {
-    return redactString(value);
-  }
-  if (Array.isArray(value)) {
-    return value.map((entry, index) => redactExternalValue(entry, redactFields, `${path}/${index}`));
-  }
-  if (!value || typeof value !== 'object') {
-    return value;
-  }
-  return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
-    const childPath = `${path}/${key}`;
-    if (SECRET_KEY_RE.test(key) || pathMatches(childPath, redactFields)) {
-      return [key, '[REDACTED]'];
-    }
-    return [key, redactExternalValue(entry, redactFields, childPath)];
-  }));
 }
 
 function normalizeAdapterErrorCode(value: unknown): AdapterErrorCode {
@@ -479,7 +443,7 @@ export class AiExternalMcpBridgeService {
       collectedAt: new Date().toISOString(),
       trustLevel: 'external',
       summary: input.summary,
-      redactedPayload: redactExternalValue(input.payload, new Set(this.redactionFields(server, snapshot))),
+      redactedPayload: redactSensitiveValue(input.payload, this.redactionFields(server, snapshot)),
       rawPayloadRetention: 'redacted',
     };
   }
@@ -513,7 +477,7 @@ export class AiExternalMcpBridgeService {
 
     const errorCode = normalizeAdapterErrorCode(result.errorCode);
     const message = typeof result.message === 'string' && result.message.trim().length > 0
-      ? result.message.trim()
+      ? redactSensitiveText(result.message.trim())
       : 'External MCP provider returned an error.';
     return {
       ok: false,
@@ -618,7 +582,7 @@ export class AiExternalMcpBridgeService {
         summary: 'External MCP transport returned malformed output.',
         redactedPayload: {
           malformed: true,
-          output,
+          output: redactSensitiveValue(output, this.redactionFields(server, snapshot)),
         },
         rawPayloadRetention: 'redacted',
       }],

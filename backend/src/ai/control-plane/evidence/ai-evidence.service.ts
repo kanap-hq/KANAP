@@ -9,11 +9,40 @@ import { EMAIL_ADDRESSES } from '../../../common/text-scan';
 
 const MAX_SUMMARY_CHARS = 2000;
 const MAX_PAYLOAD_JSON_CHARS = 24000;
-const SECRET_KEY_RE = /(api[-_]?key|token|secret|password|authorization|cookie|session)/i;
+// Field names whose value is hidden, wherever they appear in a value.
+const SECRET_KEY_RE = /(api[-_]?key|access[-_]?key|private[-_]?key|token|secret|passw|pwd|passphrase|passhash|credential|authorization|bearer|jwt|cookie|session|^auth$)/i;
 const EMAIL_RE = EMAIL_ADDRESSES;
 const IPV4_RE = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
 const BEARER_RE = /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/gi;
-const SECRET_ASSIGNMENT_RE = /\b(password|token|secret|api[-_]?key)\s*[:=]\s*[^ \n\r\t]+/gi;
+// `password=…`, `access_token=…`, `"refresh_token": "…"`, `client_secret=…`, in a text or an address.
+const SECRET_ASSIGNMENT_RE = /(passw(?:or)?d|passphrase|passhash|token|secret|api[-_]?key)(\\?["']?\s*[:=]\s*\\?["']?)[^\s"'&]+/gi;
+// Keys with a known format: KANAP keys and refresh tokens, provider keys (`sk-…`, `ghp_…`, `xoxb-…`
+// and the like).
+const KNOWN_KEY_RE = new RegExp([
+  String.raw`kanap_mcp[a-z]*_[A-Za-z0-9_-]+`,
+  String.raw`(?<![A-Za-z0-9_-])(?:`
+    + String.raw`sk-(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{20,}`
+    + String.raw`|[sr]k_(?:live|test)_[A-Za-z0-9]{10,}|whsec_[A-Za-z0-9]{10,}`
+    + String.raw`|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}`
+    + String.raw`|xox[abeoprs]-[A-Za-z0-9-]{10,}|xapp-[A-Za-z0-9-]{10,}`
+    + String.raw`|(?:AKIA|ASIA)[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35})`,
+].join('|'), 'g');
+// A `Cookie:` or `Set-Cookie:` header value (`name=value; …`).
+const COOKIE_VALUE_RE = /\b((?:set-)?cookie)(\\?["']?\s*:\s*\\?["']?)[^\s=;,"']+=[^\r\n"']*/gi;
+// The password of an address (`https://user:password@host`).
+const URL_PASSWORD_RE = /(?<![A-Za-z0-9+.-])([A-Za-z][A-Za-z0-9+.-]*:\/\/[^\s:@/]+:)[^\s@/]+@/g;
+// A JWT: three base64url segments, the first one a JSON header (`eyJ…`), also right after `_` or an
+// encoded `=` (`%3D`), and cut by line breaks. A segment stops before another `eyJ` glued to it, so
+// that the time stays linear in the length of the text.
+const JWT_UNIT = String.raw`(?:[A-Za-z0-9-]|_(?!eyJ)|\r?\n(?![\r\n]|eyJ))`;
+const JWT_RE = new RegExp(
+  String.raw`(?:(?<![A-Za-z0-9-])|(?<=%3[Dd]))eyJ${JWT_UNIT}{5,}\.(?:\r?\n)?${JWT_UNIT}{5,}\.(?:\r?\n)?`
+    + String.raw`[A-Za-z0-9_-]*(?:\r?\n[A-Za-z0-9_-]{20,}(?!\S))*`,
+  'g',
+);
+// The value of an Authorization header: after a known scheme (`Authorization: Basic …`,
+// `"Authorization":"Bearer …"`), or a long value without spaces. Ordinary words stay.
+const AUTHORIZATION_VALUE_RE = /\b((?:proxy-)?authorization)(\\?["']?\s*[:=]\s*\\?["']?)(?:(?:bearer|basic|digest|token|negotiate|ntlm)\s+[^\s"',;]+|[^\s"',;]{16,})/gi;
 
 export type AiEvidenceSeed = {
   runId?: string | null;
@@ -58,10 +87,20 @@ export function hashStableJson(value: unknown): string {
   return createHash('sha256').update(stableStringify(value)).digest('hex');
 }
 
-function redactString(value: string): string {
+// Credentials only: an address keeps its host, IP address included, and stays usable.
+function redactCredentials(value: string): string {
   return value
+    .replace(AUTHORIZATION_VALUE_RE, '$1$2[REDACTED]')
+    .replace(COOKIE_VALUE_RE, '$1$2[REDACTED]')
+    .replace(URL_PASSWORD_RE, '$1[REDACTED]@')
+    .replace(JWT_RE, '[REDACTED]')
+    .replace(KNOWN_KEY_RE, '[REDACTED]')
     .replace(BEARER_RE, 'Bearer [REDACTED]')
-    .replace(SECRET_ASSIGNMENT_RE, '$1=[REDACTED]')
+    .replace(SECRET_ASSIGNMENT_RE, '$1$2[REDACTED]');
+}
+
+function redactString(value: string): string {
+  return redactCredentials(value)
     .replace(EMAIL_RE, '[REDACTED_EMAIL]')
     .replace(IPV4_RE, '[REDACTED_IP]');
 }
@@ -89,9 +128,19 @@ function redactValue(value: unknown, redactFields: Set<string>, path = ''): unkn
   }));
 }
 
-/** The redaction every evidence summary gets (secret fields, bearer tokens, emails, IP addresses). */
-export function redactSensitiveValue(value: unknown): unknown {
-  return redactValue(value, new Set());
+/**
+ * The redaction every kept evidence row gets: secret fields, the fields named in `redactFields`,
+ * JWTs, keys of a known format, bearer tokens, Authorization and cookie header values, passwords
+ * in addresses, secret assignments, emails, IP addresses. The evidence writer, the dispatcher's
+ * summaries, the external MCP bridge and the MCP journal share it.
+ */
+export function redactSensitiveValue(value: unknown, redactFields: readonly string[] = []): unknown {
+  return redactValue(value, new Set(redactFields));
+}
+
+/** The same redaction for one text. */
+export function redactSensitiveText(value: string): string {
+  return redactString(value);
 }
 
 function truncateText(value: string, max = MAX_SUMMARY_CHARS): string {
@@ -159,11 +208,11 @@ export class AiEvidenceService {
       source_provider: seed.sourceProvider,
       source_object_type: seed.sourceObjectType,
       source_object_id: seed.sourceObjectId ?? null,
-      source_uri: seed.sourceUri ?? null,
+      source_uri: seed.sourceUri == null ? null : redactCredentials(seed.sourceUri),
       trust_level: seed.trustLevel ?? 'system',
       redaction_status: 'redacted',
       content_hash: this.hash(redactedPayload),
-      summary: truncateText(seed.summary ?? summarizePayload(redactedPayload)),
+      summary: truncateText(redactString(seed.summary ?? summarizePayload(redactedPayload))),
       payload_json: payloadJson,
       retention_class: seed.retentionClass ?? 'standard',
       collected_at: seed.collectedAt ?? new Date(),

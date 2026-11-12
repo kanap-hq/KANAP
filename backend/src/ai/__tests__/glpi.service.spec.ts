@@ -1776,7 +1776,24 @@ async function testAddTicketTechnicianObserverIsAdditiveIdempotentAndRestricted(
   }
 }
 
+async function testAFollowupIsPublicOnlyWhenGlpiMarksItNotPrivate() {
+  const service = createService() as any;
+  const isPrivate = (value: unknown, present = true) => {
+    const record: Record<string, unknown> = { id: 7, content: '<p>Follow-up</p>' };
+    if (present) record.is_private = value;
+    return service.normalizeFollowup(record, '<p>Follow-up</p>').is_private;
+  };
+  for (const value of [0, '0', false, 'false', ' 0 ', 'no', { id: 0 }]) {
+    assert.equal(isPrivate(value), false, `is_private ${JSON.stringify(value)}`);
+  }
+  for (const value of [1, '1', true, 'true', null, '', 'unknown', {}, 2]) {
+    assert.equal(isPrivate(value), true, `is_private ${JSON.stringify(value)}`);
+  }
+  assert.equal(isPrivate(undefined, false), true, 'is_private absent');
+}
+
 async function run() {
+  await testAFollowupIsPublicOnlyWhenGlpiMarksItNotPrivate();
   await testInitSessionSendsJsonHeaders();
   await testInitSessionExplainsHtmlResponse();
   await testInitSessionNormalizesApiEndpointBaseUrl();

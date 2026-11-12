@@ -676,10 +676,24 @@
     "knowledgeSources": "Knowledge and web sources",
     "knowledgeEnabled": "Search the knowledge base",
     "knowledgeHint": "When off, the agent answers from the model's own knowledge (and the web, if enabled).",
-    "allLibraries": "Search all available libraries",
+    "libraryScope": {
+      "none": "No library",
+      "some": "Chosen libraries",
+      "all": "All libraries",
+      "noneHint": "The agent cites no document in its replies."
+    },
     "specificLibraries": "Libraries",
     "librariesPlaceholder": "Select libraries",
     "librariesHint": "The agent searches only these libraries, within what it can access. Library names are in the Knowledge section.",
+    "internalNotes": "Internal notes of the ticket",
+    "internalNotesChoice": {
+      "used": "Used",
+      "ignored": "Ignored"
+    },
+    "internalNotesState": {
+      "used": "The agent uses them to decide and to reply.",
+      "ignored": "The agent reads only the public messages of the ticket."
+    },
     "webEnabled": "Search the web",
     "webHint": "When on, the agent may also search the public web. The knowledge base always takes precedence, and web results are cited in replies.",
     "webUnavailableHint": "Web search isn't available on this platform yet. Contact your administrator to enable it.",

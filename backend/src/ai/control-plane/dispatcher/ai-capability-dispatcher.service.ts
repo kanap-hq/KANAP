@@ -24,7 +24,7 @@ import { AiApproval } from '../entities/ai-approval.entity';
 import { AiRun } from '../entities/ai-run.entity';
 import { AiRunStep } from '../entities/ai-run-step.entity';
 import { AiToolExecution } from '../entities/ai-tool-execution.entity';
-import { AiEvidenceService } from '../evidence/ai-evidence.service';
+import { AiEvidenceService, redactSensitiveText } from '../evidence/ai-evidence.service';
 import { AiEmergencyPauseService } from '../pause/ai-emergency-pause.service';
 import { mcpArgumentPreview } from '../mcp/ai-mcp-audit.service';
 import { AdapterEvidenceSeed } from '../providers/provider.types';
@@ -583,7 +583,8 @@ export class AiCapabilityDispatcherService {
         previews: userPreviews,
       };
     } catch (error: any) {
-      const message = error?.message || 'Capability execution failed.';
+      // The kept message goes through the evidence redaction; the error itself is rethrown as is.
+      const message = redactSensitiveText(String(error?.message || 'Capability execution failed.'));
       toolExecution.status = 'failed';
       toolExecution.error_message = message;
       toolExecution.duration_ms = Math.max(0, Date.now() - startedAt);

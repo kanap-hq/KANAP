@@ -6,7 +6,8 @@ import { AiActionRequest } from '../entities/ai-action-request.entity';
 import { AiAgentDefinition } from '../entities/ai-agent-definition.entity';
 import { MAX_INTERNAL_NOTE_CHARS, MAX_PUBLIC_REPLY_CHARS } from '../providers/ticket-safety';
 import { ticketLooksFrench } from './agent-control-knowledge.util';
-import { adapterData, clampText } from './agent-control-util';
+import { clampText } from './agent-control-util';
+import { isPublicTicketItem } from './agent-ticket-sources';
 import type { ConversationActionGate, KnowledgeSearchItem, TicketLike, TicketNoteLike, TicketTimelineEntry, WebSearchResultItem } from './ai-agent-control.service';
 import { ReplySynthesisRejectedSource, ReplySynthesisResult, ReplySynthesisSource } from './ai-reply-synthesis.service';
 import {
@@ -49,30 +50,6 @@ export function actionRequestIdsFromCapabilityOutput(value: unknown): string[] {
     ids.add(nested.id.trim());
   }
   return Array.from(ids);
-}
-
-export function ticketNotesFromOutput(value: unknown): TicketNoteLike[] {
-  const data = adapterData<{ notes?: unknown[] }>(value);
-  const notes = Array.isArray(data?.notes) ? data.notes : [];
-  return notes
-    .filter(isRecord)
-    .map((note): TicketNoteLike => {
-      const visibility: TicketNoteLike['visibility'] = note.visibility === 'internal' ? 'internal' : 'public';
-      return {
-        id: typeof note.id === 'string' ? note.id : String(note.id ?? ''),
-        visibility,
-        authorId: typeof note.authorId === 'string' ? note.authorId : null,
-        author: typeof note.author === 'string' ? note.author : null,
-        authorRole: note.authorRole === 'requester' || note.authorRole === 'support' || note.authorRole === 'kanap_agent'
-          ? note.authorRole
-          : 'unknown',
-        body: typeof note.body === 'string' ? note.body : '',
-        createdAt: typeof note.createdAt === 'string' ? note.createdAt : '',
-        updatedAt: typeof note.updatedAt === 'string' ? note.updatedAt : null,
-        updateFingerprint: typeof note.updateFingerprint === 'string' ? note.updateFingerprint : null,
-      };
-    })
-    .filter((note) => note.id.length > 0);
 }
 
 export function parseTime(value: string | Date | null | undefined): number | null {
@@ -237,6 +214,8 @@ export function buildTicketTimeline(
   }
 
   for (const note of notes) {
+    // A message the ticketing system does not mark public is internal.
+    const visibility: TicketTimelineEntry['visibility'] = isPublicTicketItem(note) ? 'public' : 'internal';
     const body = normalizeKnowledgeReplyText(note.body);
     const normalizedBody = normalizeTimelineBody(body);
     const markedKanap = kanapPublicBodies.has(normalizedBody) || isKanapMarkedBody(body) || note.authorRole === 'kanap_agent';
@@ -244,14 +223,14 @@ export function buildTicketTimeline(
       ? 'kanap_agent'
       : note.authorRole === 'requester'
         ? 'requester_candidate'
-        : note.visibility === 'internal' || note.authorRole === 'support'
+        : visibility === 'internal' || note.authorRole === 'support'
           ? 'support_or_unknown'
           : 'requester_candidate';
     const actorSource: TicketTimelineEntry['actorSource'] = markedKanap
       ? 'kanap_marker'
       : note.authorRole === 'requester'
         ? 'provider_requester_user'
-        : note.visibility === 'internal' || note.authorRole === 'support'
+        : visibility === 'internal' || note.authorRole === 'support'
           ? 'provider_support_user'
           : 'public_non_kanap_followup';
     const createdTime = parseTime(note.createdAt);
@@ -259,7 +238,7 @@ export function buildTicketTimeline(
     entries.push({
       id: `followup:${note.id}`,
       kind: 'followup',
-      visibility: note.visibility,
+      visibility,
       actor,
       actorSource,
       actorId: note.authorId ?? null,

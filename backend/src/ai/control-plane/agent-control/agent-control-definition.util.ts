@@ -13,6 +13,7 @@ import { PlannerAction } from './ai-agent-action-planner.service';
 import { VerbatimCandidate } from './ai-agent-prompt-compiler.service';
 import { BadRequestException } from '@nestjs/common';
 import { codedForbidden } from '../../../auth/module-right-required';
+import { AGENT_INTERNAL_NOTES_SETTINGS, AgentInternalNotesSetting } from './agent-ticket-sources';
 
 /**
  * Agent definition normalisation: persona, response policy, scope policy, allowed
@@ -41,12 +42,15 @@ export function readKanapDataBlock(sources: Record<string, unknown>): {
 
 // Per-agent retrieval-source policy, read from scope_policy_json.knowledge_sources.
 // Defaults preserve current behaviour: knowledge ON over all accessible libraries, web OFF,
-// KANAP data OFF (see readKanapDataBlock).
+// KANAP data OFF (see readKanapDataBlock), internal notes of the ticket used. A new agent is
+// written with no library (newAgentScopePolicy), so the "all libraries" default only applies
+// to agents saved before.
 export function readAgentKnowledgeSources(definition: AiAgentDefinition | null): {
   knowledgeEnabled: boolean;
-  knowledgeLibraryIds: string[] | null; // null = all accessible libraries
+  knowledgeLibraryIds: string[] | null; // null = all accessible libraries; [] = none
   webEnabled: boolean;
   kanapData: { enabled: boolean; domains: Record<KanapEntityFamily, boolean> };
+  internalNotes: AgentInternalNotesSetting;
 } {
   const scope = isRecord(definition?.scope_policy_json) ? definition.scope_policy_json : {};
   const sources = isRecord(scope.knowledge_sources) ? scope.knowledge_sources : {};
@@ -58,10 +62,26 @@ export function readAgentKnowledgeSources(definition: AiAgentDefinition | null):
     : [];
   return {
     knowledgeEnabled: knowledge.enabled !== false,
-    knowledgeLibraryIds: allLibraries || libraryIds.length === 0 ? null : libraryIds,
+    // Without "all libraries", only the chosen libraries: none when none is chosen.
+    knowledgeLibraryIds: allLibraries ? null : libraryIds,
     webEnabled: web.enabled === true,
     kanapData: readKanapDataBlock(sources),
+    internalNotes: sources.internal_notes === 'ignored' ? 'ignored' : 'used',
   };
+}
+
+// The internal notes setting written by a create or an update: "used" or "ignored", refused
+// otherwise. An input that does not give it keeps the stored value ("used" when none).
+export function internalNotesSettingToWrite(input: unknown, storedSources: unknown): AgentInternalNotesSetting {
+  const source = isRecord(input) ? input : {};
+  if (!hasOwn(source, 'internal_notes')) {
+    return isRecord(storedSources) && storedSources.internal_notes === 'ignored' ? 'ignored' : 'used';
+  }
+  const value = source.internal_notes;
+  if (typeof value !== 'string' || !(AGENT_INTERNAL_NOTES_SETTINGS as readonly string[]).includes(value)) {
+    throw new BadRequestException('Internal notes must be "used" or "ignored".');
+  }
+  return value as AgentInternalNotesSetting;
 }
 
 // Validate/clamp a knowledge_sources patch at write time. Library ids are UUID-checked and
@@ -86,6 +106,22 @@ export function normalizeKnowledgeSources(value: unknown): Record<string, unknow
     web: { enabled: web.enabled === true },
     kanap_data: { enabled: kanapData.enabled, domains: kanapData.domains },
     precedence: 'knowledge_first',
+    internal_notes: internalNotesSettingToWrite(source, null),
+  };
+}
+
+// A new agent cites no library until an administrator opens one, some or all: a missing
+// knowledge setting, or one that does not say "all libraries", starts with none. Only the
+// create path calls this; an agent saved before keeps what readAgentKnowledgeSources reads.
+export function newAgentScopePolicy(scopePolicy: Record<string, unknown>): Record<string, unknown> {
+  const sources = isRecord(scopePolicy.knowledge_sources) ? scopePolicy.knowledge_sources : {};
+  const knowledge = isRecord(sources.knowledge) ? sources.knowledge : {};
+  return {
+    ...scopePolicy,
+    knowledge_sources: normalizeKnowledgeSources({
+      ...sources,
+      knowledge: { ...knowledge, all_libraries: knowledge.all_libraries === true },
+    }),
   };
 }
 

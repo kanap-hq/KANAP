@@ -1223,6 +1223,21 @@ looks for answers when it triages work:
   only takes effect when the platform has a web-search provider configured
   (`AI_WEB_SEARCH_READY`, i.e. `BRAVE_SEARCH_API_KEY` is present); otherwise the
   agent setting is inert and the corresponding UI control is disabled.
+- **Internal notes of the ticket** (service desk agents, `internal_notes`):
+  `used` or `ignored`. An agent saved without the setting uses them, a new agent
+  is written with `used`, an update that does not give the setting keeps the
+  stored value, and any other value is refused. The rules of the reply synthesis
+  and the action planner always say that internal items are support notes, used
+  without being quoted (`INTERNAL_NOTES_LINE`); with `ignored` the line applies
+  to nothing, since no internal item reaches the model. With `used`, every triage
+  stage reads every item of the ticket. With `ignored`, the triage keeps the public items only: no model call, search or
+  screenshot extraction reads an internal item, and the action planner gets the
+  conversation gate without its message fingerprints. An item the ticketing
+  system does not mark public (a GLPI follow-up not flagged as not private) is
+  internal. One function decides (`ticketItemsTheAgentReads` in
+  `agent-ticket-sources.ts`); the internal note proposed to the technician is
+  built from the same items, while the conversation gate and the run record
+  read the whole thread.
 
 When both run, **KANAP knowledge always takes precedence.** Web search runs
 through a governed internal `web_search` capability whose `provider_kind` is

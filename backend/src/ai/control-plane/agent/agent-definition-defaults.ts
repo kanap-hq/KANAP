@@ -204,9 +204,10 @@ export function helpdeskAgentDefaults(input: { ticketingProviderKey: string }): 
       all_matching: { enabled: false },
       freeform_live_object_ids: false,
       knowledge_sources: {
-        knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+        knowledge: { enabled: true, all_libraries: false, library_ids: [] },
         web: { enabled: false },
         precedence: 'knowledge_first',
+        internal_notes: 'used',
       },
       // The helper only returns null for a null input; this literal is never null.
     }) ?? {},
@@ -275,7 +276,7 @@ export function sreAgentDefaults(input: { monitoringProviderKey?: string | null 
     },
     scope_policy_json: {
       knowledge_sources: {
-        knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+        knowledge: { enabled: true, all_libraries: false, library_ids: [] },
         web: { enabled: false },
         precedence: 'knowledge_first',
         kanap_data: {

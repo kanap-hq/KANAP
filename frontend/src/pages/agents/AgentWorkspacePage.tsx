@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Box, Button, Checkbox, Chip, CircularProgress, Collapse, FormControlLabel, MenuItem, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography, useTheme } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Chip, CircularProgress, Collapse, FormControlLabel, MenuItem, Radio, RadioGroup, Select, Stack, Switch, Tab, Tabs, TextField, Tooltip, Typography, useTheme } from '@mui/material';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -1457,9 +1457,14 @@ function sharedContextProfileLines(profile: AiSharedContextProfile | null | unde
   return [];
 }
 
+// The libraries an agent may cite: none, the chosen ones, or all it can access.
+type LibraryScope = 'none' | 'some' | 'all';
+// Whether a ticket agent reads the internal notes of a ticket.
+type InternalNotesSetting = 'used' | 'ignored';
+
 function knowledgeFormFromDefinition(definition: AiAgentControlAgentDefinition): {
-  enabled: boolean; allLibraries: boolean; libraryIds: string[]; webEnabled: boolean;
-  kanapData: AiAgentKanapDataSources | null;
+  enabled: boolean; libraryScope: LibraryScope; libraryIds: string[]; webEnabled: boolean;
+  kanapData: AiAgentKanapDataSources | null; internalNotes: InternalNotesSetting;
 } {
   const scope = definition.scope_policy_json && typeof definition.scope_policy_json === 'object'
     ? definition.scope_policy_json as Record<string, unknown> : {};
@@ -1473,10 +1478,13 @@ function knowledgeFormFromDefinition(definition: AiAgentControlAgentDefinition):
   // disabled and older (helpdesk) agents must keep that default untouched.
   const kanapDataRaw = isRecord(ks.kanap_data) ? ks.kanap_data : null;
   const kanapDomainsRaw = kanapDataRaw && isRecord(kanapDataRaw.domains) ? kanapDataRaw.domains : {};
+  // Same reading as the backend: an agent saved without "all libraries: false" reads every
+  // library it can access; otherwise only the chosen ones, and none when none is chosen.
+  const libraryIds = Array.isArray(k.library_ids) ? k.library_ids.filter((id): id is string => typeof id === 'string') : [];
   return {
     enabled: k.enabled !== false,
-    allLibraries: k.all_libraries !== false,
-    libraryIds: Array.isArray(k.library_ids) ? k.library_ids.filter((id): id is string => typeof id === 'string') : [],
+    libraryScope: k.all_libraries !== false ? 'all' : libraryIds.length > 0 ? 'some' : 'none',
+    libraryIds,
     webEnabled: web.enabled === true,
     kanapData: kanapDataRaw
       ? {
@@ -1490,6 +1498,8 @@ function knowledgeFormFromDefinition(definition: AiAgentControlAgentDefinition):
         },
       }
       : null,
+    // Same reading as the backend: an agent saved without the setting uses them.
+    internalNotes: ks.internal_notes === 'ignored' ? 'ignored' : 'used',
   };
 }
 
@@ -1501,8 +1511,8 @@ function knowledgeSourcesPayloadFromForm(current: ReturnType<typeof knowledgeFor
   return {
     knowledge: {
       enabled: current.enabled,
-      all_libraries: current.allLibraries,
-      library_ids: current.allLibraries ? [] : current.libraryIds,
+      all_libraries: current.libraryScope === 'all',
+      library_ids: current.libraryScope === 'some' ? current.libraryIds : [],
     },
     web: { enabled: current.webEnabled },
     // Round-trip the FULL block: the backend replaces knowledge_sources
@@ -1511,6 +1521,7 @@ function knowledgeSourcesPayloadFromForm(current: ReturnType<typeof knowledgeFor
     // absent block). Send exactly what was read (plus any user edits); an
     // absent block is never fabricated here.
     ...(current.kanapData ? { kanap_data: current.kanapData } : {}),
+    internal_notes: current.internalNotes,
   };
 }
 
@@ -2399,12 +2410,27 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
           <Typography variant="caption" color="text.secondary">{t('settings.knowledgeHint')}</Typography>
           {knowledgeForm.enabled && (
             <>
-              <FormControlLabel
-                sx={featureSwitchRowSx}
-                control={<Switch size="small" checked={knowledgeForm.allLibraries} onChange={(event) => updateKnowledge({ allLibraries: event.target.checked })} />}
-                label={t('settings.allLibraries')}
-              />
-              {!knowledgeForm.allLibraries && (
+              <RadioGroup
+                row
+                aria-label={t('settings.specificLibraries')}
+                value={knowledgeForm.libraryScope}
+                onChange={(_event, value) => updateKnowledge({ libraryScope: value as LibraryScope })}
+                sx={{ columnGap: 2 }}
+              >
+                {(['none', 'some', 'all'] as const).map((scope) => (
+                  <FormControlLabel
+                    key={scope}
+                    value={scope}
+                    sx={featureSwitchRowSx}
+                    control={<Radio size="small" />}
+                    label={t(`settings.libraryScope.${scope}`)}
+                  />
+                ))}
+              </RadioGroup>
+              {(knowledgeForm.libraryScope === 'none' || (knowledgeForm.libraryScope === 'some' && knowledgeForm.libraryIds.length === 0)) && (
+                <Typography variant="caption" color="text.secondary">{t('settings.libraryScope.noneHint')}</Typography>
+              )}
+              {knowledgeForm.libraryScope === 'some' && (
                 <SettingsField label={t('settings.specificLibraries')} hint={t('settings.librariesHint')}>
                   <Select
                     multiple
@@ -2412,6 +2438,7 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
                     sx={pageSelectSx}
                     value={knowledgeForm.libraryIds}
                     displayEmpty
+                    SelectDisplayProps={{ 'aria-label': t('settings.librariesPlaceholder') } as React.HTMLAttributes<HTMLDivElement>}
                     renderValue={(selected) => {
                       const ids = selected as string[];
                       if (ids.length === 0) {
@@ -2435,6 +2462,27 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
                 </SettingsField>
               )}
             </>
+          )}
+          {isHelpdesk && (
+            <SettingsField label={t('settings.internalNotes')} hint={t(`settings.internalNotesState.${knowledgeForm.internalNotes}`)}>
+              <RadioGroup
+                row
+                aria-label={t('settings.internalNotes')}
+                value={knowledgeForm.internalNotes}
+                onChange={(_event, value) => updateKnowledge({ internalNotes: value as InternalNotesSetting })}
+                sx={{ columnGap: 2 }}
+              >
+                {(['used', 'ignored'] as const).map((setting) => (
+                  <FormControlLabel
+                    key={setting}
+                    value={setting}
+                    sx={featureSwitchRowSx}
+                    control={<Radio size="small" />}
+                    label={t(`settings.internalNotesChoice.${setting}`)}
+                  />
+                ))}
+              </RadioGroup>
+            </SettingsField>
           )}
           <FormControlLabel
             sx={featureSwitchRowSx}

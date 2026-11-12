@@ -12,6 +12,7 @@ import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
 import type { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { estimateJsonTokens } from './json-token-estimate';
 import { HTML_TAGS, SPACES_BEFORE_LINE_BREAKS, hasHtmlTag } from '../../../common/text-scan';
+import { citableKnowledgeDocuments } from './agent-ticket-sources';
 
 export type ReplySynthesisTicket = {
   id: string;
@@ -36,6 +37,7 @@ export type ReplySynthesisKnowledgeDoc = {
   summary?: string | null;
   snippet?: string | null;
   content_markdown?: string | null;
+  library_id?: string | null;
   // 'selected' = pre-validated by the interpreter; 'unvalidated' = retrieved candidate to judge
   // (use only if its content clearly answers the need, else reject). Default 'selected'. See #3.
   validation_status?: 'selected' | 'unvalidated' | null;
@@ -249,7 +251,11 @@ export class AiReplySynthesisService {
     imageEvidence?: TicketImageEvidence[];
     interpretation?: Record<string, unknown> | null;
     profile?: CompiledGuidance | null;
+    // The agent's library list; null = every library the agent may read.
+    citableLibraryIds?: readonly string[] | null;
   }): Record<string, unknown> {
+    // The reply cites the documents of the libraries the agent may cite.
+    const knowledgeDocs = citableKnowledgeDocuments(input.knowledgeDocs, input.citableLibraryIds);
     return {
       task: 'Compose a grounded helpdesk requester reply and technician brief.',
       schema: {
@@ -288,7 +294,7 @@ export class AiReplySynthesisService {
       })),
       screenshot_evidence: compactImageEvidence(input.imageEvidence),
       knowledge_interpretation: input.interpretation ?? null,
-      knowledge_sources: input.knowledgeDocs.slice(0, 6).map((doc, index) => ({
+      knowledge_sources: knowledgeDocs.slice(0, 6).map((doc, index) => ({
         index: index + 1,
         ref: doc.ref ?? doc.id ?? null,
         title: doc.title ?? 'Untitled document',
@@ -320,9 +326,11 @@ export class AiReplySynthesisService {
       imageEvidence?: TicketImageEvidence[];
       interpretation?: Record<string, unknown> | null;
       profile?: CompiledGuidance | null;
+      citableLibraryIds?: readonly string[] | null;
     },
   ): Promise<ReplySynthesisResult> {
     const payload = this.buildPromptPayload(input);
+    const knowledgeDocs = citableKnowledgeDocuments(input.knowledgeDocs, input.citableLibraryIds);
     const response = await this.llmClient.callStructuredJsonModel(context, {
       taskName: 'reply_synthesis',
       systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_SYNTHESIS, input.profile),
@@ -346,7 +354,7 @@ export class AiReplySynthesisService {
     }
     const parsed = response.value;
     const knownSources = new Map<string, ReplySynthesisSource>();
-    for (const doc of input.knowledgeDocs) {
+    for (const doc of knowledgeDocs) {
       const ref = (doc.ref ?? doc.id ?? '').trim();
       if (!ref) continue;
       knownSources.set(`knowledge:${ref.toLocaleLowerCase()}`, {
@@ -408,7 +416,7 @@ export class AiReplySynthesisService {
     const operatingContextLeak = operatingContextLeakDetected({
       requesterReply,
       profile: input.profile,
-      knowledgeDocs: input.knowledgeDocs,
+      knowledgeDocs: knowledgeDocs,
       webResults: input.webResults,
     });
     // A reply is presentable when it is grounded in at least one real used source, within length,

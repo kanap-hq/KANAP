@@ -294,6 +294,12 @@ export function buildFallbackKnowledgeSearchPlan(
   };
 }
 
+function knowledgeLibraryId(item: Record<string, unknown>): string | null {
+  const library = isRecord(item.library) ? item.library : null;
+  const id = library?.id ?? item.library_id;
+  return typeof id === 'string' && id.trim().length > 0 ? id.trim() : null;
+}
+
 export function knowledgeItemsFromOutput(value: unknown): KnowledgeSearchItem[] {
   const record = isRecord(value) ? value : null;
   const items = Array.isArray(record?.items) ? record.items : [];
@@ -314,6 +320,7 @@ export function knowledgeItemsFromOutput(value: unknown): KnowledgeSearchItem[] 
       status: typeof item.status === 'string' ? item.status : null,
       updated_at: typeof item.updated_at === 'string' ? item.updated_at : null,
       score: numericScore(item),
+      library_id: knowledgeLibraryId(item),
     }));
 }
 
@@ -367,6 +374,7 @@ export function knowledgeDocumentFromOutput(searchItem: KnowledgeSearchItem, val
     updated_at: typeof value.updated_at === 'string' ? value.updated_at : searchItem.updated_at ?? null,
     content_markdown: typeof value.content_markdown === 'string' ? value.content_markdown : searchItem.content_markdown ?? null,
     score: searchItem.score ?? null,
+    library_id: knowledgeLibraryId(value) ?? searchItem.library_id ?? null,
   };
 }
 

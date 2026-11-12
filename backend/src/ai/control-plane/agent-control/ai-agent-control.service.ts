@@ -93,7 +93,7 @@ import { AiCapabilityDispatcherService } from '../dispatcher/ai-capability-dispa
 import { AiReadonlyDiagnosticWorkflowService } from '../diagnostics/ai-readonly-diagnostic-workflow.service';
 import { AiTenantExecutionService } from '../../execution/ai-tenant-execution.service';
 import { AiActionRequest } from '../entities/ai-action-request.entity';
-import { hashStableJson } from '../evidence/ai-evidence.service';
+import { hashStableJson, redactSensitiveText } from '../evidence/ai-evidence.service';
 import { RunResultAccess, originWithoutRun, runResultAccess } from '../evidence/run-result-visibility';
 import { AiAgentAuditEvent } from '../entities/ai-agent-audit-event.entity';
 import { AiModelConfig } from '../../ai-model-config.entity';
@@ -174,6 +174,7 @@ import {
   ReplySynthesisResult,
   ReplySynthesisSource,
 } from './ai-reply-synthesis.service';
+import { conversationGateTheAgentReads, ticketItemsTheAgentReads } from './agent-ticket-sources';
 import {
   AiSharedContextProfileService,
   SharedContextProfileInput,
@@ -298,6 +299,8 @@ import {
   changedConfigDiff,
   autonomyThresholds,
   normalizeKnowledgeSources,
+  internalNotesSettingToWrite,
+  newAgentScopePolicy,
   readAgentKnowledgeSources,
   proposalHash,
 } from './agent-control-definition.util';
@@ -337,7 +340,6 @@ import {
 
 import {
   actionRequestIdsFromCapabilityOutput,
-  ticketNotesFromOutput,
   parseTime,
   isoFromTime,
   actionPayloadBody,
@@ -661,6 +663,7 @@ export type KnowledgeSearchItem = {
   // (LLM-fallback path), handed to synthesis as a candidate to judge. Set when presenting items
   // for the reply; absent for raw search/merge candidates. See applyKnowledgeInterpretation (#3).
   validation_status?: 'selected' | 'unvalidated' | null;
+  library_id?: string | null;
 };
 
 export type KnowledgeSearchAttempt = {
@@ -1011,7 +1014,7 @@ export class AiAgentControlService {
       capability_version: stage.capabilityVersion ?? '1.0.0',
       input_summary: input.inputSummary,
       output_summary: input.outputSummary,
-      error_message: input.errorMessage ?? null,
+      error_message: input.errorMessage == null ? null : redactSensitiveText(input.errorMessage),
       started_at: now,
       completed_at: now,
       created_at: now,
@@ -2191,7 +2194,7 @@ export class AiAgentControlService {
     const forbiddenCapabilities = input.forbidden_capabilities_json !== undefined
       ? (() => { throw codedForbidden('AGENT_FORBIDDEN_CAPABILITIES_LOCKED', 'Forbidden capabilities are immutable from this endpoint.'); })()
       : [...defaults.forbidden_capabilities_json];
-    const scopePolicy = normalizedPolicyObject(input.scope_policy_json, 'Scope policy') ?? defaults.scope_policy_json;
+    const scopePolicy = newAgentScopePolicy(normalizedPolicyObject(input.scope_policy_json, 'Scope policy') ?? defaults.scope_policy_json);
     const normalizedScopePolicy = normalizeScopePolicyForAgentType(agentType, scopePolicy);
     const now = new Date();
     const definition = await repo.save(repo.create({
@@ -2291,13 +2294,37 @@ export class AiAgentControlService {
       );
     }
     if (Object.prototype.hasOwnProperty.call(input, 'scope_policy_json')) {
-      definition.scope_policy_json = normalizeScopePolicyForAgentType(definition.agent_type, normalizedPolicyObject(input.scope_policy_json, 'Scope policy'));
+      // The libraries the agent may cite change only when the input gives them: a scope policy
+      // without knowledge_sources keeps the stored ones, and knowledge_sources that is not an
+      // object counts as missing. So does the internal notes setting.
+      const nextScopePolicy = normalizedPolicyObject(input.scope_policy_json, 'Scope policy');
+      const storedKnowledgeSources = isRecord(definition.scope_policy_json) ? definition.scope_policy_json.knowledge_sources : undefined;
+      const nextKnowledgeSources = nextScopePolicy?.knowledge_sources;
+      definition.scope_policy_json = normalizeScopePolicyForAgentType(
+        definition.agent_type,
+        storedKnowledgeSources !== undefined && !isRecord(nextKnowledgeSources)
+          ? { ...(nextScopePolicy ?? {}), knowledge_sources: storedKnowledgeSources }
+          : isRecord(nextKnowledgeSources)
+            ? {
+              ...nextScopePolicy,
+              knowledge_sources: {
+                ...nextKnowledgeSources,
+                internal_notes: internalNotesSettingToWrite(nextKnowledgeSources, storedKnowledgeSources),
+              },
+            }
+            : nextScopePolicy,
+      );
     }
     if (Object.prototype.hasOwnProperty.call(input, 'knowledge_sources')) {
       // Patch only the knowledge_sources sub-block, preserving the rest of scope_policy_json.
+      // Knowledge sources without the internal notes setting keep the stored one.
+      const storedScopePolicy = isRecord(definition.scope_policy_json) ? definition.scope_policy_json : {};
       definition.scope_policy_json = normalizeScopePolicyForAgentType(definition.agent_type, {
-        ...(isRecord(definition.scope_policy_json) ? definition.scope_policy_json : {}),
-        knowledge_sources: normalizeKnowledgeSources(input.knowledge_sources),
+        ...storedScopePolicy,
+        knowledge_sources: normalizeKnowledgeSources({
+          ...(isRecord(input.knowledge_sources) ? input.knowledge_sources : {}),
+          internal_notes: internalNotesSettingToWrite(input.knowledge_sources, storedScopePolicy.knowledge_sources),
+        }),
       });
     }
     if (Object.prototype.hasOwnProperty.call(input, 'queue_policy_json')) {
@@ -4444,8 +4471,10 @@ export class AiAgentControlService {
       // get_document for top hits), but best-effort: for a monitoring
       // diagnosis every enrichment source is optional and the deterministic
       // alert evidence must survive any retrieval failure.
-      const knowledgeQueryCandidates = knowledgeSources.knowledgeEnabled ? retrievalQueryCandidates : [];
-      let knowledgeStatus: string = knowledgeSources.knowledgeEnabled ? 'executed' : 'disabled_by_agent';
+      // An agent with no library to cite searches none.
+      const knowledgeSearchable = knowledgeSources.knowledgeEnabled && knowledgeSources.knowledgeLibraryIds?.length !== 0;
+      const knowledgeQueryCandidates = knowledgeSearchable ? retrievalQueryCandidates : [];
+      let knowledgeStatus: string = knowledgeSearchable ? 'executed' : 'disabled_by_agent';
       const knowledgeAttempts: Array<{ query: string; items: KnowledgeSearchItem[] }> = [];
       for (const [candidateIndex, knowledgeQuery] of knowledgeQueryCandidates.entries()) {
         try {
@@ -5272,11 +5301,18 @@ export class AiAgentControlService {
     );
     const ticketTimeline = buildTicketTimeline(ticket, ticketNotesData.notes, kanapPublicBodies);
     const conversationGate = evaluateConversationGate(priorTargetActions, ticketTimeline, ticketNotesData.notes);
+    // What the agent reads of the ticket, by its internal notes setting: every item, or the
+    // public items only. Every stage below that calls a model, the searches and the internal
+    // note proposed to the technician take these items; the conversation gate above and the
+    // run record read the whole thread.
+    const internalNotesSetting = readAgentKnowledgeSources(agentDefinition).internalNotes;
+    const agentTimeline = ticketItemsTheAgentReads(ticketTimeline, internalNotesSetting);
+    const agentNotes = ticketItemsTheAgentReads(ticketNotesData.notes, internalNotesSetting);
     const ticketForKnowledge = {
       ...ticket,
       description: [
         ticket.description,
-        ...ticketTimeline
+        ...agentTimeline
           .filter((entry) => entry.actor === 'requester_candidate')
           .slice(-4)
           .map((entry) => entry.body),
@@ -5288,7 +5324,7 @@ export class AiAgentControlService {
     let ticketImageExtraction: TicketEvidenceExtractionResult = {
       attachmentRefs: [
         ...(ticket.attachments ?? []),
-        ...ticketNotesData.notes.flatMap((note) => note.attachments ?? []),
+        ...agentNotes.flatMap((note) => note.attachments ?? []),
       ],
       evidence: [],
       warnings: [],
@@ -5303,7 +5339,7 @@ export class AiAgentControlService {
       const evidenceProjection = estimateTicketEvidenceExtractionUsage({
         systemPrompt: plannerSystemPrompt,
         ticket,
-        notes: ticketNotesData.notes,
+        notes: agentNotes,
         maxImages: this.ticketEvidenceExtractor.maxImageCount(),
       }, llmPrices, this.ticketEvidenceExtractor.maxOutputTokens());
       const evidenceInputSummary = {
@@ -5344,7 +5380,7 @@ export class AiAgentControlService {
         try {
           ticketImageExtraction = await this.ticketEvidenceExtractor.extractImageEvidence(context, {
             ticket,
-            notes: ticketNotesData.notes,
+            notes: agentNotes,
             profile: promptRuntime.plannerGuidance,
             readAttachment: async (ref) => {
               const result = await this.dispatcher.execute<AdapterResultLike<TicketAttachmentReadResult>>(context, {
@@ -5417,7 +5453,7 @@ export class AiAgentControlService {
     }
 
     let knowledgeNeedRepresentation: TicketNeedRepresentationBuildResult | null = null;
-    const fallbackPreferenceTerms = extractKnowledgePreferenceTerms(ticketTimeline).positiveTerms;
+    const fallbackPreferenceTerms = extractKnowledgePreferenceTerms(agentTimeline).positiveTerms;
     const shortFallbackKnowledgeQueries = uniqueKnowledgeCandidates([
       ...fallbackPreferenceTerms,
       fallbackPreferenceTerms.slice(0, 4).join(' '),
@@ -5435,7 +5471,7 @@ export class AiAgentControlService {
     if (this.ticketNeedBuilder) {
       const needInput = {
         ticket,
-        timeline: ticketTimeline,
+        timeline: agentTimeline,
         imageEvidence: ticketImageExtraction.evidence,
         profile: promptRuntime.plannerGuidance,
       };
@@ -5531,11 +5567,12 @@ export class AiAgentControlService {
     let selectedKnowledgeItems: KnowledgeSearchItem[] = [];
     let unvalidatedKnowledgeItems: KnowledgeSearchItem[] = [];
     let knowledgeLowRelevance: Array<{ ref: string | null; title: string | null; score: number | null; lexical_overlap: number; reason: string }> = [];
-    if (!knowledgeSources.knowledgeEnabled) {
+    // An agent with no library to cite searches none.
+    if (!knowledgeSources.knowledgeEnabled || knowledgeSources.knowledgeLibraryIds?.length === 0) {
       // Knowledge search is disabled for this agent — gather no KANAP knowledge so the
       // triage relies on the LLM (and web, when enabled). The plan/interpretation are kept
       // as valid empty structures for the downstream audit metadata.
-      knowledgeSearchPlan = buildFallbackKnowledgeSearchPlan(ticket, ticketTimeline, []);
+      knowledgeSearchPlan = buildFallbackKnowledgeSearchPlan(ticket, agentTimeline, []);
       knowledgeQueryCandidates = [];
       knowledgeInterpretation = buildFallbackKnowledgeInterpretation(knowledgeSearchPlan, []);
     } else {
@@ -5565,10 +5602,10 @@ export class AiAgentControlService {
         : this.knowledgePlanner
         ? await this.knowledgePlanner.planKnowledgeSearch(context, {
           ticket,
-          timeline: ticketTimeline,
+          timeline: agentTimeline,
           profile: promptRuntime.plannerGuidance,
         })
-        : buildFallbackKnowledgeSearchPlan(ticket, ticketTimeline, deterministicKnowledgeQueries);
+        : buildFallbackKnowledgeSearchPlan(ticket, agentTimeline, deterministicKnowledgeQueries);
       knowledgeSearchPlan = {
         ...plannedKnowledgeSearch,
         queries: this.ticketNeedBuilder
@@ -5616,7 +5653,7 @@ export class AiAgentControlService {
         ? await this.knowledgePlanner.interpretKnowledgeResults(context, {
           plan: knowledgeSearchPlan,
           ticket,
-          timeline: ticketTimeline,
+          timeline: agentTimeline,
           candidates: plannerCandidatesFromKnowledge(mergedKnowledgeCandidates),
           profile: promptRuntime.interpreterGuidance,
         })
@@ -5720,7 +5757,7 @@ export class AiAgentControlService {
     let webSearchQuery: string | null = null;
     let webSearchError: string | null = null;
     const webQueryCandidates = knowledgeSources.webEnabled && Features.AI_WEB_SEARCH_READY
-      ? buildWebSearchQueryCandidates(ticketForKnowledge, ticketTimeline, knowledgeQueryCandidates)
+      ? buildWebSearchQueryCandidates(ticketForKnowledge, agentTimeline, knowledgeQueryCandidates)
       : [];
     if (knowledgeSources.webEnabled && Features.AI_WEB_SEARCH_READY) {
       const webQuery = webQueryCandidates[0] ?? trimmedString(ticket.title) ?? '';
@@ -5795,13 +5832,14 @@ export class AiAgentControlService {
       }
       const synthesisPayload = this.replySynthesis.buildPromptPayload({
         ticket,
-        timeline: ticketTimeline,
+        timeline: agentTimeline,
         language: synthesisLanguage,
         knowledgeDocs: enrichedKnowledgeItems.slice(0, MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY),
         webResults: webSearchResults,
         imageEvidence: ticketImageExtraction.evidence,
         interpretation: serializeKnowledgeInterpretation(knowledgeInterpretation),
         profile: promptRuntime.synthesisGuidance,
+        citableLibraryIds: knowledgeSources.knowledgeLibraryIds,
       });
       synthesisProjection = estimateReplySynthesisUsage({
         systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_SYNTHESIS, promptRuntime.synthesisGuidance),
@@ -5838,13 +5876,14 @@ export class AiAgentControlService {
         try {
           replySynthesisResult = await this.replySynthesis.synthesizeTicketReply(context, {
             ticket,
-            timeline: ticketTimeline,
+            timeline: agentTimeline,
             language: synthesisLanguage,
             knowledgeDocs: enrichedKnowledgeItems.slice(0, MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY),
             webResults: webSearchResults,
             imageEvidence: ticketImageExtraction.evidence,
             interpretation: serializeKnowledgeInterpretation(knowledgeInterpretation),
             profile: promptRuntime.synthesisGuidance,
+            citableLibraryIds: knowledgeSources.knowledgeLibraryIds,
           });
           if (replySynthesisResult.fallback_reason) {
             synthesisFallbackReason = replySynthesisResult.fallback_reason;
@@ -5960,14 +5999,14 @@ export class AiAgentControlService {
     );
     const actionPlannerInput = {
       ticket,
-      timeline: ticketTimeline,
+      timeline: agentTimeline,
       contexts: {
         classification: classificationContext,
         lifecycle: lifecycleContext,
         routing: routingContext,
         participants: participantContext,
       },
-      gates: conversationGate as unknown as Record<string, unknown>,
+      gates: conversationGateTheAgentReads(conversationGate, internalNotesSetting),
       close_eligibility: {
         matched: closeEligible,
         has_inactivity_age: targetingEligibility.hasInactivityAge,
@@ -6362,12 +6401,12 @@ export class AiAgentControlService {
       ])
       : null;
     const noteBody = isPlannerEscalation
-      ? buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason })
+      ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason })
       : (replySynthesisResult
-        ? renderSynthesizedTriageNote(ticket, ticketTimeline, replySynthesisResult)
+        ? renderSynthesizedTriageNote(ticket, agentTimeline, replySynthesisResult)
         : (isPlannerAdministrativeReply
-          ? buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, { kind: 'administrative_reply', reason: administrativeReason })
-          : buildTriageNote(ticket, knowledgeItems, ticketTimeline, webSearchResults, null)));
+          ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'administrative_reply', reason: administrativeReason })
+          : buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, null)));
 
     const plannerClassificationUpdate = effectivePlannerActions.find((entry) => entry.action.action_type === PLANNER_CLASSIFICATION_ACTION_TYPE) ?? null;
     const classificationUpdateInput = plannerClassificationUpdate?.action.proposed
@@ -6717,7 +6756,7 @@ export class AiAgentControlService {
     }
     const requesterReplyBody = replySynthesisResult
       ? renderSynthesizedRequesterReply(ticket, replySynthesisResult)
-      : buildRequesterReply(ticket, enrichedKnowledgeItems, ticketTimeline, webSearchResults);
+      : buildRequesterReply(ticket, enrichedKnowledgeItems, agentTimeline, webSearchResults);
     const plannerRequesterReplyBody = plannerRequesterReply
       ? plannerRequesterReply.replyBody ?? requesterReplyBody
       : null;

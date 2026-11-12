@@ -53,6 +53,14 @@ export async function seedTestHelpdeskDefinition(
     agent_type: 'helpdesk',
     status: 'enabled',
     ...defaults,
+    // The test agent searches KANAP knowledge: its administrator opened every library.
+    scope_policy_json: {
+      ...defaults.scope_policy_json,
+      knowledge_sources: {
+        ...(defaults.scope_policy_json.knowledge_sources as Record<string, unknown>),
+        knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+      },
+    },
     persona_json: {
       mission: 'Triage helpdesk tickets, gather supporting KANAP knowledge, and prepare safe follow-up proposals for review.',
       tone: 'Clear, concise, and support-oriented.',
@@ -155,6 +163,14 @@ export async function seedTestSreDefinition(
     agent_type: 'sre',
     status: 'draft',
     ...defaults,
+    // The test agent correlates alerts with KANAP knowledge: its administrator opened every library.
+    scope_policy_json: {
+      ...defaults.scope_policy_json,
+      knowledge_sources: {
+        ...(defaults.scope_policy_json.knowledge_sources as Record<string, unknown>),
+        knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+      },
+    },
     persona_json: {
       mission: 'Diagnose monitoring alerts with supporting KANAP knowledge and infrastructure context, and prepare clear findings for operator review.',
     },
