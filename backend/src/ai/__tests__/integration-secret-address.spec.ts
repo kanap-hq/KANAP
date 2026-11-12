@@ -492,7 +492,10 @@ async function testPrtgEmptyAddressRemovesTheConnection() {
   const count = harness.audits.length;
   await assert.rejects(
     () => harness.service.savePrtgIntegration(harness.context, { enabled: false, base_url: '', api_token: 'typed-after-removal' }),
-    (error: any) => error instanceof BadRequestException,
+    // With a code the card translates, and the English sentence for other callers.
+    (error: any) => error instanceof BadRequestException
+      && (error.getResponse() as any).code === 'prtg_base_url_invalid'
+      && /full web address/.test(error.message),
   );
   assert.equal(harness.audits.length, count, 'no entry without a change');
   assert.equal(harness.rows[0].credential_ref_json, null);

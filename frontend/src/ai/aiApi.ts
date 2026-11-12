@@ -110,6 +110,8 @@ export type AiProviderTestResult = {
   model: string | null;
   latency_ms: number | null;
   message: string;
+  // Code of a refusal shown in the screen language (`errors:<code>`), such as a refused address.
+  code?: string;
   validation_errors: string[];
   // The effort the test call sent; null when none was.
   reasoning_effort_sent?: AiReasoningEffort | null;

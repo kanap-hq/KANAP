@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { modelKeyDestination } from '../common/secret-destination';
 import { assertPublicHttpTarget } from '../common/ssrf-guard';
@@ -109,6 +109,7 @@ export class AiProviderTestService {
           startedAt,
           message: this.getErrorMessage(error),
           validationErrors: [this.getErrorMessage(error)],
+          error,
         });
       }
     }
@@ -219,6 +220,7 @@ export class AiProviderTestService {
         startedAt,
         message: this.getErrorMessage(error),
         validationErrors: [],
+        error,
       });
     }
   }
@@ -279,13 +281,17 @@ export class AiProviderTestService {
     startedAt: number;
     message: string;
     validationErrors: string[];
+    /** The failure, when it may carry a code the screen translates (a refused address). */
+    error?: unknown;
   }): AiProviderTestResult {
+    const code = errorCodeOf(input.error);
     return {
       ok: false,
       provider: input.provider,
       model: input.model,
       latency_ms: Date.now() - input.startedAt,
       message: input.message,
+      ...(code ? { code } : {}),
       validation_errors: input.validationErrors,
     };
   }
@@ -296,4 +302,12 @@ export class AiProviderTestService {
     }
     return 'Provider test failed.';
   }
+}
+
+/** The code of a refusal raised with one (`{ code, message }`), such as the address guard's. */
+function errorCodeOf(error: unknown): string | null {
+  if (!(error instanceof HttpException)) return null;
+  const response = error.getResponse();
+  const code = response && typeof response === 'object' ? (response as { code?: unknown }).code : null;
+  return typeof code === 'string' && code ? code : null;
 }

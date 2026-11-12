@@ -59,6 +59,15 @@ export type PrtgIntegrationTestResult = {
 
 const BASE_URL_MESSAGE = 'The PRTG server address must be a full web address starting with http:// or https:// '
   + '(for example https://prtg.example.com). You can copy it from the browser address bar when logged into PRTG.';
+/** The refused PRTG address, with the code the card translates. */
+function baseUrlRefusal(): BadRequestException {
+  return new BadRequestException({
+    statusCode: 400,
+    error: 'Bad Request',
+    code: 'prtg_base_url_invalid',
+    message: BASE_URL_MESSAGE,
+  });
+}
 const TIMEZONE_MESSAGE = 'The server time zone must be a valid IANA time zone name such as Europe/Paris. '
   + 'Use the time zone configured on the machine that runs the PRTG core server (its operating-system clock setting).';
 const CREDENTIAL_PAIR_MESSAGE = 'Enter both the PRTG user name and the passhash together. '
@@ -86,10 +95,10 @@ export function normalizePrtgBaseUrl(raw: string): string {
   try {
     parsed = new URL(trimmed);
   } catch {
-    throw new BadRequestException(BASE_URL_MESSAGE);
+    throw baseUrlRefusal();
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new BadRequestException(BASE_URL_MESSAGE);
+    throw baseUrlRefusal();
   }
   if (parsed.username || parsed.password || parsed.search || parsed.hash) {
     throw new BadRequestException('The PRTG server address must not contain a query string, fragment, or embedded credentials.');
@@ -206,7 +215,7 @@ export class AiMonitoringIntegrationsService {
       // An empty address removes a saved connection, as for GLPI.
       const removed = await this.removePrtgConnection(context);
       if (removed) return removed;
-      throw new BadRequestException(BASE_URL_MESSAGE);
+      throw baseUrlRefusal();
     }
     const baseUrl = normalizePrtgBaseUrl(baseUrlRaw);
     assertPublicHttpUrl(baseUrl); // SSRF: block internal targets in cloud (no-op on-prem)

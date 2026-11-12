@@ -1,5 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import i18n from '../../i18n';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -220,6 +221,49 @@ describe('AdminIntegrationsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
     await waitFor(() => expect(api.put).toHaveBeenCalledTimes(1));
     expect((api.put as any).mock.calls[0][1]).toMatchObject({ base_url: '' });
+  });
+
+  it('shows a refused PRTG address in the language of the screen', async () => {
+    const settingsGet = (api.get as any).getMockImplementation();
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === '/ai/admin/integrations/monitoring') {
+        // A connection already removed: no address, no key.
+        return Promise.resolve({
+          data: {
+            integrations: [{
+              provider_key: 'prtg',
+              implementation: 'prtg',
+              enabled: false,
+              environment: 'production',
+              base_url: null,
+              server_timezone: 'UTC',
+              request_timeout_seconds: null,
+              credential: { present: false, shape: null },
+              updated_at: '2026-09-18T10:00:00.000Z',
+            }],
+          },
+        });
+      }
+      return settingsGet(url);
+    });
+    const message = 'The PRTG server address must be a full web address starting with http:// or https:// '
+      + '(for example https://prtg.example.com). You can copy it from the browser address bar when logged into PRTG.';
+    (api.put as any).mockRejectedValue({
+      response: { status: 400, data: { statusCode: 400, error: 'Bad Request', code: 'prtg_base_url_invalid', message } },
+    });
+    renderPage();
+    const card = (await screen.findByText('Monitoring: PRTG')).closest('.MuiCard-root') as HTMLElement;
+    fireEvent.change(within(card).getByLabelText(/^API key/), { target: { value: 'typed-key' } });
+    const save = within(card).getByText('Save settings').closest('button')!;
+    try {
+      await act(async () => { await i18n.changeLanguage('fr'); });
+      fireEvent.click(save);
+      await waitFor(() => expect(api.put).toHaveBeenCalledTimes(1));
+      expect(await screen.findByText(/^L'adresse du serveur PRTG doit être une adresse web complète/)).toBeInTheDocument();
+      expect(screen.queryByText(message)).toBeNull();
+    } finally {
+      await act(async () => { await i18n.changeLanguage('en'); });
+    }
   });
 
   it('empties the saved PRTG key when the address changes and asks for it again', async () => {

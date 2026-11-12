@@ -154,15 +154,26 @@ function parseHttpUrl(target: string | URL): URL {
   return parsed;
 }
 
+/**
+ * A refused target address, with a code the screens translate (`errors:<code>`). The English
+ * sentence and Nest's usual fields stay for the callers that read them.
+ */
+function addressRefusal(code: 'address_private_host' | 'address_unresolved'): BadRequestException {
+  const message = code === 'address_private_host'
+    ? 'Private or internal hosts are not allowed.'
+    : 'Unable to resolve target host.';
+  return new BadRequestException({ statusCode: 400, error: 'Bad Request', code, message });
+}
+
 function assertHostLiteral(hostname: string): void {
   const raw = String(hostname || '').trim().toLowerCase();
   if (!raw) throw new BadRequestException('Invalid target host.');
   const host = stripBrackets(raw); // unbracket so isIP()/BlockList detect IPv6 literals
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) {
-    throw new BadRequestException('Private or internal hosts are not allowed.');
+    throw addressRefusal('address_private_host');
   }
   if (isBlockedAddress(host)) {
-    throw new BadRequestException('Private or internal hosts are not allowed.');
+    throw addressRefusal('address_private_host');
   }
 }
 
@@ -205,20 +216,20 @@ export async function resolvePublicHttpTarget(
   try {
     addresses = await lookupFn(stripBrackets(url.hostname), { all: true, verbatim: true });
   } catch {
-    throw new BadRequestException('Unable to resolve target host.');
+    throw addressRefusal('address_unresolved');
   }
-  if (!addresses.length) throw new BadRequestException('Unable to resolve target host.');
+  if (!addresses.length) throw addressRefusal('address_unresolved');
   // A resolved address is blocked unless it is explicitly allowlisted (covers a DNS
   // name that legitimately points at an allowlisted internal IP).
   if (addresses.some(({ address }) => isBlockedAddress(address) && !allow.has(address.toLowerCase()))) {
-    throw new BadRequestException('Private or internal hosts are not allowed.');
+    throw addressRefusal('address_private_host');
   }
   const validated: ValidatedAddress[] = [];
   for (const { address } of addresses) {
     const family = isIP(address);
     if (family === 4 || family === 6) validated.push({ address, family });
   }
-  if (!validated.length) throw new BadRequestException('Unable to resolve target host.');
+  if (!validated.length) throw addressRefusal('address_unresolved');
   return { url, addresses: validated };
 }
 

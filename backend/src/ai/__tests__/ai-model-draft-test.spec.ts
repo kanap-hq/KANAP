@@ -141,7 +141,23 @@ async function testTheBodyIsValidated() {
   await pipe.transform(undefined, meta);
 }
 
+// A refused address comes back with its code, which the dialog translates.
+async function testRefusedAddressCarriesItsCode() {
+  const { instance, calls, req } = controller(null);
+  const result = await instance.test(undefined, {
+    provider: 'openai',
+    model: 'gpt-5-mini',
+    endpoint_url: 'http://10.0.0.5/v1',
+    api_key: 'typed-key',
+  }, req);
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'address_private_host');
+  assert.equal(result.message, 'Private or internal hosts are not allowed.');
+  assert.equal(calls.length, 0);
+}
+
 async function run() {
+  await testRefusedAddressCarriesItsCode();
   await testTheBodyIsValidated();
   await testUnsavedValuesAreTested();
   await testAnotherSpellingKeepsTheSavedKey();

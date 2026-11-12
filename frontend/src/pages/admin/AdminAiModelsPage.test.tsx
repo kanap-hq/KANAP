@@ -378,6 +378,37 @@ describe('AdminAiModelsPage model dialog', () => {
     });
   });
 
+  it('shows a refused address in the language of the screen', async () => {
+    (api.post as any).mockResolvedValueOnce({
+      data: {
+        ok: false, provider: 'openai', model: 'mistral-medium-latest', latency_ms: 5,
+        message: 'Private or internal hosts are not allowed.', code: 'address_private_host',
+        validation_errors: ['Private or internal hosts are not allowed.'],
+      },
+    }).mockResolvedValueOnce({
+      data: {
+        ok: false, provider: 'openai', model: 'mistral-medium-latest', latency_ms: 5,
+        message: 'Unable to resolve target host.', code: 'address_unresolved',
+        validation_errors: ['Unable to resolve target host.'],
+      },
+    });
+    await openEditDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
+    expect(await screen.findByText('This address points at a private or internal network.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
+    expect(await screen.findByText('The server could not be found from its address.')).toBeInTheDocument();
+
+    (api.patch as any).mockRejectedValueOnce({
+      response: {
+        status: 400,
+        data: { statusCode: 400, error: 'Bad Request', code: 'address_private_host', message: 'Private or internal hosts are not allowed.' },
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('This address points at a private or internal network.', { selector: '.MuiAlert-message' })).toBeInTheDocument();
+    expect(screen.queryByText('Private or internal hosts are not allowed.')).toBeNull();
+  });
+
   async function switchToOllama() {
     const dialog = screen.getByRole('dialog');
     fireEvent.mouseDown(within(dialog).getByText('OpenAI'));

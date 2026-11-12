@@ -30,6 +30,7 @@ import { useFeatures } from '../../config/FeaturesContext';
 import { useLocale } from '../../i18n/useLocale';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { secretAddressKey } from '../../utils/secretAddress';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import {
   AiModelConfig,
   AiModelConfigInput,
@@ -181,7 +182,7 @@ function DefaultStar({
 }
 
 export default function AdminAiModelsPage() {
-  const { t } = useTranslation(['admin', 'common']);
+  const { t } = useTranslation(['admin', 'common', 'errors']);
   const locale = useLocale();
   const { config } = useFeatures();
   const queryClient = useQueryClient();
@@ -220,7 +221,8 @@ export default function AdminAiModelsPage() {
     if (data?.used_by?.length) {
       return t('aiModels.errors.stillAssigned', { consumers: data.used_by.join(', ') });
     }
-    return data?.message ?? fallback;
+    // A coded refusal (a refused address) in the screen language; otherwise the server's sentence.
+    return getApiErrorMessage(err, t, fallback);
   };
 
   const saveMutation = useMutation({
@@ -278,7 +280,8 @@ export default function AdminAiModelsPage() {
 
   const testResultLine = (result: AiProviderTestResult): string => {
     if (!result.ok) {
-      return [result.message, ...(result.validation_errors ?? []).filter((item) => item !== result.message)].join(' ');
+      const message = result.code ? t(`errors:${result.code}`, { defaultValue: result.message }) : result.message;
+      return [message, ...(result.validation_errors ?? []).filter((item) => item !== result.message)].join(' ');
     }
     const parts = [t('aiModels.dialog.testOk', { latency: result.latency_ms ?? 0 })];
     parts.push(result.reasoning_effort_sent
