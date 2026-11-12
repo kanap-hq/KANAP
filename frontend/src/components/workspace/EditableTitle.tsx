@@ -251,7 +251,10 @@ export default function EditableTitle({
     if (!editing || submitted.current === null || !value) return;
     submitted.current = null;
     closing.current = true;
-    pendingFocus.current = sentByEnter.current && !tabbed.current;
+    // Only while the focus is still in the title or nowhere: a person who went on to another field keeps it.
+    const active = document.activeElement;
+    const focusLeft = !!active && active !== document.body && active !== inputRef.current;
+    pendingFocus.current = sentByEnter.current && !tabbed.current && !focusLeft;
     sentByEnter.current = false;
     tabbed.current = false;
     setEditing(false);
