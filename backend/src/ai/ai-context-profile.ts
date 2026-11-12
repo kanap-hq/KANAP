@@ -422,6 +422,13 @@ function withWebCapability(profile: AiContextProfile, needsWeb: boolean): AiCont
 const FILE_IMPORT_RE = /\b(?:import|imports|importe|importes|importer|importez|importons|importing|importiere|importieren|importa|importar)\b/;
 const TICKET_IMPORT_RE = /\b(?:ticket|tickets|glpi)\b/;
 const HOW_TO_RE = /\b(?:comment|how|wie|como)\b/;
+/** "N'importe quel", "peu importe", "no importa": the idioms import nothing. */
+const IMPORT_IDIOM_RE = /\bn['’]\s*importe\b|\bpeu importe\b|\bno importa\b/g;
+
+/** An import request in one of the four languages; a question on how to import is not one. */
+function asksToImport(text: string): boolean {
+  return FILE_IMPORT_RE.test(text.replace(IMPORT_IDIOM_RE, ' ')) && !HOW_TO_RE.test(text);
+}
 
 const SOCIAL_MESSAGE_RE = /^(hi|hello|hey|bonjour|bonsoir|salut|merci|thanks|thank you|ca va|ça va|help|aide)[\s!.?]*$/i;
 
@@ -1016,8 +1023,11 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   }
 
   // A spreadsheet import: "Importe ce fichier", "Import these servers", "Importiere die Datei",
-  // "Importa el archivo". A ticket import stays a task write, and "how do I import" a question.
-  if (FILE_IMPORT_RE.test(text) && !TICKET_IMPORT_RE.test(text) && !HOW_TO_RE.test(text)) {
+  // "Importa el archivo". A ticket import is a task write below ("Importe le ticket GLPI 4512"),
+  // and "how do I import" a question.
+  const importRequest = asksToImport(text);
+  const isTicketImport = importRequest && TICKET_IMPORT_RE.test(text);
+  if (importRequest && !isTicketImport) {
     return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };
   }
 
@@ -1107,10 +1117,10 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const isWrite = hasTechnologyPeopleIntent || hasTechnologyWebLinkIntent || hasTaskFieldStateWriteIntent
     || hasUserAdministrationIntent || hasAccessAdministrationIntent || hasVulnerabilityStateIntent
     || hasApplicationRetirement || hasContractCancellationIntent || hasBudgetLineCancellationIntent
-    || hasInstalledDeclaration || hasMainContactRelation
+    || hasInstalledDeclaration || hasMainContactRelation || isTicketImport
     || containsAny(writeText, [
     // "Set up :" names the subject of the question that follows. "Set" and "Set up Redis" still write.
-    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set(?!\s+up\s*:))\b/,
+    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|passe|passer|publish|publier|mark|set(?!\s+up\s*:))\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
     // "Résous INC-3", "Rouvre INC-3", "Annule INC-3", "Lève la confidentialité de INC-3".

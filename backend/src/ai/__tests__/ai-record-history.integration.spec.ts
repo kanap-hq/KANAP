@@ -36,6 +36,8 @@ type Seeded = {
   /** A person with no first or last name, and the one they replaced as owner (Plaid L9, lot F, M2). */
   nameless: Person;
   named: Person;
+  /** A person who reads the screens in French (Plaid L7: the states in their words). */
+  francophone: Person;
 };
 
 const SECOND_TENANT_NAME = 'Other tenant Postgres';
@@ -354,6 +356,26 @@ async function testImportAndSharedBudgetReference(seeded: Seeded) {
  * A record whose newest entries are updates with no visible change (left out by the History tab):
  * the first page reads past them to the entry before (Plaid L7, lot E), within five pages.
  */
+/**
+ * A state comes with the words of the History tab in the person's language: the model quotes
+ * "À traiter", never its own translation of `to_review` (Plaid L7 and L8).
+ */
+async function testStatesInThePersonsWords(seeded: Seeded) {
+  const technology = await read(seeded.data.tenantId, seeded.francophone, { entity_type: 'technologies', entity_id: 'TEC-10' });
+  const state = technology.items.flatMap((item) => item.changes).find((change: any) => change.field === 'vulnerability_state');
+  assert.deepEqual(state, {
+    field: 'vulnerability_state', before: 'to_review', after: 'handled', before_label: 'À traiter', after_label: 'Traitée',
+  });
+  const task = await read(seeded.data.tenantId, seeded.francophone, { entity_type: 'tasks', entity_id: seeded.data.task });
+  const status = task.items.flatMap((item) => item.changes).find((change: any) => change.field === 'status');
+  assert.deepEqual(status, { field: 'status', before: 'open', after: 'in_progress', before_label: 'Ouvert', after_label: 'En cours' });
+  // In English for an English reader: the same words as the screen.
+  const english = await read(seeded.data.tenantId, seeded.reader, { entity_type: 'technologies', entity_id: 'TEC-10' });
+  const englishState = english.items.flatMap((item) => item.changes).find((change: any) => change.field === 'vulnerability_state') as any;
+  assert.equal(englishState?.after_label, 'Handled');
+  console.log('  a state in the person\'s words, as the History tab names it: OK');
+}
+
 async function testEmptyPagesAreReadPast(seeded: Seeded) {
   const line = await seed(seeded.data.tenantId, (runner) => storedRow(runner, 'spend_items', seeded.data.capexLine));
   const invisible = () => seed(seeded.data.tenantId, (runner) => audit(runner, {
@@ -383,6 +405,9 @@ async function seedAll(tenantId: string, otherTenantId: string): Promise<Seeded>
     );
     const reader = await seedPerson(runner, tenantId, { first: 'Una', last: 'Unlimited' }, { infrastructure: 'reader', budget: 'reader', applications: 'reader', cost_centers: 'reader', contracts: 'reader' });
     const named = await seedPerson(runner, tenantId, { first: 'Olivier', last: 'Owner' }, {});
+    const francophone = await seedPerson(runner, tenantId, { first: 'Françoise', last: 'Lecteur' }, { infrastructure: 'reader', tasks: 'reader' });
+    await runner.query(`UPDATE users SET locale = 'fr' WHERE tenant_id = $1 AND id = $2`, [tenantId, francophone.id]);
+    const storedTask = (await runner.query(`SELECT to_jsonb(t) AS row FROM tasks t WHERE t.id = $1`, [data.task]))[0].row;
     const nameless = await seedPerson(runner, tenantId, { first: '', last: '' }, {});
     const budgetOnly = await seedPerson(runner, tenantId, { first: 'Bob', last: 'Budget' }, { budget: 'reader' });
     const limited = await seedPerson(runner, tenantId, { first: 'Lila', last: 'Limited' }, { budget: 'reader' }, { mode: 'limited', nodeCompanyId: data.companyA });
@@ -403,7 +428,7 @@ async function seedAll(tenantId: string, otherTenantId: string): Promise<Seeded>
     const storedContract = (await runner.query(`SELECT to_jsonb(t) AS row FROM contracts t WHERE t.id = $1`, [data.contractA]))[0].row;
     return {
       data, successor: successor.id as string, reader, budgetOnly, limited, technology, line, costCenter: costCenter.id as string,
-      storedCenter, storedContract, named, nameless,
+      storedCenter, storedContract, named, nameless, francophone, storedTask,
     };
   });
   // The owner changes from a named person to a person without a name, by that person.
@@ -424,6 +449,17 @@ async function seedAll(tenantId: string, otherTenantId: string): Promise<Seeded>
     table: 'technologies', recordId: base.data.technology, action: 'update',
     before: { ...base.technology, name: 'PostgreSQL' }, after: { ...base.technology, name: 'PostgreSQL', replaced_by_id: base.successor }, userId: base.reader.id,
   }));
+  // A vulnerability row of the successor technology handled, and the task started.
+  await seed(tenantId, (runner) => audit(runner, {
+    table: 'technology_vulnerabilities', recordId: randomUUID(), action: 'update',
+    before: { technology_id: base.successor, cve_id: 'CVE-2024-3094', state: 'to_review' },
+    after: { technology_id: base.successor, cve_id: 'CVE-2024-3094', state: 'handled' },
+    userId: base.reader.id,
+  }));
+  await seed(tenantId, (runner) => audit(runner, {
+    table: 'tasks', recordId: base.data.task, action: 'update',
+    before: { ...base.storedTask, status: 'open' }, after: { ...base.storedTask, status: 'in_progress' }, userId: base.reader.id,
+  }));
   await seed(tenantId, (runner) => audit(runner, {
     table: 'spend_items', recordId: base.data.opexLine, action: 'update',
     before: base.line, after: { ...base.line, description: 'Renewed description' }, userId: base.reader.id,
@@ -439,7 +475,7 @@ async function seedAll(tenantId: string, otherTenantId: string): Promise<Seeded>
   });
   return {
     data: base.data, successor: base.successor, reader: base.reader, budgetOnly: base.budgetOnly, limited: base.limited, otherTenantTechnology,
-    costCenter: base.costCenter, nameless: base.nameless, named: base.named,
+    costCenter: base.costCenter, nameless: base.nameless, named: base.named, francophone: base.francophone,
   };
 }
 
@@ -461,6 +497,7 @@ async function run() {
     await testOtherTenant(seeded);
     await testImportAndSharedBudgetReference(seeded);
     await testEmptyPagesAreReadPast(seeded);
+    await testStatesInThePersonsWords(seeded);
     console.log('ai-record-history.integration.spec: ok');
   } finally {
     await dropRaceTenant(tenantId);
