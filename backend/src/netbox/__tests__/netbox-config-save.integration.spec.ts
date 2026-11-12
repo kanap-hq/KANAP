@@ -14,6 +14,13 @@ const STORED_URL = 'https://netbox.example.com';
 // The form the save path writes (an encrypted credential reference) and the service reads.
 const STORED_TOKEN = { kind: 'encrypted', ciphertext: 'enc:stored-token', material_shape: 'api_token' };
 const LAST_TEST = { ok: true, tested_at: '2026-10-24T19:38:00.000Z' };
+// What the runs against the stored server left: the hourly run, the first import read
+// by a person and the last run shown on the page.
+const SERVER_STATE = {
+  auto_sync: true,
+  first_manual_sync_at: '2026-10-01T00:00:00.000Z',
+  sync_state: { status: 'success', trigger: 'manual', started_at: '2026-10-01T00:00:00.000Z' },
+};
 
 function service() {
   return new NetboxConfigService({
@@ -203,9 +210,9 @@ async function main() {
       const { tenantId, configId } = await seed(runner);
       await runner.query(
         `UPDATE ai_adapter_configs
-            SET metadata_json = metadata_json || '{"auto_sync":true,"first_manual_sync_at":"2026-10-01T00:00:00.000Z","review_pending":0}'::jsonb
+            SET metadata_json = metadata_json || $2::jsonb
           WHERE id = $1`,
-        [configId],
+        [configId, JSON.stringify({ ...SERVER_STATE, review_pending: 0 })],
       );
       const view = await service().save(runner.manager, tenantId, { base_url: '', api_token: 'nbt_ignored' }, { userId: null });
       assert.equal(view.configured, false);
@@ -220,6 +227,7 @@ async function main() {
       assert.deepEqual(row.metadata_json.role_map, { server: 'physical_server' }, 'the matches stay');
       assert.equal(row.metadata_json.first_manual_sync_at, undefined, 'a new server starts with a manual review');
       assert.equal(row.metadata_json.last_connection_test, undefined);
+      assert.equal(row.metadata_json.sync_state, undefined, 'the last run of the removed server is not shown');
       const audits = await auditRows(runner, configId);
       assert.equal(audits.length, 1);
       assert.equal(audits[0].action, 'update');

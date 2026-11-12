@@ -460,8 +460,9 @@ export class NetboxConfigService {
    * Removes the saved connection: the address and the token are emptied and the
    * connection is switched off, with an audit entry. What was imported stays, links to
    * Netbox included, and so do the matches, which a new connection can reuse. What
-   * describes the removed server goes: its connection test, the hourly run and the mark
-   * of the first import read by a person, so a new server starts with a manual review.
+   * describes the removed server goes: its connection test, its last run, the hourly run
+   * and the mark of the first import read by a person, so a new server starts with a
+   * manual review.
    */
   private async removeConnection(
     manager: EntityManager,
@@ -471,6 +472,7 @@ export class NetboxConfigService {
   ): Promise<NetboxIntegrationView> {
     const metadata: Record<string, unknown> = { ...(asRecord(existing.metadata_json) ?? {}) };
     delete metadata.last_connection_test;
+    delete metadata.sync_state;
     delete metadata.first_manual_sync_at;
     delete metadata.review_pending;
     metadata.auto_sync = false;
