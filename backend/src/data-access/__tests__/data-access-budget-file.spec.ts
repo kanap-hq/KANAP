@@ -251,6 +251,32 @@ async function testCreatePlacement(runner: QueryRunner, f: Fixture) {
   console.log('  creation: out of placement refused at preflight and load, inside created and placed: OK');
 }
 
+/**
+ * A new row named like a stored line: the check names the line only when the person reads it. Marta
+ * reads L3, not L1: a row named like L1 is a new line for her, and nothing in her report names L1.
+ */
+async function testLookalikes(runner: QueryRunner, f: Fixture) {
+  const nameOf = async (id: string) => (await runner.query(`SELECT product_name FROM spend_items WHERE id = $1`, [id]))[0].product_name as string;
+  const columns = ['item_number', 'name', 'company_name', 'account_number', 'currency'];
+  const file = csv(columns, [
+    { name: await nameOf(f.lines.L1), company_name: f.esName, account_number: '6000', currency: 'EUR' },
+    { name: await nameOf(f.lines.L3), company_name: f.esName, account_number: '6000', currency: 'EUR' },
+  ]);
+  await as(runner, f.persons.marta, async (m) => {
+    const report = await preflight(m, f, f.persons.marta, file);
+    assert.equal(report.ok, true, JSON.stringify(report.errors));
+    assert.deepEqual(report.warnings.duplicates.map((warning) => warning.params), [{ line: 3, ref: f.ref.L3 }], 'only the line she reads');
+    assert.equal(report.warnings.duplicatesCount, 1);
+    assert.ok(!JSON.stringify(report).includes(`"${f.ref.L1}"`), 'L1 is not named');
+  });
+  await as(runner, f.persons.ulla, async (m) => {
+    const report = await preflight(m, f, f.persons.ulla, file);
+    assert.deepEqual(report.warnings.duplicates.map((warning) => warning.params), [{ line: 2, ref: f.ref.L1 }, { line: 3, ref: f.ref.L3 }]);
+    assert.equal(report.warnings.duplicatesCount, 2);
+  });
+  console.log('  lookalikes: a limited person\'s check names only the lines she reads: OK');
+}
+
 async function testCentreChange(runner: QueryRunner, f: Fixture) {
   // Rita modifies L1 (FR / INF-FR); INF-ES is outside her edit access.
   await as(runner, f.persons.rita, async (m) => {
@@ -453,6 +479,7 @@ async function run() {
       await testReadOnly(runner, f);
       await testXlsx(runner, f);
       await testCreatePlacement(runner, f);
+      await testLookalikes(runner, f);
       await testCentreChange(runner, f);
       await testDimensionValues(runner, f);
       await testPicker(runner, f);

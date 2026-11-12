@@ -121,7 +121,10 @@ export type BudgetFileReport = {
   }>;
   changedSinceExportCount: number;
   warnings: {
+    /** New rows that look like a line the person reads, or an earlier row of the file: the first 20. */
     duplicates: Array<{ line: number } & BudgetFileSentence>;
+    /** How many there are in all (absent from a report of before 26.11.8). */
+    duplicatesCount?: number;
     ignoredColumns: string[];
     supplierNames: Array<{ line: number } & BudgetFileSentence>;
     /** company_name of another company than the cost center's; `code` names the sentence in `errors`. */

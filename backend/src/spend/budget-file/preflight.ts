@@ -1389,6 +1389,7 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
     changedSinceExportCount: bag.changed.length,
     warnings: {
       duplicates: bag.duplicates.slice(0, PREFLIGHT_LIST_LIMIT),
+      duplicatesCount: bag.duplicates.length,
       ignoredColumns: input.read.ignoredColumns,
       supplierNames: bag.supplierNames.slice(0, PREFLIGHT_LIST_LIMIT),
       costCenterCompanies: bag.costCenterCompanies.slice(0, PREFLIGHT_LIST_LIMIT),
