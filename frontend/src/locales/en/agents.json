@@ -687,7 +687,7 @@
       "ignored": "Ignored"
     },
     "internalNotesState": {
-      "used": "The agent uses them to decide and to reply.",
+      "used": "The agent uses them to decide and to brief the technician; its replies to the requester draw on the public messages only.",
       "ignored": "The agent reads only the public messages of the ticket."
     },
     "webEnabled": "Search the web",

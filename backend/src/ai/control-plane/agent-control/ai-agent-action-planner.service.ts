@@ -8,6 +8,7 @@ import {
   CompiledGuidance,
   compileSystemPrompt,
   RUNTIME_SAFETY_FLOOR_ACTION_PLANNER,
+  RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY,
   VerbatimCandidate,
 } from './ai-agent-prompt-compiler.service';
 import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
@@ -121,6 +122,24 @@ export type ActionPlannerPromptInput = {
   profile?: CompiledGuidance | null;
 };
 
+export type AdministrativeReplyPromptInput = {
+  ticket: ActionPlannerPromptInput['ticket'];
+  // The public items of the ticket.
+  timeline: ActionPlannerPromptInput['timeline'];
+  reply_language?: string | null;
+  administrative_intent?: PlannerAdministrativeIntent | null;
+  profile?: CompiledGuidance | null;
+};
+
+export type AdministrativeReplyResult = {
+  body: string;
+  model: string;
+  usage: { input_tokens: number; output_tokens: number } | null;
+  estimated_tokens: number;
+  estimated_cost_eur: number;
+  latency_ms: number;
+};
+
 // Reasoning models regularly need 45s+ on large planner prompts; a too-tight cap
 // aborts the stream mid-JSON and degrades the run to deterministic fallback actions.
 // Override per deployment via AI_AGENT_ACTION_PLANNER_TIMEOUT_MS.
@@ -128,6 +147,11 @@ const DEFAULT_LLM_TIMEOUT_MS = 120_000;
 // Raised well above the old 1600 so verbose / reasoning models do not truncate the
 // JSON (finish_reason=length). Override per deployment via AI_AGENT_ACTION_PLANNER_MAX_TOKENS.
 const MAX_ACTION_PLANNER_OUTPUT_TOKENS = 6000;
+const MAX_ADMINISTRATIVE_REPLY_OUTPUT_TOKENS = 3000;
+
+const AdministrativeReplySchema = z.object({
+  body: z.string().trim().min(1).max(12000).nullable().optional(),
+});
 
 const RoutingTargetSchema = z.object({
   kind: z.enum(['user', 'group']),
@@ -397,6 +421,75 @@ export class AiAgentActionPlannerService {
         routing: routingContextWithoutCatalogue(input.contexts.routing),
         participants: input.contexts.participants,
       },
+    };
+  }
+
+  maxAdministrativeReplyOutputTokens(): number {
+    return MAX_ADMINISTRATIVE_REPLY_OUTPUT_TOKENS;
+  }
+
+  /**
+   * The administrative reply the planner chose, written again on the public items of the ticket:
+   * the planner read its internal notes to decide, its own draft may carry their text.
+   */
+  buildAdministrativeReplyPayload(input: AdministrativeReplyPromptInput): Record<string, unknown> {
+    return {
+      task: 'Write the administrative reply to the requester of a helpdesk ticket.',
+      schema: {
+        body: 'the reply body, ready to send to the requester',
+      },
+      rules: [
+        'administrative_intent says what the reply is for: acknowledgement confirms that the request is being handled; close_reply tells the requester that the ticket is being closed; other asks the requester for what the request lacks or answers an administrative point.',
+        'Follow the agent instructions on administrative replies when they apply.',
+      ],
+      requested_language: input.reply_language ?? null,
+      administrative_intent: input.administrative_intent ?? 'other',
+      ticket: {
+        id: input.ticket.id,
+        title: input.ticket.title,
+        description: compact(input.ticket.description, 1000),
+        status: input.ticket.status ?? null,
+        priority: input.ticket.priority ?? null,
+      },
+      recent_timeline: input.timeline.slice(-8).map((entry) => ({
+        actor: entry.actor,
+        visibility: entry.visibility,
+        created_at: entry.createdAt,
+        body: compact(entry.body, 520),
+      })),
+    };
+  }
+
+  async draftAdministrativeReply(
+    context: AiExecutionContextWithManager,
+    input: AdministrativeReplyPromptInput,
+  ): Promise<AdministrativeReplyResult> {
+    const userPayload = this.buildAdministrativeReplyPayload(input);
+    const response = await this.llmClient.callStructuredJsonModel(context, {
+      taskName: 'administrative_reply',
+      systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY, input.profile),
+      userPayload,
+      maxTokens: MAX_ADMINISTRATIVE_REPLY_OUTPUT_TOKENS,
+      maxTokensEnvName: 'AI_AGENT_ADMINISTRATIVE_REPLY_MAX_TOKENS',
+      timeoutEnvName: 'AI_AGENT_ACTION_PLANNER_TIMEOUT_MS',
+      defaultTimeoutMs: DEFAULT_LLM_TIMEOUT_MS,
+      schema: AdministrativeReplySchema,
+    });
+    if (!response) {
+      throw new Error('No LLM runtime is configured for the administrative reply.');
+    }
+    if (!response.ok) {
+      throw new Error(`Administrative reply returned invalid JSON: ${response.metadata.failure?.message ?? 'invalid structured JSON'}`);
+    }
+    const actualInputTokens = response.usage ? response.usage.input_tokens : estimateJsonTokens(userPayload);
+    const actualOutputTokens = response.usage ? response.usage.output_tokens : estimateJsonTokens(response.text);
+    return {
+      body: typeof response.value.body === 'string' ? response.value.body.trim() : '',
+      model: `${response.runtime.providerId}:${response.runtime.model}`,
+      usage: response.usage,
+      estimated_tokens: actualInputTokens + actualOutputTokens,
+      estimated_cost_eur: agentCallCostEur(actualInputTokens, actualOutputTokens, response.runtime, response.usage),
+      latency_ms: response.latencyMs,
     };
   }
 

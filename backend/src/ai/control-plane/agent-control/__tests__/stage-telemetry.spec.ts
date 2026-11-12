@@ -16,6 +16,8 @@ const RUN_STEP_STAGE_EXPECTATIONS = {
   diagnosticBrief: { kind: 'synthesis', capabilityName: 'diagnostic_brief_synthesis' },
   needRepresentation: { kind: 'need_representation', capabilityName: 'ticket_need_representation' },
   evidenceExtraction: { kind: 'evidence_extraction', capabilityName: 'ticket_image_evidence_extraction' },
+  technicianBrief: { kind: 'synthesis', capabilityName: 'technician_brief_synthesis' },
+  administrativeReply: { kind: 'synthesis', capabilityName: 'administrative_reply_synthesis' },
 };
 
 function testStageTableMatchesTheFormerPerStageMethods() {
@@ -118,6 +120,8 @@ const STAGE_KEYS = [
   'knowledge_interpretation',
   'evidence_extraction',
   'action_planner',
+  'technician_brief',
+  'administrative_reply',
 ];
 
 async function testUsageMirrorWritesEveryStageKey() {
