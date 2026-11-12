@@ -149,6 +149,8 @@
   "CSV_STATUS_DATE_PASSED": "El estado es enabled pero el fin de validez ya pasó. Borre la fecha o cambie el estado a disabled. Si el archivo viene de una exportación anterior, exporte los datos de nuevo.",
   "CSV_STATUS_DATE_FUTURE": "El estado es disabled pero el fin de validez aún no ha llegado. Cambie el estado a enabled o indique una fecha pasada.",
   "CSV_IMPORT_FAILED": "La importación falló: {{reason}}",
+  "CSV_PROJECT_ORIGIN_STANDARD": "Un proyecto nuevo no puede tener la procedencia Solicitud. Convierta una solicitud, o utilice fast_track o legacy.",
+  "CSV_PROJECT_ORIGIN_LOCKED": "Solo un proyecto Fast-track o Histórico puede cambiar de procedencia, a Fast-track o Histórico.",
   "CSV_INCIDENT_STATUS_RESERVED": "{{reference}}: el estado no puede pasar de \"{{from}}\" a \"{{to}}\" mediante la importación. Solo un administrador del registro puede hacerlo; use Reabrir o Cancelar incidente en la aplicación.",
   "CSV_TECHNOLOGY_NOT_ADOPTED": "Tecnología desconocida «{{value}}». Adóptela primero desde el catálogo.",
   "CSV_NAME_AMBIGUOUS": "Varios registros se llaman «{{value}}».",

@@ -20,7 +20,7 @@
         "es": "Seguir cada lote de queso desde la recogida de la leche hasta la venta, para responder a una retirada en horas en lugar de días."
       },
       "status": "planned",
-      "origin": "standard",
+      "origin": "legacy",
       "planned_start": "{Y}-09-01",
       "planned_end": "{Y+1}-06-30",
       "estimated_effort_it": 60,
@@ -52,7 +52,7 @@
         "es": "Sustituir las cajas de las doce tiendas de Italia antes de que termine su soporte."
       },
       "status": "in_progress",
-      "origin": "standard",
+      "origin": "legacy",
       "planned_start": "{Y-1}-10-01",
       "planned_end": "{Y}-12-15",
       "estimated_effort_it": 45,

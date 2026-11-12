@@ -1,8 +1,11 @@
+import { BadRequestException } from '@nestjs/common';
 import type { CsvLanguage } from '../common/csv-sheet';
 import {
   CsvEntityConfig,
   CsvFieldType,
   CsvImportContext,
+  CsvImportParams,
+  CsvImportRow,
 } from '../common/csv';
 import { richTextCell } from '../common/csv/rich-text-cell';
 import { allocateItemNumbers } from '../common/item-number.service';
@@ -51,6 +54,46 @@ function normalizeCodes(entity: any): void {
     if (!entity[key]) continue;
     const resolved = lookup.get(String(entity[key]).trim().toLowerCase());
     if (resolved) entity[key] = resolved;
+  }
+}
+
+/**
+ * Request (`standard`) is assigned only when a request is converted. The screen refuses it on
+ * create and on any later change. The column default is still `standard`, so a new row that
+ * leaves origin out must be set to `legacy` before the insert (see `beforeCommit`).
+ */
+const STANDARD_ORIGIN_MESSAGE =
+  'A new project cannot have the origin Request. Convert a request, or use fast_track or legacy.';
+const LOCKED_ORIGIN_MESSAGE =
+  'Only a fast-track or legacy project can change its origin, to fast-track or legacy.';
+
+function refuseProjectOrigin(rows: CsvImportRow[], operation: CsvImportParams['operation']): void {
+  for (const row of rows) {
+    if (row.errors.length > 0) continue;
+    const origin = row.parsed.origin as string | null | undefined;
+    if (row.isInsert) {
+      // update_only never writes the new row, so its origin is not created.
+      if (operation === 'update_only') continue;
+      if (origin === 'standard') {
+        row.errors.push({
+          row: row.rowNumber,
+          column: 'origin',
+          message: STANDARD_ORIGIN_MESSAGE,
+          code: 'CSV_PROJECT_ORIGIN_STANDARD',
+        });
+      }
+      continue;
+    }
+    const stored = row.existingEntity?.origin as string | undefined;
+    if (origin == null || origin === '' || origin === stored) continue;
+    if (stored === 'standard' || origin === 'standard') {
+      row.errors.push({
+        row: row.rowNumber,
+        column: 'origin',
+        message: LOCKED_ORIGIN_MESSAGE,
+        code: 'CSV_PROJECT_ORIGIN_LOCKED',
+      });
+    }
   }
 }
 
@@ -550,7 +593,10 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
   ],
 
   /** A purpose cell that repeats its document is kept as stored, whatever tags it holds. */
-  afterValidate: (rows, context) => keepStoredSlotBodies(rows, context, 'projects', { purpose: 'purpose' }),
+  afterValidate: async (rows, context) => {
+    refuseProjectOrigin(rows, context.params.operation);
+    await keepStoredSlotBodies(rows, context, 'projects', { purpose: 'purpose' });
+  },
 
   /** The purpose lives in bound documents (the CSV service writes them there), the rest in columns. */
   sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'projects', { purpose: 'purpose' }, normalizeCodes),
@@ -561,6 +607,14 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
    */
   beforeCommit: async (entities: any[], context: CsvImportContext) => {
     for (const entity of entities) normalizeCodes(entity);
+
+    // New rows only. An update already carries its item number and keeps the stored origin,
+    // including Request on a project that came from a request.
+    for (const entity of entities) {
+      if (entity.item_number) continue;
+      if (!entity.origin) entity.origin = 'legacy';
+      else if (entity.origin === 'standard') throw new BadRequestException(STANDARD_ORIGIN_MESSAGE);
+    }
 
     // Assign item_numbers to new entities
     const newEntities = entities.filter(e => !e.item_number);
