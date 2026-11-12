@@ -33,7 +33,7 @@ Vaya a **Administración > Integraciones** y abra la tarjeta **Inventario de Net
 |-------|----------------|
 | **Activar la sincronización con Netbox** | El conmutador maestro. Cuando está desactivado, Kadratis no llama nunca a Netbox, ni a mano ni de forma programada. |
 | **Dirección de Netbox** | La dirección que usa para abrir Netbox en el navegador, por ejemplo `https://netbox.example.com`. |
-| **Token de API** | El token que creó en Netbox. Se guarda cifrado y no se vuelve a mostrar. Deje el campo vacío al guardar para conservar el token ya almacenado. |
+| **Token de API** | El token que creó en Netbox. Se guarda cifrado y no se vuelve a mostrar. Deje el campo vacío al guardar para conservar el token ya almacenado, mientras la dirección no cambie. Una dirección nueva vacía el token almacenado: vuelva a introducirlo. |
 | **Tiempo de espera (segundos)** | Cuánto esperar a Netbox antes de abandonar, entre 5 y 120. Déjelo vacío para usar 30. |
 | **Ignorar los errores de certificado** | Desactivado de forma predeterminada. Véase más arriba. |
 | **Sincronización automática** | Se ejecuta cada hora y aplica los cambios por su cuenta. Déjela desactivada hasta que la primera ejecución le parezca correcta. |

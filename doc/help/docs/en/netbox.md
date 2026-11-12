@@ -33,7 +33,7 @@ Go to **Administration > Integrations** and open the **Netbox inventory** card.
 |-------|---------------|
 | **Enable Netbox synchronisation** | The master switch. When it is off, Kadratis never calls Netbox, by hand or on a schedule. |
 | **Netbox address** | The address you use to open Netbox in a browser, for example `https://netbox.example.com`. |
-| **API token** | The token you created in Netbox. It is stored encrypted and never shown again. Leave the field empty when saving to keep the token already stored. |
+| **API token** | The token you created in Netbox. It is stored encrypted and never shown again. Leave the field empty when saving to keep the token already stored, as long as the address stays the same. A new address empties the stored token: enter it again. |
 | **Request timeout (seconds)** | How long to wait for Netbox before giving up, between 5 and 120. Leave it empty to use 30. |
 | **Ignore certificate errors** | Off by default. See above. |
 | **Automatic synchronisation** | Runs every hour and applies the changes on its own. Leave it off until your first run looks right. |

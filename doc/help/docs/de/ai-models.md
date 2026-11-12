@@ -72,7 +72,7 @@ In einer On-Premise-Installation erscheint diese Zeile überhaupt nicht.
 - **Anbieter**: wer das Modell bereitstellt. Die Auswahl bestimmt, welche der folgenden Felder gelten.
 - **Modell**: die genaue Modellkennung in der Schreibweise des Anbieters (zum Beispiel `claude-sonnet-5`). Das ist kein Anzeigename; ein Tippfehler zeigt sich hier als fehlgeschlagener Aufruf, nicht als Validierungsfehler.
 - **Serveradresse**: nur für Anbieter, die Sie selbst betreiben oder gezielt adressieren. Wenn Kadratis in Docker läuft und das Modell auf derselben Host-Maschine, adressieren Sie den Host statt `localhost`.
-- **API-Schlüssel**: die Zugangsdaten Ihres Anbieters. Er wird verschlüsselt gespeichert und nie wieder angezeigt: Wenn Sie ein vorhandenes Modell erneut öffnen, zeigt das Feld eine Maske (`••••••••`) mit dem Hinweis *Leer lassen, um den aktuellen Schlüssel zu behalten*, Sie tippen also nur hinein, um den Schlüssel zu ersetzen. Ist auf der Instanz kein Verschlüsselungsgeheimnis konfiguriert, erklärt eine Warnung am Seitenanfang, dass Schlüssel überhaupt nicht gespeichert werden können.
+- **API-Schlüssel**: die Zugangsdaten Ihres Anbieters. Er wird verschlüsselt gespeichert und nie wieder angezeigt: Wenn Sie ein vorhandenes Modell erneut öffnen, zeigt das Feld eine Maske (`••••••••`) mit dem Hinweis *Leer lassen, um den aktuellen Schlüssel zu behalten*, Sie tippen also nur hinein, um den Schlüssel zu ersetzen. Ein neuer Anbieter oder eine neue Serveradresse leert den gespeicherten Schlüssel: Geben Sie ihn erneut ein. Ist auf der Instanz kein Verschlüsselungsgeheimnis konfiguriert, erklärt eine Warnung am Seitenanfang, dass Schlüssel überhaupt nicht gespeichert werden können.
 
 **Fähigkeiten**:
 
