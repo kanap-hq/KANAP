@@ -75,6 +75,7 @@ vi.mock('../ai/aiApi', () => ({
 // The dialog itself is covered by its own test; here only the menu entry that opens it.
 vi.mock('./about/AboutDialog', () => ({ default: ({ open }: { open: boolean }) => (open ? <div role="dialog">about-dialog</div> : null) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+vi.mock('./onboarding/StepHint', () => ({ default: () => <section aria-label="step-hint" /> }));
 
 const applicationVisibility = vi.hoisted(() => ({
   isLoading: false,
@@ -153,6 +154,17 @@ describe('Layout page scroller', () => {
     expect(scroller).not.toContainElement(banner);
     // Banner first, scroller after it.
     expect(banner.compareDocumentPosition(scroller) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('puts the hint of a first step under the scroller, in the flow of <main>, so that it covers no page', () => {
+    const { container } = renderShell();
+    const main = container.querySelector('main') as HTMLElement;
+    const scroller = container.querySelector('.kanap-app-scroll') as HTMLElement;
+    const hint = screen.getByRole('region', { name: 'step-hint' });
+
+    expect(hint.parentElement).toBe(main);
+    expect(main.lastElementChild).toBe(hint);
+    expect(scroller.nextElementSibling).toBe(hint);
   });
 
   it('bounds <main> to the viewport and lets only the scroller scroll', () => {

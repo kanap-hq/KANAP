@@ -825,12 +825,14 @@ export default function Layout() {
             <Outlet />
           </React.Suspense>
         </Box>
+        {/* The hint of a first step, under the page: the scroller gives up its height, so the
+            bar covers nothing. */}
+        <StepHint />
       </Box>
       {/* The previous in-app address, where a cancelled creation returns. */}
       <NavigationTracker />
       {/* The name prompt is mounted last, so it comes first when both are open. */}
       <FirstOpenDialog />
-      <StepHint />
       <NamePromptDialog />
     </Box>
     </NotifyProvider>
