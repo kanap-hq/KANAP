@@ -219,7 +219,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'auth/entra.controller.ts', member: 'handleConsentCallback', site: 'with_tenant', class: 'no_scoped_table', reason: 'Entra consent callback: audit_log entry on the tenant' },
   { file: 'auth/entra.controller.ts', member: 'handleSetupCallback', site: 'with_tenant', class: 'no_scoped_table', reason: 'Entra setup callback: audit_log entry on the tenant' },
   { file: 'auth/entra.controller.ts', member: 'issueLoginSession', site: 'with_tenant', class: 'no_scoped_table', reason: 'Entra sign-in: the person and their session' },
-  { file: 'auth/entra-directory-sync.service.ts', member: 'runTenantSync', site: 'with_tenant', class: 'no_scoped_table', reason: 'Entra directory sync (schedule, setup, admin route): users, the accounts it disables, and their managers', count: 3 },
+  { file: 'auth/entra-directory-sync.service.ts', member: 'runTenantSync', site: 'with_tenant_execution', class: 'no_scoped_table', reason: 'Entra directory sync (schedule, setup, admin route): short transactions on the connection that holds the sync lock (users, the accounts it disables, their managers)' },
   { file: 'audit/security-events.service.ts', member: 'recordAuthEvent', site: 'with_tenant', class: 'no_scoped_table', reason: 'writes a sign-in event to audit_log' },
   { file: 'public/public.controller.ts', member: 'activateTrial', site: 'with_tenant', class: 'no_scoped_table', reason: 'trial activation: password reset token of the new administrator (users)' },
 

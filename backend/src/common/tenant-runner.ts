@@ -1,7 +1,12 @@
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 
 export type TenantExecutionOptions = {
   transaction?: boolean;
+  /**
+   * Runs on this connection, which the caller opened and releases, instead of one taken from the
+   * pool for the call (a job that keeps one connection for its whole run).
+   */
+  runner?: QueryRunner;
 };
 
 async function setTenantContext(
@@ -28,8 +33,9 @@ export async function withTenantExecution<T>(
   opts?: TenantExecutionOptions,
 ): Promise<T> {
   const useTransaction = opts?.transaction !== false;
-  const runner = dataSource.createQueryRunner();
-  await runner.connect();
+  const ownRunner = !opts?.runner;
+  const runner = opts?.runner ?? dataSource.createQueryRunner();
+  if (ownRunner) await runner.connect();
   try {
     if (useTransaction) {
       await runner.startTransaction();
@@ -57,10 +63,12 @@ export async function withTenantExecution<T>(
     } catch {
       // ignore tenant reset errors
     }
-    try {
-      await runner.release();
-    } catch {
-      // ignore release errors
+    if (ownRunner) {
+      try {
+        await runner.release();
+      } catch {
+        // ignore release errors
+      }
     }
   }
 }

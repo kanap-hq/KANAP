@@ -15,7 +15,11 @@ import { EntraDirectorySyncService } from '../entra-directory-sync.service';
 //   disabled; a disabled Administrator does not count.
 // - runs once at a time per workspace: a second run while one is in progress does nothing and
 //   says so (`already_running`), without waiting. Two workspaces sync at the same time.
-// Microsoft is replaced by a fake directory; the database is real.
+// - works on the connection that holds its lock: it runs in the smallest pool (DB_POOL_MAX=2)
+//   while the caller holds the other connection (the scheduler's lock, a request's transaction),
+//   and a run whose connection is lost fails, so the work is done once.
+// - counts only the accounts it disables itself.
+// Microsoft is replaced by a fake directory; the database is real, with the smallest pool.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret-of-at-least-32-characters';
@@ -23,6 +27,8 @@ process.env.S3_ENDPOINT ||= 'http://127.0.0.1:9';
 process.env.S3_BUCKET ||= 'directory-sync-guards-spec';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
+process.env.DB_POOL_MAX = '2';
+process.env.DB_POOL_CONNECTION_TIMEOUT = '4000';
 
 type DirectoryEntry = { accountEnabled: boolean } | undefined;
 
@@ -38,7 +44,10 @@ class FakeDirectory {
   isConsentError = () => false;
   fetchDirectoryUsers = async (_token: string, ids: string[]) => {
     this.reads += 1;
-    if (this.gate) await this.gate;
+    // The gate holds one read only.
+    const gate = this.gate;
+    this.gate = null;
+    if (gate) await gate;
     return ids
       .map((id) => ({ id, entry: this.entries.get(id) }))
       .filter(({ entry }) => !!entry)
@@ -263,6 +272,103 @@ async function testFailedRunReleasesTheLock(sync: EntraDirectorySyncService, dir
   assert.equal(next.status, 'ok', 'a failed run leaves no lock behind');
 }
 
+/** The caller holds one of the pool's two connections: the scheduler's lock, a request's transaction. */
+async function testSmallestPool(sync: EntraDirectorySyncService, dir: FakeDirectory, ds: DataSource) {
+  const w = await workspace(ds);
+  await w.user('nia', { admin: true });
+  const leaver = await w.user('oli', { admin: false });
+  dir.entries.set('oid-nia', { accountEnabled: true });
+  for (const caller of ['scheduler', 'request'] as const) {
+    const held = ds.createQueryRunner();
+    await held.connect();
+    try {
+      if (caller === 'scheduler') {
+        await held.query(`SELECT pg_try_advisory_lock(hashtext('directory-sync-guards-spec'))`);
+      } else {
+        await held.startTransaction();
+        await held.query(`SELECT set_config('app.current_tenant', $1, true)`, [w.tenantId]);
+      }
+      const result = await within(sync.syncTenant(w.tenantId), 15_000, `sync beside the ${caller}`);
+      assert.equal(result.status, 'ok', `${caller}: ${result.message}`);
+      assert.equal(result.synced, 1, `${caller}: the run did its work`);
+      assert.equal((await storedSyncStatus(ds, w.tenantId))?.status, 'ok', `${caller}: status recorded`);
+    } finally {
+      if (held.isTransactionActive) await held.rollbackTransaction();
+      else await held.query(`SELECT pg_advisory_unlock_all()`);
+      await held.release();
+    }
+  }
+  assert.equal(await statusOf(ds, w.tenantId, leaver), 'disabled');
+}
+
+/** The lock's connection is lost during the directory read: that run fails, the next does the work once. */
+async function testLostLockConnection(sync: EntraDirectorySyncService, dir: FakeDirectory, ds: DataSource) {
+  const w = await workspace(ds);
+  await w.user('pat', { admin: true });
+  const leaver = await w.user('quinn', { admin: false });
+  dir.entries.set('oid-pat', { accountEnabled: true });
+
+  let open!: () => void;
+  dir.gate = new Promise<void>((resolve) => { open = resolve; });
+  const readsBefore = dir.reads;
+  const first = sync.syncTenant(w.tenantId);
+  try {
+    for (let i = 0; i < 100 && dir.reads === readsBefore; i++) await new Promise((r) => setTimeout(r, 20));
+    const holders: Array<{ pid: number }> = await ds.query(
+      `SELECT pid FROM pg_locks
+        WHERE locktype = 'advisory' AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
+          AND classid::bigint = $1 AND objid::bigint = (hashtext($2)::bigint + 4294967296) % 4294967296 AND objsubid = 2`,
+      [0x45445359, `entra-directory-sync:${w.tenantId}`],
+    );
+    assert.equal(holders.length, 1, 'one connection holds the sync lock');
+    const [killed] = await ds.query(`SELECT pg_terminate_backend($1) AS ok`, [holders[0].pid]);
+    assert.equal(killed.ok, true);
+    for (let i = 0; i < 100; i++) {
+      const [row] = await ds.query(`SELECT count(*)::int AS n FROM pg_stat_activity WHERE pid = $1`, [holders[0].pid]);
+      if (row.n === 0) break;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+
+    const second = await within(sync.syncTenant(w.tenantId), 15_000, 'run after the lost connection');
+    assert.equal(second.status, 'ok', `second run: ${second.message}`);
+    open();
+    const firstResult = await within(first, 15_000, 'first run after the gate');
+    assert.equal(firstResult.status, 'error', 'the run that lost its connection fails');
+    assert.equal(firstResult.removed + second.removed, 1, 'the account is disabled and counted once');
+    assert.equal(firstResult.synced + second.synced, 1, 'the profile is refreshed once');
+  } finally {
+    open();
+    await first.catch(() => undefined);
+  }
+  assert.equal(await statusOf(ds, w.tenantId, leaver), 'disabled');
+}
+
+/** An account disabled meanwhile (from the Users screen) is not counted by the run. */
+async function testAlreadyDisabledIsNotCounted(sync: EntraDirectorySyncService, dir: FakeDirectory, ds: DataSource) {
+  const w = await workspace(ds);
+  await w.user('rae', { admin: true });
+  const leaver = await w.user('sam', { admin: false });
+  dir.entries.set('oid-rae', { accountEnabled: true });
+  let open!: () => void;
+  dir.gate = new Promise<void>((resolve) => { open = resolve; });
+  const readsBefore = dir.reads;
+  const run = sync.syncTenant(w.tenantId);
+  try {
+    for (let i = 0; i < 100 && dir.reads === readsBefore; i++) await new Promise((r) => setTimeout(r, 20));
+    await withTenantExecution(ds, w.tenantId, (manager) =>
+      manager.query(`UPDATE users SET status = 'disabled' WHERE tenant_id = $1 AND id = $2`, [w.tenantId, leaver]),
+    );
+    open();
+    const result = await within(run, 15_000, 'run after the gate');
+    assert.equal(result.status, 'ok');
+    assert.equal(result.removed, 0, 'the run disabled nobody');
+    assert.equal(result.disabled, 0);
+  } finally {
+    open();
+    await run.catch(() => undefined);
+  }
+}
+
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for entra-directory-sync-guards.integration.spec.ts.');
   const { AppModule } = require('../../app.module');
@@ -281,10 +387,14 @@ async function run() {
     ['a disabled Administrator does not count', testDisabledAdministratorDoesNotCount],
     ['one run at a time per workspace', testOneRunAtATime],
     ['a failed run releases the lock', testFailedRunReleasesTheLock],
+    ['the smallest pool is enough', testSmallestPool],
+    ['a lost lock connection fails its run', testLostLockConnection],
+    ['an account disabled meanwhile is not counted', testAlreadyDisabledIsNotCounted],
   ];
   try {
     for (const [name, test] of tests) {
       dir.entries.clear();
+      dir.gate = null;
       try {
         await test(sync, dir, dataSource);
         console.log(`ok - ${name}`);
