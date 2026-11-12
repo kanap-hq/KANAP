@@ -28,6 +28,7 @@ import {
   onWindowChange$,
   activeEditor$,
 } from '@mdxeditor/editor';
+import { richTextLinkAddress } from '../lib/richTextLinkAddress';
 
 /**
  * Custom replacement for MDXEditor's built-in link dialog.
@@ -179,7 +180,9 @@ export default function MarkdownLinkDialog() {
   // Preview popover for an existing link: stays anchored to the link, and closes
   // when the selection moves off it (matching MDXEditor's default behaviour).
   if (!virtualAnchor) return <></>;
-  const urlIsExternal = state.url.startsWith('http');
+  // The preview opens the addresses a rich text may link to; any other address shows as text.
+  const address = richTextLinkAddress(state.url);
+  const urlIsExternal = address !== null && /^https?:/i.test(address);
 
   return (
     <Popper
@@ -204,19 +207,18 @@ export default function MarkdownLinkDialog() {
           sx={{ pl: 1.5, pr: 0.5, py: 0.5, maxWidth: 440 }}
         >
           <Typography
-            component="a"
-            href={state.url}
-            target={urlIsExternal ? '_blank' : undefined}
-            rel="noreferrer"
+            {...(address === null
+              ? { component: 'span' as const }
+              : { component: 'a' as const, href: address, target: urlIsExternal ? '_blank' : undefined, rel: 'noreferrer' })}
             sx={{
-              color: 'primary.main',
+              color: address === null ? 'text.secondary' : 'primary.main',
               textDecoration: 'none',
               maxWidth: 280,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               fontSize: 13,
-              '&:hover': { textDecoration: 'underline' },
+              ...(address === null ? {} : { '&:hover': { textDecoration: 'underline' } }),
             }}
           >
             {state.url}

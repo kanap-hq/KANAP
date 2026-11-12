@@ -9,6 +9,7 @@ import { missingConnectionFields } from '../connection-creation';
 import { Asset } from '../../assets/asset.entity';
 import { AuditService, AuditSourceOptions } from '../../audit/audit.service';
 import { BulkDeleteResult } from '../../common/delete.types';
+import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import {
   assetSummary,
@@ -151,7 +152,8 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     if (!body || typeof body !== 'object') throw new BadRequestException('Body is required');
 
     const name = this.normalizeRequiredText(body.name, 'name');
-    const description = this.normalizeNullable(body.description);
+    // The description is rich text.
+    const description = await normalizeMarkdownRichText(this.normalizeNullable(body.description), { fieldName: 'description' });
     const topology = body.topology && !atTitle ? this.normalizeTopology(body.topology) : 'server_to_server';
     const lifecycle = await this.normalizeLifecycle(body.lifecycle, tenant, mg, 'active');
     const protocols = atTitle ? [] : await this.normalizeProtocols(body.protocols ?? body.protocol_codes, tenant, mg);
@@ -281,7 +283,13 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
 
     const topology = body.topology ? this.normalizeTopology(body.topology) : (existing.topology as Topology);
     const name = body.name ? this.normalizeRequiredText(body.name, 'name') : existing.name;
-    const description = body.hasOwnProperty('description') ? this.normalizeNullable(body.description) : existing.description;
+    // Rich text: a changed text is checked as a write, the stored one is kept as it is.
+    const description = body.hasOwnProperty('description')
+      ? await normalizeMarkdownRichText(this.normalizeNullable(body.description), {
+        fieldName: 'description',
+        storedValue: existing.description,
+      })
+      : existing.description;
     const lifecycle = await this.normalizeLifecycle(
       body.hasOwnProperty('lifecycle') ? body.lifecycle : existing.lifecycle,
       tenant,

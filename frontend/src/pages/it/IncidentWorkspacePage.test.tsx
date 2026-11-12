@@ -180,7 +180,7 @@ const incident: Incident = {
 
 function renderPage(tab = 'overview') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const view = render(
+  const tree = (
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={[`/it/incidents/INC-1/${tab}`]}>
@@ -189,9 +189,13 @@ function renderPage(tab = 'overview') {
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
-    </ThemeProvider>,
+    </ThemeProvider>
   );
-  return Object.assign(view, { queryClient });
+  const view = render(tree);
+  return Object.assign(view, {
+    queryClient,
+    renderAgain: () => view.rerender(tree),
+  });
 }
 
 /** Types into the review document: opens the editor (auto edit mode) and edits it. */
@@ -585,6 +589,22 @@ describe('IncidentWorkspacePage — delete', () => {
     expect(asked.confirmLabel).toBe('it:pages.incidents.delete.confirmAnyway');
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith(`/incidents/${incident.id}`));
     await waitFor(() => expect(navigateMock).toHaveBeenCalled());
+  });
+
+  it('does not load the deleted incident again after deleting it', async () => {
+    vi.mocked(api.post).mockImplementation(async (url: string) => (url === '/incidents/delete-check' ? { data: impact } : { data: {} }) as any);
+    const { renderAgain } = renderPage();
+    await screen.findByRole('button', { name: 'common:buttons.delete' });
+    const loadsBefore = vi.mocked(incidentsApi.get).mock.calls.filter(([routeId]) => routeId === 'INC-1' || routeId === incident.id).length;
+    expect(loadsBefore).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith(`/incidents/${incident.id}`));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalled());
+    // The router can keep the page on screen while the list loads: a render then must not reload it.
+    renderAgain();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(vi.mocked(incidentsApi.get).mock.calls.filter(([routeId]) => routeId === 'INC-1' || routeId === incident.id)).toHaveLength(loadsBefore);
   });
 
   it('refuses an incident holding regulatory reporting data before any confirmation', async () => {

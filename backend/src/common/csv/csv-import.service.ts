@@ -26,6 +26,7 @@ import {
 import { CsvResolverService } from './csv-resolver.service';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
+import { isRichTextContentRefusal } from '../markdown-limits';
 import { markdownWorkBudget } from '../markdown-worker';
 import { uploadedBytes } from '../upload';
 
@@ -556,6 +557,7 @@ export class CsvImportService {
       if (existingEntity) {
         parsedRow.existingEntity = existingEntity;
         parsedRow.isInsert = false;
+        this.keepStoredRichText(importFields, raw, parsedRow, existingEntity);
       }
 
       // Assemble NESTED fields into their parent objects (full replace: onto the stored list)
@@ -586,6 +588,26 @@ export class CsvImportService {
     }
 
     return parsedRows;
+  }
+
+  /**
+   * A rich-text cell refused for an HTML tag or for the address of a link, that repeats the
+   * stored text of its column, is no error: a text saved before that rule stays as it is, and its row stays importable.
+   */
+  private keepStoredRichText(
+    fields: CsvFieldDefinition[],
+    raw: Record<string, string>,
+    row: CsvImportRow,
+    existingEntity: any,
+  ): void {
+    row.errors = row.errors.filter((error) => {
+      if (!isRichTextContentRefusal(error.code)) return true;
+      const field = fields.find((candidate) => candidate.csvColumn === error.column);
+      const stored = field ? existingEntity[field.entityProperty] : undefined;
+      if (!field || typeof stored !== 'string' || stored.trim() !== this.getRawValue(field, raw)) return true;
+      row.parsed[field.entityProperty] = stored;
+      return false;
+    });
   }
 
   /**

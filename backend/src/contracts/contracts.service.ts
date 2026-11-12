@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { moduleRightRequired } from '../auth/module-right-required';
 import { BUDGET_LINE_TABLE, BUDGET_NATURES, linkedLineOf, naturesAnd } from '../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -24,6 +24,7 @@ import { validate as isUuid } from 'uuid';
 import { ContractContactsService } from './contract-contacts.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { assertWebLinkUrl } from '../common/web-link-url';
+import { markdownWorkBudget, normalizeMarkdownRichText } from '../common/markdown-worker';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import {
@@ -918,6 +919,8 @@ export class ContractsService {
     if (!rawBody?.name) throw new BadRequestException('name is required');
     this.validateInput(rawBody);
     const body = await this.writableBody(mg, rawBody);
+    // The notes are rich text.
+    if (body.notes !== undefined) body.notes = await normalizeMarkdownRichText(body.notes, { fieldName: 'notes' });
     // A new contract goes where the person may place it (spec §2.3): the clear refusal comes
     // before the INSERT policy, which would answer 42501.
     await assertContractPlacement(mg, body.company_id ?? null, body.cost_center_id ?? null);
@@ -955,6 +958,10 @@ export class ContractsService {
     await assertContractsEditable(mg, [id]);
     this.validateInput({ ...existing, ...rawBody });
     const body = await this.writableBody(mg, rawBody);
+    // The notes are rich text: a changed text is checked as a write, the stored one is kept as it is.
+    if (body.notes !== undefined) {
+      body.notes = await normalizeMarkdownRichText(body.notes, { fieldName: 'notes', storedValue: existing.notes });
+    }
     // An owner edits a field, never the place: a change of company or place must be placable.
     const nextCompany = body.company_id !== undefined ? body.company_id : existing.company_id;
     const nextPlace = body.cost_center_id !== undefined ? body.cost_center_id : existing.cost_center_id;
@@ -1506,6 +1513,7 @@ export class ContractsService {
     // contract counts as unchanged and is not written: no audit line, no new `updated_at`.
     let inserted = 0; let updated = 0; let unchanged = 0;
     const toWrite: typeof unique = [];
+    const markdownBudget = markdownWorkBudget();
     const now = new Date();
     const today = utcDateYmd(now);
     for (const item of unique) {
@@ -1532,6 +1540,16 @@ export class ContractsService {
         continue;
       } else updated += 1;
       toWrite.push(item);
+      // Notes the write would refuse (`create`, `update`): said for the row, dry run included.
+      try {
+        await normalizeMarkdownRichText(item.notes, { fieldName: 'notes', storedValue: exists?.notes, budget: markdownBudget });
+      } catch (error) {
+        if (!(error instanceof HttpException) || error.getStatus() !== 400) throw error;
+        const code = (error.getResponse() as { code?: unknown })?.code;
+        errors.push(typeof code === 'string'
+          ? rowError(item.line, 'notes', code, error.message)
+          : { row: item.line, message: error.message });
+      }
       // The update would be refused (`update`): said for the row, dry run included.
       if (exists && turnsOffRenewalOfRenewedContract(exists, { ...exists, start_date: item.start_date as any, duration_months: item.duration_months, auto_renewal: item.auto_renewal }, today)) {
         errors.push({ row: item.line, message: `auto_renewal: ${RENEWED_CONTRACT_RENEWAL_OFF}` });

@@ -278,6 +278,7 @@ export class TechnologiesService {
         applications: counts.get(row.id)?.applications ?? 0,
         versions_in_use: counts.get(row.id)?.versions_in_use ?? 0,
         next_support_end: counts.get(row.id)?.next_support_end ?? null,
+        next_support_end_kind: counts.get(row.id)?.next_support_end_kind ?? null,
         ended_versions: counts.get(row.id)?.ended_versions ?? 0,
       })),
       total: Number(rows[0]?.total ?? 0),

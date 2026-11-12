@@ -273,6 +273,8 @@ export default function TaskWorkspacePage() {
   const [isContentScrolled, setIsContentScrolled] = React.useState(false);
   const { data: classificationDefaults, isLoading: classificationDefaultsLoading } = useClassificationDefaults();
 
+  // Set once this task is deleted: the page leaves without loading it again.
+  const [deletedId, setDeletedId] = React.useState<string | null>(null);
   const {
     data: task,
     isLoading,
@@ -283,7 +285,7 @@ export default function TaskWorkspacePage() {
       const res = await api.get<TaskData>(`/tasks/${id}`);
       return res.data;
     },
-    enabled: !!id && !isCreate,
+    enabled: !!id && !isCreate && deletedId !== id,
     placeholderData: (previousData) => previousData,
   });
   const taskMatchesCurrentRoute = React.useMemo(() => taskMatchesRoute(task, id), [task, id]);
@@ -1013,8 +1015,16 @@ export default function TaskWorkspacePage() {
     try {
       await waitForSidebarSaves();
       await api.delete('/tasks/bulk', { data: { ids: [task.id] } });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      // The page leaves first. This task's query (keyed by T-n or by its id) is dropped
+      // so it is not read again, then the lists read again.
+      setDeletedId(id);
       navigate(originPath);
+      queryClient.removeQueries({ queryKey: ['tasks', id], exact: true });
+      if (task.id !== id) queryClient.removeQueries({ queryKey: ['tasks', task.id], exact: true });
+      void queryClient.invalidateQueries({
+        queryKey: ['tasks'],
+        predicate: (q) => q.queryKey[1] !== id && q.queryKey[1] !== task.id,
+      });
     } catch (error) {
       setError(getApiErrorMessage(error, t, t('portfolio:workspace.task.messages.deleteFailed')));
     }

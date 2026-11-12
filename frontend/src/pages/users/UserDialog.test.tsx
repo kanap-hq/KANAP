@@ -421,3 +421,67 @@ describe('UserDialog save and invite', () => {
     await waitFor(() => expect(post).toHaveBeenCalledWith('/users/new-1/invite', { sign_in: 'password' }));
   });
 });
+
+describe('UserDialog empty role list', () => {
+  const CONTACT_ID = '22222222-2222-4222-8222-222222222222';
+  const CONTACT = {
+    id: CONTACT_ID,
+    role_name: 'Contact',
+    role_description: 'Directory contact without app access by default',
+    is_system: true,
+  };
+
+  // The column is NOT NULL, so a user with no role row still carries Contact there.
+  function userWithLegacyContactOnly() {
+    const { role_ids: _roleIds, roles: _roles, ...rest } = USER;
+    return {
+      ...rest,
+      role_id: CONTACT_ID,
+      role: { id: CONTACT_ID, role_name: 'Contact' },
+    };
+  }
+
+  function mockOpenedUser(
+    user: Record<string, unknown>,
+    roleItems: Array<{ id: string; name?: string; is_primary?: boolean }>,
+  ) {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/users/u-1') return { data: user };
+      if (url === '/users/u-1/roles') return { data: { items: roleItems } };
+      if (url === '/users/u-1/data-access') return { data: PERSON_ACCESS };
+      if (url === '/roles') return { data: { items: [CONTACT, ROLE] } };
+      return { data: { items: [] } };
+    });
+  }
+
+  async function waitForRolesLoaded() {
+    await screen.findByRole('textbox', { name: 'userForm.fields.email' });
+    await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+  }
+
+  it('shows no role chip when the role list is empty, and saving keeps that list empty', async () => {
+    mockOpenedUser(userWithLegacyContactOnly(), []);
+    renderDialog();
+    await waitForRolesLoaded();
+    expect(screen.queryByText(/builtIn\.contact\.name/)).not.toBeInTheDocument();
+    expect(screen.getByText('userForm.fields.rolesEmptyHint')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'userForm.fields.firstName' }), {
+      target: { value: 'Marta2' },
+    });
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(put).toHaveBeenCalledWith('/users/u-1/roles', { role_ids: [] }));
+  });
+
+  it('shows the chips from the role list and ignores the legacy Contact column', async () => {
+    mockOpenedUser(
+      { ...userWithLegacyContactOnly(), role_ids: [CONTACT_ID] },
+      [{ id: ROLE_ID, name: 'Budget member', is_primary: true }],
+    );
+    renderDialog();
+    expect(await screen.findByText('Budget member')).toBeInTheDocument();
+    await waitForRolesLoaded();
+    expect(screen.queryByText(/builtIn\.contact\.name/)).not.toBeInTheDocument();
+  });
+});

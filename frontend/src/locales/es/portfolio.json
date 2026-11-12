@@ -207,11 +207,11 @@
         "timeLogged": "Tiempo registrado"
       },
       "values": {
-        "averageMonthlyProjectEffort": "Esfuerzo promedio mensual en proyectos (últimos 6 meses): {{value}} d/mes",
+        "averageMonthlyProjectEffort": "Esfuerzo promedio mensual en proyectos (últimos 6 meses): {{value}}\u00a0d/mes",
         "unassigned": "Sin asignar",
         "skillCount_one": "{{count}} competencia",
         "skillCount_other": "{{count}} competencias",
-        "daysPerMonthShort": "{{count}} d/mes",
+        "daysPerMonthShort": "{{count}}\u00a0d/mes",
         "noManager": "Sin responsable",
         "fromEntra": "Desde Microsoft Entra"
       },
@@ -418,10 +418,10 @@
         },
         "values": {
           "executionProgress": "Progreso: {{progress}} %",
-          "hoursValue": "{{hours}} h",
-          "mdHigher": "{{count}} DP más",
-          "mdLower": "{{count}} DP menos",
-          "mdValue": "{{value}} DP",
+          "hoursValue": "{{hours}}\u00a0h",
+          "mdHigher": "{{count}}\u00a0DP más",
+          "mdLower": "{{count}}\u00a0DP menos",
+          "mdValue": "{{value}}\u00a0DP",
           "onTrack": "En plazo",
           "projectOverhead": "Gastos generales del proyecto",
           "shareOfTotal": "{{percent}} % del total ({{hours}} h)",
@@ -430,7 +430,7 @@
           "totalLogged": "Total registrado",
           "workloadConsumption": "Consumo de esfuerzo: {{actual}} / {{planned}} DP",
           "mdUnit": "DP",
-          "actualOfEstimated": "{{actual}} / {{estimated}} DP",
+          "actualOfEstimated": "{{actual}} / {{estimated}}\u00a0DP",
           "actualSplit": "(Proyecto {{project}} · Tarea {{task}})"
         },
         "overview": {
@@ -782,8 +782,8 @@
           "combineThree": "{{first}}, {{second}} y {{third}}",
           "combineTwo": "{{first}} y {{second}}",
           "comment": "Comentario",
-          "logHours": "Registrar {{hours}} h",
-          "setStatus": "Establecer {{status}}",
+          "logHours": "Registrar {{hours}}\u00a0h",
+          "setStatus": "Pasar a «{{status}}»",
           "submit": "Enviar",
           "submitting": "Enviando…"
         },
@@ -875,7 +875,7 @@
         }
       },
       "workLog": {
-        "total": "Total: {{time}} ({{md}} DP)",
+        "total": "Total: {{time}} ({{md}}\u00a0DP)",
         "actions": {
           "delete": "Eliminar",
           "edit": "Editar"
@@ -889,9 +889,9 @@
           "time": "Tiempo"
         },
         "duration": {
-          "daysHours": "{{days}} d {{hours}} h",
-          "daysOnly": "{{days}} d",
-          "hoursOnly": "{{hours}} h"
+          "daysHours": "{{days}}\u00a0d {{hours}}\u00a0h",
+          "daysOnly": "{{days}}\u00a0d",
+          "hoursOnly": "{{hours}}\u00a0h"
         },
         "messages": {
           "deleteFailed": "Error al eliminar la entrada de tiempo",
@@ -1993,8 +1993,8 @@
     "cards": {
       "skillCount_one": "{{count}} competencia",
       "skillCount_other": "{{count}} competencias",
-      "daysPerMonth": "{{count}} d/mes",
-      "avgDaysPerMonth": "Prom.: {{count}} d/mes"
+      "daysPerMonth": "{{count}}\u00a0d/mes",
+      "avgDaysPerMonth": "Prom.: {{count}}\u00a0d/mes"
     },
     "dialog": {
       "title": "Añadir colaborador",
@@ -2243,7 +2243,7 @@
       "helper": {
         "dayLength": "8 horas/día",
         "hoursRange": "0-7 horas",
-        "total": "Total: {{hours}} h ({{md}} DP)"
+        "total": "Total: {{hours}}\u00a0h ({{md}}\u00a0DP)"
       },
       "messages": {
         "saveFailed": "Error al guardar la entrada de tiempo"

@@ -1249,8 +1249,8 @@
       "allocation_rules": "Zuordnungsregeln für Budgets",
       "analytics_axes": "Analysedimensionen",
       "analytics_categories": "Werte der Analysedimensionen",
-      "app_asset_assignments": "Assets der Anwendungsinstanzen",
-      "app_instances": "Anwendungsinstanzen",
+      "app_asset_assignments": "Assets der Bereitstellungen",
+      "app_instances": "Bereitstellungen",
       "application_attachments": "Anwendungsanhänge",
       "application_business_processes": "Geschäftsprozesse von Anwendungen",
       "application_capex_items": "CAPEX-Zeilen von Anwendungen",
@@ -1708,6 +1708,7 @@
       "unpaid": "Unbezahlt"
     },
     "subscription": {
+      "keepSubscription": "Nicht kündigen",
       "scheduledChange": {
         "annual": "Wechselt am {{date}} zu jährlich.",
         "keepAnnual": "Jährlich beibehalten",
@@ -1983,6 +1984,7 @@
     "errors": {
       "noActiveSubscription": "Kein aktives Abonnement gefunden.",
       "planNotBankTransferEligible": "Dieser Plan ist nicht für Banküberweisung geeignet.",
+      "subscriptionPaymentPending": "Begleichen Sie zuerst die offene Rechnung und ändern Sie dann Ihren Plan.",
       "termsNotAccepted": "Die Annahme der Allgemeinen Geschäftsbedingungen konnte nicht bestätigt werden. Laden Sie die Seite neu und akzeptieren Sie sie erneut.",
       "vatNumberInvalid": "Die USt-IdNr. wurde nicht akzeptiert. Prüfen Sie sie in den Rechnungsinformationen."
     },

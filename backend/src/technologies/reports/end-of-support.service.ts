@@ -49,7 +49,7 @@ export type DeadlineState = 'out_of_support' | 'extended_support' | 'upcoming';
 export type GapKind = (typeof GAP_KINDS)[number];
 export type ReportOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
 
-export type ServerRef = { id: string; name: string };
+export type ServerRef = { id: string; name: string; reference: string | null };
 export type ApplicationRef = { id: string; name: string; reference: string | null };
 
 export type DeadlineRow = {
@@ -190,7 +190,7 @@ export class EndOfSupportService {
     const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' });
     const items: DeadlineRow[] = candidates.map(({ serverIds, applicationIds, touchedIds: _touched, ...row }) => {
       const counts = (id: string) => row.type === 'application' || (!servers.get(id)!.is_cluster && id !== row.item_id);
-      const serverRefs = Array.from(new Set(serverIds)).flatMap((id) => (servers.has(id) && counts(id) ? [{ id, name: servers.get(id)!.name }] : [])).sort(byName);
+      const serverRefs = Array.from(new Set(serverIds)).flatMap((id) => (servers.has(id) && counts(id) ? [{ id, name: servers.get(id)!.name, reference: servers.get(id)!.reference }] : [])).sort(byName);
       const appRefs = apps ? Array.from(new Set(applicationIds)).flatMap((id) => (apps.has(id) ? [apps.get(id)!] : [])).sort(byName) : null;
       return { ...row, server_count: serverRefs.length, servers: serverRefs, application_count: appRefs ? appRefs.length : null, applications: appRefs };
     });
@@ -237,8 +237,8 @@ export class EndOfSupportService {
       items.push(...rows.map((r) => subject('application_without_server', 'application', r.id, r.name, r.sequential_id)));
     }
 
-    const vms: Array<{ id: string; name: string }> = await mg.query(
-      `SELECT a.id, a.name FROM assets a
+    const vms: Array<{ id: string; name: string; asset_reference: string | null }> = await mg.query(
+      `SELECT a.id, a.name, a.asset_reference FROM assets a
         WHERE a.tenant_id = $1 AND a.kind = 'virtual_machine' AND ${assetInServiceSql('a')}
           AND NOT EXISTS (
             SELECT 1 FROM asset_relations r
@@ -246,7 +246,7 @@ export class EndOfSupportService {
           )`,
       [tenantId],
     );
-    items.push(...vms.map((r) => subject('vm_without_host', 'asset', r.id, r.name, null)));
+    items.push(...vms.map((r) => subject('vm_without_host', 'asset', r.id, r.name, r.asset_reference)));
 
     // A technology hosted on premises (a type of the `on_prem` category) runs on servers of the tenant.
     const { hostingTypes } = await this.itOps.getSettings(tenantId, { manager: mg });
@@ -269,8 +269,8 @@ export class EndOfSupportService {
 
     // Servers with a database role (effective: the members of a cluster that holds it too): a
     // technology of the database family installed on them or carried to them.
-    const dbServers: Array<{ id: string; name: string }> = await mg.query(
-      `SELECT DISTINCT a.id, a.name
+    const dbServers: Array<{ id: string; name: string; asset_reference: string | null }> = await mg.query(
+      `SELECT DISTINCT a.id, a.name, a.asset_reference
          FROM (${effectiveAssignmentsSql({ tenant: '$1' })}) x
          JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
          JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
@@ -282,7 +282,7 @@ export class EndOfSupportService {
       const reached = await this.reach.technologiesOfAssets(mg, tenantId, dbServers.map((r) => r.id));
       const families = await this.families(mg, tenantId, reached.map((r) => r.technology_id));
       const covered = new Set(reached.filter((r) => families.get(r.technology_id) === 'database').map((r) => r.subject_id));
-      items.push(...dbServers.filter((r) => !covered.has(r.id)).map((r) => subject('database_server_without_dbms', 'asset', r.id, r.name, null)));
+      items.push(...dbServers.filter((r) => !covered.has(r.id)).map((r) => subject('database_server_without_dbms', 'asset', r.id, r.name, r.asset_reference)));
     }
 
     if (applications) {
@@ -544,13 +544,13 @@ export class EndOfSupportService {
    */
   private async hardwareDeadlines(mg: EntityManager, tenantId: string, window: ReportWindow, physicalKinds: string[]): Promise<Candidate[]> {
     if (physicalKinds.length === 0) return [];
-    const rows: Array<{ id: string; name: string; milestone: 'end_of_life' | 'support_contract'; day: string }> = await mg.query(
-      `SELECT a.id, a.name, 'end_of_life' AS milestone, ${DAY('a.end_of_life_date')} AS day
+    const rows: Array<{ id: string; name: string; asset_reference: string | null; milestone: 'end_of_life' | 'support_contract'; day: string }> = await mg.query(
+      `SELECT a.id, a.name, a.asset_reference, 'end_of_life' AS milestone, ${DAY('a.end_of_life_date')} AS day
          FROM assets a
         WHERE a.tenant_id = $1 AND ${assetInServiceSql('a')} AND a.end_of_life_date <= $2::date
           AND a.kind = ANY($3::text[]) AND a.is_cluster IS NOT TRUE
        UNION ALL
-       SELECT a.id, a.name, 'support_contract', ${DAY('s.support_expiry')}
+       SELECT a.id, a.name, a.asset_reference, 'support_contract', ${DAY('s.support_expiry')}
          FROM asset_support_info s
          JOIN assets a ON a.tenant_id = $1 AND a.id = s.asset_id AND ${assetInServiceSql('a')}
                       AND a.kind = ANY($3::text[]) AND a.is_cluster IS NOT TRUE
@@ -562,7 +562,7 @@ export class EndOfSupportService {
       type: 'hardware' as const,
       item_id: row.id,
       item_name: row.name,
-      item_reference: null,
+      item_reference: row.asset_reference,
       version_id: null,
       version: null,
       milestone: row.milestone,
@@ -597,14 +597,15 @@ export class EndOfSupportService {
     return out;
   }
 
-  private async assetNames(mg: EntityManager, tenantId: string, ids: string[]): Promise<Map<string, { name: string; is_cluster: boolean }>> {
+  private async assetNames(mg: EntityManager, tenantId: string, ids: string[]): Promise<Map<string, { name: string; is_cluster: boolean; reference: string | null }>> {
     const wanted = Array.from(new Set(ids));
     if (wanted.length === 0) return new Map();
-    const rows: Array<{ id: string; name: string; is_cluster: boolean }> = await mg.query(
-      `SELECT id, name, COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+    const rows: Array<{ id: string; name: string; is_cluster: boolean; reference: string | null }> = await mg.query(
+      `SELECT id, name, COALESCE(is_cluster, false) AS is_cluster, asset_reference AS reference
+         FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [tenantId, wanted],
     );
-    return new Map(rows.map((row) => [row.id, { name: row.name, is_cluster: row.is_cluster }]));
+    return new Map(rows.map((row) => [row.id, { name: row.name, is_cluster: row.is_cluster, reference: row.reference }]));
   }
 
   /** The applications of `ids` the caller sees, with their name and reference. */

@@ -189,7 +189,11 @@ function subscriptionLines(subscription: BillingSubscription | null | undefined,
   if (isTrialing && daysRemaining != null && daysRemaining > 0) {
     details.push(t('billing.subscription.values.daysRemaining', { count: daysRemaining }));
   }
-  if (live && subscription && !isTrialing) {
+  // A live subscription whose cancellation is set ends on that date instead of renewing.
+  const endsAt = live && !isTrialing ? subscription?.canceled_at_effective ?? null : null;
+  if (endsAt) {
+    details.push(t('billing.subscription.values.ends', { date: date(endsAt) }));
+  } else if (live && subscription && !isTrialing) {
     const renewal = subscription.renewal_at
       ?? subscription.current_period_end
       ?? subscription.next_payment_at
@@ -198,7 +202,7 @@ function subscriptionLines(subscription: BillingSubscription | null | undefined,
     if (renewal) details.push(t('billing.subscription.values.renews', { date: date(renewal) }));
   }
   if (live && subscription) details.push(paymentMethodLabel(subscription, t));
-  return { plan, details };
+  return { plan, details, cancelled: !!endsAt };
 }
 
 type BillingInterval = 'monthly' | 'annual';
@@ -474,7 +478,7 @@ export default function BillingCenter() {
   const hasSubscription = !!subscriptionSummary?.stripe_subscription_id;
   const statusMeta = getStatusMeta(subscriptionSummary, t);
   const statusColor = getDotColor(statusMeta.color ?? 'default', mode);
-  const { plan: planLine, details: detailParts } = subscriptionLines(subscriptionSummary, t, locale);
+  const { plan: planLine, details: detailParts, cancelled } = subscriptionLines(subscriptionSummary, t, locale);
   const switchLine = scheduledChangeLine(subscriptionSummary, t, locale);
   const isHealthy = subscription?.is_subscription_healthy;
   const planActionLabel = hasSubscription ? t('billing.actions.changePlan') : t('billing.actions.choosePlan');
@@ -700,6 +704,12 @@ export default function BillingCenter() {
                 {detailParts.map((part) => (
                   <Box component="span" key={part}>{`· ${part}`}</Box>
                 ))}
+                {cancelled && canManage && (
+                  // The cancellation is taken back in the Stripe customer portal.
+                  <Box component="button" type="button" onClick={openPortal} disabled={opening} sx={keepActionSx}>
+                    {t('billing.subscription.keepSubscription')}
+                  </Box>
+                )}
               </Box>
               {switchLine && (
                 <Typography component="div" sx={{ fontSize: 13, lineHeight: 1.4, color: 'kanap.text.secondary' }}>

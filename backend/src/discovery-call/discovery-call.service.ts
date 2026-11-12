@@ -13,6 +13,7 @@ import { withTenant } from '../common/tenant-runner';
  * - `trial.discovery_call_clicked` `{ placement }`, one entry per click;
  * - `trial.discovery_call_updated` before and after `{ scheduled_at, status, source, note }`;
  * - `trial.discovery_call_removed` before.
+ * The erasure after `DISCOVERY_CALL_RETENTION_DAYS` days writes none (`eraseExpiredDiscoveryCall`).
  *
  * Every method that takes a manager runs in its transaction, which carries the tenant, and names
  * `tenant_id` in each query.
@@ -63,6 +64,31 @@ export type DiscoveryCallInput = {
 };
 
 const NOTE_MAX = 2000;
+
+/** Days the note and the date of a call are kept after the call (privacy policy, section 6). */
+export const DISCOVERY_CALL_RETENTION_DAYS = 60;
+
+/**
+ * Erases the note and the date of the tenant's call once `DISCOVERY_CALL_RETENTION_DAYS` days
+ * have passed since the call, whatever the workspace's subscription. A call to come or younger is
+ * untouched. The state, the source and the booking uid stay; no audit entry, which would copy the
+ * note again. Runs on a manager whose transaction carries the tenant. Returns the number of rows
+ * changed: 0 on a second run.
+ */
+export async function eraseExpiredDiscoveryCall(manager: EntityManager, tenantId: string, now: Date): Promise<number> {
+  const rows: Array<{ n: number }> = await manager.query(
+    `WITH changed AS (
+       UPDATE trial_discovery_calls
+          SET note = NULL, scheduled_at = NULL, updated_at = now()
+        WHERE tenant_id = $1
+          AND scheduled_at <= $2::timestamptz - make_interval(days => $3::int)
+       RETURNING 1
+     )
+     SELECT count(*)::int AS n FROM changed`,
+    [tenantId, now, DISCOVERY_CALL_RETENTION_DAYS],
+  );
+  return Number(rows[0]?.n ?? 0);
+}
 
 type Row = {
   scheduled_at: Date | string | null;

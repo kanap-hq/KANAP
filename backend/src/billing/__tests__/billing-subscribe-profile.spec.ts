@@ -78,10 +78,16 @@ function createService(opts: {
   /** What Stripe does on `subscriptions.update`: may change `state`, returns the answer. */
   onSubscriptionUpdate?: (params: Record<string, any>, state: Record<string, any>) => unknown;
   schedule?: Record<string, any>;
+  /** What Stripe does to the schedule on `subscriptionSchedules.update`. */
+  onScheduleUpdate?: (params: Record<string, any>, schedule: Record<string, any>) => void;
   /** The customer's saved cards (`customers.listPaymentMethods`). */
   cards?: Array<Record<string, unknown>>;
   /** What `invoices.retrieve` returns (nothing by default). */
   retrievedInvoice?: Record<string, unknown>;
+  /** What `subscriptions.retrieve` throws (a subscription Stripe no longer has). */
+  subscriptionRetrieveError?: unknown;
+  /** How many first `subscriptionSchedules.retrieve` calls fail. */
+  scheduleRetrieveFailures?: number;
 }) {
   const calls: Call[] = [];
   const record = (method: string, impl: (...args: any[]) => unknown) => async (...args: unknown[]) => {
@@ -92,6 +98,7 @@ function createService(opts: {
     ? JSON.parse(JSON.stringify(opts.stripeSubscription))
     : null;
   const schedule = opts.schedule ?? null;
+  let scheduleRetrieveFailures = opts.scheduleRetrieveFailures ?? 0;
   const client = {
     customers: {
       retrieve: record('customers.retrieve', () => opts.retrievedCustomer ?? { id: 'cus_1' }),
@@ -111,6 +118,7 @@ function createService(opts: {
     subscriptions: {
       create: record('subscriptions.create', () => ({ id: 'sub_1', latest_invoice: null })),
       retrieve: record('subscriptions.retrieve', () => {
+        if (opts.subscriptionRetrieveError) throw opts.subscriptionRetrieveError;
         if (stripeState) return JSON.parse(JSON.stringify(stripeState));
         return opts.subscription ? { id: 'sub_1', status: 'active', items: { data: [{ id: 'si_1' }] } } : null;
       }),
@@ -119,8 +127,17 @@ function createService(opts: {
     },
     subscriptionSchedules: {
       create: record('subscriptionSchedules.create', () => schedule),
-      retrieve: record('subscriptionSchedules.retrieve', () => schedule),
-      update: record('subscriptionSchedules.update', (id: string) => ({ id })),
+      retrieve: record('subscriptionSchedules.retrieve', () => {
+        if (scheduleRetrieveFailures > 0) {
+          scheduleRetrieveFailures -= 1;
+          throw new Error('Stripe is slow');
+        }
+        return schedule;
+      }),
+      update: record('subscriptionSchedules.update', (id: string, params: Record<string, any>) => {
+        if (schedule && opts.onScheduleUpdate) opts.onScheduleUpdate(params, schedule);
+        return { id };
+      }),
       release: record('subscriptionSchedules.release', (id: string) => {
         // Released: the subscription no longer has a schedule.
         if (stripeState) stripeState.schedule = null;
@@ -894,6 +911,215 @@ async function testSelectingAnnualWhileASwitchIsPlannedKeepsIt() {
   assert.equal(audits.filter((a) => a.entry.table === 'subscriptions' && a.entry.sourceRef === 'sub_sched_1').length, 1);
 }
 
+/**
+ * Planning annual to monthly is audited on the subscription, and the answer carries the planned
+ * switch as the change just made it, without another read from Stripe. The read of the switch
+ * planned before, which only serves the audit entry, cannot fail the change.
+ */
+async function testScheduledSwitchIsAuditedAndReturned() {
+  for (const scheduleRetrieveFailures of [0, 1]) {
+    const schedule = {
+      id: 'sub_sched_1',
+      status: 'active',
+      current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
+      phases: [{ start_date: PERIOD.start, end_date: PERIOD.end, items: [{ price: 'price_annual', quantity: 1 }] }],
+    };
+    const { service, manager, audits, calls } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      // A row the summary does not need to refresh.
+      subscription: {
+        ...runningOn('annual'),
+        current_period_end: new Date(PERIOD.end * 1000),
+        amount: 249000,
+        currency: 'EUR',
+        default_payment_method_id: 'pm_card',
+        last_synced_at: new Date(),
+      } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(ANNUAL_PRICE, { schedule: 'sub_sched_1' }),
+      schedule,
+      onScheduleUpdate: (params, current) => {
+        current.phases = [params.phases[0], { start_date: PERIOD.end, end_date: SWITCH_END, items: params.phases[1].items }];
+      },
+      scheduleRetrieveFailures,
+    });
+    (service as any).logger = { warn: () => undefined };
+    const result: any = await service.changePlan('tenant-1', 'max', 'monthly', 'user-1', manager as any, GTC_VERSION);
+
+    assert.deepEqual(result.change, { status: 'scheduled', effective_at: SWITCH_TO_MONTHLY.effective_at });
+    assert.deepEqual(result.scheduled_change, SWITCH_TO_MONTHLY, 'the answer carries the planned switch');
+    assert.equal(calls.filter((call) => call.method === 'subscriptions.retrieve').length, 1, 'no refresh from Stripe for the answer');
+    const entries = audits.filter((a) => a.entry.table === 'subscriptions');
+    assert.deepEqual(entries.map((a) => a.entry), [{
+      table: 'subscriptions',
+      recordId: 'local-sub',
+      action: 'update',
+      before: { stripe_subscription_id: 'sub_1', scheduled_change: null },
+      after: { stripe_subscription_id: 'sub_1', scheduled_change: SWITCH_TO_MONTHLY },
+      userId: 'user-1',
+      sourceRef: 'sub_sched_1',
+    }]);
+    assert.equal(entries[0].opts?.manager, manager);
+  }
+}
+
+/*
+ * A Stripe subscription that still runs is never doubled: one in good standing (active, trialing)
+ * is changed; one that runs unpaid (past due, unpaid, incomplete, paused) is refused with
+ * SUBSCRIPTION_PAYMENT_PENDING before any change in Stripe, the status read from Stripe deciding.
+ * Only an ended one (canceled, incomplete expired) is replaced by a new subscription.
+ */
+const UNPAID_STATUSES = ['past_due', 'unpaid', 'incomplete', 'paused'];
+const TRIAL_END = Math.floor(Date.now() / 1000) + 7 * 86400;
+
+async function testTransferChangesALiveSubscriptionInsteadOfDoublingIt() {
+  for (const status of ['active', 'trialing']) {
+    const { service, manager, calls } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      subscription: { ...runningOn('monthly'), status } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status, trial_end: status === 'trialing' ? TRIAL_END : null }),
+      onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+    });
+    await service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+    assert.equal(calls.filter((call) => call.method === 'subscriptions.create').length, 0, `no second subscription while ${status}`);
+    assert.deepEqual(calls.filter((call) => call.method === 'subscriptions.update').map((call) => call.args[0]), ['sub_1'], status);
+  }
+
+  for (const status of UNPAID_STATUSES) {
+    const { service, manager, calls } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      // The stored status may be late: Stripe's decides.
+      subscription: { ...runningOn('monthly'), status: 'active' } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status }),
+      onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+    });
+    await expectBadRequest(service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION), PAYMENT_PENDING);
+    assert.deepEqual(calls.map((call) => call.method), ['subscriptions.retrieve'], `nothing changes in Stripe while ${status}`);
+  }
+
+  for (const status of ['canceled', 'incomplete_expired']) {
+    const { service, manager, calls, subscription } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      subscription: { ...runningOn('monthly'), stripe_subscription_id: 'sub_old', status } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { id: 'sub_old', status }),
+    });
+    await service.requestInvoice('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+    assert.equal(calls.filter((call) => call.method === 'subscriptions.create').length, 1, `an ended subscription (${status}) is replaced`);
+    assert.equal(calls.filter((call) => call.method === 'subscriptions.update').length, 0, status);
+    assert.equal(subscription.stripe_subscription_id, 'sub_1');
+  }
+}
+
+async function testPlanChangeAppliesToALiveSubscription() {
+  // The stored status may be late: a subscription Stripe has as active again is changed.
+  const { service, manager, calls } = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status: 'active' }),
+    onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+  });
+  await service.changePlan('tenant-1', 'max', 'annual', 'user-1', manager as any, GTC_VERSION);
+  assert.deepEqual(calls.filter((call) => call.method === 'subscriptions.update').map((call) => call.args), [['sub_1', IMMEDIATE_CHANGE]]);
+  assert.equal(calls.filter((call) => call.method === 'subscriptions.create').length, 0);
+
+  // Unpaid in Stripe: refused before any change, the planned switch and "Keep annual" included.
+  for (const status of UNPAID_STATUSES) {
+    for (const [interval, current] of [['annual', MONTHLY_PRICE], ['monthly', ANNUAL_PRICE], ['annual', ANNUAL_PRICE]] as const) {
+      const unpaid = createService({
+        tenant: createTenant(COMPLETE_FR_INVOICE),
+        subscription: { ...runningOn('monthly'), status: 'active' } as Partial<Subscription>,
+        priceIds: PRICE_IDS,
+        stripeSubscription: stripeSubscription(current, { status, schedule: 'sub_sched_1' }),
+        onSubscriptionUpdate: (_params, state) => ({ ...state, latest_invoice: null }),
+        schedule: PLANNED_SWITCH,
+      });
+      await expectBadRequest(unpaid.service.changePlan('tenant-1', 'max', interval, 'user-1', unpaid.manager as any, GTC_VERSION), PAYMENT_PENDING);
+      assert.deepEqual(unpaid.calls.map((call) => call.method), ['subscriptions.retrieve'], `nothing changes in Stripe while ${status}`);
+    }
+  }
+
+  // Ended in Stripe while the stored status still says it runs.
+  const endedInStripe = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status: 'canceled' }),
+  });
+  await expectBadRequest(
+    endedInStripe.service.changePlan('tenant-1', 'max', 'annual', 'user-1', endedInStripe.manager as any, GTC_VERSION),
+    { message: 'NO_ACTIVE_SUBSCRIPTION', error: 'Bad Request', statusCode: 400 },
+  );
+  assert.deepEqual(endedInStripe.calls.map((call) => call.method), ['subscriptions.retrieve']);
+
+  const ended = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: { ...runningOn('monthly'), status: 'canceled' } as Partial<Subscription>,
+    priceIds: PRICE_IDS,
+    stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status: 'canceled' }),
+  });
+  await expectBadRequest(
+    ended.service.changePlan('tenant-1', 'max', 'annual', 'user-1', ended.manager as any, GTC_VERSION),
+    { message: 'NO_ACTIVE_SUBSCRIPTION', error: 'Bad Request', statusCode: 400 },
+  );
+  assert.equal(ended.calls.filter((call) => call.method.startsWith('subscriptions.')).length, 0);
+}
+
+const CHECKOUT = { tenantId: 'tenant-1', planKey: 'max' as const, interval: 'monthly' as const, termsVersion: GTC_VERSION };
+const PAYMENT_PENDING = { message: 'SUBSCRIPTION_PAYMENT_PENDING', error: 'Bad Request', statusCode: 400 };
+
+/*
+ * A checkout starts a new Stripe subscription. While the tenant's subscription still runs in
+ * Stripe (paid or not), it is refused before any change in Stripe; the status read from Stripe
+ * decides, the stored one may be late. A subscription that has ended, or that Stripe no longer
+ * has, lets a new checkout through.
+ */
+async function testCheckoutIsRefusedWhileTheSubscriptionRuns() {
+  for (const status of ['active', 'trialing', 'past_due', 'unpaid', 'incomplete', 'paused']) {
+    const { service, manager, calls } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      subscription: { ...runningOn('monthly'), status: 'canceled' } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status }),
+    });
+    await expectBadRequest(service.createCheckoutSession({ ...CHECKOUT, manager: manager as any }), PAYMENT_PENDING);
+    assert.deepEqual(calls.map((call) => call.method), ['subscriptions.retrieve'], `only the subscription is read while ${status}`);
+  }
+
+  for (const status of ['canceled', 'incomplete_expired']) {
+    const { service, manager, calls } = createService({
+      tenant: createTenant(COMPLETE_FR_INVOICE),
+      subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
+      priceIds: PRICE_IDS,
+      stripeSubscription: stripeSubscription(MONTHLY_PRICE, { status }),
+    });
+    const session = await service.createCheckoutSession({ ...CHECKOUT, manager: manager as any });
+    assert.equal(session.id, 'cs_1', `an ended subscription (${status}) lets a new checkout through`);
+  }
+
+  const missing = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
+    priceIds: PRICE_IDS,
+    subscriptionRetrieveError: Object.assign(new Error('No such subscription'), { statusCode: 404, code: 'resource_missing' }),
+  });
+  const session = await missing.service.createCheckoutSession({ ...CHECKOUT, manager: missing.manager as any });
+  assert.equal(session.id, 'cs_1', 'a subscription Stripe no longer has lets a new checkout through');
+
+  // Any other Stripe error stops the checkout: nothing is created.
+  const down = createService({
+    tenant: createTenant(COMPLETE_FR_INVOICE),
+    subscription: { ...runningOn('monthly'), status: 'past_due' } as Partial<Subscription>,
+    priceIds: PRICE_IDS,
+    subscriptionRetrieveError: new Error('Stripe is down'),
+  });
+  await assert.rejects(down.service.createCheckoutSession({ ...CHECKOUT, manager: down.manager as any }), /Stripe is down/);
+  assert.equal(down.calls.filter((call) => call.method === 'checkout.sessions.create').length, 0);
+}
+
 const BANK_TRANSFER_SCHEDULE = {
   id: 'sub_sched_1',
   current_phase: { start_date: PERIOD.start, end_date: PERIOD.end },
@@ -989,6 +1215,10 @@ async function run() {
   await testKeepAnnualReleasesTheScheduleAndAudits();
   await testKeepAnnualGivesBankTransferBack();
   await testSelectingAnnualWhileASwitchIsPlannedKeepsIt();
+  await testScheduledSwitchIsAuditedAndReturned();
+  await testTransferChangesALiveSubscriptionInsteadOfDoublingIt();
+  await testPlanChangeAppliesToALiveSubscription();
+  await testCheckoutIsRefusedWhileTheSubscriptionRuns();
   await testTransferToCardWithoutACardRequiresOne();
   await testTransferToCardWithASavedCardMakesItTheDefault();
 }

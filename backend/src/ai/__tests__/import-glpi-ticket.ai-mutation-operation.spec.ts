@@ -1,6 +1,9 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import { decodeHtmlEntities } from '../../common/html-entities';
+import { MARKDOWN_HTML_NOT_ALLOWED } from '../../common/markdown-limits';
+import { normalizeMarkdownRichText } from '../../common/markdown-worker';
+import { TaskActivitiesService } from '../../tasks/task-activities.service';
 import { ImportGlpiTicketAiMutationOperation, ImportTicketAiMutationOperation } from '../mutation/operations/import-glpi-ticket.ai-mutation-operation';
 
 function createContext() {
@@ -183,6 +186,91 @@ async function testPrepareCreatePreviewMapsTicketFieldsAndUsesCurrentUserAsReque
   assert.deepEqual(prepared.mutationInput.glpi_image_targets, ['front/document.send.php?docid=19']);
   assert.match(String(prepared.mutationInput.description || ''), /Source: GLPI Ticket #4523/);
   assert.match(String(prepared.mutationInput.description || ''), /GLPI URL: https:\/\/glpi\.internal\/helpdesk\/front\/ticket\.form\.php\?id=4523/);
+}
+
+/** A ticket text is read from another system: its tags are kept as text, and the import goes on. */
+const TICKET_TEXT_WITH_TAGS = [
+  'The service stops when it starts:', '',
+  '    at com.example.Service.<init>(Service.java:12)',
+  '    at java.util.HashMap.<clinit>(HashMap.java:3)', '',
+  'The page shows <form action="/search"><input name="q"></form> twice.',
+].join('\n');
+
+async function assertStoredAsText(stored: string) {
+  // The stored text is one a person can save again: it passes the rule of a write.
+  assert.equal(await normalizeMarkdownRichText(stored, { fieldName: 'description' }), stored);
+  assert.ok(stored.includes('com.example.Service.\\<init>(Service.java:12)'), stored);
+  assert.ok(stored.includes('\\<form action="/search">\\<input name="q">\\</form>'), stored);
+  assert.ok(stored.replace(/\\</g, '<').includes(TICKET_TEXT_WITH_TAGS), 'nothing of the ticket text is lost');
+}
+
+async function testPrepareCreatePreviewKeepsTheTagsOfATicketAsText() {
+  await assert.rejects(
+    normalizeMarkdownRichText(TICKET_TEXT_WITH_TAGS, { fieldName: 'description' }),
+    (error: any) => error?.getResponse?.()?.code === MARKDOWN_HTML_NOT_ALLOWED,
+  );
+
+  const operation = new ImportGlpiTicketAiMutationOperation(
+    {
+      resolveCurrentUser: async () => ({ id: 'user-1', email: 'requestor@example.com', label: 'Requestor User' }),
+      resolveCreateTarget: async () => ({ mode: 'standalone', type: null, id: null, ref: null, label: 'Standalone' }),
+      resolveTaskType: async () => {
+        throw new BadRequestException('Task type "Task" is not available.');
+      },
+    } as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    ticketingRegistryFromFixture({
+      ticket: {
+        id: 4524,
+        name: 'Service stops when it starts',
+        content_html: TICKET_TEXT_WITH_TAGS,
+        status: 'New',
+        priority: 3,
+        type: 1,
+        glpi_url: 'https://glpi.internal/helpdesk/front/ticket.form.php?id=4524',
+      },
+      followups: [],
+    } as any),
+    { assertBusinessPermission: async () => undefined } as any,
+  );
+
+  const prepared = await operation.prepareCreatePreview(createContext() as any, {
+    ticket_id: 4524,
+    relation_type: 'standalone',
+  });
+
+  const description = String(prepared.mutationInput.description || '');
+  await assertStoredAsText(description);
+  assert.match(description, /Source: GLPI Ticket #4524/);
+}
+
+async function testImportedCommentKeepsTheTagsOfAFollowupAsText() {
+  const saved: any[] = [];
+  const manager = {
+    getRepository: () => ({
+      findOne: async () => ({ id: 'task-1', tenant_id: 'tenant-1' }),
+      create: (value: any) => value,
+      save: async (value: any) => {
+        saved.push(value);
+        return { id: 'activity-1', ...value };
+      },
+    }),
+  };
+  const service = new TaskActivitiesService({ manager } as any, {} as any, {} as any, {} as any, {} as any);
+  (service as any).logActivityAuditIfNeeded = async () => undefined;
+
+  await service.createImportedComment(
+    'task-1',
+    { content: `Source: GLPI Ticket #4524 followup #1\n---\n${TICKET_TEXT_WITH_TAGS}` } as any,
+    'tenant-1',
+    null,
+    { manager } as any,
+  );
+
+  assert.equal(saved.length, 1);
+  await assertStoredAsText(String(saved[0].content));
 }
 
 async function testImportTicketPrepareRequiresExplicitProviderKeyAndStoresGenericMetadata() {
@@ -695,6 +783,8 @@ async function testExecutePreviewImportsFollowupsAsNativeCommentsWithInlineImage
 
 async function run() {
   await testPrepareCreatePreviewMapsTicketFieldsAndUsesCurrentUserAsRequestor();
+  await testPrepareCreatePreviewKeepsTheTagsOfATicketAsText();
+  await testImportedCommentKeepsTheTagsOfAFollowupAsText();
   await testImportTicketPrepareRequiresExplicitProviderKeyAndStoresGenericMetadata();
   await testImportTicketExecuteRequiresStoredProviderBeforeCreatingTask();
   await testPrepareCreatePreviewFallsBackToUrgencyWhenPriorityIsMissing();

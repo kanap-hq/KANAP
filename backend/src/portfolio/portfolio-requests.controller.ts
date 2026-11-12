@@ -1091,8 +1091,8 @@ export class PortfolioRequestsController {
     @Param('attachmentId') attachmentId: string,
     @Req() req: any,
   ) {
-    await this.resolveForAccess(idOrRef, req, 'member');
-    return this.svc.deleteAttachment(attachmentId, req.user?.sub ?? null, {
+    const { id } = await this.resolveForAccess(idOrRef, req, 'member');
+    return this.svc.deleteAttachment(id, attachmentId, req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
     });
   }

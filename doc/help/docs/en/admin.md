@@ -485,6 +485,8 @@ On the cloud service, the person who started the trial receives a few e-mails fr
 
 When a switch to monthly billing is planned, a third line shows it, for example "Switches to monthly on 7 Oct 2027." Click **Keep annual** on that line to cancel the switch.
 
+Once the subscription is cancelled in the Stripe customer portal, the second line shows its end date in place of the renewal date, for example "Active · ends 7 Oct 2027". Click **Don't cancel** on that line to open the portal and take the cancellation back. Requires billing admin.
+
 ### Actions
 
 - **Choose plan** / **Change plan**: Open the plan dialog to subscribe or switch between monthly and annual billing. Requires billing admin.

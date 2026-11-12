@@ -236,7 +236,8 @@ service reads the same rules).
 | Access token | `purpose: 'access'` | `JWT_SECRET` | `JwtAuthGuard` |
 | Password-reset link | `purpose: 'kanap:v1:password-reset'` | `PASSWORD_RESET_SECRET`, else derived | `AuthService.resetPasswordWithToken` |
 | Provisioning exchange | `purpose: 'provision'` | `PROVISIONING_TOKEN_SECRET`, else `JWT_SECRET` | `AuthController.exchangeProvisioningToken` |
-| Entra SSO state | `purpose: 'kanap:v1:entra-state'` | `ENTRA_STATE_SECRET`, else derived | `EntraAuthService.verifyState` |
+| Entra SSO state (sign-in, setup) | `purpose: 'kanap:v1:entra-state'`; the workspace travels as a sealed reference | `ENTRA_STATE_SECRET`, else derived | `EntraAuthService.verifyState` |
+| Entra admin-consent state (directory sync) | `purpose: 'kanap:v1:entra-consent-state'`, one hour; names the workspace and the administrator who opened the consent | idem SSO state | `EntraAuthService.verifyConsentState` |
 | Entra login handoff | `type: 'entra_login_handoff'` | idem SSO state | `EntraAuthService.verifyLoginHandoff` |
 | MCP OAuth authorization code | `purpose: 'kanap:v1:mcp-oauth-code'` | `MCP_OAUTH_CODE_SECRET`, else derived | `McpOAuthService` (token endpoint) |
 | MCP OAuth access token | `purpose: 'kanap:v1:mcp-access'` | `MCP_ACCESS_TOKEN_SECRET`, else derived | `McpApiKeyAuthGuard` (MCP endpoint only) |

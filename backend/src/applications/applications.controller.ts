@@ -713,8 +713,9 @@ export class ApplicationsController {
     );
   }
 
+  // The level of the bulk delete and of the Delete action of the application page.
   @UseGuards(PermissionGuard)
-  @RequireLevel('applications', 'member')
+  @RequireLevel('applications', 'admin')
   @Delete(':id')
   delete(
     @Param('id') id: string,

@@ -1249,8 +1249,8 @@
       "allocation_rules": "Règles de ventilation",
       "analytics_axes": "Dimensions analytiques",
       "analytics_categories": "Valeurs des dimensions analytiques",
-      "app_asset_assignments": "Actifs des instances d'application",
-      "app_instances": "Instances d'application",
+      "app_asset_assignments": "Actifs des déploiements",
+      "app_instances": "Déploiements",
       "application_attachments": "Pièces jointes d'application",
       "application_business_processes": "Processus métier d'application",
       "application_capex_items": "Lignes CAPEX d'application",
@@ -1708,6 +1708,7 @@
       "unpaid": "Impayé"
     },
     "subscription": {
+      "keepSubscription": "Ne pas résilier",
       "scheduledChange": {
         "annual": "Passe en annuel le {{date}}.",
         "keepAnnual": "Rester en annuel",
@@ -1983,6 +1984,7 @@
     "errors": {
       "noActiveSubscription": "Aucun abonnement actif trouvé.",
       "planNotBankTransferEligible": "Ce plan n'est pas éligible au virement bancaire.",
+      "subscriptionPaymentPending": "Réglez d'abord la facture en attente, puis changez de plan.",
       "termsNotAccepted": "L'acceptation des conditions générales de vente n'a pas pu être confirmée. Rechargez la page et acceptez-les à nouveau.",
       "vatNumberInvalid": "Le numéro de TVA n'a pas été accepté. Vérifiez-le dans les informations de facturation."
     },

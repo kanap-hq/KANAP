@@ -119,7 +119,9 @@ its own: load the current dataset on a new tenant instead.
 6. **Relations**: Microsoft 365 suite members, application↔department links,
    app instances, interfaces + bindings, connections + equipment hops,
    interface↔connection links, contract↔spend links, spend↔application links,
-   portfolio teams and capacity, project phases and team members, company
+   contract↔application links, portfolio teams and capacity, project phases
+   (the project converted from Cave Climate Digital Twin starts with its first
+   phase) and team members, company
    allocations on selected spend/CAPEX versions. Then the IT landscape: the
    `PAR-VSPHERE-CL01` and `PAR-SQL-CL01` clusters and their members. The
    Paris vSphere landscape has the `PAR-SAN-01` storage array, its three ESXi
@@ -321,6 +323,7 @@ load is a failure. The token is never printed.
 
 | Environment | Base URL | Notes |
 |---|---|---|
+| Local | `http://fromage.lvh.me` | Local stack. The default of `--base-url` |
 | Dev | `https://fromage.dev.kanap.net` | Local stack behind the Cloudflare tunnel |
 | QA | `https://fromage.qa.kanap.net` | |
 | Prod | `https://demo.kanap.net` | Prospect demos: slug `demo`, private `--demo-password`, marked internal |

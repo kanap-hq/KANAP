@@ -21,6 +21,7 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
+import { formatLocaleFigure } from '../../portfolio/figures';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import TaskLogTimeDialog, { TaskTimeEntryData } from './TaskLogTimeDialog';
 import { useKanapDialogs } from '../../../components/design';
@@ -161,11 +162,11 @@ export default function TaskWorkLog({ taskId, projectId, readOnly = false, relat
     const days = Math.floor(h / 8);
     const remaining = h % 8;
     if (days > 0 && remaining > 0) {
-      return t('portfolio:workspace.task.workLog.duration.daysHours', { days, hours: remaining.toFixed(1) });
+      return t('portfolio:workspace.task.workLog.duration.daysHours', { days, hours: formatLocaleFigure(remaining, locale, 1) });
     } else if (days > 0) {
       return t('portfolio:workspace.task.workLog.duration.daysOnly', { days });
     }
-    return t('portfolio:workspace.task.workLog.duration.hoursOnly', { hours: h.toFixed(1) });
+    return t('portfolio:workspace.task.workLog.duration.hoursOnly', { hours: formatLocaleFigure(h, locale, 1) });
   };
 
   return (
@@ -174,7 +175,7 @@ export default function TaskWorkLog({ taskId, projectId, readOnly = false, relat
         <Typography variant="subtitle2" color="text.secondary">
           {t('portfolio:workspace.task.workLog.total', {
             time: formatHours(totalHours),
-            md: (Number(totalHours) / 8).toFixed(1),
+            md: formatLocaleFigure(Number(totalHours) / 8, locale, 1),
           })}
         </Typography>
         {canManageForContext && !readOnly && !TIME_LOGGING_EXCLUDED_TYPES.includes(relatedObjectType || '') && (

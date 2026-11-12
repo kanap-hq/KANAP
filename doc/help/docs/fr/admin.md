@@ -485,6 +485,8 @@ Sur le service cloud, la personne qui a démarré l'essai reçoit quelques e-mai
 
 Lorsqu'un passage à la facturation mensuelle est prévu, une troisième ligne l'indique, par exemple « Passe en mensuel le 7 oct. 2027. » Cliquez sur **Rester en annuel** sur cette ligne pour annuler ce passage.
 
+Une fois l'abonnement résilié dans le portail client Stripe, la deuxième ligne affiche sa date de fin à la place de la date de renouvellement, par exemple « Actif · se termine le 7 oct. 2027 ». Cliquez sur **Ne pas résilier** sur cette ligne pour ouvrir le portail et revenir sur la résiliation. Nécessite l'admin facturation.
+
 ### Actions
 
 - **Choisir un plan** / **Changer de plan** : Ouvrir la boîte de dialogue du plan pour souscrire ou basculer entre facturation mensuelle et annuelle. Nécessite l'admin facturation.

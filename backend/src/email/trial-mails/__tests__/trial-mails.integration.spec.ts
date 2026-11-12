@@ -23,7 +23,8 @@ import { DiscoveryCallService } from '../../../discovery-call/discovery-call.ser
 import { getEmailStrings } from '../../../i18n/email-i18n';
 import type { SendEmailOptions } from '../../email.types';
 import { TrialMailsController } from '../trial-mails.controller';
-import { TRIAL_MAIL_FOUNDER, TrialMailsService } from '../trial-mails.service';
+import { trialMailFounder } from '../trial-mail-founder';
+import { TrialMailsService } from '../trial-mails.service';
 import { PRODUCT_NAME } from '../../../config/product';
 
 // The trial e-mails (`doc/trial-mails.md`) on the spec database, with a recording e-mail service:
@@ -118,7 +119,7 @@ async function testWelcomeOnceAfterTheChoice() {
       const [mail] = email.to(t!.ownerEmail);
       assert.equal(mail?.subject, `Welcome to your ${PRODUCT_NAME} workspace`);
       assert.ok(mail.html.includes('Hello Camille,') && mail.text!.includes('/first-steps/budget-example/'));
-      assert.equal(mail.replyTo, TRIAL_MAIL_FOUNDER);
+      assert.equal(mail.replyTo, trialMailFounder());
       assert.equal(mail.from, undefined, 'J0 leaves from the application address');
       assert.match(mail.headers?.['List-Unsubscribe'] ?? '', /^<https:\/\/rs-tm-j0-[^/]+\.trial-mails-spec\.test\/api\/trial-mails\/unsubscribe\?t=/);
       assert.equal(mail.headers?.['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
@@ -183,7 +184,7 @@ async function testFollowUpEndingAndNotice() {
       await trialMails.onSubscriptionChanged(t!.tenantId, new Date(start.getTime() + 5 * DAY + 120_000));
       const [followUp] = email.to(t!.ownerEmail);
       assert.equal(followUp?.subject, getEmailStrings('fr').trialMails.j5.subject);
-      assert.equal(followUp.from, TRIAL_MAIL_FOUNDER, 'J+5 leaves from Friedrich');
+      assert.equal(followUp.from, trialMailFounder(), 'J+5 leaves from Friedrich');
       assert.equal(followUp.replyTo, undefined);
       assert.ok(followUp.text!.includes('/api/trial-mails/call?t='), 'the call link, counted');
 

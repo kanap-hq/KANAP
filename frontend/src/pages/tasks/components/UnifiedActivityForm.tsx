@@ -13,10 +13,20 @@ import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { StatusDot } from '../../../components/design';
 import { inlineControlSx } from '../../../theme/formSx';
 import { useTheme } from '@mui/material/styles';
+import { useLocale } from '../../../i18n/useLocale';
+import { formatFigure } from '../../portfolio/figures';
 
 const MarkdownEditor = React.lazy(() => import('../../../components/MarkdownEditor'));
 
 const TIME_LOGGING_EXCLUDED_TYPES = ['contract', 'spend_item', 'capex_item'];
+
+/** Lowers the first letter so a later action continues the sentence. A quoted status keeps its own capital. */
+function continueSentence(text: string, language: string): string {
+  const [first] = Array.from(text);
+  if (!first) return text;
+  const lower = first.toLocaleLowerCase(language);
+  return lower === first ? text : lower + text.slice(first.length);
+}
 
 interface UnifiedActivityFormProps {
   taskId: string;
@@ -45,7 +55,8 @@ export default function UnifiedActivityForm({
   onImageUpload,
   onImageUrlImport,
 }: UnifiedActivityFormProps) {
-  const { t } = useTranslation(['portfolio', 'common', 'errors']);
+  const { t, i18n } = useTranslation(['portfolio', 'common', 'errors']);
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const [comment, setComment] = React.useState('');
   const [status, setStatus] = React.useState<string>('');
@@ -87,6 +98,7 @@ export default function UnifiedActivityForm({
 
   const submitLabel = React.useMemo(() => {
     if (!hasAnyAction) return t('portfolio:workspace.task.activity.actions.submit');
+    const language = i18n.resolvedLanguage || i18n.language;
     const actions: string[] = [];
     if (hasComment) actions.push(t('portfolio:workspace.task.activity.actions.comment'));
     if (hasStatusChange) {
@@ -94,20 +106,21 @@ export default function UnifiedActivityForm({
         status: getTaskStatusLabel(t, status),
       }));
     }
-    if (hasTime) actions.push(t('portfolio:workspace.task.activity.actions.logHours', { hours: timeHours }));
-    if (actions.length === 1) return actions[0];
-    if (actions.length === 2) {
+    if (hasTime) actions.push(t('portfolio:workspace.task.activity.actions.logHours', { hours: formatFigure(timeHours, locale, 1) }));
+    const parts = actions.map((action, index) => (index === 0 ? action : continueSentence(action, language)));
+    if (parts.length === 1) return parts[0];
+    if (parts.length === 2) {
       return t('portfolio:workspace.task.activity.actions.combineTwo', {
-        first: actions[0],
-        second: actions[1],
+        first: parts[0],
+        second: parts[1],
       });
     }
     return t('portfolio:workspace.task.activity.actions.combineThree', {
-      first: actions[0],
-      second: actions[1],
-      third: actions[2],
+      first: parts[0],
+      second: parts[1],
+      third: parts[2],
     });
-  }, [hasAnyAction, hasComment, hasStatusChange, hasTime, status, t, timeHours]);
+  }, [hasAnyAction, hasComment, hasStatusChange, hasTime, i18n.language, i18n.resolvedLanguage, locale, status, t, timeHours]);
 
   // Build success label based on what was submitted
   const getSuccessLabel = React.useCallback(() => {
@@ -313,7 +326,7 @@ export default function UnifiedActivityForm({
                 component="span"
                 sx={{ fontFamily: MONO_FONT_FAMILY, ...taskDetailTypography.composerCtrl, minWidth: 24, flexShrink: 0 }}
               >
-                {timeHours}h
+                {t('portfolio:workspace.task.workLog.duration.hoursOnly', { hours: formatFigure(timeHours, locale, 1) })}
               </Typography>
             </Box>
           )}

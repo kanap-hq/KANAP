@@ -262,7 +262,7 @@ La carte **Journal MCP** liste chaque appel d'outil fait par les clients MCP de 
 
 Filtrez la liste par **Personne**, **Clé ou connexion**, **Résultat** et **Période** (dernières 24 heures, 7 derniers jours, 30 derniers jours ou toute la période). Elle affiche 25 appels par page. Utilisez **Précédent** et **Suivant** pour passer d'une page à l'autre.
 
-Cliquez sur une ligne pour voir les arguments envoyés par l'appel, raccourcis, et pour un refus ou un échec sa cause complète. Les valeurs secrètes apparaissent comme *Masqué*.
+Cliquez sur une ligne pour voir les arguments envoyés par l'appel, raccourcis. Pour un refus ou un échec, la ligne montre sa raison ; sa cause complète s'affiche pour l'auteur de l'appel et pour un Administrator. Les valeurs secrètes apparaissent comme *Masqué*.
 
 Le journal enregistre aussi les appels faits avec une clé révoquée ou expirée. Il ne conserve jamais de clé ni de jeton.
 

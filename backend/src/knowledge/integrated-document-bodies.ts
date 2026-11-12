@@ -1,5 +1,6 @@
 import type { CsvImportContext, CsvImportRow } from '../common/csv/csv-field.types';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
+import { isRichTextContentRefusal } from '../common/markdown-limits';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { IntegratedDocumentSlotKey } from './integrated-document.constants';
 
@@ -40,7 +41,7 @@ export async function sameSlotBody(stored: string | undefined, value: unknown, f
   try {
     const next = (await normalizeMarkdownRichText(value, { fieldName })) || '';
     if (next === stored) return true;
-    return next === ((await normalizeMarkdownRichText(stored, { fieldName, enforceSizeLimit: false })) || '');
+    return next === ((await normalizeMarkdownRichText(stored, { fieldName, storedContent: true })) || '');
   } catch {
     // Too large or too complex: the write refuses it, so it is not "unchanged".
     return false;
@@ -81,4 +82,37 @@ export async function sameAsStoredWithDocuments(
     }
     return sameStoredValues(row.existingEntity, next);
   }));
+}
+
+/**
+ * For a CSV import whose texts live in bound documents: a cell refused for an HTML tag or for
+ * the address of a link, that repeats the text of its document, is no error. A text saved before that rule stays as it is,
+ * and its row stays importable (as `CsvImportService` does for a text stored in a column).
+ * `slots` gives the slot of each column, named as its entity property.
+ */
+export async function keepStoredSlotBodies(
+  rows: CsvImportRow[],
+  context: CsvImportContext,
+  sourceEntityType: 'projects' | 'requests' | 'incidents',
+  slots: Record<string, IntegratedDocumentSlotKey>,
+): Promise<void> {
+  const refusedSlot = (error: { code?: string; column?: string }) =>
+    (isRichTextContentRefusal(error.code) && error.column ? slots[error.column] : undefined);
+  const refused = rows.filter((row) => row.existingEntity && row.errors.some((error) => refusedSlot(error)));
+  if (refused.length === 0) return;
+
+  const bodies = await loadSlotBodies(
+    context.manager, context.tenantId, sourceEntityType,
+    refused.map((row) => row.existingEntity.id), Object.values(slots),
+  );
+  for (const row of refused) {
+    row.errors = row.errors.filter((error) => {
+      const slot = refusedSlot(error);
+      if (!slot) return true;
+      const stored = bodies.get(row.existingEntity.id)?.get(slot);
+      if (typeof stored !== 'string' || stored.trim() !== (row.raw[error.column!] ?? '').trim()) return true;
+      row.parsed[error.column!] = stored;
+      return false;
+    });
+  }
 }

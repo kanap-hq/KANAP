@@ -375,10 +375,10 @@ export default function BudgetPropertiesDrawer({
       {mode === 'edit' && (
         <PropertyGroup>
           <PropertyRow label={t('opex.fields.created')}>
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(createdAt, locale, { empty: '-' })}</Typography>
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(createdAt, locale, { year: 'always', empty: '-' })}</Typography>
           </PropertyRow>
           <PropertyRow label={t('opex.fields.updated')}>
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(updatedAt, locale, { empty: '-' })}</Typography>
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(updatedAt, locale, { year: 'always', empty: '-' })}</Typography>
           </PropertyRow>
         </PropertyGroup>
       )}

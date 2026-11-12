@@ -82,12 +82,14 @@ describe('CsvImportDialog', () => {
         errors: [
           { row: 4, column: 'description', message: 'description is too long: 250 KB of text, the limit is 200 KB.', code: 'MARKDOWN_TOO_LARGE' },
           { row: 5, column: 'supplier', message: 'Unknown supplier' },
+          { row: 6, column: 'notes', message: 'notes holds a link or an image whose address is not accepted.', code: 'MARKDOWN_LINK_NOT_ALLOWED' },
         ],
       }),
     });
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
     expect(await screen.findByText('csv.rowColumnError:description:errors:MARKDOWN_TOO_LARGE')).toBeInTheDocument();
+    expect(screen.getByText('csv.rowColumnError:notes:errors:MARKDOWN_LINK_NOT_ALLOWED')).toBeInTheDocument();
     // A row error without a code reads as before.
     expect(screen.getByText('csv.rowError')).toBeInTheDocument();
   });

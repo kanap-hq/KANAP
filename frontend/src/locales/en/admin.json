@@ -1249,8 +1249,8 @@
       "allocation_rules": "Allocation rules",
       "analytics_axes": "Analytics dimensions",
       "analytics_categories": "Analytics dimension values",
-      "app_asset_assignments": "Application instance assets",
-      "app_instances": "Application instances",
+      "app_asset_assignments": "Deployment assets",
+      "app_instances": "Deployments",
       "application_attachments": "Application attachments",
       "application_business_processes": "Application business processes",
       "application_capex_items": "Application CAPEX lines",
@@ -1708,6 +1708,7 @@
       "unpaid": "Unpaid"
     },
     "subscription": {
+      "keepSubscription": "Don't cancel",
       "scheduledChange": {
         "annual": "Switches to annual on {{date}}.",
         "keepAnnual": "Keep annual",
@@ -1983,6 +1984,7 @@
     "errors": {
       "noActiveSubscription": "No active subscription was found.",
       "planNotBankTransferEligible": "This plan is not eligible for bank transfer.",
+      "subscriptionPaymentPending": "Pay the pending invoice first, then change your plan.",
       "termsNotAccepted": "The general terms of sale could not be confirmed. Reload the page and accept them again.",
       "vatNumberInvalid": "The VAT number was not accepted. Check it in the invoicing information."
     },

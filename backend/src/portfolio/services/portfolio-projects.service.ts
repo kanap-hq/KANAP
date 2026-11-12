@@ -429,11 +429,12 @@ export class PortfolioProjectsService {
   }
 
   deleteAttachment(
+    projectId: string,
     attachmentId: string,
     userId: string | null,
     opts?: ServiceOpts,
   ) {
-    return this.attachmentsService.deleteAttachment(attachmentId, userId, opts);
+    return this.attachmentsService.deleteAttachment(projectId, attachmentId, userId, opts);
   }
 
   getAttachment(attachmentId: string, opts?: ServiceOpts) {

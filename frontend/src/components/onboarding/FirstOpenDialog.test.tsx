@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -49,13 +49,18 @@ function stubStorage(store: Map<string, string>) {
   });
 }
 
-function renderWith(node: React.ReactNode) {
+function Where() {
+  const location = useLocation();
+  return <div data-testid="where">{location.pathname}</div>;
+}
+
+function renderWith(node: React.ReactNode, path = '/') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <I18nextProvider i18n={i18n}>
         <ThemeProvider theme={createAppTheme('light')}>
-          <MemoryRouter>{node}</MemoryRouter>
+          <MemoryRouter initialEntries={[path]}>{node}<Where /></MemoryRouter>
         </ThemeProvider>
       </I18nextProvider>
     </QueryClientProvider>,
@@ -267,6 +272,46 @@ describe('AboutOnboardingLine', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('This workspace already holds data.');
     expect(screen.queryByText('Erase everything and start over')).not.toBeInTheDocument();
     expect(screen.getByText(/Path: IT budget · my own data/)).toBeInTheDocument();
+  });
+
+  it('goes back to the home page when the choice erases the sample data of the record on screen', async () => {
+    env.administrator = true;
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example', sampleData: { status: 'loaded', step: null } });
+    renderWith(<AboutOnboardingLine />, '/projects/PRJ-3');
+    fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'The IT budget' }));
+    fireEvent.click(screen.getByRole('button', { name: /Start with my own data/ }));
+    await waitFor(() => expect(screen.getByText(/Path: IT budget · my own data/)).toBeInTheDocument());
+    expect(choiceCalls()).toEqual([{ mode: 'own_data' }]);
+    expect(env.server.db.sampleData.status).toBe('resetting');
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/$/));
+  });
+
+  it('goes back to the home page when the workspace is erased before the example loads', async () => {
+    env.administrator = true;
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data', holdsData: true });
+    renderWith(<AboutOnboardingLine />, '/projects/PRJ-3');
+    fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'The IT budget' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explore with the complete example' }));
+    await screen.findByText('Erase everything and start over');
+    const confirm = screen.getByRole('dialog');
+    fireEvent.change(within(confirm).getByRole('textbox', { name: 'Workspace name' }), { target: { value: 'acme' } });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Erase everything' }));
+    await waitFor(() => expect(screen.getByText(/Path: IT budget · example/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/$/));
+  });
+
+  it('leaves the person where they are when the choice erases nothing', async () => {
+    env.administrator = true;
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example', sampleData: { status: 'loaded', step: null } });
+    renderWith(<AboutOnboardingLine />, '/projects/PRJ-3');
+    fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'The IT landscape map' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explore with the complete example' }));
+    await waitFor(() => expect(screen.getByText(/Path: IT landscape map · example/)).toBeInTheDocument());
+    expect(choiceCalls()).toEqual([{ angle: 'cartography' }]);
+    expect(screen.getByTestId('where')).toHaveTextContent('/projects/PRJ-3');
   });
 
   it('only shows the path to a user who may not change it', async () => {
