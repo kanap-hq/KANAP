@@ -85,8 +85,8 @@ Anwendungen, die schon vor dieser Regel denselben Namen trugen, bleiben bearbeit
 Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 
 **Oberer Bereichsfilter (Anzeigen)**:
-- **Meine Anwendungen**: zeigt Apps, bei denen Sie im Eigenschaftenbereich als **Business-Verantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
-- **Anwendungen meines Teams**: zeigt Apps, bei denen ein Mitglied Ihres Portfolio-Teams als Business-Verantwortlicher oder IT-Verantwortlicher gelistet ist. Ihre eigene Verantwortlichkeit ist in diesem Bereich ebenfalls enthalten. Deaktiviert, wenn Sie keinem Portfolio-Team zugewiesen sind.
+- **Meine Anwendungen**: zeigt Apps, bei denen Sie im Eigenschaftenbereich als **Fachverantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
+- **Anwendungen meines Teams**: zeigt Apps, bei denen ein Mitglied Ihres Portfolio-Teams als Fachverantwortlicher oder IT-Verantwortlicher gelistet ist. Ihre eigene Verantwortlichkeit ist in diesem Bereich ebenfalls enthalten. Deaktiviert, wenn Sie keinem Portfolio-Team zugewiesen sind.
 - **Alle Anwendungen** (Standard): zeigt das vollständige Anwendungsraster mit dem standardmäßigen Lebenszyklus-Filterverhalten.
 - Ihre Auswahl wird sitzungsübergreifend gespeichert: bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt.
 
@@ -108,7 +108,7 @@ Eine Zelle ohne Wert zeigt einen Strich.
 **Zusätzliche Spalten** (über die Spaltenauswahl):
 - **Suites**: Übergeordnete Suites, zu denen diese Anwendung gehört
 - **Lieferant**: Verknüpfter Lieferantenname
-- **Business-Verantwortliche** / **IT-Verantwortliche**: Zugewiesene Verantwortliche (gekürzt, Mauszeiger oder Klick zum Anzeigen aller)
+- **Fachverantwortliche** / **IT-Verantwortliche**: Zugewiesene Verantwortliche (gekürzt, Mauszeiger oder Klick zum Anzeigen aller)
 - **Hosting**: Abgeleitet von Server-Standorten, die App-Bereitstellungen zugewiesen sind. Eine Anwendung auf einem Cluster übernimmt auch die Standorte seiner Mitglieder
 - **Extern erreichbar**: Ob die App aus dem Internet zugänglich ist
 - **SSO aktiviert** / **MFA aktiviert**: Authentifizierungsfunktionen
@@ -197,7 +197,7 @@ Der Bereich ist die Identitätskarte der Anwendung. Er wird in jedem Reiter ange
 
 **Geschäftsprozesse und Verantwortliche**:
 - **Geschäftsprozesse**: die Prozesse, die die Anwendung unterstützt. Jeder Name öffnet den Prozess. Tippen Sie in das Feld, um einen Prozess zu suchen und hinzuzufügen; fahren Sie mit der Maus über einen Namen und klicken Sie auf das Kreuz, um ihn zu entfernen. Jede Änderung wird sofort gespeichert. Der Prozess zeigt dieselbe Verknüpfung in seinem eigenen Abschnitt **Anwendungen**. Ein deaktivierter Prozess bleibt ausgegraut aufgeführt. Das Ändern der Liste erfordert zusätzlich `business_processes:member`; ohne Leserecht für Geschäftsprozesse ist das Feld ausgeblendet.
-- **Business-Verantwortliche**: Geschäftliche Stakeholder, die für diese Anwendung rechenschaftspflichtig sind (Mehrfachauswahl)
+- **Fachverantwortliche**: Geschäftliche Stakeholder, die für diese Anwendung rechenschaftspflichtig sind (Mehrfachauswahl)
 - **IT-Verantwortliche**: IT-Teammitglieder, die für den technischen Support verantwortlich sind (Mehrfachauswahl)
 
 Um einen Verantwortlichen zu entfernen, fahren Sie mit der Maus über den Namen und klicken Sie auf das Kreuz am Zeilenende.
@@ -678,7 +678,7 @@ Eine leere Klassifizierungszelle behält im Modus Anreichern und Ersetzen den vo
 
 | CSV-Spalte | Beschreibung | Hinweise |
 |------------|-------------|-------|
-| `business_owner_email_1` bis `_4` | E-Mails der Business-Verantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
+| `business_owner_email_1` bis `_4` | E-Mails der Fachverantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
 | `it_owner_email_1` bis `_4` | E-Mails der IT-Verantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
 
 Im Modus `Anreichern` behält die Anwendung ihre Verantwortlichen eines Typs, wenn alle Verantwortlichen-Zellen dieses Typs leer sind.
@@ -725,7 +725,7 @@ Eine über ihre `id` gefundene Zeile mit einem anderen Namen benennt die Anwendu
 - **Bereitstellungen nicht enthalten**: Umgebungsbereitstellungen (Prod, QA, Dev) erfordern Arbeitsbereich-Konfiguration
 - **Server-Zuweisungen ausgeschlossen**: Server-Bindungen müssen im Reiter Bereitstellungen eingerichtet werden
 - **Schnittstellen ausgeschlossen**: Integrationsdefinitionen sind nicht Teil des Imports und Exports
-- **Maximal 4 Verantwortliche pro Typ**: Bis zu 4 Business-Verantwortliche und 4 IT-Verantwortliche können importiert/exportiert werden
+- **Maximal 4 Verantwortliche pro Typ**: Bis zu 4 Fachverantwortliche und 4 IT-Verantwortliche können importiert/exportiert werden
 - **Benutzermetriken nur Export**: Zielgruppen- und Benutzeranzahlfelder (`users_mode`, `users_year`, `users_override`) werden im Arbeitsbereich verwaltet
 - **Status nur Export**: Aktivieren oder deaktivieren Sie eine Anwendung in ihrem Arbeitsbereich
 

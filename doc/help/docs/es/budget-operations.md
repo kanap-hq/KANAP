@@ -37,7 +37,7 @@ El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de 
 
 Las columnas presupuestarias son Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto. Son los nombres estándar. Su organización puede renombrarlas, ocultar algunas y elegir una columna por defecto en [Columnas presupuestarias](#columnas-presupuestarias). Cada página a continuación muestra los nombres que eligió su organización.
 
-Mientras una de estas operaciones esté en curso, no se pueden guardar las líneas presupuestarias: una edición muestra el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» hasta que la operación termine.
+Mientras una de estas operaciones esté en curso, no se pueden guardar las líneas presupuestarias: una edición muestra el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» hasta que la operación termine. Del mismo modo, una operación se rechaza con este mensaje mientras hay en curso una modificación de varias líneas a la vez.
 
 ---
 
