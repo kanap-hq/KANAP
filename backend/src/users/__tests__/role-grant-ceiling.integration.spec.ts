@@ -200,6 +200,15 @@ async function testRolePermissions(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal((await permissionsOf(runner, s.roles.budgetReader)).budget, 'admin');
 }
 
+async function testTasksReadAddedWithBudget(h: Harness, runner: QueryRunner, s: Seed) {
+  // The tasks read that comes with a budget right is added only for a person who reads tasks.
+  await runner.query(`DELETE FROM role_permissions WHERE role_id = $1 AND resource = 'tasks'`, [s.roles.budgetAdmin]);
+  await h.roles.setRolePermissions(s.roles.budgetAdmin, { permissions: { budget: 'reader' } }, req(runner, s, 'userAdmin'));
+  assert.deepEqual(await permissionsOf(runner, s.roles.budgetAdmin), { budget: 'reader' }, 'no tasks read added by a person without it');
+  await h.roles.setRolePermissions(s.roles.budgetAdmin, { permissions: { budget: 'reader' } }, req(runner, s, 'admin'));
+  assert.deepEqual(await permissionsOf(runner, s.roles.budgetAdmin), { budget: 'reader', tasks: 'reader' }, 'added by an administrator');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -212,6 +221,7 @@ async function run() {
       await testMainRoleAndNewPerson(harness, runner, s);
       await testCsvImport(harness, runner, s);
       await testRolePermissions(harness, runner, s);
+      await testTasksReadAddedWithBudget(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

@@ -134,7 +134,15 @@ export class PermissionsService {
     return out;
   }
 
-  async setRolePermissionsMap(roleId: string, permissions: Record<string, PermissionLevel | null>, opts?: { manager?: EntityManager }) {
+  /**
+   * `autoTasksRead` (default true): whether a role with a right on budget, projects or contracts also
+   * gets `tasks: reader` when the call does not set tasks. False for a person who does not read tasks.
+   */
+  async setRolePermissionsMap(
+    roleId: string,
+    permissions: Record<string, PermissionLevel | null>,
+    opts?: { manager?: EntityManager; autoTasksRead?: boolean },
+  ) {
     // Upsert/delete
     const mgr = opts?.manager ?? this.rolePermissionRepo.manager;
     const repo = mgr.getRepository(RolePermission);
@@ -179,7 +187,7 @@ export class PermissionsService {
     });
 
     // If user has any operations access and tasks is not explicitly set, auto-grant tasks:reader
-    if (hasAnyOpsAccess && !merged.has('tasks')) {
+    if (opts?.autoTasksRead !== false && hasAnyOpsAccess && !merged.has('tasks')) {
       toSave.push({ resource: 'tasks', level: 'reader' });
     }
     for (const r of toSave) {

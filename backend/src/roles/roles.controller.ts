@@ -213,8 +213,11 @@ export class RolesController {
     const perms = body.permissions as Record<string, 'reader'|'contributor'|'member'|'admin'|null>;
     const before = await this.perms.getRolePermissionsMap(id, { manager: mg });
     // A right raised on the role stays within the rights of the one who sets it.
-    assertRolePermissionsWithinActorRights(roleGrantActorOf(req), before, perms);
-    const after = await this.perms.setRolePermissionsMap(id, perms as any, { manager: mg });
+    const actor = roleGrantActorOf(req);
+    assertRolePermissionsWithinActorRights(actor, before, perms);
+    // The tasks read added with a budget, projects or contracts right: only by a person who reads tasks.
+    const autoTasksRead = actor.isAdmin || !!actor.permissions.tasks;
+    const after = await this.perms.setRolePermissionsMap(id, perms as any, { manager: mg, autoTasksRead });
     await this.logRoleChange(req, id, 'update', roleSnapshot(role, before), roleSnapshot(role, after));
     return after;
   }
