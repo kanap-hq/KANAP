@@ -33,7 +33,7 @@ function stub(calls: string[]) {
   return new Proxy({}, {
     get: (_target, name) => async (...args: unknown[]) => {
       calls.push(String(name));
-      // A route reads the stored links before it replaces them (`withUnseenLinksKept`).
+      // A route reads the stored links before it replaces them (`removableLinks`).
       return { ok: true, args: args.length, items: [] };
     },
   });

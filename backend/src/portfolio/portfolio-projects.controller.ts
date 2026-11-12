@@ -40,7 +40,7 @@ import { resolveBusinessContributorScopeForUser } from '../auth/business-contrib
 import { PermissionLevel } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
-import { linkedReadsFromContext, withUnseenLinksKept } from '../common/relations/linked-reads';
+import { linkedReadsFromContext, removableLinks } from '../common/relations/linked-reads';
 import { assertApplicationsInScope, idsInScope, PortfolioLinkedReads } from './portfolio-linked-reads';
 import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 import { countEditedManagedDocuments, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
@@ -881,12 +881,13 @@ export class PortfolioProjectsController {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     const linked = await this.svc.listLinkedApplications(id, { manager: ctx.manager });
     const { applicationScope } = await this.projectRelationsContext(ctx);
-    // The links to applications the person does not read stay; the answer lists those they read.
+    // Only the links to applications the person reads may leave; the answer lists those they read.
     await assertApplicationsInScope(this.requireManager(ctx), body?.application_ids ?? [], applicationScope);
-    const next = await withUnseenLinksKept(ctx, 'applications', linked.items.map((row: { id: string }) => row.id), body?.application_ids ?? []);
-    const answer = await this.svc.bulkReplaceLinkedApplications(id, next, {
+    const removable = await removableLinks(ctx, 'applications', linked.items.map((row: { id: string }) => row.id));
+    const answer = await this.svc.bulkReplaceLinkedApplications(id, body?.application_ids ?? [], {
       manager: ctx.manager,
       userId: ctx.userId ?? null,
+      removable,
     });
     const visible = await idsInScope(this.requireManager(ctx), 'applications', answer.items.map((row: { id: string }) => row.id), applicationScope);
     return { ...answer, items: answer.items.filter((row: { id: string }) => visible.has(String(row.id))) };

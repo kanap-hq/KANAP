@@ -37,7 +37,7 @@ import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
 import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
-import { assertLinkedRecordsReadable, withUnseenLinksKept } from '../common/relations/linked-reads';
+import { assertLinkedRecordsReadable, readableLinkedItems, removableLinks } from '../common/relations/linked-reads';
 
 /**
  * The CAPEX routes, kept as aliases until the unified screens (plan planning/budget-unifie.md, lot
@@ -437,10 +437,11 @@ export class CapexItemsController {
   ) {
     await assertLinkedRecordsReadable(ctx, 'projects', body?.project_ids ?? []);
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    // The links to projects the person does not read stay.
+    // Only the links to projects the person reads may leave; the answer names no other project.
     const stored = (await this.svc.listProjects(id, { manager: ctx.manager })).items.map((row: { id: string }) => row.id);
-    const next = await withUnseenLinksKept(ctx, 'projects', stored, body?.project_ids ?? []);
-    return this.svc.bulkReplaceProjects(id, next, { manager: ctx.manager });
+    const removable = await removableLinks(ctx, 'projects', stored);
+    const answer = await this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], { manager: ctx.manager, removable });
+    return { ...answer, items: await readableLinkedItems(ctx, 'projects', answer.items) };
   }
 
   // Applications
@@ -468,8 +469,9 @@ export class CapexItemsController {
     await assertLinkedRecordsReadable(ctx, 'applications', body?.application_ids ?? []);
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     const stored = (await this.svc.listApplications(id, { manager: ctx.manager })).items.map((row: { id: string }) => row.id);
-    const next = await withUnseenLinksKept(ctx, 'applications', stored, body?.application_ids ?? []);
-    return this.svc.bulkReplaceApplications(id, next, ctx.userId || null, { manager: ctx.manager });
+    const removable = await removableLinks(ctx, 'applications', stored);
+    const answer = await this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, { manager: ctx.manager, removable });
+    return { ...answer, items: await readableLinkedItems(ctx, 'applications', answer.items) };
   }
 
   // Technologies: their section is null without the right to read the infrastructure, and a set the

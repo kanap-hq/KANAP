@@ -109,7 +109,8 @@ async function contextScope(
  */
 export async function assertLinkedRecordsReadable(ctx: LinkWriteContext, module: LinkedModule, ids: unknown[]): Promise<void> {
   assertLinkedModuleRead(ctx, module);
-  const wanted = (Array.isArray(ids) ? ids : []).map((id) => String(id || '').trim()).filter((id) => UUID_RE.test(id));
+  // Stored ids are lower case: an upper-case id names the same record.
+  const wanted = (Array.isArray(ids) ? ids : []).map((id) => String(id || '').trim().toLowerCase()).filter((id) => UUID_RE.test(id));
   if (wanted.length === 0) return;
   const scoped = await contextScope(ctx, module);
   if (!scoped) return;
@@ -120,21 +121,45 @@ export async function assertLinkedRecordsReadable(ctx: LinkWriteContext, module:
 }
 
 /**
- * The ids a replacement of a record's links of `module` stores: `next`, plus the links among `stored`
- * the person does not read (a Business Contributor's records outside their participation), which a
- * replacement keeps, as on a document's links. `ctx`: the route's `@Tenant()` context or its request.
+ * The stored links among `stored` (ids of `module` records) a replacement may remove: those the
+ * person reads. Undefined for a person who reads every record of the module. The others are never
+ * removed, also when stored by someone else meanwhile (`replacedLinks`). `ctx`: the route's
+ * `@Tenant()` context or its request.
  */
-export async function withUnseenLinksKept(
-  ctx: LinkWriteContext,
-  module: ParticipationLinkedModule,
-  stored: string[],
-  next: string[],
-): Promise<string[]> {
+export async function removableLinks(ctx: LinkWriteContext, module: ParticipationLinkedModule, stored: string[]): Promise<string[] | undefined> {
   const scoped = await contextScope(ctx, module);
-  if (!scoped) return next;
-  const kept = await linksOutsideScope(scoped.manager, module, stored.map((id) => String(id).toLowerCase()), scoped.scope);
-  const seen = new Set(next.map((id) => String(id).trim().toLowerCase()));
-  return [...next, ...kept.filter((id) => !seen.has(id))];
+  if (!scoped) return undefined;
+  const ids = stored.map((id) => String(id).toLowerCase());
+  const visible = await idsInScope(scoped.manager, module, ids, scoped.scope);
+  return ids.filter((id) => visible.has(id));
+}
+
+/** The items among `items` (records of `module`) the person reads: a route's answer names no other. */
+export async function readableLinkedItems<T extends { id: string }>(ctx: LinkWriteContext, module: ParticipationLinkedModule, items: T[]): Promise<T[]> {
+  const scoped = await contextScope(ctx, module);
+  if (!scoped) return items;
+  const visible = await idsInScope(scoped.manager, module, items.map((item) => String(item.id).toLowerCase()), scoped.scope);
+  return items.filter((item) => visible.has(String(item.id).toLowerCase()));
+}
+
+/**
+ * A replacement of a record's links, from the stored ones (`before`): the links to remove (stored,
+ * not in `next`, and among `removable` when given), the links to add, and the set stored after.
+ * A link outside `removable` stays: it is neither deleted nor written again.
+ */
+export function replacedLinks(before: string[], next: string[], removable?: string[]): { removed: string[]; added: string[]; after: string[] } {
+  const stored = Array.from(new Set(before.map((id) => String(id).toLowerCase())));
+  const wanted = Array.from(new Set(next.map((id) => String(id).trim().toLowerCase()).filter(Boolean)));
+  const wantedSet = new Set(wanted);
+  const storedSet = new Set(stored);
+  const mayRemove = removable ? new Set(removable.map((id) => String(id).toLowerCase())) : null;
+  const removed = stored.filter((id) => !wantedSet.has(id) && (!mayRemove || mayRemove.has(id)));
+  const removedSet = new Set(removed);
+  return {
+    removed,
+    added: wanted.filter((id) => !storedSet.has(id)),
+    after: [...stored.filter((id) => !removedSet.has(id)), ...wanted.filter((id) => !storedSet.has(id))],
+  };
 }
 
 /**

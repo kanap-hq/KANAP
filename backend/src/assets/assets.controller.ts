@@ -36,7 +36,7 @@ import {
   assetRelationKindOrThrow,
   type AssetRelationsContext,
 } from './asset-relations-tab.service';
-import { assertLinkedModuleRead, assertLinkedRecordsReadable, withUnseenLinksKept } from '../common/relations/linked-reads';
+import { assertLinkedModuleRead, assertLinkedRecordsReadable, readableLinkedItems, removableLinks } from '../common/relations/linked-reads';
 
 @UseGuards(JwtAuthGuard)
 @Controller('assets')
@@ -535,10 +535,11 @@ export class AssetsController {
     await assertLinkedRecordsReadable(req, 'projects', body?.project_ids ?? []);
     const tenantId: string | undefined = req?.tenant?.id;
     const opts = { manager: req?.queryRunner?.manager, tenantId };
-    // The links to projects the person does not read stay.
+    // Only the links to projects the person reads may leave; the answer names no other project.
     const stored = (await this.svc.listProjects(id, opts)).items.map((row: { id: string }) => row.id);
-    const next = await withUnseenLinksKept(req, 'projects', stored, body?.project_ids ?? []);
-    return this.svc.bulkReplaceProjects(id, next, tenantId ?? '', req.user?.sub ?? null, opts);
+    const removable = await removableLinks(req, 'projects', stored);
+    const answer = await this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], tenantId ?? '', req.user?.sub ?? null, { ...opts, removable });
+    return { ...answer, items: await readableLinkedItems(req, 'projects', answer.items) };
   }
 
   // Links (URLs)
