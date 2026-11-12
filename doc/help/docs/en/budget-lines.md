@@ -206,7 +206,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 1. Select the lines, then click **Change the selection** (edit icon). The icon shows the number of lines selected
 2. Choose the **Field**: **Cost center**, **Account**, **Paying company**, **Supplier**, **IT owner**, **Business owner**, **Dimension value** or **Run or build**. For an account, first pick the company in **Chart of accounts of**, then the account. For a dimension value, first pick the **Dimension**, then the value
 3. Choose the **New value**. The dialog counts the lines: how many will change, how many already have this value, and how many are refused, with the reason for each (for example "Read only for you" or "Account not for this type of line"). The count runs again at each new value
-4. Click **Change 12 rows** (with your count) to confirm. The refused lines stay as they are and the others change. A message gives the number of lines changed and refused
+4. Click **Change 12 rows** (with your count) to confirm. The refused lines stay as they are and the others change. The window then shows the outcome: the lines changed, those that already had the value, and those refused with their reasons. Click **Close** to close it. The list behind it is already up to date
 
 **Emptying a field**: For an optional field, click **Empty the field** (eraser icon) beside the value. The value reads **Empty**, and the field is emptied on every selected line. **Account** and **Paying company** cannot be emptied, nor a required dimension.
 

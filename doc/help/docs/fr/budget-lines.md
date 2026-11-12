@@ -206,7 +206,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 1. Sélectionnez les lignes, puis cliquez sur **Modifier la sélection** (icône de modification). L'icône affiche le nombre de lignes sélectionnées
 2. Choisissez le **Champ** : **Centre de coûts**, **Compte**, **Société payeuse**, **Fournisseur**, **Responsable IT**, **Responsable métier**, **Valeur de dimension** ou **Run ou build**. Pour un compte, choisissez d'abord la société dans **Plan comptable de**, puis le compte. Pour une valeur de dimension, choisissez d'abord la **Dimension**, puis la valeur
 3. Choisissez la **Nouvelle valeur**. La boîte de dialogue compte les lignes : combien changeront, combien ont déjà cette valeur, et combien sont refusées, avec la raison de chaque refus (par exemple « En lecture seule pour vous » ou « Compte non prévu pour ce type de ligne »). Le comptage reprend à chaque nouvelle valeur
-4. Cliquez sur **Modifier 12 lignes** (avec votre comptage) pour confirmer. Les lignes refusées restent telles quelles et les autres changent. Un message donne le nombre de lignes modifiées et refusées
+4. Cliquez sur **Modifier 12 lignes** (avec votre comptage) pour confirmer. Les lignes refusées restent telles quelles et les autres changent. La fenêtre affiche ensuite le résultat : les lignes modifiées, celles qui avaient déjà la valeur, et celles refusées avec leurs raisons. Cliquez sur **Fermer** pour la fermer. La liste derrière elle est déjà à jour
 
 **Vider un champ** : Pour un champ facultatif, cliquez sur **Vider le champ** (icône de gomme) à côté de la valeur. La valeur affiche **Vide**, et le champ est vidé sur chaque ligne sélectionnée. Le **Compte** et la **Société payeuse** ne peuvent pas être vidés, ni une dimension obligatoire.
 

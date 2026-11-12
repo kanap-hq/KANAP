@@ -206,7 +206,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 1. Seleccione las líneas y haga clic en **Modificar la selección** (icono de edición). El icono muestra el número de líneas seleccionadas
 2. Elija el **Campo**: **Centro de coste**, **Cuenta**, **Empresa pagadora**, **Proveedor**, **Responsable de TI**, **Responsable de negocio**, **Valor de dimensión** o **Run o build**. Para una cuenta, elija primero la empresa en **Plan de cuentas de** y luego la cuenta. Para un valor de dimensión, elija primero la **Dimensión** y luego el valor
 3. Elija el **Nuevo valor**. El diálogo cuenta las líneas: cuántas cambiarán, cuántas ya tienen este valor y cuántas se rechazan, con el motivo de cada rechazo (por ejemplo "Solo lectura para usted" o "Cuenta no prevista para este tipo de línea"). El recuento se repite con cada nuevo valor
-4. Haga clic en **Modificar 12 filas** (con su recuento) para confirmar. Las líneas rechazadas quedan como estaban y las demás cambian. Un mensaje indica el número de líneas modificadas y rechazadas
+4. Haga clic en **Modificar 12 filas** (con su recuento) para confirmar. Las líneas rechazadas quedan como estaban y las demás cambian. La ventana muestra entonces el resultado: las líneas modificadas, las que ya tenían el valor y las rechazadas con sus motivos. Haga clic en **Cerrar** para cerrarla. La lista detrás ya está actualizada
 
 **Vaciar un campo**: En un campo opcional, haga clic en **Vaciar el campo** (icono de goma) junto al valor. El valor muestra **Vacío**, y el campo se vacía en cada línea seleccionada. La **Cuenta** y la **Empresa pagadora** no se pueden vaciar, ni una dimensión obligatoria.
 
