@@ -36,7 +36,7 @@ import {
   assetRelationKindOrThrow,
   type AssetRelationsContext,
 } from './asset-relations-tab.service';
-import { assertLinkedModuleRead, assertLinkedRecordsReadable } from '../common/relations/linked-reads';
+import { assertLinkedModuleRead, assertLinkedRecordsReadable, withUnseenLinksKept } from '../common/relations/linked-reads';
 
 @UseGuards(JwtAuthGuard)
 @Controller('assets')
@@ -534,10 +534,11 @@ export class AssetsController {
   async bulkReplaceProjects(@Param('id') id: string, @Body() body: { project_ids: string[] }, @Req() req: any) {
     await assertLinkedRecordsReadable(req, 'projects', body?.project_ids ?? []);
     const tenantId: string | undefined = req?.tenant?.id;
-    return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], tenantId ?? '', req.user?.sub ?? null, {
-      manager: req?.queryRunner?.manager,
-      tenantId,
-    });
+    const opts = { manager: req?.queryRunner?.manager, tenantId };
+    // The links to projects the person does not read stay.
+    const stored = (await this.svc.listProjects(id, opts)).items.map((row: { id: string }) => row.id);
+    const next = await withUnseenLinksKept(req, 'projects', stored, body?.project_ids ?? []);
+    return this.svc.bulkReplaceProjects(id, next, tenantId ?? '', req.user?.sub ?? null, opts);
   }
 
   // Links (URLs)

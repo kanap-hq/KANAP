@@ -1,4 +1,4 @@
-import { linkedReadsFromContext } from '../common/relations/linked-reads';
+import { linkedReadsFromContext, withUnseenLinksKept } from '../common/relations/linked-reads';
 import { assertApplicationsInScope, idsInScope } from './portfolio-linked-reads';
 import { languageOf } from '../common/csv-sheet';
 import {
@@ -856,12 +856,11 @@ export class PortfolioRequestsController {
     }
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     const linked = await this.svc.listLinkedApplications(id, { manager: req?.queryRunner?.manager });
-    await assertApplicationsInScope(
-      req.queryRunner.manager,
-      [...linked.items.map((row) => row.id), ...(body?.application_ids ?? [])],
-      await resolveBusinessContributorScope(req, 'applications'),
-    );
-    return this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], {
+    const applicationScope = await resolveBusinessContributorScope(req, 'applications');
+    // The links to applications the person does not read stay.
+    await assertApplicationsInScope(req.queryRunner.manager, body?.application_ids ?? [], applicationScope);
+    const next = await withUnseenLinksKept(req, 'applications', linked.items.map((row) => row.id), body?.application_ids ?? []);
+    return this.svc.bulkReplaceApplications(id, next, {
       manager: req?.queryRunner?.manager,
       userId: req.user?.sub ?? null,
     });

@@ -33,7 +33,8 @@ function stub(calls: string[]) {
   return new Proxy({}, {
     get: (_target, name) => async (...args: unknown[]) => {
       calls.push(String(name));
-      return { ok: true, args: args.length };
+      // A route reads the stored links before it replaces them (`withUnseenLinksKept`).
+      return { ok: true, args: args.length, items: [] };
     },
   });
 }
@@ -93,10 +94,11 @@ async function testRoutes() {
     assert.deepEqual(body.params, { resources: [route.linked] }, `${route.label}: params`);
     assert.deepEqual(calls, [], `${route.label}: nothing read, nothing written`);
 
+    const writes = () => (calls as string[]).filter((name) => !name.startsWith('list')).length;
     await call(ctx({ ...route.own, [route.linked]: 'reader' }));
-    assert.equal(calls.length, 1, `${route.label}: written with the read`);
+    assert.equal(writes(), 1, `${route.label}: written with the read`);
     await call(ctx({}, true));
-    assert.equal(calls.length, 2, `${route.label}: written by an administrator`);
+    assert.equal(writes(), 2, `${route.label}: written by an administrator`);
     calls.length = 0;
   }
 }

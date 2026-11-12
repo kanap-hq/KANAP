@@ -55,10 +55,10 @@ export async function idsInScope(
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * 400 when a replacement of a record's applications keeps, adds or drops one outside the
- * participation scope, as the Relations tab, which neither shows nor links it
- * (`assertApplicationVisible`). `ids` holds the stored links and the requested ones. An id that is
- * not a uuid is left to the replacement, which refuses it.
+ * 400 when a replacement of a record's applications names one outside the participation scope, as
+ * the Relations tab, which neither shows nor links it (`assertApplicationVisible`): it reads as a
+ * missing one. `ids`: the requested ones; the stored links outside the scope stay
+ * (`withUnseenLinksKept`). An id that is not a uuid is left to the replacement, which refuses it.
  */
 export async function assertApplicationsInScope(
   manager: EntityManager,
