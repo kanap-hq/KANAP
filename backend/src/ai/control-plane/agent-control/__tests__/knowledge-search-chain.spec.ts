@@ -198,6 +198,29 @@ function testQueriesCoverTheLanguagesOfTheDocuments() {
   }
 }
 
+// A code that opens the ticket title (« R8 R1 VPN ») names the ticket, not an application: it
+// prefixes no query. A name the description gives too stays one, as does a title without a code.
+function testACodeOpeningTheTitleIsNoApplication() {
+  const builder = new AiTicketNeedRepresentationService({} as any);
+  const derive = (title: string, description: string, applications: string[]) => builder.deriveKnowledgeQueries({
+    need: need({ entities: { applications, modules: [], screens: [], equipment: [], services: [] }, symptoms: ['connexion refusée'] }),
+    fallbackTitle: title,
+    fallbackDescription: description,
+  });
+  const coded = derive('R8 R1 VPN ter', 'Le VPN refuse ma connexion.', ['R8', 'R1', 'R8 R1 VPN', 'VPN']);
+  for (const query of coded.queries) assert.doesNotMatch(query, /\bR[18]\b/i, `query ${query}`);
+  assert.ok(coded.facet_queries.some((query) => query.startsWith('VPN ')), 'the application after the code stays one');
+
+  const title = 'INC4521 Outlook plante';
+  const deterministic = builder.buildDeterministicNeedRepresentation({ ticket: { id: '9', title, description: '' }, timeline: [] }).need;
+  const fromDeterministic = builder.deriveKnowledgeQueries({ need: { ...deterministic, symptoms: ['plante'] }, fallbackTitle: title, fallbackDescription: '' });
+  for (const query of fromDeterministic.facet_queries) assert.doesNotMatch(query, /INC4521/, `query ${query}`);
+  assert.ok(fromDeterministic.facet_queries.some((query) => query.startsWith('Outlook ')));
+
+  assert.ok(derive('X3 bloqué', 'Sage X3 ne répond plus depuis ce matin.', ['X3']).facet_queries.some((query) => query.startsWith('X3 ')), 'a name the description gives');
+  assert.ok(derive('Outlook plante', '', ['Outlook']).facet_queries.some((query) => query.startsWith('Outlook ')), 'a title without a code');
+}
+
 // A word that only starts a sentence or links two is no application: it prefixes no query.
 function testLinkingWordsAreNoApplications() {
   const builder = new AiTicketNeedRepresentationService({} as any);
@@ -285,6 +308,7 @@ function testInternalNoteFollowsTheTenantLanguage() {
 
 async function run() {
   for (const test of [
+    testACodeOpeningTheTitleIsNoApplication,
     testInterpreterPromptIsBounded,
     testFallbackResultsAreCandidatesOnly,
     testQueriesCoverTheLanguagesOfTheDocuments,

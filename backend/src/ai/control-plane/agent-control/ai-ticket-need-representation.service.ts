@@ -89,6 +89,39 @@ export function isNonApplicationWord(value: string): boolean {
   const key = stripAccents(words[0]).toLocaleLowerCase().replace(/['\u2019].*$/, '').replace(/[^\p{L}\p{N}]+/gu, '');
   return !key || NON_APPLICATION_WORDS.has(key);
 }
+
+// A code that opens a ticket title (« R8 R1 VPN », « INC4521 Outlook plante »): letters then digits.
+const TITLE_HEAD_CODE = /^[\p{L}]{1,4}-?\d{1,6}$/u;
+
+function codeWords(value: string): string[] {
+  return stripAccents(normalizeText(value)).toLocaleLowerCase().split(/[^\p{L}\p{N}-]+/u).filter(Boolean);
+}
+
+/**
+ * The application names without the codes that open the ticket title: such a code names the
+ * ticket, not an application, unless the description gives it too. A name made of such codes only
+ * is dropped; a name they open keeps its other words (« R8 R1 VPN » gives « VPN »).
+ */
+export function withoutTitleHeadCodes(names: string[], title: string | null | undefined, description: string | null | undefined): string[] {
+  const codes = new Set<string>();
+  for (const word of codeWords(title ?? '')) {
+    if (!TITLE_HEAD_CODE.test(word)) break;
+    codes.add(word);
+  }
+  const described = new Set(codeWords(description ?? ''));
+  const isHeadCode = (word: string) => {
+    const key = codeWords(word)[0] ?? '';
+    return codes.has(key) && !described.has(key);
+  };
+  if (codes.size === 0) return names;
+  return names.flatMap((name) => {
+    const words = normalizeText(name).split(/\s+/).filter(Boolean);
+    let start = 0;
+    while (start < words.length && isHeadCode(words[start])) start += 1;
+    return start < words.length ? [words.slice(start).join(' ')] : [];
+  });
+}
+
 const QUERY_STOPWORDS = new Set([
   'avec', 'avoir', 'besoin', 'cest', 'cherche', 'chercher', 'comment', 'dans',
   'des', 'donc', 'elle', 'est', 'etes', 'etre', 'faire', 'faut', 'for', 'from',
@@ -888,8 +921,10 @@ export class AiTicketNeedRepresentationService {
     const facetBucket = { queries: [] as string[], dropped: [] as KnowledgeQueryDerivation['dropped_queries'], seen: exactBucket.seen };
     const fallbackBucket = { queries: [] as string[], dropped: [] as KnowledgeQueryDerivation['dropped_queries'], seen: exactBucket.seen };
 
-    const applications = need.entities.applications.filter((application) => !isNonApplicationWord(application));
-    const modules = need.entities.modules.filter((module) => !isNonApplicationWord(module));
+    const applications = withoutTitleHeadCodes(need.entities.applications, input.fallbackTitle, input.fallbackDescription)
+      .filter((application) => !isNonApplicationWord(application));
+    const modules = withoutTitleHeadCodes(need.entities.modules, input.fallbackTitle, input.fallbackDescription)
+      .filter((module) => !isNonApplicationWord(module));
     const screens = need.entities.screens;
     const symptoms = uniqueStrings([...need.symptoms, ...need.constraints.positive], MAX_FIELD_ITEMS);
     const actions = need.actions_attempted;
