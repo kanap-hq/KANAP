@@ -15,6 +15,11 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   attachment through its application, as the download does, and the interface route refuses a
 //   Business Contributor, as the download does.
 // - A person with limited data access does not delete an attachment of a record out of their scope.
+// - The same holds for the deletes that take attachments with them: an inline image cleaned up
+//   from a text, an application, a technology, a managed document.
+// - Without a current tenant the check fails, and no file is deleted.
+// - A file that cannot be deleted leaves the attachment deleted: the weekly sweep removes the file.
+// - Every table with a `storage_path` column is one the tenant purge (and so the check) knows.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret-of-at-least-32-characters';
@@ -237,6 +242,99 @@ function testRoutesAskForAWriteLevel() {
   }
 }
 
+/** A file named by an attachment of `family` and by a request copy; returns both. */
+async function sharedWithRequest(runner: QueryRunner, s: TenantSeed, family: Family, recordId: string) {
+  const own = await attach(runner, s, family, recordId);
+  const copy = await attach(runner, s, 'requests', s.records.requests, own.storagePath);
+  return { own, copy };
+}
+
+/** The deletes that take attachments with them keep a file another row names. */
+async function testRecordDeletesKeepSharedFiles(h: Harness, runner: QueryRunner, s: TenantSeed) {
+  const manager = runner.manager;
+  const { PortfolioAttachmentsService } = require('../../portfolio/services/portfolio-attachments.service');
+  const { ApplicationsDeleteService } = require('../../applications/applications-delete.service');
+  const { TechnologiesDeleteService } = require('../../technologies/technologies-delete.service');
+  const { KnowledgeService } = require('../../knowledge/knowledge.service');
+
+  // A project's inline image cloned into a managed document, then taken out of the project text.
+  const inline = await attach(runner, s, 'projects');
+  await runner.query(`UPDATE portfolio_project_attachments SET source_field = 'purpose' WHERE id = $1`, [inline.id]);
+  const clone = await attach(runner, s, 'documents', s.records.documents, inline.storagePath);
+  const text = `![shot](/api/portfolio/projects/inline/spec/${inline.id})`;
+  await h.get(PortfolioAttachmentsService).cleanupOrphanedImages(s.records.projects, 'purpose', text, '', { manager });
+  assert.equal(await rowExists(runner, 'projects', inline.id), false, 'inline image: the project row is cleaned up');
+  assert.equal(h.deletedObjects.includes(inline.storagePath), false, 'inline image: the file the document clone names is kept');
+  assert.equal(await rowExists(runner, 'documents', clone.id), true, 'inline image: the clone stays');
+
+  // An application with an attachment shared with a request copy.
+  const appId = await insertId(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, $2)`, [s.tenantId, `Deleted app ${s.tenantId.slice(0, 8)}`]);
+  const app = await sharedWithRequest(runner, s, 'applications', appId);
+  await h.get(ApplicationsDeleteService).delete(appId, { manager, userId: s.editor });
+  assert.equal(await rowExists(runner, 'applications', app.own.id), false, 'application delete: its attachment goes');
+  assert.equal(h.deletedObjects.includes(app.own.storagePath), false, 'application delete: the shared file is kept');
+
+  // A technology, the same way.
+  const techId = await insertId(runner, `INSERT INTO technologies (tenant_id, item_number, name) VALUES ($1, 9, $2)`, [s.tenantId, `Deleted tech ${s.tenantId.slice(0, 8)}`]);
+  const tech = await sharedWithRequest(runner, s, 'technologies', techId);
+  await h.get(TechnologiesDeleteService).delete(techId, { manager, tenantId: s.tenantId, userId: s.editor });
+  assert.equal(await rowExists(runner, 'technologies', tech.own.id), false, 'technology delete: its attachment goes');
+  assert.equal(h.deletedObjects.includes(tech.own.storagePath), false, 'technology delete: the shared file is kept');
+
+  // A managed document, the same way; its unshared file goes.
+  const library = (await runner.query(`SELECT library_id FROM documents WHERE id = $1`, [s.records.documents]))[0].library_id;
+  const docId = await insertId(runner,
+    `INSERT INTO documents (tenant_id, item_number, title, library_id, status) VALUES ($1, 9, 'Deleted document', $2, 'published')`, [s.tenantId, library]);
+  const doc = await sharedWithRequest(runner, s, 'documents', docId);
+  const alone = await attach(runner, s, 'documents', docId);
+  await h.get(KnowledgeService).deleteManagedDocument(docId, s.editor, { manager, checkAccess: false });
+  assert.equal(await rowExists(runner, 'documents', doc.own.id), false, 'document delete: its attachment goes');
+  assert.equal(h.deletedObjects.includes(doc.own.storagePath), false, 'document delete: the shared file is kept');
+  assert.equal(h.deletedObjects.includes(alone.storagePath), true, 'document delete: its own file goes');
+}
+
+/** Without a current tenant the check fails before any file is deleted. */
+async function testNoTenantNoDelete(h: Harness, runner: QueryRunner, s: TenantSeed) {
+  const { isStoragePathReferencedInAnyTable, unreferencedPaths } = require('../storage-path-refs');
+  const before = h.deletedObjects.length;
+  await runner.query(`SAVEPOINT no_tenant`);
+  await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
+  await assert.rejects(() => isStoragePathReferencedInAnyTable(runner.manager, 'files/any/path'), /No tenant/);
+  await assert.rejects(() => unreferencedPaths(runner.manager, '', ['files/any/path']), /No tenant/);
+  await runner.query(`ROLLBACK TO SAVEPOINT no_tenant`);
+  await useTenant(runner, s.tenantId);
+  assert.equal(h.deletedObjects.length, before, 'no tenant: no file deleted');
+}
+
+/** A file that cannot be deleted leaves the attachment deleted (contracts: the row, then the file). */
+async function testStorageFailureLeavesTheRowDeleted(h: Harness, runner: QueryRunner, s: TenantSeed) {
+  const { StorageService } = require('../storage/storage.service');
+  const storage = h.app.get(StorageService);
+  const record = storage.deleteObject;
+  storage.deleteObject = async () => { throw new Error('storage unavailable'); };
+  try {
+    const failing = await attach(runner, s, 'contracts');
+    assert.deepEqual(await deleteAs(h, runner, s, 'contracts', failing.id), { ok: true });
+    assert.equal(await rowExists(runner, 'contracts', failing.id), false, 'storage failure: the attachment is deleted');
+  } finally {
+    storage.deleteObject = record;
+  }
+}
+
+/** Every table with a stored file column is known to the tenant purge, so to the check. */
+async function testEveryStoredFileTableIsKnown(runner: QueryRunner) {
+  const { TENANT_PURGE_ATTACHMENT_TABLES } = require('../../admin/tenants/tenant-purge.inventory');
+  // A table here holds a `storage_path` the check need not read, with the reason why.
+  const KEPT_OUT: Record<string, string> = {};
+  const rows: Array<{ table_name: string }> = await runner.query(
+    `SELECT DISTINCT table_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND column_name = 'storage_path' ORDER BY 1`,
+  );
+  const known = new Set<string>([...TENANT_PURGE_ATTACHMENT_TABLES, ...Object.keys(KEPT_OUT)]);
+  const missing = rows.map((r) => r.table_name).filter((table) => !known.has(table));
+  assert.deepEqual(missing, [], `tables with a storage_path the tenant purge does not know: ${missing.join(', ')}`);
+}
+
 /** The application and interface routes read the attachment's record as their downloads do. */
 async function testBusinessContributorDeletesThroughTheRecord(h: Harness, runner: QueryRunner, s: TenantSeed) {
   const { ApplicationsController } = require('../../applications/applications.controller');
@@ -316,6 +414,10 @@ async function run() {
         await testOtherTenantIsNotReached(harness, runner, s, foreign, family);
       }
       await testBusinessContributorDeletesThroughTheRecord(harness, runner, s);
+      await testRecordDeletesKeepSharedFiles(harness, runner, s);
+      await testNoTenantNoDelete(harness, runner, s);
+      await testStorageFailureLeavesTheRowDeleted(harness, runner, s);
+      await testEveryStoredFileTableIsKnown(runner);
       await testLimitedPerson(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
