@@ -27,6 +27,7 @@ import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { parseInviteSignIn } from './invite-sign-in';
+import { assertRoleGrantWithinActorRights, roleGrantActorOf } from '../roles/role-grant-ceiling';
 
 function canViewUserAdministration(req: any): boolean {
   return req?.isAdmin === true || req?.permissionLevel === 'admin';
@@ -139,7 +140,9 @@ export class UsersController {
   @Post()
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
-  create(@Body() body: any, @Req() req: any) { return this.svc.createUser(body, { manager: req?.queryRunner?.manager }); }
+  create(@Body() body: any, @Req() req: any) {
+    return this.svc.createUser(body, { manager: req?.queryRunner?.manager, roleGrant: roleGrantActorOf(req) });
+  }
 
   @Patch('me')
   updateMe(@Body() body: any, @Req() req: any) {
@@ -156,14 +159,16 @@ export class UsersController {
   @Patch(':id')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'member')
-  update(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    const userId = userIdParam(id);
+    const canManageUsers = req.isAdmin === true || req.permissionLevel === 'admin';
+    if (canManageUsers && body?.role_id) {
+      await assertRoleGrantWithinActorRights(req?.queryRunner?.manager ?? this.userRepo.manager, roleGrantActorOf(req), userId, [body.role_id]);
+    }
     return this.svc.updateUser(
-      userIdParam(id),
+      userId,
       body,
-      {
-        actorUserId: req.user?.sub ?? null,
-        canManageUsers: req.isAdmin === true || req.permissionLevel === 'admin',
-      },
+      { actorUserId: req.user?.sub ?? null, canManageUsers },
       { manager: req?.queryRunner?.manager },
     );
   }
@@ -192,6 +197,7 @@ export class UsersController {
         language,
         dateOrder: parseDateOrder(dateOrderRaw),
         decimalMark: parseDecimalMark(decimalMarkRaw),
+        roleGrant: roleGrantActorOf(req),
       },
       { manager: req?.queryRunner?.manager },
     );
@@ -289,6 +295,9 @@ export class UsersController {
     // Get user
     const user = await userRepo.findOne({ where: { id: userId } });
     if (!user) throw new BadRequestException('User not found');
+
+    // A role the person does not hold yet stays within the rights of the one who gives it.
+    await assertRoleGrantWithinActorRights(manager ?? this.userRoleRepo.manager, roleGrantActorOf(req), userId, roleIds);
 
     // Snapshot current roles for the audit trail before replacing them
     const previousRoles = await userRoleRepo.find({ where: { user_id: userId }, relations: ['role'] });

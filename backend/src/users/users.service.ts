@@ -57,6 +57,7 @@ import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { uploadedBytes } from '../common/upload';
 import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import { assertRoleGrantWithinActorRights, RoleGrantActor } from '../roles/role-grant-ceiling';
 
 const SUPPORTED_USER_LOCALES = ['en', 'fr', 'de', 'es'] as const;
 const SELF_SERVICE_FIELDS = ['first_name', 'last_name', 'job_title', 'business_phone', 'mobile_phone', 'locale'] as const;
@@ -741,7 +742,7 @@ export class UsersService {
     department_id?: string | null;
     status?: string | null;
     tenant_id?: string;
-  }, opts?: { manager?: EntityManager }) {
+  }, opts?: { manager?: EntityManager; roleGrant?: RoleGrantActor }) {
     const repo = this.getRepo(opts?.manager);
     const existing = await repo.findOne({ where: { email: params.email } });
     if (existing) return existing;
@@ -753,7 +754,11 @@ export class UsersService {
     }
     const roleName = params.role_name ?? 'Contact';
     if (!role) {
-      role = await this.rolesService.findByName(roleName, { manager: opts?.manager });
+      role = await this.rolesService.findByNameOrSystemName(roleName, { manager: opts?.manager });
+    }
+    // A person created from a request gets a role within the rights of the one who creates them.
+    if (role && opts?.roleGrant) {
+      await assertRoleGrantWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, null, [role.id]);
     }
     if (!role) {
       role = await this.rolesService.createRole({
@@ -940,6 +945,7 @@ export class UsersService {
       language,
       dateOrder,
       decimalMark,
+      roleGrant,
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -947,6 +953,8 @@ export class UsersService {
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /** The person importing: a role the file gives stays within their rights. */
+      roleGrant?: RoleGrantActor;
     },
     opts?: { manager?: EntityManager },
   ) {
@@ -984,7 +992,7 @@ export class UsersService {
       const key = name.toLowerCase();
       const known = roleByName.get(key);
       if (known) return known;
-      const existing = await this.rolesService.findByName(name, { manager: opts?.manager });
+      const existing = await this.rolesService.findByNameOrSystemName(name, { manager: opts?.manager });
       const role: FileRole = { name, id: existing ? existing.id : null };
       if (!existing) rolesToCreate.push(name);
       roleByName.set(key, role);
@@ -1123,6 +1131,14 @@ export class UsersService {
         updated += 1;
       }
       toWrite.push({ item, existing });
+    }
+    // A role the file gives (a new person, or a main role that changes) stays within the rights of
+    // the person importing. A role the load creates gives no right yet.
+    if (roleGrant) {
+      const given = toWrite
+        .filter(({ item, existing }) => item.role.id && item.role.id !== existing?.role_id)
+        .map(({ item }) => item.role.id);
+      await assertRoleGrantWithinActorRights(opts?.manager ?? repo.manager, roleGrant, null, given);
     }
     if (dryRun) {
       return {

@@ -47,6 +47,14 @@ export class RolesService {
     return repo.findOne({ where: { role_name } });
   }
 
+  /**
+   * The role named `role_name`; a system role's name in another case or with surrounding spaces
+   * names that system role (a users file, a new person).
+   */
+  async findByNameOrSystemName(role_name: string, opts?: { manager?: EntityManager }) {
+    return (await this.findByName(role_name, opts)) ?? this.systemNameHolder(role_name, null, opts);
+  }
+
   /** Another role holding the name of a system role in another case or with surrounding spaces. */
   private async systemNameHolder(roleName: string, exceptId: string | null, opts?: { manager?: EntityManager }) {
     if (!isSystemRoleName(roleName)) return null;

@@ -13,6 +13,7 @@ import { AuditService } from '../audit/audit.service';
 import { RecordInUseException } from '../common/record-in-use';
 import { sqlStateOf } from '../common/filters/database-error.mapping';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+import { assertRolePermissionsWithinActorRights, roleGrantActorOf } from './role-grant-ceiling';
 
 /** What the audit log keeps of a role: its name and description, and its permissions when given. */
 function roleSnapshot(role: Pick<Role, 'role_name' | 'role_description'>, permissions?: Record<string, unknown>) {
@@ -211,6 +212,8 @@ export class RolesController {
     if (!body || typeof body !== 'object' || !body.permissions) throw new BadRequestException('permissions required');
     const perms = body.permissions as Record<string, 'reader'|'contributor'|'member'|'admin'|null>;
     const before = await this.perms.getRolePermissionsMap(id, { manager: mg });
+    // A right raised on the role stays within the rights of the one who sets it.
+    assertRolePermissionsWithinActorRights(roleGrantActorOf(req), before, perms);
     const after = await this.perms.setRolePermissionsMap(id, perms as any, { manager: mg });
     await this.logRoleChange(req, id, 'update', roleSnapshot(role, before), roleSnapshot(role, after));
     return after;

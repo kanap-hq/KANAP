@@ -7,8 +7,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 
 // The names of the system roles (Administrator, Contact) stay theirs: no other role takes one of
 // them, whatever its case or surrounding spaces.
-// - Creating a role by such a name, through the Roles screen (`POST /roles`), a duplicate or a new
-//   person (`POST /users` with `role_name`), is refused and creates nothing.
+// - Creating a role by such a name, through the Roles screen (`POST /roles`) or a duplicate, is
+//   refused and creates nothing; a new person (`POST /users` with `role_name`) or a users file
+//   naming it gets the system role.
 // - Renaming a role to such a name (`PUT /roles/:id`) is refused and keeps its name.
 // - The exact name of a system role still returns that role, and other names stay free.
 // - A tenant reads only its own roles: the names of another tenant change nothing.
@@ -90,10 +91,9 @@ async function testCreationBySystemNameIsRefused(h: Harness, runner: QueryRunner
     await refusedAsTaken(() => h.roles.createRole({ role_name: name, role_description: 'x' }, req(runner, s)), `POST /roles "${name}"`);
   }
   await refusedAsTaken(() => h.roles.duplicateRole(s.analyst, { role_name: 'administrator' }, req(runner, s)), 'duplicate as "administrator"');
-  await refusedAsTaken(
-    () => h.users.create({ email: `new-${s.tenantId.slice(0, 8)}@example.test`, role_name: 'administrator' }, req(runner, s)),
-    'POST /users with role_name "administrator"',
-  );
+  // A new person named with a system role's name in another case gets that system role.
+  const created = await h.users.create({ email: `new-${s.tenantId.slice(0, 8)}@example.test`, role_name: ' administrator' }, req(runner, s));
+  assert.equal(created.role_id, s.administrator, 'POST /users with role_name " administrator": the system role');
   assert.deepEqual(await roleNames(runner), before, 'no role created');
 }
 
