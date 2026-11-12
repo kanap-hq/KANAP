@@ -112,18 +112,11 @@ export default function UserDialog({
     const { role_ids, ...userPayload } = values;
     try {
       if (mode === 'create') {
-        const created = await api.post<{ id: string }>('/users', {
-          ...userPayload,
-          role_id: role_ids[0] ?? null,
-        });
+        // The person and their roles in one request: a refused role creates nothing, so no
+        // invitation leaves either.
+        const created = await api.post<{ id: string }>('/users', { ...userPayload, role_ids });
         const createdId = created.data?.id;
         if (createdId) {
-          try {
-            await api.put(`/users/${createdId}/roles`, { role_ids });
-          } catch (roleErr: any) {
-            setIdentityError(new Error(getApiErrorMessage(roleErr, t, t('users.messages.rolesSaveFailed'))));
-            return false;
-          }
           if (invite) {
             try {
               await postInvite(createdId, invite);

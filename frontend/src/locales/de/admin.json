@@ -2589,7 +2589,6 @@
       "deleteConfirm": "{{name}} löschen? Dies kann nicht rückgängig gemacht werden.",
       "inviteSentOne": "Einladung an {{email}} gesendet",
       "resetSent": "E-Mail zum Zurücksetzen des Passworts an {{email}} gesendet",
-      "rolesSaveFailed": "Der Benutzer wurde gespeichert, aber die Rollen konnten nicht aktualisiert werden. Öffnen Sie den Benutzer erneut und versuchen Sie es noch einmal.",
       "disableSelectedConfirm_one": "{{count}} Konto deaktivieren? Der Benutzer wird sofort abgemeldet.",
       "disableSelectedConfirm_other": "{{count}} Konten deaktivieren? Sie werden sofort abgemeldet.",
       "disableSelectedResult_one": "{{count}} deaktiviert; {{failed}} fehlgeschlagen",

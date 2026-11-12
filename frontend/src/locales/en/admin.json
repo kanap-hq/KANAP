@@ -2589,7 +2589,6 @@
       "deleteConfirm": "Delete {{name}}? This cannot be undone.",
       "inviteSentOne": "Invitation sent to {{email}}",
       "resetSent": "Password reset email sent to {{email}}",
-      "rolesSaveFailed": "The user was saved but the roles could not be updated. Open the user again and retry.",
       "disableSelectedConfirm_one": "Disable {{count}} account? Its user will be signed out immediately.",
       "disableSelectedConfirm_other": "Disable {{count}} accounts? They will be signed out immediately.",
       "disableSelectedResult_one": "Disabled {{count}}; {{failed}} failed",

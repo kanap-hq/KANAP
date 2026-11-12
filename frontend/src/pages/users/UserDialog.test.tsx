@@ -451,6 +451,38 @@ describe('UserDialog save and invite', () => {
     expect(urls.indexOf('/users')).toBeLessThan(urls.indexOf('/users/new-1/invite'));
   });
 
+  it('creates the person and their roles in one request', async () => {
+    post.mockImplementation(async (url: string) => (
+      url === '/users' ? { data: { id: 'new-1' } } : { data: {} }
+    ));
+    const { onClose } = renderDialog({ mode: 'create', userId: undefined, personName: undefined });
+    fireEvent.change(screen.getByRole('textbox', { name: 'userForm.fields.email' }), {
+      target: { value: email },
+    });
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith('/users', expect.objectContaining({ email, role_ids: [] }));
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it('sends no invitation when the creation is refused, and keeps the dialog open', async () => {
+    post.mockImplementation(async (url: string) => {
+      if (url === '/users') {
+        throw { response: { status: 403, data: { code: 'administrator_required', message: 'Only an administrator can give the Administrator role.' } } };
+      }
+      return { data: {} };
+    });
+    const dialog = await askToInvite();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'users.actions.sendInvite' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/users', expect.objectContaining({ email })));
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(put).not.toHaveBeenCalled();
+    expect(screen.getByText('users.dialogs.newUser')).toBeInTheDocument();
+  });
+
   it('asks no sign-in choice in a workspace without Microsoft sign-in', async () => {
     const dialog = await askToInvite();
     expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();

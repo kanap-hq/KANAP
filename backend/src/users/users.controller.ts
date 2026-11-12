@@ -52,6 +52,17 @@ function userIdParam(id: string): string {
   return id;
 }
 
+function hasField(body: any, field: string): boolean {
+  return !!body && Object.prototype.hasOwnProperty.call(body, field);
+}
+
+/** `role_ids` of `POST /users` and `PATCH /users/:id`: a list of role ids, anything else refused (never read as "no role"). */
+function assertRoleIdList(raw: unknown) {
+  if (!Array.isArray(raw) || raw.some((rid: unknown) => typeof rid !== 'string' || !USER_ID_RE.test(rid))) {
+    throw new BadRequestException({ code: 'ROLE_IDS_INVALID', message: 'role_ids must be a list of role ids.' });
+  }
+}
+
 function toUserLookup(user: User | null | undefined) {
   if (!user) return null;
   return {
@@ -154,8 +165,22 @@ export class UsersController {
   @Post()
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
-  create(@Body() body: any, @Req() req: any) {
-    return this.svc.createUser(body, { manager: req?.queryRunner?.manager, roleGrant: roleGrantActorOf(req) });
+  async create(@Body() body: any, @Req() req: any) {
+    const roleGrant = roleGrantActorOf(req);
+    if (!hasField(body, 'role_ids')) return this.svc.createUser(body, { manager: req?.queryRunner?.manager, roleGrant });
+    // `role_ids`: all the roles of the new person, given with their profile in the same request
+    // (the user dialog creates both at once, or neither), under the checks of `PUT /users/:id/roles`.
+    // A refused role is refused before anything is written.
+    assertRoleIdList(body.role_ids);
+    const { role_ids: _roleIds, role_name: _roleName, ...profile } = body;
+    const roleList = await this.readRoleList(null, body.role_ids, req);
+    await assertRoleGrantWithinActorRights(req?.queryRunner?.manager ?? this.userRepo.manager, roleGrant, null, roleList.roleIds);
+    const created = await this.svc.createUser(
+      { ...profile, role_id: roleList.legacyRoleId },
+      { manager: req?.queryRunner?.manager, roleGrant },
+    );
+    await this.writeRoles(created.id, roleList, req);
+    return { ...created, role_id: roleList.legacyRoleId };
   }
 
   @Patch('me')
@@ -177,13 +202,10 @@ export class UsersController {
     const userId = userIdParam(id);
     const canManageUsers = req.isAdmin === true || req.permissionLevel === 'admin';
     const manager = req?.queryRunner?.manager ?? this.userRepo.manager;
-    const has = (field: string) => !!body && Object.prototype.hasOwnProperty.call(body, field);
+    const has = (field: string) => hasField(body, field);
     // `role_ids`: all the roles of the person, set with the profile in the same request (the user
-    // dialog saves both at once, or neither). A list of role ids: anything else is refused, never
-    // read as "no role".
-    if (has('role_ids') && (!Array.isArray(body.role_ids) || body.role_ids.some((rid: unknown) => typeof rid !== 'string' || !USER_ID_RE.test(rid)))) {
-      throw new BadRequestException({ code: 'ROLE_IDS_INVALID', message: 'role_ids must be a list of role ids.' });
-    }
+    // dialog saves both at once, or neither).
+    if (has('role_ids')) assertRoleIdList(body.role_ids);
     // The person's row is locked before their rights are read (see lockPeople).
     await lockPeople(manager, [userId]);
     const roleList = canManageUsers && has('role_ids') ? await this.readRoleList(userId, body.role_ids, req) : null;
@@ -217,11 +239,11 @@ export class UsersController {
   }
 
   /**
-   * The roles a request sets on `userId` (`PUT /users/:id/roles`, `role_ids` of `PATCH /users/:id`),
-   * checked before anything is written: an empty list falls back to the Contact system role, and a
-   * person does not take away their own last role.
+   * The roles a request sets on `userId` (`PUT /users/:id/roles`, `role_ids` of `PATCH /users/:id`;
+   * null for the person `POST /users` creates), checked before anything is written: an empty list
+   * falls back to the Contact system role, and a person does not take away their own last role.
    */
-  private async readRoleList(userId: string, raw: unknown, req: any): Promise<{ roleIds: string[]; roles: Role[]; legacyRoleId: string }> {
+  private async readRoleList(userId: string | null, raw: unknown, req: any): Promise<{ roleIds: string[]; roles: Role[]; legacyRoleId: string }> {
     const manager = req?.queryRunner?.manager;
     const roleRepo = manager ? manager.getRepository(Role) : this.roleRepo;
     const userRepo = manager ? manager.getRepository(User) : this.userRepo;
@@ -236,8 +258,7 @@ export class UsersController {
     if (roles.length !== roleIds.length) {
       throw new BadRequestException('One or more roles not found');
     }
-    const user = await userRepo.findOne({ where: { id: userId } });
-    if (!user) throw new BadRequestException('User not found');
+    if (userId && !(await userRepo.findOne({ where: { id: userId } }))) throw new BadRequestException('User not found');
     // Legacy role_id column is NOT NULL: first role, or the Contact system
     // role when the list is empty (no roles = no access -> pending).
     let legacyRoleId = roleIds[0];
