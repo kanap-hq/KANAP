@@ -21,6 +21,7 @@ import {
   type RelationLinkTable,
 } from '../../common/relations/related-objects';
 import { parseTargetId } from '../../common/relations/relation-target';
+import { idsInScope } from '../../portfolio/portfolio-linked-reads';
 import { isFrozenIncidentStatus } from '../incident-visibility';
 import { IncidentsBaseService, ServiceOpts } from './incidents-base.service';
 
@@ -427,7 +428,15 @@ export class IncidentRelationsService extends IncidentsBaseService {
     // The incident row first: a concurrent replacement of its links waits, then reads what this one wrote.
     await mg.query(`SELECT 1 FROM incidents WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, incident.id]);
 
-    const nextIds = Array.from(new Set((rawIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+    const nextIds = Array.from(new Set((rawIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean)));
+    // A Business Contributor's applications: they add and remove only those they take part in, an
+    // application outside reads as a missing one, and the links they do not read stay unnamed.
+    const scope = spec.key === 'applications' ? opts?.applicationScope : undefined;
+    const readable = async (items: IncidentLinkedObject[]) => {
+      if (!scope) return items;
+      const visible = await idsInScope(mg, 'applications', items.map((item) => String(item.id)), scope);
+      return items.filter((item) => visible.has(String(item.id)));
+    };
     const targets: IncidentLinkedObject[] = nextIds.length
       ? await mg.query(
           `SELECT t.id, t.name, ${spec.reference} AS reference
@@ -441,7 +450,11 @@ export class IncidentRelationsService extends IncidentsBaseService {
     }
 
     // The viewer goes along: without it a confidential incident reads as missing, even to its reporter.
-    const current = await this.listLinked(spec, incidentId, { manager: mg, tenantId, viewer: opts?.viewer });
+    const stored = await this.listLinked(spec, incidentId, { manager: mg, tenantId, viewer: opts?.viewer });
+    const current = await readable(stored);
+    if ((await readable(targets)).length !== targets.length) {
+      throw new BadRequestException(`One or more ${spec.label.toLowerCase()} not found`);
+    }
     const currentIds = new Set(current.map((item) => item.id));
     const wantedIds = new Set(nextIds);
     const removed = current.filter((item) => !wantedIds.has(item.id));
@@ -456,7 +469,8 @@ export class IncidentRelationsService extends IncidentsBaseService {
       await repo.save(added.map((item) => repo.create({ tenant_id: tenantId, incident_id: incident.id, [spec.linkColumn]: item.id })));
     }
 
-    const next = await this.listLinked(spec, incidentId, { manager: mg, tenantId, viewer: opts?.viewer });
+    const after = await this.listLinked(spec, incidentId, { manager: mg, tenantId, viewer: opts?.viewer });
+    const next = await readable(after);
     const parts: string[] = [];
     if (added.length) parts.push(`${spec.label} linked: ${added.map(displayRef).join(', ')}`);
     if (removed.length) parts.push(`${spec.label} unlinked: ${removed.map(displayRef).join(', ')}`);
@@ -471,8 +485,8 @@ export class IncidentRelationsService extends IncidentsBaseService {
         table: spec.linkTable,
         recordId: incident.id,
         action: 'update',
-        before: current.map((item) => item.id),
-        after: next.map((item) => item.id),
+        before: stored.map((item) => item.id),
+        after: after.map((item) => item.id),
         userId,
         // The screen leaves the source out (`user`); Plaid names its preview, as the other incident writes do.
         ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),

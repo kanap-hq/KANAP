@@ -15,6 +15,7 @@ import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { assertWebLinkUrl } from '../../common/web-link-url';
 import { validateUploadedFile } from '../../common/upload-validation';
 import { fixMulterFilename } from '../../common/upload';
+import { replacedLinks } from '../../common/relations/linked-reads';
 
 /**
  * Service for managing asset links, attachments, and projects.
@@ -253,13 +254,13 @@ export class AssetsAttachmentsService extends AssetsBaseService {
     projectIds: string[],
     tenantId: string,
     userId: string | null,
-    opts?: ServiceOpts,
+    opts?: ServiceOpts & { removable?: string[] },
   ) {
     const mg = this.getManager(opts);
     const tenant = this.ensureTenantId(tenantId);
     const asset = await this.ensureAsset(assetId, mg, tenant);
 
-    const cleanIds = Array.from(new Set((projectIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+    const cleanIds = Array.from(new Set((projectIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean)));
     if (cleanIds.length) {
       const projects = await mg.getRepository(PortfolioProject).find({
         where: { id: In(cleanIds), tenant_id: asset.tenant_id } as any,
@@ -267,12 +268,25 @@ export class AssetsAttachmentsService extends AssetsBaseService {
       if (projects.length !== cleanIds.length) throw new BadRequestException('One or more projects not found');
     }
 
-    const repo = mg.getRepository(AssetProject);
-    const existing = await repo.find({ where: { asset_id: assetId, tenant_id: asset.tenant_id } as any });
-    if (existing.length) await repo.delete({ id: In(existing.map((x) => x.id)) as any });
-    if (cleanIds.length) {
-      const rows = cleanIds.map((projId) => repo.create({ tenant_id: asset.tenant_id, project_id: projId, asset_id: assetId }));
-      await repo.save(rows);
+    // Only the stored links the person may remove leave (`removable`); the others stay untouched.
+    const existing: Array<{ id: string }> = await mg.query(
+      `SELECT project_id::text AS id FROM asset_projects WHERE asset_id = $1 AND tenant_id = $2`,
+      [assetId, asset.tenant_id],
+    );
+    const { removed, added } = replacedLinks(existing.map((row) => row.id), cleanIds, opts?.removable);
+    if (removed.length) {
+      await mg.query(
+        `DELETE FROM asset_projects WHERE asset_id = $1 AND tenant_id = $2 AND project_id = ANY($3::uuid[])`,
+        [assetId, asset.tenant_id, removed],
+      );
+    }
+    if (added.length) {
+      await mg.query(
+        `INSERT INTO asset_projects (tenant_id, asset_id, project_id)
+         SELECT $1, $2, project_id FROM unnest($3::uuid[]) AS project_id
+         ON CONFLICT DO NOTHING`,
+        [asset.tenant_id, assetId, added],
+      );
     }
 
     return this.listProjects(assetId, { manager: mg, tenantId: tenant });

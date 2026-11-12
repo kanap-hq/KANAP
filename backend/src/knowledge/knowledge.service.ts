@@ -740,6 +740,18 @@ export function unreadableRelationFamilies(families: string[], reads: LinkedRead
 
 const RELATION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** The families a document write's `relations` body replaces (each one given as a list), with their ids. */
+function relationWritesOf(relations: unknown): Partial<Record<RelationEntityType, string[]>> {
+  if (!relations || typeof relations !== 'object' || Array.isArray(relations)) return {};
+  const body = relations as Partial<Record<RelationEntityType, unknown>>;
+  const writes: Partial<Record<RelationEntityType, string[]>> = {};
+  for (const key of Object.keys(RELATION_TABLE_MAP) as RelationEntityType[]) {
+    const values = body[key];
+    if (Array.isArray(values)) writes[key] = values.map((value) => String(value ?? '').trim());
+  }
+  return writes;
+}
+
 /** The participation resource of each family a Business Contributor reads inside their participation. */
 const KNOWLEDGE_SOURCE_SCOPES = {
   projects: 'portfolio_projects',
@@ -2176,16 +2188,9 @@ export class KnowledgeService {
     manager: EntityManager,
     userId?: string | null,
   ): Promise<void> {
-    if (!relations || typeof relations !== 'object' || Array.isArray(relations)) {
-      return;
-    }
-
-    const relationBody = relations as Partial<Record<RelationEntityType, unknown>>;
-    for (const key of Object.keys(RELATION_TABLE_MAP) as RelationEntityType[]) {
-      const relationValues = relationBody[key];
-      if (Array.isArray(relationValues)) {
-        await this.replaceDocumentRelationsByEntity(documentId, key, relationValues, manager, { userId });
-      }
+    const writes = relationWritesOf(relations);
+    for (const key of Object.keys(writes) as RelationEntityType[]) {
+      await this.replaceDocumentRelationsByEntity(documentId, key, writes[key] ?? [], manager, { userId });
     }
   }
 
@@ -4312,6 +4317,12 @@ export class KnowledgeService {
       await this.bulkReplaceClassifications(saved.id, templateClassifications, { manager });
     }
 
+    // A new document's links follow the rule of the link routes; the empty families a creation form
+    // sends write nothing and need no read.
+    if (userId) {
+      const writes = Object.fromEntries(Object.entries(relationWritesOf(body?.relations)).filter(([, ids]) => (ids ?? []).length > 0));
+      await this.assertRelationWriteAllowed(writes, manager, userId);
+    }
     await this.applyDocumentRelations(saved.id, body?.relations, manager);
 
     await this.ensureVersionSnapshot(saved, body?.change_note ? String(body.change_note) : 'Initial version', userId, manager);
@@ -4805,6 +4816,8 @@ export class KnowledgeService {
     }
 
     await this.assertIntegratedDocumentUpdateRestrictions(existing, body, manager);
+    // The links in the body follow the rule of the document's link routes (module read, participation).
+    await this.assertRelationWriteAllowed(relationWritesOf(body?.relations), manager, userId);
 
     const before = { ...existing };
 
@@ -5830,15 +5843,14 @@ export class KnowledgeService {
   /**
    * A write of a document's links (`writes`: each family the request sets, even empty, with its ids)
    * touches only the families the person reads, as `get` shows them: another family would be
-   * replaced unseen. A family left out of the request stays as it is. A Business Contributor adds
-   * only records inside their participation (`remove`: the ids leave, nothing is added).
+   * replaced unseen. A family left out of the request stays as it is. A Business Contributor names
+   * only records inside their participation, to add, keep or remove a link: another record answers
+   * the same, linked or not, and the links they do not see stay as they are.
    */
   async assertRelationWriteAllowed(
-    documentId: string,
     writes: Partial<Record<RelationEntityType, string[]>>,
     manager: EntityManager,
     userId: string | null,
-    mode: 'set' | 'remove' = 'set',
   ): Promise<void> {
     const families = Object.keys(writes) as RelationEntityType[];
     if (families.length === 0) return;
@@ -5851,26 +5863,17 @@ export class KnowledgeService {
         { resources: [...new Set(refused.map((family) => LINKED_MODULE_RESOURCES[DOCUMENT_RELATION_MODULES[family]]))] },
       );
     }
-    if (mode === 'remove' || !userId) return;
+    if (!userId) return;
     for (const family of families) {
       const resource = isKnowledgeSourceFamily(family) ? KNOWLEDGE_SOURCE_SCOPES[family] : undefined;
       const map = RELATION_TABLE_MAP[family];
       // A malformed id fails the write's own check (`assertTenantScopedIdsExist`).
-      const ids = dedupeStrings(writes[family] ?? []).filter((id) => RELATION_ID_RE.test(id));
+      const ids = dedupeStrings((writes[family] ?? []).map((id) => String(id ?? '').toLowerCase())).filter((id) => RELATION_ID_RE.test(id));
       if (!resource || !map || ids.length === 0) continue;
       const scope = await resolveBusinessContributorScopeForUser({ manager, userId }, resource, 'reader');
       if (!scope) continue;
-      const linked: Array<{ id: string }> = await manager.query(
-        `SELECT ${map.idColumn}::text AS id
-         FROM ${map.table}
-         WHERE document_id = $1
-           AND tenant_id = app_current_tenant()`,
-        [documentId],
-      );
-      const current = new Set(linked.map((row) => row.id));
-      const added = ids.filter((id) => !current.has(id));
-      const visible = await idsInScope(manager, family as keyof typeof KNOWLEDGE_SOURCE_SCOPES, added, scope);
-      if (added.some((id) => !visible.has(id))) {
+      const visible = await idsInScope(manager, family as keyof typeof KNOWLEDGE_SOURCE_SCOPES, ids, scope);
+      if (ids.some((id) => !visible.has(id))) {
         throw outsideParticipation(family, `You can only link ${family} you take part in to this document.`);
       }
     }

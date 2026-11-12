@@ -304,7 +304,7 @@ export class AssetsService {
     projectIds: string[],
     tenantId: string,
     userId: string | null,
-    opts?: ServiceOpts,
+    opts?: ServiceOpts & { removable?: string[] },
   ) {
     return this.attachmentsService.bulkReplaceProjects(assetId, projectIds, tenantId, userId, opts);
   }

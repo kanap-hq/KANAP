@@ -73,6 +73,8 @@ function projectController(scopeVisible: string[] = []) {
     get: (_t, name: string) => async (..._args: unknown[]) => {
       calls.push(name);
       if (name === 'listLinkedApplications') return { items: [{ id: APP_IN }] };
+      // A replacement answers with the record's links, as the service does.
+      if (name === 'bulkReplaceLinkedApplications') return { items: [] };
       return { ok: true };
     },
   });
