@@ -1,6 +1,6 @@
 ---
 title: "Votre système d'information dans Kadratis en dix minutes : découvrir avec l'exemple"
-description: Les cinq pas du parcours cartographie du SI sur l'exemple Fromage & Co, de la liste des applications aux fins de support et à votre propre fichier.
+description: Les cinq étapes du parcours cartographie du SI sur l'exemple Fromage & Co, de la liste des applications aux fins de support et à votre propre fichier.
 ---
 
 # Votre système d'information dans Kadratis en dix minutes
@@ -9,7 +9,7 @@ description: Les cinq pas du parcours cartographie du SI sur l'exemple Fromage &
 
 Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail. En dix minutes sur son système d'information, vous lisez l'inventaire des applications, ouvrez une application critique, voyez où elle tourne, repérez ce qui arrive en fin de support et voyez comment votre propre fichier entre dans Kadratis.
 
-Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **La cartographie du SI** avec **Découvrir avec l'exemple complet**. Chaque pas de la tuile ouvre son écran avec une courte indication, et l'ouvrir le marque comme fait. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
+Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **La cartographie du SI** avec **Découvrir avec l'exemple complet**. Chaque étape de la tuile ouvre son écran avec une courte indication, et l'ouvrir la marque comme faite. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. La liste des applications
 
@@ -23,7 +23,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 ## 2. Une fiche d'application
 
-**L'application la plus critique**, ouverte par le pas
+**L'application la plus critique**, ouverte par l'étape
 
 ![Une fiche d'application](images/landscape-example-2.webp)
 
@@ -70,6 +70,6 @@ Vous avez vu l'essentiel de Kadratis pour la cartographie du SI. Les deux autres
 - [Votre budget IT dans Kadratis en dix minutes](budget-example.md)
 - [Votre portefeuille dans Kadratis en dix minutes](portfolio-example.md)
 
-Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
+Une fois les cinq étapes faites, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
 
 Pour aller plus loin : [Applications](../applications.md), [Actifs](../assets.md), [Fins de support](../end-of-support.md), [Vulnérabilités](../vulnerabilities.md), [Fichiers CSV et Excel](../csv-files.md).

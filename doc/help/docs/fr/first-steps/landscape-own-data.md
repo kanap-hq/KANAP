@@ -1,6 +1,6 @@
 ---
 title: "Votre système d'information dans Kadratis en dix minutes : commencer avec vos données"
-description: Les cinq pas du parcours cartographie du SI sur vos propres données, de vos sites à vos actifs, puis un collègue.
+description: Les cinq étapes du parcours cartographie du SI sur vos propres données, de vos sites à vos actifs, puis un collègue.
 ---
 
 # Votre système d'information dans Kadratis en dix minutes
@@ -9,7 +9,7 @@ description: Les cinq pas du parcours cartographie du SI sur vos propres donnée
 
 En dix minutes, vos sites, vos applications, leurs technologies et vos actifs sont dans Kadratis, vos premières dates de fin de support s'affichent, et un collègue peut tenir la cartographie à jour. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
 
-Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **La cartographie du SI** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Chaque pas crée quelque chose et est marqué comme fait dès que cet élément existe dans l'espace. Pour marquer comme fait un pas que vous sautez, cliquez sur la marque à côté. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
+Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **La cartographie du SI** avec **Commencer avec mes données**. Chaque étape de la tuile ouvre son écran avec une courte indication. Chaque étape crée quelque chose et est marquée comme faite dès que cet élément existe dans l'espace. Pour marquer comme faite une étape que vous sautez, cliquez sur la marque à côté. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. Vos sites
 
@@ -61,6 +61,6 @@ Votre système d'information est dans Kadratis. Les deux autres parcours prennen
 - [Votre budget IT dans Kadratis en dix minutes](budget-own-data.md)
 - [Votre portefeuille dans Kadratis en dix minutes](portfolio-own-data.md)
 
-Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
+Une fois les cinq étapes faites, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
 
 Pour aller plus loin : [Sites](../locations.md), [Applications](../applications.md), [Technologies](../technologies.md), [Actifs](../assets.md), [Fichiers CSV et Excel](../csv-files.md).

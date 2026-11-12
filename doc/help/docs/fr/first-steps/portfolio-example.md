@@ -1,6 +1,6 @@
 ---
 title: "Votre portefeuille dans Kadratis en dix minutes : découvrir avec l'exemple"
-description: Les cinq pas du parcours portefeuille sur l'exemple Fromage & Co, d'une demande notée aux rapports du portefeuille et à votre propre fichier.
+description: Les cinq étapes du parcours portefeuille sur l'exemple Fromage & Co, d'une demande notée aux rapports du portefeuille et à votre propre fichier.
 ---
 
 # Votre portefeuille dans Kadratis en dix minutes
@@ -9,11 +9,11 @@ description: Les cinq pas du parcours portefeuille sur l'exemple Fromage & Co, d
 
 Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail. En dix minutes sur son portefeuille, vous lisez comment une demande est notée, la suivez jusqu'au projet, trouvez les tâches, lisez les rapports et voyez comment votre propre fichier entre dans Kadratis.
 
-Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Portefeuille** avec **Découvrir avec l'exemple complet**. Chaque pas de la tuile ouvre son écran avec une courte indication, et l'ouvrir le marque comme fait. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
+Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Portefeuille** avec **Découvrir avec l'exemple complet**. Chaque étape de la tuile ouvre son écran avec une courte indication, et l'ouvrir la marque comme faite. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. Une demande et son score
 
-**La mieux notée des demandes non converties**, ouverte par le pas sur son onglet **Évaluation**
+**La mieux notée des demandes non converties**, ouverte par l'étape sur son onglet **Évaluation**
 
 ![Une demande et son score](images/portfolio-example-1.webp)
 
@@ -23,7 +23,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 ## 2. Le projet issu de la demande
 
-**Le projet d'une demande convertie**, ouvert par le pas
+**Le projet d'une demande convertie**, ouvert par l'étape
 
 ![Le projet issu de la demande](images/portfolio-example-2.webp)
 
@@ -70,6 +70,6 @@ Vous avez vu l'essentiel de Kadratis pour les projets et les demandes. Les deux 
 - [Votre budget IT dans Kadratis en dix minutes](budget-example.md)
 - [Votre système d'information dans Kadratis en dix minutes](landscape-example.md)
 
-Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
+Une fois les cinq étapes faites, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
 
 Pour aller plus loin : [Demandes du portefeuille](../portfolio-requests.md), [Projets du portefeuille](../portfolio-projects.md), [Tâches](../tasks.md), [Rapports du portefeuille](../portfolio-reporting.md), [Fichiers CSV et Excel](../csv-files.md).

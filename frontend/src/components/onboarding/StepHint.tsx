@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, Paper, Popper, Typography } from '@mui/material';
+import { Box, Button, Paper, Typography } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -12,6 +12,30 @@ import { useOpenStep } from './useOpenStep';
 
 /** While the hint waits for the object of its step, the state is read again this often. */
 export const STEP_OBJECT_POLL_MS = 5000;
+
+/** The hint's distance from the right and bottom edges of the window, in pixels. */
+const CORNER = 16;
+
+/** Space between the hint and the element of its step when it rises above it, outline included. */
+const GAP = 12;
+
+const overlaps = (a: { top: number; left: number; right: number; bottom: number }, b: DOMRect) =>
+  a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+/**
+ * The hint's distance from the bottom of the window: in its corner, or just above the element of
+ * its step when that element lies under the corner (Plaid's composer at the foot of a conversation).
+ */
+function bottomOffset(target: DOMRect | null, bubble: { width: number; height: number }): number {
+  if (!target) return CORNER;
+  const corner = {
+    right: window.innerWidth - CORNER,
+    left: window.innerWidth - CORNER - bubble.width,
+    bottom: window.innerHeight - CORNER,
+    top: window.innerHeight - CORNER - bubble.height,
+  };
+  return overlaps(corner, target) ? Math.max(CORNER, window.innerHeight - target.top + GAP) : CORNER;
+}
 
 /** `data-page-title`: the title of `PageHeader` and `ReportLayout`. */
 const TITLE = ['main [data-page-title]', 'main .MuiTypography-h5', 'main h1, main h2, main h3, main h4, main h5'];
@@ -61,7 +85,7 @@ const sameBox = (a: DOMRect | null, b: DOMRect | null) => (a === null || b === n
 /**
  * The element of the screen and its box, looked up on every tick while the hint is open: the
  * page draws it late (lazy route, data) and may replace it (Plaid's acceptance box gives way to
- * the composer once accepted, a screen changes under the hint). The hint hides while there is none.
+ * the composer once accepted, a screen changes under the hint). Without one, the hint shows no outline.
  */
 function useTarget(target: StepTarget | null): Target {
   const { t } = useTranslation('common');
@@ -94,8 +118,8 @@ function useTarget(target: StepTarget | null): Target {
  * The hint of a step opened from the first steps: the target of its screen is outlined and one
  * sentence says what to look at. On the example, opening the step marks it done; with your own
  * data, the object the step creates does, or "Done" for a step that creates none. It stays on
- * the step's screen and its records until it is closed (`activeStep.ts`); once the step is done,
- * it opens the next step, or the home page at the end of the path.
+ * every screen until it is closed (`activeStep.ts`), with no outline away from the step's screen;
+ * once the step is done, it opens the next step, or the home page at the end of the path.
  */
 export default function StepHint() {
   const { t, i18n } = useTranslation('common');
@@ -119,21 +143,30 @@ export default function StepHint() {
   }, [paramKey]);
   const key = paramKey ?? active?.key ?? null;
   const found = key && state ? state.steps.find((candidate) => candidate.key === key) ?? null : null;
-  const foundScreen = found && state ? stepScreen(found.key, state.angle) : null;
-  // Without its key in the address, the hint shows on its screen and the pages below it only.
-  const shown = !!foundScreen && (!!paramKey || withinStepScreen(location.pathname, foundScreen.to));
-  const step = shown ? found : null;
-  const screen = shown ? foundScreen : null;
-  // A record opened from the list of a title step (its address goes below the list's): under the
-  // record's title, the bubble would hide its tab row, so the hint points at the tabs.
+  const screen = found && state ? stepScreen(found.key, state.angle) : null;
+  // The hint stays on every screen until it is closed: a step leads out of its own address (from
+  // the end of support to a technology and to the vulnerabilities, from a request to the project it
+  // was converted into). Its element is outlined on its screen and the pages below it only.
+  const step = screen ? found : null;
+  const onStepScreen = !!screen && (!!paramKey || withinStepScreen(location.pathname, screen.to));
+  // A record opened from the list of a title step (its address goes below the list's): the hint
+  // points at its tab row.
   const onRecord = screen?.target === 'title' && location.pathname.startsWith(`${screen.to}/`);
-  const target = useTarget(screen ? (onRecord ? 'tabs' : screen.target) : null);
+  const target = useTarget(screen && onStepScreen ? (onRecord ? 'tabs' : screen.target) : null);
   // Between a screen change and the next look-up, the element may have left the page already.
   const rect = target.element && isShown(target.element) ? target.rect : null;
-  // The bubble stands on the box of the last look-up, as the outline does: a screen that replaces
-  // the element in the same render never leaves it on a node out of the page.
-  const anchor = React.useMemo(() => (rect ? { getBoundingClientRect: () => rect } : null), [rect]);
   const discover = state?.mode === 'example';
+
+  // Measured once drawn: the hint's size decides whether the element of its step lies under it.
+  const bubbleRef = React.useRef<HTMLDivElement>(null);
+  const [bottom, setBottom] = React.useState(CORNER);
+  React.useLayoutEffect(() => {
+    const bubble = bubbleRef.current;
+    if (!bubble) return;
+    const { width, height } = bubble.getBoundingClientRect();
+    const next = bottomOffset(rect, { width, height });
+    setBottom((previous) => (previous === next ? previous : next));
+  });
 
   // The object of the step may be created in a dialog, with no change of address.
   const waiting = !!step && step.automatic && !step.done_at;
@@ -192,61 +225,63 @@ export default function StepHint() {
           })}
         />
       ) : null}
-      {/* Below Plaid's composer too: above it, the bubble would hide the suggested questions. It
-          goes above only when the composer sits at the bottom of the screen. */}
-      <Popper
-        open={!!anchor}
-        anchorEl={anchor}
-        placement="bottom-start"
-        modifiers={[{ name: 'offset', options: { offset: [0, 10] } }]}
-        sx={(theme) => ({ zIndex: theme.zIndex.modal - 1 })}
+      {/* In the bottom-right corner of the window, apart from what the step asks to use: on the
+          element, the hint would cover it (filters, tabs, fields). No floating control sits in
+          that corner. */}
+      <Paper
+        ref={bubbleRef}
+        role="dialog"
+        aria-label={t(stepTitleKey(step.key, state.angle))}
+        style={{ bottom }}
+        sx={(theme) => ({
+          position: 'fixed',
+          right: CORNER,
+          zIndex: theme.zIndex.modal - 1,
+          boxSizing: 'border-box',
+          // Inside the window on a narrow screen.
+          maxWidth: `min(360px, calc(100vw - ${2 * CORNER}px))`,
+          p: 1.5,
+          borderRadius: '8px',
+          // Apart from the element it describes, the hint wears the same ring as its outline, which
+          // also sets it off a card of the same tint in dark mode.
+          border: `1px solid ${theme.palette.primary.main}`,
+          // A raised surface: in dark mode the page background would swallow it.
+          bgcolor: theme.palette.kanap.bg.composer,
+          boxShadow: theme.shadows[3],
+        })}
       >
-        <Paper
-          role="dialog"
-          aria-label={t(stepTitleKey(step.key, state.angle))}
-          sx={(theme) => ({
-            maxWidth: 360,
-            p: 1.5,
-            borderRadius: '8px',
-            border: `1px solid ${theme.palette.kanap.border.default}`,
-            // A raised surface: in dark mode the page background would swallow it.
-            bgcolor: theme.palette.kanap.bg.composer,
-            boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 4px 16px rgba(15, 17, 23, 0.08)',
-          })}
-        >
-          <Typography variant="body2">{hint}</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mt: 1.25 }}>
-            {step.done_at && !discover ? (
-              <CheckCircleIcon aria-hidden sx={{ fontSize: 18, color: 'success.main', mr: 'auto' }} />
-            ) : null}
-            {step.done_at ? (
-              <>
-                <Button variant="action" onClick={close}>{t('onboarding.firstSteps.gotIt')}</Button>
-                {state.next_step ? (
-                  <Button variant="action-primary" onClick={() => { void openStep(state.next_step!, state.angle); }}>
-                    {t('onboarding.firstSteps.nextStep')}
-                  </Button>
-                ) : (
-                  <Button variant="action-primary" onClick={finish}>{t('onboarding.firstSteps.finish')}</Button>
-                )}
-              </>
-            ) : discover || step.automatic ? (
+        <Typography variant="body2">{hint}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mt: 1.25 }}>
+          {step.done_at && !discover ? (
+            <CheckCircleIcon aria-hidden sx={{ fontSize: 18, color: 'success.main', mr: 'auto' }} />
+          ) : null}
+          {step.done_at ? (
+            <>
               <Button variant="action" onClick={close}>{t('onboarding.firstSteps.gotIt')}</Button>
-            ) : (
-              <>
-                <Button variant="action" onClick={close}>{t('onboarding.firstSteps.later')}</Button>
-                <Button
-                  variant="action-primary"
-                  disabled={markDone.isPending}
-                  onClick={() => markDone.mutate(step.key)}
-                >
-                  {t('onboarding.firstSteps.done')}
+              {state.next_step ? (
+                <Button variant="action-primary" onClick={() => { void openStep(state.next_step!, state.angle); }}>
+                  {t('onboarding.firstSteps.nextStep')}
                 </Button>
-              </>
-            )}
-          </Box>
-        </Paper>
-      </Popper>
+              ) : (
+                <Button variant="action-primary" onClick={finish}>{t('onboarding.firstSteps.finish')}</Button>
+              )}
+            </>
+          ) : discover || step.automatic ? (
+            <Button variant="action" onClick={close}>{t('onboarding.firstSteps.gotIt')}</Button>
+          ) : (
+            <>
+              <Button variant="action" onClick={close}>{t('onboarding.firstSteps.later')}</Button>
+              <Button
+                variant="action-primary"
+                disabled={markDone.isPending}
+                onClick={() => markDone.mutate(step.key)}
+              >
+                {t('onboarding.firstSteps.done')}
+              </Button>
+            </>
+          )}
+        </Box>
+      </Paper>
     </>
   );
 }
