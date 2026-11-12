@@ -71,7 +71,7 @@ Les deux catégories affichent aussi :
 - **Ville** : Nom de la ville
 - **Informations complémentaires** : Notes libres sur le site
 
-**Comment ça fonctionne** : Basculer entre un type d'hébergement on-premise et cloud efface les champs qui appartiennent à l'autre catégorie. L'éditeur demande confirmation avant d'effectuer le changement.
+**Comment ça fonctionne** : Basculer entre un type d'hébergement on-premise et cloud efface les champs qui appartiennent à l'autre catégorie. L'éditeur demande confirmation avant un changement qui efface une valeur.
 
 #### Sous-sites
 

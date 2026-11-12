@@ -243,13 +243,16 @@ export default function EditableTitle({
   const submitted = React.useRef<string | null>(null);
   // The name was sent by Tab: the focus has gone on (`onTab`, or the record's creation), the title does not take it back.
   const tabbed = React.useRef(false);
+  // The name was sent by Enter: the focus comes back to the title once it rests. Sent by a blur, the focus is elsewhere and stays there.
+  const sentByEnter = React.useRef(false);
 
   React.useEffect(() => {
-    // The caller's value arrived for the name sent: the title rests, and the focus goes to it.
+    // The caller's value arrived for the name sent: the title rests, and the focus goes to it after an Enter.
     if (!editing || submitted.current === null || !value) return;
     submitted.current = null;
     closing.current = true;
-    pendingFocus.current = !tabbed.current;
+    pendingFocus.current = sentByEnter.current && !tabbed.current;
+    sentByEnter.current = false;
     tabbed.current = false;
     setEditing(false);
   }, [editing, value]);
@@ -292,6 +295,7 @@ export default function EditableTitle({
       // Nothing to send while empty: the field stays open for the name.
       if (trimmed && trimmed !== submitted.current) {
         submitted.current = trimmed;
+        sentByEnter.current = focusButton;
         onSave?.(trimmed);
       }
       return;

@@ -71,7 +71,7 @@ Both categories also show:
 - **City**: City name
 - **Additional Info**: Free-form notes about the location
 
-**How it works**: Switching between an on-prem and a cloud hosting type clears the fields that belong to the other category. The editor asks for confirmation before making the switch.
+**How it works**: Switching between an on-prem and a cloud hosting type clears the fields that belong to the other category. The editor asks for confirmation before making a switch that clears a value.
 
 #### Sub-locations
 

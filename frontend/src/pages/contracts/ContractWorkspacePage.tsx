@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, IconButton, Stack, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
@@ -103,6 +103,21 @@ const NEW_CONTRACT: ContractForm = {
 
 const mergePatch = (form: ContractForm, patch: ContractPatch): ContractForm => ({ ...form, ...(patch as Partial<ContractForm>) });
 
+const fetchContract = async (contractId: string) => (await api.get<ContractDetail>(`/contracts/${contractId}`)).data;
+
+/** The draft's fields that Create sends and a patch can change. */
+const DRAFT_FIELDS = [
+  'supplier_id', 'company_id', 'cost_center_id', 'owner_user_id', 'start_date', 'duration_months', 'notice_period_months',
+  'auto_renewal', 'yearly_amount_at_signature', 'currency', 'billing_frequency', 'notes', 'status', 'disabled_at',
+] as const;
+
+/** What changed in the draft after it was sent: the edits to save on the contract it created. */
+function editsSince(sent: ContractForm, now: ContractForm): ContractPatch | null {
+  const late: Record<string, unknown> = {};
+  for (const field of DRAFT_FIELDS) if (!Object.is(sent[field], now[field])) late[field] = now[field];
+  return Object.keys(late).length > 0 ? late as ContractPatch : null;
+}
+
 /** The list's sort, search, filters and scope, kept in every address of the page. */
 function useListContext() {
   const [searchParams] = useSearchParams();
@@ -123,11 +138,15 @@ export default function ContractWorkspacePage() {
   const location = useLocation();
   const id = String(params.id || '');
   const rawTab = params.tab;
+  // The contract the draft has just created: the page stays the draft's, so that what is typed
+  // while it is written, and the field being typed in, are kept.
+  const fromDraft = useCreatedFromDraft('contracts', id);
   if (rawTab && LEGACY_TABS[rawTab]) {
     return <Navigate replace to={`${LIST_PATH}/${id}/${LEGACY_TABS[rawTab]}${location.search}`} />;
   }
   const tab: TabKey = TAB_KEYS.includes(rawTab as TabKey) ? (rawTab as TabKey) : 'overview';
-  if (id === 'new') return <ContractEditor key="new" id="new" tab="overview" />;
+  if (id === 'new') return <ContractEditor key="draft" id="new" tab="overview" />;
+  if (fromDraft) return <ContractEditor key="draft" id={id} tab={tab} />;
   return <ContractEditor id={id} tab={tab} />;
 }
 
@@ -152,7 +171,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const [deletedId, setDeletedId] = React.useState<string | null>(null);
   const { data, error: loadError, isPlaceholderData } = useQuery({
     queryKey: detailKey,
-    queryFn: async () => (await api.get<ContractDetail>(`/contracts/${id}`)).data,
+    queryFn: () => fetchContract(id),
     // The previous contract stays on screen while the next one loads (prev / next).
     placeholderData: (previous) => previous,
     enabled: deletedId !== id && !isCreate,
@@ -341,7 +360,12 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   }, [id, queryClient]);
 
   const notesTouchedRef = React.useRef(false);
-  React.useEffect(() => { notesTouchedRef.current = false; }, [id]);
+  // Another contract starts untouched; the contract the draft creates is the same page, its notes in hand.
+  const notesOfId = React.useRef(id);
+  React.useEffect(() => {
+    if (notesOfId.current !== 'new') notesTouchedRef.current = false;
+    notesOfId.current = id;
+  }, [id]);
 
   const counts = countsQuery.data;
   const tabs = [
@@ -406,6 +430,13 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           disabled_at: draft.disabled_at,
         });
         void queryClient.invalidateQueries({ queryKey: ['contracts-ids'] });
+        // The page moves to the contract with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the contract was written): saved on the contract.
+        await queryClient.fetchQuery({ queryKey: ['contracts', created.id], queryFn: () => fetchContract(created.id) }).catch(() => undefined);
+        const now = formRef.current;
+        const late = now ? editsSince(draft, now) : null;
+        if (late && patchBuffer.add(created.id, late)) autosave.schedule(flushPending);
+        setForm((prev) => (prev ? { ...prev, id: created.id, name: creationTitle.current().trim() } : prev));
         return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
       } catch (e) {
         setSaveError(getApiErrorMessage(e, t, t('contracts.messages.createFailed')));
@@ -566,7 +597,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
         ) : <Box />}
       >
         {form && tab === 'overview' && (
-          <Stack key={form.id} spacing={4} sx={sectionStackSx}>
+          <Stack key={isCreate || creation.beingCreated ? 'draft' : form.id} spacing={4} sx={sectionStackSx}>
             <ContractDeadlines schedule={schedule} />
             {!stale && !isCreate && <ContractRenewalDecision contractId={form.id} startDate={form.start_date} canDecide={editable} onDecided={refreshAfterDecision} />}
             {!isCreate && <EntityTasksSection entityType="contract" entityId={form.id} disabled={!editable} />}
