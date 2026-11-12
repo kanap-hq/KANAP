@@ -44,7 +44,8 @@ export type TenantSyncResult = {
   /** Directory managers left aside: not a KANAP user yet, or refused. */
   managers_unresolved: number;
   /**
-   * The name of the workspace's last enabled Administrator, kept enabled although the directory
+   * The name of the workspace's last enabled Administrator, kept enabled (and made a local
+   * account, out of the sync from then on) although the directory
    * removed or deactivated them; null otherwise.
    */
   kept_administrator: string | null;
@@ -254,7 +255,7 @@ export class EntraDirectorySyncService implements OnModuleInit {
       }
 
       // The workspace keeps an enabled Administrator: the directory does not disable the last
-      // one, and the report names them. One short transaction per account, taking its locks as
+      // one, it becomes a local account, and the report names them. One short transaction per account, taking its locks as
       // every write on a person does: the person first, then the Administrator role (locked by
       // the last-administrator check until the transaction ends). A transaction for the whole list
       // would hold the role while locking the next person, the reverse order. Only an account this
@@ -267,6 +268,9 @@ export class EntraDirectorySyncService implements OnModuleInit {
           );
           if (!current || current.status === 'disabled') return 'unchanged' as const;
           if ((await lastActiveAdministratorsLeaving(manager, [{ userId: user.id, status: 'disabled' }])).length > 0) {
+            // Kept enabled, and made a local account: "Forgot password" gives it back access. Out
+            // of the sync from then on.
+            await this.users.unlinkExternalSignIn(user.id, null, { manager, sourceRef: 'entra-sync:last-administrator' });
             return 'kept' as const;
           }
           await this.users.disableUser(user.id, null, { manager, sourceRef: `entra-sync:${reason}` });
@@ -275,7 +279,7 @@ export class EntraDirectorySyncService implements OnModuleInit {
         if (outcome === 'kept') {
           result.kept_administrator = personName(user);
           this.logger.warn(
-            `[${ENTRA_DIRECTORY_SYNC_TASK}] tenant ${tenantId}: user ${user.id} ${reason} in the directory, kept enabled as the last administrator`,
+            `[${ENTRA_DIRECTORY_SYNC_TASK}] tenant ${tenantId}: user ${user.id} ${reason} in the directory, kept enabled as the last administrator and made a local account`,
           );
         } else if (outcome === 'disabled') {
           if (reason === 'removed') result.removed++;

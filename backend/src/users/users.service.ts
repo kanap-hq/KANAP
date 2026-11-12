@@ -1317,6 +1317,43 @@ export class UsersService {
   }
 
   /**
+   * Makes an account local: its link to the identity provider is removed (provider, subject, last
+   * directory refresh), so it signs in with a password and "Forgot password" sends it a link. A
+   * password it already has stays. Written to the person's history. No-op for a local account.
+   */
+  async unlinkExternalSignIn(
+    id: string,
+    actorId?: string | null,
+    opts?: { manager?: EntityManager; sourceRef?: string },
+  ) {
+    const repo = this.getRepo(opts?.manager);
+    const user = await repo.findOne({ where: { id } });
+    if (!user) throw new BadRequestException('User not found');
+    if (!user.external_auth_provider && !user.external_subject) return user;
+    const before = userAuditSnapshot(user);
+    user.external_auth_provider = null;
+    user.external_subject = null;
+    user.external_synced_at = null;
+    const saved = await repo.save(user);
+    if (this.audit) {
+      await this.audit.log(
+        {
+          table: 'users',
+          recordId: saved.id,
+          action: 'update',
+          before,
+          after: userAuditSnapshot(saved),
+          userId: actorId ?? null,
+          source: opts?.sourceRef ? 'system' : undefined,
+          sourceRef: opts?.sourceRef ?? null,
+        },
+        { manager: opts?.manager ?? repo.manager },
+      );
+    }
+    return { ...saved, password_hash: undefined } as any;
+  }
+
+  /**
    * Invites a user by e-mail: a link that sets the password (`signIn` 'password', the default,
    * valid `INVITE_LINK_TTL`), or, in a workspace with Microsoft Entra sign-in, an e-mail that
    * asks the person to sign in with Microsoft (`signIn` 'microsoft': no link, no password; the

@@ -10,8 +10,10 @@ import { EntraDirectorySyncService } from '../entra-directory-sync.service';
 
 // The Microsoft directory sync of a workspace:
 // - keeps the workspace's last enabled Administrator: a sync that would disable them (removed from
-//   the directory, or deactivated there) leaves the account as it is and names it in its report
-//   (the result and the stored sync status). With another enabled Administrator, the account is
+//   the directory, or deactivated there) keeps the account enabled, makes it a local account (its
+//   Microsoft link removed, its password kept, an entry in its history) so that "Forgot password"
+//   gives it back access, and names it in its report (the result and the stored sync status). The
+//   next syncs leave it alone. With another enabled Administrator, the account is
 //   disabled; a disabled Administrator does not count.
 // - runs once at a time per workspace: a second run while one is in progress does nothing and
 //   says so (`already_running`), without waiting. Two workspaces sync at the same time.
@@ -31,6 +33,7 @@ process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 process.env.DB_POOL_MAX = '2';
 process.env.DB_POOL_CONNECTION_TIMEOUT = '4000';
+process.env.APP_BASE_URL ||= 'http://app.directory-sync-guards.test';
 
 type PgClient = {
   connect(): Promise<void>;
@@ -136,6 +139,16 @@ async function statusOf(dataSource: DataSource, tenantId: string, userId: string
   });
 }
 
+async function linkOf(ds: DataSource, tenantId: string, userId: string) {
+  return withTenantExecution(ds, tenantId, async (manager) => {
+    const [row] = await manager.query(
+      `SELECT external_auth_provider, external_subject, external_synced_at, password_hash FROM users WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, userId],
+    );
+    return row;
+  });
+}
+
 async function storedSyncStatus(dataSource: DataSource, tenantId: string): Promise<Record<string, any> | null> {
   const [row] = await dataSource.query(`SELECT entra_metadata FROM tenants WHERE id = $1`, [tenantId]);
   return row?.entra_metadata?.directory_sync ?? null;
@@ -154,6 +167,30 @@ async function testRemovedLastAdministratorIsKept(sync: EntraDirectorySyncServic
   assert.equal(result.removed, 1, 'only the disabled account is counted');
   assert.equal((result as any).kept_administrator, 'alice Tester', 'the report names the kept account');
   assert.equal((await storedSyncStatus(ds, w.tenantId))?.kept_administrator, 'alice Tester', 'the stored status names it too');
+  const link = await linkOf(ds, w.tenantId, admin);
+  assert.equal(link.external_auth_provider, null, 'the kept account becomes local');
+  assert.equal(link.external_subject, null);
+  assert.equal(link.external_synced_at, null);
+  const history = await withTenantExecution(ds, w.tenantId, (manager) =>
+    manager.query(
+      `SELECT source, source_ref, before_json->>'external_auth_provider' AS before_provider, after_json->>'external_auth_provider' AS after_provider
+         FROM audit_log WHERE tenant_id = $1 AND table_name = 'users' AND record_id = $2`,
+      [w.tenantId, admin],
+    ),
+  );
+  assert.deepEqual(
+    history.map((row: any) => ({ ...row })),
+    [{ source: 'system', source_ref: 'entra-sync:last-administrator', before_provider: 'entra', after_provider: null }],
+    'one entry in the person\'s history',
+  );
+
+  // The next sync leaves the local account alone and keeps nobody.
+  const next = await sync.syncTenant(w.tenantId);
+  assert.equal(next.status, 'ok');
+  assert.equal(next.kept_administrator, null, 'nobody kept on the next sync');
+  assert.equal(next.removed + next.disabled + next.synced, 0, 'the local account is out of the sync');
+  assert.equal(await statusOf(ds, w.tenantId, admin), 'enabled');
+  assert.equal((await storedSyncStatus(ds, w.tenantId))?.kept_administrator, null);
 }
 
 /** Deactivated in the directory, through an extra role: kept too. */
@@ -432,6 +469,64 @@ async function testPersonBeforeRole(sync: EntraDirectorySyncService, dir: FakeDi
   assert.equal(await statusOf(ds, w.tenantId, leaver), 'disabled');
 }
 
+/** A kept account with a password keeps it; "Forgot password" works for a kept account without one. */
+async function testKeptAccountSignsInWithAPassword(
+  sync: EntraDirectorySyncService,
+  _dir: FakeDirectory,
+  ds: DataSource,
+  app: any,
+) {
+  const { AuthController } = require('../auth.controller');
+  const { AuthService } = require('../auth.service');
+  const { Features } = require('../../config/features');
+  const controller = app.get(AuthController);
+  const auth = app.get(AuthService);
+
+  // With a password: kept as it is.
+  const withPassword = await workspace(ds);
+  const holder = await withPassword.user('vic', { admin: true });
+  await withTenantExecution(ds, withPassword.tenantId, (manager) =>
+    manager.query(`UPDATE users SET password_hash = 'stored-password-hash' WHERE id = $1`, [holder]),
+  );
+  await sync.syncTenant(withPassword.tenantId);
+  assert.equal((await linkOf(ds, withPassword.tenantId, holder)).password_hash, 'stored-password-hash', 'the password stays');
+
+  // Without a password: "Forgot password" sends nothing while the account is linked to Microsoft,
+  // and a link once it is local.
+  const w = await workspace(ds);
+  const admin = await w.user('wes', { admin: true });
+  const email = `wes-${w.tenantId.slice(0, 8)}@example.test`;
+  const sent: string[] = [];
+  const emails = (controller as any).emails;
+  const send = emails.sendPasswordResetEmail;
+  const emailEnabled = Features.EMAIL_ENABLED;
+  emails.sendPasswordResetEmail = async (input: { resetUrl: string }) => { sent.push(input.resetUrl); };
+  (Features as any).EMAIL_ENABLED = true;
+  const req = { tenant: { id: w.tenantId, slug: `dir-sync-${w.tenantId.slice(0, 8)}` }, headers: {}, ip: '127.0.0.1' };
+  const settle = async () => { for (let i = 0; i < 50; i++) await new Promise((r) => setTimeout(r, 20)); };
+  try {
+    await controller.requestPasswordReset({ email }, req);
+    await settle();
+    assert.equal(sent.length, 0, 'an account linked to Microsoft gets no link');
+
+    const result = await sync.syncTenant(w.tenantId);
+    assert.equal(result.kept_administrator, 'wes Tester');
+
+    await controller.requestPasswordReset({ email }, req);
+    for (let i = 0; i < 100 && sent.length === 0; i++) await new Promise((r) => setTimeout(r, 20));
+    assert.equal(sent.length, 1, 'the kept account gets a link');
+    const token = decodeURIComponent(sent[0].split('#token=')[1]);
+    await controller.completePasswordReset({ token, password: 'A-new-password-for-wes-1' }, req);
+    const signedIn: { id: string } = await withTenantExecution(ds, w.tenantId, (manager) =>
+      auth.validateUser(email, 'A-new-password-for-wes-1', manager),
+    );
+    assert.equal(signedIn.id, admin, 'the kept account signs in with its new password');
+  } finally {
+    emails.sendPasswordResetEmail = send;
+    (Features as any).EMAIL_ENABLED = emailEnabled;
+  }
+}
+
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for entra-directory-sync-guards.integration.spec.ts.');
   const { AppModule } = require('../../app.module');
@@ -442,7 +537,7 @@ async function run() {
   (sync as any).entra = dir;
   (sync as any).logger = { warn: () => undefined, log: () => undefined, debug: () => undefined };
   let failures = 0;
-  const tests: Array<[string, (s: EntraDirectorySyncService, d: FakeDirectory, ds: DataSource) => Promise<void>]> = [
+  const tests: Array<[string, (s: EntraDirectorySyncService, d: FakeDirectory, ds: DataSource, app: any) => Promise<void>]> = [
     ['removed last Administrator is kept', testRemovedLastAdministratorIsKept],
     ['deactivated last Administrator is kept', testDeactivatedLastAdministratorIsKept],
     ['one of two Administrators is disabled', testOneOfTwoAdministratorsIsDisabled],
@@ -454,13 +549,14 @@ async function run() {
     ['a lost lock connection fails its run', testLostLockConnection],
     ['an account disabled meanwhile is not counted', testAlreadyDisabledIsNotCounted],
     ['the person is locked before the Administrator role', testPersonBeforeRole],
+    ['the kept account signs in with a password', testKeptAccountSignsInWithAPassword],
   ];
   try {
     for (const [name, test] of tests) {
       dir.entries.clear();
       dir.gate = null;
       try {
-        await test(sync, dir, dataSource);
+        await test(sync, dir, dataSource, app);
         console.log(`ok - ${name}`);
       } catch (error) {
         failures += 1;
