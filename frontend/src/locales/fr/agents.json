@@ -675,16 +675,12 @@
     "save": "Enregistrer",
     "knowledgeSources": "Sources de connaissances et web",
     "knowledgeEnabled": "Rechercher dans la base de connaissances",
-    "knowledgeHint": "Désactivé, l'agent répond à partir des connaissances du modèle (et du web, si activé).",
     "libraryScope": {
-      "none": "Aucune bibliothèque",
       "some": "Bibliothèques choisies",
-      "all": "Toutes les bibliothèques",
-      "noneHint": "L'agent ne cite aucun document dans ses réponses."
+      "all": "Toutes les bibliothèques"
     },
     "specificLibraries": "Bibliothèques",
     "librariesPlaceholder": "Sélectionner des bibliothèques",
-    "librariesHint": "L'agent ne recherche que dans ces bibliothèques, parmi celles auxquelles il a accès. Les noms des bibliothèques se trouvent dans la section Connaissances.",
     "internalNotes": "Notes internes du ticket",
     "internalNotesChoice": {
       "used": "Utilisées",
@@ -695,7 +691,6 @@
       "ignored": "L'agent ne lit que les messages publics du ticket."
     },
     "webEnabled": "Rechercher sur le web",
-    "webHint": "Activé, l'agent peut aussi rechercher sur le web public. La base de connaissances reste prioritaire et les résultats web sont cités dans les réponses.",
     "webUnavailableHint": "La recherche web n'est pas encore disponible sur cette plateforme. Contactez votre administrateur pour l'activer.",
     "saveKnowledge": "Enregistrer les sources",
     "capabilities": "Capacités",
