@@ -2736,6 +2736,10 @@
   },
   "integrations": {
     "secretAddressChanged": "La dirección ha cambiado: vuelva a introducir este valor.",
+    "removeConnection": {
+      "title": "¿Quitar la conexión {{name}}?",
+      "message": "Se eliminan su dirección y el secreto guardado. Los datos ya importados se conservan."
+    },
     "netbox": {
       "title": "Inventario de Netbox",
       "description": "Incorpora tu inventario de Netbox como activos. Netbox sigue siendo la referencia para los equipos que describe.",

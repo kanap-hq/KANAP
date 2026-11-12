@@ -203,6 +203,9 @@ export class AiMonitoringIntegrationsService {
   ): Promise<{ ok: true }> {
     const baseUrlRaw = textOrNull(input.base_url);
     if (!baseUrlRaw) {
+      // An empty address removes a saved connection, as for GLPI.
+      const removed = await this.removePrtgConnection(context);
+      if (removed) return removed;
       throw new BadRequestException(BASE_URL_MESSAGE);
     }
     const baseUrl = normalizePrtgBaseUrl(baseUrlRaw);
@@ -289,6 +292,38 @@ export class AiMonitoringIntegrationsService {
       recordId: saved.id,
       action: existing ? 'update' : 'create',
       before: existing ? toView(existing) : null,
+      after: toView(saved),
+      userId: context.userId || null,
+      sourceRef: context.requestId ?? null,
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Removes the saved connection: the address and the credential are emptied and the
+   * connection is switched off, with an audit entry. The row and its other settings
+   * (time zone, timeout) stay, as GLPI keeps its settings row. Agents bound to PRTG then
+   * report the connection as unavailable on their next cycle. Null when nothing is saved.
+   */
+  private async removePrtgConnection(context: AiExecutionContextWithManager): Promise<{ ok: true } | null> {
+    const existing = await this.adapterConfigs.getConfig(context, 'monitoring', PRTG_MONITORING_PROVIDER_KEY, { forUpdate: true });
+    if (!existing || (!textOrNull(existing.base_url) && !existing.credential_ref_json && !existing.enabled)) {
+      return existing ? { ok: true } : null;
+    }
+    const saved = await this.adapterConfigs.saveConfig(context, {
+      provider_kind: 'monitoring',
+      provider_key: PRTG_MONITORING_PROVIDER_KEY,
+      implementation: existing.implementation,
+      environment: existing.environment,
+      enabled: false,
+      base_url: null,
+      credential_ref_json: null,
+    });
+    await writeAuditLog(context.manager, {
+      table: 'ai_adapter_configs',
+      recordId: saved.id,
+      action: 'update',
+      before: toView(existing),
       after: toView(saved),
       userId: context.userId || null,
       sourceRef: context.requestId ?? null,

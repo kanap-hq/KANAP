@@ -345,6 +345,10 @@ export class NetboxConfigService {
     let baseUrl = textOrNull(existing?.base_url);
     if (input.base_url !== undefined) {
       const raw = textOrNull(input.base_url);
+      if (!raw && existing) {
+        // An empty address removes the saved connection, as for GLPI.
+        return this.removeConnection(manager, tenantId, existing, opts);
+      }
       if (!raw) throw netboxBadRequest('netbox_base_url_invalid');
       try {
         baseUrl = normalizeNetboxAddress(raw);
@@ -448,6 +452,47 @@ export class NetboxConfigService {
       delete cleared.last_connection_test;
       return this.toView({ ...saved, metadata_json: cleared });
     }
+    return this.toView(saved);
+  }
+
+  /**
+   * Removes the saved connection: the address and the token are emptied and the
+   * connection is switched off, with an audit entry. What was imported stays, links to
+   * Netbox included, and so do the matches, which a new connection can reuse. What
+   * describes the removed server goes: its connection test, the hourly run and the mark
+   * of the first import read by a person, so a new server starts with a manual review.
+   */
+  private async removeConnection(
+    manager: EntityManager,
+    tenantId: string,
+    existing: AiAdapterConfig,
+    opts?: { userId?: string | null; sourceRef?: string | null },
+  ): Promise<NetboxIntegrationView> {
+    const metadata: Record<string, unknown> = { ...(asRecord(existing.metadata_json) ?? {}) };
+    delete metadata.last_connection_test;
+    delete metadata.first_manual_sync_at;
+    delete metadata.review_pending;
+    metadata.auto_sync = false;
+    const before = this.auditView(existing);
+    const repo = this.repo(manager);
+    const saved = await repo.save(repo.create({
+      ...existing,
+      tenant_id: tenantId,
+      enabled: false,
+      base_url: null,
+      credential_ref_json: null,
+      metadata_json: metadata,
+      updated_at: new Date(),
+    }));
+    await writeAuditLog(manager, {
+      table: 'ai_adapter_configs',
+      recordId: saved.id,
+      action: 'update',
+      before,
+      after: this.auditView(saved),
+      userId: opts?.userId ?? null,
+      sourceRef: opts?.sourceRef ?? null,
+    });
     return this.toView(saved);
   }
 

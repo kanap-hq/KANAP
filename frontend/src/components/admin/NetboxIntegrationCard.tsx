@@ -25,7 +25,7 @@ import {
   type NetboxIntegrationView,
   type NetboxTestResult,
 } from '../../api/endpoints/netbox';
-import { StatusDot } from '../design';
+import { StatusDot, useKanapDialogs } from '../design';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
@@ -134,6 +134,7 @@ export default function NetboxIntegrationCard() {
   const theme = useTheme();
   const locale = useLocale();
   const queryClient = useQueryClient();
+  const dialogs = useKanapDialogs();
 
   const [form, setForm] = React.useState<NetboxForm>(() => buildForm(undefined));
   // One banner: a new save or test replaces whatever was showing.
@@ -159,7 +160,8 @@ export default function NetboxIntegrationCard() {
     mutationFn: async (data: NetboxForm) => netboxApi.saveIntegration(buildSavePayload(data, integration)),
     onMutate: () => setNotice(null),
     onSuccess: async (_saved, data) => {
-      const showNext = data.enabled && ((integration?.credential?.present ?? false) || data.api_token.trim().length > 0);
+      const showNext = data.enabled && !!data.base_url.trim()
+        && ((integration?.credential?.present ?? false) || data.api_token.trim().length > 0);
       setNotice({
         severity: 'success',
         text: showNext
@@ -225,12 +227,28 @@ export default function NetboxIntegrationCard() {
     })
     : null;
   const sessionOnly = !!lastTest && !!sessionTest && lastTest.tested_at === sessionTest.tested_at && !sessionTest.persisted;
+  // An emptied address removes the saved connection (address and token) on save.
+  const removing = !!integration?.base_url && !form.base_url.trim();
   // The saved token only goes to the saved address: a new one empties it on save.
   const tokenEmptiedByAddress = (integration?.credential?.present ?? false)
+    && !removing
     && isNewSecretAddress(form.base_url, integration?.base_url);
-  const hasStoredToken = (integration?.credential?.present ?? false) && !tokenEmptiedByAddress;
+  const hasStoredToken = (integration?.credential?.present ?? false) && !tokenEmptiedByAddress && !removing;
   const tokenMissingForAddress = tokenEmptiedByAddress && !form.api_token.trim();
   const secretWritable = integration?.secret_writable !== false;
+
+  const handleSave = async () => {
+    if (removing) {
+      const confirmed = await dialogs.confirm({
+        title: t('integrations.removeConnection.title', { name: 'Netbox' }),
+        message: t('integrations.removeConnection.message'),
+        confirmLabel: t('common:buttons.remove'),
+        intent: 'danger',
+      });
+      if (!confirmed) return;
+    }
+    saveMutation.mutate(form);
+  };
 
   const tokenHelperText = tokenEmptiedByAddress
     ? t('integrations.secretAddressChanged')
@@ -385,7 +403,7 @@ export default function NetboxIntegrationCard() {
             <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
               <Button
                 variant="contained"
-                onClick={() => saveMutation.mutate(form)}
+                onClick={() => { void handleSave(); }}
                 disabled={saveMutation.isPending || (tokenMissingForAddress && form.enabled)}
               >
                 {saveMutation.isPending ? t('common:status.saving') : t('integrations.netbox.actions.save')}
@@ -393,7 +411,7 @@ export default function NetboxIntegrationCard() {
               <Button
                 variant="outlined"
                 onClick={() => testMutation.mutate(form)}
-                disabled={testMutation.isPending || tokenMissingForAddress}
+                disabled={testMutation.isPending || tokenMissingForAddress || removing}
               >
                 {testMutation.isPending
                   ? t('integrations.netbox.actions.testing')

@@ -273,13 +273,13 @@ async function testValidationRejectsJunk() {
   });
   assert.equal(harness.rows[0].metadata_json, null);
 
-  // Base URL and enabled validation.
+  // Base URL and enabled validation. An empty address removes a saved connection
+  // (integration-secret-address.spec.ts).
   for (const badBody of [
     { base_url: 'not-a-url', enabled: true },
     { base_url: 'ftp://prtg.example.test', enabled: true },
     { base_url: 'https://prtg.example.test/?apitoken=x', enabled: true },
     { base_url: 'https://user:pass@prtg.example.test', enabled: true },
-    { base_url: '', enabled: true },
     { base_url: 'https://prtg.example.test', enabled: 'yes' },
   ]) {
     await assert.rejects(

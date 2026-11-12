@@ -2736,6 +2736,10 @@
   },
   "integrations": {
     "secretAddressChanged": "L'adresse a changé : saisissez de nouveau cette valeur.",
+    "removeConnection": {
+      "title": "Retirer la connexion {{name}} ?",
+      "message": "Son adresse et le secret enregistré sont supprimés. Les données déjà importées restent."
+    },
     "netbox": {
       "title": "Inventaire Netbox",
       "description": "Importez l'inventaire Netbox en tant qu'actifs. Netbox reste la référence pour les équipements qu'il décrit.",

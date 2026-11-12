@@ -32,7 +32,7 @@ Gehen Sie zu **Administration > Integrationen** und öffnen Sie die Karte **Netb
 | Feld | Was einzutragen ist |
 |-------|---------------|
 | **Netbox-Synchronisierung aktivieren** | Der Hauptschalter. Ist er aus, ruft Kadratis Netbox nie auf, weder manuell noch nach Zeitplan. |
-| **Netbox-Adresse** | Die Adresse, mit der Sie Netbox im Browser öffnen, zum Beispiel `https://netbox.example.com`. |
+| **Netbox-Adresse** | Die Adresse, mit der Sie Netbox im Browser öffnen, zum Beispiel `https://netbox.example.com`. Leeren und speichern Sie sie, um die Verbindung zu entfernen. |
 | **API-Token** | Das Token, das Sie in Netbox angelegt haben. Es wird verschlüsselt gespeichert und nie wieder angezeigt. Lassen Sie das Feld beim Speichern leer, um das bereits gespeicherte Token zu behalten, solange die Adresse gleich bleibt. Eine neue Adresse leert das gespeicherte Token: Geben Sie es erneut ein. |
 | **Zeitlimit für Anfragen (Sekunden)** | Wie lange auf Netbox gewartet wird, bevor abgebrochen wird, zwischen 5 und 120. Für 30 Sekunden leer lassen. |
 | **Zertifikatsfehler ignorieren** | Standardmäßig aus. Siehe oben. |
@@ -40,6 +40,8 @@ Gehen Sie zu **Administration > Integrationen** und öffnen Sie die Karte **Netb
 | **Umgebung für neue Assets** | Gilt für die Assets, die diese Integration anlegt. Danach wird sie nie geändert. |
 
 **Verbindung testen** führt einen reinen Leseaufruf aus und meldet die gefundene Netbox-Version oder den Grund des Fehlschlags. Führen Sie den Test nach jeder Änderung der Adresse oder des Tokens aus. Die Karte zeigt **Konfiguriert**, sobald die Verbindung gespeichert und eingeschaltet ist. Daneben nennt sie Ergebnis und Datum des letzten Tests: „Letzter Test erfolgreich am …“ oder „Letzter Test fehlgeschlagen am …“. Sind die Einstellungen gespeichert, bietet die Karte den Link **Synchronisierung einrichten** an, der Sie zum Tab **Netbox** unter **IT-Landschaft > Einstellungen** führt.
+
+**Die Verbindung entfernen.** Leeren Sie die Adresse, speichern Sie und bestätigen Sie. Kadratis löscht die Adresse und das Token, schaltet die Verbindung und die automatische Synchronisierung aus und schreibt einen Eintrag ins Audit-Protokoll. Importierte Assets bleiben mit ihrer Verknüpfung zu Netbox erhalten, ebenso Ihre Zuordnungen. Eine neue Verbindung beginnt wieder mit einer Synchronisierung, die Sie selbst anwenden, bevor der stündliche Lauf weitergeht.
 
 ---
 

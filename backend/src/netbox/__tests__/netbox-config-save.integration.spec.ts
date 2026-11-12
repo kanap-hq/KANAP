@@ -198,6 +198,51 @@ async function main() {
       assert.equal(row.base_url, STORED_URL);
       assert.deepEqual(row.credential_ref_json, STORED_TOKEN);
     });
+
+    await inTransaction('an empty address removes the connection, keeps the matches and leaves a trace', async (runner) => {
+      const { tenantId, configId } = await seed(runner);
+      await runner.query(
+        `UPDATE ai_adapter_configs
+            SET metadata_json = metadata_json || '{"auto_sync":true,"first_manual_sync_at":"2026-10-01T00:00:00.000Z","review_pending":0}'::jsonb
+          WHERE id = $1`,
+        [configId],
+      );
+      const view = await service().save(runner.manager, tenantId, { base_url: '', api_token: 'nbt_ignored' }, { userId: null });
+      assert.equal(view.configured, false);
+      assert.equal(view.enabled, false);
+      assert.equal(view.base_url, null);
+      assert.equal(view.credential.present, false);
+      assert.equal(view.auto_sync, false);
+      assert.equal(view.last_test, null);
+      const row = await readRow(runner, configId);
+      assert.equal(row.base_url, null);
+      assert.equal(row.credential_ref_json, null);
+      assert.deepEqual(row.metadata_json.role_map, { server: 'physical_server' }, 'the matches stay');
+      assert.equal(row.metadata_json.first_manual_sync_at, undefined, 'a new server starts with a manual review');
+      assert.equal(row.metadata_json.last_connection_test, undefined);
+      const audits = await auditRows(runner, configId);
+      assert.equal(audits.length, 1);
+      assert.equal(audits[0].action, 'update');
+      assert.equal(audits[0].before_json.base_url, STORED_URL);
+      assert.equal(audits[0].before_json.credential.present, true);
+      assert.equal(audits[0].after_json.base_url, null);
+      assert.equal(audits[0].after_json.credential.present, false);
+      assert.doesNotMatch(JSON.stringify(audits), /stored-token|nbt_ignored|ciphertext/);
+    });
+
+    await inTransaction('an empty address with nothing saved is refused', async (runner) => {
+      const tenantId = randomUUID();
+      await runner.query(
+        `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+         VALUES ($1, $2, 'Netbox empty', 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+        [tenantId, `netbox-empty-${tenantId.slice(0, 8)}`],
+      );
+      await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+      await assert.rejects(
+        () => service().save(runner.manager, tenantId, { base_url: '' }),
+        (error: any) => error?.getResponse?.()?.code === 'netbox_base_url_invalid',
+      );
+    });
   } finally {
     await dataSource.destroy();
   }

@@ -32,7 +32,7 @@ Vaya a **Administración > Integraciones** y abra la tarjeta **Inventario de Net
 | Campo | Qué introducir |
 |-------|----------------|
 | **Activar la sincronización con Netbox** | El conmutador maestro. Cuando está desactivado, Kadratis no llama nunca a Netbox, ni a mano ni de forma programada. |
-| **Dirección de Netbox** | La dirección que usa para abrir Netbox en el navegador, por ejemplo `https://netbox.example.com`. |
+| **Dirección de Netbox** | La dirección que usa para abrir Netbox en el navegador, por ejemplo `https://netbox.example.com`. Vacíela y guarde para quitar la conexión. |
 | **Token de API** | El token que creó en Netbox. Se guarda cifrado y no se vuelve a mostrar. Deje el campo vacío al guardar para conservar el token ya almacenado, mientras la dirección no cambie. Una dirección nueva vacía el token almacenado: vuelva a introducirlo. |
 | **Tiempo de espera (segundos)** | Cuánto esperar a Netbox antes de abandonar, entre 5 y 120. Déjelo vacío para usar 30. |
 | **Ignorar los errores de certificado** | Desactivado de forma predeterminada. Véase más arriba. |
@@ -40,6 +40,8 @@ Vaya a **Administración > Integraciones** y abra la tarjeta **Inventario de Net
 | **Entorno de los nuevos activos** | Se aplica a los activos que crea esta integración. Después no se cambia nunca. |
 
 **Probar conexión** hace una llamada de solo lectura e indica la versión de Netbox encontrada, o el motivo del fallo. Ejecútela después de cada cambio de dirección o de token. La tarjeta muestra **Configurado** una vez guardada y activada la conexión. Al lado, indica el resultado y la fecha de la última prueba: «Última prueba correcta el …» o «Última prueba fallida el …». Una vez guardada la configuración, la tarjeta ofrece un enlace **Configurar la sincronización**, que lleva a la pestaña **Netbox** de **Panorama IT > Configuración**.
+
+**Quitar la conexión.** Vacíe la dirección, guarde y confirme. Kadratis elimina la dirección y el token, desactiva la conexión y la sincronización automática, y escribe una entrada en el registro de auditoría. Los activos importados se conservan, con su vínculo a Netbox, y también sus correspondencias. Una nueva conexión vuelve a empezar con una sincronización que usted aplica antes de que se reanude la ejecución horaria.
 
 ---
 
