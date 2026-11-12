@@ -246,7 +246,8 @@ export class TaskActivitiesService {
     }
 
     const repo = mg.getRepository(PortfolioActivity);
-    const normalizedContent = await normalizeMarkdownRichText(dto.content, { fieldName: 'content' });
+    // The text comes from another system: a tag it holds is kept as text.
+    const normalizedContent = await normalizeMarkdownRichText(dto.content, { fieldName: 'content', thirdPartyText: true });
     const createdAt = parseImportedCreatedAt(dto.created_at);
     const activity = repo.create({
       task_id: taskId,
@@ -473,7 +474,7 @@ export class TaskActivitiesService {
       throw codedForbidden('OWN_COMMENTS_ONLY', 'You can only edit your own comments');
     }
 
-    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content' });
+    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content', storedValue: activity.content });
     activity.updated_at = new Date();
 
     return repo.save(activity);

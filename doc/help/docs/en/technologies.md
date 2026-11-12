@@ -186,7 +186,7 @@ The check adds the new versions, CPE product identifiers and CVE.org names of th
 The **Vulnerability identifiers** group, under the versions, holds the CPE product identifiers and the CVE.org names. Kadratis finds the vulnerabilities of a technology through them.
 
 - **Folded**: when the technology has at least one identifier, the group is folded, with a summary on its title line, for example `2 CPE identifiers · 3 CVE.org names`. Click the title to open it.
-- **Open**: when the technology has none, the group is open, with a warning: no vulnerability is looked up for this technology. The **Versions** section says so too. With the Member level on infrastructure, **Add an identifier** next to that line opens the group.
+- **Open**: when the technology has none, the group is open, with a warning: no vulnerability is looked up for this technology.
 
 The match is made at the level of the technology. Every version of the technology is compared with the vulnerabilities of its identifiers, and a version you add is matched at once. Without an identifier, Kadratis looks up no vulnerability for any version.
 

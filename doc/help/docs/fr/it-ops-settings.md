@@ -88,7 +88,7 @@ Où sont hébergés les sites et les technologies. Valeurs par défaut : Sur sit
 
 **Où c'est utilisé** :
 - Espace de travail Sites > Onglet Vue d'ensemble > Champ **Type d'hébergement**
-- Espace de travail Technologies > panneau de propriétés > **Type d'hébergement**, et la fenêtre de nouvelle technologie. Voir [Technologies](technologies.md#type-dhebergement).
+- Espace de travail Technologies > panneau Propriétés > **Type d'hébergement**, et la fenêtre de nouvelle technologie. Voir [Technologies](technologies.md#type-dhebergement).
 
 Un type utilisé par une technologie ne peut pas être supprimé : marquez-le plutôt **Ne plus proposer**.
 
@@ -117,8 +117,8 @@ L'ordre de la liste compte : la première zone est la plus sensible. Faites glis
 - **Groupe d'administrateurs** : le groupe de l'annuaire ou l'équipe qui administre la zone, par exemple « Admins du domaine ».
 
 **Où c'est utilisé** :
-- Espace de travail Actifs > panneau de propriétés > **Zone d'administration**
-- Espace de travail Technologies > panneau de propriétés > **Zone d'administration**, pour les technologies de la famille **Annuaire et identité**
+- Espace de travail Actifs > panneau Propriétés > **Zone d'administration**
+- Espace de travail Technologies > panneau Propriétés > **Zone d'administration**, pour les technologies de la famille **Annuaire et identité**
 - **Cartographie SI > Zones d'administration**, qui compte les actifs et les services d'annuaire de chaque zone, lance les points de contrôle et affecte les zones en masse. Voir [Zones d'administration](administration-view.md).
 
 Une zone marquée **Ne plus proposer** reste sur les technologies et les actifs déjà placés dedans.
@@ -130,7 +130,7 @@ Le genre de chaque technologie : base de données, hyperviseur, annuaire et iden
 **Colonnes** : Nom, Ne plus proposer
 
 **Où c'est utilisé** :
-- Espace de travail Technologies > en-tête et panneau de propriétés > **Famille**, et la fenêtre de nouvelle technologie
+- Espace de travail Technologies > en-tête et panneau Propriétés > **Famille**, et la fenêtre de nouvelle technologie
 
 La famille **Système d'exploitation** désigne les systèmes d'exploitation : une technologie de cette famille ajoutée à un serveur qui n'en a pas devient son système d'exploitation. Voir [Technologies](technologies.md#systemes-dexploitation).
 
@@ -416,7 +416,7 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 |-------|------------------|
 | **Méthodes d'accès** | Applications (Onglet Technique et support > Méthodes d'accès) |
 | **Catégories d'application** | Applications (Catégorie) |
-| **Zones d'administration** | Actifs (panneau de propriétés > Zone d'administration), Technologies de la famille Annuaire et identité (panneau de propriétés > Zone d'administration), page Zones d'administration |
+| **Zones d'administration** | Actifs (panneau Propriétés > Zone d'administration), Technologies de la famille Annuaire et identité (panneau Propriétés > Zone d'administration), page Zones d'administration |
 | **Fournisseurs cloud** | Actifs (Fournisseur), Sites (Fournisseur cloud) |
 | **Types de connexion** | Connexions (Type de connexion) |
 | **Domaines** | Actifs (Onglet Réseau > Domaine, FQDN), page Zones d'administration |

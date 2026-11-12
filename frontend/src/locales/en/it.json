@@ -2440,9 +2440,7 @@
         "cveNameCount_one": "{{count, count}} CVE.org name",
         "cveNameCount_other": "{{count, count}} CVE.org names",
         "missing": "Without a CPE identifier or a CVE.org name, no vulnerability is looked up for this technology.",
-        "missingCpe": "Without a CPE identifier, no vulnerability is looked up for this technology.",
-        "versionsUnmatched": "These versions will not be matched to any vulnerability until the technology has an identifier.",
-        "add": "Add an identifier"
+        "missingCpe": "Without a CPE identifier, no vulnerability is looked up for this technology."
       },
       "cpe": {
         "title": "CPE product identifiers",

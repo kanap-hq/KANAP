@@ -60,8 +60,9 @@ export abstract class PortfolioProjectsBaseService {
     return opts?.manager ?? this.projectRepo.manager;
   }
 
-  protected async normalizeNullable(value: unknown): Promise<string | null> {
-    return await normalizeMarkdownRichText(value);
+  /** @param storedValue the text the field holds now, on an update: a write that repeats it is kept as it is */
+  protected async normalizeNullable(value: unknown, storedValue?: string | null): Promise<string | null> {
+    return await normalizeMarkdownRichText(value, { storedValue });
   }
 
   protected normalizeOrigin(value: unknown): ProjectOrigin {

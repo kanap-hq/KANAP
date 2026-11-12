@@ -37,7 +37,9 @@ import { isTenantAdministrator } from './tenant-administrator';
  * The steps of an own-data path that create an object are done by themselves once it exists in
  * the workspace (`onboarding-step-evidence.ts`): reading the state records them, which is the
  * only write of `GET /onboarding`. Never while sample data is in the workspace or being erased,
- * since its objects are not the user's. Such a step cannot be undone while its object exists.
+ * since its objects are not the user's. Such a step cannot be undone while its object exists, and
+ * the same read undoes it once the object is gone (a creation cancelled, a record deleted), unless
+ * the user marked it done by hand.
  *
  * Audit log, read by the platform measures (no other form): `table_name = 'onboarding'`,
  * `record_id` = the tenant, actions `onboarding.angle_chosen` `{ angle, previous }`,
@@ -118,8 +120,8 @@ export class OnboardingService {
 
   /**
    * The state of the workspace's onboarding for `userId`. On an own-data path, the steps whose
-   * object exists are recorded done first, unless the sample data is not `idle` (loaded, or being
-   * loaded or erased).
+   * object exists are recorded done first, and those whose object is gone are undone
+   * (`undoDoneByObject`), unless the sample data is not `idle` (loaded, or being loaded or erased).
    */
   async getState(manager: EntityManager, tenantId: string, userId: string): Promise<OnboardingState> {
     const choice = await this.readChoice(manager, tenantId);
@@ -134,12 +136,14 @@ export class OnboardingService {
     const automatic = new Set(angle && mode === 'own_data' ? path.filter((key) => stepEvidence(key, angle)) : []);
 
     let doneByKey = await this.readDone(manager, tenantId, userId, angle, mode);
-    const pending = [...automatic].filter((key) => !doneByKey.has(key));
-    if (angle && mode && pending.length > 0 && demo.status === 'idle') {
-      const found = await this.stepsWithObject(manager, tenantId, userId, angle, pending);
-      if (found.length > 0) {
+    if (angle && mode && automatic.size > 0 && demo.status === 'idle') {
+      const found = new Set(await this.stepsWithObject(manager, tenantId, userId, angle, [...automatic]));
+      const appeared = [...automatic].filter((key) => found.has(key) && !doneByKey.has(key));
+      const gone = [...automatic].filter((key) => !found.has(key) && doneByKey.has(key));
+      if (appeared.length > 0 || gone.length > 0) {
         await this.lockSteps(manager, tenantId, userId);
-        await this.recordDone(manager, tenantId, userId, angle, mode, found, true);
+        if (appeared.length > 0) await this.recordDone(manager, tenantId, userId, angle, mode, appeared, true);
+        if (gone.length > 0) await this.undoDoneByObject(manager, tenantId, userId, angle, mode, gone);
         doneByKey = await this.readDone(manager, tenantId, userId, angle, mode);
       }
     }
@@ -522,6 +526,35 @@ export class OnboardingService {
     if (!previous?.logged) {
       await this.audit(manager, tenantId, userId, 'onboarding.completed', { angle, mode });
     }
+  }
+
+  /**
+   * Among `keys`, the done steps whose object is gone (a creation cancelled, a record deleted),
+   * under `lockSteps`: a step its object did (its last `step_done` is `automatic`) is undone; a
+   * step marked done by hand stays. Nothing is logged, as for any undo.
+   */
+  private async undoDoneByObject(
+    manager: EntityManager,
+    tenantId: string,
+    userId: string,
+    angle: OnboardingAngle,
+    mode: OnboardingMode,
+    keys: readonly string[],
+  ): Promise<void> {
+    await manager.query(
+      `DELETE FROM onboarding_steps s
+        WHERE s.tenant_id = $1 AND s.user_id = $2 AND s.angle = $3 AND s.mode = $4 AND s.step_key = ANY($5::text[])
+          AND (
+            SELECT a.after_json->>'automatic' = 'true'
+              FROM audit_log a
+             WHERE a.tenant_id = $1 AND a.record_id = $1 AND a.table_name = $6 AND a.action = 'onboarding.step_done'
+               AND a.user_id = $2 AND a.after_json->>'angle' = $3 AND a.after_json->>'mode' = $4
+               AND a.after_json->>'step_key' = s.step_key
+             ORDER BY a.created_at DESC
+             LIMIT 1
+          ) IS TRUE`,
+      [tenantId, userId, angle, mode, [...keys], ONBOARDING_AUDIT_TABLE],
+    );
   }
 
   /** Hides (`dismissed`) or shows again the list of first steps, for `userId`. */

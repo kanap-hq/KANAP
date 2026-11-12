@@ -552,7 +552,7 @@
     "exportDescription": "Export data as CSV. Files use semicolon separators.",
     "exportDescriptionFlexible": "Export data as CSV. The separator, the decimal mark and the dates follow the language of the screen.",
     "exportData": "Export data",
-    "exportPreset": "Export preset",
+    "exportPreset": "Fields to export",
     "fullExport": "Full export",
     "customSelection": "Custom selection",
     "fieldsSelected": "{{selected}} of {{total}} fields selected",
@@ -583,9 +583,9 @@
     "headerError": "Header: {{message}}",
     "andMoreErrors": "…and {{count}} more",
     "ignoredColumns": "Ignored columns: {{columns}}.",
-    "importWorkflow": "Import workflow",
+    "importWorkflow": "What the import does",
     "advancedOptions": "Advanced options",
-    "overridePresetNote": "These settings override the workflow preset selection.",
+    "overridePresetNote": "These options replace the choice above.",
     "emptyCellHandling": "Empty cell handling",
     "preserveExisting": "Preserve existing",
     "setToNull": "Clear the stored value",
@@ -1181,7 +1181,10 @@
     "subscriptionNeedsAttention": "Your subscription needs attention.",
     "goToBilling": "Go to billing",
     "accountAccessLimited": "Account access is limited. Contact your billing admin.",
-    "choosePlanToContinueAction": "Choose a plan to continue"
+    "choosePlanToContinueAction": "Choose a plan to continue",
+    "paymentOverdueAmount": "Payment of {{amount}} overdue. Access will be limited on {{date}}.",
+    "paymentOverdue": "A payment is overdue. Access will be limited on {{date}}.",
+    "contactBillingAdmin": "Contact your billing admin."
   },
   "forbidden": {
     "title": "Access denied",
@@ -1551,7 +1554,7 @@
     "angles": {
       "budget": "The IT budget",
       "cartography": "The IT landscape map",
-      "portfolio": "Projects and requests"
+      "portfolio": "The portfolio"
     },
     "modes": {
       "example": "Explore with the complete example",
@@ -1562,7 +1565,7 @@
       "angles": {
         "budget": "IT budget",
         "cartography": "IT landscape map",
-        "portfolio": "Project portfolio",
+        "portfolio": "Portfolio",
         "none": "Just looking"
       },
       "modes": {
@@ -1651,7 +1654,7 @@
         },
         "own_sites": {
           "title": "Your locations",
-          "hint": "Create your locations: server rooms, data centers or clouds. Every server belongs to one."
+          "hint": "Create your locations: server rooms, data centers or clouds. Every asset belongs to one."
         },
         "own_applications": {
           "title": "Your applications",
@@ -1662,8 +1665,8 @@
           "hint": "Turn on technologies and link them to your applications. {{product}} takes care of the rest."
         },
         "own_assets": {
-          "title": "Your servers",
-          "hint": "Import or create your servers, then link them to applications."
+          "title": "Your assets",
+          "hint": "Import or create your assets, then link them to applications."
         },
         "portfolio_request": {
           "title": "A request and its score",
@@ -1690,8 +1693,8 @@
           "hint": "Every application of the example, with its business criticality and its lifecycle. It is the inventory: filter, sort, search."
         },
         "map_assets": {
-          "title": "The servers",
-          "hint": "Each server tells where the applications run: environment, site, installed technologies. Open a record to learn more."
+          "title": "The assets",
+          "hint": "Each asset tells where the applications run: environment, location, installed technologies. Open a record to learn more."
         },
         "portfolio_project": {
           "title": "The project born from the request",

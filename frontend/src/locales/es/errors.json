@@ -51,6 +51,8 @@
   "SHARE_RATE_LIMITED": "Ha enviado el máximo de 30 enlaces en la última hora. Vuelva a intentarlo más tarde.",
   "MARKDOWN_TOO_LARGE": "Este texto es demasiado largo: el límite es de 200 KB de texto (las imágenes no cuentan).",
   "MARKDOWN_TOO_LARGE_DOCUMENT": "Este documento supera los 200 KB de texto que admite un guardado (las imágenes no cuentan). Acórtelo para guardar sus cambios. Se conserva la última versión guardada.",
+  "MARKDOWN_HTML_NOT_ALLOWED": "Este texto contiene una etiqueta HTML. Elimínela o colóquela en un bloque de código.",
+  "MARKDOWN_LINK_NOT_ALLOWED": "Este enlace no se acepta. Utilice una dirección web, una dirección de correo electrónico, un número de teléfono o una página de la aplicación.",
   "MARKDOWN_TOO_COMPLEX": "Este texto es demasiado complejo para analizarlo. Ponga los registros o el código pegados en un bloque de código, o cierre los caracteres de formato (* y _).",
   "MARKDOWN_BUSY": "El servidor está ocupado con otros textos. Vuelva a intentarlo en un momento.",
   "MARKDOWN_UNAVAILABLE": "Los textos con formato no se pueden guardar en este momento. Vuelva a intentarlo en unos minutos.",
@@ -104,6 +106,9 @@
   "BUDGET_FILE_NOT_PROJECT_NUMBER": "«{{value}}» no es un número de proyecto.",
   "BUDGET_FILE_DIMENSION_CLOSED": "«{{value}}» no está en la lista de {{name}}. Elija un valor existente.",
   "BUDGET_FILE_DIMENSION_REQUIRED": "La dimensión {{name}} es obligatoria. Elija un valor.",
+  "BUDGET_FILE_DIMENSION_VALUE_TOO_LONG": "Un valor de {{name}} no puede superar los {{max}} caracteres.",
+  "BUDGET_FILE_DIMENSION_VALUE_CHARACTERS": "Un valor de {{name}} no puede contener caracteres de control ni invisibles.",
+  "BUDGET_FILE_DIMENSION_VALUE_INVALID": "«{{value}}» no puede ser un valor de {{name}}.",
   "BUDGET_FILE_FROZEN": "La columna {{label}} {{year}} está congelada.",
   "BUDGET_FILE_AMOUNT_CANNOT_BE_CLEARED": "Un importe no se puede vaciar. Indique 0 para ponerlo a cero, o deje la celda vacía para conservar el importe guardado.",
   "BUDGET_FILE_AMOUNT_TOO_LARGE": "Este importe es demasiado grande.",
@@ -501,5 +506,6 @@
     "incidents": "incidentes"
   },
   "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} fila actualiza un registro existente, y esta importación sustituye todos sus valores: el archivo no tiene columna para {{columns}}, cuyos valores se borrarían. Asigne esas columnas o deje solo los registros nuevos en el archivo.",
-  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} filas actualizan registros existentes, y esta importación sustituye todos sus valores: el archivo no tiene columna para {{columns}}, cuyos valores se borrarían. Asigne esas columnas o deje solo los registros nuevos en el archivo."
+  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} filas actualizan registros existentes, y esta importación sustituye todos sus valores: el archivo no tiene columna para {{columns}}, cuyos valores se borrarían. Asigne esas columnas o deje solo los registros nuevos en el archivo.",
+  "INVOICE_PAYMENT_IN_PROGRESS": "Ya hay un pago en curso."
 }

@@ -1631,7 +1631,9 @@
     "actions": {
       "changePlan": "Cambiar plan",
       "choosePlan": "Elegir plan",
-      "managePayment": "Gestionar el pago"
+      "managePayment": "Gestionar el pago",
+      "payInvoice": "Pagar la factura",
+      "updateCardAndPay": "Actualizar la tarjeta y pagar"
     },
     "fields": {
       "addressLine1": "Dirección línea 1",
@@ -1678,6 +1680,7 @@
     "messages": {
       "keepFailed": "No se pudo cancelar el cambio previsto.",
       "loadFailed": "No se pudieron cargar los detalles de facturación.",
+      "payFailed": "No se pudo pagar la factura.",
       "portalFailed": "No se pudo abrir el portal de facturación.",
       "portalUnavailable": "El portal de facturación no está disponible.",
       "saveFailed": "No se pudieron guardar los detalles de facturación."
@@ -1730,7 +1733,32 @@
         "trialEnded": "prueba finalizada el {{date}}"
       }
     },
-    "title": "Facturación"
+    "title": "Facturación",
+    "unpaid": {
+      "limited": "El acceso está limitado.",
+      "limitedOn": "El acceso se limitará el {{date}}.",
+      "limitedSince": "Acceso limitado desde el {{date}}.",
+      "overdue": "Hay una factura vencida.",
+      "reasons": {
+        "authentication_required": "el banco solicita una autenticación",
+        "expired_card": "tarjeta caducada",
+        "incorrect_cvc": "código de seguridad incorrecto",
+        "insufficient_funds": "fondos insuficientes",
+        "other": "tarjeta rechazada",
+        "processing_error": "error de procesamiento en el banco"
+      },
+      "refused": "Pago rechazado el {{date}}.",
+      "refusedReason": "Pago rechazado el {{date}}: {{reason}}.",
+      "transferOverdue": "Factura {{number}} de {{amount}} vencida el {{date}}."
+    },
+    "payment": {
+      "cardUnchanged": "La tarjeta no ha cambiado. Actualícela y después pague.",
+      "failed": "Pago rechazado: {{reason}}.",
+      "openInvoice": "Abrir la factura",
+      "paid": "Factura pagada.",
+      "processing": "El pago se está procesando.",
+      "requiresAction": "Su banco solicita confirmar el pago."
+    }
   },
   "branding": {
     "actions": {
@@ -1984,6 +2012,8 @@
     "errors": {
       "noActiveSubscription": "No se encontró ninguna suscripción activa.",
       "planNotBankTransferEligible": "Este plan no es elegible para transferencia bancaria.",
+      "subscriptionEnding": "Su suscripción finaliza el {{date}}: anule la cancelación antes de cambiar de plan.",
+      "subscriptionEndingNoDate": "Su suscripción va a finalizar: anule la cancelación antes de cambiar de plan.",
       "subscriptionPaymentPending": "Pague primero la factura pendiente y después cambie de plan.",
       "termsNotAccepted": "No se pudo confirmar la aceptación de las condiciones generales de venta. Vuelva a cargar la página y acéptelas de nuevo.",
       "vatNumberInvalid": "No se aceptó el número de IVA. Revíselo en la información de facturación."

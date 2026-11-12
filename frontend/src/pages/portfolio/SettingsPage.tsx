@@ -1213,9 +1213,9 @@ function SkillsSection({
 
   if (skills.length === 0) {
     return (
-      <Alert severity="info">
+      <Typography className="kanap-empty-state" sx={{ fontSize: 13, color: 'kanap.text.tertiary', m: 0 }}>
         {t('settings.skills.empty')}
-      </Alert>
+      </Typography>
     );
   }
 
@@ -2335,9 +2335,9 @@ function TeamsSection({
   const { t } = useTranslation(['portfolio', 'common']);
   if (teams.length === 0) {
     return (
-      <Alert severity="info">
+      <Typography className="kanap-empty-state" sx={{ fontSize: 13, color: 'kanap.text.tertiary', m: 0 }}>
         {t('settings.teams.empty')}
-      </Alert>
+      </Typography>
     );
   }
 

@@ -552,7 +552,7 @@
     "exportDescription": "Daten als CSV exportieren. Dateien verwenden Semikolon als Trennzeichen.",
     "exportDescriptionFlexible": "Daten als CSV exportieren. Trennzeichen, Dezimaltrennzeichen und Datumsformat richten sich nach der Sprache der Oberfläche.",
     "exportData": "Daten exportieren",
-    "exportPreset": "Exportvorlage",
+    "exportPreset": "Zu exportierende Felder",
     "fullExport": "Vollständiger Export",
     "customSelection": "Benutzerdefinierte Auswahl",
     "fieldsSelected": "{{selected}} von {{total}} Feldern ausgewählt",
@@ -583,9 +583,9 @@
     "headerError": "Kopfzeile: {{message}}",
     "andMoreErrors": "…und {{count}} weitere",
     "ignoredColumns": "Ignorierte Spalten: {{columns}}.",
-    "importWorkflow": "Import-Workflow",
+    "importWorkflow": "Was der Import macht",
     "advancedOptions": "Erweiterte Optionen",
-    "overridePresetNote": "Diese Einstellungen überschreiben die Workflow-Vorlagenauswahl.",
+    "overridePresetNote": "Diese Optionen ersetzen die Auswahl oben.",
     "emptyCellHandling": "Behandlung leerer Zellen",
     "preserveExisting": "Vorhandene beibehalten",
     "setToNull": "Gespeicherten Wert löschen",
@@ -1181,7 +1181,10 @@
     "subscriptionNeedsAttention": "Ihr Abonnement erfordert Ihre Aufmerksamkeit.",
     "goToBilling": "Zur Abrechnung",
     "accountAccessLimited": "Der Kontozugang ist eingeschränkt. Kontaktieren Sie Ihren Abrechnungsadministrator.",
-    "choosePlanToContinueAction": "Plan auswählen, um fortzufahren"
+    "choosePlanToContinueAction": "Plan auswählen, um fortzufahren",
+    "paymentOverdueAmount": "Zahlung von {{amount}} überfällig. Der Zugang wird am {{date}} eingeschränkt.",
+    "paymentOverdue": "Eine Zahlung ist überfällig. Der Zugang wird am {{date}} eingeschränkt.",
+    "contactBillingAdmin": "Kontaktieren Sie Ihren Abrechnungsadministrator."
   },
   "forbidden": {
     "title": "Zugriff verweigert",
@@ -1551,7 +1554,7 @@
     "angles": {
       "budget": "Das IT-Budget",
       "cartography": "Die IT-Landkarte",
-      "portfolio": "Projekte und Anfragen"
+      "portfolio": "Das Portfolio"
     },
     "modes": {
       "example": "Mit dem vollständigen Beispiel entdecken",
@@ -1562,7 +1565,7 @@
       "angles": {
         "budget": "IT-Budget",
         "cartography": "IT-Landkarte",
-        "portfolio": "Projektportfolio",
+        "portfolio": "Portfolio",
         "none": "Ich schaue mich um"
       },
       "modes": {
@@ -1651,7 +1654,7 @@
         },
         "own_sites": {
           "title": "Ihre Standorte",
-          "hint": "Legen Sie Ihre Standorte an: Serverräume, Rechenzentren oder Clouds. Jeder Server gehört zu einem davon."
+          "hint": "Legen Sie Ihre Standorte an: Serverräume, Rechenzentren oder Clouds. Jedes Asset gehört zu einem davon."
         },
         "own_applications": {
           "title": "Ihre Anwendungen",
@@ -1662,8 +1665,8 @@
           "hint": "Aktivieren Sie Technologien und verknüpfen Sie sie mit Ihren Anwendungen. Um den Rest kümmert sich {{product}}."
         },
         "own_assets": {
-          "title": "Ihre Server",
-          "hint": "Importieren oder erstellen Sie Ihre Server und verknüpfen Sie sie mit Anwendungen."
+          "title": "Ihre Assets",
+          "hint": "Importieren oder erstellen Sie Ihre Assets und verknüpfen Sie sie mit Anwendungen."
         },
         "portfolio_request": {
           "title": "Eine Anfrage und ihre Bewertung",
@@ -1690,8 +1693,8 @@
           "hint": "Alle Anwendungen des Beispiels mit Geschäftskritikalität und Lebenszyklus. Das ist das Inventar: filtern, sortieren, suchen."
         },
         "map_assets": {
-          "title": "Die Server",
-          "hint": "Jeder Server zeigt, wo die Anwendungen laufen: Umgebung, Standort, installierte Technologien. Öffnen Sie einen Datensatz, um mehr zu erfahren."
+          "title": "Die Assets",
+          "hint": "Jedes Asset zeigt, wo die Anwendungen laufen: Umgebung, Standort, installierte Technologien. Öffnen Sie einen Datensatz, um mehr zu erfahren."
         },
         "portfolio_project": {
           "title": "Das aus der Anfrage entstandene Projekt",

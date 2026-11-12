@@ -51,6 +51,8 @@
   "SHARE_RATE_LIMITED": "You have sent the maximum of 30 links in the last hour. Try again later.",
   "MARKDOWN_TOO_LARGE": "This text is too long: the limit is 200 KB of text (images do not count).",
   "MARKDOWN_TOO_LARGE_DOCUMENT": "This document is over the 200 KB of text a save accepts (images do not count). Shorten it to save your changes. The last saved version is kept.",
+  "MARKDOWN_HTML_NOT_ALLOWED": "This text contains an HTML tag. Remove it or put it in a code block.",
+  "MARKDOWN_LINK_NOT_ALLOWED": "This link is not accepted. Use a web address, an email address, a phone number or a page of the application.",
   "MARKDOWN_TOO_COMPLEX": "This text is too complex to process. Put pasted logs or code in a code block, or close the formatting marks (* and _).",
   "MARKDOWN_BUSY": "The server is busy with other texts. Try again in a moment.",
   "MARKDOWN_UNAVAILABLE": "Formatted texts cannot be saved right now. Try again in a few minutes.",
@@ -104,6 +106,9 @@
   "BUDGET_FILE_NOT_PROJECT_NUMBER": "\"{{value}}\" is not a project number.",
   "BUDGET_FILE_DIMENSION_CLOSED": "\"{{value}}\" is not in the list of {{name}}. Pick an existing value.",
   "BUDGET_FILE_DIMENSION_REQUIRED": "The {{name}} dimension is required. Choose a value.",
+  "BUDGET_FILE_DIMENSION_VALUE_TOO_LONG": "A value of {{name}} must be {{max}} characters or fewer.",
+  "BUDGET_FILE_DIMENSION_VALUE_CHARACTERS": "A value of {{name}} cannot contain control or invisible characters.",
+  "BUDGET_FILE_DIMENSION_VALUE_INVALID": "\"{{value}}\" cannot be a value of {{name}}.",
   "BUDGET_FILE_FROZEN": "{{label}} for {{year}} is frozen.",
   "BUDGET_FILE_AMOUNT_CANNOT_BE_CLEARED": "An amount cannot be cleared. Use 0 to set it to zero, or leave the cell empty to keep the stored amount.",
   "BUDGET_FILE_AMOUNT_TOO_LARGE": "This amount is too large.",
@@ -501,5 +506,6 @@
     "incidents": "incidents"
   },
   "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} row updates an existing record, and this import replaces all its values: the file has no column for {{columns}}, whose values would be cleared. Map those columns, or keep only new records in the file.",
-  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} rows update existing records, and this import replaces all their values: the file has no column for {{columns}}, whose values would be cleared. Map those columns, or keep only new records in the file."
+  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} rows update existing records, and this import replaces all their values: the file has no column for {{columns}}, whose values would be cleared. Map those columns, or keep only new records in the file.",
+  "INVOICE_PAYMENT_IN_PROGRESS": "A payment is already in progress."
 }

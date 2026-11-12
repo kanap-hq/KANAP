@@ -19,6 +19,8 @@ const FULL_SUMMARY = {
   trial_end: '2026-11-01T00:00:00.000Z',
   trial_days_remaining: 19,
   is_subscription_healthy: true,
+  access_allowed: true,
+  freeze_effective_at: null,
   amount: 24900,
   currency: 'eur',
   default_payment_method_id: 'pm_1',
@@ -32,7 +34,9 @@ const FULL_SUMMARY = {
   payment_due_at: '2026-11-01T00:00:00.000Z',
 } as any;
 
-const STATUS_KEYS = ['is_subscription_healthy', 'status', 'trial_days_remaining', 'trial_end'];
+// Whether the workspace is usable and when it freezes: the banners and the redirect to billing
+// follow the access rule for everybody; the amount due stays with the billing permission.
+const STATUS_KEYS = ['access_allowed', 'freeze_effective_at', 'is_subscription_healthy', 'status', 'trial_days_remaining', 'trial_end'];
 
 function testStatusViewHoldsNoPaymentDetail() {
   const view = subscriptionStatusView(FULL_SUMMARY);

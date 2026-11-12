@@ -13,7 +13,7 @@ import {
   CsvImportRow,
 } from '../common/csv';
 import { VULNERABILITY_CSV_HEADERS, vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
-import { assertMarkdownSize } from '../common/markdown-limits';
+import { richTextCell } from '../common/csv/rich-text-cell';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { formatApplicationCategoryOptions, ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
 
@@ -418,11 +418,8 @@ export const applicationCsvConfig: CsvEntityConfig = {
       defaultExport: false,
       label: 'Description',
       group: 'Overview',
-      // The description is the source of the overview document: same size limit as on the page.
-      importTransformFn: (value: string) => {
-        assertMarkdownSize(value, 'description');
-        return value;
-      },
+      // The description is the source of the overview document: same rules as on the page.
+      importTransformFn: richTextCell('description'),
     },
     {
       csvColumn: 'lifecycle',

@@ -31,15 +31,15 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué ve.** El panel de propiedades da el editor, las fechas de su ciclo de vida y sus responsables. **Despliegues** muestra un bloque por entorno con los servidores donde se ejecuta. **Interfaces** lista los flujos de datos entrantes y salientes. **Operaciones** lista las tecnologías de las que depende la aplicación, con su fin de soporte. **Relaciones** la vincula con líneas presupuestarias, contratos y proyectos.
 
-## 3. Los servidores
+## 3. Los activos
 
 **Panorama IT > Activos**
 
-![Los servidores](images/landscape-example-3.webp)
+![Los activos](images/landscape-example-3.webp)
 
-**Qué hacer.** Abra un servidor.
+**Qué hacer.** Abra un activo.
 
-**Qué ve.** Cada servidor indica dónde se ejecutan las aplicaciones: su entorno, su ubicación y las tecnologías instaladas. Su pestaña **Operaciones** lista las aplicaciones que aloja.
+**Qué ve.** Cada activo indica dónde se ejecutan las aplicaciones: su entorno, su ubicación y las tecnologías instaladas. Su pestaña **Operaciones** lista las aplicaciones que aloja.
 
 ## 4. Tecnologías, fin de soporte y vulnerabilidades
 

@@ -51,6 +51,8 @@
   "SHARE_RATE_LIMITED": "Sie haben in der letzten Stunde die Höchstzahl von 30 Links gesendet. Versuchen Sie es später erneut.",
   "MARKDOWN_TOO_LARGE": "Dieser Text ist zu lang: Die Grenze liegt bei 200 KB Text (Bilder zählen nicht).",
   "MARKDOWN_TOO_LARGE_DOCUMENT": "Dieses Dokument überschreitet die 200 KB Text, die eine Speicherung zulässt (Bilder zählen nicht). Kürzen Sie es, um Ihre Änderungen zu speichern. Die zuletzt gespeicherte Version bleibt erhalten.",
+  "MARKDOWN_HTML_NOT_ALLOWED": "Dieser Text enthält ein HTML-Tag. Entfernen Sie es oder setzen Sie es in einen Codeblock.",
+  "MARKDOWN_LINK_NOT_ALLOWED": "Dieser Link wird nicht akzeptiert. Verwenden Sie eine Webadresse, eine E-Mail-Adresse, eine Telefonnummer oder eine Seite der Anwendung.",
   "MARKDOWN_TOO_COMPLEX": "Dieser Text ist zu komplex. Setzen Sie eingefügte Protokolle oder Code in einen Codeblock oder schließen Sie die Formatierungszeichen (* und _).",
   "MARKDOWN_BUSY": "Der Server ist mit anderen Texten ausgelastet. Versuchen Sie es gleich noch einmal.",
   "MARKDOWN_UNAVAILABLE": "Formatierte Texte können gerade nicht gespeichert werden. Versuchen Sie es in einigen Minuten erneut.",
@@ -104,6 +106,9 @@
   "BUDGET_FILE_NOT_PROJECT_NUMBER": "„{{value}}“ ist keine Projektnummer.",
   "BUDGET_FILE_DIMENSION_CLOSED": "„{{value}}“ steht nicht in der Liste von {{name}}. Wählen Sie einen vorhandenen Wert.",
   "BUDGET_FILE_DIMENSION_REQUIRED": "Die Dimension {{name}} ist erforderlich. Wählen Sie einen Wert.",
+  "BUDGET_FILE_DIMENSION_VALUE_TOO_LONG": "Ein Wert von {{name}} darf höchstens {{max}} Zeichen lang sein.",
+  "BUDGET_FILE_DIMENSION_VALUE_CHARACTERS": "Ein Wert von {{name}} darf keine Steuerzeichen oder unsichtbaren Zeichen enthalten.",
+  "BUDGET_FILE_DIMENSION_VALUE_INVALID": "„{{value}}“ kann kein Wert von {{name}} sein.",
   "BUDGET_FILE_FROZEN": "Die Spalte {{label}} {{year}} ist eingefroren.",
   "BUDGET_FILE_AMOUNT_CANNOT_BE_CLEARED": "Ein Betrag kann nicht geleert werden. Geben Sie 0 ein, um ihn auf null zu setzen, oder lassen Sie die Zelle leer, um den gespeicherten Betrag zu behalten.",
   "BUDGET_FILE_AMOUNT_TOO_LARGE": "Dieser Betrag ist zu groß.",
@@ -501,5 +506,6 @@
     "incidents": "Vorfälle"
   },
   "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} Zeile aktualisiert einen bestehenden Datensatz, und dieser Import ersetzt alle seine Werte: Die Datei hat keine Spalte für {{columns}}, deren Werte gelöscht würden. Ordnen Sie diese Spalten zu oder behalten Sie nur neue Datensätze in der Datei.",
-  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} Zeilen aktualisieren bestehende Datensätze, und dieser Import ersetzt alle ihre Werte: Die Datei hat keine Spalte für {{columns}}, deren Werte gelöscht würden. Ordnen Sie diese Spalten zu oder behalten Sie nur neue Datensätze in der Datei."
+  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} Zeilen aktualisieren bestehende Datensätze, und dieser Import ersetzt alle ihre Werte: Die Datei hat keine Spalte für {{columns}}, deren Werte gelöscht würden. Ordnen Sie diese Spalten zu oder behalten Sie nur neue Datensätze in der Datei.",
+  "INVOICE_PAYMENT_IN_PROGRESS": "Eine Zahlung ist bereits in Bearbeitung."
 }

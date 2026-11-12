@@ -51,6 +51,8 @@
   "SHARE_RATE_LIMITED": "Vous avez envoyé le maximum de 30 liens au cours de la dernière heure. Réessayez plus tard.",
   "MARKDOWN_TOO_LARGE": "Ce texte est trop long : la limite est de 200 Ko de texte (les images ne comptent pas).",
   "MARKDOWN_TOO_LARGE_DOCUMENT": "Ce document dépasse les 200 Ko de texte qu'un enregistrement accepte (les images ne comptent pas). Raccourcissez-le pour enregistrer vos modifications. La dernière version enregistrée est conservée.",
+  "MARKDOWN_HTML_NOT_ALLOWED": "Ce texte contient une balise HTML. Retirez-la ou placez-la dans un bloc de code.",
+  "MARKDOWN_LINK_NOT_ALLOWED": "Ce lien n'est pas accepté. Utilisez une adresse web, une adresse e-mail, un numéro de téléphone ou une page de l'application.",
   "MARKDOWN_TOO_COMPLEX": "Ce texte est trop complexe à analyser. Mettez les journaux ou le code collés dans un bloc de code, ou refermez les caractères de mise en forme (* et _).",
   "MARKDOWN_BUSY": "Le serveur est occupé par d'autres textes. Réessayez dans un instant.",
   "MARKDOWN_UNAVAILABLE": "Les textes mis en forme ne peuvent pas être enregistrés pour le moment. Réessayez dans quelques minutes.",
@@ -104,6 +106,9 @@
   "BUDGET_FILE_NOT_PROJECT_NUMBER": "« {{value}} » n'est pas un numéro de projet.",
   "BUDGET_FILE_DIMENSION_CLOSED": "« {{value}} » n'est pas dans la liste de {{name}}. Choisissez une valeur existante.",
   "BUDGET_FILE_DIMENSION_REQUIRED": "La dimension {{name}} est obligatoire. Choisissez une valeur.",
+  "BUDGET_FILE_DIMENSION_VALUE_TOO_LONG": "Une valeur de {{name}} ne doit pas dépasser {{max}} caractères.",
+  "BUDGET_FILE_DIMENSION_VALUE_CHARACTERS": "Une valeur de {{name}} ne peut pas contenir de caractères de contrôle ou invisibles.",
+  "BUDGET_FILE_DIMENSION_VALUE_INVALID": "« {{value}} » ne peut pas être une valeur de {{name}}.",
   "BUDGET_FILE_FROZEN": "La colonne {{label}} {{year}} est gelée.",
   "BUDGET_FILE_AMOUNT_CANNOT_BE_CLEARED": "Un montant ne peut pas être vidé. Indiquez 0 pour le mettre à zéro, ou laissez la cellule vide pour garder le montant enregistré.",
   "BUDGET_FILE_AMOUNT_TOO_LARGE": "Ce montant est trop grand.",
@@ -501,5 +506,6 @@
     "incidents": "incidents"
   },
   "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} ligne met à jour une fiche existante, et cet import remplace toutes ses valeurs : le fichier n'a pas de colonne pour {{columns}}, dont les valeurs seraient effacées. Faites correspondre ces colonnes, ou ne gardez que les nouvelles fiches dans le fichier.",
-  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} lignes mettent à jour des fiches existantes, et cet import remplace toutes leurs valeurs : le fichier n'a pas de colonne pour {{columns}}, dont les valeurs seraient effacées. Faites correspondre ces colonnes, ou ne gardez que les nouvelles fiches dans le fichier."
+  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} lignes mettent à jour des fiches existantes, et cet import remplace toutes leurs valeurs : le fichier n'a pas de colonne pour {{columns}}, dont les valeurs seraient effacées. Faites correspondre ces colonnes, ou ne gardez que les nouvelles fiches dans le fichier.",
+  "INVOICE_PAYMENT_IN_PROGRESS": "Un paiement est déjà en cours."
 }

@@ -766,11 +766,11 @@ async function testARefusedFileIsNotImported() {
   assert.equal(dto.import_mapping!.validation!.ok, false);
   const failed = await refused.previews.executePreview(refused.context, dto.preview_id);
   assert.equal(failed.status, 'failed');
-  assert.match(failed.error_message ?? '', /The import refused this file, so nothing was imported/);
+  assert.match(failed.error_message ?? '', /The check of this file found errors, so nothing was imported/);
   assert.deepEqual(refused.runs.map((run) => run.dryRun), [true], 'no load is tried');
   assert.equal(refused.manager.audits.length, 0);
 
-  // The check passed, but the import refuses the file at approval (the data changed meanwhile).
+  // The check passed, but the check of the load finds errors at approval (the data changed meanwhile).
   const changed = createImport({ [FILE]: { csv: CLEAN_CSV, filename: 'apps.csv' } }, { applications: 'admin' }, {
     locale: 'de', answer: (run) => (run.dryRun ? {} : refusal),
   });
@@ -779,7 +779,7 @@ async function testARefusedFileIsNotImported() {
   });
   const late = await changed.previews.executePreview(changed.context, card.preview_id);
   assert.equal(late.status, 'failed');
-  assert.equal(late.error_message, 'Der Import hat diese Datei abgelehnt, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.');
+  assert.equal(late.error_message, 'Die Prüfung dieser Datei hat Fehler gefunden, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.');
   assert.equal(late.import_mapping!.result ?? null, null, 'no result on a refused import');
   assert.equal(changed.manager.audits.length, 0);
   console.log('  a refused file is not imported: OK');
@@ -799,31 +799,38 @@ function testBilanOnThePersonsLines() {
   }, true, lines);
   assert.equal(rows.ok, false);
   assert.deepEqual(rows.report.kind === 'rows' && rows.report.errors.map((error) => error.row), [5, 9, 0]);
+  // The model reads the lines as the card numbers them: the person's file, header counted.
   assert.deepEqual(rows.issues, [
-    { level: 'error', code: 'lifecycle_invalid', column: 'lifecycle', count: 2 },
+    { level: 'error', code: 'lifecycle_invalid', column: 'lifecycle', count: 2, file_lines: [5, 9] },
     { level: 'error', code: 'XLSX_FIRST_SHEET_ONLY', column: null, count: 1 },
   ]);
   // The budget file: its check as its dialog shows it, on the person's lines, without the snapshot.
   const budget = budgetBilan({
     ok: false,
     snapshot: { secret: true },
-    errors: [{ line: 2, column: 'account_number', message: 'Unknown account 7000' }],
-    errorCount: 1,
+    errors: [
+      { line: 2, column: 'account_number', message: 'Unknown account 7000' },
+      { line: 4, column: 'project', message: 'A value of Project must not exceed 100 characters.', code: 'BUDGET_FILE_DIMENSION_VALUE_TOO_LONG' },
+    ],
+    errorCount: 2,
     missing: [{ type: 'supplier', count: 2 }],
     changes: { created: 3, updated: 0, unchanged: 0 },
     warnings: { duplicates: [{ line: 4 }] },
   }, true, lines);
   assert.equal(budget.ok, false);
   assert.equal(budget.inserted, 3);
-  assert.equal(budget.error_count, 3);
+  assert.equal(budget.error_count, 4);
   assert.equal(budget.warning_count, 1);
   assert.deepEqual(budget.issues, [
-    { level: 'error', code: null, column: 'account_number', count: 1 },
+    { level: 'error', code: null, column: 'account_number', count: 1, file_lines: [3] },
+    { level: 'error', code: 'BUDGET_FILE_DIMENSION_VALUE_TOO_LONG', column: 'project', count: 1, file_lines: [9] },
     { level: 'error', code: 'missing_supplier', column: null, count: 2 },
   ]);
   const file = budget.report.kind === 'budget_file' ? budget.report.file as any : null;
   assert.equal(file.snapshot, undefined);
+  // The card's line and the model's line are the same number.
   assert.equal(file.errors[0].line, 3);
+  assert.equal(file.errors[1].line, budget.issues[1].file_lines![0]);
   assert.equal(file.warnings.duplicates[0].line, 9);
   console.log('  bilan on the person\'s lines, tallied for the model: OK');
 }

@@ -102,7 +102,8 @@ export function RenewalField({ value, onChange, disabled, ariaLabel }: { value: 
 /**
  * A number of months or an amount. Each valid value reaches `onValue` as it is typed (the page
  * recomputes the terms, the autosave waits for a pause); `onCommit` runs on blur. An invalid text
- * is flagged and never sent.
+ * is flagged and never sent. Entering the field selects its content, so the first keystroke
+ * replaces it: the amount is right-aligned, and a click otherwise lands before the digits.
  */
 export function NumberField({
   kind,
@@ -127,28 +128,70 @@ export function NumberField({
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(shown);
   const parse = kind === 'amount' ? parseAmount : parseMonths;
   const invalid = draft.trim() !== '' && parse(draft) === null;
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const mouseDownRef = React.useRef(false);
+  const selectOnMouseUpRef = React.useRef(false);
+  const justFocusedRef = React.useRef(false);
+  const [focused, setFocused] = React.useState(false);
+
+  const handleFocus = () => {
+    onFocus();
+    setFocused(true);
+    justFocusedRef.current = true;
+    // A click must select after the render; the browser would otherwise collapse that selection
+    // on mouse up. Keyboard focus needs no second selection.
+    selectOnMouseUpRef.current = mouseDownRef.current;
+    mouseDownRef.current = false;
+  };
+
+  const handleBlur = () => {
+    setFocused(false);
+    selectOnMouseUpRef.current = false;
+    mouseDownRef.current = false;
+    onBlur();
+    onCommit?.();
+    if (invalid || draft.trim() === '') setDraft(shown);
+  };
+
+  // Select the whole content on entering the field, so the first keystroke replaces it.
+  React.useLayoutEffect(() => {
+    if (!focused || !justFocusedRef.current) return;
+    justFocusedRef.current = false;
+    inputRef.current?.select();
+  }, [focused]);
+
+  const onInputMouseUp = (event: React.MouseEvent<HTMLInputElement>) => {
+    if (!selectOnMouseUpRef.current) return;
+    selectOnMouseUpRef.current = false;
+    event.preventDefault();
+    event.currentTarget.select();
+  };
+
   return (
     <TextField
       variant="standard"
       value={draft}
-      onFocus={onFocus}
+      inputRef={inputRef}
+      onFocus={handleFocus}
       onChange={(event) => {
         setDraft(event.target.value);
         const next = parse(event.target.value);
         if (next !== null && next !== value) onValue(next);
       }}
-      onBlur={() => {
-        onBlur();
-        onCommit?.();
-        if (invalid || draft.trim() === '') setDraft(shown);
-      }}
+      onBlur={handleBlur}
       onKeyDown={(event) => { if (event.key === 'Enter') (event.target as HTMLInputElement).blur(); }}
       error={invalid}
       helperText={invalid ? t(kind === 'amount' ? 'contracts.messages.invalidAmount' : 'contracts.messages.invalidMonths') : undefined}
       placeholder={placeholder}
       fullWidth
       disabled={disabled}
-      inputProps={{ inputMode: kind === 'amount' ? 'decimal' : 'numeric', 'aria-label': ariaLabel, style: kind === 'amount' ? { textAlign: 'right' } : undefined }}
+      inputProps={{
+        inputMode: kind === 'amount' ? 'decimal' : 'numeric',
+        'aria-label': ariaLabel,
+        style: kind === 'amount' ? { textAlign: 'right' } : undefined,
+        onMouseDown: () => { mouseDownRef.current = true; },
+        onMouseUp: onInputMouseUp,
+      }}
     />
   );
 }

@@ -961,6 +961,27 @@ async function testCalculationLinesSilentCases() {
   assert.deepEqual(created.warnings.calculationLines, [], 'a line the file creates has no calculation lines');
 }
 
+// A new value of a dimension that the analytics rules refuse (too long, invisible characters): the
+// error carries a code and its values, which the dialog and Kad's card translate.
+async function testRefusedNewDimensionValue() {
+  const cat = catalog({
+    accounts: [{ id: 'a1', number: '1200', coaId: null, disabledAt: null }],
+    dimensions: [{ code: 'nature', name: 'Nature', required: false, axisName: 'Nature', values: [] }],
+  });
+  const options = { cat, dimensions: ['nature'] };
+  const header = 'item_number,name,company_name,account_number,currency,analytics:nature\n';
+  const long = await preflight('opex', `${header},Widget,Acme,1200,EUR,${'x'.repeat(201)}\n`, [], options);
+  assert.deepEqual(
+    long.errors.map((error) => [error.column, error.code, error.params]),
+    [['analytics:nature', 'BUDGET_FILE_DIMENSION_VALUE_TOO_LONG', { name: 'Nature', max: 200 }]],
+  );
+  const hidden = await preflight('opex', `${header},Widget,Acme,1200,EUR,Lic\u200bences\n`, [], options);
+  assert.deepEqual(
+    hidden.errors.map((error) => [error.column, error.code, error.params]),
+    [['analytics:nature', 'BUDGET_FILE_DIMENSION_VALUE_CHARACTERS', { name: 'Nature' }]],
+  );
+}
+
 async function main() {
   await testTokenLanguages();
   await testDecimalMarkParameter();
@@ -974,6 +995,7 @@ async function main() {
   await testAccountNature();
   await testValueAppliesTo();
   await testRequiredDimension();
+  await testRefusedNewDimensionValue();
   await testExportShape();
   await testPlan();
   await testNatureColumn();

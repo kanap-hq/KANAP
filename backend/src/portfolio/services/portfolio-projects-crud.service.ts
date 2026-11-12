@@ -24,6 +24,7 @@ import { computeAutoAllocations } from '../utils/allocation-utils';
 import { formatItemLabel } from '../utils/activity-labels';
 import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../../common/change-detection';
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
+import { loadSlotBodies } from '../../knowledge/integrated-document-bodies';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { activityBudgetLines, budgetLineActivitiesForReader } from '../budget-line-activity';
@@ -557,7 +558,13 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
 
     const before = { ...existing };
     const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
-    const nextPurpose = has('purpose') ? await this.normalizeNullable(body.purpose) : undefined;
+    // The purpose lives in a bound document. A text that repeats what is stored is kept as it is.
+    const nextPurpose = has('purpose')
+      ? await this.normalizeNullable(
+        body.purpose,
+        (await loadSlotBodies(mg, existing.tenant_id, 'projects', [existing.id], ['purpose'])).get(existing.id)?.get('purpose'),
+      )
+      : undefined;
 
     // Status transition handling
     if (has('status')) {

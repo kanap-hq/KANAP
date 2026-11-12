@@ -44,7 +44,7 @@ En un espacio de trabajo en la nube vacío, que nunca ha tenido datos de ejemplo
 
 En un espacio de trabajo en prueba, se abre un cuadro de diálogo la primera vez que abre Kadratis. Hace una pregunta por pantalla:
 
-1. **¿Qué le trae a Kadratis?** **El presupuesto de TI**, **El mapa del SI**, **Los proyectos y las solicitudes** o **Solo estoy mirando**.
+1. **¿Qué le trae a Kadratis?** **El presupuesto de TI**, **El mapa del SI**, **El portafolio** o **Solo estoy mirando**.
 2. **¿Cómo quiere empezar?** **Descubrir con el ejemplo completo** o **Empezar con mis datos**.
 
 Empezar con sus datos borra el ejemplo. Si se crearon elementos desde la carga del ejemplo, una confirmación indica su número antes de borrar nada. Solo un administrador puede elegir sus propios datos mientras el espacio de trabajo contiene el ejemplo. El ejemplo solo se carga en un espacio de trabajo vacío. Durante el periodo de prueba, un administrador que elige el ejemplo cuando el espacio de trabajo contiene datos debe borrarlo primero: la confirmación pide el nombre del espacio de trabajo y ofrece **Ver lo que contiene el espacio de trabajo**. El espacio de trabajo se borra y después se carga el ejemplo. Después del periodo de prueba, la elección se rechaza y su recorrido no cambia.
@@ -67,8 +67,8 @@ Durante la prueba, el mosaico también ofrece **Programar una llamada de descubr
 | Recorrido | Con el ejemplo | Con sus datos |
 |---|---|---|
 | Presupuesto de TI | La vista general, Una línea presupuestaria, Un informe, Una pregunta a Kad, Sus datos | Su empresa, Sus líneas, Un contrato vinculado, Su primer informe, Un colega |
-| Mapa del SI | La lista de aplicaciones, Una ficha de aplicación, Los servidores, Tecnologías, fin de soporte y vulnerabilidades, Sus datos | Sus ubicaciones, Sus aplicaciones, Sus tecnologías, Sus servidores, Un colega |
-| Proyectos y solicitudes | Una solicitud y su puntuación, El proyecto nacido de la solicitud, Las tareas, Los informes, Sus datos | Su primera solicitud, Su proyecto, Las primeras tareas, El presupuesto del proyecto, Su perfil de colaborador |
+| Mapa del SI | La lista de aplicaciones, Una ficha de aplicación, Los activos, Tecnologías, fin de soporte y vulnerabilidades, Sus datos | Sus ubicaciones, Sus aplicaciones, Sus tecnologías, Sus activos, Un colega |
+| Portafolio | Una solicitud y su puntuación, El proyecto nacido de la solicitud, Las tareas, Los informes, Sus datos | Su primera solicitud, Su proyecto, Las primeras tareas, El presupuesto del proyecto, Su perfil de colaborador |
 
 ### La página de inicio sigue su recorrido
 
@@ -76,7 +76,7 @@ Durante una prueba, la sección de su recorrido aparece primero, encabezada por 
 
 - **Presupuesto de TI**: **Gestión presupuestaria**.
 - **Mapa del SI**: **Panorama IT**.
-- **Proyectos y solicitudes**: **Portafolio**.
+- **Portafolio**: **Portafolio**.
 
 Sin recorrido, las secciones mantienen su orden predeterminado. En cuanto ordena usted mismo las secciones, se aplica su orden.
 

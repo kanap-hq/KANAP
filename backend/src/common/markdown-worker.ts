@@ -772,32 +772,55 @@ export function renderPlainTextEmailHtml(content: string): string {
 
 type NormalizeOptions = MarkdownWorkOptions & {
   /**
-   * False for server-side processing of contents already stored (copies,
-   * backfills, repairs, verification): they keep whatever size they had, and a
-   * content the workers cannot process in time is kept as it is.
+   * True for server-side processing of contents already stored (copies,
+   * backfills, repairs, verification): they keep whatever size and HTML tags
+   * they had, and a content the workers cannot process in time is kept as it is.
    */
-  enforceSizeLimit?: boolean;
+  storedContent?: boolean;
+  /**
+   * The text the field holds now, on an update. A write that repeats it is
+   * accepted as it is: a text saved before a rule of the writes stays savable
+   * with the rest of its record.
+   */
+  storedValue?: string | null;
+  /**
+   * True for a text an automatic import reads from another system (a ticket):
+   * a tag outside the accepted list is kept as text instead of refusing the write.
+   */
+  thirdPartyText?: boolean;
 };
 
+/** Whether the text is the one the field holds already. */
+function repeatsStoredValue(text: string, opts?: NormalizeOptions): boolean {
+  return typeof opts?.storedValue === 'string' && opts.storedValue.trim() === text;
+}
+
 /**
- * The Markdown content of a rich-text field, trimmed, or null when blank. Refuses
- * raw HTML outside code, inline base64 images and contents over the size limit
- * (400), and contents the workers cannot process (`MARKDOWN_TOO_COMPLEX`, ...).
+ * The Markdown content of a rich-text field, trimmed, or null when blank. A write
+ * is refused when it holds an HTML tag outside the accepted list
+ * (`MARKDOWN_HTML_NOT_ALLOWED`), a link or an image whose address is not accepted
+ * (`MARKDOWN_LINK_NOT_ALLOWED`), an inline base64 image, more than the size limit
+ * (400), or a content the workers cannot process (`MARKDOWN_TOO_COMPLEX`, ...).
  */
 export async function normalizeMarkdownRichText(value: unknown, opts?: NormalizeOptions): Promise<string | null> {
   if (value == null) return null;
   const text = String(value).trim();
   if (!text) return null;
+  if (repeatsStoredValue(text, opts)) return text;
   const fieldName = opts?.fieldName || 'content';
-  const enforceSizeLimit = opts?.enforceSizeLimit !== false;
-  if (enforceSizeLimit) {
+  const storedContent = opts?.storedContent === true;
+  if (!storedContent) {
     // Checked here first: a text over the limit is never sent to a worker.
     assertMarkdownSize(text, fieldName);
   }
   try {
-    return await submit('normalize', [text, { fieldName, enforceSizeLimit }], { ...opts, fieldName });
+    return await submit(
+      'normalize',
+      [text, { fieldName, storedContent, thirdPartyText: opts?.thirdPartyText === true }],
+      { ...opts, fieldName },
+    );
   } catch (error) {
-    if (!enforceSizeLimit && isMarkdownTooComplex(error)) {
+    if (storedContent && isMarkdownTooComplex(error)) {
       // A stored content the workers cannot process in time stays as it is.
       return text;
     }
@@ -817,18 +840,19 @@ export async function normalizeMarkdownWithSearchText(
   const text = value == null ? '' : String(value).trim();
   if (!text) return { content: null, searchText: '' };
   const fieldName = opts?.fieldName || 'content';
-  const enforceSizeLimit = opts?.enforceSizeLimit !== false;
-  if (enforceSizeLimit) assertMarkdownSize(text, fieldName);
+  // A text that repeats the stored one is indexed as stored content.
+  const storedContent = opts?.storedContent === true || repeatsStoredValue(text, opts);
+  if (!storedContent) assertMarkdownSize(text, fieldName);
   try {
     // The work of two calls (normalization, then search text), with the budget of two: a document
     // accepted when they were two calls is accepted still.
     return await submit(
       'normalizeWithSearchText',
-      [text, { fieldName, enforceSizeLimit }],
+      [text, { fieldName, storedContent }],
       { ...opts, fieldName, timeoutMs: 2 * MARKDOWN_WORK_TIMEOUT_MS },
     );
   } catch (error) {
-    if (!enforceSizeLimit && isMarkdownTooComplex(error)) {
+    if (storedContent && isMarkdownTooComplex(error)) {
       return { content: text, searchText: text.replace(/\s+/g, ' ').trim() };
     }
     throw error;

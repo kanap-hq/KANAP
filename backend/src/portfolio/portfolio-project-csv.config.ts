@@ -4,8 +4,9 @@ import {
   CsvFieldType,
   CsvImportContext,
 } from '../common/csv';
+import { richTextCell } from '../common/csv/rich-text-cell';
 import { allocateItemNumbers } from '../common/item-number.service';
-import { sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
+import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
 
 // Status label to code mapping
 const statusLookup = new Map<string, string>([
@@ -210,6 +211,8 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Purpose',
       group: 'Overview',
+      // Rich text: same rules as in the editor of the project.
+      importTransformFn: richTextCell('purpose'),
     },
     {
       csvColumn: 'status',
@@ -545,6 +548,9 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
       ],
     },
   ],
+
+  /** A purpose cell that repeats its document is kept as stored, whatever tags it holds. */
+  afterValidate: (rows, context) => keepStoredSlotBodies(rows, context, 'projects', { purpose: 'purpose' }),
 
   /** The purpose lives in bound documents (the CSV service writes them there), the rest in columns. */
   sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'projects', { purpose: 'purpose' }, normalizeCodes),

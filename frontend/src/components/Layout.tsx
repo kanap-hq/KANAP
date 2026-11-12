@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppBar, Box, CircularProgress, Divider, Drawer, IconButton, LinearProgress, List, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Toolbar, Typography, Tooltip, Tabs, Tab, Menu, MenuItem } from '@mui/material';
+import type { TabsActions } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { keyframes } from '@emotion/react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -413,6 +414,20 @@ export default function Layout() {
     return focusPageScroller(scroller);
   }, [location.pathname, shellReady]);
 
+  // MUI moves the section underline when a tab changes size, not when the tabs move. The
+  // row is centred by auto margins, so the tabs move whenever the row's width changes (the
+  // logo or the workspace name loading, the trial chip appearing): follow the row's size.
+  const sectionTabsActions = React.useRef<TabsActions | null>(null);
+  const sectionTabsObserver = React.useRef<ResizeObserver | null>(null);
+  const sectionTabsRef = React.useCallback((node: HTMLDivElement | null) => {
+    sectionTabsObserver.current?.disconnect();
+    sectionTabsObserver.current = null;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => sectionTabsActions.current?.updateIndicator());
+    observer.observe(node);
+    sectionTabsObserver.current = observer;
+  }, []);
+
   if (waitingForAiGating) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -478,6 +493,8 @@ export default function Layout() {
               // while that end is out of view. Workspaces that appear later (AI, once its
               // capabilities load) would leave it watching stale tabs: remount on a new set.
               key={visibleWorkspaces.join(',')}
+              ref={sectionTabsRef}
+              action={sectionTabsActions}
               value={workspace === 'home' ? false : (visibleWorkspaces.includes(workspace) ? workspace : visibleWorkspaces[0])}
               onChange={(_, val) => {
                 void guardedLeave(() => navigate(workspaceRoutes[val as WorkspaceKey] ?? workspaceRoutes.admin));

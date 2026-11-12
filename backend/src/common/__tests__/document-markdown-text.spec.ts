@@ -8,6 +8,8 @@ import {
   sanitizeForMdxEditor,
 } from '../document-import-markdown';
 import { DocumentImportService } from '../document-import.service';
+import { MARKDOWN_WORKER_OPERATIONS } from '../markdown-worker.thread';
+import { normalizeMarkdownRichText } from '../markdown-rich-text';
 
 function importer(): any {
   return new DocumentImportService({} as any);
@@ -114,8 +116,32 @@ function stripsTagsAndCommentsUntilNoneIsLeft() {
   );
 }
 
+/** What the cleaning leaves of a tag is kept as text: the imported document passes the rule of a save. */
+function keepsWhatIsLeftOfATagAsText() {
+  const raw = [
+    '<?xml version="1.0"?>', '',
+    '<!DOCTYPE html>', '',
+    'A value written List<T, <b>bold</b> and a line.', '',
+    '- step', '',
+    '  ```xml', '  <config a="1">', '', '  </config>', '  ```', '',
+    'A last line <div class="note"',
+  ].join('\n');
+  const cleaned = sanitizeForMdxEditor(raw);
+  assert.throws(() => normalizeMarkdownRichText(cleaned, { fieldName: 'content_markdown' }), /must be Markdown/);
+
+  const { markdown } = MARKDOWN_WORKER_OPERATIONS.importedMarkdown(raw);
+  assert.equal(normalizeMarkdownRichText(markdown, { fieldName: 'content_markdown' }), markdown.trim());
+  assert.equal(markdown.replace(/\\</g, '<'), cleaned, 'the escape removes nothing');
+  assert.ok(markdown.includes('\\<?xml version="1.0"?>'), markdown);
+
+  // A document without any tag left is not changed.
+  const plain = 'One **bold** word, a<b and `<code>`.\n';
+  assert.equal(MARKDOWN_WORKER_OPERATIONS.importedMarkdown(plain).markdown, sanitizeForMdxEditor(plain));
+}
+
 decodesImportedHtmlTextOnce();
 stripsTagsAndCommentsUntilNoneIsLeft();
+keepsWhatIsLeftOfATagAsText();
 escapesTableCellText();
 escapesImageTitle();
 decodesExportedImageAttributeOnce();

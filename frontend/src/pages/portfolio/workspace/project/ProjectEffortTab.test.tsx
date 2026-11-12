@@ -242,4 +242,11 @@ describe('ProjectEffortTab', () => {
     expect(screen.getByLabelText('IT estimated effort in MD')).toBeDisabled();
     expect(screen.getByRole('slider')).toBeDisabled();
   });
+
+  it('says there is no time logged yet, in one line and without an alert', () => {
+    renderEffortTab();
+
+    expect(screen.getByText('No time logged yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
 });

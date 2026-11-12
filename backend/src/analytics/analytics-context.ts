@@ -40,14 +40,17 @@ export function analyticsRefusal(message: string, field?: string): BadRequestExc
 export const ANALYTICS_NAME_MAX = 200;
 const CONTROL_OR_FORMAT = /[\p{Cc}\p{Cf}]/u;
 
+/** The refusals of `normalizeAnalyticsName`, which the budget file turns into codes it translates. */
+export const ANALYTICS_NAME_REQUIRED_MESSAGE = 'Name is required.';
+export const ANALYTICS_NAME_TOO_LONG_MESSAGE = `Name must be ${ANALYTICS_NAME_MAX} characters or fewer.`;
+export const ANALYTICS_NAME_CHARACTERS_MESSAGE = 'Name cannot contain control or invisible characters.';
+
 /** A trimmed, non-empty name of 200 characters at most. */
 export function normalizeAnalyticsName(raw: unknown): string {
   const name = typeof raw === 'string' ? raw.trim() : raw == null ? '' : String(raw).trim();
-  if (!name) throw analyticsRefusal('Name is required.', 'name');
-  if ([...name].length > ANALYTICS_NAME_MAX) {
-    throw analyticsRefusal(`Name must be ${ANALYTICS_NAME_MAX} characters or fewer.`, 'name');
-  }
-  if (CONTROL_OR_FORMAT.test(name)) throw analyticsRefusal('Name cannot contain control or invisible characters.', 'name');
+  if (!name) throw analyticsRefusal(ANALYTICS_NAME_REQUIRED_MESSAGE, 'name');
+  if ([...name].length > ANALYTICS_NAME_MAX) throw analyticsRefusal(ANALYTICS_NAME_TOO_LONG_MESSAGE, 'name');
+  if (CONTROL_OR_FORMAT.test(name)) throw analyticsRefusal(ANALYTICS_NAME_CHARACTERS_MESSAGE, 'name');
   return name;
 }
 

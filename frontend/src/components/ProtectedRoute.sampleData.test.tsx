@@ -17,7 +17,7 @@ vi.mock('../auth/AuthContext', () => ({
     claims: { isGlobalAdmin: true, isPlatformAdmin: false, isBillingAdmin: true, permissions: {} },
     hasLevel: () => true,
     hasAnyAccess: true,
-    subscription: { status: 'past_due', is_subscription_healthy: false },
+    subscription: { status: 'past_due', is_subscription_healthy: false, access_allowed: false },
   }),
 }));
 vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ isPlatformHost: false }) }));

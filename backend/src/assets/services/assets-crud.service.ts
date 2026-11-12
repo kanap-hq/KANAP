@@ -21,6 +21,7 @@ import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { displayName } from '../../common/display-name';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 
 /** Every asset has a site: a create without one, or an update that clears it, is refused. */
 function locationRequired() {
@@ -213,7 +214,8 @@ export class AssetsCrudService extends AssetsBaseService {
     const setsOperatingSystem = Object.prototype.hasOwnProperty.call(body, 'operating_system');
     const is_cluster = body.is_cluster === undefined ? false : this.normalizeBooleanFlag((body as any).is_cluster, 'is_cluster');
     const ip_addresses = await this.validation.validateIpAddresses((body as any).ip_addresses, tenant, this.getManager(opts));
-    const notes = this.normalizeNullable((body as any).notes);
+    // The notes are rich text.
+    const notes = await normalizeMarkdownRichText(this.normalizeNullable((body as any).notes), { fieldName: 'notes' });
 
     // Handle domain, hostname, and FQDN
     const domain = await this.validation.resolveDomain((body as any).domain, tenant, opts?.manager);
@@ -362,7 +364,11 @@ export class AssetsCrudService extends AssetsBaseService {
       existing.ip_addresses = await this.validation.validateIpAddresses((body as any).ip_addresses, tenant, this.getManager(opts), existing.id);
     }
     if (has('notes')) {
-      existing.notes = this.normalizeNullable((body as any).notes);
+      // Rich text: a changed text is checked as a write, the stored one is kept as it is.
+      existing.notes = await normalizeMarkdownRichText(this.normalizeNullable((body as any).notes), {
+        fieldName: 'notes',
+        storedValue: existing.notes,
+      });
     }
     if (has('cluster')) {
       existing.cluster = this.normalizeNullable((body as any).cluster);

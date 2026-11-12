@@ -2440,9 +2440,7 @@
         "cveNameCount_one": "{{count, count}} nom CVE.org",
         "cveNameCount_other": "{{count, count}} noms CVE.org",
         "missing": "Sans identifiant CPE ni nom CVE.org, aucune vulnérabilité n’est recherchée pour cette technologie.",
-        "missingCpe": "Sans identifiant CPE, aucune vulnérabilité n’est recherchée pour cette technologie.",
-        "versionsUnmatched": "Ces versions ne seront rapprochées d’aucune vulnérabilité tant que la technologie n’a pas d’identifiant.",
-        "add": "Ajouter un identifiant"
+        "missingCpe": "Sans identifiant CPE, aucune vulnérabilité n’est recherchée pour cette technologie."
       },
       "cpe": {
         "title": "Identifiants CPE produit",

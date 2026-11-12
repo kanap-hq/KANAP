@@ -414,7 +414,7 @@
           "capturedAtInProgress": "erfasst bei In Bearbeitung"
         },
         "states": {
-          "noTimeLogged": "Noch keine Zeit erfasst. Klicken Sie auf «Zeit erfassen», um Einträge hinzuzufügen."
+          "noTimeLogged": "Noch keine Zeit erfasst."
         },
         "values": {
           "executionProgress": "Fortschritt: {{progress}} %",
@@ -529,7 +529,7 @@
           "projectDates": "Projektdaten"
         },
         "states": {
-          "noMilestones": "Keine Meilensteine definiert. Fügen Sie Meilensteine manuell hinzu oder aktivieren Sie Phasen-Meilensteine oben.",
+          "noMilestones": "Noch keine Meilensteine.",
           "noPlannedPhases": "Keine Phasen mit geplanten Daten",
           "noPlannedPhasesHelp": "Legen Sie geplante Start- und Enddaten für Phasen fest, um sie im Gantt-Diagramm zu sehen.",
           "noPlannedProjects": "Keine Projekte mit geplanten Daten",
@@ -1984,7 +1984,7 @@
       }
     },
     "states": {
-      "empty": "Noch keine Mitwirkenden konfiguriert. Fügen Sie Mitwirkende hinzu, um deren Kompetenzen und Verfügbarkeit zu definieren.",
+      "empty": "Noch keine Mitwirkenden.",
       "noneMatchFilter": "Kein Mitwirkender entspricht den aktuellen Filtern."
     },
     "teams": {
@@ -2560,7 +2560,7 @@
       "confirmDelete": "Seine bestehenden Bewertungen werden ebenfalls entfernt. Dies kann nicht rückgängig gemacht werden."
     },
     "skills": {
-      "empty": "Noch keine Kompetenzen konfiguriert. Verwenden Sie «Standardwerte laden», um Standardkompetenzen zu laden, oder fügen Sie Kompetenzen manuell hinzu.",
+      "empty": "Noch keine Kompetenzen.",
       "dialog": {
         "editTitle": "Kompetenz bearbeiten",
         "createTitle": "Kompetenz erstellen",
@@ -2645,7 +2645,7 @@
       }
     },
     "teams": {
-      "empty": "Noch keine Teams konfiguriert. Verwenden Sie «Standardwerte laden», um Standardteams zu laden, oder fügen Sie Teams manuell hinzu.",
+      "empty": "Noch keine Teams.",
       "memberCount_one": "{{count}} Mitglied",
       "memberCount_other": "{{count}} Mitglieder",
       "dialog": {

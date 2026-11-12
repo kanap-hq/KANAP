@@ -227,8 +227,11 @@ workspace, whoever created it (`backend/src/onboarding/onboarding-step-evidence.
   This is the only write of `GET /onboarding`. It is skipped unless `sample_data.status` is
   `idle`: sample data being loaded, loaded or erased is not the user's.
 - Such a step stays done while its object exists: `DELETE /steps/:key/done` leaves it as it is.
-- The interface reads the state again each time the first steps tile shows. The hint of such a
-  step offers "Got it" instead of "Done".
+- Once the object is gone (a creation cancelled, a record deleted), the same read undoes a step
+  its object did (its last `onboarding.step_done` is `automatic`). A step marked done by hand
+  stays. Nothing is logged for the undo.
+- The interface reads the state again each time the first steps tile shows, and after a creation
+  is cancelled. The hint of such a step offers "Got it" instead of "Done".
 
 ## Audit log
 

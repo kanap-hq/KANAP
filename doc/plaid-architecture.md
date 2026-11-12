@@ -1050,7 +1050,9 @@ as a date cell, a number as a number cell), or the person's own text when the
 mapping did not read it, which the import then refuses with its own message.
 `AiImportRunnerService` hands it to the import service of the screen, called as
 its route calls it (the "merge" mode of the V2 imports, the person's language,
-a decimal point; the budget file's preflight, without creating suppliers), in
+a decimal point; the budget file's preflight, which creates the missing
+suppliers as the dialog's "Create missing suppliers" does when the person may
+create suppliers, and reports their count as `new_suppliers`), in
 the transaction of the call, which carries the person's data access: that check
 (the dry run) is stored on the card as `import_mapping.validation`. Approving
 checks the rights again, refuses a card whose check failed, builds the file

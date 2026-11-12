@@ -118,7 +118,7 @@ Cliquez sur n'importe quelle ligne de la grille des comptes pour ouvrir l'espace
 ### Disposition
 
 - **En-tête** : le numéro de compte sert de référence (vous pouvez le copier à cet endroit) et le nom du compte sert de titre. Cliquez sur le titre pour renommer le compte. Les flèches **Compte précédent** et **Compte suivant** parcourent les comptes de la liste d'où vous venez, dans le même ordre, avec la même recherche et les mêmes filtres. Le lien de retour ramène à **Plans comptables** en conservant votre sélection.
-- **Panneau des propriétés** à droite : **Plan comptable**, **Numéro de compte**, **Utilisé pour** et **Cycle de vie** (l'interrupteur de statut et la date de **Fin de validité**). Le bouton du panneau permet de le réduire ou de le rouvrir. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie).
+- **Panneau Propriétés** à droite : **Plan comptable**, **Numéro de compte**, **Utilisé pour** et **Cycle de vie** (l'interrupteur de statut et la date de **Fin de validité**). Le bouton du panneau permet de le réduire ou de le rouvrir. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie).
 - **Colonne principale** : **Nom local (langue locale)**, **Description** et la section **Consolidation**.
 
 **Les modifications s'enregistrent automatiquement.** Chaque champ s'enregistre lorsque vous le quittez, et il n'y a pas de bouton Enregistrer. Si une valeur est refusée, un message apparaît sous le champ. Le **Numéro de compte** doit être un nombre entier supérieur à zéro, de 15 chiffres au plus.
@@ -152,7 +152,7 @@ La section **Consolidation** contient un seul champ, **Compte de consolidation**
 
 ### Créer un compte
 
-**Nouveau compte** dans la liste ouvre la page du nouveau compte, son panneau des propriétés ouvert, avec le plan que vous consultiez déjà sélectionné. Saisissez le nom du compte dans le titre en haut de la page et renseignez le **Numéro de compte**. Le compte est créé dès qu'il a son nom, son **Plan comptable** et un **Numéro de compte** valide. Un numéro invalide est signalé quand vous quittez le champ. Tous ses onglets deviennent alors disponibles, et le compte s'enregistre automatiquement à chaque modification. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+**Nouveau compte** dans la liste ouvre la page du nouveau compte, son panneau Propriétés ouvert, avec le plan que vous consultiez déjà sélectionné. Saisissez le nom du compte dans le titre en haut de la page et renseignez le **Numéro de compte**. Le compte est créé dès qu'il a son nom, son **Plan comptable** et un **Numéro de compte** valide. Un numéro invalide est signalé quand vous quittez le champ. Tous ses onglets deviennent alors disponibles, et le compte s'enregistre automatiquement à chaque modification. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
 
 Tant que le compte est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve le compte et vous ramène à votre point de départ : la liste ou l'écran précédent. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur un compte déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des comptes. Si vous quittez la page autrement, le compte est conservé.
 

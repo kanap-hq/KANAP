@@ -4379,7 +4379,7 @@ export class KnowledgeService {
     const summary = body?.summary == null ? null : String(body.summary).trim() || null;
     const normalizedContent = await normalizeMarkdownWithSearchText(body?.content_markdown, {
       fieldName: 'content_markdown',
-      enforceSizeLimit: !opts?.storedContent,
+      storedContent: opts?.storedContent,
     });
     const contentMarkdown = normalizedContent.content || '';
     const status = this.normalizeStatus(body?.status, 'published');
@@ -4448,7 +4448,8 @@ export class KnowledgeService {
       if (patch && patch.content_markdown !== undefined) {
         const next = await normalizeMarkdownWithSearchText(patch.content_markdown, {
           fieldName: 'content_markdown',
-          enforceSizeLimit: !opts?.storedContent,
+          storedContent: opts?.storedContent,
+          storedValue: saved.content_markdown,
         });
         const nextContent = next.content || '';
         if (nextContent !== saved.content_markdown) {
@@ -4546,6 +4547,7 @@ export class KnowledgeService {
     if (body?.content_markdown !== undefined) {
       const next = await normalizeMarkdownWithSearchText(body.content_markdown, {
         fieldName: 'content_markdown',
+        storedValue: existing.content_markdown,
       });
       const normalized = next.content || '';
       if (normalized !== existing.content_markdown) {
@@ -4821,7 +4823,10 @@ export class KnowledgeService {
     }
 
     if (body?.content_markdown !== undefined) {
-      const next = await normalizeMarkdownWithSearchText(body.content_markdown, { fieldName: 'content_markdown' });
+      const next = await normalizeMarkdownWithSearchText(body.content_markdown, {
+        fieldName: 'content_markdown',
+        storedValue: existing.content_markdown,
+      });
       existing.content_markdown = next.content || '';
       existing.content_plain = next.searchText;
     }
@@ -6138,7 +6143,7 @@ export class KnowledgeService {
       throw new BadRequestException('Only comments can be edited via this endpoint');
     }
 
-    existing.content = await normalizeMarkdownRichText(body?.content, { fieldName: 'content' });
+    existing.content = await normalizeMarkdownRichText(body?.content, { fieldName: 'content', storedValue: existing.content });
     existing.updated_at = new Date();
     return repo.save(existing);
   }

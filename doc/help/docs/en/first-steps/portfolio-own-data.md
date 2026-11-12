@@ -1,6 +1,6 @@
 ---
 title: "Your portfolio in Kadratis in ten minutes: start with your own data"
-description: The five steps of the projects and requests path on your own data, from a first request to its project, its tasks and its budget, then your contributor profile.
+description: The five steps of the portfolio path on your own data, from a first request to its project, its tasks and its budget, then your contributor profile.
 ---
 
 # Your portfolio in Kadratis in ten minutes
@@ -9,7 +9,7 @@ description: The five steps of the projects and requests path on your own data, 
 
 In ten minutes, a first request is scored and converted into a project, the project has its first tasks and its budget, and your contributor profile is ready for planning. Starting with your own data erases the example: what you see at the end comes from you.
 
-These are the five steps of the **Your first five steps** tile on the home page, for the path **Projects and requests** with **Start with my own data**. Each step in the tile opens its screen with a short hint. A step that creates something is marked done as soon as it exists in the workspace. For **Your project**, click **Done** in the hint, or the mark next to the step. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
+These are the five steps of the **Your first five steps** tile on the home page, for the path **Portfolio** with **Start with my own data**. Each step in the tile opens its screen with a short hint. A step that creates something is marked done as soon as it exists in the workspace. For **Your project**, click **Done** in the hint, or the mark next to the step. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
 
 ## 1. Your first request
 
