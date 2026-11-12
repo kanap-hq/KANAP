@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -212,5 +212,18 @@ describe('AdminIntegrationsPage', () => {
     fireEvent.change(within(card).getByLabelText(/^API key/), { target: { value: 'new-key' } });
     expect(save).toBeEnabled();
     expect(test).toBeEnabled();
+  });
+
+  it('sends the address on screen with a typed GLPI token', async () => {
+    (api.patch as any).mockResolvedValue({ data: { settings: {} } });
+    renderPage();
+    const card = (await screen.findByText('GLPI integration')).closest('.MuiCard-root') as HTMLElement;
+    fireEvent.change(within(card).getByLabelText(/^User token/), { target: { value: 'rotated-token' } });
+    fireEvent.click(within(card).getByText('Save settings'));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect((api.patch as any).mock.calls[0][1]).toEqual({
+      glpi_url: 'https://glpi.internal/',
+      glpi_user_token: 'rotated-token',
+    });
   });
 });

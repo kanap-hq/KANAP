@@ -69,7 +69,9 @@ function buildUpdatePayload(
   }
 
   const glpiUrl = normalizeNullableString(form.glpi_url);
-  if (glpiUrl !== settings.glpi_url) {
+  // A typed token goes with the address on screen: the server binds it to that address.
+  const tokenTyped = !!form.glpi_user_token.trim() || !!form.glpi_app_token.trim();
+  if (glpiUrl !== settings.glpi_url || tokenTyped) {
     payload.glpi_url = glpiUrl;
   }
 

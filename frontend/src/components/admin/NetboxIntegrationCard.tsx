@@ -89,7 +89,10 @@ function buildForm(integration: NetboxIntegrationView | undefined): NetboxForm {
   };
 }
 
-/** Only what the user actually changed is sent; the token only when it was typed. */
+/**
+ * Only what the user actually changed is sent; the token only when it was typed, and then
+ * with the address on screen, which the server binds it to.
+ */
 function buildSavePayload(
   form: NetboxForm,
   integration: NetboxIntegrationView | undefined,
@@ -98,7 +101,7 @@ function buildSavePayload(
   const baseline = buildForm(integration);
 
   if (form.enabled !== baseline.enabled) payload.enabled = form.enabled;
-  if (form.base_url.trim() !== baseline.base_url) payload.base_url = form.base_url.trim();
+  if (form.base_url.trim() !== baseline.base_url || form.api_token.trim()) payload.base_url = form.base_url.trim();
   if (form.insecure_tls !== baseline.insecure_tls) payload.insecure_tls = form.insecure_tls;
   if (form.auto_sync !== baseline.auto_sync) payload.auto_sync = form.auto_sync;
   if (form.default_environment !== baseline.default_environment) {

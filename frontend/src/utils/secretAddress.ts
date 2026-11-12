@@ -8,7 +8,8 @@ export function secretAddressKey(value: string | null | undefined): string | nul
   if (!text) return null;
   try {
     const parsed = new URL(text);
-    return `${parsed.protocol}//${parsed.host}${parsed.pathname.replace(/\/+$/, '')}${parsed.search}`;
+    // Credentials written in the address count, as on the server.
+    return `${parsed.protocol}//${parsed.username}:${parsed.password}@${parsed.host}${parsed.pathname.replace(/\/+$/, '')}${parsed.search}`;
   } catch {
     return text.toLowerCase();
   }

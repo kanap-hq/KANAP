@@ -75,14 +75,16 @@ describe('NetboxIntegrationCard', () => {
     fireEvent.click(screen.getByText('Save settings'));
 
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledTimes(1));
+    // A typed token goes with the address on screen.
     expect(apiClient.put).toHaveBeenCalledWith('/netbox/integration', {
+      base_url: 'https://netbox.internal/',
       auto_sync: true,
       api_token: 'nbt_secret',
     });
     expect(await screen.findByRole('link', { name: 'Set up the synchronisation' })).toHaveAttribute('href', '/it/settings?tab=netbox');
   });
 
-  it('sends nothing but the token when only the token was typed', async () => {
+  it('sends the token with the address on screen when only the token was typed', async () => {
     renderCard();
     await screen.findByText('Netbox inventory');
 
@@ -90,7 +92,10 @@ describe('NetboxIntegrationCard', () => {
     fireEvent.click(screen.getByText('Save settings'));
 
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledTimes(1));
-    expect(apiClient.put).toHaveBeenCalledWith('/netbox/integration', { api_token: 'abc' });
+    expect(apiClient.put).toHaveBeenCalledWith('/netbox/integration', {
+      base_url: 'https://netbox.internal/',
+      api_token: 'abc',
+    });
   });
 
   it('replaces the previous banner and translates the connection code', async () => {
