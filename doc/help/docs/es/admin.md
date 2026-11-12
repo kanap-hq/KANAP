@@ -297,7 +297,7 @@ Si alguien es eliminado de su directorio, o su cuenta del directorio es desactiv
 
 ### Inicio de sesión inmediato con Microsoft
 
-Cuando el inicio de sesión único está conectado, una persona que inicia sesión con Microsoft por primera vez obtiene automáticamente una cuenta de Kadratis. Si ya existe una cuenta con la misma dirección de correo, Kadratis envía en su lugar un enlace de confirmación a esa dirección. La cuenta se vincula a la identidad de Microsoft cuando la persona confirma desde ese enlace, en el plazo de 1 hora, y conserva su contraseña. Una cuenta con el estado **Invitado** se activa en su siguiente inicio de sesión con Microsoft. Una cuenta ya vinculada a otra identidad de Microsoft conserva ese vínculo. Sin servicio de correo, una cuenta existente no puede vincularse de esta forma.
+Cuando el inicio de sesión único está conectado, una persona que inicia sesión con Microsoft por primera vez obtiene automáticamente una cuenta de Kadratis. Si ya existe una cuenta con la misma dirección de correo, Kadratis envía en su lugar un enlace de confirmación a esa dirección. El correo indica la cuenta de Microsoft que lo solicitó, y otro inicio de sesión en los 5 minutos siguientes no envía un enlace nuevo. La cuenta se vincula a la identidad de Microsoft cuando la persona confirma desde ese enlace, en el plazo de 1 hora, y conserva su contraseña. Una cuenta con el estado **Invitado** se activa en su siguiente inicio de sesión con Microsoft. Una cuenta ya vinculada a otra identidad de Microsoft conserva ese vínculo. Sin servicio de correo, una cuenta existente no puede vincularse de esta forma.
 
 Una cuenta nueva empieza con el rol de sistema **Contacto** y sin permisos. La persona ve una página que dice:
 
