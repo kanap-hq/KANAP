@@ -1515,7 +1515,8 @@ function knowledgeSourcesPayloadFromForm(current: ReturnType<typeof knowledgeFor
     knowledge: {
       enabled: current.enabled,
       all_libraries: current.libraryScope === 'all',
-      library_ids: current.libraryScope === 'some' ? current.libraryIds : [],
+      // Sent under "all libraries" too, so going back to chosen ones finds them.
+      library_ids: current.libraryIds,
     },
     web: { enabled: current.webEnabled },
     // Round-trip the FULL block: the backend replaces knowledge_sources

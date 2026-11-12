@@ -101,7 +101,8 @@ export function normalizeKnowledgeSources(value: unknown): Record<string, unknow
     knowledge: {
       enabled: knowledge.enabled !== false,
       all_libraries: allLibraries,
-      library_ids: allLibraries ? [] : libraryIds,
+      // Kept under "all libraries" for a return to the chosen ones; read only without it.
+      library_ids: libraryIds,
     },
     web: { enabled: web.enabled === true },
     kanap_data: { enabled: kanapData.enabled, domains: kanapData.domains },

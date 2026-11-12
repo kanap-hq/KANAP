@@ -300,12 +300,41 @@ describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
     await waitFor(() => {
       expect(harness.updateAgent).toHaveBeenLastCalledWith('agent-1', {
         knowledge_sources: {
-          knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+          knowledge: { enabled: true, all_libraries: true, library_ids: [LIBRARY_ID] },
           web: { enabled: false },
           internal_notes: 'used',
         },
       });
     }, { timeout: 3000 });
+  });
+
+  it('keeps the chosen libraries through all libraries and back', async () => {
+    shownDefinition = withKnowledge({ enabled: true, all_libraries: false, library_ids: [LIBRARY_ID] });
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByRole('radio', { name: 'Chosen libraries' }, { timeout: 5000 })).toBeChecked();
+    expect(await screen.findByText('Service desk docs')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'All libraries' }));
+    expect(screen.queryByLabelText('Select libraries')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'Chosen libraries' }));
+    expect(screen.getByLabelText('Select libraries')).toHaveTextContent('Service desk docs');
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenLastCalledWith('agent-1', {
+        knowledge_sources: {
+          knowledge: { enabled: true, all_libraries: false, library_ids: [LIBRARY_ID] },
+          web: { enabled: false },
+          internal_notes: 'used',
+        },
+      });
+    }, { timeout: 3000 });
+  });
+
+  it('reads the libraries kept by an agent saved with all libraries when going back to chosen ones', async () => {
+    shownDefinition = withKnowledge({ enabled: true, all_libraries: true, library_ids: [LIBRARY_ID] });
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByRole('radio', { name: 'All libraries' }, { timeout: 5000 })).toBeChecked();
+    fireEvent.click(screen.getByRole('radio', { name: 'Chosen libraries' }));
+    expect(await screen.findByText('Service desk docs')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select libraries')).toHaveTextContent('Service desk docs');
   });
 
   it('says why the web search is unavailable when the platform has none', async () => {

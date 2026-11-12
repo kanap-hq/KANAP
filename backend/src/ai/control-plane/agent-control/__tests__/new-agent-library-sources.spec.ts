@@ -119,8 +119,20 @@ async function testTheThreeChoicesAreSavedAsChosen() {
   assert.deepEqual(readAgentKnowledgeSources(definitionWithScope({ knowledge_sources: some })).knowledgeLibraryIds, [LIBRARY_A, LIBRARY_B]);
 
   const all = normalizeKnowledgeSources({ knowledge: { enabled: true, all_libraries: true, library_ids: [LIBRARY_A] } });
-  assert.deepEqual(all.knowledge, { enabled: true, all_libraries: true, library_ids: [] });
   assert.equal(readAgentKnowledgeSources(definitionWithScope({ knowledge_sources: all })).knowledgeLibraryIds, null);
+}
+
+// "All libraries" keeps the chosen libraries for a later return to "Chosen libraries", and the
+// agent still searches and cites every library it can access.
+async function testAllLibrariesKeepsTheChosenOnes() {
+  const all = normalizeKnowledgeSources({ knowledge: { enabled: true, all_libraries: true, library_ids: [LIBRARY_A, LIBRARY_B, LIBRARY_A] } });
+  assert.deepEqual(all.knowledge, { enabled: true, all_libraries: true, library_ids: [LIBRARY_A, LIBRARY_B] });
+  const read = readAgentKnowledgeSources(definitionWithScope({ knowledge_sources: all }));
+  assert.equal(read.knowledgeEnabled, true);
+  assert.equal(read.knowledgeLibraryIds, null);
+
+  const back = normalizeKnowledgeSources({ knowledge: { ...(all.knowledge as Record<string, unknown>), all_libraries: false } });
+  assert.deepEqual(readAgentKnowledgeSources(definitionWithScope({ knowledge_sources: back })).knowledgeLibraryIds, [LIBRARY_A, LIBRARY_B]);
 }
 
 async function run() {
@@ -133,6 +145,7 @@ async function run() {
     testANewSreAgentKeepsItsKanapDataChoice,
     testAnAgentSavedBeforeKeepsItsLibraries,
     testTheThreeChoicesAreSavedAsChosen,
+    testAllLibrariesKeepsTheChosenOnes,
   ];
   let failures = 0;
   for (const test of tests) {
