@@ -199,6 +199,8 @@ Status ist keine Dekoration. Er sagt Lesern, wie ernst sie den Artikel nehmen so
 | **Archiviert** | Für Aufzeichnungen aufbewahrt | Normalerweise immer noch nützlich für die Historie, nicht für aktive Anleitung |
 | **Veraltet** | Ersetzt oder nicht mehr gültig | Leser sollten ihm nicht als aktuelle Praxis folgen |
 
+KI-Agenten lesen und zitieren nur veröffentlichte Dokumente. Kad liest jedes Dokument, das Sie öffnen können, und nennt den Status eines nicht veröffentlichten Dokuments, das er zitiert.
+
 Die Wissensdatenbank erlaubt direktes Veröffentlichen auch ohne formalen Review-Workflow. Das ist nützlich für risikoarmes Material, bedeutet aber auch, dass Teams Disziplin brauchen, wann Review optional ist und wann er zu erwarten ist.
 
 ## Schreiben, Sperren und Autosave

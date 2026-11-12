@@ -199,6 +199,8 @@ Status is not decoration. It tells readers how seriously they should treat the a
 | **Archived** | Kept for record | Usually still useful for history, not for active guidance |
 | **Obsolete** | Superseded or no longer valid | Readers should not follow it as current practice |
 
+AI agents read and cite published documents only. Kad reads every document you can open and gives the status of a document it cites that is not published.
+
 Knowledge allows direct publishing even without a formal review workflow. That is useful for low-risk material, but it also means teams need discipline about when review is optional and when it should be expected.
 
 ## Writing, locks, and autosave

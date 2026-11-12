@@ -168,7 +168,7 @@ The agent's name and short description live on the workspace title, not in this 
 
 Where the agent gets its facts:
 
-- **Search the knowledge base**: when on, the agent draws on your [Knowledge libraries](knowledge.md) and cites them in replies. With it off, the agent answers from the model's own knowledge (and the web, if that's on). A new agent starts with it off.
+- **Search the knowledge base**: when on, the agent draws on your [Knowledge libraries](knowledge.md) and cites them in replies. It reads published documents only. With it off, the agent answers from the model's own knowledge (and the web, if that's on). A new agent starts with it off.
 - **Libraries**: the libraries the agent may search and cite, shown once the knowledge base search is on. Pick **Chosen libraries** and select them in the menu, or **All libraries** for every library the agent is allowed to access. **Chosen libraries** starts empty: the agent cites no document until you choose a library. Library names come from the Knowledge section.
 - **Internal notes of the ticket** (desk agents only): with **Used**, the agent reads the internal notes along with the public messages to decide and to reply. The agent is told not to quote them to the requester. With **Ignored**, it reads only the public messages of the ticket. A new agent uses them.
 - **Search the web**: lets the agent also consult the public web; the knowledge base always takes precedence and web results are cited. This switch is only available if web search is enabled for the whole platform. When it isn't, the switch is disabled and a note points you to your administrator (see [Kad Settings](ai-settings.md)).
