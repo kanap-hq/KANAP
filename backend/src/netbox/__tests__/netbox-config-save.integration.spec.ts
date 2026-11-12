@@ -195,6 +195,28 @@ async function main() {
       assert.doesNotMatch(JSON.stringify(audits), /stored-token|ciphertext/);
     });
 
+    await inTransaction('another server starts with a manual review; another spelling keeps the reviewed one', async (runner) => {
+      const { tenantId, configId } = await seed(runner);
+      await runner.query(
+        `UPDATE ai_adapter_configs SET metadata_json = metadata_json || $2::jsonb WHERE id = $1`,
+        [configId, JSON.stringify({ ...SERVER_STATE, review_pending: 3 })],
+      );
+      await service().save(runner.manager, tenantId, { base_url: 'HTTPS://NetBox.Example.com:443/' });
+      let row = await readRow(runner, configId);
+      assert.equal(row.metadata_json.first_manual_sync_at, SERVER_STATE.first_manual_sync_at);
+      assert.equal(row.metadata_json.review_pending, 3);
+      assert.deepEqual(row.metadata_json.sync_state, SERVER_STATE.sync_state);
+
+      const view = await service().save(runner.manager, tenantId, { base_url: 'https://other.example.com', api_token: 'nbt_other' });
+      assert.equal(view.manual_sync_done, false, 'the hourly run waits for a person to read the new server');
+      row = await readRow(runner, configId);
+      assert.equal(row.metadata_json.first_manual_sync_at, undefined);
+      assert.equal(row.metadata_json.review_pending, undefined);
+      assert.equal(row.metadata_json.sync_state, undefined, 'the last run of the previous server is not shown');
+      assert.equal(row.metadata_json.auto_sync, true, 'the setting stays; it applies once the review is done');
+      assert.deepEqual(row.metadata_json.role_map, { server: 'physical_server' }, 'the matches stay');
+    });
+
     await inTransaction('an enabled connection moved without its token is refused', async (runner) => {
       const { tenantId, configId } = await seed(runner);
       await assert.rejects(

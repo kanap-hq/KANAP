@@ -399,6 +399,14 @@ export class NetboxConfigService {
     } else if (destinationChanged && credentialRef) {
       credentialRef = null;
     }
+    if (destinationChanged) {
+      // Another server: its first import is read by a person before the hourly run
+      // applies anything, as after a removal, and the last run shown was the previous
+      // server's. The matches and the hourly setting stay.
+      delete metadata.first_manual_sync_at;
+      delete metadata.review_pending;
+      delete metadata.sync_state;
+    }
     // A new address or a new token makes the stored connection test describe a
     // configuration that is gone. An empty token keeps the stored secret, so
     // the test still applies.
