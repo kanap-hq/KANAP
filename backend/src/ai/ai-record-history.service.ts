@@ -15,9 +15,17 @@ import { AiPolicyService, missingRightMessage } from './ai-policy.service';
 import { AiQueryExecutor } from './query/ai-query.executor';
 import { AI_PERSON_WITHOUT_NAME } from './query/ai-support.query';
 import {
+  BILLING_FREQUENCY_LABELS,
+  BUDGET_NATURE_LABELS,
+  COST_CENTER_KIND_LABELS,
+  INCIDENT_SEVERITY_LABELS,
   INCIDENT_STATUS_LABELS,
+  PROCESS_TYPE_LABELS,
+  PROJECT_ORIGIN_LABELS,
   PROJECT_STATUS_LABELS,
   REQUEST_STATUS_LABELS,
+  RUN_BUILD_LABELS,
+  TASK_PRIORITY_LABELS,
   TASK_STATUS_LABELS,
   type AiImportCodeLabels,
 } from './import/ai-import-code-labels';
@@ -79,8 +87,8 @@ export function noRecordHistoryMessage(entityType: string): string {
 /** What the entries are, said with every page. */
 export const AI_RECORD_HISTORY_NOTE = 'These are the entries of the record\'s History tab, newest first, and nothing more: '
   + 'an update with no visible change is left out, and a reference the person may not read is given as hidden '
-  + '(deleted when the record no longer exists). A state comes with before_label and after_label, the words of the '
-  + 'History tab in the person\'s language: quote them. next_cursor reads the older entries.';
+  + '(deleted when the record no longer exists). A value of a fixed list (a status, a priority...) comes with before_label '
+  + 'and after_label, the words of the History tab in the person\'s language: quote them. next_cursor reads the older entries.';
 
 export type GetRecordHistoryInput = {
   entity_type: AiDetailEntityType;
@@ -136,22 +144,54 @@ function withoutRawIds(value: unknown): unknown {
 }
 
 /**
- * The states the History tab names from a fixed list, by table and field: the same lists as the
- * screens (the import's copies, checked against the locale files, and the vulnerability states of
- * #1196). A vulnerability row is a child of a technology: its field names it wherever it appears.
+ * A fixed list of the History tab: `screen`, the locale object the tab names a value from
+ * (`namespace:path`, as `enumerationLabel` of `frontend/src/lib/audit/auditLogValues.ts` reads it),
+ * and the server's copy of its words, kept for the import and the cards. The API has no locale file
+ * of the screens: `ai-record-history-labels.spec.ts` checks each copy against the tab's object in
+ * the four languages.
  */
-const RECORD_STATE_LABELS: Readonly<Record<string, Readonly<Record<string, AiImportCodeLabels>>>> = {
-  tasks: { status: TASK_STATUS_LABELS },
-  portfolio_projects: { status: PROJECT_STATUS_LABELS },
-  portfolio_requests: { status: REQUEST_STATUS_LABELS },
-  incidents: { status: INCIDENT_STATUS_LABELS },
-};
-const CHILD_STATE_LABELS: Readonly<Record<string, AiImportCodeLabels>> = {
-  vulnerability_state: VULNERABILITY_STATE_LABELS,
+type HistoryList = { screen: string; labels: AiImportCodeLabels };
+
+/**
+ * The fields the History tab names from a fixed list that the server already writes in the
+ * person's words, by table (a field of the record itself) or by field (a child row's, wherever it
+ * appears: a vulnerability row is a child of a technology). The tab's other lists (criticality,
+ * environment, hosting model, the shared statuses...) have no copy on the server: their values stay
+ * as stored.
+ */
+export const RECORD_HISTORY_LISTS: {
+  records: Readonly<Record<string, Readonly<Record<string, HistoryList>>>>;
+  children: Readonly<Record<string, HistoryList>>;
+} = {
+  records: {
+    tasks: {
+      status: { screen: 'portfolio:statuses.task', labels: TASK_STATUS_LABELS },
+      priority_level: { screen: 'portfolio:priority', labels: TASK_PRIORITY_LABELS },
+    },
+    portfolio_projects: {
+      status: { screen: 'portfolio:statuses.project', labels: PROJECT_STATUS_LABELS },
+      origin: { screen: 'portfolio:origin', labels: PROJECT_ORIGIN_LABELS },
+    },
+    portfolio_requests: { status: { screen: 'portfolio:statuses.request', labels: REQUEST_STATUS_LABELS } },
+    incidents: {
+      status: { screen: 'it:enums.incidentStatus', labels: INCIDENT_STATUS_LABELS },
+      severity: { screen: 'it:enums.incidentSeverity', labels: INCIDENT_SEVERITY_LABELS },
+    },
+    [BUDGET_LINE_TABLE]: {
+      nature: { screen: 'admin:auditLogs.values.nature', labels: BUDGET_NATURE_LABELS },
+      run_build: { screen: 'admin:auditLogs.values.runBuild', labels: RUN_BUILD_LABELS },
+    },
+    cost_centers: { kind: { screen: 'admin:auditLogs.values.costCenterKind', labels: COST_CENTER_KIND_LABELS } },
+    business_processes: { process_type: { screen: 'master-data:businessProcesses.types', labels: PROCESS_TYPE_LABELS } },
+    contracts: { billing_frequency: { screen: 'ops:contracts.billing', labels: BILLING_FREQUENCY_LABELS } },
+  },
+  children: {
+    vulnerability_state: { screen: 'admin:auditLogs.values.vulnerabilityState', labels: VULNERABILITY_STATE_LABELS },
+  },
 };
 
-/** A state change with the History tab's words for its values, in the person's language. */
-function withStateLabels(
+/** A change of a fixed-list field with the History tab's words for its values, in the person's language. */
+export function withStateLabels(
   change: unknown,
   table: string,
   subject: RecordHistorySubject,
@@ -160,9 +200,11 @@ function withStateLabels(
   if (!change || typeof change !== 'object') return change;
   const entry = change as { field?: unknown; before?: unknown; after?: unknown };
   const field = String(entry.field ?? '');
-  const labels = CHILD_STATE_LABELS[field] ?? (subject.kind === 'record' ? RECORD_STATE_LABELS[table]?.[field] : undefined);
-  if (!labels) return change;
-  const label = (value: unknown) => (typeof value === 'string' ? labels[language][value] : undefined);
+  const list = RECORD_HISTORY_LISTS.children[field]
+    ?? (subject.kind === 'record' ? RECORD_HISTORY_LISTS.records[table]?.[field] : undefined);
+  if (!list) return change;
+  const words = list.labels[language];
+  const label = (value: unknown) => (typeof value === 'string' && Object.hasOwn(words, value) ? words[value] : undefined);
   const before = label(entry.before);
   const after = label(entry.after);
   return { ...entry, ...(before ? { before_label: before } : {}), ...(after ? { after_label: after } : {}) };
