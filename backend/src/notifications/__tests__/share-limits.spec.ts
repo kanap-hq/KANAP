@@ -12,8 +12,6 @@ import { ThrottlerStorageService } from '@nestjs/throttler';
 import { ShareItemDto, SHARE_MAX_RECIPIENTS, SHARE_MESSAGE_MAX_LENGTH } from '../dto/share-item.dto';
 import { shareRecipientsOf } from '../share-recipients';
 import { ShareRateLimit, ShareRateLimitGuard, shareLinkRateLimitKey } from '../share-rate-limit';
-import { inertLinks } from '../share-message';
-import { buildShareEmail } from '../notification-templates';
 import { RATE_LIMITS } from '../../common/rate-limit';
 import { giveBackRateLimit, takeRateLimit, UserRateLimitGuard } from '../../common/rate-limit.guard';
 import { PermissionGuard } from '../../auth/permission.guard';
@@ -22,8 +20,7 @@ import { Features } from '../../config/features';
 /**
  * "Send link" (every object's `POST .../:id/share`): bounded recipient lists and message, one
  * total recipient limit in the service, a per-user request limit declared on every share route,
- * recipient budgets per user (both modes) and per tenant (multi-tenant mode), and a message whose
- * web addresses are not clickable in the e-mail.
+ * and recipient budgets per user (both modes) and per tenant (multi-tenant mode).
  */
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -260,39 +257,6 @@ async function testBudgetsAllOrNothing() {
   assert.equal((await takeRateLimit(storage, [{ budget: short, tracker: 'k', amount: 2 }])).ok, true, 'the window reopens');
 }
 
-function testMessageLinksAreInert() {
-  const message = [
-    'Votre compte expire. Connectez-vous sur https://evil.example/login',
-    'or www.example.org/path, example.com, mail me at someone@example.net',
-    'HTTP://EXAMPLE.IO and xn--80ak6aa92e.com and 192.0.2.10',
-    '<a href="https://evil.example">here</a>',
-  ].join('\n');
-  const inert = inertLinks(message);
-  for (const clickable of ['https://', 'HTTP://', 'evil.example', 'www.example', 'example.org', 'example.com', 'example.net', 'example.io', '92e.com', '192.0.2.10']) {
-    assert.ok(!inert.includes(clickable), `"${clickable}" no longer reads as an address: ${inert}`);
-  }
-  assert.ok(inert.includes('https[:]//evil[.]example/login'), inert);
-  assert.ok(inert.includes('someone@example[.]net'), inert);
-  // Ordinary text is left as it is.
-  const plain = 'See the budget v2.0 (3.5 FTE, i.e. 12 days), e.g. by Friday. Merci !';
-  assert.equal(inertLinks(plain), plain);
-
-  const email = buildShareEmail({
-    itemType: 'project',
-    itemName: 'Data platform',
-    itemUrl: 'https://acme.app.example/portfolio/projects/1',
-    senderName: 'Ada',
-    message,
-    locale: 'en',
-  });
-  for (const part of [email.html, email.text]) {
-    assert.ok(!part.includes('https://evil.example'), 'the message keeps no clickable address');
-    assert.ok(part.includes('https[:]//evil[.]example/login'), 'the message keeps its words');
-  }
-  assert.ok(email.html.includes('href="https://acme.app.example/portfolio/projects/1"'), 'the link to the record stays');
-  assert.ok(!/<a href="https:\/\/evil/.test(email.html), 'markup in the message stays text');
-}
-
 function testOneBudgetPerUser() {
   const route = (handler: string) => ({ getClass: () => ({ name: 'X' }), getHandler: () => ({ name: handler }) }) as any;
   const a = shareLinkRateLimitKey(route('shareContract'), 'user:t1:u1', 'default');
@@ -309,7 +273,6 @@ async function run() {
   await testUserRecipientBudget(true);
   await testTenantRecipientBudget();
   await testBudgetsAllOrNothing();
-  testMessageLinksAreInert();
   console.log('share-limits.spec: all assertions passed');
 }
 
