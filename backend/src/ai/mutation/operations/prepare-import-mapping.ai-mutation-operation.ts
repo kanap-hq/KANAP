@@ -70,7 +70,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     + '(dates and times, numbers, yes/no, codes, catalog names and countries by name) and returns, per column, the values read and not read; '
     + 'the card shows the user the first rows and the values it could not read. To correct the mapping, call it again with the corrected mapping. '
     + 'The server also has the import check the file it builds (its dry run): the result gives the counts (rows to create, update, '
-    + 'unchanged) and, per code and column, the number of errors and warnings; the card shows the person the messages. '
+    + 'unchanged) and, per code and column, the number of errors and warnings with `file_lines`, the lines of the person\'s file '
+    + 'they are on as the card numbers them (header counted): name a line by that number; the card shows the person the messages. '
     + 'Requires explicit user approval. Approving runs the import with the user\'s rights; a card whose check found errors cannot be approved.';
   readonly inputSchema = PrepareImportMappingInputSchema;
   readonly inputSummary = {
