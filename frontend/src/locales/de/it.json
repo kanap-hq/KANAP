@@ -720,7 +720,9 @@
         },
         "platform": "Zugrunde liegende Plattform ({{count}})",
         "countLink_one": "Die zu prüfende Schwachstelle auf der Seite Schwachstellen ansehen",
-        "countLink_other": "Die {{count}} zu prüfenden Schwachstellen auf der Seite Schwachstellen ansehen"
+        "countLink_other": "Die {{count}} zu prüfenden Schwachstellen auf der Seite Schwachstellen ansehen",
+        "excluded_one": "{{count, count}} Schwachstelle von den Warnungen ausgeschlossen",
+        "excluded_other": "{{count, count}} Schwachstellen von den Warnungen ausgeschlossen"
       },
       "severeBadge": {
         "label_one": "{{count}} schwerwiegend",

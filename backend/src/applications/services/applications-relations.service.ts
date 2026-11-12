@@ -35,6 +35,7 @@ import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { TechnologyLinksService, type DeploymentServer, type LinkInput } from '../../technologies/technology-links.service';
 import { technologyReference } from '../../technologies/technology-rows';
+import { mostPressingSupport, versionSupportOf, type VersionSupport } from '../../technologies/reports/version-support';
 import { type IncidentViewer, taskIncidentVisibilitySql } from '../../incidents/incident-visibility';
 import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
 import { hiddenContractCount } from '../../data-access/hidden-links';
@@ -117,7 +118,10 @@ export type RelationSuggestion = {
  * A technology of the application, once per technology: declared (a direct dependency, removable)
  * and/or hosted (carried by a server the application is deployed on, or by that server's host).
  * `versions` are the known versions of every row, `version_unknown` true when a row has none;
- * `standard_support_end` is the earliest end among those versions; `via` the servers of the hosted rows.
+ * the support fields are those of the most pressing of those versions (`mostPressingSupport`), on
+ * the rule of the End of support report (`versionSupportSql`): `support_end` the date that matters,
+ * `support_state` its state, and the version's two ends; all null when no version has an end.
+ * `via` the servers of the hosted rows.
  * `declarations` are the application's own links (one per version declared), whose version the
  * screen changes through `PATCH /technologies/:id/application-links/:linkId`.
  */
@@ -131,6 +135,9 @@ export type RelatedTechnology = {
   versions: string[];
   version_unknown: boolean;
   standard_support_end: string | null;
+  extended_support_end: string | null;
+  support_end: string | null;
+  support_state: VersionSupport['state'] | null;
   via: Array<{ asset_id: string; asset_name: string | null; host_name: string | null }>;
   declarations: Array<{ link_id: string; technology_version_id: string | null; version_label: string | null }>;
 };
@@ -279,9 +286,8 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
    * badge does not count these rows.
    */
   private async listTechnologies(mg: EntityManager, tenantId: string, appId: string, linkOpts: { manager: EntityManager; tenantId: string; userId: string | null }) {
-    const declared: Array<{ id: string; technology_id: string; technology_version_id: string | null; name: string; item_number: number | null; family: string | null; version_label: string | null; standard_support_end: string | null }> = await mg.query(
-      `SELECT d.id, d.technology_id, d.technology_version_id, t.name, t.item_number, t.family, v.label AS version_label,
-              to_char(v.standard_support_end, 'YYYY-MM-DD') AS standard_support_end
+    const declared: Array<{ id: string; technology_id: string; technology_version_id: string | null; name: string; item_number: number | null; family: string | null; version_label: string | null }> = await mg.query(
+      `SELECT d.id, d.technology_id, d.technology_version_id, t.name, t.item_number, t.family, v.label AS version_label
          FROM application_technologies d
          JOIN technologies t ON t.id = d.technology_id AND t.tenant_id = d.tenant_id
          LEFT JOIN technology_versions v ON v.id = d.technology_version_id AND v.tenant_id = d.tenant_id
@@ -289,14 +295,15 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       [tenantId, appId],
     );
     const hosted = (await this.technologyLinks.technologiesOfApplication(appId, linkOpts)).items.filter((row) => row.kind !== 'declared');
+    const support = await versionSupportOf(mg, tenantId, [...declared, ...hosted].map((row) => row.technology_version_id));
     return mergeTechnologies([
       ...declared.map((row): TechnologyMergeRow => ({
         technology_id: row.technology_id, technology_name: row.name, technology_reference: technologyReference(row.item_number), family: row.family,
-        kind: 'declared', version_label: row.version_label, standard_support_end: row.standard_support_end,
+        kind: 'declared', version_label: row.version_label,
         asset_id: null, asset_name: null, via_asset_name: null, link_id: row.id, technology_version_id: row.technology_version_id,
       })),
       ...hosted,
-    ]);
+    ], support);
   }
 
   private async listRequests(mg: EntityManager, tenantId: string, appId: string, scope?: ParticipationAccessScope): Promise<RelatedRequest[]> {
@@ -669,34 +676,36 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
 
 type ReachingRow = Awaited<ReturnType<TechnologyLinksService['technologiesOfApplication']>>['items'][number];
 type TechnologyMergeRow = Pick<ReachingRow,
-  'technology_id' | 'technology_name' | 'technology_reference' | 'family' | 'kind' | 'version_label' | 'standard_support_end' | 'asset_id' | 'asset_name' | 'via_asset_name'>
+  'technology_id' | 'technology_name' | 'technology_reference' | 'family' | 'kind' | 'version_label' | 'asset_id' | 'asset_name' | 'via_asset_name'>
   & { link_id?: string | null; technology_version_id?: string | null };
 
 /**
  * One row per technology from the rows of `technologiesOfApplication` (one per declaration, and
  * one per server, environment and version reached): a technology both declared and hosted shows
- * once, marked both ways. Sorted by name.
+ * once, marked both ways, with the support of its most pressing version (`support`, by version id:
+ * `versionSupportOf`). Sorted by name.
  */
-export function mergeTechnologies(rows: TechnologyMergeRow[]): RelatedTechnology[] {
-  const byId = new Map<string, RelatedTechnology & { versionSet: Set<string>; viaSet: Set<string> }>();
+export function mergeTechnologies(rows: TechnologyMergeRow[], support: Map<string, VersionSupport> = new Map()): RelatedTechnology[] {
+  const byId = new Map<string, RelatedTechnology & { versionSet: Set<string>; viaSet: Set<string>; supports: VersionSupport[] }>();
   for (const row of rows) {
     let tech = byId.get(row.technology_id);
     if (!tech) {
       tech = {
         id: row.technology_id, reference: row.technology_reference ?? null, name: row.technology_name, family: row.family,
-        declared: false, hosted: false, versions: [], version_unknown: false, standard_support_end: null, via: [], declarations: [],
-        versionSet: new Set(), viaSet: new Set(),
+        declared: false, hosted: false, versions: [], version_unknown: false,
+        standard_support_end: null, extended_support_end: null, support_end: null, support_state: null, via: [], declarations: [],
+        versionSet: new Set(), viaSet: new Set(), supports: [],
       };
       byId.set(row.technology_id, tech);
     }
+    const versionSupport = row.technology_version_id ? support.get(row.technology_version_id) : undefined;
+    if (versionSupport) tech.supports.push(versionSupport);
     if (row.kind === 'declared') {
       tech.declared = true;
       if (row.link_id) tech.declarations.push({ link_id: row.link_id, technology_version_id: row.technology_version_id ?? null, version_label: row.version_label });
     } else tech.hosted = true;
     if (row.version_label) tech.versionSet.add(row.version_label);
     else tech.version_unknown = true;
-    const end = row.standard_support_end;
-    if (end && (!tech.standard_support_end || end < tech.standard_support_end)) tech.standard_support_end = end;
     if (row.kind !== 'declared' && row.asset_id && !tech.viaSet.has(row.asset_id)) {
       tech.viaSet.add(row.asset_id);
       tech.via.push({ asset_id: row.asset_id, asset_name: row.asset_name, host_name: row.via_asset_name });
@@ -704,12 +713,19 @@ export function mergeTechnologies(rows: TechnologyMergeRow[]): RelatedTechnology
   }
   const byName = (a: string | null, b: string | null) => String(a ?? '').localeCompare(String(b ?? ''), 'en', { sensitivity: 'base' });
   return [...byId.values()]
-    .map(({ versionSet, viaSet: _viaSet, ...tech }) => ({
-      ...tech,
-      versions: [...versionSet].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })),
-      via: tech.via.sort((a, b) => byName(a.asset_name, b.asset_name)),
-      declarations: tech.declarations.sort((a, b) => String(a.version_label ?? '').localeCompare(String(b.version_label ?? ''), 'en', { numeric: true })),
-    }))
+    .map(({ versionSet, viaSet: _viaSet, supports, ...tech }) => {
+      const pressing = mostPressingSupport(supports);
+      return {
+        ...tech,
+        standard_support_end: pressing?.standard_support_end ?? null,
+        extended_support_end: pressing?.extended_support_end ?? null,
+        support_end: pressing?.date ?? null,
+        support_state: pressing?.state ?? null,
+        versions: [...versionSet].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })),
+        via: tech.via.sort((a, b) => byName(a.asset_name, b.asset_name)),
+        declarations: tech.declarations.sort((a, b) => String(a.version_label ?? '').localeCompare(String(b.version_label ?? ''), 'en', { numeric: true })),
+      };
+    })
     .sort((a, b) => byName(a.name, b.name) || a.id.localeCompare(b.id));
 }
 

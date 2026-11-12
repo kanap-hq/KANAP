@@ -41,6 +41,12 @@ export type ReachVulnerabilities = {
   /** Distinct CVE over the direct lines; null when the asset or application is out of service. */
   totals: { open: number; severe: number; exploited_severe: number } | null;
   /**
+   * CVE to review kept out of the alerts on this record (a cluster's members included): what the
+   * Vulnerabilities page lists on it under Excluded, left out of the lines and the count. Null
+   * when `totals` is; absent from an older answer.
+   */
+  excluded?: number | null;
+  /**
    * A cluster only: distinct CVE over its own direct links and those of its members in service,
    * `critical` among them; null when retired.
    */
@@ -103,6 +109,7 @@ const rowKey = (row: ReachVulnerabilityRow) => `${row.technology.id}:${row.versi
  * carries (the platform underneath) waits under one folded line, not counted either.
  * Pure: the caller fetches the data, and hides the section while the vulnerability feed is off.
  * While `pending` is set and no line is ready, the empty line says the search is in progress.
+ * The CVE kept out of the alerts are counted on one line under the table, which opens the page on them.
  * The caller refetches on `reachVulnerabilitiesRefetchMs` until `pending` is no longer set.
  */
 export default function ReachVulnerabilitiesSection({ data, kind, subjectReference, heading, onRecordOnServer }: Props) {
@@ -251,6 +258,20 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
         </RelationsEmpty>
       )) : (
         <RelationsTable columns={directColumns} rows={data.rows} rowKey={rowKey} ariaLabel={title} />
+      )}
+      {/* What the lines and the count leave out: the page lists them under Excluded. Not while the search runs. */}
+      {!showPending && !!data.excluded && data.excluded > 0 && (
+        <Box sx={{ mt: 0.5 }}>
+          <Link
+            component={RouterLink}
+            to={`/it/vulnerabilities?${subjectParam}&alerts=excluded`}
+            underline="hover"
+            data-testid="reach-vulnerabilities-excluded"
+            sx={{ ...seeLinkSx, color: 'kanap.text.secondary' }}
+          >
+            {t('pages.vulnerabilities.reach.excluded', { count: data.excluded })}
+          </Link>
+        </Box>
       )}
       {/* What a cluster's members carry: counted with the cluster (`member_totals`). What a host carries folds as the platform. */}
       {indirect.length > 0 && (

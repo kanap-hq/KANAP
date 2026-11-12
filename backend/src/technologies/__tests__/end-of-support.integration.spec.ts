@@ -419,6 +419,37 @@ async function testBusinessContributorScope() {
   });
 }
 
+/**
+ * An operating system an application declares on its Operations tab, on no server of it, touches
+ * that application, as the technologies list counts it (`countsOfTechnologies`) and the first-steps
+ * guide says. The applications hosted on its servers stay.
+ */
+async function testDeclaredOperatingSystem() {
+  await inRolledBackTransaction(async (runner) => {
+    const tag = 'eos-declared-os';
+    const tenantId = await seedTenant(runner, tag);
+    const os = await technology(runner, tenantId, 1, 'Windows Server', 'operating_system');
+    const v2019 = await version(runner, tenantId, os, '2019', '2020-01-01');
+    const declaring = await application(runner, tenantId, `Declares ${tag}`);
+    await runner.query(
+      `INSERT INTO application_technologies (tenant_id, application_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4)`,
+      [tenantId, declaring, os, v2019],
+    );
+    const server = await asset(runner, tenantId, `SRV ${tag}`);
+    await installed(runner, tenantId, server, os, v2019);
+    const hosted = await application(runner, tenantId, `Hosted ${tag}`);
+    await assign(runner, tenantId, hosted, server);
+
+    const report = await service().deadlines({ type: 'operating_system' }, { manager: runner.manager, tenantId }, ALL);
+    const row = report.items.find((item) => item.key === `operating_system:${v2019}`);
+    assert.ok(row, 'the declared version is a deadline');
+    assert.deepEqual(row.applications!.map((a) => a.id).sort(), [declaring, hosted].sort(), 'declared and hosted');
+    const list = (await new TechnologyReachService().countsOfTechnologies(runner.manager, tenantId, [os])).get(os)!;
+    assert.equal(row.application_count, list.applications, 'the report counts what the technologies list counts');
+    assert.deepEqual(row.servers.map((s) => s.id), [server], 'the servers are unchanged');
+  });
+}
+
 async function testTenantIsolation() {
   await inRolledBackTransaction(async (runner) => {
     const a: Ctx = await seed(runner, 'eos-iso-a');
@@ -441,6 +472,7 @@ runSpecs('end-of-support.integration.spec', [
   ['gaps', testGaps],
   ['without the applications right', testWithoutApplications],
   ['Business Contributor scope', testBusinessContributorScope],
+  ['operating system declared by an application', testDeclaredOperatingSystem],
   ['tenant isolation', testTenantIsolation],
 ]).catch((err) => {
   console.error(err);

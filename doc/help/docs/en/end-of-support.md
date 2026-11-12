@@ -35,7 +35,7 @@ Retired assets, disabled applications and versions nobody uses are left out.
 **What an item touches**: click a row to unfold the servers and the applications behind its counts. Each name opens its record.
 
 - A technology version touches the servers it is installed on, and the applications that declare it or are hosted on a server that carries it (including the virtual machines inside such a server).
-- An operating system touches the servers that run that version, and the applications deployed on them and on what they contain. Its row opens the technology.
+- An operating system touches the servers that run that version, the applications deployed on them and on what they contain, and the applications that declare it on their **Operations** tab. Its row opens the technology.
 - A piece of hardware touches its servers, what they contain, and the applications deployed on all of them. The hardware itself is not one of its servers.
 - An application touches the servers it is deployed on. On a cluster, these are the cluster and its members in service.
 
