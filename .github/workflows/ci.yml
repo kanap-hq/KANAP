@@ -21,6 +21,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # The token of every job reads the repository only; a job that needs more says so itself.
+# Checkouts keep no token in the git config, so the installed packages cannot read it; the
+# scripts that fetch more history read the public repository without one.
 # Actions are pinned to the full commit SHA of a release, its version in the comment
 # (Dependabot updates both). Each job's timeout-minutes is about three times its usual duration
 # (3 minutes at least), so a stuck job fails and frees the queue before its 30-minute limit.
@@ -46,6 +48,7 @@ jobs:
         with:
           # Full history, so git can tell whether one pull request head contains another.
           fetch-depth: 0
+          persist-credentials: false
       - name: Warn when an open pull request below this one is not merged yet
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,6 +73,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Check that no open pull request below this one waits behind it
         env:
           GH_TOKEN: ${{ github.token }}
@@ -86,6 +90,8 @@ jobs:
     if: ${{ !cancelled() && github.event_name == 'merge_group' && needs.changes.outputs.backend != 'none' }}
     runs-on: ubuntu-latest
     timeout-minutes: 28
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:16
@@ -112,6 +118,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -177,12 +185,16 @@ jobs:
     if: ${{ github.event_name == 'merge_group' && needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 4
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: frontend
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -198,6 +210,8 @@ jobs:
     if: ${{ github.event_name == 'merge_group' && needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    permissions:
+      contents: read
     strategy:
       # Every shard finishes, so one run lists every failing test.
       fail-fast: false
@@ -209,6 +223,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -231,6 +247,7 @@ jobs:
     if: ${{ always() && github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    permissions: {}
     steps:
       - name: Check the stack order, the frontend build and the tests
         env:
@@ -269,11 +286,15 @@ jobs:
     if: ${{ !cancelled() && github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     env:
       DEPLOYMENT_MODE: single-tenant
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -329,6 +350,8 @@ jobs:
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    permissions:
+      contents: read
     outputs:
       backend: ${{ steps.decide.outputs.backend }}
       frontend: ${{ steps.decide.outputs.frontend }}
@@ -337,6 +360,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Decide which checks run
         id: decide
         env:
@@ -362,9 +387,13 @@ jobs:
           github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       # The env files the compose files load are not in git: the on-premise example stands in
       # for ../.env (it also proves the example is accepted), empty files for the others.
       - name: Check the compose files

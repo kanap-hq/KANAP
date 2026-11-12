@@ -32,16 +32,20 @@ concurrency:
   group: auto-queue
   cancel-in-progress: false
 
+# The workflow token only reads; the queueing uses the app token.
 permissions:
   contents: read
-  checks: read
-  pull-requests: read
 
 jobs:
   queue:
     name: queue ready pull requests
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # READ_TOKEN below: the checkout, the check runs and the pull requests, read only.
+    permissions:
+      contents: read
+      checks: read
+      pull-requests: read
     steps:
       - name: Checkout the script from main
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
