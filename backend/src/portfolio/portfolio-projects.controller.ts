@@ -1161,8 +1161,8 @@ export class PortfolioProjectsController {
     @Body() body: { name?: string; planned_start?: string; planned_end?: string; status?: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'member');
-    return this.svc.updatePhase(phaseId, body as Record<string, unknown>, ctx.userId || null, {
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
+    return this.svc.updatePhase(id, phaseId, body as Record<string, unknown>, ctx.userId || null, {
       manager: ctx.manager,
     });
   }
@@ -1175,8 +1175,8 @@ export class PortfolioProjectsController {
     @Param('phaseId') phaseId: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'member');
-    return this.svc.deletePhase(phaseId, ctx.userId || null, {
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
+    return this.svc.deletePhase(id, phaseId, ctx.userId || null, {
       manager: ctx.manager,
     });
   }
@@ -1204,8 +1204,9 @@ export class PortfolioProjectsController {
     @Body() body: { enabled: boolean; milestone_name?: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'member');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.togglePhaseMilestone(
+      id,
       phaseId,
       body.enabled,
       body.milestone_name || null,
@@ -1251,8 +1252,8 @@ export class PortfolioProjectsController {
     @Body() body: { name?: string; target_date?: string; status?: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'member');
-    return this.svc.updateMilestone(milestoneId, body as Record<string, unknown>, ctx.userId || null, {
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
+    return this.svc.updateMilestone(id, milestoneId, body as Record<string, unknown>, ctx.userId || null, {
       manager: ctx.manager,
     });
   }
@@ -1265,8 +1266,8 @@ export class PortfolioProjectsController {
     @Param('milestoneId') milestoneId: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'member');
-    return this.svc.deleteMilestone(milestoneId, ctx.userId || null, {
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
+    return this.svc.deleteMilestone(id, milestoneId, ctx.userId || null, {
       manager: ctx.manager,
     });
   }

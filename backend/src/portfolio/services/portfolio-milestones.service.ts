@@ -87,9 +87,10 @@ export class PortfolioMilestonesService extends PortfolioProjectsBaseService {
   }
 
   /**
-   * Update a milestone.
+   * Update a milestone of `projectId`; a milestone of another project reads as missing.
    */
   async updateMilestone(
+    projectId: string,
     milestoneId: string,
     body: { name?: string; target_date?: string; status?: MilestoneStatus },
     userId: string | null,
@@ -98,7 +99,7 @@ export class PortfolioMilestonesService extends PortfolioProjectsBaseService {
     const mg = this.getManager(opts);
     const milestoneRepo = mg.getRepository(PortfolioProjectMilestone);
 
-    const milestone = await milestoneRepo.findOne({ where: { id: milestoneId } });
+    const milestone = await milestoneRepo.findOne({ where: { id: milestoneId, project_id: projectId } });
     if (!milestone) throw new NotFoundException('Milestone not found');
 
     const before = { ...milestone };
@@ -139,9 +140,10 @@ export class PortfolioMilestonesService extends PortfolioProjectsBaseService {
   }
 
   /**
-   * Delete a milestone.
+   * Delete a milestone of `projectId`; a milestone of another project reads as missing.
    */
   async deleteMilestone(
+    projectId: string,
     milestoneId: string,
     userId: string | null,
     opts?: ServiceOpts,
@@ -149,7 +151,7 @@ export class PortfolioMilestonesService extends PortfolioProjectsBaseService {
     const mg = this.getManager(opts);
     const milestoneRepo = mg.getRepository(PortfolioProjectMilestone);
 
-    const milestone = await milestoneRepo.findOne({ where: { id: milestoneId } });
+    const milestone = await milestoneRepo.findOne({ where: { id: milestoneId, project_id: projectId } });
     if (!milestone) throw new NotFoundException('Milestone not found');
 
     await milestoneRepo.delete({ id: milestoneId });

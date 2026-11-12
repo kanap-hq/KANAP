@@ -280,20 +280,22 @@ export class PortfolioProjectsService {
   }
 
   updatePhase(
+    projectId: string,
     phaseId: string,
     body: { name?: string; planned_start?: string; planned_end?: string; status?: PhaseStatus },
     userId: string | null,
     opts?: ServiceOpts,
   ) {
-    return this.phasesService.updatePhase(phaseId, body, userId, opts);
+    return this.phasesService.updatePhase(projectId, phaseId, body, userId, opts);
   }
 
   deletePhase(
+    projectId: string,
     phaseId: string,
     userId: string | null,
     opts?: ServiceOpts,
   ) {
-    return this.phasesService.deletePhase(phaseId, userId, opts);
+    return this.phasesService.deletePhase(projectId, phaseId, userId, opts);
   }
 
   reorderPhases(
@@ -317,6 +319,7 @@ export class PortfolioProjectsService {
   }
 
   togglePhaseMilestone(
+    projectId: string,
     phaseId: string,
     enabled: boolean,
     milestoneName: string | null,
@@ -324,7 +327,7 @@ export class PortfolioProjectsService {
     userId: string | null,
     opts?: ServiceOpts,
   ) {
-    return this.phasesService.togglePhaseMilestone(phaseId, enabled, milestoneName, tenantId, userId, opts);
+    return this.phasesService.togglePhaseMilestone(projectId, phaseId, enabled, milestoneName, tenantId, userId, opts);
   }
 
   // =========================================================================
@@ -346,20 +349,22 @@ export class PortfolioProjectsService {
   }
 
   updateMilestone(
+    projectId: string,
     milestoneId: string,
     body: { name?: string; target_date?: string; status?: MilestoneStatus },
     userId: string | null,
     opts?: ServiceOpts,
   ) {
-    return this.milestonesService.updateMilestone(milestoneId, body, userId, opts);
+    return this.milestonesService.updateMilestone(projectId, milestoneId, body, userId, opts);
   }
 
   deleteMilestone(
+    projectId: string,
     milestoneId: string,
     userId: string | null,
     opts?: ServiceOpts,
   ) {
-    return this.milestonesService.deleteMilestone(milestoneId, userId, opts);
+    return this.milestonesService.deleteMilestone(projectId, milestoneId, userId, opts);
   }
 
   // =========================================================================
