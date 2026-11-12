@@ -297,7 +297,7 @@ Si une personne est supprimée de votre annuaire, ou si son compte d'annuaire es
 
 ### Connexion à la volée avec Microsoft
 
-Lorsque le single sign-on est connecté, une personne qui se connecte avec Microsoft pour la première fois obtient automatiquement un compte Kadratis. Si un compte avec la même adresse e-mail existe déjà, il est lié à son identité Microsoft à la place, et un compte **Invité** est activé.
+Lorsque le single sign-on est connecté, une personne qui se connecte avec Microsoft pour la première fois obtient automatiquement un compte Kadratis. Si un compte avec la même adresse e-mail existe déjà, Kadratis envoie à la place un lien de confirmation à cette adresse. L'e-mail nomme le compte Microsoft qui l'a demandé, et une autre connexion dans les 5 minutes n'envoie pas de nouveau lien. Le compte est lié à l'identité Microsoft une fois la confirmation faite depuis ce lien, dans l'heure, et garde son mot de passe. Un compte **Invité** qui n'a pas encore de mot de passe est lié à sa première connexion avec Microsoft, sans lien de confirmation, et activé. Un autre compte **Invité** est activé à sa connexion suivante avec Microsoft. Un compte déjà lié à une autre identité Microsoft garde ce lien. Sans service d'e-mail, un compte existant ne peut pas être lié de cette façon.
 
 Un nouveau compte démarre avec le rôle système **Contact** et aucune autorisation. La personne voit une page indiquant :
 

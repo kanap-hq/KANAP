@@ -217,6 +217,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'auth/auth.controller.ts', member: 'deliverPasswordReset', site: 'with_tenant', class: 'no_scoped_table', reason: 'password reset token (users, password reset tokens)' },
   { file: 'auth/entra.controller.ts', member: 'handleLoginCallback', site: 'with_tenant', class: 'no_scoped_table', reason: 'Entra sign-in callback: users and sessions' },
   { file: 'auth/entra.controller.ts', member: 'handleConsentCallback', site: 'with_tenant', class: 'no_scoped_table', reason: 'Entra consent callback: audit_log entry on the tenant' },
+  { file: 'auth/entra.controller.ts', member: 'confirmLink', site: 'with_tenant', class: 'no_scoped_table', reason: 'Microsoft link confirmation: the account, its pending link and an audit_log entry' },
   { file: 'auth/entra.controller.ts', member: 'handleSetupCallback', site: 'with_tenant', class: 'no_scoped_table', reason: 'Entra setup callback: audit_log entry on the tenant' },
   { file: 'auth/entra.controller.ts', member: 'issueLoginSession', site: 'with_tenant', class: 'no_scoped_table', reason: 'Entra sign-in: the person and their session' },
   { file: 'auth/entra-directory-sync.service.ts', member: 'syncTenant', site: 'with_tenant', class: 'no_scoped_table', reason: 'Entra directory sync (schedule, setup, admin route): users and their managers', count: 2 },

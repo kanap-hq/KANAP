@@ -297,7 +297,7 @@ Wenn jemand aus Ihrem Verzeichnis entfernt wird oder sein Verzeichniskonto deakt
 
 ### Just-in-time-Anmeldung mit Microsoft
 
-Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal mit Microsoft anmeldet, automatisch ein Kadratis-Konto. Existiert bereits ein Konto mit derselben E-Mail-Adresse, wird stattdessen dieses mit ihrer Microsoft-Identität verknüpft, und ein Konto mit dem Status **Eingeladen** wird aktiviert.
+Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal mit Microsoft anmeldet, automatisch ein Kadratis-Konto. Existiert bereits ein Konto mit derselben E-Mail-Adresse, sendet Kadratis stattdessen einen Bestätigungslink an diese Adresse. Die E-Mail nennt das Microsoft-Konto, das ihn angefordert hat, und eine weitere Anmeldung innerhalb von 5 Minuten sendet keinen neuen Link. Das Konto wird mit der Microsoft-Identität verknüpft, sobald die Person über diesen Link bestätigt, innerhalb von 1 Stunde, und behält sein Passwort. Ein Konto mit dem Status **Eingeladen**, das noch kein Passwort hat, wird bei der ersten Anmeldung mit Microsoft ohne Bestätigungslink verknüpft und aktiviert. Ein anderes Konto mit dem Status **Eingeladen** wird bei der nächsten Anmeldung mit Microsoft aktiviert. Ein Konto, das bereits mit einer anderen Microsoft-Identität verknüpft ist, behält diese Verknüpfung. Ohne E-Mail-Dienst kann ein bestehendes Konto auf diese Weise nicht verknüpft werden.
 
 Ein neues Konto startet mit der Systemrolle **Kontakt** und ohne Berechtigungen. Die Person sieht eine Seite mit dem Hinweis:
 

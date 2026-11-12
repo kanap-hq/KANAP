@@ -51,8 +51,9 @@ const i18n = vi.hoisted(() => {
     'auth:login.ssoMicrosoft': 'Sign in with Microsoft',
   };
   // A stable t: a new function on each render would loop effects.
-  const t = (key: string, options?: { count?: number }) =>
-    labels[key] ?? (options?.count !== undefined ? `${key}:${options.count}` : key);
+  const t = (key: string, options?: { count?: number; email?: string }) =>
+    labels[key]
+    ?? (options?.count !== undefined ? `${key}:${options.count}` : options?.email !== undefined ? `${key}:${options.email}` : key);
   return { t };
 });
 
@@ -202,6 +203,25 @@ describe('LoginPage', () => {
   });
 
   const consentPath = '/oauth/authorize?client_id=https%3A%2F%2Fclaude.ai%2Fmeta&state=abc&code_challenge=x';
+
+  it.each([
+    ['ENTRA_ACCOUNT_LINKED', 'auth:login.ssoAccountLinked'],
+    ['ENTRA_LINK_NEEDS_EMAIL', 'auth:login.ssoLinkNeedsEmail'],
+    ['ENTRA_LINK_INVALID', 'auth:login.ssoLinkInvalid'],
+  ])('explains a Microsoft sign-in refused with %s', (code, message) => {
+    renderLogin(`/login?ssoError=${code}`);
+    expect(screen.getByRole('alert').textContent).toBe(message);
+  });
+
+  it('names the address a Microsoft link confirmation went to', () => {
+    renderLogin({ pathname: '/login', search: '?ssoNotice=ENTRA_LINK_SENT', hash: '#to=julie%40example.com' });
+    expect(screen.getByRole('status').textContent).toBe('auth:login.ssoLinkSent:julie@example.com');
+  });
+
+  it('says the Microsoft account is linked after a confirmation', () => {
+    renderLogin({ pathname: '/login', state: { microsoftLinked: true } });
+    expect(screen.getByRole('status').textContent).toBe('auth:login.ssoLinked');
+  });
 
   async function signIn(search: string) {
     renderLogin(`/login${search}`);

@@ -297,7 +297,7 @@ If someone is removed from your directory, or their directory account is deactiv
 
 ### Just-in-time sign-in with Microsoft
 
-When single sign-on is connected, a person who signs in with Microsoft for the first time gets a Kadratis account automatically. If an account with the same email address already exists, it is linked to their Microsoft identity instead, and an **Invited** account is enabled.
+When single sign-on is connected, a person who signs in with Microsoft for the first time gets a Kadratis account automatically. If an account with the same email address already exists, Kadratis e-mails a confirmation link to that address instead. The e-mail names the Microsoft account that asked for it, and another sign-in within 5 minutes sends no new link. The account is linked to the Microsoft identity once the person confirms from that link, within 1 hour, and keeps its password. An **Invited** account that has no password yet is linked at its first Microsoft sign-in without a confirmation link, and enabled. Another **Invited** account is enabled at its next Microsoft sign-in. An account already linked to another Microsoft identity keeps that link. Without an email service, an existing account cannot be linked this way.
 
 A new account starts with the **Contact** system role and no permissions. The person sees a page saying:
 

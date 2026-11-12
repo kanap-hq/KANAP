@@ -252,6 +252,13 @@ export const fr: EmailStrings = {
       intro: "Nous avons reçu une demande de réinitialisation de votre mot de passe. Le bouton ci-dessous permet d'en choisir un nouveau ; il reste valable {{duration}}.",
       ignore: "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe actuel reste valable.",
     },
+    entraLinkConfirmation: {
+      subject: 'Confirmer votre connexion Microsoft sur {{organisation}}',
+      intro: "Une connexion avec Microsoft a utilisé votre adresse. Le bouton ci-dessous relie ce compte Microsoft à votre compte ; il reste valable {{duration}}.",
+      ignore: "Si vous ne vous êtes pas connecté avec Microsoft, ignorez ce message : rien ne change sur votre compte.",
+      requestedBy: 'Compte Microsoft : {{account}}, {{date}}',
+      button: 'Relier mon compte Microsoft',
+    },
     userInvite: {
       subject: 'Invitation à rejoindre {{organisation}}',
       intro: '{{inviterName}} vous invite à rejoindre {{place}}.',
