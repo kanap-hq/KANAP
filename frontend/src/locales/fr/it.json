@@ -1950,6 +1950,8 @@
           "both": "Déclarée et hébergée"
         },
         "versionUnknown": "Version inconnue",
+        "endsWithinMonths_one": "Fin dans {{count}} mois",
+        "endsWithinMonths_other": "Fin dans les {{count}} mois",
         "also": {
           "prefix": "Aussi relié :",
           "assets_one": "{{count}} actif (déploiements)",

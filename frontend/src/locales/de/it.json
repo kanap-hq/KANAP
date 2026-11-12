@@ -1950,6 +1950,8 @@
           "both": "Deklariert und gehostet"
         },
         "versionUnknown": "Version unbekannt",
+        "endsWithinMonths_one": "Endet innerhalb von {{count}} Monat",
+        "endsWithinMonths_other": "Endet innerhalb von {{count}} Monaten",
         "also": {
           "prefix": "Ebenfalls verknüpft:",
           "assets_one": "{{count}} Asset (Bereitstellungen)",

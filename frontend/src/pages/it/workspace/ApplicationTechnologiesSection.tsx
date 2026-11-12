@@ -7,7 +7,7 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { formatSupportDate, supportStateColor, supportStateNeedsAttention, supportStateOf, type SupportState } from '../../../utils/supportState';
+import { formatSupportDate, SUPPORT_HORIZON_MONTHS, supportStateColor, supportStateNeedsAttention, supportStateOf, type SupportState } from '../../../utils/supportState';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import ViaAssetNames from '../../../components/workspace/ViaAssetNames';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
@@ -19,8 +19,12 @@ import TechnologyServersProposal from './TechnologyServersProposal';
 
 const PAGE = 30;
 
-/** The End of support report's name of each support state that calls for attention (`pages.endOfSupport.states`). */
-const REPORT_STATE: Partial<Record<SupportState, string>> = { ended: 'out_of_support', extended: 'extended_support', ending_soon: 'upcoming' };
+/**
+ * The End of support report's name of the states that call for attention (`pages.endOfSupport.states`).
+ * `ending_soon` is named apart: the record always counts {@link SUPPORT_HORIZON_MONTHS}, while the
+ * report's "Ends soon" means "within the horizon the report is open on".
+ */
+const REPORT_STATE: Partial<Record<SupportState, string>> = { ended: 'out_of_support', extended: 'extended_support' };
 
 type Declaration = NonNullable<TechnologyRow['declarations']>[number];
 
@@ -259,7 +263,10 @@ export default function ApplicationTechnologiesSection({
           standardEnd ? t('workspace.asset.technical.standardSupportEnds', { date: formatSupportDate(standardEnd, lang) }) : '',
           extendedEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: formatSupportDate(extendedEnd, lang) }) : '',
         ].filter(Boolean).join(' / ');
-        const title = [REPORT_STATE[state] ? t(`pages.endOfSupport.states.${REPORT_STATE[state]}`) : '', ends].filter(Boolean).join(' · ');
+        const stateLabel = state === 'ending_soon'
+          ? t('workspace.application.relations.endsWithinMonths', { count: SUPPORT_HORIZON_MONTHS })
+          : REPORT_STATE[state] ? t(`pages.endOfSupport.states.${REPORT_STATE[state]}`) : '';
+        const title = [stateLabel, ends].filter(Boolean).join(' · ');
         return (
           <Box
             component="span"

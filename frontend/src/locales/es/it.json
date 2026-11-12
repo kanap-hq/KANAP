@@ -1950,6 +1950,8 @@
           "both": "Declarada y alojada"
         },
         "versionUnknown": "Versión desconocida",
+        "endsWithinMonths_one": "Termina dentro de {{count}} mes",
+        "endsWithinMonths_other": "Termina dentro de {{count}} meses",
         "also": {
           "prefix": "También relacionado:",
           "assets_one": "{{count}} activo (despliegues)",
