@@ -119,7 +119,7 @@ const tests: Array<[string, () => Promise<void>]> = [
     for (const id of chosen) assert.equal(await column(runner, id, 'cost_center_id'), null, 'the dry run wrote nothing');
     assert.equal(await updateRows(runner, chosen), 0, 'the dry run left no audit row');
 
-    const done = await svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows }, undefined, { manager: runner.manager });
+    const done = await svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, undefined, { manager: runner.manager });
     assert.equal(done.rows, 3);
     assert.equal(done.changed, 3);
     assert.deepEqual(done.refused, {});
@@ -147,7 +147,7 @@ const tests: Array<[string, () => Promise<void>]> = [
     const dry = await svc.bulkUpdate({ ...body, dry_run: true }, undefined, { manager: runner.manager });
     assert.equal(dry.rows, 4);
     assert.equal(dry.changes, 4);
-    const done = await svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows }, undefined, { manager: runner.manager });
+    const done = await svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, undefined, { manager: runner.manager });
     assert.equal(done.changed, 4);
     for (const id of ids(s, 0, 2, 3, 4)) assert.equal(await column(runner, id, 'supplier_id'), null, 'an optional field emptied');
     assert.equal(await column(runner, s.lines[1].id, 'supplier_id'), s.supplier, 'the excluded line keeps its supplier');
@@ -167,10 +167,40 @@ const tests: Array<[string, () => Promise<void>]> = [
     assert.equal(dry.rows, 4, 'the disabled line is out of the list');
     await runner.query(`UPDATE spend_items SET disabled_at = NULL, status = 'enabled' WHERE id = $1`, [s.lines[2].id]);
     await assert.rejects(
-      svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows }, undefined, { manager: runner.manager }),
+      svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, undefined, { manager: runner.manager }),
       (err: any) => err.status === 409 && err.getResponse().code === 'bulk_list_changed',
     );
     for (const line of s.lines) assert.equal(await column(runner, line.id, 'run_build'), null);
+  })],
+
+  ['a line swapped for another between the count and the write: 409 bulk_list_changed, nothing written', () => withSeed(async (runner, s) => {
+    const svc = service();
+    const disable = (id: string) => runner.query(`UPDATE spend_items SET disabled_at = '2021-06-30T12:00:00Z', status = 'disabled' WHERE id = $1`, [id]);
+    const enable = (id: string) => runner.query(`UPDATE spend_items SET disabled_at = NULL, status = 'enabled' WHERE id = $1`, [id]);
+    await disable(s.lines[2].id);
+    const body = { all: true, filters: {}, changes: { run_build: 'run' } };
+    const dry: any = await svc.bulkUpdate({ ...body, dry_run: true }, undefined, { manager: runner.manager });
+    assert.equal(dry.rows, 4);
+    assert.match(String(dry.fingerprint), /^[0-9a-f]{64}$/, 'the count names the lines it reached');
+    // One line enters the filter while another leaves it: as many lines as counted, not the same ones.
+    await enable(s.lines[2].id);
+    await disable(s.lines[1].id);
+    await assert.rejects(
+      svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, undefined, { manager: runner.manager }),
+      (err: any) => err.status === 409 && err.getResponse().code === 'bulk_list_changed',
+    );
+    for (const line of s.lines) assert.equal(await column(runner, line.id, 'run_build'), null, 'nothing written');
+    // A line that leaves the filter alone is a change of the list too.
+    await disable(s.lines[2].id);
+    await assert.rejects(
+      svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, undefined, { manager: runner.manager }),
+      (err: any) => err.status === 409 && err.getResponse().code === 'bulk_list_changed',
+    );
+    // With all, the write sends the fingerprint back.
+    await assert.rejects(
+      svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows }, undefined, { manager: runner.manager }),
+      (err: any) => err.status === 400 && /fingerprint is required/.test(err.message),
+    );
   })],
 
   ['a line created after the count is left out, without a 409', () => withSeed(async (runner, s) => {
@@ -179,7 +209,7 @@ const tests: Array<[string, () => Promise<void>]> = [
     const dry = await svc.bulkUpdate({ ...body, dry_run: true }, undefined, { manager: runner.manager });
     const { itemId } = await seedLine(runner, 'opex', s.tenantId, YEAR, {}, 99);
     await runner.query(`UPDATE spend_items SET paying_company_id = $2, created_at = clock_timestamp() + interval '1 minute' WHERE id = $1`, [itemId, s.a.companyId]);
-    const done = await svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows }, undefined, { manager: runner.manager });
+    const done = await svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, undefined, { manager: runner.manager });
     assert.equal(done.changed, 5);
     assert.equal(await column(runner, itemId, 'run_build'), null, 'the new line stays as it is');
   })],

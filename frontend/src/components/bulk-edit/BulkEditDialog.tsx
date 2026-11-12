@@ -38,7 +38,7 @@ export type BulkEditField = {
 };
 
 /** The count of a dry run (`common/bulk-edit/bulk-edit.ts`). */
-type BulkCount = { rows: number; changes: number; unchanged: number; refused: Record<string, number>; as_of: string };
+type BulkCount = { rows: number; changes: number; unchanged: number; refused: Record<string, number>; as_of: string; fingerprint?: string };
 /** The answer of the write. */
 export type BulkEditWriteResult = { rows: number; changed: number; unchanged: number; refused: Record<string, number> };
 
@@ -112,8 +112,8 @@ const refusalTotal = (refused: Record<string, number> | undefined) => Object.val
 /**
  * "Change the selection" of a list: a field, then its value (for a dimension, the dimension then the
  * value); a dry run counts the rows that will change, those that already hold the value and the
- * refused ones by reason, each time the value changes; the write sends back the count's `as_of` and
- * `expected_rows`. The rows: `selection`, the body part of `useBulkSelection`. Once written, the
+ * refused ones by reason, each time the value changes; the write sends back the count's `as_of`,
+ * `expected_rows` and `fingerprint`. The rows: `selection`, the body part of `useBulkSelection`. Once written, the
  * dialog stays on the write's outcome (rows changed, already holding the value, refused by reason)
  * with Close alone, and `onDone` reloads the list behind it.
  */
@@ -244,10 +244,10 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
     setSaving(true);
     setError(null);
     try {
-      // Only the rows of the count: more rows than counted is refused (409), rows created since stay out.
+      // Only the rows of the count: other rows than counted is refused (409), rows created since stay out.
       const res = await api.post<BulkEditWriteResult>(
         endpoint,
-        { ...body, as_of: result.as_of, expected_rows: result.rows },
+        { ...body, as_of: result.as_of, expected_rows: result.rows, fingerprint: result.fingerprint },
         { timeout: BULK_EDIT_TIMEOUT_MS },
       );
       // The dialog says the outcome itself (no notice besides it); the list reloads behind it.

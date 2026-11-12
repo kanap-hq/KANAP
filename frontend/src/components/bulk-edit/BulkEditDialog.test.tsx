@@ -38,7 +38,7 @@ const FIELDS: BulkEditField[] = [
   },
 ];
 
-const COUNT = { dry_run: true, rows: 10, changes: 6, unchanged: 2, refused: { account_chart: 1, not_found: 1 }, as_of: '2026-11-12T10:00:00.000Z' };
+const COUNT = { dry_run: true, rows: 10, changes: 6, unchanged: 2, refused: { account_chart: 1, not_found: 1 }, as_of: '2026-11-12T10:00:00.000Z', fingerprint: 'f'.repeat(64) };
 
 function renderDialog(props: Partial<React.ComponentProps<typeof BulkEditDialog>> = {}) {
   const onDone = vi.fn();
@@ -169,7 +169,7 @@ describe('BulkEditDialog', () => {
     ));
   });
 
-  it('confirms with the count instant and rows, then says what changed and what was refused', async () => {
+  it('confirms with the count instant, rows and fingerprint, then says what changed and what was refused', async () => {
     post.mockResolvedValueOnce({ data: COUNT });
     post.mockResolvedValueOnce({ data: { dry_run: false, rows: 10, changed: 6, unchanged: 2, refused: { account_chart: 1, not_found: 1 } } });
     const { onDone } = renderDialog({ selection: { all: true, filters: { q: 'srv' }, exclude_ids: ['l-9'] } });
@@ -179,7 +179,7 @@ describe('BulkEditDialog', () => {
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(post).toHaveBeenLastCalledWith(
       '/budget-lines/bulk-update',
-      { all: true, filters: { q: 'srv' }, exclude_ids: ['l-9'], changes: { supplier_id: 's-2' }, as_of: COUNT.as_of, expected_rows: 10 },
+      { all: true, filters: { q: 'srv' }, exclude_ids: ['l-9'], changes: { supplier_id: 's-2' }, as_of: COUNT.as_of, expected_rows: 10, fingerprint: COUNT.fingerprint },
       { timeout: BULK_EDIT_TIMEOUT_MS },
     );
     // The dialog stays, on the outcome of the write; no notice besides it.
