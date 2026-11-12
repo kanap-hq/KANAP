@@ -78,13 +78,22 @@ async function run() {
       tenantId, userId, isPlatformHost: false, surface: 'mcp' as const, authMethod: 'api_key' as const, manager: runner.manager,
     });
     const names = (list: any) => (list === null ? null : (list.items ?? list).map((item: { name: string }) => item.name).sort());
-    const lineOf = async (userId: string) => (await executor.executeDetail(ctx(userId), { entity_type: 'budget_lines', entity_id: line })).data;
-    const assetOf = async (userId: string) => (await executor.executeDetail(ctx(userId), { entity_type: 'assets', entity_id: asset })).data;
+    const lineDetail = (userId: string) => executor.executeDetail(ctx(userId), { entity_type: 'budget_lines', entity_id: line });
+    const assetDetail = (userId: string) => executor.executeDetail(ctx(userId), { entity_type: 'assets', entity_id: asset });
+    const lineOf = async (userId: string) => (await lineDetail(userId)).data;
+    const assetOf = async (userId: string) => (await assetDetail(userId)).data;
+    // The notes that say a list is partial or withheld: the fields they name.
+    const notes = (detail: any) => ({
+      withheld: (detail.fields_withheld ?? []).map((note: { field: string }) => note.field).sort(),
+      partial: (detail.fields_partial ?? []).map((note: { field: string }) => note.field).sort(),
+    });
 
     const full = await lineOf(adminId);
     assert.deepEqual(names(full.linked_applications), ['Secret app', 'Seen app'], 'full reader: line applications');
     assert.deepEqual(names(full.projects), ['Secret project', 'Seen project'], 'full reader: line projects');
     assert.deepEqual(names((await assetOf(adminId)).projects), ['Secret project', 'Seen project'], 'full reader: asset projects');
+    assert.deepEqual(notes(await lineDetail(adminId)), { withheld: [], partial: [] }, 'full reader: the line lists are whole');
+    assert.deepEqual(notes(await assetDetail(adminId)), { withheld: [], partial: [] }, 'full reader: the asset list is whole');
     console.log('  a person who reads everything sees every linked record: OK');
 
     const bcLine = await lineOf(bcId);
@@ -95,10 +104,14 @@ async function run() {
     // The linked lists only: the line's own `project_name` column is the budget read engine's.
     assert.ok(!/Secret/.test(JSON.stringify([bcLine.linked_applications, bcLine.projects, bcAsset.projects])), 'contributor: no unseen name');
     assert.ok(!/Secret/.test(JSON.stringify(bcAsset)), 'contributor: nothing unseen on the asset');
+    // The answer says the lists are partial, so that a short list does not read as "only these".
+    assert.deepEqual(notes(await lineDetail(bcId)), { withheld: [], partial: ['linked_applications', 'projects'] }, 'contributor: the line lists said partial');
+    assert.deepEqual(notes(await assetDetail(bcId)), { withheld: [], partial: ['projects'] }, 'contributor: the asset projects said partial');
     console.log('  a Business Contributor sees the linked records of their participation: OK');
 
     const readerLine = await lineOf(readerId);
     assert.deepEqual([readerLine.linked_applications, readerLine.projects], [null, null], 'no reader of the modules: null');
+    assert.deepEqual(notes(await lineDetail(readerId)), { withheld: ['linked_applications', 'projects'], partial: [] }, 'no reader of the modules: said withheld');
     console.log('  a person who does not read the modules gets null: OK');
   } finally {
     await runner.rollbackTransaction();

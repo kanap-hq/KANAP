@@ -3554,6 +3554,29 @@ export class AiQueryExecutor {
     return { ...list, items: list.items.filter((item) => visible.has(String(item.id))) };
   }
 
+  /**
+   * What a detail says of its linked lists of applications or projects, so that the answer never
+   * turns a missing read into "none": `fields_withheld` for a list left null (the family is not
+   * read), `fields_partial` for a Business Contributor, whose list holds their participation only.
+   * Said whatever the list holds, so that it tells nothing of the records left out.
+   */
+  private async linkedListNotes(
+    context: AiExecutionContextWithManager,
+    row: Record<string, unknown>,
+    lists: Array<{ field: string; family: 'applications' | 'projects' }>,
+  ): Promise<{ fields_withheld?: AiWithheldField[]; fields_partial?: AiWithheldField[] }> {
+    const withheld: AiWithheldField[] = [];
+    const partial: AiWithheldField[] = [];
+    for (const { field, family } of lists) {
+      if (row[field] === null) {
+        withheld.push({ field, reason: `This person does not read ${family}: the linked ${family} are withheld (null), which does not mean there are none.` });
+      } else if (await resolveAiParticipationAccessScope(context, family)) {
+        partial.push({ field, reason: `This person reads only the ${family} they take part in (Business Contributor): the list names those, and the record may be linked to others.` });
+      }
+    }
+    return { ...(withheld.length ? { fields_withheld: withheld } : {}), ...(partial.length ? { fields_partial: partial } : {}) };
+  }
+
   /** The modules the caller reads, for the linked records of a task, a project or a request. */
   private linkedReads(context: AiExecutionContextWithManager): Promise<LinkedReads> {
     return loadLinkedReads(context.manager, context.userId, context.tenantId);
@@ -3774,7 +3797,7 @@ export class AiQueryExecutor {
       row.links = await this.assets.listLinks(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.attachments = await this.assets.listAttachments(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       Object.assign(row, vulnerabilityCountsOf((await assetVulnerabilityCounts(context.manager, context.tenantId, [row.id])).get(row.id)));
-      return this.toDetailResult(this.mapAsset(row), row);
+      return { ...this.toDetailResult(this.mapAsset(row), row), ...await this.linkedListNotes(context, row, [{ field: 'projects', family: 'projects' }]) };
     }
 
     if (entityType === 'budget_lines') {
@@ -3792,7 +3815,13 @@ export class AiQueryExecutor {
       // The id, not the reference the caller may have given (`get` accepts both).
       Object.assign(row, await this.loadBudgetLineDeepDetail(context, row.id as string, row.nature, registry));
       const consolidation = await this.consolidationLabels(context, [row], registry, await aiBudgetListAccess(this.policy, context));
-      return this.toDetailResult(this.mapBudgetLine(row, registry, consolidation), row);
+      return {
+        ...this.toDetailResult(this.mapBudgetLine(row, registry, consolidation), row),
+        ...await this.linkedListNotes(context, row, [
+          { field: 'linked_applications', family: 'applications' },
+          { field: 'projects', family: 'projects' },
+        ]),
+      };
     }
 
     if (entityType === 'contracts') {

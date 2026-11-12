@@ -82,6 +82,8 @@ async function run() {
     });
     const detail = (userId: string) => executor.executeDetail(ctx(userId), { entity_type: 'tasks', entity_id: 'T-1' });
     const names = (result: any) => (result.data.applications === null ? null : result.data.applications.map((app: { name: string }) => app.name).sort());
+    const contextPartial = async (userId: string) => ((await entities.getEntityContext(ctx(userId), { entity_type: 'tasks', entity_id: task })).fields_partial ?? [])
+      .map((entry: { field: string }) => entry.field);
     const contextNames = async (userId: string) => {
       const context = await entities.getEntityContext(ctx(userId), { entity_type: 'tasks', entity_id: task });
       const group = (context.related ?? context.relationships ?? []).find((g: any) => g.relation === 'linked_applications');
@@ -94,6 +96,7 @@ async function run() {
     assert.equal(full.fields_withheld, undefined, 'full reader: nothing withheld');
     assert.equal(full.fields_partial, undefined, 'full reader: nothing partial');
     assert.deepEqual(await contextNames(adminId), ['Secret app', 'Seen app'], 'full reader: context');
+    assert.deepEqual(await contextPartial(adminId), [], 'full reader: the context group is whole');
     console.log('  a person who reads everything: every application: OK');
 
     // A Business Contributor: their application, and the read said partial.
@@ -102,6 +105,7 @@ async function run() {
     assert.ok(!JSON.stringify(bc).includes('Secret') && !JSON.stringify(bc).includes(unseen), 'contributor: nothing of the other');
     assert.deepEqual(bc.fields_partial?.map((entry: { field: string }) => entry.field), ['applications'], 'contributor: the read is said partial');
     assert.deepEqual(await contextNames(bcId), ['Seen app'], 'contributor: context');
+    assert.deepEqual(await contextPartial(bcId), ['linked_applications'], 'contributor: the context group said partial');
     console.log('  a Business Contributor: their applications, the read said partial: OK');
 
     // aggregate_entities on tasks grouped by application: the applications the person reads only.

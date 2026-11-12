@@ -4044,6 +4044,13 @@ export class AiEntityService {
       },
       related: await this.readableGroups(context, relatedGroups),
       knowledge: await this.getKnowledgeContext(context, 'tasks', taskId, manager),
+      // Said whatever the task holds, so that the answer says nothing of the applications left out.
+      ...(applicationAccessScope ? {
+        fields_partial: [{
+          field: 'linked_applications',
+          reason: 'This person reads only the applications they take part in (Business Contributor): the group lists those, and the task may be linked to others.',
+        }],
+      } : {}),
     };
   }
 
