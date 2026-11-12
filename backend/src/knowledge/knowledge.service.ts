@@ -47,6 +47,7 @@ import { normalizeAgFilterModel, assertSetFilterModes } from '../common/ag-grid-
 import { resolveToUuid } from '../common/resolve-item-id';
 import { resolveInlineTenantSlug } from '../common/resolve-inline-tenant-slug';
 import { StorageService } from '../common/storage/storage.service';
+import { isStoragePathReferencedInAnyTable } from '../common/storage-path-refs';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
 import { Features } from '../config/features';
 import { EmailService } from '../email/email.service';
@@ -4737,7 +4738,7 @@ export class KnowledgeService {
     const excludedAttachmentIds = attachments.map((attachment) => attachment.id);
 
     for (const attachment of attachments) {
-      const referencedElsewhere = await this.isStoragePathReferencedElsewhere(
+      const referencedElsewhere = await isStoragePathReferencedInAnyTable(
         manager,
         attachment.storage_path,
         excludedAttachmentIds,
@@ -4961,57 +4962,6 @@ export class KnowledgeService {
     await this.auditDocumentChange('delete', id, existing, null, userId, manager, opts?.audit);
 
     return { ok: true };
-  }
-
-  private async isStoragePathReferencedElsewhere(
-    manager: EntityManager,
-    storagePath: string,
-    excludedDocumentAttachmentIds: string[] = [],
-  ): Promise<boolean> {
-    const documentRefs = excludedDocumentAttachmentIds.length > 0
-      ? await manager.query<Array<{ exists: number }>>(
-          `SELECT 1 AS exists
-           FROM document_attachments
-           WHERE storage_path = $1
-             AND id <> ALL($2::uuid[])
-           LIMIT 1`,
-          [storagePath, excludedDocumentAttachmentIds],
-        )
-      : await manager.query<Array<{ exists: number }>>(
-          `SELECT 1 AS exists
-           FROM document_attachments
-           WHERE storage_path = $1
-           LIMIT 1`,
-          [storagePath],
-        );
-    if (documentRefs.length > 0) return true;
-
-    const requestRefs = await manager.query<Array<{ exists: number }>>(
-      `SELECT 1 AS exists
-       FROM portfolio_request_attachments
-       WHERE storage_path = $1
-       LIMIT 1`,
-      [storagePath],
-    );
-    if (requestRefs.length > 0) return true;
-
-    const projectRefs = await manager.query<Array<{ exists: number }>>(
-      `SELECT 1 AS exists
-       FROM portfolio_project_attachments
-       WHERE storage_path = $1
-       LIMIT 1`,
-      [storagePath],
-    );
-    if (projectRefs.length > 0) return true;
-
-    const taskRefs = await manager.query<Array<{ exists: number }>>(
-      `SELECT 1 AS exists
-       FROM task_attachments
-       WHERE storage_path = $1
-       LIMIT 1`,
-      [storagePath],
-    );
-    return taskRefs.length > 0;
   }
 
   async bulkRemove(ids: string[], userId: string | null, opts?: { manager?: EntityManager }): Promise<BulkDeleteResult> {
@@ -6637,10 +6587,13 @@ export class KnowledgeService {
     const existing = await repo.findOne({ where: { id: attachmentId, document_id: documentId } as any });
     if (!existing) throw new NotFoundException('Attachment not found');
 
-    try {
-      await this.storage.deleteObject(existing.storage_path);
-    } catch {
-      // Keep DB delete resilient even if object is already missing.
+    // A file cloned from another record (an inline image of its source) stays while a row names it.
+    if (!(await isStoragePathReferencedInAnyTable(manager, existing.storage_path, [existing.id]))) {
+      try {
+        await this.storage.deleteObject(existing.storage_path);
+      } catch {
+        // Keep DB delete resilient even if object is already missing.
+      }
     }
 
     await repo.delete({ id: existing.id } as any);
@@ -6815,7 +6768,7 @@ export class KnowledgeService {
         continue;
       }
 
-      const referencedElsewhere = await this.isStoragePathReferencedElsewhere(manager, attachment.storage_path, [attachment.id]);
+      const referencedElsewhere = await isStoragePathReferencedInAnyTable(manager, attachment.storage_path, [attachment.id]);
       if (!referencedElsewhere) {
         try {
           await this.storage.deleteObject(attachment.storage_path);

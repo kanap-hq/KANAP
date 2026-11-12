@@ -11,6 +11,9 @@ import { EntityManager } from 'typeorm';
  * §5.4 "Chiffres d'un objet visible"): the page and the list read the linked lines' amounts there,
  * then keep the per-contract aggregates and the amounts of the lines the person reads.
  *
+ * It also tells whether another attachment row still names a stored file before the file is
+ * deleted (`common/storage-path-refs.ts`): every row counts, and only the caller's paths come back.
+ *
  * `withFullDataAccess` is that window, and the only code besides `data_access_apply` that changes
  * the role (inventory: `data-access-inventory.spec.ts`, which also checks its two callers: the
  * chargeback report and the contract coverage):

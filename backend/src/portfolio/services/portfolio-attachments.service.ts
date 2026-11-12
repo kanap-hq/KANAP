@@ -113,10 +113,13 @@ export class PortfolioAttachmentsService extends PortfolioProjectsBaseService {
     const attachment = await repo.findOne({ where: { id: attachmentId, project_id: projectId } });
     if (!attachment) throw new NotFoundException('Attachment not found');
 
-    try {
-      await this.storage.deleteObject(attachment.storage_path);
-    } catch (e) {
-      // Log but don't fail
+    // A clone of the file in another record (a managed document's inline image) keeps it.
+    if (!(await isStoragePathReferencedInAnyTable(mg, attachment.storage_path, [attachment.id]))) {
+      try {
+        await this.storage.deleteObject(attachment.storage_path);
+      } catch (e) {
+        // Log but don't fail
+      }
     }
 
     await repo.delete({ id: attachmentId });

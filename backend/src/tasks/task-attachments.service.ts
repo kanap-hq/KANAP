@@ -14,6 +14,7 @@ import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
 import { assertMarkdownSize } from '../common/markdown-limits';
 import { assertTaskModifiable } from './task-data-access';
+import { isStoragePathReferencedInAnyTable } from '../common/storage-path-refs';
 
 @Injectable()
 export class TaskAttachmentsService {
@@ -194,15 +195,7 @@ export class TaskAttachmentsService {
         continue;
       }
 
-      const refs = await mg.query<Array<{ exists: number }>>(
-        `SELECT 1 AS exists
-         FROM task_attachments
-         WHERE storage_path = $1
-           AND id <> $2
-         LIMIT 1`,
-        [attachment.storage_path, attachment.id],
-      );
-      if (refs.length === 0) {
+      if (!(await isStoragePathReferencedInAnyTable(mg, attachment.storage_path, [attachment.id]))) {
         try {
           await this.storage.deleteObject(attachment.storage_path);
         } catch {
@@ -226,15 +219,8 @@ export class TaskAttachmentsService {
     // Before the stored file is deleted: a refused row would stay, pointing at nothing.
     await assertTaskModifiable(mg, found.task_id);
 
-    const refs = await mg.query<Array<{ exists: number }>>(
-      `SELECT 1 AS exists
-       FROM task_attachments
-       WHERE storage_path = $1
-         AND id <> $2
-       LIMIT 1`,
-      [found.storage_path, found.id],
-    );
-    if (refs.length === 0) {
+    // A request made from the task names the same file: it stays while any row names it.
+    if (!(await isStoragePathReferencedInAnyTable(mg, found.storage_path, [found.id]))) {
       try {
         await this.storage.deleteObject(found.storage_path);
       } catch {

@@ -7,6 +7,7 @@ import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { duplicateNameException } from '../common/duplicate-name';
 import { StorageService } from '../common/storage/storage.service';
+import { unreferencedPaths } from '../common/storage-path-refs';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
@@ -1066,7 +1067,9 @@ export class TechnologiesService {
     const found = await this.readAttachment(attachmentId, opts).catch(() => null);
     if (!found) return { ok: true };
     await opts.manager.query(`DELETE FROM technology_attachments WHERE tenant_id = $1 AND id = $2`, [opts.tenantId, found.id]);
-    try { await this.storage.deleteObject(found.storage_path); } catch { /* best effort, as the applications */ }
+    if ((await unreferencedPaths(opts.manager, opts.tenantId, [found.storage_path], [found.id])).length > 0) {
+      try { await this.storage.deleteObject(found.storage_path); } catch { /* best effort, as the applications */ }
+    }
     await this.audit.log({ table: 'technology_attachments', recordId: found.id, action: 'delete', before: found, after: null, userId: opts.userId ?? null, ...opts.audit }, { manager: opts.manager });
     return { ok: true };
   }
