@@ -540,8 +540,11 @@ export type AiImportRunDto = {
   skipped: number;
   error_count: number;
   warning_count: number;
-  /** How many messages of each code and column the report holds. */
-  issues: Array<{ level: 'error' | 'warning'; code: string | null; column: string | null; count: number }>;
+  /**
+   * How many messages of each code and column the report holds, and `file_lines`: the lines of the
+   * person's file they are on, header counted, as the card numbers them (the first ones).
+   */
+  issues: Array<{ level: 'error' | 'warning'; code: string | null; column: string | null; count: number; file_lines?: number[] }>;
   /** The budget file: the suppliers its load creates, which the card lists (the person may create suppliers). */
   new_suppliers?: number;
   report:
