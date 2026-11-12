@@ -1874,6 +1874,11 @@
       "leaveDelete": "Delete it",
       "leaveAnyway": "Leave anyway",
       "completeFailed": "The line could not be checked."
+    },
+    "bulkEdit": {
+      "chartOf": "Chart of accounts of",
+      "dimension": "Dimension",
+      "dimensionValue": "Dimension value"
     }
   }
 }
