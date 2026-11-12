@@ -11,7 +11,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   refused and creates nothing; a new person (`POST /users` with `role_name`) or a users file
 //   naming it gets the system role.
 // - Renaming a role to such a name (`PUT /roles/:id`) is refused and keeps its name.
-// - The exact name of a system role still returns that role, and other names stay free.
+// - The exact name of a system or built-in role on `POST /roles` is refused (400) and leaves the
+//   role as it was, as `PUT /roles/:id` does; other names stay free.
 // - A tenant reads only its own roles: the names of another tenant change nothing.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -64,6 +65,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     `INSERT INTO roles (tenant_id, role_name, role_description, is_system) VALUES ($1, 'Administrator', 'Administrator', true)`, [tenantId]);
   await runner.query(`INSERT INTO roles (tenant_id, role_name, role_description, is_system) VALUES ($1, 'Contact', 'Contact', true)`, [tenantId]);
   const analyst = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Analyst', 'Analyst')`, [tenantId]);
+  await runner.query(`INSERT INTO roles (tenant_id, role_name, role_description, is_built_in) VALUES ($1, 'Budget Member', 'Built in', true)`, [tenantId]);
   const adminUserId = await insertId(runner,
     `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Ada', 'Admin', $3, 'enabled')`,
     [tenantId, `admin-${tenantId.slice(0, 8)}@example.test`, administrator]);
@@ -106,8 +108,14 @@ async function testRenameToSystemNameIsRefused(h: Harness, runner: QueryRunner, 
 }
 
 async function testOtherNamesStayFree(h: Harness, runner: QueryRunner, s: Seed) {
-  const same = await h.roles.createRole({ role_name: 'Administrator', role_description: 'Administrator' }, req(runner, s));
-  assert.equal(same.id, s.administrator, 'the exact name returns the system role');
+  const descriptions = async () => runner.query(`SELECT role_name, role_description FROM roles ORDER BY role_name`);
+  const before = await descriptions();
+  for (const name of ['Administrator', 'Contact', 'Budget Member']) {
+    await refusedAsTaken(() => h.roles.createRole({ role_name: name, role_description: 'Changed' }, req(runner, s)), `POST /roles exact "${name}"`);
+  }
+  assert.deepEqual(await descriptions(), before, 'system and built-in roles kept');
+  const same = await h.roles.createRole({ role_name: 'Analyst', role_description: 'Analyst role' }, req(runner, s));
+  assert.equal(same.id, s.analyst, 'the exact name of another role returns it');
   const renamed = await h.roles.updateRole(s.analyst, { role_name: 'Administrators of finance' }, req(runner, s));
   assert.equal(renamed.role_name, 'Administrators of finance');
   // The other tenant's role names are not read here.

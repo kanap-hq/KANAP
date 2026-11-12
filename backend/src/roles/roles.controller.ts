@@ -14,6 +14,7 @@ import { RecordInUseException } from '../common/record-in-use';
 import { sqlStateOf } from '../common/filters/database-error.mapping';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertRolePermissionsWithinActorRights, roleGrantActorOf } from './role-grant-ceiling';
+import { isAdministratorRole } from './system-roles';
 
 /** What the audit log keeps of a role: its name and description, and its permissions when given. */
 function roleSnapshot(role: Pick<Role, 'role_name' | 'role_description'>, permissions?: Record<string, unknown>) {
@@ -86,8 +87,11 @@ export class RolesController {
   async createRole(@Body() body: { role_name?: string; role_description?: string }, @Req() req: any) {
     const mg: EntityManager | undefined = req?.queryRunner?.manager;
     if (!body?.role_name) throw new BadRequestException('role_name is required');
-    // An existing name returns that role (its description updated): a change, not a creation.
+    // An existing name returns that role (its description updated): a change, not a creation. A
+    // system or built-in role is not changed here either, as on `PUT /roles/:id`.
     const existing = await this.rolesService.findByName(body.role_name, { manager: mg });
+    if (existing?.is_system || isAdministratorRole(existing)) throw new BadRequestException('Cannot modify a system role');
+    if (existing?.is_built_in) throw new BadRequestException('Cannot modify a built-in role');
     const saved = await this.rolesService.createRole({ role_name: body.role_name, role_description: body.role_description || null }, { manager: mg });
     await this.logRoleChange(req, saved.id, existing ? 'update' : 'create', existing ? roleSnapshot(existing) : null, roleSnapshot(saved));
     return saved;
