@@ -49,7 +49,6 @@ export const ASSIGNMENT_READERS: Readonly<Record<string, AssignmentReader>> = {
   },
   'src/contracts/contract-compliance.ts': { status: 'effective', reason: 'The applications a contract on an asset covers, and the cloud hosting of an application.' },
   'src/locations/location-relations.ts': { status: 'effective', reason: 'The applications of a location\'s Relations tab and its badge.' },
-  'src/locations/locations.service.ts': { status: 'effective', reason: 'The applications of a location.' },
   'src/knowledge/knowledge.service.ts': { status: 'effective', reason: 'The context sources of an application (its servers) and of an asset (its applications).' },
   'src/ai/ai-entity.service.ts': { status: 'effective', reason: 'The assistant\'s context: the servers of an application, the applications of an asset.' },
   'src/technologies/application-conversion.service.ts': {
