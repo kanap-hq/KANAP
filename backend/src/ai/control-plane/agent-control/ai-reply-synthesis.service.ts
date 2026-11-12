@@ -172,7 +172,10 @@ function compactImageEvidence(evidence: TicketImageEvidence[] | null | undefined
   }));
 }
 
-/** The passages of a document that the start of its body, as given to the model, does not hold. */
+/**
+ * The passages of a document that the start of its body, as given to the model, does not hold
+ * whole: a passage that starts before the cut and runs past it is kept.
+ */
 function passagesBeyondContent(doc: ReplySynthesisKnowledgeDoc, content: string): string[] {
   if (doc.passages_matched === false) return [];
   // Letters and digits only: the body is Markdown, the passages come from its plain text.
@@ -180,7 +183,7 @@ function passagesBeyondContent(doc: ReplySynthesisKnowledgeDoc, content: string)
   const shown = wordsOf(content);
   return (doc.passages ?? [])
     .map((passage) => compact(passage, MAX_SOURCE_PASSAGE_CHARS))
-    .filter((passage) => passage && !shown.includes(wordsOf(passage).slice(0, 80)))
+    .filter((passage) => passage && !shown.includes(wordsOf(passage)))
     .slice(0, MAX_SOURCE_PASSAGES);
 }
 

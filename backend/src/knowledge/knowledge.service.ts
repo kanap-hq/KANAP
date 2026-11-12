@@ -254,8 +254,55 @@ export type DocumentSearchPassages = {
   passages: string[];
 };
 
-const DOCUMENT_PASSAGE_DELIMITER = ' ⁂ ';
 const DOCUMENT_BODY_LEAD_CHARS = 1200;
+/** A passage: whole sentences, up to this many words (a longer sentence is cut into pieces). */
+const DOCUMENT_PASSAGE_MAX_WORDS = 70;
+
+/** The sentences of a plain-text body: cut after `.`, `!`, `?`, `;`, `:` and at line breaks. */
+function documentSentences(body: string): string[] {
+  const sentences: string[] = [];
+  for (const piece of String(body || '').split(/(?<=[.!?;:])\s+|\n+/)) {
+    const words = piece.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+    for (let start = 0; start < words.length; start += DOCUMENT_PASSAGE_MAX_WORDS) {
+      sentences.push(words.slice(start, start + DOCUMENT_PASSAGE_MAX_WORDS).join(' '));
+    }
+  }
+  return sentences;
+}
+
+/**
+ * The passages of a body for the words of a query, from the query stems each sentence holds
+ * (`hits[i]`): a window of whole sentences starts at every sentence, up to 70 words, and scores
+ * the stems it holds, each weighted by how rare it is in the body (a word of almost every
+ * sentence, such as "laptop" in a laptop handbook, weighs little). The best windows that do not
+ * overlap are kept, best first, wherever they are in the body.
+ */
+function selectDocumentPassages(sentences: string[], hits: string[][], maxPassages: number): string[] {
+  const frequency = new Map<string, number>();
+  for (const stems of hits) for (const stem of new Set(stems)) frequency.set(stem, (frequency.get(stem) ?? 0) + 1);
+  const weight = (stem: string) => Math.log(1 + sentences.length / (frequency.get(stem) ?? 1));
+  const windows: Array<{ start: number; end: number; score: number }> = [];
+  for (let start = 0; start < sentences.length; start += 1) {
+    if ((hits[start] ?? []).length === 0) continue;
+    let end = start;
+    let words = sentences[start].split(' ').length;
+    while (end + 1 < sentences.length && words + sentences[end + 1].split(' ').length <= DOCUMENT_PASSAGE_MAX_WORDS) {
+      end += 1;
+      words += sentences[end].split(' ').length;
+    }
+    const stems = new Set<string>();
+    for (let index = start; index <= end; index += 1) for (const stem of hits[index] ?? []) stems.add(stem);
+    windows.push({ start, end, score: [...stems].reduce((total, stem) => total + weight(stem), 0) });
+  }
+  windows.sort((left, right) => right.score - left.score || left.start - right.start);
+  const kept: Array<{ start: number; end: number }> = [];
+  for (const window of windows) {
+    if (kept.length >= maxPassages) break;
+    if (kept.some((other) => window.start <= other.end && other.start <= window.end)) continue;
+    kept.push(window);
+  }
+  return kept.map((window) => sentences.slice(window.start, window.end + 1).join(' '));
+}
 
 /** The start of a body, cut at a word boundary: one passage, or none for an empty body. */
 function documentBodyLead(body: string): string[] {
@@ -6350,10 +6397,10 @@ export class KnowledgeService {
 
   /**
    * Long passages of one document's body around the words of `query`, for a model that judges the
-   * document on its text: up to `maxPassages` (default 4, at most 8) fragments of 30 to 70 words,
-   * plain text without highlight tags, cut by `ts_headline` under the configuration (French or
-   * English) whose stems match the body best. When no word of the query is in the body, `matched`
-   * is false and the single passage is the start of the body. Null when the document does not
+   * document on its text: up to `maxPassages` (default 4, at most 8) passages of whole sentences,
+   * 70 words at most, plain text, best first (`selectDocumentPassages`), the stems compared under
+   * the configuration (French or English) that finds more of them in the body. When no word of the
+   * query is in the body, `matched` is false and the single passage is the start of the body. Null when the document does not
    * exist, the person may not read it, it is not published under `publishedOnly`, or it is in no
    * library of `libraryIds`.
    */
@@ -6380,39 +6427,41 @@ export class KnowledgeService {
       throw error;
     }
     const maxPassages = Math.min(Math.max(Math.trunc(Number(opts?.maxPassages) || 4), 1), 8);
-    const tsQuerySql = bilingualDocumentTsQueryAnyTermSql('$2');
-    const headlineOptions = `MaxFragments=${maxPassages}, MinWords=30, MaxWords=70, StartSel="", StopSel="", `
-      + `FragmentDelimiter="${DOCUMENT_PASSAGE_DELIMITER}"`;
     const rows = await manager.query(
-      `SELECT d.id, d.item_number, d.title, d.status, coalesce(d.content_plain, '') AS body,
-              CASE WHEN q.fr_rank > 0 OR q.en_rank > 0 THEN
-                ts_headline(
-                  CASE WHEN q.en_rank > q.fr_rank THEN 'kanap_en'::regconfig ELSE 'kanap_fr'::regconfig END,
-                  coalesce(d.content_plain, ''), ${tsQuerySql}, $3)
-              END AS headline
+      `SELECT d.id, d.item_number, d.title, d.status, coalesce(d.content_plain, '') AS body
        FROM documents d
-       CROSS JOIN LATERAL (
-         SELECT ts_rank_cd(to_tsvector('kanap_fr', coalesce(d.content_plain, '')), ${tsQuerySql}) AS fr_rank,
-                ts_rank_cd(to_tsvector('kanap_en', coalesce(d.content_plain, '')), ${tsQuerySql}) AS en_rank
-       ) q
        WHERE d.id = $1
          AND d.tenant_id = app_current_tenant()
          ${opts?.publishedOnly === true ? `AND d.status = 'published'` : ''}
-         ${opts?.libraryIds ? 'AND d.library_id = ANY($4::uuid[])' : ''}
+         ${opts?.libraryIds ? 'AND d.library_id = ANY($2::uuid[])' : ''}
        LIMIT 1`,
-      [
-        documentId,
-        normalizeDocumentAnyTermQuery(String(query || '')),
-        headlineOptions,
-        ...(opts?.libraryIds ? [opts.libraryIds] : []),
-      ],
+      [documentId, ...(opts?.libraryIds ? [opts.libraryIds] : [])],
     );
     const row = rows[0];
     if (!row) return null;
-    const passages = String(row.headline ?? '')
-      .split(DOCUMENT_PASSAGE_DELIMITER)
-      .map((passage) => passage.replace(/\s+/g, ' ').trim())
-      .filter((passage) => passage.length > 0);
+    // The query stems each sentence holds, under both configurations, in one statement.
+    const sentences = documentSentences(String(row.body));
+    const queryText = normalizeDocumentAnyTermQuery(String(query || ''));
+    const stemRows: Array<{ ord: string | number; fr: string[] | null; en: string[] | null }> = sentences.length > 0 && queryText
+      ? await manager.query(
+        `SELECT s.ord,
+                ARRAY(SELECT unnest(tsvector_to_array(to_tsvector('kanap_fr', s.sentence)))
+                      INTERSECT SELECT unnest(tsvector_to_array(to_tsvector('kanap_fr', $2)))) AS fr,
+                ARRAY(SELECT unnest(tsvector_to_array(to_tsvector('kanap_en', s.sentence)))
+                      INTERSECT SELECT unnest(tsvector_to_array(to_tsvector('kanap_en', $2)))) AS en
+         FROM unnest($1::text[]) WITH ORDINALITY AS s(sentence, ord)`,
+        [sentences, queryText],
+      )
+      : [];
+    const hitsFor = (key: 'fr' | 'en') => {
+      const hits: string[][] = sentences.map(() => []);
+      for (const stemRow of stemRows) hits[Number(stemRow.ord) - 1] = stemRow[key] ?? [];
+      return hits;
+    };
+    const frHits = hitsFor('fr');
+    const enHits = hitsFor('en');
+    const count = (hits: string[][]) => hits.reduce((total, stems) => total + stems.length, 0);
+    const passages = selectDocumentPassages(sentences, count(enHits) > count(frHits) ? enHits : frHits, maxPassages);
     const matched = passages.length > 0;
     return {
       id: String(row.id),
