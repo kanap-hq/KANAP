@@ -675,7 +675,6 @@
     "save": "Enregistrer",
     "knowledgeSources": "Sources de connaissances et web",
     "knowledgeEnabled": "Rechercher dans la base de connaissances",
-    "knowledgeHint": "Désactivé, l'agent répond à partir des connaissances du modèle (et du web, si activé).",
     "libraryScope": {
       "some": "Bibliothèques choisies",
       "all": "Toutes les bibliothèques"

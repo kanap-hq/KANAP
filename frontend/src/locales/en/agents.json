@@ -675,7 +675,6 @@
     "save": "Save settings",
     "knowledgeSources": "Knowledge and web sources",
     "knowledgeEnabled": "Search the knowledge base",
-    "knowledgeHint": "When off, the agent answers from the model's own knowledge (and the web, if enabled).",
     "libraryScope": {
       "some": "Chosen libraries",
       "all": "All libraries"

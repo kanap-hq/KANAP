@@ -201,6 +201,7 @@ describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
     /cites no document/,
     /searches only these libraries/,
     /may also search the public web/,
+    /answers from the model's own knowledge/,
   ];
 
   function withKnowledge(knowledge: Record<string, unknown> | null): AiAgentControlAgentDefinition {

@@ -2414,7 +2414,6 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
             control={<Switch size="small" checked={knowledgeForm.enabled} onChange={(event) => switchKnowledgeSearch(event.target.checked)} />}
             label={t('settings.knowledgeEnabled')}
           />
-          <Typography variant="caption" color="text.secondary">{t('settings.knowledgeHint')}</Typography>
           {knowledgeForm.enabled && (
             <>
               <RadioGroup

@@ -675,7 +675,6 @@
     "save": "Einstellungen speichern",
     "knowledgeSources": "Wissens- und Webquellen",
     "knowledgeEnabled": "Wissensdatenbank durchsuchen",
-    "knowledgeHint": "Wenn aus, antwortet der Agent aus dem Wissen des Modells (und aus dem Web, falls aktiviert).",
     "libraryScope": {
       "some": "Ausgewählte Bibliotheken",
       "all": "Alle Bibliotheken"
