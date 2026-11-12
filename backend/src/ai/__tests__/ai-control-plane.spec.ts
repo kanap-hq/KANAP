@@ -14953,6 +14953,20 @@ async function testThePlannerWritesItsReasonsInTheNoteLanguage() {
   }
 }
 
+// Planner unavailable and synthesis unusable: no reply to the requester is prepared, and the
+// internal note says only what is prepared.
+async function testTheFallbackNoteSaysOnlyWhatIsPrepared() {
+  const result = await runTriageWithSimulatedModel({
+    notes: triageNotes(false),
+    plan: null,
+    reply: { language: 'fr', usable: false, needs_human_review: true, requester_reply: '', technician_brief: 'Aucune source ne répond.', used_sources: [], rejected_sources: [], confidence: 0.2 },
+  });
+  assert.equal(result.publicReply, null, 'no reply to the requester');
+  assert.ok(result.internalNote, 'an internal note');
+  assert.ok(!result.internalNote.includes('ask a technician to follow up'), `the note announces a reply: ${result.internalNote}`);
+  assert.ok(result.internalNote.includes('no reply to the requester was prepared'), `note: ${result.internalNote}`);
+}
+
 function payloadOf(calls: Array<{ taskName: string; payload: unknown }>, taskName: string): string {
   const call = calls.find((candidate) => candidate.taskName === taskName);
   assert.ok(call, `${taskName} is called`);
@@ -18051,6 +18065,7 @@ async function run() {
   await testTriageWithInternalNotesUsedReadsEveryItem();
   await testThePublicReplyReadsThePublicThreadOnly();
   await testThePlannerWritesItsReasonsInTheNoteLanguage();
+  await testTheFallbackNoteSaysOnlyWhatIsPrepared();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();
