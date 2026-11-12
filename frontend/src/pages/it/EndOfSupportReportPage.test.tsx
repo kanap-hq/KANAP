@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../i18n';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -125,6 +125,11 @@ function Opened({ label }: { label: string }) {
   return <div>{label} {id}</div>;
 }
 
+function Address() {
+  const { search } = useLocation();
+  return <div data-testid="address">{search}</div>;
+}
+
 function renderPage(path = '/it/technologies/end-of-support') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -132,7 +137,7 @@ function renderPage(path = '/it/technologies/end-of-support') {
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
-            <Route path="/it/technologies/end-of-support" element={<EndOfSupportReportPage />} />
+            <Route path="/it/technologies/end-of-support" element={<><EndOfSupportReportPage /><Address /></>} />
             <Route path="/it/assets/:id" element={<Opened label="Asset page" />} />
             <Route path="/it/technologies/:id" element={<Opened label="Technology page" />} />
             <Route path="/it/applications/:id" element={<Opened label="Application page" />} />
@@ -174,6 +179,41 @@ describe('EndOfSupportReportPage', () => {
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Horizon' }));
     fireEvent.click(await screen.findByRole('option', { name: '24 months' }));
     await waitFor(() => expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support', { params: { horizon_months: 24 } }));
+    expect(screen.getByTestId('address').textContent).toBe('?horizon=24');
+  });
+
+  it('reads horizon_months from the address, and lets horizon win', async () => {
+    respond();
+    renderPage('/it/technologies/end-of-support?horizon_months=24');
+    await screen.findByText('SQL Server');
+    expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support', { params: { horizon_months: 24 } });
+    expect(screen.getByRole('combobox', { name: 'Horizon' }).textContent).toBe('24 months');
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Horizon' }));
+    fireEvent.click(await screen.findByRole('option', { name: '36 months' }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support', { params: { horizon_months: 36 } }));
+    expect(screen.getByTestId('address').textContent).toBe('?horizon=36');
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Horizon' }));
+    fireEvent.click(await screen.findByRole('option', { name: '12 months' }));
+    await waitFor(() => expect(screen.getByTestId('address').textContent).toBe(''));
+    expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support', { params: { horizon_months: 12 } });
+  });
+
+  it('falls back to 12 months for an unknown horizon_months', async () => {
+    respond();
+    renderPage('/it/technologies/end-of-support?horizon_months=18');
+    await screen.findByText('SQL Server');
+    expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support', { params: { horizon_months: 12 } });
+    expect(screen.getByRole('combobox', { name: 'Horizon' }).textContent).toBe('12 months');
+  });
+
+  it('keeps horizon when the address also carries horizon_months', async () => {
+    respond();
+    renderPage('/it/technologies/end-of-support?horizon=6&horizon_months=24');
+    await screen.findByText('SQL Server');
+    expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support', { params: { horizon_months: 6 } });
+    expect(screen.getByRole('combobox', { name: 'Horizon' }).textContent).toBe('6 months');
   });
 
   it('links each item to its record and opens a row on what it touches', async () => {

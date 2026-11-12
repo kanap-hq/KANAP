@@ -19,6 +19,20 @@ import { type SupportState, supportStateColor } from '../../utils/supportState';
 import ForbiddenPage from '../ForbiddenPage';
 
 export const HORIZONS = [6, 12, 24, 36] as const;
+
+/**
+ * The horizon in the address. `horizon` (what the page writes) wins when it is one of
+ * {@link HORIZONS}. Otherwise `horizon_months` (the API's name) is used the same way.
+ * Anything else is 12.
+ */
+export function horizonFromSearch(params: URLSearchParams): number {
+  const known = (key: string): number | null => {
+    const value = Number(params.get(key));
+    return (HORIZONS as readonly number[]).includes(value) ? value : null;
+  };
+  return known('horizon') ?? known('horizon_months') ?? 12;
+}
+
 export const DEADLINE_TYPES = ['technology', 'operating_system', 'application', 'hardware'] as const;
 type DeadlineType = (typeof DEADLINE_TYPES)[number];
 type View = 'deadlines' | 'gaps';
@@ -326,8 +340,7 @@ export default function EndOfSupportReportPage() {
   const allowed = hasLevel('infrastructure', 'reader');
   const [params, setParams] = useSearchParams();
   const view: View = params.get('view') === 'gaps' ? 'gaps' : 'deadlines';
-  const horizonParam = Number(params.get('horizon'));
-  const horizon = (HORIZONS as readonly number[]).includes(horizonParam) ? horizonParam : 12;
+  const horizon = horizonFromSearch(params);
   const typeParam = params.get('type') ?? '';
   const type = (DEADLINE_TYPES as readonly string[]).includes(typeParam) ? (typeParam as DeadlineType) : '';
 
@@ -335,6 +348,9 @@ export default function EndOfSupportReportPage() {
     setParams((prev) => {
       const next = new URLSearchParams(prev);
       if (value) next.set(key, value); else next.delete(key);
+      // Drop the API alias once the page writes its own parameter, so returning to 12 months
+      // (which omits `horizon`) does not reopen the horizon the address arrived with.
+      if (key === 'horizon') next.delete('horizon_months');
       return next;
     }, { replace: true });
   };
