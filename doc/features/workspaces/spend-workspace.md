@@ -57,7 +57,7 @@ Major Components (paths)
 - UX: multi-select dropdown (names only); saved tags are clickable and navigate to `/it/applications/:id/overview` in the same window.
 - Storage: `application_spend_items` linking `spend_items` to `applications` (tenant-scoped, cascade on delete of app or spend item).
 - API:
-  - `GET /spend-items/:id/applications` (reader) – returns `{ items: [{ id, name }] }`.
+  - The line's Relations tab (`GET /budget-lines/:id/relations`) reads its applications.
   - `POST /spend-items/:id/applications/bulk-replace` (manager) – `{ application_ids: string[] }`.
 - Validation: all application ids must exist and belong to the same tenant as the spend item; duplicates are deduped server-side.
 
@@ -89,8 +89,8 @@ API Contracts (used by workspace)
   - `PATCH /spend-items/:id` – update Overview fields
   - `POST /spend-items` – create new item
   - `GET /spend-items/summary/ids` – ordered id list for prev/next
-  - `GET /spend-items/:id/projects` / `POST /spend-items/:id/projects/bulk-replace` – link to Portfolio projects (via `portfolio_project_opex` junction table)
-  - `GET /spend-items/:id/applications` / `POST /spend-items/:id/applications/bulk-replace` – link to Applications workspace entries
+  - `POST /spend-items/:id/projects/bulk-replace` – link to Portfolio projects (via `portfolio_project_opex` junction table)
+  - `POST /spend-items/:id/applications/bulk-replace` – link to Applications workspace entries
   - `GET /spend-items/:id/contracts` / `POST /spend-items/:id/contracts/bulk-replace`
 - Versions
   - `GET /spend-items/:id/versions`, `POST /spend-items/:id/versions`, `PATCH /spend-items/:id/versions`

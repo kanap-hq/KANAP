@@ -478,26 +478,13 @@ async function testTaskScreens(h: Harness, runner: QueryRunner, s: Seed) {
 
 // 11. Portfolio routes.
 async function testPortfolioRoutes(h: Harness, runner: QueryRunner, s: Seed) {
-  const a = tenantRequest(runner, s, 'a');
-  await rejects(runner, () => h.projectsController.listLinkedApplications('PRJ-1', a), /cannot read applications/, 'A: project applications refused');
-  await rejects(runner, () => h.projectsController.listLinkedAssets('PRJ-1', a), /cannot read assets/, 'A: project assets refused');
-  const aReq = rawRequest(runner, s, 'a');
-  await rejects(runner, () => h.requestsController.listLinkedApplications('REQ-1', aReq), /cannot read applications/, 'A: request applications refused');
-  await rejects(runner, () => h.requestsController.listLinkedAssets('REQ-1', aReq), /cannot read assets/, 'A: request assets refused');
-
-  const e = tenantRequest(runner, s, 'e');
-  const eApps = await h.projectsController.listLinkedApplications('PRJ-1', e);
-  assert.deepEqual(eApps.items, [], 'E: the application is outside their participation');
-  const full = tenantRequest(runner, s, 'full');
-  assert.equal((await h.projectsController.listLinkedApplications('PRJ-1', full)).items.length, 1, 'full: the application');
-  assert.equal((await h.requestsController.listLinkedAssets('REQ-1', rawRequest(runner, s, 'full'))).items.length, 1, 'full: the asset');
-
+  // The linked applications and assets of a project or a request are read through its Relations tab.
   const pProject = await h.projectsController.get('PRJ-1', { include: 'source_requests,dependencies' }, tenantRequest(runner, s, 'p'));
   assert.equal(pProject.source_requests, null, 'P: no source request on the project page');
   const qRequest = await h.requestsController.get('REQ-1', { include: 'projects,dependencies' }, rawRequest(runner, s, 'q'));
   assert.equal(qRequest.resulting_projects, null, 'Q: no resulting project on the request page');
   assert.deepEqual(qRequest.dependencies, [], 'Q: no project dependency on the request page');
-  const aRequest = await h.requestsController.get('REQ-1', { include: 'projects,dependencies' }, aReq);
+  const aRequest = await h.requestsController.get('REQ-1', { include: 'projects,dependencies' }, rawRequest(runner, s, 'a'));
   assert.equal(aRequest.resulting_projects.length, 1, 'A: the resulting project');
 }
 

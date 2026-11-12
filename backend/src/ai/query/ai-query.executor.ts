@@ -82,7 +82,7 @@ import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes
 import { entityNotFound, isUuid, resolveAiEntityReference } from '../ai-entity-reference.util';
 import { AiPolicyService } from '../ai-policy.service';
 import { LinkedReads, loadLinkedReads } from '../../common/relations/linked-reads';
-import type { PortfolioLinkedReads } from '../../portfolio/portfolio-linked-reads';
+import { idsInScope, type PortfolioLinkedReads } from '../../portfolio/portfolio-linked-reads';
 import {
   AiTechnologyRow,
   AiTechnologyVersionRow,
@@ -3356,10 +3356,10 @@ export class AiQueryExecutor {
         id: lineId,
       }).catch(() => []);
     const linkedApplications = reads.applications
-      ? await this.budgetLines.listApplications(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] }))
+      ? await this.inParticipation(context, 'applications', await this.budgetLines.listApplications(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] })))
       : null;
     const linkedProjects = reads.projects
-      ? await this.budgetLines.listProjects(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] }))
+      ? await this.inParticipation(context, 'projects', await this.budgetLines.listProjects(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] })))
       : null;
     const linkedContracts = reads.contracts
       ? await (nature === 'opex'
@@ -3537,6 +3537,21 @@ export class AiQueryExecutor {
       requests: await resolveAiParticipationAccessScope(context, 'requests'),
       applications: await resolveAiParticipationAccessScope(context, 'applications'),
     };
+  }
+
+  /**
+   * The records of a linked list the caller reads: a Business Contributor's applications or projects
+   * are those of their participation, as on the Relations tab; everyone else's list is unchanged.
+   */
+  private async inParticipation<T extends { id: unknown }, L extends { items: T[] }>(
+    context: AiExecutionContextWithManager,
+    family: 'applications' | 'projects',
+    list: L,
+  ): Promise<L> {
+    const scope = await resolveAiParticipationAccessScope(context, family);
+    if (!scope || list.items.length === 0) return list;
+    const visible = await idsInScope(context.manager, family, list.items.map((item) => String(item.id)), scope);
+    return { ...list, items: list.items.filter((item) => visible.has(String(item.id))) };
   }
 
   /** The modules the caller reads, for the linked records of a task, a project or a request. */
@@ -3752,7 +3767,7 @@ export class AiQueryExecutor {
         ? await this.assets.listLinkedContracts(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
         : null;
       row.projects = reads.projects
-        ? await this.assets.listProjects(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
+        ? await this.inParticipation(context, 'projects', await this.assets.listProjects(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] })))
         : null;
       row.cluster_members = await this.assets.listClusterMembers(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.clusters = await this.assets.listClustersForAsset(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
