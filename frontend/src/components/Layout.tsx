@@ -473,7 +473,7 @@ export default function Layout() {
                 component="img"
                 src={logoUrl || undefined}
                 alt={organisationName}
-                sx={{ height: 36, maxWidth: 96, objectFit: 'contain' }}
+                sx={{ height: 36, maxWidth: 120, objectFit: 'contain' }}
               />
             </Box>
           ) : (
@@ -511,7 +511,9 @@ export default function Layout() {
                 minWidth: 0,
                 '& .MuiTabs-flexContainer > :first-of-type': { ml: 'auto' },
                 '& .MuiTabs-flexContainer > :last-of-type': { mr: 'auto' },
-                '& .MuiTabs-scrollButtons': { width: 28, flexShrink: 0, color: 'text.secondary' },
+                // An arrow with nothing more to scroll is hidden by MUI but keeps its width: fold it,
+                // so the first tab sits next to the logo until the row is scrolled.
+                '& .MuiTabs-scrollButtons': { width: 28, flexShrink: 0, color: 'text.secondary', '&.Mui-disabled': { width: 0 } },
                 '& .MuiTab-root': {
                   // Narrower tabs below xl: at 1280 px every section, Plaid included, fits without scrolling.
                   px: { xs: 1.25, xl: 2 },

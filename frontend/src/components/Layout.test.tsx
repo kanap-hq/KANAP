@@ -124,7 +124,7 @@ describe('Layout header', () => {
       const logo = screen.getByRole('img', { name: 'Acme Industries' });
       expect(getComputedStyle(logo.parentElement as HTMLElement).flexShrink).toBe('0');
       expect(getComputedStyle(logo).height).toBe('36px');
-      expect(getComputedStyle(logo).maxWidth).toBe('96px');
+      expect(getComputedStyle(logo).maxWidth).toBe('120px');
     } finally {
       tenant.logoUrl = null;
     }
