@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Paper, Typography } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -13,9 +13,11 @@ import { useOpenStep } from './useOpenStep';
 /** While the hint waits for the object of its step, the state is read again this often. */
 export const STEP_OBJECT_POLL_MS = 5000;
 
+/** The hint's distance from the left and bottom edges of the window, in pixels. */
+const CORNER = 16;
+
 /**
- * The hint of a step opened from the first steps: a bar at the foot of the main column, under the
- * page (`Layout`), so that it covers nothing at any width. One sentence says what to look at. On the
+ * The hint of a step opened from the first steps: one sentence says what to look at. On the
  * example, opening the step marks it done; with your own data, the object the step creates does,
  * or "Done" for a step that creates none. It stays on every screen until it is closed
  * (`activeStep.ts`); once the step is done, it opens the next step, or the home page at the end of
@@ -91,31 +93,32 @@ export default function StepHint() {
     : t(stepHintKey(step.key, state.angle));
 
   return (
-    // The last child of the main column, after the page scroller: the page stops above it and
-    // scrolls as usual. A drawer or a dialog comes in front of it.
-    <Box
-      component="section"
+    // In the bottom-left corner of the window, where it stays: it never moves. A modal dialog
+    // stands above it.
+    <Paper
+      role="dialog"
       aria-label={t(stepTitleKey(step.key, state.angle))}
       sx={(theme) => ({
-        flexShrink: 0,
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        columnGap: 2,
-        rowGap: 1,
-        px: 2,
-        py: 1,
-        // A raised surface with a ring on top: it reads apart from the page in both modes.
+        position: 'fixed',
+        left: CORNER,
+        bottom: CORNER,
+        zIndex: theme.zIndex.modal - 1,
+        boxSizing: 'border-box',
+        // Inside the window on a narrow screen.
+        maxWidth: `min(360px, calc(100vw - ${2 * CORNER}px))`,
+        p: 1.5,
+        borderRadius: '8px',
+        // The ring sets the hint off a card of the same tint in dark mode.
+        border: `1px solid ${theme.palette.primary.main}`,
+        // A raised surface: in dark mode the page background would swallow it.
         bgcolor: theme.palette.kanap.bg.composer,
-        borderTop: `1px solid ${theme.palette.primary.main}`,
-        displayPrint: 'none',
+        boxShadow: theme.shadows[3],
       })}
     >
-      {/* On a narrow window the buttons go under the sentence, on the right. */}
-      <Typography variant="body2" sx={{ flex: '1 1 320px', minWidth: 0 }}>{hint}</Typography>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+      <Typography variant="body2">{hint}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mt: 1.25 }}>
         {step.done_at && !discover ? (
-          <CheckCircleIcon aria-hidden sx={{ fontSize: 18, color: 'success.main' }} />
+          <CheckCircleIcon aria-hidden sx={{ fontSize: 18, color: 'success.main', mr: 'auto' }} />
         ) : null}
         {step.done_at ? (
           <>
@@ -143,6 +146,6 @@ export default function StepHint() {
           </>
         )}
       </Box>
-    </Box>
+    </Paper>
   );
 }

@@ -258,40 +258,52 @@ describe('StepHint', () => {
   it('says what to look at and marks the step done on the example', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt('/ops/budget?step=budget_overview', page);
-    const hint = await screen.findByRole('region', { name: 'The overview' });
+    const hint = await screen.findByRole('dialog', { name: 'The overview' });
     expect(hint).toHaveTextContent('Here are the budget lines, sorted by budget for the current year.');
     await waitFor(() => expect(done('budget_overview')).toBeTruthy());
     fireEvent.click(within(hint).getByRole('button', { name: 'Got it' }));
-    await waitFor(() => expect(screen.queryByRole('region')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByTestId('where')).toHaveTextContent(/^\/ops\/budget$/);
   });
 
-  it('stands at the foot of the main column, in its flow after the page scroller, and outlines nothing', async () => {
+  it('stands in the bottom-left corner of the window and outlines nothing', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
-    renderAt('/ops/budget?step=budget_overview', (
-      <main className="kanap-app-main">
-        <div className="kanap-app-scroll"><h5 className="MuiTypography-h5">Budget lines</h5></div>
-        <StepHint />
-      </main>
-    ));
-    const bar = await screen.findByRole('region', { name: 'The overview' });
-    const style = getComputedStyle(bar);
-    expect(style.position).not.toBe('fixed');
-    expect(style.position).not.toBe('absolute');
-    expect(style.flexShrink).toBe('0');
-    expect(bar.previousElementSibling).toHaveClass('kanap-app-scroll');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    renderAt('/ops/budget?step=budget_overview', page);
+    const hint = await screen.findByRole('dialog', { name: 'The overview' });
+    expect(hint).toHaveStyle({ position: 'fixed', left: '16px', bottom: '16px' });
+    expect(hint.style.right).toBe('');
+    expect(getComputedStyle(hint).right).not.toBe('16px');
+    expect(hint.closest('[data-popper-placement]')).toBeNull();
     expect(screen.queryByTestId('step-hint-outline')).not.toBeInTheDocument();
   });
 
-  it('wears the raised background and the top ring of the theme, in dark mode too', async () => {
+  it('never moves, even with a button or a field under it', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    const under = { left: 20, top: 700, width: 200, height: 36, x: 20, y: 700, right: 220, bottom: 736 };
+    const rect = () => ({ ...under, toJSON: () => under }) as DOMRect;
+    renderAt('/ops/budget?step=budget_overview', (
+      <main>
+        <button type="button" data-testid="save">Save</button>
+        <textarea aria-label="Comment" data-testid="comment" />
+        <StepHint />
+      </main>
+    ));
+    screen.getByTestId('save').getBoundingClientRect = rect;
+    screen.getByTestId('comment').getBoundingClientRect = rect;
+    const hint = await screen.findByRole('dialog', { name: 'The overview' });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(hint).toHaveStyle({ left: '16px', bottom: '16px' });
+  });
+
+  it('draws the hint with the border, background and shadow of the theme, in dark mode too', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     const dark = createAppTheme('dark');
     renderAt('/ops/budget?step=budget_overview', page, undefined, dark);
-    const bar = await screen.findByRole('region', { name: 'The overview' });
-    expect(bar).toHaveStyle({
-      borderTop: `1px solid ${dark.palette.primary.main}`,
+    const hint = await screen.findByRole('dialog', { name: 'The overview' });
+    expect(hint).toHaveStyle({
+      border: `1px solid ${dark.palette.primary.main}`,
       backgroundColor: dark.palette.kanap.bg.composer,
+      boxShadow: dark.shadows[3],
     });
   });
 
@@ -304,7 +316,7 @@ describe('StepHint', () => {
         <StepHint />
       </main>
     ));
-    const hint = await screen.findByRole('region', { name: 'A budget line' });
+    const hint = await screen.findByRole('dialog', { name: 'A budget line' });
     expect(hint).toHaveTextContent('You are in the record of BL-7 Microsoft Enterprise. Explore the tabs.');
   });
 
@@ -317,7 +329,7 @@ describe('StepHint', () => {
         <StepHint />
       </main>
     ));
-    const hint = await screen.findByRole('region', { name: 'Your data' });
+    const hint = await screen.findByRole('dialog', { name: 'Your data' });
     expect(hint).toHaveTextContent('Try the export to get the data as csv or xlsx.');
   });
 
@@ -330,20 +342,20 @@ describe('StepHint', () => {
         <StepHint />
       </main>
     ));
-    const hint = await screen.findByRole('region', { name: 'An application record' });
+    const hint = await screen.findByRole('dialog', { name: 'An application record' });
     expect(hint).toHaveTextContent('Here is an application record. Explore the properties panel and the tabs');
   });
 
   it('waits for "Done" with your own data on a step that creates nothing, then opens the next step', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
     renderAt('/master-data/companies?step=own_company', page);
-    const hint = await screen.findByRole('region', { name: 'Your company' });
+    const hint = await screen.findByRole('dialog', { name: 'Your company' });
     expect(done('own_company')).toBeFalsy();
     fireEvent.click(within(hint).getByRole('button', { name: 'Done' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Next step' }));
     expect(done('own_company')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/budget?step=own_budget_lines'));
-    expect(await screen.findByRole('region', { name: 'Your budget lines' })).toHaveTextContent('click Import first to download the example file');
+    expect(await screen.findByRole('dialog', { name: 'Your budget lines' })).toHaveTextContent('click Import first to download the example file');
   });
 
   it('stays with its step on every screen until it is closed', async () => {
@@ -356,20 +368,20 @@ describe('StepHint', () => {
         <Go to="/ops/contracts" />
       </>
     ));
-    await screen.findByRole('region', { name: 'Your company' });
+    await screen.findByRole('dialog', { name: 'Your company' });
     fireEvent.click(screen.getByRole('button', { name: 'go /master-data/companies/C-1/overview' }));
-    expect(await screen.findByRole('region', { name: 'Your company' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Your company' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'go /ops/contracts' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/ops\/contracts$/));
-    expect(screen.getByRole('region', { name: 'Your company' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Your company' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'go /master-data/companies' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/master-data\/companies$/));
-    const hint = screen.getByRole('region', { name: 'Your company' });
+    const hint = screen.getByRole('dialog', { name: 'Your company' });
     fireEvent.click(within(hint).getByRole('button', { name: 'Later' }));
-    await waitFor(() => expect(screen.queryByRole('region')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'go /master-data/companies/C-1/overview' }));
     await new Promise((resolve) => setTimeout(resolve, 400));
-    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('stays on the screens its step leads to: a technology and the vulnerabilities from the end of support', async () => {
@@ -381,14 +393,14 @@ describe('StepHint', () => {
         <Go to="/it/vulnerabilities" />
       </>
     ));
-    await screen.findByRole('region', { name: 'Technologies, end of support and vulnerabilities' });
+    await screen.findByRole('dialog', { name: 'Technologies, end of support and vulnerabilities' });
     fireEvent.click(screen.getByRole('button', { name: 'go /it/technologies/tech-1' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/it\/technologies\/tech-1$/));
-    expect(screen.getByRole('region', { name: 'Technologies, end of support and vulnerabilities' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Technologies, end of support and vulnerabilities' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'go /it/vulnerabilities' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/it\/vulnerabilities$/));
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(screen.getByRole('region', { name: 'Technologies, end of support and vulnerabilities' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Technologies, end of support and vulnerabilities' })).toBeInTheDocument();
   });
 
   it('stays on the project a request of its step was converted into', async () => {
@@ -400,12 +412,12 @@ describe('StepHint', () => {
         <Go to="/portfolio/projects/PRJ-1/summary" />
       </>
     ));
-    await screen.findByRole('region', { name: 'Your first request' });
+    await screen.findByRole('dialog', { name: 'Your first request' });
     fireEvent.click(screen.getByRole('button', { name: 'go /portfolio/requests/REQ-1/summary' }));
     fireEvent.click(screen.getByRole('button', { name: 'go /portfolio/projects/PRJ-1/summary' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/portfolio\/projects\/PRJ-1\/summary$/));
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(screen.getByRole('region', { name: 'Your first request' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Your first request' })).toBeInTheDocument();
   });
 
   it('says « étape » in French, the title of the first steps aside', async () => {
@@ -414,7 +426,7 @@ describe('StepHint', () => {
     await i18n.changeLanguage('fr');
     try {
       renderAt('/master-data/companies?step=own_company', <>{page}<FirstStepsTile /></>);
-      const hint = await screen.findByRole('region', { name: 'Votre société' });
+      const hint = await screen.findByRole('dialog', { name: 'Votre société' });
       expect(within(hint).getByRole('button', { name: 'Étape suivante' })).toBeInTheDocument();
       expect(await screen.findByText('Vos cinq premiers pas')).toBeInTheDocument();
       const firstSteps = i18n.getResource('fr', 'common', 'onboarding.firstSteps') as Record<string, unknown>;
@@ -431,7 +443,7 @@ describe('StepHint', () => {
     try {
       env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
       renderAt('/ops/contracts?step=own_contract', page);
-      await screen.findByRole('region', { name: 'A linked contract' });
+      await screen.findByRole('dialog', { name: 'A linked contract' });
       expect(screen.queryByRole('button', { name: 'Next step' })).not.toBeInTheDocument();
       env.server.db.objects.add('own_contract');
       await act(async () => { vi.advanceTimersByTime(STEP_OBJECT_POLL_MS + 100); });
@@ -450,24 +462,24 @@ describe('StepHint', () => {
     renderAt('/ops/budget?step=budget_import', page);
     fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/'));
-    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('leaves a step that creates an object to that object, and gives the hint of the angle', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
     renderAt('/admin/users?step=own_invite', page);
-    const hint = await screen.findByRole('region', { name: 'A colleague' });
+    const hint = await screen.findByRole('dialog', { name: 'A colleague' });
     expect(hint).toHaveTextContent('Use the Authentication menu to set up SSO');
     expect(within(hint).queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     fireEvent.click(within(hint).getByRole('button', { name: 'Got it' }));
-    await waitFor(() => expect(screen.queryByRole('region')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(done('own_invite')).toBeFalsy();
   });
 
   it('describes project availability on your own contributor profile, without a team', async () => {
     env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'own_data' });
     renderAt('/portfolio/contributors/me?step=own_invite', page);
-    const hint = await screen.findByRole('region', { name: 'Your contributor profile' });
+    const hint = await screen.findByRole('dialog', { name: 'Your contributor profile' });
     expect(hint).toHaveTextContent('Here is your contributor profile. Set your project availability.');
     expect(hint.textContent).not.toMatch(/team/i);
 
@@ -488,7 +500,7 @@ describe('StepHint', () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt('/it/applications?step=map_application', page);
     await waitFor(() => expect(env.server.calls.length).toBe(1));
-    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(env.server.calls.filter((call) => call.method === 'post')).toEqual([]);
   });
 
