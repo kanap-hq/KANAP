@@ -144,7 +144,7 @@ Una dimensión nueva se coloca la última en el orden de las dimensiones. Despu�
 
 - **Encabezado**: el nombre de la dimensión. Haga clic en él para cambiar el nombre de la dimensión. **Ant.** / **Sig.** recorren las dimensiones en orden, y el botón de cierre vuelve a la página en esta dimensión
 - **Zona principal**: una línea de uso, y después la **Descripción**. La línea de uso da el número de valores y de líneas de presupuesto que tienen uno de ellos, OPEX y CAPEX juntas, por ejemplo «12 valores · Usada por 29 líneas». **Usada por 29 líneas** es un enlace: abre esas líneas en la lista de líneas presupuestarias, en una pestaña nueva, incluidas las líneas activadas y desactivadas. Una dimensión que ninguna línea usa indica «Aún sin usar», y una sin valores «Todavía no hay valores.» Mientras la dimensión esté desactivada, el recuento se muestra sin enlace
-- **Panel Propiedades** a la derecha: **Nombre**, **Código**, **Usada para**, **Obligatoria**, **Valores abiertos** y **Ciclo de vida**
+- **Panel de propiedades** a la derecha: **Nombre**, **Código**, **Usada para**, **Obligatoria**, **Valores abiertos** y **Ciclo de vida**
 
 **Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. Los campos de texto se guardan al salir de ellos (en **Nombre** y **Código**, pulse Intro para guardar de inmediato); el interruptor **Obligatoria** y el ciclo de vida se guardan en cuanto los cambia. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó, por ejemplo un código duplicado bajo **Código**. Un nombre rechazado en el encabezado se muestra en la parte superior de la página.
 
@@ -165,7 +165,7 @@ Una dimensión nueva se coloca la última en el orden de las dimensiones. Despu�
 Las dimensiones tienen un orden, que usted define. Kadratis las muestra en este orden:
 
 - en la barra de selección de esta página
-- en el panel **Propiedades** de las líneas OPEX y CAPEX
+- en el panel de propiedades de las líneas OPEX y CAPEX
 - en las columnas de la lista de líneas presupuestarias
 - en las columnas del archivo de presupuesto
 - en los filtros de los informes y en el selector de dimensión del informe
@@ -191,7 +191,7 @@ El campo **Usada para** indica a qué líneas de presupuesto se aplica la dimens
 | **Solo OPEX** | Solo las líneas OPEX pueden tener un valor |
 | **Solo CAPEX** | Solo las líneas CAPEX pueden tener un valor |
 
-Las pantallas OPEX muestran las dimensiones usadas para las líneas OPEX, y las pantallas CAPEX las usadas para las líneas CAPEX. Esto incluye el panel **Propiedades** de la línea, las columnas, los filtros y la búsqueda rápida de las listas, los selectores y los filtros de dimensión de los informes (siguen la elección **OPEX** / **CAPEX** del informe) y Kad. El archivo de presupuesto tiene una columna para cada dimensión activada, y cada fila solo toma valores en las dimensiones de su tipo de línea.
+Las pantallas OPEX muestran las dimensiones usadas para las líneas OPEX, y las pantallas CAPEX las usadas para las líneas CAPEX. Esto incluye el panel de propiedades de la línea, las columnas, los filtros y la búsqueda rápida de las listas, los selectores y los filtros de dimensión de los informes (siguen la elección **OPEX** / **CAPEX** del informe) y Kad. El archivo de presupuesto tiene una columna para cada dimensión activada, y cada fila solo toma valores en las dimensiones de su tipo de línea.
 
 Una línea conserva el valor que ya tiene en una dimensión que deja de aplicarse a su tipo de línea. El valor queda oculto en todas partes y vuelve a mostrarse si abre de nuevo la dimensión a ese tipo de línea. Cuando su elección oculta valores, aparece una nota bajo el campo, por ejemplo "8 líneas CAPEX tienen un valor para esta dimensión. Lo conservan, oculto mientras la dimensión sea solo para líneas OPEX."
 
@@ -251,7 +251,7 @@ Mientras el valor se está creando, el encabezado muestra **Crear** y **Cancelar
 
 - **Encabezado**: el nombre del valor. Haga clic en él para cambiar el nombre del valor. **Ant.** / **Sig.** recorren los valores de la misma dimensión, en el orden y con los filtros actuales de la lista. El botón de cierre vuelve a la lista
 - **Zona principal**: una línea de uso, y después la **Descripción**. La línea de uso cuenta las líneas de presupuesto que tienen el valor, OPEX y CAPEX juntas, por ejemplo «Usado por 4 líneas». Es un enlace que abre esas líneas en la lista de líneas presupuestarias, en una pestaña nueva. Un valor que ninguna línea usa indica «Aún sin usar». Mientras la dimensión esté desactivada, el recuento se muestra sin enlace
-- **Panel Propiedades** a la derecha: **Dimensión** (solo lectura), **Usada para** y **Ciclo de vida**
+- **Panel de propiedades** a la derecha: **Dimensión** (solo lectura), **Usada para** y **Ciclo de vida**
 
 El botón **Historial** de la cabecera abre el historial del valor en un panel lateral. Vea [Historial de los registros](record-history.md).
 
@@ -332,7 +332,7 @@ La dimensión por defecto no se puede desactivar.
 
 ## Valores en las líneas de presupuesto
 
-En el panel **Propiedades** de una línea OPEX o CAPEX, y al crear una, cada dimensión activada que se usa para ese tipo de línea tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. La dimensión por defecto se muestra como **Dimensión analítica** hasta que le dé un nombre.
+En el panel de propiedades de una línea OPEX o CAPEX, y al crear una, cada dimensión activada que se usa para ese tipo de línea tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. La dimensión por defecto se muestra como **Dimensión analítica** hasta que le dé un nombre.
 
 - Elija un valor, o vacíe el campo para dejar la línea sin valor en esa dimensión. El cambio se guarda de inmediato.
 - El campo de una dimensión obligatoria está marcado con un asterisco. En una línea que se está creando, **Crear** la indica como faltante hasta que tenga un valor. En una línea que tiene un valor, el campo no tiene botón para vaciarlo: solo puede elegir otro valor. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).

@@ -1631,7 +1631,9 @@
     "actions": {
       "changePlan": "Plan ändern",
       "choosePlan": "Plan wählen",
-      "managePayment": "Zahlung verwalten"
+      "managePayment": "Zahlung verwalten",
+      "payInvoice": "Rechnung bezahlen",
+      "updateCardAndPay": "Karte aktualisieren und bezahlen"
     },
     "fields": {
       "addressLine1": "Adresszeile 1",
@@ -1678,6 +1680,7 @@
     "messages": {
       "keepFailed": "Der geplante Wechsel konnte nicht storniert werden.",
       "loadFailed": "Abrechnungsdetails konnten nicht geladen werden.",
+      "payFailed": "Die Rechnung konnte nicht bezahlt werden.",
       "portalFailed": "Das Abrechnungsportal konnte nicht geöffnet werden.",
       "portalUnavailable": "Das Abrechnungsportal ist nicht verfügbar.",
       "saveFailed": "Abrechnungsdetails konnten nicht gespeichert werden."
@@ -1730,7 +1733,32 @@
         "trialEnded": "Testphase beendet am {{date}}"
       }
     },
-    "title": "Abrechnung"
+    "title": "Abrechnung",
+    "unpaid": {
+      "limited": "Der Zugang ist eingeschränkt.",
+      "limitedOn": "Der Zugang wird am {{date}} eingeschränkt.",
+      "limitedSince": "Zugang eingeschränkt seit dem {{date}}.",
+      "overdue": "Eine Rechnung ist überfällig.",
+      "reasons": {
+        "authentication_required": "die Bank verlangt eine Authentifizierung",
+        "expired_card": "Karte abgelaufen",
+        "incorrect_cvc": "falscher Sicherheitscode",
+        "insufficient_funds": "unzureichende Deckung",
+        "other": "Karte abgelehnt",
+        "processing_error": "Verarbeitungsfehler bei der Bank"
+      },
+      "refused": "Zahlung am {{date}} abgelehnt.",
+      "refusedReason": "Zahlung am {{date}} abgelehnt: {{reason}}.",
+      "transferOverdue": "Rechnung {{number}} über {{amount}} war am {{date}} fällig."
+    },
+    "payment": {
+      "cardUnchanged": "Die Karte wurde nicht geändert. Aktualisieren Sie sie und bezahlen Sie dann.",
+      "failed": "Zahlung abgelehnt: {{reason}}.",
+      "openInvoice": "Rechnung öffnen",
+      "paid": "Rechnung bezahlt.",
+      "processing": "Die Zahlung wird bearbeitet.",
+      "requiresAction": "Ihre Bank verlangt eine Bestätigung der Zahlung."
+    }
   },
   "branding": {
     "actions": {
@@ -1984,6 +2012,8 @@
     "errors": {
       "noActiveSubscription": "Kein aktives Abonnement gefunden.",
       "planNotBankTransferEligible": "Dieser Plan ist nicht für Banküberweisung geeignet.",
+      "subscriptionEnding": "Ihr Abonnement endet am {{date}}: Nehmen Sie die Kündigung zurück, bevor Sie den Plan ändern.",
+      "subscriptionEndingNoDate": "Ihr Abonnement endet bald: Nehmen Sie die Kündigung zurück, bevor Sie den Plan ändern.",
       "subscriptionPaymentPending": "Begleichen Sie zuerst die offene Rechnung und ändern Sie dann Ihren Plan.",
       "termsNotAccepted": "Die Annahme der Allgemeinen Geschäftsbedingungen konnte nicht bestätigt werden. Laden Sie die Seite neu und akzeptieren Sie sie erneut.",
       "vatNumberInvalid": "Die USt-IdNr. wurde nicht akzeptiert. Prüfen Sie sie in den Rechnungsinformationen."

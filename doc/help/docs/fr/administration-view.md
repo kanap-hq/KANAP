@@ -11,7 +11,7 @@ La page lit ce que vous saisissez ailleurs :
 1. Définissez vos zones d'administration et complétez vos domaines dans **Cartographie SI > Paramètres**. Mettez les zones dans l'ordre : la première est la plus sensible. Voir [Zones d'administration](it-ops-settings.md#zones-dadministration) et [Domaines](it-ops-settings.md#domaines).
 2. Placez chaque actif dans sa zone, ici en masse (voir [Affecter une zone](#affecter-une-zone)) ou avec le champ **Zone d'administration** du tiroir des propriétés de l'actif. Voir [Actifs](assets.md#tiroir-des-proprietes-panneau-de-droite).
 3. Liez les technologies d'annuaire, comme Active Directory, aux serveurs qui les portent. Voir [Lier une technologie à un serveur](technologies.md#lier-une-technologie-a-un-serveur).
-4. Un service d'annuaire qui ne tourne sur aucun de vos serveurs, comme Entra ID, prend sa zone dans le champ **Zone d'administration** de son tiroir des propriétés. Voir [Technologies](technologies.md#panneau-de-proprietes).
+4. Un service d'annuaire qui ne tourne sur aucun de vos serveurs, comme Entra ID, prend sa zone dans le champ **Zone d'administration** de son tiroir des propriétés. Voir [Technologies](technologies.md#panneau-proprietes).
 
 ## Pourquoi les zones comptent
 

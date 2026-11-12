@@ -335,7 +335,103 @@ async function testRefreshGivesADraftNoNumber() {
   assert.equal(summary.latest_invoice_number, null);
 }
 
+/**
+ * The refresh reads the reason of a refused payment on the latest invoice's PaymentIntent (never
+ * on the invoice), keeps it while the invoice stays open, and clears it once the invoice is paid.
+ */
+async function testRefreshReadsTheRefusalOnThePaymentIntent() {
+  const declined = { code: 'card_declined', decline_code: 'insufficient_funds', message: 'Your card has insufficient funds.' };
+  const openInvoice = {
+    id: 'in_1',
+    status: 'open',
+    number: 'KAN-0047',
+    total: 24900,
+    currency: 'eur',
+    payments: { data: [{ created: 1, payment: { type: 'payment_intent', payment_intent: { id: 'pi_1', last_payment_error: declined } } }] },
+  };
+  const refused = createService(
+    storedSubscription(),
+    3,
+    stripeSubscription({ status: 'past_due', latest_invoice: openInvoice }, { current_period_start: PERIOD_START, current_period_end: PERIOD_END }),
+  );
+  const summary = await refused.service.getSubscriptionSummary({ manager: refused.manager as any, forceStripeRefresh: true });
+  assert.equal(summary.last_payment_error_code, 'insufficient_funds');
+  assert.equal(summary.last_payment_error_message, declined.message);
+
+  // Open, its PaymentIntent without a refusal (a transfer awaited): the stored reason stays.
+  const kept = createService(
+    storedSubscription({ last_payment_error_code: 'expired_card', last_payment_error_message: 'Your card has expired.' }),
+    3,
+    stripeSubscription({ status: 'past_due', latest_invoice: { ...openInvoice, payments: { data: [] } } }, { current_period_start: PERIOD_START, current_period_end: PERIOD_END }),
+  );
+  const keptSummary = await kept.service.getSubscriptionSummary({ manager: kept.manager as any, forceStripeRefresh: true });
+  assert.equal(keptSummary.last_payment_error_code, 'expired_card');
+
+  const paid = createService(
+    storedSubscription({ last_payment_error_code: 'insufficient_funds', last_payment_error_message: declined.message }),
+    3,
+    stripeSubscription({ latest_invoice: { ...openInvoice, status: 'paid' } }, { current_period_start: PERIOD_START, current_period_end: PERIOD_END }),
+  );
+  const paidSummary = await paid.service.getSubscriptionSummary({ manager: paid.manager as any, forceStripeRefresh: true });
+  assert.equal(paidSummary.last_payment_error_code, null);
+  assert.equal(paidSummary.last_payment_error_message, null);
+}
+
+/** The summary's freeze date is the one the access check applies (computeFreezeEffectiveAt), not a second rule. */
+async function testFreezeDateFollowsTheUnpaidInvoice() {
+  const invoicedAt = new Date(Date.now() - 2 * 86400000);
+  const pastDue = createService(
+    storedSubscription({
+      status: SubscriptionStatus.PAST_DUE,
+      collection_method: 'charge_automatically' as any,
+      latest_invoice_created: invoicedAt,
+      current_period_start: invoicedAt,
+      current_period_end: new Date(invoicedAt.getTime() + 30 * 86400000),
+      stripe_subscription_id: null,
+    }),
+    3,
+  );
+  const summary = await pastDue.service.getSubscriptionSummary({ manager: pastDue.manager as any });
+  assert.equal(summary.freeze_effective_at, new Date(invoicedAt.getTime() + 14 * 86400000).toISOString());
+
+  const active = createService(storedSubscription({ status: SubscriptionStatus.ACTIVE, latest_invoice_created: invoicedAt, stripe_subscription_id: null }), 3);
+  assert.equal((await active.service.getSubscriptionSummary({ manager: active.manager as any })).freeze_effective_at, null);
+}
+
+/**
+ * `access_allowed` is the access rule the API applies (evaluateSubscriptionAccess): a past due
+ * subscription stays usable during its grace, and is frozen after it. On-premise (billing not
+ * configured), always usable.
+ */
+async function testAccessFollowsTheAccessRule() {
+  const unpaidSince = (days: number, configured = true) => {
+    const invoicedAt = new Date(Date.now() - days * 86400000);
+    const built = createService(
+      storedSubscription({ status: SubscriptionStatus.PAST_DUE, latest_invoice_created: invoicedAt, stripe_subscription_id: null }),
+      3,
+    );
+    if (!configured) (built.service as any).stripeConfig = { isConfigured: () => false, getPriceId: () => null };
+    return built;
+  };
+  const inGrace = unpaidSince(2);
+  const graceSummary = await inGrace.service.getSubscriptionSummary({ manager: inGrace.manager as any });
+  assert.equal(graceSummary.access_allowed, true, 'usable during the grace');
+  assert.equal(graceSummary.is_subscription_healthy, false);
+
+  const frozen = unpaidSince(20);
+  assert.equal((await frozen.service.getSubscriptionSummary({ manager: frozen.manager as any })).access_allowed, false, 'frozen after it');
+
+  const onPremise = unpaidSince(20, false);
+  assert.equal((await onPremise.service.getSubscriptionSummary({ manager: onPremise.manager as any })).access_allowed, true, 'no billing, no freeze');
+
+  const active = createService(storedSubscription({ status: SubscriptionStatus.ACTIVE, stripe_subscription_id: null }), 3);
+  assert.equal((await active.service.getSubscriptionSummary({ manager: active.manager as any })).access_allowed, true);
+}
+
 async function run() {
+  await testAccessFollowsTheAccessRule();
+  await testFreezeDateFollowsTheUnpaidInvoice();
+  await testRefreshReadsTheRefusalOnThePaymentIntent();
   await testEstimateIsOneSubscription();
   await testTrialHasNoEstimate();
   await testTrialDeletionDate();

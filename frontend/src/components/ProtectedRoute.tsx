@@ -377,10 +377,11 @@ export default function ProtectedRoute() {
         : refuse(requirement);
     }
 
-    // Redirect billing admins to billing page when subscription is unhealthy (only when billing is enabled)
+    // Billing admins go to the billing page once the workspace is frozen or its trial has ended
+    // (only when billing is enabled). During the grace of an unpaid invoice it stays usable.
     if (
       config.features.billing &&
-      subscription?.is_subscription_healthy === false &&
+      subscription?.access_allowed === false &&
       claims.isBillingAdmin &&
       !path.startsWith('/admin/billing') &&
       // An Administrator may still erase the content of a frozen workspace (sample data reset).

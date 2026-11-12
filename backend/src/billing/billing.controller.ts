@@ -268,6 +268,24 @@ export class BillingController {
     return { url: session.url };
   }
 
+  /**
+   * On the return from the customer portal: charges the open invoice of a card subscription on
+   * its card now, once; returns the subscription summary plus `payment: { status }`.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('billing', 'admin')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
+  @Post('pay-invoice')
+  async payInvoice(@Req() req: any) {
+    if (!Features.STRIPE_BILLING) throwFeatureDisabled('billing');
+    const tenantId = req?.tenant?.id as string | undefined;
+    if (!tenantId) {
+      throw new BadRequestException('Tenant context not resolved');
+    }
+    const mg = req?.queryRunner?.manager as import('typeorm').EntityManager | undefined;
+    return this.billing.payOpenInvoice({ tenantId, userId: req.user?.sub ?? null, manager: mg });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('billing', 'admin')
   @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)

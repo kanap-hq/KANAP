@@ -15,17 +15,20 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { SUPPORTED_LANGUAGES } from '../../i18n';
+import { selectKeepsFocus } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 export default function ProfileTab() {
   const { t } = useTranslation(['common', 'settings']);
   const { hasLevel, isAuthenticating, profile, refreshMe } = useAuth();
+  const theme = useTheme();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -174,6 +177,12 @@ export default function ProfileTab() {
                 displayEmpty
                 label={t('settings:profile.fields.language')}
                 onChange={handleLocaleChange}
+                // Close at once (a fading menu covers "Save changes" and takes a quick click), and give the focus
+                // back to the list so Tab goes on to the button.
+                MenuProps={{
+                  ...selectKeepsFocus.MenuProps,
+                  transitionDuration: { enter: theme.transitions.duration.enteringScreen, exit: 0 },
+                }}
                 renderValue={(value) => {
                   if (!value) {
                     return t('settings:profile.locale.autoDetect')

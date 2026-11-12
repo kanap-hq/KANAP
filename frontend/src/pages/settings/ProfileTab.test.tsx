@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import ProfileTab from './ProfileTab';
@@ -24,6 +24,9 @@ vi.mock('../../i18n', () => ({
     { code: 'es', nativeLabel: 'Español' },
   ],
 }));
+
+const api = vi.hoisted(() => ({ patch: vi.fn() }));
+vi.mock('../../api', () => ({ default: api }));
 
 const auth = vi.hoisted(() => ({
   profile: {
@@ -70,5 +73,32 @@ describe('ProfileTab', () => {
     expect(mobile).toHaveAttribute('placeholder', 'e.g., +33 6 12 34 56 78');
     expect(screen.queryByPlaceholderText('+1 (555) 123-4567')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText('+1 (555) 987-6543')).not.toBeInTheDocument();
+  });
+
+  it('saves a language chosen just before the click: the menu is gone at once', async () => {
+    api.patch.mockResolvedValue({ data: {} });
+    // jsdom has no layout: give the menu a height, so a fading menu would take real time to leave.
+    const height = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(300);
+    try {
+      renderTab();
+
+      const language = screen.getByRole('combobox', { name: 'Language' });
+      language.focus();
+      fireEvent.mouseDown(language);
+      fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'Français' }));
+
+      // A menu still on screen covers "Save changes" and holds the focus: it must leave before the next click.
+      await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+      expect(screen.queryByRole('listbox', { hidden: true })).not.toBeInTheDocument();
+      // The focus comes back to the list, so Tab goes on to "Save changes".
+      expect(language).toHaveFocus();
+
+      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.saveChanges' }));
+
+      await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+      expect(api.patch).toHaveBeenCalledWith('/users/me', expect.objectContaining({ locale: 'fr' }));
+    } finally {
+      height.mockRestore();
+    }
   });
 });

@@ -279,6 +279,21 @@ describe('PlanSelectionDialog', () => {
     expect(screen.queryByText('SUBSCRIPTION_PAYMENT_PENDING')).not.toBeInTheDocument();
   });
 
+  it('says to undo the cancellation when the subscription is ending', async () => {
+    (api.post as any).mockRejectedValue({ response: { data: { message: 'SUBSCRIPTION_ENDING', ends_at: '2099-10-04T00:00:00.000Z' } } });
+    authState.subscription = { status: 'active', stripe_subscription_id: 'sub_1', is_subscription_healthy: true };
+    renderDialog({ invoiceMissingFields: [] });
+    await switchToAnnual();
+    acceptTerms();
+    const refusal = 'Your subscription ends on 4 Oct 2099: undo the cancellation before changing plan.';
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change plan (card)' }));
+    expect(await screen.findByText(refusal)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Change plan (bank transfer)' }));
+    expect(await screen.findByText(refusal)).toBeInTheDocument();
+    expect(screen.queryByText('SUBSCRIPTION_ENDING')).not.toBeInTheDocument();
+  });
+
   it('shows the trial end and the days left under the title', async () => {
     const year = new Date().getFullYear();
     authState.subscription = { ...TRIAL, trial_end: `${year}-10-20`, trial_days_remaining: 14 };

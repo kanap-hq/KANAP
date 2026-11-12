@@ -86,8 +86,11 @@ describe('CsvImportDialogV2', () => {
       },
     });
     renderDialog();
+    expect(screen.getByText('csv.importWorkflow')).toBeInTheDocument();
     expect(screen.getByText('csv.workflowPresets.merge.label')).toBeInTheDocument();
     expect(screen.getByText('csv.workflowPresets.fullReplace.description')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.advancedOptions' }));
+    expect(screen.getByText('csv.overridePresetNote')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'buttons.validate' }));
     expect(await screen.findByText('csv.validationFailed')).toBeInTheDocument();

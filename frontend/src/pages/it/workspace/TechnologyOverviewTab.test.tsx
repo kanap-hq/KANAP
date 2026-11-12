@@ -641,6 +641,9 @@ describe('TechnologyOverviewTab', () => {
         expect(getComputedStyle(warning).color).toBe(probe.style.color);
         expect(screen.getByRole('heading', { name: 'CPE product identifiers' })).toBeInTheDocument();
         expect(screen.getByRole('heading', { name: 'CVE.org names' })).toBeInTheDocument();
+        // The same fact is said once, in this group. Versions carries no second sentence and no link.
+        expect(screen.queryByText(UNMATCHED)).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Add an identifier' })).not.toBeInTheDocument();
         view.unmount();
       }
     }));
@@ -648,6 +651,7 @@ describe('TechnologyOverviewTab', () => {
     it('names only the CPE identifiers without the CVE.org list', () => {
       renderTab(BARE);
       expect(screen.getByText('Without a CPE identifier, no vulnerability is looked up for this technology.')).toBeInTheDocument();
+      expect(screen.queryByText(UNMATCHED)).not.toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'CVE.org names' })).not.toBeInTheDocument();
     });
 
@@ -667,27 +671,6 @@ describe('TechnologyOverviewTab', () => {
       expect(screen.getByRole('button', { name: /Vulnerability identifiers/ })).toHaveAttribute('aria-expanded', 'true');
       view.rerender(tree({ ...BARE, id: 'tech-2', cpe_products: ['a:postgresql:postgresql'] }));
       expect(screen.getByRole('button', { name: /Vulnerability identifiers/ })).toHaveAttribute('aria-expanded', 'false');
-    }));
-
-    it('opens the group and brings it into view from the Versions section', withCveNames(() => {
-      const scrollIntoView = vi.fn();
-      const original = Element.prototype.scrollIntoView;
-      Element.prototype.scrollIntoView = scrollIntoView;
-      try {
-        renderTab(BARE);
-        const toggle = screen.getByRole('button', { name: /Vulnerability identifiers/ });
-        fireEvent.click(toggle);
-        expect(toggle).toHaveAttribute('aria-expanded', 'false');
-        expect(screen.getByText(UNMATCHED)).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Add an identifier' }));
-        expect(toggle).toHaveAttribute('aria-expanded', 'true');
-        expect(screen.getByRole('heading', { name: 'CPE product identifiers' })).toBeInTheDocument();
-        expect(scrollIntoView).toHaveBeenCalledTimes(1);
-        expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('technology-vulnerability-identifiers'));
-        expect(toggle).toHaveFocus();
-      } finally {
-        Element.prototype.scrollIntoView = original;
-      }
     }));
 
     it('says nothing about matching without the vulnerability feed', () => {

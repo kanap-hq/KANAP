@@ -552,7 +552,7 @@
     "exportDescription": "Export data as CSV. Files use semicolon separators.",
     "exportDescriptionFlexible": "Export data as CSV. The separator, the decimal mark and the dates follow the language of the screen.",
     "exportData": "Export data",
-    "exportPreset": "Export preset",
+    "exportPreset": "Fields to export",
     "fullExport": "Full export",
     "customSelection": "Custom selection",
     "fieldsSelected": "{{selected}} of {{total}} fields selected",
@@ -583,9 +583,9 @@
     "headerError": "Header: {{message}}",
     "andMoreErrors": "…and {{count}} more",
     "ignoredColumns": "Ignored columns: {{columns}}.",
-    "importWorkflow": "Import workflow",
+    "importWorkflow": "What the import does",
     "advancedOptions": "Advanced options",
-    "overridePresetNote": "These settings override the workflow preset selection.",
+    "overridePresetNote": "These options replace the choice above.",
     "emptyCellHandling": "Empty cell handling",
     "preserveExisting": "Preserve existing",
     "setToNull": "Clear the stored value",
@@ -1181,7 +1181,10 @@
     "subscriptionNeedsAttention": "Your subscription needs attention.",
     "goToBilling": "Go to billing",
     "accountAccessLimited": "Account access is limited. Contact your billing admin.",
-    "choosePlanToContinueAction": "Choose a plan to continue"
+    "choosePlanToContinueAction": "Choose a plan to continue",
+    "paymentOverdueAmount": "Payment of {{amount}} overdue. Access will be limited on {{date}}.",
+    "paymentOverdue": "A payment is overdue. Access will be limited on {{date}}.",
+    "contactBillingAdmin": "Contact your billing admin."
   },
   "forbidden": {
     "title": "Access denied",

@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { CollectionMethod, Subscription, SubscriptionStatus } from '../subscription.entity';
-import { computeFreezeEffectiveAt, computeTrialDeletionAt, evaluateSubscriptionAccess } from '../subscription-freeze.util';
+import { computeFreezeDate, computeFreezeEffectiveAt, computeTrialDeletionAt, evaluateSubscriptionAccess } from '../subscription-freeze.util';
 import { BillingService } from '../billing.service';
 
 const DAY_MS = 86400000;
@@ -53,22 +53,113 @@ function testTrialing() {
 }
 
 function testPastDueGraceWindow() {
-  // Within grace: current_period_end 1 day ago + 14 day grace -> still allowed.
+  // Within grace: the unpaid invoice is 1 day old, 14 days of grace -> still allowed.
   const withinGrace = evaluateSubscriptionAccess(
-    sub({ status: SubscriptionStatus.PAST_DUE, current_period_end: new Date(NOW - DAY_MS) }),
+    sub({ status: SubscriptionStatus.PAST_DUE, latest_invoice_created: new Date(NOW - DAY_MS) }),
     NOW,
     true,
   );
   assert.equal(withinGrace.allowed, true);
 
-  // Past grace: current_period_end 20 days ago + 14 day grace -> frozen.
+  // Past grace: the unpaid invoice is 20 days old -> frozen.
   const frozen = evaluateSubscriptionAccess(
-    sub({ status: SubscriptionStatus.PAST_DUE, current_period_end: new Date(NOW - 20 * DAY_MS) }),
+    sub({ status: SubscriptionStatus.PAST_DUE, latest_invoice_created: new Date(NOW - 20 * DAY_MS) }),
     NOW,
     true,
   );
   assert.equal(frozen.allowed, false);
   assert.equal(frozen.reason, 'SUBSCRIPTION_FROZEN');
+}
+
+/**
+ * One freeze rule (doc/architecture.md): 14 days after the unpaid invoice, after its due date
+ * for a bank transfer. A card renewal refused on 10/11 freezes on 24/11, whatever the end of the
+ * period Stripe has already opened (10/12 for a monthly, a year later for an annual).
+ */
+function testCardGraceStartsAtTheUnpaidInvoice() {
+  const invoicedAt = new Date('2026-11-10T09:00:00.000Z');
+  for (const periodEnd of ['2026-12-10T09:00:00.000Z', '2027-11-10T09:00:00.000Z']) {
+    const at = computeFreezeEffectiveAt(sub({
+      status: SubscriptionStatus.PAST_DUE,
+      latest_invoice_created: invoicedAt,
+      current_period_start: invoicedAt,
+      current_period_end: new Date(periodEnd),
+      days_until_due: null,
+    }));
+    assert.equal(at, new Date('2026-11-24T09:00:00.000Z').getTime(), `period ending ${periodEnd}`);
+  }
+  // No invoice date stored: the start of the period the unpaid renewal opened.
+  assert.equal(
+    computeFreezeEffectiveAt(sub({ current_period_start: invoicedAt, current_period_end: new Date('2026-12-10T09:00:00.000Z') })),
+    new Date('2026-11-24T09:00:00.000Z').getTime(),
+  );
+  assert.equal(computeFreezeEffectiveAt(sub({})), null);
+}
+
+/**
+ * A stale invoice date: the row still holds the previous, paid invoice (the subscription could
+ * not be read again while the new invoice's events came) and is past due. The grace starts at
+ * the start of the period the unpaid renewal opened, the later of the two dates.
+ */
+function testStaleInvoiceDateUsesThePeriodStart() {
+  const periodStart = new Date('2026-11-10T09:00:00.000Z');
+  for (const previousInvoice of ['2026-10-10T09:00:00.000Z', '2025-11-10T09:00:00.000Z']) {
+    const stale = sub({
+      status: SubscriptionStatus.PAST_DUE,
+      latest_invoice_created: new Date(previousInvoice),
+      current_period_start: periodStart,
+    });
+    assert.equal(computeFreezeEffectiveAt(stale), new Date('2026-11-24T09:00:00.000Z').getTime(), `previous invoice of ${previousInvoice}`);
+    assert.equal(evaluateSubscriptionAccess(stale, new Date('2026-11-11T09:00:00.000Z').getTime(), true).allowed, true);
+  }
+}
+
+/** A bank transfer whose payment term is not stored: the module's payment term (30 days). */
+function testTransferWithoutPaymentTermUsesTheModuleTerm() {
+  const at = computeFreezeEffectiveAt(sub({
+    collection_method: CollectionMethod.SEND_INVOICE,
+    latest_invoice_created: new Date(NOW),
+    days_until_due: null,
+  }));
+  assert.equal(at, NOW + 30 * DAY_MS + 14 * DAY_MS);
+}
+
+/**
+ * The freeze date of the summary: ahead or passed while past due; for an ended subscription its
+ * end, or the end of the grace of an invoice left unpaid when earlier; for unpaid, the end of the
+ * grace once passed; none for a subscription in good standing.
+ */
+function testFreezeDateOfTheSummary() {
+  const invoicedAt = new Date(NOW - 3 * DAY_MS);
+  const graceEnd = invoicedAt.getTime() + 14 * DAY_MS;
+  assert.equal(computeFreezeDate(sub({ status: SubscriptionStatus.ACTIVE, latest_invoice_created: invoicedAt }), NOW), null);
+  assert.equal(computeFreezeDate(sub({ status: SubscriptionStatus.TRIALING, trial_end: new Date(NOW - DAY_MS) }), NOW), null);
+  assert.equal(computeFreezeDate(sub({ status: SubscriptionStatus.PAST_DUE, latest_invoice_created: invoicedAt }), NOW), graceEnd);
+
+  // Unpaid: Stripe's date of the status is not stored, so only a passed grace dates the freeze.
+  assert.equal(computeFreezeDate(sub({ status: SubscriptionStatus.UNPAID, latest_invoice_created: invoicedAt }), NOW), null);
+  const longUnpaid = new Date(NOW - 40 * DAY_MS);
+  assert.equal(
+    computeFreezeDate(sub({ status: SubscriptionStatus.UNPAID, latest_invoice_created: longUnpaid }), NOW),
+    longUnpaid.getTime() + 14 * DAY_MS,
+  );
+
+  // Canceled after the dunning: the first of the cancellation and the end of the grace.
+  const canceledAt = new Date(NOW - DAY_MS);
+  assert.equal(
+    computeFreezeDate(sub({ status: SubscriptionStatus.CANCELED, canceled_at: canceledAt, latest_invoice_status: 'open', latest_invoice_created: longUnpaid }), NOW),
+    longUnpaid.getTime() + 14 * DAY_MS,
+  );
+  assert.equal(
+    computeFreezeDate(sub({ status: SubscriptionStatus.CANCELED, canceled_at: canceledAt, latest_invoice_status: 'open', latest_invoice_created: invoicedAt }), NOW),
+    canceledAt.getTime(),
+  );
+  // Canceled at the end of a paid period: that end.
+  const endedAt = new Date(NOW - 5 * DAY_MS);
+  assert.equal(
+    computeFreezeDate(sub({ status: SubscriptionStatus.CANCELED, canceled_at: new Date(NOW - 60 * DAY_MS), canceled_at_effective: endedAt, latest_invoice_status: 'paid', latest_invoice_created: longUnpaid }), NOW),
+    endedAt.getTime(),
+  );
 }
 
 function testUnknownStatusFrozen() {
@@ -104,17 +195,17 @@ async function storedAfterRefresh(stripeSub: unknown): Promise<Subscription> {
 }
 
 async function testPastDueCloverSubscriptionKeepsItsGrace() {
-  // 2025-09-30.clover: the period is on the subscription item. A card subscription that
-  // goes past due one day after its period end still has 13 days of grace.
-  const periodEnd = NOW - DAY_MS;
+  // 2025-09-30.clover: the period is on the subscription item. A card renewal refused one day
+  // ago (the period it opened starts then) still has 13 days of grace.
+  const periodStart = NOW - DAY_MS;
   const stored = await storedAfterRefresh({
     id: 'sub_1',
     status: 'past_due',
     collection_method: 'charge_automatically',
-    items: { data: [{ quantity: 1, current_period_start: (periodEnd - 30 * DAY_MS) / 1000, current_period_end: periodEnd / 1000 }] },
+    items: { data: [{ quantity: 1, current_period_start: periodStart / 1000, current_period_end: (periodStart + 30 * DAY_MS) / 1000 }] },
   });
   assert.equal(stored.status, SubscriptionStatus.PAST_DUE);
-  assert.equal(computeFreezeEffectiveAt(stored), periodEnd + 14 * DAY_MS);
+  assert.equal(computeFreezeEffectiveAt(stored), periodStart + 14 * DAY_MS);
   assert.equal(evaluateSubscriptionAccess(stored, NOW, true).allowed, true);
 }
 
@@ -155,6 +246,10 @@ async function run() {
   testPastDueGraceWindow();
   testUnknownStatusFrozen();
   testComputeFreezeInvoiceBased();
+  testCardGraceStartsAtTheUnpaidInvoice();
+  testStaleInvoiceDateUsesThePeriodStart();
+  testTransferWithoutPaymentTermUsesTheModuleTerm();
+  testFreezeDateOfTheSummary();
   await testPastDueCloverSubscriptionKeepsItsGrace();
   testTrialDeletionDate();
   // eslint-disable-next-line no-console

@@ -126,16 +126,23 @@ const EMPTY_FORM: BudgetLineForm = {
   notes: '', created_at: null, updated_at: null,
 };
 
-function todayYmd() {
-  return new Date().toISOString().slice(0, 10);
+/** The year the page shows: `?year=` when the address names a positive year, the current year otherwise. */
+function pageYear(yearParam: string | null): number {
+  const y = Number(yearParam);
+  return Number.isFinite(y) && y > 0 ? y : new Date().getFullYear();
+}
+
+/** 1 January of `year`, as `YYYY-MM-DD`: the start a new line takes. */
+function yearStartYmd(year: number): string {
+  return `${year}-01-01`;
 }
 
 /** A new line before its title: the draft its preview shows, with the defaults the title creates it with. */
-function draftBudgetLineForm(currency = 'EUR'): BudgetLineForm {
+function draftBudgetLineForm(currency = 'EUR', year = new Date().getFullYear()): BudgetLineForm {
   return {
     ...EMPTY_FORM,
     currency,
-    effective_start: todayYmd(),
+    effective_start: yearStartYmd(year),
   };
 }
 
@@ -330,7 +337,10 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     [currencySettings],
   );
   const [form, setForm] = React.useState<BudgetLineForm>(EMPTY_FORM);
-  const draftForm = React.useMemo(() => draftBudgetLineForm(defaultSpendCurrency), [defaultSpendCurrency]);
+  const draftForm = React.useMemo(
+    () => draftBudgetLineForm(defaultSpendCurrency, pageYear(searchParams.get('year'))),
+    [defaultSpendCurrency, searchParams],
+  );
   const [saveError, setSaveError] = React.useState<string | null>(null);
   // A person with limited data access places the new line before its title: filled in when the
   // access allows one company only, chosen on the new page otherwise (`useLinePlacementDefault`).
@@ -402,11 +412,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     ? { index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null as any, nextId: null as any }
     : nav;
 
-  // Year for budget/allocations (?year=YYYY).
-  const currentYear = React.useMemo(() => {
-    const y = Number(searchParams.get('year'));
-    return Number.isFinite(y) && y > 0 ? y : new Date().getFullYear();
-  }, [searchParams]);
+  // Year for budget/allocations (?year=YYYY). The same year a new line starts on, 1 January.
+  const currentYear = React.useMemo(() => pageYear(searchParams.get('year')), [searchParams]);
   const availableYears = React.useMemo(() => {
     const Y = new Date().getFullYear();
     return [Y - 2, Y - 1, Y, Y + 1, Y + 2];
@@ -986,9 +993,9 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // Create was clicked while the title created the line: its check runs once the line shows.
   const createAfterOpenRef = React.useRef(false);
 
-  // The title creates the line at once with the defaults (the tenant's currency, today, the type of
-  // the address) and, for a person with limited access, its place; the page moves to it, every tab
-  // open, with Create and Cancel.
+  // The title creates the line at once with the defaults (the tenant's currency, 1 January of the
+  // year the page shows, the type of the address) and, for a person with limited access, its place;
+  // the page moves to it, every tab open, with Create and Cancel.
   // A title committed before the currency and the person's place were known waits for them.
   const titleCreation = useTitleCreation<{ id: string; nature?: string; reference?: string; item_number: number }>({
     isCreate,
@@ -999,7 +1006,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         ? { paying_company_id: toNull(placementDraft.paying_company_id), cost_center_id: toNull(placementDraft.cost_center_id) }
         : placementDefault.companyId ? { paying_company_id: placementDefault.companyId } : {};
       const res = await api.post('/budget-lines/creation', {
-        nature, product_name: name, currency: defaultSpendCurrency, effective_start: todayYmd(), ...place,
+        nature, product_name: name, currency: defaultSpendCurrency, effective_start: draftForm.effective_start, ...place,
       });
       return res.data ?? {};
     },

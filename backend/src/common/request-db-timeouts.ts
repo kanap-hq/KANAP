@@ -77,7 +77,11 @@ export const BULK_WRITE_TIMEOUTS: Readonly<Partial<RequestDbTimeouts>> = Object.
  * Outside work while the request transaction waits idle: Netbox inventory
  * pages, the Microsoft Graph directory sync, pandoc document rendering, an AI
  * provider test, Stripe calls (its client waits up to 80 s per attempt). Only
- * the idle limit is raised (10 min); the transaction holds no lock meanwhile.
+ * the idle limit is raised (10 min). The transaction may hold a lock meanwhile:
+ * `POST /billing/pay-invoice` holds the tenant's billing lock (shared with the
+ * Stripe webhook) during its Stripe calls. A request waiting for that lock
+ * still gives up after the default lock wait (the second call of a payment is
+ * answered 409 INVOICE_PAYMENT_IN_PROGRESS).
  */
 export const OUTSIDE_WORK_TIMEOUTS: Readonly<Partial<RequestDbTimeouts>> = Object.freeze({
   idleInTransactionTimeoutMs: 600_000,

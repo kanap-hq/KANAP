@@ -107,7 +107,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. El bot
 
 - **Encabezado**: el código como referencia, con un botón para copiarlo, y el nombre. Haga clic en el nombre para cambiarlo. **Ant.** / **Sig.** recorren la lista en su orden y con sus filtros actuales, y el botón de cierre vuelve a la lista
 - **Zona principal**: una línea como "Usado por 3 líneas OPEX y 1 línea CAPEX." cuando hay líneas de presupuesto que usan el elemento, y después la **Descripción**
-- **Panel Propiedades** a la derecha: **Código**, **Tipo**, **Grupo superior**, **Empresa** (solo centros de coste), **Responsable del presupuesto** y **Ciclo de vida**
+- **Panel de propiedades** a la derecha: **Código**, **Tipo**, **Grupo superior**, **Empresa** (solo centros de coste), **Responsable del presupuesto** y **Ciclo de vida**
 - Pestaña **Acceso**, para las personas que gestionan el acceso a los datos: las personas con acceso directo al centro o al grupo, y las que lo heredan de un grupo superior, de la empresa o de **Todo**. Vea [Acceso a los datos](data-access.md#the-access-tab-of-companies-and-cost-centers)
 
 **Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. Los campos de texto se guardan al salir de ellos (pulse Intro en **Código** para guardar de inmediato); las listas y los interruptores se guardan en cuanto elige un valor. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó, por ejemplo un código duplicado bajo **Código**. Un nombre rechazado se muestra en la parte superior de la página.
@@ -160,7 +160,7 @@ El botón **Eliminar** (icono de papelera) del encabezado elimina el elemento tr
 
 ## Centros de coste en las líneas de presupuesto
 
-- **OPEX y CAPEX**: el campo **Centro de coste** del panel **Propiedades** muestra el árbol. Los grupos se muestran para ayudarle a orientarse y no se pueden elegir. Cuando la empresa pagadora está vacía, elegir un centro de coste la completa con la empresa del centro de coste. Cuando las dos empresas difieren, se conservan ambas y una indicación lo señala. Consulte [Líneas presupuestarias](budget-lines.md).
+- **OPEX y CAPEX**: el campo **Centro de coste** del panel de propiedades muestra el árbol. Los grupos se muestran para ayudarle a orientarse y no se pueden elegir. Cuando la empresa pagadora está vacía, elegir un centro de coste la completa con la empresa del centro de coste. Cuando las dos empresas difieren, se conservan ambas y una indicación lo señala. Consulte [Líneas presupuestarias](budget-lines.md).
 - **Lista**: las columnas y filtros **Centro de coste** y **Run o build** de la lista de líneas presupuestarias.
 - **Informes**: los informes presupuestarios se pueden filtrar por un centro de coste o un grupo. Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](reports.md#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas).
 

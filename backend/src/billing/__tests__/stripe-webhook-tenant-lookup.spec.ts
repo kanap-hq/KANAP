@@ -263,6 +263,8 @@ function createSyncService(
         if (opts.invoiceUpdateError) throw opts.invoiceUpdateError;
         return { id: args[0] };
       },
+      // Read on `invoice.payment_failed` for the reason of the refusal: none here.
+      retrieve: async (id: string) => ({ id, payments: { data: [] } }),
     },
     setupIntents: {
       retrieve: async (id: string) => ({ id, ...(opts.setupIntent ?? {}) }),

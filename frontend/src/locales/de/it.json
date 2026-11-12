@@ -2440,9 +2440,7 @@
         "cveNameCount_one": "{{count, count}} CVE.org-Name",
         "cveNameCount_other": "{{count, count}} CVE.org-Namen",
         "missing": "Ohne CPE-Kennung und ohne CVE.org-Namen wird für diese Technologie nach keiner Schwachstelle gesucht.",
-        "missingCpe": "Ohne CPE-Kennung wird für diese Technologie nach keiner Schwachstelle gesucht.",
-        "versionsUnmatched": "Diese Versionen werden keiner Schwachstelle zugeordnet, solange die Technologie keine Kennung hat.",
-        "add": "Kennung hinzufügen"
+        "missingCpe": "Ohne CPE-Kennung wird für diese Technologie nach keiner Schwachstelle gesucht."
       },
       "cpe": {
         "title": "CPE-Produktkennungen",

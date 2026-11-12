@@ -54,13 +54,13 @@ La cuadrícula de Departamentos proporciona una visión general de todos los dep
 Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene tres pestañas: **Visión general**, **Detalles** e **Historial** (los cambios hechos en el departamento, vea [Historial de los registros](record-history.md)).
 
 - **Encabezado**: el nombre del departamento. Haga clic en él para cambiar el nombre del departamento. **Ant.** / **Sig.** permiten moverse entre departamentos en el orden y con los filtros de la lista sin volver a ella, y el botón de cierre vuelve a la lista
-- **Panel Propiedades** a la derecha: **Empresa** y **Ciclo de vida**
+- **Panel de propiedades** a la derecha: **Empresa** y **Ciclo de vida**
 
 **Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. El nombre y la descripción se guardan al salir del campo; la empresa y el ciclo de vida se guardan en cuanto los cambia. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó.
 
 ### Visión general
 
-La pestaña Visión general contiene la descripción. Los demás campos están en el encabezado y en el panel **Propiedades**.
+La pestaña Visión general contiene la descripción. Los demás campos están en el encabezado y en el panel de propiedades.
 
 **Qué puede editar**:
 - **Nombre**: Nombre del departamento (obligatorio), en el encabezado

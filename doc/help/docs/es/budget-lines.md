@@ -11,13 +11,13 @@ Ambos tipos están en una sola lista y se abren en el mismo espacio de trabajo, 
 
 Navegue a **Gestión presupuestaria > Líneas presupuestarias** para ver la lista. Haga clic en **Nueva línea** para crear una línea.
 
-El espacio de trabajo se abre en una línea nueva, con el título **Nueva línea OPEX** o **Nueva línea CAPEX**. Su tipo es aquel por el que está filtrada la lista en su columna **Tipo** y, si no, **OPEX**. No se puede cambiar mientras la línea se está creando. Escriba el nombre de la línea en el título de arriba y pulse Intro. La línea existe de inmediato, con la moneda de su espacio de trabajo y la fecha de hoy como inicio de vigencia, y todas las pestañas se abren, **Presupuesto** incluida. Complete el panel **Propiedades**: cada cambio se guarda al instante.
+El espacio de trabajo se abre en una línea nueva, con el título **Nueva línea OPEX** o **Nueva línea CAPEX**. Su tipo es aquel por el que está filtrada la lista en su columna **Tipo** y, si no, **OPEX**. No se puede cambiar mientras la línea se está creando. Escriba el nombre de la línea en el título de arriba y pulse Intro. La línea existe de inmediato, con la moneda de su espacio de trabajo y la fecha de hoy como inicio de vigencia, y todas las pestañas se abren, **Presupuesto** incluida. Complete el panel de propiedades: cada cambio se guarda al instante.
 
 Si su acceso a los datos se limita a una empresa, la empresa pagadora se completa con ella. Si debe elegir, elija la empresa pagadora o el centro de coste antes de escribir el título.
 
 Mientras la línea se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre:
 
-- **Crear** comprueba los campos obligatorios indicados abajo. Si falta alguno, un mensaje los enumera, se marcan en el panel **Propiedades** y el cursor va al primero. Si no, la línea se cierra y vuelve al punto de partida: la pantalla anterior o, si no, la lista
+- **Crear** comprueba los campos obligatorios indicados abajo. Si falta alguno, un mensaje los enumera, se marcan en el panel de propiedades y el cursor va al primero. Si no, la línea se cierra y vuelve al punto de partida: la pantalla anterior o, si no, la lista
 - **Cancelar** elimina la línea y todo lo que se introdujo en ella, importes incluidos. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar líneas. Una línea con importes en una columna congelada no se puede cancelar
 
 Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Una línea que se dejó sin empresa pagadora muestra una advertencia con los campos que faltan y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título vacío para salir sin crear nada.
@@ -52,10 +52,10 @@ Cuando cambia la empresa pagadora de una línea que tiene una cuenta y la nueva 
 
 ## OPEX y CAPEX
 
-Cada línea tiene un tipo, visible en la columna **Tipo** de la lista y en la primera fila del panel **Propiedades**. La mayor parte del espacio de trabajo funciona igual para ambos. El tipo decide:
+Cada línea tiene un tipo, visible en la columna **Tipo** de la lista y en la primera fila del panel de propiedades. La mayor parte del espacio de trabajo funciona igual para ambos. El tipo decide:
 
 - **Cuentas**: una cuenta puede estar como **OPEX y CAPEX**, **Solo OPEX** o **Solo CAPEX**. Consulte [Cuentas OPEX o CAPEX](chart-of-accounts.md#cuentas-opex-o-capex)
-- **Dimensiones y valores**: una dimensión o un valor puede usarse solo para un tipo, y una dimensión puede ser obligatoria para un tipo. El panel **Propiedades** muestra solo las dimensiones usadas para el tipo de la línea. Consulte [Dimensiones OPEX o CAPEX](analytics.md#dimensiones-opex-o-capex)
+- **Dimensiones y valores**: una dimensión o un valor puede usarse solo para un tipo, y una dimensión puede ser obligatoria para un tipo. El panel de propiedades muestra solo las dimensiones usadas para el tipo de la línea. Consulte [Dimensiones OPEX o CAPEX](analytics.md#dimensiones-opex-o-capex)
 - **Contracargo**: los informes de contracargo se abren en las líneas OPEX y ofrecen las líneas CAPEX o ambas. Consulte [Informes](reports.md)
 - **Congelaciones**: una columna presupuestaria se congela por año y por tipo. Consulte [Congelar / descongelar datos](budget-operations.md#congelar-descongelar-datos)
 
@@ -72,7 +72,7 @@ Un espacio de trabajo nuevo empieza con cuatro dimensiones recomendadas, con sus
 | **Motivo** | Por qué se gasta el dinero: sustitución, capacidad, productividad, seguridad, conformidad, crecimiento, otro |
 | **Prioridad** | Obligatoria, alta, media o baja |
 
-Se aplican a las líneas OPEX y CAPEX y ninguna es obligatoria. Funcionan como cualquier otra dimensión: sus campos están en el panel **Propiedades**, y un administrador puede renombrarlas, añadir valores, hacer obligatoria una de ellas, desactivarlas o eliminarlas. Un administrador puede añadirlas a un espacio de trabajo existente. Consulte [Dimensiones recomendadas](analytics.md#dimensiones-recomendadas) en Dimensiones analíticas.
+Se aplican a las líneas OPEX y CAPEX y ninguna es obligatoria. Funcionan como cualquier otra dimensión: sus campos están en el panel de propiedades, y un administrador puede renombrarlas, añadir valores, hacer obligatoria una de ellas, desactivarlas o eliminarlas. Un administrador puede añadirlas a un espacio de trabajo existente. Consulte [Dimensiones recomendadas](analytics.md#dimensiones-recomendadas) en Dimensiones analíticas.
 
 Los espacios de trabajo creados antes de las dimensiones recomendadas conservan tres dimensiones solo para líneas CAPEX, todas obligatorias: **PP&E type**, **Investment type** y **Priority**. Una línea CAPEX nueva necesita allí un valor en cada una.
 
@@ -205,11 +205,11 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dir
 - **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir**, **Eliminar** (icono de papelera, `budget:admin`, acceso a todos los datos) y el botón de cierre. Mientras la línea se está creando, **Crear** y **Cancelar** sustituyen a **Eliminar** y al botón de cierre
 - **Barra de metadatos** bajo el título: **Estado**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio. Cuando el centro de coste de la línea tiene un responsable del presupuesto, **Responsable del presupuesto** aparece a continuación. Es de solo lectura y se deriva del centro de coste, no se almacena en la línea: pase el cursor por encima para ver de qué centro de coste procede, y cámbielo en el centro de coste (consulte [Centros de coste](cost-centers.md#responsable-del-presupuesto-en-las-lineas-de-presupuesto))
 - **Cinco pestañas**: **Vista general**, **Presupuesto**, **Asignaciones**, **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la línea) e **Historial**
-- **Panel Propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (con **Cambiar el tipo…** junto a él en cuanto la línea deja de estar en creación, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
+- **Panel de propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (con **Cambiar el tipo…** junto a él en cuanto la línea deja de estar en creación, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
 
 **Elección de responsables**:
 
-- En el panel **Propiedades** de una línea nueva y en la barra de metadatos de una línea existente, las listas **Responsable de TI** y **Responsable de negocio** empiezan, bajo **Acceso al centro de coste**, por las personas que tienen acceso al presupuesto y pueden leer las líneas del centro de coste de la línea. Las demás siguen tras un separador
+- En el panel de propiedades de una línea nueva y en la barra de metadatos de una línea existente, las listas **Responsable de TI** y **Responsable de negocio** empiezan, bajo **Acceso al centro de coste**, por las personas que tienen acceso al presupuesto y pueden leer las líneas del centro de coste de la línea. Las demás siguen tras un separador
 - Al escribir se busca entre todas las personas, como antes. Puede elegir a cualquiera
 - Sin centro de coste, la lista es la habitual. El grupo no aparece cuando incluiría a todo el mundo, por ejemplo cuando nadie tiene un [acceso a los datos](data-access.md) limitado
 - Cuando su propio acceso a los datos está limitado, el grupo aparece para los centros de coste de su acceso y para la línea que está editando
@@ -251,7 +251,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 - Las tareas tienen sus propios permisos (`tasks:member` para crear y editar). El nivel Miembro en Presupuesto no da por sí solo derechos de edición de tareas; consulte a su administrador si no puede crear tareas
 - Las tareas también se pueden ver y gestionar desde **Portafolio > Tareas**, que muestra todas las tareas de su organización
 
-**Panel Propiedades**:
+**Panel de propiedades**:
 
 - **Tipo**: **OPEX** o **CAPEX**. En cuanto la línea deja de estar en creación, **Cambiar el tipo…** junto a él abre el diálogo descrito en [Cambiar el tipo](#cambiar-el-tipo)
 - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora y el tipo de la línea), **Moneda** (solo las monedas permitidas en su espacio de trabajo), un campo por dimensión analítica usada para el tipo de la línea, **Run o build** e **Inicio de vigencia**
@@ -445,7 +445,7 @@ Construya una columna a partir de líneas en lugar de escribir sus importes. Cad
 
 Cada línea tiene un número en el margen. Cuando la columna tiene varias líneas, las notas bajo la tabla lo usan, por ejemplo «Línea 2: Introduzca una cantidad y un precio unitario para guardar esta línea.»
 
-Cuando la pestaña es lo bastante ancha, cada línea ocupa una sola fila. En un panel más estrecho, cada línea ocupa dos filas. La primera se lee como un cálculo: **Descripción**, **Cantidad**, **Unidad**, × **Precio unitario** e **Importe**. La segunda se lee como una frase: **Frecuencia**, «del» una fecha «al» una fecha (o una sola **Fecha**), «calendario» y el **Calendario**. En un panel de anchura media, **Frecuencia** sube a la primera fila. Cerrar el panel **Propiedades** da más espacio a las líneas.
+Cuando la pestaña es lo bastante ancha, cada línea ocupa una sola fila. En un panel más estrecho, cada línea ocupa dos filas. La primera se lee como un cálculo: **Descripción**, **Cantidad**, **Unidad**, × **Precio unitario** e **Importe**. La segunda se lee como una frase: **Frecuencia**, «del» una fecha «al» una fecha (o una sola **Fecha**), «calendario» y el **Calendario**. En un panel de anchura media, **Frecuencia** sube a la primera fila. Cerrar el panel de propiedades da más espacio a las líneas.
 
 Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en la cruz al final de una línea para quitarla. Una columna admite hasta 50 líneas.
 
@@ -645,8 +645,8 @@ Cada línea tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de valid
 
 **Establecer estado**:
 
-- Mientras la línea se está creando, puede establecer su **Fin de validez** en el panel **Propiedades**
-- Más adelante, cambie el **Estado** en la barra de metadatos, o use el campo **Ciclo de vida** del panel **Propiedades** (interruptor de estado y **Fin de validez**). Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha
+- Mientras la línea se está creando, puede establecer su **Fin de validez** en el panel de propiedades
+- Más adelante, cambie el **Estado** en la barra de metadatos, o use el campo **Ciclo de vida** del panel de propiedades (interruptor de estado y **Fin de validez**). Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha
 - Puede programar un fin de validez futuro, por ejemplo el fin de un contrato, una baja planificada o el final de la vida útil de un activo
 
 **Ver líneas deshabilitadas**:
@@ -668,7 +668,7 @@ Cada línea tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de valid
 
 ## Cambiar el tipo
 
-Una línea OPEX que resulta ser una inversión pasa a ser una línea CAPEX, y una línea CAPEX que resulta ser gasto operativo pasa a ser una línea OPEX. Haga clic en **Cambiar el tipo…** junto a **Tipo** en el panel **Propiedades**. Necesita el nivel Miembro en Presupuesto (`budget:member`). Los cambios aún no guardados se guardan antes de que se abra el diálogo.
+Una línea OPEX que resulta ser una inversión pasa a ser una línea CAPEX, y una línea CAPEX que resulta ser gasto operativo pasa a ser una línea OPEX. Haga clic en **Cambiar el tipo…** junto a **Tipo** en el panel de propiedades. Necesita el nivel Miembro en Presupuesto (`budget:member`). Los cambios aún no guardados se guardan antes de que se abra el diálogo.
 
 **A partir de** fija dónde empieza el cambio:
 

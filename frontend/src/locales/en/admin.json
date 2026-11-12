@@ -1631,7 +1631,9 @@
     "actions": {
       "changePlan": "Change plan",
       "choosePlan": "Choose plan",
-      "managePayment": "Manage payment"
+      "managePayment": "Manage payment",
+      "payInvoice": "Pay invoice",
+      "updateCardAndPay": "Update card and pay"
     },
     "fields": {
       "addressLine1": "Address line 1",
@@ -1678,6 +1680,7 @@
     "messages": {
       "keepFailed": "Failed to cancel the planned switch.",
       "loadFailed": "Failed to load billing details.",
+      "payFailed": "Failed to pay the invoice.",
       "portalFailed": "Failed to open the billing portal.",
       "portalUnavailable": "Billing portal is unavailable.",
       "saveFailed": "Failed to save billing details."
@@ -1730,7 +1733,32 @@
         "trialEnded": "trial ended {{date}}"
       }
     },
-    "title": "Billing"
+    "title": "Billing",
+    "unpaid": {
+      "limited": "Access is limited.",
+      "limitedOn": "Access will be limited on {{date}}.",
+      "limitedSince": "Access limited since {{date}}.",
+      "overdue": "An invoice is overdue.",
+      "reasons": {
+        "authentication_required": "the bank asks for authentication",
+        "expired_card": "card expired",
+        "incorrect_cvc": "incorrect security code",
+        "insufficient_funds": "insufficient funds",
+        "other": "card declined",
+        "processing_error": "processing error at the bank"
+      },
+      "refused": "Payment refused on {{date}}.",
+      "refusedReason": "Payment refused on {{date}}: {{reason}}.",
+      "transferOverdue": "Invoice {{number}} of {{amount}} was due on {{date}}."
+    },
+    "payment": {
+      "cardUnchanged": "The card has not changed. Update it, then pay.",
+      "failed": "Payment refused: {{reason}}.",
+      "openInvoice": "Open invoice",
+      "paid": "Invoice paid.",
+      "processing": "Payment is being processed.",
+      "requiresAction": "Your bank asks you to confirm the payment."
+    }
   },
   "branding": {
     "actions": {
@@ -1984,6 +2012,8 @@
     "errors": {
       "noActiveSubscription": "No active subscription was found.",
       "planNotBankTransferEligible": "This plan is not eligible for bank transfer.",
+      "subscriptionEnding": "Your subscription ends on {{date}}: undo the cancellation before changing plan.",
+      "subscriptionEndingNoDate": "Your subscription is ending: undo the cancellation before changing plan.",
       "subscriptionPaymentPending": "Pay the pending invoice first, then change your plan.",
       "termsNotAccepted": "The general terms of sale could not be confirmed. Reload the page and accept them again.",
       "vatNumberInvalid": "The VAT number was not accepted. Check it in the invoicing information."

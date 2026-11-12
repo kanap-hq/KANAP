@@ -1,6 +1,6 @@
 import React from 'react';
 import PageHeader from '../../components/PageHeader';
-import { Alert, Autocomplete, Box, Button, CircularProgress, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, Button, CircularProgress, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { ChipProps } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { getDotColor } from '../../utils/statusColors';
@@ -20,7 +20,7 @@ import {
   getBillingProfile,
   updateBillingProfile,
 } from '../../services/billing';
-import PlanSelectionDialog from './PlanSelectionPage';
+import PlanSelectionDialog, { subscriptionEndingMessage } from './PlanSelectionPage';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { isEuCountry } from '../../utils/billingProfile';
 import { filterCountryOptions, useCountryOptions } from '../../i18n/countries';
@@ -193,7 +193,8 @@ function subscriptionLines(subscription: BillingSubscription | null | undefined,
   const endsAt = live && !isTrialing ? subscription?.canceled_at_effective ?? null : null;
   if (endsAt) {
     details.push(t('billing.subscription.values.ends', { date: date(endsAt) }));
-  } else if (live && subscription && !isTrialing) {
+  } else if (live && subscription && !isTrialing && !isPaymentPending(subscription)) {
+    // An unpaid subscription shows its debt instead (unpaidLines): Stripe has opened the next period anyway.
     const renewal = subscription.renewal_at
       ?? subscription.current_period_end
       ?? subscription.next_payment_at
@@ -203,6 +204,120 @@ function subscriptionLines(subscription: BillingSubscription | null | undefined,
   }
   if (live && subscription) details.push(paymentMethodLabel(subscription, t));
   return { plan, details, cancelled: !!endsAt };
+}
+
+/** Stripe's refusal codes the screen names; any other reads as a declined card. */
+const PAYMENT_ERROR_REASONS = ['insufficient_funds', 'expired_card', 'incorrect_cvc', 'authentication_required', 'processing_error'];
+const UNPAID_INVOICE_STATUSES = ['open', 'uncollectible'];
+const UNPAID_SUBSCRIPTION_STATUSES = ['past_due', 'unpaid', 'canceled'];
+
+/** A subscription that still runs without being paid: its plan cannot change until the invoice is paid. */
+function isPaymentPending(
+  subscription: Pick<BillingSubscription, 'stripe_subscription_id' | 'status' | 'is_subscription_healthy'> | null | undefined,
+): boolean {
+  return isLiveSubscription(subscription) && subscription?.status !== 'trialing' && subscription?.is_subscription_healthy === false;
+}
+
+/**
+ * The unpaid latest invoice of a subscription past due, unpaid or ended on it: "Payment refused on
+ * 10 Nov 2026: insufficient funds." for a card, "Invoice KAN-0041 of €249.00 was due on 3 Nov 2026."
+ * for a bank transfer, and when access becomes (or became) limited. Null when nothing is owed.
+ */
+function unpaidLines(subscription: BillingSubscription | null | undefined, t: Translate, locale: string) {
+  if (!subscription?.stripe_subscription_id) return null;
+  if (!UNPAID_SUBSCRIPTION_STATUSES.includes(subscription.status ?? '')) return null;
+  if (!UNPAID_INVOICE_STATUSES.includes(subscription.latest_invoice_status ?? '')) return null;
+  const date = (value: string) => formatShortDate(value, locale, { year: 'always' });
+  const transfer = subscription.collection_method
+    ? subscription.collection_method === 'send_invoice'
+    : subscription.payment_mode === 'bank_transfer';
+  const amount = formatMoney(locale, subscription.latest_invoice_amount ?? null, subscription.latest_invoice_currency ?? null);
+
+  let invoice = t('billing.unpaid.overdue');
+  if (transfer) {
+    if (subscription.latest_invoice_number && amount && subscription.payment_due_at) {
+      invoice = t('billing.unpaid.transferOverdue', {
+        number: subscription.latest_invoice_number,
+        amount,
+        date: date(subscription.payment_due_at),
+      });
+    }
+  } else if (subscription.latest_invoice_created) {
+    const code = subscription.last_payment_error_code;
+    const refusedOn = date(subscription.latest_invoice_created);
+    invoice = code
+      ? t('billing.unpaid.refusedReason', {
+        date: refusedOn,
+        reason: t(`billing.unpaid.reasons.${PAYMENT_ERROR_REASONS.includes(code) ? code : 'other'}`),
+      })
+      : t('billing.unpaid.refused', { date: refusedOn });
+  }
+
+  const frozen = subscription.access_allowed === false;
+  const freezeAt = subscription.freeze_effective_at ?? null;
+  let access: string | null = null;
+  if (frozen) access = freezeAt ? t('billing.unpaid.limitedSince', { date: date(freezeAt) }) : t('billing.unpaid.limited');
+  else if (freezeAt) access = t('billing.unpaid.limitedOn', { date: date(freezeAt) });
+  // Only a subscription that still runs is paid here; an ended one takes a new plan.
+  const payable = isLiveSubscription(subscription);
+  // A transfer, or an invoice Stripe no longer retries (uncollectible), is paid on its own page.
+  const onInvoicePage = transfer || subscription.latest_invoice_status === 'uncollectible';
+  return { invoice, access, frozen, payable, onInvoicePage, invoiceUrl: subscription.latest_invoice_url ?? null };
+}
+
+/** The outcome of `POST /billing/pay-invoice`, called on the return from the portal. */
+type InvoicePaymentStatus = 'paid' | 'payment_failed' | 'processing' | 'requires_action' | 'card_unchanged' | 'nothing_to_pay';
+type PaymentNotice = { tone: 'success' | 'info' | 'error'; text: string; invoiceUrl?: string | null };
+
+/** The line the page shows after paying the open invoice, or null when there was nothing to pay. */
+function paymentNotice(
+  status: InvoicePaymentStatus | undefined,
+  subscription: BillingSubscription | null | undefined,
+  t: Translate,
+): PaymentNotice | null {
+  switch (status) {
+    case 'paid':
+      return { tone: 'success', text: t('billing.payment.paid') };
+    case 'payment_failed': {
+      const code = subscription?.last_payment_error_code ?? '';
+      const reason = t(`billing.unpaid.reasons.${PAYMENT_ERROR_REASONS.includes(code) ? code : 'other'}`);
+      return { tone: 'error', text: t('billing.payment.failed', { reason }) };
+    }
+    case 'processing':
+      return { tone: 'info', text: t('billing.payment.processing') };
+    case 'requires_action':
+      return { tone: 'error', text: t('billing.payment.requiresAction'), invoiceUrl: subscription?.latest_invoice_url ?? null };
+    case 'card_unchanged':
+      // The invoice page also takes a payment with the same card.
+      return { tone: 'error', text: t('billing.payment.cardUnchanged'), invoiceUrl: subscription?.latest_invoice_url ?? null };
+    default:
+      return null;
+  }
+}
+
+/**
+ * Set in this browser session when the page sends the person to the portal to pay: only that
+ * return pays the open invoice, never the address reopened from the history or received by a link.
+ */
+const PAY_ON_RETURN_MARK = 'billing-pay-on-return';
+
+function markPayOnReturn() {
+  try {
+    window.sessionStorage.setItem(PAY_ON_RETURN_MARK, '1');
+  } catch {
+    // No session storage: the return pays nothing, the button stays.
+  }
+}
+
+/** Whether this session sent the person to the portal to pay; the mark is used once. */
+function takePayOnReturnMark(): boolean {
+  try {
+    const marked = window.sessionStorage.getItem(PAY_ON_RETURN_MARK) === '1';
+    window.sessionStorage.removeItem(PAY_ON_RETURN_MARK);
+    return marked;
+  } catch {
+    return false;
+  }
 }
 
 type BillingInterval = 'monthly' | 'annual';
@@ -247,6 +362,7 @@ const summarySx = {
   borderColor: 'kanap.border.soft',
 } as const;
 const inlineStatusSx = { display: 'inline-flex', alignItems: 'center', gap: 0.75 } as const;
+const unpaidLineSx = { ...inlineStatusSx, fontSize: 13, lineHeight: 1.4, color: 'kanap.text.primary' } as const;
 const invoiceNumberSx = {
   fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
   fontSize: 12,
@@ -442,7 +558,7 @@ function InvoicesTable({ invoices, locale, t }: { invoices: BillingInvoice[]; lo
 }
 
 export default function BillingCenter() {
-  const { subscription, claims } = useAuth();
+  const { subscription, claims, refreshMe } = useAuth();
   const { t } = useTranslation(['admin', 'common']);
   const locale = useLocale();
   const { mode } = useTheme().palette;
@@ -454,6 +570,8 @@ export default function BillingCenter() {
   const [justSaved, setJustSaved] = React.useState(false);
   const [keeping, setKeeping] = React.useState(false);
   const [keepError, setKeepError] = React.useState<string | null>(null);
+  const [payNotice, setPayNotice] = React.useState<PaymentNotice | null>(null);
+  const payingRef = React.useRef(false);
   // Back from the card setup page: the plan dialog reopens on the interval to confirm.
   const [confirmInterval, setConfirmInterval] = React.useState<BillingInterval | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -481,6 +599,13 @@ export default function BillingCenter() {
   const { plan: planLine, details: detailParts, cancelled } = subscriptionLines(subscriptionSummary, t, locale);
   const switchLine = scheduledChangeLine(subscriptionSummary, t, locale);
   const isHealthy = subscription?.is_subscription_healthy;
+  const unpaid = unpaidLines(subscriptionSummary, t, locale);
+  // The plan changes once the invoice is paid (the server refuses it before).
+  const paymentPending = isPaymentPending(subscriptionSummary);
+  // Nor while its cancellation is set: it is undone first ("Don't cancel").
+  const planChangeBlocked = paymentPending
+    ? t('planSelection.errors.subscriptionPaymentPending')
+    : cancelled ? subscriptionEndingMessage(subscriptionSummary?.canceled_at_effective, t, locale) : null;
   const planActionLabel = hasSubscription ? t('billing.actions.changePlan') : t('billing.actions.choosePlan');
   const invoices = profileQuery.data?.invoices ?? [];
   const invoiceMissingFields = profileQuery.data?.invoice_missing_fields ?? [];
@@ -592,14 +717,20 @@ export default function BillingCenter() {
     target?.focus({ preventScroll: true });
   };
 
-  const openPortal = async () => {
+  /** The Stripe customer portal; `payOnReturn` comes back with `pay_invoice=1` to pay the open invoice. */
+  const openPortal = async (payOnReturn = false) => {
     setPortalError(null);
     setOpening(true);
     try {
-      const res = await api.post('/billing/portal', { returnUrl: window.location.origin + '/admin/billing' });
+      const returnUrl = window.location.origin + '/admin/billing' + (payOnReturn ? '?pay_invoice=1' : '');
+      const res = await api.post('/billing/portal', { returnUrl });
       const url = res.data?.url;
-      if (url) window.location.href = url;
-      else setPortalError(t('billing.messages.portalUnavailable'));
+      if (url) {
+        if (payOnReturn) markPayOnReturn();
+        window.location.href = url;
+      } else {
+        setPortalError(t('billing.messages.portalUnavailable'));
+      }
     } catch (e: any) {
       setPortalError(getApiErrorMessage(e, t, t('billing.messages.portalFailed')));
     } finally {
@@ -623,6 +754,44 @@ export default function BillingCenter() {
     }
   };
 
+  // The portal returns with `pay_invoice=1` once the card is updated: the open invoice is charged
+  // on it now. Once per return (the server also takes the payment only once), and only when this
+  // browser session opened the portal to pay: the address alone pays nothing.
+  const payOnReturn = searchParams.get('pay_invoice') === '1';
+  React.useEffect(() => {
+    if (!payOnReturn) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('pay_invoice');
+      return next;
+    }, { replace: true });
+    if (!canManage || payingRef.current) return;
+    if (!takePayOnReturnMark()) return;
+    payingRef.current = true;
+    void (async () => {
+      setPayNotice(null);
+      try {
+        const res = await api.post<BillingSubscription & { payment?: { status?: InvoicePaymentStatus } }>('/billing/pay-invoice');
+        const { payment, ...summary } = res.data ?? {};
+        // A read still running started before the payment: drop it, show the answer, then read
+        // again for the invoice list.
+        await queryClient.cancelQueries({ queryKey: ['billing-profile'] });
+        queryClient.setQueryData<BillingProfileResponse | undefined>(['billing-profile'], (prev) => (
+          prev ? { ...prev, subscription: summary } : prev
+        ));
+        void queryClient.invalidateQueries({ queryKey: ['billing-profile'] });
+        // The banner and the redirect follow the subscription, whatever the answer (another tab
+        // may have paid the invoice).
+        void refreshMe?.();
+        setPayNotice(paymentNotice(payment?.status, summary, t));
+      } catch (e: any) {
+        setPayNotice({ tone: 'error', text: getApiErrorMessage(e, t, t('billing.messages.payFailed')) });
+      } finally {
+        payingRef.current = false;
+      }
+    })();
+  }, [payOnReturn, canManage, setSearchParams, queryClient, refreshMe, t]);
+
   // The card setup page returns with `card_saved=<interval>`: confirm the switch in the plan dialog.
   const cardSaved = searchParams.get('card_saved');
   React.useEffect(() => {
@@ -638,14 +807,15 @@ export default function BillingCenter() {
     }, { replace: true });
   }, [cardSaved, canManage, setSearchParams]);
 
-  // Auto-open plan dialog when subscription is unhealthy
+  // Auto-open plan dialog when subscription is unhealthy, unless it still runs unpaid: paying is the way out.
+  const signInPaymentPending = isPaymentPending(subscription);
   const isHealthyRef = React.useRef(isHealthy);
   React.useEffect(() => {
-    if (isHealthy === false && canManage && isHealthyRef.current === undefined) {
+    if (isHealthy === false && !signInPaymentPending && canManage && isHealthyRef.current === undefined) {
       setPlanDialogOpen(true);
     }
     isHealthyRef.current = isHealthy;
-  }, [isHealthy, canManage]);
+  }, [isHealthy, signInPaymentPending, canManage]);
 
   const saveStatus = savesInFlight > 0
     ? t('common:status.saving', { defaultValue: 'Saving…' })
@@ -706,11 +876,23 @@ export default function BillingCenter() {
                 ))}
                 {cancelled && canManage && (
                   // The cancellation is taken back in the Stripe customer portal.
-                  <Box component="button" type="button" onClick={openPortal} disabled={opening} sx={keepActionSx}>
+                  <Box component="button" type="button" onClick={() => openPortal()} disabled={opening} sx={keepActionSx}>
                     {t('billing.subscription.keepSubscription')}
                   </Box>
                 )}
               </Box>
+              {unpaid && (
+                <Box sx={unpaidLineSx}>
+                  <StatusDot color={getDotColor(unpaid.frozen ? 'error' : 'warning', mode)} />
+                  <span>{unpaid.invoice}</span>
+                </Box>
+              )}
+              {unpaid?.access && (
+                <Box sx={unpaidLineSx}>
+                  <StatusDot color={getDotColor(unpaid.frozen ? 'error' : 'warning', mode)} />
+                  <span>{unpaid.access}</span>
+                </Box>
+              )}
               {switchLine && (
                 <Typography component="div" sx={{ fontSize: 13, lineHeight: 1.4, color: 'kanap.text.secondary' }}>
                   {switchLine.text}
@@ -726,21 +908,59 @@ export default function BillingCenter() {
               )}
             </Box>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
-              <Button
-                variant={isHealthy === false ? 'contained' : 'action'}
-                size="small"
-                onClick={() => setPlanDialogOpen(true)}
-                disabled={!canManage}
-              >
-                {planActionLabel}
-              </Button>
+              {unpaid?.payable && !unpaid.onInvoicePage && (
+                <Button variant="contained" size="small" onClick={() => openPortal(true)} disabled={!canManage || opening}>
+                  {t('billing.actions.updateCardAndPay')}
+                </Button>
+              )}
+              {unpaid?.payable && unpaid.onInvoicePage && unpaid.invoiceUrl && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  component="a"
+                  href={unpaid.invoiceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('billing.actions.payInvoice')}
+                </Button>
+              )}
+              {planChangeBlocked ? (
+                <Tooltip title={planChangeBlocked}>
+                  <span>
+                    <Button variant="action" size="small" disabled>
+                      {planActionLabel}
+                    </Button>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button
+                  variant={isHealthy === false ? 'contained' : 'action'}
+                  size="small"
+                  onClick={() => setPlanDialogOpen(true)}
+                  disabled={!canManage}
+                >
+                  {planActionLabel}
+                </Button>
+              )}
               {hasSubscription && (
-                <Button variant="action" size="small" onClick={openPortal} disabled={!canManage || opening}>
+                <Button variant="action" size="small" onClick={() => openPortal()} disabled={!canManage || opening}>
                   {opening ? <CircularProgress size={14} sx={{ color: 'inherit' }} /> : t('billing.actions.managePayment')}
                 </Button>
               )}
             </Stack>
           </Box>
+          {payNotice && (
+            <Box role={payNotice.tone === 'error' ? 'alert' : 'status'} sx={{ ...unpaidLineSx, mt: 1 }}>
+              <StatusDot color={getDotColor(payNotice.tone, mode)} />
+              <span>{payNotice.text}</span>
+              {payNotice.invoiceUrl && (
+                <Box component="a" href={payNotice.invoiceUrl} target="_blank" rel="noopener noreferrer" sx={{ ...tealLinkSx, fontSize: 13 }}>
+                  {t('billing.payment.openInvoice')}
+                </Box>
+              )}
+            </Box>
+          )}
           {!canManage && (
             <Typography sx={{ display: 'block', mt: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>
               {t('shared.billingAdminRequired')}

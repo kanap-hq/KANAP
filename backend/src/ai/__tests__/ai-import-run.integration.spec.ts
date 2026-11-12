@@ -158,7 +158,8 @@ async function testApplications(h: Harness, runner: QueryRunner, s: Seed) {
   // The card cannot be approved: the server refuses it, and nothing is written.
   const refused = await h.previews.executePreview(admin, first.preview_id);
   assert.equal(refused.status, 'failed');
-  assert.match(refused.error_message, /The import refused this file/);
+  // A check that found errors, said as such: not a refusal of the person or of their rights.
+  assert.match(refused.error_message, /^The check of this file found errors, so nothing was imported\./);
 
   // The person says what "En prod" stands for: the check passes, and the approval imports.
   const corrected = columns.map((column) => (column.column === 'lifecycle'

@@ -210,7 +210,7 @@ Un tipo de tarea que las tareas todavía usan no se puede eliminar. Kadratis lo 
 
 ## Tipos de contrato
 
-Los tipos de contrato registran cómo trabaja cada colaborador con usted. Aparecen como un desplegable en el panel Propiedades de cada colaborador, y como filtro en la página de Colaboradores. Cada colaborador empieza como Interno.
+Los tipos de contrato registran cómo trabaja cada colaborador con usted. Aparecen como un desplegable en el panel de propiedades de cada colaborador, y como filtro en la página de Colaboradores. Cada colaborador empieza como Interno.
 
 Cuatro tipos se crean con cada espacio de trabajo:
 

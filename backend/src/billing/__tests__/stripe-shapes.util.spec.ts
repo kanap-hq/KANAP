@@ -1,5 +1,13 @@
 import * as assert from 'node:assert/strict';
-import { invoiceSubscriptionId, subscriptionPeriod, subscriptionQuantity } from '../stripe/stripe-shapes.util';
+import {
+  invoiceHasPaymentIntent,
+  invoicePaymentFailure,
+  invoicePaymentIntentsExpand,
+  invoiceSubscriptionId,
+  paymentIntentFailure,
+  subscriptionPeriod,
+  subscriptionQuantity,
+} from '../stripe/stripe-shapes.util';
 
 /**
  * Stripe moved fields KANAP reads in 2025-03-31.basil: the subscription period went to
@@ -84,7 +92,35 @@ function testQuantity() {
   assert.equal(subscriptionQuantity(undefined), null);
 }
 
+/** A refused payment is read on the invoice's PaymentIntent: `payments` since basil, `payment_intent` before. */
+function testPaymentFailure() {
+  const declined = { code: 'card_declined', decline_code: 'insufficient_funds', message: 'Your card has insufficient funds.', payment_method: { id: 'pm_old' } };
+  assert.deepEqual(paymentIntentFailure({ last_payment_error: declined }), { code: 'insufficient_funds', message: declined.message, paymentMethodId: 'pm_old' });
+  assert.deepEqual(paymentIntentFailure({ last_payment_error: { code: 'expired_card', message: 'Your card has expired.', payment_method: 'pm_x' } }), { code: 'expired_card', message: 'Your card has expired.', paymentMethodId: 'pm_x' });
+  assert.equal(paymentIntentFailure({ last_payment_error: null }), null);
+  assert.equal(paymentIntentFailure(undefined), null);
+
+  const older = { id: 'pi_old', last_payment_error: { code: 'expired_card', message: 'Your card has expired.' } };
+  const latest = { id: 'pi_new', last_payment_error: declined };
+  const basil = { payments: { data: [{ created: 1, payment: { payment_intent: older } }, { created: 2, payment: { payment_intent: latest } }] } };
+  assert.equal(invoicePaymentFailure(basil)?.code, 'insufficient_funds', 'the latest payment first');
+  assert.equal(invoicePaymentFailure({ payment_intent: older })?.code, 'expired_card', 'before basil');
+  assert.equal(invoicePaymentFailure({ payments: { data: [{ payment: { payment_intent: 'pi_new' } }] } }), null, 'not expanded');
+  assert.equal(invoicePaymentFailure({ last_payment_error: declined }), null, 'never on the invoice');
+
+  assert.equal(invoiceHasPaymentIntent(basil, 'pi_old'), true);
+  assert.equal(invoiceHasPaymentIntent({ payments: { data: [{ payment: { payment_intent: 'pi_new' } }] } }, 'pi_new'), true);
+  assert.equal(invoiceHasPaymentIntent(basil, 'pi_other'), false);
+  assert.equal(invoiceHasPaymentIntent(null, 'pi_new'), false);
+
+  assert.equal(invoicePaymentIntentsExpand('2023-10-16'), 'payment_intent');
+  assert.equal(invoicePaymentIntentsExpand('2025-03-31.basil'), 'payments.data.payment.payment_intent');
+  assert.equal(invoicePaymentIntentsExpand('2025-09-30.clover'), 'payments.data.payment.payment_intent');
+  assert.equal(invoicePaymentIntentsExpand(undefined), 'payments.data.payment.payment_intent');
+}
+
 function run() {
+  testPaymentFailure();
   testPeriodTopLevel();
   testPeriodFromTheItems();
   testPeriodMissing();
