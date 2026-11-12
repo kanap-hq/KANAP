@@ -106,6 +106,7 @@ export function extractTriage(response, dataset) {
       reply_kind: plannedReply?.reply_kind ?? null,
       actions: (d.action_planner?.planned_actions ?? []).map((a) => a.action_type),
       fallback_reason: d.action_planner?.fallback_reason ?? null,
+      rationale: d.action_planner?.rationale ?? null,
     },
     reply: replyPayload ? { body: replyPayload.body ?? null } : null,
     internal_note: notePayload ? { body: notePayload.body ?? notePayload.noteBody ?? null } : null,

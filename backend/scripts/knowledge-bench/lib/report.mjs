@@ -66,6 +66,7 @@ export function buildRunReport({ meta, results, scores }) {
   if (!missed.length) out.push('None.');
   for (const r of missed.sort((a, b) => a.n - b.n)) {
     out.push(`- **#${r.n}** (${r.family}, ${r.lang}, need language ${r.need_language ?? '?'}; planner: ${(r.planner?.actions ?? []).join(', ') || 'none'}${r.planner?.reply_kind ? `, ${r.planner.reply_kind}` : ''}):`);
+    if (r.planner?.rationale) out.push(`  - planner: ${cell(r.planner.rationale)}`);
     for (const q of r.per_query ?? []) out.push(`  - \`${cell(q.query)}\` -> ${q.result_count ?? '?'} results, kept ${cell(q.kept.join(', ')) || 'none'}`);
   }
   out.push('');

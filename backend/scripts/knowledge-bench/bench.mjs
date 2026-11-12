@@ -17,7 +17,7 @@ import { loadDataset, selectTickets } from './lib/dataset.mjs';
 import { KanapApi, TenantDb } from './lib/kanap.mjs';
 import { BENCH_AGENT_NAME, setupTenant } from './lib/setup.mjs';
 import { glpiTicketId, startFakeGlpi } from './fake-glpi.mjs';
-import { playTicket } from './lib/player.mjs';
+import { playTicket, waitForApi } from './lib/player.mjs';
 import { scoreResults } from './lib/score.mjs';
 import { buildCompareReport, buildRunReport } from './lib/report.mjs';
 
@@ -99,6 +99,7 @@ async function cmdRun() {
   if (!opts['glpi-listen'] && !opts['external-glpi']) fail('give --glpi-listen <host:port>: where the fake GLPI listens');
   const [listenHost, listenPort] = (opts['glpi-listen'] ?? '').split(/:(?=\d+$)/);
   const { api, baseUrl } = connect();
+  if (!(await waitForApi(baseUrl, { log: console.log }))) fail('the API does not answer');
   const startedAt = new Date();
   const stamp = startedAt.toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const outDir = path.resolve(opts.out ?? path.join(os.homedir(), '.cache', 'kadratis-knowledge-bench'), `${opts.tenant}-${stamp}`);
@@ -158,6 +159,7 @@ async function cmdReplay(dir) {
   const cut = results.filter((r) => r.error && (r.transient || TRANSIENT_MESSAGE.test(r.error)));
   if (!cut.length) { console.log('no ticket to replay'); return; }
   const { api, baseUrl } = connect();
+  if (!(await waitForApi(baseUrl, { log: console.log }))) fail('the API does not answer');
   const [listenHost, listenPort] = (opts['glpi-listen'] ?? '').split(/:(?=\d+$)/);
   const fake = opts['external-glpi'] ? null : await startFakeGlpi({
     ticketsByNumber: new Map(dataset.tickets.map((t) => [t.n, t])), host: listenHost, port: Number(listenPort),
