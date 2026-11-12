@@ -179,7 +179,11 @@ export class UsersController {
     const manager = req?.queryRunner?.manager ?? this.userRepo.manager;
     const has = (field: string) => !!body && Object.prototype.hasOwnProperty.call(body, field);
     // `role_ids`: all the roles of the person, set with the profile in the same request (the user
-    // dialog saves both at once, or neither). Read and checked before anything is written.
+    // dialog saves both at once, or neither). A list of role ids: anything else is refused, never
+    // read as "no role".
+    if (has('role_ids') && (!Array.isArray(body.role_ids) || body.role_ids.some((rid: unknown) => typeof rid !== 'string' || !USER_ID_RE.test(rid)))) {
+      throw new BadRequestException({ code: 'ROLE_IDS_INVALID', message: 'role_ids must be a list of role ids.' });
+    }
     // The person's row is locked before their rights are read (see lockPeople).
     await lockPeople(manager, [userId]);
     const roleList = canManageUsers && has('role_ids') ? await this.readRoleList(userId, body.role_ids, req) : null;

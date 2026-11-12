@@ -16,7 +16,11 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   All of them for an administrator.
 // - `PATCH /users/:id` with `role_ids` writes the profile and the roles together: a refused role
 //   (above the giver's rights) or a change that would leave the workspace without an enabled
-//   Administrator writes neither the profile nor the roles.
+//   Administrator writes neither the profile nor the roles. `role_ids` that is not a list of role ids
+//   (null, a text, a number) is refused (400 `ROLE_IDS_INVALID`), never read as "no role". With
+//   `role_id` in the same body, `role_ids` sets the roles (its first is the main role) and `role_id`
+//   is checked too. A refusal that comes after the profile was written leaves nothing once the
+//   request's transaction is rolled back.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret-of-at-least-32-characters';
@@ -184,6 +188,42 @@ async function run() {
     const high = await row(runner, s.users.high);
     assert.equal(high.first_name, 'High');
     assert.deepEqual(high.roles, [s.roles.budgetAdmin]);
+
+    // `role_ids` that is not a list of role ids is refused, and nothing is written.
+    const peerBefore = await row(runner, s.users.peer);
+    for (const value of [null, 'all', 42, [42], ['not-a-role-id']]) {
+      await refusedWith(
+        () => users.update(s.users.peer, { first_name: 'Invalid', role_ids: value }, ua),
+        BadRequestException, 'ROLE_IDS_INVALID', `role_ids ${JSON.stringify(value)}`,
+      );
+    }
+    assert.deepEqual(await row(runner, s.users.peer), peerBefore, 'invalid role_ids: nothing written');
+
+    // `role_id` and `role_ids` together: the list sets the roles, the main role is checked too.
+    await users.update(s.users.peer, { first_name: 'Combo', role_id: s.roles.contact, role_ids: [s.roles.budgetReader, s.roles.contact] }, ua);
+    const combo = await row(runner, s.users.peer);
+    assert.equal(combo.first_name, 'Combo');
+    assert.equal(combo.role_id, s.roles.budgetReader, 'the first of role_ids is the main role');
+    assert.deepEqual(combo.roles, [s.roles.budgetReader, s.roles.contact].sort());
+    await refusedWith(
+      () => users.update(s.users.peer, { first_name: 'Combo2', role_id: s.roles.budgetAdmin, role_ids: [s.roles.budgetReader] }, ua),
+      ForbiddenException, 'MODULE_RIGHT_REQUIRED', 'role_id above the giver beside role_ids',
+    );
+    assert.deepEqual(await row(runner, s.users.peer), combo, 'role_id refused: nothing written');
+
+    // A refusal after the profile was written: the request's transaction takes it back. The
+    // trigger refuses the roles write and says what the profile held at that moment.
+    await runner.query(`CREATE FUNCTION pg_temp.refuse_roles_write() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        RAISE EXCEPTION 'roles write refused, profile already %', (SELECT first_name FROM users WHERE id = NEW.user_id);
+      END $$`);
+    await runner.query(`CREATE TRIGGER refuse_roles_write BEFORE INSERT ON user_roles FOR EACH ROW EXECUTE FUNCTION pg_temp.refuse_roles_write()`);
+    await runner.query('SAVEPOINT request');
+    const late = await users.update(s.users.peer, { first_name: 'Late', role_ids: [s.roles.contact] }, admin).then(() => null, (e: unknown) => e);
+    await runner.query('ROLLBACK TO SAVEPOINT request');
+    await runner.query('DROP TRIGGER refuse_roles_write ON user_roles');
+    assert.match(String((late as Error)?.message), /profile already Late/, 'the profile was written before the refusal');
+    assert.deepEqual(await row(runner, s.users.peer), combo, 'rolled back: neither the profile nor the roles');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
