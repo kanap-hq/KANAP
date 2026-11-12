@@ -560,11 +560,11 @@ async function testTaskParticipation(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual([outside.related_object_id, outside.related_object_name], [null, null], 'E: no project id or name');
   assert.equal(outside.phase_name, null, 'E: no phase');
   assert.deepEqual([outside.converted_request_id, outside.converted_request_item_number], [null, null], 'E: no converted request');
-  assert.deepEqual([outside.applications, outside.application_ids], [null, null], 'E: no application field');
+  assert.deepEqual([outside.applications, outside.application_ids], [[], []], 'E: no application outside their participation');
   hasNot(outside, hidden, 'E, task page outside their participation');
   const inside = await h.tasksController.getOne('T-1', eReq);
   assert.equal(inside.related_object_name, PROJECT, 'E: the project they take part in');
-  assert.equal(inside.applications, null, 'E: an application outside their participation hides the field');
+  assert.deepEqual(inside.applications, [], 'E: an application outside their participation is left out of the field');
 
   const list = await h.tasksController.list({}, eReq);
   hasNot(list, hidden, 'E, tasks list');

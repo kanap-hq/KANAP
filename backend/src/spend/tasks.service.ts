@@ -863,15 +863,20 @@ export type TaskVisibleLinks = {
  * object the task belongs to loses its id and its name (`related_object_hidden`, without a kind:
  * the screen shows nothing in its place), and so do the project's name, phase and classification
  * and the converted request. A record outside a Business Contributor's participation (`visible`)
- * reads the same way; one application outside it hides the field, which a save would replace whole.
- * The task keeps its own type of object, so an edit of another field leaves the link untouched.
+ * reads the same way; of the applications, only those of the participation show. The task keeps its
+ * own type of object, so an edit of another field leaves the link untouched.
  */
 export function withReadableTaskLinks<T extends Record<string, any>>(row: T, reads: LinkedReads, visible: TaskVisibleLinks = {}): T {
   const task: Record<string, any> = { ...row };
-  const applicationIds: string[] = Array.isArray(task.application_ids) ? task.application_ids.map(String) : [];
-  if (!reads.applications || (visible.applications && applicationIds.some((id) => !visible.applications!.has(id)))) {
+  if (!reads.applications) {
     task.applications = null;
     task.application_ids = null;
+  } else if (visible.applications) {
+    // A Business Contributor: the applications of their participation only. A save of the field
+    // keeps the links to the others (`TasksUnifiedService`), so the field stays.
+    const shown = visible.applications;
+    if (Array.isArray(task.application_ids)) task.application_ids = task.application_ids.filter((id: unknown) => shown.has(String(id)));
+    if (Array.isArray(task.applications)) task.applications = task.applications.filter((app: { id?: unknown }) => shown.has(String(app?.id)));
   }
   if (!reads.assets) {
     task.assets = null;
