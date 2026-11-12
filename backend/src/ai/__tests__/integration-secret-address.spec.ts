@@ -58,9 +58,11 @@ function settingsRow(overrides?: Partial<AiSettings>): AiSettings {
 
 function settingsService(row: AiSettings) {
   const audits: any[] = [];
-  const queryBuilder = {
+  const queryBuilder: any = {
     addSelect: () => queryBuilder,
-    where: () => ({ getOne: async () => row }),
+    where: () => queryBuilder,
+    setLock: () => queryBuilder,
+    getOne: async () => row,
   };
   const repo = {
     manager: {
@@ -120,6 +122,19 @@ async function testGlpiSameAddressKeepsTokens() {
     const saved = await service.update(TENANT_ID, input);
     assert.equal(saved.glpi_user_token_encrypted, 'enc:stored-user-token', JSON.stringify(input));
     assert.equal(saved.glpi_app_token_encrypted, 'enc:stored-app-token', JSON.stringify(input));
+  }
+}
+
+async function testGlpiAddressStoredInAnOlderFormKeepsTokens() {
+  for (const stored of [
+    'https://glpi.example.com/helpdesk/api.php/v1',
+    'https://glpi.example.com/helpdesk/apirest.php/initSession',
+  ]) {
+    const { service } = settingsService(settingsRow({ glpi_url: stored }));
+    const saved = await service.update(TENANT_ID, { glpi_url: 'https://glpi.example.com/helpdesk' });
+    assert.equal(saved.glpi_url, 'https://glpi.example.com/helpdesk');
+    assert.equal(saved.glpi_user_token_encrypted, 'enc:stored-user-token', stored);
+    assert.equal(saved.glpi_app_token_encrypted, 'enc:stored-app-token', stored);
   }
 }
 
@@ -389,6 +404,14 @@ async function testPrtgCredentialFollowsItsAddress() {
     assert.equal(row.credential_ref_json?.kind, 'encrypted');
     assert.equal(new AiSecretCipherService().decrypt(row.credential_ref_json.ciphertext), 'new-prtg-token');
   }
+  {
+    // A reference managed by the operator goes too: it was set for the old address.
+    const harness = prtgHarness();
+    await savePrtg(harness, { base_url: 'https://prtg.example.test', api_token: 'stored-prtg-token' });
+    harness.rows[0].credential_ref_json = { kind: 'secret_ref', ref: `tenant/${TENANT_ID}/prtg-token` };
+    const row = await savePrtg(harness, { base_url: 'https://prtg-other.example.test' });
+    assert.equal(row.credential_ref_json, null);
+  }
   for (const sameAddress of ['https://prtg.example.test', 'https://PRTG.example.test:443/']) {
     const harness = prtgHarness();
     const first = await savePrtg(harness, { base_url: 'https://prtg.example.test', api_token: 'stored-prtg-token' });
@@ -423,6 +446,7 @@ async function run() {
     ['GLPI: a new address without tokens empties them, with a trace', testGlpiNewAddressWithoutTokensEmptiesThem],
     ['GLPI: a new address with a new token keeps the new one', testGlpiNewAddressWithNewTokenKeepsTheNewOne],
     ['GLPI: the same address, however spelled, keeps the tokens', testGlpiSameAddressKeepsTokens],
+    ['GLPI: an address stored in an older form keeps the tokens', testGlpiAddressStoredInAnOlderFormKeepsTokens],
     ['GLPI: an enabled connection moved without its token is refused', testGlpiEnabledNewAddressAsksForTheToken],
     ['Settings model key follows its destination', testLegacyModelKeyFollowsItsDestination],
     ['Model entry key follows its destination', testModelEntryKeyFollowsItsDestination],

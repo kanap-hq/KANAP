@@ -155,10 +155,9 @@ export default function MonitoringIntegrationCard() {
   const status = derivePrtgStatus(prtg);
   const statusColor = getDotColor(status === 'connected' ? 'success' : 'default', theme.palette.mode);
   const savedKey = prtg?.credential.present ?? false;
-  // The saved key only goes to the saved address: a new one empties it on save. A
-  // reference managed on the server (secret_ref) stays.
+  // The saved key only goes to the saved address: a new one empties it on save.
   const addressChanged = !!prtg && isNewSecretAddress(form.base_url, prtg.base_url);
-  const keyEmptiedByAddress = addressChanged && savedKey && prtg?.credential.shape !== 'secret_ref';
+  const keyEmptiedByAddress = addressChanged && savedKey;
   const hasStoredKey = savedKey && !keyEmptiedByAddress;
   const keyMissingForAddress = addressChanged && savedKey && !form.api_token.trim();
 

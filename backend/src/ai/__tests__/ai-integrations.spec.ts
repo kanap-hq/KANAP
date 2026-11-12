@@ -160,18 +160,23 @@ async function testWriteOnlyKeepOnOmitIncludingSecretRef() {
   });
   assert.equal(harness.rows[0].credential_ref_json.ciphertext, initialCiphertext);
 
-  // An operator-managed secret_ref row must survive a base_url-only save: it is
-  // not stored material the screen could ask for again.
+  // An operator-managed secret_ref row survives a save on the same address.
   harness.rows[0].credential_ref_json = { kind: 'secret_ref', ref: `tenant/${TENANT_ID}/prtg-token` };
+  await harness.service.savePrtgIntegration(harness.context, {
+    base_url: 'https://prtg.example.test',
+    enabled: true,
+  });
+  assert.deepEqual(harness.rows[0].credential_ref_json, {
+    kind: 'secret_ref',
+    ref: `tenant/${TENANT_ID}/prtg-token`,
+  });
+  // A new address empties it like any stored credential.
   await harness.service.savePrtgIntegration(harness.context, {
     base_url: 'https://prtg-three.example.test',
     enabled: true,
   });
   assert.equal(harness.rows[0].base_url, 'https://prtg-three.example.test');
-  assert.deepEqual(harness.rows[0].credential_ref_json, {
-    kind: 'secret_ref',
-    ref: `tenant/${TENANT_ID}/prtg-token`,
-  });
+  assert.equal(harness.rows[0].credential_ref_json, null);
 }
 
 async function testGetPresenceShapeMatrix() {

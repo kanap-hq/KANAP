@@ -236,13 +236,23 @@ export class NetboxConfigService {
     return manager.getRepository(AiAdapterConfig);
   }
 
-  async getConfig(manager: EntityManager, tenantId: string): Promise<AiAdapterConfig | null> {
+  /**
+   * `forUpdate` locks the row until the transaction ends: every path that saves the
+   * configuration reads it that way, so a save running at the same time waits and then
+   * reads what this one wrote, instead of writing its stale address or token back.
+   */
+  async getConfig(
+    manager: EntityManager,
+    tenantId: string,
+    opts?: { forUpdate?: boolean },
+  ): Promise<AiAdapterConfig | null> {
     return this.repo(manager).findOne({
       where: {
         tenant_id: tenantId,
         provider_kind: NETBOX_PROVIDER_KIND,
         provider_key: NETBOX_PROVIDER_KEY,
       },
+      ...(opts?.forUpdate ? { lock: { mode: 'pessimistic_write' as const } } : {}),
     });
   }
 
@@ -327,9 +337,9 @@ export class NetboxConfigService {
     manager: EntityManager,
     tenantId: string,
     input: NetboxIntegrationSaveInput,
-    opts?: { userId?: string | null },
+    opts?: { userId?: string | null; sourceRef?: string | null },
   ): Promise<NetboxIntegrationView> {
-    const existing = await this.getConfig(manager, tenantId);
+    const existing = await this.getConfig(manager, tenantId, { forUpdate: true });
     const metadata: Record<string, unknown> = { ...(asRecord(existing?.metadata_json) ?? {}) };
 
     let baseUrl = textOrNull(existing?.base_url);
@@ -422,6 +432,7 @@ export class NetboxConfigService {
       before: existing ? this.auditView(existing) : null,
       after: this.auditView(saved),
       userId: opts?.userId ?? null,
+      sourceRef: opts?.sourceRef ?? null,
     });
     if (addressChanged || tokenChanged) {
       // Only this key. The save above may have copied the previous test into
@@ -462,7 +473,7 @@ export class NetboxConfigService {
     tenantId: string,
     input: { role_map?: unknown; site_map?: unknown; os_map?: unknown; cluster_map?: unknown; cluster_names?: unknown },
   ): Promise<NetboxMappingView> {
-    const existing = await this.getConfig(manager, tenantId);
+    const existing = await this.getConfig(manager, tenantId, { forUpdate: true });
     if (!existing) {
       throw new BadRequestException('Set up the Netbox connection first, then save the matches.');
     }
@@ -613,7 +624,7 @@ export class NetboxConfigService {
     tenantId: string,
     state: NetboxSyncStateView,
   ): Promise<void> {
-    const config = await this.getConfig(manager, tenantId);
+    const config = await this.getConfig(manager, tenantId, { forUpdate: true });
     if (!config) return;
     const metadata: Record<string, unknown> = { ...(asRecord(config.metadata_json) ?? {}) };
     metadata.sync_state = state;

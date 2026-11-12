@@ -211,7 +211,7 @@ export class AiMonitoringIntegrationsService {
       throw new BadRequestException('The enabled setting must be on or off.');
     }
 
-    const existing = await this.adapterConfigs.getConfig(context, 'monitoring', PRTG_MONITORING_PROVIDER_KEY);
+    const existing = await this.adapterConfigs.getConfig(context, 'monitoring', PRTG_MONITORING_PROVIDER_KEY, { forUpdate: true });
 
     let environment = existing?.environment ?? 'production';
     const environmentInput = textOrNull(input.environment);
@@ -253,16 +253,12 @@ export class AiMonitoringIntegrationsService {
       }
     }
 
-    // Credential is write-only: omitted/empty keeps the existing reference
-    // as-is — including an operator-managed secret_ref, which a base_url-only
-    // save must never clobber. A stored credential only goes to the address it
-    // was entered for: a new address empties it unless this request brings one.
+    // Credential is write-only: omitted/empty keeps the stored one, including an
+    // operator-managed reference, as long as the address stays the same. A stored
+    // credential only goes to the address it was entered for: a new address empties
+    // it, reference included, unless this request brings one.
     let credentialRef: Record<string, unknown> | null = existing?.credential_ref_json ?? null;
-    if (
-      existing
-      && !sameSecretDestination(existing.base_url, baseUrl)
-      && parseCredentialRef(credentialRef)?.kind === 'encrypted'
-    ) {
+    if (existing && !sameSecretDestination(existing.base_url, baseUrl)) {
       credentialRef = null;
     }
     const apiToken = textOrNull(input.api_token);

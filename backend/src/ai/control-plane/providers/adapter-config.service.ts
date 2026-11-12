@@ -111,10 +111,16 @@ export class AiAdapterConfigService {
     return context.manager.getRepository(AiAdapterConfig);
   }
 
+  /**
+   * `forUpdate` locks the row until the request's transaction ends: a save reads it that
+   * way, so a save running at the same time waits and then reads what this one wrote,
+   * instead of writing its stale address or credential back.
+   */
   async getConfig(
     context: AiExecutionContextWithManager,
     providerKind: ProviderKind,
     providerKey = 'default',
+    opts?: { forUpdate?: boolean },
   ): Promise<AiAdapterConfig | null> {
     return this.repository(context).findOne({
       where: {
@@ -122,6 +128,7 @@ export class AiAdapterConfigService {
         provider_kind: providerKind,
         provider_key: providerKey,
       },
+      ...(opts?.forUpdate ? { lock: { mode: 'pessimistic_write' as const } } : {}),
     });
   }
 
@@ -220,7 +227,7 @@ export class AiAdapterConfigService {
       throw new BadRequestException(applicability.message);
     }
     const repo = this.repository(context);
-    const existing = await this.getConfig(context, input.provider_kind, input.provider_key);
+    const existing = await this.getConfig(context, input.provider_kind, input.provider_key, { forUpdate: true });
     const entity = repo.create({
       ...(existing ?? {}),
       ...input,
