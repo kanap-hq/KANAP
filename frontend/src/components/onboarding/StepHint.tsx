@@ -241,10 +241,12 @@ export default function StepHint() {
           maxWidth: `min(360px, calc(100vw - ${2 * CORNER}px))`,
           p: 1.5,
           borderRadius: '8px',
-          border: `1px solid ${theme.palette.kanap.border.default}`,
+          // Apart from the element it describes, the hint wears the same ring as its outline, which
+          // also sets it off a card of the same tint in dark mode.
+          border: `1px solid ${theme.palette.primary.main}`,
           // A raised surface: in dark mode the page background would swallow it.
           bgcolor: theme.palette.kanap.bg.composer,
-          boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 4px 16px rgba(15, 17, 23, 0.08)',
+          boxShadow: theme.shadows[3],
         })}
       >
         <Typography variant="body2">{hint}</Typography>

@@ -275,6 +275,16 @@ describe('StepHint', () => {
     expect(screen.getByTestId('step-hint-outline')).toBeInTheDocument();
   });
 
+  it('draws the hint and its outline in the colour of the theme, with a shadow, in dark mode too', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    const dark = createAppTheme('dark');
+    renderAt('/ops/budget?step=budget_overview', page, undefined, dark);
+    const hint = await screen.findByRole('dialog', { name: 'The overview' });
+    // The hint stands apart from its element: the same ring as the outline ties the two together.
+    expect(hint).toHaveStyle({ border: `1px solid ${dark.palette.primary.main}`, boxShadow: dark.shadows[3] });
+    expect(screen.getByTestId('step-hint-outline')).toHaveStyle({ outline: `2px solid ${dark.palette.primary.main.toLowerCase()}` });
+  });
+
   it('names the line its step opened and points at its tabs', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt({ pathname: '/ops/budget/BL-7', search: '?step=budget_line', state: { onboardingRecord: 'BL-7 Microsoft Enterprise' } }, (
