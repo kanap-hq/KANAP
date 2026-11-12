@@ -6,6 +6,8 @@ import { AiAdapterConfig } from '../ai/control-plane/providers/adapter-config.en
 import { parseCredentialRef } from '../ai/control-plane/providers/adapter-config.service';
 import { ProviderCredentialRef } from '../ai/control-plane/providers/provider.types';
 import { ENVIRONMENTS } from '../assets/services/assets-base.service';
+import { writeAuditLog } from '../audit/audit.service';
+import { sameSecretDestination } from '../common/secret-destination';
 import { assertPublicHttpUrl } from '../common/ssrf-guard';
 import {
   NETBOX_MAX_TIMEOUT_SECONDS,
@@ -325,6 +327,7 @@ export class NetboxConfigService {
     manager: EntityManager,
     tenantId: string,
     input: NetboxIntegrationSaveInput,
+    opts?: { userId?: string | null },
   ): Promise<NetboxIntegrationView> {
     const existing = await this.getConfig(manager, tenantId);
     const metadata: Record<string, unknown> = { ...(asRecord(existing?.metadata_json) ?? {}) };
@@ -370,11 +373,16 @@ export class NetboxConfigService {
       metadata.default_environment = value;
     }
 
-    // Write-only credential: an omitted or empty token keeps the stored one.
+    // Write-only credential: an omitted or empty token keeps the stored one, as
+    // long as the address stays the same. A stored token only goes to the address
+    // it was entered for: a new address empties it unless this request brings one.
     let credentialRef = existing?.credential_ref_json ?? null;
     const token = textOrNull(input.api_token);
+    const destinationChanged = !!existing && !sameSecretDestination(existing.base_url, baseUrl);
     if (token) {
       credentialRef = this.encryptedCredentialRef(token);
+    } else if (destinationChanged && credentialRef) {
+      credentialRef = null;
     }
     // A new address or a new token makes the stored connection test describe a
     // configuration that is gone. An empty token keeps the stored secret, so
@@ -384,7 +392,9 @@ export class NetboxConfigService {
 
     const enabled = booleanOr(input.enabled, existing?.enabled ?? false);
     if (enabled && !credentialRef) {
-      throw netboxBadRequest('netbox_token_missing');
+      throw netboxBadRequest(destinationChanged && existing?.credential_ref_json
+        ? 'netbox_token_needed_for_address'
+        : 'netbox_token_missing');
     }
 
     const repo = this.repo(manager);
@@ -405,6 +415,14 @@ export class NetboxConfigService {
       created_at: existing?.created_at ?? new Date(),
     });
     const saved = await repo.save(entity);
+    await writeAuditLog(manager, {
+      table: 'ai_adapter_configs',
+      recordId: saved.id,
+      action: existing ? 'update' : 'create',
+      before: existing ? this.auditView(existing) : null,
+      after: this.auditView(saved),
+      userId: opts?.userId ?? null,
+    });
     if (addressChanged || tokenChanged) {
       // Only this key. The save above may have copied the previous test into
       // its snapshot; removing it here leaves every other metadata key as it
@@ -420,6 +438,22 @@ export class NetboxConfigService {
       return this.toView({ ...saved, metadata_json: cleared });
     }
     return this.toView(saved);
+  }
+
+  /** The connection settings an audit entry keeps: whether a token is stored, never the token. */
+  private auditView(config: AiAdapterConfig) {
+    const metadata = asRecord(config.metadata_json);
+    const credential = parseCredentialRef(config.credential_ref_json);
+    return {
+      provider_key: config.provider_key,
+      enabled: config.enabled === true,
+      base_url: textOrNull(config.base_url),
+      credential: { present: !!credential && credential.kind !== 'none' },
+      request_timeout_seconds: config.timeout_seconds ?? null,
+      insecure_tls: metadata?.insecure_tls === true,
+      auto_sync: metadata?.auto_sync === true,
+      default_environment: textOrNull(metadata?.default_environment) ?? 'prod',
+    };
   }
 
   /** Full replacement of the mapping tables the body carries. */
@@ -531,6 +565,11 @@ export class NetboxConfigService {
     const baseUrl = overrides?.baseUrl ?? textOrNull(config?.base_url);
     if (!baseUrl) {
       throw netboxBadRequest('netbox_base_url_invalid');
+    }
+    // The stored token is only sent to the stored address: another address needs
+    // its token in the request.
+    if (!overrides?.token && config?.credential_ref_json && !sameSecretDestination(baseUrl, config.base_url)) {
+      throw netboxBadRequest('netbox_token_needed_for_address');
     }
     const token = overrides?.token ?? this.revealToken(config);
     const timeoutSeconds = overrides?.timeoutSeconds ?? config?.timeout_seconds ?? null;

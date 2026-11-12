@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { modelKeyDestination } from '../common/secret-destination';
 import { assertPublicHttpUrl } from '../common/ssrf-guard';
 import { AiModelConfig, AiModelProvider } from './ai-model-config.entity';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
@@ -402,6 +403,7 @@ export class AiModelConfigService {
     input: UpdateAiModelConfigInput,
     opts: { isCreate: boolean },
   ): void {
+    const previousDestination = opts.isCreate ? null : modelKeyDestination(config.provider, config.endpoint_url);
     if (opts.isCreate || Object.prototype.hasOwnProperty.call(input, 'name')) {
       const name = normalizeNullableString(input.name);
       if (!name) {
@@ -451,6 +453,15 @@ export class AiModelConfigService {
     if (Object.prototype.hasOwnProperty.call(input, 'api_key')) {
       const raw = normalizeNullableString(input.api_key);
       config.api_key_encrypted = raw ? this.cipher.encrypt(raw) : null;
+    }
+    // A stored key only goes to the destination it was entered for: a new provider
+    // service or address empties it unless the same request brings a key.
+    if (
+      !opts.isCreate
+      && previousDestination !== modelKeyDestination(config.provider, config.endpoint_url)
+      && !normalizeNullableString(input.api_key)
+    ) {
+      config.api_key_encrypted = null;
     }
     if (Object.prototype.hasOwnProperty.call(input, 'supports_vision')) {
       config.supports_vision = input.supports_vision !== false;

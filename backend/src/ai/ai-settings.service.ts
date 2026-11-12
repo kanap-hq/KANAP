@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { Features } from '../config/features';
+import { modelKeyDestination, sameSecretDestination } from '../common/secret-destination';
 import { assertPublicHttpUrl } from '../common/ssrf-guard';
 import { AiModelConfig } from './ai-model-config.entity';
 import { AiModelReadiness, AiModelResolverService } from './ai-model-resolver.service';
@@ -323,6 +324,8 @@ export class AiSettingsService {
     const existing = await this.find(tenantId, opts);
     const settings = existing ?? await this.get(tenantId, opts);
     const beforeView = existing ? await this.toView(settings, opts) : null;
+    const previousGlpiUrl = settings.glpi_url;
+    const previousLlmDestination = modelKeyDestination(settings.llm_provider, settings.llm_endpoint_url);
 
     if (Object.prototype.hasOwnProperty.call(input, 'chat_enabled')) {
       settings.chat_enabled = input.chat_enabled === true;
@@ -414,6 +417,20 @@ export class AiSettingsService {
       settings.glpi_app_token_encrypted = raw ? this.cipher.encrypt(raw) : null;
     }
 
+    // A stored secret only goes to the address it was entered for: a new address
+    // empties every secret the same request does not bring again.
+    const glpiAddressChanged = !sameSecretDestination(previousGlpiUrl, settings.glpi_url);
+    if (glpiAddressChanged) {
+      if (!normalizeNullableString(input.glpi_user_token)) settings.glpi_user_token_encrypted = null;
+      if (!normalizeNullableString(input.glpi_app_token)) settings.glpi_app_token_encrypted = null;
+    }
+    if (
+      previousLlmDestination !== modelKeyDestination(settings.llm_provider, settings.llm_endpoint_url)
+      && !normalizeNullableString(input.llm_api_key)
+    ) {
+      settings.llm_api_key_encrypted = null;
+    }
+
     if (Object.prototype.hasOwnProperty.call(input, 'accept_builtin_provider_key')) {
       const requestedKey = input.accept_builtin_provider_key;
       if (requestedKey == null) {
@@ -446,7 +463,9 @@ export class AiSettingsService {
         throw new BadRequestException('GLPI integration requires glpi_url.');
       }
       if (!settings.glpi_user_token_encrypted) {
-        throw new BadRequestException('GLPI integration requires glpi_user_token.');
+        throw new BadRequestException(glpiAddressChanged && previousGlpiUrl
+          ? 'The GLPI address changed: enter the user token again.'
+          : 'GLPI integration requires glpi_user_token.');
       }
     }
 

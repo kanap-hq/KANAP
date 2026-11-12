@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { decodeHtmlEntities, decodeNumericHtmlEntities } from '../../common/html-entities';
 import { markdownWorkBudget, resolveHtmlContentSource, resolveHtmlContentSources } from '../../common/markdown-worker';
 import { openValidatedFetch } from '../../common/pinned-fetch';
+import { sameSecretDestination } from '../../common/secret-destination';
 import { Features } from '../../config/features';
 import { AiSecretCipherService } from '../ai-secret-cipher.service';
 import { AiSettingsService } from '../ai-settings.service';
@@ -1535,9 +1536,12 @@ export class GlpiService {
   ): Promise<ResolvedGlpiSettings> {
     const settings = await this.settingsService.find(tenantId, { manager });
     const baseUrl = normalizeBaseUrl(overrides?.glpi_url ?? settings?.glpi_url ?? null);
+    // The stored tokens are only sent to the stored address: another address needs
+    // its tokens in the request.
+    const storedTokensApply = sameSecretDestination(baseUrl, normalizeBaseUrl(settings?.glpi_url ?? null));
 
     let userToken = textOrNull(overrides?.glpi_user_token);
-    if (!userToken && settings?.glpi_user_token_encrypted) {
+    if (!userToken && storedTokensApply && settings?.glpi_user_token_encrypted) {
       try {
         userToken = this.cipher.decrypt(settings.glpi_user_token_encrypted);
       } catch (error: any) {
@@ -1548,7 +1552,7 @@ export class GlpiService {
     }
 
     let appToken = textOrNull(overrides?.glpi_app_token);
-    if (!appToken && settings?.glpi_app_token_encrypted) {
+    if (!appToken && storedTokensApply && settings?.glpi_app_token_encrypted) {
       try {
         appToken = this.cipher.decrypt(settings.glpi_app_token_encrypted);
       } catch (error: any) {
@@ -1562,7 +1566,9 @@ export class GlpiService {
       throw new BadRequestException('GLPI URL is required.');
     }
     if (!userToken) {
-      throw new BadRequestException('GLPI user token is required.');
+      throw new BadRequestException(!storedTokensApply && settings?.glpi_user_token_encrypted
+        ? 'Enter the GLPI user token to connect to an address other than the saved one.'
+        : 'GLPI user token is required.');
     }
 
     return { baseUrl, userToken, appToken };

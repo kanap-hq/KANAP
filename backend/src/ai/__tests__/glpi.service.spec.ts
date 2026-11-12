@@ -97,7 +97,8 @@ async function testConnectionNormalizesCopiedApiUrls() {
       for (const suffix of ['/apirest.php/initsession', '/apirest.php/initSession/', '/api.php/v1', '/api.php/v1/initSession/']) {
         for (const useOverride of [false, true]) {
           const configuredUrl = `${root}${suffix}?get_full_session=true#documentation`;
-          const service = createService(useOverride ? 'https://unused.internal' : configuredUrl);
+          // The override is another spelling of the stored address: the stored tokens apply.
+          const service = createService(useOverride ? root : configuredUrl);
           const requests: { url: string; headers: Headers }[] = [];
           global.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
             const url = String(input);

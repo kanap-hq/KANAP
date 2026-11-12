@@ -47,7 +47,7 @@ export class NetboxController {
   @RequireLevel('infrastructure', 'admin')
   @Put('integration')
   saveIntegration(@Body() body: NetboxIntegrationSaveInput, @Req() req: any) {
-    return this.config.save(this.manager(req), this.tenantId(req), body ?? {});
+    return this.config.save(this.manager(req), this.tenantId(req), body ?? {}, { userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)

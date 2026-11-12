@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { modelKeyDestination } from '../common/secret-destination';
 import { assertPublicHttpTarget } from '../common/ssrf-guard';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { AiSettingsService } from './ai-settings.service';
@@ -58,8 +59,13 @@ export class AiProviderTestService {
     const model = normalizeNullableString(input.llm_model) ?? currentSettings?.llm_model ?? null;
     const endpointUrl = normalizeNullableString(input.llm_endpoint_url) ?? currentSettings?.llm_endpoint_url ?? null;
 
+    // The stored key is only sent to the destination it was saved for: testing another
+    // provider or address needs the key in the request.
+    const storedKeyApplies = !!currentSettings
+      && modelKeyDestination(provider, endpointUrl)
+        === modelKeyDestination(currentSettings.llm_provider, currentSettings.llm_endpoint_url);
     let apiKey = normalizeNullableString(input.llm_api_key);
-    if (!apiKey && currentSettings?.llm_api_key_encrypted) {
+    if (!apiKey && storedKeyApplies && currentSettings?.llm_api_key_encrypted) {
       try {
         apiKey = this.cipher.decrypt(currentSettings.llm_api_key_encrypted);
       } catch (error) {

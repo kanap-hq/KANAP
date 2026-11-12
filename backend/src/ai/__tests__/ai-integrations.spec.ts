@@ -47,6 +47,8 @@ function createHarness(route: FakeRoute = () => ({ status: 500, text: 'no route'
       rows.push(saved);
       return saved;
     },
+    // The audit entry a save writes.
+    insert: async () => ({ identifiers: [{ id: 'audit-1' }] }),
   };
   const manager = { getRepository: () => repo } as any;
   const context = {
@@ -140,25 +142,26 @@ async function testWriteOnlyKeepOnOmitIncludingSecretRef() {
   });
   const initialCiphertext = harness.rows[0].credential_ref_json.ciphertext;
 
-  // Omitted and empty api_token both keep the stored credential; a missing
-  // server_timezone key keeps the stored zone.
+  // On the same address, omitted and empty api_token both keep the stored
+  // credential; a missing server_timezone key keeps the stored zone.
   await harness.service.savePrtgIntegration(harness.context, {
-    base_url: 'https://prtg-two.example.test',
+    base_url: 'https://prtg.example.test/',
     enabled: false,
   });
-  assert.equal(harness.rows[0].base_url, 'https://prtg-two.example.test');
+  assert.equal(harness.rows[0].base_url, 'https://prtg.example.test');
   assert.equal(harness.rows[0].enabled, false);
   assert.equal(harness.rows[0].credential_ref_json.ciphertext, initialCiphertext);
   assert.equal(harness.rows[0].metadata_json?.server_timezone, 'Europe/Paris');
 
   await harness.service.savePrtgIntegration(harness.context, {
-    base_url: 'https://prtg-two.example.test',
+    base_url: 'https://prtg.example.test',
     enabled: true,
     api_token: '   ',
   });
   assert.equal(harness.rows[0].credential_ref_json.ciphertext, initialCiphertext);
 
-  // An operator-managed secret_ref row must survive a base_url-only save.
+  // An operator-managed secret_ref row must survive a base_url-only save: it is
+  // not stored material the screen could ask for again.
   harness.rows[0].credential_ref_json = { kind: 'secret_ref', ref: `tenant/${TENANT_ID}/prtg-token` };
   await harness.service.savePrtgIntegration(harness.context, {
     base_url: 'https://prtg-three.example.test',

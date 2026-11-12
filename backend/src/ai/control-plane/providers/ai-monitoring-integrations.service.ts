@@ -1,4 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { writeAuditLog } from '../../../audit/audit.service';
+import { sameSecretDestination } from '../../../common/secret-destination';
 import { assertPublicHttpUrl } from '../../../common/ssrf-guard';
 import { AiSecretCipherService } from '../../ai-secret-cipher.service';
 import { AiExecutionContextWithManager } from '../../ai.types';
@@ -253,8 +255,16 @@ export class AiMonitoringIntegrationsService {
 
     // Credential is write-only: omitted/empty keeps the existing reference
     // as-is — including an operator-managed secret_ref, which a base_url-only
-    // save must never clobber.
+    // save must never clobber. A stored credential only goes to the address it
+    // was entered for: a new address empties it unless this request brings one.
     let credentialRef: Record<string, unknown> | null = existing?.credential_ref_json ?? null;
+    if (
+      existing
+      && !sameSecretDestination(existing.base_url, baseUrl)
+      && parseCredentialRef(credentialRef)?.kind === 'encrypted'
+    ) {
+      credentialRef = null;
+    }
     const apiToken = textOrNull(input.api_token);
     const username = textOrNull(input.username);
     const passhash = textOrNull(input.passhash);
@@ -267,7 +277,7 @@ export class AiMonitoringIntegrationsService {
       credentialRef = this.encryptedCredentialRef(JSON.stringify({ username, passhash }), 'username_passhash');
     }
 
-    await this.adapterConfigs.saveConfig(context, {
+    const saved = await this.adapterConfigs.saveConfig(context, {
       provider_kind: 'monitoring',
       provider_key: PRTG_MONITORING_PROVIDER_KEY,
       implementation: PRTG_MONITORING_IMPLEMENTATION,
@@ -277,6 +287,15 @@ export class AiMonitoringIntegrationsService {
       credential_ref_json: credentialRef,
       metadata_json: Object.keys(metadata).length > 0 ? metadata : null,
       timeout_seconds: timeoutSeconds,
+    });
+    await writeAuditLog(context.manager, {
+      table: 'ai_adapter_configs',
+      recordId: saved.id,
+      action: existing ? 'update' : 'create',
+      before: existing ? toView(existing) : null,
+      after: toView(saved),
+      userId: context.userId || null,
+      sourceRef: context.requestId ?? null,
     });
     return { ok: true };
   }
@@ -296,6 +315,10 @@ export class AiMonitoringIntegrationsService {
 
     let material = textOrNull(input.api_token);
     if (!material) {
+      // The stored credential is only sent to the stored address.
+      if (config?.credential_ref_json && !sameSecretDestination(config.base_url, baseUrl)) {
+        return { ok: false, message: 'Enter the API token to test an address other than the saved one.' };
+      }
       if (!config?.credential_ref_json) {
         return { ok: false, message: 'No PRTG credential is saved yet. Enter an API token to test with, or save one first.' };
       }
