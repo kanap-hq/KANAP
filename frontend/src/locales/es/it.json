@@ -720,7 +720,9 @@
         },
         "platform": "Plataforma subyacente ({{count}})",
         "countLink_one": "Ver la vulnerabilidad por revisar en la página Vulnerabilidades",
-        "countLink_other": "Ver las {{count}} vulnerabilidades por revisar en la página Vulnerabilidades"
+        "countLink_other": "Ver las {{count}} vulnerabilidades por revisar en la página Vulnerabilidades",
+        "excluded_one": "{{count}} vulnerabilidad excluida de las alertas",
+        "excluded_other": "{{count}} vulnerabilidades excluidas de las alertas"
       },
       "severeBadge": {
         "label_one": "{{count}} grave",

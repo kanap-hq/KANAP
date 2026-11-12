@@ -355,6 +355,19 @@ describe('ReachVulnerabilitiesSection', () => {
     expect(screen.queryByTestId('reach-vulnerabilities-pending')).toBeNull();
   });
 
+  it('counts the vulnerabilities kept out of the alerts and opens the page on them', () => {
+    renderSection({ kind: 'application', subjectReference: 'APP-3', data: { rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, excluded: 4338 } });
+    expect(screen.getByText('No vulnerability to review on this application.')).toBeTruthy();
+    const link = screen.getByTestId('reach-vulnerabilities-excluded');
+    expect(link.textContent).toMatch(/^4[,.\u202f\u00a0]?338 vulnerabilities excluded from alerts$/);
+    expect(link.getAttribute('href')).toBe('/it/vulnerabilities?application=APP-3&alerts=excluded');
+  });
+
+  it('says nothing more when no vulnerability is kept out of the alerts', () => {
+    renderSection({ data: { rows: [row({})], totals: { open: 6, severe: 3, exploited_severe: 1 }, excluded: 0 } });
+    expect(screen.queryByTestId('reach-vulnerabilities-excluded')).toBeNull();
+  });
+
   it('says the search is in progress while a match is pending, and keeps the rows once they are there', () => {
     const { unmount } = renderSection({ data: { rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, pending: true } });
     expect(screen.getByTestId('reach-vulnerabilities-pending').textContent).toBe('Searching for vulnerabilities…');
