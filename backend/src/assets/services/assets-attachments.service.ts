@@ -10,6 +10,7 @@ import { AssetProject } from '../asset-project.entity';
 import { PortfolioProject } from '../../portfolio/portfolio-project.entity';
 import { AuditService } from '../../audit/audit.service';
 import { StorageService } from '../../common/storage/storage.service';
+import { unreferencedPaths } from '../../common/storage-path-refs';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { assertWebLinkUrl } from '../../common/web-link-url';
 import { validateUploadedFile } from '../../common/upload-validation';
@@ -208,9 +209,11 @@ export class AssetsAttachmentsService extends AssetsBaseService {
     if (!found) return { ok: true };
 
     await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
-    try {
-      await this.storage.deleteObject((found as any).storage_path);
-    } catch {}
+    if ((await unreferencedPaths(mg, tenantId, [found.storage_path])).length > 0) {
+      try {
+        await this.storage.deleteObject(found.storage_path);
+      } catch {}
+    }
 
     await this.audit.log(
       { table: 'asset_attachments', recordId: found.id, action: 'delete', before: found, after: null, userId },

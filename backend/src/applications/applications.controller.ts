@@ -244,11 +244,11 @@ export class ApplicationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Patch('attachments/:attachmentId/delete')
-  deleteAttachment(
+  async deleteAttachment(
     @Param('attachmentId') attachmentId: string,
     @Tenant() ctx: TenantRequest,
   ): Promise<{ ok: boolean }> {
-    return this.svc.deleteAttachment(attachmentId, ctx.userId || null, { manager: ctx.manager });
+    return this.svc.deleteAttachment(attachmentId, ctx.userId || null, await this.readApplicationOpts(ctx));
   }
 
   // What a delete of `ids` would refuse (applications with interfaces) and take with it, asked before the confirmation.

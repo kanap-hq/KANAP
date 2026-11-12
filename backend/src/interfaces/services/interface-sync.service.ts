@@ -12,6 +12,7 @@ import { Application } from '../../applications/application.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { StorageService } from '../../common/storage/storage.service';
+import { unreferencedPaths } from '../../common/storage-path-refs';
 import {
   InterfacesBaseService,
   ServiceOpts,
@@ -121,14 +122,17 @@ export class InterfaceSyncService extends InterfacesBaseService {
     opts?: ServiceOpts,
   ) {
     const mg = opts?.manager ?? this.repo.manager;
+    const tenantId = await this.resolveTenantId(mg);
     const repo = mg.getRepository(InterfaceAttachment);
-    const found = await repo.findOne({ where: { id: attachmentId } });
+    const found = await repo.findOne({ where: { id: attachmentId, tenant_id: tenantId } });
     if (!found) return { ok: true };
-    await repo.delete({ id: attachmentId } as any);
-    try {
-      await this.storage.deleteObject((found as any).storage_path);
-    } catch {
-      // Best-effort; ignore storage errors during delete
+    await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
+    if ((await unreferencedPaths(mg, tenantId, [found.storage_path])).length > 0) {
+      try {
+        await this.storage.deleteObject(found.storage_path);
+      } catch {
+        // Best-effort; ignore storage errors during delete
+      }
     }
     await this.audit.log(
       { table: 'interface_attachments', recordId: found.id, action: 'delete', before: found, after: null, userId },

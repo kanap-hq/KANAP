@@ -783,10 +783,12 @@ export class InterfacesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Patch('attachments/:attachmentId/delete')
-  deleteAttachment(
+  async deleteAttachment(
     @Param('attachmentId') attachmentId: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    // As the download: interfaces are outside a Business Contributor's participation scope.
+    await this.assertUnrestrictedApplicationReader(ctx);
     return this.svc.deleteAttachment(attachmentId, ctx.userId || null, {
       manager: ctx.manager,
     });

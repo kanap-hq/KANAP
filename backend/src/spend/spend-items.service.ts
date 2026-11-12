@@ -24,6 +24,7 @@ import { SpendLink } from './spend-link.entity';
 import { SpendAttachment } from './spend-attachment.entity';
 import * as path from 'path';
 import { StorageService } from '../common/storage/storage.service';
+import { unreferencedPaths } from '../common/storage-path-refs';
 import { randomUUID } from 'crypto';
 import { Application } from '../applications/application.entity';
 import { ApplicationSpendItemLink } from '../applications/application-spend-item.entity';
@@ -820,7 +821,9 @@ export class SpendItemsService {
     // A read-only line: the policy would delete nothing and the file would go anyway.
     await assertLinesEditable(mg, [(found as any).spend_item_id]);
     await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
-    try { await this.storage.deleteObject((found as any).storage_path); } catch {}
+    if ((await unreferencedPaths(mg, tenantId, [found.storage_path])).length > 0) {
+      try { await this.storage.deleteObject(found.storage_path); } catch {}
+    }
     await this.audit.log({
       table: auditTableOf(this.nature, 'spend_attachments'), recordId: found.id, action: 'update',
       before: presentChild(this.nature, found as any), after: null, userId,
