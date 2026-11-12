@@ -11,13 +11,15 @@ import { NETBOX_PROVIDER_KEY, NETBOX_PROVIDER_KIND, NetboxConfigService } from '
 // stored token only goes to the address it was entered for.
 
 const STORED_URL = 'https://netbox.example.com';
-const STORED_TOKEN = { kind: 'secret', ciphertext: 'stored-token' };
+// The form the save path writes (an encrypted credential reference) and the service reads.
+const STORED_TOKEN = { kind: 'encrypted', ciphertext: 'enc:stored-token', material_shape: 'api_token' };
 const LAST_TEST = { ok: true, tested_at: '2026-10-24T19:38:00.000Z' };
 
 function service() {
   return new NetboxConfigService({
     canEncrypt: () => true,
     encrypt: (value: string) => `enc:${value}`,
+    decrypt: (value: string) => value.replace(/^enc:/, ''),
   } as any);
 }
 
@@ -103,6 +105,13 @@ async function inTransaction(name: string, fn: (runner: QueryRunner) => Promise<
 async function main() {
   await dataSource.initialize();
   try {
+    await inTransaction('the seeded token is the form the service reads and sends', async (runner) => {
+      const { tenantId } = await seed(runner);
+      const config = await service().getConfig(runner.manager, tenantId);
+      assert.equal(service().toView(config).credential.present, true);
+      assert.equal(service().buildConnection(config).token, 'stored-token');
+    });
+
     await inTransaction('a new address drops the stored test and keeps a mapping written during the clear', async (runner) => {
       const { tenantId, configId } = await seed(runner);
       const watch = watchClear(runner, configId);
@@ -132,6 +141,7 @@ async function main() {
     await inTransaction('an empty token on the same address keeps the stored test', async (runner) => {
       const { tenantId, configId } = await seed(runner);
       const view = await service().save(runner.manager, tenantId, { api_token: '   ', auto_sync: true });
+      assert.equal(view.credential.present, true);
       assert.deepEqual(view.last_test, LAST_TEST);
       assert.equal(view.auto_sync, true);
       const row = await readRow(runner, configId);
@@ -172,6 +182,7 @@ async function main() {
       assert.equal(audits.length, 1);
       assert.equal(audits[0].action, 'update');
       assert.equal(audits[0].before_json.base_url, STORED_URL);
+      assert.equal(audits[0].before_json.credential.present, true);
       assert.equal(audits[0].after_json.base_url, 'https://other.example.com');
       assert.equal(audits[0].after_json.credential.present, false);
       assert.doesNotMatch(JSON.stringify(audits), /stored-token|ciphertext/);
