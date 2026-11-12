@@ -23,7 +23,9 @@ vi.mock('../../hooks/useContractNav', () => ({
 }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../components/MarkdownEditor', () => ({
-  default: ({ value }: { value: string }) => <textarea aria-label="markdown-editor" value={value} readOnly />,
+  default: ({ value, onChange }: { value: string; onChange: (next: string) => void }) => (
+    <textarea aria-label="markdown-editor" value={value ?? ''} onChange={(event) => onChange(event.target.value)} />
+  ),
 }));
 // The pickers as plain inputs: what the page does with their values is what is tested here.
 vi.mock('../../components/fields/SupplierSelect', () => ({
@@ -117,6 +119,46 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
       return { data: { items: [] } };
     });
     mocked.patch.mockResolvedValue({ data: {} });
+  });
+
+  /** A new contract with every required field given and its write pending: `answer` ends the write. */
+  async function startWrite() {
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+    renderNew();
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: 'Oracle support' } });
+    fireEvent.blur(title);
+    const drawer = screen.getByRole('complementary');
+    fireEvent.change(within(drawer).getByLabelText('contracts.fields.supplier'), { target: { value: 'sup-1' } });
+    fireEvent.change(within(drawer).getByLabelText('contracts.fields.company'), { target: { value: 'co-1' } });
+    fireEvent.change(within(drawer).getByLabelText('start-date'), { target: { value: '2026-01-01' } });
+    await waitFor(() => expect(within(drawer).getByRole('combobox', { name: 'contracts.fields.currency' })).toHaveValue('EUR · Euro'));
+    const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
+    fireEvent.change(duration, { target: { value: '24' } });
+    fireEvent.blur(duration);
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    return { drawer, finish: () => act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); }) };
+  }
+
+  it('keeps the notes typed while the contract is written: same editor, same focus, saved on the new contract', async () => {
+    const { finish } = await startWrite();
+    // The person goes on to the notes and types a first letter while the contract is written.
+    const notes = await screen.findByLabelText('markdown-editor');
+    act(() => notes.focus());
+    fireEvent.change(notes, { target: { value: 'S' } });
+    await finish();
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/contracts/c-new/overview'));
+    await until(() => { if (!mocked.get.mock.calls.some(([url]) => url === '/contracts/c-new')) throw new Error('contract not read'); });
+
+    // The rest of the sentence goes to the same editor, which still has the focus.
+    const shown = screen.getByLabelText('markdown-editor') as HTMLTextAreaElement;
+    expect(shown === notes).toBe(true);
+    expect(document.activeElement === shown).toBe(true);
+    fireEvent.change(shown, { target: { value: 'Signed by the CIO' } });
+    await until(() => { if (shown.value !== 'Signed by the CIO') throw new Error(`notes show "${shown.value}"`); });
+    fireEvent.blur(shown);
+    await until(() => { if (!mocked.patch.mock.calls.some(([url, body]) => url === '/contracts/c-new' && body?.notes === 'Signed by the CIO')) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
   });
 
   it('keeps the amount typed while the contract is written, shows it and saves it on the new contract', async () => {

@@ -360,7 +360,12 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   }, [id, queryClient]);
 
   const notesTouchedRef = React.useRef(false);
-  React.useEffect(() => { notesTouchedRef.current = false; }, [id]);
+  // Another contract starts untouched; the contract the draft creates is the same page, its notes in hand.
+  const notesOfId = React.useRef(id);
+  React.useEffect(() => {
+    if (notesOfId.current !== 'new') notesTouchedRef.current = false;
+    notesOfId.current = id;
+  }, [id]);
 
   const counts = countsQuery.data;
   const tabs = [
@@ -592,7 +597,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
         ) : <Box />}
       >
         {form && tab === 'overview' && (
-          <Stack key={form.id} spacing={4} sx={sectionStackSx}>
+          <Stack key={isCreate || creation.beingCreated ? 'draft' : form.id} spacing={4} sx={sectionStackSx}>
             <ContractDeadlines schedule={schedule} />
             {!stale && !isCreate && <ContractRenewalDecision contractId={form.id} startDate={form.start_date} canDecide={editable} onDecided={refreshAfterDecision} />}
             {!isCreate && <EntityTasksSection entityType="contract" entityId={form.id} disabled={!editable} />}
