@@ -708,7 +708,7 @@ export class AiToolRegistry {
           execute: async (context, input) => this.importMapping!.describeTemplate(
             context,
             input.entity_type,
-            await personWriteLanguage(context.manager, context.tenantId, context.userId),
+            await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage),
           ),
         },
       ],

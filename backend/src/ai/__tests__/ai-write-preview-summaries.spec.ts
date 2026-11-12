@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiWriteLanguage, aiWriteLanguage, deletionImpactText, incidentLinkCardText, personWriteLanguage } from '../ai-write-texts';
+import { AiWriteLanguage, aiWriteLanguage, deletionImpactText, incidentLinkCardText, personWriteLanguage, screenLanguageOf } from '../ai-write-texts';
 import { AiBusinessRecordMutationSupportService } from '../mutation/ai-business-record-mutation-support.service';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
 import { AiFinancialPlanMutationSupportService } from '../mutation/ai-financial-plan-mutation-support.service';
@@ -1311,6 +1311,20 @@ async function testPersonLanguage() {
   assert.equal(await personWriteLanguage(manager, 'tenant-1', 'user-1'), 'es');
   assert.deepEqual(reads, [['tenant-1', 'user-1']]);
   assert.equal(await personWriteLanguage(manager, 'tenant-1', null), 'en');
+  // The profile wins over the screen; without a profile language, the screen's (the browser's) settles it.
+  assert.equal(await personWriteLanguage(manager, 'tenant-1', 'user-1', 'fr'), 'es');
+  const noLocale = { query: async () => [{ locale: null }] } as any;
+  assert.equal(await personWriteLanguage(noLocale, 'tenant-1', 'user-1', 'fr'), 'fr');
+  assert.equal(await personWriteLanguage(noLocale, 'tenant-1', 'user-1', null), 'en');
+  assert.equal(await personWriteLanguage(noLocale, 'tenant-1', 'user-1'), 'en');
+  // The browser's languages, in its order: the first one the interface has, as the screen picks it.
+  assert.equal(screenLanguageOf('fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'), 'fr');
+  assert.equal(screenLanguageOf('it-IT,it;q=0.9,de;q=0.8'), 'de');
+  assert.equal(screenLanguageOf('en-GB,fr;q=0.5'), 'en');
+  assert.equal(screenLanguageOf('pt-BR'), null);
+  assert.equal(screenLanguageOf(''), null);
+  assert.equal(screenLanguageOf(undefined), null);
+  assert.equal(screenLanguageOf(['es-ES']), 'es');
 }
 
 

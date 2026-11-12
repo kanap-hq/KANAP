@@ -2072,7 +2072,8 @@ export class AiChatOrchestratorService {
       email: typeof user.email === 'string' && user.email.trim() ? user.email.trim() : null,
       roleNames,
       teamName: teamRows[0]?.team_name ?? null,
-      screenLanguage: aiScreenLanguage(user.locale),
+      // The profile's language, else the screen's (the browser's) when the profile sets none.
+      screenLanguage: aiScreenLanguage(user.locale) ?? aiScreenLanguage(ctx.screenLanguage),
     };
   }
 
@@ -2473,7 +2474,7 @@ export class AiChatOrchestratorService {
           }
 
           // The message after the approval or the rejection, in the person's language.
-          const approvalLanguage = await personWriteLanguage(ctx.manager, ctx.tenantId, ctx.userId);
+          const approvalLanguage = await personWriteLanguage(ctx.manager, ctx.tenantId, ctx.userId, ctx.screenLanguage);
           return {
             conversationId: convId!,
             title: convTitle,
