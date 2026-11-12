@@ -1,5 +1,6 @@
 import type { EntityManager } from 'typeorm';
 import { hasLevel } from './relations-access';
+import { moduleRightRequired } from '../../auth/module-right-required';
 
 /**
  * The modules a record can link to, each with the permission resource that reads it. A linked
@@ -35,6 +36,16 @@ function readsFrom(canRead: (resource: string) => boolean): LinkedReads {
   const reads = {} as LinkedReads;
   for (const module of MODULES) reads[module] = canRead(LINKED_MODULE_RESOURCES[module]);
   return reads;
+}
+
+/**
+ * A write that links records of `module` (a replacement of the links, even an empty one, which would
+ * remove links the person does not see) needs a read of that module, as the Relations tab shows it:
+ * 403 `MODULE_RIGHT_REQUIRED` otherwise. For a request already through the permission guard.
+ */
+export function assertLinkedModuleRead(ctx: { isAdmin?: boolean; permissions?: Record<string, string> } | null | undefined, module: LinkedModule): void {
+  const resource = LINKED_MODULE_RESOURCES[module];
+  if (!hasLevel(ctx ?? {}, resource, 'reader')) throw moduleRightRequired(resource, 'reader', `You cannot read ${module}.`);
 }
 
 /** Nothing readable: what a caller gets without a known, enabled person. */

@@ -5,6 +5,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { ContractsService } from './contracts.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { EntityManager } from 'typeorm';
+import { assertLinkedModuleRead } from '../common/relations/linked-reads';
 
 @UseGuards(JwtAuthGuard)
 @Controller('spend-items/:id/contracts')
@@ -28,6 +29,7 @@ export class SpendItemContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'member')
   async bulkReplace(@Param('id') idOrRef: string, @Body() body: { contract_ids: string[] }, @Req() req: any) {
+    assertLinkedModuleRead(req, 'contracts');
     const manager = req?.queryRunner?.manager as EntityManager;
     const spendItemId = await this.resolveItemId(idOrRef, manager);
     return this.svc.bulkReplaceContractsForSpendItem(spendItemId, body?.contract_ids ?? [], { manager });

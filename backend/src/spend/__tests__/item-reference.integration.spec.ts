@@ -104,7 +104,7 @@ async function testUpdateAndDeleteByReference(kind: Kind) {
     const itemId = await seedItem(runner, kind, tenantId, 35, 'Line by reference');
     const deletedId = await seedItem(runner, kind, tenantId, 36, 'Line deleted by reference');
     const { ctl, svc, synced } = controller(kind, runner);
-    const ctx = { manager: runner.manager, tenantId, userId: USER, userRoles: [] } as any;
+    const ctx = { manager: runner.manager, tenantId, userId: USER, userRoles: [], permissions: { portfolio_projects: 'reader' } } as any;
 
     // PATCH /:id by reference (lower case too); the supplier sync gets the resolved id.
     const updated = await ctl.update(`${REF[kind]}-35`, { paying_company_id: companyId, notes: 'Edited by reference', supplier_id: supplier.id }, ctx);
@@ -238,7 +238,7 @@ async function testVersionsTasksContractsByReference(kind: Kind) {
       await runner.query(`INSERT INTO ${T[kind].contracts} (tenant_id, contract_id, ${T[kind].linkFk}) VALUES ($1, $2, $3)`, [tenantId, contractId, id]);
     }
     const { versions, tasks, contracts } = nestedControllers(kind);
-    const req = { queryRunner: runner, user: { sub: USER }, tenant: { id: tenantId } };
+    const req = { queryRunner: runner, user: { sub: USER }, tenant: { id: tenantId }, permissions: { contracts: 'reader' } };
     const ref = `${REF[kind]}-35`;
 
     // Reads by reference answer the line's rows only.

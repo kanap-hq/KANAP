@@ -248,7 +248,8 @@ async function testRoutes() {
   await inRolledBackTransaction(async (runner) => {
     const w = await seedWorld(runner);
     const { items, versions, tasks } = controllers(runner);
-    const ctx = { manager: runner.manager, tenantId: w.tenantId, userId: w.budgetUser } as any;
+    // The linked reads the permission guard would set: the routes refuse a module the person does not read.
+    const ctx = { manager: runner.manager, tenantId: w.tenantId, userId: w.budgetUser, permissions: { budget: 'admin', portfolio_projects: 'reader', applications: 'reader', contracts: 'reader' } } as any;
     const req = { queryRunner: runner, user: { sub: w.budgetUser }, tenant: { id: w.tenantId } };
     const O = w.opex;
     const res = { setHeader: () => undefined } as any;

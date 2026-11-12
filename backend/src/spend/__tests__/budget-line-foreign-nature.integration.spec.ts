@@ -368,8 +368,9 @@ async function testRoutes() {
   await inRolledBackTransaction(async (runner) => {
     const w = await seedWorld(runner);
     const { items, versions, tasks, contracts } = controllers(runner);
-    const ctx = { manager: runner.manager, tenantId: w.tenantId, userId: w.budgetUser } as any;
-    const req = { queryRunner: runner, user: { sub: w.budgetUser }, tenant: { id: w.tenantId } };
+    // The linked reads the permission guard would set: the routes refuse a module the person does not read.
+    const ctx = { manager: runner.manager, tenantId: w.tenantId, userId: w.budgetUser, permissions: { budget: 'admin', portfolio_projects: 'reader', applications: 'reader', contracts: 'reader' } } as any;
+    const req = { queryRunner: runner, user: { sub: w.budgetUser }, tenant: { id: w.tenantId }, permissions: ctx.permissions };
     const F = w.foreign;
     const res = { setHeader: () => undefined } as any;
     const file = { originalname: 'x.txt', mimetype: 'text/plain', buffer: Buffer.from('x'), size: 1 } as any;
