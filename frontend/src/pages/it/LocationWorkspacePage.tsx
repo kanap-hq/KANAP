@@ -224,29 +224,43 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
     return () => { cancelled = true; };
   }, [locationId]);
 
+  // Saves go one after the other, and a save under way blocks nothing: the fields stay editable.
+  const saveChain = React.useRef<Promise<void>>(Promise.resolve());
+  const savesPending = React.useRef(0);
   const patchLocation = React.useCallback(
-    async (patch: Partial<LocationRecord>) => {
+    (patch: Partial<LocationRecord>): Promise<void> => {
       if (isCreate) {
         setCreateError(null);
         setData((prev) => (prev ? { ...prev, ...patch } : prev));
-        return;
+        return Promise.resolve();
       }
-      if (!locationId) return;
+      if (!locationId) return Promise.resolve();
+      savesPending.current += 1;
       setSaving(true);
       if ('name' in patch) setNameError(null);
       setData((prev) => (prev ? { ...prev, ...patch } as LocationRecord : prev));
-      try {
-        const res = await api.patch(`/locations/${locationId}`, patch);
-        // The saved record has no asset count: the loaded one stays.
-        setData((prev) => ({ ...(res.data as LocationRecord), usage_count: prev?.usage_count }));
-        setError(null);
-      } catch (e: any) {
-        if ('name' in patch && isDuplicateError(e)) setNameError(t('messages.locationNameTaken'));
-        else setError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
-        await load();
-      } finally {
-        setSaving(false);
-      }
+      const run = async () => {
+        try {
+          const res = await api.patch(`/locations/${locationId}`, patch);
+          // Only the last answer of a run of saves is shown: it holds the earlier ones, and a field
+          // edited since is not put back to what an earlier answer says.
+          if (savesPending.current === 1) {
+            // The saved record has no asset count: the loaded one stays.
+            setData((prev) => ({ ...(res.data as LocationRecord), usage_count: prev?.usage_count }));
+            setError(null);
+          }
+        } catch (e: any) {
+          if ('name' in patch && isDuplicateError(e)) setNameError(t('messages.locationNameTaken'));
+          else setError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
+          await load();
+        } finally {
+          savesPending.current -= 1;
+          if (savesPending.current === 0) setSaving(false);
+        }
+      };
+      const result = saveChain.current.then(run, run);
+      saveChain.current = result.catch(() => undefined);
+      return result;
     },
     [isCreate, load, locationId, t],
   );
@@ -547,7 +561,7 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
         city: data.city,
       }}
       category={category}
-      disabled={!canManage || saving}
+      disabled={!canManage}
       onHostingTypeChange={handleHostingTypeChange}
       onOperatingCompanyChange={handleOperatingCompanyChange}
       onProviderChange={handleProviderChange}
@@ -570,7 +584,7 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
       countryIso={data.country_iso}
       city={data.city}
       subLocationsCount={subLocationsCount}
-      disabled={!canManage || saving}
+      disabled={!canManage}
       onHostingTypeChange={handleHostingTypeChange}
       onOperatingCompanyChange={handleOperatingCompanyChange}
       onProviderChange={handleProviderChange}
