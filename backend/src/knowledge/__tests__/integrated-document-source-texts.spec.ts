@@ -202,7 +202,7 @@ async function testInterfaceSpecificationIsBuiltInTheWorkers() {
   assert.equal(await interfaceSpecificationMarkdown(withHtml as any), interfaceSpecificationMarkdownInProcess(withHtml as any));
 
   // Stored texts the workers cannot read in time: the whole specification as plain text.
-  const unparsable = fill('_a ', MARKDOWN_MAX_BYTES);
+  const unparsable = fill('*_a ', MARKDOWN_MAX_BYTES);
   const { result, maxLagMs } = await withMainThreadProbe(() => interfaceSpecificationMarkdown(
     interfaceRow({ overview_notes: unparsable, business_objects: ['Salarié', unparsable] }) as any,
   ));

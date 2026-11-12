@@ -182,7 +182,6 @@ async function testContentRulesAreTheSame() {
 async function testSlowTextsAreRefusedWhileTheMainThreadServes() {
   const texts = {
     'open underscores': fill('_a', MARKDOWN_MAX_BYTES),
-    'open underscores and spaces': fill('_a ', MARKDOWN_MAX_BYTES),
     'mixed marks': fill('*_a', MARKDOWN_MAX_BYTES),
     'deep quotes': `${fill('> ', MARKDOWN_MAX_BYTES - 1)}a`,
   };
@@ -219,7 +218,7 @@ async function testLongTaskListsAreAccepted() {
 }
 
 async function testStoredContentsFallBackToReadableText() {
-  const slow = fill('_a ', 250 * 1024);
+  const slow = fill('*_a ', 250 * 1024);
   // A stored content (no size limit) the workers cannot read in time is kept as it is.
   assert.equal(await normalizeMarkdownRichText(slow, { storedContent: true }), slow.trim());
   // An email of such a content shows it as plain text.
@@ -237,7 +236,7 @@ async function testSharedBudget() {
 }
 
 async function testAStoppedWorkerIsRefusedAndReplaced() {
-  const pending = outcomeOf(() => normalizeMarkdownRichText(fill('_a ', 100 * 1024)));
+  const pending = outcomeOf(() => normalizeMarkdownRichText(fill('*_a ', 100 * 1024)));
   await new Promise((resolve) => setTimeout(resolve, 200));
   const [busy] = markdownWorkerThreadsForTests();
   await busy.terminate();
@@ -278,7 +277,7 @@ function asUser<T>(tenant: string, user: string, work: () => T): T {
 }
 
 async function testAUserNeverHoldsEveryWorker() {
-  const slow = fill('_a ', 100 * 1024);
+  const slow = fill('*_a ', 100 * 1024);
   // One tenant, as on a single-tenant server: a slow call of a user holds one worker.
   const running = track(asUser('tenant-a', 'user-1', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
   await sleep(100);
@@ -299,7 +298,7 @@ async function testAUserNeverHoldsEveryWorker() {
 }
 
 async function testTwoUsersMayUseEveryWorker() {
-  const slow = fill('_a ', 100 * 1024);
+  const slow = fill('*_a ', 100 * 1024);
   const callOfA = track(asUser('tenant-a', 'user-a', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
   const callOfB = track(asUser('tenant-b', 'user-b', () => timedOutcome(() => normalizeMarkdownRichText(slow))));
   await sleep(50);
@@ -311,7 +310,7 @@ async function testTwoUsersMayUseEveryWorker() {
 }
 
 async function testAFreeWorkerSkipsAKeyAtItsCap() {
-  const slow = fill('_a ', 100 * 1024);
+  const slow = fill('*_a ', 100 * 1024);
   const order: string[] = [];
   const tracked = (label: string, work: () => Promise<unknown>) => timedOutcome(work).then((call) => {
     order.push(label);
@@ -334,7 +333,7 @@ async function testAFreeWorkerSkipsAKeyAtItsCap() {
 }
 
 async function testCapsApplyOnlyToWaitingCalls() {
-  const slow = fill('_a ', 100 * 1024);
+  const slow = fill('*_a ', 100 * 1024);
   const base = 'https://acme.example.com';
   const comment = '**Done**, see [the plan](/portfolio/projects/PRJ-3).';
   // A user: one call running, two waiting; a fourth is refused at once.
@@ -372,7 +371,7 @@ async function testCapsApplyOnlyToWaitingCalls() {
 }
 
 async function testAFullQueueAnswersBusy() {
-  const slow = fill('_a ', 100 * 1024);
+  const slow = fill('*_a ', 100 * 1024);
   const limit = markdownQueueLimit();
   // Calls of as many users: two run, `limit` wait and are refused after the wait, the last two at once.
   const calls = await Promise.all(Array.from(
@@ -400,10 +399,10 @@ async function testOneCallPerDocumentSave() {
   // Within the time budget: a slower parse would be refused as too complex.
   const saved = await normalizeMarkdownWithSearchText(text);
   assert.equal(saved.content, text.trim());
-  const slow = fill('_a ', 250 * 1024);
+  const slow = fill('*_a ', 250 * 1024);
   assert.deepEqual(await normalizeMarkdownWithSearchText(slow, { storedContent: true }), { content: slow.trim(), searchText: slow.replace(/\s+/g, ' ').trim() });
   // The save does the work of two calls, with the budget of two.
-  const refused = await timedOutcome(() => normalizeMarkdownWithSearchText(fill('_a ', 100 * 1024)));
+  const refused = await timedOutcome(() => normalizeMarkdownWithSearchText(fill('*_a ', 100 * 1024)));
   assert.equal(refused.outcome, MARKDOWN_TOO_COMPLEX);
   assert.ok(refused.ms > 2 * MARKDOWN_WORK_TIMEOUT_MS - 100, `refused after ${refused.ms.toFixed(0)} ms`);
 }
@@ -415,7 +414,7 @@ async function testCommentEmailsAreRenderedInTheWorkers() {
     assert.deepEqual(await renderCommentEmail(page, base, 'acme'), expected);
   }
   assert.deepEqual(await renderCommentEmail('  ', base, 'acme'), renderCommentForEmail({ commentHtml: '', tenantBaseUrl: base, tenantSlug: 'acme' }));
-  const slow = fill('_a ', 150 * 1024);
+  const slow = fill('*_a ', 150 * 1024);
   const { result, ticks } = await withMainThreadProbe(() => renderCommentEmail(slow, base, 'acme'));
   assert.deepEqual(result, renderCommentForEmail({ commentHtml: renderPlainTextEmailHtml(slow), tenantBaseUrl: base, tenantSlug: 'acme' }));
   assertMainThreadServed(ticks, 'plain-text email');

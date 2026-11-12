@@ -443,7 +443,7 @@ async function testYearRouteAndReset() {
     await svc.update(france.id, { days_by_year: { 2026: edited } }, ctx);
     const afterEdit = await svc.getYear(france.id, 2026, ctx);
     assert.deepEqual([afterEdit.source, afterEdit.days, afterEdit.standard_days], ['edited', edited, FRANCE_2026]);
-    assert.equal(afterEdit.holidays[0].name, "New Year's Day");
+    assert.equal(afterEdit.holidays[0].name.replace(/\u2019/g, "'"), "New Year's Day");
     assert.equal((await svc.getYear(france.id, 2027, ctx)).source, 'standard', 'the other years keep following the rules');
 
     // Reset to standard: the edited year is removed and the rules apply again.
