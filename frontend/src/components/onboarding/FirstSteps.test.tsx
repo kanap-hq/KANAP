@@ -367,7 +367,7 @@ describe('StepHint', () => {
     expect(await screen.findByRole('dialog', { name: 'Your budget lines' })).toHaveTextContent('click Import first to download the example file');
   });
 
-  it('stays with its step on the records of its list and back, until it is closed', async () => {
+  it('stays with its step on every screen, outlining its element on the screen of its step only, until it is closed', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
     renderAt('/master-data/companies?step=own_company', (
       <>
@@ -381,14 +381,53 @@ describe('StepHint', () => {
     fireEvent.click(screen.getByRole('button', { name: 'go /master-data/companies/C-1/overview' }));
     expect(await screen.findByRole('dialog', { name: 'Your company' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'go /ops/contracts' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/ops\/contracts$/));
+    await waitFor(() => expect(screen.queryByTestId('step-hint-outline')).not.toBeInTheDocument());
+    expect(screen.getByRole('dialog', { name: 'Your company' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'go /master-data/companies' }));
-    const hint = await screen.findByRole('dialog', { name: 'Your company' });
+    await waitFor(() => expect(screen.getByTestId('step-hint-outline')).toBeInTheDocument());
+    const hint = screen.getByRole('dialog', { name: 'Your company' });
     fireEvent.click(within(hint).getByRole('button', { name: 'Later' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'go /master-data/companies/C-1/overview' }));
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('stays on the screens its step leads to: a technology and the vulnerabilities from the end of support', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'cartography', mode: 'example' });
+    renderAt('/it/technologies/end-of-support?step=map_technologies', (
+      <>
+        {page}
+        <Go to="/it/technologies/tech-1" />
+        <Go to="/it/vulnerabilities" />
+      </>
+    ));
+    await screen.findByRole('dialog', { name: 'Technologies, end of support and vulnerabilities' });
+    fireEvent.click(screen.getByRole('button', { name: 'go /it/technologies/tech-1' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/it\/technologies\/tech-1$/));
+    expect(screen.getByRole('dialog', { name: 'Technologies, end of support and vulnerabilities' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'go /it/vulnerabilities' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/it\/vulnerabilities$/));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.getByRole('dialog', { name: 'Technologies, end of support and vulnerabilities' })).toBeInTheDocument();
+  });
+
+  it('stays on the project a request of its step was converted into', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'own_data' });
+    renderAt('/portfolio/requests?step=own_request', (
+      <>
+        {page}
+        <Go to="/portfolio/requests/REQ-1/summary" />
+        <Go to="/portfolio/projects/PRJ-1/summary" />
+      </>
+    ));
+    await screen.findByRole('dialog', { name: 'Your first request' });
+    fireEvent.click(screen.getByRole('button', { name: 'go /portfolio/requests/REQ-1/summary' }));
+    fireEvent.click(screen.getByRole('button', { name: 'go /portfolio/projects/PRJ-1/summary' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/portfolio\/projects\/PRJ-1\/summary$/));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.getByRole('dialog', { name: 'Your first request' })).toBeInTheDocument();
   });
 
   it('turns to the next step once the object of its step exists', async () => {

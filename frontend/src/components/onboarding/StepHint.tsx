@@ -118,8 +118,8 @@ function useTarget(target: StepTarget | null): Target {
  * The hint of a step opened from the first steps: the target of its screen is outlined and one
  * sentence says what to look at. On the example, opening the step marks it done; with your own
  * data, the object the step creates does, or "Done" for a step that creates none. It stays on
- * the step's screen and its records until it is closed (`activeStep.ts`); once the step is done,
- * it opens the next step, or the home page at the end of the path.
+ * every screen until it is closed (`activeStep.ts`), with no outline away from the step's screen;
+ * once the step is done, it opens the next step, or the home page at the end of the path.
  */
 export default function StepHint() {
   const { t, i18n } = useTranslation('common');
@@ -143,15 +143,16 @@ export default function StepHint() {
   }, [paramKey]);
   const key = paramKey ?? active?.key ?? null;
   const found = key && state ? state.steps.find((candidate) => candidate.key === key) ?? null : null;
-  const foundScreen = found && state ? stepScreen(found.key, state.angle) : null;
-  // Without its key in the address, the hint shows on its screen and the pages below it only.
-  const shown = !!foundScreen && (!!paramKey || withinStepScreen(location.pathname, foundScreen.to));
-  const step = shown ? found : null;
-  const screen = shown ? foundScreen : null;
+  const screen = found && state ? stepScreen(found.key, state.angle) : null;
+  // The hint stays on every screen until it is closed: a step leads out of its own address (from
+  // the end of support to a technology and to the vulnerabilities, from a request to the project it
+  // was converted into). Its element is outlined on its screen and the pages below it only.
+  const step = screen ? found : null;
+  const onStepScreen = !!screen && (!!paramKey || withinStepScreen(location.pathname, screen.to));
   // A record opened from the list of a title step (its address goes below the list's): the hint
   // points at its tab row.
   const onRecord = screen?.target === 'title' && location.pathname.startsWith(`${screen.to}/`);
-  const target = useTarget(screen ? (onRecord ? 'tabs' : screen.target) : null);
+  const target = useTarget(screen && onStepScreen ? (onRecord ? 'tabs' : screen.target) : null);
   // Between a screen change and the next look-up, the element may have left the page already.
   const rect = target.element && isShown(target.element) ? target.rect : null;
   const discover = state?.mode === 'example';
