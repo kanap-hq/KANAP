@@ -126,9 +126,10 @@ async function testRolesOfAPerson(h: Harness, runner: QueryRunner, s: Seed) {
   }
   const result = await h.users.setUserRoles(s.users.target, { role_ids: [s.roles.budgetReader] }, ua);
   assert.deepEqual(result.items.map((item: { id: string }) => item.id), [s.roles.budgetReader], 'PUT roles within own rights');
-  // Roles the person already holds are kept, whatever their level.
-  await h.users.setUserRoles(s.users.heldAdmin, { role_ids: [s.roles.administrator, s.roles.budgetReader] }, ua);
-  assert.deepEqual((await heldRoles(runner, s.users.heldAdmin)).sort(), [s.roles.administrator, s.roles.budgetReader].sort());
+  // The roles of a person who has more rights than the giver do not change, even kept ones.
+  await refused(() => h.users.setUserRoles(s.users.heldAdmin, { role_ids: [s.roles.administrator, s.roles.budgetReader] }, ua),
+    'PERSON_ABOVE_OWN_RIGHTS', 'PUT roles: an administrator');
+  assert.deepEqual(await heldRoles(runner, s.users.heldAdmin), [s.roles.administrator]);
   // A role of another tenant reads as unknown.
   const error = await h.users.setUserRoles(s.users.target, { role_ids: [s.otherTenantRole] }, ua).then(() => null, (e: unknown) => e);
   assert.ok(error instanceof BadRequestException, 'PUT roles: role of another tenant');

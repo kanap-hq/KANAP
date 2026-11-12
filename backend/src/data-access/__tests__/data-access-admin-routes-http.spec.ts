@@ -73,6 +73,7 @@ type Extra = {
   usersReaderRole: string;
   budgetReaderRole: string;
   manager: string; // unscoped users admin (the caller)
+  administrator: string; // holds the Administrator role: changes an Administrator's access
   limitedAdmin: string; // limited, administers users
   reader: string; // unscoped, users reader only
   outsider: string; // unscoped, no users permission
@@ -327,9 +328,16 @@ async function seedExtra(): Promise<Extra> {
     }
     const manager = await seedPerson(client, s.tenantId, 'all', usersAdminRole);
     await client.query(`UPDATE users SET first_name = 'Marc', last_name = 'Manager' WHERE id = $1`, [manager]);
+    // The caller also reads the budget: a person changes only people who have no more rights.
+    await client.query(
+      `INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES (app_current_tenant(), $1, $2, false)`,
+      [manager, budgetReaderRole],
+    );
     const limitedAdmin = await seedPerson(client, s.tenantId, 'limited', usersAdminRole);
     await seedNodes(client, s.tenantId, limitedAdmin, [{ type: 'company', id: s.es, access: 'read' }]);
     await client.query(`UPDATE users SET first_name = 'Lea', last_name = 'Limited' WHERE id = $1`, [limitedAdmin]);
+    const [administratorRole] = await q(`SELECT id FROM roles WHERE tenant_id = app_current_tenant() AND role_name = 'Administrator'`);
+    const administrator = await seedPerson(client, s.tenantId, 'all', administratorRole.id);
     const reader = await seedPerson(client, s.tenantId, 'all', usersReaderRole);
     await client.query(`UPDATE users SET first_name = 'Rhea', last_name = 'Reader' WHERE id = $1`, [reader]);
     const outsider = await seedPerson(client, s.tenantId, 'all', budgetReaderRole);
@@ -390,6 +398,7 @@ async function seedExtra(): Promise<Extra> {
       usersReaderRole,
       budgetReaderRole,
       manager,
+      administrator,
       limitedAdmin,
       reader,
       outsider,
@@ -544,8 +553,12 @@ async function testReadAndWrite(app: INestApplication) {
   assert.equal(adminRead.body.mode, 'all');
   assert.equal(adminRead.body.is_administrator, true);
   assert.deepEqual(adminRead.body.nodes, []);
+  // A users administrator does not change the access of an Administrator, who has more rights.
+  const aboveCaller = await call(app, 'PUT', `users/${s.persons.admin}/data-access`, extra.manager, { mode: 'all', nodes: [] });
+  assert.equal(aboveCaller.status, 403, aboveCaller.text);
+  assert.equal(aboveCaller.body.code, 'PERSON_ABOVE_OWN_RIGHTS');
   // M1: an Administrator stored as limited can be put back to all; limiting one stays refused.
-  const adminLimited = await call(app, 'PUT', `users/${s.persons.admin}/data-access`, extra.manager, {
+  const adminLimited = await call(app, 'PUT', `users/${s.persons.admin}/data-access`, extra.administrator, {
     mode: 'limited',
     nodes: [{ type: 'all', access: 'read' }],
   });
@@ -553,7 +566,7 @@ async function testReadAndWrite(app: INestApplication) {
   assert.equal(adminLimited.body.code, 'DATA_ACCESS_ADMINISTRATOR');
   assert.equal(adminLimited.body.message, 'Administrators see all data.');
   const auditBeforeAdmin = (await auditRows()).length;
-  const adminTarget = await call(app, 'PUT', `users/${s.persons.admin}/data-access`, extra.manager, { mode: 'all', nodes: [] });
+  const adminTarget = await call(app, 'PUT', `users/${s.persons.admin}/data-access`, extra.administrator, { mode: 'all', nodes: [] });
   assert.equal(adminTarget.status, 200, adminTarget.text);
   assert.equal(adminTarget.body.mode, 'all');
   assert.deepEqual(adminTarget.body.nodes, []);
@@ -570,7 +583,7 @@ async function testReadAndWrite(app: INestApplication) {
   assert.equal(self.status, 409, self.text);
   assert.equal(self.body.code, 'DATA_ACCESS_SELF');
   assert.equal(self.body.message, 'You cannot change your own data access.');
-  console.log('  Administrator back to all 200 and audited, limited 409, self 409: OK');
+  console.log('  Administrator: 403 to a users admin, back to all 200 and audited, limited 409, self 409: OK');
 
   // Invalid bodies: 400 with a code.
   const invalid: Array<[string, unknown, string]> = [

@@ -17,7 +17,10 @@ import { isAdministratorRole } from './system-roles';
  * through this file: a role the person does not hold yet, or a right raised on a role, carries no
  * level above the giver's own level on the same module, and only an administrator gives the
  * Administrator role. An administrator gives every role. Taking a role or a right away is not
- * checked here.
+ * checked by that rule.
+ *
+ * A person does not change a person who has more rights than they do either
+ * (`personAboveActorRights`): the writes on another person check the target too.
  */
 
 const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
@@ -67,6 +70,43 @@ export async function assertRoleGrantWithinActorRights(
       throw codedForbidden('administrator_required', 'Only an administrator can give the Administrator role.');
     }
     for (const [resource, level] of await readRolePermissions(manager, role.id)) assertLevelWithin(actor, resource, level);
+  }
+}
+
+/** The rights `userId` holds through all their roles, read as `PermissionGuard` reads them (union). */
+async function heldRights(manager: EntityManager, userId: string): Promise<RoleGrantActor> {
+  const roleIds = [...await heldRoleIds(manager, userId)];
+  const roles = roleIds.length > 0 ? await manager.getRepository(Role).find({ where: { id: In(roleIds) } }) : [];
+  if (roles.some(isAdministratorRole)) return { isAdmin: true, permissions: {} };
+  const permissions: Record<string, string> = {};
+  for (const role of roles) {
+    for (const [resource, level] of await readRolePermissions(manager, role.id)) {
+      if ((RANK[level] ?? 0) > (RANK[permissions[resource]] ?? 0)) permissions[resource] = level;
+    }
+  }
+  return { isAdmin: false, permissions };
+}
+
+/**
+ * A person does not change a person who has more rights than they do: one who holds the
+ * Administrator role, or a level above theirs on a module (all their roles count). An administrator
+ * changes everyone. Every write on another person or on their account goes through here: their
+ * administration fields, their roles, their invitation, their data access, their deletion, the
+ * rows of an import about them.
+ */
+export async function personAboveActorRights(manager: EntityManager, actor: RoleGrantActor, targetUserId: string): Promise<boolean> {
+  if (actor.isAdmin) return false;
+  const target = await heldRights(manager, targetUserId);
+  if (target.isAdmin) return true;
+  return Object.entries(target.permissions).some(([resource, level]) => (RANK[level] ?? 0) > (RANK[actor.permissions[resource]] ?? 0));
+}
+
+export const PERSON_ABOVE_OWN_RIGHTS_MESSAGE = 'This person has more rights than you.';
+
+/** 403 `PERSON_ABOVE_OWN_RIGHTS` when the target has more rights than the actor (see above). */
+export async function assertPersonWithinActorRights(manager: EntityManager, actor: RoleGrantActor, targetUserId: string): Promise<void> {
+  if (await personAboveActorRights(manager, actor, targetUserId)) {
+    throw codedForbidden('PERSON_ABOVE_OWN_RIGHTS', PERSON_ABOVE_OWN_RIGHTS_MESSAGE);
   }
 }
 

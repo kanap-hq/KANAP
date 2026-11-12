@@ -27,7 +27,7 @@ import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { parseInviteSignIn } from './invite-sign-in';
-import { assertRoleGrantWithinActorRights, roleGrantActorOf } from '../roles/role-grant-ceiling';
+import { assertPersonWithinActorRights, assertRoleGrantWithinActorRights, roleGrantActorOf } from '../roles/role-grant-ceiling';
 
 function canViewUserAdministration(req: any): boolean {
   return req?.isAdmin === true || req?.permissionLevel === 'admin';
@@ -88,7 +88,10 @@ export class UsersController {
   @RequireLevel('users', 'admin')
   @Post('delete-check')
   deleteCheck(@Body() body: { ids?: unknown }, @Req() req: any) {
-    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], req.user?.sub ?? null, {
+      manager: req?.queryRunner?.manager,
+      roleGrant: roleGrantActorOf(req),
+    });
   }
 
   @ReservedToUnscopedDataAccess()
@@ -97,7 +100,7 @@ export class UsersController {
   @Delete('bulk')
   bulkDelete(@Body() body: { ids: string[] }, @Req() req: any) {
     const ids: string[] = Array.isArray(body?.ids) ? body.ids : [];
-    return this.deleteSvc.bulkDelete(ids, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.deleteSvc.bulkDelete(ids, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, roleGrant: roleGrantActorOf(req) });
   }
 
   @Get('export')
@@ -162,8 +165,13 @@ export class UsersController {
   async update(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     const userId = userIdParam(id);
     const canManageUsers = req.isAdmin === true || req.permissionLevel === 'admin';
+    const manager = req?.queryRunner?.manager ?? this.userRepo.manager;
+    // A person does not change a person who has more rights than they do (their own profile aside).
+    if (canManageUsers && userId !== req.user?.sub) {
+      await assertPersonWithinActorRights(manager, roleGrantActorOf(req), userId);
+    }
     if (canManageUsers && body?.role_id) {
-      await assertRoleGrantWithinActorRights(req?.queryRunner?.manager ?? this.userRepo.manager, roleGrantActorOf(req), userId, [body.role_id]);
+      await assertRoleGrantWithinActorRights(manager, roleGrantActorOf(req), userId, [body.role_id]);
     }
     return this.svc.updateUser(
       userId,
@@ -208,13 +216,17 @@ export class UsersController {
   @Post(':id/enable')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
-  async enable(@Param('id') id: string, @Req() req: any) { return this.svc.enableUser(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
+  async enable(@Param('id') id: string, @Req() req: any) {
+    return this.svc.enableUser(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, roleGrant: roleGrantActorOf(req) });
+  }
 
   @ReservedToUnscopedDataAccess()
   @Post(':id/disable')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
-  async disable(@Param('id') id: string, @Req() req: any) { return this.svc.disableUser(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
+  async disable(@Param('id') id: string, @Req() req: any) {
+    return this.svc.disableUser(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, roleGrant: roleGrantActorOf(req) });
+  }
 
   @ReservedToUnscopedDataAccess()
   @Post(':id/invite')
@@ -227,6 +239,7 @@ export class UsersController {
     // The invitation is committed before its e-mail waits on the mail queue (see inviteUser).
     return this.svc.inviteUser(id, req.user?.sub ?? null, baseUrl, {
       manager: req?.queryRunner?.manager,
+      roleGrant: roleGrantActorOf(req),
       commitThenRun: createRequestCommitThenRun(req),
       signIn,
     });
@@ -237,7 +250,7 @@ export class UsersController {
   @RequireLevel('users', 'admin')
   @Delete(':id')
   async delete(@Param('id') id: string, @Req() req: any) {
-    return this.deleteSvc.deleteUser(userIdParam(id), req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.deleteSvc.deleteUser(userIdParam(id), req.user?.sub ?? null, { manager: req?.queryRunner?.manager, roleGrant: roleGrantActorOf(req) });
   }
 
   // Per-user page permissions removed: permissions are now role-based
@@ -296,7 +309,9 @@ export class UsersController {
     const user = await userRepo.findOne({ where: { id: userId } });
     if (!user) throw new BadRequestException('User not found');
 
-    // A role the person does not hold yet stays within the rights of the one who gives it.
+    // A person does not change the roles of a person who has more rights than they do, and a role
+    // the person does not hold yet stays within the rights of the one who gives it.
+    await assertPersonWithinActorRights(manager ?? this.userRoleRepo.manager, roleGrantActorOf(req), userId);
     await assertRoleGrantWithinActorRights(manager ?? this.userRoleRepo.manager, roleGrantActorOf(req), userId, roleIds);
 
     // Snapshot current roles for the audit trail before replacing them

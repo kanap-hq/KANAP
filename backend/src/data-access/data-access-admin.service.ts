@@ -11,6 +11,7 @@ import { AccessNodeRow, AccessTree, loadAccessTree, nodeCoversCenter, nodeCovers
 import { lineEditableSql } from './line-write-checks';
 import { ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import { PERSON_ABOVE_OWN_RIGHTS_MESSAGE, personAboveActorRights, type RoleGrantActor } from '../roles/role-grant-ceiling';
 
 /**
  * Data-scoped access, lot 6 (planning/data-scoped-access/spec.md §7.1-§7.6, §8): the
@@ -629,6 +630,8 @@ export class DataAccessAdminService {
       dryRun: boolean;
       language: CsvLanguage;
       callerId: string | null;
+      /** The person importing: a row about a person who has more rights than them is refused. */
+      callerRights?: RoleGrantActor;
     },
   ): Promise<DataAccessImportResult> {
     const availability = await this.availability();
@@ -694,6 +697,10 @@ export class DataAccessAdminService {
       )
       : [];
     const usersByEmail = new Map(users.map((user) => [user.email.toLowerCase(), user]));
+    const aboveCaller = new Set<string>();
+    for (const user of input.callerRights ? users : []) {
+      if (await personAboveActorRights(manager, input.callerRights!, user.id)) aboveCaller.add(user.id);
+    }
 
     const errors: ImportReportError[] = [];
     const byPerson = new Map<string, { user: typeof users[number]; rows: Array<{ line: number; node: DetailedNode | null }>; seen: Set<string> }>();
@@ -711,6 +718,8 @@ export class DataAccessAdminService {
         personErrors.push(rowError(line, 'email', 'DATA_ACCESS_SELF', 'You cannot change your own data access.'));
       } else if (user.is_administrator === true) {
         personErrors.push(rowError(line, 'email', 'DATA_ACCESS_ADMINISTRATOR', 'Administrators see all data.'));
+      } else if (aboveCaller.has(user.id)) {
+        personErrors.push(rowError(line, 'email', 'PERSON_ABOVE_OWN_RIGHTS', PERSON_ABOVE_OWN_RIGHTS_MESSAGE));
       }
       if (!type || !NODE_TYPES.has(type)) {
         personErrors.push(type

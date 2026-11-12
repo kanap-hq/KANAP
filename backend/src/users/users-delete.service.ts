@@ -8,6 +8,9 @@ import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { userAuditSnapshot } from './users.service';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
+import { PERSON_ABOVE_OWN_RIGHTS_MESSAGE, personAboveActorRights, type RoleGrantActor } from '../roles/role-grant-ceiling';
+
+type DeleteOpts = { manager?: EntityManager; roleGrant?: RoleGrantActor };
 
 @Injectable()
 export class UsersDeleteService extends BaseDeleteService<User> {
@@ -29,14 +32,23 @@ export class UsersDeleteService extends BaseDeleteService<User> {
     return `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.email || user.id;
   }
 
-  /** The refusal of a user's delete: one's own account (`USER_OWN_ACCOUNT`: disable it instead), or null. */
-  private refusalOf(user: User, actorId: string | null): RecordInUseException | null {
-    if (!actorId || actorId !== user.id) return null;
-    return new RecordInUseException('USER_OWN_ACCOUNT', 'user', this.getUserDisplayName(user), [], 'You cannot delete your own account. Disable it instead if needed.');
+  /**
+   * The refusal of a user's delete, or null: one's own account (`USER_OWN_ACCOUNT`: disable it
+   * instead), a person who has more rights than the one deleting (`PERSON_ABOVE_OWN_RIGHTS`).
+   */
+  private async refusalOf(manager: EntityManager, user: User, actorId: string | null, roleGrant?: RoleGrantActor): Promise<RecordInUseException | null> {
+    const name = this.getUserDisplayName(user);
+    if (actorId && actorId === user.id) {
+      return new RecordInUseException('USER_OWN_ACCOUNT', 'user', name, [], 'You cannot delete your own account. Disable it instead if needed.');
+    }
+    if (roleGrant && await personAboveActorRights(manager, roleGrant, user.id)) {
+      return new RecordInUseException('PERSON_ABOVE_OWN_RIGHTS', 'user', name, [], PERSON_ABOVE_OWN_RIGHTS_MESSAGE);
+    }
+    return null;
   }
 
   /** The check before a delete (`POST /users/delete-check`): which of `ids` would be refused, and why. Nothing is written. */
-  async deleteCheck(ids: string[], actorId: string | null, opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+  async deleteCheck(ids: string[], actorId: string | null, opts?: DeleteOpts): Promise<{ refused: DeleteRefusal[] }> {
     const manager = opts?.manager ?? this.repository.manager;
     const wanted = checkIds(ids);
     if (wanted.length === 0) return { refused: [] };
@@ -44,14 +56,14 @@ export class UsersDeleteService extends BaseDeleteService<User> {
       `SELECT id, email, first_name, last_name FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
       [wanted],
     );
-    return refusalsFrom(wanted, rows, (row) => this.getUserDisplayName(row), async (row) => this.refusalOf(row, actorId));
+    return refusalsFrom(wanted, rows, (row) => this.getUserDisplayName(row), (row) => this.refusalOf(manager, row, actorId, opts?.roleGrant));
   }
 
   /**
    * Delete a user by ID
    * Note: actorId is used to prevent self-deletion
    */
-  async deleteUser(id: string, actorId: string | null, opts?: { manager?: EntityManager }): Promise<void> {
+  async deleteUser(id: string, actorId: string | null, opts?: DeleteOpts): Promise<void> {
     const manager = opts?.manager ?? this.repository.manager;
     const repo = this.getRepo(manager);
     const user = await repo.findOne({ where: { id } as any });
@@ -60,7 +72,7 @@ export class UsersDeleteService extends BaseDeleteService<User> {
       throw new NotFoundException('User not found');
     }
 
-    const refusal = this.refusalOf(user, actorId);
+    const refusal = await this.refusalOf(manager, user, actorId, opts?.roleGrant);
     if (refusal) throw refusal;
 
     try {
@@ -101,14 +113,14 @@ export class UsersDeleteService extends BaseDeleteService<User> {
   /**
    * Bulk delete multiple users
    */
-  async bulkDelete(ids: string[], actorId: string | null, opts?: { manager?: EntityManager }): Promise<BulkDeleteResult> {
+  async bulkDelete(ids: string[], actorId: string | null, opts?: DeleteOpts): Promise<BulkDeleteResult> {
     const manager = opts?.manager ?? this.repository.manager;
     const repo = this.getRepo(manager);
     const result: BulkDeleteResult = { deleted: [], failed: [] };
 
     for (const id of ids) {
       try {
-        await withSavepoint(manager, () => this.deleteUser(id, actorId, { manager }));
+        await withSavepoint(manager, () => this.deleteUser(id, actorId, { manager, roleGrant: opts?.roleGrant }));
         result.deleted.push(id);
       } catch (error: any) {
         let name = 'Unknown';

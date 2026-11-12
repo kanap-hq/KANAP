@@ -217,6 +217,7 @@
   "COST_CENTER_HAS_NODES_other": "Diese Gruppe enthält {{usages}}. Verschieben oder löschen Sie diese zuerst.",
   "CALENDAR_IN_USE": "Dieser Kalender wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
   "USER_OWN_ACCOUNT": "Sie können Ihr eigenes Konto nicht löschen. Deaktivieren Sie es bei Bedarf.",
+  "PERSON_ABOVE_OWN_RIGHTS": "Diese Person hat mehr Rechte als Sie.",
   "ACCOUNT_IN_USE": "Dieses Konto wird noch verwendet: {{usages}}. Deaktivieren Sie es, statt es zu löschen.",
   "CHART_OF_ACCOUNTS_IN_USE_one": "Dieser Kontenplan wird noch verwendet: {{usages}}. Ordnen Sie den Eintrag zuerst einem anderen Kontenplan zu.",
   "CHART_OF_ACCOUNTS_IN_USE_other": "Dieser Kontenplan wird noch verwendet: {{usages}}. Ordnen Sie diese zuerst einem anderen Kontenplan zu.",
