@@ -154,15 +154,17 @@ describe('AgentsOverviewPage new agent', () => {
     return idleMutation.mutateAsync.mock.calls[0][0];
   }
 
-  it('creates a monitoring agent that cites no library', async () => {
+  // The screen asks for no knowledge base search: the API starts a new agent with it off.
+  it('creates a monitoring agent without asking for the knowledge base search', async () => {
     const body = await createAgent('Infrastructure monitoring (SRE)');
     expect(body.agent_type).toBe('sre');
-    expect(body.scope_policy_json.knowledge_sources.knowledge).toEqual({ enabled: true, all_libraries: false, library_ids: [] });
+    expect(body.scope_policy_json.knowledge_sources.knowledge).toBeUndefined();
+    expect(body.scope_policy_json.knowledge_sources.kanap_data.enabled).toBe(true);
   });
 
-  it('creates a helpdesk agent without opening every library', async () => {
+  it('creates a helpdesk agent without asking for the knowledge base search', async () => {
     const body = await createAgent('Helpdesk');
     expect(body.agent_type).toBe('helpdesk');
-    expect(body.scope_policy_json.knowledge_sources?.knowledge?.all_libraries).not.toBe(true);
+    expect(body.scope_policy_json.knowledge_sources?.knowledge).toBeUndefined();
   });
 });
