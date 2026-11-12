@@ -158,14 +158,48 @@ async function shareGuard() {
   return guard;
 }
 
-/** The HTTP status the guard answers to a share to `recipients` addresses: 200 when it lets the request through. */
-async function statusOf(guard: ShareRateLimitGuard, tenantId: string, userId: string, recipients: number | unknown): Promise<number> {
+const RECIPIENTS_LIMITED = {
+  code: 'SHARE_RECIPIENTS_RATE_LIMITED',
+  message: 'You have reached the number of recipients allowed in the last hour. Try again later, or send to fewer people.',
+};
+
+/** The HTTP answer of the guard for a share to `recipients` addresses: 200 when it lets the request through. */
+async function answerOf(
+  guard: ShareRateLimitGuard,
+  tenantId: string,
+  userId: string,
+  recipients: number | unknown,
+): Promise<{ status: number; body: unknown }> {
   const body = typeof recipients === 'number' ? { recipient_emails: freshEmails(recipients) } : recipients;
   try {
-    return (await guard.canActivate(shareContext(tenantId, userId, body))) ? 200 : 403;
+    const allowed = await guard.canActivate(shareContext(tenantId, userId, body));
+    return { status: allowed ? 200 : 403, body: null };
   } catch (error: any) {
-    return typeof error?.getStatus === 'function' ? error.getStatus() : 500;
+    return {
+      status: typeof error?.getStatus === 'function' ? error.getStatus() : 500,
+      body: typeof error?.getResponse === 'function' ? error.getResponse() : null,
+    };
   }
+}
+
+/** The HTTP status the guard answers to a share to `recipients` addresses: 200 when it lets the request through. */
+async function statusOf(guard: ShareRateLimitGuard, tenantId: string, userId: string, recipients: number | unknown): Promise<number> {
+  return (await answerOf(guard, tenantId, userId, recipients)).status;
+}
+
+/** A recipient budget refused the share: 429 with its own code, not the 30-send limit. */
+async function assertRecipientsLimited(
+  guard: ShareRateLimitGuard,
+  tenantId: string,
+  userId: string,
+  recipients: number,
+  label: string,
+) {
+  const answer = await answerOf(guard, tenantId, userId, recipients);
+  assert.equal(answer.status, TOO_MANY, label);
+  const body = answer.body && typeof answer.body === 'object' ? (answer.body as { code?: unknown; message?: unknown }) : {};
+  assert.equal(body.code, RECIPIENTS_LIMITED.code, `${label}: code`);
+  assert.equal(body.message, RECIPIENTS_LIMITED.message, `${label}: message`);
 }
 
 /** `userId` sends shares of 20 recipients, and a last smaller one, until `total` recipients. */
@@ -197,9 +231,9 @@ async function testUserRecipientBudget(singleTenant: boolean) {
     const guard = await shareGuard();
     const perUser = RATE_LIMITS.shareLinkRecipientsPerUser.limit;
     assert.ok(ok(await sendRecipients(guard, 't1', 'ada', perUser - 10)), `${mode}: ${perUser - 10} recipients go`);
-    assert.equal(await statusOf(guard, 't1', 'ada', 20), TOO_MANY, `${mode}: a share that would pass ${perUser} recipients is refused`);
+    await assertRecipientsLimited(guard, 't1', 'ada', 20, `${mode}: a share that would pass ${perUser} recipients is refused`);
     assert.equal(await statusOf(guard, 't1', 'ada', 10), 200, `${mode}: the refused share took nothing, 10 more go`);
-    assert.equal(await statusOf(guard, 't1', 'ada', 1), TOO_MANY, `${mode}: the user's budget is spent`);
+    await assertRecipientsLimited(guard, 't1', 'ada', 1, `${mode}: the user's budget is spent`);
     assert.equal(await statusOf(guard, 't1', 'bob', 20), 200, `${mode}: another user keeps their own budget`);
     // A body the validation refuses counts nothing: the route answers 400.
     const other = await shareGuard();
@@ -221,9 +255,9 @@ async function testTenantRecipientBudget() {
     const users = perTenant / perUser;
     for (let u = 0; u < users - 1; u += 1) assert.ok(ok(await sendRecipients(guard, 't1', `u${u}`, perUser)), `user ${u} sends ${perUser}`);
     assert.ok(ok(await sendRecipients(guard, 't1', 'last', perUser - 10)), 'the tenant reaches 10 recipients under its budget');
-    assert.equal(await statusOf(guard, 't1', 'fresh', 20), TOO_MANY, 'a share that would pass the tenant budget is refused');
+    await assertRecipientsLimited(guard, 't1', 'fresh', 20, 'a share that would pass the tenant budget is refused');
     assert.equal(await statusOf(guard, 't1', 'fresh', 10), 200, 'it took nothing from the tenant: 10 more go');
-    assert.equal(await statusOf(guard, 't1', 'other', 1), TOO_MANY, 'past the tenant budget, a user who sent nothing is refused');
+    await assertRecipientsLimited(guard, 't1', 'other', 1, 'past the tenant budget, a user who sent nothing is refused');
     assert.equal(await statusOf(guard, 't2', 'fresh', 20), 200, 'another tenant keeps its own budget');
   });
   await withMode(true, async () => {
@@ -257,6 +291,18 @@ async function testBudgetsAllOrNothing() {
   assert.equal((await takeRateLimit(storage, [{ budget: short, tracker: 'k', amount: 2 }])).ok, true, 'the window reopens');
 }
 
+/** The 30-send limit stays the guards' 429: a string, and no code of its own. */
+async function testSendLimitStaysUncoded() {
+  const guard = await shareGuard();
+  const limit = RATE_LIMITS.shareLink.limit;
+  for (let i = 0; i < limit; i += 1) {
+    assert.equal(await statusOf(guard, 't1', 'lim', { recipient_emails: ['not an address'] }), 200, `request ${i + 1} of ${limit}`);
+  }
+  const refused = await answerOf(guard, 't1', 'lim', { recipient_emails: ['not an address'] });
+  assert.equal(refused.status, TOO_MANY, 'the next send is refused by the 30-send limit');
+  assert.equal(refused.body, 'ThrottlerException: Too Many Requests', 'the 30-send refusal has no code');
+}
+
 function testOneBudgetPerUser() {
   const route = (handler: string) => ({ getClass: () => ({ name: 'X' }), getHandler: () => ({ name: handler }) }) as any;
   const a = shareLinkRateLimitKey(route('shareContract'), 'user:t1:u1', 'default');
@@ -272,6 +318,7 @@ async function run() {
   await testUserRecipientBudget(false);
   await testUserRecipientBudget(true);
   await testTenantRecipientBudget();
+  await testSendLimitStaysUncoded();
   await testBudgetsAllOrNothing();
   console.log('share-limits.spec: all assertions passed');
 }

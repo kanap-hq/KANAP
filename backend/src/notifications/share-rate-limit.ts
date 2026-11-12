@@ -1,4 +1,4 @@
-import { applyDecorators, ExecutionContext, Injectable, UseGuards } from '@nestjs/common';
+import { applyDecorators, ExecutionContext, HttpException, HttpStatus, Injectable, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerException } from '@nestjs/throttler';
 import { createHash } from 'crypto';
 import { Features } from '../config/features';
@@ -22,8 +22,10 @@ const RECIPIENTS_PER_TENANT: RateLimitBudget = { name: 'share-link-recipients-te
  * (`RATE_LIMITS.shareLink`), then the recipients of the request, counted against the user's budget
  * (`shareLinkRecipientsPerUser`, both modes) and, in multi-tenant mode, the tenant's
  * (`shareLinkRecipientsPerTenant`). A request that would pass a recipient budget is refused whole
- * and takes nothing from either. The recipients are counted from the body as the route's
- * validation reads it; a body that validation refuses counts no recipient (the route answers 400).
+ * and takes nothing from either: 429 `SHARE_RECIPIENTS_RATE_LIMITED`. The 30-send limit stays the
+ * parent's `ThrottlerException`, which carries no code. The recipients are counted from the body
+ * as the route's validation reads it; a body that validation refuses counts no recipient (the
+ * route answers 400).
  */
 @Injectable()
 export class ShareRateLimitGuard extends UserRateLimitGuard {
@@ -36,7 +38,21 @@ export class ShareRateLimitGuard extends UserRateLimitGuard {
     const takes: RateLimitTake[] = [{ budget: RECIPIENTS_PER_USER, tracker: `${tenantId}:${req?.user?.sub ?? '-'}`, amount }];
     if (!Features.SINGLE_TENANT) takes.push({ budget: RECIPIENTS_PER_TENANT, tracker: tenantId, amount });
     const outcome = await takeRateLimit(this.storageService, takes);
-    if (!outcome.ok) throw new ThrottlerException();
+    if (!outcome.ok) {
+      // The person's budget and the workspace's refuse with one code. The 30-send limit is the
+      // parent's ThrottlerException, which carries no code, and so does any other budget.
+      if (outcome.refused === RECIPIENTS_PER_USER || outcome.refused === RECIPIENTS_PER_TENANT) {
+        throw new HttpException(
+          {
+            code: 'SHARE_RECIPIENTS_RATE_LIMITED',
+            message:
+              'You have reached the number of recipients allowed in the last hour. Try again later, or send to fewer people.',
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      throw new ThrottlerException();
+    }
     return true;
   }
 }
