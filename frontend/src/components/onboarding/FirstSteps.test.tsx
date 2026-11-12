@@ -60,11 +60,12 @@ function renderAt(
   path: string | { pathname: string; search?: string; state?: unknown },
   node: React.ReactNode,
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  theme = createAppTheme('light'),
 ) {
   return render(
     <QueryClientProvider client={client}>
       <I18nextProvider i18n={i18n}>
-        <ThemeProvider theme={createAppTheme('light')}>
+        <ThemeProvider theme={theme}>
           <MemoryRouter initialEntries={[path]}>
             <Routes>
               <Route path="*" element={<>{node}<Where /></>} />
@@ -265,6 +266,15 @@ describe('StepHint', () => {
     expect(screen.getByTestId('where')).toHaveTextContent(/^\/ops\/budget$/);
   });
 
+  it('stands in the bottom-right corner of the window, apart from the title it outlines', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    renderAt('/ops/budget?step=budget_overview', page);
+    const hint = await screen.findByRole('dialog', { name: 'The overview' });
+    expect(hint).toHaveStyle({ position: 'fixed', right: '16px', bottom: '16px' });
+    expect(hint.closest('[data-popper-placement]')).toBeNull();
+    expect(screen.getByTestId('step-hint-outline')).toBeInTheDocument();
+  });
+
   it('names the line its step opened and points at its tabs', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt({ pathname: '/ops/budget/BL-7', search: '?step=budget_line', state: { onboardingRecord: 'BL-7 Microsoft Enterprise' } }, (
@@ -429,9 +439,10 @@ describe('StepHint', () => {
     await i18n.changeLanguage('en');
   });
 
-  it('follows its element when the screen replaces it, and hides while there is none', async () => {
+  it('follows its element when the screen replaces it, rises above it in its corner and stays without it', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
-    const box = { top: 200, left: 300, width: 400, height: 40, x: 300, y: 200, right: 700, bottom: 240 };
+    // The composer at the bottom of a 1024 x 768 window, under the corner of the hint.
+    const box = { top: 668, left: 200, width: 800, height: 40, x: 200, y: 668, right: 1000, bottom: 708 };
     const rect = vi.spyOn(HTMLTextAreaElement.prototype, 'getBoundingClientRect')
       .mockReturnValue({ ...box, toJSON: () => box } as DOMRect);
     function Plaid() {
@@ -449,18 +460,22 @@ describe('StepHint', () => {
     try {
       renderAt('/ai?step=budget_plaid', <Plaid />);
       const hint = await screen.findByRole('dialog', { name: `A question for ${AGENT_NAME}` });
-      // Below the acceptance box: above it, the bubble would hide the suggested questions.
-      await waitFor(() => expect(hint.closest('[data-popper-placement]')).toHaveAttribute('data-popper-placement', 'bottom-start'));
+      // The acceptance box is away from the corner: the hint stays in it.
+      expect(hint.style.bottom).toBe('16px');
+      const bubble = { top: 0, left: 0, width: 360, height: 120, x: 0, y: 0, right: 360, bottom: 120 };
+      hint.getBoundingClientRect = () => ({ ...bubble, toJSON: () => bubble }) as DOMRect;
 
-      // Accepting replaces the acceptance box by the composer: the hint moves to the composer.
+      // Accepting replaces the acceptance box by the composer: the outline moves to the composer,
+      // and the hint rises above it so as not to cover it (768 - 668 + 12).
       fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
-      await waitFor(() => expect(screen.getByTestId('step-hint-outline').style.top).toBe('196px'));
-      expect(screen.getByTestId('step-hint-outline').style.left).toBe('294px');
-      expect(screen.getByRole('dialog', { name: `A question for ${AGENT_NAME}` })).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByTestId('step-hint-outline').style.top).toBe('664px'));
+      expect(screen.getByTestId('step-hint-outline').style.left).toBe('194px');
+      await waitFor(() => expect(screen.getByRole('dialog', { name: `A question for ${AGENT_NAME}` }).style.bottom).toBe('112px'));
 
+      // Without its element on the screen, the hint stays in its corner, with no outline.
       fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
-      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-      expect(screen.queryByTestId('step-hint-outline')).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByTestId('step-hint-outline')).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.getByRole('dialog', { name: `A question for ${AGENT_NAME}` }).style.bottom).toBe('16px'));
     } finally {
       rect.mockRestore();
     }
