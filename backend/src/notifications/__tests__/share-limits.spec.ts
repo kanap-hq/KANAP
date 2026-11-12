@@ -15,15 +15,15 @@ import { ShareRateLimit, ShareRateLimitGuard, shareLinkRateLimitKey } from '../s
 import { inertLinks } from '../share-message';
 import { buildShareEmail } from '../notification-templates';
 import { RATE_LIMITS } from '../../common/rate-limit';
-import { consumeRateLimit, UserRateLimitGuard } from '../../common/rate-limit.guard';
+import { giveBackRateLimit, takeRateLimit, UserRateLimitGuard } from '../../common/rate-limit.guard';
 import { PermissionGuard } from '../../auth/permission.guard';
 import { Features } from '../../config/features';
 
 /**
  * "Send link" (every object's `POST .../:id/share`): bounded recipient lists and message, one
- * total recipient limit in the service, a per-user rate limit declared on every share route, a
- * per-tenant budget on top of it in multi-tenant mode, and a message whose web addresses are not
- * clickable in the e-mail.
+ * total recipient limit in the service, a per-user request limit declared on every share route,
+ * recipient budgets per user (both modes) and per tenant (multi-tenant mode), and a message whose
+ * web addresses are not clickable in the e-mail.
  */
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -129,7 +129,8 @@ function testEveryShareRouteIsRateLimited() {
   }
   assert.ok(routes.length >= 12, `expected the 12 share routes at least, found ${routes.length}: ${routes.join('; ')}`);
   assert.deepEqual(RATE_LIMITS.shareLink, { limit: 30, ttl: 60 * 60_000 });
-  assert.deepEqual(RATE_LIMITS.shareLinkTenant, { limit: 200, ttl: 60 * 60_000 });
+  assert.deepEqual(RATE_LIMITS.shareLinkRecipientsPerUser, { limit: 200, ttl: 60 * 60_000 });
+  assert.deepEqual(RATE_LIMITS.shareLinkRecipientsPerTenant, { limit: 1000, ttl: 60 * 60_000 });
   assert.ok(ShareRateLimitGuard.prototype instanceof UserRateLimitGuard, 'the per-user count is the one of the other user limits');
 }
 
@@ -138,9 +139,13 @@ class ShareProbe {
   share() {}
 }
 
-/** A share request of `userId` in `tenantId`, as the guard sees it after authentication. */
-function shareContext(tenantId: string, userId: string) {
-  const req = { tenant: { id: tenantId }, user: { sub: userId }, ip: '203.0.113.7', headers: {} };
+/** `count` distinct addresses, unique to the call. */
+let addressSeq = 0;
+const freshEmails = (count: number) => Array.from({ length: count }, () => `r${addressSeq++}@example.com`);
+
+/** A share request of `userId` in `tenantId` to `body`, as the guard sees it after authentication. */
+function shareContext(tenantId: string, userId: string, body: unknown) {
+  const req = { tenant: { id: tenantId }, user: { sub: userId }, ip: '203.0.113.7', headers: {}, body };
   const res = { header: () => res };
   return {
     getHandler: () => ShareProbe.prototype.share,
@@ -156,71 +161,103 @@ async function shareGuard() {
   return guard;
 }
 
-/** The HTTP status the guard answers: 200 when it lets the request through. */
-async function statusOf(guard: ShareRateLimitGuard, tenantId: string, userId: string): Promise<number> {
+/** The HTTP status the guard answers to a share to `recipients` addresses: 200 when it lets the request through. */
+async function statusOf(guard: ShareRateLimitGuard, tenantId: string, userId: string, recipients: number | unknown): Promise<number> {
+  const body = typeof recipients === 'number' ? { recipient_emails: freshEmails(recipients) } : recipients;
   try {
-    return (await guard.canActivate(shareContext(tenantId, userId))) ? 200 : 403;
+    return (await guard.canActivate(shareContext(tenantId, userId, body))) ? 200 : 403;
   } catch (error: any) {
     return typeof error?.getStatus === 'function' ? error.getStatus() : 500;
   }
 }
 
-/** Every user of `tenantId` sends up to the per-user limit, until the tenant has sent `total`. */
-async function fillTenant(guard: ShareRateLimitGuard, tenantId: string, total: number): Promise<number[]> {
+/** `userId` sends shares of 20 recipients, and a last smaller one, until `total` recipients. */
+async function sendRecipients(guard: ShareRateLimitGuard, tenantId: string, userId: string, total: number): Promise<number[]> {
   const statuses: number[] = [];
-  for (let sent = 0; sent < total; sent += 1) {
-    const user = `u${Math.floor(sent / RATE_LIMITS.shareLink.limit)}`;
-    statuses.push(await statusOf(guard, tenantId, user));
+  for (let left = total; left > 0; left -= SHARE_MAX_RECIPIENTS) {
+    statuses.push(await statusOf(guard, tenantId, userId, Math.min(SHARE_MAX_RECIPIENTS, left)));
   }
   return statuses;
 }
 
-async function testTenantBudget() {
+const ok = (statuses: number[]) => [...new Set(statuses)].join(',') === '200';
+const TOO_MANY = HttpStatus.TOO_MANY_REQUESTS;
+
+async function withMode<T>(singleTenant: boolean, run: () => Promise<T>): Promise<T> {
   const saved = Features.SINGLE_TENANT;
-  (Features as any).SINGLE_TENANT = false;
+  (Features as any).SINGLE_TENANT = singleTenant;
   try {
+    return await run();
+  } finally {
+    (Features as any).SINGLE_TENANT = saved;
+  }
+}
+
+/** Per user, in both modes: recipients are counted, the last request that would pass the budget is refused whole. */
+async function testUserRecipientBudget(singleTenant: boolean) {
+  await withMode(singleTenant, async () => {
+    const mode = singleTenant ? 'single-tenant' : 'multi-tenant';
     const guard = await shareGuard();
-    const limit = RATE_LIMITS.shareLinkTenant.limit;
-    const statuses = await fillTenant(guard, 't1', limit);
-    assert.deepEqual([...new Set(statuses)], [200], `the tenant's first ${limit} shares go, several users together`);
-    assert.equal(await statusOf(guard, 't1', 'fresh-user'), HttpStatus.TOO_MANY_REQUESTS, 'past the tenant budget, a user who sent nothing is refused');
-    assert.equal(await statusOf(guard, 't1', 'u0'), HttpStatus.TOO_MANY_REQUESTS, 'and so is a user who already sent');
-    assert.equal(await statusOf(guard, 't2', 'fresh-user'), 200, 'another tenant keeps its own budget');
-    // A user over the per-user limit is refused before the tenant count: the tenant keeps its budget.
+    const perUser = RATE_LIMITS.shareLinkRecipientsPerUser.limit;
+    assert.ok(ok(await sendRecipients(guard, 't1', 'ada', perUser - 10)), `${mode}: ${perUser - 10} recipients go`);
+    assert.equal(await statusOf(guard, 't1', 'ada', 20), TOO_MANY, `${mode}: a share that would pass ${perUser} recipients is refused`);
+    assert.equal(await statusOf(guard, 't1', 'ada', 10), 200, `${mode}: the refused share took nothing, 10 more go`);
+    assert.equal(await statusOf(guard, 't1', 'ada', 1), TOO_MANY, `${mode}: the user's budget is spent`);
+    assert.equal(await statusOf(guard, 't1', 'bob', 20), 200, `${mode}: another user keeps their own budget`);
+    // A body the validation refuses counts nothing: the route answers 400.
     const other = await shareGuard();
-    for (let i = 0; i < RATE_LIMITS.shareLink.limit; i += 1) assert.equal(await statusOf(other, 't3', 'busy'), 200);
-    for (let i = 0; i < 50; i += 1) assert.equal(await statusOf(other, 't3', 'busy'), HttpStatus.TOO_MANY_REQUESTS);
-    const rest = await fillTenant(other, 't3', limit - RATE_LIMITS.shareLink.limit);
-    assert.deepEqual([...new Set(rest)], [200], 'refused requests of one user do not take the tenant budget');
-  } finally {
-    (Features as any).SINGLE_TENANT = saved;
-  }
+    // 20 refused bodies and 10 full shares: the 30 requests of the request limit.
+    for (let i = 0; i < 10; i += 1) {
+      assert.equal(await statusOf(other, 't1', 'eve', { recipient_emails: freshEmails(SHARE_MAX_RECIPIENTS + 1) }), 200);
+      assert.equal(await statusOf(other, 't1', 'eve', { recipient_emails: ['not an address'] }), 200);
+    }
+    assert.ok(ok(await sendRecipients(other, 't1', 'eve', perUser)), `${mode}: refused bodies left the budget whole`);
+  });
 }
 
-async function testNoTenantBudgetOnPremise() {
-  const saved = Features.SINGLE_TENANT;
-  (Features as any).SINGLE_TENANT = true;
-  try {
+/** Per tenant, multi-tenant only: all users together, refused whole, without taking from the user's budget. */
+async function testTenantRecipientBudget() {
+  await withMode(false, async () => {
     const guard = await shareGuard();
-    const limit = RATE_LIMITS.shareLinkTenant.limit;
-    const statuses = await fillTenant(guard, 'only', limit + RATE_LIMITS.shareLink.limit);
-    assert.deepEqual([...new Set(statuses)], [200], 'single-tenant: only the per-user limit applies');
-    for (let i = 0; i < RATE_LIMITS.shareLink.limit; i += 1) assert.equal(await statusOf(guard, 'only', 'solo'), 200);
-    assert.equal(await statusOf(guard, 'only', 'solo'), HttpStatus.TOO_MANY_REQUESTS, 'single-tenant: the per-user limit holds');
-  } finally {
-    (Features as any).SINGLE_TENANT = saved;
-  }
+    const perUser = RATE_LIMITS.shareLinkRecipientsPerUser.limit;
+    const perTenant = RATE_LIMITS.shareLinkRecipientsPerTenant.limit;
+    const users = perTenant / perUser;
+    for (let u = 0; u < users - 1; u += 1) assert.ok(ok(await sendRecipients(guard, 't1', `u${u}`, perUser)), `user ${u} sends ${perUser}`);
+    assert.ok(ok(await sendRecipients(guard, 't1', 'last', perUser - 10)), 'the tenant reaches 10 recipients under its budget');
+    assert.equal(await statusOf(guard, 't1', 'fresh', 20), TOO_MANY, 'a share that would pass the tenant budget is refused');
+    assert.equal(await statusOf(guard, 't1', 'fresh', 10), 200, 'it took nothing from the tenant: 10 more go');
+    assert.equal(await statusOf(guard, 't1', 'other', 1), TOO_MANY, 'past the tenant budget, a user who sent nothing is refused');
+    assert.equal(await statusOf(guard, 't2', 'fresh', 20), 200, 'another tenant keeps its own budget');
+  });
+  await withMode(true, async () => {
+    const guard = await shareGuard();
+    const perUser = RATE_LIMITS.shareLinkRecipientsPerUser.limit;
+    const perTenant = RATE_LIMITS.shareLinkRecipientsPerTenant.limit;
+    for (let u = 0; u <= perTenant / perUser; u += 1) {
+      assert.ok(ok(await sendRecipients(guard, 'only', `u${u}`, perUser)), `single-tenant: user ${u} sends ${perUser}, no tenant budget`);
+    }
+  });
 }
 
-async function testBudgetWindowReopens() {
+/** All or nothing: a budget that refuses gives back what the others took; a window reopens. */
+async function testBudgetsAllOrNothing() {
   const storage = new ThrottlerStorageService();
-  const budget = { limit: 2, ttl: 40 };
-  await consumeRateLimit(storage, 'probe', budget, 'k');
-  await consumeRateLimit(storage, 'probe', budget, 'k');
-  await assert.rejects(consumeRateLimit(storage, 'probe', budget, 'k'), (error: any) => error?.getStatus?.() === HttpStatus.TOO_MANY_REQUESTS);
-  await consumeRateLimit(storage, 'probe', budget, 'other-key');
+  const wide = { name: 'probe-wide', limit: 10, ttl: 60_000 };
+  const narrow = { name: 'probe-narrow', limit: 5, ttl: 60_000 };
+  const refused = await takeRateLimit(storage, [{ budget: wide, tracker: 'k', amount: 6 }, { budget: narrow, tracker: 'k', amount: 6 }]);
+  assert.equal(refused.ok, false);
+  assert.equal(!refused.ok && refused.refused, narrow, 'the narrow budget refuses');
+  const whole = await takeRateLimit(storage, [{ budget: wide, tracker: 'k', amount: 10 }]);
+  assert.equal(whole.ok, true, 'the wide budget was given back');
+  assert.equal((await takeRateLimit(storage, [{ budget: wide, tracker: 'k', amount: 1 }])).ok, false);
+  assert.equal((await takeRateLimit(storage, [{ budget: wide, tracker: 'other', amount: 10 }])).ok, true, 'another tracker has its own count');
+  if (whole.ok) await giveBackRateLimit(storage, whole.taken);
+  assert.equal((await takeRateLimit(storage, [{ budget: wide, tracker: 'k', amount: 10 }])).ok, true, 'given back');
+  const short = { name: 'probe-short', limit: 2, ttl: 40 };
+  assert.equal((await takeRateLimit(storage, [{ budget: short, tracker: 'k', amount: 2 }])).ok, true);
+  assert.equal((await takeRateLimit(storage, [{ budget: short, tracker: 'k', amount: 1 }])).ok, false);
   await new Promise((resolve) => setTimeout(resolve, 120));
-  await consumeRateLimit(storage, 'probe', budget, 'k');
+  assert.equal((await takeRateLimit(storage, [{ budget: short, tracker: 'k', amount: 2 }])).ok, true, 'the window reopens');
 }
 
 function testMessageLinksAreInert() {
@@ -268,9 +305,10 @@ async function run() {
   testTotalRecipientLimit();
   testOneBudgetPerUser();
   testEveryShareRouteIsRateLimited();
-  await testTenantBudget();
-  await testNoTenantBudgetOnPremise();
-  await testBudgetWindowReopens();
+  await testUserRecipientBudget(false);
+  await testUserRecipientBudget(true);
+  await testTenantRecipientBudget();
+  await testBudgetsAllOrNothing();
   testMessageLinksAreInert();
   console.log('share-limits.spec: all assertions passed');
 }

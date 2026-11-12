@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { ExecutionContext, Injectable } from '@nestjs/common';
-import { ThrottlerException, ThrottlerGuard, ThrottlerStorage } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerStorage } from '@nestjs/throttler';
 import { clientAddress } from './client-address';
 import { isRateLimitEnabled } from './rate-limit';
 import { DatabaseHitCounter, DatabaseThrottlerStorage, HitCounter, MemoryHitCounter } from './rate-limit-store';
@@ -104,20 +104,4 @@ export class UserRateLimitGuard extends RateLimitGuard {
     if (!userId) return super.getTracker(req);
     return `user:${req?.tenant?.id ?? '-'}:${userId}`;
   }
-}
-
-/**
- * Counts one request against a budget that is not the route's own count, in the storage of the
- * guards. Past the limit the request gets the guards' 429 for the rest of the window.
- */
-export async function consumeRateLimit(
-  storage: ThrottlerStorage,
-  name: string,
-  budget: { limit: number; ttl: number },
-  tracker: string,
-): Promise<void> {
-  if (!isRateLimitEnabled()) return;
-  const key = createHash('sha256').update(`${name}-${tracker}`).digest('hex');
-  const { isBlocked } = await storage.increment(key, budget.ttl, budget.limit, budget.ttl, name);
-  if (isBlocked) throw new ThrottlerException();
 }

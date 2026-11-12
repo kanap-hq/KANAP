@@ -91,13 +91,19 @@ export const RATE_LIMITS = {
   /** Sample data load, reset and banner dismissal, per user (`UserRateLimitGuard`). */
   sampleDataAction: { limit: 10, ttl: 10 * 60_000 },
   /**
-   * "Send link" e-mails of every object, per user and one budget for all the share routes
+   * "Send link" requests of every object, per user and one budget for all the share routes
    * (`ShareRateLimit`, notifications/share-rate-limit.ts).
    */
   shareLink: { limit: 30, ttl: 60 * 60_000 },
   /**
-   * "Send link" e-mails of one tenant, all its users together, counted after the per-user limit
-   * (`ShareRateLimitGuard`). Multi-tenant mode only: on-premise the tenant is the whole installation.
+   * Recipients of "Send link" e-mails per user over an hour, every share route together, counted
+   * after the request limit above, in both modes (`ShareRateLimitGuard`). A request carries up to
+   * 20 recipients: ten full requests an hour.
    */
-  shareLinkTenant: { limit: 200, ttl: 60 * 60_000 },
+  shareLinkRecipientsPerUser: { limit: 200, ttl: 60 * 60_000 },
+  /**
+   * Recipients of "Send link" e-mails of one tenant over an hour, all its users together.
+   * Multi-tenant mode only: on-premise the tenant is the whole installation.
+   */
+  shareLinkRecipientsPerTenant: { limit: 1000, ttl: 60 * 60_000 },
 };
