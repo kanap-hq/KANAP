@@ -69,7 +69,16 @@ export default function LoginPage() {
     if (state?.inviteAccepted) {
       return 'accountReady';
     }
+    if (state?.microsoftLinked) {
+      return 'ssoLinked';
+    }
     return null;
+  });
+  // After a Microsoft sign-in with the address of an existing account: the address the
+  // confirmation link went to, carried in the fragment.
+  const [linkSentTo] = useState<string | null>(() => {
+    if (searchParams.get('ssoNotice') !== 'ENTRA_LINK_SENT') return null;
+    return new URLSearchParams(location.hash.replace(/^#/, '')).get('to') || '';
   });
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(() =>
     sessionExpired ? 'sessionExpired' : null
@@ -81,6 +90,9 @@ export default function LoginPage() {
       ENTRA_EMAIL_UNVERIFIED: 'ssoEmailUnverified',
       ENTRA_TENANT_MISMATCH: 'ssoTenantMismatch',
       SSO_NOT_CONFIGURED: 'ssoNotConfigured',
+      ENTRA_ACCOUNT_LINKED: 'ssoAccountLinked',
+      ENTRA_LINK_NEEDS_EMAIL: 'ssoLinkNeedsEmail',
+      ENTRA_LINK_INVALID: 'ssoLinkInvalid',
     };
     return map[code] ?? 'ssoFailed';
   });
@@ -90,7 +102,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     const state = location.state as any;
-    if (state?.passwordResetSuccess || state?.passwordResetEmailSent || state?.inviteAccepted) {
+    if (state?.passwordResetSuccess || state?.passwordResetEmailSent || state?.inviteAccepted || state?.microsoftLinked) {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location, navigate]);
@@ -190,6 +202,11 @@ export default function LoginPage() {
             {infoMessage && (
               <Alert severity="success" role="status">
                 {t(`auth:login.${infoMessage}`)}
+              </Alert>
+            )}
+            {linkSentTo !== null && !infoMessage && (
+              <Alert severity="info" role="status">
+                {t('auth:login.ssoLinkSent', { email: linkSentTo })}
               </Alert>
             )}
 
