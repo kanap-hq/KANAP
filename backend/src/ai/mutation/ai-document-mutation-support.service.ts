@@ -1,7 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { codedForbidden } from '../../auth/module-right-required';
 import { parseItemNumber } from '../../common/parse-item-number';
-import { LINKED_MODULE_RESOURCES, loadLinkedReads } from '../../common/relations/linked-reads';
+import { LINKED_MODULE_RESOURCES, linkedParticipationScope, loadLinkedReads } from '../../common/relations/linked-reads';
+import { idsInScope } from '../../portfolio/portfolio-linked-reads';
 import { validate as isUuid } from 'uuid';
 import { incidentVisibilitySql, resolveIncidentViewer } from '../../incidents/incident-visibility';
 import { DOCUMENT_RELATION_MODULES, KnowledgeService, RelationEntityType, unreadableRelationFamilies } from '../../knowledge/knowledge.service';
@@ -790,10 +791,16 @@ export class AiDocumentMutationSupportService {
     }
 
     if (isUuid(normalized) || this.parseRelationItemNumber(entityType, normalized) != null) {
-      return this.getExactRelationTarget(context, entityType, normalized);
+      const exact = await this.getExactRelationTarget(context, entityType, normalized);
+      if ((await this.readableTargetIds(context, entityType, [exact.id])).size === 0) {
+        throw new NotFoundException(`No ${config.subject} found matching "${normalized}".`);
+      }
+      return exact;
     }
 
-    const candidates = await this.searchRelationCandidates(context, entityType, normalized);
+    const found = await this.searchRelationCandidates(context, entityType, normalized);
+    const readable = await this.readableTargetIds(context, entityType, found.map((candidate) => candidate.id));
+    const candidates = found.filter((candidate) => readable.has(candidate.id));
     if (candidates.length === 0) {
       throw new NotFoundException(`No ${config.subject} found matching "${normalized}".`);
     }
@@ -821,6 +828,16 @@ export class AiDocumentMutationSupportService {
     throw new BadRequestException(
       this.buildRelationAmbiguityMessage(entityType, normalized, candidates),
     );
+  }
+
+  /**
+   * The ids among `ids` the person reads in a participation family (a Business Contributor's
+   * projects, requests, applications and tasks): a record outside reads as a missing one.
+   */
+  private async readableTargetIds(context: AiExecutionContextWithManager, entityType: RelationEntityType, ids: string[]): Promise<Set<string>> {
+    if (entityType !== 'projects' && entityType !== 'requests' && entityType !== 'applications' && entityType !== 'tasks') return new Set(ids);
+    const scope = await linkedParticipationScope(context.manager, context.userId, context.tenantId, entityType);
+    return idsInScope(context.manager, entityType, ids, scope);
   }
 
   async resolveRelationTargets(

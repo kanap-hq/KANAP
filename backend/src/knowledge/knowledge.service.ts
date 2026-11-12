@@ -4316,6 +4316,12 @@ export class KnowledgeService {
       await this.bulkReplaceClassifications(saved.id, templateClassifications, { manager });
     }
 
+    // A new document's links follow the rule of the link routes; the empty families a creation form
+    // sends write nothing and need no read.
+    if (userId) {
+      const writes = Object.fromEntries(Object.entries(relationWritesOf(body?.relations)).filter(([, ids]) => (ids ?? []).length > 0));
+      await this.assertRelationWriteAllowed(saved.id, writes, manager, userId);
+    }
     await this.applyDocumentRelations(saved.id, body?.relations, manager);
 
     await this.ensureVersionSnapshot(saved, body?.change_note ? String(body.change_note) : 'Initial version', userId, manager);
@@ -5919,7 +5925,7 @@ export class KnowledgeService {
       const resource = isKnowledgeSourceFamily(family) ? KNOWLEDGE_SOURCE_SCOPES[family] : undefined;
       const map = RELATION_TABLE_MAP[family];
       // A malformed id fails the write's own check (`assertTenantScopedIdsExist`).
-      const ids = dedupeStrings(writes[family] ?? []).filter((id) => RELATION_ID_RE.test(id));
+      const ids = dedupeStrings((writes[family] ?? []).map((id) => String(id ?? '').toLowerCase())).filter((id) => RELATION_ID_RE.test(id));
       if (!resource || !map || ids.length === 0) continue;
       const scope = await resolveBusinessContributorScopeForUser({ manager, userId }, resource, 'reader');
       if (!scope) continue;

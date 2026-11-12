@@ -96,7 +96,8 @@ function testRoutesNeedTheCreateLevel() {
 
 async function testCreatorCancelsTheCreation() {
   await inRolledBackTransaction(async (runner) => {
-    const seed: CreationSeed = await seedCreationTenant(runner, { knowledge: 'member' });
+    // The creator reads the projects: the document is created from a project's page.
+    const seed: CreationSeed = await seedCreationTenant(runner, { knowledge: 'member', portfolio_projects: 'reader' });
     const { tenantId, creatorId, otherId } = seed;
     const { libraryId, projectId, templateId } = await seedLibrary(runner, tenantId);
     const { controller, knowledge } = controllerFor(runner);
