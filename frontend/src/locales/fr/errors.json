@@ -49,6 +49,7 @@
   "rate_limited": "Trop de tentatives. Patientez quelques minutes, puis réessayez.",
   "SHARE_TOO_MANY_RECIPIENTS": "Un lien peut être envoyé à 20 destinataires au maximum.",
   "SHARE_RATE_LIMITED": "Vous avez envoyé le maximum de 30 liens au cours de la dernière heure. Réessayez plus tard.",
+  "SHARE_RECIPIENTS_RATE_LIMITED": "Vous avez atteint le nombre de destinataires autorisé au cours de la dernière heure. Réessayez plus tard, ou envoyez-le à moins de personnes.",
   "MARKDOWN_TOO_LARGE": "Ce texte est trop long : la limite est de 200 Ko de texte (les images ne comptent pas).",
   "MARKDOWN_TOO_LARGE_DOCUMENT": "Ce document dépasse les 200 Ko de texte qu'un enregistrement accepte (les images ne comptent pas). Raccourcissez-le pour enregistrer vos modifications. La dernière version enregistrée est conservée.",
   "MARKDOWN_HTML_NOT_ALLOWED": "Ce texte contient une balise HTML. Retirez-la ou placez-la dans un bloc de code.",

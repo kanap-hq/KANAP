@@ -49,6 +49,7 @@
   "rate_limited": "Too many attempts. Wait a few minutes and try again.",
   "SHARE_TOO_MANY_RECIPIENTS": "A link can be sent to 20 recipients at most.",
   "SHARE_RATE_LIMITED": "You have sent the maximum of 30 links in the last hour. Try again later.",
+  "SHARE_RECIPIENTS_RATE_LIMITED": "You have reached the number of recipients allowed in the last hour. Try again later, or send to fewer people.",
   "MARKDOWN_TOO_LARGE": "This text is too long: the limit is 200 KB of text (images do not count).",
   "MARKDOWN_TOO_LARGE_DOCUMENT": "This document is over the 200 KB of text a save accepts (images do not count). Shorten it to save your changes. The last saved version is kept.",
   "MARKDOWN_HTML_NOT_ALLOWED": "This text contains an HTML tag. Remove it or put it in a code block.",

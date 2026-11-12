@@ -42,7 +42,8 @@ function stringifyErrorValue(value: unknown): string {
   return '';
 }
 
-function getApiErrorCode(apiError: ApiErrorLike | null | undefined): string {
+/** The refusal code of an API answer: `code`, then `error`. Empty when the answer has none. */
+export function getApiErrorCode(apiError: ApiErrorLike | null | undefined): string {
   const payload = apiError?.response?.data;
   return (
     stringifyErrorValue(payload?.code) ||

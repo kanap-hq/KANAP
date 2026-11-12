@@ -186,6 +186,31 @@ describe('ShareDialog limits', () => {
     fireEvent.click(screen.getByRole('button', { name: 'share.sendEmail' }));
     expect(await screen.findByText('errors:SHARE_RATE_LIMITED')).toBeInTheDocument();
     expect(screen.queryByText('errors:rate_limited')).not.toBeInTheDocument();
+    expect(screen.queryByText('errors:SHARE_RECIPIENTS_RATE_LIMITED')).not.toBeInTheDocument();
+  });
+
+  it('names the recipient limit when the server refuses for too many recipients in the hour', async () => {
+    const apiPost = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+    apiPost.mockReset();
+    apiPost.mockRejectedValue({
+      response: {
+        status: 429,
+        data: {
+          code: 'SHARE_RECIPIENTS_RATE_LIMITED',
+          message: 'You have reached the number of recipients allowed in the last hour. Try again later, or send to fewer people.',
+        },
+      },
+    });
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>
+      <ShareDialog open onClose={() => undefined} itemType="contract" itemId="c-1" itemName="SAP Maintenance" />
+    </ThemeProvider></QueryClientProvider>);
+    const input = screen.getByPlaceholderText('share.searchUsersOrEmail') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'buyer@example.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'share.sendEmail' }));
+    expect(await screen.findByText('errors:SHARE_RECIPIENTS_RATE_LIMITED')).toBeInTheDocument();
+    expect(screen.queryByText('errors:SHARE_RATE_LIMITED')).not.toBeInTheDocument();
   });
 
   it('caps the personal message at the length the server accepts', () => {
