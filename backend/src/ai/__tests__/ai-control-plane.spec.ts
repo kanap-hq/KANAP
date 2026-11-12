@@ -16764,8 +16764,9 @@ async function testCreateHelpdeskAgentFromCodeDefaultsBindsProviderAndCapabiliti
   assert.equal(typeof bindings?.ticketing?.provider_key, 'string');
   assert.ok(String(bindings.ticketing.provider_key).length > 0);
   assert.equal(created.agent_definition.max_autonomy_level, 'A3');
-  // A new agent cites no library until an administrator opens one.
-  const closedKnowledge = { enabled: true, all_libraries: false, library_ids: [] };
+  // A new agent does not search the knowledge base, and cites no library, until an
+  // administrator turns the search on and opens one.
+  const closedKnowledge = { enabled: false, all_libraries: false, library_ids: [] };
   assert.deepEqual((created.agent_definition.scope_policy_json as any)?.knowledge_sources?.knowledge, closedKnowledge);
   // Same when the screen sends its own scope without a knowledge setting.
   const fromScreen = await service.createAgentDefinition(context, {
@@ -16773,6 +16774,19 @@ async function testCreateHelpdeskAgentFromCodeDefaultsBindsProviderAndCapabiliti
     scope_policy_json: { mode: 'manual_safe_target', provider_kind: 'ticketing', target_kind: 'ticket' },
   });
   assert.deepEqual((fromScreen.agent_definition.scope_policy_json as any)?.knowledge_sources?.knowledge, closedKnowledge);
+  // A caller that asks for the search gets it, with the libraries it gives.
+  const LIBRARY_ID = '6f1c2b0e-8d4a-4c1e-9b7a-3e5d2c1f0a94';
+  const asked = await service.createAgentDefinition(context, {
+    name: 'Desk with its library',
+    scope_policy_json: {
+      mode: 'manual_safe_target',
+      knowledge_sources: { knowledge: { enabled: true, all_libraries: false, library_ids: [LIBRARY_ID] } },
+    },
+  });
+  assert.deepEqual(
+    (asked.agent_definition.scope_policy_json as any)?.knowledge_sources?.knowledge,
+    { enabled: true, all_libraries: false, library_ids: [LIBRARY_ID] },
+  );
 }
 
 async function testCreateSreAgentFromCodeDefaultsUsesA1AndCapabilities() {
@@ -16802,7 +16816,7 @@ async function testCreateSreAgentFromCodeDefaultsUsesA1AndCapabilities() {
   const bindings = created.agent_definition.provider_bindings_json as Record<string, any>;
   assert.equal(bindings?.monitoring?.provider_key, 'prtg');
   const sources = (created.agent_definition.scope_policy_json as any)?.knowledge_sources;
-  assert.deepEqual(sources?.knowledge, { enabled: true, all_libraries: false, library_ids: [] });
+  assert.deepEqual(sources?.knowledge, { enabled: false, all_libraries: false, library_ids: [] });
   assert.equal(sources?.kanap_data?.enabled, true);
 }
 

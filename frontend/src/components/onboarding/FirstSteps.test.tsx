@@ -255,7 +255,7 @@ describe('StepHint', () => {
     </main>
   );
 
-  it('points at the page title, says what to look at and marks the step done on the example', async () => {
+  it('says what to look at and marks the step done on the example', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt('/ops/budget?step=budget_overview', page);
     const hint = await screen.findByRole('dialog', { name: 'The overview' });
@@ -266,26 +266,48 @@ describe('StepHint', () => {
     expect(screen.getByTestId('where')).toHaveTextContent(/^\/ops\/budget$/);
   });
 
-  it('stands in the bottom-right corner of the window, apart from the title it outlines', async () => {
+  it('stands in the bottom-left corner of the window and outlines nothing', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt('/ops/budget?step=budget_overview', page);
     const hint = await screen.findByRole('dialog', { name: 'The overview' });
-    expect(hint).toHaveStyle({ position: 'fixed', right: '16px', bottom: '16px' });
+    expect(hint).toHaveStyle({ position: 'fixed', left: '16px', bottom: '16px' });
+    expect(hint.style.right).toBe('');
+    expect(getComputedStyle(hint).right).not.toBe('16px');
     expect(hint.closest('[data-popper-placement]')).toBeNull();
-    expect(screen.getByTestId('step-hint-outline')).toBeInTheDocument();
+    expect(screen.queryByTestId('step-hint-outline')).not.toBeInTheDocument();
   });
 
-  it('draws the hint and its outline in the colour of the theme, with a shadow, in dark mode too', async () => {
+  it('never moves, even with a button or a field under it', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    const under = { left: 20, top: 700, width: 200, height: 36, x: 20, y: 700, right: 220, bottom: 736 };
+    const rect = () => ({ ...under, toJSON: () => under }) as DOMRect;
+    renderAt('/ops/budget?step=budget_overview', (
+      <main>
+        <button type="button" data-testid="save">Save</button>
+        <textarea aria-label="Comment" data-testid="comment" />
+        <StepHint />
+      </main>
+    ));
+    screen.getByTestId('save').getBoundingClientRect = rect;
+    screen.getByTestId('comment').getBoundingClientRect = rect;
+    const hint = await screen.findByRole('dialog', { name: 'The overview' });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(hint).toHaveStyle({ left: '16px', bottom: '16px' });
+  });
+
+  it('draws the hint with the border, background and shadow of the theme, in dark mode too', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     const dark = createAppTheme('dark');
     renderAt('/ops/budget?step=budget_overview', page, undefined, dark);
     const hint = await screen.findByRole('dialog', { name: 'The overview' });
-    // The hint stands apart from its element: the same ring as the outline ties the two together.
-    expect(hint).toHaveStyle({ border: `1px solid ${dark.palette.primary.main}`, boxShadow: dark.shadows[3] });
-    expect(screen.getByTestId('step-hint-outline')).toHaveStyle({ outline: `2px solid ${dark.palette.primary.main.toLowerCase()}` });
+    expect(hint).toHaveStyle({
+      border: `1px solid ${dark.palette.primary.main}`,
+      backgroundColor: dark.palette.kanap.bg.composer,
+      boxShadow: dark.shadows[3],
+    });
   });
 
-  it('names the line its step opened and points at its tabs', async () => {
+  it('names the line its step opened', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt({ pathname: '/ops/budget/BL-7', search: '?step=budget_line', state: { onboardingRecord: 'BL-7 Microsoft Enterprise' } }, (
       <main>
@@ -298,38 +320,7 @@ describe('StepHint', () => {
     expect(hint).toHaveTextContent('You are in the record of BL-7 Microsoft Enterprise. Explore the tabs.');
   });
 
-  it('points at the tab row of a record opened from its list, which the bubble would hide under the title', async () => {
-    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
-    const box = { top: 240, left: 260, width: 900, height: 40, x: 260, y: 240, right: 1160, bottom: 280 };
-    renderAt('/ops/contracts/new/overview?step=own_contract', (
-      <main>
-        <h5 className="MuiTypography-h5">New contract</h5>
-        <div role="tablist" aria-label="tabs" data-testid="tabs" />
-        <StepHint />
-      </main>
-    ));
-    screen.getByTestId('tabs').getBoundingClientRect = () => ({ ...box, toJSON: () => box }) as DOMRect;
-    await screen.findByRole('dialog', { name: 'A linked contract' });
-    await waitFor(() => expect(screen.getByTestId('step-hint-outline').style.top).toBe('236px'));
-    expect(screen.getByTestId('step-hint-outline').style.left).toBe('254px');
-  });
-
-  it('points at the title of its list, tabs or not', async () => {
-    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
-    const box = { top: 60, left: 236, width: 200, height: 32, x: 236, y: 60, right: 436, bottom: 92 };
-    renderAt('/ops/reports/top-opex?step=own_report', (
-      <main>
-        <h5 className="MuiTypography-h5" data-testid="title">Top lines</h5>
-        <div role="tablist" aria-label="tabs" />
-        <StepHint />
-      </main>
-    ));
-    screen.getByTestId('title').getBoundingClientRect = () => ({ ...box, toJSON: () => box }) as DOMRect;
-    await screen.findByRole('dialog');
-    await waitFor(() => expect(screen.getByTestId('step-hint-outline').style.top).toBe('56px'));
-  });
-
-  it('points at the Export button of the list for the data step', async () => {
+  it('says to try the export for the data step', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
     renderAt('/ops/budget?step=budget_import', (
       <main>
@@ -367,7 +358,7 @@ describe('StepHint', () => {
     expect(await screen.findByRole('dialog', { name: 'Your budget lines' })).toHaveTextContent('click Import first to download the example file');
   });
 
-  it('stays with its step on every screen, outlining its element on the screen of its step only, until it is closed', async () => {
+  it('stays with its step on every screen until it is closed', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
     renderAt('/master-data/companies?step=own_company', (
       <>
@@ -382,10 +373,9 @@ describe('StepHint', () => {
     expect(await screen.findByRole('dialog', { name: 'Your company' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'go /ops/contracts' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/ops\/contracts$/));
-    await waitFor(() => expect(screen.queryByTestId('step-hint-outline')).not.toBeInTheDocument());
     expect(screen.getByRole('dialog', { name: 'Your company' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'go /master-data/companies' }));
-    await waitFor(() => expect(screen.getByTestId('step-hint-outline')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/master-data\/companies$/));
     const hint = screen.getByRole('dialog', { name: 'Your company' });
     fireEvent.click(within(hint).getByRole('button', { name: 'Later' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -504,48 +494,6 @@ describe('StepHint', () => {
       expect(i18n.t('onboarding.firstSteps.steps.own_invite.hint.portfolio')).not.toMatch(/équipe|Team|equipo/i);
     }
     await i18n.changeLanguage('en');
-  });
-
-  it('follows its element when the screen replaces it, rises above it in its corner and stays without it', async () => {
-    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
-    // The composer at the bottom of a 1024 x 768 window, under the corner of the hint.
-    const box = { top: 668, left: 200, width: 800, height: 40, x: 200, y: 668, right: 1000, bottom: 708 };
-    const rect = vi.spyOn(HTMLTextAreaElement.prototype, 'getBoundingClientRect')
-      .mockReturnValue({ ...box, toJSON: () => box } as DOMRect);
-    function Plaid() {
-      const [stage, setStage] = React.useState<'consent' | 'composer' | 'none'>('consent');
-      return (
-        <main>
-          <button type="button" onClick={() => setStage('composer')}>Accept</button>
-          <button type="button" onClick={() => setStage('none')}>Leave</button>
-          {stage === 'consent' ? <div data-plaid-composer>Turn Plaid on</div> : null}
-          {stage === 'composer' ? <textarea aria-label="Message" /> : null}
-          <StepHint />
-        </main>
-      );
-    }
-    try {
-      renderAt('/ai?step=budget_plaid', <Plaid />);
-      const hint = await screen.findByRole('dialog', { name: `A question for ${AGENT_NAME}` });
-      // The acceptance box is away from the corner: the hint stays in it.
-      expect(hint.style.bottom).toBe('16px');
-      const bubble = { top: 0, left: 0, width: 360, height: 120, x: 0, y: 0, right: 360, bottom: 120 };
-      hint.getBoundingClientRect = () => ({ ...bubble, toJSON: () => bubble }) as DOMRect;
-
-      // Accepting replaces the acceptance box by the composer: the outline moves to the composer,
-      // and the hint rises above it so as not to cover it (768 - 668 + 12).
-      fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
-      await waitFor(() => expect(screen.getByTestId('step-hint-outline').style.top).toBe('664px'));
-      expect(screen.getByTestId('step-hint-outline').style.left).toBe('194px');
-      await waitFor(() => expect(screen.getByRole('dialog', { name: `A question for ${AGENT_NAME}` }).style.bottom).toBe('112px'));
-
-      // Without its element on the screen, the hint stays in its corner, with no outline.
-      fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
-      await waitFor(() => expect(screen.queryByTestId('step-hint-outline')).not.toBeInTheDocument());
-      await waitFor(() => expect(screen.getByRole('dialog', { name: `A question for ${AGENT_NAME}` }).style.bottom).toBe('16px'));
-    } finally {
-      rect.mockRestore();
-    }
   });
 
   it('ignores a step that is not in the current path', async () => {
