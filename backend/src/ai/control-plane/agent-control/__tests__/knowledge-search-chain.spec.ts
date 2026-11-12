@@ -216,6 +216,17 @@ function testLinkingWordsAreNoApplications() {
     timeline: [],
   }).need;
   assert.deepEqual(deterministic.entities.applications.sort(), ['CheeseTrack', 'Outlook'].sort());
+
+  // A name at the head of the title stays an application; the first word of a sentence of the
+  // description does not (review of 12/11).
+  const applicationsOf = (title: string, description: string) => builder.buildDeterministicNeedRepresentation({
+    ticket: { id: '8', title, description },
+    timeline: [],
+  }).need.entities.applications;
+  assert.deepEqual(applicationsOf('Outlook plante', ''), ['Outlook']);
+  assert.deepEqual(applicationsOf('SAP ne répond plus', 'Bonjour,\nDepuis ce matin la saisie bloque.'), ['SAP']);
+  assert.deepEqual(applicationsOf('Teams', 'Impossible de rejoindre la réunion de 10 h.'), ['Teams']);
+  assert.deepEqual(applicationsOf('Réunion bloquée', 'Bonjour,\nImpossible de rejoindre la réunion.\nDepuis hier Teams se ferme.'), ['Teams']);
 }
 
 // The reply synthesis gets the passages that lie past the cut of the body, within a bound.

@@ -540,27 +540,35 @@ function looksLikeProductName(token: string): boolean {
   return /[0-9]/.test(token) || /^.+[A-Z]/.test(token);
 }
 
-// A capital letter is the only sign of a name here: the first word of a sentence carries one
-// whatever it is, so it counts only when it also looks like a product name (a digit, a capital
-// inside: GLPI, CheeseTrack, X3) or comes back capitalised inside a sentence.
-function extractAppLikeTokens(text: string): string[] {
+// A capital letter is the only sign of a name here. A title often starts with the name
+// (« Outlook plante », « Teams »), so every capitalised word of the title counts. In the
+// description and the notes, the first word of a sentence carries one whatever it is, so it
+// counts only when it also looks like a product name (a digit, a capital inside: GLPI,
+// CheeseTrack, X3) or comes back capitalised inside a sentence. Linking words never count.
+function extractAppLikeTokens(title: string, body: string): string[] {
   const tokens: string[] = [];
   const insideSentence = new Set<string>();
   const sentenceStart: string[] = [];
   const pattern = /\b[A-Z][A-Za-z0-9_+.-]{2,40}\b/g;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(text)) != null) {
-    const token = match[0];
-    if (/^(DOC|HTTP|ERROR|ERR)$/i.test(token) || isNonApplicationWord(token)) continue;
-    const before = text.slice(0, match.index).replace(/[\s"'«»(\[]+$/u, '');
-    if (!before || /[.!?\n]$/.test(before)) {
-      if (looksLikeProductName(token)) tokens.push(token);
-      else sentenceStart.push(token);
-      continue;
+  const visit = (text: string, isTitle: boolean) => {
+    let match: RegExpExecArray | null;
+    pattern.lastIndex = 0;
+    while ((match = pattern.exec(text)) != null) {
+      const token = match[0];
+      if (/^(DOC|HTTP|ERROR|ERR)$/i.test(token) || isNonApplicationWord(token)) continue;
+      // Blanks and opening quotes are skipped, line breaks are kept: a new line starts a sentence.
+      const before = text.slice(0, match.index).replace(/(?:[^\S\r\n]|["'«»(\[])+$/u, '');
+      if (!isTitle && (!before || /[.!?\r\n]$/.test(before))) {
+        if (looksLikeProductName(token)) tokens.push(token);
+        else sentenceStart.push(token);
+        continue;
+      }
+      insideSentence.add(token);
+      tokens.push(token);
     }
-    insideSentence.add(token);
-    tokens.push(token);
-  }
+  };
+  visit(title, true);
+  visit(body, false);
   tokens.push(...sentenceStart.filter((token) => insideSentence.has(token)));
   return uniqueStrings(tokens, MAX_FIELD_ITEMS);
 }
@@ -648,7 +656,10 @@ function deterministicNeed(input: {
   const allText = textParts.map((part) => part.body).join('\n');
   need.intent = compact(latestRequesterMessage(input.timeline) ?? input.ticket.description ?? input.ticket.title, 240);
   need.language = guessLanguage(allText);
-  need.entities.applications = extractAppLikeTokens(allText);
+  need.entities.applications = extractAppLikeTokens(
+    input.ticket.title,
+    textParts.slice(1).map((part) => part.body).join('\n'),
+  );
   need.constraints.negative = extractNegativeConstraints(allText);
   const seenCodes = new Set<string>();
   for (const part of textParts) {
