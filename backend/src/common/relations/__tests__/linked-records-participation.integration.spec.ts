@@ -21,6 +21,10 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   keeps the links the person does not see; a new document links only records they read, and the
 //   empty families of a creation form need no read;
 // - an incident's and a task's applications: the unseen links stay, an unseen application is refused;
+// - a record the person does not read is refused the same way whether it is linked or not, and on
+//   an incident or a task as an unknown id (same status, same text);
+// - a task's history gives a Business Contributor the number of linked applications changed, not
+//   their names;
 // - every answer names and counts only the records the person reads, and an id in upper case names
 //   the same record.
 // Without a read of projects the answer is 403 LINKED_MODULE_NOT_READABLE.
@@ -58,6 +62,7 @@ async function run() {
   const { KnowledgeRelationsService } = require('../../../knowledge/knowledge-relations.service');
   const { IncidentsController } = require('../../../incidents/incidents.controller');
   const { TasksController } = require('../../../spend/tasks.controller');
+  const { TaskActivitiesService } = require('../../../tasks/task-activities.service');
   const projects = app.get(PortfolioProjectsController);
   const requests = app.get(PortfolioRequestsController);
   const knowledge = app.get(KnowledgeService);
@@ -209,6 +214,7 @@ async function run() {
     assert.deepEqual(await documentApps(), sorted([seenApp, unseenApp]), 'document: nothing removed');
     await documentRelations.removeRelation(documentId, 'applications', seenApp, opts);
     assert.deepEqual(await documentApps(), [unseenApp], 'document: a seen link removed');
+    assert.equal(await codeOf(() => documentRelations.addRelation(documentId, 'applications', unseenApp, opts)), 'OUTSIDE_PARTICIPATION', 'document: an unseen record already linked');
     // A save whose body carries links.
     const token = (await knowledge.acquireLock(documentId, bcId, { manager: runner.manager })).lock_token;
     const revision = async () => Number((await runner.query(`SELECT revision FROM documents WHERE id = $1`, [documentId]))[0].revision);
@@ -216,6 +222,7 @@ async function run() {
       knowledge.update(documentId, { relations, revision: await revision(), save_mode: 'manual' }, bcId, token, { manager: runner.manager });
     const notLinked = await insertId(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, 'Unseen too')`, [tenantId]);
     assert.equal(await codeOf(() => save({ applications: [seenApp, notLinked] })), 'OUTSIDE_PARTICIPATION', 'document save: an unseen record added');
+    assert.equal(await codeOf(() => save({ applications: [seenApp, unseenApp] })), 'OUTSIDE_PARTICIPATION', 'document save: an unseen record already linked');
     assert.equal(await codeOf(() => save({ incidents: [] })), 'LINKED_MODULE_NOT_READABLE', 'document save: a family the person does not read');
     assert.deepEqual(await documentApps(), [unseenApp], 'document save: nothing written');
     await save({ applications: [seenApp2.toUpperCase()] });
@@ -239,7 +246,17 @@ async function run() {
     await runner.query(`INSERT INTO incident_applications (tenant_id, incident_id, application_id) VALUES ($1, $2, $3), ($1, $2, $4)`, [tenantId, incident, seenApp, unseenApp]);
     const incidentApps = () => ids(`SELECT application_id AS id FROM incident_applications WHERE tenant_id = $1 AND incident_id = $2`, incident);
     const incidents = app.get(IncidentsController);
-    await badRequest(() => incidents.bulkReplaceApplications(incident, { application_ids: [seenApp, notLinked] }, bcCtx));
+    // An unseen application, linked or not, answers as an unknown one.
+    const refusalOf = async (fn: () => Promise<unknown>) => {
+      const error = await fn().then(() => null, (caught: any) => caught);
+      return { status: error?.getStatus?.(), message: String(error?.message) };
+    };
+    const unknownApp = randomUUID();
+    const incidentUnknown = await refusalOf(() => incidents.bulkReplaceApplications(incident, { application_ids: [seenApp, unknownApp] }, bcCtx));
+    assert.equal(incidentUnknown.status, 400);
+    for (const unseen of [notLinked, unseenApp]) {
+      assert.deepEqual(await refusalOf(() => incidents.bulkReplaceApplications(incident, { application_ids: [seenApp, unseen] }, bcCtx)), incidentUnknown, 'incident: unseen as unknown');
+    }
     const incidentAnswer = await incidents.bulkReplaceApplications(incident, { application_ids: [seenApp2.toUpperCase()] }, bcCtx);
     assert.deepEqual(await incidentApps(), sorted([seenApp2, unseenApp]), 'incident applications: unseen link kept');
     assert.deepEqual((incidentAnswer as Array<{ id: string }>).map((row) => row.id), [seenApp2], 'incident: the answer names what the person reads');
@@ -251,12 +268,25 @@ async function run() {
     await runner.query(`INSERT INTO task_applications (tenant_id, task_id, application_id) VALUES ($1, $2, $3), ($1, $2, $4)`, [tenantId, task, seenApp, unseenApp]);
     const taskApps = () => ids(`SELECT application_id AS id FROM task_applications WHERE tenant_id = $1 AND task_id = $2`, task);
     const tasks = app.get(TasksController);
-    await badRequest(() => tasks.updateTask(task, { application_ids: [seenApp, notLinked] }, bcReq));
+    const invalid = (id: string) => ({ status: 400, message: `Invalid application_ids: ${id}` });
+    assert.deepEqual(await refusalOf(() => tasks.updateTask(task, { application_ids: [seenApp, unknownApp] }, bcReq)), invalid(unknownApp), 'task: an unknown id');
+    for (const unseen of [notLinked, unseenApp]) {
+      assert.deepEqual(await refusalOf(() => tasks.updateTask(task, { application_ids: [seenApp, unseen] }, bcReq)), invalid(unseen), 'task: unseen as unknown');
+    }
     assert.deepEqual(await taskApps(), sorted([seenApp, unseenApp]), 'task: nothing written');
     await tasks.updateTask(task, { application_ids: [seenApp2.toUpperCase()] }, bcReq);
     assert.deepEqual(await taskApps(), sorted([seenApp2, unseenApp]), 'task applications: unseen link kept');
     const taskActivity = await runner.query(`SELECT changed_fields::text AS fields FROM portfolio_activities WHERE tenant_id = $1 AND task_id = $2`, [tenantId, task]);
     assert.ok(taskActivity.length > 0 && taskActivity.every((row: { fields: string }) => !row.fields.includes('Billing')), 'task activity: no unseen name');
+    // A change written by someone who reads every application: the contributor gets the numbers only.
+    await runner.query(`INSERT INTO portfolio_activities (tenant_id, task_id, author_id, type, changed_fields) VALUES ($1, $2, $3, 'change', $4::jsonb)`,
+      [tenantId, task, userId, JSON.stringify({ linked_applications: [[], ['Billing', 'Seen']] })]);
+    const feed = await tasks.listActivities(task, bcReq);
+    assert.ok(!JSON.stringify(feed).includes('Billing'), 'task history: no unseen name');
+    assert.deepEqual(feed.find((row: any) => row.author_id === userId)?.changed_fields?.linked_applications,
+      [{ labels: null, hidden: 0 }, { labels: null, hidden: 2 }], 'task history: the numbers');
+    const fullFeed = await app.get(TaskActivitiesService).listForTask(task, { manager: runner.manager, userId });
+    assert.ok(JSON.stringify(fullFeed).includes('Billing'), 'task history: names for a reader of every application');
     console.log('  incident and task applications: unseen links kept, unseen records refused: OK');
   } finally {
     await runner.rollbackTransaction();
