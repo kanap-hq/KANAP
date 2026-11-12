@@ -1,6 +1,7 @@
 /**
  * SQL fragment matching the bilingual document search vector built by
- * `documents_search_vector_sync()` (migration 1852900000000): the same text is
+ * `documents_search_vector_compute()` (migrations 1852900000000 and
+ * 1856190000000), which the `documents_search_vector_sync()` trigger calls: the same text is
  * indexed under both `kanap_fr` and `kanap_en` (unaccent + language stemmer),
  * so queries must OR the two configurations to get accent folding and
  * French/English stemming in either direction.
