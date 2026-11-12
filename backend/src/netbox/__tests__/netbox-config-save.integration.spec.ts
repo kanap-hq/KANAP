@@ -230,6 +230,18 @@ async function main() {
       assert.doesNotMatch(JSON.stringify(audits), /stored-token|nbt_ignored|ciphertext/);
     });
 
+    await inTransaction('once removed, an empty address is refused again and a typed token is not lost silently', async (runner) => {
+      const { tenantId, configId } = await seed(runner);
+      await service().save(runner.manager, tenantId, { base_url: '' }, { userId: null });
+      await assert.rejects(
+        () => service().save(runner.manager, tenantId, { base_url: '', api_token: 'nbt_typed_after' }, { userId: null }),
+        (error: any) => error?.getResponse?.()?.code === 'netbox_base_url_invalid',
+      );
+      const row = await readRow(runner, configId);
+      assert.equal(row.credential_ref_json, null);
+      assert.equal((await auditRows(runner, configId)).length, 1, 'no entry without a change');
+    });
+
     await inTransaction('an empty address with nothing saved is refused', async (runner) => {
       const tenantId = randomUUID();
       await runner.query(

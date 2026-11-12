@@ -303,12 +303,14 @@ export class AiMonitoringIntegrationsService {
    * Removes the saved connection: the address and the credential are emptied and the
    * connection is switched off, with an audit entry. The row and its other settings
    * (time zone, timeout) stay, as GLPI keeps its settings row. Agents bound to PRTG then
-   * report the connection as unavailable on their next cycle. Null when nothing is saved.
+   * report the connection as unavailable on their next cycle. Null when there is nothing
+   * to remove (no row, or one already removed): the caller then refuses the empty address,
+   * so a token typed with it is never dropped behind a reported save.
    */
   private async removePrtgConnection(context: AiExecutionContextWithManager): Promise<{ ok: true } | null> {
     const existing = await this.adapterConfigs.getConfig(context, 'monitoring', PRTG_MONITORING_PROVIDER_KEY, { forUpdate: true });
     if (!existing || (!textOrNull(existing.base_url) && !existing.credential_ref_json && !existing.enabled)) {
-      return existing ? { ok: true } : null;
+      return null;
     }
     const saved = await this.adapterConfigs.saveConfig(context, {
       provider_kind: 'monitoring',

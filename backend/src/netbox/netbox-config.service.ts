@@ -345,8 +345,9 @@ export class NetboxConfigService {
     let baseUrl = textOrNull(existing?.base_url);
     if (input.base_url !== undefined) {
       const raw = textOrNull(input.base_url);
-      if (!raw && existing) {
-        // An empty address removes the saved connection, as for GLPI.
+      if (!raw && existing && (textOrNull(existing.base_url) || existing.credential_ref_json)) {
+        // An empty address removes the saved connection, as for GLPI. Once removed, it
+        // is refused again below, as with nothing saved.
         return this.removeConnection(manager, tenantId, existing, opts);
       }
       if (!raw) throw netboxBadRequest('netbox_base_url_invalid');

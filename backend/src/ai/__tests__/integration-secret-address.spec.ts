@@ -487,10 +487,15 @@ async function testPrtgEmptyAddressRemovesTheConnection() {
   assert.equal(entry.after_json.enabled, false);
   assert.doesNotMatch(JSON.stringify(harness.audits), /stored-prtg-token|ciphertext/);
 
-  // Removing what is already removed changes nothing and leaves no new entry.
+  // Once removed, an empty address is refused again, as with nothing saved: a token
+  // typed with it would otherwise be dropped while the screen reports a save.
   const count = harness.audits.length;
-  await harness.service.savePrtgIntegration(harness.context, { enabled: false, base_url: '' });
-  assert.equal(harness.audits.length, count);
+  await assert.rejects(
+    () => harness.service.savePrtgIntegration(harness.context, { enabled: false, base_url: '', api_token: 'typed-after-removal' }),
+    (error: any) => error instanceof BadRequestException,
+  );
+  assert.equal(harness.audits.length, count, 'no entry without a change');
+  assert.equal(harness.rows[0].credential_ref_json, null);
 
   // With nothing saved, an empty address is still refused.
   const empty = prtgHarness();
