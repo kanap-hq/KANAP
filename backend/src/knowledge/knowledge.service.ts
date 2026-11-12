@@ -4316,9 +4316,6 @@ export class KnowledgeService {
       await this.bulkReplaceClassifications(saved.id, templateClassifications, { manager });
     }
 
-    if (userId) {
-      await this.assertRelationWriteAllowed(saved.id, relationWritesOf(body?.relations), manager, userId);
-    }
     await this.applyDocumentRelations(saved.id, body?.relations, manager);
 
     await this.ensureVersionSnapshot(saved, body?.change_note ? String(body.change_note) : 'Initial version', userId, manager);
