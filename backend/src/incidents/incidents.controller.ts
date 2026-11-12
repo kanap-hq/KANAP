@@ -96,7 +96,7 @@ export class IncidentsController {
   /**
    * The detail, the list routes (list, ids, filter-values, export) and the Relations tab. A
    * Business Contributor who reads applications is limited to the applications they take part
-   * in. The journal and attachment routes stay on `opts`.
+   * in, the journal too. The note and attachment routes stay on `opts`.
    */
   private async viewOpts(ctx: TenantRequest) {
     const base = this.opts(ctx);
@@ -300,7 +300,8 @@ export class IncidentsController {
   @Get(':id/entries')
   async listEntries(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
     const id = await this.visibleId(idOrRef, ctx);
-    return this.entries.list(id, this.opts(ctx));
+    // A Business Contributor's journal names only the applications of their participation.
+    return this.entries.list(id, await this.viewOpts(ctx));
   }
 
   @UseGuards(PermissionGuard)

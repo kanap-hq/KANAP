@@ -9,7 +9,7 @@ import { createAppTheme } from '../../../config/ThemeContext';
 
 vi.mock('../../../api/endpoints/incidents', () => ({ incidentsApi: { listEntries: vi.fn(), createEntry: vi.fn() } }));
 
-import { incidentsApi } from '../../../api/endpoints/incidents';
+import { incidentsApi, type IncidentEntry } from '../../../api/endpoints/incidents';
 import { formatShortDateTime } from '../../../lib/dateFormat';
 import IncidentJournalTab from './IncidentJournalTab';
 
@@ -20,7 +20,7 @@ function entry(
   kind: string,
   content: string,
   times: { occurred_at?: string; created_at?: string } = {},
-  changedFields: Record<string, { from: unknown; to: unknown }> | null = null,
+  changedFields: IncidentEntry['changed_fields'] = null,
 ) {
   const occurredAt = times.occurred_at ?? '2026-10-16T08:00:00.000Z';
   return {
@@ -118,6 +118,25 @@ describe('IncidentJournalTab link changes', () => {
     // No snapshot, or a snapshot that is not two lists of references: the stored sentence stays.
     expect(screen.getByText('Technologies linked: TEC-1.')).toBeInTheDocument();
     expect(screen.getByText('Technologies linked: TEC-OLD.')).toBeInTheDocument();
+  });
+
+  // The server counts the applications a Business Contributor does not see (`hidden`): the line
+  // names the references they see, then the number of the others.
+  it('shows the number of the applications the reader does not see', async () => {
+    await i18n.changeLanguage('fr');
+    listEntries.mockResolvedValue([
+      entry('e1', 'link_change', 'Applications linked: APP-4, 2 not shown.', {}, {
+        applications: { from: [], to: ['APP-4'], hidden: { linked: 2, unlinked: 0 } },
+      }),
+      entry('e2', 'link_change', 'Applications unlinked: 1 not shown.', {}, {
+        applications: { from: ['APP-4'], to: ['APP-4'], hidden: { linked: 0, unlinked: 1 } },
+      }),
+    ]);
+    renderTab();
+    const asWritten = { normalizer: (text: string) => text };
+    expect(await screen.findByText('Applications liées\u00a0: APP-4, 2 non affichées.', asWritten)).toBeInTheDocument();
+    expect(screen.getByText('Applications déliées\u00a0: 1 non affichée.', asWritten)).toBeInTheDocument();
+    expect(screen.queryByText(/not shown/)).not.toBeInTheDocument();
   });
 
   it.each([
