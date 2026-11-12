@@ -43,8 +43,10 @@ vi.mock('../auth/AuthContext', () => ({
   }),
 }));
 
+const tenant = vi.hoisted(() => ({ logoUrl: null as string | null }));
+
 vi.mock('../tenant/TenantContext', () => ({
-  useTenant: () => ({ isPlatformHost: false, tenantName: 'Acme', organisationName: 'Acme Industries', logoUrl: null, useLogoInDark: false }),
+  useTenant: () => ({ isPlatformHost: false, tenantName: 'Acme', organisationName: 'Acme Industries', logoUrl: tenant.logoUrl, useLogoInDark: false }),
 }));
 
 vi.mock('../config/FeaturesContext', () => ({
@@ -113,6 +115,19 @@ describe('Layout header', () => {
     const home = screen.getByRole('link', { name: 'Acme Industries' });
     expect(home).toHaveAttribute('href', '/');
     expect(screen.queryByText('KANAP')).not.toBeInTheDocument();
+  });
+
+  it('keeps the logo at one size, however little room the section tabs leave', () => {
+    tenant.logoUrl = '/logo.png';
+    try {
+      renderShell();
+      const logo = screen.getByRole('img', { name: 'Acme Industries' });
+      expect(getComputedStyle(logo.parentElement as HTMLElement).flexShrink).toBe('0');
+      expect(getComputedStyle(logo).height).toBe('36px');
+      expect(getComputedStyle(logo).maxWidth).toBe('96px');
+    } finally {
+      tenant.logoUrl = null;
+    }
   });
 });
 

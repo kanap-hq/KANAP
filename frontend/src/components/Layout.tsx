@@ -459,20 +459,21 @@ export default function Layout() {
           >
             <MenuIcon />
           </IconButton>
-          {/* The logo or the workspace name gives way to the section tabs: its large shrink
-              factor makes it take nearly all of a shortfall, down to its minimum width (the name
-              with an ellipsis), before the tabs shrink and show their scroll arrows. */}
+          {/* The logo keeps one size whatever the room left by the section tabs: on a narrow
+              window the tabs scroll instead. The workspace name gives way to the tabs: its
+              large shrink factor makes it take nearly all of a shortfall, down to its minimum
+              width (the name with an ellipsis), before the tabs shrink and show their arrows. */}
           {showHeaderLogo ? (
             <Box
               component={Link}
               to="/"
-              sx={{ display: 'flex', alignItems: 'center', mr: { xs: 1, sm: 3 }, flexShrink: 1000, minWidth: 48, textDecoration: 'none' }}
+              sx={{ display: 'flex', alignItems: 'center', mr: { xs: 1, sm: 3 }, flexShrink: 0, textDecoration: 'none' }}
             >
               <Box
                 component="img"
                 src={logoUrl || undefined}
                 alt={organisationName}
-                sx={{ height: 36, maxWidth: 140, minWidth: 0, objectFit: 'contain' }}
+                sx={{ height: 36, maxWidth: 96, objectFit: 'contain' }}
               />
             </Box>
           ) : (
