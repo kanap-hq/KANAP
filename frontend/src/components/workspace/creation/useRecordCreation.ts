@@ -6,6 +6,7 @@ import type { TFunction } from 'i18next';
 import api from '../../../api';
 import { useKanapDialogs } from '../../design';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { deleteKeepalive } from '../../../lib/deleteKeepalive';
 import { ONBOARDING_QUERY_KEY } from '../../onboarding/useOnboarding';
 import {
   cancelCreationClear,
@@ -189,5 +190,17 @@ export default function useRecordCreation({
     }
   }, [apiBase, cancelling, dialogs, key, listPath, navigate, onError, queryClient, queryKeyPrefixes, recordId, recordLabel, t]);
 
-  return { beingCreated: !!entry, token: entry?.token ?? null, cancelling, completing, startCreation, finishCreation, completeCreation, cancelCreation };
+  /**
+   * The cancel of this record, sent as a request the browser finishes after the page is gone (a
+   * reload or a closed tab left with the record incomplete, `useIncompleteLeave`): the same route
+   * and token as Cancel, so the server refuses it for any other person, record or expired creation.
+   * Nothing is sent once the creation is over.
+   */
+  const discardOnUnload = React.useCallback(() => {
+    const current = key ? getCreation(key) : undefined;
+    if (!recordId || !current) return;
+    deleteKeepalive(`${apiBase}/${recordId}/creation`, { token: current.token });
+  }, [apiBase, key, recordId]);
+
+  return { beingCreated: !!entry, token: entry?.token ?? null, cancelling, completing, startCreation, finishCreation, completeCreation, cancelCreation, discardOnUnload };
 }

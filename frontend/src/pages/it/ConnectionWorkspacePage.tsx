@@ -323,6 +323,7 @@ export default function ConnectionWorkspacePage() {
     missing: () => missingOf(dataRef.current).map((key) => ({ key, label: fieldLabel(key) })),
     focus: focusField,
     onDelete: () => creation.cancelCreation({ leave: false }),
+    discardOnUnload: creation.discardOnUnload,
   });
   // Leaving a connection being created that still lacks a field asks first: complete it, or delete it.
   const leaveAsks = React.useCallback(
