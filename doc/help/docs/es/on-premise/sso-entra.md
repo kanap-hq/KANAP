@@ -152,6 +152,9 @@ Los valores vacíos del directorio nunca borran datos ya presentes en Kadratis.
 
 Desactivar una cuenta cierra la sesión de la persona de inmediato y bloquea cualquier nuevo inicio de sesión. Sus datos y su historial se conservan.
 
+El último administrador activo del espacio de trabajo sigue activo, aunque el directorio lo haya eliminado o desactivado, y el bloque lo nombra: **Cuenta mantenida activa (último administrador): {nombre}**. Solo se ejecuta una sincronización a la vez por espacio de trabajo: mientras se ejecuta, **Sincronizar ahora** no hace nada y muestra **Ya hay una sincronización en curso.**
+
+
 El bloque de **Administración → Autenticación** indica el resultado: **Última sincronización {fecha}: N cuentas actualizadas, N desactivadas.** después de una ejecución correcta o, en caso contrario, **La última sincronización falló: {mensaje}**. **Sincronizar ahora** ejecuta el mismo trabajo bajo demanda.
 
 ## Solución de problemas

@@ -596,7 +596,7 @@ Conecte Kadratis a su inquilino de Microsoft Entra ID para SSO:
 
 ### Sincronización diaria del directorio
 
-Este bloque aparece debajo de la tarjeta de Entra una vez conectado el inicio de sesión único. Cada noche a las 03:00 hora del servidor, Kadratis actualiza nombres, cargos, teléfonos, departamentos y empresas desde Microsoft Entra, actualiza el responsable de las personas que son colaboradores, y desactiva las cuentas eliminadas o desactivadas en el directorio.
+Este bloque aparece debajo de la tarjeta de Entra una vez conectado el inicio de sesión único. Cada noche a las 03:00 hora del servidor, Kadratis actualiza nombres, cargos, teléfonos, departamentos y empresas desde Microsoft Entra, actualiza el responsable de las personas que son colaboradores, y desactiva las cuentas eliminadas o desactivadas en el directorio. El último administrador activo del espacio de trabajo sigue activo, aunque el directorio lo haya eliminado o desactivado.
 
 Los departamentos y las empresas se comparan por nombre con los registros que ya existen en Kadratis. No se crea nada automáticamente. Los valores vacíos del directorio nunca borran lo que ya está almacenado en Kadratis.
 
@@ -607,8 +607,10 @@ La sincronización necesita una aprobación única por parte de un administrador
 | **Aún no autorizado...** | Ningún administrador de Microsoft Entra ha aprobado la sincronización, o falta el permiso requerido en el registro de aplicación. |
 | **Conceder acceso en Microsoft Entra** | Le lleva a la página de aprobación de Microsoft. Se muestra mientras la sincronización no está autorizada. Vuelve con **Acceso concedido. La primera sincronización está en curso.** |
 | **Última sincronización {fecha}: N cuentas actualizadas, N desactivadas.** | Resultado de la última ejecución correcta. |
+| **Cuenta mantenida activa (último administrador): {nombre}** | El directorio eliminó o desactivó a esta persona. Su cuenta sigue activa porque es el último administrador activo del espacio de trabajo. |
 | **La última sincronización falló: {mensaje}** | La última ejecución no se completó. El mensaje proviene de Microsoft. |
 | **Sincronizar ahora** | Ejecuta la sincronización de inmediato en lugar de esperar a esta noche. Informa **Sincronización completada: N cuentas actualizadas, N desactivadas.** |
+| **Ya hay una sincronización en curso.** | Otra sincronización del espacio de trabajo está en curso (la nocturna, o una iniciada por otro administrador). **Sincronizar ahora** no hace nada; vuelva a intentarlo cuando haya terminado. |
 
 Los pasos de configuración del registro de aplicación de Entra están en [SSO con Microsoft Entra](on-premise/sso-entra.md).
 

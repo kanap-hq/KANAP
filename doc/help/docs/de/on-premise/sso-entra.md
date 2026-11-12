@@ -152,6 +152,9 @@ Leere Werte im Verzeichnis löschen niemals Daten, die bereits in Kadratis stehe
 
 Das Deaktivieren eines Kontos meldet die Person sofort ab und sperrt jede weitere Anmeldung. Ihre Daten und ihr Verlauf bleiben erhalten.
 
+Der letzte aktive Administrator des Arbeitsbereichs bleibt aktiv, auch wenn das Verzeichnis ihn entfernt oder deaktiviert hat, und der Block nennt ihn: **Konto aktiv gelassen (letzter Administrator): {Name}**. Pro Arbeitsbereich läuft jeweils nur eine Synchronisierung: Solange sie läuft, tut **Jetzt synchronisieren** nichts und zeigt **Eine Synchronisierung läuft bereits.**
+
+
 Der Block unter **Administration → Authentifizierung** meldet das Ergebnis: **Zuletzt synchronisiert {date}: N Konten aktualisiert, N deaktiviert.** nach einem erfolgreichen Lauf, sonst **Die letzte Synchronisierung ist fehlgeschlagen: {message}**. **Jetzt synchronisieren** führt denselben Job auf Anforderung aus.
 
 ## Fehlerbehebung

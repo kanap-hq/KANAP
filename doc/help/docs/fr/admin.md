@@ -596,7 +596,7 @@ Connectez Kadratis à votre tenant Microsoft Entra ID pour le SSO :
 
 ### Synchronisation quotidienne de l'annuaire
 
-Ce bloc apparaît sous la carte Entra une fois le single sign-on connecté. Chaque nuit à 03h00 (heure du serveur), Kadratis actualise les noms, postes, téléphones, départements et sociétés depuis Microsoft Entra, actualise le responsable des personnes qui sont contributeurs, et désactive les comptes supprimés ou désactivés dans l'annuaire.
+Ce bloc apparaît sous la carte Entra une fois le single sign-on connecté. Chaque nuit à 03h00 (heure du serveur), Kadratis actualise les noms, postes, téléphones, départements et sociétés depuis Microsoft Entra, actualise le responsable des personnes qui sont contributeurs, et désactive les comptes supprimés ou désactivés dans l'annuaire. Le dernier administrateur actif de l'espace de travail reste actif, même quand l'annuaire l'a supprimé ou désactivé.
 
 Les départements et les sociétés sont rapprochés par leur nom des enregistrements qui existent déjà dans Kadratis. Rien n'est créé automatiquement. Les valeurs vides de l'annuaire n'effacent jamais ce qui est déjà stocké dans Kadratis.
 
@@ -607,8 +607,10 @@ La synchronisation nécessite une approbation unique par un administrateur Micro
 | **Pas encore autorisé...** | Aucun administrateur Microsoft Entra n'a approuvé la synchronisation, ou l'autorisation requise manque dans l'enregistrement d'application. |
 | **Autoriser dans Microsoft Entra** | Vous envoie vers la page d'approbation de Microsoft. Affiché tant que la synchronisation n'est pas autorisée. Vous revenez avec **Accès accordé. La première synchronisation est en cours.** |
 | **Dernière synchronisation {date} : N comptes actualisés, N désactivés.** | Résultat de la dernière exécution réussie. |
+| **Compte gardé actif (dernier administrateur) : {nom}** | L'annuaire a supprimé ou désactivé cette personne. Son compte reste actif, car elle est le dernier administrateur actif de l'espace de travail. |
 | **La dernière synchronisation a échoué : {message}** | La dernière exécution ne s'est pas terminée. Le message provient de Microsoft. |
 | **Synchroniser maintenant** | Lance la synchronisation immédiatement au lieu d'attendre la nuit. Affiche **Synchronisation terminée : N comptes actualisés, N désactivés.** |
+| **Une synchronisation est déjà en cours.** | Une autre synchronisation de l'espace de travail est en cours (celle de la nuit, ou celle lancée par un autre administrateur). **Synchroniser maintenant** ne fait rien ; réessayez une fois qu'elle est terminée. |
 
 Les étapes de configuration de l'enregistrement d'application Entra sont décrites dans [SSO Microsoft Entra](on-premise/sso-entra.md).
 
