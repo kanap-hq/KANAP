@@ -13,7 +13,7 @@ import { AuditService } from '../audit/audit.service';
 import { RecordInUseException } from '../common/record-in-use';
 import { sqlStateOf } from '../common/filters/database-error.mapping';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
-import { assertRolePermissionsWithinActorRights, roleGrantActorOf } from './role-grant-ceiling';
+import { assertRolePermissionsWithinActorRights, roleGrantActorOf, rolesAboveActorRights } from './role-grant-ceiling';
 import { isAdministratorRole, roleNameReserved, roleNameTaken } from './system-roles';
 
 /** What the audit log keeps of a role: its name and description, and its permissions when given. */
@@ -77,7 +77,9 @@ export class RolesController {
     const items = await this.rolesService.list({ manager: mg });
     // On the request's single connection (the assistant reads the same count).
     const counts = await this.rolesService.userCounts(items.map((role) => role.id), { manager: mg ?? this.userRoleRepo.manager });
-    return { items: items.map((role) => ({ ...role, user_count: counts.get(role.id) ?? 0 })) };
+    // Whether the reader may give the role to a person who does not hold it yet (the role pickers).
+    const above = await rolesAboveActorRights(mg ?? this.userRoleRepo.manager, roleGrantActorOf(req), items.map((role) => role.id));
+    return { items: items.map((role) => ({ ...role, user_count: counts.get(role.id) ?? 0, grantable: !above.has(role.id) })) };
   }
 
   @ReservedToUnscopedDataAccess()

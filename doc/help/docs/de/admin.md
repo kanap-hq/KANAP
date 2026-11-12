@@ -209,6 +209,8 @@ Zeilenaktionen über das Menü am Ende jeder Zeile:
 | **Datenzugriff** | Öffnet den Benutzer auf dem Reiter **Datenzugriff**. Sichtbar für Personen mit Zugriff auf alle Daten, in den Zeilen anderer Personen. |
 | **Löschen** | Entfernt den Benutzer dauerhaft. Die Datensätze, an denen er gearbeitet hat, bleiben ohne ihn erhalten. Ihr eigenes Konto können Sie nicht löschen. Um den Zugang einer Person zu sperren und das Konto zu behalten, deaktivieren Sie es stattdessen. |
 
+Ohne die Rolle Administrator ändern Sie keine Person, die mehr Rechte hat als Sie (einen Administrator oder eine Person mit einer höheren Stufe als Ihrer in einem Modul): Ihr Menü bietet **Anzeigen** und **Passwort-Zurücksetzung senden**, ihr Benutzerfenster öffnet sich schreibgeschützt und ihre Zeile lässt sich nicht auswählen. In den Rollen eines Benutzers ist eine Rolle über Ihren Rechten ausgegraut, außer die Person hat sie bereits.
+
 ### CSV-Datei der Benutzer
 
 **Exportieren** lädt die Benutzerliste als CSV-Datei oder Excel-Arbeitsmappe herunter. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
@@ -444,7 +446,7 @@ Die Rollenseite hat ein zweispaltiges Layout:
 
 **Aktionen**:
 - **Neue Rolle**: Benutzerdefinierte Rolle von Grund auf erstellen. Eine neue oder umbenannte Rolle kann keinen Namen tragen, den die Seite für eine System- oder integrierte Rolle anzeigt, in einer ihrer Sprachen.
-- **Duplizieren**: Bestehende Rolle (einschließlich integrierter Rollen) als Ausgangspunkt kopieren. Nicht verfügbar für Systemrollen.
+- **Duplizieren**: Bestehende Rolle (einschließlich integrierter Rollen) als Ausgangspunkt kopieren. Das Fenster fragt nach dem Namen der Kopie. Nicht verfügbar für Systemrollen.
 - **Löschen**: Benutzerdefinierte Rolle entfernen. Eine Rolle, die Benutzern zugewiesen ist, kann nicht gelöscht werden: Weisen Sie ihnen zuerst eine andere Rolle zu. Das Fenster weist vor jeder Bestätigung darauf hin.
 - **Details speichern**: Rollenname und -beschreibung aktualisieren
 - **Berechtigungen speichern**: Berechtigungsänderungen anwenden

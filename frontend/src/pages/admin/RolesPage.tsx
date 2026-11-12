@@ -11,6 +11,7 @@ import { RESOURCE_LABELS } from '../../utils/permissionLabels';
 import { PERMISSION_GROUPS } from './rolePermissionGroups';
 import { roleDescription, roleLabel } from '../../utils/roleLabel';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
+import { useKanapDialogs } from '../../components/design';
 
 type Role = { id: string; role_name: string; role_description: string; is_system?: boolean; is_built_in?: boolean; user_count?: number };
 type PermissionLevel = 'reader'|'contributor'|'member'|'admin'|null;
@@ -48,6 +49,7 @@ export default function RolesPage() {
   const { t, i18n } = useTranslation(['admin', 'common']);
   const canEdit = hasLevel('users','admin');
   const qc = useQueryClient();
+  const dialogs = useKanapDialogs();
   const { data: roles } = useQuery({ queryKey: ['roles'], queryFn: async () => (await api.get<{ items: Role[] }>('/roles')).data.items });
   const language = i18n.resolvedLanguage || i18n.language;
   // Alphabetical in the language on screen. The stored English name stays the sort key on the server.
@@ -126,11 +128,11 @@ export default function RolesPage() {
     onError: (error: unknown) => setCreateError(refusal(error)),
   });
 
-  // Duplicate role
+  // Duplicate role: the name of the copy is asked first, proposed in the language on screen.
   const { mutate: duplicateRole, isPending: duplicating } = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (roleName: string) => {
       if (!selected) return null;
-      const res = await api.post(`/roles/${selected.id}/duplicate`);
+      const res = await api.post(`/roles/${selected.id}/duplicate`, { role_name: roleName });
       return res.data as Role;
     },
     onSuccess: async (created: Role | null) => {
@@ -199,6 +201,17 @@ export default function RolesPage() {
       : t('roles.messages.administratorLocked'))
     : t('roles.messages.builtInLocked');
 
+  const askDuplicate = async () => {
+    if (!selected) return;
+    const name = await dialogs.prompt({
+      title: t('roles.dialogs.duplicateTitle'),
+      initialValue: t('roles.dialogs.duplicateName', { name: selectedLabel }),
+      confirmLabel: t('roles.actions.duplicate'),
+      required: true,
+    });
+    if (name?.trim()) duplicateRole(name.trim());
+  };
+
   const getRoleBadge = (role: Role) => {
     const key = (role.role_name ?? '').toLowerCase();
     if (role.is_system && (key === 'administrator' || key === 'contact')) {
@@ -221,7 +234,7 @@ export default function RolesPage() {
         actions={canEdit ? (
           <Stack direction="row" spacing={1}>
             {selected && !isSystem && (
-              <Button variant="action" onClick={() => duplicateRole()} disabled={duplicating}>
+              <Button variant="action" onClick={() => { void askDuplicate(); }} disabled={duplicating}>
                 {duplicating ? t('roles.actions.duplicating') : t('roles.actions.duplicate')}
               </Button>
             )}

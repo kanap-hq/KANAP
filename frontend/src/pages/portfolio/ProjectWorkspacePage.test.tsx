@@ -50,7 +50,14 @@ vi.mock('./workspace/PortfolioDetailWorkspaceShell', () => ({
   ),
 }));
 vi.mock('./workspace/project/ProjectPropertyPanel', () => ({ default: () => null }));
-vi.mock('./workspace/project/ProjectSummaryTab', () => ({ default: () => <div data-testid="project-summary" /> }));
+vi.mock('./workspace/project/ProjectSummaryTab', () => ({
+  default: (props: { canEditManagedDocs: boolean }) => (
+    <div data-testid="project-summary" data-edit-docs={String(props.canEditManagedDocs)} />
+  ),
+}));
+vi.mock('./editors/ProjectTasksPanel', () => ({
+  default: (props: { disabled: boolean }) => <div data-testid="project-tasks" data-disabled={String(props.disabled)} />,
+}));
 vi.mock('./workspace/project/ProjectActivityTab', () => ({ default: () => <div data-testid="project-activity" /> }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/workspace/MetadataUserPicker', () => ({
@@ -119,5 +126,33 @@ describe('ProjectWorkspacePage history', () => {
     renderPage('/portfolio/projects/proj-1/history');
     await screen.findByTestId('record-history');
     expect(navParams[navParams.length - 1].extraParams).toBeUndefined();
+  });
+});
+
+describe('ProjectWorkspacePage contribution', () => {
+  const serve = (project: Record<string, unknown>) => {
+    get.mockReset();
+    get.mockImplementation(async (url: string) => {
+      if (url === '/portfolio/projects/proj-1') return { data: project };
+      if (url === '/portfolio/classification/all') return { data: { sources: [], categories: [], streams: [] } };
+      return { data: {} };
+    });
+  };
+
+  // The person holds the contributor level (every level here) but the project read says the
+  // server refuses their contributions to this project.
+  it('offers no task and no managed document edit when the project read refuses contributions', async () => {
+    serve({ ...PROJECT, can_contribute: false });
+    renderPage('/portfolio/projects/proj-1/tasks');
+    expect(await screen.findByTestId('project-tasks')).toHaveAttribute('data-disabled', 'true');
+    serve({ ...PROJECT, can_contribute: false });
+    renderPage('/portfolio/projects/proj-1/summary');
+    expect(await screen.findByTestId('project-summary')).toHaveAttribute('data-edit-docs', 'false');
+  });
+
+  it('offers them when the project read allows contributions', async () => {
+    serve({ ...PROJECT, can_contribute: true });
+    renderPage('/portfolio/projects/proj-1/tasks');
+    expect(await screen.findByTestId('project-tasks')).toHaveAttribute('data-disabled', 'false');
   });
 });

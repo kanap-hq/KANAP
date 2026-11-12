@@ -8,6 +8,7 @@ import {
   normalizeResource,
   PermissionLevel,
   readRolePermissions,
+  readRolesPermissions,
 } from '../permissions/permissions.service';
 import { codedForbidden, moduleRightRequired } from '../auth/module-right-required';
 import { isAdministratorRole } from './system-roles';
@@ -74,18 +75,35 @@ export async function assertRoleGrantWithinActorRights(
   }
 }
 
-/** The rights `userId` holds through all their roles, read as `PermissionGuard` reads them (union). */
-async function heldRights(manager: EntityManager, userId: string): Promise<RoleGrantActor> {
-  const roleIds = [...await heldRoleIds(manager, userId)];
-  const roles = roleIds.length > 0 ? await manager.getRepository(Role).find({ where: { id: In(roleIds) } }) : [];
-  if (roles.some(isAdministratorRole)) return { isAdmin: true, permissions: {} };
-  const permissions: Record<string, string> = {};
+/** The roles each of `userIds` holds (main and additional), in two queries. */
+async function heldRoleIdsOf(manager: EntityManager, userIds: string[]): Promise<Map<string, Set<string>>> {
+  const held = new Map<string, Set<string>>(userIds.map((id) => [id, new Set<string>()]));
+  if (userIds.length === 0) return held;
+  const users = await manager.getRepository(User).find({ where: { id: In(userIds) }, select: { id: true, role_id: true } });
+  for (const user of users) if (user.role_id) held.get(user.id)?.add(user.role_id);
+  for (const row of await manager.getRepository(UserRole).find({ where: { user_id: In(userIds) } })) held.get(row.user_id)?.add(row.role_id);
+  return held;
+}
+
+/** Whether `rights` hold a level above the actor's own on a module (the Administrator role counts as above). */
+function rightsAboveActor(actor: RoleGrantActor, rights: RoleGrantActor): boolean {
+  if (actor.isAdmin) return false;
+  if (rights.isAdmin) return true;
+  return Object.entries(rights.permissions).some(([resource, level]) => (RANK[level] ?? 0) > (RANK[actor.permissions[resource]] ?? 0));
+}
+
+/** The rights each role gives (the Administrator role as `isAdmin`), in two queries. */
+async function rolesRights(manager: EntityManager, roleIds: string[]): Promise<Map<string, RoleGrantActor>> {
+  const out = new Map<string, RoleGrantActor>();
+  if (roleIds.length === 0) return out;
+  const roles = await manager.getRepository(Role).find({ where: { id: In(roleIds) } });
+  const permissions = await readRolesPermissions(manager, roles.map((role) => role.id));
   for (const role of roles) {
-    for (const [resource, level] of await readRolePermissions(manager, role.id)) {
-      if ((RANK[level] ?? 0) > (RANK[permissions[resource]] ?? 0)) permissions[resource] = level;
-    }
+    out.set(role.id, isAdministratorRole(role)
+      ? { isAdmin: true, permissions: {} }
+      : { isAdmin: false, permissions: Object.fromEntries(permissions.get(role.id) ?? []) });
   }
-  return { isAdmin: false, permissions };
+  return out;
 }
 
 /**
@@ -93,13 +111,62 @@ async function heldRights(manager: EntityManager, userId: string): Promise<RoleG
  * Administrator role, or a level above theirs on a module (all their roles count). An administrator
  * changes everyone. Every write on another person or on their account goes through here: their
  * administration fields, their roles, their invitation, their data access, their deletion, the
- * rows of an import about them.
+ * rows of an import about them. The users screen reads the same answer for a page of people.
  */
+export async function peopleAboveActorRights(manager: EntityManager, actor: RoleGrantActor, userIds: string[]): Promise<Set<string>> {
+  const above = new Set<string>();
+  if (actor.isAdmin || userIds.length === 0) return above;
+  const held = await heldRoleIdsOf(manager, userIds);
+  const rights = await rolesRights(manager, [...new Set([...held.values()].flatMap((ids) => [...ids]))]);
+  for (const [userId, roleIds] of held) {
+    // Their rights, read as `PermissionGuard` reads them: the union of their roles.
+    const union: RoleGrantActor = { isAdmin: false, permissions: {} };
+    for (const roleId of roleIds) {
+      const role = rights.get(roleId);
+      if (!role) continue;
+      if (role.isAdmin) union.isAdmin = true;
+      for (const [resource, level] of Object.entries(role.permissions)) {
+        if ((RANK[level] ?? 0) > (RANK[union.permissions[resource]] ?? 0)) union.permissions[resource] = level;
+      }
+    }
+    if (rightsAboveActor(actor, union)) above.add(userId);
+  }
+  return above;
+}
+
 export async function personAboveActorRights(manager: EntityManager, actor: RoleGrantActor, targetUserId: string): Promise<boolean> {
-  if (actor.isAdmin) return false;
-  const target = await heldRights(manager, targetUserId);
-  if (target.isAdmin) return true;
-  return Object.entries(target.permissions).some(([resource, level]) => (RANK[level] ?? 0) > (RANK[actor.permissions[resource]] ?? 0));
+  return (await peopleAboveActorRights(manager, actor, [targetUserId])).has(targetUserId);
+}
+
+/**
+ * The roles among `roleIds` the actor may not give to a person who does not hold them yet (see
+ * `assertRoleGrantWithinActorRights`): the Administrator role, and a role with a level above the
+ * actor's own on a module. Empty for an administrator. The role pickers of the users screen read it.
+ */
+export async function rolesAboveActorRights(manager: EntityManager, actor: RoleGrantActor, roleIds: string[]): Promise<Set<string>> {
+  const above = new Set<string>();
+  if (actor.isAdmin) return above;
+  for (const [roleId, rights] of await rolesRights(manager, roleIds)) {
+    if (rightsAboveActor(actor, rights)) above.add(roleId);
+  }
+  return above;
+}
+
+/**
+ * Every write on a person (their profile, e-mail, status, roles, invitation, data access, deletion,
+ * an import row about them) locks their `users` row first, until the end of the transaction, and
+ * only then reads their rights and checks them. Two writes on the same person run one after the
+ * other: the second reads the first one's result (a person made Administrator meanwhile is above
+ * the second writer's rights). Order of the locks, everywhere: the people's rows (by id), then the
+ * Administrator role rows (`lastActiveAdministratorsLeaving`).
+ */
+export async function lockPeople(manager: EntityManager, userIds: string[]): Promise<void> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (ids.length === 0) return;
+  await manager.query(
+    `SELECT id FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[]) ORDER BY id FOR UPDATE`,
+    [ids],
+  );
 }
 
 export const PERSON_ABOVE_OWN_RIGHTS_MESSAGE = 'This person has more rights than you.';

@@ -214,7 +214,8 @@ async function testInvitation() {
   };
   const repo = { findOne: async () => ({ ...user }), save: async (row: any) => row, manager: {} };
   const tokens = { create: (row: any) => row, save: async () => undefined };
-  const manager: any = { getRepository: (entity: { name?: string }) => (entity?.name === 'User' ? repo : tokens) };
+  // `query` takes the lock on the person's row (`lockPeople`).
+  const manager: any = { getRepository: (entity: { name?: string }) => (entity?.name === 'User' ? repo : tokens), query: async () => [] };
   const users = new UsersService(repo as any, {} as any, {} as any, {} as any, {} as any, service, { log: async () => undefined } as any);
   const commitThenRun = async (fn: () => Promise<void>) => { await fn(); };
 

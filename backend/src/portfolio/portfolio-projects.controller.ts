@@ -1,6 +1,6 @@
 import { languageOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { moduleRightRequired, requestContextMissing } from '../auth/module-right-required';
@@ -348,12 +348,29 @@ export class PortfolioProjectsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const { id, accessScope } = await this.resolveForAccess(idOrRef, ctx, 'reader');
-    return this.svc.get(id, query, {
+    const project = await this.svc.get(id, query, {
       manager: ctx.manager,
       accessScope,
       readsBudget: hasLevel(ctx, 'budget', 'reader'),
       linked: await this.projectLinkedReads(ctx),
     });
+    return { ...project, can_contribute: await this.canContribute(id, ctx) };
+  }
+
+  /**
+   * Whether the reader may contribute to this project (tasks, time, managed documents): the check
+   * those writes make. A Business Contributor who reads every project through another role
+   * contributes only to the projects they take part in.
+   */
+  private async canContribute(id: string, ctx: TenantRequest): Promise<boolean> {
+    if (!hasLevel(ctx, 'portfolio_projects', 'contributor')) return false;
+    try {
+      await this.resolveForAccess(id, ctx, 'contributor');
+      return true;
+    } catch (error) {
+      if (error instanceof NotFoundException) return false;
+      throw error;
+    }
   }
 
   @UseGuards(PermissionGuard)

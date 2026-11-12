@@ -39,7 +39,8 @@ function buildInviteService(opts: {
   const passwordMails: any[] = [];
   const microsoftMails: any[] = [];
   const tenant = opts.tenant === undefined ? ENTRA_TENANT : opts.tenant;
-  const manager: any = {};
+  // `query` takes the lock on the person's row (`lockPeople`).
+  const manager: any = { query: async () => [] };
   const users = {
     manager,
     findOne: async (query: any) => {

@@ -11,6 +11,7 @@ import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type Dele
 import {
   LAST_ADMINISTRATOR_MESSAGE,
   lastActiveAdministratorsLeaving,
+  lockPeople,
   PERSON_ABOVE_OWN_RIGHTS_MESSAGE,
   personAboveActorRights,
   type RoleGrantActor,
@@ -76,6 +77,8 @@ export class UsersDeleteService extends BaseDeleteService<User> {
   async deleteUser(id: string, actorId: string | null, opts?: DeleteOpts): Promise<void> {
     const manager = opts?.manager ?? this.repository.manager;
     const repo = this.getRepo(manager);
+    // The person's row is locked before it is read (see lockPeople).
+    await lockPeople(manager, [id]);
     const user = await repo.findOne({ where: { id } as any });
 
     if (!user) {
@@ -127,6 +130,8 @@ export class UsersDeleteService extends BaseDeleteService<User> {
     const manager = opts?.manager ?? this.repository.manager;
     const repo = this.getRepo(manager);
     const result: BulkDeleteResult = { deleted: [], failed: [] };
+    // Every row first, in id order (see lockPeople).
+    await lockPeople(manager, checkIds(ids));
 
     for (const id of ids) {
       try {

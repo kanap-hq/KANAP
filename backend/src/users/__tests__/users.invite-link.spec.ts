@@ -57,7 +57,8 @@ function buildInviteService() {
   };
   const repo = { findOne: async () => ({ ...user }), save: async (row: any) => row, manager: {} };
   const tokens = { create: (row: any) => row, save: async () => undefined };
-  const manager: any = { getRepository: (entity: { name?: string }) => (entity?.name === 'User' ? repo : tokens) };
+  // `query` takes the lock on the person's row (`lockPeople`).
+  const manager: any = { getRepository: (entity: { name?: string }) => (entity?.name === 'User' ? repo : tokens), query: async () => [] };
   const email = { sendUserInviteEmail: async (params: any) => { sent.push(params); } };
   const audit = { log: async () => undefined };
   const service = new UsersService(repo as any, {} as any, {} as any, {} as any, {} as any, email as any, audit as any);

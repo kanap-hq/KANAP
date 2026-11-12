@@ -245,12 +245,32 @@ describe('UserDialog save', () => {
     fireEvent.change(firstName, { target: { value: 'Marta2' } });
     await waitFor(() => expect(saveButton()).toBeEnabled());
     fireEvent.click(saveButton());
+    // The profile and the roles go in one request: a refusal of either writes neither.
     await waitFor(() => expect(patch).toHaveBeenCalledWith(
       '/users/u-1',
-      expect.objectContaining({ first_name: 'Marta2' }),
+      expect.objectContaining({ first_name: 'Marta2', role_ids: [ROLE_ID] }),
     ));
-    expect(put).toHaveBeenCalledWith('/users/u-1/roles', { role_ids: [ROLE_ID] });
+    expect(put).not.toHaveBeenCalledWith('/users/u-1/roles', expect.anything());
     expect(put).not.toHaveBeenCalledWith('/users/u-1/data-access', expect.anything());
+  });
+
+  it('leaves the roles out of the save when they could not be read', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/users/u-1') return { data: USER };
+      if (url === '/users/u-1/roles') throw new Error('roles unavailable');
+      if (url === '/users/u-1/data-access') return { data: PERSON_ACCESS };
+      if (url === '/roles') return { data: { items: [ROLE] } };
+      return { data: { items: [] } };
+    });
+    renderDialog();
+    const firstName = await screen.findByRole('textbox', { name: 'userForm.fields.firstName' });
+    expect(screen.getByRole('combobox', { name: 'userForm.fields.roles' })).toBeDisabled();
+    fireEvent.change(firstName, { target: { value: 'Marta2' } });
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(patch).toHaveBeenCalledWith('/users/u-1', expect.objectContaining({ first_name: 'Marta2' })));
+    expect(patch.mock.calls[0][1]).not.toHaveProperty('role_ids');
+    expect(put).not.toHaveBeenCalledWith('/users/u-1/roles', expect.anything());
   });
 
   it('saves only the access when only it changed', async () => {
@@ -289,7 +309,6 @@ describe('UserDialog save', () => {
 
     await waitFor(() => expect(calls).toEqual([
       'patch /users/u-1',
-      'put /users/u-1/roles',
       'put /users/u-1/data-access',
     ]));
   });
@@ -349,6 +368,46 @@ describe('UserDialog save', () => {
     expect(onClose).toHaveBeenCalled();
     expect(patch).not.toHaveBeenCalled();
     expect(put).not.toHaveBeenCalled();
+  });
+});
+
+describe('UserDialog rights of the reader', () => {
+  const HELD_HIGH = { id: '22222222-2222-4222-8222-222222222222', role_name: 'Finance lead', role_description: '', grantable: false };
+  const OTHER_HIGH = { id: '33333333-3333-4333-8333-333333333333', role_name: 'Treasury lead', role_description: '', grantable: false };
+
+  it('shows a person with more rights than the reader without a way to change them', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/users/u-1') return { data: { ...USER, above_own_rights: true } };
+      if (url === '/users/u-1/roles') return { data: { items: [ROLE] } };
+      if (url === '/roles') return { data: { items: [ROLE] } };
+      return { data: { items: [] } };
+    });
+    renderDialog();
+    const email = await screen.findByRole('textbox', { name: 'userForm.fields.email' });
+    expect(email).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'userForm.fields.firstName' })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'userForm.fields.roles' })).toBeDisabled();
+    expect(screen.getByText('users.dialogs.viewUser')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'buttons.save' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'common:buttons.close' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'users.actions.dataAccess' })).toBeNull();
+  });
+
+  it('offers only the roles the reader may give, and keeps those the person holds', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/users/u-1') return { data: { ...USER, above_own_rights: false } };
+      if (url === '/users/u-1/roles') return { data: { items: [ROLE, HELD_HIGH] } };
+      if (url === '/roles') return { data: { items: [{ ...ROLE, grantable: true }, HELD_HIGH, OTHER_HIGH] } };
+      return { data: { items: [] } };
+    });
+    renderDialog();
+    const roles = await screen.findByRole('combobox', { name: 'userForm.fields.roles' });
+    await screen.findByText('Finance lead');
+    fireEvent.keyDown(roles, { key: 'ArrowDown' });
+    const option = (name: string) => screen.getByRole('option', { name: new RegExp(name) });
+    expect(option('Treasury lead')).toHaveAttribute('aria-disabled', 'true');
+    expect(option('Finance lead')).not.toHaveAttribute('aria-disabled', 'true');
+    expect(option('Budget member')).not.toHaveAttribute('aria-disabled', 'true');
   });
 });
 
@@ -471,7 +530,7 @@ describe('UserDialog empty role list', () => {
     });
     await waitFor(() => expect(saveButton()).toBeEnabled());
     fireEvent.click(saveButton());
-    await waitFor(() => expect(put).toHaveBeenCalledWith('/users/u-1/roles', { role_ids: [] }));
+    await waitFor(() => expect(patch).toHaveBeenCalledWith('/users/u-1', expect.objectContaining({ role_ids: [] })));
   });
 
   it('shows the chips from the role list and ignores the legacy Contact column', async () => {

@@ -1728,6 +1728,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 
 ## Portfolio Projects
 - GET `/portfolio/projects/:id?include=activities` — load project (include activity feed via `include=activities`) **[Requires: portfolio_projects:reader]**
+  - `can_contribute`: whether the reader may contribute to the project (tasks, time entries, managed documents), with the check those writes make. A Business Contributor who reads every project through another role contributes only to the projects they take part in.
   - Activity rows are ordered newest-first and tenant-scoped in SQL (`a.tenant_id = app_current_tenant()`).
 - PATCH `/portfolio/projects/:id` — update project **[Requires: portfolio_projects:contributor]**
   - Auto-writes `type='change'` history for tracked fields.
@@ -1989,6 +1990,8 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - A person who is not an administrator gives only the rights they hold: on POST `/users`, PATCH `/users/:id` (`role_id`), PUT `/users/:id/roles` and the users import, a role that is not already the person's and grants a module level above the caller's is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level), and the Administrator role is `403` `administrator_required`. Nothing is written.
   - A person who is not an administrator changes no person who has more rights than they do (the Administrator role, or a module level above theirs, all roles counted): PATCH `/users/:id`, PUT `/users/:id/roles`, POST `/users/:id/enable|disable|invite`, PUT `/users/:id/data-access` are `403` `PERSON_ABOVE_OWN_RIGHTS`; DELETE `/users/:id`, DELETE `/users/bulk` and POST `/users/delete-check` report the refusal `PERSON_ABOVE_OWN_RIGHTS`; a row of POST `/users/import` or POST `/data-access/import` about such a person is refused with that code. One's own profile is not limited.
   - A workspace keeps at least one enabled Administrator: taking the role away from the last one (PUT `/users/:id/roles`, PATCH `/users/:id` `role_id`), disabling them (POST `/users/:id/disable`, PATCH `status`), deleting them, or an import row doing so is `409` `LAST_ADMINISTRATOR` (a delete refusal, an import row error) and nothing is written.
+  - What the users screen offers follows these rules: for a users administrator who is not an administrator, `GET /users` rows and `GET /users/:id` carry `above_own_rights` (true for a person they may not change), and `GET /roles` items carry `grantable` (false for a role they may not give to a person who does not hold it yet). An administrator reads `false` and `true` everywhere.
+  - PATCH `/users/:id` with `role_ids` sets all the roles of the person with the profile, in the same request, under the same checks as PUT `/users/:id/roles` (the first role is the main one; an empty list leaves the Contact system role): a refusal writes neither the profile nor the roles. The user dialog saves this way.
   - `status` defaults to `enabled`; a user limit, when set on the tenant's plan, is enforced when saving with `status='enabled'`.
 - POST `/users/:id/enable` → sets user `status='enabled'`
   - Requires: users:admin level

@@ -16,6 +16,8 @@ type Role = {
   role_description: string | null;
   is_system?: boolean;
   is_built_in?: boolean;
+  /** False when the reader may not give this role to a person who does not hold it yet. */
+  grantable?: boolean;
 };
 
 export default function MultiRoleSelect({
@@ -28,6 +30,7 @@ export default function MultiRoleSelect({
   required,
   hideLabel = false,
   textFieldSx,
+  heldRoleIds,
 }: {
   label?: string;
   value: string[];
@@ -38,6 +41,11 @@ export default function MultiRoleSelect({
   required?: boolean;
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
+  /**
+   * The roles the person already holds: they stay selectable. The other roles the reader may not
+   * give (`grantable: false` from `/roles`) are shown disabled.
+   */
+  heldRoleIds?: string[];
 }) {
   const { t, i18n } = useTranslation('common');
   const label = labelProp ?? t('selects.roles');
@@ -76,6 +84,7 @@ export default function MultiRoleSelect({
       onChange={handleRoleChange}
       disabled={disabled}
       isOptionEqualToValue={(a, b) => a.id === b.id}
+      getOptionDisabled={(o: Role) => o.grantable === false && !(heldRoleIds ?? []).includes(o.id)}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
       renderInput={(params) => (
         <TextField
