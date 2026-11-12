@@ -209,6 +209,8 @@ Acciones de fila, desde el menú al final de cada fila:
 | **Acceso a los datos** | Abre el usuario en la pestaña **Acceso a los datos**. Se muestra a las personas con acceso a todos los datos, en las filas de otras personas. |
 | **Eliminar** | Eliminar el usuario permanentemente. Los registros en los que trabajó se conservan, sin él. No puede eliminar su propia cuenta. Para bloquear el acceso de una persona y conservar la cuenta, desactívela en su lugar. |
 
+Sin el rol Administrador, no modifica a ninguna persona que tenga más derechos que usted (un Administrador, o un nivel superior al suyo en un módulo): su menú ofrece **Ver** y **Enviar restablecimiento de contraseña**, su ventana de usuario se abre en solo lectura y su fila no se puede seleccionar. En los roles de un usuario, un rol por encima de sus derechos aparece en gris, salvo que la persona ya lo tenga.
+
 ### Archivo CSV de usuarios
 
 **Exportar** descarga la lista de usuarios como archivo CSV o libro de Excel. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
@@ -444,7 +446,7 @@ La página de Roles tiene un diseño de dos paneles:
 
 **Acciones**:
 - **Nuevo rol**: Crear un rol personalizado desde cero. Un rol nuevo o renombrado no puede llevar un nombre que la página muestra para un rol del sistema o integrado, en cualquiera de sus idiomas.
-- **Duplicar**: Copiar un rol existente (incluyendo roles integrados) como punto de partida. No disponible para roles de Sistema.
+- **Duplicar**: Copiar un rol existente (incluyendo roles integrados) como punto de partida. La ventana pide el nombre de la copia. No disponible para roles de Sistema.
 - **Eliminar**: Eliminar un rol personalizado. Un rol asignado a usuarios no se puede eliminar: asígneles primero otro rol. La ventana lo indica antes de cualquier confirmación.
 - **Guardar detalles**: Actualizar nombre y descripción del rol
 - **Guardar permisos**: Aplicar cambios de permisos

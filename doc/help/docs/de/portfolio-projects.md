@@ -207,6 +207,7 @@ Verwenden Sie den Reiter **Verlauf**, wenn Sie wissen müssen, was sich geänder
 Der Reiter **Aufgaben** ist die Ausführungswarteschlange des Projekts. Das Reiter-Badge zeigt die Anzahl der Projektaufgaben.
 
 - hier erstellte Aufgaben werden automatisch mit dem Projekt verknüpft
+- **Aufgabe hinzufügen** wird Personen angeboten, die Aufgaben erstellen (`tasks:member`) und zum Projekt beitragen (`portfolio_projects:contributor`)
 - Aufgaben können auch aus einer Zeitleisten-Phase erstellt werden, was sie sowohl mit dem Projekt als auch mit der ausgewählten Phase verknüpft
 - der Reiter unterstützt Statusfilterung und Phasenfilterung
 - die standardmäßige Aufgabenansicht konzentriert sich auf aktive Arbeit, indem erledigte und stornierte Elemente ausgeblendet werden

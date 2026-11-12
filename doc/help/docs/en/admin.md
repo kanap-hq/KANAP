@@ -209,6 +209,8 @@ Row actions, from the menu at the end of each row:
 | **Data access** | Open the user on the **Data access** tab. Shown to people with access to all data, on other people's rows. |
 | **Delete** | Remove the user permanently. The records the user worked on stay, without the user. You cannot delete your own account. To block a person's access and keep the account, disable it instead. |
 
+Without the Administrator role, you change no person who has more rights than you (an Administrator, or a module level above yours): their menu offers **View** and **Send password reset**, their user window opens read-only, and their row cannot be selected. In the roles of a user, a role above your own rights is greyed out unless the person already holds it.
+
 ### Users CSV
 
 **Export** downloads the user list as a CSV file or an Excel workbook. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
@@ -444,7 +446,7 @@ The Roles page has a two-panel layout:
 
 **Actions**:
 - **New Role**: Create a custom role from scratch. A new or renamed role cannot take a name the page shows for a system or built-in role, in any of its languages.
-- **Duplicate**: Copy an existing role (including built-in roles) as a starting point. Not available for System roles.
+- **Duplicate**: Copy an existing role (including built-in roles) as a starting point. The window asks for the name of the copy. Not available for System roles.
 - **Delete**: Remove a custom role. A role given to users cannot be deleted: give them another role first. The window says so before any confirmation.
 - **Save Details**: Update the role name and description
 - **Save Permissions**: Apply permission changes

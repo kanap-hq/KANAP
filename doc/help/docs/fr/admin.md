@@ -209,6 +209,8 @@ Actions de ligne, depuis le menu au bout de chaque ligne :
 | **Accès aux données** | Ouvre l'utilisateur sur l'onglet **Accès aux données**. Affiché aux personnes qui ont accès à toutes les données, sur les lignes des autres personnes. |
 | **Supprimer** | Supprimer définitivement l'utilisateur. Les enregistrements sur lesquels il a travaillé restent, sans lui. Vous ne pouvez pas supprimer votre propre compte. Pour bloquer l'accès d'une personne en gardant son compte, désactivez-le plutôt. |
 
+Sans le rôle Administrateur, vous ne modifiez aucune personne qui a plus de droits que vous (un Administrateur, ou un niveau supérieur au vôtre sur un module) : son menu propose **Consulter** et **Envoyer une réinitialisation de mot de passe**, sa fenêtre s'ouvre en lecture seule et sa ligne ne peut pas être sélectionnée. Dans les rôles d'un utilisateur, un rôle au-dessus de vos droits est grisé, sauf si la personne le détient déjà.
+
 ### Fichier CSV des utilisateurs
 
 **Exporter** télécharge la liste des utilisateurs dans un fichier CSV ou un classeur Excel. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
@@ -444,7 +446,7 @@ La page Rôles a une disposition à deux panneaux :
 
 **Actions** :
 - **Nouveau rôle** : Créer un rôle personnalisé de zéro. Un rôle créé ou renommé ne peut pas prendre un nom que la page affiche pour un rôle système ou intégré, dans l'une de ses langues.
-- **Dupliquer** : Copier un rôle existant (y compris les rôles intégrés) comme point de départ. Non disponible pour les rôles Système.
+- **Dupliquer** : Copier un rôle existant (y compris les rôles intégrés) comme point de départ. La fenêtre demande le nom de la copie. Non disponible pour les rôles Système.
 - **Supprimer** : Supprimer un rôle personnalisé. Un rôle attribué à des utilisateurs ne peut pas être supprimé : attribuez-leur d'abord un autre rôle. La fenêtre l'indique avant toute confirmation.
 - **Enregistrer les détails** : Mettre à jour le nom et la description du rôle
 - **Enregistrer les autorisations** : Appliquer les modifications d'autorisations
