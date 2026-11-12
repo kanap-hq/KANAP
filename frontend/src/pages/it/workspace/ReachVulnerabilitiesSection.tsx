@@ -259,8 +259,8 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
       )) : (
         <RelationsTable columns={directColumns} rows={data.rows} rowKey={rowKey} ariaLabel={title} />
       )}
-      {/* What the lines and the count leave out: the page lists them under Excluded. */}
-      {!!data.excluded && data.excluded > 0 && (
+      {/* What the lines and the count leave out: the page lists them under Excluded. Not while the search runs. */}
+      {!showPending && !!data.excluded && data.excluded > 0 && (
         <Box sx={{ mt: 0.5 }}>
           <Link
             component={RouterLink}

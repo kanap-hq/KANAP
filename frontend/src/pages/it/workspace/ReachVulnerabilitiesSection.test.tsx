@@ -374,6 +374,12 @@ describe('ReachVulnerabilitiesSection', () => {
     }
   });
 
+  it('leaves out the excluded line while the search is in progress', () => {
+    renderSection({ data: { rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, excluded: 12, pending: true } });
+    expect(screen.getByTestId('reach-vulnerabilities-pending')).toBeTruthy();
+    expect(screen.queryByTestId('reach-vulnerabilities-excluded')).toBeNull();
+  });
+
   it('says nothing more when no vulnerability is kept out of the alerts', () => {
     renderSection({ data: { rows: [row({})], totals: { open: 6, severe: 3, exploited_severe: 1 }, excluded: 0 } });
     expect(screen.queryByTestId('reach-vulnerabilities-excluded')).toBeNull();
