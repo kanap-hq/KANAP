@@ -14855,6 +14855,44 @@ async function testKnowledgeChainRetainedDocumentThatDoesNotAnswer() {
   assert.ok(JSON.stringify(planner.knowledge_summary).indexOf('needs_human_review') === -1, 'no review flag reaches the planner');
 }
 
+// A usable synthesis, then a planner that asks the requester a question instead of answering:
+// the internal note describes the administrative reply that goes out, not the synthesized one.
+async function testKnowledgeChainAdministrativeReplyKeepsItsNote() {
+  for (const usable of [true, false]) {
+    await knowledgeChainAdministrativeReplyCase(usable);
+  }
+}
+
+async function knowledgeChainAdministrativeReplyCase(usable: boolean) {
+  const question = 'Bonjour, pouvez-vous nous indiquer le numéro inscrit sous l\'imprimante ?';
+  const result = await runKnowledgeChainTriage({
+    documents: [KNOWLEDGE_CHAIN_DOC_44],
+    need: KNOWLEDGE_CHAIN_NEED,
+    interpretation: () => ({ selected_refs: ['DOC-44'], rejected: [], confidence: 0.8, rationale: 'Le passage traite du bourrage.' }),
+    reply: () => ({
+      language: 'fr', usable, needs_human_review: false,
+      requester_reply: usable ? 'Ouvrez la tête d\'impression puis maintenez FEED deux secondes.' : '',
+      technician_brief: 'Réponse tirée de DOC-44.',
+      used_sources: [{ kind: 'knowledge', ref: 'DOC-44', url: null, title: 'Zebra ZT411 troubleshooting' }],
+      rejected_sources: [], confidence: 0.8,
+    }),
+    plan: () => ({
+      actions: [
+        { action_type: 'internal_note', reason: 'Documenter la question posée.' },
+        { action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: 'other', reason: 'Identifier l\'imprimante avant de répondre.', body: question },
+      ],
+      rationale: 'Il faut d\'abord savoir de quelle imprimante il s\'agit.',
+      confidence: 0.8,
+    }),
+  });
+  assert.ok(result.publicReply?.includes('numéro inscrit sous l\'imprimante'), `reply: ${result.publicReply}`);
+  assert.ok(result.internalNote, 'an internal note');
+  assert.ok(!result.internalNote.includes('Recommended reply to requester'), `the note does not announce the synthesized reply: ${result.internalNote}`);
+  assert.ok(!result.internalNote.includes('maintenez FEED'), 'the synthesized reply is not in the note');
+  assert.ok(!result.internalNote.includes('ask a technician to follow up'), 'the note does not announce a follow-up reply');
+  assert.ok(result.internalNote.includes('Il faut d\'abord savoir de quelle imprimante il s\'agit.'), `the note carries the planner's reason: ${result.internalNote}`);
+}
+
 function payloadOf(calls: Array<{ taskName: string; payload: unknown }>, taskName: string): string {
   const call = calls.find((candidate) => candidate.taskName === taskName);
   assert.ok(call, `${taskName} is called`);
@@ -17812,6 +17850,7 @@ async function run() {
   await testTriageWithInternalNotesUsedReadsEveryItem();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
+  await testKnowledgeChainAdministrativeReplyKeepsItsNote();
   await testTriageWithInternalNotesIgnoredReadsThePublicItems();
   await testTriageWithInternalNotesIgnoredSkipsTheRequesterInternalFollowUp();
   testSynthesisPromptPrefersInternalKnowledgeSources();

@@ -6480,9 +6480,15 @@ export class AiAgentControlService {
     const noteLanguage = triageNoteLanguage(tenantSeedLanguage(
       (await context.manager.getRepository(Tenant).findOne({ where: { id: context.tenantId } }))?.metadata,
     ));
+    // The synthesis runs as soon as a document is retained, before the planner decides: its note
+    // describes the reply only when a sourced answer is what goes out (or the planner is
+    // unavailable). With an administrative reply, the note is the administrative one.
+    const sourcedAnswerPrepared = effectivePlannerActions.some((entry) =>
+      entry.action.action_type === 'requester_reply' && entry.action.reply_kind === 'sourced_answer');
+    const noteFromSynthesis = !!replySynthesisResult && (!actionPlannerResult || sourcedAnswerPrepared);
     const noteBody = isPlannerEscalation
       ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason }, noteLanguage)
-      : (replySynthesisResult
+      : (noteFromSynthesis && replySynthesisResult
         ? renderSynthesizedTriageNote(ticket, agentTimeline, replySynthesisResult, noteLanguage)
         : (isPlannerAdministrativeReply
           ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'administrative_reply', reason: administrativeReason }, noteLanguage)
