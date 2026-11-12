@@ -14935,6 +14935,24 @@ async function knowledgeChainAdministrativeReplyCase(usable: boolean) {
   assert.ok(result.internalNote.includes('Il faut d\'abord savoir de quelle imprimante il s\'agit.'), `the note carries the planner's reason: ${result.internalNote}`);
 }
 
+// The planner's rationale and reasons are copied into the internal note: the planner writes them
+// in the language of the note, the tenant's.
+async function testThePlannerWritesItsReasonsInTheNoteLanguage() {
+  for (const [tenantLanguage, expected] of [['fr', 'fr'], ['de-DE', 'de'], [undefined, 'en']] as const) {
+    const result = await runKnowledgeChainTriage({
+      documents: [KNOWLEDGE_CHAIN_DOC_44],
+      need: KNOWLEDGE_CHAIN_NEED,
+      interpretation: () => ({ selected_refs: [], rejected: [], confidence: 0.2, rationale: 'Rien.' }),
+      reply: () => ({ language: 'fr', usable: false, requester_reply: '', technician_brief: '', used_sources: [], rejected_sources: [], confidence: 0.2 }),
+      plan: () => KNOWLEDGE_CHAIN_ESCALATION_PLAN,
+      tenantLanguage,
+    });
+    const planner = result.calls.find((call) => call.taskName === 'action_planner')!.payload;
+    assert.equal(planner.note_language, expected, `tenant language ${String(tenantLanguage)}`);
+    assert.ok((planner.rules as string[]).some((rule) => rule.includes('note_language') && rule.includes('rationale')), 'the rule names the note language');
+  }
+}
+
 function payloadOf(calls: Array<{ taskName: string; payload: unknown }>, taskName: string): string {
   const call = calls.find((candidate) => candidate.taskName === taskName);
   assert.ok(call, `${taskName} is called`);
@@ -18032,6 +18050,7 @@ async function run() {
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();
   await testTriageWithInternalNotesUsedReadsEveryItem();
   await testThePublicReplyReadsThePublicThreadOnly();
+  await testThePlannerWritesItsReasonsInTheNoteLanguage();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();

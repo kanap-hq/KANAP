@@ -6160,6 +6160,11 @@ export class AiAgentControlService {
       target.provider_kind,
       target.provider_key,
     );
+    // The note's frame is in the tenant's language, as the reply is in the ticket's; the planner
+    // writes its rationale and reasons, copied into the note, in the same language.
+    const noteLanguage = triageNoteLanguage(tenantSeedLanguage(
+      (await context.manager.getRepository(Tenant).findOne({ where: { id: context.tenantId } }))?.metadata,
+    ));
     const actionPlannerInput = {
       ticket,
       timeline: agentTimeline,
@@ -6176,6 +6181,7 @@ export class AiAgentControlService {
         terminal: lifecycleContext?.terminal === true,
       },
       reply_language: synthesisLanguage,
+      note_language: noteLanguage,
       knowledge_summary: plannerKnowledgeSummary(knowledgeItems, knowledgeLowRelevance.length, knowledgeInterpretation, knowledgeSearchPlan, knowledgeQueryDerivation),
       web_summary: plannerWebSummary(webSearchResults, webSearchStatus, webSearchQuery),
       sourced_reply: plannerSourcedReplySummary(replySynthesisResult),
@@ -6616,10 +6622,6 @@ export class AiAgentControlService {
         effectiveInternalNoteAction.action.reason,
       ])
       : null;
-    // The note's frame is in the tenant's language, as the reply is in the ticket's.
-    const noteLanguage = triageNoteLanguage(tenantSeedLanguage(
-      (await context.manager.getRepository(Tenant).findOne({ where: { id: context.tenantId } }))?.metadata,
-    ));
     // The synthesis runs as soon as a document is retained, before the planner decides: its note
     // describes the reply only when a sourced answer is what goes out (or the planner is
     // unavailable). With an administrative reply, the note is the administrative one.
