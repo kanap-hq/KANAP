@@ -165,6 +165,8 @@ export type AiModelAssignmentOption = {
 export const AI_REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type AiReasoningEffort = (typeof AI_REASONING_EFFORTS)[number];
 
+export type AiModelTestDraft = Pick<AiModelConfigInput, 'provider' | 'model' | 'endpoint_url' | 'api_key' | 'reasoning_effort'>;
+
 export type AiModelConfigInput = {
   name?: string;
   provider?: string;
@@ -1483,8 +1485,9 @@ export const aiModelConfigsApi = {
     const res = await api.post(`/ai/model-configs/${id}/clear-default`);
     return res.data;
   },
-  async test(id: string): Promise<AiProviderTestResult> {
-    const res = await api.post(`/ai/model-configs/${id}/test`);
+  /** Tests the dialog as it stands; a saved entry (`id`) fills in what the draft leaves out. */
+  async test(id: string | null, draft: AiModelTestDraft): Promise<AiProviderTestResult> {
+    const res = await api.post(id ? `/ai/model-configs/${id}/test` : '/ai/model-configs/test', draft);
     return res.data;
   },
   async reasoningEfforts(provider: string, model: string): Promise<AiReasoningEffortSupport> {

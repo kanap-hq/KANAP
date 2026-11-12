@@ -115,3 +115,30 @@ export class UpdateAiModelConfigDto {
   @IsBoolean()
   is_default?: boolean;
 }
+
+/** The model dialog as it stands when « Test » is pressed. A field left out is the saved value. */
+export class TestAiModelConfigDto {
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsIn(['anthropic', 'openai', 'ollama', 'custom'])
+  provider?: 'anthropic' | 'openai' | 'ollama' | 'custom' | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsString()
+  @MaxLength(100)
+  model?: string | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null && value !== '')
+  @IsString()
+  @MaxLength(2048)
+  @IsUrl({ require_protocol: true, require_tld: false })
+  endpoint_url?: string | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsString()
+  @MaxLength(4096)
+  api_key?: string | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsIn(AI_REASONING_EFFORTS)
+  reasoning_effort?: AiReasoningEffort | null;
+}
