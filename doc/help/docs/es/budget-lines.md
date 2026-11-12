@@ -20,7 +20,7 @@ Mientras la línea se está creando, su encabezado muestra **Crear** y **Cancela
 - **Crear** comprueba los campos obligatorios indicados abajo. Si falta alguno, un mensaje los enumera, se marcan en el panel de propiedades y el cursor va al primero. Si no, la línea se cierra y vuelve al punto de partida: la pantalla anterior o, si no, la lista
 - **Cancelar** elimina la línea y todo lo que se introdujo en ella, importes incluidos. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar líneas. Una línea con importes en una columna congelada no se puede cancelar
 
-Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Una línea que se dejó sin empresa pagadora muestra una advertencia con los campos que faltan y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título vacío para salir sin crear nada.
+Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Si recarga la página o cierra la pestaña mientras a la línea nueva todavía le falta un campo obligatorio, su navegador pide confirmación y la línea se elimina si sale de todos modos. Una línea que se dejó sin empresa pagadora muestra una advertencia con los campos que faltan y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título vacío para salir sin crear nada.
 
 **Campos obligatorios**:
 

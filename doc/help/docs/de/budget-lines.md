@@ -20,7 +20,7 @@ Solange die Zeile erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrec
 - **Erstellen** prüft die unten genannten Pflichtfelder. Fehlt eines, nennt eine Meldung die fehlenden Felder, sie werden im Bereich **Eigenschaften** markiert, und der Cursor springt in das erste. Andernfalls schließt sich die Zeile, und Sie kehren dorthin zurück, wo Sie begonnen haben: zum vorherigen Bildschirm, sonst zur Liste
 - **Abbrechen** löscht die Zeile und alles, was darin erfasst wurde, Beträge eingeschlossen. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Zeilen abbrechen. Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht abgebrochen werden
 
-Verlassen Sie die Zeile auf andere Weise, während ein Pflichtfeld fehlt, fragt Kadratis, ob Sie sie vervollständigen oder löschen möchten. Eine Zeile, die ohne zahlendes Unternehmen verlassen wurde, zeigt eine Warnung mit den fehlenden Feldern und fragt bei jedem Verlassen erneut. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+Verlassen Sie die Zeile auf andere Weise, während ein Pflichtfeld fehlt, fragt Kadratis, ob Sie sie vervollständigen oder löschen möchten. Wenn Sie die Seite neu laden oder den Tab schließen, solange der neuen Zeile noch ein Pflichtfeld fehlt, bittet Ihr Browser um Bestätigung, und die Zeile wird gelöscht, wenn Sie die Seite trotzdem verlassen. Eine Zeile, die ohne zahlendes Unternehmen verlassen wurde, zeigt eine Warnung mit den fehlenden Feldern und fragt bei jedem Verlassen erneut. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
 **Pflichtfelder**:
 

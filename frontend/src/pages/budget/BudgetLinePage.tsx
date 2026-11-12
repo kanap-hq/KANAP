@@ -842,6 +842,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     missing: () => missingNow().map((key) => ({ key, label: fieldLabel(key) })),
     focus: focusLineField,
     onDelete: () => creation.cancelCreation({ leave: false }),
+    discardOnUnload: creation.discardOnUnload,
   });
 
   // Leaving the line: what is not saved first, then a line that lacks a field it needs (being

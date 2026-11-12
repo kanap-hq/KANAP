@@ -1581,6 +1581,7 @@ function AssetWorkspaceRoute() {
     missing: missingNow,
     focus: focusField,
     onDelete: () => creation.cancelCreation({ leave: false }),
+    discardOnUnload: creation.discardOnUnload,
   });
   // Leaving an asset being created without a site asks first: complete it, or delete it.
   const leaveAsks = React.useCallback(
