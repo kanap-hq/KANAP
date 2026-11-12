@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DataSource, EntityManager } from 'typeorm';
 import {
@@ -8,7 +8,7 @@ import {
   RequireAnyLevelMeta,
   RequireLevelMeta,
 } from './require-level.decorator';
-import { moduleRightRequired } from './module-right-required';
+import { codedForbidden, moduleRightRequired } from './module-right-required';
 import { UsersService } from '../users/users.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { UserRole } from '../users/user-role.entity';
@@ -83,7 +83,7 @@ export class PermissionGuard implements CanActivate {
         // Authenticated user whose roles grant nothing at all (e.g. a JIT-provisioned
         // SSO user still waiting for access). Distinct body so the frontend can show
         // a "your account has not been granted access yet" page instead of a generic 403.
-        throw new ForbiddenException({ error: 'NO_ACCESS', message: 'This account has not been granted access yet.' });
+        throw codedForbidden('NO_ACCESS', 'This account has not been granted access yet.');
       }
       const hasRequiredLevel = (resource: string, level: string) => {
         const current = map.get(resource);
@@ -150,7 +150,7 @@ export class PermissionGuard implements CanActivate {
     // Load tenant subscription
     const tenantId = req.tenant?.id;
     if (!tenantId) {
-      throw new ForbiddenException({ error: 'SUBSCRIPTION_FROZEN', message: 'No active subscription found.' });
+      throw codedForbidden('SUBSCRIPTION_FROZEN', 'No active subscription found.');
     }
 
     const subscription = await manager.getRepository(Subscription).findOne({
@@ -162,7 +162,9 @@ export class PermissionGuard implements CanActivate {
     // subscription is treated as frozen. Shared with the AI/agent freeze gate.
     const decision = evaluateSubscriptionAccess(subscription, Date.now(), true);
     if (!decision.allowed) {
-      throw new ForbiddenException({ error: decision.reason, message: decision.message });
+      const message = decision.message ?? 'Your subscription is not active.';
+      if (decision.reason === 'TRIAL_EXPIRED') throw codedForbidden('TRIAL_EXPIRED', message);
+      throw codedForbidden('SUBSCRIPTION_FROZEN', message);
     }
   }
 }

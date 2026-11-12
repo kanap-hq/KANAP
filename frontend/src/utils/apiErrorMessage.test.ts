@@ -351,6 +351,23 @@ describe('getApiErrorMessage', () => {
     }
   });
 
+  it('translates the coded refusals of the permission guard in the four languages', () => {
+    const answer = (code: string, message: string) => ({ response: { status: 403, data: { statusCode: 403, error: 'Forbidden', code, message } } });
+    const english = {
+      NO_ACCESS: 'This account has not been granted access yet.',
+      SUBSCRIPTION_FROZEN: 'No active subscription found.',
+      TRIAL_EXPIRED: 'Your trial has expired. Please choose a plan to continue.',
+    };
+    for (const [code, message] of Object.entries(english)) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const fixed = i18n.getFixedT(language);
+        expect(getApiErrorMessage(answer(code, message), fixed, 'fallback'), `${code} ${language}`).toBe(fixed(`errors:${code}`));
+      }
+    }
+    expect(getApiErrorMessage(answer('NO_ACCESS', english.NO_ACCESS), i18n.getFixedT('fr'), 'fallback'))
+      .toBe("Ce compte n'a pas encore reçu d'accès. Demandez-le à un administrateur.");
+  });
+
   it('translates the application refusals with their values', () => {
     const fr = i18n.getFixedT('fr');
     const taken = { response: { status: 409, data: { code: 'name_taken', message: 'Another application is already named "CRM"', params: { name: 'CRM', ref: 'APP-12' } } } };
