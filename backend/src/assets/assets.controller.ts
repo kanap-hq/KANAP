@@ -36,7 +36,7 @@ import {
   assetRelationKindOrThrow,
   type AssetRelationsContext,
 } from './asset-relations-tab.service';
-import { assertLinkedModuleRead } from '../common/relations/linked-reads';
+import { assertLinkedModuleRead, assertLinkedRecordsReadable } from '../common/relations/linked-reads';
 
 @UseGuards(JwtAuthGuard)
 @Controller('assets')
@@ -531,8 +531,8 @@ export class AssetsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Post(':id/projects/bulk-replace')
-  bulkReplaceProjects(@Param('id') id: string, @Body() body: { project_ids: string[] }, @Req() req: any) {
-    assertLinkedModuleRead(req, 'projects');
+  async bulkReplaceProjects(@Param('id') id: string, @Body() body: { project_ids: string[] }, @Req() req: any) {
+    await assertLinkedRecordsReadable(req, 'projects', body?.project_ids ?? []);
     const tenantId: string | undefined = req?.tenant?.id;
     return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], tenantId ?? '', req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,

@@ -10,8 +10,9 @@ import { CapexItemContractsController } from '../../../contracts/capex-item-cont
 import { AiRelationMutationSupportService } from '../../../ai/mutation/ai-relation-mutation-support.service';
 
 // A write that links records of a module (a replacement of the links, even an empty one) needs a
-// read of that module, as the Relations tab: without it the answer is 403 MODULE_RIGHT_REQUIRED
-// (the module, level `reader`) before anything is read or written. With the read, or as an
+// read of that module, as the Relations tab: without it the answer is 403
+// LINKED_MODULE_NOT_READABLE (the module's resource), the code of a document's links, before
+// anything is read or written. With the read, or as an
 // administrator, the route writes. Kad's relation writes follow the same rule.
 //   - an application's budget lines (OPEX, CAPEX), contracts and projects;
 //   - an asset's budget lines (OPEX, CAPEX), contracts and projects;
@@ -88,8 +89,8 @@ async function testRoutes() {
     const error = await call(ctx(route.own)).then(() => null, (caught: unknown) => caught);
     assert.ok(error instanceof ForbiddenException, `${route.label}: 403 without a read of ${route.linked}`);
     const body = error.getResponse() as { code?: string; params?: Record<string, unknown> };
-    assert.equal(body.code, 'MODULE_RIGHT_REQUIRED', `${route.label}: code`);
-    assert.deepEqual(body.params, { resource: route.linked, level: 'reader' }, `${route.label}: params`);
+    assert.equal(body.code, 'LINKED_MODULE_NOT_READABLE', `${route.label}: code`);
+    assert.deepEqual(body.params, { resources: [route.linked] }, `${route.label}: params`);
     assert.deepEqual(calls, [], `${route.label}: nothing read, nothing written`);
 
     await call(ctx({ ...route.own, [route.linked]: 'reader' }));

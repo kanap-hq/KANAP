@@ -1,3 +1,4 @@
+import { linksOutsideScope } from '../../common/relations/linked-reads';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
@@ -164,7 +165,7 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
     const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
     const tenantId = await this.getCurrentTenantId(mg);
     // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
-    const nextIds = Array.from(new Set((itemIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).sort();
+    let nextIds = Array.from(new Set((itemIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).sort();
     if (nextIds.some((id) => !UUID_RE.test(id))) throw new BadRequestException(t.notFound);
     const locked = await mg.query(
       `SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
@@ -184,6 +185,11 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
       [tenantId, resolvedAppId],
     );
     const beforeState = Array.from(new Set(existing.map((r) => r.item_id))).sort();
+    // A person who reads the projects in part (a Business Contributor) keeps the links they do not see.
+    if (kind === 'project' && opts?.projectAccessScope) {
+      const kept = await linksOutsideScope(mg, 'projects', beforeState, opts.projectAccessScope);
+      nextIds = Array.from(new Set([...nextIds, ...kept])).sort();
+    }
     const [{ n: removed }] = await mg.query(
       `WITH d AS (
          DELETE FROM ${t.links} l
@@ -246,7 +252,7 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
 
   async bulkReplaceProjects(applicationId: string, projectIds: string[], userId?: string | null, opts?: ServiceOpts) {
     const mg = this.getManager(opts);
-    await this.replaceLinkedItems('project', applicationId, projectIds, userId, { manager: mg });
-    return this.listProjects(applicationId, { manager: mg });
+    await this.replaceLinkedItems('project', applicationId, projectIds, userId, { manager: mg, projectAccessScope: opts?.projectAccessScope });
+    return this.listProjects(applicationId, { manager: mg, projectAccessScope: opts?.projectAccessScope });
   }
 }

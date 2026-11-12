@@ -54,7 +54,7 @@ import { ApplicationDataResidency } from './application-data-residency.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 import type { CreationChanges } from '../common/creation/creation-changes';
-import { assertLinkedModuleRead } from '../common/relations/linked-reads';
+import { assertLinkedModuleRead, assertLinkedRecordsReadable } from '../common/relations/linked-reads';
 
 @UseGuards(JwtAuthGuard)
 @Controller('applications')
@@ -1081,13 +1081,17 @@ export class ApplicationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Post(':id/projects/bulk-replace')
-  bulkReplaceProjects(
+  async bulkReplaceProjects(
     @Param('id') id: string,
     @Body() body: { project_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ): Promise<{ items: Array<{ id: string; name: string }> }> {
-    assertLinkedModuleRead(ctx, 'projects');
-    return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], ctx.userId || null, { manager: ctx.manager });
+    await assertLinkedRecordsReadable(ctx, 'projects', body?.project_ids ?? []);
+    // The answer lists the projects the person reads, as `GET :id/projects`.
+    return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], ctx.userId || null, {
+      manager: ctx.manager,
+      projectAccessScope: await this.readProjectScope(ctx),
+    });
   }
 
   // Structure — Suites and Components

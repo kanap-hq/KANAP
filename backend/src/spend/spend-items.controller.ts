@@ -37,7 +37,7 @@ import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
 import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
-import { assertLinkedModuleRead } from '../common/relations/linked-reads';
+import { assertLinkedModuleRead, assertLinkedRecordsReadable } from '../common/relations/linked-reads';
 
 @UseGuards(JwtAuthGuard)
 @Controller('spend-items')
@@ -321,7 +321,7 @@ export class SpendItemsController {
     @Body() body: { project_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    assertLinkedModuleRead(ctx, 'projects');
+    await assertLinkedRecordsReadable(ctx, 'projects', body?.project_ids ?? []);
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], { manager: ctx.manager });
   }
