@@ -7,7 +7,7 @@ import CompanySelect from '../../../components/fields/CompanySelect';
 import type { CountryOption } from '../../../constants/isoOptions';
 import { filterCountryOptions, useCountryOptions } from '../../../i18n/countries';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
-import { useFieldDraft } from '../../../hooks/useFieldDraft';
+import CommitTextField from './CommitTextField';
 
 export type LocationDrawerData = {
   hosting_type: string;
@@ -29,34 +29,6 @@ type Props = {
   onCountryChange: (iso: string) => void;
   onCityChange: (next: string) => void;
 };
-
-/** A one-line property saved when focus leaves it (Enter too): typing is never interrupted by a save. */
-function CommitTextField({ value, placeholder, disabled, onCommit }: {
-  value: string;
-  placeholder: string;
-  disabled: boolean;
-  onCommit: (next: string) => void;
-}) {
-  const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
-  return (
-    <TextField
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onFocus={onFocus}
-      onBlur={() => {
-        onBlur();
-        onCommit(draft);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-      }}
-      variant="standard"
-      sx={drawerFieldValueSx}
-      placeholder={placeholder}
-      disabled={disabled}
-    />
-  );
-}
 
 export default function LocationPropertiesDrawer({
   data,

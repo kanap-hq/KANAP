@@ -9,6 +9,7 @@ import {
 } from '../../portfolio/workspace/PortfolioMetadataBar';
 import { drawerMenuItemSx, drawerFieldValueSx, drawerSelectSx } from '../../../theme/formSx';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import CommitTextField from './CommitTextField';
 
 type Props = {
   hostingType: string;
@@ -175,15 +176,12 @@ export default function LocationMetadataBar({
               </MenuItem>
             ))}
           </TextField>
-          <TextField
+          <CommitTextField
             label={t('pages.locations.columns.city')}
             value={city || ''}
-            onChange={(e) => onCityChange(e.target.value)}
-            onBlur={(e) => onCityChange(e.target.value)}
+            onCommit={onCityChange}
             size="small"
-            variant="standard"
             placeholder={t('workspace.location.fields.cityPlaceholder')}
-            sx={drawerFieldValueSx}
           />
         </Box>
       </Popover>
@@ -272,15 +270,12 @@ export default function LocationMetadataBar({
                   </MenuItem>
                 ))}
               </TextField>
-              <TextField
+              <CommitTextField
                 label={t('workspace.location.fields.region')}
                 value={region || ''}
-                onChange={(e) => onRegionChange(e.target.value)}
-                onBlur={(e) => onRegionChange(e.target.value)}
+                onCommit={onRegionChange}
                 size="small"
-                variant="standard"
                 placeholder={t('workspace.location.fields.regionPlaceholder')}
-                sx={drawerFieldValueSx}
               />
             </Box>
           </Popover>
