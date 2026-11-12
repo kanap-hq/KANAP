@@ -14,6 +14,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 // - The exact name of a system or built-in role on `POST /roles` is refused (400) and leaves the
 //   role as it was, as `PUT /roles/:id` does; other names stay free.
 // - A tenant reads only its own roles: the names of another tenant change nothing.
+// - These refusals carry a code: ROLE_NAME_RESERVED for a name of a system or built-in role,
+//   ROLE_NAME_TAKEN for the name of another role.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret-of-at-least-32-characters';
@@ -65,6 +67,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     `INSERT INTO roles (tenant_id, role_name, role_description, is_system) VALUES ($1, 'Administrator', 'Administrator', true)`, [tenantId]);
   await runner.query(`INSERT INTO roles (tenant_id, role_name, role_description, is_system) VALUES ($1, 'Contact', 'Contact', true)`, [tenantId]);
   const analyst = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Analyst', 'Analyst')`, [tenantId]);
+  await runner.query(`INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Buyers', 'Buyers')`, [tenantId]);
   await runner.query(`INSERT INTO roles (tenant_id, role_name, role_description, is_built_in) VALUES ($1, 'Budget Member', 'Built in', true)`, [tenantId]);
   const adminUserId = await insertId(runner,
     `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Ada', 'Admin', $3, 'enabled')`,
@@ -85,6 +88,21 @@ async function refusedAsTaken(fn: () => Promise<unknown>, label: string) {
   const error = await fn().then(() => null, (caught: unknown) => caught);
   assert.ok(error instanceof BadRequestException, `${label}: refused`);
   assert.equal(error.getStatus(), 400, `${label}: status`);
+}
+
+async function refusedWith(fn: () => Promise<unknown>, code: string, label: string) {
+  const error = await fn().then(() => null, (caught: unknown) => caught);
+  assert.ok(error instanceof BadRequestException, `${label}: refused`);
+  assert.equal(error.getStatus(), 400, `${label}: status`);
+  assert.equal((error.getResponse() as { code?: string }).code, code, `${label}: code`);
+}
+
+async function testRefusalsCarryACode(h: Harness, runner: QueryRunner, s: Seed) {
+  for (const name of ['Administrator', 'Contact', 'Budget Member', ' administrator']) {
+    await refusedWith(() => h.roles.createRole({ role_name: name, role_description: 'x' }, req(runner, s)), 'ROLE_NAME_RESERVED', `POST /roles "${name}"`);
+  }
+  await refusedWith(() => h.roles.updateRole(s.analyst, { role_name: 'administrator' }, req(runner, s)), 'ROLE_NAME_RESERVED', 'PUT /roles/:id "administrator"');
+  await refusedWith(() => h.roles.updateRole(s.analyst, { role_name: 'Buyers' }, req(runner, s)), 'ROLE_NAME_TAKEN', 'PUT /roles/:id "Buyers"');
 }
 
 async function testCreationBySystemNameIsRefused(h: Harness, runner: QueryRunner, s: Seed) {
@@ -135,6 +153,7 @@ async function run() {
       const s = await seed(runner);
       await testCreationBySystemNameIsRefused(harness, runner, s);
       await testRenameToSystemNameIsRefused(harness, runner, s);
+      await testRefusalsCarryACode(harness, runner, s);
       await testOtherNamesStayFree(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();

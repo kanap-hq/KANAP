@@ -1,11 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Role } from './role.entity';
 import { RolePermission } from '../permissions/role-permission.entity';
 import { RESOURCES } from '../permissions/permissions.service';
 import { userAssignedRolesSql } from '../users/user-access-sql';
-import { isSystemRoleName, roleNameKey } from './system-roles';
+import { isSystemRoleName, roleNameKey, roleNameReserved, roleNameTaken } from './system-roles';
 
 @Injectable()
 export class RolesService {
@@ -117,7 +117,7 @@ export class RolesService {
     }
     // The name of a system role stays theirs, whatever its case.
     if (await this.systemNameHolder(params.role_name, null, opts)) {
-      throw new BadRequestException('Role name must be unique');
+      throw roleNameReserved();
     }
 
     const role = repo.create({
@@ -139,8 +139,8 @@ export class RolesService {
     if (!role) return null;
     if (params.role_name && params.role_name !== role.role_name) {
       const exists = await this.findByName(params.role_name, opts);
-      if (exists && exists.id !== id) throw new Error('Role name must be unique');
-      if (await this.systemNameHolder(params.role_name, id, opts)) throw new Error('Role name must be unique');
+      if (exists && exists.id !== id) throw roleNameTaken();
+      if (await this.systemNameHolder(params.role_name, id, opts)) throw roleNameReserved();
       role.role_name = params.role_name;
     }
     if (params.role_description !== undefined) role.role_description = params.role_description;

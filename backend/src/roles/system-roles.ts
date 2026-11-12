@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+
 /**
  * The two system roles, Administrator and Contact. Their names are reserved: a system role cannot be
  * renamed, and no other role takes the name of one of them, whatever its case or surrounding spaces.
@@ -20,4 +22,14 @@ export function isSystemRoleName(name: string | null | undefined): boolean {
  */
 export function isAdministratorRole(role: { role_name?: string | null } | null | undefined): boolean {
   return roleNameKey(role?.role_name) === 'administrator';
+}
+
+/** A role name refused because a system or built-in role has it (400). */
+export function roleNameReserved(): BadRequestException {
+  return new BadRequestException({ code: 'ROLE_NAME_RESERVED', message: 'This name belongs to a system or built-in role.' });
+}
+
+/** A role name refused because another role of the workspace has it (400). */
+export function roleNameTaken(): BadRequestException {
+  return new BadRequestException({ code: 'ROLE_NAME_TAKEN', message: 'A role already has this name.' });
 }

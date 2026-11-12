@@ -254,6 +254,8 @@
   "ROLE_BUILT_IN": "Ce rôle est fourni avec {{product}} et ne peut pas être supprimé. Dupliquez-le pour obtenir un rôle modifiable.",
   "ROLE_IN_USE_one": "Ce rôle est attribué à {{usages}}. Attribuez-lui d’abord un autre rôle.",
   "ROLE_IN_USE_other": "Ce rôle est attribué à {{usages}}. Attribuez-leur d’abord un autre rôle.",
+  "ROLE_NAME_RESERVED": "Ce nom est celui d’un rôle système ou intégré.",
+  "ROLE_NAME_TAKEN": "Un rôle porte déjà ce nom.",
   "DEPLOYMENT_IN_USE_one": "Ce déploiement a encore {{usages}}. Retirez-le d'abord.",
   "DEPLOYMENT_IN_USE_other": "Ce déploiement a encore {{usages}}. Retirez-les d'abord.",
   "INTERFACE_HAS_BINDINGS_one": "Cette interface a {{usages}}. Supprimez sa liaison avec elle, ou retirez-la d’abord.",
