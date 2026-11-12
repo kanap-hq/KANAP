@@ -47,12 +47,12 @@ El formulario de configuración contiene:
 
 - **Habilitar importación de tickets GLPI**: conmutador maestro de la conexión. Cuando está desactivado, Kadratis no intentará consultar GLPI aunque las credenciales estén establecidas: ni las importaciones de Kad ni las comprobaciones de los agentes llegarán a su centro de servicios.
 - **URL de GLPI**: la URL base de su instancia de GLPI, por ejemplo `https://glpi.example.com`.
-- **Token de usuario**: el token API personal de la cuenta GLPI que Kadratis usará. Los tokens existentes se enmascaran; deje el campo en blanco durante un guardado o una prueba para conservar el valor almacenado.
+- **Token de usuario**: el token API personal de la cuenta GLPI que Kadratis usará. Los tokens existentes se enmascaran; deje el campo en blanco durante un guardado o una prueba para conservar el valor almacenado, mientras la URL no cambie. Una URL nueva vacía los tokens almacenados: vuelva a introducirlos.
 - **Token de aplicación**: el token de aplicación opcional de GLPI. Mismo comportamiento de dejar en blanco para conservar que el token de usuario.
 
 ### Acciones
 
-- **Guardar configuración**: persiste el formulario. Los tokens introducidos en el formulario reemplazan los almacenados; los campos de token en blanco conservan lo que ya está almacenado.
+- **Guardar configuración**: persiste el formulario. Los tokens introducidos en el formulario reemplazan los almacenados; los campos de token en blanco conservan lo que ya está almacenado, salvo si la URL cambió.
 - **Probar conexión**: ejecuta una ida y vuelta autenticada contra la URL de GLPI usando los valores del formulario (o, donde estén en blanco, los valores almacenados). La banda de resultado muestra el éxito o el error subyacente junto con la latencia.
 
 ### Almacenamiento de secretos

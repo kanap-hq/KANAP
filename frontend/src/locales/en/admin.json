@@ -1238,6 +1238,7 @@
     "tableNames": {
       "accounts": "Accounts",
       "ai_action_requests": "AI action requests",
+      "ai_adapter_configs": "Integration connections",
       "ai_api_keys": "AI API keys",
       "ai_approvals": "AI approvals",
       "ai_evidence": "AI evidence",
@@ -2734,6 +2735,7 @@
     }
   },
   "integrations": {
+    "secretAddressChanged": "The address changed: enter it again.",
     "netbox": {
       "title": "Netbox inventory",
       "description": "Import your Netbox inventory as assets. Netbox stays the reference for the equipment it describes.",

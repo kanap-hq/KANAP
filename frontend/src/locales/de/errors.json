@@ -478,6 +478,7 @@
   "netbox_address_too_long": "Die Netbox-Adresse darf höchstens 2048 Zeichen lang sein.",
   "netbox_timeout_invalid": "Die Wartezeit muss eine ganze Zahl von Sekunden zwischen 5 und 120 sein, oder leer für den Standardwert.",
   "netbox_token_missing": "Es ist noch kein Netbox-API-Token gespeichert. Legen Sie in Netbox unter Ihrem Profil ein API-Token an und fügen Sie es hier ein.",
+  "netbox_token_needed_for_address": "Das API-Token wird nur mit der Adresse verwendet, für die es gespeichert wurde. Geben Sie es für diese Adresse erneut ein.",
   "netbox_tls": "Das Netbox-Zertifikat konnte nicht geprüft werden. Aktivieren Sie Zertifikatsfehler ignorieren nur, wenn Sie diesem Server vertrauen.",
   "netbox_invalid_response": "Der Netbox-Server hat eine Antwort geliefert, die nicht gelesen werden konnte. Prüfen Sie, ob die Adresse auf Netbox zeigt.",
   "netbox_rate_limited": "Netbox nimmt gerade keine weiteren Anfragen an. Versuchen Sie es in ein paar Minuten erneut.",

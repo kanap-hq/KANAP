@@ -47,12 +47,12 @@ The configuration form contains:
 
 - **Enable GLPI ticket import**: master switch for the connection. When off, Kadratis will not attempt to query GLPI even if credentials are set: neither Kad imports nor agent checks will reach your service desk.
 - **GLPI URL**: the base URL of your GLPI instance, for example `https://glpi.example.com`.
-- **User Token**: the personal API token of the GLPI account Kadratis will use. Existing tokens are masked; leave the field blank during a save or test to keep the stored value.
+- **User Token**: the personal API token of the GLPI account Kadratis will use. Existing tokens are masked; leave the field blank during a save or test to keep the stored value, as long as the URL stays the same. A new URL empties the stored tokens: enter them again.
 - **App Token**: the optional GLPI application token. Same blank-to-keep behaviour as the user token.
 
 ### Actions
 
-- **Save settings**: persists the form. Tokens entered in the form replace the stored ones; blank token fields keep what is already stored.
+- **Save settings**: persists the form. Tokens entered in the form replace the stored ones; blank token fields keep what is already stored, unless the URL changed.
 - **Test connection**: runs an authenticated round-trip against the GLPI URL using the values in the form (or, where blank, the stored values). The result banner shows success or the underlying error along with the latency.
 
 ### Secret storage

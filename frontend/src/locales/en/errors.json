@@ -478,6 +478,7 @@
   "netbox_address_too_long": "The Netbox address must be at most 2048 characters long.",
   "netbox_timeout_invalid": "The request timeout must be a whole number of seconds between 5 and 120, or empty to use the default.",
   "netbox_token_missing": "No Netbox API token is saved yet. Add one in Netbox under your profile, API tokens, then paste it here.",
+  "netbox_token_needed_for_address": "The API token is only used with the address it was saved for. Enter it again for this address.",
   "netbox_tls": "The Netbox certificate could not be verified. Turn on Ignore certificate errors only if you trust this server.",
   "netbox_invalid_response": "The Netbox server returned an answer that could not be read. Check that the address points at Netbox.",
   "netbox_rate_limited": "Netbox is refusing more requests for the moment. Try again in a few minutes.",

@@ -478,6 +478,7 @@
   "netbox_address_too_long": "L'adresse Netbox doit compter au plus 2048 caractères.",
   "netbox_timeout_invalid": "Le délai d'attente doit être un nombre entier de secondes entre 5 et 120, ou vide pour la valeur par défaut.",
   "netbox_token_missing": "Aucun jeton d'API Netbox n'est encore enregistré. Dans Netbox, ouvrez votre profil, puis Jetons d'API, et collez-le ici.",
+  "netbox_token_needed_for_address": "Le jeton d'API ne sert qu'avec l'adresse pour laquelle il a été enregistré. Saisissez-le de nouveau pour cette adresse.",
   "netbox_tls": "Le certificat Netbox n'a pas pu être vérifié. Activez Ignorer les erreurs de certificat seulement si vous faites confiance à ce serveur.",
   "netbox_invalid_response": "Le serveur Netbox a renvoyé une réponse illisible. Vérifiez que l'adresse pointe vers Netbox.",
   "netbox_rate_limited": "Netbox refuse d'autres demandes pour le moment. Réessayez dans quelques minutes.",

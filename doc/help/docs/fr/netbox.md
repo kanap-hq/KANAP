@@ -33,7 +33,7 @@ Ouvrez **Administration > Intégrations**, puis la carte **Inventaire Netbox**.
 |-------|----------------------|
 | **Activer la synchronisation Netbox** | L'interrupteur principal. Désactivé, Kadratis n'appelle jamais Netbox, ni à la main ni automatiquement. |
 | **Adresse Netbox** | L'adresse que vous utilisez pour ouvrir Netbox dans un navigateur, par exemple `https://netbox.example.com`. |
-| **Jeton d'API** | Le jeton créé dans Netbox. Il est stocké chiffré et n'est jamais réaffiché. Laissez le champ vide à l'enregistrement pour conserver le jeton déjà en place. |
+| **Jeton d'API** | Le jeton créé dans Netbox. Il est stocké chiffré et n'est jamais réaffiché. Laissez le champ vide à l'enregistrement pour conserver le jeton déjà en place, tant que l'adresse ne change pas. Une nouvelle adresse vide le jeton enregistré : saisissez-le de nouveau. |
 | **Délai d'attente (secondes)** | Temps d'attente avant d'abandonner, entre 5 et 120. Laissez vide pour utiliser 30. |
 | **Ignorer les erreurs de certificat** | Désactivé par défaut. Voir ci-dessus. |
 | **Synchronisation automatique** | S'exécute toutes les heures et applique les changements automatiquement. Laissez-la désactivée tant que votre première exécution ne vous convient pas. |

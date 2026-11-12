@@ -75,14 +75,16 @@ describe('NetboxIntegrationCard', () => {
     fireEvent.click(screen.getByText('Save settings'));
 
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledTimes(1));
+    // A typed token goes with the address on screen.
     expect(apiClient.put).toHaveBeenCalledWith('/netbox/integration', {
+      base_url: 'https://netbox.internal/',
       auto_sync: true,
       api_token: 'nbt_secret',
     });
     expect(await screen.findByRole('link', { name: 'Set up the synchronisation' })).toHaveAttribute('href', '/it/settings?tab=netbox');
   });
 
-  it('sends nothing but the token when only the token was typed', async () => {
+  it('sends the token with the address on screen when only the token was typed', async () => {
     renderCard();
     await screen.findByText('Netbox inventory');
 
@@ -90,7 +92,10 @@ describe('NetboxIntegrationCard', () => {
     fireEvent.click(screen.getByText('Save settings'));
 
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledTimes(1));
-    expect(apiClient.put).toHaveBeenCalledWith('/netbox/integration', { api_token: 'abc' });
+    expect(apiClient.put).toHaveBeenCalledWith('/netbox/integration', {
+      base_url: 'https://netbox.internal/',
+      api_token: 'abc',
+    });
   });
 
   it('replaces the previous banner and translates the connection code', async () => {
@@ -151,5 +156,34 @@ describe('NetboxIntegrationCard', () => {
 
     expect(await screen.findByText(/Last test succeeded on /)).toBeInTheDocument();
     expect(screen.getByText('This result is kept for this session only.')).toBeInTheDocument();
+  });
+
+  it('empties the saved token when the address changes and asks for it again', async () => {
+    renderCard();
+    await screen.findByText('Netbox inventory');
+    const save = screen.getByText('Save settings').closest('button')!;
+    const test = screen.getByText('Test connection').closest('button')!;
+
+    // Another spelling of the saved address keeps the token.
+    fireEvent.change(screen.getByLabelText('Netbox address'), { target: { value: 'https://NETBOX.internal' } });
+    expect(screen.getByLabelText(/^API token/)).not.toBeRequired();
+    expect(screen.queryByText('The address changed: enter it again.')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Netbox address'), { target: { value: 'https://netbox2.internal' } });
+    expect(screen.getByLabelText(/^API token/)).toBeRequired();
+    expect(screen.getByText('The address changed: enter it again.')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Configured')).not.toBeInTheDocument();
+    expect(save).toBeDisabled();
+    expect(test).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/^API token/), { target: { value: 'nbt_new' } });
+    expect(save).toBeEnabled();
+    expect(test).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() => expect(apiClient.put).toHaveBeenCalledTimes(1));
+    expect(apiClient.put).toHaveBeenCalledWith('/netbox/integration', {
+      base_url: 'https://netbox2.internal',
+      api_token: 'nbt_new',
+    });
   });
 });

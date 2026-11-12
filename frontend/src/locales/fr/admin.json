@@ -1238,6 +1238,7 @@
     "tableNames": {
       "accounts": "Comptes",
       "ai_action_requests": "Demandes d'action de l'IA",
+      "ai_adapter_configs": "Connexions d'intégration",
       "ai_api_keys": "Clés API de l'IA",
       "ai_approvals": "Approbations de l'IA",
       "ai_evidence": "Preuves de l'IA",
@@ -2734,6 +2735,7 @@
     }
   },
   "integrations": {
+    "secretAddressChanged": "L'adresse a changé : saisissez de nouveau cette valeur.",
     "netbox": {
       "title": "Inventaire Netbox",
       "description": "Importez l'inventaire Netbox en tant qu'actifs. Netbox reste la référence pour les équipements qu'il décrit.",
