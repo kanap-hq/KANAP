@@ -216,7 +216,9 @@ export class AiModelConfigsController {
   @Post(['test', ':id/test'])
   async test(
     @Param('id', new ParseUUIDPipe({ optional: true })) id: string | undefined,
-    @Body() body: TestAiModelConfigDto | undefined,
+    // A plain class type: the validation pipe reads it (a union would be emitted as Object).
+    // Without a body the pipe validates an empty object and passes undefined on.
+    @Body() body: TestAiModelConfigDto,
     @Req() req: AiModelConfigsRequest,
   ) {
     const context = this.buildContext(req);

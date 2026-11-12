@@ -1,4 +1,6 @@
+import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { AiModelConfigsController } from '../ai-model-configs.controller';
 import { AiProviderTestService, MODEL_KEY_NEEDED_FOR_ADDRESS } from '../ai-provider-test.service';
 import { AiProviderAdapter } from '../providers/ai-provider.types';
@@ -124,7 +126,23 @@ async function testNewEntryIsTestedBeforeItIsSaved() {
   assert.equal(calls.length, 1);
 }
 
+// The body goes through the global validation pipe with the type the route declares:
+// a union type would be emitted as Object and skip every check of the DTO.
+async function testTheBodyIsValidated() {
+  const types = Reflect.getMetadata('design:paramtypes', AiModelConfigsController.prototype, 'test');
+  const pipe = new ValidationPipe({ whitelist: true, transform: true });
+  const meta = { type: 'body' as const, metatype: types[1], data: '' };
+  for (const body of [{ provider: 'unknown' }, { endpoint_url: 'not an address' }, { model: 'x'.repeat(101) }, { reasoning_effort: 'extreme' }]) {
+    await assert.rejects(pipe.transform(body, meta), BadRequestException, JSON.stringify(body));
+  }
+  const cleaned = await pipe.transform({ model: 'mistral-large-latest', extra: 'dropped' }, meta);
+  assert.equal(cleaned.model, 'mistral-large-latest');
+  assert.equal('extra' in cleaned, false, 'unknown fields are stripped');
+  await pipe.transform(undefined, meta);
+}
+
 async function run() {
+  await testTheBodyIsValidated();
   await testUnsavedValuesAreTested();
   await testAnotherSpellingKeepsTheSavedKey();
   await testNewAddressWithoutKeyIsRefused();
