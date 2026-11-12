@@ -1,0 +1,591 @@
+{
+  "fixture_articles": [
+    {
+      "key": "vpn-remote-access",
+      "title": "VPN & Remote Access Guide",
+      "lang": "en"
+    },
+    {
+      "key": "sap-access-request",
+      "title": "SAP Access Request Process",
+      "lang": "en"
+    },
+    {
+      "key": "caveguard-alert-runbook",
+      "title": "CaveGuard Alert Runbook — Cheese Cave Sensors",
+      "lang": "en"
+    },
+    {
+      "key": "guest-wifi-visitors",
+      "title": "Guest Wi-Fi & Visitor Access",
+      "lang": "en"
+    },
+    {
+      "key": "label-printer-troubleshooting",
+      "title": "Label Printer Troubleshooting (Zebra)",
+      "lang": "en"
+    }
+  ],
+  "tickets": [
+    {
+      "n": 1,
+      "family": "same_language",
+      "lang": "en",
+      "expected": [
+        "vpn-remote-access"
+      ],
+      "forbidden": [
+        "r2-vpn-anyconnect-draft"
+      ],
+      "title": "VPN says credentials rejected",
+      "description": "Since I changed my password yesterday, FortiClient keeps saying \"credentials rejected\" when I try to connect from home. What should I do?"
+    },
+    {
+      "n": 2,
+      "family": "same_language",
+      "lang": "en",
+      "expected": [
+        "sap-access-request"
+      ],
+      "title": "New controller needs SAP FI access before month-end close",
+      "description": "Our new financial controller starts on Monday and must post journal entries in SAP during the close. How do we request the SAP FI role, and can it be expedited?"
+    },
+    {
+      "n": 3,
+      "family": "same_language",
+      "lang": "en",
+      "expected": [
+        "caveguard-alert-runbook"
+      ],
+      "title": "Orange humidity alert in the Comté cave",
+      "description": "CaveGuard shows an orange alert at 91% RH in Paris cave 2 (Comté). Someone opened the cellar door about an hour ago. Do I need to call the on-call affineur?"
+    },
+    {
+      "n": 4,
+      "family": "same_language",
+      "lang": "en",
+      "expected": [
+        "guest-wifi-visitors"
+      ],
+      "forbidden": [
+        "r2-guest-wifi-vouchers-obsolete"
+      ],
+      "title": "Visitors on Thursday: Wi-Fi and cave visit",
+      "description": "Six people from a retail customer visit Paris on Thursday. They need Wi-Fi during the meeting and would like to see the aging caves. Is it too late to organise?"
+    },
+    {
+      "n": 5,
+      "family": "same_language",
+      "lang": "en",
+      "expected": [
+        "label-printer-troubleshooting"
+      ],
+      "title": "Label printer keeps jamming in Gouda",
+      "description": "The label printer next to the washing line in Gouda jams several times a day and the labels come out curled. Do we need a new printer?"
+    },
+    {
+      "n": 6,
+      "family": "same_language",
+      "lang": "fr",
+      "expected": [
+        "r2-okta-password-reset"
+      ],
+      "title": "Compte verrouillé après plusieurs essais",
+      "description": "Je me suis trompé plusieurs fois de mot de passe ce matin et maintenant je ne peux plus me connecter du tout. Comment débloquer mon compte ?"
+    },
+    {
+      "n": 7,
+      "family": "same_language",
+      "lang": "fr",
+      "expected": [
+        "r2-office-printers-ricoh"
+      ],
+      "title": "Mon impression n'apparaît pas au copieur",
+      "description": "J'ai lancé une impression il y a 20 minutes mais quand je passe mon badge au copieur Ricoh du 2e étage, mon document n'est pas dans la liste. Que faire ?"
+    },
+    {
+      "n": 8,
+      "family": "same_language",
+      "lang": "de",
+      "expected": [
+        "r2-teams-audio"
+      ],
+      "title": "Kein Ton in Teams-Besprechungen",
+      "description": "Seit ich mein Headset an der Dockingstation benutze, höre ich in Teams-Besprechungen nichts mehr und die anderen hören mich auch nicht. Was kann ich tun?"
+    },
+    {
+      "n": 9,
+      "family": "same_language",
+      "lang": "es",
+      "expected": [
+        "r2-handheld-scanners"
+      ],
+      "title": "El terminal no sincroniza",
+      "description": "Esta mañana mi terminal TC52 muestra «Sincronización pendiente» desde hace 20 minutos y no puedo empezar la preparación de pedidos. ¿Qué hago?"
+    },
+    {
+      "n": 10,
+      "family": "same_language",
+      "lang": "en",
+      "expected": [
+        "r2-sharepoint-access"
+      ],
+      "title": "No answer to my SharePoint access request",
+      "description": "Three days ago I clicked Request access on the Quality SharePoint site and nobody has answered. I need the audit files for Friday. Who can give me access?"
+    },
+    {
+      "n": 11,
+      "family": "same_language",
+      "lang": "de",
+      "expected": [
+        "r2-laptop-replacement"
+      ],
+      "title": "Laptop-Austausch nächste Woche",
+      "description": "Mein Laptop wird nächste Woche ausgetauscht. Was muss ich vorher sichern, und was passiert mit meinen Outlook-Archiven?"
+    },
+    {
+      "n": 12,
+      "family": "cross_language",
+      "lang": "fr",
+      "expected": [
+        "vpn-remote-access"
+      ],
+      "forbidden": [
+        "r2-vpn-anyconnect-draft"
+      ],
+      "title": "VPN : identifiants refusés depuis le changement de mot de passe",
+      "description": "Depuis que j'ai changé mon mot de passe hier, FortiClient m'affiche « identifiants refusés » quand je me connecte depuis chez moi. Comment retrouver l'accès ?"
+    },
+    {
+      "n": 13,
+      "family": "cross_language",
+      "lang": "fr",
+      "expected": [
+        "sap-access-request"
+      ],
+      "title": "Accès SAP pour une nouvelle contrôleuse de gestion",
+      "description": "Une contrôleuse de gestion arrive lundi et doit saisir des écritures dans SAP pendant la clôture mensuelle. Quelle est la procédure pour obtenir le rôle finance, et peut-on accélérer ?"
+    },
+    {
+      "n": 14,
+      "family": "cross_language",
+      "lang": "fr",
+      "expected": [
+        "caveguard-alert-runbook"
+      ],
+      "title": "Alerte orange d'humidité dans la cave à comté",
+      "description": "Le tableau de bord des caves affiche une alerte orange à 91 % d'humidité dans la cave 2 (comté). La porte a été ouverte tout à l'heure. Faut-il appeler l'affineur d'astreinte ?"
+    },
+    {
+      "n": 15,
+      "family": "cross_language",
+      "lang": "de",
+      "expected": [
+        "guest-wifi-visitors"
+      ],
+      "forbidden": [
+        "r2-guest-wifi-vouchers-obsolete"
+      ],
+      "title": "Gäste-WLAN für Besucher am Donnerstag",
+      "description": "Am Donnerstag kommen fünf Besucher eines Lieferanten nach Gouda. Wie bekommen sie Zugang zum WLAN, und brauche ich dafür ein IT-Ticket?"
+    },
+    {
+      "n": 16,
+      "family": "cross_language",
+      "lang": "es",
+      "expected": [
+        "label-printer-troubleshooting"
+      ],
+      "title": "La impresora de etiquetas Zebra se atasca",
+      "description": "La impresora Zebra de etiquetas de expedición se atasca varias veces al día y las etiquetas salen enrolladas. ¿Hay que pedir una impresora nueva?"
+    },
+    {
+      "n": 17,
+      "family": "cross_language",
+      "lang": "en",
+      "expected": [
+        "r2-okta-password-reset"
+      ],
+      "title": "Locked out after too many password attempts",
+      "description": "I typed my password wrong several times this morning and now I cannot sign in anywhere. How do I unlock my account?"
+    },
+    {
+      "n": 18,
+      "family": "cross_language",
+      "lang": "en",
+      "expected": [
+        "r2-caveguard-sensor-codes"
+      ],
+      "title": "CaveGuard sensor shows a low battery code",
+      "description": "The CaveGuard sensor in cave 4 displays a low battery error on its screen. Which batteries do I need and where are they?"
+    },
+    {
+      "n": 19,
+      "family": "cross_language",
+      "lang": "en",
+      "expected": [
+        "r2-teams-audio"
+      ],
+      "title": "No sound in Teams meetings with my headset",
+      "description": "Since I plugged my headset into the docking station, I hear nothing in Teams meetings and people cannot hear me. How do I fix it?"
+    },
+    {
+      "n": 20,
+      "family": "cross_language",
+      "lang": "en",
+      "expected": [
+        "r2-badges-madrid"
+      ],
+      "title": "Madrid office badge no longer opens the door",
+      "description": "I came back to the Madrid office after five weeks of holiday and my access card does not open the main door any more. What should I do?"
+    },
+    {
+      "n": 21,
+      "family": "cross_language",
+      "lang": "fr",
+      "expected": [
+        "r2-intune-phone-enrolment"
+      ],
+      "title": "Inscrire mon nouveau téléphone professionnel",
+      "description": "J'ai reçu un nouvel iPhone professionnel. Comment l'inscrire pour avoir Outlook et Teams dessus ?"
+    },
+    {
+      "n": 22,
+      "family": "cross_language",
+      "lang": "de",
+      "expected": [
+        "r2-office-printers-ricoh"
+      ],
+      "title": "Druckauftrag erscheint nicht am Kopierer",
+      "description": "Ich habe vor einer halben Stunde gedruckt, aber am Ricoh-Kopierer sehe ich nach dem Anmelden mit dem Ausweis meinen Druckauftrag nicht. Was tun?"
+    },
+    {
+      "n": 23,
+      "family": "paraphrase",
+      "lang": "fr",
+      "expected": [
+        "label-printer-troubleshooting"
+      ],
+      "title": "L'imprimante de l'entrepôt ne sort plus rien",
+      "description": "Depuis ce matin l'imprimante de l'entrepôt ne sort plus rien : les étiquettes restent coincées à l'intérieur et ressortent toutes tordues. On en commande une autre ?"
+    },
+    {
+      "n": 24,
+      "family": "paraphrase",
+      "lang": "en",
+      "expected": [
+        "vpn-remote-access"
+      ],
+      "forbidden": [
+        "r2-vpn-anyconnect-draft"
+      ],
+      "title": "Can't get into the company network from home",
+      "description": "Since I updated my login yesterday, I can't reach the company network from home any more. The remote access app just tells me my details are wrong. Help?"
+    },
+    {
+      "n": 25,
+      "family": "paraphrase",
+      "lang": "en",
+      "expected": [
+        "caveguard-alert-runbook"
+      ],
+      "title": "The cellar monitor says it is a bit too damp",
+      "description": "The monitoring screen for the aging rooms is warning that the Comté room is slightly too damp. Is this serious?"
+    },
+    {
+      "n": 26,
+      "family": "paraphrase",
+      "lang": "en",
+      "expected": [
+        "guest-wifi-visitors"
+      ],
+      "forbidden": [
+        "r2-guest-wifi-vouchers-obsolete"
+      ],
+      "title": "Suppliers coming over next week: how do they get online?",
+      "description": "A few people from one of our suppliers are coming to the Parma office next week. How can they get internet on their laptops while they are here?"
+    },
+    {
+      "n": 27,
+      "family": "paraphrase",
+      "lang": "fr",
+      "expected": [
+        "r2-teams-audio"
+      ],
+      "title": "Je n'entends personne en visio",
+      "description": "Pendant les visios je n'entends plus personne et on ne m'entend pas non plus depuis que j'utilise mon casque sur la station d'accueil."
+    },
+    {
+      "n": 28,
+      "family": "paraphrase",
+      "lang": "en",
+      "expected": [
+        "sap-access-request"
+      ],
+      "title": "Rights in the finance system from day one",
+      "description": "Someone joining accounting must be able to book entries in the finance system on their very first day. How quickly can rights be set up?"
+    },
+    {
+      "n": 29,
+      "family": "paraphrase",
+      "lang": "en",
+      "expected": [
+        "r2-laptop-replacement"
+      ],
+      "title": "Will my files follow me to the new computer?",
+      "description": "I am getting a new work computer next week. Will my documents and favourites be on it, or do I need to copy things first?"
+    },
+    {
+      "n": 30,
+      "family": "paraphrase",
+      "lang": "en",
+      "expected": [
+        "r2-handheld-scanners"
+      ],
+      "title": "Warehouse handheld will not pull today's picking list",
+      "description": "My handheld device in the Zaragoza warehouse keeps showing that it is waiting and does not download today's orders to pick."
+    },
+    {
+      "n": 31,
+      "family": "exact_code",
+      "lang": "en",
+      "expected": [
+        "r2-sap-goods-issue-m7021"
+      ],
+      "title": "MIGO error M7 021",
+      "description": "Posting the goods issue for production order 1000452 fails with \"Deficit of BA Unrestricted-use 12 KG\" (M7 021). The wheels are physically there. What is wrong?"
+    },
+    {
+      "n": 32,
+      "family": "exact_code",
+      "lang": "en",
+      "expected": [
+        "r2-intune-phone-enrolment"
+      ],
+      "title": "Company Portal error 0x80180014",
+      "description": "I am setting up the phone I received from my former colleague and Company Portal says \"Something went wrong. 0x80180014\"."
+    },
+    {
+      "n": 33,
+      "family": "exact_code",
+      "lang": "en",
+      "expected": [
+        "r2-webshop-sync"
+      ],
+      "title": "Web order W-104233 stuck with SYNC-409",
+      "description": "Web shop order W-104233 has not reached SAP. The ShopBridge monitor shows SYNC-409. What does it mean?"
+    },
+    {
+      "n": 34,
+      "family": "exact_code",
+      "lang": "fr",
+      "expected": [
+        "r2-caveguard-sensor-codes"
+      ],
+      "title": "Capteur cave 3 : code CG-E12",
+      "description": "Le capteur CaveGuard de la cave 3 à Parme affiche CG-E12 depuis ce matin. Est-ce que les mesures sont perdues ?"
+    },
+    {
+      "n": 35,
+      "family": "exact_code",
+      "lang": "fr",
+      "expected": [
+        "r2-okta-password-reset"
+      ],
+      "title": "Message E0000119 à la connexion",
+      "description": "La page de connexion m'affiche E0000119 et je ne peux plus entrer dans Outlook ni SAP."
+    },
+    {
+      "n": 36,
+      "family": "exact_code",
+      "lang": "en",
+      "expected": [
+        "label-printer-troubleshooting"
+      ],
+      "title": "ZT411 calibration after a jam",
+      "description": "I cleared a jam on the ZT411 in Parma but the labels now print offset. How do I recalibrate it?"
+    },
+    {
+      "n": 37,
+      "family": "exact_code",
+      "lang": "de",
+      "expected": [
+        "r2-webshop-sync"
+      ],
+      "title": "SYNC-422 im ShopBridge-Monitor",
+      "description": "Eine Webshop-Bestellung steht im ShopBridge-Monitor mit SYNC-422. Was muss ich tun?"
+    },
+    {
+      "n": 38,
+      "family": "deep_passage",
+      "lang": "en",
+      "expected": [
+        "r2-it-handbook"
+      ],
+      "title": "Laptop asks for a recovery key after an update",
+      "description": "After this morning's BIOS update my laptop stops at a blue screen asking for a 48-digit recovery key before Windows starts. Where do I find it?"
+    },
+    {
+      "n": 39,
+      "family": "deep_passage",
+      "lang": "en",
+      "expected": [
+        "r2-it-handbook"
+      ],
+      "title": "Automatic reply for a colleague on sick leave",
+      "description": "My colleague is on sick leave for three weeks and customers keep writing to him. Can you set an automatic reply on his mailbox or give me access to it?"
+    },
+    {
+      "n": 40,
+      "family": "deep_passage",
+      "lang": "en",
+      "expected": [
+        "r2-it-handbook"
+      ],
+      "title": "Signing in on the shop computer",
+      "description": "Can I sign in with my own account on the computer of the Paris shop and save my password in its browser? I use it every Saturday."
+    },
+    {
+      "n": 41,
+      "family": "deep_passage",
+      "lang": "fr",
+      "expected": [
+        "r2-production-it-manual"
+      ],
+      "title": "Les poids des balances n'arrivent plus dans SAP",
+      "description": "Depuis la coupure de courant de cette nuit, les balances de la salle de découpe pèsent normalement mais les ordres de découpe restent sans quantité dans SAP. Faut-il ressaisir les poids ?"
+    },
+    {
+      "n": 42,
+      "family": "deep_passage",
+      "lang": "fr",
+      "expected": [
+        "r2-production-it-manual"
+      ],
+      "title": "Caméra de contrôle des croûtes : image noire",
+      "description": "L'écran de contrôle de la caméra de la ligne de conditionnement est tout noir depuis la sortie des meules de cave. La ligne doit-elle s'arrêter ?"
+    },
+    {
+      "n": 43,
+      "family": "deep_passage",
+      "lang": "fr",
+      "expected": [
+        "r2-production-it-manual"
+      ],
+      "title": "Recette de l'automate saumure modifiée par erreur",
+      "description": "Un intérimaire a modifié par erreur la durée de la recette sur l'automate des bacs de saumure. Comment revenir à la recette d'hier ?"
+    },
+    {
+      "n": 44,
+      "family": "no_answer",
+      "lang": "en",
+      "expected": [],
+      "title": "Second monitor for my desk",
+      "description": "Could I get a second monitor for my desk in Gouda? I work on large spreadsheets all day."
+    },
+    {
+      "n": 45,
+      "family": "no_answer",
+      "lang": "en",
+      "expected": [],
+      "title": "Power BI report no longer refreshes",
+      "description": "The sales Power BI report has not refreshed since Monday. The data stops on Sunday. Can someone look at it?"
+    },
+    {
+      "n": 46,
+      "family": "no_answer",
+      "lang": "fr",
+      "expected": [],
+      "title": "Clavier passé en QWERTY",
+      "description": "Mon clavier tape des Q à la place des A depuis ce matin, on dirait qu'il est passé en QWERTY. Comment remettre l'AZERTY ?"
+    },
+    {
+      "n": 47,
+      "family": "no_answer",
+      "lang": "de",
+      "expected": [],
+      "title": "Bankverbindung für die Gehaltsabrechnung ändern",
+      "description": "Ich habe die Bank gewechselt. Wie ändere ich meine Bankverbindung für die Gehaltsabrechnung?"
+    },
+    {
+      "n": 48,
+      "family": "no_answer",
+      "lang": "es",
+      "expected": [],
+      "title": "Certificado de retenciones",
+      "description": "¿Dónde puedo descargar mi certificado de retenciones del IRPF del año pasado?"
+    },
+    {
+      "n": 49,
+      "family": "no_answer",
+      "lang": "en",
+      "expected": [],
+      "title": "Salesforce dashboard shows the wrong currency",
+      "description": "Our Salesforce pipeline dashboard shows amounts in dollars instead of euros since last week. How do we change it back?"
+    },
+    {
+      "n": 50,
+      "family": "stale_doc",
+      "lang": "en",
+      "expected": [],
+      "forbidden": [
+        "r2-vpn-anyconnect-draft"
+      ],
+      "acceptable": [
+        "vpn-remote-access"
+      ],
+      "title": "AnyConnect: untrusted server certificate",
+      "description": "Cisco AnyConnect says \"Untrusted server certificate\" when I try to connect. Should I change the setting to allow it?"
+    },
+    {
+      "n": 51,
+      "family": "stale_doc",
+      "lang": "en",
+      "expected": [],
+      "forbidden": [
+        "r2-vpn-anyconnect-draft"
+      ],
+      "acceptable": [
+        "vpn-remote-access"
+      ],
+      "title": "Where do I install AnyConnect?",
+      "description": "A colleague told me we now use Cisco AnyConnect for remote access. Where do I install it and which gateway do I enter?"
+    },
+    {
+      "n": 52,
+      "family": "stale_doc",
+      "lang": "en",
+      "expected": [],
+      "forbidden": [
+        "r2-guest-wifi-vouchers-obsolete"
+      ],
+      "acceptable": [
+        "guest-wifi-visitors"
+      ],
+      "title": "No more paper Wi-Fi vouchers at reception",
+      "description": "Reception has run out of printed Wi-Fi vouchers for visitors. How do we print more from Guest Manager?"
+    },
+    {
+      "n": 53,
+      "family": "stale_doc",
+      "lang": "fr",
+      "expected": [],
+      "forbidden": [
+        "r2-expense-concur-obsolete"
+      ],
+      "title": "Envoyer ma note de frais dans Concur",
+      "description": "Comment envoyer ma note de frais du déplacement à Parme dans Concur ? Je ne trouve pas le bouton pour créer une note."
+    },
+    {
+      "n": 54,
+      "family": "stale_doc",
+      "lang": "fr",
+      "expected": [],
+      "forbidden": [
+        "r2-expense-concur-obsolete"
+      ],
+      "title": "Dépenses de la carte d'entreprise absentes de Concur",
+      "description": "Les dépenses de ma carte d'entreprise du mois dernier n'apparaissent pas dans Concur. Est-ce normal ?"
+    }
+  ]
+}
