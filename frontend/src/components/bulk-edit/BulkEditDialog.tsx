@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, CircularProgress, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import BackspaceOutlined from '@mui/icons-material/BackspaceOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useTranslation } from 'react-i18next';
@@ -218,6 +218,9 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
   const refusedChange = countFailed && !tooMany && [400, 409].includes(countError?.response?.status)
     ? getApiErrorMessage(countError, t, t('bulkEdit.countFailed'))
     : null;
+  // The count asked again (`common:buttons.retry`): after no answer, a server error or another operation
+  // running; a change refused as a whole would be refused again.
+  const canRecount = countFailed && !tooMany && countError?.response?.status !== 400;
   const result = shown && !countFailed ? shown.data ?? null : null;
 
   const choose = (key: string) => {
@@ -377,10 +380,13 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
               </Stack>
             ) : tooMany ? (
               <Typography sx={statusSx}>{t('bulkEdit.tooMany')}</Typography>
-            ) : refusedChange ? (
-              <Typography sx={statusSx}>{refusedChange}</Typography>
             ) : countFailed ? (
-              <Typography sx={statusSx}>{t('bulkEdit.countFailed')}</Typography>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                <Typography sx={statusSx}>{refusedChange ?? t('bulkEdit.countFailed')}</Typography>
+                {canRecount && (
+                  <Button size="small" variant="text" onClick={recount}>{t('buttons.retry')}</Button>
+                )}
+              </Stack>
             ) : result ? (
               <Stack spacing={0.25}>
                 <Typography sx={statusSx}>{t('bulkEdit.willChange', { count: result.changes })}</Typography>

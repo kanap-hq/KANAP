@@ -229,6 +229,28 @@ describe('BulkEditDialog', () => {
     expect(post).toHaveBeenCalledTimes(3);
   });
 
+  it('counts again with Retry after the count got no answer', async () => {
+    post.mockRejectedValueOnce({ code: 'ERR_NETWORK', message: 'Network Error' });
+    post.mockResolvedValueOnce({ data: COUNT });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status()).toHaveTextContent('The rows could not be counted. Try again.'));
+    expect(save()).toBeDisabled();
+    fireEvent.click(within(status()).getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(status().textContent).toContain('6 rows will change'));
+    expect(post).toHaveBeenCalledTimes(2);
+    expect(post.mock.calls[1][1]).toEqual(post.mock.calls[0][1]);
+    expect(save()).toBeEnabled();
+  });
+
+  it('offers no Retry for a change refused as a whole: the same value would be refused again', async () => {
+    post.mockRejectedValue({ response: { status: 400, data: { message: 'This cost center is disabled.' } } });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status()).toHaveTextContent('This cost center is disabled.'));
+    expect(within(status()).queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+
   it('says the cap when the selection is too large', async () => {
     post.mockRejectedValue({ response: { status: 400, data: { code: 'bulk_too_many', message: 'These filters reach 6000 rows' } } });
     renderDialog();
