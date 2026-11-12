@@ -2,6 +2,7 @@ import '../../i18n';
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MenuItem, TextField } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,6 +19,8 @@ const post = vi.mocked(api.post);
 /** A picker: one button per value. */
 const picker = (values: string[]) => ({ value, onChange, label, disabled }: { value: string | null; onChange: (v: string | null) => void; label: string; disabled?: boolean }) => (
   <div aria-label={label} data-value={value ?? ''}>
+    {/* What a picker shows: the label of its value. */}
+    <input aria-label={`${label} shown`} readOnly value={value ? `Name of ${value}` : ''} />
     {values.map((v) => <button type="button" key={v} disabled={disabled} onClick={() => onChange(v)}>{`pick ${v}`}</button>)}
   </div>
 );
@@ -41,14 +44,14 @@ function renderDialog(props: Partial<React.ComponentProps<typeof BulkEditDialog>
   const onDone = vi.fn();
   const onClose = vi.fn();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const ui = (open: boolean) => (
+  const ui = (open: boolean, selection: Record<string, unknown> = { ids: ['l-1', 'l-2'] }) => (
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={client}>
           <BulkEditDialog
             open={open}
             onClose={onClose}
             endpoint="/budget-lines/bulk-update"
-            selection={{ ids: ['l-1', 'l-2'] }}
+            selection={selection as any}
             fields={FIELDS}
             onDone={onDone}
             {...props}
@@ -57,7 +60,12 @@ function renderDialog(props: Partial<React.ComponentProps<typeof BulkEditDialog>
     </ThemeProvider>
   );
   const { rerender } = render(ui(true));
-  return { onDone, onClose, setOpen: (open: boolean) => rerender(ui(open)) };
+  return {
+    onDone,
+    onClose,
+    setOpen: (open: boolean) => rerender(ui(open)),
+    setSelection: (selection: Record<string, unknown>) => rerender(ui(true, selection)),
+  };
 }
 
 const status = () => screen.getByRole('status');
@@ -174,7 +182,9 @@ describe('BulkEditDialog', () => {
       { all: true, filters: { q: 'srv' }, exclude_ids: ['l-9'], changes: { supplier_id: 's-2' }, as_of: COUNT.as_of, expected_rows: 10 },
       { timeout: BULK_EDIT_TIMEOUT_MS },
     );
-    expect(notify).toHaveBeenCalledWith({ message: '6 rows changed, 2 refused' });
+    // The dialog stays, on the outcome of the write; no notice besides it.
+    expect(notify).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('keeps the button off at zero rows to change', async () => {
@@ -242,7 +252,8 @@ describe('BulkEditDialog', () => {
     expect(post).toHaveBeenCalledTimes(2);
     await act(async () => { answerWrite({ data: { dry_run: false, rows: 10, changed: 6, unchanged: 4, refused: {} } }); });
     await waitFor(() => expect(onDone).toHaveBeenCalled());
-    expect(notify).toHaveBeenCalledWith({ message: '6 rows changed' });
+    expect(notify).not.toHaveBeenCalled();
+    expect(screen.getByTestId('bulk-edit-done')).toHaveTextContent('6 rows changed');
   });
 
   it.each([
@@ -293,6 +304,89 @@ describe('BulkEditDialog', () => {
     await waitFor(() => expect(status().textContent).toContain('8 rows will change'));
     expect(save()).toHaveTextContent('Change 8 rows');
     expect(save()).toBeEnabled();
+    expect(post).toHaveBeenCalledTimes(2);
+  });
+
+  it('stays open once written, on the outcome of the write: rows changed, already holding the value, refused by reason', async () => {
+    post.mockResolvedValueOnce({ data: COUNT });
+    post.mockResolvedValueOnce({ data: { dry_run: false, rows: 10, changed: 5, unchanged: 3, refused: { not_found: 1, account_chart: 1 } } });
+    const { onDone, onClose, setSelection } = renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-2' }));
+    await waitFor(() => expect(save()).toBeEnabled());
+    fireEvent.click(save());
+    const done = await screen.findByTestId('bulk-edit-done');
+    expect(onDone).toHaveBeenCalledWith({ dry_run: false, rows: 10, changed: 5, unchanged: 3, refused: { not_found: 1, account_chart: 1 } });
+    // The list clears its selection behind the outcome: nothing more is counted.
+    setSelection({ ids: [] });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(post).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('bulk-edit-done')).toHaveTextContent('5 rows changed');
+    expect(onClose).not.toHaveBeenCalled();
+    // The write's numbers, in the count's sentences and order, the first one in the past.
+    expect(done).toHaveTextContent('5 rows changed');
+    expect(done).toHaveTextContent('Supplier: Name of s-2');
+    expect(done).toHaveTextContent('3 already have this value');
+    expect(done).toHaveTextContent('2 refused:');
+    expect(within(done).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Not found: 1',
+      "Account outside the company's chart of accounts: 1",
+    ]);
+    expect(done.textContent).not.toContain('6 rows');
+    // Close alone: no picker, no confirmation, no Cancel; it has the focus, and closes.
+    expect(screen.queryByRole('combobox', { name: 'Field' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'pick s-1' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Change/ })).toBeNull();
+    const close = screen.getByRole('button', { name: 'Close' });
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    fireEvent.click(close);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('names the change by the choice before the value when the field asks it (a dimension), as the selects show them', async () => {
+    const select = (options: Array<[string, string]>) => function Select({ value, onChange, label }: { value: string | null; onChange: (next: string | null) => void; label: string }) {
+      return (
+        <TextField select value={value ?? ''} onChange={(event) => onChange(event.target.value || null)} SelectProps={{ inputProps: { 'aria-label': label } }}>
+          {options.map(([id, name]) => <MenuItem key={id} value={id}>{name}</MenuItem>)}
+        </TextField>
+      );
+    };
+    const fields: BulkEditField[] = [{
+      key: 'analytics_values',
+      label: 'Dimension value',
+      optional: true,
+      first: { label: 'Dimension', namesField: true, render: select([['axis-1', 'Region']]) },
+      render: ({ first: _first, ...props }) => select([['v-1', 'North']])(props),
+      changes: (value, axisId) => ({ analytics_values: { [axisId!]: value } }),
+    }];
+    post.mockResolvedValueOnce({ data: { ...COUNT, refused: {}, unchanged: 0 } });
+    post.mockResolvedValueOnce({ data: { dry_run: false, rows: 6, changed: 6, unchanged: 0, refused: {} } });
+    renderDialog({ fields });
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Dimension' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Region' }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Dimension value' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'North' }));
+    await waitFor(() => expect(save()).toBeEnabled());
+    fireEvent.click(save());
+    expect((await screen.findByTestId('bulk-edit-done')).textContent).toBe('6 rows changedRegion: North');
+  });
+
+  it('says the outcome without refusals in one line, and opens afresh after it', async () => {
+    post.mockResolvedValueOnce({ data: { ...COUNT, refused: {}, unchanged: 0 } });
+    post.mockResolvedValueOnce({ data: { dry_run: false, rows: 6, changed: 6, unchanged: 0, refused: {} } });
+    const { setOpen } = renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Empty the field' }));
+    await waitFor(() => expect(save()).toBeEnabled());
+    fireEvent.click(save());
+    const done = await screen.findByTestId('bulk-edit-done');
+    expect(done.textContent).toBe('6 rows changedSupplier: Empty');
+    setOpen(false);
+    setOpen(true);
+    expect(screen.queryByTestId('bulk-edit-done')).toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Field' })).toHaveTextContent('Supplier');
+    expect(screen.queryByRole('status')).toBeNull();
     expect(post).toHaveBeenCalledTimes(2);
   });
 

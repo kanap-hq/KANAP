@@ -134,6 +134,7 @@ export function useBudgetLineBulkFields(scope: BudgetNatureScope): BulkEditField
         optional: (axisId) => !required(axisId),
         first: {
           label: t('budget.bulkEdit.dimension'),
+          namesField: true,
           render: ({ value, onChange, label, disabled }) => <FlatSelect value={value} onChange={onChange} label={label} disabled={disabled} options={dimensionOptions} />,
         },
         render: ({ value, onChange, label, disabled, first }) => (

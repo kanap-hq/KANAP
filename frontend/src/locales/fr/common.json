@@ -1807,8 +1807,6 @@
     "saving": "Enregistrement de la modification…",
     "doneChanged_one": "{{count}} ligne modifiée",
     "doneChanged_other": "{{count}} lignes modifiées",
-    "doneRefused_one": "{{count}} refusée",
-    "doneRefused_other": "{{count}} refusées",
-    "doneWithRefused": "{{changed}}, {{refused}}"
+    "applied": "{{field}} : {{value}}"
   }
 }

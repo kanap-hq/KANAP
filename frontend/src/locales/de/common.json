@@ -1807,8 +1807,6 @@
     "saving": "Änderung wird gespeichert…",
     "doneChanged_one": "{{count}} Zeile geändert",
     "doneChanged_other": "{{count}} Zeilen geändert",
-    "doneRefused_one": "{{count}} abgelehnt",
-    "doneRefused_other": "{{count}} abgelehnt",
-    "doneWithRefused": "{{changed}}, {{refused}}"
+    "applied": "{{field}}: {{value}}"
   }
 }

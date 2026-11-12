@@ -1807,8 +1807,6 @@
     "saving": "Guardando el cambio…",
     "doneChanged_one": "{{count}} fila modificada",
     "doneChanged_other": "{{count}} filas modificadas",
-    "doneRefused_one": "{{count}} rechazada",
-    "doneRefused_other": "{{count}} rechazadas",
-    "doneWithRefused": "{{changed}}, {{refused}}"
+    "applied": "{{field}}: {{value}}"
   }
 }

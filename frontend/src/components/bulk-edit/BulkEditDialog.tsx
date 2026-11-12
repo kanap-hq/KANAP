@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, CircularProgress, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import BackspaceOutlined from '@mui/icons-material/BackspaceOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { KanapDialog, PropertyRow } from '../design';
-import { useNotify } from '../notify/NotifyProvider';
 import { reportFilterMenuProps } from '../reports/ReportLayout';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -23,7 +23,12 @@ export type BulkEditField = {
    * A choice made before the value, which the value picker depends on: the dimension of a dimension
    * value, the company whose chart of accounts lists the accounts. Changing it drops the value.
    */
-  first?: { label: string; render: (props: BulkEditPickerProps) => React.ReactNode };
+  first?: {
+    label: string;
+    render: (props: BulkEditPickerProps) => React.ReactNode;
+    /** The choice names what changed in the outcome's reminder (a dimension), in place of the field. */
+    namesField?: boolean;
+  };
   /** The value may be emptied (with `first`, for that choice): the dialog offers "Empty" beside the picker. */
   optional: boolean | ((first: string) => boolean);
   /** The value picker; `first`, the choice made before it (the picker is shown once it is made). */
@@ -67,14 +72,50 @@ const quietSx = { fontSize: 12, color: 'kanap.text.tertiary' } as const;
 // The pickers draw their own label: hidden here, the row carries it.
 const hideInnerLabelSx = { flex: 1, minWidth: 0, '& .MuiInputLabel-root': { display: 'none' }, '& .MuiFormControl-root': { m: 0 } } as const;
 
+/**
+ * The text a picker shows for its value (the label of an autocomplete's input, the shown item of a
+ * select): the outcome names the value as the person picked it, whatever the list's pickers are.
+ */
+function shownText(box: HTMLElement | null): string {
+  if (!box) return '';
+  const input = box.querySelector<HTMLInputElement>('input:not([type="hidden"]):not([aria-hidden="true"])');
+  if (input?.value) return input.value.trim();
+  return box.querySelector('[role="combobox"]')?.textContent?.trim() ?? '';
+}
+
+/** The rows that already held the value, and the refused ones by reason: shared by the count and the outcome. */
+function OtherRows({ unchanged, refused }: { unchanged: number; refused: Record<string, number> }) {
+  const { t } = useTranslation('common');
+  const reasons = Object.entries(refused).filter(([, n]) => n > 0);
+  const total = refusalTotal(refused);
+  return (
+    <>
+      {unchanged > 0 && <Typography sx={quietSx}>{t('bulkEdit.unchanged', { count: unchanged })}</Typography>}
+      {total > 0 && (
+        <>
+          <Typography sx={statusSx}>{t('bulkEdit.refused', { count: total })}</Typography>
+          <Box component="ul" sx={{ m: 0, pl: 2 }}>
+            {reasons.map(([code, n]) => (
+              <Typography component="li" key={code} sx={quietSx} data-refusal={code}>
+                {t('bulkEdit.refusal', { reason: t(`bulkEdit.refusals.${code}`, { defaultValue: t('bulkEdit.refusals.other') }), count: n })}
+              </Typography>
+            ))}
+          </Box>
+        </>
+      )}
+    </>
+  );
+}
+
 const refusalTotal = (refused: Record<string, number> | undefined) => Object.values(refused ?? {}).reduce((sum, n) => sum + n, 0);
 
 /**
  * "Change the selection" of a list: a field, then its value (for a dimension, the dimension then the
  * value); a dry run counts the rows that will change, those that already hold the value and the
  * refused ones by reason, each time the value changes; the write sends back the count's `as_of` and
- * `expected_rows`. The rows: `selection`, the body part of `useBulkSelection`. Once written, a
- * notice says how many rows changed and were refused, and `onDone` reloads the list.
+ * `expected_rows`. The rows: `selection`, the body part of `useBulkSelection`. Once written, the
+ * dialog stays on the write's outcome (rows changed, already holding the value, refused by reason)
+ * with Close alone, and `onDone` reloads the list behind it.
  */
 export default function BulkEditDialog({ open, onClose, endpoint, selection, fields, onDone }: {
   open: boolean;
@@ -86,12 +127,16 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
   onDone: (result: BulkEditWriteResult) => void;
 }) {
   const { t } = useTranslation('common');
-  const notify = useNotify();
   const [fieldKey, setFieldKey] = useState('');
   const [first, setFirst] = useState<string | null>(null);
   const [picked, setPicked] = useState<Picked>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Once written: the write's answer and the change as picked ("Supplier: Acme"), until closed.
+  const [written, setWritten] = useState<{ result: BulkEditWriteResult; applied: string } | null>(null);
+  const firstBoxRef = useRef<HTMLDivElement | null>(null);
+  const valueBoxRef = useRef<HTMLDivElement | null>(null);
+  const outcomeRef = useRef<HTMLDivElement | null>(null);
   // Each opening starts afresh, on the first field with nothing picked. Reset while rendering the
   // opening, before any effect: an effect would let the count of the opening read the value of the
   // previous one, and count it for nothing.
@@ -103,8 +148,13 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
       setFirst(null);
       setPicked(null);
       setError(null);
+      setWritten(null);
     }
   }
+  // The outcome takes the focus to its Close button: Enter closes, as Escape does.
+  useEffect(() => {
+    if (written) outcomeRef.current?.closest('form')?.querySelector<HTMLButtonElement>('button[type="submit"]')?.focus();
+  }, [written]);
 
   const field = fields.find((f) => f.key === fieldKey) ?? null;
   const firstMade = !field?.first || first != null;
@@ -149,10 +199,11 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
     if (!inFlightRef.current) runCount(wantedRef.current);
   }, [runCount]);
   useEffect(() => {
-    askCount(open && body && bodyKey ? { key: bodyKey, body } : null);
+    // Once written, nothing more to count: the list clears its selection behind the outcome.
+    askCount(open && !written && body && bodyKey ? { key: bodyKey, body } : null);
     // The body by its key: a new object of the same content counts nothing again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, bodyKey, askCount]);
+  }, [open, written, bodyKey, askCount]);
   const recount = () => {
     if (body && bodyKey) askCount({ key: bodyKey, body });
   };
@@ -185,7 +236,11 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
   };
 
   const save = async () => {
-    if (!body || !result) return;
+    if (!body || !result || !field) return;
+    // Read before the write: what the person picked, as the pickers show it.
+    const what = field.first?.namesField ? shownText(firstBoxRef.current) || field.label : field.label;
+    const value = picked?.value == null ? t('bulkEdit.emptied') : shownText(valueBoxRef.current);
+    const applied = value ? t('bulkEdit.applied', { field: what, value }) : what;
     setSaving(true);
     setError(null);
     try {
@@ -195,11 +250,9 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
         { ...body, as_of: result.as_of, expected_rows: result.rows },
         { timeout: BULK_EDIT_TIMEOUT_MS },
       );
-      const done = res.data;
-      const refused = refusalTotal(done.refused);
-      const changed = t('bulkEdit.doneChanged', { count: done.changed });
-      notify({ message: refused > 0 ? t('bulkEdit.doneWithRefused', { changed, refused: t('bulkEdit.doneRefused', { count: refused }) }) : changed });
-      onDone(done);
+      // The dialog says the outcome itself (no notice besides it); the list reloads behind it.
+      setWritten({ result: res.data, applied });
+      onDone(res.data);
     } catch (failure: any) {
       const status = failure?.response?.status;
       if (status === 409) {
@@ -220,8 +273,28 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
     }
   };
 
-  const refusals = Object.entries(result?.refused ?? {}).filter(([, n]) => n > 0);
-  const refusedCount = refusalTotal(result?.refused);
+  if (written) {
+    return (
+      <KanapDialog
+        open={open}
+        title={t('bulkEdit.title')}
+        onClose={onClose}
+        onSave={onClose}
+        saveLabel={t('buttons.close')}
+        saveVariant="action"
+        showCancel={false}
+      >
+        <Stack spacing={0.25} ref={outcomeRef} data-testid="bulk-edit-done">
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <CheckCircleOutlineIcon sx={{ fontSize: 16, color: 'kanap.teal', flexShrink: 0 }} />
+            <Typography sx={{ ...statusSx, color: 'kanap.text.primary' }}>{t('bulkEdit.doneChanged', { count: written.result.changed })}</Typography>
+          </Stack>
+          <Typography sx={statusSx}>{written.applied}</Typography>
+          <OtherRows unchanged={written.result.unchanged} refused={written.result.refused ?? {}} />
+        </Stack>
+      </KanapDialog>
+    );
+  }
 
   return (
     <KanapDialog
@@ -253,7 +326,7 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
         </PropertyRow>
         {field?.first && (
           <PropertyRow label={field.first.label}>
-            <Box sx={hideInnerLabelSx}>
+            <Box sx={hideInnerLabelSx} ref={firstBoxRef}>
               {field.first.render({ value: first, onChange: chooseFirst, label: field.first.label, disabled: saving })}
             </Box>
           </PropertyRow>
@@ -264,7 +337,7 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
               {picked && picked.value == null ? (
                 <Typography sx={{ ...statusSx, flex: 1, py: '5px' }} data-testid="bulk-edit-emptied">{t('bulkEdit.emptied')}</Typography>
               ) : (
-                <Box sx={hideInnerLabelSx} key={`${field.key}:${first ?? ''}`}>
+                <Box sx={hideInnerLabelSx} key={`${field.key}:${first ?? ''}`} ref={valueBoxRef}>
                   {field.render({
                     value: picked?.value ?? null,
                     // Clearing the picker is "nothing picked"; emptying the field is the button beside it.
@@ -307,19 +380,7 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
             ) : result ? (
               <Stack spacing={0.25}>
                 <Typography sx={statusSx}>{t('bulkEdit.willChange', { count: result.changes })}</Typography>
-                {result.unchanged > 0 && <Typography sx={quietSx}>{t('bulkEdit.unchanged', { count: result.unchanged })}</Typography>}
-                {refusedCount > 0 && (
-                  <>
-                    <Typography sx={statusSx}>{t('bulkEdit.refused', { count: refusedCount })}</Typography>
-                    <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                      {refusals.map(([code, n]) => (
-                        <Typography component="li" key={code} sx={quietSx} data-refusal={code}>
-                          {t('bulkEdit.refusal', { reason: t(`bulkEdit.refusals.${code}`, { defaultValue: t('bulkEdit.refusals.other') }), count: n })}
-                        </Typography>
-                      ))}
-                    </Box>
-                  </>
-                )}
+                <OtherRows unchanged={result.unchanged} refused={result.refused ?? {}} />
               </Stack>
             ) : null}
           </Box>

@@ -1807,8 +1807,6 @@
     "saving": "Saving the change…",
     "doneChanged_one": "{{count}} row changed",
     "doneChanged_other": "{{count}} rows changed",
-    "doneRefused_one": "{{count}} refused",
-    "doneRefused_other": "{{count}} refused",
-    "doneWithRefused": "{{changed}}, {{refused}}"
+    "applied": "{{field}}: {{value}}"
   }
 }

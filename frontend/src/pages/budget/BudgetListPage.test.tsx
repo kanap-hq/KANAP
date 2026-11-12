@@ -1070,7 +1070,7 @@ describe('BudgetListPage', () => {
     expect(dialogs.edit.selection).toEqual({ ids: [] });
   });
 
-  it('after the change: the selection empties and the list and totals reload', async () => {
+  it('after the change: the dialog stays on its outcome, the selection empties and the list and totals reload', async () => {
     await renderPage();
     tick({ id: 'line-1', product_name: 'Servers' });
     fireEvent.click(editButton()!);
@@ -1078,10 +1078,13 @@ describe('BudgetListPage', () => {
     const before = get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length;
     const refreshKey = (lastProps() as any).refreshKey;
     act(() => dialogs.edit.onDone({ rows: 1, changed: 1, unchanged: 0, refused: {} }));
-    expect(dialogs.edit.open).toBe(false);
+    expect(dialogs.edit.open).toBe(true);
     expect(editButton()).toHaveAccessibleName('bulkEdit.title (0)');
     expect((lastProps() as any).refreshKey).toBe(refreshKey + 1);
     await waitFor(() => expect(get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length).toBe(before + 1));
+    // Close, on the outcome, closes it.
+    act(() => dialogs.edit.onClose());
+    expect(dialogs.edit.open).toBe(false);
   });
 
   it('shows one Total row from one totals GET, with no nature filter added, when the list holds both types', async () => {

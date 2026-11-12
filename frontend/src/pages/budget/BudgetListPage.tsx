@@ -1128,7 +1128,6 @@ function BudgetListPageView() {
           selection={bulk.body}
           fields={bulkFields}
           onDone={() => {
-            setBulkOpen(false);
             bulk.clear();
             setRefreshKey((k) => k + 1);
           }}
