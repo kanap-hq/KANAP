@@ -149,6 +149,8 @@
   "CSV_STATUS_DATE_PASSED": "Le statut est enabled mais la fin de validité est passée. Videz la date ou passez le statut à disabled. Si le fichier vient d'un ancien export, exportez à nouveau les données.",
   "CSV_STATUS_DATE_FUTURE": "Le statut est disabled mais la fin de validité est encore à venir. Passez le statut à enabled ou indiquez une date passée.",
   "CSV_IMPORT_FAILED": "L'import a échoué : {{reason}}",
+  "CSV_PROJECT_ORIGIN_STANDARD": "Un nouveau projet ne peut pas avoir l'origine Demande. Convertissez une demande, ou utilisez fast_track ou legacy.",
+  "CSV_PROJECT_ORIGIN_LOCKED": "Seul un projet Fast-track ou Historique peut changer d'origine, vers Fast-track ou Historique.",
   "CSV_INCIDENT_STATUS_RESERVED": "{{reference}} : le statut ne peut pas passer de « {{from}} » à « {{to}} » par import. Seul un administrateur du registre peut le faire ; utilisez Rouvrir ou Annuler l'incident dans l'application.",
   "CSV_TECHNOLOGY_NOT_ADOPTED": "Technologie inconnue « {{value}} ». Adoptez-la d'abord depuis le catalogue.",
   "CSV_NAME_AMBIGUOUS": "Plusieurs enregistrements portent le nom « {{value}} ».",
