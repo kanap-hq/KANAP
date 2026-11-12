@@ -8,8 +8,9 @@ import { helpdeskAgentDefaults, sreAgentDefaults } from '../../agent/agent-defin
 import type { AiAgentDefinition } from '../../entities/ai-agent-definition.entity';
 
 /**
- * A new agent cites no library until an administrator opens one, some or all of them.
- * An agent saved before keeps its setting.
+ * A new agent does not search the knowledge base, and cites no library, until an
+ * administrator turns the search on and opens one, some or all of them. An agent saved
+ * before keeps its setting.
  */
 
 const LIBRARY_A = '11111111-1111-4111-8111-111111111111';
@@ -24,30 +25,45 @@ function knowledgeBlock(scope: Record<string, unknown>): Record<string, unknown>
   return sources.knowledge as Record<string, unknown>;
 }
 
-async function testHelpdeskDefaultsOpenNoLibrary() {
+async function testHelpdeskDefaultsSearchNoKnowledge() {
   const defaults = helpdeskAgentDefaults({ ticketingProviderKey: 'glpi' });
-  assert.deepEqual(knowledgeBlock(defaults.scope_policy_json), { enabled: true, all_libraries: false, library_ids: [] });
-  assert.deepEqual(readAgentKnowledgeSources(definitionWithScope(defaults.scope_policy_json)).knowledgeLibraryIds, []);
+  assert.deepEqual(knowledgeBlock(defaults.scope_policy_json), { enabled: false, all_libraries: false, library_ids: [] });
+  const read = readAgentKnowledgeSources(definitionWithScope(defaults.scope_policy_json));
+  assert.equal(read.knowledgeEnabled, false);
+  assert.deepEqual(read.knowledgeLibraryIds, []);
 }
 
-async function testSreDefaultsOpenNoLibraryAndKeepKanapData() {
+async function testSreDefaultsSearchNoKnowledgeAndKeepKanapData() {
   const defaults = sreAgentDefaults({ monitoringProviderKey: 'prtg' });
-  assert.deepEqual(knowledgeBlock(defaults.scope_policy_json), { enabled: true, all_libraries: false, library_ids: [] });
+  assert.deepEqual(knowledgeBlock(defaults.scope_policy_json), { enabled: false, all_libraries: false, library_ids: [] });
   const read = readAgentKnowledgeSources(definitionWithScope(defaults.scope_policy_json));
+  assert.equal(read.knowledgeEnabled, false);
   assert.deepEqual(read.knowledgeLibraryIds, []);
   assert.equal(read.kanapData.enabled, true);
 }
 
-async function testANewAgentWithoutKnowledgeSettingOpensNoLibrary() {
+async function testANewAgentWithoutKnowledgeSettingSearchesNoKnowledge() {
   const scope = newAgentScopePolicy({ mode: 'manual_safe_target', provider_key: 'mock' });
   assert.equal(scope.mode, 'manual_safe_target');
   assert.equal(scope.provider_key, 'mock');
-  assert.deepEqual(knowledgeBlock(scope), { enabled: true, all_libraries: false, library_ids: [] });
+  assert.deepEqual(knowledgeBlock(scope), { enabled: false, all_libraries: false, library_ids: [] });
   const read = readAgentKnowledgeSources(definitionWithScope(scope));
-  assert.equal(read.knowledgeEnabled, true);
+  assert.equal(read.knowledgeEnabled, false);
   assert.deepEqual(read.knowledgeLibraryIds, []);
   assert.equal(read.webEnabled, false);
   assert.equal(read.kanapData.enabled, false);
+}
+
+async function testANewAgentSearchesTheKnowledgeBaseOnlyWhenAsked() {
+  const asked = newAgentScopePolicy({ knowledge_sources: { knowledge: { enabled: true } } });
+  assert.deepEqual(knowledgeBlock(asked), { enabled: true, all_libraries: false, library_ids: [] });
+  assert.equal(readAgentKnowledgeSources(definitionWithScope(asked)).knowledgeEnabled, true);
+
+  for (const enabled of [undefined, false, null, 'true', 1]) {
+    const scope = newAgentScopePolicy({ knowledge_sources: { knowledge: { enabled, library_ids: [LIBRARY_A] } } });
+    assert.equal(knowledgeBlock(scope).enabled, false, `enabled ${String(enabled)}`);
+    assert.equal(readAgentKnowledgeSources(definitionWithScope(scope)).knowledgeEnabled, false);
+  }
 }
 
 async function testANewAgentOpensAllLibrariesOnlyWhenAsked() {
@@ -80,9 +96,18 @@ async function testAnAgentSavedBeforeKeepsItsLibraries() {
     knowledge_sources: { knowledge: { enabled: true, all_libraries: true, library_ids: [] } },
   });
   assert.equal(readAgentKnowledgeSources(explicitAll).knowledgeLibraryIds, null);
-  // An agent stored without any knowledge setting keeps reading every library it can access.
-  assert.equal(readAgentKnowledgeSources(definitionWithScope({ mode: 'manual_safe_target' })).knowledgeLibraryIds, null);
-  assert.equal(readAgentKnowledgeSources(definitionWithScope(null)).knowledgeLibraryIds, null);
+  // An agent stored without any knowledge setting keeps searching every library it can access.
+  for (const scope of [{ mode: 'manual_safe_target' }, null]) {
+    const read = readAgentKnowledgeSources(definitionWithScope(scope));
+    assert.equal(read.knowledgeEnabled, true);
+    assert.equal(read.knowledgeLibraryIds, null);
+  }
+  // An agent stored with the search on and no library keeps searching none.
+  const openNone = readAgentKnowledgeSources(definitionWithScope({
+    knowledge_sources: { knowledge: { enabled: true, all_libraries: false, library_ids: [] } },
+  }));
+  assert.equal(openNone.knowledgeEnabled, true);
+  assert.deepEqual(openNone.knowledgeLibraryIds, []);
 }
 
 async function testTheThreeChoicesAreSavedAsChosen() {
@@ -100,9 +125,10 @@ async function testTheThreeChoicesAreSavedAsChosen() {
 
 async function run() {
   const tests = [
-    testHelpdeskDefaultsOpenNoLibrary,
-    testSreDefaultsOpenNoLibraryAndKeepKanapData,
-    testANewAgentWithoutKnowledgeSettingOpensNoLibrary,
+    testHelpdeskDefaultsSearchNoKnowledge,
+    testSreDefaultsSearchNoKnowledgeAndKeepKanapData,
+    testANewAgentWithoutKnowledgeSettingSearchesNoKnowledge,
+    testANewAgentSearchesTheKnowledgeBaseOnlyWhenAsked,
     testANewAgentOpensAllLibrariesOnlyWhenAsked,
     testANewSreAgentKeepsItsKanapDataChoice,
     testAnAgentSavedBeforeKeepsItsLibraries,
