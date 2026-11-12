@@ -185,7 +185,8 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - **Nouvelle ligne** : Créer une ligne (nécessite `budget:member`)
 - **Importer** : Charger des lignes en masse depuis un fichier budgétaire (nécessite `budget:admin`)
 - **Exporter** : Exporter les lignes dans un fichier budgétaire (nécessite `budget:admin`)
-- **Supprimer la sélection** : Suppression en masse des lignes sélectionnées (nécessite `budget:admin` ; sélectionnez-les via les cases à cocher). Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée. Avant toute suppression, la confirmation liste les lignes conservées, avec la colonne gelée. Les autres sont supprimées. La même suppression est sur la ligne : **Supprimer** (icône corbeille) dans son en-tête, pour une personne avec `budget:admin` dont l'accès couvre toutes les données. Le contrôle est le même. Une ligne qui a des montants dans une colonne gelée affiche le refus et sa raison. Lorsque la ligne peut être supprimée, vous confirmez, la ligne est supprimée et la liste se rouvre
+- **Modifier la sélection** : Modifier un champ sur toutes les lignes sélectionnées à la fois (nécessite `budget:member`). Voir [Modifier des lignes en masse](#modifier-des-lignes-en-masse)
+- **Supprimer la sélection** : Suppression en masse des lignes sélectionnées (nécessite `budget:admin`). Elle ne supprime que les lignes cochées une à une, et n'est pas disponible tant que la case d'en-tête prend tout le filtre. Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée. Avant toute suppression, la confirmation liste les lignes conservées, avec la colonne gelée. Les autres sont supprimées. La même suppression est sur la ligne : **Supprimer** (icône corbeille) dans son en-tête, pour une personne avec `budget:admin` dont l'accès couvre toutes les données. Le contrôle est le même. Une ligne qui a des montants dans une colonne gelée affiche le refus et sa raison. Lorsque la ligne peut être supprimée, vous confirmez, la ligne est supprimée et la liste se rouvre
 
 **Navigation Préc./Suiv.** :
 
@@ -195,6 +196,29 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - Votre contexte de liste (tri, filtres, recherche) est préservé lorsque vous fermez l'espace de travail
 
 **Conseil** : Utilisez les filtres de colonnes et la recherche rapide pour construire des vues ciblées (ex. : « Toutes les dépenses cloud de plus de 10k », ou **CAPEX** dans **Type** avec **High** dans **Priority**), puis parcourez les lignes une à une avec **Préc.**/**Suiv.** pour revoir les budgets.
+
+### Modifier des lignes en masse
+
+**Sélectionner des lignes** : Avec le droit de modifier les lignes, la liste affiche une case au début de chaque ligne. Cochez les lignes une à une, ou cochez la case de l'en-tête de colonne pour prendre toutes les lignes du filtre et de la recherche en cours, y compris celles qui ne sont pas encore chargées. Décochez une ligne pour l'en retirer. Changer les filtres ou la recherche vide la sélection. Le tri la conserve.
+
+**Modifier un champ** :
+
+1. Sélectionnez les lignes, puis cliquez sur **Modifier la sélection** (icône de modification). L'icône affiche le nombre de lignes sélectionnées
+2. Choisissez le **Champ** : **Centre de coûts**, **Compte**, **Société payeuse**, **Fournisseur**, **Responsable IT**, **Responsable métier**, **Valeur de dimension** ou **Run ou build**. Pour un compte, choisissez d'abord la société dans **Plan comptable de**, puis le compte. Pour une valeur de dimension, choisissez d'abord la **Dimension**, puis la valeur
+3. Choisissez la **Nouvelle valeur**. La boîte de dialogue compte les lignes : combien changeront, combien ont déjà cette valeur, et combien sont refusées, avec la raison de chaque refus (par exemple « En lecture seule pour vous » ou « Compte non prévu pour ce type de ligne »). Le comptage reprend à chaque nouvelle valeur
+4. Cliquez sur **Modifier 12 lignes** (avec votre comptage) pour confirmer. Les lignes refusées restent telles quelles et les autres changent. Un message donne le nombre de lignes modifiées et refusées
+
+**Vider un champ** : Pour un champ facultatif, cliquez sur **Vider le champ** (icône de gomme) à côté de la valeur. La valeur affiche **Vide**, et le champ est vidé sur chaque ligne sélectionnée. Le **Compte** et la **Société payeuse** ne peuvent pas être vidés, ni une dimension obligatoire.
+
+**Bon à savoir** :
+
+- Quand le filtre **Type** garde un seul type, les comptes et les valeurs de dimension proposés sont ceux de ce type. Avec les deux types, les lignes auxquelles une valeur ne convient pas sont refusées, avec la raison
+- Une modification porte sur 5 000 lignes au plus. Au-delà, resserrez les filtres ou sélectionnez moins de lignes
+- Une grande sélection peut prendre jusqu'à une minute au comptage, et autant à l'enregistrement
+- Si la liste change entre le comptage et votre confirmation, la boîte de dialogue affiche le nouveau comptage. Vérifiez-le, puis confirmez à nouveau
+- Les montants ne se modifient pas ainsi. Modifiez-les sur la ligne ou dans le [fichier budgétaire](budget-file.md)
+- Chaque ligne modifiée a sa propre entrée dans son onglet **Historique**
+- Avec un accès aux données limité, vous modifiez les lignes de votre accès. Une modification qui ferait sortir une ligne de votre accès est refusée pour cette ligne
 
 ---
 
@@ -724,12 +748,12 @@ Un fichier budgétaire ne change jamais le type d'une ligne. Voir [Charger un bu
 L'accès aux lignes budgétaires est contrôlé par la ressource Budget, qui couvre les lignes OPEX et CAPEX de la même façon. Elle a trois niveaux :
 
 - `budget:reader` : Consulter la liste, ouvrir les lignes, voir les budgets et ventilations (lecture seule), télécharger les pièces jointes
-- `budget:member` : Créer et modifier les lignes, changer leur type, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts
+- `budget:member` : Créer et modifier les lignes, changer leur type, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts, modifier des lignes en masse
 - `budget:admin` : Tous les droits membre plus import et export, opérations budgétaires (copier les colonnes budgétaires, avec leurs montants et leurs ventilations, et réinitialiser une colonne budgétaire) et la suppression des lignes depuis la liste ou depuis la ligne
 
 Le gel des colonnes budgétaires relève de l'administration budgétaire (`budget_ops:admin`).
 
-L'accès aux données peut limiter une personne aux lignes de certaines sociétés ou de certains centres de coûts. Elle voit alors ces lignes et celles sur lesquelles elle est nommée, une ligne qu'elle voit en Lecture affiche « Lecture seule dans votre accès », et la suppression de lignes et les opérations en masse sont réservées aux personnes qui ont accès à toutes les données. Voir [Accès aux données](data-access.md).
+L'accès aux données peut limiter une personne aux lignes de certaines sociétés ou de certains centres de coûts. Elle voit alors ces lignes et celles sur lesquelles elle est nommée, une ligne qu'elle voit en Lecture affiche « Lecture seule dans votre accès », et la suppression de lignes et les opérations budgétaires sont réservées aux personnes qui ont accès à toutes les données. Elle peut modifier des lignes en masse, sur les lignes de son accès. Voir [Accès aux données](data-access.md).
 
 De plus :
 
