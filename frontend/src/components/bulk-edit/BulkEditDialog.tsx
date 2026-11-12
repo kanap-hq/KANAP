@@ -92,16 +92,19 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
   const [picked, setPicked] = useState<Picked>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  // Each opening starts afresh, on the first field.
-  useEffect(() => {
-    if (!open) return;
-    setFieldKey(fields[0]?.key ?? '');
-    setFirst(null);
-    setPicked(null);
-    setError(null);
-    // The fields at the opening only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  // Each opening starts afresh, on the first field with nothing picked. Reset while rendering the
+  // opening, before any effect: an effect would let the count of the opening read the value of the
+  // previous one, and count it for nothing.
+  const [openedAt, setOpenedAt] = useState(false);
+  if (open !== openedAt) {
+    setOpenedAt(open);
+    if (open) {
+      setFieldKey(fields[0]?.key ?? '');
+      setFirst(null);
+      setPicked(null);
+      setError(null);
+    }
+  }
 
   const field = fields.find((f) => f.key === fieldKey) ?? null;
   const firstMade = !field?.first || first != null;

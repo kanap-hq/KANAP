@@ -40,11 +40,12 @@ const COUNT = { dry_run: true, rows: 10, changes: 6, unchanged: 2, refused: { ac
 function renderDialog(props: Partial<React.ComponentProps<typeof BulkEditDialog>> = {}) {
   const onDone = vi.fn();
   const onClose = vi.fn();
-  render(
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const ui = (open: boolean) => (
     <ThemeProvider theme={createAppTheme('light')}>
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <QueryClientProvider client={client}>
           <BulkEditDialog
-            open
+            open={open}
             onClose={onClose}
             endpoint="/budget-lines/bulk-update"
             selection={{ ids: ['l-1', 'l-2'] }}
@@ -53,9 +54,10 @@ function renderDialog(props: Partial<React.ComponentProps<typeof BulkEditDialog>
             {...props}
           />
       </QueryClientProvider>
-    </ThemeProvider>,
+    </ThemeProvider>
   );
-  return { onDone, onClose };
+  const { rerender } = render(ui(true));
+  return { onDone, onClose, setOpen: (open: boolean) => rerender(ui(open)) };
 }
 
 const status = () => screen.getByRole('status');
@@ -69,6 +71,23 @@ describe('BulkEditDialog', () => {
   beforeEach(() => {
     post.mockReset();
     notify.mockReset();
+  });
+
+  it('opens afresh: no count of the previous opening\'s value, until a value is picked', async () => {
+    post.mockResolvedValue({ data: COUNT });
+    const { setOpen } = renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status().textContent).toContain('6 rows will change'));
+    expect(post).toHaveBeenCalledTimes(1);
+    setOpen(false);
+    setOpen(true);
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('combobox', { name: 'Field' })).toHaveTextContent('Supplier');
+    expect(screen.queryByRole('status')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-2' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(post.mock.calls[1][1]).toMatchObject({ changes: { supplier_id: 's-2' }, dry_run: true });
   });
 
   it('counts nothing before a value is picked, then counts the picked value once', async () => {
