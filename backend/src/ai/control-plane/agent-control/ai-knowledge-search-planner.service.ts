@@ -89,7 +89,9 @@ const MAX_TERMS = 10;
 // body where the search words fall (480 characters each, a passage being 30 to 70 words); when no
 // search word falls in the body, the first 3 such candidates show the start of the body instead
 // (600 characters). A candidate without passages keeps its search snippet (280 characters).
-// Worst case of document text: 8 x (280 + 3 x 480) + 8 x (280 + 280) = 18,240 characters.
+// Worst case of document text: 8 x (280 + 3 x 480) + 8 x (280 + 280) = 18,240 characters. Not
+// counted: the titles (not cut) and the search queries of each candidate (4 x 120 characters at
+// most, 7,680 for 16 candidates).
 export const MAX_INTERPRETER_CANDIDATES = 16;
 export const MAX_INTERPRETER_PASSAGE_CANDIDATES = 8;
 export const MAX_INTERPRETER_PASSAGES_PER_CANDIDATE = 3;

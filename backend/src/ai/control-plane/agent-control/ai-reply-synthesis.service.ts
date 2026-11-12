@@ -98,7 +98,8 @@ const MAX_SYNTHESIS_REQUESTER_REPLY_CHARS = 10500;
 const MAX_SOURCE_CONTENT_CHARS = 3800;
 // The passages where the search words fall, given after the start of the body when they lie past
 // its cut: at most 3 of 480 characters, so a long article still shows the part that matches.
-// Worst case for the knowledge sources: 3 x (3,800 + 3 x 480) = 15,720 characters.
+// Worst case of document text for the knowledge sources (3 sources, MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY):
+// 3 x (600 summary + 3,800 body + 3 x 480 passages) = 17,520 characters, titles not counted.
 export const MAX_SOURCE_PASSAGES = 3;
 export const MAX_SOURCE_PASSAGE_CHARS = 480;
 // Raised well above the old 1800 so verbose / reasoning models do not truncate the
