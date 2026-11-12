@@ -9,7 +9,6 @@ import {
   type ManagedDocsFolderDefinition,
   ManagedDocsFolderSystemKey,
 } from './integrated-document.constants';
-import { markdownToSearchText } from '../common/markdown-worker';
 
 type SqlExecutor = {
   query<T = any>(query: string, parameters?: any[]): Promise<T[]>;
@@ -315,6 +314,9 @@ async function ensureTemplateDocument(
   );
   // The body is indexed for the search from content_plain (documents_search_vector_sync), as for
   // any document saved from Knowledge: derive it from the Markdown on both paths.
+  // Loaded on use: the Markdown workers read the deployment settings (config/features) when
+  // they load, and this seed is imported by scripts and specs that set them afterwards.
+  const { markdownToSearchText } = await import('../common/markdown-worker');
   const contentMarkdown = params.contentMarkdown ?? '';
   const contentPlain = await markdownToSearchText(contentMarkdown);
   if (existing[0]?.id) {
