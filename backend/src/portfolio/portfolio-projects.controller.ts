@@ -147,8 +147,8 @@ export class PortfolioProjectsController {
 
   /** What the project detail may name of other portfolio records (`include=source_requests`). */
   private async projectLinkedReads(ctx: TenantRequest): Promise<PortfolioLinkedReads> {
-    const { requestScope } = await this.projectRelationsContext(ctx);
-    return { reads: linkedReadsFromContext(ctx), requestScope };
+    const { requestScope, applicationScope } = await this.projectRelationsContext(ctx);
+    return { reads: linkedReadsFromContext(ctx), requestScope, applicationScope };
   }
 
   // ==================== CRUD ====================

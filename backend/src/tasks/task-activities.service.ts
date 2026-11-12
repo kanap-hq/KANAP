@@ -10,7 +10,7 @@ import { AuditService } from '../audit/audit.service';
 import { displayName } from '../common/display-name';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { writeTaskColumns } from './task-column-write';
-import { linkedParticipationScope, loadLinkedReads } from '../common/relations/linked-reads';
+import { personReadsPartOf, withCountedLinkChanges } from '../common/relations/linked-activity';
 
 export interface TaskActivityItem {
   id: string;
@@ -188,20 +188,8 @@ export class TaskActivitiesService {
   ): Promise<T[]> {
     const changes = (row: T) => row.changed_fields?.linked_applications || row.changed_fields?.linked_assets;
     if (!userId || !rows.some(changes)) return rows;
-    const reads = await loadLinkedReads(mg, userId);
-    const bounded: Record<string, boolean> = {
-      linked_applications: !reads.applications || !!(await linkedParticipationScope(mg, userId, null, 'applications')),
-      linked_assets: !reads.assets,
-    };
-    const counted = (side: unknown) => (Array.isArray(side) ? { labels: null, hidden: side.length } : side);
-    return rows.map((row) => {
-      if (!changes(row)) return row;
-      const fields = { ...row.changed_fields } as Record<string, [unknown, unknown]>;
-      for (const key of Object.keys(bounded)) {
-        if (bounded[key] && Array.isArray(fields[key])) fields[key] = [counted(fields[key][0]), counted(fields[key][1])];
-      }
-      return { ...row, changed_fields: fields };
-    });
+    const partial = await personReadsPartOf(mg, userId, null, ['applications', 'assets']);
+    return withCountedLinkChanges(rows, { linked_applications: partial.applications, linked_assets: partial.assets });
   }
 
   /**

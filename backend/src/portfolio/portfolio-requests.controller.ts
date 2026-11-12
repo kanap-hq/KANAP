@@ -377,6 +377,7 @@ export class PortfolioRequestsController {
         reads: linkedReadsFromContext({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }),
         projectScope: await resolveBusinessContributorScope(req, 'portfolio_projects'),
         taskScope: await resolveBusinessContributorScope(req, 'tasks'),
+        applicationScope: await resolveBusinessContributorScope(req, 'applications'),
       },
     });
   }

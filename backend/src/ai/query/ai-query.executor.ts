@@ -3505,6 +3505,7 @@ export class AiQueryExecutor {
       projectScope: await resolveAiParticipationAccessScope(context, 'projects'),
       requestScope: await resolveAiParticipationAccessScope(context, 'requests'),
       taskScope: await resolveAiParticipationAccessScope(context, 'tasks'),
+      applicationScope: await resolveAiParticipationAccessScope(context, 'applications'),
     };
   }
 
