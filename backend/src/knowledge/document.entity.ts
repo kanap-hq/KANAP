@@ -29,8 +29,10 @@ export class Document {
   @Column('text', { default: '' })
   content_plain!: string;
 
-  @Column({ type: 'tsvector' as any, nullable: true })
-  search_vector!: string | null;
+  // Written by the trigger only (documents_search_vector_sync): TypeORM never reads, inserts or
+  // updates it, so a save cannot put back a vector read before the text changed.
+  @Column({ type: 'tsvector' as any, nullable: true, select: false, insert: false, update: false })
+  search_vector?: string | null;
 
   @Column('uuid', { nullable: true })
   folder_id!: string | null;
