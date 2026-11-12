@@ -19,6 +19,8 @@ import { EntraDirectorySyncService } from '../entra-directory-sync.service';
 //   while the caller holds the other connection (the scheduler's lock, a request's transaction),
 //   and a run whose connection is lost fails, so the work is done once.
 // - counts only the accounts it disables itself.
+// - locks a person before the Administrator role, as every write on a person does: a write that
+//   holds the person and then asks for the role does not deadlock with the sync.
 // Microsoft is replaced by a fake directory; the database is real, with the smallest pool.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -29,6 +31,13 @@ process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 process.env.DB_POOL_MAX = '2';
 process.env.DB_POOL_CONNECTION_TIMEOUT = '4000';
+
+type PgClient = {
+  connect(): Promise<void>;
+  query(sql: string, params?: unknown[]): Promise<{ rows: any[] }>;
+  end(): Promise<void>;
+};
+const { Client } = require('pg') as { Client: new (config: { connectionString: string }) => PgClient };
 
 type DirectoryEntry = { accountEnabled: boolean } | undefined;
 
@@ -369,6 +378,60 @@ async function testAlreadyDisabledIsNotCounted(sync: EntraDirectorySyncService, 
   }
 }
 
+/**
+ * A write on a person holds their row, then asks for the Administrator role, while the sync comes
+ * to disable that person: the sync waits for the row, the write gets the role, both end.
+ */
+async function testPersonBeforeRole(sync: EntraDirectorySyncService, dir: FakeDirectory, ds: DataSource) {
+  const w = await workspace(ds);
+  await w.user('tia', { admin: true });
+  const leaver = await w.user('uma', { admin: false });
+  dir.entries.set('oid-tia', { accountEnabled: true });
+  // Outside the pool: the sync and the test's own reads use its two connections.
+  const writer = new Client({ connectionString: process.env.DATABASE_URL as string });
+  await writer.connect();
+  let open!: () => void;
+  dir.gate = new Promise<void>((resolve) => { open = resolve; });
+  const readsBefore = dir.reads;
+  const run = sync.syncTenant(w.tenantId);
+  try {
+    for (let i = 0; i < 100 && dir.reads === readsBefore; i++) await new Promise((r) => setTimeout(r, 20));
+    await writer.query('BEGIN');
+    await writer.query(`SELECT set_config('app.current_tenant', $1, true)`, [w.tenantId]);
+    await writer.query(`SELECT id FROM users WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, [w.tenantId, leaver]);
+    open();
+    // Wait until the sync waits on a lock the writer holds.
+    let waiting = 0;
+    for (let i = 0; i < 250 && waiting === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      const [row] = await ds.query(
+        `SELECT count(*)::int AS n FROM pg_locks
+          WHERE NOT granted AND database IS NOT DISTINCT FROM (SELECT oid FROM pg_database WHERE datname = current_database())
+             OR (NOT granted AND locktype = 'transactionid')`,
+      );
+      waiting = row.n;
+    }
+    assert.ok(waiting > 0, 'the sync waits for the person the writer holds');
+    const role = await writer
+      .query(
+        `SELECT id FROM roles WHERE tenant_id = $1 AND lower(trim(role_name)) = 'administrator' FOR UPDATE`,
+        [w.tenantId],
+      )
+      .then(() => null, (error: unknown) => error);
+    assert.equal(role, null, `the writer gets the role (got ${String(role)})`);
+    await writer.query('COMMIT');
+    const result = await within(run, 15_000, 'sync after the writer');
+    assert.equal(result.status, 'ok', `sync: ${result.message}`);
+    assert.equal(result.removed, 1);
+  } finally {
+    open();
+    await writer.query('ROLLBACK').catch(() => undefined);
+    await writer.end();
+    await run.catch(() => undefined);
+  }
+  assert.equal(await statusOf(ds, w.tenantId, leaver), 'disabled');
+}
+
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for entra-directory-sync-guards.integration.spec.ts.');
   const { AppModule } = require('../../app.module');
@@ -390,6 +453,7 @@ async function run() {
     ['the smallest pool is enough', testSmallestPool],
     ['a lost lock connection fails its run', testLostLockConnection],
     ['an account disabled meanwhile is not counted', testAlreadyDisabledIsNotCounted],
+    ['the person is locked before the Administrator role', testPersonBeforeRole],
   ];
   try {
     for (const [name, test] of tests) {

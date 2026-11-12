@@ -254,28 +254,33 @@ export class EntraDirectorySyncService implements OnModuleInit {
       }
 
       // The workspace keeps an enabled Administrator: the directory does not disable the last
-      // one, and the report names them. The Administrator role is locked first (as the Users
-      // screens do), then the person's row; only an account this run disables is counted.
-      if (leaving.length > 0) {
-        await inTenant(async (manager) => {
-          for (const { user, reason } of leaving) {
-            if ((await lastActiveAdministratorsLeaving(manager, [{ userId: user.id, status: 'disabled' }])).length > 0) {
-              result.kept_administrator = personName(user);
-              this.logger.warn(
-                `[${ENTRA_DIRECTORY_SYNC_TASK}] tenant ${tenantId}: user ${user.id} ${reason} in the directory, kept enabled as the last administrator`,
-              );
-              continue;
-            }
-            const [current] = await manager.query(
-              `SELECT status FROM users WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
-              [tenantId, user.id],
-            );
-            if (!current || current.status === 'disabled') continue;
-            await this.users.disableUser(user.id, null, { manager, sourceRef: `entra-sync:${reason}` });
-            if (reason === 'removed') result.removed++;
-            else result.disabled++;
+      // one, and the report names them. One short transaction per account, taking its locks as
+      // every write on a person does: the person first, then the Administrator role (locked by
+      // the last-administrator check until the transaction ends). A transaction for the whole list
+      // would hold the role while locking the next person, the reverse order. Only an account this
+      // run disables is counted.
+      for (const { user, reason } of leaving) {
+        const outcome = await inTenant(async (manager) => {
+          const [current] = await manager.query(
+            `SELECT status FROM users WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+            [tenantId, user.id],
+          );
+          if (!current || current.status === 'disabled') return 'unchanged' as const;
+          if ((await lastActiveAdministratorsLeaving(manager, [{ userId: user.id, status: 'disabled' }])).length > 0) {
+            return 'kept' as const;
           }
+          await this.users.disableUser(user.id, null, { manager, sourceRef: `entra-sync:${reason}` });
+          return 'disabled' as const;
         });
+        if (outcome === 'kept') {
+          result.kept_administrator = personName(user);
+          this.logger.warn(
+            `[${ENTRA_DIRECTORY_SYNC_TASK}] tenant ${tenantId}: user ${user.id} ${reason} in the directory, kept enabled as the last administrator`,
+          );
+        } else if (outcome === 'disabled') {
+          if (reason === 'removed') result.removed++;
+          else result.disabled++;
+        }
       }
 
       // The reporting line gets its own short transaction: the cycle guard's
