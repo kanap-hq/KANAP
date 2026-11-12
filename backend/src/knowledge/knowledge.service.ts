@@ -6271,17 +6271,16 @@ export class KnowledgeService {
       if (fallbackTerms.length > 0) {
         usedFallback = true;
         const fallbackParams: Array<string | number | string[]> = [];
-        const fallbackClauses: string[] = [];
-        for (const term of fallbackTerms) {
-          // A whole word, accents folded on both sides (the term is folded, letters and digits only).
-          fallbackParams.push(`\\m${term}\\M`);
-          const index = fallbackParams.length;
-          fallbackClauses.push(
-            `public.unaccent(d.title) ~* $${index}`,
-            `public.unaccent(COALESCE(d.summary, '')) ~* $${index}`,
-            `public.unaccent(COALESCE(d.content_plain, '')) ~* $${index}`,
-          );
-        }
+        // One pass over title, summary and body with one pattern: any of the words, as a whole
+        // word. The terms hold letters and digits only (getDocumentSearchFallbackTerms); they go
+        // through unaccent like the columns ("Straße" and "cœur" find themselves), and whatever
+        // unaccent turns into something else than a letter or a digit (it maps the modifier letter
+        // "ˆ" to "^") is dropped before the pattern is built, once per query.
+        fallbackParams.push(fallbackTerms.join('|'));
+        const fallbackClauses: string[] = [
+          `public.unaccent(concat_ws(' ', d.title, d.summary, d.content_plain))
+             ~* (SELECT '\\m(' || regexp_replace(public.unaccent($${fallbackParams.length}::text), '[^[:alnum:]|]', '', 'g') || ')\\M')`,
+        ];
         if (search.itemNumber != null) {
           fallbackParams.push(search.itemNumber);
           fallbackClauses.unshift(`d.item_number = $${fallbackParams.length}`);

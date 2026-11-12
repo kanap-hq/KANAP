@@ -400,6 +400,44 @@ async function testKnowledgeSearchFallbackIgnoresShortWordsAndWordParts() {
   }
 }
 
+// The whole-word fallback reads title, summary and body in one pass with one pattern (the review
+// of 12/11 measured 24 regular expressions per row), and folds the words of the query as the
+// columns are folded: "Straße" finds "Straße", "cœur" finds "cœur".
+async function testKnowledgeSearchFallbackIsOnePassFoldedLikeTheColumns() {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    const statements: string[] = [];
+    const manager = Object.create(runner.manager);
+    manager.query = (sql: string, params?: unknown[]) => {
+      statements.push(sql);
+      return runner.manager.query(sql, params);
+    };
+    const service = createKnowledgeService(manager);
+    const [street, heart] = await seedSearchFixture(runner, [
+      { title: 'Lieferadresse', contentPlain: 'Die Straße des Lagers wurde umbenannt.' },
+      { title: 'Notes', summary: 'Le cœur du réseau est au sous-sol.' },
+    ]);
+    const streetResult = await service.search({ q: 'Straße rouleau', limit: 10, offset: 0 }, { manager });
+    assert.deepEqual(streetResult.items.map((item: any) => item.id), [street], 'Straße finds Straße');
+    assert.equal(streetResult.items[0].fallback, true);
+    const heartResult = await service.search({ q: 'cœur rouleau', limit: 10, offset: 0 }, { manager });
+    assert.deepEqual(heartResult.items.map((item: any) => item.id), [heart], 'cœur finds cœur');
+    // unaccent maps the modifier letter "ˆ" to "^": it is dropped and never reaches the pattern.
+    const modifier = await service.search({ q: 'Straˆße rouleau', limit: 10, offset: 0 }, { manager });
+    assert.deepEqual(modifier.items.map((item: any) => item.id), [street]);
+    const fallbackSql = statements.filter((sql) => sql.includes('~*'));
+    assert.ok(fallbackSql.length > 0, 'the fallback ran');
+    for (const sql of fallbackSql) {
+      assert.equal(sql.split('~*').length - 1, 1, `one regular expression per row: ${sql}`);
+    }
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
 async function testKnowledgeSearchMarksDirectMatchesAsNotFallback() {
   await withSearchFixture(
     [{ title: 'Sauvegarde des serveurs', contentPlain: 'Procédure complète.' }],
@@ -723,6 +761,7 @@ async function run() {
     await testKnowledgeSearchIlikeFallbackCatchesNonLexemeMatches();
     await testKnowledgeSearchHandlesStopWordOnlyQuery();
     await testKnowledgeSearchFallbackIgnoresShortWordsAndWordParts();
+    await testKnowledgeSearchFallbackIsOnePassFoldedLikeTheColumns();
     await testKnowledgeSearchMarksDirectMatchesAsNotFallback();
     await testKnowledgeSearchPublishedOnlyLeavesOtherStatesOut();
     await testDocumentSearchPassagesReturnLongPlainFragments();
