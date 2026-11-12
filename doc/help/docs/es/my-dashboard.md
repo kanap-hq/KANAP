@@ -55,7 +55,7 @@ Si cierra el cuadro de diálogo, la elección queda pendiente en **Acerca de Kad
 
 ### Sus cinco primeros pasos
 
-Una vez elegido el recorrido, el mosaico **Sus cinco primeros pasos** aparece primero en la página de inicio. Enumera los cinco pasos del recorrido y su progreso, por ejemplo **2/5**. Cada paso abre su pantalla y dice en una frase lo que hay que mirar en ella, en la esquina inferior derecha de la ventana. La explicación permanece en cada pantalla hasta que usted la cierre, y se aparta de los botones y campos que quedan debajo de ella. Una vez hecho el paso, **Siguiente paso** abre el próximo paso pendiente (**Terminar** después del último).
+Una vez elegido el recorrido, el mosaico **Sus cinco primeros pasos** aparece primero en la página de inicio. Enumera los cinco pasos del recorrido y su progreso, por ejemplo **2/5**. Cada paso abre su pantalla y dice en una frase lo que hay que mirar en ella, en la esquina inferior izquierda de la ventana. La explicación permanece en cada pantalla hasta que usted la cierre. Una vez hecho el paso, **Siguiente paso** abre el próximo paso pendiente (**Terminar** después del último).
 
 - Con el ejemplo, abrir un paso lo marca como hecho.
 - Con sus datos, un paso que crea algo queda marcado como hecho en cuanto ese elemento existe. Para los demás pasos, haga clic en **Hecho** en la explicación, o en la marca junto al paso en el mosaico. La marca también deshace un paso, salvo uno cuyo elemento existe.

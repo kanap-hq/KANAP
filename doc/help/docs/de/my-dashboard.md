@@ -55,7 +55,7 @@ Wenn Sie den Dialog schließen, wartet die Wahl unter **Über Kadratis**. Die Ze
 
 ### Ihre ersten fünf Schritte
 
-Sobald ein Pfad gewählt ist, steht die Kachel **Ihre ersten fünf Schritte** an erster Stelle der Startseite. Sie listet die fünf Schritte des Pfads und Ihren Fortschritt, zum Beispiel **2/5**. Jeder Schritt öffnet seinen Bildschirm und sagt in einem Satz, worauf es dort ankommt, unten rechts im Fenster. Die Erklärung bleibt auf jedem Bildschirm, bis Sie sie schließen, und weicht den Schaltflächen und Feldern aus, die unter ihr liegen. Ist der Schritt erledigt, öffnet **Nächster Schritt** den nächsten offenen Schritt (**Abschließen** nach dem letzten).
+Sobald ein Pfad gewählt ist, steht die Kachel **Ihre ersten fünf Schritte** an erster Stelle der Startseite. Sie listet die fünf Schritte des Pfads und Ihren Fortschritt, zum Beispiel **2/5**. Jeder Schritt öffnet seinen Bildschirm und sagt in einem Satz, worauf es dort ankommt, unten links im Fenster. Die Erklärung bleibt auf jedem Bildschirm, bis Sie sie schließen. Ist der Schritt erledigt, öffnet **Nächster Schritt** den nächsten offenen Schritt (**Abschließen** nach dem letzten).
 
 - Mit dem Beispiel gilt ein Schritt als erledigt, sobald Sie ihn öffnen.
 - Mit Ihren eigenen Daten gilt ein Schritt, der etwas anlegt, als erledigt, sobald es existiert. Für die anderen Schritte klicken Sie auf **Erledigt** in der Erklärung oder auf die Markierung neben dem Schritt in der Kachel. Die Markierung macht einen Schritt auch wieder rückgängig, außer wenn sein Element existiert.
