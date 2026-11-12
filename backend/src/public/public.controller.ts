@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Get, GoneException, Header, InternalServerErrorException, Logger, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Features } from '../config/features';
 import { throwNotAvailableInMode } from '../common/feature-gates';
-import { Throttle } from '@nestjs/throttler';
+import { InjectThrottlerStorage, Throttle, ThrottlerStorage } from '@nestjs/throttler';
 import { IsEmail, IsISO31661Alpha2, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,7 +14,7 @@ import { DataSource } from 'typeorm';
 import { TrialSignup } from './trial-signup.entity';
 import { EmailService } from '../email/email.service';
 import { AuthService } from '../auth/auth.service';
-import { RateLimitGuard } from '../common/rate-limit.guard';
+import { consumeRateLimit, RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { clientAddress } from '../common/client-address';
 import { enrollTrialMails } from '../email/trial-mails/trial-mails.service';
@@ -243,6 +243,10 @@ type SupportInvoiceRequest = {
 @Controller('public')
 export class PublicController {
   private readonly logger = new Logger(PublicController.name);
+
+  /** The counts of the rate limits (ThrottlerModule's storage), for the budgets of the support invoice. */
+  @InjectThrottlerStorage()
+  private readonly rateLimitStorage!: ThrottlerStorage;
 
   constructor(
     private readonly tenants: TenantsService,
@@ -484,6 +488,9 @@ export class PublicController {
       remoteIp: clientAddress(req),
       action: 'support-invoice',
     });
+    // Counted once the request is valid and the CAPTCHA passed: refused requests take nothing.
+    await consumeRateLimit(this.rateLimitStorage, 'support-invoice-billing-email', RATE_LIMITS.publicSupportInvoiceBillingEmail, request.email);
+    await consumeRateLimit(this.rateLimitStorage, 'support-invoice-platform', RATE_LIMITS.publicSupportInvoicePlatform, 'all');
 
     const stripe = this.stripeClient.getClient();
     if (!stripe) throw new InternalServerErrorException('Stripe is not configured');

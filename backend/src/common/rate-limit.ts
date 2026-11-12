@@ -61,6 +61,17 @@ export const RATE_LIMITS = {
   publicContact: { limit: 5, ttl: 10 * 60_000 },
   publicRequestSupportInvoice: { limit: 3, ttl: 10 * 60_000 },
   /**
+   * Support invoice requests per billing address, whatever the client address, over a day. Counted
+   * once the request has passed its checks and the CAPTCHA, before anything is created
+   * (`consumeRateLimit`): a buyer retrying a few times stays under it.
+   */
+  publicSupportInvoiceBillingEmail: { limit: 3, ttl: 24 * 60 * 60_000 },
+  /**
+   * Support invoice requests of the whole platform over a day, counted like the one above. Real
+   * requests come a few times a month.
+   */
+  publicSupportInvoicePlatform: { limit: 20, ttl: 24 * 60 * 60_000 },
+  /**
    * The workspace logo (`GET /public/branding/logo`, light and dark together), per client address.
    * The sign-in page shows it and each browser keeps it 300 seconds, so 600 a minute serves several
    * hundred people of one organisation opening the app behind one outbound address in the same minute.
