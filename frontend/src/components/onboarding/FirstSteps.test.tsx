@@ -430,6 +430,24 @@ describe('StepHint', () => {
     expect(screen.getByRole('dialog', { name: 'Your first request' })).toBeInTheDocument();
   });
 
+  it('says « étape » in French, the title of the first steps aside', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
+    env.server.db.done.set('budget/own_data/own_company', '2026-11-02T09:20:00.000Z');
+    await i18n.changeLanguage('fr');
+    try {
+      renderAt('/master-data/companies?step=own_company', <>{page}<FirstStepsTile /></>);
+      const hint = await screen.findByRole('dialog', { name: 'Votre société' });
+      expect(within(hint).getByRole('button', { name: 'Étape suivante' })).toBeInTheDocument();
+      expect(await screen.findByText('Vos cinq premiers pas')).toBeInTheDocument();
+      const firstSteps = i18n.getResource('fr', 'common', 'onboarding.firstSteps') as Record<string, unknown>;
+      const { title: _title, hide: _hide, showAgain: _showAgain, ...rest } = firstSteps;
+      // Outside the name of the first steps, « pas » is only ever a negation.
+      expect(JSON.stringify(rest)).not.toMatch(/\b(le|un|du|ce|des|cinq|chaque) pas\b/i);
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+
   it('turns to the next step once the object of its step exists', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {

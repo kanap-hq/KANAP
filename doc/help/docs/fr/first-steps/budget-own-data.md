@@ -1,6 +1,6 @@
 ---
 title: "Votre budget IT dans Kadratis en dix minutes : commencer avec vos données"
-description: Les cinq pas du parcours budget IT sur vos propres données, de votre société à votre premier rapport, puis un collègue.
+description: Les cinq étapes du parcours budget IT sur vos propres données, de votre société à votre premier rapport, puis un collègue.
 ---
 
 # Votre budget IT dans Kadratis en dix minutes
@@ -9,7 +9,7 @@ description: Les cinq pas du parcours budget IT sur vos propres données, de vot
 
 En dix minutes, votre société, vos lignes budgétaires et un contrat sont dans Kadratis, votre premier rapport tourne sur vos chiffres, et un collègue peut les lire. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
 
-Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Le budget IT** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Un pas qui crée quelque chose est marqué comme fait dès que cet élément existe dans l'espace. Pour **Votre société** et **Votre premier rapport**, cliquez sur **Fait** dans l'indication, ou sur la marque à côté du pas. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
+Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Le budget IT** avec **Commencer avec mes données**. Chaque étape de la tuile ouvre son écran avec une courte indication. Une étape qui crée quelque chose est marquée comme faite dès que cet élément existe dans l'espace. Pour **Votre société** et **Votre premier rapport**, cliquez sur **Fait** dans l'indication, ou sur la marque à côté de l'étape. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. Votre société
 
@@ -61,6 +61,6 @@ Votre budget IT est dans Kadratis. Les deux autres parcours prennent aussi dix m
 - [Votre système d'information dans Kadratis en dix minutes](landscape-own-data.md)
 - [Votre portefeuille dans Kadratis en dix minutes](portfolio-own-data.md)
 
-Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
+Une fois les cinq étapes faites, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
 
 Pour aller plus loin : [Sociétés](../companies.md), [Lignes budgétaires](../budget-lines.md), [Contrats](../contracts.md), [Charger un budget depuis un tableur](../budget-file.md), [Administration](../admin.md).

@@ -1,6 +1,6 @@
 ---
 title: "Votre budget IT dans Kadratis en dix minutes : découvrir avec l'exemple"
-description: Les cinq pas du parcours budget IT sur l'exemple Fromage & Co, de la liste des lignes budgétaires à votre propre fichier.
+description: Les cinq étapes du parcours budget IT sur l'exemple Fromage & Co, de la liste des lignes budgétaires à votre propre fichier.
 ---
 
 # Votre budget IT dans Kadratis en dix minutes
@@ -9,7 +9,7 @@ description: Les cinq pas du parcours budget IT sur l'exemple Fromage & Co, de l
 
 Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail. En dix minutes sur son budget, vous lisez les lignes budgétaires, ouvrez la plus grosse, lancez un rapport, posez une question à Kad et voyez comment votre propre fichier entre dans Kadratis.
 
-Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Le budget IT** avec **Découvrir avec l'exemple complet**. Chaque pas de la tuile ouvre son écran avec une courte indication, et l'ouvrir le marque comme fait. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
+Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Le budget IT** avec **Découvrir avec l'exemple complet**. Chaque étape de la tuile ouvre son écran avec une courte indication, et l'ouvrir la marque comme faite. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. La vue d'ensemble
 
@@ -23,7 +23,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 ## 2. Une ligne budgétaire
 
-**La plus grosse ligne de l'année**, ouverte par le pas
+**La plus grosse ligne de l'année**, ouverte par l'étape
 
 ![Une ligne budgétaire](images/budget-example-2.webp)
 
@@ -49,7 +49,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Sous **Pour démarrer**, cliquez sur **Quelles sont les principales opportunités d'économies dans les OPEX IT ?** La deuxième question du parcours, **Quelles lignes n'ont pas de responsable ?**, vient ensuite.
 
-**Ce que vous lisez.** Une réponse construite sur les lignes budgétaires de l'exemple. Kad les lit avec vos droits. Vérifiez une ligne qu'il cite dans la liste du pas 1.
+**Ce que vous lisez.** Une réponse construite sur les lignes budgétaires de l'exemple. Kad les lit avec vos droits. Vérifiez une ligne qu'il cite dans la liste de l'étape 1.
 
 Pendant l'essai, Kad démarre désactivé. Un administrateur l'active en cochant la case qui tient la place du champ de message. Les autres lisent que Kad attend un administrateur. Voir [Avant l'acceptation du modèle inclus](../ai-assistant.md#included-model-acceptance).
 
@@ -72,6 +72,6 @@ Vous avez vu l'essentiel de Kadratis pour le budget IT. Les deux autres parcours
 - [Votre système d'information dans Kadratis en dix minutes](landscape-example.md)
 - [Votre portefeuille dans Kadratis en dix minutes](portfolio-example.md)
 
-Une fois les cinq pas faits, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
+Une fois les cinq étapes faites, la tuile propose ces parcours. Pendant l'essai, elle propose aussi **Planifier un appel découverte**.
 
 Pour aller plus loin : [Lignes budgétaires](../budget-lines.md), [Rapports](../reports.md), [Charger un budget depuis un tableur](../budget-file.md).
