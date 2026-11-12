@@ -314,7 +314,9 @@ function LocationEditor() {
       if (!data || next === data.hosting_type) return;
       const prevCategory = getHostingCategory(data.hosting_type);
       const nextCategory = getHostingCategory(next);
-      if (prevCategory !== nextCategory && !isCreate) {
+      // Asked only when the switch clears something: the operating company (to cloud), the provider or the region (to on-premises).
+      const clears = nextCategory === 'on_prem' ? !!(data.provider || data.region) : !!data.operating_company_id;
+      if (prevCategory !== nextCategory && !isCreate && clears) {
         setPendingHostingType(next);
         return;
       }

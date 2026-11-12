@@ -71,7 +71,7 @@ Beide Kategorien zeigen außerdem:
 - **Stadt**: Stadtname
 - **Zusätzliche Informationen**: Freitext-Notizen zum Standort
 
-**So funktioniert es**: Das Wechseln zwischen einem On-prem- und einem Cloud-Hosting-Typ löscht die Felder, die zur anderen Kategorie gehören. Der Editor bittet um Bestätigung, bevor der Wechsel durchgeführt wird.
+**So funktioniert es**: Das Wechseln zwischen einem On-prem- und einem Cloud-Hosting-Typ löscht die Felder, die zur anderen Kategorie gehören. Der Editor bittet um Bestätigung, bevor ein Wechsel einen Wert löscht.
 
 #### Unter-Standorte
 
