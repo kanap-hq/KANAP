@@ -15,6 +15,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   preview, and at the run when the participation ended in between;
 // - a visible link that becomes unseen between the preview and the run: the run is refused and the
 //   link stays;
+// - a task's applications (`update_task_fields`): the same; an application outside the
+//   participation is refused as a missing one;
+// - a new document's links (`create_document`): records outside the participation are not found;
 // - another tenant's links are never touched.
 // An application's server assignments need the member level on the infrastructure, as the screen.
 // The AI surface checks are not under test: stubbed open.
@@ -96,7 +99,7 @@ async function run() {
     };
     // The built-in role's name sets the participation scope; the budget role reads neither projects nor applications.
     const bcRole = await role('Business Contributor', { ai_chat: 'member', portfolio_projects: 'contributor', portfolio_requests: 'member', applications: 'reader', tasks: 'member' });
-    const budgetRole = await role('Budget writer', { budget: 'member' });
+    const budgetRole = await role('Budget and document writer', { budget: 'member', knowledge: 'member' });
     const bc = await user('Bc', [bcRole, budgetRole]);
     const appMember = await user('AppMember', [await role('Application writer', { ai_chat: 'member', applications: 'member' })]);
 
@@ -189,6 +192,31 @@ async function run() {
     assert.deepEqual(await lineProjects(), [p2], 'line projects: removing every visible link keeps the unseen one');
     assert.equal(await refusal(() => relation('budget_lines', 'BL-1', 'projects', { add: ['PRJ-2'] })), 'No projects found matching "PRJ-2".');
     console.log('  request applications, budget line applications and projects: unseen links kept: OK');
+
+    // A task's applications.
+    const task = await insertId(runner,
+      `INSERT INTO tasks (tenant_id, item_number, title, status, assignee_user_id, labels, owner_ids, viewer_ids) VALUES ($1, 1, 'My task', 'open', $2, '[]', '[]', '[]')`,
+      [tenantId, bc]);
+    await runner.query(`INSERT INTO task_applications (tenant_id, task_id, application_id) VALUES ($1, $2, $3), ($1, $2, $4)`, [tenantId, task, a1, a2]);
+    const taskApps = () => ids(`SELECT application_id AS id FROM task_applications WHERE tenant_id = $1 AND task_id = $2`, task);
+    const taskFields = (applications: string[]) =>
+      h.previews.createPreview(ctx(bc), 'update_task_fields', { ref: 'T-1', fields: { applications } });
+    const taskSet = await taskFields(['APP-3']);
+    assert.ok(!shown(taskSet).includes('Unseen'), 'task: the preview does not name the unseen application');
+    assert.equal((await approve(taskSet)).status, 'executed');
+    assert.deepEqual(await taskApps(), sorted([a2, a3]), 'task: the unseen link stays');
+    assert.match(await refusal(() => taskFields(['APP-3', 'Unseen'])), /Unseen/, 'task: an application outside the participation');
+    assert.match(await refusal(() => taskFields(['APP-3', 'APP-2'])), /APP-2/, 'task: an application outside the participation, by reference');
+    assert.deepEqual(await taskApps(), sorted([a2, a3]), 'task: nothing written');
+    console.log('  task applications: unseen link kept, unseen application refused: OK');
+
+    // A new document's links.
+    await runner.query(`INSERT INTO document_libraries (tenant_id, name, slug, is_system, display_order) VALUES ($1, 'Notes', 'notes', false, 0)`, [tenantId]);
+    assert.match(await refusal(() => h.previews.createPreview(ctx(bc), 'create_document', { title: 'Notes', projects: ['PRJ-2'] })), /PRJ-2/);
+    assert.match(await refusal(() => h.previews.createPreview(ctx(bc), 'create_document', { title: 'Notes', applications: ['Unseen'] })), /Unseen/);
+    const documentPreview = await h.previews.createPreview(ctx(bc), 'create_document', { title: 'Notes', projects: ['PRJ-1'] });
+    assert.ok(shown(documentPreview).includes('Mine'), 'document: a project of the participation is linked');
+    console.log('  document creation: records outside the participation are not found: OK');
 
     // Server assignments: the member level on the infrastructure, as the Deployments tab.
     assert.match(

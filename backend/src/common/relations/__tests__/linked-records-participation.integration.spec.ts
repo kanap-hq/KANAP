@@ -18,7 +18,11 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   missing one;
 // - a document: unlinking a record outside the participation is 403 OUTSIDE_PARTICIPATION, a save
 //   whose body carries links follows the rule of the link routes (participation, module read), and
-//   keeps the links the person does not see.
+//   keeps the links the person does not see; a new document links only records they read, and the
+//   empty families of a creation form need no read;
+// - an incident's and a task's applications: the unseen links stay, an unseen application is refused;
+// - every answer names and counts only the records the person reads, and an id in upper case names
+//   the same record.
 // Without a read of projects the answer is 403 LINKED_MODULE_NOT_READABLE.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -52,6 +56,8 @@ async function run() {
   const { PortfolioRequestsController } = require('../../../portfolio/portfolio-requests.controller');
   const { KnowledgeService } = require('../../../knowledge/knowledge.service');
   const { KnowledgeRelationsService } = require('../../../knowledge/knowledge-relations.service');
+  const { IncidentsController } = require('../../../incidents/incidents.controller');
+  const { TasksController } = require('../../../spend/tasks.controller');
   const projects = app.get(PortfolioProjectsController);
   const requests = app.get(PortfolioRequestsController);
   const knowledge = app.get(KnowledgeService);
@@ -90,7 +96,10 @@ async function run() {
       [tenantId, application, mine, theirs]);
     const asset = await insertId(runner, `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, 'Server', 'server', 'prod')`, [tenantId]);
 
-    const permissions = { portfolio_projects: 'contributor', portfolio_requests: 'member', applications: 'member', infrastructure: 'member', budget: 'member', knowledge: 'admin' };
+    const permissions = {
+      portfolio_projects: 'contributor', portfolio_requests: 'member', applications: 'member', infrastructure: 'member', budget: 'member',
+      knowledge: 'admin', incidents: 'contributor', tasks: 'member',
+    };
     const ctx = { tenantId, userId, isAdmin: false, permissions, manager: runner.manager, queryRunner: runner };
     const req = { ...ctx, user: { sub: userId }, tenant: { id: tenantId } };
     const links = async () => (await runner.query(
@@ -139,20 +148,27 @@ async function run() {
 
     // An asset's projects: the unseen link stays.
     await runner.query(`INSERT INTO asset_projects (tenant_id, asset_id, project_id) VALUES ($1, $2, $3), ($1, $2, $4)`, [tenantId, asset, mine, theirs]);
-    await assets.bulkReplaceProjects(asset, { project_ids: [mine2] }, bcReq);
+    const assetAnswer = await assets.bulkReplaceProjects(asset, { project_ids: [mine2] }, bcReq);
     assert.deepEqual(await ids(`SELECT project_id AS id FROM asset_projects WHERE tenant_id = $1 AND asset_id = $2`, asset), sorted([mine2, theirs]), 'asset projects: unseen link kept');
+    assert.deepEqual(assetAnswer.items.map((item: { id: string }) => item.id), [mine2], 'asset: the answer names what the person reads');
 
     // A budget line's projects and applications.
     const line = await insertId(runner,
       `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number) VALUES ($1, 'Licences', 'EUR', '2026-01-01', 1)`, [tenantId]);
     await runner.query(`INSERT INTO portfolio_project_opex (tenant_id, project_id, opex_id) VALUES ($1, $2, $4), ($1, $3, $4)`, [tenantId, mine, theirs, line]);
     await runner.query(`INSERT INTO application_spend_items (tenant_id, application_id, spend_item_id) VALUES ($1, $2, $4), ($1, $3, $4)`, [tenantId, seenApp, unseenApp, line]);
-    await lines.bulkReplaceProjects(line, { project_ids: [] }, bcCtx);
-    assert.deepEqual(await ids(`SELECT project_id AS id FROM portfolio_project_opex WHERE tenant_id = $1 AND opex_id = $2`, line), [theirs], 'line projects: unseen link kept');
+    const lineProjects = () => ids(`SELECT project_id AS id FROM portfolio_project_opex WHERE tenant_id = $1 AND opex_id = $2`, line);
+    const lineProjectsAnswer = await lines.bulkReplaceProjects(line, { project_ids: [] }, bcCtx);
+    assert.deepEqual(await lineProjects(), [theirs], 'line projects: unseen link kept');
+    assert.deepEqual(lineProjectsAnswer.items, [], 'line projects: the answer names no unseen project');
+    // An id in upper case names the same project.
+    await lines.bulkReplaceProjects(line, { project_ids: [mine.toUpperCase()] }, bcCtx);
+    assert.deepEqual(await lineProjects(), sorted([mine, theirs]), 'line projects: upper-case id accepted');
     const lineApps = () => ids(`SELECT application_id AS id FROM application_spend_items WHERE tenant_id = $1 AND spend_item_id = $2`, line);
     assert.equal(await codeOf(() => lines.bulkReplaceApplications(line, { application_ids: [seenApp, unseenApp] }, bcCtx)), 'OUTSIDE_PARTICIPATION', 'line applications');
-    await lines.bulkReplaceApplications(line, { application_ids: [seenApp2] }, bcCtx);
+    const lineAppsAnswer = await lines.bulkReplaceApplications(line, { application_ids: [seenApp2] }, bcCtx);
     assert.deepEqual(await lineApps(), sorted([seenApp2, unseenApp]), 'line applications: unseen link kept');
+    assert.deepEqual(lineAppsAnswer.items.map((item: { id: string }) => item.id), [seenApp2], 'line applications: the answer names what the person reads');
 
     // A project's and a request's applications: 400 for an unseen one, as a missing one; the unseen link stays.
     await runner.query(`INSERT INTO application_projects (tenant_id, application_id, project_id) VALUES ($1, $2, $4), ($1, $3, $4)`, [tenantId, seenApp, unseenApp, mine2]);
@@ -169,8 +185,14 @@ async function run() {
     await runner.query(`INSERT INTO portfolio_request_applications (tenant_id, request_id, application_id) VALUES ($1, $2, $3), ($1, $2, $4)`, [tenantId, request, seenApp, unseenApp]);
     const requestApps = () => ids(`SELECT application_id AS id FROM portfolio_request_applications WHERE tenant_id = $1 AND request_id = $2`, request);
     await badRequest(() => requests.bulkReplaceApplications(request, { application_ids: [unseenApp] }, bcReq));
+    const requestAnswer = await requests.bulkReplaceApplications(request, { application_ids: [seenApp2] }, bcReq);
+    assert.deepEqual(await requestApps(), sorted([seenApp2, unseenApp]), 'request applications: unseen link kept');
+    assert.equal(requestAnswer.count, 1, 'request: the answer counts the links the person reads');
+    const activity = await runner.query(
+      `SELECT changed_fields::text AS fields FROM portfolio_activities WHERE tenant_id = $1 AND request_id = $2`, [tenantId, request]);
+    assert.ok(activity.length > 0 && activity.every((row: { fields: string }) => !row.fields.includes('Billing')), 'request activity: no unseen name');
     await requests.bulkReplaceApplications(request, { application_ids: [] }, bcReq);
-    assert.deepEqual(await requestApps(), [unseenApp], 'request applications: unseen link kept');
+    assert.deepEqual(await requestApps(), [unseenApp], 'request applications: emptied, unseen link kept');
     console.log('  asset, budget line, project and request links: unseen links kept, unseen records refused: OK');
 
     // A document linked to an application of the participation and to one outside it.
@@ -178,7 +200,7 @@ async function run() {
       `INSERT INTO document_libraries (tenant_id, name, slug, is_system, display_order) VALUES ($1, 'Links', 'links', false, 0)`, [tenantId]);
     const documentId = await insertId(runner,
       `INSERT INTO documents (tenant_id, item_number, title, content_markdown, content_plain, library_id, status, revision, current_version_number, created_by, updated_by)
-       VALUES ($1, 1, 'Runbook', '', '', $2, 'draft', 1, 0, $3, $3)`, [tenantId, library, bcId]);
+       VALUES ($1, 900, 'Runbook', '', '', $2, 'draft', 1, 0, $3, $3)`, [tenantId, library, bcId]);
     await runner.query(`INSERT INTO document_contributors (document_id, user_id, role, is_primary) VALUES ($1, $2, 'owner', true)`, [documentId, bcId]);
     await runner.query(`INSERT INTO document_applications (tenant_id, document_id, application_id) VALUES ($1, $2, $3), ($1, $2, $4)`, [tenantId, documentId, seenApp, unseenApp]);
     const documentApps = () => ids(`SELECT application_id AS id FROM document_applications WHERE tenant_id = $1 AND document_id = $2`, documentId);
@@ -196,9 +218,46 @@ async function run() {
     assert.equal(await codeOf(() => save({ applications: [seenApp, notLinked] })), 'OUTSIDE_PARTICIPATION', 'document save: an unseen record added');
     assert.equal(await codeOf(() => save({ incidents: [] })), 'LINKED_MODULE_NOT_READABLE', 'document save: a family the person does not read');
     assert.deepEqual(await documentApps(), [unseenApp], 'document save: nothing written');
-    await save({ applications: [seenApp2] });
-    assert.deepEqual(await documentApps(), sorted([seenApp2, unseenApp]), 'document save: unseen link kept');
-    console.log('  document links: unlink and save follow the participation: OK');
+    await save({ applications: [seenApp2.toUpperCase()] });
+    assert.deepEqual(await documentApps(), sorted([seenApp2, unseenApp]), 'document save: unseen link kept, upper-case id accepted');
+    // A new document: links to records the person reads only; the empty families need no read.
+    const create = (relations: Record<string, string[]>) =>
+      knowledge.create({ title: 'New page', library_id: library, relations }, tenantId, bcId, { manager: runner.manager });
+    assert.equal(await codeOf(() => create({ projects: [theirs] })), 'OUTSIDE_PARTICIPATION', 'document create: an unseen project');
+    assert.equal(await codeOf(() => create({ incidents: [randomUUID()] })), 'LINKED_MODULE_NOT_READABLE', 'document create: a family the person does not read');
+    const created = await create({ projects: [mine], incidents: [], tasks: [] });
+    assert.deepEqual(await ids(`SELECT project_id AS id FROM document_projects WHERE tenant_id = $1 AND document_id = $2`, created.id), [mine], 'document create from a project the person reads');
+    console.log('  document links: unlink, save and creation follow the participation: OK');
+
+    // An incident's and a task's applications, once the person writes both modules.
+    for (const [resource, level] of [['incidents', 'contributor'], ['tasks', 'member']]) {
+      await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, $4)`, [tenantId, otherWriter, resource, level]);
+    }
+    const incident = await insertId(runner,
+      `INSERT INTO incidents (tenant_id, item_number, title, severity, status, detected_at, reporter_user_id, owner_user_id, confidential, created_at, updated_at)
+       VALUES ($1, 1, 'Outage', 'major', 'open', now(), $2, $2, false, now(), now())`, [tenantId, bcId]);
+    await runner.query(`INSERT INTO incident_applications (tenant_id, incident_id, application_id) VALUES ($1, $2, $3), ($1, $2, $4)`, [tenantId, incident, seenApp, unseenApp]);
+    const incidentApps = () => ids(`SELECT application_id AS id FROM incident_applications WHERE tenant_id = $1 AND incident_id = $2`, incident);
+    const incidents = app.get(IncidentsController);
+    await badRequest(() => incidents.bulkReplaceApplications(incident, { application_ids: [seenApp, notLinked] }, bcCtx));
+    const incidentAnswer = await incidents.bulkReplaceApplications(incident, { application_ids: [seenApp2.toUpperCase()] }, bcCtx);
+    assert.deepEqual(await incidentApps(), sorted([seenApp2, unseenApp]), 'incident applications: unseen link kept');
+    assert.deepEqual((incidentAnswer as Array<{ id: string }>).map((row) => row.id), [seenApp2], 'incident: the answer names what the person reads');
+
+    // A task's applications (the API: the task page has no applications field).
+    const task = await insertId(runner,
+      `INSERT INTO tasks (tenant_id, item_number, title, status, assignee_user_id, labels, owner_ids, viewer_ids) VALUES ($1, 1, 'My task', 'open', $2, '[]', '[]', '[]')`,
+      [tenantId, bcId]);
+    await runner.query(`INSERT INTO task_applications (tenant_id, task_id, application_id) VALUES ($1, $2, $3), ($1, $2, $4)`, [tenantId, task, seenApp, unseenApp]);
+    const taskApps = () => ids(`SELECT application_id AS id FROM task_applications WHERE tenant_id = $1 AND task_id = $2`, task);
+    const tasks = app.get(TasksController);
+    await badRequest(() => tasks.updateTask(task, { application_ids: [seenApp, notLinked] }, bcReq));
+    assert.deepEqual(await taskApps(), sorted([seenApp, unseenApp]), 'task: nothing written');
+    await tasks.updateTask(task, { application_ids: [seenApp2.toUpperCase()] }, bcReq);
+    assert.deepEqual(await taskApps(), sorted([seenApp2, unseenApp]), 'task applications: unseen link kept');
+    const taskActivity = await runner.query(`SELECT changed_fields::text AS fields FROM portfolio_activities WHERE tenant_id = $1 AND task_id = $2`, [tenantId, task]);
+    assert.ok(taskActivity.length > 0 && taskActivity.every((row: { fields: string }) => !row.fields.includes('Billing')), 'task activity: no unseen name');
+    console.log('  incident and task applications: unseen links kept, unseen records refused: OK');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
