@@ -1874,6 +1874,11 @@
       "leaveDelete": "Löschen",
       "leaveAnyway": "Trotzdem verlassen",
       "completeFailed": "Die Zeile konnte nicht geprüft werden."
+    },
+    "bulkEdit": {
+      "chartOf": "Kontenplan von",
+      "dimension": "Dimension",
+      "dimensionValue": "Dimensionswert"
     }
   }
 }

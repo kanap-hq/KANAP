@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Features } from '../config/features';
 import { cveListEnabled } from './cve-list-feed.service';
 import { NvdFeedService } from './nvd-feed.service';
@@ -6,6 +6,7 @@ import type { EntityManager } from 'typeorm';
 import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
+import { BULK_MAX_ROWS, bulkListChanged, bulkTooMany, parseBulkConfirmation, parseBulkSelection } from '../common/bulk-edit/bulk-edit';
 import { languageOf } from '../common/csv-sheet';
 import type { CsvLanguage } from '../common/csv-sheet/types';
 import { typedTextRows, writeListExport, type ListExportFile } from '../common/csv/list-export';
@@ -83,8 +84,8 @@ export type VulnerabilityFilters = {
   source?: unknown;
 };
 
-/** At most this many rows (technology version and CVE) in one change of state in bulk. */
-export const BULK_MAX_ROWS = 5000;
+/** At most this many rows (technology version and CVE) in one change of state in bulk (`common/bulk-edit`). */
+export { BULK_MAX_ROWS };
 /** Rows written by one statement of a bulk change. */
 const BULK_BATCH = 500;
 
@@ -1612,21 +1613,8 @@ export class VulnerabilitiesService {
       if (text.length > 4000) throw new BadRequestException('note must be at most 4000 characters.');
       note = text || null;
     }
-    const all = body.all === true;
-    const rowIds = (name: 'ids' | 'exclude_ids'): string[] => {
-      const raw = body[name];
-      if (raw === undefined || raw === null) return [];
-      if (!Array.isArray(raw)) throw new BadRequestException(`${name} must be a list of row ids.`);
-      const ids = Array.from(new Set(raw.map((v) => String(v ?? '').trim().toLowerCase())));
-      if (ids.some((id) => !UUID_RE.test(id))) throw new BadRequestException(`${name} must be row ids.`);
-      if (ids.length > BULK_MAX_ROWS) throw new BadRequestException({ code: 'bulk_too_many', message: `At most ${BULK_MAX_ROWS} rows at once: narrow the filters.` });
-      return ids;
-    };
-    const ids = rowIds('ids');
-    const excluded = rowIds('exclude_ids');
-    if (all && ids.length > 0) throw new BadRequestException('Send the chosen rows (ids) or every row of the filter (all: true), not both.');
-    if (!all && excluded.length > 0) throw new BadRequestException('exclude_ids goes with all: true.');
-    if (!all && ids.length === 0) throw new BadRequestException('Choose the rows (ids), or every row of the filter (all: true).');
+    // The contract shared with the other lists (`common/bulk-edit`).
+    const { all, ids, excluded } = parseBulkSelection(body);
     const filters = (body.filters && typeof body.filters === 'object' ? body.filters : {}) as VulnerabilityFilters;
 
     const params: unknown[] = [tenantId];
@@ -1641,22 +1629,10 @@ export class VulnerabilitiesService {
       params.push(ids);
       where = ` AND tv.id = ANY($${params.length}::uuid[])`;
     }
-    // Every one of the filter: only what the user confirmed, so the count's instant is required.
-    if (all && body.dry_run !== true && (body.as_of === undefined || body.as_of === null)) {
-      throw new BadRequestException('as_of is required with all: send the instant the dry run returned.');
-    }
-    // The rows the user confirmed (the dry run's `rows`): required with all, checked under the lock.
-    let expectedRows: number | null = null;
-    if (body.expected_rows !== undefined && body.expected_rows !== null) {
-      expectedRows = Number(body.expected_rows);
-      if (!Number.isSafeInteger(expectedRows) || expectedRows < 0) throw new BadRequestException('expected_rows must be the rows the dry run counted.');
-    } else if (all && body.dry_run !== true) {
-      throw new BadRequestException('expected_rows is required with all: send the rows the dry run counted.');
-    }
-    if (body.as_of !== undefined && body.as_of !== null) {
-      const asOf = new Date(String(body.as_of));
-      if (Number.isNaN(asOf.getTime())) throw new BadRequestException('as_of must be the instant a dry run returned.');
-      params.push(asOf.toISOString());
+    // `as_of` (required with all) and `expected_rows`, the rows the user confirmed, checked under the lock.
+    const { asOf, expectedRows } = parseBulkConfirmation(body, all);
+    if (asOf !== null) {
+      params.push(asOf);
       where += ` AND tv.detected_at <= $${params.length}::timestamptz`;
     }
     const scopeParams = [...params];
@@ -1669,10 +1645,8 @@ export class VulnerabilitiesService {
       params,
     );
     const rows = Number(count?.rows ?? 0);
-    if (rows > BULK_MAX_ROWS) {
-      // A code: the page says the cap in its own words, and any other refusal by its message.
-      throw new BadRequestException({ code: 'bulk_too_many', message: `These filters reach ${rows} rows, more than ${BULK_MAX_ROWS} at once: narrow them.` });
-    }
+    // A code: the page says the cap in its own words, and any other refusal by its message.
+    if (rows > BULK_MAX_ROWS) throw bulkTooMany(rows);
     const summary = { rows, cves: Number(count?.cves ?? 0) };
     if (body.dry_run === true) {
       const [{ as_of: asOf }] = await mg.query(`SELECT clock_timestamp() AS as_of`);
@@ -1689,7 +1663,7 @@ export class VulnerabilitiesService {
     // More rows than confirmed: one the count did not see (a matching that began before the count and
     // committed after it has a detection instant before `as_of`). Nothing is written; the user counts again.
     if (expectedRows !== null && before.length > expectedRows) {
-      throw new ConflictException({ code: 'bulk_list_changed', message: 'The list changed since the count: count again.' });
+      throw bulkListChanged();
     }
     const toChange = before.filter((row) => row.state !== state || (noteChanges && row.note !== note));
     let changed = 0;

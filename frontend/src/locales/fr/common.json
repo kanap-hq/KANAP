@@ -1769,5 +1769,47 @@
   },
   "discoveryCall": {
     "book": "Planifier un appel découverte"
+  },
+  "bulkEdit": {
+    "title": "Modifier la sélection",
+    "selectAll": "Sélectionner toutes les lignes du filtre",
+    "selectRow": "Sélectionner {{name}}",
+    "field": "Champ",
+    "value": "Nouvelle valeur",
+    "empty": "Vider le champ",
+    "emptied": "Vide",
+    "chooseValue": "Choisir une valeur",
+    "counting": "Comptage des lignes…",
+    "willChange_one": "{{count}} ligne changera",
+    "willChange_other": "{{count}} lignes changeront",
+    "unchanged_one": "{{count}} a déjà cette valeur",
+    "unchanged_other": "{{count}} ont déjà cette valeur",
+    "refused_one": "{{count}} refusée :",
+    "refused_other": "{{count}} refusées :",
+    "refusal": "{{reason}} : {{count}}",
+    "refusals": {
+      "not_found": "Introuvable",
+      "read_only": "En lecture seule pour vous",
+      "placement": "Société ou centre de coûts hors de votre accès",
+      "leaves_access": "Sortirait de votre accès",
+      "account_chart": "Compte hors du plan comptable de la société",
+      "account_nature": "Compte non prévu pour ce type de ligne",
+      "dimension_required": "Dimension obligatoire",
+      "dimension_not_applicable": "Dimension non prévue pour ce type de ligne",
+      "value_not_applicable": "Valeur non prévue pour ce type de ligne",
+      "other": "Autre raison"
+    },
+    "tooMany": "Plus de 5 000 lignes : resserrez les filtres ou sélectionnez moins de lignes.",
+    "countFailed": "Les lignes n'ont pas pu être comptées. Réessayez.",
+    "listChanged": "La liste a changé depuis le comptage. Vérifiez le nouveau comptage, puis confirmez à nouveau.",
+    "failed": "La modification n'a pas pu être enregistrée. Réessayez.",
+    "noAnswer": "Le serveur n'a pas répondu. Rechargez la liste pour voir si les lignes ont changé.",
+    "save_one": "Modifier {{count}} ligne",
+    "save_other": "Modifier {{count}} lignes",
+    "saveIdle": "Modifier",
+    "saving": "Enregistrement de la modification…",
+    "doneChanged_one": "{{count}} ligne modifiée",
+    "doneChanged_other": "{{count}} lignes modifiées",
+    "applied": "{{field}} : {{value}}"
   }
 }
