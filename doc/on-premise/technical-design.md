@@ -493,7 +493,7 @@ Shared by every tenant-supplied outbound URL: Netbox, PRTG and GLPI. Not a `Feat
 |------|------|----------|
 | `common/ssrf-guard.ts` | `shouldEnforce()` (`assertPublicHttpUrl`, `assertPublicHttpTarget`) | Multi-tenant: private / loopback / link-local / CGNAT / metadata ranges are refused. Single-tenant: no-op, since RFC1918 and internal-DNS targets are the normal case on-prem. Callers can force either way with `enforcePrivateBlock`. |
 | `common/ssrf-guard.ts` | `SSRF_ALLOWED_HOSTS` | Operator escape hatch, comma-separated hosts/IPs allowed even when private. Empty by default, so cloud behavior is unchanged. Read per call. |
-| `common/outbound-redirects.ts` | `sameOriginRedirectFetch()` (GLPI, PRTG, model providers) | A redirect to another origin (scheme, host, port) is never followed, in either mode, so no token or key leaves for another address; the call fails and names the redirect. Single-tenant: a redirect on the same origin is followed (at most 5). Multi-tenant: no redirect is followed. Netbox follows none in either mode. |
+| `common/outbound-redirects.ts` | `sameOriginRedirectFetch()` (GLPI, PRTG, model providers, Brave web search, NVD feed) | A redirect to another origin (scheme, host, port) is never followed, in either mode, so no token or key leaves for another address; the call fails and names the redirect. Single-tenant: a redirect on the same origin is followed (at most 5). Multi-tenant: no redirect is followed. Netbox follows none in either mode, and the Turnstile verification (secret in the body) follows none either (`redirect: 'manual'`). |
 
 #### Netbox inventory (`backend/src/netbox/`)
 

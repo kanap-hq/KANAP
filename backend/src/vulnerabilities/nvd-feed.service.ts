@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { isRedirectStatus, sameOriginRedirectFetch } from '../common/outbound-redirects';
 import { NeverRejects } from '../common/never-rejects';
 import { TechnologyCpeEvents, type CpeProductsAdded } from '../technologies/technology-cpe-events';
 import { DataSource, EntityManager } from 'typeorm';
@@ -180,8 +181,8 @@ export function defaultRuntime(): FeedRuntime {
 }
 
 class HttpError extends Error {
-  constructor(readonly status: number) {
-    super(`NVD answered HTTP ${status}`);
+  constructor(readonly status: number, message = `NVD answered HTTP ${status}`) {
+    super(message);
   }
 }
 
@@ -893,16 +894,25 @@ export class NvdFeedService implements OnModuleInit {
   private async request(url: URL, runtime: FeedRuntime, summary: FeedSummary): Promise<any> {
     let lastError: unknown = null;
     const attempts = runtime.attempts ?? ATTEMPTS;
+    // The key travels in a header that a followed redirect would carry to another origin.
+    const fetchOnce = sameOriginRedirectFetch(runtime.fetch);
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       const wait = this.lastRequestAt + runtime.spacingMs - runtime.now();
       if (wait > 0) await runtime.sleep(wait);
       this.lastRequestAt = runtime.now();
       summary.requests += 1;
       try {
-        const response = await runtime.fetch(url.toString(), {
+        const response = await fetchOnce(url.toString(), {
           headers: { Accept: 'application/json', ...(runtime.apiKey ? { apiKey: runtime.apiKey } : {}) },
           signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
+        if (isRedirectStatus(response.status)) {
+          throw new HttpError(
+            response.status,
+            `NVD answered with a redirect (HTTP ${response.status}), which is not followed. `
+              + 'Set NVD_API_BASE_URL to the address the NVD API is actually served on.',
+          );
+        }
         if (!response.ok) throw new HttpError(response.status);
         return await response.json();
       } catch (error) {

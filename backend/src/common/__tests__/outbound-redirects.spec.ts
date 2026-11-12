@@ -7,9 +7,13 @@ import { PrtgService } from '../../ai/prtg/prtg.service';
 import { AnthropicAiProviderAdapter } from '../../ai/providers/anthropic-ai-provider.adapter';
 import { openaiCompatibleStream } from '../../ai/providers/openai-stream.util';
 import { NetboxClient } from '../../netbox/netbox.client';
+import { BraveSearchService } from '../../ai/web-search/brave-search.service';
+import { TurnstileService } from '../../public/turnstile.service';
+import { NvdFeedService } from '../../vulnerabilities/nvd-feed.service';
 import { MAX_SAME_ORIGIN_REDIRECTS, sameOriginRedirectFetch, sameOriginRedirectTarget } from '../outbound-redirects';
 
-// Outbound calls that carry a secret (GLPI, PRTG, Netbox, model providers) against two
+// Outbound calls that carry a secret (GLPI, PRTG, Netbox, model providers, web search,
+// NVD, Turnstile) against two
 // local servers on two ports, so two origins. The first one redirects either to the
 // second (another origin) or to itself (same origin). In both modes no request, and so
 // no secret, reaches the other origin, and the call fails with a sentence that names the
@@ -50,6 +54,7 @@ function answer(path: string, res: http.ServerResponse) {
     res.end(OPENAI_SSE_OK);
     return;
   }
+  if (path.includes('/rest/json/cves/2.0')) return json(200, { totalResults: 0, vulnerabilities: [] });
   if (path.includes('/v1/messages')) {
     return json(400, { type: 'error', error: { type: 'invalid_request_error', message: 'target reached' } });
   }
@@ -271,6 +276,91 @@ async function testAnthropic(home: string) {
   }
 }
 
+/** Sends the calls of a client with a fixed host to `base` instead, path kept. */
+async function withFixedHostAt<T>(host: string, base: string, fn: () => Promise<T>): Promise<T> {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = ((input: any, init?: RequestInit) =>
+    realFetch(String(input).replace(host, base), init)) as typeof fetch;
+  try {
+    return await fn();
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+}
+
+async function testBraveSearch(home: string) {
+  const previous = process.env.BRAVE_SEARCH_API_KEY;
+  process.env.BRAVE_SEARCH_API_KEY = 'search-key';
+  try {
+    for (const singleTenant of [true, false]) {
+      setSingleTenant(singleTenant);
+      reset();
+      await assert.rejects(
+        () => withFixedHostAt('https://api.search.brave.com', `${home}/cross`, () => new BraveSearchService().search('kadratis')),
+        /returned 302/,
+      );
+      assert.equal(homeSeen[0]?.headers['x-subscription-token'], 'search-key');
+      assert.deepEqual(otherSeen, [], 'the search key never reaches another origin');
+    }
+  } finally {
+    if (previous === undefined) delete process.env.BRAVE_SEARCH_API_KEY;
+    else process.env.BRAVE_SEARCH_API_KEY = previous;
+  }
+}
+
+async function testNvd(home: string) {
+  const service = new NvdFeedService({} as any, {} as any, {} as any, {} as any);
+  const runtime = (base: string) => ({
+    baseUrl: base,
+    apiKey: 'nvd-key',
+    fetch: globalThis.fetch,
+    sleep: async () => undefined,
+    now: () => Date.now(),
+    spacingMs: 0,
+    retryDelayMs: 0,
+    attempts: 1,
+  });
+  const request = (base: string) => (service as any).request(
+    new URL(`${base}/rest/json/cves/2.0`), runtime(base), { requests: 0 },
+  );
+  for (const singleTenant of [true, false]) {
+    setSingleTenant(singleTenant);
+    reset();
+    await assert.rejects(() => request(`${home}/cross`), /redirect \(HTTP 302\), which is not followed/);
+    assert.deepEqual(otherSeen, [], 'the NVD key never reaches another origin');
+  }
+  setSingleTenant(true);
+  reset();
+  const page = await request(`${home}/same`);
+  assert.equal(page.totalResults, 0);
+  assert.equal(homeSeen.find((seen) => seen.path.startsWith('/final/'))?.headers.apikey, 'nvd-key');
+}
+
+async function testTurnstile(home: string) {
+  const saved = { mode: process.env.CAPTCHA_MODE, site: process.env.TURNSTILE_SITE_KEY, secret: process.env.TURNSTILE_SECRET_KEY };
+  process.env.CAPTCHA_MODE = 'enforce';
+  process.env.TURNSTILE_SITE_KEY = 'site-key';
+  process.env.TURNSTILE_SECRET_KEY = 'captcha-secret';
+  try {
+    for (const singleTenant of [true, false]) {
+      setSingleTenant(singleTenant);
+      reset();
+      const service = new TurnstileService();
+      await assert.rejects(
+        () => withFixedHostAt('https://challenges.cloudflare.com', `${home}/cross`, () => (service as any).verifyWithTurnstile('token')),
+        /Turnstile HTTP 302/,
+      );
+      assert.equal(homeSeen.length, 1);
+      assert.deepEqual(otherSeen, [], 'the verification never goes anywhere else');
+    }
+  } finally {
+    for (const [name, value] of [['CAPTCHA_MODE', saved.mode], ['TURNSTILE_SITE_KEY', saved.site], ['TURNSTILE_SECRET_KEY', saved.secret]] as const) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+}
+
 async function testHelperLimitsAndMethods(home: string) {
   setSingleTenant(true);
   const redirecting = sameOriginRedirectFetch(globalThis.fetch);
@@ -306,6 +396,9 @@ async function run() {
     await testNetbox(home.base);
     await testOpenAiCompatible(home.base);
     await testAnthropic(home.base);
+    await testBraveSearch(home.base);
+    await testNvd(home.base);
+    await testTurnstile(home.base);
     await testHelperLimitsAndMethods(home.base);
   } finally {
     setSingleTenant(originalSingleTenant);
