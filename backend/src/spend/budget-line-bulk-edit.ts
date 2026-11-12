@@ -15,7 +15,7 @@ import {
 import { DataAccessLimitedException, type DataAccessReason } from '../data-access/line-write-checks';
 import { loadAnalyticsAxes } from '../analytics/analytics-axes.util';
 import { BUDGET_NATURES, naturesAnd, type BudgetNature } from './budget-nature';
-import { lockBudgetLinesOfBothNatures } from './budget-locks';
+import { lockBudgetLinesOfBothNatures, lockTenantBudgetOperations } from './budget-locks';
 import { summaryTenantId } from './spend-summary.builder';
 import {
   notApplicableDimensionMessage,
@@ -31,6 +31,9 @@ import { ACCOUNT_CHART_REFUSAL, accountNatureRefusal, RUN_BUILD_VALUES } from '.
  * accounts of the paying company, the type of an account, a dimension or a value, a required
  * dimension, the cost center rules, the line's row lock, its audit row (its history) and the search
  * index its triggers maintain. The contract is the common one (`common/bulk-edit/bulk-edit.ts`).
+ * Like the other bulk budget operations, it takes the tenant's budget-operations lock first
+ * (`lockTenantBudgetOperations`), its count as its write: while a column copy, an import or another
+ * change in bulk runs, it is refused at once (409 `operation_running`).
  *
  * The fields (rules of Fried, P10): cost center, account, paying company, supplier, IT owner,
  * business owner, run or build, dimension values. No amount. The paying company and the account
@@ -102,6 +105,8 @@ export async function bulkUpdateBudgetLines(body: unknown, deps: BudgetLineBulkD
   const confirmation = parseBulkConfirmation(input, selection.all);
   const { manager } = deps;
   const tenantId = await summaryTenantId(manager);
+  // Before any line is locked (the lock order of `budget-locks.ts`): the count plays the writes too.
+  await lockTenantBudgetOperations(manager, tenantId);
   const columns = COLUMNS.filter((column) => column in changes);
   const dimensions = (changes.analytics_values ?? {}) as Record<string, string | null>;
   const axisIds = Object.keys(dimensions);

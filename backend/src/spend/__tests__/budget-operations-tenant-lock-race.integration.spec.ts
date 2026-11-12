@@ -1,8 +1,12 @@
+import { writeAuditLog } from '../../audit/audit.service';
 import { copyAllocations } from '../budget-allocation-operations';
+import { BudgetLinesService } from '../budget-lines.service';
+import { SUMMARY_SCOPES } from '../spend-summary.builder';
+import { realSummaryDeps } from './oracle/oracle-deps';
 import { clearBudgetColumn, copyBudgetColumn } from '../budget-column-operations';
 import { BUDGET_OPERATION_RUNNING } from '../budget-locks';
 import { loadBudgetFile, preflightBudgetFile } from './budget-file.fixtures';
-import { seedCompany } from './cost-center.fixtures';
+import { itemService, seedCompany } from './cost-center.fixtures';
 import { captureAudit, noFreeze, repeat, seedLine } from './round-inputs.fixtures';
 import {
   assert,
@@ -26,7 +30,9 @@ import {
 // transaction advisory lock per tenant. While one runs, another is refused at
 // once with a 409 (code `operation_running`, never the `retry` a client sends
 // again at once) that says what runs; a dry run and a budget file preflight
-// take no lock; another tenant is never held up.
+// take no lock; another tenant is never held up. A change in bulk of budget lines (lot F2 of
+// 26.11.8, `budget-line-bulk-edit.ts`) takes the same lock, its count as its write: it plays the
+// writes of the lines.
 
 const YEAR = 2026;
 
@@ -36,6 +42,18 @@ const copyColumn = (manager: any, dryRun = false) => copyBudgetColumn(
   { sourceYear: YEAR, sourceColumn: 'budget', destinationYear: YEAR, destinationColumn: 'revision', percentageIncrease: 0, overwrite: true, dryRun },
   null,
 );
+
+const summaryDeps = realSummaryDeps(SUMMARY_SCOPES.opex);
+const dbAudit = { log: (entry: any, opts?: { manager?: any }) => writeAuditLog(opts!.manager, entry) };
+
+/** "Change the selection" of the budget lines list, on one line. */
+function bulkUpdate(manager: any, lineId: string, dryRun: boolean) {
+  const svc = new BudgetLinesService(
+    summaryDeps.allocationCalculator as any, summaryDeps.fxRates as any, undefined as any, undefined as any,
+    itemService('opex', dbAudit), itemService('capex', dbAudit), undefined as any,
+  );
+  return svc.bulkUpdate({ ids: [lineId], changes: { run_build: 'build' }, dry_run: dryRun }, undefined, { manager });
+}
 
 /** A new line of the race company, the whole file of a budget file load. */
 function newLineFile(kind: 'opex' | 'capex'): string {
@@ -75,6 +93,8 @@ async function secondOperationRefused() {
       )],
       ['an OPEX budget file load', (manager) => loadBudgetFile(manager, 'opex', race.tenantId, newLineFile('opex'))],
       ['a CAPEX budget file load', (manager) => loadBudgetFile(manager, 'capex', race.tenantId, newLineFile('capex'))],
+      ['a change in bulk of budget lines', (manager) => bulkUpdate(manager, line.itemId, false)],
+      ['the count of a change in bulk', (manager) => bulkUpdate(manager, line.itemId, true)],
     ];
     for (const [who, attempt] of attempts) {
       const work = race.start(other, attempt);
@@ -96,6 +116,28 @@ async function secondOperationRefused() {
     ))), 'a clear once the copy is done');
     const [row] = await race.read(`SELECT sum(committed)::text AS revision FROM spend_amounts WHERE version_id = $1`, [line.versionId]);
     assert.equal(Number(row.revision), 0, 'the clear ran after the copy');
+  });
+}
+
+/** A change in bulk of budget lines holds the lock: a column copy is refused at once, and inversely. */
+async function bulkChangeHoldsTheLock() {
+  await withRace('tenant-lock-bulk', async (race) => {
+    const line = await race.seedWith(async (runner) => {
+      await seedCompany(runner, race.tenantId, 'Race company', 6000);
+      return seedLine(runner, 'opex', race.tenantId, YEAR, { planned: repeat('100', 12) }, 1);
+    });
+    const bulk = await race.open('change in bulk');
+    const other = await race.open('column copy');
+    const bulkHolds = race.gate(bulk, { label: 'take the tenant lock', when: 'after', match: (text) => /pg_try_advisory_xact_lock/.test(text) });
+    const bulkWork = race.start(bulk, (manager) => bulkUpdate(manager, line.itemId, false));
+    assert.equal(await progress(bulkWork, { party: bulk, gate: bulkHolds }), 'gated', 'harness: the change in bulk must pause holding the tenant lock');
+    const copyWork = race.start(other, (manager) => copyColumn(manager));
+    assert.equal(await progress(copyWork, { party: other }), 'settled', 'the copy does not wait for the change in bulk');
+    assertRefused(await settle(copyWork), 'a column copy during a change in bulk');
+    bulkHolds.release();
+    const done = await settle(bulkWork);
+    assertSucceeded(done, 'the change in bulk');
+    assert.equal((done as any).value?.changed, 1, 'the line changed');
   });
 }
 
@@ -124,4 +166,5 @@ async function otherTenantNotHeld() {
 void runRaceSpecs('Bulk budget operation tenant lock', [
   ['a second bulk budget operation of the tenant is refused at once with a 409 (3B)', secondOperationRefused],
   ['another tenant\'s bulk operation is not held up (3B)', otherTenantNotHeld],
+  ['a change in bulk of budget lines takes the same lock (F2)', bulkChangeHoldsTheLock],
 ]);

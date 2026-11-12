@@ -213,8 +213,9 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
   const countError = shown?.error as any;
   const countFailed = !!shown && shown.error !== undefined;
   const tooMany = countFailed && countError?.response?.data?.code === 'bulk_too_many';
-  // A change the route refuses as a whole (a value that names nothing, a disabled cost center): its reason.
-  const refusedChange = countFailed && !tooMany && countError?.response?.status === 400
+  // A change the route refuses as a whole (a value that names nothing, a disabled cost center), or
+  // another operation of the list running (409 `operation_running`): its reason.
+  const refusedChange = countFailed && !tooMany && [400, 409].includes(countError?.response?.status)
     ? getApiErrorMessage(countError, t, t('bulkEdit.countFailed'))
     : null;
   const result = shown && !countFailed ? shown.data ?? null : null;
@@ -255,9 +256,12 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
       onDone(res.data);
     } catch (failure: any) {
       const status = failure?.response?.status;
-      if (status === 409) {
+      if (status === 409 && failure?.response?.data?.code === 'bulk_list_changed') {
         setError(t('bulkEdit.listChanged'));
         recount();
+      } else if (status === 409) {
+        // Another operation of the list runs (`operation_running`): in the words of the other operations.
+        setError(getApiErrorMessage(failure, t, t('bulkEdit.failed')));
       } else if (failure?.response?.data?.code === 'bulk_too_many') {
         setError(t('bulkEdit.tooMany'));
       } else if (status === 400) {

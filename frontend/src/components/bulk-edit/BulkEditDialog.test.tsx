@@ -211,6 +211,24 @@ describe('BulkEditDialog', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
+  it('says another budget operation runs, at the count and at the write, in the words of the other operations', async () => {
+    const running = { response: { status: 409, data: { code: 'operation_running', message: 'Another budget operation (…) is running for this workspace.' } } };
+    post.mockRejectedValueOnce(running);
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status()).toHaveTextContent('Another budget operation is running. Try again when it has finished.'));
+    expect(save()).toBeDisabled();
+    post.mockResolvedValueOnce({ data: COUNT });
+    post.mockRejectedValueOnce(running);
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-2' }));
+    await waitFor(() => expect(save()).toBeEnabled());
+    fireEvent.click(save());
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Another budget operation is running. Try again when it has finished.'));
+    expect(screen.getByRole('alert')).not.toHaveTextContent('The list changed');
+    // Not a change of the list: nothing is counted again.
+    expect(post).toHaveBeenCalledTimes(3);
+  });
+
   it('says the cap when the selection is too large', async () => {
     post.mockRejectedValue({ response: { status: 400, data: { code: 'bulk_too_many', message: 'These filters reach 6000 rows' } } });
     renderDialog();
