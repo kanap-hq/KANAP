@@ -46,7 +46,9 @@ const PrepareImportMappingInputSchema = z.object({
   columns: z.array(ColumnMappingSchema).min(1).max(150)
     .describe('One entry per template column the file fills, in any order. A template column left out stays empty.'),
   assumptions: z.array(z.string().trim().min(1).max(300)).max(12).optional()
-    .describe('What the mapping supposes about the whole file, in the person\'s language (one row per server, the amounts are in euros).'),
+    .describe('What the mapping supposes about the whole file, in the person\'s language (one row per server, the amounts are in euros). '
+      + 'A row is named by its line of the file, as the summary numbers it (header counted). The card shows the rows and the values '
+      + 'not read: do not describe them here.'),
 });
 
 function stringOf(value: unknown): string {
@@ -70,8 +72,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     + '(dates and times, numbers, yes/no, codes, catalog names and countries by name) and returns, per column, the values read and not read; '
     + 'the card shows the user the first rows and the values it could not read. To correct the mapping, call it again with the corrected mapping. '
     + 'The server also has the import check the file it builds (its dry run): the result gives the counts (rows to create, update, '
-    + 'unchanged) and, per code and column, the number of errors and warnings with `file_lines`, the lines of the person\'s file '
-    + 'they are on as the card numbers them (header counted): name a line by that number; the card shows the person the messages. '
+    + 'unchanged) and, per code and column, the number of errors and warnings with `file_lines`, the line of the file each one is on, '
+    + 'as the card numbers it (header counted): name a line by that number. The card writes each message in the person\'s language. '
     + 'Requires explicit user approval. Approving runs the import with the user\'s rights; a card whose check found errors cannot be approved.';
   readonly inputSchema = PrepareImportMappingInputSchema;
   readonly inputSummary = {
@@ -96,8 +98,9 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'suppliers: the check counts them in `new_suppliers` and the card lists them, so say they will be created on approval. '
       + 'Without that right the check refuses them: the suppliers are created in their list first. '
       + 'A new card for the same file closes the pending one at once: it can no longer be approved, so do not warn the person about it. '
-      + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say what the errors are about '
-      + '(their columns and codes, never the cells), help the user correct the mapping or the file, and call again. '
+      + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say which columns and lines they are on, '
+      + 'a column by its title and a row by its line of the file: the card writes each message in the person\'s language, so never write a code '
+      + '(`BUDGET_FILE_...`, `CSV_...`), a template column key (`analytics:...`) or a cell. Help the user correct the mapping or the file, and call again. '
       + 'The imports of master data and technology links replace every value of a record they update: when the check refuses the file '
       + 'with AI_IMPORT_CLEARS_COLUMNS, rows of the file match existing records and the template columns it lacks would be cleared; '
       + 'offer to map those columns or to keep only the new records. '
@@ -120,7 +123,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     context: AiExecutionContextWithManager,
     input: PrepareImportMappingInput,
   ): Promise<AiPreparedMutationPreview> {
-    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId);
+    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
     const { target, mapping } = await this.mapping.prepareMapping(context, input, language);
     return {
       // The import as the target type: the reservation of the import route is checked on it again at approval.
@@ -200,7 +203,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     const mapping = (preview.current_values?.import_mapping ?? null) as AiImportMappingPreviewDto | null;
     if (!mapping?.validation?.ok) throw new Error(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE);
     const input = preview.mutation_input as unknown as PrepareImportMappingInput;
-    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId);
+    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
     const result = await this.mapping.runImport(
       { ...context, conversationId: context.conversationId ?? preview.conversation_id ?? null },
       input,
