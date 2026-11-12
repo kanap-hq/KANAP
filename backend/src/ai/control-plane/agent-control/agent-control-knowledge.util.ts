@@ -8,6 +8,7 @@ import type {
   KnowledgeSearchPlan,
 } from './ai-knowledge-search-planner.service';
 import type { TicketEvidenceExtractionResult } from './ai-ticket-evidence-extraction.service';
+import type { ReplySynthesisResult } from './ai-reply-synthesis.service';
 import type { TicketNeedRepresentationBuildResult } from './ai-ticket-need-representation.service';
 import type { KnowledgeQueryDerivation } from './ai-ticket-need-representation.types';
 // Type-only import from the service this module was extracted from: types are erased at
@@ -90,6 +91,9 @@ export const KNOWLEDGE_QUERY_STOP_WORDS = new Set([
 ]);
 export const MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY = 3;
 export const MAX_KNOWLEDGE_QUERY_CANDIDATES = 10;
+// The searches of one triage: the derived queries (MAX_DERIVED_QUERIES of the need step), one per
+// document language among them.
+export const MAX_KNOWLEDGE_SEARCH_QUERIES = 12;
 
 export const MIN_KNOWLEDGE_RELEVANCE_SCORE = 0.00001;
 export const MIN_KNOWLEDGE_LEXICAL_OVERLAP = 1;
@@ -121,7 +125,7 @@ export function cleanKnowledgeCandidate(value: string | null | undefined): strin
   return clampText(normalized, 160);
 }
 
-export function uniqueKnowledgeCandidates(values: string[]): string[] {
+export function uniqueKnowledgeCandidates(values: string[], max = MAX_KNOWLEDGE_QUERY_CANDIDATES): string[] {
   const seen = new Set<string>();
   const candidates: string[] = [];
   for (const value of values) {
@@ -132,7 +136,7 @@ export function uniqueKnowledgeCandidates(values: string[]): string[] {
     if (seen.has(key)) continue;
     seen.add(key);
     candidates.push(candidate);
-    if (candidates.length >= MAX_KNOWLEDGE_QUERY_CANDIDATES) break;
+    if (candidates.length >= max) break;
   }
   return candidates;
 }
@@ -321,7 +325,44 @@ export function knowledgeItemsFromOutput(value: unknown): KnowledgeSearchItem[] 
       updated_at: typeof item.updated_at === 'string' ? item.updated_at : null,
       score: numericScore(item),
       library_id: knowledgeLibraryId(item),
+      fallback: item.fallback === true,
     }));
+}
+
+/**
+ * The passages a `get_document` call in passages mode returns (`KnowledgeService.getDocumentSearchPassages`):
+ * at most `maxPassages`, each at most `maxChars`. Null when the output holds none.
+ */
+export function knowledgePassagesFromOutput(
+  value: unknown,
+  maxPassages: number,
+  maxChars: number,
+): { matched: boolean; passages: string[] } | null {
+  if (!isRecord(value) || !Array.isArray(value.passages)) {
+    return null;
+  }
+  const passages = value.passages
+    .filter((passage): passage is string => typeof passage === 'string')
+    .map((passage) => clampText(normalizeKnowledgeText(passage), maxChars))
+    .filter((passage) => passage.length > 0)
+    .slice(0, maxPassages);
+  return passages.length > 0 ? { matched: value.matched === true, passages } : null;
+}
+
+/** One query for the passages of a candidate: the words of the queries that found it, at most `maxChars`. */
+export function knowledgePassageQuery(searchQueries: string[], maxChars: number): string {
+  const words: string[] = [];
+  const seen = new Set<string>();
+  for (const query of searchQueries) {
+    for (const word of normalizeKnowledgeText(query).split(/\s+/)) {
+      const key = stripKnowledgeAccents(word).toLocaleLowerCase();
+      if (!word || seen.has(key)) continue;
+      if ([...words, word].join(' ').length > maxChars) return words.join(' ');
+      seen.add(key);
+      words.push(word);
+    }
+  }
+  return words.join(' ');
 }
 
 const WEB_TEXT_ENTITIES = { amp: '&', quot: '"', '#39': '\'', lt: '<', gt: '>' };
@@ -405,6 +446,8 @@ export function mergeKnowledgeAttempts(attempts: KnowledgeSearchAttempt[]): Merg
         existing.content_markdown = existing.content_markdown ?? item.content_markdown ?? null;
         existing.status = existing.status ?? item.status ?? null;
         existing.updated_at = existing.updated_at ?? item.updated_at ?? null;
+        // A document is a fallback result only when every search that found it fell back.
+        existing.fallback = existing.fallback === true && item.fallback === true;
         const nextScore = Math.max(knowledgeScoreSortValue(existing.score), knowledgeScoreSortValue(item.score));
         existing.score = nextScore === Number.NEGATIVE_INFINITY ? null : nextScore;
       } else {
@@ -439,6 +482,9 @@ export function plannerCandidatesFromKnowledge(candidates: MergedKnowledgeCandid
     search_queries: candidate.search_queries,
     match_count: candidate.match_count ?? candidate.search_queries.length,
     score: candidate.score ?? null,
+    fallback: candidate.fallback === true,
+    passages: candidate.passages ?? null,
+    passages_matched: candidate.passages_matched ?? null,
   }));
 }
 
@@ -461,6 +507,9 @@ export function applyKnowledgeInterpretation(
     const ref = knowledgeDocumentRef(candidate);
     return !ref || !rejected.has(ref.toLocaleLowerCase());
   });
+  // A fallback result becomes a source only when the model interpreter selects it, having read
+  // its passages: it is never handed on as an unvalidated candidate.
+  const unvalidated = notRejected.filter((candidate) => candidate.fallback !== true);
   if (interpretation.source === 'llm') {
     const selectedRefs = new Set(interpretation.selected_refs.map((ref) => ref.toLocaleLowerCase()));
     if (selectedRefs.size > 0) {
@@ -474,8 +523,8 @@ export function applyKnowledgeInterpretation(
     }
   }
   // No LLM validation: keep the retrieved candidates as unvalidated (already score-sorted by
-  // mergeKnowledgeAttempts). Never return [] when candidates exist.
-  return { selected: [], unvalidated: notRejected };
+  // mergeKnowledgeAttempts), fallback results excepted.
+  return { selected: [], unvalidated };
 }
 
 export function knowledgeRelevanceTerms(ticket: TicketLike): string[] {
@@ -556,6 +605,27 @@ export function plannerKnowledgeSummary(
   };
 }
 
+/** What the action planner reads of the reply synthesis, when it ran before the planner. */
+export function plannerSourcedReplySummary(
+  synthesis: ReplySynthesisResult | null,
+): NonNullable<ActionPlannerPromptInput['sourced_reply']> {
+  if (!synthesis) {
+    return { attempted: false };
+  }
+  return {
+    attempted: true,
+    usable: synthesis.usable,
+    used_sources: synthesis.used_sources.map((source) => ({ ref: source.ref ?? source.url, title: source.title })),
+    rejected_sources: synthesis.rejected_sources.map((source) => ({
+      ref: source.ref ?? source.url,
+      title: source.title,
+      reason: clampText(source.reason, 240),
+    })),
+    confidence: synthesis.confidence,
+    reply_preview: synthesis.usable ? clampText(synthesis.requester_reply, 400) || null : null,
+  };
+}
+
 export function plannerWebSummary(
   items: WebSearchResultItem[],
   status: string,
@@ -610,7 +680,6 @@ export function buildFallbackKnowledgeInterpretation(
     selected_refs: selectedRefs,
     rejected,
     facet_match: null,
-    needs_human_review: selectedRefs.length === 0,
     confidence: selectedRefs.length > 0 ? 0.58 : 0.34,
     rationale: selectedRefs.length > 0
       ? 'Deterministic ranking selected candidates that matched positive search terms and avoided explicit negative terms.'
@@ -659,6 +728,7 @@ export function serializeKnowledgeQueryDerivation(derivation: KnowledgeQueryDeri
     source: derivation.source,
     queries: derivation.queries,
     exact_queries: derivation.exact_queries,
+    language_queries: derivation.language_queries,
     facet_queries: derivation.facet_queries,
     fallback_queries: derivation.fallback_queries,
     dropped_queries: derivation.dropped_queries,
@@ -686,7 +756,6 @@ export function serializeKnowledgeInterpretation(interpretation: KnowledgeResult
     selected_refs: interpretation.selected_refs,
     rejected: interpretation.rejected,
     facet_match: interpretation.facet_match ?? null,
-    needs_human_review: interpretation.needs_human_review,
     confidence: interpretation.confidence,
     rationale: interpretation.rationale,
     model: interpretation.model,

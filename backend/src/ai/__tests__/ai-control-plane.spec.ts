@@ -56,6 +56,7 @@ import { AiKnowledgeSearchPlannerService } from '../control-plane/agent-control/
 import { AiReplySynthesisService } from '../control-plane/agent-control/ai-reply-synthesis.service';
 import { AiTicketEvidenceExtractionService } from '../control-plane/agent-control/ai-ticket-evidence-extraction.service';
 import { AiTicketNeedRepresentationService } from '../control-plane/agent-control/ai-ticket-need-representation.service';
+import { Tenant } from '../../tenants/tenant.entity';
 import { AiReadonlyDiagnosticWorkflowService } from '../control-plane/diagnostics/ai-readonly-diagnostic-workflow.service';
 import { AiAgentHelpdeskTicketingIngestionService } from '../control-plane/agent/ai-agent-helpdesk-ticketing-ingestion.service';
 import { AiAgentApprovalLifecycleSweeperService } from '../control-plane/agent/ai-agent-approval-lifecycle-sweeper.service';
@@ -6546,7 +6547,7 @@ async function testKnowledgeInterpreterFallbackKeepsRequesterNeedAbovePlannerNoi
 
     assert.equal(result.source, 'llm_fallback');
     assert.deepEqual(result.selected_refs, []);
-    assert.equal(result.needs_human_review, true);
+    assert.equal('needs_human_review' in result, false, 'the interpretation no longer carries a review flag');
     // `selected_refs` is inferred as `never[]` on the fallback path, so it is
     // widened once here to keep the negative lookups meaningful.
     const selectedRefs: string[] = result.selected_refs;
@@ -13606,7 +13607,8 @@ async function testGlpiTriageLargeKnowledgeDocumentsDoNotConsumeRunCap() {
     const runUsageTokens = (run.usage_json as any).estimated_tokens;
     assert.equal(plannerCalled, true);
     assert.equal(synthesisCalled, true);
-    assert.equal(calls.filter((call) => call.capabilityName === 'get_document').length, 3);
+    // Three full reads; the other get_document calls ask for the passages the interpreter reads.
+    assert.equal(calls.filter((call) => call.capabilityName === 'get_document' && !call.input?.passages_query).length, 3);
     assert.notEqual((result.diagnostic.action_planner as any).fallback_reason, 'action_planner_projected_over_per_run_cap');
     assert.notEqual((result.diagnostic.synthesis as any).synthesis_fallback_reason, 'synthesis_projected_over_per_run_cap');
     assert.deepEqual((run.usage_json as any).knowledge_interpretation, {
@@ -14570,6 +14572,287 @@ async function runTriageWithSimulatedModel(input: {
     (Features as any).AI_WEB_SEARCH_READY = previousWebReady;
   }
   return { calls, ...prepared, capabilityCalls, capabilityInputs };
+}
+
+// The chain of the support agent on knowledge (lot R1 of 26.11.8, tickets 94 to 96 of fromage):
+// every model stage simulated by the test, the search, the passages and the documents served by it.
+type KnowledgeChainDocument = { id: string; ref: string; title: string; summary: string; body: string };
+
+function knowledgeChainWords(query: string): string[] {
+  return query.toLocaleLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').split(/[^a-z0-9]+/).filter((word) => word.length >= 3);
+}
+
+function knowledgeChainSentences(body: string): string[] {
+  return body.split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter(Boolean);
+}
+
+async function runKnowledgeChainTriage(input: {
+  documents: KnowledgeChainDocument[];
+  need: Record<string, unknown>;
+  interpretation: (payload: any) => Record<string, unknown>;
+  reply: (payload: any) => Record<string, unknown>;
+  plan: (payload: any) => Record<string, unknown>;
+  tenantLanguage?: string;
+}) {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  if (input.tenantLanguage) {
+    await manager.getRepository(Tenant).save({ id: context.tenantId, metadata: { language: input.tenantLanguage } });
+  }
+  const queue = new AiAgentWorkQueueService();
+  const definitionBundle = await seedTestHelpdeskDefinition(context);
+  definitionBundle.definition.scope_policy_json = {
+    ...(definitionBundle.definition.scope_policy_json ?? {}),
+    knowledge_sources: {
+      knowledge: { enabled: true, all_libraries: true, library_ids: [] },
+      web: { enabled: false },
+      precedence: 'knowledge_first',
+    },
+  };
+  await manager.getRepository(AiAgentDefinition).save(definitionBundle.definition);
+  const searches: string[] = [];
+  const passageRequests: Array<Record<string, unknown>> = [];
+  const prepared: { publicReply: string | null; internalNote: string | null } = { publicReply: null, internalNote: null };
+  let toolIndex = 0;
+  const runId = 'run-knowledge-chain';
+  // A document matches a query when one word of the query is a word of its body (the search
+  // matches any word of a query).
+  const matches = (document: KnowledgeChainDocument, query: string) => {
+    const words = new Set(knowledgeChainWords(`${document.title} ${document.summary} ${document.body}`));
+    return knowledgeChainWords(query).some((word) => words.has(word));
+  };
+  const dispatcher = {
+    execute: async (_context: unknown, request: any) => {
+      toolIndex += 1;
+      const toolExecutionId = `knowledge-chain-tool-${toolIndex}`;
+      const ok = (data: unknown) => ({ run_id: runId, step_id: `step-${toolIndex}`, tool_execution_id: toolExecutionId, output: { ok: true, data, evidence: [] } });
+      const raw = (output: unknown) => ({ run_id: runId, step_id: `step-${toolIndex}`, tool_execution_id: toolExecutionId, output });
+      switch (request.capabilityName) {
+        case 'ticketing.ticket.get':
+          return ok({ id: '94', title: 'Panne imprimante étiquettes', status: 'new', priority: 'medium', description: 'Je crois qu\'elle est en bourrage papier' });
+        case TICKETING_TICKET_NOTES_LIST_CAPABILITY:
+          return ok({ notes: [] });
+        case TICKETING_CLASSIFICATION_CONTEXT_CAPABILITY:
+          return ok({ type: 'Incident', priority: 'Medium', urgency: 'Medium' });
+        case TICKETING_LIFECYCLE_CONTEXT_CAPABILITY:
+          return ok({ allowedTransitions: [] });
+        case TICKETING_ROUTING_CONTEXT_CAPABILITY:
+        case TICKETING_PARTICIPANT_CONTEXT_CAPABILITY:
+          return ok({});
+        case 'search_knowledge': {
+          searches.push(String(request.input.query));
+          const items = input.documents
+            .filter((document) => matches(document, String(request.input.query)))
+            .map((document) => ({ id: document.id, ref: document.ref, title: document.title, summary: document.summary, snippet: null, status: 'published', score: 0.4, fallback: false }));
+          return raw({ items, total: items.length, returned: items.length, truncated: false, complete: true, fallback: false });
+        }
+        case 'get_document': {
+          const document = input.documents.find((candidate) => candidate.ref === request.input.document_id || candidate.id === request.input.document_id);
+          if (!document) throw new NotFoundException('Document not found.');
+          if (request.input.passages_query) {
+            passageRequests.push(request.input);
+            const words = new Set(knowledgeChainWords(String(request.input.passages_query)));
+            // The sentences that hold the most words of the query, as ts_headline picks its fragments.
+            const passages = knowledgeChainSentences(document.body)
+              .map((sentence) => ({ sentence, hits: new Set(knowledgeChainWords(sentence).filter((word) => words.has(word))).size }))
+              .filter((entry) => entry.hits > 0)
+              .sort((left, right) => right.hits - left.hits)
+              .map((entry) => entry.sentence)
+              .filter((sentence, index, all) => all.indexOf(sentence) === index)
+              .slice(0, Number(request.input.max_passages ?? 4));
+            return raw({
+              id: document.id, ref: document.ref, title: document.title, status: 'published',
+              matched: passages.length > 0,
+              passages: passages.length > 0 ? passages : [document.body.slice(0, 1200)],
+            });
+          }
+          return raw({ id: document.id, ref: document.ref, title: document.title, summary: document.summary, status: 'published', content_markdown: document.body });
+        }
+        case TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY:
+          prepared.internalNote = request.input.note_body;
+          await savePreparedTicketingAction(context, {
+            id: 'knowledge-chain-internal-action', runId, toolExecutionId,
+            capabilityName: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY, body: request.input.note_body, visibility: 'internal', providerKey: 'glpi',
+          });
+          return ok({ action_request_id: 'knowledge-chain-internal-action' });
+        case TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY:
+          prepared.publicReply = request.input.reply_body;
+          await savePreparedTicketingAction(context, {
+            id: 'knowledge-chain-public-action', runId, toolExecutionId,
+            capabilityName: TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY, body: request.input.reply_body, visibility: 'public', providerKey: 'glpi',
+          });
+          return ok({ action_request_id: 'knowledge-chain-public-action' });
+        default:
+          throw new Error(`Unexpected capability ${request.capabilityName}`);
+      }
+    },
+  };
+  const calls: Array<{ taskName: string; payload: any }> = [];
+  const llmClient = {
+    resolveRuntime: async () => VISION_TEST_RUNTIME,
+    callStructuredJsonModel: async (_context: unknown, request: any) => {
+      calls.push({ taskName: request.taskName, payload: request.userPayload });
+      switch (request.taskName) {
+        case 'ticket_need_representation':
+          return structuredJsonSuccess(input.need);
+        case 'knowledge_result_interpretation':
+          return structuredJsonSuccess(input.interpretation(request.userPayload));
+        case 'reply_synthesis':
+          return structuredJsonSuccess(input.reply(request.userPayload));
+        case 'action_planner':
+          return structuredJsonSuccess(input.plan(request.userPayload));
+        default:
+          throw new Error(`Unexpected model call ${request.taskName}`);
+      }
+    },
+  };
+  const service = new AiAgentControlService(
+    {} as any,
+    {} as any,
+    dispatcher as any,
+    {} as any,
+    { getApplicability: async () => ({ available: true }) } as any,
+    queue,
+    new AiKnowledgeSearchPlannerService(llmClient as any),
+    new AiReplySynthesisService(llmClient as any),
+    undefined,
+    undefined,
+    new AiAgentActionPlannerService(llmClient as any),
+    new AiTicketNeedRepresentationService(llmClient as any),
+    undefined,
+  ) as any;
+  service.getRunDetail = async () => ({ action_requests: [] });
+  await service.runTicketingTriage(context, {
+    provider_key: 'glpi',
+    target_key: '#94',
+    agent_definition_id: definitionBundle.definition.id,
+  });
+  return { calls, searches, passageRequests, ...prepared };
+}
+
+const KNOWLEDGE_CHAIN_FILLER = [
+  'The warehouses and production sites use Zebra ZT411 printers for product and shipping labels.',
+  'Paris, Gouda and Parma each keep two spare rolls per format in the IT cabinet.',
+  'Each site names a device owner who orders ribbons and cleaning cards every quarter.',
+  'Firmware updates are pushed by the IT team during the monthly maintenance window.',
+].join(' ');
+const KNOWLEDGE_CHAIN_JAM = 'Calibration after a jam: open the printhead, remove the jammed label, close the head and hold FEED for two seconds.';
+// DOC-44 as on fromage: an English article, the useful passage in the middle of a long body, no
+// word of the French ticket in its title or summary.
+const KNOWLEDGE_CHAIN_DOC_44: KnowledgeChainDocument = {
+  id: 'doc-44',
+  ref: 'DOC-44',
+  title: 'Zebra ZT411 troubleshooting',
+  summary: 'Curled labels, humidity, calibration, and when to call Axians.',
+  body: `${`${KNOWLEDGE_CHAIN_FILLER} `.repeat(16)}${KNOWLEDGE_CHAIN_JAM} ${`${KNOWLEDGE_CHAIN_FILLER} `.repeat(16)}`.trim(),
+};
+const KNOWLEDGE_CHAIN_NEED = {
+  intent: 'Imprimante d\'étiquettes en bourrage papier',
+  language: 'fr',
+  entities: { equipment: ['imprimante étiquettes'] },
+  symptoms: ['bourrage papier'],
+  search_terms: {
+    en: ['label printer', 'paper jam'],
+    fr: ['imprimante étiquettes', 'bourrage papier'],
+    de: ['Etikettendrucker', 'Papierstau'],
+    es: ['impresora de etiquetas', 'atasco de papel'],
+  },
+  confidence: 0.8,
+};
+const KNOWLEDGE_CHAIN_SOURCED_PLAN = {
+  actions: [
+    { action_type: 'internal_note', reason: 'Documenter la réponse.' },
+    { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: 'DOC-44 répond au bourrage.' },
+  ],
+  rationale: 'La synthèse fondée sur DOC-44 est utilisable.',
+  confidence: 0.8,
+};
+const KNOWLEDGE_CHAIN_ESCALATION_PLAN = {
+  actions: [{ action_type: 'internal_note', reason: 'Aucun document retenu ne répond à la demande.' }],
+  rationale: 'Transmettre au support.',
+  confidence: 0.7,
+};
+// The planner of the test reads what the synthesis said, as the model is asked to.
+const knowledgeChainPlan = (payload: any) => (payload.sourced_reply?.usable === true ? KNOWLEDGE_CHAIN_SOURCED_PLAN : KNOWLEDGE_CHAIN_ESCALATION_PLAN);
+
+// Tickets 94 to 96: a French ticket, an English article whose useful passage sits in the middle
+// of a long body. The chain searches in English, the interpreter reads the passage, the synthesis
+// is made before the planner, and the proposed action is a reply to the requester citing DOC-44.
+async function testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle() {
+  const result = await runKnowledgeChainTriage({
+    documents: [KNOWLEDGE_CHAIN_DOC_44],
+    need: KNOWLEDGE_CHAIN_NEED,
+    interpretation: (payload) => {
+      const candidate = payload.candidates.find((entry: any) => entry.ref === 'DOC-44');
+      const read = (candidate?.body_passages ?? []).some((passage: string) => passage.includes('Calibration after a jam'));
+      return { selected_refs: read ? ['DOC-44'] : [], rejected: [], confidence: read ? 0.8 : 0.2, rationale: read ? 'Le passage traite du bourrage.' : 'Rien sur le bourrage.' };
+    },
+    reply: (payload) => {
+      const source = payload.knowledge_sources.find((entry: any) => entry.ref === 'DOC-44');
+      const read = (source?.matching_passages ?? []).some((passage: string) => passage.includes('Calibration after a jam'));
+      return read
+        ? {
+          language: 'fr', usable: true, needs_human_review: false,
+          requester_reply: 'Ouvrez la tête d\'impression, retirez l\'étiquette coincée, refermez puis maintenez FEED deux secondes.',
+          technician_brief: 'Réponse tirée du passage « Calibration after a jam » de DOC-44.',
+          used_sources: [{ kind: 'knowledge', ref: 'DOC-44', url: null, title: 'Zebra ZT411 troubleshooting' }],
+          rejected_sources: [], confidence: 0.8,
+        }
+        : { language: 'fr', usable: false, requester_reply: '', technician_brief: 'Rien trouvé.', used_sources: [], rejected_sources: [], confidence: 0.2 };
+    },
+    plan: knowledgeChainPlan,
+  });
+  assert.ok(result.searches.some((query) => knowledgeChainWords(query).includes('jam')), `an English query is searched: ${result.searches.join(' | ')}`);
+  assert.deepEqual(result.calls.map((call) => call.taskName), [
+    'ticket_need_representation',
+    'knowledge_result_interpretation',
+    'reply_synthesis',
+    'action_planner',
+  ]);
+  assert.ok(KNOWLEDGE_CHAIN_DOC_44.body.indexOf(KNOWLEDGE_CHAIN_JAM) > 3800, 'the passage lies past the body cut of the synthesis');
+  assert.equal(result.passageRequests.length, 1, 'the passages of the candidate are read');
+  const planner = result.calls.find((call) => call.taskName === 'action_planner')!.payload;
+  assert.equal(planner.sourced_reply.usable, true);
+  assert.deepEqual(planner.sourced_reply.used_sources.map((source: any) => source.ref), ['DOC-44']);
+  assert.ok(result.publicReply?.includes('maintenez FEED deux secondes'), `reply: ${result.publicReply}`);
+  assert.ok(result.publicReply?.includes('DOC-44'), 'the reply cites the article');
+  assert.ok(result.internalNote?.includes('Technician brief:'), 'a tenant without a language gets the English frame');
+}
+
+// A retained document whose body does not answer: the synthesis says so, the planner reads it,
+// no reply to the requester, an internal note, in the tenant's language.
+async function testKnowledgeChainRetainedDocumentThatDoesNotAnswer() {
+  const vpnGuide: KnowledgeChainDocument = {
+    id: 'doc-50',
+    ref: 'DOC-50',
+    title: 'VPN client setup',
+    summary: 'Install the VPN client on a new laptop.',
+    body: 'Install the VPN client from the software centre. Sign in with your usual account. The label printer team is not involved.',
+  };
+  const result = await runKnowledgeChainTriage({
+    documents: [vpnGuide],
+    need: KNOWLEDGE_CHAIN_NEED,
+    interpretation: () => ({ selected_refs: ['DOC-50'], rejected: [], confidence: 0.5, rationale: 'Mentionne l\'imprimante.' }),
+    reply: () => ({
+      language: 'fr', usable: false, needs_human_review: true, requester_reply: '',
+      technician_brief: 'DOC-50 ne traite pas du bourrage.',
+      used_sources: [],
+      rejected_sources: [{ kind: 'knowledge', ref: 'DOC-50', url: null, title: 'VPN client setup', reason: 'Ne traite pas du bourrage.' }],
+      confidence: 0.3,
+    }),
+    plan: knowledgeChainPlan,
+    tenantLanguage: 'fr',
+  });
+  assert.deepEqual(result.calls.map((call) => call.taskName).slice(-2), ['reply_synthesis', 'action_planner']);
+  const planner = result.calls.find((call) => call.taskName === 'action_planner')!.payload;
+  assert.equal(planner.sourced_reply.attempted, true);
+  assert.equal(planner.sourced_reply.usable, false);
+  assert.equal(planner.sourced_reply.rejected_sources[0].ref, 'DOC-50');
+  assert.equal(result.publicReply, null, 'no reply to the requester');
+  assert.ok(result.internalNote, 'an internal note');
+  assert.ok(result.internalNote.includes('Note pour le technicien :'), `note: ${result.internalNote}`);
+  assert.ok(!result.internalNote.includes('Technician brief:'));
+  assert.ok(JSON.stringify(planner.knowledge_summary).indexOf('needs_human_review') === -1, 'no review flag reaches the planner');
 }
 
 function payloadOf(calls: Array<{ taskName: string; payload: unknown }>, taskName: string): string {
@@ -15827,7 +16110,8 @@ async function testGlpiTriageReranksKnowledgeAfterRequesterPreferenceChange() {
         };
       }
       if (request.capabilityName === 'get_document') {
-        fetchedDocuments.push(String(request.input.document_id));
+        // Full reads only: a call with a passages query asks for the passages the interpreter reads.
+        if (!request.input.passages_query) fetchedDocuments.push(String(request.input.document_id));
         return {
           run_id: 'run-glpi-sweet',
           step_id: 'step-document',
@@ -17526,6 +17810,8 @@ async function run() {
   await testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale();
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();
   await testTriageWithInternalNotesUsedReadsEveryItem();
+  await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
+  await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testTriageWithInternalNotesIgnoredReadsThePublicItems();
   await testTriageWithInternalNotesIgnoredSkipsTheRequesterInternalFollowUp();
   testSynthesisPromptPrefersInternalKnowledgeSources();

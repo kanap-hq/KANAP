@@ -170,9 +170,205 @@ export function latestExecutedAction(actions: AiActionRequest[], capabilityName:
     .sort((left, right) => (actionConversationTime(right, notes) ?? 0) - (actionConversationTime(left, notes) ?? 0))[0] ?? null;
 }
 
-/** The header and the closing line of a triage note the agent posts in a ticket. */
-export const TRIAGE_NOTE_HEADER = `[${PRODUCT_NAME} triage proposal]`;
-export const TRIAGE_NOTE_FOOTER = `No external change has been made. This note was prepared by ${PRODUCT_NAME} and requires human approval before posting.`;
+/**
+ * The frame of the internal note the triage proposes to the technicians (headings and fixed
+ * sentences), in the tenant's language (`tenants.metadata.language`, English otherwise), as the
+ * reply to the requester follows the ticket's. What the models write stays in their language.
+ */
+export type TriageNoteLanguage = 'en' | 'fr' | 'de' | 'es';
+
+type TriageNoteTexts = {
+  header: string;
+  footer: string;
+  ticket: (id: string, title: string) => string;
+  status: (value: string) => string;
+  priority: (value: string) => string;
+  historyHeading: string;
+  noHistory: string;
+  initialTicket: string;
+  agentActor: string;
+  requesterActor: string;
+  supportActor: string;
+  visibility: { public: string; internal: string };
+  technicianBrief: string;
+  administrativeSourcesHeading: string;
+  administrativeReplyReason: string;
+  escalationReason: string;
+  synthesisUnavailable: string;
+  unvalidatedCandidate: string;
+  untitledDocument: string;
+  untitledSource: string;
+  fallbackKnowledgeHeading: string;
+  fallbackWebHeading: string;
+  noFallbackSource: string;
+  usedSources: string;
+  rejectedSources: string;
+  none: string;
+  noneRecorded: string;
+  recommendedReply: string;
+  noSynthesisBrief: string;
+  noReliableAnswer: string;
+  uncertainty: string;
+  validationNote: (reason: string) => string;
+  omitted: (count: number, kind: 'used' | 'rejected') => string;
+};
+
+const TRIAGE_NOTE_TEXTS: Record<TriageNoteLanguage, TriageNoteTexts> = {
+  en: {
+    header: `[${PRODUCT_NAME} triage proposal]`,
+    footer: `No external change has been made. This note was prepared by ${PRODUCT_NAME} and requires human approval before posting.`,
+    ticket: (id, title) => `Ticket #${id} - ${title}`,
+    status: (value) => `Status: ${value}`,
+    priority: (value) => `Priority: ${value}`,
+    historyHeading: 'Ticket history considered:',
+    noHistory: '- No ticket history entries were available.',
+    initialTicket: 'initial ticket',
+    agentActor: `${PRODUCT_NAME} agent`,
+    requesterActor: 'requester/public user',
+    supportActor: 'support/internal',
+    visibility: { public: 'public', internal: 'internal' },
+    technicianBrief: 'Technician brief:',
+    administrativeSourcesHeading: 'Candidate sources reviewed (not used by the administrative reply; no article body copied):',
+    administrativeReplyReason: 'The agent answered with an administrative reply (see the proposed requester reply on this ticket); no knowledge-sourced answer was required.',
+    escalationReason: 'The agent escalated this ticket internally; no requester reply was prepared.',
+    synthesisUnavailable: 'AI reply synthesis was unavailable or skipped. Review the possible sources above and complete the requester answer manually before approving.',
+    unvalidatedCandidate: ' [unvalidated candidate]',
+    untitledDocument: 'Untitled document',
+    untitledSource: 'Untitled source',
+    fallbackKnowledgeHeading: 'Possible sources found (fallback mode; no article body copied):',
+    fallbackWebHeading: 'Web leads (not validated):',
+    noFallbackSource: '- No source candidate was retrieved.',
+    usedSources: 'Used sources:',
+    rejectedSources: 'Rejected/off-topic sources:',
+    none: '- None',
+    noneRecorded: '- None recorded',
+    recommendedReply: 'Recommended reply to requester:',
+    noSynthesisBrief: 'No synthesis brief was produced.',
+    noReliableAnswer: 'No reliable source-grounded answer was produced; the requester reply will ask a technician to follow up.',
+    uncertainty: 'Uncertainty: technician confirmation is recommended before approval.',
+    validationNote: (reason) => `Synthesis validation note: ${reason}.`,
+    omitted: (count, kind) => `- ${count} more ${kind === 'used' ? 'used' : 'rejected'} source(s) omitted from this compact note.`,
+  },
+  fr: {
+    header: `[Proposition de ${PRODUCT_NAME} pour le ticket]`,
+    footer: `Aucune modification externe n'a été faite. Cette note a été préparée par ${PRODUCT_NAME} et doit être approuvée par une personne avant publication.`,
+    ticket: (id, title) => `Ticket #${id} - ${title}`,
+    status: (value) => `Statut : ${value}`,
+    priority: (value) => `Priorité : ${value}`,
+    historyHeading: 'Historique du ticket pris en compte :',
+    noHistory: '- Aucun élément d\'historique du ticket n\'était disponible.',
+    initialTicket: 'ticket initial',
+    agentActor: `agent ${PRODUCT_NAME}`,
+    requesterActor: 'demandeur/utilisateur public',
+    supportActor: 'support/interne',
+    visibility: { public: 'public', internal: 'interne' },
+    technicianBrief: 'Note pour le technicien :',
+    administrativeSourcesHeading: 'Sources candidates examinées (non utilisées par la réponse administrative ; aucun corps d\'article recopié) :',
+    administrativeReplyReason: 'L\'agent a répondu par une réponse administrative (voir la réponse proposée au demandeur sur ce ticket) ; aucune réponse sourcée n\'était nécessaire.',
+    escalationReason: 'L\'agent a transmis ce ticket en interne ; aucune réponse au demandeur n\'a été préparée.',
+    synthesisUnavailable: 'La rédaction de la réponse par l\'IA était indisponible ou n\'a pas eu lieu. Examinez les sources possibles ci-dessus et complétez la réponse au demandeur avant d\'approuver.',
+    unvalidatedCandidate: ' [candidat non validé]',
+    untitledDocument: 'Document sans titre',
+    untitledSource: 'Source sans titre',
+    fallbackKnowledgeHeading: 'Sources possibles trouvées (mode dégradé ; aucun corps d\'article recopié) :',
+    fallbackWebHeading: 'Pistes web (non validées) :',
+    noFallbackSource: '- Aucune source candidate n\'a été trouvée.',
+    usedSources: 'Sources utilisées :',
+    rejectedSources: 'Sources écartées ou hors sujet :',
+    none: '- Aucune',
+    noneRecorded: '- Aucune enregistrée',
+    recommendedReply: 'Réponse recommandée au demandeur :',
+    noSynthesisBrief: 'Aucune note de synthèse n\'a été produite.',
+    noReliableAnswer: 'Aucune réponse fiable fondée sur une source n\'a été produite ; la réponse au demandeur indiquera qu\'un technicien va reprendre la demande.',
+    uncertainty: 'Incertitude : une confirmation par un technicien est recommandée avant approbation.',
+    validationNote: (reason) => `Note de validation de la rédaction : ${reason}.`,
+    omitted: (count, kind) => `- ${count} autre(s) source(s) ${kind === 'used' ? 'utilisée(s)' : 'écartée(s)'} non reprise(s) dans cette note courte.`,
+  },
+  de: {
+    header: `[${PRODUCT_NAME}-Vorschlag zum Ticket]`,
+    footer: `Es wurde keine externe Änderung vorgenommen. Diese Notiz wurde von ${PRODUCT_NAME} vorbereitet und muss vor dem Veröffentlichen von einer Person freigegeben werden.`,
+    ticket: (id, title) => `Ticket #${id} - ${title}`,
+    status: (value) => `Status: ${value}`,
+    priority: (value) => `Priorität: ${value}`,
+    historyHeading: 'Berücksichtigter Ticketverlauf:',
+    noHistory: '- Es lagen keine Einträge im Ticketverlauf vor.',
+    initialTicket: 'ursprüngliches Ticket',
+    agentActor: `${PRODUCT_NAME}-Agent`,
+    requesterActor: 'Anfragende Person/öffentlicher Benutzer',
+    supportActor: 'Support/intern',
+    visibility: { public: 'öffentlich', internal: 'intern' },
+    technicianBrief: 'Hinweis für den Techniker:',
+    administrativeSourcesHeading: 'Geprüfte mögliche Quellen (von der administrativen Antwort nicht verwendet; kein Artikeltext übernommen):',
+    administrativeReplyReason: 'Der Agent hat mit einer administrativen Antwort geantwortet (siehe die vorgeschlagene Antwort an die anfragende Person in diesem Ticket); eine auf Wissen gestützte Antwort war nicht erforderlich.',
+    escalationReason: 'Der Agent hat dieses Ticket intern weitergeleitet; es wurde keine Antwort an die anfragende Person vorbereitet.',
+    synthesisUnavailable: 'Die KI-Antwort war nicht verfügbar oder wurde übersprungen. Prüfen Sie die oben genannten möglichen Quellen und vervollständigen Sie die Antwort an die anfragende Person vor der Freigabe.',
+    unvalidatedCandidate: ' [nicht validierter Kandidat]',
+    untitledDocument: 'Dokument ohne Titel',
+    untitledSource: 'Quelle ohne Titel',
+    fallbackKnowledgeHeading: 'Gefundene mögliche Quellen (Ausweichmodus; kein Artikeltext übernommen):',
+    fallbackWebHeading: 'Hinweise aus dem Web (nicht validiert):',
+    noFallbackSource: '- Es wurde keine mögliche Quelle gefunden.',
+    usedSources: 'Verwendete Quellen:',
+    rejectedSources: 'Verworfene oder themenfremde Quellen:',
+    none: '- Keine',
+    noneRecorded: '- Keine erfasst',
+    recommendedReply: 'Empfohlene Antwort an die anfragende Person:',
+    noSynthesisBrief: 'Es wurde kein Hinweis aus der Antworterstellung erzeugt.',
+    noReliableAnswer: 'Es wurde keine verlässliche, auf Quellen gestützte Antwort erstellt; die Antwort an die anfragende Person kündigt die Rückmeldung eines Technikers an.',
+    uncertainty: 'Unsicherheit: Eine Bestätigung durch einen Techniker wird vor der Freigabe empfohlen.',
+    validationNote: (reason) => `Prüfhinweis zur Antworterstellung: ${reason}.`,
+    omitted: (count, kind) => `- ${count} weitere ${kind === 'used' ? 'verwendete' : 'verworfene'} Quelle(n) in dieser kurzen Notiz ausgelassen.`,
+  },
+  es: {
+    header: `[Propuesta de ${PRODUCT_NAME} para el ticket]`,
+    footer: `No se ha realizado ningún cambio externo. Esta nota la ha preparado ${PRODUCT_NAME} y debe aprobarla una persona antes de publicarse.`,
+    ticket: (id, title) => `Ticket #${id} - ${title}`,
+    status: (value) => `Estado: ${value}`,
+    priority: (value) => `Prioridad: ${value}`,
+    historyHeading: 'Historial del ticket considerado:',
+    noHistory: '- No había entradas disponibles en el historial del ticket.',
+    initialTicket: 'ticket inicial',
+    agentActor: `agente de ${PRODUCT_NAME}`,
+    requesterActor: 'solicitante/usuario público',
+    supportActor: 'soporte/interno',
+    visibility: { public: 'público', internal: 'interno' },
+    technicianBrief: 'Nota para el técnico:',
+    administrativeSourcesHeading: 'Fuentes candidatas revisadas (no utilizadas por la respuesta administrativa; no se ha copiado el cuerpo de ningún artículo):',
+    administrativeReplyReason: 'El agente respondió con una respuesta administrativa (consulte la respuesta propuesta al solicitante en este ticket); no se necesitaba una respuesta basada en la base de conocimiento.',
+    escalationReason: 'El agente ha escalado este ticket internamente; no se ha preparado ninguna respuesta al solicitante.',
+    synthesisUnavailable: 'La redacción de la respuesta por la IA no estaba disponible o no se realizó. Revise las fuentes posibles indicadas arriba y complete la respuesta al solicitante antes de aprobar.',
+    unvalidatedCandidate: ' [candidato no validado]',
+    untitledDocument: 'Documento sin título',
+    untitledSource: 'Fuente sin título',
+    fallbackKnowledgeHeading: 'Fuentes posibles encontradas (modo alternativo; no se ha copiado el cuerpo de ningún artículo):',
+    fallbackWebHeading: 'Pistas web (no validadas):',
+    noFallbackSource: '- No se encontró ninguna fuente candidata.',
+    usedSources: 'Fuentes utilizadas:',
+    rejectedSources: 'Fuentes descartadas o fuera de tema:',
+    none: '- Ninguna',
+    noneRecorded: '- Ninguna registrada',
+    recommendedReply: 'Respuesta recomendada al solicitante:',
+    noSynthesisBrief: 'No se generó ninguna nota de la redacción.',
+    noReliableAnswer: 'No se generó ninguna respuesta fiable basada en fuentes; la respuesta al solicitante indicará que un técnico retomará la solicitud.',
+    uncertainty: 'Incertidumbre: se recomienda la confirmación de un técnico antes de aprobar.',
+    validationNote: (reason) => `Nota de validación de la redacción: ${reason}.`,
+    omitted: (count, kind) => `- ${count} fuente(s) ${kind === 'used' ? 'utilizada(s)' : 'descartada(s)'} más omitida(s) en esta nota breve.`,
+  },
+};
+
+/** The note language of a tenant language (`fr-FR` gives `fr`); English for anything else. */
+export function triageNoteLanguage(value: string | null | undefined): TriageNoteLanguage {
+  const base = String(value ?? '').trim().toLowerCase().split(/[-_]/, 1)[0];
+  return base === 'fr' || base === 'de' || base === 'es' ? base : 'en';
+}
+
+function noteTexts(language: TriageNoteLanguage | null | undefined): TriageNoteTexts {
+  return TRIAGE_NOTE_TEXTS[language ?? 'en'] ?? TRIAGE_NOTE_TEXTS.en;
+}
+
+/** The header and the closing line of a triage note the agent posts in a ticket (English). */
+export const TRIAGE_NOTE_HEADER = TRIAGE_NOTE_TEXTS.en.header;
+export const TRIAGE_NOTE_FOOTER = TRIAGE_NOTE_TEXTS.en.footer;
 
 /**
  * Marks of a body the agent wrote. The literals are those of tickets written before the product
@@ -184,6 +380,8 @@ const AGENT_BODY_MARKS = [
   `[${PRODUCT_NAME} triage proposal]`.toLocaleLowerCase(),
   `this note was prepared by ${PRODUCT_NAME}`.toLocaleLowerCase(),
   'prepared by the agent control center',
+  // The header of a note written in the tenant's language.
+  ...Object.values(TRIAGE_NOTE_TEXTS).map((texts) => texts.header.toLocaleLowerCase()),
 ];
 
 export function isKanapMarkedBody(value: string): boolean {
@@ -312,18 +510,19 @@ export function evaluateConversationGate(
   };
 }
 
-export function timelineSummaryLines(timeline: TicketTimelineEntry[]): string[] {
+export function timelineSummaryLines(timeline: TicketTimelineEntry[], language: TriageNoteLanguage = 'en'): string[] {
+  const texts = noteTexts(language);
   if (timeline.length === 0) {
-    return ['- No ticket history entries were available.'];
+    return [texts.noHistory];
   }
   return timeline.slice(-8).map((entry) => {
-    const at = entry.createdAt ? entry.createdAt.slice(0, 19).replace('T', ' ') : 'initial ticket';
+    const at = entry.createdAt ? entry.createdAt.slice(0, 19).replace('T', ' ') : texts.initialTicket;
     const actor = entry.actor === 'kanap_agent'
-      ? `${PRODUCT_NAME} agent`
+      ? texts.agentActor
       : entry.actor === 'requester_candidate'
-        ? 'requester/public user'
-        : 'support/internal';
-    return `- ${at} / ${actor} / ${entry.visibility}: ${clampText(entry.body, 220)}`;
+        ? texts.requesterActor
+        : texts.supportActor;
+    return `- ${at} / ${actor} / ${texts.visibility[entry.visibility] ?? entry.visibility}: ${clampText(entry.body, 220)}`;
   });
 }
 
@@ -339,21 +538,21 @@ export function buildTriageNote(
   // present the (insufficient) candidate sources as "found"; an administrative reply keeps them
   // as context but labels them as unused.
   plannerOutcome: { kind: 'escalation' | 'administrative_reply'; reason: string | null } | null = null,
+  language: TriageNoteLanguage = 'en',
 ): string {
+  const texts = noteTexts(language);
   const technicianBrief = plannerOutcome
     ? (plannerOutcome.reason?.trim()
-      || (plannerOutcome.kind === 'administrative_reply'
-        ? 'The agent answered with an administrative reply (see the proposed requester reply on this ticket); no knowledge-sourced answer was required.'
-        : 'The agent escalated this ticket internally; no requester reply was prepared.'))
-    : 'AI reply synthesis was unavailable or skipped. Review the possible sources above and complete the requester answer manually before approving.';
+      || (plannerOutcome.kind === 'administrative_reply' ? texts.administrativeReplyReason : texts.escalationReason))
+    : texts.synthesisUnavailable;
   return renderProviderBody([
-    TRIAGE_NOTE_HEADER,
-    `Ticket #${ticket.id} - ${ticket.title}`,
-    ticket.status ? `Status: ${ticket.status}` : null,
-    ticket.priority ? `Priority: ${ticket.priority}` : null,
+    texts.header,
+    texts.ticket(ticket.id, ticket.title),
+    ticket.status ? texts.status(ticket.status) : null,
+    ticket.priority ? texts.priority(ticket.priority) : null,
     '',
-    'Ticket history considered:',
-    ...timelineSummaryLines(timeline),
+    texts.historyHeading,
+    ...timelineSummaryLines(timeline, language),
     '',
     // An escalation omits candidate sources. An administrative reply keeps knowledge and web
     // results together under its own heading: they are context the reply did not use. The
@@ -363,18 +562,18 @@ export function buildTriageNote(
       ? []
       : plannerOutcome?.kind === 'administrative_reply'
         ? [
-          'Candidate sources reviewed (not used by the administrative reply; no article body copied):',
-          ...fallbackSourceLines(knowledgeItems, webResults, 8),
+          texts.administrativeSourcesHeading,
+          ...fallbackSourceLines(knowledgeItems, webResults, 8, language),
           '',
         ]
         : [
-          ...synthesisFallbackSourceSections(knowledgeItems, webResults, 8),
+          ...synthesisFallbackSourceSections(knowledgeItems, webResults, 8, language),
           '',
         ]),
-    'Technician brief:',
+    texts.technicianBrief,
     technicianBrief,
     '',
-    TRIAGE_NOTE_FOOTER,
+    texts.footer,
   ], MAX_INTERNAL_NOTE_CHARS);
 }
 
@@ -488,12 +687,13 @@ export function replyLocale(language: string | null | undefined, ticket: TicketL
   };
 }
 
-export function sourceLineFromKnowledge(item: KnowledgeSearchItem, index: number): string {
+export function sourceLineFromKnowledge(item: KnowledgeSearchItem, index: number, language: TriageNoteLanguage = 'en'): string {
+  const texts = noteTexts(language);
   const ref = sanitizeInlineForProvider(item.ref ?? item.id ?? `document-${index + 1}`, 80);
-  const title = sanitizeInlineForProvider(item.title ?? 'Untitled document', 180);
+  const title = sanitizeInlineForProvider(item.title ?? texts.untitledDocument, 180);
   // Be explicit when a candidate was retrieved but not validated by the interpreter, so the
   // technician knows it still needs a relevance check (it never grounded an automated reply).
-  const suffix = item.validation_status === 'unvalidated' ? ' [unvalidated candidate]' : '';
+  const suffix = item.validation_status === 'unvalidated' ? texts.unvalidatedCandidate : '';
   return `- ${ref} - ${title}${suffix}`;
 }
 
@@ -503,17 +703,14 @@ export function sourceLineFromWeb(item: WebSearchResultItem): string {
   return `- ${title} (${url})`;
 }
 
-const FALLBACK_KNOWLEDGE_SOURCE_HEADING = 'Possible sources found (fallback mode; no article body copied):';
-const FALLBACK_WEB_LEAD_HEADING = 'Web leads (not validated):';
-const NO_FALLBACK_SOURCE_LINE = '- No source candidate was retrieved.';
-
 // Knowledge lines keep their place at the front of the shared cap, then web lines fill what remains.
 function limitedFallbackSourceLines(
   knowledgeItems: KnowledgeSearchItem[],
   webResults: WebSearchResultItem[],
   limit: number,
+  language: TriageNoteLanguage,
 ): { knowledge: string[]; web: string[] } {
-  const knowledge = knowledgeItems.map(sourceLineFromKnowledge);
+  const knowledge = knowledgeItems.map((item, index) => sourceLineFromKnowledge(item, index, language));
   const web = webResults.map(sourceLineFromWeb);
   const keptKnowledge = knowledge.slice(0, limit);
   const keptWeb = web.slice(0, Math.max(0, limit - keptKnowledge.length));
@@ -524,10 +721,11 @@ export function fallbackSourceLines(
   knowledgeItems: KnowledgeSearchItem[],
   webResults: WebSearchResultItem[],
   limit: number,
+  language: TriageNoteLanguage = 'en',
 ): string[] {
-  const { knowledge, web } = limitedFallbackSourceLines(knowledgeItems, webResults, limit);
+  const { knowledge, web } = limitedFallbackSourceLines(knowledgeItems, webResults, limit, language);
   const lines = [...knowledge, ...web];
-  return lines.length > 0 ? lines : [NO_FALLBACK_SOURCE_LINE];
+  return lines.length > 0 ? lines : [noteTexts(language).noFallbackSource];
 }
 
 // Synthesis-failure note only. Knowledge keeps the existing heading. Web results, when any
@@ -537,24 +735,26 @@ function synthesisFallbackSourceSections(
   knowledgeItems: KnowledgeSearchItem[],
   webResults: WebSearchResultItem[],
   limit: number,
+  language: TriageNoteLanguage,
 ): string[] {
-  const { knowledge, web } = limitedFallbackSourceLines(knowledgeItems, webResults, limit);
+  const texts = noteTexts(language);
+  const { knowledge, web } = limitedFallbackSourceLines(knowledgeItems, webResults, limit, language);
   const sections: string[] = [];
   if (knowledge.length > 0 || web.length === 0) {
     sections.push(
-      FALLBACK_KNOWLEDGE_SOURCE_HEADING,
-      ...(knowledge.length > 0 ? knowledge : [NO_FALLBACK_SOURCE_LINE]),
+      texts.fallbackKnowledgeHeading,
+      ...(knowledge.length > 0 ? knowledge : [texts.noFallbackSource]),
     );
   }
   if (web.length > 0) {
     if (sections.length > 0) sections.push('');
-    sections.push(FALLBACK_WEB_LEAD_HEADING, ...web);
+    sections.push(texts.fallbackWebHeading, ...web);
   }
   return sections;
 }
 
-export function synthesisSourceLine(source: ReplySynthesisSource): string {
-  const title = sanitizeInlineForProvider(source.title, 180) || 'Untitled source';
+export function synthesisSourceLine(source: ReplySynthesisSource, language: TriageNoteLanguage = 'en'): string {
+  const title = sanitizeInlineForProvider(source.title, 180) || noteTexts(language).untitledSource;
   if (source.kind === 'knowledge') {
     const ref = sanitizeInlineForProvider(source.ref ?? 'knowledge', 80) || 'knowledge';
     return `- ${ref} - ${title}`;
@@ -563,17 +763,22 @@ export function synthesisSourceLine(source: ReplySynthesisSource): string {
   return `- ${title}${url ? ` (${url})` : ''}`;
 }
 
-export function rejectedSynthesisSourceLine(source: ReplySynthesisRejectedSource): string {
-  return `${synthesisSourceLine(source)}: ${sanitizeInlineForProvider(source.reason, 220)}`;
+export function rejectedSynthesisSourceLine(source: ReplySynthesisRejectedSource, language: TriageNoteLanguage = 'en'): string {
+  return `${synthesisSourceLine(source, language)}: ${sanitizeInlineForProvider(source.reason, 220)}`;
 }
 
-export function limitedSourceLines(lines: string[], maxLines: number, omittedLabel: string): string[] {
+export function limitedSourceLines(
+  lines: string[],
+  maxLines: number,
+  kind: 'used' | 'rejected',
+  language: TriageNoteLanguage = 'en',
+): string[] {
   if (lines.length <= maxLines) {
     return lines;
   }
   return [
     ...lines.slice(0, maxLines),
-    `- ${lines.length - maxLines} more ${omittedLabel} omitted from this compact note.`,
+    noteTexts(language).omitted(lines.length - maxLines, kind),
   ];
 }
 
@@ -593,7 +798,7 @@ export function renderSynthesizedRequesterReply(
       ...locale.closing,
     ], MAX_PUBLIC_REPLY_CHARS);
   }
-  const sourceLines = synthesis.used_sources.map(synthesisSourceLine);
+  const sourceLines = synthesis.used_sources.map((source) => synthesisSourceLine(source));
   const requesterBody = sanitizeForProvider(synthesis.requester_reply, MAX_SYNTHESIZED_REQUESTER_BODY_CHARS);
   return renderProviderBody([
     locale.greeting,
@@ -611,45 +816,53 @@ export function renderSynthesizedTriageNote(
   ticket: TicketLike,
   timeline: TicketTimelineEntry[],
   synthesis: ReplySynthesisResult,
+  language: TriageNoteLanguage = 'en',
 ): string {
-  const used = limitedSourceLines(synthesis.used_sources.map(synthesisSourceLine), MAX_SYNTHESIS_NOTE_SOURCES, 'used source(s)');
+  const texts = noteTexts(language);
+  const used = limitedSourceLines(
+    synthesis.used_sources.map((source) => synthesisSourceLine(source, language)),
+    MAX_SYNTHESIS_NOTE_SOURCES,
+    'used',
+    language,
+  );
   const rejected = limitedSourceLines(
-    synthesis.rejected_sources.map(rejectedSynthesisSourceLine),
+    synthesis.rejected_sources.map((source) => rejectedSynthesisSourceLine(source, language)),
     MAX_SYNTHESIS_NOTE_REJECTIONS,
-    'rejected source(s)',
+    'rejected',
+    language,
   );
   const technicianBrief = sanitizeForProvider(
-    synthesis.technician_brief || 'No synthesis brief was produced.',
+    synthesis.technician_brief || texts.noSynthesisBrief,
     MAX_INTERNAL_SYNTHESIS_BRIEF_CHARS,
   );
   const recommendedReply = synthesis.usable
     ? sanitizeForProvider(synthesis.requester_reply, MAX_INTERNAL_RECOMMENDED_REPLY_CHARS)
-    : 'No reliable source-grounded answer was produced; the requester reply will ask a technician to follow up.';
+    : texts.noReliableAnswer;
   return renderProviderBody([
-    TRIAGE_NOTE_HEADER,
-    `Ticket #${ticket.id} - ${ticket.title}`,
-    ticket.status ? `Status: ${ticket.status}` : null,
-    ticket.priority ? `Priority: ${ticket.priority}` : null,
+    texts.header,
+    texts.ticket(ticket.id, ticket.title),
+    ticket.status ? texts.status(ticket.status) : null,
+    ticket.priority ? texts.priority(ticket.priority) : null,
     '',
-    'Ticket history considered:',
-    ...timelineSummaryLines(timeline).slice(-4),
+    texts.historyHeading,
+    ...timelineSummaryLines(timeline, language).slice(-4),
     '',
-    'Technician brief:',
+    texts.technicianBrief,
     technicianBrief,
     '',
-    'Used sources:',
-    ...(used.length > 0 ? used : ['- None']),
+    texts.usedSources,
+    ...(used.length > 0 ? used : [texts.none]),
     '',
-    'Rejected/off-topic sources:',
-    ...(rejected.length > 0 ? rejected : ['- None recorded']),
+    texts.rejectedSources,
+    ...(rejected.length > 0 ? rejected : [texts.noneRecorded]),
     '',
-    'Recommended reply to requester:',
+    texts.recommendedReply,
     recommendedReply,
     '',
-    synthesis.needs_human_review ? 'Uncertainty: technician confirmation is recommended before approval.' : null,
-    synthesis.fallback_reason ? `Synthesis validation note: ${synthesis.fallback_reason}.` : null,
+    synthesis.needs_human_review ? texts.uncertainty : null,
+    synthesis.fallback_reason ? texts.validationNote(synthesis.fallback_reason) : null,
     '',
-    TRIAGE_NOTE_FOOTER,
+    texts.footer,
   ], MAX_INTERNAL_NOTE_CHARS);
 }
 
