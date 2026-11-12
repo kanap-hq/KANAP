@@ -20,6 +20,8 @@ type DirectorySyncInfo = {
   synced: number | null;
   disabled: number | null;
   removed: number | null;
+  /** The last enabled Administrator the sync kept although the directory removed them. */
+  kept_administrator: string | null;
   consent_url: string | null;
 };
 
@@ -229,6 +231,11 @@ export default function AdminAuthPage() {
                         })}
                       </Typography>
                     )}
+                    {sync.status === 'ok' && sync.kept_administrator && (
+                      <Typography variant="body2">
+                        {t('auth.sync.keptAdministrator', { name: sync.kept_administrator })}
+                      </Typography>
+                    )}
                     {(sync.status === 'never' || sync.status === 'consent_required') && (
                       <Typography variant="body2" color="text.secondary">{t('auth.sync.consentNeeded')}</Typography>
                     )}
@@ -236,9 +243,11 @@ export default function AdminAuthPage() {
                       <Alert severity="warning">{t('auth.sync.error', { message: sync.message ?? '' })}</Alert>
                     )}
                     {syncResult && (
-                      <Alert severity={syncResult.status === 'ok' ? 'success' : 'warning'}>
+                      <Alert severity={syncResult.status === 'ok' ? 'success' : syncResult.status === 'already_running' ? 'info' : 'warning'}>
                         {syncResult.status === 'ok'
                           ? t('auth.sync.resultOk', { synced: syncResult.synced, disabled: syncResult.disabled + syncResult.removed })
+                          : syncResult.status === 'already_running'
+                          ? t('auth.sync.alreadyRunning')
                           : syncResult.status === 'consent_required'
                           ? t('auth.sync.consentNeeded')
                           : t('auth.sync.error', { message: syncResult.message ?? '' })}

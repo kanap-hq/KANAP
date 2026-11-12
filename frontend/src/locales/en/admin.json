@@ -1619,12 +1619,14 @@
       "consentNeeded": "Not authorized yet. A Microsoft Entra administrator must grant {{product}} permission to read directory users.",
       "grantAccess": "Grant access in Microsoft Entra",
       "lastSynced": "Last synced {{date}}: {{synced}} accounts refreshed, {{disabled}} disabled.",
+      "keptAdministrator": "Account kept active (last administrator): {{name}}",
       "error": "The last sync failed: {{message}}",
       "syncNow": "Sync now",
       "syncing": "Syncing…",
       "consentSuccess": "Access granted. The first sync is running.",
       "consentError": "Microsoft did not grant access. Ask a Microsoft Entra administrator to approve the request.",
-      "resultOk": "Sync complete: {{synced}} accounts refreshed, {{disabled}} disabled."
+      "resultOk": "Sync complete: {{synced}} accounts refreshed, {{disabled}} disabled.",
+      "alreadyRunning": "A sync is already running."
     }
   },
   "billing": {

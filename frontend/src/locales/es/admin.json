@@ -1619,12 +1619,14 @@
       "consentNeeded": "Aún no autorizado. Un administrador de Microsoft Entra debe conceder a {{product}} permiso para leer los usuarios del directorio.",
       "grantAccess": "Conceder acceso en Microsoft Entra",
       "lastSynced": "Última sincronización {{date}}: {{synced}} cuentas actualizadas, {{disabled}} desactivadas.",
+      "keptAdministrator": "Cuenta mantenida activa (último administrador): {{name}}",
       "error": "La última sincronización falló: {{message}}",
       "syncNow": "Sincronizar ahora",
       "syncing": "Sincronizando…",
       "consentSuccess": "Acceso concedido. La primera sincronización está en curso.",
       "consentError": "Microsoft no concedió el acceso. Pida a un administrador de Microsoft Entra que apruebe la solicitud.",
-      "resultOk": "Sincronización completada: {{synced}} cuentas actualizadas, {{disabled}} desactivadas."
+      "resultOk": "Sincronización completada: {{synced}} cuentas actualizadas, {{disabled}} desactivadas.",
+      "alreadyRunning": "Ya hay una sincronización en curso."
     }
   },
   "billing": {
