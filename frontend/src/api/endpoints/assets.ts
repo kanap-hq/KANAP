@@ -321,12 +321,6 @@ export const locationsApi = {
   delete: (id: string): Promise<void> =>
     api.delete(`/locations/${id}`),
 
-  /**
-   * Get servers at this location
-   */
-  getServers: (id: string, params?: PaginationParams): Promise<PaginatedResponse<AssetSummary>> =>
-    api.paginated<AssetSummary>(`/locations/${id}/servers`, params),
-
   listSubItems: (id: string): Promise<LocationSubItem[]> =>
     api.get<LocationSubItem[]>(`/locations/${id}/sub-items`),
 
