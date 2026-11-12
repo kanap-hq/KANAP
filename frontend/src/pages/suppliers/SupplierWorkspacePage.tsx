@@ -26,7 +26,7 @@ import { getDotColor } from '../../utils/statusColors';
 import { SupplierNameTitle, SupplierNotes, SupplierTextRow } from './SupplierFields';
 import SupplierContactsTab, { useSupplierContacts } from './SupplierContactsTab';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
-import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import RecordUsagesSection, { scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
@@ -49,6 +49,11 @@ type FieldErrors = Partial<Record<FieldKey, string>>;
 /** What a new supplier starts from. */
 const NEW_SUPPLIER: Supplier = { id: '', name: '', erp_supplier_id: null, notes: null, status: STATUS_ENABLED, disabled_at: null };
 
+/** The draft's fields that Create sends and a patch can change. */
+const DRAFT_FIELDS = ['name', 'erp_supplier_id', 'notes', 'status', 'disabled_at'] as const;
+
+const fetchSupplier = async (supplierId: string) => (await api.get<Supplier>(`/suppliers/${supplierId}`)).data;
+
 /** The list's sort, search, filters and scope, kept in every address of the page. */
 function useListContext() {
   const [searchParams] = useSearchParams();
@@ -67,14 +72,17 @@ export default function SupplierWorkspacePage() {
   const params = useParams();
   const location = useLocation();
   const id = String(params.id || '');
+  // The supplier the draft has just created: the page stays the draft's, so that what is typed
+  // while it is written, and the field being typed in, are kept.
+  const fromDraft = useCreatedFromDraft('suppliers', id);
   // The new page is the supplier's own page on a draft, sent by Create.
-  if (id === 'new') return <SupplierEditor key="new" id="new" tab="overview" />;
+  if (id === 'new') return <SupplierEditor key="draft" id="new" tab="overview" />;
   // An address without a tab, or with a tab the page no longer has, opens the overview.
   if (!params.tab || !TAB_KEYS.includes(params.tab)) {
     return <Navigate replace to={`${SUPPLIERS_PATH}/${id}/overview${location.search}`} />;
   }
   // Keyed by supplier: drafts and pending saves belong to the supplier they were typed on.
-  return <SupplierEditor key={id} id={id} tab={params.tab as TabKey} />;
+  return <SupplierEditor key={fromDraft ? 'draft' : id} id={id} tab={params.tab as TabKey} />;
 }
 
 function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
@@ -158,6 +166,10 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     return result;
   }, [canEdit, detailKey, id, isCreate, queryClient, t]);
 
+  // The notes scheduled on the draft are saved by the supplier's page once the draft has created it.
+  const saveRef = React.useRef(save);
+  saveRef.current = save;
+
   // The fields saved at once (name, ERP ID, status, end of validity) show Saving, then Saved, as the notes do.
   const [fieldSaves, setFieldSaves] = React.useState(0);
   const [fieldSaved, setFieldSaved] = React.useState(false);
@@ -223,11 +235,29 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
       await autosave.flush();
       setCreateError(null);
       try {
-        const { erp_supplier_id, notes, status, disabled_at } = draftRef.current;
+        const sent = { ...draftRef.current, name: title.current().trim() };
+        const { erp_supplier_id, notes, status, disabled_at, name } = sent;
         const { data: created } = await api.post<Supplier & { creation_token: string }>('/suppliers', {
-          name: title.current().trim(), erp_supplier_id, notes, status, disabled_at,
+          name, erp_supplier_id, notes, status, disabled_at,
         });
         void queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+        // The page moves to the supplier with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the supplier was written): saved on the supplier.
+        const createdKey = ['suppliers', created.id] as const;
+        await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => fetchSupplier(created.id) }).catch(() => undefined);
+        try {
+          await saveEditsSince({
+            sent,
+            now: () => ({ ...draftRef.current, name: title.current().trim() }),
+            fields: DRAFT_FIELDS,
+            save: async (edits) => {
+              const res = await api.patch<Supplier>(`/suppliers/${created.id}`, edits);
+              queryClient.setQueryData<Supplier>(createdKey, (prev) => ({ ...(prev as Supplier), ...res.data }));
+            },
+          });
+        } catch (e) {
+          setCreateError(getApiErrorMessage(e, t, t('suppliers.messages.saveFailed')));
+        }
         return { id: created.id, token: created.creation_token, path: withContext(`${SUPPLIERS_PATH}/${created.id}/overview`) };
       } catch (e) {
         if (isDuplicateError(e)) title.refuse(t('suppliers.messages.nameTaken'));
@@ -428,7 +458,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
               disabled={disabled}
               error={errors.notes}
               onTyped={(notes) => {
-                autosave.schedule(() => save({ notes: notes.trim() ? notes : null }, 'notes'));
+                autosave.schedule(() => saveRef.current({ notes: notes.trim() ? notes : null }, 'notes'));
               }}
               onCommit={() => { void autosave.flush(); }}
             />
