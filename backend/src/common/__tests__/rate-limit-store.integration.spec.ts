@@ -208,6 +208,31 @@ async function testHitCounterFallsBackWhenTheDatabaseFails() {
   assert.equal((await counter.hit(counted, wide)).hits, 2, 'and takes a hit back in memory');
 }
 
+/** Budgets counted in units (DatabaseHitCounter.take): shared by the processes, all or nothing, given back. */
+async function testHitCounterTake(a: DataSource, b: DataSource) {
+  const one = new DatabaseHitCounter(a);
+  const two = new DatabaseHitCounter(b);
+  const rule = { limit: 30, ttl: TTL };
+  const key = `spec-${randomUUID()}`;
+  const outcomes = await Promise.all(Array.from({ length: 8 }, (_, i) => (i % 2 ? one : two).take(key, 5, rule)));
+  assert.equal(outcomes.filter((o) => o.taken).length, 6, 'eight takes of 5 at once over two processes: six fit in 30');
+  const [row] = await dataSource.query(`SELECT hits, blocked_until FROM rate_limit_hits WHERE key = $1`, [key]);
+  assert.equal(Number(row.hits), 30, 'refused takes counted nothing');
+  assert.equal(row.blocked_until, null, 'a take never blocks');
+  const taken = outcomes.find((o) => o.taken)!;
+  await one.giveBack(key, 5, taken.window);
+  assert.equal((await two.take(key, 6, rule)).taken, false, 'only 5 were given back');
+  assert.equal((await two.take(key, 5, rule)).taken, true, '5 fit again');
+  assert.equal((await one.take(`spec-${randomUUID()}`, 31, rule)).taken, false, 'more than the limit at once never fits');
+  // A window that ended starts again from the amount; nothing is given back to the new window.
+  await dataSource.query(`UPDATE rate_limit_hits SET window_ends_at = now() - interval '1 second' WHERE key = $1`, [key]);
+  const fresh = await one.take(key, 7, rule);
+  assert.equal(fresh.taken, true);
+  await two.giveBack(key, 5, taken.window);
+  const [after] = await dataSource.query(`SELECT hits FROM rate_limit_hits WHERE key = $1`, [key]);
+  assert.equal(Number(after.hits), 7, 'the old window gives nothing back to the new one');
+}
+
 async function main() {
   process.exitCode = 1;
   await dataSource.initialize();
@@ -228,6 +253,7 @@ async function main() {
       ['testHitCounterMemoryStaysBounded', () => testHitCounterMemoryStaysBounded(dataSource)],
       ['testHitCounterRelease', () => testHitCounterRelease(dataSource, other)],
       ['testHitCounterFallsBackWhenTheDatabaseFails', () => testHitCounterFallsBackWhenTheDatabaseFails()],
+      ['testHitCounterTake', () => testHitCounterTake(dataSource, other)],
     ] as const) {
       try {
         await test();

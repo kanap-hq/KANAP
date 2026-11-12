@@ -61,6 +61,20 @@ export const RATE_LIMITS = {
   publicContact: { limit: 5, ttl: 10 * 60_000 },
   publicRequestSupportInvoice: { limit: 3, ttl: 10 * 60_000 },
   /**
+   * Support invoice requests per billing address, whatever the client address, over a day. Counted
+   * once the request has passed its checks and the CAPTCHA, before anything is created
+   * (`takeRateLimit`), with the forms of one mailbox together (public/billing-email-key.ts). A
+   * request that fails afterwards (Stripe unreachable) is taken back: a buyer retrying a few times
+   * stays under it.
+   */
+  publicSupportInvoiceBillingEmail: { limit: 3, ttl: 24 * 60 * 60_000 },
+  /**
+   * Support invoice requests of the whole platform over a day, counted like the one above, failed
+   * requests included; a request refused by either budget takes nothing from the other. The first
+   * refusal of a window is logged once. Real requests come a few times a month.
+   */
+  publicSupportInvoicePlatform: { limit: 20, ttl: 24 * 60 * 60_000 },
+  /**
    * The workspace logo (`GET /public/branding/logo`, light and dark together), per client address.
    * The sign-in page shows it and each browser keeps it 300 seconds, so 600 a minute serves several
    * hundred people of one organisation opening the app behind one outbound address in the same minute.
@@ -77,8 +91,19 @@ export const RATE_LIMITS = {
   /** Sample data load, reset and banner dismissal, per user (`UserRateLimitGuard`). */
   sampleDataAction: { limit: 10, ttl: 10 * 60_000 },
   /**
-   * "Send link" e-mails of every object, per user and one budget for all the share routes
+   * "Send link" requests of every object, per user and one budget for all the share routes
    * (`ShareRateLimit`, notifications/share-rate-limit.ts).
    */
   shareLink: { limit: 30, ttl: 60 * 60_000 },
+  /**
+   * Recipients of "Send link" e-mails per user over an hour, every share route together, counted
+   * after the request limit above, in both modes (`ShareRateLimitGuard`). A request carries up to
+   * 20 recipients: ten full requests an hour.
+   */
+  shareLinkRecipientsPerUser: { limit: 200, ttl: 60 * 60_000 },
+  /**
+   * Recipients of "Send link" e-mails of one tenant over an hour, all its users together.
+   * Multi-tenant mode only: on-premise the tenant is the whole installation.
+   */
+  shareLinkRecipientsPerTenant: { limit: 1000, ttl: 60 * 60_000 },
 };

@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Get, GoneException, Header, InternalServerErrorException, Logger, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Features } from '../config/features';
 import { throwNotAvailableInMode } from '../common/feature-gates';
-import { Throttle } from '@nestjs/throttler';
+import { InjectThrottlerStorage, Throttle, ThrottlerException, ThrottlerStorage } from '@nestjs/throttler';
 import { IsEmail, IsISO31661Alpha2, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,7 +14,8 @@ import { DataSource } from 'typeorm';
 import { TrialSignup } from './trial-signup.entity';
 import { EmailService } from '../email/email.service';
 import { AuthService } from '../auth/auth.service';
-import { RateLimitGuard } from '../common/rate-limit.guard';
+import { giveBackRateLimit, RateLimitBudget, RateLimitGuard, takeRateLimit } from '../common/rate-limit.guard';
+import { billingEmailRateLimitKey } from './billing-email-key';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { clientAddress } from '../common/client-address';
 import { enrollTrialMails } from '../email/trial-mails/trial-mails.service';
@@ -231,6 +232,12 @@ export class RequestSupportInvoiceDto {
   captcha_token?: string;
 }
 
+const SUPPORT_INVOICE_PER_BILLING_EMAIL: RateLimitBudget = {
+  name: 'support-invoice-billing-email',
+  ...RATE_LIMITS.publicSupportInvoiceBillingEmail,
+};
+const SUPPORT_INVOICE_PER_PLATFORM: RateLimitBudget = { name: 'support-invoice-platform', ...RATE_LIMITS.publicSupportInvoicePlatform };
+
 /** A support invoice request after normalisation: exactly what is sent to Stripe. */
 type SupportInvoiceRequest = {
   company: string;
@@ -243,6 +250,13 @@ type SupportInvoiceRequest = {
 @Controller('public')
 export class PublicController {
   private readonly logger = new Logger(PublicController.name);
+
+  /** The storage of the rate limits (ThrottlerModule's), for the budgets of the support invoice. */
+  @InjectThrottlerStorage()
+  private readonly rateLimitStorage!: ThrottlerStorage;
+
+  /** The window of the platform budget already reported (`warnPlatformInvoiceLimitOnce`). */
+  private platformInvoiceLimitWarnedWindow: string | null = null;
 
   constructor(
     private readonly tenants: TenantsService,
@@ -484,7 +498,37 @@ export class PublicController {
       remoteIp: clientAddress(req),
       action: 'support-invoice',
     });
+    // Counted once the request is valid and the CAPTCHA passed, all or nothing: a request refused
+    // by one budget takes nothing from the other, and refused requests take nothing.
+    const limits = await takeRateLimit(this.rateLimitStorage, [
+      { budget: SUPPORT_INVOICE_PER_BILLING_EMAIL, tracker: billingEmailRateLimitKey(request.email), amount: 1 },
+      { budget: SUPPORT_INVOICE_PER_PLATFORM, tracker: 'all', amount: 1 },
+    ]);
+    if (!limits.ok) {
+      if (limits.refused === SUPPORT_INVOICE_PER_PLATFORM) this.warnPlatformInvoiceLimitOnce(limits.window);
+      throw new ThrottlerException();
+    }
+    try {
+      return await this.issueSupportInvoice(request);
+    } catch (error) {
+      // A request that fails (Stripe unreachable or not configured, a refused payload) does not
+      // count against the buyer's address; it still counts for the platform.
+      await giveBackRateLimit(this.rateLimitStorage, limits.taken.filter((taken) => taken.budget === SUPPORT_INVOICE_PER_BILLING_EMAIL));
+      throw error;
+    }
+  }
 
+  /** Once per window of the platform budget: the form answers 429 to everyone until it ends. */
+  private warnPlatformInvoiceLimitOnce(window: string) {
+    if (this.platformInvoiceLimitWarnedWindow === window) return;
+    this.platformInvoiceLimitWarnedWindow = window;
+    this.logger.warn(
+      `Support invoice requests: the platform limit of ${SUPPORT_INVOICE_PER_PLATFORM.limit} a day is reached; the form answers 429 until the window ends`,
+    );
+  }
+
+  /** Creates the Stripe customer and subscription of a checked request, then finalizes and sends its invoice. */
+  private async issueSupportInvoice(request: SupportInvoiceRequest) {
     const stripe = this.stripeClient.getClient();
     if (!stripe) throw new InternalServerErrorException('Stripe is not configured');
     const priceId = (process.env.STRIPE_PRICE_ENTERPRISE_SUPPORT_ANNUAL || '').trim();

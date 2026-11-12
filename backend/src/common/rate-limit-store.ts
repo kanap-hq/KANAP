@@ -72,6 +72,31 @@ const RELEASE_SQL = `
   UPDATE rate_limit_hits SET hits = hits - 1
   WHERE key = $1 AND hits > 0 AND window_ends_at = $2::timestamptz AND window_ends_at > now() AND blocked_until IS NULL`;
 
+/**
+ * Adds an amount to a key's count when the count stays within the limit, and changes nothing
+ * otherwise; a key never gets blocked this way. The window is fixed, as above. The answer is the
+ * window the amount was or would have been counted in, or no row when another process created the
+ * key in the meantime (a refusal).
+ */
+const TAKE_SQL = `
+  WITH taken AS (
+    INSERT INTO rate_limit_hits AS r (key, hits, window_ends_at, blocked_until)
+    VALUES ($1, $2::int, now() + make_interval(secs => $3::double precision / 1000), NULL)
+    ON CONFLICT (key) DO UPDATE SET
+      hits = CASE WHEN r.window_ends_at <= now() THEN EXCLUDED.hits ELSE r.hits + EXCLUDED.hits END,
+      window_ends_at = CASE WHEN r.window_ends_at <= now() THEN EXCLUDED.window_ends_at ELSE r.window_ends_at END
+    WHERE r.window_ends_at <= now() OR r.hits + EXCLUDED.hits <= $4::int
+    RETURNING window_ends_at::text AS window_end
+  )
+  SELECT true AS taken, window_end FROM taken
+  UNION ALL
+  SELECT false AS taken, window_ends_at::text AS window_end FROM rate_limit_hits WHERE key = $1 AND NOT EXISTS (SELECT 1 FROM taken)`;
+
+/** Takes back an amount counted in a window, while that window is still open and the key's. */
+const GIVE_BACK_SQL = `
+  UPDATE rate_limit_hits SET hits = GREATEST(0, hits - $2::int)
+  WHERE key = $1 AND window_ends_at = $3::timestamptz AND window_ends_at > now()`;
+
 const PURGE_SQL = `DELETE FROM rate_limit_hits WHERE window_ends_at < now() - interval '1 hour' AND (blocked_until IS NULL OR blocked_until < now())`;
 
 const PURGE_EVERY_MS = 10 * 60_000;
@@ -102,7 +127,7 @@ export class DatabaseThrottlerStorage implements ThrottlerStorage {
   private lastPurgeAt = Date.now();
   private lastWarnAt = 0;
 
-  constructor(private readonly dataSource: DataSource, private readonly waitMs = RATE_LIMIT_DB_WAIT_MS) {}
+  constructor(readonly dataSource: DataSource, private readonly waitMs = RATE_LIMIT_DB_WAIT_MS) {}
 
   async increment(key: string, ttl: number, limit: number, blockDuration: number, throttlerName: string): Promise<ThrottlerStorageRecord> {
     try {
@@ -142,6 +167,12 @@ export type HitRule = { limit: number; ttl: number; blockDuration: number };
  */
 export type HitOutcome = { hits: number; blocked: boolean; retryAfterMs: number; window: string };
 
+/** A budget of a `HitCounter.take`: `limit` units in a window of `ttl` ms. */
+export type TakeRule = { limit: number; ttl: number };
+
+/** Whether the amount was counted, and the window it was (or would have been) counted in. */
+export type TakeOutcome = { taken: boolean; window: string };
+
 /**
  * A count per key that can also be blocked or cleared, for limits that the outcome of a request
  * changes (the password sign-in attempts of one account from one address,
@@ -163,6 +194,14 @@ export interface HitCounter {
    * key's and the key is not blocked. The other hits of the window stay counted.
    */
   release(key: string, window: string): Promise<void>;
+  /**
+   * Adds `amount` to the key's count when the count stays within `rule.limit`; otherwise counts
+   * nothing (and blocks nothing). For budgets counted in units other than requests, such as the
+   * recipients of a share (common/rate-limit.guard.ts, `takeRateLimit`).
+   */
+  take(key: string, amount: number, rule: TakeRule): Promise<TakeOutcome>;
+  /** Takes back `amount` counted by `take` in `window`, while that window is still the key's. */
+  giveBack(key: string, amount: number, window: string): Promise<void>;
 }
 
 type MemoryEntry = { hits: number; windowEndsAt: number; blockedUntil: number | null };
@@ -216,6 +255,25 @@ export class MemoryHitCounter implements HitCounter {
     if (!entry || entry.blockedUntil !== null || entry.hits < 1) return;
     if (memoryWindow(entry) !== window || entry.windowEndsAt <= this.now()) return;
     entry.hits -= 1;
+  }
+
+  async take(key: string, amount: number, rule: TakeRule): Promise<TakeOutcome> {
+    const now = this.now();
+    this.purgeNowAndThen(now);
+    let entry = this.entries.get(key);
+    if (!entry || entry.windowEndsAt <= now) {
+      entry = { hits: 0, windowEndsAt: now + rule.ttl, blockedUntil: null };
+      this.entries.set(key, entry);
+    }
+    if (entry.hits + amount > rule.limit) return { taken: false, window: memoryWindow(entry) };
+    entry.hits += amount;
+    return { taken: true, window: memoryWindow(entry) };
+  }
+
+  async giveBack(key: string, amount: number, window: string): Promise<void> {
+    const entry = this.entries.get(key);
+    if (!entry || memoryWindow(entry) !== window || entry.windowEndsAt <= this.now()) return;
+    entry.hits = Math.max(0, entry.hits - amount);
   }
 
   /** Keys whose window and block have both passed go every 10 minutes. */
@@ -287,6 +345,33 @@ export class DatabaseHitCounter implements HitCounter {
     if (window.startsWith('memory:')) return this.fallback.release(key, window);
     try {
       await answerWithin(this.dataSource.query(RELEASE_SQL, [key, window]), this.waitMs);
+    } catch (error) {
+      this.warn(error);
+    }
+  }
+
+  async take(key: string, amount: number, rule: TakeRule): Promise<TakeOutcome> {
+    if (amount > rule.limit) return { taken: false, window: '' };
+    try {
+      const rows = await answerWithin(
+        this.dataSource.query(TAKE_SQL, [key, amount, rule.ttl, rule.limit]) as Promise<Array<{ taken: boolean; window_end: string }>>,
+        this.waitMs,
+      );
+      this.purgeNowAndThen();
+      const [row] = rows;
+      return row ? { taken: row.taken === true, window: String(row.window_end) } : { taken: false, window: '' };
+    } catch (error) {
+      this.warn(error);
+      return this.fallback.take(key, amount, rule);
+    }
+  }
+
+  async giveBack(key: string, amount: number, window: string): Promise<void> {
+    // An amount counted in memory (the database did not answer) is taken back there.
+    if (window.startsWith('memory:')) return this.fallback.giveBack(key, amount, window);
+    if (!window) return;
+    try {
+      await answerWithin(this.dataSource.query(GIVE_BACK_SQL, [key, amount, window]), this.waitMs);
     } catch (error) {
       this.warn(error);
     }
