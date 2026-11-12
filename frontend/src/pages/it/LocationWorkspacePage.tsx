@@ -289,7 +289,11 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
       const { id: _id, location_reference: _reference, ...fields } = data;
       const sent = { ...fields, name: creationTitle.current().trim() };
       try {
-        const { data: created } = await api.post<LocationRecord & { creation_token: string }>('/locations', sent);
+        const { data: posted } = await api.post<LocationRecord & { creation_token: string }>('/locations', sent);
+        // The answer of the create has no reference (the database gives it): the page reads the site
+        // before moving to it, so that its address is the reference and never the long identifier.
+        const stored = await api.get<LocationRecord>(`/locations/${posted.id}`).then((res) => res.data, () => null);
+        const created = { ...posted, location_reference: stored?.location_reference ?? posted.location_reference };
         // The page moves to the site with its data in hand, and keeps what was typed since the
         // draft was sent (the next field, while the site was written): saved on the site.
         try {

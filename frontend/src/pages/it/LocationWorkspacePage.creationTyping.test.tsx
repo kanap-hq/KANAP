@@ -118,7 +118,9 @@ describe('LocationWorkspacePage typing while the site is created', () => {
     fireEvent.blur(title);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
-      await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });
+      // The answer of the real create has no reference: the database gives it, a read returns it.
+      const { location_reference: _reference, ...posted } = STORED;
+      await act(async () => { answer({ data: { ...posted, creation_token: 'tok' } }); });
       await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/locations/LOC-9/overview'));
       // Let the page settle: it must not read the site again and replace what is typed.
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
@@ -129,23 +131,47 @@ describe('LocationWorkspacePage typing while the site is created', () => {
   const patchesWith = (field: string, value: unknown) => mocked.patch.mock.calls
     .filter(([url, body]) => url === '/locations/loc-new' && body?.[field] === value);
 
-  it('keeps the city being typed while the site is written: same field, same focus, saved on the new site', async () => {
+  it('opens the site at its reference, never at its long identifier', async () => {
+    const { finish } = await startWrite();
+    await finish();
+    expect(screen.getByTestId('where')).toHaveTextContent('/it/locations/LOC-9/overview');
+    expect(screen.getByTestId('where').textContent).not.toContain('loc-new');
+  });
+
+  it('keeps the city being typed, letter by letter, across the move to the site: same field, same focus, saved on blur', async () => {
     const { drawer, finish } = await startWrite();
     const city = within(drawer).getByPlaceholderText('workspace.location.fields.cityPlaceholder');
     act(() => city.focus());
-    fireEvent.change(city, { target: { value: 'Ly' } });
+    fireEvent.change(city, { target: { value: 'Lo' } });
     await finish();
 
     const shown = within(screen.getByRole('complementary')).getByPlaceholderText('workspace.location.fields.cityPlaceholder') as HTMLInputElement;
     expect(shown === city).toBe(true);
     expect(document.activeElement === shown).toBe(true);
-    expect(shown.value).toBe('Ly');
-    // The part typed while the site was written is on the site; the rest goes to it as well.
-    expect(patchesWith('city', 'Ly')).toHaveLength(1);
-    fireEvent.change(shown, { target: { value: 'Lyon' } });
-    await until(() => { if (shown.value !== 'Lyon') throw new Error(`city shows "${shown.value}"`); });
+    // The rest of the word is typed after the move, one letter at a time: nothing interrupts it.
+    for (const typed of ['Lor', 'Lori', 'Lorie', 'Lorien', 'Lorient']) {
+      fireEvent.change(shown, { target: { value: typed } });
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+      expect(document.activeElement === shown).toBe(true);
+      expect(shown.disabled).toBe(false);
+      expect(shown.value).toBe(typed);
+    }
+    expect(mocked.patch).not.toHaveBeenCalled();
     fireEvent.blur(shown);
-    await until(() => { if (patchesWith('city', 'Lyon').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
+    await until(() => { if (patchesWith('city', 'Lorient').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
+    expect(mocked.patch.mock.calls.filter(([, body]) => 'city' in body)).toHaveLength(1);
+  });
+
+  it('saves on the new site a city committed while the site is written', async () => {
+    const { drawer, finish } = await startWrite();
+    const city = within(drawer).getByPlaceholderText('workspace.location.fields.cityPlaceholder');
+    act(() => city.focus());
+    fireEvent.change(city, { target: { value: 'Lorient' } });
+    fireEvent.blur(city);
+    await finish();
+    expect(patchesWith('city', 'Lorient')).toHaveLength(1);
+    const shown = within(screen.getByRole('complementary')).getByPlaceholderText('workspace.location.fields.cityPlaceholder') as HTMLInputElement;
+    expect(shown.value).toBe('Lorient');
   });
 
   it('keeps the notes typed while the site is written: same editor, same focus, saved on the new site', async () => {
