@@ -14,6 +14,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 // - The exact name of a system or built-in role on `POST /roles` is refused (400) and leaves the
 //   role as it was, as `PUT /roles/:id` does; other names stay free.
 // - A tenant reads only its own roles: the names of another tenant change nothing.
+// - The names the screen shows for the system and built-in roles, in its four languages, are
+//   reserved the same way, on creation, rename, duplicate, a new person and a users file. A role
+//   already stored under such a name keeps it.
 // - These refusals carry a code: ROLE_NAME_RESERVED for a name of a system or built-in role,
 //   ROLE_NAME_TAKEN for the name of another role.
 
@@ -24,7 +27,7 @@ process.env.S3_BUCKET ||= 'system-role-names-spec';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
-type Seed = { tenantId: string; otherTenantId: string; adminUserId: string; administrator: string; analyst: string };
+type Seed = { tenantId: string; otherTenantId: string; adminUserId: string; administrator: string; analyst: string; storedFrench: string };
 type Harness = { app: any; dataSource: DataSource; roles: any; users: any };
 
 async function createHarness(): Promise<Harness> {
@@ -68,11 +71,13 @@ async function seed(runner: QueryRunner): Promise<Seed> {
   await runner.query(`INSERT INTO roles (tenant_id, role_name, role_description, is_system) VALUES ($1, 'Contact', 'Contact', true)`, [tenantId]);
   const analyst = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Analyst', 'Analyst')`, [tenantId]);
   await runner.query(`INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Buyers', 'Buyers')`, [tenantId]);
+  // A role stored earlier under a name the screen shows for a built-in role.
+  const storedFrench = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Lecteur budget', 'Stored')`, [tenantId]);
   await runner.query(`INSERT INTO roles (tenant_id, role_name, role_description, is_built_in) VALUES ($1, 'Budget Member', 'Built in', true)`, [tenantId]);
   const adminUserId = await insertId(runner,
     `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Ada', 'Admin', $3, 'enabled')`,
     [tenantId, `admin-${tenantId.slice(0, 8)}@example.test`, administrator]);
-  return { tenantId, otherTenantId, adminUserId, administrator, analyst };
+  return { tenantId, otherTenantId, adminUserId, administrator, analyst, storedFrench };
 }
 
 function req(runner: QueryRunner, s: Seed) {
@@ -97,12 +102,43 @@ async function refusedWith(fn: () => Promise<unknown>, code: string, label: stri
   assert.equal((error.getResponse() as { code?: string }).code, code, `${label}: code`);
 }
 
+function csv(email: string, role: string): Express.Multer.File {
+  const content = ['email,first_name,last_name,role,company_name,department_name,status', `${email},Probe,Row,${role},,,contact`].join('\n');
+  return { buffer: Buffer.from(`${content}\n`, 'utf8'), originalname: 'users.csv' } as Express.Multer.File;
+}
+
 async function testRefusalsCarryACode(h: Harness, runner: QueryRunner, s: Seed) {
   for (const name of ['Administrator', 'Contact', 'Budget Member', ' administrator']) {
     await refusedWith(() => h.roles.createRole({ role_name: name, role_description: 'x' }, req(runner, s)), 'ROLE_NAME_RESERVED', `POST /roles "${name}"`);
   }
   await refusedWith(() => h.roles.updateRole(s.analyst, { role_name: 'administrator' }, req(runner, s)), 'ROLE_NAME_RESERVED', 'PUT /roles/:id "administrator"');
   await refusedWith(() => h.roles.updateRole(s.analyst, { role_name: 'Buyers' }, req(runner, s)), 'ROLE_NAME_TAKEN', 'PUT /roles/:id "Buyers"');
+}
+
+async function testShownNamesAreReserved(h: Harness, runner: QueryRunner, s: Seed) {
+  const before = await roleNames(runner);
+  const shown = ['Administrateur', 'Administrador', ' administrateur ', 'ADMINISTRADOR', 'Kontakt', 'Membre budget', 'membre BUDGET ', 'KI-Agenten-Leser', 'budget member'];
+  for (const name of shown) {
+    await refusedWith(() => h.roles.createRole({ role_name: name, role_description: 'x' }, req(runner, s)), 'ROLE_NAME_RESERVED', `POST /roles "${name}"`);
+    await refusedWith(() => h.roles.updateRole(s.analyst, { role_name: name }, req(runner, s)), 'ROLE_NAME_RESERVED', `PUT /roles/:id "${name}"`);
+  }
+  await refusedWith(() => h.roles.duplicateRole(s.analyst, { role_name: 'Administrador' }, req(runner, s)), 'ROLE_NAME_RESERVED', 'duplicate as "Administrador"');
+  await refusedWith(() => h.users.create({ email: `fr-${s.tenantId.slice(0, 8)}@example.test`, role_name: 'Administrateur' }, req(runner, s)),
+    'ROLE_NAME_RESERVED', 'POST /users role_name "Administrateur"');
+  for (const dryRun of ['true', 'false']) {
+    const result = await h.users.import(csv(`csv-${s.tenantId.slice(0, 8)}@example.test`, 'Administrateur'), dryRun, 'en', undefined, undefined, req(runner, s));
+    assert.equal(result.ok, false, `import (dryRun ${dryRun}): refused`);
+    assert.deepEqual(result.errors.map((error: { code?: string }) => error.code), ['ROLE_NAME_RESERVED'], `import (dryRun ${dryRun}): code`);
+    assert.deepEqual(result.rolesToCreate, [], `import (dryRun ${dryRun}): no role to create`);
+  }
+  assert.deepEqual(await roleNames(runner), before, 'no role created');
+  const [row] = await runner.query(`SELECT role_name FROM roles WHERE id = $1`, [s.analyst]);
+  assert.equal(row.role_name, 'Analyst', 'the role keeps its name');
+  // A role already stored under such a name stays as it is, and is still found by it.
+  const kept = await h.roles.updateRole(s.storedFrench, { role_description: 'Kept' }, req(runner, s));
+  assert.equal(kept.role_name, 'Lecteur budget');
+  const imported = await h.users.import(csv(`csv-kept-${s.tenantId.slice(0, 8)}@example.test`, 'Lecteur budget'), 'true', 'en', undefined, undefined, req(runner, s));
+  assert.equal(imported.ok, true, 'import naming the stored role');
 }
 
 async function testCreationBySystemNameIsRefused(h: Harness, runner: QueryRunner, s: Seed) {
@@ -154,6 +190,7 @@ async function run() {
       await testCreationBySystemNameIsRefused(harness, runner, s);
       await testRenameToSystemNameIsRefused(harness, runner, s);
       await testRefusalsCarryACode(harness, runner, s);
+      await testShownNamesAreReserved(harness, runner, s);
       await testOtherNamesStayFree(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();

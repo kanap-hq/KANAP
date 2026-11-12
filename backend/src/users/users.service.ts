@@ -4,6 +4,7 @@ import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { User } from './user.entity';
 import { Role } from '../roles/role.entity';
 import { RolesService } from '../roles/roles.service';
+import { isReservedRoleName, isSystemRoleName } from '../roles/system-roles';
 import { UserRole } from './user-role.entity';
 import * as argon2 from 'argon2';
 import { parsePagination, parseExportPagination } from '../common/pagination';
@@ -1061,6 +1062,11 @@ export class UsersService {
       let role: FileRole | null = null;
       if (!roleName) roleName = 'Contact';
       if (roleName) role = await resolveRole(roleName);
+      // A role the file would create keeps clear of the names of the system and built-in roles (a
+      // system role the workspace lacks is created as that role).
+      if (role && !role.id && isReservedRoleName(roleName) && !isSystemRoleName(roleName)) {
+        errors.push(rowError(line, 'role', 'ROLE_NAME_RESERVED', 'This name belongs to a system or built-in role.', { value: roleName }));
+      }
 
       let company: Company | null = null;
       if (companyName) {

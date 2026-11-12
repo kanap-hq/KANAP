@@ -5,7 +5,7 @@ import { Role } from './role.entity';
 import { RolePermission } from '../permissions/role-permission.entity';
 import { RESOURCES } from '../permissions/permissions.service';
 import { userAssignedRolesSql } from '../users/user-access-sql';
-import { isSystemRoleName, roleNameKey, roleNameReserved, roleNameTaken } from './system-roles';
+import { isReservedRoleName, isSystemRoleName, roleNameKey, roleNameReserved, roleNameTaken } from './system-roles';
 
 @Injectable()
 export class RolesService {
@@ -52,16 +52,14 @@ export class RolesService {
    * names that system role (a users file, a new person).
    */
   async findByNameOrSystemName(role_name: string, opts?: { manager?: EntityManager }) {
-    return (await this.findByName(role_name, opts)) ?? this.systemNameHolder(role_name, null, opts);
+    return (await this.findByName(role_name, opts)) ?? this.systemNameHolder(role_name, opts);
   }
 
   /** Another role holding the name of a system role in another case or with surrounding spaces. */
-  private async systemNameHolder(roleName: string, exceptId: string | null, opts?: { manager?: EntityManager }) {
+  private async systemNameHolder(roleName: string, opts?: { manager?: EntityManager }) {
     if (!isSystemRoleName(roleName)) return null;
     const repo = (opts?.manager ?? this.repo.manager).getRepository(Role);
-    const query = repo.createQueryBuilder('r').where('lower(trim(r.role_name)) = :key', { key: roleNameKey(roleName) });
-    if (exceptId) query.andWhere('r.id <> :exceptId', { exceptId });
-    return query.getOne();
+    return repo.createQueryBuilder('r').where('lower(trim(r.role_name)) = :key', { key: roleNameKey(roleName) }).getOne();
   }
 
   async findById(id: string, opts?: { manager?: EntityManager }) {
@@ -115,8 +113,12 @@ export class RolesService {
       }
       return existing;
     }
-    // The name of a system role stays theirs, whatever its case.
-    if (await this.systemNameHolder(params.role_name, null, opts)) {
+    // The name of a system role, whatever its case, names that role: refused while the workspace
+    // has it. The other names of the system and built-in roles, as stored or as the screen shows
+    // them, are reserved to the seed of the built-in roles.
+    if (isSystemRoleName(params.role_name)) {
+      if (await this.systemNameHolder(params.role_name, opts)) throw roleNameReserved();
+    } else if (params.is_built_in !== true && isReservedRoleName(params.role_name)) {
       throw roleNameReserved();
     }
 
@@ -140,7 +142,7 @@ export class RolesService {
     if (params.role_name && params.role_name !== role.role_name) {
       const exists = await this.findByName(params.role_name, opts);
       if (exists && exists.id !== id) throw roleNameTaken();
-      if (await this.systemNameHolder(params.role_name, id, opts)) throw roleNameReserved();
+      if (isReservedRoleName(params.role_name)) throw roleNameReserved();
       role.role_name = params.role_name;
     }
     if (params.role_description !== undefined) role.role_description = params.role_description;

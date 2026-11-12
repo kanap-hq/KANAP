@@ -1997,7 +1997,7 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 ## Roles (Admin)
 - GET `/roles` → `{ items: Role[] }` (includes `user_count` and `is_system`)
 - POST `/roles` → create role `{ role_name, role_description }` (admin only)
-  - The names of the system roles (`Administrator`, `Contact`) are theirs: another role named so in any case or with surrounding spaces, by POST `/roles`, a duplicate or PUT `/roles/:id`, is `400` `Role name must be unique` and nothing is written. POST `/roles` with the exact name of a system or built-in role is `400` and changes nothing; the exact name of another role returns it.
+  - The names of the system and built-in roles are theirs, as stored and as the screen shows them in its four languages (`SHIPPED_ROLE_NAMES`, `roles/system-roles.ts`, a copy of `roles.builtIn.<slug>.name` in the locale files): another role named so in any case or with surrounding spaces, by POST `/roles`, a duplicate, PUT `/roles/:id`, POST `/users` with `role_name` or a users file, is `400` `ROLE_NAME_RESERVED` (a row error in a users file) and nothing is written. A role already stored under such a name keeps it. PUT `/roles/:id` to the name of another role is `400` `ROLE_NAME_TAKEN`. The exact name of another role on POST `/roles` returns it.
 - DELETE `/roles/:id` → delete role (no users assigned, not system)
 - GET `/roles/:id/permissions` → returns per-page permission levels for the role
   - Example: `{ companies: 'manager', suppliers: null, ... }`
