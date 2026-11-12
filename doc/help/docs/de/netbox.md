@@ -33,7 +33,7 @@ Gehen Sie zu **Administration > Integrationen** und öffnen Sie die Karte **Netb
 |-------|---------------|
 | **Netbox-Synchronisierung aktivieren** | Der Hauptschalter. Ist er aus, ruft Kadratis Netbox nie auf, weder manuell noch nach Zeitplan. |
 | **Netbox-Adresse** | Die Adresse, mit der Sie Netbox im Browser öffnen, zum Beispiel `https://netbox.example.com`. |
-| **API-Token** | Das Token, das Sie in Netbox angelegt haben. Es wird verschlüsselt gespeichert und nie wieder angezeigt. Lassen Sie das Feld beim Speichern leer, um das bereits gespeicherte Token zu behalten. |
+| **API-Token** | Das Token, das Sie in Netbox angelegt haben. Es wird verschlüsselt gespeichert und nie wieder angezeigt. Lassen Sie das Feld beim Speichern leer, um das bereits gespeicherte Token zu behalten, solange die Adresse gleich bleibt. Eine neue Adresse leert das gespeicherte Token: Geben Sie es erneut ein. |
 | **Zeitlimit für Anfragen (Sekunden)** | Wie lange auf Netbox gewartet wird, bevor abgebrochen wird, zwischen 5 und 120. Für 30 Sekunden leer lassen. |
 | **Zertifikatsfehler ignorieren** | Standardmäßig aus. Siehe oben. |
 | **Automatische Synchronisierung** | Läuft stündlich und wendet die Änderungen selbstständig an. Lassen Sie sie aus, bis Ihr erster Lauf stimmig aussieht. |

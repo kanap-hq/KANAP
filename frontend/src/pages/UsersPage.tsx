@@ -220,6 +220,11 @@ export default function UsersPage() {
     if (!canManageUsers) return;
     setUserDialog({ mode: 'edit', id: row.id, name: userDisplayName(row), tab: 'identity' });
   };
+  // A person with more rights than the reader (the server says so on the row) is only viewed: the
+  // server refuses every change on them.
+  const isAboveOwnRights = (row: any) => row?.above_own_rights === true;
+  const isRowSelectable = useCallback((row: any) => row?.above_own_rights !== true, []);
+  const menuRowChangeable = !!menuRow && !isAboveOwnRights(menuRow);
   pageRef.current = {
     openUser: handleEdit,
     openMenu: (event, row) => {
@@ -476,31 +481,36 @@ export default function UsersPage() {
           }
         }}
         enableRowSelection={canManageUsers}
+        isRowSelectable={isRowSelectable}
         onSelectionChanged={setSelectedRows}
         onGridApiReady={(api) => { gridApiRef.current = api; }}
         statusScopeConfig={{ defaultScope: 'enabled', scopes: ['all', 'enabled', 'invited', 'disabled'] }}
       />
       <Menu anchorReference="anchorPosition" anchorPosition={menuPos ?? undefined} open={!!menuPos} onClose={closeRowMenu}>
-        <MenuItem sx={{ fontSize: 13 }} onClick={() => { closeRowMenu(); if (menuRow) handleEdit(menuRow); }}>{t('users.actions.edit')}</MenuItem>
-        {canAdminDataAccess && menuRow && String(menuRow.id) !== String(profile?.id) && (
+        <MenuItem sx={{ fontSize: 13 }} onClick={() => { closeRowMenu(); if (menuRow) handleEdit(menuRow); }}>
+          {menuRowChangeable ? t('users.actions.edit') : t('users.actions.view')}
+        </MenuItem>
+        {canAdminDataAccess && menuRowChangeable && String(menuRow.id) !== String(profile?.id) && (
           <MenuItem sx={{ fontSize: 13 }} onClick={() => {
             const row = menuRow;
             closeRowMenu();
             if (row) setUserDialog({ mode: 'edit', id: row.id, name: userDisplayName(row), tab: 'access' });
           }}>{t('users.actions.dataAccess')}</MenuItem>
         )}
-        {menuRow?.status === 'enabled' ? (
+        {menuRowChangeable && (menuRow?.status === 'enabled' ? (
           <MenuItem sx={{ fontSize: 13 }} onClick={() => menuRow && handleRowDisable(menuRow)}>{t('users.actions.disable')}</MenuItem>
         ) : (
           <MenuItem sx={{ fontSize: 13 }} onClick={() => menuRow && handleRowEnable(menuRow)}>{t('users.actions.enable')}</MenuItem>
-        )}
-        {!menuRow?.external_auth_provider && (
+        ))}
+        {menuRowChangeable && !menuRow?.external_auth_provider && (
           <MenuItem sx={{ fontSize: 13 }} onClick={() => menuRow && handleRowInvite(menuRow)}>{t('users.actions.sendInvite')}</MenuItem>
         )}
         {!menuRow?.external_auth_provider && menuRow?.status === 'enabled' && (
           <MenuItem sx={{ fontSize: 13 }} onClick={() => menuRow && handleRowReset(menuRow)}>{t('users.actions.sendReset')}</MenuItem>
         )}
-        <MenuItem sx={{ fontSize: 13, color: 'error.main' }} onClick={() => menuRow && handleRowDelete(menuRow)}>{t('users.actions.delete')}</MenuItem>
+        {menuRowChangeable && (
+          <MenuItem sx={{ fontSize: 13, color: 'error.main' }} onClick={() => menuRow && handleRowDelete(menuRow)}>{t('users.actions.delete')}</MenuItem>
+        )}
       </Menu>
       {userDialog && (
         <UserDialog

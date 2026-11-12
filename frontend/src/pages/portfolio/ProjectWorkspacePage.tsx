@@ -295,7 +295,11 @@ export default function ProjectWorkspacePage() {
   const { data: classificationDefaults, isLoading: classificationDefaultsLoading } = useClassificationDefaults();
 
   const canManage = hasLevel('portfolio_projects', 'manager');
-  const canContributeToProject = hasLevel('portfolio_projects', 'contributor');
+  // Tasks, time and managed documents: the project read says whether the server lets this person
+  // contribute to this project (a Business Contributor only to the projects they take part in).
+  const canContributeToProject = isCreate
+    ? hasLevel('portfolio_projects', 'contributor')
+    : data?.can_contribute === true;
   const canProjectAdmin = hasLevel('portfolio_projects', 'admin');
   const projectDependenciesCount = Array.isArray(form?.dependencies) ? form.dependencies.length : 0;
   const projectTasksCountQuery = useQuery({
@@ -1223,7 +1227,7 @@ export default function ProjectWorkspacePage() {
             <ProjectTasksPanel
               projectId={form?.id || id}
               phases={form?.phases || []}
-              disabled={!canManage}
+              disabled={!canContributeToProject}
               onTasksChange={() => {
                 void projectTasksCountQuery.refetch();
               }}

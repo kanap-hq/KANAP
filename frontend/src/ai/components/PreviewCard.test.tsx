@@ -1157,4 +1157,43 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText(/Unknown account 7000/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Approuver' })).toBeDisabled();
   });
+
+  it('writes each refusal of the budget file as its sentence in the language of the screen, never its code', () => {
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Lignes budgétaires · budget.xlsx' },
+      import_mapping: importMapping({
+        import_key: 'budget_lines',
+        validation: {
+          ok: false, dry_run: true, total: 2, inserted: 0, updated: 0, unchanged: 0, skipped: 0, error_count: 2, warning_count: 0,
+          report: {
+            kind: 'budget_file',
+            file: {
+              ok: false,
+              notices: {},
+              fileErrors: [],
+              headerErrors: [],
+              errors: [
+                { line: 3, column: 'analytics:it_tower', message: 'A value of IT tower must be 255 characters or fewer.', code: 'BUDGET_FILE_DIMENSION_VALUE_TOO_LONG', params: { name: 'Tour IT', max: 255 } },
+                { line: 4, column: 'account_number', message: "Account 7000 is not in the company's chart of accounts.", code: 'BUDGET_FILE_ACCOUNT_NOT_IN_CHART', params: { value: '7000' } },
+              ],
+              errorCount: 2,
+              missing: [],
+              deleted: [],
+              deletedCount: 0,
+              changes: { created: 0, updated: 0, unchanged: 0, createdLines: [], updatedLines: [] },
+              changedSinceExport: [],
+              changedSinceExportCount: 0,
+              warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [] },
+              creates: { dimensionValues: [], suppliers: [] },
+              supplierMessage: null,
+            } as any,
+          },
+        },
+      }),
+    }));
+    expect(screen.getByText(/Une valeur de Tour IT ne doit pas dépasser 255 caractères\./)).toBeInTheDocument();
+    expect(screen.getByText(/Le compte 7000 n'est pas dans le plan comptable de la société\./)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/BUDGET_FILE_|is not in the company's chart/);
+  });
 });

@@ -1,6 +1,6 @@
 import { languageOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { moduleRightRequired, requestContextMissing } from '../auth/module-right-required';
@@ -40,7 +40,7 @@ import { resolveBusinessContributorScopeForUser } from '../auth/business-contrib
 import { PermissionLevel } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
-import { linkedReadsFromContext } from '../common/relations/linked-reads';
+import { linkedReadsFromContext, removableLinks } from '../common/relations/linked-reads';
 import { assertApplicationsInScope, idsInScope, PortfolioLinkedReads } from './portfolio-linked-reads';
 import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 import { countEditedManagedDocuments, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
@@ -348,12 +348,29 @@ export class PortfolioProjectsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const { id, accessScope } = await this.resolveForAccess(idOrRef, ctx, 'reader');
-    return this.svc.get(id, query, {
+    const project = await this.svc.get(id, query, {
       manager: ctx.manager,
       accessScope,
       readsBudget: hasLevel(ctx, 'budget', 'reader'),
       linked: await this.projectLinkedReads(ctx),
     });
+    return { ...project, can_contribute: await this.canContribute(id, ctx) };
+  }
+
+  /**
+   * Whether the reader may contribute to this project (tasks, time, managed documents): the check
+   * those writes make. A Business Contributor who reads every project through another role
+   * contributes only to the projects they take part in.
+   */
+  private async canContribute(id: string, ctx: TenantRequest): Promise<boolean> {
+    if (!hasLevel(ctx, 'portfolio_projects', 'contributor')) return false;
+    try {
+      await this.resolveForAccess(id, ctx, 'contributor');
+      return true;
+    } catch (error) {
+      if (error instanceof NotFoundException) return false;
+      throw error;
+    }
   }
 
   @UseGuards(PermissionGuard)
@@ -881,15 +898,16 @@ export class PortfolioProjectsController {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     const linked = await this.svc.listLinkedApplications(id, { manager: ctx.manager });
     const { applicationScope } = await this.projectRelationsContext(ctx);
-    await assertApplicationsInScope(
-      this.requireManager(ctx),
-      [...linked.items.map((row: { id: string }) => row.id), ...(body?.application_ids ?? [])],
-      applicationScope,
-    );
-    return this.svc.bulkReplaceLinkedApplications(id, body?.application_ids ?? [], {
+    // Only the links to applications the person reads may leave; the answer lists those they read.
+    await assertApplicationsInScope(this.requireManager(ctx), body?.application_ids ?? [], applicationScope);
+    const removable = await removableLinks(ctx, 'applications', linked.items.map((row: { id: string }) => row.id));
+    const answer = await this.svc.bulkReplaceLinkedApplications(id, body?.application_ids ?? [], {
       manager: ctx.manager,
       userId: ctx.userId ?? null,
+      removable,
     });
+    const visible = await idsInScope(this.requireManager(ctx), 'applications', answer.items.map((row: { id: string }) => row.id), applicationScope);
+    return { ...answer, items: answer.items.filter((row: { id: string }) => visible.has(String(row.id))) };
   }
 
   // ==================== LINKED ASSETS ====================

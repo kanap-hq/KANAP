@@ -95,12 +95,18 @@ const UserForm = forwardRef<UserFormHandle, {
   serverError?: unknown;
   onStateChange?: (s: { isDirty: boolean; isValid: boolean; isSubmitting: boolean }) => void;
   managedByEntra?: boolean;
+  /** Every field shown and none changed: a person with more rights than the reader. */
+  readOnly?: boolean;
+  /** The person's roles could not be read: shown from their main role, not changed. */
+  rolesLocked?: boolean;
 }>(function UserForm({
   defaultValues,
   onSubmit,
   serverError,
   onStateChange,
   managedByEntra = false,
+  readOnly = false,
+  rolesLocked = false,
 }, ref) {
   const { t } = useTranslation(['admin', 'validation']);
   const locale = useLocale();
@@ -156,6 +162,9 @@ const UserForm = forwardRef<UserFormHandle, {
   useImperativeHandle(ref, () => ({ submit }), [submit]);
 
   const err = formState.errors as any;
+  // The directory fields come from Entra for an Entra account; nothing changes on a read-only person.
+  const directoryLocked = managedByEntra || readOnly;
+  const heldRoleIds: string[] = Array.isArray(resolvedDefaults.role_ids) ? resolvedDefaults.role_ids : [];
   const selectedCompanyId = watch('company_id') as string | null | undefined;
 
   return (
@@ -177,7 +186,7 @@ const UserForm = forwardRef<UserFormHandle, {
             helperText={err.email?.message as string}
             autoComplete="email"
             inputProps={{ 'aria-label': t('userForm.fields.email'), 'aria-required': true }}
-            disabled={managedByEntra}
+            disabled={directoryLocked}
           />
         </PropertyRow>
         <Box sx={twoColumnsSx}>
@@ -188,7 +197,7 @@ const UserForm = forwardRef<UserFormHandle, {
               {...register('first_name')}
               autoComplete="off"
               inputProps={{ 'aria-label': t('userForm.fields.firstName') }}
-              disabled={managedByEntra}
+              disabled={directoryLocked}
             />
           </PropertyRow>
           <PropertyRow label={t('userForm.fields.lastName')} valueSx={fieldValueSx}>
@@ -198,7 +207,7 @@ const UserForm = forwardRef<UserFormHandle, {
               {...register('last_name')}
               autoComplete="off"
               inputProps={{ 'aria-label': t('userForm.fields.lastName') }}
-              disabled={managedByEntra}
+              disabled={directoryLocked}
             />
           </PropertyRow>
         </Box>
@@ -209,7 +218,7 @@ const UserForm = forwardRef<UserFormHandle, {
             {...register('job_title')}
             autoComplete="organization-title"
             inputProps={{ 'aria-label': t('userForm.fields.jobTitle') }}
-            disabled={managedByEntra}
+            disabled={directoryLocked}
           />
         </PropertyRow>
         <Box sx={twoColumnsSx}>
@@ -220,7 +229,7 @@ const UserForm = forwardRef<UserFormHandle, {
               {...register('business_phone')}
               autoComplete="tel"
               inputProps={{ 'aria-label': t('userForm.fields.businessPhone') }}
-              disabled={managedByEntra}
+              disabled={directoryLocked}
             />
           </PropertyRow>
           <PropertyRow label={t('userForm.fields.mobilePhone')} valueSx={fieldValueSx}>
@@ -230,7 +239,7 @@ const UserForm = forwardRef<UserFormHandle, {
               {...register('mobile_phone')}
               autoComplete="tel-national"
               inputProps={{ 'aria-label': t('userForm.fields.mobilePhone') }}
-              disabled={managedByEntra}
+              disabled={directoryLocked}
             />
           </PropertyRow>
         </Box>
@@ -244,6 +253,8 @@ const UserForm = forwardRef<UserFormHandle, {
                 label={t('userForm.fields.roles')}
                 value={field.value ?? []}
                 onChange={(v) => field.onChange(v)}
+                disabled={readOnly || rolesLocked}
+                heldRoleIds={heldRoleIds}
                 error={!!err.role_ids}
                 helperText={(err.role_ids?.message as string)
                   || (((field.value ?? []) as string[]).length === 0 ? t('userForm.fields.rolesEmptyHint') : '')}
@@ -259,6 +270,7 @@ const UserForm = forwardRef<UserFormHandle, {
               <CompanySelect
                 hideLabel
                 label={t('userForm.fields.companyOptional')}
+                disabled={readOnly}
                 value={field.value as any}
                 onChange={(v) => field.onChange(v)}
                 helperText=""
@@ -275,6 +287,7 @@ const UserForm = forwardRef<UserFormHandle, {
                 hideLabel
                 label={t('userForm.fields.departmentOptional')}
                 companyId={selectedCompanyId || undefined}
+                disabled={readOnly}
                 value={field.value as any}
                 onChange={(v) => field.onChange(v)}
                 helperText=""
@@ -291,6 +304,7 @@ const UserForm = forwardRef<UserFormHandle, {
               offLabel={t('common:statuses.disabled')}
               value={!!field.value}
               onChange={(v) => field.onChange(v)}
+              disabled={readOnly}
               error={!!err.status}
               helperText={err.status?.message as string}
               name={field.name}

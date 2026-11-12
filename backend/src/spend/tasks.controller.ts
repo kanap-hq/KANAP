@@ -590,7 +590,7 @@ export class TasksController {
   async listActivities(@Param('id') idOrRef: string, @Req() req: any) {
     const id = await this.resolve(idOrRef, req);
     await this.ensureTaskAccess(id, req, 'reader');
-    return this.activitiesSvc.listForTask(id, { manager: req?.queryRunner?.manager });
+    return this.activitiesSvc.listForTask(id, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)

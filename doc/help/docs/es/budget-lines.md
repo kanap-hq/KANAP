@@ -20,7 +20,7 @@ Mientras la línea se está creando, su encabezado muestra **Crear** y **Cancela
 - **Crear** comprueba los campos obligatorios indicados abajo. Si falta alguno, un mensaje los enumera, se marcan en el panel de propiedades y el cursor va al primero. Si no, la línea se cierra y vuelve al punto de partida: la pantalla anterior o, si no, la lista
 - **Cancelar** elimina la línea y todo lo que se introdujo en ella, importes incluidos. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar líneas. Una línea con importes en una columna congelada no se puede cancelar
 
-Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Una línea que se dejó sin empresa pagadora muestra una advertencia con los campos que faltan y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título vacío para salir sin crear nada.
+Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Si recarga la página o cierra la pestaña mientras a la línea nueva todavía le falta un campo obligatorio, su navegador pide confirmación y la línea se elimina si sale de todos modos. Una línea que se dejó sin empresa pagadora muestra una advertencia con los campos que faltan y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título vacío para salir sin crear nada.
 
 **Campos obligatorios**:
 
@@ -185,7 +185,8 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 - **Nueva línea**: Crear una línea (requiere `budget:member`)
 - **Importar**: Carga masiva de líneas desde un archivo de presupuesto (requiere `budget:admin`)
 - **Exportar**: Exportar las líneas a un archivo de presupuesto (requiere `budget:admin`)
-- **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar. Antes de eliminar nada, la confirmación enumera las líneas que se conservan, con la columna congelada. Las demás se eliminan. La misma eliminación está en la línea: **Eliminar** (icono de papelera) en su cabecera, para una persona con `budget:admin` cuyo acceso cubre todos los datos. La comprobación es la misma. Una línea con importes en una columna congelada muestra el rechazo y su motivo. Cuando la línea se puede eliminar, confirme: la línea se elimina y se abre de nuevo la lista
+- **Modificar la selección**: Modificar un campo en todas las líneas seleccionadas a la vez (requiere `budget:member`). Vea [Modificar líneas en bloque](#modificar-lineas-en-bloque)
+- **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`). Solo elimina las líneas marcadas una a una, y no está disponible mientras la casilla del encabezado toma todo el filtro. Una línea con importes en una columna congelada no se puede eliminar. Antes de eliminar nada, la confirmación enumera las líneas que se conservan, con la columna congelada. Las demás se eliminan. La misma eliminación está en la línea: **Eliminar** (icono de papelera) en su cabecera, para una persona con `budget:admin` cuyo acceso cubre todos los datos. La comprobación es la misma. Una línea con importes en una columna congelada muestra el rechazo y su motivo. Cuando la línea se puede eliminar, confirme: la línea se elimina y se abre de nuevo la lista
 
 **Navegación Anterior/Siguiente**:
 
@@ -195,6 +196,29 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 - Su contexto de lista (ordenación, filtros, búsqueda) se preserva cuando cierra el espacio de trabajo
 
 **Consejo**: Utilice filtros de columna y búsqueda rápida para construir vistas enfocadas (p. ej., "Todo el gasto en nube superior a 10k", o **CAPEX** en **Tipo** con **High** en **Priority**), luego navegue línea por línea con **Ant.**/**Sig.** para revisar presupuestos.
+
+### Modificar líneas en bloque
+
+**Seleccionar líneas**: Con el derecho de editar líneas, la lista muestra una casilla al inicio de cada fila. Marque las líneas una a una, o marque la casilla del encabezado de columna para tomar todas las líneas del filtro y la búsqueda actuales, incluidas las que aún no se han cargado. Desmarque una línea para dejarla fuera. Cambiar los filtros o la búsqueda vacía la selección. La ordenación la conserva.
+
+**Modificar un campo**:
+
+1. Seleccione las líneas y haga clic en **Modificar la selección** (icono de edición). El icono muestra el número de líneas seleccionadas
+2. Elija el **Campo**: **Centro de coste**, **Cuenta**, **Empresa pagadora**, **Proveedor**, **Responsable de TI**, **Responsable de negocio**, **Valor de dimensión** o **Run o build**. Para una cuenta, elija primero la empresa en **Plan de cuentas de** y luego la cuenta. Para un valor de dimensión, elija primero la **Dimensión** y luego el valor
+3. Elija el **Nuevo valor**. El diálogo cuenta las líneas: cuántas cambiarán, cuántas ya tienen este valor y cuántas se rechazan, con el motivo de cada rechazo (por ejemplo "Solo lectura para usted" o "Cuenta no prevista para este tipo de línea"). El recuento se repite con cada nuevo valor
+4. Haga clic en **Modificar 12 filas** (con su recuento) para confirmar. Las líneas rechazadas quedan como estaban y las demás cambian. La ventana muestra entonces el resultado: las líneas modificadas, las que ya tenían el valor y las rechazadas con sus motivos. Haga clic en **Cerrar** para cerrarla. La lista detrás ya está actualizada
+
+**Vaciar un campo**: En un campo opcional, haga clic en **Vaciar el campo** (icono de goma) junto al valor. El valor muestra **Vacío**, y el campo se vacía en cada línea seleccionada. La **Cuenta** y la **Empresa pagadora** no se pueden vaciar, ni una dimensión obligatoria.
+
+**Conviene saber**:
+
+- Cuando el filtro **Tipo** conserva un solo tipo, las cuentas y los valores de dimensión ofrecidos son los de ese tipo. Con ambos tipos, las líneas a las que un valor no corresponde se rechazan, con el motivo
+- Una modificación abarca como máximo 5000 líneas. Por encima, acote los filtros o seleccione menos líneas
+- Una selección grande puede tardar hasta un minuto en el recuento, y lo mismo en el guardado
+- Si la lista cambia entre el recuento y su confirmación, el diálogo muestra el nuevo recuento. Revíselo y vuelva a confirmar
+- Los importes no se modifican así. Modifíquelos en la línea o en el [archivo de presupuesto](budget-file.md)
+- Cada línea modificada tiene su propia entrada en su pestaña **Historial**
+- Con un acceso a los datos limitado, usted modifica las líneas de su acceso. Un cambio que sacaría una línea de su acceso se rechaza para esa línea
 
 ---
 
@@ -724,12 +748,12 @@ Un archivo de presupuesto nunca cambia el tipo de una línea. Consulte [Cargar u
 El acceso a las líneas presupuestarias se controla con el recurso Presupuesto, que cubre por igual las líneas OPEX y CAPEX. Tiene tres niveles:
 
 - `budget:reader`: Ver la lista, abrir líneas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
-- `budget:member`: Crear y editar líneas, cambiar su tipo, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos
+- `budget:member`: Crear y editar líneas, cambiar su tipo, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos, modificar líneas en bloque
 - `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y restablecer columna presupuestaria) y la eliminación de líneas desde la lista o desde la línea
 
 Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
 
-El acceso a los datos puede limitar a una persona a las líneas de ciertas empresas o centros de coste. Entonces ve esas líneas y aquellas en las que está nombrada, una línea que ve en Lectura muestra «Solo lectura en su acceso», y la eliminación de líneas y las operaciones en bloque quedan reservadas a las personas con acceso a todos los datos. Vea [Acceso a los datos](data-access.md).
+El acceso a los datos puede limitar a una persona a las líneas de ciertas empresas o centros de coste. Entonces ve esas líneas y aquellas en las que está nombrada, una línea que ve en Lectura muestra «Solo lectura en su acceso», y la eliminación de líneas y las operaciones presupuestarias quedan reservadas a las personas con acceso a todos los datos. Puede modificar líneas en bloque, en las líneas de su acceso. Vea [Acceso a los datos](data-access.md).
 
 Adicionalmente:
 

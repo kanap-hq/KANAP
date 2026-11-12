@@ -26,7 +26,7 @@ Mientras la conexión se está creando, su encabezado muestra **Crear** y **Canc
 - **Crear** comprueba que la conexión tenga al menos un protocolo y sus dos endpoints, o dos servidores en una conexión multi-servidor. Un mensaje indica lo que falta, y el primer campo que falta recibe el foco. Cuando no falta nada, Kadratis conserva la conexión y la cierra. Vuelve al punto de partida
 - **Cancelar** elimina la conexión. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar conexiones
 
-Si sale de la conexión de otra forma mientras falta algo, Kadratis le pregunta qué hacer. **Completarla** le deja en la conexión, en el primer campo que falta. **Eliminarla** elimina la conexión.
+Si sale de la conexión de otra forma mientras falta algo, Kadratis le pregunta qué hacer. **Completarla** le deja en la conexión, en el primer campo que falta. **Eliminarla** elimina la conexión. Si recarga la página o cierra la pestaña mientras a la conexión nueva todavía le falta un campo, su navegador pide confirmación. Si sale de todos modos, la conexión se elimina.
 
 ---
 

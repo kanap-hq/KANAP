@@ -39,7 +39,7 @@ While the asset is being created, its header shows **Create** and **Cancel** in 
 - **Create** checks that the asset has a location. Without one, a message names the missing location and the **Location** field of the properties drawer gets the focus. The asset stays open. With a location, Kadratis keeps the asset and closes it. You go back to where you started
 - **Cancel** deletes the asset. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete assets
 
-Leaving the asset another way (the back arrow, the menu, another asset) while it has no location asks what to do. **Complete it** keeps you on the asset, on the **Location** field. **Delete it** deletes the asset.
+Leaving the asset another way (the back arrow, the menu, another asset) while it has no location asks what to do. **Complete it** keeps you on the asset, on the **Location** field. **Delete it** deletes the asset. Reloading the page or closing the tab while the new asset has no location asks your browser to confirm. If you leave anyway, the asset is deleted.
 
 ---
 
@@ -279,7 +279,7 @@ When vulnerabilities are followed, the last section of the tab lists the vulnera
 | **Crit.**, **High**, **Med.**, **Low**, **N/R** | One column per severity (Critical, High, Medium, Low, Not rated, the full name in a tooltip on the header): the vulnerabilities still to review. A vulnerability rated **None** counts with **Low** |
 | **Total** | The distinct vulnerabilities still to review on this line |
 
-**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the asset and the technology. When nothing is left to review, the section says so in one line. While the first read of a product from the NVD, or the match of a technology just recorded on this asset, is still running, the section says "Searching for vulnerabilities…" and fills in on its own. When the search cannot be completed, the section says so. A retired asset has no section.
+**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the asset and the technology. When nothing is left to review, the section says so in one line. Vulnerabilities out of the alerts, such as those of an operating system at first, are not counted: a line under the table gives their number, for example "12 vulnerabilities excluded from alerts", and opens the Vulnerabilities page on them. While the first read of a product from the NVD, or the match of a technology just recorded on this asset, is still running, the section says "Searching for vulnerabilities…" and fills in on its own. When the search cannot be completed, the section says so. A retired asset has no section.
 
 On a **cluster**, **On its members** lists apart the technologies of its members, one line per technology and version, with the members that carry it in the **Asset** column. A cluster counts the vulnerabilities of its members in service with its own: the count of the section, the header badge (its tooltip says "members included") and the column of the list. The **See** of a line opens the page on the member that carries it.
 

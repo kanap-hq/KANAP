@@ -30,6 +30,11 @@ export const ENTRA_STATE_PURPOSE = TOKEN_SECRET_LABEL['entra-state'];
  */
 export const ENTRA_CONSENT_STATE_PURPOSE = `${TOKEN_SECRET_LABEL_PREFIX}entra-consent-state`;
 export const ENTRA_LOGIN_HANDOFF_TYPE = 'entra_login_handoff';
+/**
+ * The link e-mailed to an existing account to confirm its link to a Microsoft account. Signed with
+ * a key derived from the SSO state key under this label.
+ */
+export const ENTRA_LINK_CONFIRMATION_PURPOSE = `${TOKEN_SECRET_LABEL_PREFIX}entra-link-confirmation`;
 /** MCP OAuth (ai/oauth): the authorization code and the access token of an MCP client. */
 export const MCP_OAUTH_CODE_PURPOSE = TOKEN_SECRET_LABEL['mcp-oauth-code'];
 export const MCP_ACCESS_PURPOSE = TOKEN_SECRET_LABEL['mcp-access'];
@@ -45,6 +50,7 @@ export const FOREIGN_TOKEN_MARKERS: readonly string[] = [
   ENTRA_STATE_PURPOSE,
   ENTRA_CONSENT_STATE_PURPOSE,
   ENTRA_LOGIN_HANDOFF_TYPE,
+  ENTRA_LINK_CONFIRMATION_PURPOSE,
   MCP_OAUTH_CODE_PURPOSE,
   MCP_ACCESS_PURPOSE,
 ];

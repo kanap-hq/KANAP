@@ -3,25 +3,14 @@ import { DataSource } from 'typeorm';
 import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.service';
 import { StorageService } from '../common/storage/storage.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
-import { isStoragePathReferencedInAnyTable, ATTACHMENT_TABLES } from '../common/storage-path-refs';
+import { isStoragePathReferencedInAnyTable, ATTACHMENT_TABLES, CONTENT_SOURCES } from '../common/storage-path-refs';
 import { releaseOrphanedManagedDocuments } from '../knowledge/integrated-document-orphans';
 import { brandingLogoPaths, TenantBranding } from '../tenants/tenant.entity';
 
 const DRY_RUN = (process.env.ATTACHMENT_CLEANUP_DRY_RUN || '').toLowerCase() === 'true';
 
-/** Content tables with columns that may contain inline images */
-export const CONTENT_SOURCES = [
-  { table: 'portfolio_requests', columns: ['current_situation', 'expected_benefits'] },
-  { table: 'portfolio_activities', columns: ['content'] },
-  { table: 'tasks', columns: ['description'] },
-  { table: 'documents', columns: ['content_markdown'] },
-  // Stored versions render their own images: an attachment dropped from the
-  // current body but still present in a kept version is alive, not an orphan.
-  // Without this the cron would delete the illustrations of a frozen incident
-  // review the moment the body moved on.
-  { table: 'document_versions', columns: ['content_markdown'] },
-  { table: 'document_activities', columns: ['content'] },
-] as const;
+/** Content tables with columns that may contain inline images (shared with the delete paths). */
+export { CONTENT_SOURCES };
 
 /** Inline-capable attachment tables with their timestamp column */
 const INLINE_ATTACHMENT_TABLES = [
@@ -145,22 +134,25 @@ export class OrphanedAttachmentCleanupService implements OnModuleInit {
           // Step 3: Safe delete — check cross-table references
           for (const candidate of candidates) {
             try {
-              const referenced = await isStoragePathReferencedInAnyTable(mg, candidate.storage_path, [candidate.id]);
-              if (referenced) {
-                summary.skippedReferenced++;
-                // Delete the orphan DB row but keep S3 blob
-                if (!DRY_RUN) {
-                  await mg.query(`DELETE FROM ${table} WHERE id = $1`, [candidate.id]);
+              if (DRY_RUN) {
+                const referenced = await isStoragePathReferencedInAnyTable(mg, candidate.storage_path, [candidate.id]);
+                if (referenced) {
+                  summary.skippedReferenced++;
+                  continue;
                 }
+                this.logger.log(`[DRY RUN] Would delete: ${table}/${candidate.id} -> ${candidate.storage_path}`);
+                summary.deleted++;
                 continue;
               }
-
-              if (DRY_RUN) {
-                this.logger.log(`[DRY RUN] Would delete: ${table}/${candidate.id} -> ${candidate.storage_path}`);
-              } else {
-                try { await this.storage.deleteObject(candidate.storage_path); } catch {}
-                await mg.query(`DELETE FROM ${table} WHERE id = $1`, [candidate.id]);
+              // The row goes first, then the check: a copy of it running at the same time either
+              // waits or is seen (`unreferencedPaths`).
+              await mg.query(`DELETE FROM ${table} WHERE tenant_id = $1 AND id = $2`, [tenant.id, candidate.id]);
+              if (await isStoragePathReferencedInAnyTable(mg, candidate.storage_path)) {
+                // The orphan row is gone; the file another row names stays.
+                summary.skippedReferenced++;
+                continue;
               }
+              try { await this.storage.deleteObject(candidate.storage_path); } catch {}
               summary.deleted++;
             } catch (err: any) {
               summary.errors.push(`${table}/${candidate.id}: ${err.message}`);

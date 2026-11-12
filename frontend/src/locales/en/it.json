@@ -720,7 +720,9 @@
         },
         "platform": "Underlying platform ({{count}})",
         "countLink_one": "See the vulnerability to review on the Vulnerabilities page",
-        "countLink_other": "See the {{count}} vulnerabilities to review on the Vulnerabilities page"
+        "countLink_other": "See the {{count}} vulnerabilities to review on the Vulnerabilities page",
+        "excluded_one": "{{count, count}} vulnerability excluded from alerts",
+        "excluded_other": "{{count, count}} vulnerabilities excluded from alerts"
       },
       "severeBadge": {
         "label_one": "{{count}} severe",

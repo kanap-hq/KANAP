@@ -395,6 +395,7 @@ export default function ArtifactPanel({
               disabled={disabled}
               onApprove={onApprove}
               onReject={onReject}
+              stickyActions
             />
           </Box>
 

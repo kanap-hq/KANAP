@@ -47,6 +47,7 @@ import { normalizeAgFilterModel, assertSetFilterModes } from '../common/ag-grid-
 import { resolveToUuid } from '../common/resolve-item-id';
 import { resolveInlineTenantSlug } from '../common/resolve-inline-tenant-slug';
 import { StorageService } from '../common/storage/storage.service';
+import { isStoragePathReferencedInAnyTable, unreferencedPaths } from '../common/storage-path-refs';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
 import { Features } from '../config/features';
 import { EmailService } from '../email/email.service';
@@ -242,6 +243,77 @@ export type DocumentSourceGrant = {
 };
 
 export type { DocumentSourceAccessContext };
+
+/** Passages of one document's body for a search (`KnowledgeService.getDocumentSearchPassages`). */
+export type DocumentSearchPassages = {
+  id: string;
+  ref: string;
+  title: string;
+  status: string;
+  /** True when words of the query fall in the body; false: the single passage is the start of the body. */
+  matched: boolean;
+  passages: string[];
+};
+
+const DOCUMENT_BODY_LEAD_CHARS = 1200;
+/** A passage: whole sentences, up to this many words (a longer sentence is cut into pieces). */
+const DOCUMENT_PASSAGE_MAX_WORDS = 70;
+
+/** The sentences of a plain-text body: cut after `.`, `!`, `?`, `;`, `:` and at line breaks. */
+function documentSentences(body: string): string[] {
+  const sentences: string[] = [];
+  for (const piece of String(body || '').split(/(?<=[.!?;:])\s+|\n+/)) {
+    const words = piece.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+    for (let start = 0; start < words.length; start += DOCUMENT_PASSAGE_MAX_WORDS) {
+      sentences.push(words.slice(start, start + DOCUMENT_PASSAGE_MAX_WORDS).join(' '));
+    }
+  }
+  return sentences;
+}
+
+/**
+ * The passages of a body for the words of a query, from the query stems each sentence holds
+ * (`hits[i]`): a window of whole sentences starts at every sentence, up to 70 words, and scores
+ * the stems it holds, each weighted by how rare it is in the body (a word of almost every
+ * sentence, such as "laptop" in a laptop handbook, weighs little). The best windows that do not
+ * overlap are kept, best first, wherever they are in the body.
+ */
+function selectDocumentPassages(sentences: string[], hits: string[][], maxPassages: number): string[] {
+  const frequency = new Map<string, number>();
+  for (const stems of hits) for (const stem of new Set(stems)) frequency.set(stem, (frequency.get(stem) ?? 0) + 1);
+  const weight = (stem: string) => Math.log(1 + sentences.length / (frequency.get(stem) ?? 1));
+  const windows: Array<{ start: number; end: number; score: number }> = [];
+  for (let start = 0; start < sentences.length; start += 1) {
+    if ((hits[start] ?? []).length === 0) continue;
+    let end = start;
+    let words = sentences[start].split(' ').length;
+    while (end + 1 < sentences.length && words + sentences[end + 1].split(' ').length <= DOCUMENT_PASSAGE_MAX_WORDS) {
+      end += 1;
+      words += sentences[end].split(' ').length;
+    }
+    const stems = new Set<string>();
+    for (let index = start; index <= end; index += 1) for (const stem of hits[index] ?? []) stems.add(stem);
+    windows.push({ start, end, score: [...stems].reduce((total, stem) => total + weight(stem), 0) });
+  }
+  windows.sort((left, right) => right.score - left.score || left.start - right.start);
+  const kept: Array<{ start: number; end: number }> = [];
+  for (const window of windows) {
+    if (kept.length >= maxPassages) break;
+    if (kept.some((other) => window.start <= other.end && other.start <= window.end)) continue;
+    kept.push(window);
+  }
+  return kept.map((window) => sentences.slice(window.start, window.end + 1).join(' '));
+}
+
+/** The start of a body, cut at a word boundary: one passage, or none for an empty body. */
+function documentBodyLead(body: string): string[] {
+  const text = body.replace(/\s+/g, ' ').trim();
+  if (!text) return [];
+  if (text.length <= DOCUMENT_BODY_LEAD_CHARS) return [text];
+  const cut = text.slice(0, DOCUMENT_BODY_LEAD_CHARS);
+  const lastSpace = cut.lastIndexOf(' ');
+  return [`${(lastSpace > DOCUMENT_BODY_LEAD_CHARS / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`];
+}
 
 /** `%`, `_` and `\` are LIKE metacharacters: escaped so the fragment matches literally. */
 function escapeLikePattern(value: string): string {
@@ -738,6 +810,18 @@ export function unreadableRelationFamilies(families: string[], reads: LinkedRead
 }
 
 const RELATION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The families a document write's `relations` body replaces (each one given as a list), with their ids. */
+function relationWritesOf(relations: unknown): Partial<Record<RelationEntityType, string[]>> {
+  if (!relations || typeof relations !== 'object' || Array.isArray(relations)) return {};
+  const body = relations as Partial<Record<RelationEntityType, unknown>>;
+  const writes: Partial<Record<RelationEntityType, string[]>> = {};
+  for (const key of Object.keys(RELATION_TABLE_MAP) as RelationEntityType[]) {
+    const values = body[key];
+    if (Array.isArray(values)) writes[key] = values.map((value) => String(value ?? '').trim());
+  }
+  return writes;
+}
 
 /** The participation resource of each family a Business Contributor reads inside their participation. */
 const KNOWLEDGE_SOURCE_SCOPES = {
@@ -1901,6 +1985,12 @@ export class KnowledgeService {
       .toLowerCase();
   }
 
+  /**
+   * The words of the fallback search, run only when the main search finds nothing: each word of
+   * four letters or more, matched as a whole word. It lets a phrased query (`and` mode) find a
+   * document that holds one of its words; a short word or a part of a word matched anything
+   * ("par" found "Paris", "Parma" and "spare"), so neither counts.
+   */
   private getDocumentSearchFallbackTerms(term: string): string[] {
     const normalized = this.normalizeDocumentSearchTerm(term);
     if (!normalized) return [];
@@ -1917,13 +2007,10 @@ export class KnowledgeService {
       'une',
       'with',
     ]);
-    const values = [
-      normalized,
-      ...normalized.split(/\s+/)
-        .flatMap((token) => token.split(/['-]/))
-        .map((token) => token.trim())
-        .filter((token) => token.length >= 3 && !stopWords.has(token)),
-    ];
+    const values = normalized.split(/\s+/)
+      .flatMap((token) => token.split(/['-]/))
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 4 && /^[\p{L}\p{N}]+$/u.test(token) && !stopWords.has(token));
     const result: string[] = [];
     const seen = new Set<string>();
     for (const value of values) {
@@ -2175,16 +2262,9 @@ export class KnowledgeService {
     manager: EntityManager,
     userId?: string | null,
   ): Promise<void> {
-    if (!relations || typeof relations !== 'object' || Array.isArray(relations)) {
-      return;
-    }
-
-    const relationBody = relations as Partial<Record<RelationEntityType, unknown>>;
-    for (const key of Object.keys(RELATION_TABLE_MAP) as RelationEntityType[]) {
-      const relationValues = relationBody[key];
-      if (Array.isArray(relationValues)) {
-        await this.replaceDocumentRelationsByEntity(documentId, key, relationValues, manager, { userId });
-      }
+    const writes = relationWritesOf(relations);
+    for (const key of Object.keys(writes) as RelationEntityType[]) {
+      await this.replaceDocumentRelationsByEntity(documentId, key, writes[key] ?? [], manager, { userId });
     }
   }
 
@@ -4311,6 +4391,12 @@ export class KnowledgeService {
       await this.bulkReplaceClassifications(saved.id, templateClassifications, { manager });
     }
 
+    // A new document's links follow the rule of the link routes; the empty families a creation form
+    // sends write nothing and need no read.
+    if (userId) {
+      const writes = Object.fromEntries(Object.entries(relationWritesOf(body?.relations)).filter(([, ids]) => (ids ?? []).length > 0));
+      await this.assertRelationWriteAllowed(writes, manager, userId);
+    }
     await this.applyDocumentRelations(saved.id, body?.relations, manager);
 
     await this.ensureVersionSnapshot(saved, body?.change_note ? String(body.change_note) : 'Initial version', userId, manager);
@@ -4734,24 +4820,19 @@ export class KnowledgeService {
     const attachments = await manager.getRepository(DocumentAttachment).find({
       where: { document_id: id } as any,
     });
-    const excludedAttachmentIds = attachments.map((attachment) => attachment.id);
 
-    for (const attachment of attachments) {
-      const referencedElsewhere = await this.isStoragePathReferencedElsewhere(
-        manager,
-        attachment.storage_path,
-        excludedAttachmentIds,
-      );
-      if (!referencedElsewhere) {
-        try {
-          await this.storage.deleteObject(attachment.storage_path);
-        } catch {
-          // Keep document deletion resilient even if the object is already missing.
-        }
+    // The attachment rows go with the document (cascade), then the files no other row names
+    // (`unreferencedPaths`).
+    await repo.delete({ id } as any);
+
+    const paths = await unreferencedPaths(manager, existing.tenant_id, [...new Set(attachments.map((attachment) => attachment.storage_path).filter(Boolean))]);
+    for (const storagePath of paths) {
+      try {
+        await this.storage.deleteObject(storagePath);
+      } catch {
+        // Keep document deletion resilient even if the object is already missing.
       }
     }
-
-    await repo.delete({ id } as any);
 
     await this.auditDocumentChange('delete', existing.id, existing, null, userId, manager);
   }
@@ -4809,6 +4890,8 @@ export class KnowledgeService {
     }
 
     await this.assertIntegratedDocumentUpdateRestrictions(existing, body, manager);
+    // The links in the body follow the rule of the document's link routes (module read, participation).
+    await this.assertRelationWriteAllowed(relationWritesOf(body?.relations), manager, userId);
 
     const before = { ...existing };
 
@@ -4961,57 +5044,6 @@ export class KnowledgeService {
     await this.auditDocumentChange('delete', id, existing, null, userId, manager, opts?.audit);
 
     return { ok: true };
-  }
-
-  private async isStoragePathReferencedElsewhere(
-    manager: EntityManager,
-    storagePath: string,
-    excludedDocumentAttachmentIds: string[] = [],
-  ): Promise<boolean> {
-    const documentRefs = excludedDocumentAttachmentIds.length > 0
-      ? await manager.query<Array<{ exists: number }>>(
-          `SELECT 1 AS exists
-           FROM document_attachments
-           WHERE storage_path = $1
-             AND id <> ALL($2::uuid[])
-           LIMIT 1`,
-          [storagePath, excludedDocumentAttachmentIds],
-        )
-      : await manager.query<Array<{ exists: number }>>(
-          `SELECT 1 AS exists
-           FROM document_attachments
-           WHERE storage_path = $1
-           LIMIT 1`,
-          [storagePath],
-        );
-    if (documentRefs.length > 0) return true;
-
-    const requestRefs = await manager.query<Array<{ exists: number }>>(
-      `SELECT 1 AS exists
-       FROM portfolio_request_attachments
-       WHERE storage_path = $1
-       LIMIT 1`,
-      [storagePath],
-    );
-    if (requestRefs.length > 0) return true;
-
-    const projectRefs = await manager.query<Array<{ exists: number }>>(
-      `SELECT 1 AS exists
-       FROM portfolio_project_attachments
-       WHERE storage_path = $1
-       LIMIT 1`,
-      [storagePath],
-    );
-    if (projectRefs.length > 0) return true;
-
-    const taskRefs = await manager.query<Array<{ exists: number }>>(
-      `SELECT 1 AS exists
-       FROM task_attachments
-       WHERE storage_path = $1
-       LIMIT 1`,
-      [storagePath],
-    );
-    return taskRefs.length > 0;
   }
 
   async bulkRemove(ids: string[], userId: string | null, opts?: { manager?: EntityManager }): Promise<BulkDeleteResult> {
@@ -5885,15 +5917,14 @@ export class KnowledgeService {
   /**
    * A write of a document's links (`writes`: each family the request sets, even empty, with its ids)
    * touches only the families the person reads, as `get` shows them: another family would be
-   * replaced unseen. A family left out of the request stays as it is. A Business Contributor adds
-   * only records inside their participation (`remove`: the ids leave, nothing is added).
+   * replaced unseen. A family left out of the request stays as it is. A Business Contributor names
+   * only records inside their participation, to add, keep or remove a link: another record answers
+   * the same, linked or not, and the links they do not see stay as they are.
    */
   async assertRelationWriteAllowed(
-    documentId: string,
     writes: Partial<Record<RelationEntityType, string[]>>,
     manager: EntityManager,
     userId: string | null,
-    mode: 'set' | 'remove' = 'set',
   ): Promise<void> {
     const families = Object.keys(writes) as RelationEntityType[];
     if (families.length === 0) return;
@@ -5906,26 +5937,17 @@ export class KnowledgeService {
         { resources: [...new Set(refused.map((family) => LINKED_MODULE_RESOURCES[DOCUMENT_RELATION_MODULES[family]]))] },
       );
     }
-    if (mode === 'remove' || !userId) return;
+    if (!userId) return;
     for (const family of families) {
       const resource = isKnowledgeSourceFamily(family) ? KNOWLEDGE_SOURCE_SCOPES[family] : undefined;
       const map = RELATION_TABLE_MAP[family];
       // A malformed id fails the write's own check (`assertTenantScopedIdsExist`).
-      const ids = dedupeStrings(writes[family] ?? []).filter((id) => RELATION_ID_RE.test(id));
+      const ids = dedupeStrings((writes[family] ?? []).map((id) => String(id ?? '').toLowerCase())).filter((id) => RELATION_ID_RE.test(id));
       if (!resource || !map || ids.length === 0) continue;
       const scope = await resolveBusinessContributorScopeForUser({ manager, userId }, resource, 'reader');
       if (!scope) continue;
-      const linked: Array<{ id: string }> = await manager.query(
-        `SELECT ${map.idColumn}::text AS id
-         FROM ${map.table}
-         WHERE document_id = $1
-           AND tenant_id = app_current_tenant()`,
-        [documentId],
-      );
-      const current = new Set(linked.map((row) => row.id));
-      const added = ids.filter((id) => !current.has(id));
-      const visible = await idsInScope(manager, family as keyof typeof KNOWLEDGE_SOURCE_SCOPES, added, scope);
-      if (added.some((id) => !visible.has(id))) {
+      const visible = await idsInScope(manager, family as keyof typeof KNOWLEDGE_SOURCE_SCOPES, ids, scope);
+      if (ids.some((id) => !visible.has(id))) {
         throw outsideParticipation(family, `You can only link ${family} you take part in to this document.`);
       }
     }
@@ -6146,7 +6168,15 @@ export class KnowledgeService {
     return repo.save(existing);
   }
 
-  async search(query: any, opts?: { manager?: EntityManager; userId?: string | null; tenantId?: string | null }) {
+  /**
+   * `publishedOnly` (server side only, never read from the query): the AI agents search published
+   * documents only (Fried, 12/11); Kad, the MCP server and the screens keep every status.
+   * Items found by the fallback (one whole word of the query, score 0) carry `fallback: true`.
+   */
+  async search(
+    query: any,
+    opts?: { manager?: EntityManager; userId?: string | null; tenantId?: string | null; publishedOnly?: boolean },
+  ) {
     const manager = this.getManager(opts);
     const search = this.getDocumentSearchState(query?.q);
     if (!search) throw new BadRequestException('q is required');
@@ -6162,8 +6192,9 @@ export class KnowledgeService {
       : null;
     const accessibleLibraries = await this.listAccessibleLibraryIds(manager, opts?.userId || null, 'reader');
     if (accessibleLibraries && accessibleLibraries.length === 0) {
-      return { items: [], total: 0, offset, limit, truncated: false };
+      return { items: [], total: 0, offset, limit, truncated: false, fallback: false };
     }
+    const publishedOnly = opts?.publishedOnly === true;
 
     const matchMode = query?.matchMode === 'any' ? 'any' : 'and';
     const tsQueryTerm = matchMode === 'any' ? normalizeDocumentAnyTermQuery(search.term) : search.term;
@@ -6199,6 +6230,7 @@ export class KnowledgeService {
       params.push(accessibleLibraries);
       whereClauses.push(`d.library_id = ANY($${params.length}::uuid[])`);
     }
+    if (publishedOnly) whereClauses.push(`d.status = 'published'`);
     whereClauses.push(documentIncidentVisibilitySql('d', incidentViewer, params).replace(/^\s*AND\s/, ''));
     params.push(limit);
     params.push(offset);
@@ -6228,20 +6260,22 @@ export class KnowledgeService {
       params,
     );
 
+    let usedFallback = false;
     if (rows.length === 0) {
       const fallbackTerms = this.getDocumentSearchFallbackTerms(search.term);
       if (fallbackTerms.length > 0) {
+        usedFallback = true;
         const fallbackParams: Array<string | number | string[]> = [];
-        const fallbackClauses: string[] = [];
-        for (const term of fallbackTerms) {
-          fallbackParams.push(`%${term}%`);
-          const index = fallbackParams.length;
-          fallbackClauses.push(
-            `d.title ILIKE $${index}`,
-            `COALESCE(d.summary, '') ILIKE $${index}`,
-            `COALESCE(d.content_plain, '') ILIKE $${index}`,
-          );
-        }
+        // One pass over title, summary and body with one pattern: any of the words, as a whole
+        // word. The terms hold letters and digits only (getDocumentSearchFallbackTerms); they go
+        // through unaccent like the columns ("Straße" and "cœur" find themselves), and whatever
+        // unaccent turns into something else than a letter or a digit (it maps the modifier letter
+        // "ˆ" to "^") is dropped before the pattern is built, once per query.
+        fallbackParams.push(fallbackTerms.join('|'));
+        const fallbackClauses: string[] = [
+          `public.unaccent(concat_ws(' ', d.title, d.summary, d.content_plain))
+             ~* (SELECT '\\m(' || regexp_replace(public.unaccent($${fallbackParams.length}::text), '[^[:alnum:]|]', '', 'g') || ')\\M')`,
+        ];
         if (search.itemNumber != null) {
           fallbackParams.push(search.itemNumber);
           fallbackClauses.unshift(`d.item_number = $${fallbackParams.length}`);
@@ -6259,6 +6293,7 @@ export class KnowledgeService {
           fallbackParams.push(accessibleLibraries);
           fallbackWhereClauses.push(`d.library_id = ANY($${fallbackParams.length}::uuid[])`);
         }
+        if (publishedOnly) fallbackWhereClauses.push(`d.status = 'published'`);
         fallbackWhereClauses.push(
           documentIncidentVisibilitySql('d', incidentViewer, fallbackParams).replace(/^\s*AND\s/, ''),
         );
@@ -6291,17 +6326,98 @@ export class KnowledgeService {
     }
 
     const total = rows.length > 0 ? Math.max(Number(rows[0].total_count) || 0, rows.length) : 0;
+    const fallback = usedFallback && rows.length > 0;
 
     return {
       items: rows.map((row: any) => ({
         ...row,
         item_ref: `DOC-${row.item_number}`,
         score: Number(row.rank ?? row.score ?? 0),
+        fallback,
       })),
       total,
       offset,
       limit,
       truncated: offset + rows.length < total,
+      fallback,
+    };
+  }
+
+  /**
+   * Long passages of one document's body around the words of `query`, for a model that judges the
+   * document on its text: up to `maxPassages` (default 4, at most 8) passages of whole sentences,
+   * 70 words at most, plain text, best first (`selectDocumentPassages`), the stems compared under
+   * the configuration (French or English) that finds more of them in the body. When no word of the
+   * query is in the body, `matched` is false and the single passage is the start of the body. Null when the document does not
+   * exist, the person may not read it, it is not published under `publishedOnly`, or it is in no
+   * library of `libraryIds`.
+   */
+  async getDocumentSearchPassages(
+    idOrRef: string,
+    query: string,
+    opts?: {
+      manager?: EntityManager;
+      userId?: string | null;
+      tenantId?: string | null;
+      publishedOnly?: boolean;
+      maxPassages?: number;
+      /** Only a document of one of these libraries (an agent's list); null or absent: any. */
+      libraryIds?: string[] | null;
+    },
+  ): Promise<DocumentSearchPassages | null> {
+    const manager = this.getManager(opts);
+    let documentId: string;
+    try {
+      documentId = await this.resolveDocumentId(idOrRef, manager);
+      await this.assertDocumentReadable(documentId, manager, opts?.userId || null, { tenantId: opts?.tenantId ?? null });
+    } catch (error) {
+      if (error instanceof HttpException) return null;
+      throw error;
+    }
+    const maxPassages = Math.min(Math.max(Math.trunc(Number(opts?.maxPassages) || 4), 1), 8);
+    const rows = await manager.query(
+      `SELECT d.id, d.item_number, d.title, d.status, coalesce(d.content_plain, '') AS body
+       FROM documents d
+       WHERE d.id = $1
+         AND d.tenant_id = app_current_tenant()
+         ${opts?.publishedOnly === true ? `AND d.status = 'published'` : ''}
+         ${opts?.libraryIds ? 'AND d.library_id = ANY($2::uuid[])' : ''}
+       LIMIT 1`,
+      [documentId, ...(opts?.libraryIds ? [opts.libraryIds] : [])],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    // The query stems each sentence holds, under both configurations, in one statement.
+    const sentences = documentSentences(String(row.body));
+    const queryText = normalizeDocumentAnyTermQuery(String(query || ''));
+    const stemRows: Array<{ ord: string | number; fr: string[] | null; en: string[] | null }> = sentences.length > 0 && queryText
+      ? await manager.query(
+        `SELECT s.ord,
+                ARRAY(SELECT unnest(tsvector_to_array(to_tsvector('kanap_fr', s.sentence)))
+                      INTERSECT SELECT unnest(tsvector_to_array(to_tsvector('kanap_fr', $2)))) AS fr,
+                ARRAY(SELECT unnest(tsvector_to_array(to_tsvector('kanap_en', s.sentence)))
+                      INTERSECT SELECT unnest(tsvector_to_array(to_tsvector('kanap_en', $2)))) AS en
+         FROM unnest($1::text[]) WITH ORDINALITY AS s(sentence, ord)`,
+        [sentences, queryText],
+      )
+      : [];
+    const hitsFor = (key: 'fr' | 'en') => {
+      const hits: string[][] = sentences.map(() => []);
+      for (const stemRow of stemRows) hits[Number(stemRow.ord) - 1] = stemRow[key] ?? [];
+      return hits;
+    };
+    const frHits = hitsFor('fr');
+    const enHits = hitsFor('en');
+    const count = (hits: string[][]) => hits.reduce((total, stems) => total + stems.length, 0);
+    const passages = selectDocumentPassages(sentences, count(enHits) > count(frHits) ? enHits : frHits, maxPassages);
+    const matched = passages.length > 0;
+    return {
+      id: String(row.id),
+      ref: `DOC-${row.item_number}`,
+      title: String(row.title ?? ''),
+      status: String(row.status),
+      matched,
+      passages: matched ? passages : documentBodyLead(String(row.body)),
     };
   }
 
@@ -6637,13 +6753,16 @@ export class KnowledgeService {
     const existing = await repo.findOne({ where: { id: attachmentId, document_id: documentId } as any });
     if (!existing) throw new NotFoundException('Attachment not found');
 
-    try {
-      await this.storage.deleteObject(existing.storage_path);
-    } catch {
-      // Keep DB delete resilient even if object is already missing.
-    }
-
+    // The row first, then the check (`unreferencedPaths`), then the file: a file cloned from another
+    // record (an inline image of its source) stays while a row names it.
     await repo.delete({ id: existing.id } as any);
+    if (!(await isStoragePathReferencedInAnyTable(manager, existing.storage_path))) {
+      try {
+        await this.storage.deleteObject(existing.storage_path);
+      } catch {
+        // Keep DB delete resilient even if object is already missing.
+      }
+    }
 
     await this.audit.log(
       {
@@ -6815,7 +6934,9 @@ export class KnowledgeService {
         continue;
       }
 
-      const referencedElsewhere = await this.isStoragePathReferencedElsewhere(manager, attachment.storage_path, [attachment.id]);
+      // The row first, then the check (`unreferencedPaths`), then the file.
+      await repo.delete({ id: attachment.id } as any);
+      const referencedElsewhere = await isStoragePathReferencedInAnyTable(manager, attachment.storage_path);
       if (!referencedElsewhere) {
         try {
           await this.storage.deleteObject(attachment.storage_path);
@@ -6823,7 +6944,6 @@ export class KnowledgeService {
           // Ignore storage delete failures during inline attachment cleanup.
         }
       }
-      await repo.delete({ id: attachment.id } as any);
     }
   }
 

@@ -36,6 +36,8 @@ export type KanapDialogProps = {
   /** Defaults to the localized "Cancel"; pass one only for a non-standard label. */
   cancelLabel?: string;
   showCancel?: boolean;
+  /** False for a dialog that only shows (a record the person may only read): no main action. */
+  showSave?: boolean;
   /** Escape does not close the dialog (while it means something inside it, such as cancelling a drag). */
   disableEscapeKeyDown?: boolean;
   sx?: SxProps<Theme>;
@@ -73,6 +75,7 @@ export default function KanapDialog({
   initialFocusRef,
   cancelLabel,
   showCancel = true,
+  showSave = true,
   disableEscapeKeyDown = false,
   sx,
 }: KanapDialogProps) {
@@ -82,9 +85,9 @@ export default function KanapDialog({
   const saveButtonRef = React.useRef<HTMLButtonElement>(null);
   const handleSubmit = React.useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (saveDisabled || saveLoading) return;
+    if (!showSave || saveDisabled || saveLoading) return;
     void onSave();
-  }, [onSave, saveDisabled, saveLoading]);
+  }, [onSave, saveDisabled, saveLoading, showSave]);
 
   return (
     <Dialog
@@ -128,7 +131,7 @@ export default function KanapDialog({
         onKeyDown={(event: React.KeyboardEvent<HTMLFormElement>) => {
           if (isSubmitEnter(event)) {
             event.preventDefault();
-            if (!saveDisabled && !saveLoading) void onSave();
+            if (showSave && !saveDisabled && !saveLoading) void onSave();
           }
         }}
       >
@@ -195,16 +198,18 @@ export default function KanapDialog({
             </Button>
           ) : null}
           {secondaryActions}
-          <Button
-            ref={saveButtonRef}
-            type="submit"
-            autoFocus={saveAutoFocus}
-            variant={saveVariant}
-            disabled={saveDisabled || saveLoading}
-            startIcon={saveLoading ? <CircularProgress color="inherit" size={14} /> : undefined}
-          >
-            {saveLabel}
-          </Button>
+          {showSave ? (
+            <Button
+              ref={saveButtonRef}
+              type="submit"
+              autoFocus={saveAutoFocus}
+              variant={saveVariant}
+              disabled={saveDisabled || saveLoading}
+              startIcon={saveLoading ? <CircularProgress color="inherit" size={14} /> : undefined}
+            >
+              {saveLabel}
+            </Button>
+          ) : null}
         </Box>
       </Box>
     </Dialog>

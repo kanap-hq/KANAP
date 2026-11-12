@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { Features } from '../config/features';
+import { modelKeyDestination, sameSecretDestination } from '../common/secret-destination';
 import { assertPublicHttpUrl } from '../common/ssrf-guard';
 import { AiModelConfig } from './ai-model-config.entity';
 import { AiModelReadiness, AiModelResolverService } from './ai-model-resolver.service';
@@ -117,6 +118,15 @@ function normalizeHttpUrl(value: string | null | undefined, fieldName: string): 
   return parsed.toString();
 }
 
+/** A stored address in the form a save writes it today; as stored when it cannot be read. */
+function storedUrlForm(value: string | null, fieldName: string): string | null {
+  try {
+    return normalizeHttpUrl(value, fieldName);
+  } catch {
+    return value;
+  }
+}
+
 @Injectable()
 export class AiSettingsService {
   constructor(
@@ -133,18 +143,25 @@ export class AiSettingsService {
     return (manager ?? this.repo.manager).getRepository(AiSettings);
   }
 
+  /**
+   * The row with its secrets. `forUpdate` locks it until the request's transaction ends: a
+   * save reads it that way, so a save running at the same time waits and then reads what
+   * this one wrote, instead of writing its own stale copy of the secrets back.
+   */
   private async findWithSecrets(
     tenantId: string,
     manager?: EntityManager,
+    opts?: { forUpdate?: boolean },
   ): Promise<AiSettings | null> {
     const repo = this.getRepo(manager);
-    return repo
+    const query = repo
       .createQueryBuilder('settings')
       .addSelect('settings.llm_api_key_encrypted')
       .addSelect('settings.glpi_user_token_encrypted')
       .addSelect('settings.glpi_app_token_encrypted')
-      .where('settings.tenant_id = :tenantId', { tenantId })
-      .getOne();
+      .where('settings.tenant_id = :tenantId', { tenantId });
+    if (opts?.forUpdate) query.setLock('pessimistic_write');
+    return query.getOne();
   }
 
   private normalizeProviderSourceValue(value: 'builtin' | 'custom' | undefined): 'builtin' | 'custom' {
@@ -161,7 +178,12 @@ export class AiSettingsService {
     }
     settings.provider_source = nextValue;
     settings.updated_at = new Date();
-    await this.getRepo(manager).save(settings);
+    // Only this column: a whole-row save from a read path would write back secrets that a
+    // save running at the same time may have changed.
+    await this.getRepo(manager).update(
+      { id: settings.id, tenant_id: settings.tenant_id },
+      { provider_source: nextValue, updated_at: settings.updated_at },
+    );
     return settings;
   }
 
@@ -320,9 +342,17 @@ export class AiSettingsService {
     opts?: { manager?: EntityManager; userId?: string | null; sourceRef?: string | null },
   ): Promise<AiSettings> {
     const repo = this.getRepo(opts?.manager);
-    const existing = await this.find(tenantId, opts);
+    const existing = await this.findWithSecrets(tenantId, opts?.manager, { forUpdate: true });
+    if (existing) existing.provider_source = this.normalizeProviderSourceValue(existing.provider_source);
     const settings = existing ?? await this.get(tenantId, opts);
     const beforeView = existing ? await this.toView(settings, opts) : null;
+    // Compared in the form a save writes them, so an address stored before a change of
+    // that form (an API route kept on GLPI, a query string) is not a new address.
+    const previousGlpiUrl = storedUrlForm(settings.glpi_url, 'glpi_url');
+    const previousLlmDestination = modelKeyDestination(
+      settings.llm_provider,
+      storedUrlForm(settings.llm_endpoint_url, 'llm_endpoint_url'),
+    );
 
     if (Object.prototype.hasOwnProperty.call(input, 'chat_enabled')) {
       settings.chat_enabled = input.chat_enabled === true;
@@ -414,6 +444,20 @@ export class AiSettingsService {
       settings.glpi_app_token_encrypted = raw ? this.cipher.encrypt(raw) : null;
     }
 
+    // A stored secret only goes to the address it was entered for: a new address
+    // empties every secret the same request does not bring again.
+    const glpiAddressChanged = !sameSecretDestination(previousGlpiUrl, settings.glpi_url);
+    if (glpiAddressChanged) {
+      if (!normalizeNullableString(input.glpi_user_token)) settings.glpi_user_token_encrypted = null;
+      if (!normalizeNullableString(input.glpi_app_token)) settings.glpi_app_token_encrypted = null;
+    }
+    if (
+      previousLlmDestination !== modelKeyDestination(settings.llm_provider, settings.llm_endpoint_url)
+      && !normalizeNullableString(input.llm_api_key)
+    ) {
+      settings.llm_api_key_encrypted = null;
+    }
+
     if (Object.prototype.hasOwnProperty.call(input, 'accept_builtin_provider_key')) {
       const requestedKey = input.accept_builtin_provider_key;
       if (requestedKey == null) {
@@ -446,7 +490,9 @@ export class AiSettingsService {
         throw new BadRequestException('GLPI integration requires glpi_url.');
       }
       if (!settings.glpi_user_token_encrypted) {
-        throw new BadRequestException('GLPI integration requires glpi_user_token.');
+        throw new BadRequestException(glpiAddressChanged && previousGlpiUrl
+          ? 'The GLPI address changed: enter the user token again.'
+          : 'GLPI integration requires glpi_user_token.');
       }
     }
 

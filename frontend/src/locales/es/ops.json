@@ -1874,6 +1874,11 @@
       "leaveDelete": "Eliminarla",
       "leaveAnyway": "Salir de todos modos",
       "completeFailed": "No se pudo comprobar la línea."
+    },
+    "bulkEdit": {
+      "chartOf": "Plan de cuentas de",
+      "dimension": "Dimensión",
+      "dimensionValue": "Valor de dimensión"
     }
   }
 }

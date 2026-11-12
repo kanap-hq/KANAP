@@ -47,12 +47,12 @@ Le formulaire de configuration contient :
 
 - **Activer l'import de tickets GLPI** : interrupteur principal de la connexion. Lorsqu'il est désactivé, Kadratis n'essaiera pas d'interroger GLPI même si des identifiants sont renseignés : ni les imports Kad ni les contrôles d'agent n'atteindront votre centre de services.
 - **URL GLPI** : l'URL de base de votre instance GLPI, par exemple `https://glpi.example.com`.
-- **Jeton utilisateur** : le jeton d'API personnel du compte GLPI que Kadratis utilisera. Les jetons existants sont masqués ; laissez le champ vide lors d'un enregistrement ou d'un test pour conserver la valeur stockée.
+- **Jeton utilisateur** : le jeton d'API personnel du compte GLPI que Kadratis utilisera. Les jetons existants sont masqués ; laissez le champ vide lors d'un enregistrement ou d'un test pour conserver la valeur stockée, tant que l'URL ne change pas. Une nouvelle URL vide les jetons enregistrés : saisissez-les de nouveau.
 - **Jeton d'application** : le jeton d'application GLPI facultatif. Même comportement « laisser vide pour conserver » que pour le jeton utilisateur.
 
 ### Actions
 
-- **Enregistrer les paramètres** : enregistre le formulaire. Les jetons saisis dans le formulaire remplacent ceux qui sont stockés ; les champs de jeton laissés vides conservent la valeur déjà enregistrée.
+- **Enregistrer les paramètres** : enregistre le formulaire. Les jetons saisis dans le formulaire remplacent ceux qui sont stockés ; les champs de jeton laissés vides conservent la valeur déjà enregistrée, sauf si l'URL a changé.
 - **Tester la connexion** : effectue un aller-retour authentifié vers l'URL GLPI à l'aide des valeurs du formulaire (ou, lorsqu'elles sont vides, des valeurs stockées). La bannière de résultat indique la réussite ou l'erreur sous-jacente, ainsi que la latence.
 
 ### Stockage des secrets

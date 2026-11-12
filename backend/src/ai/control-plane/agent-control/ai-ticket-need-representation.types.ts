@@ -46,7 +46,14 @@ export type TicketNeedRepresentation = {
   evidence_refs: string[];
   warnings: string[];
   confidence: number | null;
+  // Search terms (symptoms, actions, objects) in each language the documents may be written in,
+  // translated by the same model call; empty without a model.
+  search_terms: Record<TicketNeedSearchLanguage, string[]>;
 };
+
+/** The languages of the product, those the knowledge documents may be written in. */
+export const TICKET_NEED_SEARCH_LANGUAGES = ['en', 'fr', 'de', 'es'] as const;
+export type TicketNeedSearchLanguage = (typeof TICKET_NEED_SEARCH_LANGUAGES)[number];
 
 export type TicketImageEvidence = {
   attachment_ref: string;
@@ -66,6 +73,8 @@ export type KnowledgeQueryDerivation = {
   source: 'need_representation' | 'deterministic_fallback';
   queries: string[];
   exact_queries: string[];
+  // One query per document language, from the translated search terms.
+  language_queries: string[];
   facet_queries: string[];
   fallback_queries: string[];
   dropped_queries: Array<{

@@ -37,7 +37,7 @@ import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
 import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
-import { assertLinkedModuleRead, assertLinkedRecordsReadable } from '../common/relations/linked-reads';
+import { assertLinkedRecordsReadable, readableLinkedItems, removableLinks } from '../common/relations/linked-reads';
 
 @UseGuards(JwtAuthGuard)
 @Controller('spend-items')
@@ -323,7 +323,11 @@ export class SpendItemsController {
   ) {
     await assertLinkedRecordsReadable(ctx, 'projects', body?.project_ids ?? []);
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], { manager: ctx.manager });
+    // Only the links to projects the person reads may leave; the answer names no other project.
+    const stored = (await this.svc.listProjects(id, { manager: ctx.manager })).items.map((row: { id: string }) => row.id);
+    const removable = await removableLinks(ctx, 'projects', stored);
+    const answer = await this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], { manager: ctx.manager, removable });
+    return { ...answer, items: await readableLinkedItems(ctx, 'projects', answer.items) };
   }
 
   // Linked applications (Apps & Services workspace)
@@ -346,9 +350,14 @@ export class SpendItemsController {
     @Body() body: { application_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    assertLinkedModuleRead(ctx, 'applications');
+    // As the line's Relations tab: applications of the person's participation only, and the links
+    // to the applications they do not read stay.
+    await assertLinkedRecordsReadable(ctx, 'applications', body?.application_ids ?? []);
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, { manager: ctx.manager });
+    const stored = (await this.svc.listApplications(id, { manager: ctx.manager })).items.map((row: { id: string }) => row.id);
+    const removable = await removableLinks(ctx, 'applications', stored);
+    const answer = await this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, { manager: ctx.manager, removable });
+    return { ...answer, items: await readableLinkedItems(ctx, 'applications', answer.items) };
   }
 
   // Technologies: their section is null without the right to read the infrastructure, and a set the

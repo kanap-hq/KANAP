@@ -72,7 +72,7 @@ On an on-premise installation this row does not appear at all.
 - **Provider**: who serves the model. The choice changes which of the following fields apply.
 - **Model**: the exact model identifier as the provider spells it (for example `claude-sonnet-5`). This is not a display name; a typo here surfaces as a failed call, not a validation error.
 - **Server address**: only for providers you host or point somewhere specific. When Kadratis runs in Docker and the model runs on the same host machine, address the host rather than `localhost`.
-- **API key**: the credential from your provider. It is stored encrypted and never shown again: when you reopen an existing model the field shows a mask (`••••••••`) with the hint *Leave empty to keep the current key*, so you only type in it to replace the key. If the instance has no encryption secret configured, a warning at the top of the page explains that keys cannot be stored at all.
+- **API key**: the credential from your provider. It is stored encrypted and never shown again: when you reopen an existing model the field shows a mask (`••••••••`) with the hint *Leave empty to keep the current key*, so you only type in it to replace the key. A new provider or server address empties the stored key: enter it again. If the instance has no encryption secret configured, a warning at the top of the page explains that keys cannot be stored at all.
 
 **Capabilities**:
 

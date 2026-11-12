@@ -5,7 +5,7 @@ import { budgetColumnName, readBudgetColumns } from '../budget-columns/budget-co
 import { AmountMeasure, AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN } from './amounts-write.util';
 import { RecordInUseException } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
-import { ATTACHMENT_TABLES } from '../common/storage-path-refs';
+import { unreferencedPaths } from '../common/storage-path-refs';
 import { StorageService } from '../common/storage/storage.service';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 import { deleteTaskActivities } from '../tasks/task-delete-cleanup';
@@ -226,22 +226,9 @@ export async function deleteItemTasks(
   }
 }
 
-/**
- * The attachment paths no attachment row of the tenant references any more.
- * Runs with the item's rows, inside its savepoint on a bulk delete, so a
- * failed check fails only that item and no file has been touched yet.
- */
-export async function unreferencedPaths(manager: EntityManager, tenantId: string, paths: string[]): Promise<string[]> {
-  if (paths.length === 0) return [];
-  const rows: Array<{ storage_path: string }> = await manager.query(
-    ATTACHMENT_TABLES.map(
-      (table) => `SELECT storage_path FROM ${table} WHERE tenant_id = $1 AND storage_path = ANY($2::text[])`,
-    ).join(' UNION '),
-    [tenantId, paths],
-  );
-  const referenced = new Set(rows.map((r) => r.storage_path));
-  return paths.filter((path) => !referenced.has(path));
-}
+// The attachment paths no attachment row of the tenant references any more (all rows, those a
+// limited person cannot read included).
+export { unreferencedPaths };
 
 /**
  * Best effort, once the rows are gone: a storage failure is logged, never

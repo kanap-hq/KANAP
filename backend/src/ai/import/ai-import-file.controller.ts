@@ -7,7 +7,7 @@ import { Tenant, TenantRequest } from '../../common/decorators';
 import { XLSX_CONTENT_TYPE } from '../../common/xlsx/write';
 import { AiMutationPreviewService } from '../ai-mutation-preview.service';
 import { AiPolicyService } from '../ai-policy.service';
-import { personWriteLanguage } from '../ai-write-texts';
+import { personWriteLanguage, screenLanguageOf } from '../ai-write-texts';
 import type { AiExecutionContextWithManager } from '../ai.types';
 import { AiImportMappingService, PrepareImportMappingInput } from './ai-import-mapping.service';
 
@@ -50,6 +50,7 @@ export class AiImportFileController {
       conversationId: id,
       requestId: req?.id ?? null,
       aiApiKeyId: null,
+      screenLanguage: screenLanguageOf(req?.headers?.['accept-language']),
       manager: tenant.manager,
     };
     await this.policy.assertSurfaceAccess(context, context.manager);
@@ -57,7 +58,7 @@ export class AiImportFileController {
     if (preview.tool_name !== 'prepare_import_mapping' || preview.conversation_id !== id) {
       throw new NotFoundException('AI preview not found.');
     }
-    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId);
+    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
     const file = await this.mapping.preparedFile(context, preview.mutation_input as unknown as PrepareImportMappingInput, language);
     res.setHeader('Content-Type', XLSX_CONTENT_TYPE);
     res.setHeader('Content-Disposition', contentDisposition(preparedFileName(preview.mutation_input?.filename)));

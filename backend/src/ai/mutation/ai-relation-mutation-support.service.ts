@@ -42,7 +42,8 @@ import {
 } from '../../assets/placement-rules';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
-import { LINKED_MODULE_RESOURCES } from '../../common/relations/linked-reads';
+import { LINKED_MODULE_RESOURCES, linkedParticipationScope } from '../../common/relations/linked-reads';
+import { idsInScope } from '../../portfolio/portfolio-linked-reads';
 
 export const AI_RELATION_ENTITY_TYPES = [
   'applications',
@@ -112,6 +113,15 @@ type SpecialRelationConfig = {
 };
 
 type RelationConfig = SimpleRelationConfig | SpecialRelationConfig;
+
+/**
+ * The target families a Business Contributor reads inside their participation: a relation shows,
+ * adds and removes only the links to the records they read, and keeps the others.
+ */
+const PARTICIPATION_TARGETS: Partial<Record<RelationTarget, 'applications' | 'projects'>> = {
+  applications: 'applications',
+  projects: 'projects',
+};
 
 /** The module whose read a link to a record of the target family asks for (`common/relations/linked-reads.ts`). */
 const RELATION_TARGET_READ_RESOURCES: Partial<Record<string, string>> = {
@@ -340,6 +350,12 @@ export class AiRelationMutationSupportService {
    * (spec §4.3, lot 5), an application's projects the projects reader level, and so on.
    */
   private async assertLinkedModuleRead(context: AiExecutionContextWithManager, config: RelationConfig): Promise<void> {
+    // An application's server assignments change the servers too: the Deployments tab and its
+    // routes ask the member level on the infrastructure.
+    if (config.kind === 'app_asset_assignments') {
+      await this.policy?.assertBusinessPermission(context, LINKED_MODULE_RESOURCES.assets, 'member', context.manager);
+      return;
+    }
     if (config.kind !== 'simple') return;
     const resource = RELATION_TARGET_READ_RESOURCES[config.target];
     if (!resource) return;
@@ -532,6 +548,7 @@ export class AiRelationMutationSupportService {
     ) {
       throw new ConflictException(`${config.label} changed after the preview was created.`);
     }
+    await this.assertAddedTargetsReadable(context, config, expectedItems, nextItems);
     const audit = buildAiMutationAudit(preview);
     await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems, audit);
     // R1: the host links the cluster replaces, removed after the cluster's own relations are in
@@ -1082,39 +1099,55 @@ export class AiRelationMutationSupportService {
     }
   }
 
+  /**
+   * The links of a simple relation the person reads: a target outside a Business Contributor's
+   * participation is left out (the read of the Relations tab, `idsInScope`), and a replacement keeps it.
+   */
   private async loadSimpleRelation(context: AiExecutionContextWithManager, config: SimpleRelationConfig, sourceId: string): Promise<RelationItem[]> {
     const target = this.targetSql(config.target);
-    const params: unknown[] = [context.tenantId, sourceId];
-    const accessScope = config.target === 'applications'
-      ? await resolveBusinessContributorScopeForUser({
-        manager: context.manager,
-        userId: context.userId,
-        tenantId: context.tenantId,
-      }, 'applications', 'reader')
-      : undefined;
-    const accessScopeSql = accessScope
-      ? (() => {
-        params.push(accessScope.userId);
-        return `AND ${applicationParticipantCondition('t', `$${params.length}`)}`;
-      })()
-      : '';
-    const rows = await context.manager.query(
+    const rows: Array<{ target_id: string; label: string | null }> = await context.manager.query(
       `
       SELECT l.${config.targetColumn} AS target_id,
              ${target.labelSql} AS label
       FROM ${config.table} l
       JOIN ${target.table} t ON t.id = l.${config.targetColumn} AND t.tenant_id = $1${target.where ?? ''}
       WHERE l.tenant_id = $1 AND l.${config.sourceColumn} = $2
-      ${accessScopeSql}
       ORDER BY label ASC
       `,
-      params,
+      [context.tenantId, sourceId],
     );
-    return rows.map((row: any) => ({
+    const visible = await this.readableTargetIds(context, config, rows.map((row) => String(row.target_id)));
+    return rows.filter((row) => visible.has(String(row.target_id))).map((row) => ({
       key: String(row.target_id),
       label: String(row.label || row.target_id),
       payload: { [config.targetColumn]: String(row.target_id) },
     }));
+  }
+
+  /** The ids among `ids` (targets of `config`) the person reads: every id outside a participation family. */
+  private async readableTargetIds(context: AiExecutionContextWithManager, config: SimpleRelationConfig, ids: string[]): Promise<Set<string>> {
+    const family = PARTICIPATION_TARGETS[config.target];
+    if (!family || ids.length === 0) return new Set(ids);
+    const scope = await linkedParticipationScope(context.manager, context.userId, context.tenantId, family);
+    return idsInScope(context.manager, family, ids, scope);
+  }
+
+  /**
+   * At the run, the targets the preview adds are read again: one the person no longer reads (outside
+   * their participation since the preview) is refused as a missing one, and nothing is written.
+   */
+  private async assertAddedTargetsReadable(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    expectedItems: RelationItem[],
+    nextItems: RelationItem[],
+  ): Promise<void> {
+    if (config.kind !== 'simple' || !PARTICIPATION_TARGETS[config.target]) return;
+    const current = new Set(expectedItems.map((item) => item.key.toLowerCase()));
+    const added = nextItems.filter((item) => !current.has(item.key.toLowerCase()));
+    const visible = await this.readableTargetIds(context, config, added.map((item) => item.key.toLowerCase()));
+    const unseen = added.find((item) => !visible.has(item.key.toLowerCase()));
+    if (unseen) throw new NotFoundException(`No ${config.target.replace(/_/g, ' ')} found matching "${unseen.label}".`);
   }
 
   /** `where`: a predicate on the target row `t`; a `budget_lines` target names both natures (`spend/budget-nature.ts`). */
@@ -1442,16 +1475,19 @@ export class AiRelationMutationSupportService {
       }
       return;
     }
-    // A target with a predicate (OPEX or CAPEX lines): only the links to such targets are replaced,
-    // a link to a line of the other nature stays.
-    const target = this.targetSql(config.target);
-    const ofTarget = target.where
-      ? ` AND EXISTS (SELECT 1 FROM ${target.table} t WHERE t.tenant_id = l.tenant_id AND t.id = l.${config.targetColumn}${target.where})`
-      : '';
-    await context.manager.query(`DELETE FROM ${config.table} l WHERE l.tenant_id = $1 AND l.${config.sourceColumn} = $2${ofTarget}`, [context.tenantId, sourceId]);
-    for (const item of nextItems) {
-      const targetId = item.payload[config.targetColumn];
-      if (!targetId) continue;
+    // Only the links the person reads are replaced (`loadSimpleRelation`, the read the preview showed):
+    // a link to a record they do not read (outside their participation, a line hidden by their data
+    // access, a line of no nature) stays, and a link that stays linked is not rewritten.
+    const visible = new Set((await this.loadSimpleRelation(context, config, sourceId)).map((item) => item.key.toLowerCase()));
+    const removed = Array.from(visible).filter((id) => !targetIds.includes(id));
+    const added = targetIds.filter((id) => !visible.has(id));
+    if (removed.length > 0) {
+      await context.manager.query(
+        `DELETE FROM ${config.table} WHERE tenant_id = $1 AND ${config.sourceColumn} = $2 AND ${config.targetColumn} = ANY($3::uuid[])`,
+        [context.tenantId, sourceId, removed],
+      );
+    }
+    for (const targetId of added) {
       await context.manager.query(
         `INSERT INTO ${config.table} (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
         [context.tenantId, sourceId, targetId],

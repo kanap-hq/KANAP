@@ -39,7 +39,7 @@ Tant que l'actif est en cours de création, son en-tête affiche **Créer** et *
 - **Créer** vérifie que l'actif a un site. Sans site, un message nomme le site manquant et le champ **Site** du tiroir des propriétés prend le focus. L'actif reste ouvert. Avec un site, Kadratis conserve l'actif et le ferme. Vous revenez à votre point de départ
 - **Annuler** supprime l'actif. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des actifs
 
-Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, Kadratis vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif.
+Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, Kadratis vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif. Recharger la page ou fermer l'onglet alors que le nouvel actif n'a pas de site fait demander une confirmation par votre navigateur. Si vous partez quand même, l'actif est supprimé.
 
 ---
 
@@ -279,7 +279,7 @@ Quand les vulnérabilités sont suivies, la dernière section de l'onglet liste 
 | **Crit.**, **Élev.**, **Moy.**, **Faible**, **N. éval.** | Une colonne par sévérité (Critique, Élevée, Moyenne, Faible, Non évaluée, le nom complet en infobulle sur l'en-tête) : les vulnérabilités encore à traiter. Une vulnérabilité notée **Aucune** compte avec **Faible** |
 | **Total** | Les vulnérabilités distinctes encore à traiter sur cette ligne |
 
-**Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Tant que la première lecture d'un produit dans la NVD, ou le rapprochement d'une technologie qui vient d'être renseignée sur cet actif, est en cours, la section affiche « Recherche des vulnérabilités en cours… » et se complète d'elle-même. Quand la recherche ne peut pas aboutir, la section le dit. Un actif retiré n'a pas de section.
+**Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Les vulnérabilités exclues des alertes, comme d'abord celles d'un système d'exploitation, ne sont pas comptées : une ligne sous le tableau en donne le nombre, par exemple « 12 vulnérabilités exclues des alertes », et ouvre la page Vulnérabilités sur elles. Tant que la première lecture d'un produit dans la NVD, ou le rapprochement d'une technologie qui vient d'être renseignée sur cet actif, est en cours, la section affiche « Recherche des vulnérabilités en cours… » et se complète d'elle-même. Quand la recherche ne peut pas aboutir, la section le dit. Un actif retiré n'a pas de section.
 
 Sur un **cluster**, **Sur ses membres** liste à part les technologies de ses membres, une ligne par technologie et version, avec dans la colonne **Actif** les membres qui la portent. Un cluster compte les vulnérabilités de ses membres en service avec les siennes : le nombre de la section, le badge de l'en-tête (son infobulle dit « membres compris ») et la colonne de la liste. Le **Voir** d'une ligne ouvre la page sur le membre qui la porte.
 

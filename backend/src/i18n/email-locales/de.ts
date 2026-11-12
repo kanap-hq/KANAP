@@ -250,6 +250,13 @@ export const de: EmailStrings = {
       intro: 'Wir haben eine Anfrage zum Zurücksetzen Ihres Passworts erhalten. Mit der Schaltfläche unten wählen Sie ein neues. Sie bleibt {{duration}} gültig.',
       ignore: 'Wenn Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese Nachricht: Ihr aktuelles Passwort bleibt gültig.',
     },
+    entraLinkConfirmation: {
+      subject: 'Microsoft-Anmeldung für {{organisation}} bestätigen',
+      intro: 'Bei einer Anmeldung mit Microsoft wurde Ihre Adresse verwendet. Mit der Schaltfläche unten verknüpfen Sie dieses Microsoft-Konto mit Ihrem Konto. Sie bleibt {{duration}} gültig.',
+      ignore: 'Wenn Sie sich nicht mit Microsoft angemeldet haben, ignorieren Sie diese Nachricht: An Ihrem Konto ändert sich nichts.',
+      requestedBy: 'Microsoft-Konto: {{account}}, {{date}}',
+      button: 'Mein Microsoft-Konto verknüpfen',
+    },
     userInvite: {
       subject: 'Einladung zu {{organisation}}',
       intro: '{{inviterName}} lädt Sie ein, {{place}} beizutreten.',

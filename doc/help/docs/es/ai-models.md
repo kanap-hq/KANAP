@@ -72,7 +72,7 @@ En una instalación local esta fila no aparece en absoluto.
 - **Proveedor**: quién sirve el modelo. La elección cambia cuáles de los campos siguientes se aplican.
 - **Modelo**: el identificador exacto del modelo, tal como lo escribe el proveedor (por ejemplo, `claude-sonnet-5`). No es un nombre para mostrar; una errata aquí se manifiesta como una llamada fallida, no como un error de validación.
 - **Dirección del servidor**: solo para los proveedores que usted aloja o que apuntan a un sitio concreto. Cuando Kadratis se ejecuta en Docker y el modelo se ejecuta en la misma máquina anfitriona, dirija la petición al host en lugar de a `localhost`.
-- **Clave API**: la credencial de su proveedor. Se almacena cifrada y no se vuelve a mostrar: cuando reabre un modelo existente, el campo muestra una máscara (`••••••••`) con la indicación *Déjelo vacío para conservar la clave actual*, así que solo escribe en él para sustituir la clave. Si la instancia no tiene configurado ningún secreto de cifrado, una advertencia en la parte superior de la página explica que las claves no se pueden almacenar en absoluto.
+- **Clave API**: la credencial de su proveedor. Se almacena cifrada y no se vuelve a mostrar: cuando reabre un modelo existente, el campo muestra una máscara (`••••••••`) con la indicación *Déjelo vacío para conservar la clave actual*, así que solo escribe en él para sustituir la clave. Un proveedor o una dirección del servidor nuevos vacían la clave almacenada: vuelva a introducirla. Si la instancia no tiene configurado ningún secreto de cifrado, una advertencia en la parte superior de la página explica que las claves no se pueden almacenar en absoluto.
 
 **Capacidades**:
 

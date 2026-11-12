@@ -154,6 +154,8 @@ export type ServerDataGridProps<T> = {
   onListAnswer?: (answer: Record<string, unknown>) => void;
   pinnedBottomRowData?: any[]; // optional pinned totals row(s)
   enableRowSelection?: boolean; // enable multi-row selection with checkboxes (default: false)
+  /** With row selection: the rows the person may act on. The others show no checkbox. Keep it stable. */
+  isRowSelectable?: (row: T) => boolean;
   onSelectionChanged?: (selectedRows: T[]) => void; // callback when selection changes
   statusScopeConfig?: {
     columnField?: string;
@@ -558,6 +560,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   onListAnswer,
   pinnedBottomRowData,
   enableRowSelection = false,
+  isRowSelectable,
   onSelectionChanged,
   statusScopeConfig,
   enablePagination = false,
@@ -1488,7 +1491,11 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     },
   }), []);
 
-  const rowSelection = useMemo(() => gridRowSelection(enableRowSelection), [enableRowSelection]);
+  const rowSelection = useMemo(() => {
+    const selection = gridRowSelection(enableRowSelection);
+    if (!enableRowSelection || !isRowSelectable) return selection;
+    return { ...selection, isRowSelectable: (node: { data?: T }) => !!node.data && isRowSelectable(node.data) };
+  }, [enableRowSelection, isRowSelectable]);
 
   const gridContext = useMemo(() => ({
     // Read by the set filters: whether "All" then untick may send an exclude model.

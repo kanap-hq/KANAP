@@ -33,6 +33,7 @@ import { AuditService } from '../audit/audit.service';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { ItemNumberService } from '../common/item-number.service';
+import { replacedLinks } from '../common/relations/linked-reads';
 import { parseItemNumber } from '../common/parse-item-number';
 import { StorageService } from '../common/storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -54,7 +55,7 @@ import { PortfolioCriteriaService } from './portfolio-criteria.service';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { extractInlineImageUrls } from '../common/content-image-urls';
-import { isStoragePathReferencedInAnyTable } from '../common/storage-path-refs';
+import { isInlineAttachmentShownInContent, isStoragePathReferencedInAnyTable, lockStoragePaths, unreferencedPaths } from '../common/storage-path-refs';
 import { detectChanges, REQUEST_TRACKED_FIELDS, resolveDisplayNames } from '../common/change-detection';
 import { MarkdownWorkBudget, markdownWorkBudget, normalizeMarkdownRichText } from '../common/markdown-worker';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
@@ -1317,10 +1318,15 @@ export class PortfolioRequestsService {
       userId,
     }, { manager: mg });
 
-    const taskAttachments = await taskAttachmentRepo.find({
+    // The copies name the task's files: the files are locked, then the rows read again, so a delete
+    // of one of them running at the same time either sees the copy or is not copied
+    // (`lockStoragePaths`).
+    const readTaskAttachments = () => taskAttachmentRepo.find({
       where: { task_id: task.id, source_field: IsNull() },
       order: { uploaded_at: 'ASC' },
     });
+    await lockStoragePaths(mg, (await readTaskAttachments()).map((att) => att.storage_path));
+    const taskAttachments = await readTaskAttachments();
     if (taskAttachments.length > 0) {
       const toInsert = taskAttachments.map((att) => requestAttachmentRepo.create({
         tenant_id: tenantId,
@@ -1810,13 +1816,13 @@ export class PortfolioRequestsService {
   async bulkReplaceApplications(
     requestId: string,
     applicationIds: string[],
-    opts?: { manager?: EntityManager; userId?: string | null },
+    opts?: { manager?: EntityManager; userId?: string | null; removable?: string[] },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const actorId = this.requireActivityAuthor(opts?.userId);
     const request = await this.getRequestOrThrow(requestId, mg);
 
-    const unique = Array.from(new Set((applicationIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+    const unique = Array.from(new Set((applicationIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean)));
     if (unique.length > 0) {
       const rows = await mg.query<Array<{ id: string }>>(
         `SELECT id
@@ -1839,28 +1845,35 @@ export class PortfolioRequestsService {
     );
     const beforeIds = Array.from(new Set(existing.map((row) => row.application_id)));
 
-    await mg.query(
-      `DELETE FROM portfolio_request_applications
-       WHERE request_id = $1
-         AND tenant_id = $2`,
-      [requestId, request.tenant_id],
-    );
-
-    if (unique.length > 0) {
+    // Only the stored links the person may remove leave (`removable`); the others stay untouched.
+    const { removed, added, after } = replacedLinks(beforeIds, unique, opts?.removable);
+    if (removed.length > 0) {
       await mg.query(
-        `INSERT INTO portfolio_request_applications (tenant_id, request_id, application_id)
-         SELECT $1, $2, application_id
-         FROM unnest($3::uuid[]) AS application_id`,
-        [request.tenant_id, requestId, unique],
+        `DELETE FROM portfolio_request_applications
+         WHERE request_id = $1
+           AND tenant_id = $2
+           AND application_id = ANY($3::uuid[])`,
+        [requestId, request.tenant_id, removed],
       );
     }
 
-    const beforeSorted = [...beforeIds].sort();
-    const afterSorted = [...unique].sort();
+    if (added.length > 0) {
+      await mg.query(
+        `INSERT INTO portfolio_request_applications (tenant_id, request_id, application_id)
+         SELECT $1, $2, application_id
+         FROM unnest($3::uuid[]) AS application_id
+         ON CONFLICT DO NOTHING`,
+        [request.tenant_id, requestId, added],
+      );
+    }
+
+    const beforeSorted = beforeIds.map((id) => id.toLowerCase()).sort();
+    const afterSorted = [...after].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      // One after the other: the request's single connection runs its queries in turn anyway.
-      const beforeLabels = await this.resolveApplicationLabelsByIds(mg, beforeSorted);
-      const afterLabels = await this.resolveApplicationLabelsByIds(mg, afterSorted);
+      // One after the other: the request's single connection runs its queries in turn anyway. The
+      // activity names the applications the author reads (`removable` and the sent list) only.
+      const beforeLabels = await this.resolveApplicationLabelsByIds(mg, opts?.removable ? [...opts.removable].sort() : beforeSorted);
+      const afterLabels = await this.resolveApplicationLabelsByIds(mg, opts?.removable ? [...unique].sort() : afterSorted);
       await this.logActivity(mg, {
         request_id: requestId,
         tenant_id: request.tenant_id,
@@ -2703,11 +2716,9 @@ export class PortfolioRequestsService {
     const attachment = await repo.findOne({ where: { id: attachmentId, request_id: requestId } });
     if (!attachment) throw new NotFoundException('Attachment not found');
 
-    const isReferencedElsewhere = await isStoragePathReferencedInAnyTable(
-      mg,
-      attachment.storage_path,
-      [attachment.id],
-    );
+    // The row first, then the check (`unreferencedPaths`), then the file.
+    await repo.delete({ id: attachmentId });
+    const isReferencedElsewhere = await isStoragePathReferencedInAnyTable(mg, attachment.storage_path);
     if (!isReferencedElsewhere) {
       try {
         await this.storage.deleteObject(attachment.storage_path);
@@ -2715,8 +2726,6 @@ export class PortfolioRequestsService {
         // Log but don't fail
       }
     }
-
-    await repo.delete({ id: attachmentId });
 
     await this.audit.log({
       table: 'portfolio_request_attachments',
@@ -2839,9 +2848,10 @@ export class PortfolioRequestsService {
           const attachment = await repo.findOne({
             where: { id: attachmentId, request_id: requestId, source_field: sourceField },
           });
-          if (attachment) {
-            const referenced = await isStoragePathReferencedInAnyTable(mg, attachment.storage_path, [attachment.id]);
+          // Another text still showing it keeps it: the weekly sweep takes it once none does.
+          if (attachment && !(await isInlineAttachmentShownInContent(mg, attachment.id))) {
             await repo.delete({ id: attachmentId });
+            const referenced = await isStoragePathReferencedInAnyTable(mg, attachment.storage_path);
             if (!referenced) {
               try { await this.storage.deleteObject(attachment.storage_path); } catch {}
             }
@@ -2989,30 +2999,23 @@ export class PortfolioRequestsService {
     // not checked again, as the application, incident and interface deletes do.
     await this.integratedDocuments.deleteForEntity('requests', id, userId, { manager: mg, checkAccess: false });
 
-    // Delete all attachment files from S3 before cascade removes DB rows
+    // Attachment paths are read before the cascade removes their rows; the files go after it, when
+    // no other row names them (`unreferencedPaths`).
     const attachments: PortfolioRequestAttachment[] = await mg
       .getRepository(PortfolioRequestAttachment)
       .find({ where: { request_id: id } });
 
-    const excludedRequestAttachmentIds = attachments.map((att) => att.id);
-
-    for (const att of attachments) {
-      const isReferencedElsewhere = await isStoragePathReferencedInAnyTable(
-        mg,
-        att.storage_path,
-        excludedRequestAttachmentIds,
-      );
-      if (!isReferencedElsewhere) {
-        try {
-          await this.storage.deleteObject(att.storage_path);
-        } catch {
-          // Log but don't fail — orphaned S3 objects are preferable to a blocked delete
-        }
-      }
-    }
-
     const before = { ...request };
     await repo.delete({ id });
+
+    const paths = await unreferencedPaths(mg, request.tenant_id, [...new Set(attachments.map((att) => att.storage_path).filter(Boolean))]);
+    for (const storagePath of paths) {
+      try {
+        await this.storage.deleteObject(storagePath);
+      } catch {
+        // Log but don't fail — orphaned S3 objects are preferable to a blocked delete
+      }
+    }
 
     await this.audit.log({
       table: 'portfolio_requests',

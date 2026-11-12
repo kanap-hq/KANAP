@@ -81,6 +81,21 @@ function aliasGroup(resource: string): string[] {
 /** The rights a role gives, by resource (aliases folded, the derived contacts right included). */
 export async function readRolePermissions(manager: EntityManager, roleId: string): Promise<Map<string, PermissionLevel>> {
   const items = await manager.getRepository(RolePermission).find({ where: { role_id: roleId } });
+  return rolePermissionMap(items);
+}
+
+/** `readRolePermissions` for several roles, in one query. Every given role has an entry. */
+export async function readRolesPermissions(manager: EntityManager, roleIds: string[]): Promise<Map<string, Map<string, PermissionLevel>>> {
+  const rowsByRole = new Map<string, RolePermission[]>(roleIds.map((id) => [id, []]));
+  if (roleIds.length > 0) {
+    const items = await manager.getRepository(RolePermission).find({ where: { role_id: In(roleIds) } });
+    for (const item of items) rowsByRole.get(item.role_id)?.push(item);
+  }
+  return new Map([...rowsByRole].map(([roleId, rows]) => [roleId, rolePermissionMap(rows)]));
+}
+
+/** The rights of one role from its stored rows. */
+function rolePermissionMap(items: Array<Pick<RolePermission, 'resource' | 'level'>>): Map<string, PermissionLevel> {
   const map = new Map<string, PermissionLevel>();
   for (const i of items) {
     const key = normalizeResource(i.resource);

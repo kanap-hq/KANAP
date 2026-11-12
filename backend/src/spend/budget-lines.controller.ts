@@ -176,6 +176,22 @@ export class BudgetLinesController {
   }
 
   /**
+   * "Change the selection" of the list: one change on the lines chosen (`ids`) or on every line of
+   * the list's filters (`all`, `filters`, `exclude_ids`), each through the update of one line
+   * (`budget-line-bulk-edit.ts`). `dry_run` counts the lines that would change and the refused ones
+   * per code, writing nothing. Same level as the update of one line; a limited person changes the
+   * lines of their access only.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('bulk-update')
+  @HttpCode(200)
+  bulkUpdate(@Body() body: unknown, @Tenant() ctx: TenantRequest) {
+    return this.svc.bulkUpdate(body, ctx.userId || undefined, { manager: ctx.manager as EntityManager, access: budgetListAccess(ctx) });
+  }
+
+  /**
    * "Copy budget columns" of Budget administration: the amounts of a column, the allocations, or both, of
    * all lines (`scope: 'all'`) or of one nature, under one tenant lock (`budget-copy.ts`).
    */

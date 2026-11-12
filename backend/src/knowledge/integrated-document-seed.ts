@@ -312,14 +312,22 @@ async function ensureTemplateDocument(
      LIMIT 1`,
     [params.templatesLibraryId, params.documentTypeId, params.title],
   );
+  // The body is indexed for the search from content_plain (documents_search_vector_sync), as for
+  // any document saved from Knowledge: derive it from the Markdown on both paths.
+  // Loaded on use: the Markdown workers read the deployment settings (config/features) when
+  // they load, and this seed is imported by scripts and specs that set them afterwards.
+  const { markdownToSearchText } = await import('../common/markdown-worker');
+  const contentMarkdown = params.contentMarkdown ?? '';
+  const contentPlain = await markdownToSearchText(contentMarkdown);
   if (existing[0]?.id) {
     await executor.query(
       `UPDATE documents
        SET summary = $2,
            content_markdown = $3,
+           content_plain = $4,
            updated_at = now()
        WHERE id = $1`,
-      [existing[0].id, params.summary, params.contentMarkdown ?? ''],
+      [existing[0].id, params.summary, contentMarkdown, contentPlain],
     );
     return String(existing[0].id);
   }
@@ -348,7 +356,7 @@ async function ensureTemplateDocument(
        $3,
        $4,
        $5,
-       '',
+       $8,
        NULL,
        $6,
        $7,
@@ -364,9 +372,10 @@ async function ensureTemplateDocument(
       itemNumber,
       params.title,
       params.summary,
-      params.contentMarkdown ?? '',
+      contentMarkdown,
       params.templatesLibraryId,
       params.documentTypeId,
+      contentPlain,
     ],
   );
   return String(rows[0].id);

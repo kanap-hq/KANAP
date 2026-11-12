@@ -5,7 +5,7 @@ import { RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { ReservedToUnscopedDataAccess } from './reserved-operations';
 import { DataAccessAdminService } from './data-access-admin.service';
-import { assertPersonWithinActorRights } from '../roles/role-grant-ceiling';
+import { assertPersonWithinActorRights, lockPeople } from '../roles/role-grant-ceiling';
 
 /**
  * Data-scoped access, lot 6: the administration of a person's access and the "who sees this node"
@@ -31,7 +31,9 @@ export class DataAccessAdminController {
   @Put('users/:id/data-access')
   @RequireLevel('users', 'admin')
   async updatePerson(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: unknown, @Tenant() ctx: TenantRequest) {
-    // A person does not change the access of a person who has more rights than they do.
+    // A person does not change the access of a person who has more rights than they do; their row
+    // is locked before their rights are read (see lockPeople).
+    await lockPeople(ctx.manager!, [id]);
     await assertPersonWithinActorRights(ctx.manager!, { isAdmin: ctx.isAdmin === true, permissions: { ...(ctx.permissions ?? {}) } }, id);
     return this.svc.updatePerson(ctx.manager!, id, body, ctx.userId || null, 'screen');
   }

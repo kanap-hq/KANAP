@@ -19,6 +19,7 @@ import { ApplicationDataResidency } from '../application-data-residency.entity';
 import { AuditService } from '../../audit/audit.service';
 import { formatApplicationCategoryOptions, ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { StorageService } from '../../common/storage/storage.service';
+import { unreferencedPaths } from '../../common/storage-path-refs';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
@@ -531,11 +532,16 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
 
   async deleteAttachment(attachmentId: string, userId?: string | null, opts?: ServiceOpts) {
     const mg = this.getManager(opts);
+    const tenantId = await this.resolveTenantId(mg);
     const repo = mg.getRepository(ApplicationAttachment);
-    const found = await repo.findOne({ where: { id: attachmentId } });
+    const found = await repo.findOne({ where: { id: attachmentId, tenant_id: tenantId } });
     if (!found) return { ok: true };
-    await repo.delete({ id: attachmentId } as any);
-    try { await this.storage.deleteObject((found as any).storage_path); } catch {}
+    // Through its application, as the download: an application the person does not read reads as missing.
+    await this.assertVisible(found.application_id, opts?.accessScope, mg);
+    await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
+    if ((await unreferencedPaths(mg, tenantId, [found.storage_path])).length > 0) {
+      try { await this.storage.deleteObject(found.storage_path); } catch {}
+    }
     await this.audit.log({ table: 'application_attachments', recordId: found.id, action: 'update', before: found, after: null, userId }, { manager: mg });
     return { ok: true };
   }

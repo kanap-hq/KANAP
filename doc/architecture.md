@@ -620,9 +620,20 @@ restrictive RLS policies that target one role only, so nothing changes for anyon
     or a contract; notifications and "Send the link" use it;
   - `withFullDataAccess(manager, read)` opens a savepoint, makes it read only, leaves the limited
     role (`RESET ROLE`), runs `read`, rolls back to the savepoint (which restores the role) and
-    checks the role came back; only the chargeback report (`spend/chargeback-report.service.ts`)
-    and the contract coverage (`contracts/contract-budget.ts`) call it, and a spec checks those two
-    callers.
+    checks the role came back; only the chargeback report (`spend/chargeback-report.service.ts`),
+    the contract coverage (`contracts/contract-budget.ts`), the record history's existence read
+    (`audit/record-history/families.ts`) and the stored file reference check
+    (`common/storage-path-refs.ts`, below) call it, and a spec checks those callers.
+- **Stored files of attachments.** A stored file may be named by several attachment rows (the copy
+  of a task's attachment in the request made from the task, an inline image cloned into a managed
+  document). Every delete of an attachment, or of a record with its attachments, removes the file
+  only when no attachment row of the tenant still names it (`unreferencedPaths`,
+  `isStoragePathReferencedInAnyTable`); the check counts the rows a limited person cannot read.
+  A delete removes its rows first, then checks, then deletes the file; a copy locks the files
+  (`lockStoragePaths`, an advisory lock per path) before it reads the rows it copies, so a copy and
+  a delete running at the same time see each other. An inline image that another text still shows
+  by its address (a task's image in the request made from the task) is not cleaned up with the
+  text it left (`isInlineAttachmentShownInContent`); the weekly sweep removes it once no text does.
 - **Reserved operations.** A limited person cannot run the operations reserved to unscoped persons
   (tenant settings, bulk line operations, deletes of a line or a contract, user and role
   administration, audit log, organisation data, updates and deletes of suppliers and shared
@@ -670,7 +681,7 @@ restrictive RLS policies that target one role only, so nothing changes for anyon
 - Microsoft Entra is the only SSO provider (no SAML, Google or generic OIDC). Each tenant connects one Entra directory via **Admin → Authentication**; the tenant row stores `sso_provider` (`none|entra`), `sso_enabled`, `entra_tenant_id` and `entra_metadata`, enforcing a strict 1:1 mapping.
 - `EntraAuthService` downloads the discovery document and JWKS, builds authorization URLs, exchanges codes and validates `id_token` claims (audience, `nonce`, `tid`, `oid`). The issuer is validated against `https://login.microsoftonline.com/<tid>/v2.0` to support multi-tenant authorities. Env: `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `ENTRA_AUTHORITY` (e.g. `https://login.microsoftonline.com/organizations`), `ENTRA_REDIRECT_URI` (public HTTPS URL of `/auth/entra/callback`). The whole feature is gated by `ENTRA_SSO`.
 - Setup flow: `POST /auth/entra/setup/start` (tenant admin, JWT; a `GET` variant exists for browser redirects) returns `{ url }` with a signed short-lived `state` carrying the OIDC nonce. The URL uses `prompt=consent`. The shared callback validates the nonce, persists the Entra tenant id and redirects to the tenant host's `/admin/auth?setup=success`.
-- Login flow: `/login` offers "Sign in with Microsoft" → `GET /auth/entra/login?redirectTo=...` on the tenant host → 302 to Microsoft with signed `state`. The callback validates the token (nonce, `tid` vs `tenant.entra_tenant_id`), links or provisions the user (external subject first, then email), signs a short-lived handoff and redirects to `/login/callback#handoff=...`. The SPA redeems it through `POST /auth/entra/session` on the tenant host, which sets the refresh cookie and returns the access token; `AuthContext.login()` clears the fragment and navigates.
+- Login flow: `/login` offers "Sign in with Microsoft" → `GET /auth/entra/login?redirectTo=...` on the tenant host → 302 to Microsoft with signed `state`. The callback validates the token (nonce, `tid` vs `tenant.entra_tenant_id`), finds the user by external subject or provisions one (an existing account with the same email is linked only after its owner confirms a link e-mailed to it, `POST /auth/entra/link`, except an invited account with no password, linked at once and enabled), signs a short-lived handoff and redirects to `/login/callback#handoff=...`. The SPA redeems it through `POST /auth/entra/session` on the tenant host, which sets the refresh cookie and returns the access token; `AuthContext.login()` clears the fragment and navigates.
 - Directory sync: a daily scheduled task (`entra-directory-sync.service.ts`) pulls users and manager relationships from Microsoft Graph per tenant, running under `withTenant()`, and reports `consent_required` when the app registration lacks permissions. Group sync is not implemented.
   - Permissions: the sync uses application permissions (client credentials, scope `https://graph.microsoft.com/.default`). The app registration needs `User.Read.All`, which also covers reading the manager. Without it the tenant reports `consent_required` and keeps login-time enrichment only. After consent is granted, `invalidateAppToken` drops the cached token, because a token issued before the grant lacks the new permission.
   - One run per tenant at a time: `syncTenant` takes a session advisory lock (`pg_try_advisory_lock`, keyed by the tenant id) on one connection, and the whole run works on that connection: its short transactions (`withTenantExecution` with the `runner` option) and its status. The run takes no more connections than before the lock, and no transaction is open during the Graph calls. A lost connection takes the lock with it and fails the run at its next statement. The lock is released by `pg_advisory_unlock`; when that fails, the connection is destroyed rather than returned to the pool. A run that finds the lock taken returns `already_running` at once and records nothing.

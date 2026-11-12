@@ -103,12 +103,12 @@ Lisez le journal de l'API après chaque démarrage et après chaque modification
 
 ```bash
 cd /opt/kanap
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[(entrypoint|VERSION|ENV|CONFIG|SECRETS|RATE-LIMIT|CORS|DB|on-prem|SECURITY|DATA-ACCESS|markdown|cluster|shutdown)\]|WARN|ERROR|successfully started|Email transport'
 ```
 
 Le filtre garde les lignes ci-dessous et laisse de côté les détails du framework. Sans lui, `docker compose -f infra/compose.onprem.yml logs api` affiche tout.
 
-**Ordre.** Les lignes que Kadratis écrit lui-même (`[entrypoint]`, `[VERSION]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`, `[markdown]`) viennent en premier. Les lignes du framework (`Starting Nest application...`, e-mail, tâches planifiées, `Nest application successfully started`) suivent. La ligne `[DB] pool budget` vient en dernier.
+**Ordre.** Les lignes que Kadratis écrit lui-même (`[entrypoint]`, `[VERSION]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`, `[markdown]`) viennent en premier. Les lignes du framework (`Starting Nest application...`, e-mail, tâches planifiées, `Nest application successfully started`) suivent. La ligne `[DB] pool budget` vient en dernier. Avec `API_WORKERS` au-dessus de 1, des lignes `[cluster]` nomment les processus de l'API, et les lignes du framework apparaissent une fois par processus. À l'arrêt, des lignes `[shutdown]` disent comment les requêtes en cours se sont terminées.
 
 **Un premier démarrage sans problème** de l'[exemple d'installation](installation-example.md#7-telecharger-et-demarrer) affiche ces lignes, dans cet ordre (la première ligne `[SECRETS]` est raccourcie ici) :
 

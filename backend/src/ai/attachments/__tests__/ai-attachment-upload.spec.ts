@@ -59,7 +59,7 @@ async function run() {
   const text = await service.loadTableSummaryText(table);
   assert.match(text, /^<attached_table id="[0-9a-f-]+" filename="apps.xlsx">/);
   assert.match(text, /^1\. "Name": text, 1 of 1$/m);
-  assert.match(text, /^CRM \| 800$/m);
+  assert.match(text, /^line 2: CRM \| 800$/m);
   assert.equal(reads.length, 0);
 
   // A summary missing from the cache (a restart) is read again from the stored file.
@@ -73,7 +73,7 @@ async function run() {
   const other = { ...csv, id: '00000000-0000-4000-8000-000000000001' };
   rows.push(other);
   objects.set(other.storage_path, objects.get(csv.storage_path)!);
-  assert.match(await restarted.loadTableSummaryText(other), /^Acme \| 1 200,50$/m);
+  assert.match(await restarted.loadTableSummaryText(other), /^line 2: Acme \| 1 200,50$/m);
   assert.equal(reads.length, 1);
 
   // A file that cannot be read is refused before anything is stored.

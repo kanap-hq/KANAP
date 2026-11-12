@@ -44,7 +44,8 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
       },
       {
         id: 'tec-1', reference: 'TEC-1', name: 'SQL Server', family: 'database', declared: false, hosted: true, versions: ['2019'], version_unknown: false,
-        standard_support_end: '2020-01-14', via: [{ asset_id: 'srv-1', asset_name: 'srv-etl-1', host_name: null }],
+        standard_support_end: '2020-01-14', support_end: '2020-01-14', support_state: 'out_of_support',
+        via: [{ asset_id: 'srv-1', asset_name: 'srv-etl-1', host_name: null }],
       },
       {
         id: 'tec-3', reference: 'TEC-3', name: 'Tomcat', family: 'middleware', declared: true, hosted: true, versions: [], version_unknown: true,
@@ -53,7 +54,8 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
       },
       {
         id: 'tec-2', reference: 'TEC-2', name: 'vSphere', family: 'virtualization', declared: false, hosted: true, versions: ['8'], version_unknown: false,
-        standard_support_end: '2099-10-11', via: [{ asset_id: 'srv-2', asset_name: 'srv-etl-2', host_name: 'esx-01' }],
+        standard_support_end: '2099-10-11', support_end: '2099-10-11', support_state: 'supported',
+        via: [{ asset_id: 'srv-2', asset_name: 'srv-etl-2', host_name: 'esx-01' }],
       },
     ],
     deployment_servers: [],
@@ -128,6 +130,33 @@ describe('ApplicationTechnologiesSection', () => {
     // A hosted row changes on the server's page.
     fireEvent.click(sql.getByRole('link', { name: 'srv-etl-1' }));
     expect(screen.getByTestId('location').textContent).toBe('/it/assets/srv-1/operations');
+  });
+
+  it('shows the end of support as the End of support report does: the date that matters, its state and both ends', async () => {
+    const base = relations().technologies!;
+    renderSection(relations({
+      technologies: [
+        // Standard support passed, extended support to come: the extended end, in extended support.
+        { ...base[1], standard_support_end: '2022-10-11', extended_support_end: '2098-10-12', support_end: '2098-10-12', support_state: 'extended_support' },
+        // Both passed: the last end, out of support.
+        { ...base[3], standard_support_end: '2019-12-31', extended_support_end: '2022-12-31', support_end: '2022-12-31', support_state: 'out_of_support' },
+        // No version with an end: a dash.
+        { ...base[2] },
+      ],
+    }));
+    const table = await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
+    const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
+    const extended = within(rows[0]).getByText(/2098/);
+    expect(extended.getAttribute('data-state')).toBe('extended');
+    expect(extended.getAttribute('title')).toBe(
+      'pages.endOfSupport.states.extended_support · workspace.asset.technical.standardSupportEnds(date=11 Oct 2022) / workspace.asset.technical.extendedSupportEnds(date=12 Oct 2098)',
+    );
+    expect(within(rows[0]).queryByText(/2022/)).toBeNull();
+    const ended = within(rows[1]).getByText(/2022/);
+    expect(ended.getAttribute('data-state')).toBe('ended');
+    expect(ended.getAttribute('title')).toMatch(/^pages\.endOfSupport\.states\.out_of_support · /);
+    expect(getComputedStyle(ended).color).not.toBe(getComputedStyle(extended).color);
+    expect(rows[2].querySelectorAll('td')[6]?.textContent).toBe('—');
   });
 
   it('wraps several long server names in Via instead of cutting them', async () => {

@@ -20,7 +20,7 @@ While the line is being created, its header shows **Create** and **Cancel** in p
 - **Create** checks the required fields below. When one is missing, a message lists them, they are marked in the **Properties** panel, and the cursor goes to the first one. Otherwise the line closes and you go back to where you started: the previous screen, else the list
 - **Cancel** deletes the line and everything entered on it, amounts included. If you entered more than the title, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete lines. A line with amounts in a frozen column cannot be cancelled
 
-Leaving the line another way while a required field is missing asks you to complete it or delete it. A line left without a paying company shows a warning that lists the missing fields, and asks again each time you leave it. Press Escape on the empty title to leave without creating anything.
+Leaving the line another way while a required field is missing asks you to complete it or delete it. Reloading the page or closing the tab while the new line still lacks a required field asks your browser to confirm, and the line is deleted if you leave anyway. A line left without a paying company shows a warning that lists the missing fields, and asks again each time you leave it. Press Escape on the empty title to leave without creating anything.
 
 **Required fields**:
 
@@ -185,7 +185,8 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 - **New line**: Create a line (requires `budget:member`)
 - **Import**: Bulk-load lines from a budget file (requires `budget:admin`)
 - **Export**: Export the lines to a budget file (requires `budget:admin`)
-- **Delete selected**: Bulk-delete selected lines (requires `budget:admin`; select rows via checkboxes). A line with amounts in a frozen column cannot be deleted. Before anything is deleted, the confirmation lists the lines kept, with the frozen column. The others are deleted. The same delete is on the line: **Delete** (trash icon) in its header, for someone with `budget:admin` whose access covers all data. The check is the same. A line with amounts in a frozen column shows the refusal and its reason. When the line can be deleted, you confirm, the line is deleted, and the list opens again
+- **Change the selection**: Change one field on the selected lines at once (requires `budget:member`). See [Changing lines in bulk](#changing-lines-in-bulk)
+- **Delete selected**: Bulk-delete selected lines (requires `budget:admin`). It deletes only the lines ticked one by one, and is not available while the header box takes the whole filter. A line with amounts in a frozen column cannot be deleted. Before anything is deleted, the confirmation lists the lines kept, with the frozen column. The others are deleted. The same delete is on the line: **Delete** (trash icon) in its header, for someone with `budget:admin` whose access covers all data. The check is the same. A line with amounts in a frozen column shows the refusal and its reason. When the line can be deleted, you confirm, the line is deleted, and the list opens again
 
 **Prev/Next navigation**:
 
@@ -195,6 +196,29 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 - Your list context (sort, filters, search) is preserved when you close the workspace
 
 **Tip**: Use column filters and quick search to build focused views (e.g., "All cloud spend over 10k", or **CAPEX** in **Type** with **High** in **Priority**), then navigate line by line with **Prev**/**Next** to review budgets.
+
+### Changing lines in bulk
+
+**Selecting lines**: With the right to edit lines, the list shows a box at the start of each row. Tick lines one by one, or tick the box in the column header to take every line of the current filter and search, including the lines not loaded yet. Untick a line to leave it out. Changing the filters or the search clears the selection. Sorting keeps it.
+
+**Changing a field**:
+
+1. Select the lines, then click **Change the selection** (edit icon). The icon shows the number of lines selected
+2. Choose the **Field**: **Cost center**, **Account**, **Paying company**, **Supplier**, **IT owner**, **Business owner**, **Dimension value** or **Run or build**. For an account, first pick the company in **Chart of accounts of**, then the account. For a dimension value, first pick the **Dimension**, then the value
+3. Choose the **New value**. The dialog counts the lines: how many will change, how many already have this value, and how many are refused, with the reason for each (for example "Read only for you" or "Account not for this type of line"). The count runs again at each new value
+4. Click **Change 12 rows** (with your count) to confirm. The refused lines stay as they are and the others change. The window then shows the outcome: the lines changed, those that already had the value, and those refused with their reasons. Click **Close** to close it. The list behind it is already up to date
+
+**Emptying a field**: For an optional field, click **Empty the field** (eraser icon) beside the value. The value reads **Empty**, and the field is emptied on every selected line. **Account** and **Paying company** cannot be emptied, nor a required dimension.
+
+**Good to know**:
+
+- When the **Type** filter keeps one type, the accounts and dimension values offered are those of that type. With both types, the lines a value does not fit are refused, with the reason
+- One change covers up to 5,000 lines. Above that, narrow the filters or select fewer lines
+- A large selection can take up to a minute to count, and as long to save
+- If the list changes between the count and your confirmation, the dialog shows the new count. Check it, then confirm again
+- Amounts cannot be changed this way. Change them on the line or in the [budget file](budget-file.md)
+- Each changed line gets its own entry in its **History** tab
+- With limited data access, you change the lines of your access. A change that would take a line out of your access is refused for that line
 
 ---
 
@@ -724,12 +748,12 @@ A budget file never changes the type of a line. See [Load a budget from a spread
 Access to budget lines is controlled by the Budget resource, which covers OPEX and CAPEX lines alike. It has three levels:
 
 - `budget:reader`: View the list, open lines, see budgets and allocations (read-only), download attachments
-- `budget:member`: Create and edit lines, change their type, update budgets and allocations, upload and delete attachments, manage relations, links and contacts
+- `budget:member`: Create and edit lines, change their type, update budgets and allocations, upload and delete attachments, manage relations, links and contacts, change lines in bulk
 - `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and reset budget column), and deleting lines from the list or from the line
 
 Freezing budget columns needs Budget administration (`budget_ops:admin`).
 
-Data access can limit a person to the lines of some companies or cost centers. They then see those lines and the lines they are named on, a line they see in Read shows "Read only in your access", and deleting lines and bulk operations are reserved to people with access to all data. See [Data access](data-access.md).
+Data access can limit a person to the lines of some companies or cost centers. They then see those lines and the lines they are named on, a line they see in Read shows "Read only in your access", and deleting lines and the budget operations are reserved to people with access to all data. They can change lines in bulk, on the lines of their access. See [Data access](data-access.md).
 
 Additionally:
 

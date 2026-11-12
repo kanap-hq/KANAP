@@ -461,7 +461,11 @@ function testTimeIsBoundedOnLongTexts() {
   }
 }
 
-/** The rule reads a text of the size limit once, whatever it holds: 200 KB in less than 300 ms. */
+/**
+ * The rule reads a text of the size limit once, whatever it holds: 200 KB in well under a second (about
+ * 80 ms on a developer machine). A rule that reads the text again for each character takes seconds. The
+ * best of three runs is kept, so that a CI runner busy with other specs does not count as a slow rule.
+ */
 function testTheRuleReadsALongTextOnce() {
   const size = 200 * 1024;
   const cases: Array<[string, string]> = [
@@ -475,10 +479,13 @@ function testTheRuleReadsALongTextOnce() {
     ['underline tags that are never closed', '<u>'.repeat(Math.floor(size / 3))],
   ];
   for (const [name, text] of cases) {
-    const start = process.hrtime.bigint();
-    refusalOf(text);
-    const ms = Number(process.hrtime.bigint() - start) / 1e6;
-    assert.ok(ms < 300, `${name}: ${ms.toFixed(0)} ms`);
+    let ms = Infinity;
+    for (let run = 0; run < 3; run += 1) {
+      const start = process.hrtime.bigint();
+      refusalOf(text);
+      ms = Math.min(ms, Number(process.hrtime.bigint() - start) / 1e6);
+    }
+    assert.ok(ms < 1000, `${name}: ${ms.toFixed(0)} ms`);
   }
   assert.equal(refusalOf(cases[0][1])?.example, '<form a="b">');
   assert.equal(refusalOf(cases[1][1]), null);

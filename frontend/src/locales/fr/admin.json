@@ -1238,6 +1238,7 @@
     "tableNames": {
       "accounts": "Comptes",
       "ai_action_requests": "Demandes d'action de l'IA",
+      "ai_adapter_configs": "Connexions d'intégration",
       "ai_api_keys": "Clés API de l'IA",
       "ai_approvals": "Approbations de l'IA",
       "ai_evidence": "Preuves de l'IA",
@@ -2202,7 +2203,9 @@
     "dialogs": {
       "createTitle": "Nouveau rôle",
       "deleteMessage": "Cette action est définitive. Vous ne pouvez supprimer que les rôles sans utilisateurs assignés.",
-      "deleteTitle": "Supprimer le rôle"
+      "deleteTitle": "Supprimer le rôle",
+      "duplicateTitle": "Dupliquer le rôle",
+      "duplicateName": "{{name}} (copie)"
     },
     "empty": "Aucun rôle trouvé.",
     "fields": {
@@ -2536,6 +2539,7 @@
       "inviting": "Invitation en cours…",
       "rowMenu": "Actions utilisateur",
       "edit": "Modifier",
+      "view": "Consulter",
       "enable": "Activer",
       "disable": "Désactiver",
       "sendInvite": "Envoyer une invitation",
@@ -2569,6 +2573,7 @@
     "dialogs": {
       "newUser": "Nouvel utilisateur",
       "editUser": "Modifier l'utilisateur",
+      "viewUser": "Consulter l'utilisateur",
       "identity": "Identité",
       "saveAndInvite": "Enregistrer et inviter"
     },
@@ -2736,6 +2741,7 @@
     }
   },
   "integrations": {
+    "secretAddressChanged": "L'adresse a changé : saisissez de nouveau cette valeur.",
     "netbox": {
       "title": "Inventaire Netbox",
       "description": "Importez l'inventaire Netbox en tant qu'actifs. Netbox reste la référence pour les équipements qu'il décrit.",

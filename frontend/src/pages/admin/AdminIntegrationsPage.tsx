@@ -27,6 +27,7 @@ import {
   type AiSettingsPayload,
 } from '../../ai/aiApi';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { glpiAddressRoot, isNewSecretAddress } from '../../utils/secretAddress';
 
 type IntegrationsForm = {
   glpi_enabled: boolean;
@@ -68,7 +69,9 @@ function buildUpdatePayload(
   }
 
   const glpiUrl = normalizeNullableString(form.glpi_url);
-  if (glpiUrl !== settings.glpi_url) {
+  // A typed token goes with the address on screen: the server binds it to that address.
+  const tokenTyped = !!form.glpi_user_token.trim() || !!form.glpi_app_token.trim();
+  if (glpiUrl !== settings.glpi_url || tokenTyped) {
     payload.glpi_url = glpiUrl;
   }
 
@@ -176,6 +179,13 @@ export default function AdminIntegrationsPage() {
   });
 
   const currentSettings = settingsQuery.data?.settings;
+  // The saved tokens only go to the saved address: a new one empties them on save.
+  const glpiAddressChanged = !!currentSettings
+    && isNewSecretAddress(glpiAddressRoot(form.glpi_url), glpiAddressRoot(currentSettings.glpi_url));
+  const hasUserToken = !!currentSettings?.has_glpi_user_token && !glpiAddressChanged;
+  const hasAppToken = !!currentSettings?.has_glpi_app_token && !glpiAddressChanged;
+  const userTokenRequired = glpiAddressChanged && !!currentSettings?.has_glpi_user_token;
+  const userTokenMissing = userTokenRequired && !form.glpi_user_token.trim();
 
   return (
     <>
@@ -221,19 +231,22 @@ export default function AdminIntegrationsPage() {
                     size="small"
                     label={t('aiAdmin.glpi.fields.userToken')}
                     type="password"
+                    required={userTokenRequired}
                     value={form.glpi_user_token}
                     onChange={(event) => setForm((prev) => ({ ...prev, glpi_user_token: event.target.value }))}
                     placeholder={
-                      currentSettings?.has_glpi_user_token
+                      hasUserToken
                         ? t('aiAdmin.glpi.placeholders.userTokenConfigured')
                         : t('aiAdmin.glpi.placeholders.enterUserToken')
                     }
-                    helperText={glpiSecretHelperText(
-                      currentSettings?.has_glpi_user_token,
-                      'aiAdmin.glpi.tokenHint.userTokenExisting',
-                      currentSettings,
-                      t,
-                    )}
+                    helperText={userTokenRequired
+                      ? t('integrations.secretAddressChanged')
+                      : glpiSecretHelperText(
+                        hasUserToken,
+                        'aiAdmin.glpi.tokenHint.userTokenExisting',
+                        currentSettings,
+                        t,
+                      )}
                   />
 
                   <TextField
@@ -243,16 +256,18 @@ export default function AdminIntegrationsPage() {
                     value={form.glpi_app_token}
                     onChange={(event) => setForm((prev) => ({ ...prev, glpi_app_token: event.target.value }))}
                     placeholder={
-                      currentSettings?.has_glpi_app_token
+                      hasAppToken
                         ? t('aiAdmin.glpi.placeholders.appTokenConfigured')
                         : t('aiAdmin.glpi.placeholders.enterAppToken')
                     }
-                    helperText={glpiSecretHelperText(
-                      currentSettings?.has_glpi_app_token,
-                      'aiAdmin.glpi.tokenHint.appTokenExisting',
-                      currentSettings,
-                      t,
-                    )}
+                    helperText={glpiAddressChanged && currentSettings?.has_glpi_app_token
+                      ? t('integrations.secretAddressChanged')
+                      : glpiSecretHelperText(
+                        hasAppToken,
+                        'aiAdmin.glpi.tokenHint.appTokenExisting',
+                        currentSettings,
+                        t,
+                      )}
                   />
 
                   {glpiTestResult ? (
@@ -272,14 +287,14 @@ export default function AdminIntegrationsPage() {
                     <Button
                       variant="contained"
                       onClick={() => saveMutation.mutate(form)}
-                      disabled={saveMutation.isPending}
+                      disabled={saveMutation.isPending || (userTokenMissing && form.glpi_enabled)}
                     >
                       {saveMutation.isPending ? t('common:status.saving') : t('aiAdmin.actions.saveSettings')}
                     </Button>
                     <Button
                       variant="outlined"
                       onClick={() => testGlpiMutation.mutate(form)}
-                      disabled={testGlpiMutation.isPending}
+                      disabled={testGlpiMutation.isPending || userTokenMissing}
                     >
                       {testGlpiMutation.isPending ? t('aiAdmin.actions.testing') : t('aiAdmin.actions.testConnection')}
                     </Button>

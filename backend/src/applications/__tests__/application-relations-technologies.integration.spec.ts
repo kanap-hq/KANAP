@@ -4,6 +4,8 @@ import * as assert from 'node:assert/strict';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { QueryRunner } from 'typeorm';
 import { ApplicationsCrudService } from '../services/applications-crud.service';
+import { EndOfSupportService } from '../../technologies/reports/end-of-support.service';
+import { TechnologyReachService } from '../../technologies/technology-reach.service';
 import {
   ALL_ACCESS, ALL_WRITES, context, inRolledBackTransaction, relationsService, runSpecs, seedRelations,
   type AuditEntry, type RelationsSeed,
@@ -91,6 +93,57 @@ async function testTechnologiesDeclaredAndHostedMerged() {
     assert.deepEqual(tomcat.via.map((v) => v.asset_id), [seed.servers.etl1]);
 
     assert.deepEqual(res.processes, [{ id: seed.processes.linked, name: 'Order to cash', path: 'Order to cash', status: 'enabled', owner_name: 'Claire Dubois' }]);
+  });
+}
+
+/**
+ * The end of support of a technology on the Operations tab is the End of support report's: the
+ * date that matters and its state (`versionSupportSql`), of the most pressing version (out of
+ * support, then in extended support, then the earliest end), with its standard and extended ends.
+ */
+async function testSupportEndMatchesTheReport() {
+  await inRolledBackTransaction(async (runner) => {
+    const seed = await seedTechnologies(runner, 'tech-eos');
+    const t = seed.tenantId;
+    const [{ later }]: Array<{ later: string }> = await runner.query(`SELECT to_char(CURRENT_DATE + interval '2 years', 'YYYY-MM-DD') AS later`);
+    // SQL Server 2019, hosted: its standard end passed, its extended end is to come.
+    await runner.query(`UPDATE technology_versions SET extended_support_end = $3 WHERE tenant_id = $1 AND technology_id = $2`, [t, seed.tech.sql, later]);
+    // Java, declared at two versions: 8 out of support, 21 supported. The tab shows 8.
+    const java = async (label: string, standard: string, extended: string | null) => {
+      const [{ id }] = await runner.query(
+        `INSERT INTO technology_versions (tenant_id, technology_id, label, standard_support_end, extended_support_end) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [t, seed.tech.java, label, standard, extended],
+      );
+      await runner.query(`INSERT INTO application_technologies (tenant_id, application_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4)`, [t, seed.appId, seed.tech.java, id]);
+      return id as string;
+    };
+    const java8 = await java('8', '2019-01-31', '2022-03-31');
+    await java('21', '2099-09-30', null);
+
+    const rows = (await relationsService().getRelations(seed.appId, context(runner.manager, seed))).technologies ?? [];
+    const tab = (id: string) => rows.find((row) => row.id === id)!;
+    const report = await new EndOfSupportService(new TechnologyReachService(), {} as any)
+      .deadlines({ type: 'technology', horizon_months: 36 }, { manager: runner.manager, tenantId: t }, { scope: undefined });
+    const deadline = (versionId: string) => report.items.find((item) => item.version_id === versionId)!;
+    const [{ id: sql2019 }] = await runner.query(`SELECT id FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2`, [t, seed.tech.sql]);
+
+    for (const [technologyId, versionId, state] of [[seed.tech.sql, sql2019, 'extended_support'], [seed.tech.java, java8, 'out_of_support']] as const) {
+      const row = tab(technologyId);
+      const item = deadline(versionId);
+      assert.equal(item.state, state);
+      assert.deepEqual(
+        [row.support_end, row.support_state, row.standard_support_end, row.extended_support_end],
+        [item.date, item.state, item.standard_support_end, item.extended_support_end],
+        `${row.name}: the tab says what the report says`,
+      );
+    }
+    assert.equal(tab(seed.tech.sql).support_end, later, 'the extended end, the standard one has passed');
+    assert.deepEqual(
+      [tab(seed.tech.vsphere).support_end, tab(seed.tech.vsphere).support_state, tab(seed.tech.vsphere).extended_support_end],
+      ['2027-10-11', 'supported', null],
+      'still supported: its standard end',
+    );
+    assert.deepEqual([tab(seed.tech.tomcat).support_end, tab(seed.tech.tomcat).support_state], [null, null], 'no version, no end');
   });
 }
 
@@ -449,6 +502,7 @@ async function testServersNeedTheRight() {
 
 runSpecs('application-relations-technologies.integration.spec', [
   testTechnologiesDeclaredAndHostedMerged,
+  testSupportEndMatchesTheReport,
   testSectionsNullWithoutReadRight,
   testLinkAndUnlinkTechnology,
   testLinkAndUnlinkProcess,

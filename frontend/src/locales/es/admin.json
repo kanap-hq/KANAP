@@ -1238,6 +1238,7 @@
     "tableNames": {
       "accounts": "Cuentas",
       "ai_action_requests": "Solicitudes de acción de la IA",
+      "ai_adapter_configs": "Conexiones de integración",
       "ai_api_keys": "Claves API de la IA",
       "ai_approvals": "Aprobaciones de la IA",
       "ai_evidence": "Evidencias de la IA",
@@ -2202,7 +2203,9 @@
     "dialogs": {
       "createTitle": "Nuevo rol",
       "deleteMessage": "Esta acción es permanente. Solo puede eliminar roles sin usuarios asignados.",
-      "deleteTitle": "Eliminar rol"
+      "deleteTitle": "Eliminar rol",
+      "duplicateTitle": "Duplicar rol",
+      "duplicateName": "{{name}} (copia)"
     },
     "empty": "No se encontraron roles.",
     "fields": {
@@ -2536,6 +2539,7 @@
       "inviting": "Invitando…",
       "rowMenu": "Acciones de usuario",
       "edit": "Editar",
+      "view": "Ver",
       "enable": "Activar",
       "disable": "Desactivar",
       "sendInvite": "Enviar invitación",
@@ -2569,6 +2573,7 @@
     "dialogs": {
       "newUser": "Nuevo usuario",
       "editUser": "Editar usuario",
+      "viewUser": "Ver usuario",
       "identity": "Identidad",
       "saveAndInvite": "Guardar e invitar"
     },
@@ -2736,6 +2741,7 @@
     }
   },
   "integrations": {
+    "secretAddressChanged": "La dirección ha cambiado: vuelva a introducir este valor.",
     "netbox": {
       "title": "Inventario de Netbox",
       "description": "Incorpora tu inventario de Netbox como activos. Netbox sigue siendo la referencia para los equipos que describe.",

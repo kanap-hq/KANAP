@@ -24,11 +24,13 @@ import { SpendLink } from './spend-link.entity';
 import { SpendAttachment } from './spend-attachment.entity';
 import * as path from 'path';
 import { StorageService } from '../common/storage/storage.service';
+import { unreferencedPaths } from '../common/storage-path-refs';
 import { randomUUID } from 'crypto';
 import { Application } from '../applications/application.entity';
 import { ApplicationSpendItemLink } from '../applications/application-spend-item.entity';
 import { CapexItemContactsService, SpendItemContactsService } from './spend-item-contacts.service';
 import { listItemApplications, replaceItemApplications } from './item-applications';
+import { replacedLinks } from '../common/relations/linked-reads';
 import { listItemTechnologies, replaceItemTechnologies } from './item-technologies';
 import { PortfolioProjectOpex } from '../portfolio/portfolio-project-opex.entity';
 import { PortfolioProject } from '../portfolio/portfolio-project.entity';
@@ -431,10 +433,10 @@ export class SpendItemsService {
   }
 
   /** Replace the line's applications (audited when the set changes); see `item-applications.ts`. */
-  async bulkReplaceApplications(itemId: string, applicationIds: string[], userId?: string | null, opts?: { manager?: EntityManager }) {
+  async bulkReplaceApplications(itemId: string, applicationIds: string[], userId?: string | null, opts?: { manager?: EntityManager; removable?: string[] }) {
     const mg = opts?.manager ?? this.repo.manager;
     const line = await this.findItem(itemId, mg);
-    return replaceItemApplications({ manager: mg, audit: this.audit }, this.nature, line, applicationIds, userId ?? null);
+    return replaceItemApplications({ manager: mg, audit: this.audit }, this.nature, line, applicationIds, userId ?? null, opts?.removable);
   }
 
   /** Technologies linked to the line; see `item-technologies.ts`. */
@@ -820,7 +822,9 @@ export class SpendItemsService {
     // A read-only line: the policy would delete nothing and the file would go anyway.
     await assertLinesEditable(mg, [(found as any).spend_item_id]);
     await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
-    try { await this.storage.deleteObject((found as any).storage_path); } catch {}
+    if ((await unreferencedPaths(mg, tenantId, [found.storage_path])).length > 0) {
+      try { await this.storage.deleteObject(found.storage_path); } catch {}
+    }
     await this.audit.log({
       table: auditTableOf(this.nature, 'spend_attachments'), recordId: found.id, action: 'update',
       before: presentChild(this.nature, found as any), after: null, userId,
@@ -843,12 +847,16 @@ export class SpendItemsService {
     return { items: rows };
   }
 
-  async bulkReplaceProjects(itemId: string, projectIds: string[], opts?: { manager?: EntityManager }) {
+  /**
+   * `removable`: the stored links the replacement may remove (those the person reads); every stored
+   * link when absent. The others stay, never deleted nor written again.
+   */
+  async bulkReplaceProjects(itemId: string, projectIds: string[], opts?: { manager?: EntityManager; removable?: string[] }) {
     const mg = opts?.manager ?? this.repo.manager;
     const line = await this.findItem(itemId, mg);
     const lineId = line.id;
     const tenantId = line.tenant_id;
-    const cleanIds = Array.from(new Set((projectIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+    const cleanIds = Array.from(new Set((projectIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean)));
     if (cleanIds.length) {
       // Read in the line's tenant: a project of another tenant is not found.
       const projects = await mg.getRepository(PortfolioProject).find({ where: { tenant_id: tenantId, id: In(cleanIds) } as any });
@@ -857,8 +865,18 @@ export class SpendItemsService {
     // Two saves of the line's projects take turns (the last one wins); a link the project
     // side stored meanwhile is kept, never a unique violation. See project-budget-links.util.ts.
     if (!(await lockBudgetLine(mg, this.nature, tenantId, lineId))) throw new NotFoundException(this.contract.notFound);
-    await mg.getRepository(PortfolioProjectOpex).delete({ tenant_id: tenantId, opex_id: lineId } as any);
-    await insertProjectBudgetLinks(mg, this.nature, tenantId, cleanIds.map((projectId) => ({ projectId, itemId: lineId })));
+    const stored: Array<{ id: string }> = await mg.query(
+      `SELECT project_id::text AS id FROM portfolio_project_opex WHERE tenant_id = $1 AND opex_id = $2`,
+      [tenantId, lineId],
+    );
+    const { removed, added } = replacedLinks(stored.map((row) => row.id), cleanIds, opts?.removable);
+    if (removed.length) {
+      await mg.query(
+        `DELETE FROM portfolio_project_opex WHERE tenant_id = $1 AND opex_id = $2 AND project_id = ANY($3::uuid[])`,
+        [tenantId, lineId, removed],
+      );
+    }
+    await insertProjectBudgetLinks(mg, this.nature, tenantId, added.map((projectId) => ({ projectId, itemId: lineId })));
     return this.listProjects(lineId, { manager: mg });
   }
 }

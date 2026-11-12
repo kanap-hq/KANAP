@@ -47,12 +47,12 @@ Das Konfigurationsformular enthält:
 
 - **GLPI-Ticketimport aktivieren**: Hauptschalter für die Verbindung. Wenn deaktiviert, wird Kadratis nicht versuchen, GLPI abzufragen, selbst wenn Anmeldedaten festgelegt sind. Weder Kad-Importe noch Agentenprüfungen erreichen Ihren Service-Desk.
 - **GLPI-URL**: die Basis-URL Ihrer GLPI-Instanz, zum Beispiel `https://glpi.example.com`.
-- **Benutzer-Token**: das persönliche API-Token des GLPI-Kontos, das Kadratis verwenden wird. Vorhandene Token sind maskiert; lassen Sie das Feld bei einem Speicher- oder Testvorgang leer, um den gespeicherten Wert beizubehalten.
+- **Benutzer-Token**: das persönliche API-Token des GLPI-Kontos, das Kadratis verwenden wird. Vorhandene Token sind maskiert; lassen Sie das Feld bei einem Speicher- oder Testvorgang leer, um den gespeicherten Wert beizubehalten, solange die URL gleich bleibt. Eine neue URL leert die gespeicherten Token: Geben Sie sie erneut ein.
 - **App-Token**: das optionale GLPI-Anwendungstoken. Gleiches „leer-lassen-um-beizubehalten“-Verhalten wie beim Benutzer-Token.
 
 ### Aktionen
 
-- **Einstellungen speichern**: speichert das Formular. Im Formular eingegebene Token ersetzen die gespeicherten; leere Tokenfelder behalten das bereits Gespeicherte bei.
+- **Einstellungen speichern**: speichert das Formular. Im Formular eingegebene Token ersetzen die gespeicherten; leere Tokenfelder behalten das bereits Gespeicherte bei, außer wenn sich die URL geändert hat.
 - **Verbindung testen**: führt einen authentifizierten Round-Trip gegen die GLPI-URL unter Verwendung der Werte im Formular durch (oder, wo leer, der gespeicherten Werte). Das Ergebnisbanner zeigt Erfolg oder den zugrunde liegenden Fehler zusammen mit der Latenz.
 
 ### Geheimnisspeicher

@@ -207,7 +207,7 @@ export class AiMutationPreviewService {
   private languageOf(context: AiExecutionContextWithManager): Promise<AiWriteLanguage> {
     let language = this.languages.get(context);
     if (!language) {
-      language = personWriteLanguage(context.manager, context.tenantId, context.userId);
+      language = personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
       this.languages.set(context, language);
     }
     return language;

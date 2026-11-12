@@ -9,6 +9,7 @@ const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
 const AcceptInvitePage = React.lazy(() => import('./pages/AcceptInvitePage'));
+const LinkMicrosoftPage = React.lazy(() => import('./pages/LinkMicrosoftPage'));
 const OAuthAuthorizePage = React.lazy(() => import('./pages/oauth/OAuthAuthorizePage'));
 const BudgetListPage = React.lazy(() => import('./pages/budget/BudgetListPage'));
 const BudgetListRedirect = React.lazy(() => import('./pages/budget/listRedirect'));
@@ -231,6 +232,7 @@ function AppRoutes() {
       <>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/callback" element={<LoginCallbackPage />} />
+        <Route path="/login/link-microsoft" element={<LinkMicrosoftPage />} />
         <Route path="/forgot-password" element={config.features.email ? <ForgotPasswordPage /> : <Navigate to="/login" replace />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
