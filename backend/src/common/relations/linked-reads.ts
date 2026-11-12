@@ -1,7 +1,7 @@
 import type { EntityManager } from 'typeorm';
 import { hasLevel } from './relations-access';
 import { codedForbidden, outsideParticipation } from '../../auth/module-right-required';
-import { resolveBusinessContributorScopeForUser } from '../../auth/business-contributor-scope';
+import { resolveBusinessContributorScopeForUser, type ParticipationAccessScope } from '../../auth/business-contributor-scope';
 import { idsInScope } from '../../portfolio/portfolio-linked-reads';
 
 /**
@@ -72,6 +72,36 @@ type LinkWriteContext = {
   tenant?: { id?: string | null } | null;
 };
 
+/** The linked modules whose records a Business Contributor reads inside their participation. */
+export type ParticipationLinkedModule = 'projects' | 'requests' | 'applications' | 'tasks';
+
+/**
+ * The participation scope of a person on the records of `module`, for a service reached without the
+ * request (Kad): undefined when the person reads every record of the module, or the module has none.
+ */
+export async function linkedParticipationScope(
+  manager: EntityManager,
+  userId: string | null | undefined,
+  tenantId: string | null | undefined,
+  module: LinkedModule,
+): Promise<ParticipationAccessScope | undefined> {
+  const resource = PARTICIPATION_RESOURCES[module];
+  if (!resource) return undefined;
+  return resolveBusinessContributorScopeForUser({ manager, userId: String(userId || ''), tenantId: tenantId ?? null, isAdmin: false }, resource, 'reader');
+}
+
+/** The participation scope of the route's person on `module`, with the manager to read it; none for an administrator. */
+async function contextScope(
+  ctx: LinkWriteContext,
+  module: LinkedModule,
+): Promise<{ manager: EntityManager; scope: ParticipationAccessScope } | null> {
+  if (!PARTICIPATION_RESOURCES[module] || ctx.isAdmin === true) return null;
+  const manager = ctx.manager ?? ctx.queryRunner?.manager;
+  if (!manager) return null;
+  const scope = await linkedParticipationScope(manager, ctx.userId ?? ctx.user?.sub ?? '', ctx.tenantId ?? ctx.tenant?.id ?? null, module);
+  return scope ? { manager, scope } : null;
+}
+
 /**
  * A write that links the records `ids` of `module`: the module read (`assertLinkedModuleRead`), and,
  * as on a document's links, a Business Contributor links only records of their participation (403
@@ -79,22 +109,32 @@ type LinkWriteContext = {
  */
 export async function assertLinkedRecordsReadable(ctx: LinkWriteContext, module: LinkedModule, ids: unknown[]): Promise<void> {
   assertLinkedModuleRead(ctx, module);
-  const resource = PARTICIPATION_RESOURCES[module];
   const wanted = (Array.isArray(ids) ? ids : []).map((id) => String(id || '').trim()).filter((id) => UUID_RE.test(id));
-  if (!resource || wanted.length === 0 || ctx.isAdmin === true) return;
-  const manager = ctx.manager ?? ctx.queryRunner?.manager;
-  if (!manager) return;
-  const scope = await resolveBusinessContributorScopeForUser({
-    manager,
-    userId: ctx.userId ?? ctx.user?.sub ?? '',
-    tenantId: ctx.tenantId ?? ctx.tenant?.id ?? null,
-    isAdmin: false,
-  }, resource, 'reader');
-  if (!scope) return;
-  const visible = await idsInScope(manager, module as 'projects' | 'requests' | 'applications' | 'tasks', wanted, scope);
+  if (wanted.length === 0) return;
+  const scoped = await contextScope(ctx, module);
+  if (!scoped) return;
+  const visible = await idsInScope(scoped.manager, module as ParticipationLinkedModule, wanted, scoped.scope);
   if (wanted.some((id) => !visible.has(id))) {
     throw outsideParticipation(module, `You can only link ${module} you take part in.`);
   }
+}
+
+/**
+ * The ids a replacement of a record's links of `module` stores: `next`, plus the links among `stored`
+ * the person does not read (a Business Contributor's records outside their participation), which a
+ * replacement keeps, as on a document's links. `ctx`: the route's `@Tenant()` context or its request.
+ */
+export async function withUnseenLinksKept(
+  ctx: LinkWriteContext,
+  module: ParticipationLinkedModule,
+  stored: string[],
+  next: string[],
+): Promise<string[]> {
+  const scoped = await contextScope(ctx, module);
+  if (!scoped) return next;
+  const kept = await linksOutsideScope(scoped.manager, module, stored.map((id) => String(id).toLowerCase()), scoped.scope);
+  const seen = new Set(next.map((id) => String(id).trim().toLowerCase()));
+  return [...next, ...kept.filter((id) => !seen.has(id))];
 }
 
 /**
@@ -103,7 +143,7 @@ export async function assertLinkedRecordsReadable(ctx: LinkWriteContext, module:
  */
 export async function linksOutsideScope(
   manager: EntityManager,
-  module: 'projects' | 'requests' | 'applications' | 'tasks',
+  module: ParticipationLinkedModule,
   linked: string[],
   scope: { userId: string } | undefined,
 ): Promise<string[]> {
