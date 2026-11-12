@@ -2200,7 +2200,8 @@
       "contactLocked": "Los roles de contacto son gestionados por el sistema para la visibilidad del directorio y no pueden ser modificados.",
       "duplicated": "Rol duplicado.",
       "permissionsSaved": "Permisos del rol guardados.",
-      "deleteFailed": "No se pudo eliminar el rol."
+      "deleteFailed": "No se pudo eliminar el rol.",
+      "saveFailed": "No se pudo guardar el rol."
     },
     "resources": {
       "accounts": "Cuentas",

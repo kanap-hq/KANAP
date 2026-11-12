@@ -57,6 +57,9 @@ export default function RolesPage() {
     return list;
   }, [roles, t, language]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  // A refused write of the selected role (rename, duplicate, rights), in the interface language.
+  const [writeError, setWriteError] = React.useState<string | null>(null);
+  const refusal = (error: unknown) => getApiErrorMessage(error, t, t('roles.messages.saveFailed'));
   const selected = orderedRoles.find((r: Role) => r.id === selectedId) ?? orderedRoles[0] ?? null;
 
   React.useEffect(() => {
@@ -77,11 +80,11 @@ export default function RolesPage() {
   });
   const [draft, setDraft] = React.useState<Record<string, PermissionLevel>>({});
   // On role change, clear draft immediately to avoid showing previous role values
-  React.useEffect(() => { setDraft({}); }, [selected?.id]);
+  React.useEffect(() => { setDraft({}); setWriteError(null); }, [selected?.id]);
   // When fetched, apply role permissions to draft
   React.useEffect(() => { setDraft((perms || {}) as any); }, [perms]);
 
-  const { mutateAsync: savePerms, isPending } = useMutation({
+  const { mutate: savePerms, isPending } = useMutation({
     mutationFn: async () => {
       if (!selected) return;
       await api.put(`/roles/${selected.id}/permissions`, { permissions: draft });
@@ -94,13 +97,21 @@ export default function RolesPage() {
       }
       // The checkboxes stay as saved: the page already shows the result.
     },
+    onMutate: () => setWriteError(null),
+    // Nothing was saved: the selectors show the saved levels again.
+    onError: (error: unknown) => {
+      setWriteError(refusal(error));
+      setDraft({ ...((perms || {}) as Record<string, PermissionLevel>) });
+    },
   });
 
   // Create role modal
   const [createOpen, setCreateOpen] = React.useState(false);
   const [newName, setNewName] = React.useState('');
   const [newDesc, setNewDesc] = React.useState('');
-  const { mutateAsync: createRole, isPending: creating } = useMutation({
+  const [createError, setCreateError] = React.useState<string | null>(null);
+  const openCreate = () => { setCreateError(null); setCreateOpen(true); };
+  const { mutate: createRole, isPending: creating } = useMutation({
     mutationFn: async () => {
       const res = await api.post('/roles', { role_name: newName.trim(), role_description: newDesc.trim() });
       return res.data as Role;
@@ -111,10 +122,12 @@ export default function RolesPage() {
       setCreateOpen(false);
       setNewName(''); setNewDesc('');
     },
+    onMutate: () => setCreateError(null),
+    onError: (error: unknown) => setCreateError(refusal(error)),
   });
 
   // Duplicate role
-  const { mutateAsync: duplicateRole, isPending: duplicating } = useMutation({
+  const { mutate: duplicateRole, isPending: duplicating } = useMutation({
     mutationFn: async () => {
       if (!selected) return null;
       const res = await api.post(`/roles/${selected.id}/duplicate`);
@@ -125,6 +138,8 @@ export default function RolesPage() {
       // The copy is selected, so its name and permissions are what the page shows.
       if (created?.id) setSelectedId(created.id);
     },
+    onMutate: () => setWriteError(null),
+    onError: (error: unknown) => setWriteError(refusal(error)),
   });
 
   // Update role meta (name/description)
@@ -133,12 +148,14 @@ export default function RolesPage() {
   React.useEffect(() => {
     if (selected) { setEditName(selected.role_name); setEditDesc(selected.role_description); }
   }, [selected?.id]);
-  const { mutateAsync: saveMeta, isPending: savingMeta } = useMutation({
+  const { mutate: saveMeta, isPending: savingMeta } = useMutation({
     mutationFn: async () => {
       if (!selected) return;
       await api.put(`/roles/${selected.id}`, { role_name: editName.trim(), role_description: editDesc.trim() });
     },
     onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['roles'] }); },
+    onMutate: () => setWriteError(null),
+    onError: (error: unknown) => setWriteError(refusal(error)),
   });
 
   // Delete role
@@ -207,7 +224,7 @@ export default function RolesPage() {
                 {duplicating ? t('roles.actions.duplicating') : t('roles.actions.duplicate')}
               </Button>
             )}
-            <Button variant="action-primary" onClick={() => setCreateOpen(true)}>{t('roles.actions.newRole')}</Button>
+            <Button variant="action-primary" onClick={openCreate}>{t('roles.actions.newRole')}</Button>
           </Stack>
         ) : undefined}
       />
@@ -246,6 +263,7 @@ export default function RolesPage() {
                     )}
                   </Stack>
                 </Stack>
+                {writeError && <Alert severity="error" sx={{ mb: 2 }}>{writeError}</Alert>}
                 {locked && (
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     {lockedMessage}
@@ -321,6 +339,7 @@ export default function RolesPage() {
           }}
         >
           <Stack spacing={2} sx={{ mt: 1 }}>
+            {createError && <Alert severity="error">{createError}</Alert>}
             <TextField autoFocus label={t('roles.fields.roleName')} value={newName} onChange={(e) => setNewName(e.target.value)} InputLabelProps={{ shrink: true }} />
             <TextField label={t('roles.fields.description')} value={newDesc} onChange={(e) => setNewDesc(e.target.value)} InputLabelProps={{ shrink: true }} />
           </Stack>
