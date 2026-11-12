@@ -64,6 +64,7 @@ import {
   AiFilterValue,
   AiFilterValuesResult,
   AiQueryResult,
+  AiWithheldField,
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
@@ -624,6 +625,26 @@ export function resolveAiQuerySort(
   if (!mappedField) return { ...fallback, ignored: [field] };
   const direction = sort?.direction === 'asc' ? 'asc' : 'desc';
   return { param: `${mappedField}:${direction.toUpperCase()}`, applied: { field, direction }, ignored: [] };
+}
+
+/**
+ * What a task's detail says of its linked applications and assets the person reads in part or not
+ * at all, so that the answer never turns a missing read into "none": `fields_withheld` for a family
+ * the person does not read (the field is null), `fields_partial` for a Business Contributor, whose
+ * list holds the applications of their participation only.
+ */
+function taskLinkedReadNotes(reads: LinkedReads, scopes: TaskLinkedScopes): { fields_withheld?: AiWithheldField[]; fields_partial?: AiWithheldField[] } {
+  const withheld: AiWithheldField[] = [];
+  const partial: AiWithheldField[] = [];
+  if (!reads.applications) {
+    withheld.push({ field: 'applications', reason: 'This person does not read applications (Applications, reader level): the linked applications are withheld (null), which does not mean there are none.' });
+  } else if (scopes.applications) {
+    partial.push({ field: 'applications', reason: 'This person reads only the applications they take part in (Business Contributor): the list names those, and the task may be linked to others.' });
+  }
+  if (!reads.assets) {
+    withheld.push({ field: 'assets', reason: 'This person does not read assets (Infrastructure, reader level): the linked assets are withheld (null), which does not mean there are none.' });
+  }
+  return { ...(withheld.length ? { fields_withheld: withheld } : {}), ...(partial.length ? { fields_partial: partial } : {}) };
 }
 
 /**
@@ -3592,19 +3613,21 @@ export class AiQueryExecutor {
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
     if (entityType === 'tasks') {
+      const linkedReads = await this.linkedReads(context);
+      const linkedScopes = await this.taskLinkedScopes(context);
       const row = await this.tasks.getOne(entityId, {
         manager: context.manager,
         accessScope,
         viewer: await resolveAiIncidentViewer(context),
-        linkedReads: await this.linkedReads(context),
-        linkedScopes: await this.taskLinkedScopes(context),
+        linkedReads,
+        linkedScopes,
       });
       if (!row) throw new NotFoundException('Task not found.');
       const task: any = withoutHiddenLine(row);
       // The stored `spend_item` / `capex_item` never reaches the model: both natures are one
       // `budget_line` family on the AI surface.
       if (task.related_object_type) task.related_object_type = taskRelatedFamily(task.related_object_type);
-      return this.toDetailResult(this.mapTask(row), task);
+      return { ...this.toDetailResult(this.mapTask(row), task), ...taskLinkedReadNotes(linkedReads, linkedScopes) };
     }
 
     if (entityType === 'projects') {

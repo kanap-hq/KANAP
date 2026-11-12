@@ -3949,10 +3949,9 @@ export class AiEntityService {
         [taskId, tenantId],
       );
 
-    // One application outside a Business Contributor's participation hides them all, as on the task
-    // page, where a save would replace the whole list.
+    // A Business Contributor: the applications of their participation, as on the task page.
     const applicationsInScope = await idsInScope(manager, 'applications', linkedApplicationRows.map((row) => row.id), applicationAccessScope);
-    const applicationRows = linkedApplicationRows.every((row) => applicationsInScope.has(String(row.id))) ? linkedApplicationRows : [];
+    const applicationRows = linkedApplicationRows.filter((row) => applicationsInScope.has(String(row.id)));
 
     // The object the task belongs to, on its module's read and, for a project, inside the person's
     // participation: without it, no name, no project, no phase.
