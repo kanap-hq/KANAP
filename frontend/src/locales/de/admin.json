@@ -1238,6 +1238,7 @@
     "tableNames": {
       "accounts": "Konten",
       "ai_action_requests": "KI-Aktionsanfragen",
+      "ai_adapter_configs": "Integrationsverbindungen",
       "ai_api_keys": "KI-API-Schlüssel",
       "ai_approvals": "KI-Freigaben",
       "ai_evidence": "KI-Nachweise",

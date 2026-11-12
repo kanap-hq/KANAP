@@ -1238,6 +1238,7 @@
     "tableNames": {
       "accounts": "Accounts",
       "ai_action_requests": "AI action requests",
+      "ai_adapter_configs": "Integration connections",
       "ai_api_keys": "AI API keys",
       "ai_approvals": "AI approvals",
       "ai_evidence": "AI evidence",
