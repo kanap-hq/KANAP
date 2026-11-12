@@ -9,7 +9,7 @@ import {
   type ManagedDocsFolderDefinition,
   ManagedDocsFolderSystemKey,
 } from './integrated-document.constants';
-import { markdownToSearchText } from '../common/markdown-search-text';
+import { markdownToSearchText } from '../common/markdown-worker';
 
 type SqlExecutor = {
   query<T = any>(query: string, parameters?: any[]): Promise<T[]>;
@@ -316,7 +316,7 @@ async function ensureTemplateDocument(
   // The body is indexed for the search from content_plain (documents_search_vector_sync), as for
   // any document saved from Knowledge: derive it from the Markdown on both paths.
   const contentMarkdown = params.contentMarkdown ?? '';
-  const contentPlain = markdownToSearchText(contentMarkdown);
+  const contentPlain = await markdownToSearchText(contentMarkdown);
   if (existing[0]?.id) {
     await executor.query(
       `UPDATE documents
