@@ -1299,7 +1299,7 @@ export class ContractsService {
     if (!found) throw new NotFoundException('Attachment not found');
     await assertContractsEditable(mg, [found.contract_id]);
     await attachRepo.delete({ id: found.id, tenant_id: found.tenant_id });
-    if ((await unreferencedPaths(mg, found.tenant_id, [found.storage_path], [found.id])).length > 0) {
+    if ((await unreferencedPaths(mg, found.tenant_id, [found.storage_path])).length > 0) {
       try { await this.storage.deleteObject(found.storage_path); } catch {}
     }
     await this.audit.log({ table: 'contract_attachments', recordId: found.id, action: 'update', before: found, after: null, userId }, { manager: mg });

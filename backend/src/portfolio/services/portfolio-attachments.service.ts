@@ -13,7 +13,7 @@ import { fixMulterFilename } from '../../common/upload';
 import { extractInlineImageUrls } from '../../common/content-image-urls';
 import { RemoteInlineImageImportService } from '../../common/remote-inline-image-import.service';
 import { resolveInlineTenantSlug } from '../../common/resolve-inline-tenant-slug';
-import { isStoragePathReferencedInAnyTable } from '../../common/storage-path-refs';
+import { isInlineAttachmentShownInContent, isStoragePathReferencedInAnyTable } from '../../common/storage-path-refs';
 import { KnowledgeService } from '../../knowledge/knowledge.service';
 
 /**
@@ -113,16 +113,16 @@ export class PortfolioAttachmentsService extends PortfolioProjectsBaseService {
     const attachment = await repo.findOne({ where: { id: attachmentId, project_id: projectId } });
     if (!attachment) throw new NotFoundException('Attachment not found');
 
-    // A clone of the file in another record (a managed document's inline image) keeps it.
-    if (!(await isStoragePathReferencedInAnyTable(mg, attachment.storage_path, [attachment.id]))) {
+    // The row first, then the check (`unreferencedPaths`), then the file: a clone of the file in
+    // another record (a managed document's inline image) keeps it.
+    await repo.delete({ id: attachmentId });
+    if (!(await isStoragePathReferencedInAnyTable(mg, attachment.storage_path))) {
       try {
         await this.storage.deleteObject(attachment.storage_path);
       } catch (e) {
         // Log but don't fail
       }
     }
-
-    await repo.delete({ id: attachmentId });
 
     await this.audit.log({
       table: 'portfolio_project_attachments',
@@ -315,9 +315,10 @@ export class PortfolioAttachmentsService extends PortfolioProjectsBaseService {
           const attachment = await repo.findOne({
             where: { id: attachmentId, project_id: projectId, source_field: sourceField },
           });
-          if (attachment) {
-            const referenced = await isStoragePathReferencedInAnyTable(mg, attachment.storage_path, [attachment.id]);
+          // Another text still showing it keeps it: the weekly sweep takes it once none does.
+          if (attachment && !(await isInlineAttachmentShownInContent(mg, attachment.id))) {
             await repo.delete({ id: attachmentId });
+            const referenced = await isStoragePathReferencedInAnyTable(mg, attachment.storage_path);
             if (!referenced) {
               try { await this.storage.deleteObject(attachment.storage_path); } catch {}
             }

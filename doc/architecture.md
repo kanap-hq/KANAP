@@ -629,6 +629,11 @@ restrictive RLS policies that target one role only, so nothing changes for anyon
   document). Every delete of an attachment, or of a record with its attachments, removes the file
   only when no attachment row of the tenant still names it (`unreferencedPaths`,
   `isStoragePathReferencedInAnyTable`); the check counts the rows a limited person cannot read.
+  A delete removes its rows first, then checks, then deletes the file; a copy locks the files
+  (`lockStoragePaths`, an advisory lock per path) before it reads the rows it copies, so a copy and
+  a delete running at the same time see each other. An inline image that another text still shows
+  by its address (a task's image in the request made from the task) is not cleaned up with the
+  text it left (`isInlineAttachmentShownInContent`); the weekly sweep removes it once no text does.
 - **Reserved operations.** A limited person cannot run the operations reserved to unscoped persons
   (tenant settings, bulk line operations, deletes of a line or a contract, user and role
   administration, audit log, organisation data, updates and deletes of suppliers and shared

@@ -539,7 +539,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     // Through its application, as the download: an application the person does not read reads as missing.
     await this.assertVisible(found.application_id, opts?.accessScope, mg);
     await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
-    if ((await unreferencedPaths(mg, tenantId, [found.storage_path], [found.id])).length > 0) {
+    if ((await unreferencedPaths(mg, tenantId, [found.storage_path])).length > 0) {
       try { await this.storage.deleteObject(found.storage_path); } catch {}
     }
     await this.audit.log({ table: 'application_attachments', recordId: found.id, action: 'update', before: found, after: null, userId }, { manager: mg });

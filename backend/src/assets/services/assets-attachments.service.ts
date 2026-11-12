@@ -209,7 +209,7 @@ export class AssetsAttachmentsService extends AssetsBaseService {
     if (!found) return { ok: true };
 
     await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
-    if ((await unreferencedPaths(mg, tenantId, [found.storage_path], [found.id])).length > 0) {
+    if ((await unreferencedPaths(mg, tenantId, [found.storage_path])).length > 0) {
       try {
         await this.storage.deleteObject(found.storage_path);
       } catch {}

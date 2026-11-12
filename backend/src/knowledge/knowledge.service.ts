@@ -47,7 +47,7 @@ import { normalizeAgFilterModel, assertSetFilterModes } from '../common/ag-grid-
 import { resolveToUuid } from '../common/resolve-item-id';
 import { resolveInlineTenantSlug } from '../common/resolve-inline-tenant-slug';
 import { StorageService } from '../common/storage/storage.service';
-import { isStoragePathReferencedInAnyTable } from '../common/storage-path-refs';
+import { isStoragePathReferencedInAnyTable, unreferencedPaths } from '../common/storage-path-refs';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
 import { Features } from '../config/features';
 import { EmailService } from '../email/email.service';
@@ -4735,24 +4735,19 @@ export class KnowledgeService {
     const attachments = await manager.getRepository(DocumentAttachment).find({
       where: { document_id: id } as any,
     });
-    const excludedAttachmentIds = attachments.map((attachment) => attachment.id);
 
-    for (const attachment of attachments) {
-      const referencedElsewhere = await isStoragePathReferencedInAnyTable(
-        manager,
-        attachment.storage_path,
-        excludedAttachmentIds,
-      );
-      if (!referencedElsewhere) {
-        try {
-          await this.storage.deleteObject(attachment.storage_path);
-        } catch {
-          // Keep document deletion resilient even if the object is already missing.
-        }
+    // The attachment rows go with the document (cascade), then the files no other row names
+    // (`unreferencedPaths`).
+    await repo.delete({ id } as any);
+
+    const paths = await unreferencedPaths(manager, existing.tenant_id, [...new Set(attachments.map((attachment) => attachment.storage_path).filter(Boolean))]);
+    for (const storagePath of paths) {
+      try {
+        await this.storage.deleteObject(storagePath);
+      } catch {
+        // Keep document deletion resilient even if the object is already missing.
       }
     }
-
-    await repo.delete({ id } as any);
 
     await this.auditDocumentChange('delete', existing.id, existing, null, userId, manager);
   }
@@ -6587,16 +6582,16 @@ export class KnowledgeService {
     const existing = await repo.findOne({ where: { id: attachmentId, document_id: documentId } as any });
     if (!existing) throw new NotFoundException('Attachment not found');
 
-    // A file cloned from another record (an inline image of its source) stays while a row names it.
-    if (!(await isStoragePathReferencedInAnyTable(manager, existing.storage_path, [existing.id]))) {
+    // The row first, then the check (`unreferencedPaths`), then the file: a file cloned from another
+    // record (an inline image of its source) stays while a row names it.
+    await repo.delete({ id: existing.id } as any);
+    if (!(await isStoragePathReferencedInAnyTable(manager, existing.storage_path))) {
       try {
         await this.storage.deleteObject(existing.storage_path);
       } catch {
         // Keep DB delete resilient even if object is already missing.
       }
     }
-
-    await repo.delete({ id: existing.id } as any);
 
     await this.audit.log(
       {
@@ -6768,7 +6763,9 @@ export class KnowledgeService {
         continue;
       }
 
-      const referencedElsewhere = await isStoragePathReferencedInAnyTable(manager, attachment.storage_path, [attachment.id]);
+      // The row first, then the check (`unreferencedPaths`), then the file.
+      await repo.delete({ id: attachment.id } as any);
+      const referencedElsewhere = await isStoragePathReferencedInAnyTable(manager, attachment.storage_path);
       if (!referencedElsewhere) {
         try {
           await this.storage.deleteObject(attachment.storage_path);
@@ -6776,7 +6773,6 @@ export class KnowledgeService {
           // Ignore storage delete failures during inline attachment cleanup.
         }
       }
-      await repo.delete({ id: attachment.id } as any);
     }
   }
 
