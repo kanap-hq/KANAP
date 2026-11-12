@@ -1,4 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { linkedParticipationScope, linksOutsideScope } from '../common/relations/linked-reads';
+import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Task, TaskPriorityLevel } from './task.entity';
@@ -99,7 +101,8 @@ export class TasksUnifiedService {
     if (!Array.isArray(value)) {
       throw new BadRequestException(`${fieldName} must be an array`);
     }
-    const normalized = value.map((item) => String(item || '').trim()).filter(Boolean);
+    // Stored ids are lower case: an upper-case id names the same record.
+    const normalized = value.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean);
     return Array.from(new Set(normalized));
   }
 
@@ -171,7 +174,7 @@ export class TasksUnifiedService {
     manager: EntityManager;
   }): Promise<void> {
     const tenantId = params.tenantId || await this.getTaskTenant(params.taskId, params.manager);
-    const ids = this.normalizeLinkIds(params.ids, params.fieldName);
+    let ids = this.normalizeLinkIds(params.ids, params.fieldName);
     // Elements of a task: the task modifiable (policy of task_applications and task_assets).
     await assertTaskModifiable(params.manager, params.taskId);
     await this.validateLinkedIds(params.targetTable, ids, tenantId, params.manager, params.fieldName);
@@ -185,6 +188,21 @@ export class TasksUnifiedService {
     );
     const existingIds = existingRows.map((row) => row.id);
     const existingSet = new Set(existingIds);
+    // A Business Contributor adds only applications of their participation (another answers as a
+    // missing one) and keeps the links to the applications they do not read.
+    const scope = params.targetTable === 'applications' && params.userId
+      ? await linkedParticipationScope(params.manager, params.userId, tenantId, 'applications')
+      : undefined;
+    let unseenKept = new Set<string>();
+    if (scope) {
+      const added = ids.filter((id) => !existingSet.has(id));
+      const visible = await idsInScope(params.manager, 'applications', added, scope);
+      const unseen = added.filter((id) => !visible.has(id));
+      if (unseen.length > 0) throw new BadRequestException(`Invalid ${params.fieldName}: ${unseen.join(', ')}`);
+      const kept = await linksOutsideScope(params.manager, 'applications', existingIds, scope);
+      ids = Array.from(new Set([...ids, ...kept]));
+      unseenKept = new Set(kept);
+    }
     const nextSet = new Set(ids);
     const toInsert = ids.filter((id) => !existingSet.has(id));
     const toDelete = existingIds.filter((id) => !nextSet.has(id));
@@ -193,8 +211,10 @@ export class TasksUnifiedService {
       return;
     }
 
-    const beforeNames = await this.resolveLinkNames(params.targetTable, existingIds, tenantId, params.manager);
-    const afterNames = await this.resolveLinkNames(params.targetTable, ids, tenantId, params.manager);
+    // The activity names the records the author reads; the audit row keeps the whole sets.
+    const named = (list: string[]) => list.filter((id) => !unseenKept.has(id));
+    const beforeNames = await this.resolveLinkNames(params.targetTable, named(existingIds), tenantId, params.manager);
+    const afterNames = await this.resolveLinkNames(params.targetTable, named(ids), tenantId, params.manager);
 
     if (toDelete.length > 0) {
       await params.manager.query(
