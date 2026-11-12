@@ -9,14 +9,20 @@ import type { ParticipationAccessScope } from '../../auth/business-contributor-s
  * module, or a Business Contributor's participation) gets a side as a number: `{ labels: null,
  * hidden }` when no name shows, `{ labels, hidden }` when some do. The fact that a link changed
  * stays; the name or the reference of a record the person does not read never leaves the server.
- * The budget lines of a project's or a request's history follow the same shape
- * (`portfolio/budget-line-activity.ts`).
+ * The record a project or a request was created from, and the request a task became, are one
+ * record on one side: counted the same way, `{ labels: null, hidden: 1 }`. The budget lines of a
+ * project's or a request's history follow the same shape (`portfolio/budget-line-activity.ts`).
  */
 export type LinkedActivitySide = string[] | { labels: string[] | null; hidden: number };
 
-/** A side of a change counted: no name, the number of records. Anything else stays as stored. */
+/**
+ * A side of a change counted: no name, the number of records. A single record stored as its label
+ * (the request a task became, the task a request came from) counts as one. Anything else (an
+ * empty side) stays as stored.
+ */
 export function countedSide(side: unknown): unknown {
-  return Array.isArray(side) ? { labels: null, hidden: side.length } : side;
+  if (Array.isArray(side)) return { labels: null, hidden: side.length };
+  return typeof side === 'string' ? { labels: null, hidden: 1 } : side;
 }
 
 /**

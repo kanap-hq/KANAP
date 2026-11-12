@@ -233,11 +233,13 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         [id]
       );
       // Budget lines in the history: named only as far as the reader may read them. The
-      // applications and assets: named only to a reader of every record of the family.
+      // applications and assets, and the request the project came from: named only to a reader
+      // of every record of the family.
       const linked = opts?.linked;
       result.activities = withCountedLinkChanges(await budgetLineActivitiesForReader(mg, activities, opts?.readsBudget === true), {
         applications: readsPartOf(linked?.reads, 'applications', linked?.applicationScope),
         assets: readsPartOf(linked?.reads, 'assets'),
+        created_from_request: readsPartOf(linked?.reads, 'requests', linked?.requestScope),
       });
       const creators = await resolveRecordCreators(mg, 'portfolio_projects', [id]);
       result.created_by_name = creators.get(id) ?? null;

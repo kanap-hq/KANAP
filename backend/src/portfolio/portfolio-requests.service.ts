@@ -1119,11 +1119,13 @@ export class PortfolioRequestsService {
         [id]
       );
       // Budget lines in the history: named only as far as the reader may read them. The
-      // applications and assets: named only to a reader of every record of the family.
+      // applications and assets, and the task the request came from: named only to a reader of
+      // every record of the family.
       const linked = opts?.linked;
       result.activities = withCountedLinkChanges(await budgetLineActivitiesForReader(mg, activities, opts?.readsBudget === true), {
         applications: readsPartOf(linked?.reads, 'applications', linked?.applicationScope),
         assets: readsPartOf(linked?.reads, 'assets'),
+        created_from_task: readsPartOf(linked?.reads, 'tasks', linked?.taskScope),
       });
       const creators = await resolveRecordCreators(mg, 'portfolio_requests', [id]);
       result.created_by_name = creators.get(id) ?? null;

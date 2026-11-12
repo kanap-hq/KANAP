@@ -176,20 +176,25 @@ export class TaskActivitiesService {
   }
 
   /**
-   * A change of the task's linked applications or assets stores their names. A reader who does not
-   * read every record of the family (no read of the module, or a Business Contributor's
-   * participation) gets each side as a count (`{ labels: null, hidden }`), as the record history
-   * says « an application ».
+   * A change of the task's linked applications or assets stores their names, its conversion the
+   * label of the request it became. A reader who does not read every record of the family (no read
+   * of the module, or a Business Contributor's participation) gets each side as a count
+   * (`{ labels: null, hidden }`), as the record history says « an application ».
    */
   private async withLinkNamesForReader<T extends { changed_fields: Record<string, [unknown, unknown]> | null }>(
     mg: EntityManager,
     rows: T[],
     userId: string | null | undefined,
   ): Promise<T[]> {
-    const changes = (row: T) => row.changed_fields?.linked_applications || row.changed_fields?.linked_assets;
+    const changes = (row: T) => row.changed_fields?.linked_applications || row.changed_fields?.linked_assets
+      || row.changed_fields?.converted_to_request;
     if (!userId || !rows.some(changes)) return rows;
-    const partial = await personReadsPartOf(mg, userId, null, ['applications', 'assets']);
-    return withCountedLinkChanges(rows, { linked_applications: partial.applications, linked_assets: partial.assets });
+    const partial = await personReadsPartOf(mg, userId, null, ['applications', 'assets', 'requests']);
+    return withCountedLinkChanges(rows, {
+      linked_applications: partial.applications,
+      linked_assets: partial.assets,
+      converted_to_request: partial.requests,
+    });
   }
 
   /**

@@ -11,6 +11,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   side of an application change as a number (`{ labels: null, hidden }`), whether the change
 //   came from a replacement of the list or from the Relations tab, one link at a time;
 // - a person who does not read applications (or assets) gets the numbers too.
+// The record a project or a request was created from, and the request a task became, are one record
+// on one side: a person who does not read every record of its family gets `{ labels: null, hidden: 1 }`.
 // The fact that a link changed stays; no name or reference of an unread record leaves the server.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -38,12 +40,14 @@ async function run() {
   const { PortfolioRequestsService } = require('../portfolio-requests.service');
   const { PortfolioProjectsService } = require('../services/portfolio-projects.service');
   const { PortfolioRelationsService } = require('../portfolio-relations.service');
+  const { TaskActivitiesService } = require('../../tasks/task-activities.service');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   const projects = app.get(PortfolioProjectsController);
   const requests = app.get(PortfolioRequestsController);
   const requestsSvc = app.get(PortfolioRequestsService);
   const projectsSvc = app.get(PortfolioProjectsService);
   const relations = app.get(PortfolioRelationsService);
+  const taskActivities = app.get(TaskActivitiesService);
   const runner = app.get(DataSource).createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
@@ -75,8 +79,10 @@ async function run() {
     const adminId = await user('admin', adminRole.id);
     const bcId = await user('bc', bcRole.id);
     const readerId = await user('reader', portfolioOnly.id);
-    await runner.query(`INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, true), ($1, $4, $5, true)`,
-      [tenantId, bcId, bcRole.id, readerId, portfolioOnly.id]);
+    const tasksOnly = await role('Task reader', { tasks: 'reader' });
+    const taskReaderId = await user('tasks', tasksOnly.id);
+    await runner.query(`INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, true), ($1, $4, $5, true), ($1, $6, $7, true), ($1, $8, $9, true)`,
+      [tenantId, bcId, bcRole.id, readerId, portfolioOnly.id, adminId, adminRole.id, taskReaderId, tasksOnly.id]);
 
     const project = await insertId(runner, `INSERT INTO portfolio_projects (tenant_id, item_number, name, business_lead_id) VALUES ($1, 1, 'Mine', $2)`, [tenantId, bcId]);
     const request = await insertId(runner, `INSERT INTO portfolio_requests (tenant_id, item_number, name, requestor_id) VALUES ($1, 1, 'Request', $2)`, [tenantId, bcId]);
@@ -135,6 +141,35 @@ async function run() {
     assert.deepEqual(changes(readerRequest, 'assets'), [[{ labels: null, hidden: 0 }, { labels: null, hidden: 1 }]], 'no reader of assets: the number');
     assert.equal(changes(readerRequest, 'applications').length, 2, 'no reader of applications: the changes stay');
     console.log('  a person who reads neither family gets the numbers: OK');
+
+    // The record a project or a request came from, and the request a task became.
+    const task = await insertId(runner,
+      `INSERT INTO tasks (tenant_id, item_number, title, status, labels, owner_ids, viewer_ids) VALUES ($1, 1, 'Secret task', 'open', '[]', '[]', '[]')`, [tenantId]);
+    await runner.query(
+      `INSERT INTO portfolio_activities (tenant_id, request_id, project_id, task_id, author_id, type, changed_fields)
+       VALUES ($1, $2, NULL, NULL, $5, 'change', '{"created_from_task": [null, "T-1 Secret task"]}'::jsonb),
+              ($1, NULL, $3, NULL, $5, 'change', '{"created_from_request": [null, "REQ-9 Secret request"]}'::jsonb),
+              ($1, NULL, NULL, $4, $5, 'change', '{"converted_to_request": [null, "REQ-9 Secret request"]}'::jsonb)`,
+      [tenantId, request, project, task, adminId]);
+    const counted = [[null, { labels: null, hidden: 1 }]];
+    assert.deepEqual(changes(await activities(full, 'request'), 'created_from_task'), [[null, 'T-1 Secret task']], 'full reader: the task a request came from');
+    assert.deepEqual(changes(await activities(full, 'project'), 'created_from_request'), [[null, 'REQ-9 Secret request']], 'full reader: the request a project came from');
+    const taskChanges = async (userId: string) => changes(await taskActivities.listForTask(task, { manager: runner.manager, userId }), 'converted_to_request');
+    assert.deepEqual(await taskChanges(adminId), [[null, 'REQ-9 Secret request']], 'full reader: the request a task became');
+    // A Business Contributor reads part of the requests and no task: counted.
+    assert.deepEqual(changes(await activities(bc, 'request'), 'created_from_task'), counted, 'contributor: the origin task counted');
+    assert.deepEqual(changes(await activities(bc, 'project'), 'created_from_request'), counted, 'contributor: the origin request counted');
+    assert.deepEqual(await taskChanges(bcId), counted, 'contributor: the request a task became counted');
+    // A person who reads every request but no task: the request named, the task counted.
+    assert.deepEqual(changes(await activities(reader, 'project'), 'created_from_request'), [[null, 'REQ-9 Secret request']], 'request reader: the origin request named');
+    assert.deepEqual(changes(await activities(reader, 'request'), 'created_from_task'), counted, 'no reader of tasks: the origin task counted');
+    // A person who reads tasks but no request: counted.
+    assert.deepEqual(await taskChanges(taskReaderId), counted, 'no reader of requests: the request a task became counted');
+    for (const ctx of [bc, reader]) {
+      assert.ok(!/Secret task/.test(JSON.stringify(await activities(ctx, 'request'))), 'no task name to a non-reader of tasks');
+    }
+    assert.ok(!/Secret request/.test(JSON.stringify(await activities(bc, 'project'))), 'no request name to a contributor');
+    console.log('  the origin record of a project, a request or a task: named to its readers, counted for others: OK');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
