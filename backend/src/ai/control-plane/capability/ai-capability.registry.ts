@@ -106,6 +106,12 @@ const InternalKnowledgeSearchInputSchema = z.object({
 
 const InternalKnowledgeDocumentInputSchema = z.object({
   document_id: z.string().trim().min(1),
+  // Passages mode: the passages of the body around the words of this query, in place of the
+  // body (KnowledgeService.getDocumentSearchPassages), for a model that judges the document.
+  passages_query: z.string().trim().min(1).max(600).optional(),
+  max_passages: z.number().int().min(1).max(8).optional(),
+  // Passages mode: only a document of one of these libraries (the agent's list).
+  library_ids: z.array(z.string().trim().uuid()).max(50).optional(),
 }).strict();
 
 const InternalWebSearchInputSchema = z.object({
@@ -488,6 +494,9 @@ function internalKnowledgeDocumentContract(): CapabilityContract {
       type: 'object',
       properties: {
         document_id: { type: 'string', minLength: 1 },
+        passages_query: { type: 'string', minLength: 1, maxLength: 600 },
+        max_passages: { type: 'number', minimum: 1, maximum: 8 },
+        library_ids: { type: 'array', items: { type: 'string' }, maxItems: 50 },
       },
       required: ['document_id'],
       additionalProperties: false,
@@ -508,7 +517,7 @@ function internalKnowledgeDocumentContract(): CapabilityContract {
     business_resources: ['knowledge'],
     timeout_seconds: 30,
     retry_policy: { automatic_retry: false, max_attempts: 1 },
-    idempotency: { mode: 'idempotent', key_fields: ['document_id'] },
+    idempotency: { mode: 'idempotent', key_fields: ['document_id', 'passages_query', 'max_passages', 'library_ids'] },
     rollback: { supported: false },
     cost: { estimated_unit_cost: null, metered: false },
     redaction_policy: { fields: [] },
@@ -2459,6 +2468,20 @@ export class AiCapabilityRegistry {
       throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     await policy.assertKnowledgeReadAccess(context, context.manager);
+    if (parsed.data.passages_query) {
+      // The passages of a published document of the agent's libraries, never of another one.
+      const passages = await knowledge.getDocumentSearchPassages(parsed.data.document_id, parsed.data.passages_query, {
+        manager: context.manager,
+        userId: context.userId,
+        publishedOnly: true,
+        maxPassages: parsed.data.max_passages,
+        libraryIds: parsed.data.library_ids ?? null,
+      });
+      if (!passages) {
+        throw new NotFoundException('Document not found.');
+      }
+      return passages;
+    }
     const document = await knowledge.get(parsed.data.document_id, { manager: context.manager, userId: context.userId });
     if (!document) {
       throw new NotFoundException('Document not found.');

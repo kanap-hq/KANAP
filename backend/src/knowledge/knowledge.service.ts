@@ -6355,7 +6355,8 @@ export class KnowledgeService {
    * plain text without highlight tags, cut by `ts_headline` under the configuration (French or
    * English) whose stems match the body best. When no word of the query is in the body, `matched`
    * is false and the single passage is the start of the body. Null when the document does not
-   * exist, the person may not read it, or it is not published under `publishedOnly`.
+   * exist, the person may not read it, it is not published under `publishedOnly`, or it is in no
+   * library of `libraryIds`.
    */
   async getDocumentSearchPassages(
     idOrRef: string,
@@ -6366,6 +6367,8 @@ export class KnowledgeService {
       tenantId?: string | null;
       publishedOnly?: boolean;
       maxPassages?: number;
+      /** Only a document of one of these libraries (an agent's list); null or absent: any. */
+      libraryIds?: string[] | null;
     },
   ): Promise<DocumentSearchPassages | null> {
     const manager = this.getManager(opts);
@@ -6396,8 +6399,14 @@ export class KnowledgeService {
        WHERE d.id = $1
          AND d.tenant_id = app_current_tenant()
          ${opts?.publishedOnly === true ? `AND d.status = 'published'` : ''}
+         ${opts?.libraryIds ? 'AND d.library_id = ANY($4::uuid[])' : ''}
        LIMIT 1`,
-      [documentId, normalizeDocumentAnyTermQuery(String(query || '')), headlineOptions],
+      [
+        documentId,
+        normalizeDocumentAnyTermQuery(String(query || '')),
+        headlineOptions,
+        ...(opts?.libraryIds ? [opts.libraryIds] : []),
+      ],
     );
     const row = rows[0];
     if (!row) return null;

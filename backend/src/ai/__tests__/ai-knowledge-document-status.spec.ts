@@ -157,6 +157,32 @@ async function run() {
       );
     }
 
+    // Passages mode (what the interpreter of an agent reads): the passages of a published document
+    // of the agent's libraries, without its body; a draft holding the answer, or a document of
+    // another library, gives none.
+    const passages = await agentDocument.handler(agent, {
+      document_id: refOf('published'), passages_query: 'jam', max_passages: 2, library_ids: [libraryId],
+    }, execution) as any;
+    assert.equal(passages.ref, refOf('published'));
+    assert.equal(passages.matched, true);
+    assert.match(passages.passages.join(' '), /paper jam/);
+    assert.equal('content_markdown' in passages, false);
+    const refusedPassages = [
+      ...STATUSES.filter((value) => value !== 'published').map((status) => ({ document_id: refOf(status), library_ids: [libraryId] })),
+      { document_id: refOf('published'), library_ids: [randomUUID()] },
+    ];
+    for (const refused of refusedPassages) {
+      await assert.rejects(
+        () => agentDocument.handler(agent, { ...refused, passages_query: 'jam' }, execution),
+        (error: any) => {
+          assert.equal(error?.getStatus?.(), 404);
+          assert.doesNotMatch(JSON.stringify(error?.getResponse?.() ?? {}), /paper jam/);
+          return true;
+        },
+        `no passage of ${JSON.stringify(refused)}`,
+      );
+    }
+
     // Kad (chat) and the MCP server: every state, with its status.
     for (const surface of ['chat', 'mcp'] as const) {
       const person = context(runner.manager, tenantId, surface);
