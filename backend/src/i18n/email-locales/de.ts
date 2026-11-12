@@ -254,6 +254,7 @@ export const de: EmailStrings = {
       subject: 'Microsoft-Anmeldung für {{organisation}} bestätigen',
       intro: 'Bei einer Anmeldung mit Microsoft wurde Ihre Adresse verwendet. Mit der Schaltfläche unten verknüpfen Sie dieses Microsoft-Konto mit Ihrem Konto. Sie bleibt {{duration}} gültig.',
       ignore: 'Wenn Sie sich nicht mit Microsoft angemeldet haben, ignorieren Sie diese Nachricht: An Ihrem Konto ändert sich nichts.',
+      requestedBy: 'Microsoft-Konto: {{account}}, {{date}}',
       button: 'Mein Microsoft-Konto verknüpfen',
     },
     userInvite: {

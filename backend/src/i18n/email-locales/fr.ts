@@ -256,6 +256,7 @@ export const fr: EmailStrings = {
       subject: 'Confirmer votre connexion Microsoft sur {{organisation}}',
       intro: "Une connexion avec Microsoft a utilisé votre adresse. Le bouton ci-dessous relie ce compte Microsoft à votre compte ; il reste valable {{duration}}.",
       ignore: "Si vous ne vous êtes pas connecté avec Microsoft, ignorez ce message : rien ne change sur votre compte.",
+      requestedBy: 'Compte Microsoft : {{account}}, {{date}}',
       button: 'Relier mon compte Microsoft',
     },
     userInvite: {

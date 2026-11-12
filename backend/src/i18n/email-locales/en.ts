@@ -261,6 +261,7 @@ export const en = {
       subject: 'Confirm your Microsoft sign-in on {{organisation}}',
       intro: 'A sign-in with Microsoft used your address. The button below links this Microsoft account to your account; it remains valid for {{duration}}.',
       ignore: 'If you did not sign in with Microsoft, ignore this message: nothing changes on your account.',
+      requestedBy: 'Microsoft account: {{account}}, {{date}}',
       button: 'Link my Microsoft account',
     },
     userInvite: {

@@ -14,7 +14,41 @@ export function linkConfirmationHash(token: string): string {
   return LINK_CONFIRMATION_HASH_PREFIX + digest.slice(0, 64 - LINK_CONFIRMATION_HASH_PREFIX.length);
 }
 
-/** Stores a confirmation for the account; the account's earlier confirmations stop working. */
+/** How long a pending confirmation holds off a new one for the same account. */
+export const LINK_CONFIRMATION_RESEND_MINUTES = 5;
+
+/**
+ * Locks the account's row for the rest of the transaction, so that requests and confirmations of
+ * one account run one after the other. Returns the account, or null when it no longer exists.
+ */
+export async function lockAccountForLink(
+  manager: EntityManager,
+  tenantId: string,
+  userId: string,
+): Promise<{ id: string; email: string; status: string; external_auth_provider: string | null } | null> {
+  const rows = await manager.query(
+    `SELECT id, email, status, external_auth_provider FROM users WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+    [tenantId, userId],
+  );
+  return rows[0] ?? null;
+}
+
+/** Whether the account has a usable confirmation sent less than `LINK_CONFIRMATION_RESEND_MINUTES` ago. */
+export async function hasRecentLinkConfirmation(manager: EntityManager, tenantId: string, userId: string): Promise<boolean> {
+  const rows = await manager.query(
+    `SELECT 1 FROM password_reset_tokens
+     WHERE tenant_id = $1 AND user_id = $2 AND token_hash LIKE $3 AND used_at IS NULL AND expires_at > now()
+       AND created_at > now() - make_interval(mins => $4)
+     LIMIT 1`,
+    [tenantId, userId, `${LINK_CONFIRMATION_HASH_PREFIX}%`, LINK_CONFIRMATION_RESEND_MINUTES],
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Stores a confirmation for the account; the account's earlier confirmations stop working. The
+ * caller holds the account's row (`lockAccountForLink`).
+ */
 export async function storeLinkConfirmation(
   manager: EntityManager,
   input: { tenantId: string; userId: string; token: string; expiresAt: Date },

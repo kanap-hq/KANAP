@@ -254,6 +254,7 @@ export const es: EmailStrings = {
       subject: 'Confirme su inicio de sesión con Microsoft en {{organisation}}',
       intro: 'Un inicio de sesión con Microsoft ha usado su dirección. El botón de abajo vincula esta cuenta de Microsoft a su cuenta; es válido durante {{duration}}.',
       ignore: 'Si usted no inició sesión con Microsoft, ignore este mensaje: su cuenta no cambia.',
+      requestedBy: 'Cuenta de Microsoft: {{account}}, {{date}}',
       button: 'Vincular mi cuenta de Microsoft',
     },
     userInvite: {

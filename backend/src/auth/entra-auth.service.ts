@@ -66,7 +66,16 @@ export type EntraLinkConfirmation = {
   email: string;
   oid: string;
   tid: string;
+  /** The Microsoft account as the e-mail and the confirmation page show it: display name and sign-in name. */
+  name?: string;
+  username?: string;
 };
+
+/** A display value from the directory, bounded; absent when empty. */
+function displayClaim(value: unknown): string | undefined {
+  const text = typeof value === 'string' ? value.trim().slice(0, 200) : '';
+  return text || undefined;
+}
 
 type OpenIdConfiguration = {
   issuer: string;
@@ -422,8 +431,10 @@ export class EntraAuthService {
 
   /** The link that confirms an account's link to a Microsoft account, valid for `expiresIn`. */
   signLinkConfirmation(payload: EntraLinkConfirmation, expiresIn: StringValue | number): { token: string; expiresAt: Date } {
+    const { name, username, ...link } = payload;
+    const shown = { name: displayClaim(name), username: displayClaim(username) };
     const token = jwt.sign(
-      { purpose: ENTRA_LINK_CONFIRMATION_PURPOSE, ...payload, jti: randomBytes(16).toString('hex') },
+      { purpose: ENTRA_LINK_CONFIRMATION_PURPOSE, ...link, ...shown, jti: randomBytes(16).toString('hex') },
       this.linkConfirmationKey,
       { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn },
     );
@@ -440,7 +451,15 @@ export class EntraAuthService {
       if (!decoded || decoded.purpose !== ENTRA_LINK_CONFIRMATION_PURPOSE || fields.some((f) => typeof decoded[f] !== 'string' || !decoded[f])) {
         throw new Error('invalid payload');
       }
-      return { tenantId: decoded.tenantId, userId: decoded.userId, email: decoded.email, oid: decoded.oid, tid: decoded.tid };
+      return {
+        tenantId: decoded.tenantId,
+        userId: decoded.userId,
+        email: decoded.email,
+        oid: decoded.oid,
+        tid: decoded.tid,
+        name: displayClaim(decoded.name),
+        username: displayClaim(decoded.username),
+      };
     } catch (err: any) {
       this.logger.warn(`Invalid Entra link confirmation: ${err?.message || String(err)}`);
       throw new BadRequestException('ENTRA_LINK_INVALID');

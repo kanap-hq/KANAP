@@ -3,6 +3,7 @@ import 'dotenv/config';
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
+import { Logger } from '@nestjs/common';
 import dataSource from '../../data-source';
 import { AuditService } from '../../audit/audit.service';
 import { AuditLog } from '../../audit/audit.entity';
@@ -11,12 +12,20 @@ import { User } from '../../users/user.entity';
 import { EntraAuthService } from '../entra-auth.service';
 import { EntraDirectorySyncService } from '../entra-directory-sync.service';
 import { EntraController } from '../entra.controller';
+import { linkConfirmationHash } from '../entra-link-confirmation';
+import { waitForBackgroundWork } from '../../common/background-work';
 
 // A Microsoft sign-in whose Microsoft account is not linked yet, against the database:
 // - an existing account with the same address is not linked at sign-in: a confirmation link goes
 //   to the account's address, and the account is linked once that link is confirmed;
 // - the link works once, while it is the account's latest and until it expires, on its own
 //   workspace; a password link of the account neither cancels it nor is cancelled by it;
+// - a confirmation sent less than 5 minutes ago stands: no new link and no new e-mail, whichever
+//   Microsoft account signs in; the e-mail names the Microsoft account that asked and is sent
+//   after the answer, and a failed send is logged without the address or the link;
+// - requests and confirmations of one account run one after the other: two requests at once leave
+//   one link, two confirmations at once link once, and one Microsoft account confirmed for two
+//   accounts at once links one of them;
 // - an account linked to another Microsoft account keeps that link;
 // - linking writes only the link: the local password and the two-step secret stay;
 // - without an e-mail service an existing account is not linked this way;
@@ -29,8 +38,10 @@ const DIRECTORY_ID = randomUUID();
 const SLUG = `entra-link-${TENANT_ID.slice(0, 8)}`;
 const browser = { headers: { host: `${SLUG}.lvh.me` }, protocol: 'http' };
 
-type Mail = { to: string; confirmUrl: string };
+type Mail = { to: string; confirmUrl: string; microsoftAccount: { name: string | null; username: string | null }; requestedAt: Date };
 const mails: Mail[] = [];
+const errorLogs: string[] = [];
+const recordMail = { sendEntraLinkConfirmationEmail: async (mail: Mail) => { mails.push(mail); } };
 let roleId = '';
 
 async function inTenant(fn: (manager: any) => Promise<any>, tenantId = TENANT_ID): Promise<any> {
@@ -69,7 +80,7 @@ async function seedAccount(opts: { status?: string; password?: boolean; provider
   return { id, email };
 }
 
-function controller() {
+function controller(email: unknown = recordMail) {
   const entra = new EntraAuthService({ get: () => '' } as any);
   const tenants = {
     findById: async (id: string) => (id === TENANT_ID
@@ -88,7 +99,6 @@ function controller() {
     },
     findById: (id: string, { manager }: any) => manager.getRepository(User).findOne({ where: { id }, relations: ['role'] }),
   };
-  const email = { sendEntraLinkConfirmationEmail: async (mail: Mail) => { mails.push(mail); } };
   // The directory side is not reached: no Graph profile, no reporting line.
   const directorySync = new EntraDirectorySyncService(dataSource, null as any, null as any, null as any, null as any, null as any);
   return new EntraController(
@@ -105,9 +115,9 @@ function controller() {
   );
 }
 
-async function signInWithMicrosoft(claims: Record<string, unknown>): Promise<string> {
+async function signInWithMicrosoft(claims: Record<string, unknown>, email?: unknown): Promise<string> {
   let location = '';
-  await (controller() as any).handleLoginCallback(
+  await (controller(email) as any).handleLoginCallback(
     TENANT_ID,
     SLUG,
     '/',
@@ -116,7 +126,67 @@ async function signInWithMicrosoft(claims: Record<string, unknown>): Promise<str
     browser,
     { redirect: (url: string) => { location = url; } },
   );
+  // The e-mail goes out after the answer.
+  assert.equal(await waitForBackgroundWork(Date.now() + 5000), 0);
   return location;
+}
+
+/** Makes the account's pending confirmations older, as if sent `minutes` earlier. */
+async function ageLinks(userId: string, minutes: number) {
+  await inTenant((manager) => manager.query(
+    `UPDATE password_reset_tokens SET created_at = created_at - make_interval(mins => $2) WHERE user_id = $1`,
+    [userId, minutes],
+  ));
+}
+
+/** A pending confirmation stored as the sign-in stores one, for the concurrency checks. */
+async function pendingLink(userId: string, email: string, oid: string): Promise<string> {
+  const entra = new EntraAuthService({ get: () => '' } as any);
+  const { token, expiresAt } = entra.signLinkConfirmation({ tenantId: TENANT_ID, userId, email, oid, tid: DIRECTORY_ID }, '1h');
+  await inTenant((manager) => manager.query(
+    `INSERT INTO password_reset_tokens (tenant_id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, $4)`,
+    [TENANT_ID, userId, linkConfirmationHash(token), expiresAt],
+  ));
+  return token;
+}
+
+/**
+ * Runs `work` while another transaction holds the rows of `userIds` (accounts and their pending
+ * links), and releases them once `waiting` calls wait on a lock: the calls then run at once.
+ */
+async function whileLocked<T>(userIds: string[], waiting: number, work: () => Promise<T>[]): Promise<T[]> {
+  const holder = dataSource.createQueryRunner();
+  await holder.connect();
+  await holder.startTransaction();
+  try {
+    await holder.query(`SELECT set_config('app.current_tenant', $1, true)`, [TENANT_ID]);
+    await holder.query(`SELECT id FROM users WHERE id = ANY($1::uuid[]) FOR UPDATE`, [userIds]);
+    await holder.query(`SELECT id FROM password_reset_tokens WHERE user_id = ANY($1::uuid[]) FOR UPDATE`, [userIds]);
+    const calls = work();
+    const deadline = Date.now() + 5000;
+    for (;;) {
+      const [row] = await dataSource.query(
+        `SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'`,
+      );
+      if (row.n >= waiting) break;
+      assert.ok(Date.now() < deadline, `the ${waiting} calls wait on the held rows`);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    await holder.commitTransaction();
+    return await Promise.all(calls);
+  } finally {
+    if (holder.isTransactionActive) await holder.rollbackTransaction();
+    await holder.release();
+  }
+}
+
+async function validLinks(userId: string): Promise<number> {
+  const [row] = await inTenant((manager) => manager.query(
+    `SELECT count(*)::int AS n FROM password_reset_tokens
+     WHERE user_id = $1 AND token_hash LIKE 'entra-link:%' AND used_at IS NULL AND expires_at > now()`,
+    [userId],
+  ));
+  return row.n;
 }
 
 async function refusedSignIn(claims: Record<string, unknown>): Promise<string> {
@@ -166,7 +236,12 @@ async function testExistingAccountIsLinkedOnlyAfterConfirmation() {
   const oid = `oid-${randomUUID()}`;
   mails.length = 0;
 
-  const location = await signInWithMicrosoft({ oid, email: person.email.toUpperCase() });
+  const location = await signInWithMicrosoft({
+    oid,
+    email: person.email.toUpperCase(),
+    name: 'Julie Martin',
+    preferred_username: 'julie.martin@contoso.test',
+  });
   assert.equal(location, `http://${SLUG}.lvh.me/login?ssoNotice=ENTRA_LINK_SENT#${new URLSearchParams({ to: person.email })}`);
   let row = await account(person.id);
   assert.equal(row.external_auth_provider, null, 'no link at sign-in');
@@ -174,6 +249,8 @@ async function testExistingAccountIsLinkedOnlyAfterConfirmation() {
   assert.equal(mails.length, 1);
   assert.equal(mails[0].to, person.email, 'sent to the account address');
   assert.ok(mails[0].confirmUrl.startsWith(`http://${SLUG}.lvh.me/login/link-microsoft#token=`));
+  assert.deepEqual(mails[0].microsoftAccount, { name: 'Julie Martin', username: 'julie.martin@contoso.test' });
+  assert.ok(mails[0].requestedAt instanceof Date);
   const rows = await linkRows(person.id);
   assert.equal(rows.length, 1);
   assert.ok(rows[0].token_hash.startsWith('entra-link:'), 'stored apart from the password links');
@@ -216,6 +293,7 @@ async function testExpiredOrReplacedLinksAreRefused() {
   const second = `oid-${randomUUID()}`;
   mails.length = 0;
   await signInWithMicrosoft({ oid: first, email: person.email });
+  await ageLinks(person.id, 6);
   await signInWithMicrosoft({ oid: second, email: person.email });
   assert.equal(mails.length, 2);
   assert.equal(await confirm(tokenOf(mails[0])), 'ENTRA_LINK_INVALID', 'a newer link replaces the earlier one');
@@ -242,6 +320,82 @@ async function testPasswordLinksAndConfirmationsAreIndependent() {
   assert.equal(resetRows.length, 2);
   assert.ok(resetRows.every((row: any) => row.used_at === null), 'the password links stay usable');
   assert.equal(await confirm(tokenOf(mails[0])), 'linked', 'a later password link does not cancel the confirmation');
+}
+
+async function testRecentLinkHoldsOffAnother() {
+  const person = await seedAccount();
+  const first = `oid-${randomUUID()}`;
+  mails.length = 0;
+  const sent = await signInWithMicrosoft({ oid: first, email: person.email, name: 'First', preferred_username: 'first@contoso.test' });
+  assert.equal(await signInWithMicrosoft({ oid: first, email: person.email }), sent, 'the same message');
+  // Another Microsoft account with the same address, within 5 minutes.
+  assert.equal(
+    await signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: person.email, name: 'Second', preferred_username: 'second@contoso.test' }),
+    sent,
+    'the same message',
+  );
+  assert.equal(mails.length, 1, 'one e-mail');
+  assert.equal((await linkRows(person.id)).length, 1, 'one link');
+  assert.equal(mails[0].microsoftAccount.username, 'first@contoso.test');
+  assert.equal(await confirm(tokenOf(mails[0])), 'linked');
+  assert.equal((await account(person.id)).external_subject, first, 'the Microsoft account the e-mail names');
+}
+
+async function testFailedDeliveryIsLoggedWithoutAddress() {
+  const person = await seedAccount();
+  errorLogs.length = 0;
+  let url = '';
+  const failing = {
+    sendEntraLinkConfirmationEmail: async (mail: Mail) => {
+      url = mail.confirmUrl;
+      throw new Error(`550 ${mail.to} refused ${mail.confirmUrl}`);
+    },
+  };
+  assert.match(await signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: person.email }, failing), /ssoNotice=ENTRA_LINK_SENT/);
+  const token = new URLSearchParams(url.split('#')[1]).get('token') as string;
+  const logged = errorLogs.join('\n');
+  assert.match(logged, /link confirmation e-mail not sent/);
+  assert.ok(!logged.includes(person.email) && !logged.includes(token), logged);
+}
+
+async function testConcurrentRequestsLeaveOneLink() {
+  const person = await seedAccount();
+  await signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: person.email });
+  await ageLinks(person.id, 10);
+  mails.length = 0;
+  const locations = await whileLocked([person.id], 2, () => [
+    signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: person.email }),
+    signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: person.email }),
+  ]);
+  assert.ok(locations.every((location) => /ssoNotice=ENTRA_LINK_SENT/.test(location)));
+  assert.equal(await validLinks(person.id), 1, 'one valid link');
+  assert.equal(mails.length, 1, 'one e-mail');
+}
+
+async function testConcurrentConfirmationsLinkOnce() {
+  const person = await seedAccount();
+  const tokens = [
+    await pendingLink(person.id, person.email, `oid-${randomUUID()}`),
+    await pendingLink(person.id, person.email, `oid-${randomUUID()}`),
+  ];
+  const results = await whileLocked([person.id], 2, () => tokens.map((token) => confirm(token)));
+  assert.deepEqual([...results].sort(), ['ENTRA_ACCOUNT_LINKED', 'linked']);
+  const audit = await inTenant((manager) => manager.query(
+    `SELECT count(*)::int AS n FROM audit_log WHERE record_id = $1 AND source_ref = 'entra-link-confirmed'`,
+    [person.id],
+  ));
+  assert.equal(audit[0].n, 1, 'one audit entry, for the link made');
+}
+
+async function testOneMicrosoftAccountForTwoAccountsAtOnce() {
+  const a = await seedAccount();
+  const b = await seedAccount();
+  const oid = `oid-${randomUUID()}`;
+  const tokens = [await pendingLink(a.id, a.email, oid), await pendingLink(b.id, b.email, oid)];
+  const results = await whileLocked([a.id, b.id], 2, () => tokens.map((token) => confirm(token)));
+  assert.deepEqual([...results].sort(), ['ENTRA_ACCOUNT_LINKED', 'linked']);
+  const subjects = [(await account(a.id)).external_subject, (await account(b.id)).external_subject];
+  assert.equal(subjects.filter((subject) => subject === oid).length, 1);
 }
 
 async function testLinkedAccountKeepsItsLink() {
@@ -315,20 +469,40 @@ async function cleanup() {
 
 async function main() {
   process.env.APP_BASE_URL = process.env.APP_BASE_URL || 'http://lvh.me';
+  Logger.overrideLogger({
+    log: () => undefined,
+    warn: () => undefined,
+    debug: () => undefined,
+    verbose: () => undefined,
+    error: (message: unknown) => { errorLogs.push(String(message)); },
+  });
   // The CI runner gives every spec one; run alone, the spec signs its links with a key of its own.
   process.env.JWT_SECRET = process.env.JWT_SECRET || `entra-link-spec-${randomUUID()}`;
   (Features as any).EMAIL_ENABLED = true;
   await dataSource.initialize();
   try {
     await seedTenant();
-    await testExistingAccountIsLinkedOnlyAfterConfirmation();
-    await testExpiredOrReplacedLinksAreRefused();
-    await testPasswordLinksAndConfirmationsAreIndependent();
-    await testLinkedAccountKeepsItsLink();
-    await testConfirmationIsRefusedWhenTheMicrosoftAccountIsTaken();
-    await testInvitedAccountAlsoWaitsForConfirmation();
-    await testWithoutEmailServiceNoLink();
-    await testUnknownAddressStillCreatesAnAccount();
+    const tests: Array<() => Promise<void>> = [
+      testExistingAccountIsLinkedOnlyAfterConfirmation,
+      testExpiredOrReplacedLinksAreRefused,
+      testPasswordLinksAndConfirmationsAreIndependent,
+      testRecentLinkHoldsOffAnother,
+      testFailedDeliveryIsLoggedWithoutAddress,
+      testConcurrentRequestsLeaveOneLink,
+      testConcurrentConfirmationsLinkOnce,
+      testOneMicrosoftAccountForTwoAccountsAtOnce,
+      testLinkedAccountKeepsItsLink,
+      testConfirmationIsRefusedWhenTheMicrosoftAccountIsTaken,
+      testInvitedAccountAlsoWaitsForConfirmation,
+      testWithoutEmailServiceNoLink,
+      testUnknownAddressStillCreatesAnAccount,
+    ];
+    // A name on the command line runs the tests whose name contains it.
+    const only = process.argv[2];
+    for (const test of tests) {
+      if (only && !test.name.includes(only)) continue;
+      await test();
+    }
   } finally {
     await cleanup();
     await dataSource.destroy();
