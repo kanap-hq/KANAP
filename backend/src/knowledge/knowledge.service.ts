@@ -243,6 +243,30 @@ export type DocumentSourceGrant = {
 
 export type { DocumentSourceAccessContext };
 
+/** Passages of one document's body for a search (`KnowledgeService.getDocumentSearchPassages`). */
+export type DocumentSearchPassages = {
+  id: string;
+  ref: string;
+  title: string;
+  status: string;
+  /** True when words of the query fall in the body; false: the single passage is the start of the body. */
+  matched: boolean;
+  passages: string[];
+};
+
+const DOCUMENT_PASSAGE_DELIMITER = ' ⁂ ';
+const DOCUMENT_BODY_LEAD_CHARS = 1200;
+
+/** The start of a body, cut at a word boundary: one passage, or none for an empty body. */
+function documentBodyLead(body: string): string[] {
+  const text = body.replace(/\s+/g, ' ').trim();
+  if (!text) return [];
+  if (text.length <= DOCUMENT_BODY_LEAD_CHARS) return [text];
+  const cut = text.slice(0, DOCUMENT_BODY_LEAD_CHARS);
+  const lastSpace = cut.lastIndexOf(' ');
+  return [`${(lastSpace > DOCUMENT_BODY_LEAD_CHARS / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`];
+}
+
 /** `%`, `_` and `\` are LIKE metacharacters: escaped so the fragment matches literally. */
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, '\\$&');
@@ -1901,6 +1925,12 @@ export class KnowledgeService {
       .toLowerCase();
   }
 
+  /**
+   * The words of the fallback search, run only when the main search finds nothing: each word of
+   * four letters or more, matched as a whole word. It lets a phrased query (`and` mode) find a
+   * document that holds one of its words; a short word or a part of a word matched anything
+   * ("par" found "Paris", "Parma" and "spare"), so neither counts.
+   */
   private getDocumentSearchFallbackTerms(term: string): string[] {
     const normalized = this.normalizeDocumentSearchTerm(term);
     if (!normalized) return [];
@@ -1917,13 +1947,10 @@ export class KnowledgeService {
       'une',
       'with',
     ]);
-    const values = [
-      normalized,
-      ...normalized.split(/\s+/)
-        .flatMap((token) => token.split(/['-]/))
-        .map((token) => token.trim())
-        .filter((token) => token.length >= 3 && !stopWords.has(token)),
-    ];
+    const values = normalized.split(/\s+/)
+      .flatMap((token) => token.split(/['-]/))
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 4 && /^[\p{L}\p{N}]+$/u.test(token) && !stopWords.has(token));
     const result: string[] = [];
     const seen = new Set<string>();
     for (const value of values) {
@@ -6146,7 +6173,15 @@ export class KnowledgeService {
     return repo.save(existing);
   }
 
-  async search(query: any, opts?: { manager?: EntityManager; userId?: string | null; tenantId?: string | null }) {
+  /**
+   * `publishedOnly` (server side only, never read from the query): the AI agents search published
+   * documents only (Fried, 12/11); Kad, the MCP server and the screens keep every status.
+   * Items found by the fallback (one whole word of the query, score 0) carry `fallback: true`.
+   */
+  async search(
+    query: any,
+    opts?: { manager?: EntityManager; userId?: string | null; tenantId?: string | null; publishedOnly?: boolean },
+  ) {
     const manager = this.getManager(opts);
     const search = this.getDocumentSearchState(query?.q);
     if (!search) throw new BadRequestException('q is required');
@@ -6162,8 +6197,9 @@ export class KnowledgeService {
       : null;
     const accessibleLibraries = await this.listAccessibleLibraryIds(manager, opts?.userId || null, 'reader');
     if (accessibleLibraries && accessibleLibraries.length === 0) {
-      return { items: [], total: 0, offset, limit, truncated: false };
+      return { items: [], total: 0, offset, limit, truncated: false, fallback: false };
     }
+    const publishedOnly = opts?.publishedOnly === true;
 
     const matchMode = query?.matchMode === 'any' ? 'any' : 'and';
     const tsQueryTerm = matchMode === 'any' ? normalizeDocumentAnyTermQuery(search.term) : search.term;
@@ -6199,6 +6235,7 @@ export class KnowledgeService {
       params.push(accessibleLibraries);
       whereClauses.push(`d.library_id = ANY($${params.length}::uuid[])`);
     }
+    if (publishedOnly) whereClauses.push(`d.status = 'published'`);
     whereClauses.push(documentIncidentVisibilitySql('d', incidentViewer, params).replace(/^\s*AND\s/, ''));
     params.push(limit);
     params.push(offset);
@@ -6228,18 +6265,21 @@ export class KnowledgeService {
       params,
     );
 
+    let usedFallback = false;
     if (rows.length === 0) {
       const fallbackTerms = this.getDocumentSearchFallbackTerms(search.term);
       if (fallbackTerms.length > 0) {
+        usedFallback = true;
         const fallbackParams: Array<string | number | string[]> = [];
         const fallbackClauses: string[] = [];
         for (const term of fallbackTerms) {
-          fallbackParams.push(`%${term}%`);
+          // A whole word, accents folded on both sides (the term is folded, letters and digits only).
+          fallbackParams.push(`\\m${term}\\M`);
           const index = fallbackParams.length;
           fallbackClauses.push(
-            `d.title ILIKE $${index}`,
-            `COALESCE(d.summary, '') ILIKE $${index}`,
-            `COALESCE(d.content_plain, '') ILIKE $${index}`,
+            `public.unaccent(d.title) ~* $${index}`,
+            `public.unaccent(COALESCE(d.summary, '')) ~* $${index}`,
+            `public.unaccent(COALESCE(d.content_plain, '')) ~* $${index}`,
           );
         }
         if (search.itemNumber != null) {
@@ -6259,6 +6299,7 @@ export class KnowledgeService {
           fallbackParams.push(accessibleLibraries);
           fallbackWhereClauses.push(`d.library_id = ANY($${fallbackParams.length}::uuid[])`);
         }
+        if (publishedOnly) fallbackWhereClauses.push(`d.status = 'published'`);
         fallbackWhereClauses.push(
           documentIncidentVisibilitySql('d', incidentViewer, fallbackParams).replace(/^\s*AND\s/, ''),
         );
@@ -6291,17 +6332,87 @@ export class KnowledgeService {
     }
 
     const total = rows.length > 0 ? Math.max(Number(rows[0].total_count) || 0, rows.length) : 0;
+    const fallback = usedFallback && rows.length > 0;
 
     return {
       items: rows.map((row: any) => ({
         ...row,
         item_ref: `DOC-${row.item_number}`,
         score: Number(row.rank ?? row.score ?? 0),
+        fallback,
       })),
       total,
       offset,
       limit,
       truncated: offset + rows.length < total,
+      fallback,
+    };
+  }
+
+  /**
+   * Long passages of one document's body around the words of `query`, for a model that judges the
+   * document on its text: up to `maxPassages` (default 4, at most 8) fragments of 30 to 70 words,
+   * plain text without highlight tags, cut by `ts_headline` under the configuration (French or
+   * English) whose stems match the body best. When no word of the query is in the body, `matched`
+   * is false and the single passage is the start of the body. Null when the document does not
+   * exist, the person may not read it, or it is not published under `publishedOnly`.
+   */
+  async getDocumentSearchPassages(
+    idOrRef: string,
+    query: string,
+    opts?: {
+      manager?: EntityManager;
+      userId?: string | null;
+      tenantId?: string | null;
+      publishedOnly?: boolean;
+      maxPassages?: number;
+    },
+  ): Promise<DocumentSearchPassages | null> {
+    const manager = this.getManager(opts);
+    let documentId: string;
+    try {
+      documentId = await this.resolveDocumentId(idOrRef, manager);
+      await this.assertDocumentReadable(documentId, manager, opts?.userId || null, { tenantId: opts?.tenantId ?? null });
+    } catch (error) {
+      if (error instanceof HttpException) return null;
+      throw error;
+    }
+    const maxPassages = Math.min(Math.max(Math.trunc(Number(opts?.maxPassages) || 4), 1), 8);
+    const tsQuerySql = bilingualDocumentTsQueryAnyTermSql('$2');
+    const headlineOptions = `MaxFragments=${maxPassages}, MinWords=30, MaxWords=70, StartSel="", StopSel="", `
+      + `FragmentDelimiter="${DOCUMENT_PASSAGE_DELIMITER}"`;
+    const rows = await manager.query(
+      `SELECT d.id, d.item_number, d.title, d.status, coalesce(d.content_plain, '') AS body,
+              CASE WHEN q.fr_rank > 0 OR q.en_rank > 0 THEN
+                ts_headline(
+                  CASE WHEN q.en_rank > q.fr_rank THEN 'kanap_en'::regconfig ELSE 'kanap_fr'::regconfig END,
+                  coalesce(d.content_plain, ''), ${tsQuerySql}, $3)
+              END AS headline
+       FROM documents d
+       CROSS JOIN LATERAL (
+         SELECT ts_rank_cd(to_tsvector('kanap_fr', coalesce(d.content_plain, '')), ${tsQuerySql}) AS fr_rank,
+                ts_rank_cd(to_tsvector('kanap_en', coalesce(d.content_plain, '')), ${tsQuerySql}) AS en_rank
+       ) q
+       WHERE d.id = $1
+         AND d.tenant_id = app_current_tenant()
+         ${opts?.publishedOnly === true ? `AND d.status = 'published'` : ''}
+       LIMIT 1`,
+      [documentId, normalizeDocumentAnyTermQuery(String(query || '')), headlineOptions],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const passages = String(row.headline ?? '')
+      .split(DOCUMENT_PASSAGE_DELIMITER)
+      .map((passage) => passage.replace(/\s+/g, ' ').trim())
+      .filter((passage) => passage.length > 0);
+    const matched = passages.length > 0;
+    return {
+      id: String(row.id),
+      ref: `DOC-${row.item_number}`,
+      title: String(row.title ?? ''),
+      status: String(row.status),
+      matched,
+      passages: matched ? passages : documentBodyLead(String(row.body)),
     };
   }
 

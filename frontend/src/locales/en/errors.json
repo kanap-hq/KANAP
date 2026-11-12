@@ -314,6 +314,7 @@
   "WORKFLOW_STAGE_NOT_ASSIGNED": "You are not assigned to the current stage of this review.",
   "DOCUMENT_SHARE_EXTERNAL_REFUSED": "This document belongs to an incident review and cannot be shared externally.",
   "DOCUMENT_RECIPIENT_NOT_ALLOWED": "One of the recipients cannot open this document, so nothing was shared.",
+  "DOCUMENT_NOT_PUBLISHED": "An AI agent reads published documents only: {{ref}} is not published.",
   "FEATURE_DISABLED": "This feature is turned off in this deployment.",
   "AI_USER_NOT_ALLOWED": "Your account cannot use {{agent}}. Ask an administrator of your workspace.",
   "AI_PLATFORM_HOST": "{{agent}} is available inside a workspace only. Open a workspace to use it.",

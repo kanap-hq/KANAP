@@ -184,13 +184,22 @@ async function testKnowledgeSearchFallsBackToNormalizedSearchTerms() {
 
     const result = await service.search({ q: 'plus sucré', limit: 10, offset: 0 }, { manager: runner.manager });
     assert.deepEqual(result.items.map((item: any) => item.id), [documentId]);
+    // Found by one word of the query only: the item says so, so that no assistant cites it as a source.
+    assert.equal(result.items[0].fallback, true);
+    assert.equal(result.fallback, true);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
   }
 }
 
-type SeededDocument = { title: string; summary?: string; contentPlain?: string; itemNumber?: number };
+type SeededDocument = {
+  title: string;
+  summary?: string;
+  contentPlain?: string;
+  itemNumber?: number;
+  status?: 'draft' | 'in_review' | 'published' | 'archived' | 'obsolete';
+};
 
 async function seedSearchFixture(runner: any, docs: SeededDocument[]): Promise<string[]> {
   const tenantId = randomUUID();
@@ -219,7 +228,7 @@ async function seedSearchFixture(runner: any, docs: SeededDocument[]): Promise<s
          id, tenant_id, item_number, title, summary, content_markdown, content_plain,
          library_id, document_type_id, status, revision, current_version_number, created_at, updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $6, $7, null, 'published', 1, 0, now(), now())`,
+       VALUES ($1, $2, $3, $4, $5, $6, $6, $7, null, $8, 1, 0, now(), now())`,
       [
         id,
         tenantId,
@@ -228,6 +237,7 @@ async function seedSearchFixture(runner: any, docs: SeededDocument[]): Promise<s
         doc.summary ?? '',
         doc.contentPlain ?? '',
         libraryId,
+        doc.status ?? 'published',
       ],
     );
   }
@@ -355,6 +365,150 @@ async function testKnowledgeSearchHandlesStopWordOnlyQuery() {
       assert.equal(result.items.some((item: any) => item.id === doc), true);
     },
   );
+}
+
+// Ticket 96 of fromage (12/11): no word of the ticket is in any document, and the substring fallback
+// brought back every document containing "Paris", "Parma" or "spare" through the word "par".
+async function testKnowledgeSearchFallbackIgnoresShortWordsAndWordParts() {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    const service = createKnowledgeService(runner.manager);
+    const [doc] = await seedSearchFixture(runner, [
+      { title: 'Label printer troubleshooting', contentPlain: 'Paris, Gouda and Parma each keep two spare label rolls.' },
+    ]);
+    const result = await service.search(
+      { q: 'Panne Bourrage papier suspecté par le demandeur', limit: 10, offset: 0, matchMode: 'any' },
+      { manager: runner.manager },
+    );
+    assert.equal(result.items.some((item: any) => item.id === doc), false, 'the word "par" does not bring back "Paris"');
+    assert.equal(result.fallback, false);
+
+    // A whole word of four letters or more still finds its document, marked as found by the fallback.
+    const wordResult = await service.search({ q: 'Gouda rouleau', limit: 10, offset: 0 }, { manager: runner.manager });
+    assert.deepEqual(wordResult.items.map((item: any) => item.id), [doc]);
+    assert.equal(wordResult.items[0].fallback, true);
+    assert.equal(wordResult.items[0].score, 0);
+
+    // A part of a word inside a multi-word query no longer matches.
+    const partResult = await service.search({ q: 'Goud rouleau', limit: 10, offset: 0 }, { manager: runner.manager });
+    assert.equal(partResult.items.length, 0);
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
+async function testKnowledgeSearchMarksDirectMatchesAsNotFallback() {
+  await withSearchFixture(
+    [{ title: 'Sauvegarde des serveurs', contentPlain: 'Procédure complète.' }],
+    async (search, [doc]) => {
+      const result = await search('sauvegarde');
+      const item = result.items.find((entry: any) => entry.id === doc);
+      assert.ok(item);
+      assert.equal(item.fallback, false);
+      assert.equal(result.fallback, false);
+    },
+  );
+}
+
+const ALL_STATUSES = ['draft', 'in_review', 'published', 'archived', 'obsolete'] as const;
+
+async function testKnowledgeSearchPublishedOnlyLeavesOtherStatesOut() {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    const service = createKnowledgeService(runner.manager);
+    const ids = await seedSearchFixture(
+      runner,
+      ALL_STATUSES.map((status) => ({ title: `Zebra printer guide ${status}`, contentPlain: 'Clear the paper jam.', status })),
+    );
+    const byStatus = new Map(ALL_STATUSES.map((status, index) => [ids[index], status]));
+
+    const everything = await service.search(
+      { q: 'zebra printer', limit: 10, offset: 0, matchMode: 'any' },
+      { manager: runner.manager },
+    );
+    assert.deepEqual(
+      everything.items.map((item: any) => item.status).sort(),
+      [...ALL_STATUSES].sort(),
+      'without the option every state is returned, with its status',
+    );
+
+    const published = await service.search(
+      { q: 'zebra printer', limit: 10, offset: 0, matchMode: 'any' },
+      { manager: runner.manager, publishedOnly: true },
+    );
+    assert.deepEqual(published.items.map((item: any) => byStatus.get(item.id)), ['published']);
+    assert.equal(published.total, 1);
+
+    // The fallback query applies the same filter.
+    const fallback = await service.search(
+      { q: 'zzqq paper', limit: 10, offset: 0 },
+      { manager: runner.manager, publishedOnly: true },
+    );
+    assert.deepEqual(fallback.items.map((item: any) => item.status), ['published']);
+    assert.equal(fallback.items[0].fallback, true);
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
+const LONG_BODY = [
+  'Label Printer Troubleshooting. The warehouses and production sites use Zebra ZT411 printers for product and shipping labels.',
+  'Each site keeps two spare label rolls per format in the IT cabinet, next to the ribbon stock and the cleaning pens.',
+  'Ordering: rolls and ribbons are ordered every quarter through the purchasing portal, with the cost center of the site.',
+  'Network: the printers take their address from DHCP, and the address is reserved in the console of the site router.',
+  'Training: new operators follow a short session on loading media before they print production labels on their own.',
+  'Paper jam: open the printhead, remove the jammed label, check the ribbon path, close the head and press feed twice.',
+  'If the printer still shows a red light after a jam, power cycle it and run the calibration from the front panel.',
+].join(' ');
+
+async function testDocumentSearchPassagesReturnLongPlainFragments() {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    const service = createKnowledgeService(runner.manager);
+    const [doc, draft] = await seedSearchFixture(runner, [
+      { title: 'Label printer troubleshooting', contentPlain: LONG_BODY, itemNumber: 7101 },
+      { title: 'Draft printer notes', contentPlain: LONG_BODY, itemNumber: 7102, status: 'draft' },
+    ]);
+
+    const hit = await service.getDocumentSearchPassages(doc, 'bourrage paper jam red light', { manager: runner.manager });
+    assert.ok(hit);
+    assert.equal(hit.ref, 'DOC-7101');
+    assert.equal(hit.status, 'published');
+    assert.equal(hit.matched, true);
+    assert.ok(hit.passages.length >= 1);
+    const joined = hit.passages.join(' ');
+    assert.match(joined, /jam/i);
+    assert.match(joined, /red light/);
+    assert.equal(/<\/?b>/.test(joined), false, 'passages carry no highlight tags');
+    assert.ok(hit.passages.every((passage) => passage.split(/\s+/).length >= 15), 'each passage is long');
+
+    // By reference too, and nothing in the body matches: the start of the body.
+    const lead = await service.getDocumentSearchPassages('DOC-7101', 'kubernetes ingress', { manager: runner.manager });
+    assert.ok(lead);
+    assert.equal(lead.matched, false);
+    assert.equal(lead.passages.length, 1);
+    assert.ok(LONG_BODY.startsWith(lead.passages[0].replace(/…$/, '')));
+    assert.ok(lead.passages[0].length > 200);
+
+    // Published only: a draft gives nothing.
+    assert.equal(
+      await service.getDocumentSearchPassages(draft, 'paper jam', { manager: runner.manager, publishedOnly: true }),
+      null,
+    );
+    const draftHit = await service.getDocumentSearchPassages(draft, 'paper jam', { manager: runner.manager });
+    assert.equal(draftHit?.status, 'draft');
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
 }
 
 function testAnyTermTsQueryDoesNotBroadenNegation() {
@@ -568,6 +722,10 @@ async function run() {
     await testKnowledgeSearchStillMatchesItemReference();
     await testKnowledgeSearchIlikeFallbackCatchesNonLexemeMatches();
     await testKnowledgeSearchHandlesStopWordOnlyQuery();
+    await testKnowledgeSearchFallbackIgnoresShortWordsAndWordParts();
+    await testKnowledgeSearchMarksDirectMatchesAsNotFallback();
+    await testKnowledgeSearchPublishedOnlyLeavesOtherStatesOut();
+    await testDocumentSearchPassagesReturnLongPlainFragments();
     testAnyTermTsQueryDoesNotBroadenNegation();
     testAnyTermQueryNormalizationDropsWeakWords();
     await testKnowledgeSearchAnyTermModeFindsStrongPartialMatch();

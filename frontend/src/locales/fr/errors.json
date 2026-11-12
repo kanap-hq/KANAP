@@ -314,6 +314,7 @@
   "WORKFLOW_STAGE_NOT_ASSIGNED": "Vous n'êtes pas affecté à l'étape en cours de cette revue.",
   "DOCUMENT_SHARE_EXTERNAL_REFUSED": "Ce document appartient à la revue d'incident et ne peut pas être partagé à l'extérieur.",
   "DOCUMENT_RECIPIENT_NOT_ALLOWED": "L'un des destinataires ne peut pas ouvrir ce document, rien n'a donc été partagé.",
+  "DOCUMENT_NOT_PUBLISHED": "Un agent IA ne lit que les documents publiés : {{ref}} n'est pas publié.",
   "FEATURE_DISABLED": "Cette fonctionnalité est désactivée dans ce déploiement.",
   "AI_USER_NOT_ALLOWED": "Votre compte ne peut pas utiliser {{agent}}. Demandez à un administrateur de votre espace de travail.",
   "AI_PLATFORM_HOST": "{{agent}} n'est disponible que dans un espace de travail. Ouvrez un espace de travail pour l'utiliser.",

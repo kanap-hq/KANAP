@@ -314,6 +314,7 @@
   "WORKFLOW_STAGE_NOT_ASSIGNED": "No está asignado a la etapa actual de esta revisión.",
   "DOCUMENT_SHARE_EXTERNAL_REFUSED": "Este documento pertenece a la revisión de un incidente y no se puede compartir externamente.",
   "DOCUMENT_RECIPIENT_NOT_ALLOWED": "Uno de los destinatarios no puede abrir este documento, por lo que no se compartió nada.",
+  "DOCUMENT_NOT_PUBLISHED": "Un agente de IA solo lee documentos publicados: {{ref}} no está publicado.",
   "FEATURE_DISABLED": "Esta función está desactivada en esta instalación.",
   "AI_USER_NOT_ALLOWED": "Su cuenta no puede usar {{agent}}. Consulte a un administrador de su espacio de trabajo.",
   "AI_PLATFORM_HOST": "{{agent}} solo está disponible dentro de un espacio de trabajo. Abra un espacio de trabajo para usarlo.",

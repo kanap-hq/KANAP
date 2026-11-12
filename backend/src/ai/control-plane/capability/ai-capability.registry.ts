@@ -2378,6 +2378,7 @@ export class AiCapabilityRegistry {
         returned: 0,
         truncated: false,
         complete: true,
+        fallback: false,
       };
     }
     const result = await knowledge.search(
@@ -2388,7 +2389,9 @@ export class AiCapabilityRegistry {
         matchMode: 'any',
         ...(parsed.data.library_ids ? { library_ids: parsed.data.library_ids } : {}),
       },
-      { manager: context.manager, userId: context.userId },
+      // An agent cites published documents only (Fried, 12/11): drafts, documents in review,
+      // archived and obsolete ones never reach it. Kad and the MCP server keep every status.
+      { manager: context.manager, userId: context.userId, publishedOnly: true },
     );
     return {
       items: (result.items || []).map((item: any): AiKnowledgeSearchResultDto => ({
@@ -2401,6 +2404,7 @@ export class AiCapabilityRegistry {
         score: Number.isFinite(Number(item.score ?? item.rank))
           ? Number(item.score ?? item.rank)
           : null,
+        fallback: item.fallback === true,
         library: {
           id: item.library_id ?? null,
           name: item.library_name ?? null,
@@ -2413,6 +2417,7 @@ export class AiCapabilityRegistry {
       returned: Array.isArray(result.items) ? result.items.length : 0,
       truncated: result.truncated === true,
       complete: result.truncated !== true,
+      fallback: result.fallback === true,
     };
   }
 
@@ -2457,6 +2462,16 @@ export class AiCapabilityRegistry {
     const document = await knowledge.get(parsed.data.document_id, { manager: context.manager, userId: context.userId });
     if (!document) {
       throw new NotFoundException('Document not found.');
+    }
+    if (document.status !== 'published') {
+      // An agent reads published documents only (Fried, 12/11): the refusal says why, with no content.
+      const ref = document.item_ref ?? `DOC-${document.item_number}`;
+      const status = String(document.status || 'unknown').replace(/_/g, ' ');
+      throw codedForbidden(
+        'DOCUMENT_NOT_PUBLISHED',
+        `${ref} is not published (status: ${status}): an agent reads published documents only.`,
+        { ref, status: document.status ?? null },
+      );
     }
     const result: AiDocumentDto = {
       id: document.id,
