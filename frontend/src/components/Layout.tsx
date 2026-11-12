@@ -414,16 +414,21 @@ export default function Layout() {
     return focusPageScroller(scroller);
   }, [location.pathname, shellReady]);
 
-  // MUI moves the section underline when a tab changes size, not when the tabs move. The
-  // row is centred by auto margins, so the tabs move whenever the row's width changes (the
-  // logo or the workspace name loading, the trial chip appearing): follow the row's size.
+  // MUI moves the section underline and decides on its scroll arrows when a tab changes
+  // size, not when the row does. The row's width changes when the logo or the workspace name
+  // loads or the trial chip appears: the centred tabs move, and they may start or stop
+  // overflowing (the logo keeps its size, so it loads after MUI's first check). Follow the
+  // row's size.
   const sectionTabsActions = React.useRef<TabsActions | null>(null);
   const sectionTabsObserver = React.useRef<ResizeObserver | null>(null);
   const sectionTabsRef = React.useCallback((node: HTMLDivElement | null) => {
     sectionTabsObserver.current?.disconnect();
     sectionTabsObserver.current = null;
     if (!node || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => sectionTabsActions.current?.updateIndicator());
+    const observer = new ResizeObserver(() => {
+      sectionTabsActions.current?.updateIndicator();
+      sectionTabsActions.current?.updateScrollButtons();
+    });
     observer.observe(node);
     sectionTabsObserver.current = observer;
   }, []);

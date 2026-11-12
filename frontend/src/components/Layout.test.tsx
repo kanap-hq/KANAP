@@ -558,6 +558,37 @@ describe('Layout section tabs underline', () => {
     expect(indicator.style.left).toBe('320px');
     expect(indicator.style.width).toBe('124px');
   });
+
+  it('checks again whether the tabs overflow when the row changes width, as when the logo loads', () => {
+    const watches: Array<{ callback: ResizeObserverCallback; targets: Element[]; live: boolean }> = [];
+    class FakeResizeObserver {
+      private watch: { callback: ResizeObserverCallback; targets: Element[]; live: boolean };
+      constructor(callback: ResizeObserverCallback) { this.watch = { callback, targets: [], live: true }; watches.push(this.watch); }
+      observe(target: Element) { this.watch.targets.push(target); }
+      unobserve() {}
+      disconnect() { this.watch.live = false; }
+    }
+    // MUI shows its scroll arrows from what an IntersectionObserver reports on the first and
+    // last tabs: every new observer reports afresh.
+    let intersectionChecks = 0;
+    class FakeIntersectionObserver {
+      constructor() { intersectionChecks += 1; }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+    vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver);
+    renderShell();
+    const root = screen.getByRole('tablist', { name: 'nav:topBar.sectionNav' }).closest('.MuiTabs-root') as HTMLElement;
+    const rowWatches = watches.filter((w) => w.live && w.targets.includes(root));
+    expect(rowWatches).toHaveLength(1);
+
+    const before = intersectionChecks;
+    act(() => rowWatches[0].callback([], {} as ResizeObserver));
+
+    expect(intersectionChecks).toBeGreaterThan(before);
+  });
 });
 
 describe('Layout section tabs scroll arrows', () => {
