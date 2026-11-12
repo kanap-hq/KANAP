@@ -27,7 +27,8 @@ function setup(opts: { status: string; mailFails?: boolean }) {
     create: (row: any) => row,
     save: async () => { events.push('store token'); },
   };
-  const manager: any = { getRepository: (entity: { name?: string }) => (entity?.name === 'User' ? repo : tokens) };
+  // `query` takes the lock on the person's row (`lockPeople`).
+  const manager: any = { getRepository: (entity: { name?: string }) => (entity?.name === 'User' ? repo : tokens), query: async () => [] };
   const email = {
     sendUserInviteEmail: async (params: any) => {
       events.push(`send e-mail to ${params.to}`);

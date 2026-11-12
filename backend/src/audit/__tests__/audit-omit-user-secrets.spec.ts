@@ -80,6 +80,8 @@ function createUsersService(user: Record<string, unknown>) {
     manager: {},
   };
   const manager: any = {
+    // Takes the lock on the person's row (`lockPeople`).
+    query: async () => [],
     getRepository: (entity: { name?: string }) => {
       if (entity?.name === 'User') return repo;
       return { create: (row: any) => row, save: async () => undefined, delete: async () => undefined };
