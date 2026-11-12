@@ -146,7 +146,8 @@ export default function RolesPage() {
   const [editName, setEditName] = React.useState('');
   const [editDesc, setEditDesc] = React.useState('');
   React.useEffect(() => {
-    if (selected) { setEditName(selected.role_name); setEditDesc(selected.role_description); }
+    // A role without a description shows an empty field, not the description of the role shown before.
+    if (selected) { setEditName(selected.role_name ?? ''); setEditDesc(selected.role_description ?? ''); }
   }, [selected?.id]);
   const { mutate: saveMeta, isPending: savingMeta } = useMutation({
     mutationFn: async () => {
