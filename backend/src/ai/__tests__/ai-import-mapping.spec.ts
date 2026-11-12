@@ -835,6 +835,46 @@ function testBilanOnThePersonsLines() {
   console.log('  bilan on the person\'s lines, tallied for the model: OK');
 }
 
+function testLookalikesReachTheModel() {
+  // The person's rows sat on lines 3 to 16 of their file; the built file numbers them 2 to 15.
+  const lines = Array.from({ length: 14 }, (_, index) => index + 3);
+  const looksLike = (line: number, ref: string) => ({ line, message: `row ${line} looks like ${ref}`, code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line, ref } });
+  const duplicates = [
+    ...Array.from({ length: 11 }, (_, index) => looksLike(index + 2, `BL-${index + 101}`)),
+    { line: 14, message: 'row 14 looks like row 2', code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: 14, row: 2 } },
+  ];
+  const budget = budgetBilan({
+    ok: true,
+    changes: { created: 14, updated: 0, unchanged: 0 },
+    warnings: { duplicates, duplicatesCount: 30, ignoredColumns: [] },
+  }, true, lines);
+  // The model reads how many there are and the first ten: the line of the person's file and the line it looks like.
+  assert.deepEqual(budget.similar_lines?.count, 30);
+  assert.equal(budget.similar_lines?.first.length, 10);
+  assert.deepEqual(budget.similar_lines?.first.slice(0, 2), [{ file_line: 3, looks_like: 'BL-101' }, { file_line: 4, looks_like: 'BL-102' }]);
+  assert.ok(budget.similar_lines?.note, 'what they are, said with them');
+  // The card numbers an earlier row as the person's file does, as the model does.
+  const file = budget.report.kind === 'budget_file' ? budget.report.file as any : null;
+  assert.deepEqual(file.warnings.duplicates[11].params, { line: 15, row: 3 });
+  const onlyRows = budgetBilan({
+    ok: true,
+    changes: { created: 14, updated: 0, unchanged: 0 },
+    warnings: { duplicates: duplicates.slice(11), duplicatesCount: 1 },
+  }, true, lines);
+  assert.deepEqual(onlyRows.similar_lines?.first, [{ file_line: 15, looks_like_file_line: 3 }]);
+  // No lookalike: nothing more for the model.
+  const none = budgetBilan({ ok: true, changes: { created: 1, updated: 0, unchanged: 0 }, warnings: { duplicates: [] } }, true, lines);
+  assert.equal(none.similar_lines, undefined);
+  // The model receives them with the check; the card's messages stay hidden.
+  const forModel = new AiEvidenceService({} as any).redact(
+    { import_mapping: { validation: budget } },
+    [...MODEL_HIDDEN_OUTPUT_FIELDS.prepare_import_mapping],
+  ) as any;
+  assert.equal(forModel.import_mapping.validation.report, '[REDACTED]');
+  assert.equal(forModel.import_mapping.validation.similar_lines.count, 30);
+  console.log('  lookalikes of a budget file reach the model, by line and reference: OK');
+}
+
 function testAFileImportIsAWrite() {
   for (const message of ['Importe ce fichier dans les applications', 'Import these servers', 'Importiere die Datei', 'Importa este archivo']) {
     const profile = selectAiContextProfile(message);
@@ -882,6 +922,7 @@ async function run() {
     await testApprovalRunsTheImportAndTheModelSeesNoCell();
     await testARefusedFileIsNotImported();
     testBilanOnThePersonsLines();
+    testLookalikesReachTheModel();
     testAFileImportIsAWrite();
     testApprovalEndsTheTurn();
   } finally {
