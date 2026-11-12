@@ -256,7 +256,7 @@ En un espacio de trabajo donde [Microsoft Entra ID](#microsoft-entra-id) está c
 
 | Opción | La invitación |
 |--------|----------------|
-| **Con Microsoft** (predeterminado) | Pide a la persona que abra el espacio de trabajo y elija **Iniciar sesión con Microsoft**. No contiene ningún enlace de contraseña. Su primer inicio de sesión con Microsoft vincula la cuenta a su identidad de Microsoft y la activa. |
+| **Con Microsoft** (predeterminado) | Pide a la persona que abra el espacio de trabajo y elija **Iniciar sesión con Microsoft**. No contiene ningún enlace de contraseña. En su primer inicio de sesión con Microsoft, Kadratis le envía por correo un enlace de confirmación. Una vez confirmado, su siguiente inicio de sesión con Microsoft activa la cuenta. |
 | **Con una contraseña** | Contiene el enlace para definir una contraseña, válido durante 7 días, como en un espacio de trabajo sin inicio de sesión con Microsoft. Para personas ajenas a su directorio, como consultores. |
 
 La cuenta muestra **Invitado** hasta el primer inicio de sesión de la persona. Un enlace de restablecimiento de contraseña, enviado con **Enviar restablecimiento de contraseña** o desde la página de inicio de sesión, sigue siendo válido durante 1 hora.
@@ -297,7 +297,7 @@ Si alguien es eliminado de su directorio, o su cuenta del directorio es desactiv
 
 ### Inicio de sesión inmediato con Microsoft
 
-Cuando el inicio de sesión único está conectado, una persona que inicia sesión con Microsoft por primera vez obtiene automáticamente una cuenta de Kadratis. Si ya existe una cuenta con la misma dirección de correo, se vincula a su identidad de Microsoft en lugar de crear otra, y una cuenta con el estado **Invitado** se activa.
+Cuando el inicio de sesión único está conectado, una persona que inicia sesión con Microsoft por primera vez obtiene automáticamente una cuenta de Kadratis. Si ya existe una cuenta con la misma dirección de correo, Kadratis envía en su lugar un enlace de confirmación a esa dirección. La cuenta se vincula a la identidad de Microsoft cuando la persona confirma desde ese enlace, en el plazo de 1 hora, y conserva su contraseña. Una cuenta con el estado **Invitado** se activa en su siguiente inicio de sesión con Microsoft. Una cuenta ya vinculada a otra identidad de Microsoft conserva ese vínculo. Sin servicio de correo, una cuenta existente no puede vincularse de esta forma.
 
 Una cuenta nueva empieza con el rol de sistema **Contacto** y sin permisos. La persona ve una página que dice:
 

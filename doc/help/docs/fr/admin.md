@@ -256,7 +256,7 @@ Dans un espace de travail où [Microsoft Entra ID](#microsoft-entra-id) est conn
 
 | Choix | L'invitation |
 |--------|----------------|
-| **Avec Microsoft** (par défaut) | Demande à la personne d'ouvrir l'espace de travail et de choisir **Se connecter avec Microsoft**. Elle ne contient aucun lien de mot de passe. Sa première connexion avec Microsoft lie le compte à son identité Microsoft et l'active. |
+| **Avec Microsoft** (par défaut) | Demande à la personne d'ouvrir l'espace de travail et de choisir **Se connecter avec Microsoft**. Elle ne contient aucun lien de mot de passe. À sa première connexion avec Microsoft, Kadratis lui envoie un lien de confirmation par e-mail. Une fois la confirmation faite, sa connexion suivante avec Microsoft active le compte. |
 | **Avec un mot de passe** | Contient le lien pour définir un mot de passe, valable 7 jours, comme dans un espace de travail sans connexion Microsoft. Pour les personnes extérieures à votre annuaire, comme des consultants. |
 
 Le compte affiche **Invité** jusqu'à la première connexion de la personne. Un lien de réinitialisation de mot de passe, envoyé par **Envoyer une réinitialisation de mot de passe** ou depuis la page de connexion, reste valable 1 heure.
@@ -297,7 +297,7 @@ Si une personne est supprimée de votre annuaire, ou si son compte d'annuaire es
 
 ### Connexion à la volée avec Microsoft
 
-Lorsque le single sign-on est connecté, une personne qui se connecte avec Microsoft pour la première fois obtient automatiquement un compte Kadratis. Si un compte avec la même adresse e-mail existe déjà, il est lié à son identité Microsoft à la place, et un compte **Invité** est activé.
+Lorsque le single sign-on est connecté, une personne qui se connecte avec Microsoft pour la première fois obtient automatiquement un compte Kadratis. Si un compte avec la même adresse e-mail existe déjà, Kadratis envoie à la place un lien de confirmation à cette adresse. Le compte est lié à l'identité Microsoft une fois la confirmation faite depuis ce lien, dans l'heure, et garde son mot de passe. Un compte **Invité** est activé à sa connexion suivante avec Microsoft. Un compte déjà lié à une autre identité Microsoft garde ce lien. Sans service d'e-mail, un compte existant ne peut pas être lié de cette façon.
 
 Un nouveau compte démarre avec le rôle système **Contact** et aucune autorisation. La personne voit une page indiquant :
 

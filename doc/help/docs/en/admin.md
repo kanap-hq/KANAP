@@ -256,7 +256,7 @@ In a workspace where [Microsoft Entra ID](#microsoft-entra-id) is connected, the
 
 | Choice | The invitation |
 |--------|----------------|
-| **With Microsoft** (default) | Asks the person to open the workspace and choose **Sign in with Microsoft**. It holds no password link. Their first Microsoft sign-in links the account to their Microsoft identity and enables it. |
+| **With Microsoft** (default) | Asks the person to open the workspace and choose **Sign in with Microsoft**. It holds no password link. At their first Microsoft sign-in, Kadratis e-mails them a confirmation link. Once they confirm, their next Microsoft sign-in enables the account. |
 | **With a password** | Holds the link to set a password, valid for 7 days, as in a workspace without Microsoft sign-in. For people outside your directory, such as consultants. |
 
 The account shows **Invited** until the person's first sign-in. A password reset link, sent by **Send password reset** or from the sign-in page, stays valid for 1 hour.
@@ -297,7 +297,7 @@ If someone is removed from your directory, or their directory account is deactiv
 
 ### Just-in-time sign-in with Microsoft
 
-When single sign-on is connected, a person who signs in with Microsoft for the first time gets a Kadratis account automatically. If an account with the same email address already exists, it is linked to their Microsoft identity instead, and an **Invited** account is enabled.
+When single sign-on is connected, a person who signs in with Microsoft for the first time gets a Kadratis account automatically. If an account with the same email address already exists, Kadratis e-mails a confirmation link to that address instead. The account is linked to the Microsoft identity once the person confirms from that link, within 1 hour, and keeps its password. An **Invited** account is enabled at its next Microsoft sign-in. An account already linked to another Microsoft identity keeps that link. Without an email service, an existing account cannot be linked this way.
 
 A new account starts with the **Contact** system role and no permissions. The person sees a page saying:
 
