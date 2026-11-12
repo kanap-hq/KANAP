@@ -92,7 +92,7 @@ Kadratis liest eine Tabelle, wenn Sie die Nachricht senden:
 
 - Eine Datei darf bis zu 5 MB und 20.000 Zeilen umfassen. Von einer Arbeitsmappe wird nur das erste Blatt gelesen.
 - Eine Datei, die nicht gelesen werden kann (beschädigt, leer, altes .xls-Format, zu groß), wird sofort mit Angabe des Grundes abgelehnt. Die Nachricht wird nicht gesendet.
-- Kad erhält eine Zusammenfassung der Datei: die Spaltenüberschriften, den Typ jeder Spalte (Text, Zahl oder Datum), die ersten zehn Zeilen und die Anzahl der Zeilen. Kad kann die Datei beschreiben, sagen, was jede Spalte enthält, und Probleme in den ersten Zeilen erkennen. Zu Zeilen nach den ersten zehn kann Kad nichts sagen.
+- Kad erhält eine Zusammenfassung der Datei: die Spaltenüberschriften, den Typ jeder Spalte (Text, Zahl oder Datum), die ersten zehn Zeilen mit ihrer Zeilennummer in Ihrer Datei und die Anzahl der Zeilen. Kad kann die Datei beschreiben, sagen, was jede Spalte enthält, und Probleme in den ersten Zeilen erkennen. Zu Zeilen nach den ersten zehn kann Kad nichts sagen.
 - Die Zusammenfassung bleibt für den Rest der Unterhaltung an die Nachricht angehängt.
 
 ### Eine Tabelle importieren
@@ -277,7 +277,7 @@ Bei ausstehenden Änderungsvorschauen bietet das Panel zwei Schaltflächen:
 - **Genehmigen**: bestätigt die Änderung und lässt Kad sie anwenden
 - **Ablehnen**: verwirft die Änderung. Kad teilt mit, dass die Änderung abgelehnt wurde, und bereitet nichts an ihrer Stelle vor. Wenn Ihre Anfrage mehrere Änderungen umfasste, fährt es mit den übrigen fort.
 
-Eine Vorschau und die Nachricht, die Kad nach Ihrer Genehmigung oder Ablehnung schreibt, sind in der Sprache Ihres Profils, mit den Feldnamen und Werten der Bildschirme. Eine Budgetzeile, die mit einem Betrag angefragt wird, kommt als eine einzige Vorschau: Eine Genehmigung legt die Zeile, ihre Budgetversion für das Jahr und den Betrag an.
+Eine Vorschau und die Nachricht, die Kad nach Ihrer Genehmigung oder Ablehnung schreibt, sind in der Sprache Ihres Profils (der Ihres Browsers, wenn Ihr Profil keine festlegt), mit den Feldnamen und Werten der Bildschirme. Eine Budgetzeile, die mit einem Betrag angefragt wird, kommt als eine einzige Vorschau: Eine Genehmigung legt die Zeile, ihre Budgetversion für das Jahr und den Betrag an.
 
 Wenn Sie eine Änderung anfragen, die Kad nicht vornehmen kann, etwa ein Projekt löschen oder den Abgleich der Schwachstellen erneut starten, sagt es das und nennt den Bildschirm, auf dem Sie sie vornehmen können. Es bereitet keine andere Änderung an ihrer Stelle vor.
 
