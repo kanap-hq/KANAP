@@ -8,7 +8,13 @@ import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { userAuditSnapshot } from './users.service';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
-import { PERSON_ABOVE_OWN_RIGHTS_MESSAGE, personAboveActorRights, type RoleGrantActor } from '../roles/role-grant-ceiling';
+import {
+  LAST_ADMINISTRATOR_MESSAGE,
+  lastActiveAdministratorsLeaving,
+  PERSON_ABOVE_OWN_RIGHTS_MESSAGE,
+  personAboveActorRights,
+  type RoleGrantActor,
+} from '../roles/role-grant-ceiling';
 
 type DeleteOpts = { manager?: EntityManager; roleGrant?: RoleGrantActor };
 
@@ -34,7 +40,8 @@ export class UsersDeleteService extends BaseDeleteService<User> {
 
   /**
    * The refusal of a user's delete, or null: one's own account (`USER_OWN_ACCOUNT`: disable it
-   * instead), a person who has more rights than the one deleting (`PERSON_ABOVE_OWN_RIGHTS`).
+   * instead), a person who has more rights than the one deleting (`PERSON_ABOVE_OWN_RIGHTS`), the
+   * workspace's last enabled Administrator (`LAST_ADMINISTRATOR`).
    */
   private async refusalOf(manager: EntityManager, user: User, actorId: string | null, roleGrant?: RoleGrantActor): Promise<RecordInUseException | null> {
     const name = this.getUserDisplayName(user);
@@ -43,6 +50,9 @@ export class UsersDeleteService extends BaseDeleteService<User> {
     }
     if (roleGrant && await personAboveActorRights(manager, roleGrant, user.id)) {
       return new RecordInUseException('PERSON_ABOVE_OWN_RIGHTS', 'user', name, [], PERSON_ABOVE_OWN_RIGHTS_MESSAGE);
+    }
+    if ((await lastActiveAdministratorsLeaving(manager, [{ userId: user.id, deleted: true }])).length > 0) {
+      return new RecordInUseException('LAST_ADMINISTRATOR', 'user', name, [], LAST_ADMINISTRATOR_MESSAGE);
     }
     return null;
   }

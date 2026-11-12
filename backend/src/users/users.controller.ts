@@ -27,7 +27,13 @@ import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { parseInviteSignIn } from './invite-sign-in';
-import { assertPersonWithinActorRights, assertRoleGrantWithinActorRights, roleGrantActorOf } from '../roles/role-grant-ceiling';
+import {
+  assertKeepsAnActiveAdministrator,
+  assertPersonWithinActorRights,
+  assertRoleGrantWithinActorRights,
+  type PersonChange,
+  roleGrantActorOf,
+} from '../roles/role-grant-ceiling';
 
 function canViewUserAdministration(req: any): boolean {
   return req?.isAdmin === true || req?.permissionLevel === 'admin';
@@ -173,6 +179,14 @@ export class UsersController {
     if (canManageUsers && body?.role_id) {
       await assertRoleGrantWithinActorRights(manager, roleGrantActorOf(req), userId, [body.role_id]);
     }
+    // The workspace keeps an enabled Administrator: the status or the main role of the last one stay.
+    const has = (field: string) => !!body && Object.prototype.hasOwnProperty.call(body, field);
+    if (canManageUsers && (has('status') || has('role_id'))) {
+      const change: PersonChange = { userId };
+      if (has('status')) change.status = body.status;
+      if (has('role_id')) change.mainRoleId = body.role_id;
+      await assertKeepsAnActiveAdministrator(manager, [change]);
+    }
     return this.svc.updateUser(
       userId,
       body,
@@ -313,6 +327,8 @@ export class UsersController {
     // the person does not hold yet stays within the rights of the one who gives it.
     await assertPersonWithinActorRights(manager ?? this.userRoleRepo.manager, roleGrantActorOf(req), userId);
     await assertRoleGrantWithinActorRights(manager ?? this.userRoleRepo.manager, roleGrantActorOf(req), userId, roleIds);
+    // The workspace keeps an enabled Administrator.
+    await assertKeepsAnActiveAdministrator(manager ?? this.userRoleRepo.manager, [{ userId, roleIds }]);
 
     // Snapshot current roles for the audit trail before replacing them
     const previousRoles = await userRoleRepo.find({ where: { user_id: userId }, relations: ['role'] });

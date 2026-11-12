@@ -58,7 +58,10 @@ import { uploadedBytes } from '../common/upload';
 import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
 import {
+  assertKeepsAnActiveAdministrator,
   assertPersonWithinActorRights,
+  LAST_ADMINISTRATOR_MESSAGE,
+  lastActiveAdministratorsLeaving,
   assertRoleGrantWithinActorRights,
   PERSON_ABOVE_OWN_RIGHTS_MESSAGE,
   personAboveActorRights,
@@ -1142,12 +1145,28 @@ export class UsersService {
       }
       toWrite.push({ item, existing });
     }
-    // A row changes no person who has more rights than the one importing: the row is refused.
+    // A row changes no person who has more rights than the one importing, and leaves an enabled
+    // Administrator: the row is refused.
     if (roleGrant) {
       const refused: { row: number; message: string }[] = [];
       for (const { item, existing } of toWrite) {
         if (existing && await personAboveActorRights(opts?.manager ?? repo.manager, roleGrant, existing.id)) {
           refused.push(rowError(lineOf.get(item) ?? 0, 'email', 'PERSON_ABOVE_OWN_RIGHTS', PERSON_ABOVE_OWN_RIGHTS_MESSAGE));
+        }
+      }
+      // The workspace keeps an enabled Administrator: a row that disables the last ones or takes
+      // their role away is refused.
+      const leaving = new Set(await lastActiveAdministratorsLeaving(
+        opts?.manager ?? repo.manager,
+        toWrite.filter(({ existing }) => !!existing).map(({ item, existing }) => ({
+          userId: existing!.id,
+          status: item.status as string,
+          mainRoleId: item.role.id,
+        })),
+      ));
+      for (const { item, existing } of toWrite) {
+        if (existing && leaving.has(existing.id)) {
+          refused.push(rowError(lineOf.get(item) ?? 0, 'email', 'LAST_ADMINISTRATOR', LAST_ADMINISTRATOR_MESSAGE));
         }
       }
       if (refused.length > 0) {
@@ -1264,6 +1283,8 @@ export class UsersService {
     if (!user) throw new BadRequestException('User not found');
     if (opts?.roleGrant) await assertPersonWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, id);
     if (user.status === 'disabled') return user;
+    // A person does not disable the workspace's last enabled Administrator.
+    if (opts?.roleGrant) await assertKeepsAnActiveAdministrator(opts?.manager ?? repo.manager, [{ userId: id, status: 'disabled' }]);
     const before = userAuditSnapshot(user);
     user.status = 'disabled' as any;
     const saved = await repo.save(user);

@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
 import { Role } from './role.entity';
 import { User } from '../users/user.entity';
@@ -107,6 +108,80 @@ export const PERSON_ABOVE_OWN_RIGHTS_MESSAGE = 'This person has more rights than
 export async function assertPersonWithinActorRights(manager: EntityManager, actor: RoleGrantActor, targetUserId: string): Promise<void> {
   if (await personAboveActorRights(manager, actor, targetUserId)) {
     throw codedForbidden('PERSON_ABOVE_OWN_RIGHTS', PERSON_ABOVE_OWN_RIGHTS_MESSAGE);
+  }
+}
+
+/**
+ * A write on a person, as the last-administrator check reads it: the person deleted, or their
+ * status, their main role (`users.role_id`, the other roles kept) or all their roles set.
+ */
+export type PersonChange = {
+  userId: string;
+  deleted?: boolean;
+  status?: string | null;
+  mainRoleId?: string | null;
+  roleIds?: string[];
+};
+
+/**
+ * A workspace keeps at least one enabled Administrator. When `changes` take the last enabled
+ * Administrators out of that set (their role taken away, disabled, deleted), the ids of those
+ * Administrators; an empty list otherwise. The Administrator role
+ * rows are locked first, until the end of the transaction: two writes that each take one of the two
+ * last Administrators away run one after the other, and the second reads the first one's result.
+ */
+export async function lastActiveAdministratorsLeaving(manager: EntityManager, changes: PersonChange[]): Promise<string[]> {
+  if (changes.length === 0) return [];
+  const adminRoles: Array<{ id: string }> = await manager.query(
+    `SELECT id FROM roles
+      WHERE tenant_id = app_current_tenant() AND lower(trim(role_name)) = 'administrator'
+      ORDER BY id FOR UPDATE`,
+  );
+  const adminRoleIds = adminRoles.map((row) => row.id);
+  if (adminRoleIds.length === 0) return [];
+  const active: Array<{ id: string }> = await manager.query(
+    `SELECT u.id FROM users u
+      WHERE u.tenant_id = app_current_tenant() AND u.status = 'enabled'
+        AND (u.role_id = ANY($1::uuid[])
+          OR EXISTS (SELECT 1 FROM user_roles ur
+                      WHERE ur.tenant_id = u.tenant_id AND ur.user_id = u.id AND ur.role_id = ANY($1::uuid[])))`,
+    [adminRoleIds],
+  );
+  const activeIds = new Set(active.map((row) => row.id));
+  const changed = new Map(changes.map((change) => [change.userId, change]));
+  if (![...changed.keys()].some((id) => activeIds.has(id))) return [];
+  if ([...activeIds].some((id) => !changed.has(id))) return [];
+  // Every enabled Administrator is changed: one of them must stay an enabled Administrator.
+  const ids = [...changed.keys()];
+  const users: Array<{ id: string; status: string; role_id: string | null }> = await manager.query(
+    `SELECT id, status, role_id FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+    [ids],
+  );
+  const others: Array<{ user_id: string; role_id: string }> = await manager.query(
+    `SELECT user_id, role_id FROM user_roles WHERE tenant_id = app_current_tenant() AND user_id = ANY($1::uuid[])`,
+    [ids],
+  );
+  const admin = new Set(adminRoleIds);
+  const staying = users.some((user) => {
+    const change = changed.get(user.id)!;
+    if (change.deleted) return false;
+    const status = change.status !== undefined ? change.status : user.status;
+    if (status !== 'enabled') return false;
+    const roles = change.roleIds ?? [
+      change.mainRoleId !== undefined ? change.mainRoleId : user.role_id,
+      ...others.filter((row) => row.user_id === user.id).map((row) => row.role_id),
+    ];
+    return roles.some((roleId) => !!roleId && admin.has(roleId));
+  });
+  return staying ? [] : [...activeIds];
+}
+
+export const LAST_ADMINISTRATOR_MESSAGE = 'The workspace needs at least one active administrator.';
+
+/** 409 `LAST_ADMINISTRATOR` when `changes` leave the workspace without an enabled Administrator. */
+export async function assertKeepsAnActiveAdministrator(manager: EntityManager, changes: PersonChange[]): Promise<void> {
+  if ((await lastActiveAdministratorsLeaving(manager, changes)).length > 0) {
+    throw new ConflictException({ statusCode: 409, error: 'Conflict', code: 'LAST_ADMINISTRATOR', message: LAST_ADMINISTRATOR_MESSAGE });
   }
 }
 

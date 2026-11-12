@@ -218,6 +218,7 @@
   "CALENDAR_IN_USE": "Este calendario se usa en {{usages}}. Desactívelo en lugar de eliminarlo.",
   "USER_OWN_ACCOUNT": "No puede eliminar su propia cuenta. Desactívela si es necesario.",
   "PERSON_ABOVE_OWN_RIGHTS": "Esta persona tiene más permisos que usted.",
+  "LAST_ADMINISTRATOR": "El espacio de trabajo necesita al menos un administrador activo.",
   "ACCOUNT_IN_USE": "Esta cuenta se usa en {{usages}}. Desactívela en lugar de eliminarla.",
   "CHART_OF_ACCOUNTS_IN_USE_one": "Este plan de cuentas se usa en {{usages}}. Pásela primero a otro plan de cuentas.",
   "CHART_OF_ACCOUNTS_IN_USE_other": "Este plan de cuentas se usa en {{usages}}. Páselas primero a otro plan de cuentas.",
