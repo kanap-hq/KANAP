@@ -30,8 +30,3 @@ export function writeActiveStep(step: ActiveStep | null): void {
     // Memory only.
   }
 }
-
-/** The address is the step's screen or one of its pages (a record of the list, a new record). */
-export function withinStepScreen(pathname: string, screenPath: string): boolean {
-  return pathname === screenPath || pathname.startsWith(`${screenPath}/`);
-}

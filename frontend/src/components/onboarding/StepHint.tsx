@@ -4,122 +4,143 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { readActiveStep, withinStepScreen, writeActiveStep, type ActiveStep } from './activeStep';
+import { readActiveStep, writeActiveStep, type ActiveStep } from './activeStep';
 import { onboardingApi } from './onboardingApi';
-import { STEP_PARAM, stepHintKey, stepScreen, stepTitleKey, type StepLocationState, type StepTarget } from './onboardingPaths';
+import { STEP_PARAM, stepHintKey, stepScreen, stepTitleKey, type StepLocationState } from './onboardingPaths';
 import { ONBOARDING_QUERY_KEY, useOnboarding, useOnboardingActions } from './useOnboarding';
 import { useOpenStep } from './useOpenStep';
 
 /** While the hint waits for the object of its step, the state is read again this often. */
 export const STEP_OBJECT_POLL_MS = 5000;
 
-/** The hint's distance from the right and bottom edges of the window, in pixels. */
+/** The hint's least distance from the edges of the window, in pixels: its corner is 16 px from the right and bottom. */
 const CORNER = 16;
 
-/** Space between the hint and the element of its step when it rises above it, outline included. */
-const GAP = 12;
-
-const overlaps = (a: { top: number; left: number; right: number; bottom: number }, b: DOMRect) =>
-  a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+/** Space between the hint and an action it moves off. */
+const GAP = 8;
 
 /**
- * The hint's distance from the bottom of the window: in its corner, or just above the element of
- * its step when that element lies under the corner (Plaid's composer at the foot of a conversation).
+ * How often the hint looks again at what lies under it (a page drawn late, a drawer, a card, a
+ * scroll): at this pace, it does not follow a scroll frame by frame.
  */
-function bottomOffset(target: DOMRect | null, bubble: { width: number; height: number }): number {
-  if (!target) return CORNER;
-  const corner = {
-    right: window.innerWidth - CORNER,
-    left: window.innerWidth - CORNER - bubble.width,
-    bottom: window.innerHeight - CORNER,
-    top: window.innerHeight - CORNER - bubble.height,
+const PLACE_CHECK_MS = 300;
+
+/** What the person can use: buttons and fields. */
+const ACTIONS = [
+  'button', '[role="button"]', 'a.MuiButtonBase-root', 'input:not([type="hidden"])', 'textarea', 'select',
+  '[role="combobox"]', '[contenteditable="true"]',
+].join(', ');
+
+/** The rows and cells of a data grid scroll under the hint: they do not move it. */
+const GRID = '.ag-root, [role="grid"], [role="treegrid"]';
+
+/** The hint's distances from the right and bottom edges of the window. */
+type Place = { right: number; bottom: number };
+type Box = { left: number; top: number; right: number; bottom: number };
+type Size = { width: number; height: number };
+
+const IN_CORNER: Place = { right: CORNER, bottom: CORNER };
+
+const overlaps = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+function boxAt(place: Place, size: Size): Box {
+  const right = window.innerWidth - place.right;
+  const bottom = window.innerHeight - place.bottom;
+  return { left: right - size.width, top: bottom - size.height, right, bottom };
+}
+
+/** Whole inside the window, CORNER px from its edges at least. */
+function fits(place: Place, size: Size): boolean {
+  const box = boxAt(place, size);
+  return place.right >= CORNER && place.bottom >= CORNER && box.left >= CORNER && box.top >= CORNER;
+}
+
+/** A disabled control lets the pointer through to its parent: it shows all the same (Submit before a comment is typed). */
+const DISABLED = ':disabled, [aria-disabled="true"], .Mui-disabled';
+
+/**
+ * In front where it stands, the hint aside: not behind a drawer, its backdrop or another surface,
+ * nor clipped out of a scrolled panel (jsdom has no `elementsFromPoint`).
+ */
+function reachable(element: Element, rect: Box, bubble: Element): boolean {
+  if (typeof document.elementsFromPoint !== 'function') return true;
+  const x = (Math.max(rect.left, 0) + Math.min(rect.right, window.innerWidth)) / 2;
+  const y = (Math.max(rect.top, 0) + Math.min(rect.bottom, window.innerHeight)) / 2;
+  const front = document.elementsFromPoint(x, y).find((hit) => !bubble.contains(hit));
+  if (!front) return false;
+  return element.contains(front) || (front.contains(element) && element.matches(DISABLED));
+}
+
+/** The actions the hint could cover: those along the right edge and the bottom edge of the window. */
+function actionsAround(bubble: HTMLElement, size: Size): Box[] {
+  const { innerWidth: width, innerHeight: height } = window;
+  const rightEdge = { left: width - CORNER - size.width, top: 0, right: width, bottom: height };
+  const bottomEdge = { left: 0, top: height - CORNER - size.height, right: width, bottom: height };
+  return Array.from(document.querySelectorAll(ACTIONS)).flatMap((element) => {
+    const rect = element.getBoundingClientRect();
+    if (!rect.width || !rect.height || (!overlaps(rect, rightEdge) && !overlaps(rect, bottomEdge))) return [];
+    if (bubble.contains(element) || element.closest(GRID) || !reachable(element, rect, bubble)) return [];
+    return [rect];
+  });
+}
+
+/**
+ * The hint keeps its corner while it covers no action there. Otherwise it stays where it stands if
+ * that covers none, or takes the free place nearest the corner: just above an action along the
+ * right edge (the composer of the assistant, a comment field and its button span the bottom), or
+ * just left of one along the bottom edge (the fields of a properties panel fill the right edge).
+ * With no free place, the place that covers the fewest actions.
+ */
+function choosePlace(current: Place, actions: Box[], size: Size): Place {
+  const covered = (place: Place) => {
+    const box = boxAt(place, size);
+    return actions.filter((action) => overlaps(box, action)).length;
   };
-  return overlaps(corner, target) ? Math.max(CORNER, window.innerHeight - target.top + GAP) : CORNER;
+  if (covered(IN_CORNER) === 0) return IN_CORNER;
+  if (fits(current, size) && covered(current) === 0) return current;
+  const places = actions.flatMap((action): Place[] => [
+    { right: CORNER, bottom: window.innerHeight - action.top + GAP },
+    { right: window.innerWidth - action.left + GAP, bottom: CORNER },
+  ]).filter((place) => fits(place, size));
+  return [IN_CORNER, ...places]
+    .map((place) => ({ place, covers: covered(place), distance: place.right + place.bottom }))
+    .sort((a, b) => a.covers - b.covers || a.distance - b.distance)[0].place;
 }
 
-/** `data-page-title`: the title of `PageHeader` and `ReportLayout`. */
-const TITLE = ['main [data-page-title]', 'main .MuiTypography-h5', 'main h1, main h2, main h3, main h4, main h5'];
-
-type Candidate = string | ((exportLabel: string) => HTMLElement | null);
-
-/** The list's Export button, found by its label. */
-const exportButton = (label: string) => Array.from(document.querySelectorAll<HTMLElement>('main button'))
-  .find((button) => button.textContent?.trim() === label) ?? null;
-
-/**
- * Candidates in order, the page title last. While Plaid waits to be turned on, its acceptance box
- * holds the composer's place; Export is shown to the list's administrators only.
- */
-const TARGETS: Record<StepTarget, Candidate[]> = {
-  title: TITLE,
-  composer: ['main textarea', 'main [data-plaid-composer]', ...TITLE],
-  tabs: ['main [role="tablist"]', ...TITLE],
-  export: [exportButton, ...TITLE],
-};
-
-/**
- * Drawn on the page: in the document and not in a hidden part of it, such as the screen a route
- * change keeps hidden while the next one loads (jsdom has no `checkVisibility`).
- */
-const isShown = (element: HTMLElement) => element.isConnected
-  && (typeof element.checkVisibility !== 'function' || element.checkVisibility());
-
-function findTarget(target: StepTarget, exportLabel: string): HTMLElement | null {
-  for (const candidate of TARGETS[target]) {
-    const found = typeof candidate === 'string'
-      ? Array.from(document.querySelectorAll<HTMLElement>(candidate)).find(isShown)
-      : candidate(exportLabel);
-    if (found && isShown(found)) return found;
-  }
-  return null;
-}
-
-type Target = { element: HTMLElement | null; rect: DOMRect | null };
-
-const NO_TARGET: Target = { element: null, rect: null };
-
-const sameBox = (a: DOMRect | null, b: DOMRect | null) => (a === null || b === null
-  ? a === b
-  : a.top === b.top && a.left === b.left && a.width === b.width && a.height === b.height);
-
-/**
- * The element of the screen and its box, looked up on every tick while the hint is open: the
- * page draws it late (lazy route, data) and may replace it (Plaid's acceptance box gives way to
- * the composer once accepted, a screen changes under the hint). Without one, the hint shows no outline.
- */
-function useTarget(target: StepTarget | null): Target {
-  const { t } = useTranslation('common');
-  const exportLabel = t('export.button');
-  const [found, setFound] = React.useState<Target>(NO_TARGET);
+/** Where the hint stands, placed before it is painted and looked at again while it is shown. */
+function useHintPlace(bubbleRef: React.RefObject<HTMLDivElement>, shown: boolean): Place {
+  const [place, setPlace] = React.useState<Place>(IN_CORNER);
+  const placeRef = React.useRef(IN_CORNER);
+  const check = React.useCallback(() => {
+    const bubble = bubbleRef.current;
+    if (!bubble) return;
+    const { width, height } = bubble.getBoundingClientRect();
+    const size = { width, height };
+    const current = placeRef.current;
+    const next = choosePlace(current, actionsAround(bubble, size), size);
+    if (next.right === current.right && next.bottom === current.bottom) return;
+    placeRef.current = next;
+    setPlace(next);
+  }, [bubbleRef]);
+  React.useLayoutEffect(check);
   React.useEffect(() => {
-    setFound(NO_TARGET);
-    if (!target) return undefined;
-    const look = () => {
-      const element = findTarget(target, exportLabel);
-      const rect = element ? element.getBoundingClientRect() : null;
-      setFound((previous) => (previous.element === element && sameBox(previous.rect, rect)
-        ? previous
-        : { element, rect }));
-    };
-    look();
-    const timer = window.setInterval(look, 150);
-    window.addEventListener('resize', look);
-    window.addEventListener('scroll', look, true);
+    if (!shown) return undefined;
+    const timer = window.setInterval(check, PLACE_CHECK_MS);
+    window.addEventListener('resize', check);
     return () => {
       window.clearInterval(timer);
-      window.removeEventListener('resize', look);
-      window.removeEventListener('scroll', look, true);
+      window.removeEventListener('resize', check);
     };
-  }, [exportLabel, target]);
-  return found;
+  }, [check, shown]);
+  return place;
 }
 
 /**
- * The hint of a step opened from the first steps: the target of its screen is outlined and one
- * sentence says what to look at. On the example, opening the step marks it done; with your own
- * data, the object the step creates does, or "Done" for a step that creates none. It stays on
- * every screen until it is closed (`activeStep.ts`), with no outline away from the step's screen;
- * once the step is done, it opens the next step, or the home page at the end of the path.
+ * The hint of a step opened from the first steps: one sentence says what to look at. On the
+ * example, opening the step marks it done; with your own data, the object the step creates does,
+ * or "Done" for a step that creates none. It stays on every screen until it is closed
+ * (`activeStep.ts`); once the step is done, it opens the next step, or the home page at the end of
+ * the path.
  */
 export default function StepHint() {
   const { t, i18n } = useTranslation('common');
@@ -146,27 +167,12 @@ export default function StepHint() {
   const screen = found && state ? stepScreen(found.key, state.angle) : null;
   // The hint stays on every screen until it is closed: a step leads out of its own address (from
   // the end of support to a technology and to the vulnerabilities, from a request to the project it
-  // was converted into). Its element is outlined on its screen and the pages below it only.
+  // was converted into).
   const step = screen ? found : null;
-  const onStepScreen = !!screen && (!!paramKey || withinStepScreen(location.pathname, screen.to));
-  // A record opened from the list of a title step (its address goes below the list's): the hint
-  // points at its tab row.
-  const onRecord = screen?.target === 'title' && location.pathname.startsWith(`${screen.to}/`);
-  const target = useTarget(screen && onStepScreen ? (onRecord ? 'tabs' : screen.target) : null);
-  // Between a screen change and the next look-up, the element may have left the page already.
-  const rect = target.element && isShown(target.element) ? target.rect : null;
   const discover = state?.mode === 'example';
 
-  // Measured once drawn: the hint's size decides whether the element of its step lies under it.
   const bubbleRef = React.useRef<HTMLDivElement>(null);
-  const [bottom, setBottom] = React.useState(CORNER);
-  React.useLayoutEffect(() => {
-    const bubble = bubbleRef.current;
-    if (!bubble) return;
-    const { width, height } = bubble.getBoundingClientRect();
-    const next = bottomOffset(rect, { width, height });
-    setBottom((previous) => (previous === next ? previous : next));
-  });
+  const place = useHintPlace(bubbleRef, !!step && !!state);
 
   // The object of the step may be created in a dialog, with no change of address.
   const waiting = !!step && step.automatic && !step.done_at;
@@ -209,79 +215,60 @@ export default function StepHint() {
     : t(stepHintKey(step.key, state.angle));
 
   return (
-    <>
-      {rect ? (
-        <Box
-          aria-hidden
-          data-testid="step-hint-outline"
-          // The box moves with the page: inline, so that each position does not add a style rule.
-          style={{ top: rect.top - 4, left: rect.left - 6, width: rect.width + 12, height: rect.height + 8 }}
-          sx={(theme) => ({
-            position: 'fixed',
-            borderRadius: '6px',
-            outline: `2px solid ${theme.palette.primary.main}`,
-            pointerEvents: 'none',
-            zIndex: theme.zIndex.modal - 2,
-          })}
-        />
-      ) : null}
-      {/* In the bottom-right corner of the window, apart from what the step asks to use: on the
-          element, the hint would cover it (filters, tabs, fields). No floating control sits in
-          that corner. */}
-      <Paper
-        ref={bubbleRef}
-        role="dialog"
-        aria-label={t(stepTitleKey(step.key, state.angle))}
-        style={{ bottom }}
-        sx={(theme) => ({
-          position: 'fixed',
-          right: CORNER,
-          zIndex: theme.zIndex.modal - 1,
-          boxSizing: 'border-box',
-          // Inside the window on a narrow screen.
-          maxWidth: `min(360px, calc(100vw - ${2 * CORNER}px))`,
-          p: 1.5,
-          borderRadius: '8px',
-          // Apart from the element it describes, the hint wears the same ring as its outline, which
-          // also sets it off a card of the same tint in dark mode.
-          border: `1px solid ${theme.palette.primary.main}`,
-          // A raised surface: in dark mode the page background would swallow it.
-          bgcolor: theme.palette.kanap.bg.composer,
-          boxShadow: theme.shadows[3],
-        })}
-      >
-        <Typography variant="body2">{hint}</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mt: 1.25 }}>
-          {step.done_at && !discover ? (
-            <CheckCircleIcon aria-hidden sx={{ fontSize: 18, color: 'success.main', mr: 'auto' }} />
-          ) : null}
-          {step.done_at ? (
-            <>
-              <Button variant="action" onClick={close}>{t('onboarding.firstSteps.gotIt')}</Button>
-              {state.next_step ? (
-                <Button variant="action-primary" onClick={() => { void openStep(state.next_step!, state.angle); }}>
-                  {t('onboarding.firstSteps.nextStep')}
-                </Button>
-              ) : (
-                <Button variant="action-primary" onClick={finish}>{t('onboarding.firstSteps.finish')}</Button>
-              )}
-            </>
-          ) : discover || step.automatic ? (
+    // In the bottom-right corner of the window, moved off any action it would cover there
+    // (`useHintPlace`). A modal dialog stands above it.
+    <Paper
+      ref={bubbleRef}
+      role="dialog"
+      aria-label={t(stepTitleKey(step.key, state.angle))}
+      // Inline, so that each place does not add a style rule.
+      style={{ right: place.right, bottom: place.bottom }}
+      sx={(theme) => ({
+        position: 'fixed',
+        zIndex: theme.zIndex.modal - 1,
+        boxSizing: 'border-box',
+        // Inside the window on a narrow screen.
+        maxWidth: `min(360px, calc(100vw - ${2 * CORNER}px))`,
+        p: 1.5,
+        borderRadius: '8px',
+        // The ring sets the hint off a card of the same tint in dark mode.
+        border: `1px solid ${theme.palette.primary.main}`,
+        // A raised surface: in dark mode the page background would swallow it.
+        bgcolor: theme.palette.kanap.bg.composer,
+        boxShadow: theme.shadows[3],
+      })}
+    >
+      <Typography variant="body2">{hint}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mt: 1.25 }}>
+        {step.done_at && !discover ? (
+          <CheckCircleIcon aria-hidden sx={{ fontSize: 18, color: 'success.main', mr: 'auto' }} />
+        ) : null}
+        {step.done_at ? (
+          <>
             <Button variant="action" onClick={close}>{t('onboarding.firstSteps.gotIt')}</Button>
-          ) : (
-            <>
-              <Button variant="action" onClick={close}>{t('onboarding.firstSteps.later')}</Button>
-              <Button
-                variant="action-primary"
-                disabled={markDone.isPending}
-                onClick={() => markDone.mutate(step.key)}
-              >
-                {t('onboarding.firstSteps.done')}
+            {state.next_step ? (
+              <Button variant="action-primary" onClick={() => { void openStep(state.next_step!, state.angle); }}>
+                {t('onboarding.firstSteps.nextStep')}
               </Button>
-            </>
-          )}
-        </Box>
-      </Paper>
-    </>
+            ) : (
+              <Button variant="action-primary" onClick={finish}>{t('onboarding.firstSteps.finish')}</Button>
+            )}
+          </>
+        ) : discover || step.automatic ? (
+          <Button variant="action" onClick={close}>{t('onboarding.firstSteps.gotIt')}</Button>
+        ) : (
+          <>
+            <Button variant="action" onClick={close}>{t('onboarding.firstSteps.later')}</Button>
+            <Button
+              variant="action-primary"
+              disabled={markDone.isPending}
+              onClick={() => markDone.mutate(step.key)}
+            >
+              {t('onboarding.firstSteps.done')}
+            </Button>
+          </>
+        )}
+      </Box>
+    </Paper>
   );
 }
