@@ -152,6 +152,23 @@ export async function rolesAboveActorRights(manager: EntityManager, actor: RoleG
   return above;
 }
 
+/**
+ * Every write on a person (their profile, e-mail, status, roles, invitation, data access, deletion,
+ * an import row about them) locks their `users` row first, until the end of the transaction, and
+ * only then reads their rights and checks them. Two writes on the same person run one after the
+ * other: the second reads the first one's result (a person made Administrator meanwhile is above
+ * the second writer's rights). Order of the locks, everywhere: the people's rows (by id), then the
+ * Administrator role rows (`lastActiveAdministratorsLeaving`).
+ */
+export async function lockPeople(manager: EntityManager, userIds: string[]): Promise<void> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (ids.length === 0) return;
+  await manager.query(
+    `SELECT id FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[]) ORDER BY id FOR UPDATE`,
+    [ids],
+  );
+}
+
 export const PERSON_ABOVE_OWN_RIGHTS_MESSAGE = 'This person has more rights than you.';
 
 /** 403 `PERSON_ABOVE_OWN_RIGHTS` when the target has more rights than the actor (see above). */

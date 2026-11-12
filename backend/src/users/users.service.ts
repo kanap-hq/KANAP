@@ -63,6 +63,7 @@ import {
   assertPersonWithinActorRights,
   LAST_ADMINISTRATOR_MESSAGE,
   lastActiveAdministratorsLeaving,
+  lockPeople,
   assertRoleGrantWithinActorRights,
   PERSON_ABOVE_OWN_RIGHTS_MESSAGE,
   peopleAboveActorRights,
@@ -836,6 +837,8 @@ export class UsersService {
     opts?: { manager?: EntityManager },
   ) {
     const repo = this.getRepo(opts?.manager);
+    // The person's row is locked before it is read (see lockPeople).
+    await lockPeople(opts?.manager ?? repo.manager, [id]);
     const existing = await repo.findOne({ where: { id } });
     if (!existing) {
       throw new NotFoundException({ code: 'USER_NOT_FOUND', message: 'User not found' });
@@ -1144,6 +1147,14 @@ export class UsersService {
     let updated = 0;
     let unchanged = 0;
     const toWrite: Array<{ item: Normalized; existing: User | null }> = [];
+    // The rows of the people the file names are locked before they are read (see lockPeople).
+    const named: Array<{ id: string }> = unique.length > 0
+      ? await (opts?.manager ?? repo.manager).query(
+        `SELECT id FROM users WHERE tenant_id = app_current_tenant() AND email = ANY($1::text[])`,
+        [unique.map((item) => item.email)],
+      )
+      : [];
+    await lockPeople(opts?.manager ?? repo.manager, named.map((row) => row.id));
     for (const item of unique) {
       const existing = await repo.findOne({ where: { email: item.email } });
       if (!existing) {
@@ -1265,6 +1276,7 @@ export class UsersService {
 
   async enableUser(id: string, actorId?: string | null, opts?: { manager?: EntityManager; roleGrant?: RoleGrantActor }) {
     const repo = this.getRepo(opts?.manager);
+    await lockPeople(opts?.manager ?? repo.manager, [id]);
     const user = await repo.findOne({ where: { id } });
     if (!user) throw new BadRequestException('User not found');
     if (opts?.roleGrant) await assertPersonWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, id);
@@ -1291,6 +1303,7 @@ export class UsersService {
     opts?: { manager?: EntityManager; sourceRef?: string; roleGrant?: RoleGrantActor },
   ) {
     const repo = this.getRepo(opts?.manager);
+    await lockPeople(opts?.manager ?? repo.manager, [id]);
     const user = await repo.findOne({ where: { id } });
     if (!user) throw new BadRequestException('User not found');
     if (opts?.roleGrant) await assertPersonWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, id);
@@ -1345,6 +1358,7 @@ export class UsersService {
     opts?: { manager?: EntityManager; commitThenRun?: CommitThenRunFn; signIn?: InviteSignIn; roleGrant?: RoleGrantActor },
   ) {
     const repo = this.getRepo(opts?.manager);
+    await lockPeople(opts?.manager ?? repo.manager, [id]);
     const user = await repo.findOne({ where: { id }, relations: ['role'] });
     if (!user) throw new BadRequestException('User not found');
     // The invitation opens the account: not for a person who has more rights than the one inviting.

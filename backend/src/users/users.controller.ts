@@ -31,6 +31,7 @@ import {
   assertKeepsAnActiveAdministrator,
   assertPersonWithinActorRights,
   assertRoleGrantWithinActorRights,
+  lockPeople,
   personAboveActorRights,
   type PersonChange,
   roleGrantActorOf,
@@ -179,6 +180,8 @@ export class UsersController {
     const has = (field: string) => !!body && Object.prototype.hasOwnProperty.call(body, field);
     // `role_ids`: all the roles of the person, set with the profile in the same request (the user
     // dialog saves both at once, or neither). Read and checked before anything is written.
+    // The person's row is locked before their rights are read (see lockPeople).
+    await lockPeople(manager, [userId]);
     const roleList = canManageUsers && has('role_ids') ? await this.readRoleList(userId, body.role_ids, req) : null;
     // A person does not change a person who has more rights than they do (their own profile aside).
     if (canManageUsers && userId !== req.user?.sub) {
@@ -391,6 +394,8 @@ export class UsersController {
   ) {
     const userId = userIdParam(id);
     const manager = req?.queryRunner?.manager;
+    // The person's row is locked before their rights are read (see lockPeople).
+    await lockPeople(manager ?? this.userRoleRepo.manager, [userId]);
     const list = await this.readRoleList(userId, body?.role_ids, req);
 
     // A person does not change the roles of a person who has more rights than they do, and a role
