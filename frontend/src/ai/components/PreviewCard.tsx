@@ -355,7 +355,9 @@ function PreviewCard({
             flexWrap="wrap"
             sx={stickyActions ? (theme) => ({
               position: 'sticky',
-              bottom: 0,
+              // A sticky box stops at the scroller's padding: the panel's bottom padding (1.5) is taken back,
+              // so the row reaches the bottom edge and nothing of the card shows under it.
+              bottom: theme.spacing(-1.5),
               zIndex: 1,
               // Across the card's inner width, on its own background, so the rows scrolling under it stay hidden.
               mx: -1.75,

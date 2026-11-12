@@ -120,7 +120,8 @@ describe('ArtifactPanel', () => {
     );
     const actions = screen.getByRole('button', { name: 'ai:previewCard.approve' }).parentElement!;
     expect(actions).toContainElement(screen.getByRole('button', { name: 'ai:previewCard.reject' }));
-    expect(actions).toHaveStyle({ position: 'sticky', bottom: '0px' });
+    // It reaches the bottom edge of the panel: the scroller's bottom padding (12px) is taken back.
+    expect(actions).toHaveStyle({ position: 'sticky', bottom: '-12px' });
     expect(getComputedStyle(actions).backgroundColor).not.toBe('');
   });
 });
