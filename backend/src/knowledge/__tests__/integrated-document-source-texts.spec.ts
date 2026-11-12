@@ -5,7 +5,8 @@ import { applicationCsvConfig } from '../../applications/application-csv.config'
 import { ApplicationsCrudService } from '../../applications/services/applications-crud.service';
 import { InterfacesCrudService } from '../../interfaces/services/interfaces-crud.service';
 import { DEFAULT_CLASSIFICATION_CATALOG } from '../../it-ops-settings/classification-catalog';
-import { MARKDOWN_MAX_BYTES, MARKDOWN_TOO_LARGE } from '../../common/markdown-limits';
+import type { CsvImportContext } from '../../common/csv/csv-field.types';
+import { MARKDOWN_HTML_NOT_ALLOWED, MARKDOWN_MAX_BYTES, MARKDOWN_TOO_LARGE } from '../../common/markdown-limits';
 import { closeMarkdownWorkers, interfaceSpecificationMarkdown } from '../../common/markdown-worker';
 import { interfaceSpecificationMarkdown as interfaceSpecificationMarkdownInProcess } from '../integrated-document-markdown';
 
@@ -90,9 +91,11 @@ async function testApplicationDescriptionIsLimitedOnWrite() {
 async function testApplicationCsvDescriptionIsLimited() {
   const field = applicationCsvConfig.fields.find((candidate) => candidate.csvColumn === 'description');
   assert.ok(field?.importTransformFn, 'the description column has an import transform');
-  const transform = field.importTransformFn as (value: string) => unknown;
-  assert.equal(transform(AT_LIMIT), AT_LIMIT);
+  // The cell is checked as a write of the field, in the Markdown workers: the transform is asynchronous.
+  const transform = (value: string) => field.importTransformFn!(value, {}, {} as CsvImportContext);
+  assert.equal(await transform(AT_LIMIT), AT_LIMIT.trim());
   assert.equal(await outcomeOf(async () => transform(TOO_LONG)), MARKDOWN_TOO_LARGE);
+  assert.equal(await outcomeOf(async () => transform('| a |\n|---|\n| <div>b</div> |')), MARKDOWN_HTML_NOT_ALLOWED);
 }
 
 function interfacesService(existing: Record<string, unknown>) {

@@ -1,6 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
-import { inspectMarkdownContent, isAllowedMarkdownHtmlSnippet } from './html-to-markdown';
-import { assertMarkdownSize, MARKDOWN_MAX_BYTES, markdownTooLargeError } from './markdown-limits';
+import { escapeRefusedHtml, inspectMarkdownContent } from './html-to-markdown';
+import {
+  assertMarkdownSize,
+  MARKDOWN_MAX_BYTES,
+  markdownHtmlNotAllowedError,
+  markdownLinkNotAllowedError,
+  markdownTooLargeError,
+} from './markdown-limits';
 
 /**
  * Checks of a Markdown content with the Markdown parser. Runs in the Markdown
@@ -11,10 +17,17 @@ import { assertMarkdownSize, MARKDOWN_MAX_BYTES, markdownTooLargeError } from '.
 type NormalizeMarkdownRichTextOptions = {
   fieldName?: string;
   /**
-   * False for server-side processing of contents already stored (copies,
-   * backfills, repairs, verification), which keep whatever size they had.
+   * True for server-side processing of contents already stored (copies,
+   * backfills, repairs, verification): they keep whatever size and HTML tags
+   * they had. Only a write is held to the size limit and to the accepted tags.
    */
-  enforceSizeLimit?: boolean;
+  storedContent?: boolean;
+  /**
+   * True for a text an automatic import reads from another system (a ticket):
+   * nobody is there to correct it, so a tag outside the accepted list is kept as
+   * text (`escapeRefusedHtml`) instead of refusing the write.
+   */
+  thirdPartyText?: boolean;
 };
 
 export function normalizeMarkdownRichText(
@@ -22,26 +35,26 @@ export function normalizeMarkdownRichText(
   opts?: NormalizeMarkdownRichTextOptions,
 ): string | null {
   if (value == null) return null;
-  const text = String(value).trim();
+  let text = String(value).trim();
   if (!text) return null;
   const field = opts?.fieldName || 'content';
 
-  const enforceSizeLimit = opts?.enforceSizeLimit !== false;
-  if (enforceSizeLimit) {
+  const isWrite = opts?.storedContent !== true;
+  if (isWrite) {
     assertMarkdownSize(text, field);
   }
 
-  const { rawHtmlSnippets, hasInlineDataImage } = inspectMarkdownContent(text);
-  const disallowedHtml = rawHtmlSnippets.filter((snippet) => !isAllowedMarkdownHtmlSnippet(snippet));
-  if (disallowedHtml.length > 0) {
-    const example = disallowedHtml[0]
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 120);
-    throw new BadRequestException(
-      `${field} must be Markdown. Raw HTML is not allowed outside code blocks or inline code. ` +
-      `Wrap HTML examples in backticks. Example: ${example}`,
-    );
+  let { refusedHtml, refusedAddresses, hasInlineDataImage } = inspectMarkdownContent(text);
+  if (isWrite && refusedHtml.length > 0 && opts?.thirdPartyText === true) {
+    text = escapeRefusedHtml(text);
+    ({ refusedHtml, refusedAddresses, hasInlineDataImage } = inspectMarkdownContent(text));
+  }
+  if (isWrite && refusedHtml.length > 0) {
+    // The first thing the text holds that a write refuses: a tag, or a link for its address.
+    const first = refusedHtml[0];
+    throw refusedAddresses.includes(first)
+      ? markdownLinkNotAllowedError(field, first)
+      : markdownHtmlNotAllowedError(field, first);
   }
 
   if (hasInlineDataImage) {
@@ -51,7 +64,7 @@ export function normalizeMarkdownRichText(
   }
 
   // Image payloads only leave the count when the parser sees an inline image (refused just above).
-  if (enforceSizeLimit) {
+  if (isWrite) {
     const size = Buffer.byteLength(text, 'utf8');
     if (size > MARKDOWN_MAX_BYTES) throw markdownTooLargeError(field, size);
   }

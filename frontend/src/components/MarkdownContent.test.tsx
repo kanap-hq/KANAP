@@ -141,7 +141,29 @@ describe('isKanapImageSource', () => {
   });
 });
 
+describe('MarkdownContent elements of a rich text', () => {
+  it('renders the underline, subscript and superscript the editor writes', () => {
+    const { container } = renderMarkdown('<u>souligné</u> H<sub>2</sub>O x<sup>2</sup>');
+
+    expect(container.querySelector('u')?.textContent).toBe('souligné');
+    expect(container.querySelector('sub')?.textContent).toBe('2');
+    expect(container.querySelector('sup')?.textContent).toBe('2');
+  });
+});
+
 describe('MarkdownContent links', () => {
+  it('opens a phone number', () => {
+    renderMarkdown('[appeler](tel:+33123456789)');
+
+    expect(screen.getByRole('link', { name: 'appeler' })).toHaveAttribute('href', 'tel:+33123456789');
+  });
+
+  it.each(['sms:+33123456789', 'ftp://exemple.test/a'])('gives a link to %s no address', (address) => {
+    const { container } = renderMarkdown(`[lien](${address})`);
+
+    expect(container.querySelector('a')?.getAttribute('href') ?? '').toBe('');
+  });
+
   it('keeps a relative link to a page of the application', () => {
     // How the assistant cites a record without a business reference (its `page_url`).
     renderMarkdown('Renew [SAP Maintenance & Support](/ops/contracts/11111111-1111-4111-8111-111111111111) before May.', {

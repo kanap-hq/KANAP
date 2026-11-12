@@ -171,7 +171,7 @@ export class PortfolioStatusService extends PortfolioProjectsBaseService {
     }
 
     const oldContent = activity.content;
-    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content' });
+    activity.content = await normalizeMarkdownRichText(content, { fieldName: 'content', storedValue: oldContent });
     activity.updated_at = new Date();
 
     const saved = await activityRepo.save(activity);

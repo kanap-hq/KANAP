@@ -9,7 +9,7 @@ import { allocateItemNumbers } from '../common/item-number.service';
 import { parseItemNumber } from '../common/parse-item-number';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
-import { sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
+import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, isReservedIncidentStatusMove } from './incident.entity';
 import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibility';
 
@@ -534,6 +534,8 @@ export const incidentCsvConfig: CsvEntityConfig = {
    * contributor gets a row error, with the INC-N reference, in both the preflight and the load.
    */
   afterValidate: async (rows, context) => {
+    // A review cell that repeats its document is kept as stored, whatever tags it holds.
+    await keepStoredSlotBodies(rows, context, 'incidents', { [REVIEW_ENTITY_PROPERTY]: 'review' });
     const viewer = importViewer(context);
     for (const row of rows) {
       for (const column of ['personal_data_affected', 'authority_notification_required']) {

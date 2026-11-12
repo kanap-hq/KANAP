@@ -132,13 +132,13 @@ async function testNormalContentsGiveTheSameResultAsInProcess() {
   for (const text of [...samples, ...pages]) {
     let expected: unknown;
     try {
-      expected = normalizeInProcess(text, { fieldName: 'content', enforceSizeLimit: false });
+      expected = normalizeInProcess(text, { fieldName: 'content', storedContent: true });
     } catch (error) {
       expected = (error as BadRequestException).getResponse();
     }
     let actual: unknown;
     try {
-      actual = await normalizeMarkdownRichText(text, { fieldName: 'content', enforceSizeLimit: false });
+      actual = await normalizeMarkdownRichText(text, { fieldName: 'content', storedContent: true });
     } catch (error) {
       actual = (error as BadRequestException).getResponse();
     }
@@ -151,7 +151,22 @@ async function testNormalContentsGiveTheSameResultAsInProcess() {
 }
 
 async function testContentRulesAreTheSame() {
-  assert.equal(await outcomeOf(() => normalizeMarkdownRichText('<div>raw</div>')), 'HTTP_400');
+  assert.equal(await outcomeOf(() => normalizeMarkdownRichText('<div>raw</div>')), 'MARKDOWN_HTML_NOT_ALLOWED');
+  const inCell = '| a |\n|---|\n| <div>raw</div> |';
+  assert.equal(await outcomeOf(() => normalizeMarkdownRichText(inCell)), 'MARKDOWN_HTML_NOT_ALLOWED');
+  assert.equal(await outcomeOf(() => normalizeMarkdownWithSearchText(inCell)), 'MARKDOWN_HTML_NOT_ALLOWED');
+  // A write that repeats the stored text is processed as stored content; any other text is a write.
+  assert.equal(await normalizeMarkdownRichText(inCell, { storedValue: `${inCell}\n` }), inCell);
+  assert.deepEqual(
+    await normalizeMarkdownWithSearchText(inCell, { storedValue: inCell }),
+    await normalizeMarkdownWithSearchText(inCell, { storedContent: true }),
+  );
+  for (const storedValue of [null, undefined, '', `${inCell} `.replace('raw', 'other')]) {
+    assert.equal(
+      await outcomeOf(() => normalizeMarkdownRichText(inCell, { storedValue })),
+      'MARKDOWN_HTML_NOT_ALLOWED',
+    );
+  }
   assert.equal(
     await outcomeOf(() => normalizeMarkdownRichText(fill('Une phrase. ', MARKDOWN_MAX_BYTES + 1))),
     'MARKDOWN_TOO_LARGE',
@@ -206,7 +221,7 @@ async function testLongTaskListsAreAccepted() {
 async function testStoredContentsFallBackToReadableText() {
   const slow = fill('_a ', 250 * 1024);
   // A stored content (no size limit) the workers cannot read in time is kept as it is.
-  assert.equal(await normalizeMarkdownRichText(slow, { enforceSizeLimit: false }), slow.trim());
+  assert.equal(await normalizeMarkdownRichText(slow, { storedContent: true }), slow.trim());
   // An email of such a content shows it as plain text.
   const { result, ticks } = await withMainThreadProbe(() => renderMarkdownEmailHtml(slow));
   assert.equal(result, renderPlainTextEmailHtml(slow));
@@ -386,7 +401,7 @@ async function testOneCallPerDocumentSave() {
   const saved = await normalizeMarkdownWithSearchText(text);
   assert.equal(saved.content, text.trim());
   const slow = fill('_a ', 250 * 1024);
-  assert.deepEqual(await normalizeMarkdownWithSearchText(slow, { enforceSizeLimit: false }), { content: slow.trim(), searchText: slow.replace(/\s+/g, ' ').trim() });
+  assert.deepEqual(await normalizeMarkdownWithSearchText(slow, { storedContent: true }), { content: slow.trim(), searchText: slow.replace(/\s+/g, ' ').trim() });
   // The save does the work of two calls, with the budget of two.
   const refused = await timedOutcome(() => normalizeMarkdownWithSearchText(fill('_a ', 100 * 1024)));
   assert.equal(refused.outcome, MARKDOWN_TOO_COMPLEX);

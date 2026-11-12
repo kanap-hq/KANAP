@@ -40,7 +40,7 @@ async function run() {
     assert.equal(markdownWorkersStatus(), 'unavailable');
     assert.equal(await codeOf(() => normalizeMarkdownRichText('**text**')), `503 ${MARKDOWN_UNAVAILABLE}`);
     assert.equal(
-      await codeOf(() => normalizeMarkdownRichText('**stored**', { enforceSizeLimit: false })),
+      await codeOf(() => normalizeMarkdownRichText('**stored**', { storedContent: true })),
       `503 ${MARKDOWN_UNAVAILABLE}`,
     );
     assert.equal(await renderMarkdownEmailHtml('**text**'), renderPlainTextEmailHtml('**text**'));

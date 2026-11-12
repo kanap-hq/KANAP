@@ -9972,6 +9972,16 @@ async function testAgentControlQueueOverviewReturnsLinkedActionRequests() {
   const internalActionId = randomUUID();
   const publicActionId = randomUUID();
   const classificationActionId = randomUUID();
+  // The agent's run that prepared the three actions: they are read in full through it.
+  await manager.getRepository(AiRun).save(manager.getRepository(AiRun).create({
+    id: 'run-ticket-4',
+    tenant_id: context.tenantId,
+    user_id: null,
+    invocation_channel: 'internal',
+    trigger_kind: 'internal',
+    status: 'completed',
+    metadata_json: { agent_definition_id: seeded.definition.id },
+  }));
 
   await actionRepo.save(actionRepo.create({
     id: internalActionId,
