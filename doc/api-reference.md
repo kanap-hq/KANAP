@@ -1484,7 +1484,7 @@ What a contract is expected to hold, and what was recorded (`backend/src/contrac
 - CAPEX side: GET `/capex-items/:id/contracts` and POST `/capex-items/:id/contracts/bulk-replace` with `{ contract_ids: string[] }`
 
 ### Replacing linked records needs a read of their module
-A POST that replaces the links to records of another module, even with an empty list, needs a read of that module, as the Relations tab: otherwise `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and `reader`), before anything is read or written. An administrator passes. The assistant's relation writes follow the same rule.
+A POST that replaces the links to records of another module, even with an empty list, needs a read of that module, as the Relations tab: otherwise `403` `LINKED_MODULE_NOT_READABLE` (`params.resources`: the module), as on a document's links, before anything is read or written. An administrator passes. The assistant's relation writes follow the same rule. A Business Contributor links only projects they take part in (`403` `OUTSIDE_PARTICIPATION`), and a replacement of an application's projects keeps the links to projects they do not see; its answer lists the projects they read.
 - `/applications/:id/spend-items|capex-items/bulk-replace` and `/assets/:id/spend-items|capex-items`: `budget`.
 - `/applications/:id/contracts/bulk-replace`, `/assets/:id/contracts`, `/spend-items/:id/contracts/bulk-replace` and `/capex-items/:id/contracts/bulk-replace`: `contracts`.
 - `/applications/:id/projects/bulk-replace`, `/assets/:id/projects/bulk-replace`, `/spend-items/:id/projects/bulk-replace` and `/capex-items/:id/projects/bulk-replace`: `portfolio_projects`.
@@ -1590,6 +1590,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - POST `/portfolio/projects/:projectId/tasks/:taskId/time-entries` — create project-task time entry **[Requires: portfolio_projects:contributor]**
 - PATCH `/portfolio/projects/:projectId/tasks/:taskId/time-entries/:entryId` — update project-task time entry **[Requires: portfolio_projects:contributor]**
 - DELETE `/portfolio/projects/:projectId/tasks/:taskId/time-entries/:entryId` — delete project-task time entry **[Requires: portfolio_projects:contributor]**
+- A time entry is changed by the address of its own project or task: PATCH and DELETE of `/portfolio/projects/:id/time-entries/:entryId` and of `/portfolio/projects/:projectId/tasks/:taskId/time-entries/:entryId` answer `404` for an entry of another project or task, and change nothing.
 - DELETE `/tasks/bulk` — bulk delete `{ ids: string[] }` → `{ deleted: string[], failed: { id, name, reason }[] }` **[Requires: tasks:admin]**
 
 ## Portfolio Requests
@@ -1971,6 +1972,8 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Password is optional; most flows leave it empty and rely on the invite/password-reset pipeline.
   - `role_id` preferred; falls back to `role_name` (defaults to system `Contact`). A `role_name` that is a system role's name in another case (`administrator`) names that system role.
   - A person who is not an administrator gives only the rights they hold: on POST `/users`, PATCH `/users/:id` (`role_id`), PUT `/users/:id/roles` and the users import, a role that is not already the person's and grants a module level above the caller's is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level), and the Administrator role is `403` `administrator_required`. Nothing is written.
+  - A person who is not an administrator changes no person who has more rights than they do (the Administrator role, or a module level above theirs, all roles counted): PATCH `/users/:id`, PUT `/users/:id/roles`, POST `/users/:id/enable|disable|invite`, PUT `/users/:id/data-access` are `403` `PERSON_ABOVE_OWN_RIGHTS`; DELETE `/users/:id`, DELETE `/users/bulk` and POST `/users/delete-check` report the refusal `PERSON_ABOVE_OWN_RIGHTS`; a row of POST `/users/import` or POST `/data-access/import` about such a person is refused with that code. One's own profile is not limited.
+  - A workspace keeps at least one enabled Administrator: taking the role away from the last one (PUT `/users/:id/roles`, PATCH `/users/:id` `role_id`), disabling them (POST `/users/:id/disable`, PATCH `status`), deleting them, or an import row doing so is `409` `LAST_ADMINISTRATOR` (a delete refusal, an import row error) and nothing is written.
   - `status` defaults to `enabled`; a user limit, when set on the tenant's plan, is enforced when saving with `status='enabled'`.
 - POST `/users/:id/enable` → sets user `status='enabled'`
   - Requires: users:admin level
@@ -1994,13 +1997,13 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 ## Roles (Admin)
 - GET `/roles` → `{ items: Role[] }` (includes `user_count` and `is_system`)
 - POST `/roles` → create role `{ role_name, role_description }` (admin only)
-  - The names of the system roles (`Administrator`, `Contact`) are theirs: another role named so in any case or with surrounding spaces, by POST `/roles`, a duplicate or PUT `/roles/:id`, is `400` `Role name must be unique` and nothing is written. The exact name returns the system role.
+  - The names of the system roles (`Administrator`, `Contact`) are theirs: another role named so in any case or with surrounding spaces, by POST `/roles`, a duplicate or PUT `/roles/:id`, is `400` `Role name must be unique` and nothing is written. POST `/roles` with the exact name of a system or built-in role is `400` and changes nothing; the exact name of another role returns it.
 - DELETE `/roles/:id` → delete role (no users assigned, not system)
 - GET `/roles/:id/permissions` → returns per-page permission levels for the role
   - Example: `{ companies: 'manager', suppliers: null, ... }`
 - PUT `/roles/:id/permissions` → sets per-page permission levels for the role
   - Body: `{ permissions: { [resource]: 'reader'|'manager'|'admin'|null } }`
-  - A caller who is not an administrator raises a level only up to their own: a higher one is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level) and nothing is written. Lowering a level is not limited.
+  - A caller who is not an administrator raises a level only up to their own: a higher one is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level) and nothing is written. Lowering a level is not limited. The `tasks: reader` added with a right on budget, projects or contracts is added only when the caller reads tasks.
   - `budget` covers every budget line, OPEX and CAPEX alike (lot R, migration `1853990000000`, which gave each role the higher of its former effective `opex` and `capex` levels: a `manager` row, which opened nothing, still opens nothing). The former names are aliases of `budget`: a row still named `opex` or `capex` (a tenant export or a database of before) is read as `budget` at the higher level; in a PUT, the keys that name `budget` are merged at the highest level given, a `null` removes the right only when every key naming it is `null`, and the rows of the former names are replaced. `GET /roles/:id/permissions` and `GET /auth/me` answer `budget`, never `opex` or `capex`
   - Note: `Administrator` and `Contact` are system-locked; the former is always full access, the latter cannot be granted access or login
 
