@@ -2714,6 +2714,8 @@
         "leg": "Leg: {{type}}"
       },
       "untitled": "Untitled connection",
+      "notFound": "Connection not found.",
+      "backToList": "Back to the list",
       "previous": "Previous connection",
       "next": "Next connection",
       "viewInMap": "View in map",
