@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { isRedirectStatus, sameOriginRedirectFetch } from '../../common/outbound-redirects';
 import { openValidatedFetch } from '../../common/pinned-fetch';
-import { Features } from '../../config/features';
 import {
   PrtgApiError,
   PrtgConnection,
@@ -348,8 +348,8 @@ export class PrtgService {
     // SSRF guard: block internal targets in multi-tenant cloud (no-op on-prem where
     // a private PRTG base URL is legitimate). DNS-checked at request time, not only at
     // config save, and the connection then goes to the validated addresses only;
-    // redirect:'error' in cloud additionally stops a public host 302-ing to an
-    // internal one after this check. The connection is released once the body is read.
+    // a redirect is followed on-prem only when it stays on the same origin
+    // (outbound-redirects.ts). The connection is released once the body is read.
     const target = await openValidatedFetch(url);
     try {
       return await this.readJson(target.fetch, url, endpoint, timeoutMs);
@@ -359,9 +359,8 @@ export class PrtgService {
   }
 
   private async readJson(boundFetch: typeof fetch, url: string, endpoint: string, timeoutMs: number): Promise<unknown> {
-    // Default fetch: a redirect is an error in cloud (followed on-prem).
-    const fetchImpl: PrtgFetchLike = this.fetchImpl
-      ?? ((input, init) => boundFetch(input, { ...init, redirect: Features.SINGLE_TENANT ? 'follow' : 'error' }));
+    // A redirect to another origin is never followed: the credential sits in the query.
+    const fetchImpl = sameOriginRedirectFetch((this.fetchImpl ?? boundFetch) as typeof fetch);
     let response: Response;
     try {
       response = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
@@ -374,6 +373,13 @@ export class PrtgService {
         'provider_unavailable',
         `PRTG ${endpoint} request failed: ${sanitizePrtgText(String(error?.message || error || 'request failed'))}`,
         true,
+      );
+    }
+    if (isRedirectStatus(response.status)) {
+      await response.body?.cancel().catch(() => undefined);
+      throw new PrtgApiError(
+        'invalid_response',
+        `PRTG ${endpoint} answered with a redirect (HTTP ${response.status}), which is not followed. Enter the address the PRTG web server is actually served on.`,
       );
     }
     const raw = await response.text();

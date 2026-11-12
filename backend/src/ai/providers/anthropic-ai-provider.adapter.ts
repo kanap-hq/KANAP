@@ -10,7 +10,7 @@ import {
 } from './ai-provider.types';
 import { isAbortError, parseToolCallArguments } from './streaming.util';
 import { LlmCacheCostFactors } from '../ai-llm-cost.util';
-import { describeProviderError, providerFetchOptions, toProviderError } from './provider-http.util';
+import { describeProviderError, providerFetch, toProviderError } from './provider-http.util';
 import { anthropicModelSupportsEffort, reasoningEffortToSend } from './reasoning-effort.capability';
 
 // Which models take which effort lives in reasoning-effort.capability.ts; a level the model does
@@ -80,12 +80,11 @@ export class AnthropicAiProviderAdapter implements AiProviderAdapter {
       return;
     }
 
-    const fetchOptions = providerFetchOptions();
     const client = new Anthropic({
       apiKey: params.apiKey || '',
       timeout: params.timeoutMs ?? 120_000,
       maxRetries: params.maxRetries ?? 2,
-      ...(fetchOptions ? { fetchOptions } : {}),
+      fetch: providerFetch(),
     });
 
     const messages: Anthropic.MessageParam[] = [];
