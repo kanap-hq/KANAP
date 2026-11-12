@@ -4526,14 +4526,11 @@ export class AiAgentControlService {
       }
       const knowledgeItems: KnowledgeSearchItem[] = [];
       const seenKnowledgeRefs = new Set<string>();
-      // Documents found by relevance first; a whole-word fallback result only fills what remains.
-      const rankedFirst = (attempt: { items: KnowledgeSearchItem[] }) => [
-        ...attempt.items.filter((item) => item.fallback !== true),
-        ...attempt.items.filter((item) => item.fallback === true),
-      ];
-      for (const attempt of [...knowledgeAttempts].sort((left, right) =>
-        Number(left.items.every((item) => item.fallback === true)) - Number(right.items.every((item) => item.fallback === true)))) {
-        for (const item of rankedFirst(attempt)) {
+      for (const attempt of knowledgeAttempts) {
+        for (const item of attempt.items) {
+          // No interpreter judges the documents here: a result of the whole-word fallback is
+          // never a source of the diagnosis.
+          if (item.fallback === true) continue;
           if (knowledgeItems.length >= MAX_MONITORING_KNOWLEDGE_DOCUMENTS) break;
           const ref = knowledgeDocumentRef(item);
           if (!ref || seenKnowledgeRefs.has(ref.toLocaleLowerCase())) continue;
