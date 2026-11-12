@@ -153,7 +153,7 @@ Empty directory values never clear data already in Kadratis.
 
 Disabling an account signs the person out immediately and blocks any further sign-in. Their data and history are kept.
 
-The workspace's last active administrator stays active, even when the directory removed or deactivated them, and the block names them: **Account kept active (last administrator): {name}**. One sync runs at a time per workspace: while one runs, **Sync now** does nothing and shows **A sync is already running.**
+The workspace's last active administrator stays active, even when the directory removed or deactivated them, and the block names them: **Account kept active (last administrator): {name}**. Their account becomes a local account, out of the sync from then on: **Forgot password** on the sign-in page sends them a link to set a password. Without e-mail configured, set it as described in [Password Reset](operations.md#password-reset). One sync runs at a time per workspace: while one runs, **Sync now** does nothing and shows **A sync is already running.**
 
 
 The block on **Admin → Authentication** reports the outcome: **Last synced {date}: N accounts refreshed, N disabled.** after a successful run, or **The last sync failed: {message}** otherwise. **Sync now** runs the same job on demand.

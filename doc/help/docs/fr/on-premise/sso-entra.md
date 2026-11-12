@@ -152,7 +152,7 @@ Une valeur vide dans l'annuaire n'efface jamais une donnée déjà présente dan
 
 La désactivation d'un compte déconnecte immédiatement la personne et bloque toute nouvelle connexion. Ses données et son historique sont conservés.
 
-Le dernier administrateur actif de l'espace de travail reste actif, même quand l'annuaire l'a supprimé ou désactivé, et le bloc le nomme : **Compte gardé actif (dernier administrateur) : {nom}**. Une seule synchronisation tourne à la fois par espace de travail : pendant qu'elle tourne, **Synchroniser maintenant** ne fait rien et affiche **Une synchronisation est déjà en cours.**
+Le dernier administrateur actif de l'espace de travail reste actif, même quand l'annuaire l'a supprimé ou désactivé, et le bloc le nomme : **Compte gardé actif (dernier administrateur) : {nom}**. Son compte devient un compte local, que la synchronisation ne touche plus : **Mot de passe oublié** sur la page de connexion lui envoie un lien pour définir un mot de passe. Sans e-mail configuré, définissez-le comme décrit dans [Réinitialisation du mot de passe](operations.md#reinitialisation-du-mot-de-passe). Une seule synchronisation tourne à la fois par espace de travail : pendant qu'elle tourne, **Synchroniser maintenant** ne fait rien et affiche **Une synchronisation est déjà en cours.**
 
 
 Le bloc de **Administration → Authentification** indique le résultat : **Dernière synchronisation {date} : N comptes actualisés, N désactivés.** après une exécution réussie, ou **La dernière synchronisation a échoué : {message}** sinon. **Synchroniser maintenant** lance la même tâche à la demande.
