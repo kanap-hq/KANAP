@@ -4320,7 +4320,7 @@ export class KnowledgeService {
     // sends write nothing and need no read.
     if (userId) {
       const writes = Object.fromEntries(Object.entries(relationWritesOf(body?.relations)).filter(([, ids]) => (ids ?? []).length > 0));
-      await this.assertRelationWriteAllowed(saved.id, writes, manager, userId);
+      await this.assertRelationWriteAllowed(writes, manager, userId);
     }
     await this.applyDocumentRelations(saved.id, body?.relations, manager);
 
@@ -4821,7 +4821,7 @@ export class KnowledgeService {
 
     await this.assertIntegratedDocumentUpdateRestrictions(existing, body, manager);
     // The links in the body follow the rule of the document's link routes (module read, participation).
-    await this.assertRelationWriteAllowed(existing.id, relationWritesOf(body?.relations), manager, userId);
+    await this.assertRelationWriteAllowed(relationWritesOf(body?.relations), manager, userId);
 
     const before = { ...existing };
 
@@ -5898,16 +5898,14 @@ export class KnowledgeService {
   /**
    * A write of a document's links (`writes`: each family the request sets, even empty, with its ids)
    * touches only the families the person reads, as `get` shows them: another family would be
-   * replaced unseen. A family left out of the request stays as it is. A Business Contributor adds
-   * only records inside their participation, and removes only links to them (`remove`: the ids
-   * named leave, nothing is added): another record answers as on an addition.
+   * replaced unseen. A family left out of the request stays as it is. A Business Contributor names
+   * only records inside their participation, to add, keep or remove a link: another record answers
+   * the same, linked or not, and the links they do not see stay as they are.
    */
   async assertRelationWriteAllowed(
-    documentId: string,
     writes: Partial<Record<RelationEntityType, string[]>>,
     manager: EntityManager,
     userId: string | null,
-    mode: 'set' | 'remove' = 'set',
   ): Promise<void> {
     const families = Object.keys(writes) as RelationEntityType[];
     if (families.length === 0) return;
@@ -5929,20 +5927,8 @@ export class KnowledgeService {
       if (!resource || !map || ids.length === 0) continue;
       const scope = await resolveBusinessContributorScopeForUser({ manager, userId }, resource, 'reader');
       if (!scope) continue;
-      let named = ids;
-      if (mode === 'set') {
-        const linked: Array<{ id: string }> = await manager.query(
-          `SELECT ${map.idColumn}::text AS id
-           FROM ${map.table}
-           WHERE document_id = $1
-             AND tenant_id = app_current_tenant()`,
-          [documentId],
-        );
-        const current = new Set(linked.map((row) => row.id));
-        named = ids.filter((id) => !current.has(id));
-      }
-      const visible = await idsInScope(manager, family as keyof typeof KNOWLEDGE_SOURCE_SCOPES, named, scope);
-      if (named.some((id) => !visible.has(id))) {
+      const visible = await idsInScope(manager, family as keyof typeof KNOWLEDGE_SOURCE_SCOPES, ids, scope);
+      if (ids.some((id) => !visible.has(id))) {
         throw outsideParticipation(family, `You can only link ${family} you take part in to this document.`);
       }
     }

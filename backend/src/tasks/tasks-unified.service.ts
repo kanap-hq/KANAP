@@ -188,16 +188,15 @@ export class TasksUnifiedService {
     );
     const existingIds = existingRows.map((row) => row.id);
     const existingSet = new Set(existingIds);
-    // A Business Contributor adds only applications of their participation (another answers as a
-    // missing one) and keeps the links to the applications they do not read.
+    // A Business Contributor names only applications of their participation: another answers as a
+    // missing one, linked or not. The links to the applications they do not read stay.
     const scope = params.targetTable === 'applications' && params.userId
       ? await linkedParticipationScope(params.manager, params.userId, tenantId, 'applications')
       : undefined;
     let unseenKept = new Set<string>();
     if (scope) {
-      const added = ids.filter((id) => !existingSet.has(id));
-      const visible = await idsInScope(params.manager, 'applications', added, scope);
-      const unseen = added.filter((id) => !visible.has(id));
+      const visible = await idsInScope(params.manager, 'applications', ids, scope);
+      const unseen = ids.filter((id) => !visible.has(id));
       if (unseen.length > 0) throw new BadRequestException(`Invalid ${params.fieldName}: ${unseen.join(', ')}`);
       const kept = await linksOutsideScope(params.manager, 'applications', existingIds, scope);
       ids = Array.from(new Set([...ids, ...kept]));
