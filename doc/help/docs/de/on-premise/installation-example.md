@@ -389,7 +389,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml pull
 docker compose -f infra/compose.onprem.yml up -d --wait
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[(entrypoint|VERSION|ENV|CONFIG|SECRETS|RATE-LIMIT|CORS|DB|on-prem|SECURITY|DATA-ACCESS|markdown|cluster|shutdown)\]|WARN|ERROR|successfully started|Email transport'
 ```
 
 Erreicht `pull` `ghcr.io` nicht, öffnen Sie den ausgehenden Zugang der [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades), oder [bauen Sie die Images selbst](installation.md#build-the-images-yourself).
@@ -692,4 +692,4 @@ curl -sSk -w '\n' "$(grep '^APP_BASE_URL=' .env | cut -d= -f2-)/api/config/publi
 
 Prüfen Sie PostgreSQL mit `pg_lsclusters`. `systemctl status postgresql` bleibt `active`, auch wenn der Cluster nicht läuft. Das Feld `version` der letzten Antwort ist die Version, die die API meldet.
 
-Um Kadratis zu aktualisieren, folgen Sie dem [Upgrade-Verfahren](operations.md#upgrade-verfahren): Lesen Sie das Changelog, sichern Sie, dann `git pull origin stable`, `pull` und `up -d`.
+Um Kadratis zu aktualisieren, folgen Sie dem [Upgrade-Verfahren](operations.md#upgrade-verfahren): Holen Sie die neue Version mit ihren Tags (`git fetch --tags origin stable`), lesen Sie das Changelog, sichern Sie, dann `git pull origin stable`, `pull` und `up -d`.

@@ -389,7 +389,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml pull
 docker compose -f infra/compose.onprem.yml up -d --wait
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[(entrypoint|VERSION|ENV|CONFIG|SECRETS|RATE-LIMIT|CORS|DB|on-prem|SECURITY|DATA-ACCESS|markdown|cluster|shutdown)\]|WARN|ERROR|successfully started|Email transport'
 ```
 
 If `pull` cannot reach `ghcr.io`, open the outbound access of [Firewall rules](configuration.md#outbound-installation-and-upgrades), or [build the images yourself](installation.md#build-the-images-yourself).
@@ -692,4 +692,4 @@ curl -sSk -w '\n' "$(grep '^APP_BASE_URL=' .env | cut -d= -f2-)/api/config/publi
 
 Check PostgreSQL with `pg_lsclusters`. `systemctl status postgresql` stays `active` even when the cluster is down. The `version` field of the last answer is the version the API reports.
 
-To update Kadratis, follow the [upgrade procedure](operations.md#upgrade-procedure): read the changelog, back up, then `git pull origin stable`, `pull` and `up -d`.
+To update Kadratis, follow the [upgrade procedure](operations.md#upgrade-procedure): fetch the new version with its tags (`git fetch --tags origin stable`), read the changelog, back up, then `git pull origin stable`, `pull` and `up -d`.

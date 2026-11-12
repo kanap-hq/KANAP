@@ -13,13 +13,15 @@ Die `curl`-Befehle auf dieser Seite verwenden `-k`. Sie prüfen, was Kadratis an
 
 Kadratis veröffentlicht etwa einmal im Monat eine neue Version. Der Branch `stable` zeigt immer auf die neueste veröffentlichte Version. Jede Version hat einen Eintrag in `CHANGELOG.md` im Wurzelverzeichnis des Repositorys. Ein Eintrag, der etwas von Ihnen verlangt (eine zu ändernde Einstellung, ein auszuführender Schritt), trägt "Action required" im Titel.
 
-**1. Lesen Sie das Changelog vor dem Pull.** Holen Sie den neuen Stand von `stable` und zeigen Sie nur die Einträge an, die Sie noch nicht haben. Lesen Sie die mit "Action required" markierten Einträge zuerst und tun Sie, was sie verlangen. Dieselben Einträge stehen auf der GitHub-Release-Seite des Repositorys.
+**1. Lesen Sie das Changelog vor dem Pull.** Holen Sie den neuen Stand von `stable` mit den Versions-Tags und zeigen Sie nur die Einträge an, die Sie noch nicht haben. Lesen Sie die mit "Action required" markierten Einträge zuerst und tun Sie, was sie verlangen. Dieselben Einträge stehen auf der GitHub-Release-Seite des Repositorys.
 
 ```bash
 cd /opt/kanap
-git fetch origin stable
+git fetch --tags origin stable
 git diff HEAD origin/stable -- CHANGELOG.md
 ```
+
+Behalten Sie `--tags` bei. Ein `git fetch` oder `git pull`, das einen Branch nennt, holt die Versions-Tags nicht. Ohne sie zeigt `git describe --tags` eine ältere Version mit einer Anzahl von Commits (zum Beispiel `v26.10.8-254-gcec464031`), und `git checkout v<Version>` findet die neueren Versionen nicht. Derselbe Befehl holt die fehlenden Tags auch auf eine Installation, die ohne ihn aktualisiert wurde.
 
 **2. Sichern Sie die Datenbank, die Dateien und die Konfiguration.** Führen Sie die Befehle aus [Vor einem Upgrade](#vor-einem-upgrade) aus. Sie schreiben in ein eigenes Verzeichnis, das die tägliche Sicherung nie berührt. Migrationen gehen nur vorwärts: Diese Sicherung ist der Weg zurück.
 
@@ -97,12 +99,12 @@ Die veröffentlichten Images tragen einen signierten Nachweis ihres Builds: aus 
 ```bash
 cd /opt/kanap
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[(entrypoint|VERSION|ENV|CONFIG|SECRETS|RATE-LIMIT|CORS|DB|on-prem|SECURITY|DATA-ACCESS|markdown|cluster|shutdown)\]|WARN|ERROR|successfully started|Email transport'
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
 
 - `ps` zeigt `api` und `web` nach etwa einer Minute als `healthy`.
-- Das API-Protokoll zeigt die Migrationen (`[entrypoint] Migrations complete (N executed).`) und dann den Start der API (`Nest application successfully started`). Lesen Sie auch die anderen Startzeilen: Die [Konfiguration](configuration.md#was-das-api-protokoll-beim-start-zeigt) erklärt jede davon.
+- Das API-Protokoll zeigt die Migrationen (`[entrypoint] Migrations complete (N executed).`), die Version (`[VERSION] Kadratis <Version>`) und dann den Start der API (`Nest application successfully started`). Lesen Sie auch die anderen Startzeilen: Die [Konfiguration](configuration.md#was-das-api-protokoll-beim-start-zeigt) erklärt jede davon. Der Filter behält etwa 20 Zeilen pro Start. Das Protokoll umfasst jeden Start des Containers seit dem Upgrade: Nach einem Neustart erscheinen dieselben Zeilen noch einmal.
 - Die Health-Adresse antwortet `{"status":"ok","text_processing":"ready"}` (siehe [Monitoring](#monitoring)).
 
 **Datenzugriff nach Bereich.** Nach einem Upgrade auf eine Version mit [Datenzugriff](../data-access.md) arbeiten alle weiterhin mit allen Daten. Um Personen auf einen Teil des Budgets und der Verträge zu begrenzen, führen Sie einmal den optionalen Schritt [Datenzugriff nach Bereich](installation.md#optional-data-scoped-access) aus und starten Sie dann die API neu. Der Schritt erfolgt einmal pro PostgreSQL-Server: Spätere Upgrades erfordern nichts weiter, denn die API setzt die Berechtigungen der Rolle bei jedem Start.
@@ -119,6 +121,21 @@ unset KANAP_PASSWORD
 ```
 
 Die letzte Zeile der Ausgabe lautet `0 failed`. Mit `KANAP_INSECURE_TLS=1` sind zwei TLS-Warnungen am Anfang der Ausgabe erwartet: die des Skripts selbst und die Node.js-Warnung zu `NODE_TLS_REJECT_UNAUTHORIZED`.
+
+**Images älterer Versionen entfernen.** Jedes Upgrade lädt neue Images herunter und lässt die der früheren Versionen auf der Festplatte, etwa 1,4 GB pro Version (2,8 GB mit dem Image der Wartungswerkzeuge). Behalten Sie die Images der Version, die Sie gerade verlassen haben, solange Sie auf sie zurücksetzen könnten. Entfernen Sie die älteren. Listen Sie die Images und ihren Platzbedarf auf:
+
+```bash
+docker images "ghcr.io/kanap-hq/*"
+```
+
+Die Liste zeigt die `kadratis-*`-Images und, für Versionen bis 26.11.3, die `kanap-*`-Images. Setzen Sie `OLD` auf eine zu entfernende Version und entfernen Sie dann ihre Images:
+
+```bash
+OLD=26.10.8   # eine Version, die älter ist als die für ein mögliches Zurücksetzen
+docker image rm $(docker images --format '{{.Repository}}:{{.Tag}}' "ghcr.io/kanap-hq/*" | grep ":${OLD}$")
+```
+
+Wiederholen Sie das für jede ältere Version. Docker verweigert das Entfernen eines Images, das ein Container verwendet: Die laufende Version bleibt erhalten. Ein Zurücksetzen auf eine Version, deren Images Sie entfernt haben, lädt sie erneut herunter (Schritt 2 des Zurücksetzens unten).
 
 **Zurücksetzen auf die vorherige Version.** Migrationen gehen nur vorwärts, daher spielt ein Zurücksetzen die vor dem Upgrade erstellte Sicherung unter der vorherigen Version wieder ein:
 
