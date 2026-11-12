@@ -6,9 +6,11 @@ import { DocumentSearchVectorRepair1856190000000 } from '../../migrations/185619
 import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
 
 // Migration 1856190000000 against a real database, in a transaction that is rolled back: two tenants
-// with missing and out-of-date document search vectors (and the search entries that copied them).
-// up() repairs every vector and its search entry, logs one count per tenant, leaves current
-// documents untouched and restores the tenant setting; a second up() updates no row.
+// with missing and out-of-date document search vectors (and the search entries that copied them),
+// seeded on the previous schema (down() first: the inline trigger function, no compute function).
+// The first up() replaces the trigger function, repairs every vector and its search entry, logs one
+// count per tenant, leaves current documents untouched and restores the tenant setting; a second
+// up() updates no row.
 
 const migration = new DocumentSearchVectorRepair1856190000000();
 
@@ -44,12 +46,17 @@ async function seedTenantDocuments(runner: QueryRunner, tag: string): Promise<Se
   return { tenantId, missing, stale, current };
 }
 
-async function state(runner: QueryRunner, seeded: Seeded) {
+/** `migrated`: documents_search_vector_compute exists (after up()); before it, `current` is null. */
+async function state(runner: QueryRunner, seeded: Seeded, migrated: boolean) {
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [seeded.tenantId]);
-  const rows: Array<{ id: string; ctid: string; current: boolean; indexed: boolean }> = await runner.query(
+  const current = migrated
+    ? `COALESCE(d.search_vector = documents_search_vector_compute(d.title, d.summary, d.content_plain), false)`
+    : `NULL::boolean`;
+  const rows: Array<{ id: string; ctid: string; vector: string | null; current: boolean | null; indexed: boolean }> = await runner.query(
     `SELECT d.id,
             d.ctid::text AS ctid,
-            COALESCE(d.search_vector = documents_search_vector_compute(d.title, d.summary, d.content_plain), false) AS current,
+            d.search_vector::text AS vector,
+            ${current} AS current,
             COALESCE(si.search_vector @@ plainto_tsquery('kanap_fr', split_part(d.content_plain, ' ', 2)), false) AS indexed
        FROM documents d
        LEFT JOIN search_index si
@@ -75,18 +82,23 @@ async function captureLog(fn: () => Promise<void>): Promise<string[]> {
 
 async function testRepairsTenantByTenant() {
   await inRolledBackTransaction(async (runner) => {
+    await migration.down(runner);
+    const [helper] = await runner.query(
+      `SELECT count(*)::int AS count FROM pg_proc WHERE proname = 'documents_search_vector_compute'`,
+    );
+    assert.equal(helper.count, 0, 'previous schema: no compute function');
     const a = await seedTenantDocuments(runner, 'a');
     const b = await seedTenantDocuments(runner, 'b');
 
     const seededState = new Map<string, Map<string, any>>();
     for (const seeded of [a, b]) {
-      const before = await state(runner, seeded);
+      const before = await state(runner, seeded, false);
       seededState.set(seeded.tenantId, before);
-      assert.equal(before.get(seeded.missing)!.current, false, 'seeded: missing vector');
+      assert.equal(before.get(seeded.missing)!.vector, null, 'seeded: missing vector');
       assert.equal(before.get(seeded.missing)!.indexed, false, 'seeded: its search entry has no body');
-      assert.equal(before.get(seeded.stale)!.current, false, 'seeded: stale vector');
+      assert.equal(before.get(seeded.stale)!.vector, "'ancien':1 'texte':2", 'seeded: stale vector');
       assert.equal(before.get(seeded.stale)!.indexed, false, 'seeded: its search entry has the old body');
-      assert.equal(before.get(seeded.current)!.current, true, 'seeded: current vector');
+      assert.notEqual(before.get(seeded.current)!.vector, null, 'seeded: vector from the previous trigger');
       assert.equal(before.get(seeded.current)!.indexed, true, 'seeded: current search entry');
     }
 
@@ -94,9 +106,14 @@ async function testRepairsTenantByTenant() {
     const firstLog = await captureLog(() => migration.up(runner));
     const [setting] = await runner.query(`SELECT current_setting('app.current_tenant', true) AS value`);
     assert.equal(setting.value, '', 'the tenant setting is restored');
+    const [trigger] = await runner.query(
+      `SELECT prosrc FROM pg_proc WHERE proname = 'documents_search_vector_sync'`,
+    );
+    assert.match(trigger.prosrc, /documents_search_vector_compute\(NEW\.title, NEW\.summary, NEW\.content_plain\)/,
+      'the trigger function calls the compute function');
 
     for (const seeded of [a, b]) {
-      const after = await state(runner, seeded);
+      const after = await state(runner, seeded, true);
       for (const id of [seeded.missing, seeded.stale, seeded.current]) {
         assert.equal(after.get(id)!.current, true, `repaired: vector of ${id}`);
         assert.equal(after.get(id)!.indexed, true, `repaired: search entry of ${id}`);
@@ -109,10 +126,10 @@ async function testRepairsTenantByTenant() {
     }
 
     const snapshot = new Map<string, Map<string, any>>();
-    for (const seeded of [a, b]) snapshot.set(seeded.tenantId, await state(runner, seeded));
+    for (const seeded of [a, b]) snapshot.set(seeded.tenantId, await state(runner, seeded, true));
     const secondLog = await captureLog(() => migration.up(runner));
     for (const seeded of [a, b]) {
-      const again = await state(runner, seeded);
+      const again = await state(runner, seeded, true);
       for (const [id, row] of again) {
         assert.equal(row.ctid, snapshot.get(seeded.tenantId)!.get(id).ctid, `second run: ${id} is not updated`);
       }

@@ -239,6 +239,7 @@ async function testStatusChange() {
   });
 }
 
+// A control, not a reproduction: this path writes back a vector that is already current.
 async function testCreateVersion() {
   await inRolledBackTransaction(async (runner) => {
     const f = await seedFixture(runner, 'version');
