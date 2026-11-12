@@ -272,7 +272,7 @@ async function testApplicationOverviewIsRecoveredFromAStoredDescription() {
     assert.equal((read as any).content_markdown, description, 'the overview is recovered from the stored description');
 
     // A stored description the parser cannot handle within its budget: plain text, main thread free.
-    const unparsable = '_a '.repeat(Math.ceil(MARKDOWN_MAX_BYTES / 3)).trim();
+    const unparsable = '*_a '.repeat(Math.ceil(MARKDOWN_MAX_BYTES / 4)).trim();
     const [other] = await runner.query(
       `INSERT INTO applications (tenant_id, name, description) VALUES ($1, $2, $3) RETURNING id::text AS id`,
       [f.tenantId, `Compta ${f.tag}`, unparsable],

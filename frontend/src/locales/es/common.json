@@ -1355,6 +1355,7 @@
       "frontmatterEditor": {
         "addEntry": "Añadir entrada",
         "dialogDescription": "Añada, edite o elimine las entradas clave-valor del encabezado del documento.",
+        "invalidYaml": "Este encabezado del documento no se puede editar como campos clave-valor. Edite el origen Markdown en su lugar.",
         "key": "Clave",
         "title": "Editar el encabezado del documento",
         "value": "Valor"
@@ -1439,7 +1440,9 @@
         "dialogTitle": "Cargar una imagen",
         "height": "Alto:",
         "title": "Título:",
+        "uploadError": "No se pudo cargar la imagen. Inténtelo de nuevo.",
         "uploadInstructions": "Cargue una imagen desde su dispositivo:",
+        "uploading": "Cargando la imagen…",
         "width": "Ancho:"
       }
     },
