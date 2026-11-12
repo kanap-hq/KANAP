@@ -28,12 +28,14 @@ async function run() {
   const { AppModule } = require('../../app.module');
   const { AiQueryExecutor } = require('../query/ai-query.executor');
   const { AiEntityService } = require('../ai-entity.service');
+  const { AiAggregateExecutor } = require('../query/ai-aggregate.executor');
   const { AiPolicyService } = require('../ai-policy.service');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   // The surface checks (tenant AI settings, provider, subscription) are not what this spec tests.
   app.get(AiPolicyService).assertSurfaceAccess = async () => undefined;
   const executor = app.get(AiQueryExecutor);
   const entities = app.get(AiEntityService);
+  const aggregates = app.get(AiAggregateExecutor);
   const runner = app.get(DataSource).createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
@@ -101,6 +103,13 @@ async function run() {
     assert.deepEqual(bc.fields_partial?.map((entry: { field: string }) => entry.field), ['applications'], 'contributor: the read is said partial');
     assert.deepEqual(await contextNames(bcId), ['Seen app'], 'contributor: context');
     console.log('  a Business Contributor: their applications, the read said partial: OK');
+
+    // aggregate_entities on tasks grouped by application: the applications the person reads only.
+    const groups = async (userId: string) => (await aggregates.execute(ctx(userId), { entity_type: 'tasks', group_by: 'application', function: 'count' }))
+      .groups.map((group: { key: string }) => group.key).sort();
+    assert.deepEqual(await groups(adminId), ['Secret app', 'Seen app'], 'full reader: every application group');
+    assert.deepEqual(await groups(bcId), ['Seen app'], 'contributor: the application groups of their participation');
+    console.log('  tasks grouped by application: the applications the person reads: OK');
 
     // A person who does not read applications: null, and the reason.
     const unread = await detail(readerId);

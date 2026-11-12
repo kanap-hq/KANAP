@@ -282,6 +282,8 @@ export const tasksRegistry: AiEntityFilterRegistry = {
           `JOIN task_applications task_app_link ON task_app_link.task_id = t.id AND task_app_link.tenant_id = t.tenant_id`,
           `JOIN applications task_app ON task_app.id = task_app_link.application_id AND task_app.tenant_id = task_app_link.tenant_id`,
         ],
+        // A Business Contributor groups only the applications they take part in, as the task shows them.
+        participation: { entityType: 'applications', table: 'applications', alias: 'task_app' },
       },
       asset: {
         expression: 'task_asset.name',
