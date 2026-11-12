@@ -14,7 +14,7 @@ Diez minutos por recorrido, con el ejemplo Fromage & Co o con sus propios datos:
 
 - Presupuesto de TI: [descubrir con el ejemplo](first-steps/budget-example.md), [empezar con mis datos](first-steps/budget-own-data.md)
 - Mapa del SI: [descubrir con el ejemplo](first-steps/landscape-example.md), [empezar con mis datos](first-steps/landscape-own-data.md)
-- Proyectos y solicitudes: [descubrir con el ejemplo](first-steps/portfolio-example.md), [empezar con mis datos](first-steps/portfolio-own-data.md)
+- Portafolio: [descubrir con el ejemplo](first-steps/portfolio-example.md), [empezar con mis datos](first-steps/portfolio-own-data.md)
 
 ## Guías de Inicio Rápido
 

@@ -91,7 +91,7 @@ describe('FirstOpenDialog', () => {
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent(`What brings you to ${PRODUCT_NAME}?`);
     expect(within(dialog).getAllByRole('button').map((b) => b.textContent)).toEqual(
-      expect.arrayContaining(['The IT budget', 'The IT landscape map', 'Projects and requests', 'Just looking']),
+      expect.arrayContaining(['The IT budget', 'The IT landscape map', 'The portfolio', 'Just looking']),
     );
     fireEvent.click(within(dialog).getByRole('button', { name: 'The IT budget' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('How do you want to start?');
@@ -157,7 +157,7 @@ describe('FirstOpenDialog', () => {
   it('asks before erasing what was created since the example was loaded, then confirms', async () => {
     env.server = createFakeOnboardingServer({ sampleData: { status: 'loaded', step: null }, createdSinceLoad: 3 });
     renderWith(<FirstOpenDialog />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Projects and requests' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'The portfolio' }));
     fireEvent.click(screen.getByRole('button', { name: /Start with my own data/ }));
     await screen.findByText('Erase the example?');
     const confirm = screen.getByRole('dialog');
@@ -318,7 +318,7 @@ describe('AboutOnboardingLine', () => {
     env.administrator = false;
     env.server = createFakeOnboardingServer({ mode: 'example', administrator: false, angle: 'portfolio' });
     renderWith(<AboutOnboardingLine />);
-    expect(await screen.findByText('Path: Project portfolio · example')).toBeInTheDocument();
+    expect(await screen.findByText('Path: Portfolio · example')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
   });
 });

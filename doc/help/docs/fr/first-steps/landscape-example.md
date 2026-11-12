@@ -31,15 +31,15 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Ce que vous lisez.** Le panneau des propriétés donne l'éditeur, les dates de son cycle de vie et ses responsables. **Déploiements** montre un bloc par environnement avec les serveurs qui la font tourner. **Interfaces** liste les flux de données entrants et sortants. **Exploitation** liste les technologies dont l'application dépend, avec leur fin de support. **Relations** la relie aux lignes budgétaires, aux contrats et aux projets.
 
-## 3. Les serveurs
+## 3. Les actifs
 
 **Cartographie SI > Actifs**
 
-![Les serveurs](images/landscape-example-3.webp)
+![Les actifs](images/landscape-example-3.webp)
 
-**Le geste.** Ouvrez un serveur.
+**Le geste.** Ouvrez un actif.
 
-**Ce que vous lisez.** Chaque serveur dit où tournent les applications : son environnement, son site et les technologies qui y sont installées. Son onglet **Exploitation** liste les applications qu'il héberge.
+**Ce que vous lisez.** Chaque actif dit où tournent les applications : son environnement, son site et les technologies qui y sont installées. Son onglet **Exploitation** liste les applications qu'il héberge.
 
 ## 4. Les technologies, fins de support et failles
 

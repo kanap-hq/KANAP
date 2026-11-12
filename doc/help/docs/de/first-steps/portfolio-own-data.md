@@ -1,6 +1,6 @@
 ---
 title: "Ihr Portfolio in Kadratis in zehn Minuten: mit Ihren eigenen Daten beginnen"
-description: Die fünf Schritte des Pfads Projekte und Anfragen mit Ihren eigenen Daten, von einer ersten Anfrage zu ihrem Projekt, seinen Aufgaben und seinem Budget, dann Ihr Mitwirkendenprofil.
+description: Die fünf Schritte des Pfads Portfolio mit Ihren eigenen Daten, von einer ersten Anfrage zu ihrem Projekt, seinen Aufgaben und seinem Budget, dann Ihr Mitwirkendenprofil.
 ---
 
 # Ihr Portfolio in Kadratis in zehn Minuten
@@ -9,7 +9,7 @@ description: Die fünf Schritte des Pfads Projekte und Anfragen mit Ihren eigene
 
 In zehn Minuten ist eine erste Anfrage bewertet und in ein Projekt konvertiert, das Projekt hat seine ersten Aufgaben und sein Budget, und Ihr Mitwirkendenprofil ist für die Planung bereit. Der Beginn mit Ihren eigenen Daten löscht das Beispiel: Was Sie am Ende sehen, stammt von Ihnen.
 
-Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Projekte und Anfragen** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Ein Schritt, der etwas anlegt, gilt als erledigt, sobald es im Arbeitsbereich existiert. Für **Ihr Projekt** klicken Sie im Hinweis auf **Erledigt** oder auf die Markierung neben dem Schritt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
+Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Portfolio** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Ein Schritt, der etwas anlegt, gilt als erledigt, sobald es im Arbeitsbereich existiert. Für **Ihr Projekt** klicken Sie im Hinweis auf **Erledigt** oder auf die Markierung neben dem Schritt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
 ## 1. Ihre erste Anfrage
 

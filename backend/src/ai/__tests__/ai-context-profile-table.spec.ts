@@ -604,6 +604,21 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'AST-12 a-t-il Redis 7 installé ?', profile: 'entity_inspection', mode: 'entity' },
   { prompt: 'Make Jane Doe the main contact of Acme Corp', profile: 'write_relation', mode: 'write', tools: ['update_entity_relations'] },
   { prompt: 'Who is the main contact of Acme Corp?', profile: 'read_query', mode: 'read' },
+  // Plaid L4: the two other writes of the pass, already routed, fixed here.
+  { prompt: 'Mets APP-3 en production', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },
+  { prompt: 'Mets OPX-12 à 5000', profile: 'write_financial', mode: 'write' },
+
+  // Importing a ticket is a task write in the four languages (import_ticket). A question on how
+  // to import stays a read, and the idioms "n'importe", "peu importe" import nothing.
+  { prompt: 'Import ticket 4512 from GLPI', profile: 'write_task', mode: 'write', tools: ['import_ticket'] },
+  { prompt: 'Importe le ticket GLPI 4512', profile: 'write_task', mode: 'write', tools: ['import_ticket'] },
+  { prompt: 'Importer le ticket 4512', profile: 'write_task', mode: 'write', tools: ['import_ticket'] },
+  { prompt: 'Importiere das GLPI-Ticket 4512', profile: 'write_task', mode: 'write', tools: ['import_ticket'] },
+  { prompt: 'Importa el ticket 4512 de GLPI', profile: 'write_task', mode: 'write', tools: ['import_ticket'] },
+  { prompt: 'Comment importer un ticket GLPI ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'How do I import a GLPI ticket?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Montre n\'importe quel ticket ouvert', profile: 'read_query', mode: 'read' },
+  { prompt: 'Liste n\'importe quelle application', profile: 'read_query', mode: 'read' },
 
   // Plaid L8: the budget reports are reads of aggregate_entities (a change between two columns, FTE
   // by month, the consolidation account, a crossing of two fields, several columns or years) and

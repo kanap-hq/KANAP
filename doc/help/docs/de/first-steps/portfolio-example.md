@@ -1,6 +1,6 @@
 ---
 title: "Ihr Portfolio in Kadratis in zehn Minuten: mit dem Beispiel entdecken"
-description: Die fünf Schritte des Pfads Projekte und Anfragen am Beispiel Fromage & Co, von einer bewerteten Anfrage bis zu den Portfolio-Berichten und Ihrer eigenen Datei.
+description: Die fünf Schritte des Pfads Portfolio am Beispiel Fromage & Co, von einer bewerteten Anfrage bis zu den Portfolio-Berichten und Ihrer eigenen Datei.
 ---
 
 # Ihr Portfolio in Kadratis in zehn Minuten
@@ -9,11 +9,11 @@ description: Die fünf Schritte des Pfads Projekte und Anfragen am Beispiel From
 
 Fromage & Co ist eine fiktive Käsereigruppe, deren Beispiel in Ihren Arbeitsbereich geladen ist. In zehn Minuten lesen Sie anhand ihres Portfolios, wie eine Anfrage bewertet wird, verfolgen sie bis zum Projekt, finden die Aufgaben, lesen die Berichte und sehen, wie Ihre eigene Datei in Kadratis kommt.
 
-Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Projekte und Anfragen** mit **Mit dem vollständigen Beispiel entdecken**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis, und das Öffnen markiert ihn als erledigt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
+Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Portfolio** mit **Mit dem vollständigen Beispiel entdecken**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis, und das Öffnen markiert ihn als erledigt. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
 ## 1. Eine Anfrage und ihre Bewertung
 
-**Die am besten bewertete Anfrage**, vom Schritt auf ihrem Reiter **Bewertung** geöffnet
+**Die am besten bewertete noch nicht konvertierte Anfrage**, vom Schritt auf ihrem Reiter **Bewertung** geöffnet
 
 ![Eine Anfrage und ihre Bewertung](images/portfolio-example-1.webp)
 

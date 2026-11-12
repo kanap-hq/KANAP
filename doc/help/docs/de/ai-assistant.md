@@ -46,7 +46,7 @@ Wurde beim ersten Öffnen des Arbeitsbereichs, während der Testphase, ein Pfad 
 |---|---|
 | IT-Budget | *Wo liegen die größten Einsparpotenziale bei den IT-OPEX?*, *Welche Budgetzeilen haben keine verantwortliche Person?* |
 | IT-Landkarte | *Welche Technologien erreichen in den nächsten sechs Monaten ihr Supportende?*, *Welche kritischen Anwendungen haben keinen Wiederanlaufplan?* |
-| Projekte und Anfragen | *Welche Projekte überschreiten ihr Budget?*, *Welche Anfragen warten auf eine Entscheidung?* |
+| Portfolio | *Welche Projekte überschreiten ihr Budget?*, *Welche Anfragen warten auf eine Entscheidung?* |
 
 Geben Sie eine Nachricht ein und drücken Sie **Eingabe** zum Senden. **Umschalt+Eingabe** fügt eine neue Zeile ein. Die Sende-Schaltfläche ist deaktiviert, solange nichts zu senden ist, und verwandelt sich in eine rote **Stopp**-Schaltfläche, während Kad antwortet.
 

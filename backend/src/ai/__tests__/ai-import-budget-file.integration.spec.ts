@@ -222,8 +222,12 @@ async function testSuppliersNeedTheirRight(h: Harness, runner: QueryRunner, s: S
   const check = card.import_mapping.validation;
   assert.equal(check.ok, false, JSON.stringify(check.issues));
   assert.equal(check.new_suppliers, 0);
-  // The model reads the code of the errors, as the card does.
-  assert.deepEqual(check.issues, [{ level: 'error', code: 'CSV_REFERENCE_NOT_FOUND', column: 'supplier_name', count: 8 }]);
+  // The model reads the code of the errors and their lines, as the card numbers them.
+  assert.deepEqual(check.issues, [{
+    level: 'error', code: 'CSV_REFERENCE_NOT_FOUND', column: 'supplier_name', count: 8, file_lines: [4, 5, 6, 7, 8, 9, 10, 11],
+  }]);
+  const cardLines = (check.report as { file: { errors: Array<{ line: number }> } }).file.errors.map((error) => error.line);
+  assert.deepEqual(check.issues[0].file_lines, cardLines);
   const failed = await h.previews.executePreview(budget, card.preview_id);
   assert.equal(failed.status, 'failed');
   // In the person's language, as a check that found errors: never a refusal.

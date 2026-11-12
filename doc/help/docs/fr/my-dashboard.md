@@ -44,7 +44,7 @@ Dans un espace de travail cloud vide, qui n'a jamais reçu les données d'exempl
 
 Dans un espace de travail en essai, une fenêtre s'ouvre la première fois que vous ouvrez Kadratis. Elle pose une question par écran :
 
-1. **Qu'est-ce qui vous amène ?** **Le budget IT**, **La cartographie du SI**, **Les projets et les demandes** ou **Je regarde**.
+1. **Qu'est-ce qui vous amène ?** **Le budget IT**, **La cartographie du SI**, **Le portefeuille** ou **Je regarde**.
 2. **Comment voulez-vous commencer ?** **Découvrir avec l'exemple complet** ou **Commencer avec mes données**.
 
 Commencer avec vos données efface l'exemple. Si des éléments ont été créés depuis le chargement de l'exemple, une confirmation en donne le nombre avant tout effacement. Seul un administrateur peut choisir ses propres données tant que l'espace de travail contient l'exemple. L'exemple ne se charge que dans un espace de travail vide. Pendant la période d'essai, un administrateur qui choisit l'exemple alors que l'espace de travail contient des données doit d'abord l'effacer : la confirmation demande le nom de l'espace de travail et propose **Voir ce que contient l'espace de travail**. L'espace de travail est effacé, puis l'exemple se charge. Après la période d'essai, le choix est refusé et votre parcours ne change pas.
@@ -55,7 +55,7 @@ Si vous fermez la fenêtre, le choix vous attend dans **À propos de Kadratis**.
 
 ### Vos cinq premiers pas
 
-Une fois le parcours choisi, la tuile **Vos cinq premiers pas** vient en premier sur la page d'accueil. Elle liste les cinq étapes du parcours et votre progression, par exemple **2/5**. Chaque étape ouvre son écran, où le titre de la page est mis en évidence avec une phrase d'explication. L'explication reste sur cet écran et ses fiches jusqu'à ce que vous la fermiez. Une fois l'étape faite, **Pas suivant** ouvre la prochaine étape à faire (**Terminer** après la dernière).
+Une fois le parcours choisi, la tuile **Vos cinq premiers pas** vient en premier sur la page d'accueil. Elle liste les cinq étapes du parcours et votre progression, par exemple **2/5**. Chaque étape ouvre son écran, où le titre de la page est mis en évidence avec une phrase d'explication. L'explication reste sur cet écran et ses fiches jusqu'à ce que vous la fermiez. Une fois l'étape faite, **Étape suivante** ouvre la prochaine étape à faire (**Terminer** après la dernière).
 
 - Avec l'exemple, ouvrir une étape la marque comme faite.
 - Avec vos données, une étape qui crée quelque chose est marquée comme faite dès que cet élément existe. Pour les autres étapes, cliquez sur **Fait** dans l'explication, ou sur la marque à côté de l'étape dans la tuile. La marque annule aussi une étape, sauf celle dont l'élément existe.
@@ -67,8 +67,8 @@ Pendant l'essai, la tuile propose aussi **Planifier un appel découverte** : un 
 | Parcours | Avec l'exemple | Avec vos données |
 |---|---|---|
 | Budget IT | La vue d'ensemble, Une ligne budgétaire, Un rapport, Une question à Kad, Vos données | Votre société, Vos lignes, Un contrat lié, Votre premier rapport, Un collègue |
-| Cartographie du SI | La liste des applications, Une fiche d'application, Les serveurs, Les technologies, fins de support et failles, Vos données | Vos sites, Vos applications, Vos technologies, Vos serveurs, Un collègue |
-| Projets et demandes | Une demande et son score, Le projet issu de la demande, Les tâches, Les rapports, Vos données | Votre première demande, Votre projet, Les premières tâches, Le budget du projet, Votre fiche contributeur |
+| Cartographie du SI | La liste des applications, Une fiche d'application, Les actifs, Les technologies, fins de support et failles, Vos données | Vos sites, Vos applications, Vos technologies, Vos actifs, Un collègue |
+| Portefeuille | Une demande et son score, Le projet issu de la demande, Les tâches, Les rapports, Vos données | Votre première demande, Votre projet, Les premières tâches, Le budget du projet, Votre fiche contributeur |
 
 ### La page d'accueil suit votre parcours
 
@@ -76,7 +76,7 @@ Pendant un essai, la section de votre parcours vient en premier, ouverte par la 
 
 - **Budget IT** : **Gestion budgétaire**.
 - **Cartographie du SI** : **Cartographie SI**.
-- **Projets et demandes** : **Portefeuille**.
+- **Portefeuille** : **Portefeuille**.
 
 Sans parcours, les sections gardent leur ordre par défaut. Dès que vous ordonnez les sections vous-même, votre ordre s'applique.
 

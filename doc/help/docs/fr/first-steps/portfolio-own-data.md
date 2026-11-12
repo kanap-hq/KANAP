@@ -1,6 +1,6 @@
 ---
 title: "Votre portefeuille dans Kadratis en dix minutes : commencer avec vos données"
-description: Les cinq pas du parcours projets et demandes sur vos propres données, d'une première demande à son projet, ses tâches et son budget, puis votre fiche contributeur.
+description: Les cinq pas du parcours portefeuille sur vos propres données, d'une première demande à son projet, ses tâches et son budget, puis votre fiche contributeur.
 ---
 
 # Votre portefeuille dans Kadratis en dix minutes
@@ -9,7 +9,7 @@ description: Les cinq pas du parcours projets et demandes sur vos propres donné
 
 En dix minutes, une première demande est notée puis convertie en projet, le projet a ses premières tâches et son budget, et votre fiche contributeur est prête pour la planification. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
 
-Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Les projets et les demandes** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Un pas qui crée quelque chose est marqué comme fait dès que cet élément existe dans l'espace. Pour **Votre projet**, cliquez sur **Fait** dans l'indication, ou sur la marque à côté du pas. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
+Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Portefeuille** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Un pas qui crée quelque chose est marqué comme fait dès que cet élément existe dans l'espace. Pour **Votre projet**, cliquez sur **Fait** dans l'indication, ou sur la marque à côté du pas. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. Votre première demande
 

@@ -15,6 +15,14 @@ import { AiPolicyService, missingRightMessage } from './ai-policy.service';
 import { AiQueryExecutor } from './query/ai-query.executor';
 import { AI_PERSON_WITHOUT_NAME } from './query/ai-support.query';
 import {
+  INCIDENT_STATUS_LABELS,
+  PROJECT_STATUS_LABELS,
+  REQUEST_STATUS_LABELS,
+  TASK_STATUS_LABELS,
+  type AiImportCodeLabels,
+} from './import/ai-import-code-labels';
+import { personWriteLanguage, VULNERABILITY_STATE_LABELS, type AiWriteLanguage } from './ai-write-texts';
+import {
   AI_DETAIL_ENTITY_TYPES,
   type AiDetailEntityType,
   type AiExecutionContextWithManager,
@@ -71,7 +79,8 @@ export function noRecordHistoryMessage(entityType: string): string {
 /** What the entries are, said with every page. */
 export const AI_RECORD_HISTORY_NOTE = 'These are the entries of the record\'s History tab, newest first, and nothing more: '
   + 'an update with no visible change is left out, and a reference the person may not read is given as hidden '
-  + '(deleted when the record no longer exists). next_cursor reads the older entries.';
+  + '(deleted when the record no longer exists). A state comes with before_label and after_label, the words of the '
+  + 'History tab in the person\'s language: quote them. next_cursor reads the older entries.';
 
 export type GetRecordHistoryInput = {
   entity_type: AiDetailEntityType;
@@ -124,6 +133,39 @@ function withoutRawIds(value: unknown): unknown {
       .filter(([key]) => !(named && key === 'id'))
       .map(([key, entry]) => [key, person && key === 'label' ? personLabel(entry) : withoutRawIds(entry)]),
   );
+}
+
+/**
+ * The states the History tab names from a fixed list, by table and field: the same lists as the
+ * screens (the import's copies, checked against the locale files, and the vulnerability states of
+ * #1196). A vulnerability row is a child of a technology: its field names it wherever it appears.
+ */
+const RECORD_STATE_LABELS: Readonly<Record<string, Readonly<Record<string, AiImportCodeLabels>>>> = {
+  tasks: { status: TASK_STATUS_LABELS },
+  portfolio_projects: { status: PROJECT_STATUS_LABELS },
+  portfolio_requests: { status: REQUEST_STATUS_LABELS },
+  incidents: { status: INCIDENT_STATUS_LABELS },
+};
+const CHILD_STATE_LABELS: Readonly<Record<string, AiImportCodeLabels>> = {
+  vulnerability_state: VULNERABILITY_STATE_LABELS,
+};
+
+/** A state change with the History tab's words for its values, in the person's language. */
+function withStateLabels(
+  change: unknown,
+  table: string,
+  subject: RecordHistorySubject,
+  language: AiWriteLanguage,
+): unknown {
+  if (!change || typeof change !== 'object') return change;
+  const entry = change as { field?: unknown; before?: unknown; after?: unknown };
+  const field = String(entry.field ?? '');
+  const labels = CHILD_STATE_LABELS[field] ?? (subject.kind === 'record' ? RECORD_STATE_LABELS[table]?.[field] : undefined);
+  if (!labels) return change;
+  const label = (value: unknown) => (typeof value === 'string' ? labels[language][value] : undefined);
+  const before = label(entry.before);
+  const after = label(entry.after);
+  return { ...entry, ...(before ? { before_label: before } : {}), ...(after ? { after_label: after } : {}) };
 }
 
 /**
@@ -215,12 +257,13 @@ export class AiRecordHistoryService {
       throw error;
     }
 
+    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId);
     const items = page.items.map((item): AiRecordHistoryEntryDto => ({
       at: item.at,
       action: item.action,
       actor: withoutActorEmail(item.actor),
       subject: withoutRawIds(item.subject) as RecordHistorySubject,
-      changes: item.changes.map(withoutRawIds),
+      changes: item.changes.map((change) => withStateLabels(withoutRawIds(change), table, item.subject, language)),
     }));
     return {
       entity: { type: input.entity_type, id: input.entity_id },
