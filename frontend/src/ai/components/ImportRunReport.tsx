@@ -102,6 +102,8 @@ function ImportRunReport({ run, titles }: ImportRunReportProps) {
           canCreateSuppliers={false}
           nothingToLoad={run.inserted + run.updated === 0}
           showStatus={false}
+          // The card lists the lookalikes of its check before its actions.
+          hideDuplicates={check}
         />
       )}
       {run.report.kind === 'rows' && (
