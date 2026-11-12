@@ -9,6 +9,7 @@ import {
   type ManagedDocsFolderDefinition,
   ManagedDocsFolderSystemKey,
 } from './integrated-document.constants';
+import { markdownToSearchText } from '../common/markdown-search-text';
 
 type SqlExecutor = {
   query<T = any>(query: string, parameters?: any[]): Promise<T[]>;
@@ -312,14 +313,19 @@ async function ensureTemplateDocument(
      LIMIT 1`,
     [params.templatesLibraryId, params.documentTypeId, params.title],
   );
+  // The body is indexed for the search from content_plain (documents_search_vector_sync), as for
+  // any document saved from Knowledge: derive it from the Markdown on both paths.
+  const contentMarkdown = params.contentMarkdown ?? '';
+  const contentPlain = markdownToSearchText(contentMarkdown);
   if (existing[0]?.id) {
     await executor.query(
       `UPDATE documents
        SET summary = $2,
            content_markdown = $3,
+           content_plain = $4,
            updated_at = now()
        WHERE id = $1`,
-      [existing[0].id, params.summary, params.contentMarkdown ?? ''],
+      [existing[0].id, params.summary, contentMarkdown, contentPlain],
     );
     return String(existing[0].id);
   }
@@ -348,7 +354,7 @@ async function ensureTemplateDocument(
        $3,
        $4,
        $5,
-       '',
+       $8,
        NULL,
        $6,
        $7,
@@ -364,9 +370,10 @@ async function ensureTemplateDocument(
       itemNumber,
       params.title,
       params.summary,
-      params.contentMarkdown ?? '',
+      contentMarkdown,
       params.templatesLibraryId,
       params.documentTypeId,
+      contentPlain,
     ],
   );
   return String(rows[0].id);
