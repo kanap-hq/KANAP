@@ -2200,7 +2200,9 @@
     "dialogs": {
       "createTitle": "New role",
       "deleteMessage": "This action is permanent. You can only delete roles with no users assigned.",
-      "deleteTitle": "Delete role"
+      "deleteTitle": "Delete role",
+      "duplicateTitle": "Duplicate role",
+      "duplicateName": "{{name}} (copy)"
     },
     "empty": "No roles found.",
     "fields": {
@@ -2534,6 +2536,7 @@
       "inviting": "Inviting…",
       "rowMenu": "User actions",
       "edit": "Edit",
+      "view": "View",
       "enable": "Enable",
       "disable": "Disable",
       "sendInvite": "Send invite",
@@ -2567,6 +2570,7 @@
     "dialogs": {
       "newUser": "New user",
       "editUser": "Edit user",
+      "viewUser": "View user",
       "identity": "Identity",
       "saveAndInvite": "Save and invite"
     },

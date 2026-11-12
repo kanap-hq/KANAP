@@ -55,20 +55,6 @@ export default function UserDialog({
 
   const editing = mode === 'edit' && userId != null;
   const ownAccount = editing && String(userId) === String(profile?.id);
-  const showAccessTab = editing && canAdminDataAccess && !ownAccount;
-
-  const [activeTab, setActiveTab] = React.useState<UserDialogTab>(initialTab);
-  const [accessMounted, setAccessMounted] = React.useState(initialTab === 'access');
-  const resolvedTab: UserDialogTab = showAccessTab ? activeTab : 'identity';
-
-  React.useEffect(() => {
-    if (!open) return;
-    setActiveTab(initialTab === 'access' && showAccessTab ? 'access' : 'identity');
-  }, [initialTab, open, showAccessTab]);
-
-  React.useEffect(() => {
-    if (resolvedTab === 'access') setAccessMounted(true);
-  }, [resolvedTab]);
 
   const userQuery = useQuery({
     queryKey: ['user-dialog', userId],
@@ -87,6 +73,22 @@ export default function UserDialog({
     refetchOnWindowFocus: false,
     retry: false,
   });
+  // A person with more rights than the reader (the server says so): shown, never changed.
+  const readOnly = editing && userQuery.data?.above_own_rights === true;
+  const showAccessTab = editing && canAdminDataAccess && !ownAccount && !readOnly;
+
+  const [activeTab, setActiveTab] = React.useState<UserDialogTab>(initialTab);
+  const [accessMounted, setAccessMounted] = React.useState(initialTab === 'access');
+  const resolvedTab: UserDialogTab = showAccessTab ? activeTab : 'identity';
+
+  React.useEffect(() => {
+    if (!open) return;
+    setActiveTab(initialTab === 'access' && showAccessTab ? 'access' : 'identity');
+  }, [initialTab, open, showAccessTab]);
+
+  React.useEffect(() => {
+    if (resolvedTab === 'access') setAccessMounted(true);
+  }, [resolvedTab]);
 
   const [identityState, setIdentityState] = React.useState<IdentityState>({
     isDirty: false,
@@ -135,18 +137,16 @@ export default function UserDialog({
         return true;
       }
       if (userId == null) return false;
-      await api.patch(`/users/${userId}`, userPayload);
-      try {
-        await api.put(`/users/${userId}/roles`, { role_ids });
-      } catch (roleErr: any) {
-        setIdentityError(new Error(getApiErrorMessage(roleErr, t, t('users.messages.rolesSaveFailed'))));
-        return false;
-      }
+      // The profile and the roles in one request: a refusal of either writes neither.
+      await api.patch(`/users/${userId}`, { ...userPayload, role_ids });
       void queryClient.invalidateQueries({ queryKey: ['users'] });
       return true;
     } catch (e: any) {
+      // A taken e-mail answers 409 `duplicate`; the coded refusals (roles, last administrator)
+      // are worded by the form's alert.
+      const code = e?.response?.data?.code;
       setIdentityError(
-        e?.response?.status === 409 ? new Error(t('users.messages.emailUnique')) : e,
+        e?.response?.status === 409 && (!code || code === 'duplicate') ? new Error(t('users.messages.emailUnique')) : e,
       );
       return false;
     }
@@ -222,6 +222,7 @@ export default function UserDialog({
       serverError={identityError}
       onStateChange={setIdentityState}
       managedByEntra={managedByEntra}
+      readOnly={readOnly}
     />
   );
 
@@ -238,10 +239,12 @@ export default function UserDialog({
   return (
     <KanapDialog
       open={open}
-      title={mode === 'create' ? t('users.dialogs.newUser') : t('users.dialogs.editUser')}
+      title={mode === 'create' ? t('users.dialogs.newUser') : readOnly ? t('users.dialogs.viewUser') : t('users.dialogs.editUser')}
       onClose={onClose}
       onSave={() => { void handleSave('save'); }}
-      saveDisabled={saveDisabled}
+      showSave={!readOnly}
+      cancelLabel={readOnly ? t('common:buttons.close') : undefined}
+      saveDisabled={saveDisabled || readOnly}
       saveLoading={saving}
       secondaryActions={saveAndInvite}
       sx={{ maxWidth: 640 }}

@@ -2200,7 +2200,9 @@
     "dialogs": {
       "createTitle": "Nouveau rôle",
       "deleteMessage": "Cette action est définitive. Vous ne pouvez supprimer que les rôles sans utilisateurs assignés.",
-      "deleteTitle": "Supprimer le rôle"
+      "deleteTitle": "Supprimer le rôle",
+      "duplicateTitle": "Dupliquer le rôle",
+      "duplicateName": "{{name}} (copie)"
     },
     "empty": "Aucun rôle trouvé.",
     "fields": {
@@ -2534,6 +2536,7 @@
       "inviting": "Invitation en cours…",
       "rowMenu": "Actions utilisateur",
       "edit": "Modifier",
+      "view": "Consulter",
       "enable": "Activer",
       "disable": "Désactiver",
       "sendInvite": "Envoyer une invitation",
@@ -2567,6 +2570,7 @@
     "dialogs": {
       "newUser": "Nouvel utilisateur",
       "editUser": "Modifier l'utilisateur",
+      "viewUser": "Consulter l'utilisateur",
       "identity": "Identité",
       "saveAndInvite": "Enregistrer et inviter"
     },
