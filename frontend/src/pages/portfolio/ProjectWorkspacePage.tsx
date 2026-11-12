@@ -1223,7 +1223,7 @@ export default function ProjectWorkspacePage() {
             <ProjectTasksPanel
               projectId={form?.id || id}
               phases={form?.phases || []}
-              disabled={!canManage}
+              disabled={!canContributeToProject}
               onTasksChange={() => {
                 void projectTasksCountQuery.refetch();
               }}
