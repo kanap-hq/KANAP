@@ -13,7 +13,7 @@ vi.mock('../components/AuthFrame', () => ({
 
 const i18n = vi.hoisted(() => {
   // A stable t: a new function on each render would loop effects.
-  const t = (key: string) => key;
+  const t = (key: string, options?: { account?: string }) => (options?.account ? `${key}:${options.account}` : key);
   return { t };
 });
 
@@ -41,6 +41,13 @@ function renderLanding(hash: string) {
   );
 }
 
+/** A link token as the server signs it: only its readable middle part matters here. */
+function linkToken(payload: Record<string, unknown>): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  const middle = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `header.${middle}.signature`;
+}
+
 const confirmButton = () => screen.getByRole('button', { name: 'auth:linkMicrosoft.confirm' });
 
 describe('LinkMicrosoftPage', () => {
@@ -56,6 +63,19 @@ describe('LinkMicrosoftPage', () => {
     fireEvent.click(confirmButton());
     await waitFor(() => expect(screen.getByTestId('login').textContent).toBe('/login|{"microsoftLinked":true}'));
     expect(api.post).toHaveBeenCalledWith('/auth/entra/link', { token: 'abc.def' });
+  });
+
+  it('names the Microsoft account that asked for the link, before the button', () => {
+    const token = linkToken({ name: 'Zoé <b>Martin</b>', username: 'zoe.martin@contoso.test' });
+    renderLanding(`#token=${token}`);
+    const line = screen.getByText('auth:linkMicrosoft.account:Zoé <b>Martin</b> (zoe.martin@contoso.test)');
+    expect(line.querySelector('b')).toBeNull();
+    expect(line.compareDocumentPosition(confirmButton()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows the sign-in name alone when the link has no display name', () => {
+    renderLanding(`#token=${linkToken({ username: 'zoe.martin@contoso.test' })}`);
+    expect(screen.getByText('auth:linkMicrosoft.account:zoe.martin@contoso.test')).toBeTruthy();
   });
 
   it.each([
