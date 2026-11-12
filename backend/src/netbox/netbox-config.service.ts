@@ -674,14 +674,28 @@ export class NetboxConfigService {
     return readSyncState(asRecord(config?.metadata_json), nowMs);
   }
 
-  /** Persists the run state; the page polls GET /netbox/status for it. */
+  /**
+   * Persists the run state; the page polls GET /netbox/status for it. Returns the address
+   * the state was written for, or null when nothing was written.
+   *
+   * `runFor` is the address returned when the run started. A run that ends after its
+   * connection was removed, or moved to another server, writes nothing: its outcome
+   * describes a server that is gone, and its first-import mark would let the hourly run
+   * import the next server with nobody having read it. A save that removes or moves the
+   * connection clears the state the run started, so nothing is left showing it as running.
+   */
   async writeSyncState(
     manager: EntityManager,
     tenantId: string,
     state: NetboxSyncStateView,
-  ): Promise<void> {
+    opts?: { runFor?: string | null },
+  ): Promise<string | null> {
     const config = await this.getConfig(manager, tenantId, { forUpdate: true });
-    if (!config) return;
+    if (!config) return null;
+    const baseUrl = textOrNull(config.base_url);
+    if (opts && 'runFor' in opts && (!baseUrl || !opts.runFor || !sameSecretDestination(baseUrl, opts.runFor))) {
+      return null;
+    }
     const metadata: Record<string, unknown> = { ...(asRecord(config.metadata_json) ?? {}) };
     metadata.sync_state = state;
     // The hourly run waits for this: a first import is read and applied by a
@@ -700,6 +714,7 @@ export class NetboxConfigService {
     config.metadata_json = metadata;
     config.updated_at = new Date();
     await this.repo(manager).save(config);
+    return baseUrl;
   }
 
   private encryptedCredentialRef(material: string): Record<string, unknown> {
