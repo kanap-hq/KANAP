@@ -1355,6 +1355,7 @@
       "frontmatterEditor": {
         "addEntry": "Eintrag hinzufügen",
         "dialogDescription": "Fügen Sie die Schlüssel-Wert-Einträge des Dokumentkopfs hinzu, bearbeiten oder entfernen Sie sie.",
+        "invalidYaml": "Dieser Dokumentkopf kann nicht als Schlüssel-Wert-Felder bearbeitet werden. Bearbeiten Sie stattdessen den Markdown-Quelltext.",
         "key": "Schlüssel",
         "title": "Dokumentkopf bearbeiten",
         "value": "Wert"
@@ -1439,7 +1440,9 @@
         "dialogTitle": "Bild hochladen",
         "height": "Höhe:",
         "title": "Titel:",
+        "uploadError": "Das Hochladen des Bildes ist fehlgeschlagen. Bitte versuchen Sie es erneut.",
         "uploadInstructions": "Laden Sie ein Bild von Ihrem Gerät hoch:",
+        "uploading": "Bild wird hochgeladen…",
         "width": "Breite:"
       }
     },

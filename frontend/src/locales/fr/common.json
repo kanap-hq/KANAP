@@ -1355,6 +1355,7 @@
       "frontmatterEditor": {
         "addEntry": "Ajouter une entrée",
         "dialogDescription": "Ajoutez, modifiez ou supprimez les entrées clé-valeur de l'en-tête du document.",
+        "invalidYaml": "Cet en-tête du document ne peut pas être modifié comme des champs clé-valeur. Modifiez plutôt la source Markdown.",
         "key": "Clé",
         "title": "Modifier l'en-tête du document",
         "value": "Valeur"
@@ -1439,7 +1440,9 @@
         "dialogTitle": "Téléverser une image",
         "height": "Hauteur :",
         "title": "Titre :",
+        "uploadError": "Le téléversement de l'image a échoué. Réessayez.",
         "uploadInstructions": "Téléversez une image depuis votre appareil :",
+        "uploading": "Téléversement de l'image…",
         "width": "Largeur :"
       }
     },

@@ -1355,6 +1355,7 @@
       "frontmatterEditor": {
         "addEntry": "Add entry",
         "dialogDescription": "Add, edit or remove the key-value entries of the document front matter.",
+        "invalidYaml": "This front matter cannot be edited as key-value fields. Edit the Markdown source instead.",
         "key": "Key",
         "title": "Edit document front matter",
         "value": "Value"
@@ -1439,7 +1440,9 @@
         "dialogTitle": "Upload an image",
         "height": "Height:",
         "title": "Title:",
+        "uploadError": "Image upload failed. Please try again.",
         "uploadInstructions": "Upload an image from your device:",
+        "uploading": "Uploading image…",
         "width": "Width:"
       }
     },
