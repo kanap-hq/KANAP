@@ -75,11 +75,23 @@ async function run() {
     const names = (row: any) => (row.applications === null ? null : row.applications.map((app: { name: string }) => app.name).sort());
     const ids = (row: any) => (row.application_ids === null ? null : [...row.application_ids].sort());
     const listed = async (req: any) => (await tasks.list({}, req)).items.find((item: any) => item.id === task);
+    // A second task, on an application the contributor takes part in, whose name sorts between the two.
+    const between = await insertId(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, 'Security app')`, [tenantId]);
+    await runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`, [tenantId, between, bcId]);
+    const second = await insertId(runner,
+      `INSERT INTO tasks (tenant_id, item_number, title, status, assignee_user_id, labels, owner_ids, viewer_ids) VALUES ($1, 2, 'Second task', 'open', $2, '[]', '[]', '[]')`,
+      [tenantId, bcId]);
+    await runner.query(`INSERT INTO task_applications (tenant_id, task_id, application_id) VALUES ($1, $2, $3)`, [tenantId, second, between]);
+    const sorted = async (req: any) => (await tasks.list({ sort: 'application_name:ASC' }, req)).items.map((item: any) => item.id);
+    const byApplication = async (req: any, applicationId: string) => (await tasks.list({ applicationId }, req)).items.map((item: any) => item.id).sort();
 
     // A person who reads everything: both applications, as before.
     const full = reqOf(adminId, {}, true);
     assert.deepEqual(names(await tasks.getOne(task, full)), ['Secret app', 'Seen app'], 'full reader: both applications');
     assert.deepEqual(ids(await listed(full)), [seen, unseen].sort(), 'full reader: both in the list');
+    // Sorted by application: the first name of every link (Secret app, then Security app).
+    assert.deepEqual(await sorted(full), [task, second], 'full reader: sorted on every application');
+    assert.deepEqual(await byApplication(full, unseen), [task], 'full reader: filtered on any application');
     console.log('  a person who reads everything sees every application: OK');
 
     // A Business Contributor: the field shows the application they take part in, nothing of the other.
@@ -91,6 +103,10 @@ async function run() {
     const row = await listed(bc);
     assert.deepEqual(ids(row), [seen], 'contributor: the list reads the same way');
     assert.ok(!JSON.stringify(row).includes(unseen), 'contributor: the list names nothing of the other application');
+    // The order and the filter read the applications of their participation only (Security app, then Seen app).
+    assert.deepEqual(await sorted(bc), [second, task], 'contributor: sorted on the applications they read');
+    assert.deepEqual(await byApplication(bc, unseen), [], 'contributor: an application outside their participation filters nothing in');
+    assert.deepEqual(await byApplication(bc, seen), [task], 'contributor: their application filters as before');
     // Saving the field as shown (here emptied) keeps the link the person does not see.
     await tasks.updateTask(task, { application_ids: [] }, bc);
     const stored = (await runner.query(`SELECT application_id FROM task_applications WHERE tenant_id = $1 AND task_id = $2`, [tenantId, task]))
@@ -103,6 +119,8 @@ async function run() {
     const reader = reqOf(readerId, tasksOnly.permissions);
     const unread = await tasks.getOne(task, reader);
     assert.deepEqual([unread.applications, unread.application_ids], [null, null], 'no reader of applications: no field');
+    assert.deepEqual(await byApplication(reader, unseen), [], 'no reader of applications: the filter matches nothing');
+    assert.equal((await sorted(reader)).length, 2, 'no reader of applications: the sort still lists the tasks');
     console.log('  a person who does not read applications gets no field: OK');
   } finally {
     await runner.rollbackTransaction();
