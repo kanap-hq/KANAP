@@ -65,6 +65,7 @@ import {
   lastActiveAdministratorsLeaving,
   assertRoleGrantWithinActorRights,
   PERSON_ABOVE_OWN_RIGHTS_MESSAGE,
+  peopleAboveActorRights,
   personAboveActorRights,
   RoleGrantActor,
 } from '../roles/role-grant-ceiling';
@@ -560,7 +561,7 @@ export class UsersService {
     return out;
   }
 
-  async list(query: any, opts?: { manager?: EntityManager; adminView?: boolean; exportAll?: boolean; dataAccessView?: boolean }) {
+  async list(query: any, opts?: { manager?: EntityManager; adminView?: boolean; exportAll?: boolean; dataAccessView?: boolean; roleGrant?: RoleGrantActor }) {
     const repo = this.getRepo(opts?.manager);
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll ? parseExportPagination(query) : parsePagination(query);
     const allowedSortFields = [
@@ -625,6 +626,7 @@ export class UsersService {
       nodes: Array<{ type: 'all' | 'company' | 'cost_center'; name: string | null }>;
     }> | undefined;
     let dataAccessAnyLimited: boolean | undefined;
+    let aboveOwnRights: Set<string> | undefined;
     if (opts?.adminView && items.length > 0) {
       const mg = opts?.manager ?? repo.manager;
       const pageUsers = items.map((u) => ({ id: u.id, role_id: u.role_id, role_name: u.role?.role_name ?? null }));
@@ -643,6 +645,8 @@ export class UsersService {
             .getRawMany()
         : [];
       rolesWithPerms = new Set(permRows.map((r) => r.role_id));
+      // The people the reader may not change (the screen offers no change on them).
+      if (opts?.roleGrant) aboveOwnRights = await peopleAboveActorRights(mg, opts.roleGrant, pageUsers.map((u) => u.id));
     }
 
     if (opts?.dataAccessView) {
@@ -679,6 +683,7 @@ export class UsersService {
           password_hash: undefined,
           roles,
           pending_access: u.status === 'enabled' && !hasAccess,
+          above_own_rights: aboveOwnRights?.has(u.id) === true,
           ...(opts?.dataAccessView && dataAccessByUser
             ? { data_access: dataAccessByUser.get(u.id) ?? { mode: 'all', nodes: [] } }
             : {}),
