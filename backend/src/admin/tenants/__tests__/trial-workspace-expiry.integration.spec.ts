@@ -367,6 +367,71 @@ async function testRecheckLocksTheRow() {
   }
 }
 
+async function seedDiscoveryCall(tenantId: string, scheduledAt: Date, note: string) {
+  await inTenant(tenantId, (manager) => manager.query(
+    `INSERT INTO trial_discovery_calls (tenant_id, scheduled_at, status, source, note, external_id)
+     VALUES ($1, $2, 'booked', 'calcom', $3, 'cal_uid_spec')`,
+    [tenantId, scheduledAt, note],
+  ));
+}
+
+async function discoveryCallOf(tenantId: string) {
+  const [row] = await inTenant(tenantId, (manager) => manager.query(
+    `SELECT scheduled_at, status, source, note, external_id FROM trial_discovery_calls WHERE tenant_id = $1`,
+    [tenantId],
+  ));
+  return row;
+}
+
+// Spec 7: the note and the date of a discovery call are erased sixty days after the call, in any
+// live workspace, subscribed or not, billing configured or not (privacy policy, section 6); the
+// rest of the row stays, a call to come or younger is untouched, a second run does nothing.
+async function testDiscoveryCallRetention() {
+  const svc = buildServices();
+  const clock = new Date('2026-09-01T04:15:00.000Z');
+  const before = (days: number) => new Date(clock.getTime() - days * DAY_MS);
+  const subscribed = [{ status: 'active', stripeSubscriptionId: 'sub_spec_call', planName: 'Hosted KANAP' }];
+  const ids: Record<string, string> = {};
+  try {
+    ids.day59 = await seedTenant({ tag: 'call59', subscriptions: subscribed });
+    ids.day60 = await seedTenant({ tag: 'call60', subscriptions: subscribed });
+    ids.upcoming = await seedTenant({ tag: 'callnext', subscriptions: subscribed });
+    // Not subscribed: a trial extended by hand, an internal workspace.
+    ids.trial = await seedTenant({ tag: 'calltrial', subscriptions: [{ status: 'trialing', trialEnd: new Date(clock.getTime() + 5 * DAY_MS) }] });
+    ids.internal = await seedTenant({ tag: 'callint', subscriptions: [{ status: 'active', planName: 'Internal' }] });
+    await seedDiscoveryCall(ids.day59, before(59), 'Note 59');
+    await seedDiscoveryCall(ids.day60, before(60), 'Note 60');
+    await seedDiscoveryCall(ids.upcoming, before(-3), 'Note upcoming');
+    await seedDiscoveryCall(ids.trial, before(90), 'Note trial');
+    await seedDiscoveryCall(ids.internal, before(61), 'Note internal');
+    const scope = Object.values(ids);
+    const erased = { scheduled_at: null, status: 'booked', source: 'calcom', note: null, external_id: 'cal_uid_spec' };
+
+    // Billing not configured: the trials are not enforced, the erasure still runs.
+    const first = await expiryService(svc, { billingConfigured: false }).run({ now: clock, tenantIds: scope });
+    assert.deepEqual([first.errors, first.deleted, first.discoveryCallsErased], [[], [], 3]);
+
+    const kept59 = await discoveryCallOf(ids.day59);
+    assert.equal(kept59.note, 'Note 59', 'a call 59 days old keeps its note');
+    assert.equal(new Date(kept59.scheduled_at).getTime(), before(59).getTime());
+    const upcoming = await discoveryCallOf(ids.upcoming);
+    assert.equal(upcoming.note, 'Note upcoming', 'a call to come keeps its note');
+    assert.equal(new Date(upcoming.scheduled_at).getTime(), before(-3).getTime());
+    assert.deepEqual(await discoveryCallOf(ids.day60), erased, 'a call 60 days old loses its note and its date, nothing else');
+    assert.deepEqual(await discoveryCallOf(ids.trial), erased, 'without a subscription too');
+    assert.deepEqual(await discoveryCallOf(ids.internal), erased, 'in an internal workspace too');
+    for (const id of scope) assert.equal((await tenantRow(id)).status, TenantStatus.ACTIVE);
+
+    const again = await expiryService(svc).run({ now: clock, tenantIds: scope });
+    assert.deepEqual([again.errors, again.deleted, again.discoveryCallsErased], [[], [], 0]);
+    assert.equal((await discoveryCallOf(ids.day59)).note, 'Note 59');
+    assert.equal((await discoveryCallOf(ids.upcoming)).note, 'Note upcoming');
+    assert.deepEqual(await discoveryCallOf(ids.day60), erased);
+  } finally {
+    await cleanupTenants(Object.values(ids));
+  }
+}
+
 void runSpecs('trial-workspace-expiry.integration.spec', [
   testSelection,
   testCapPerRun,
@@ -374,4 +439,5 @@ void runSpecs('trial-workspace-expiry.integration.spec', [
   testSubscribedMeanwhile,
   testStripeUnreachable,
   testRecheckLocksTheRow,
+  testDiscoveryCallRetention,
 ]);

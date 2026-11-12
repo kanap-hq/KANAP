@@ -8,8 +8,8 @@ Code: `backend/src/email/trial-mails/`. Texts: `trialMails` in `backend/src/i18n
 
 | Milestone | When | Sender | Content |
 |---|---|---|---|
-| `j0` Welcome | Once the path and the mode are chosen, or an hour after the first sign-in seen without them | Application address, replies to `fried@kanap.net` | The chosen path's first-steps guide and the two other paths ("Just looking": the three paths), the discovery call, button **Book a discovery call** |
-| `j5` Personal note | Five days after the trial started, only when no discovery call is booked (to come or past; a cancelled call counts as none) | `"Friedrich (Kadratis)" <fried@kanap.net>` | How the trial is going, the chosen path's first-steps guide ("Just looking": the three paths), the call link on its own line. No button |
+| `j0` Welcome | Once the path and the mode are chosen, or an hour after the first sign-in seen without them | Application address, replies to the founder's address (`TRIAL_MAIL_FOUNDER_ADDRESS`, default `fried@kanap.net`) | The chosen path's first-steps guide and the two other paths ("Just looking": the three paths), the discovery call, button **Book a discovery call** |
+| `j5` Personal note | Five days after the trial started, only when no discovery call is booked (to come or past; a cancelled call counts as none) | `"Friedrich (Kadratis)" <founder address>` (`TRIAL_MAIL_FOUNDER_ADDRESS`, default `fried@kanap.net`) | How the trial is going, the chosen path's first-steps guide ("Just looking": the three paths), the call link on its own line. No button |
 | `j12` Trial ends in two days | Two days before `trial_end` | Application address, replies to Friedrich | The end date, read-only for thirty days then deletion, the hosted plan (prices from `PLANS`) and installing it yourself, button **Activate the subscription** |
 | `ended` End-of-trial notice | Once `trial_end` has passed, still `trialing` | Application address, replies to Friedrich | Read-only, the deletion date, reactivate, export, install; the open question about what was missing |
 | `thanks` Thank-you | Once Stripe confirms the first subscription (`active` with a Stripe subscription) | Application address, replies to Friedrich | Subscription recorded, data kept, support address, button **Open Kadratis** |
@@ -54,4 +54,4 @@ A bad token on the unsubscribe routes answers 404 with a page in the reader's la
 
 ## Deliverability
 
-The application address is `RESEND_FROM_EMAIL`; J+5 is sent as `fried@kanap.net` through the same Resend relay, which needs the `kanap.net` domain verified in Resend (SPF include and DKIM key published) and a DMARC policy that the relay's DKIM signature aligns with.
+The application address is `RESEND_FROM_EMAIL`; J+5 is sent as the founder's address (`TRIAL_MAIL_FOUNDER_ADDRESS`, `fried@kanap.net` when unset or not a plain address) through the same Resend relay, which needs that address's domain (`kanap.net` by default) verified in Resend (SPF include and DKIM key published) and a DMARC policy that the relay's DKIM signature aligns with.

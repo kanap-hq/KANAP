@@ -415,7 +415,7 @@
     "selectExisting": "Select the existing supplier",
     "export": "Export suppliers",
     "import": "Import suppliers",
-    "importHint": "Accepted status values: enabled or disabled. disabled_at holds the end of validity, or stays empty. The contact columns take the e-mail of a contact that already exists in Contacts.",
+    "importHint": "Accepted values for Status: enabled or disabled. Disabled on holds the end of validity, or stays empty. The contact columns take the e-mail of a contact that already exists in Contacts.",
     "fields": {
       "name": "Name",
       "erpSupplierId": "ERP supplier ID",

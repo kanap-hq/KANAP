@@ -136,6 +136,17 @@ describe('TechnologiesPage', () => {
     expect(screen.getByTestId('support-end').getAttribute('data-state')).toBe('supported');
   });
 
+  it('names which end of support the date is, standard or extended', () => {
+    renderPage();
+    const Cell = column('next_support_end').cellRenderer;
+    const theme = createAppTheme('light');
+    const { unmount } = render(<ThemeProvider theme={theme}><Cell value="2099-01-01" data={{ next_support_end_kind: 'extended' }} /></ThemeProvider>);
+    expect(screen.getByTestId('support-end').getAttribute('aria-label')).toBe('workspace.technology.versions.extendedEnd');
+    unmount();
+    render(<ThemeProvider theme={theme}><Cell value="2099-01-01" data={{ next_support_end_kind: 'standard' }} /></ThemeProvider>);
+    expect(screen.getByTestId('support-end').getAttribute('aria-label')).toBe('workspace.technology.versions.standardEnd');
+  });
+
   it('says in one line that the list is empty, with the creation for a manager', async () => {
     renderPage();
     render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.emptyState}</ThemeProvider>);

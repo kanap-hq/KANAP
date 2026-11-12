@@ -3,6 +3,8 @@ import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
+import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
+import { requestContextMissing } from '../auth/module-right-required';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { reportExportBody, reportExportRequest, writeReportExport } from '../common/report-export';
 import { RoadmapApplyInput, RoadmapGenerateInput } from './dto/roadmap.dto';
@@ -49,18 +51,29 @@ export class PortfolioRoadmapController {
     res.send(await reportExportBody(res, writeReportExport(exp, request)));
   }
 
+  /**
+   * Writes the planned dates of the listed projects, as `PATCH /portfolio/projects/:id` does for
+   * one: the same level, and the same participation scope on each project (a Business Contributor
+   * changes the projects they take part in). One project outside it and nothing is written.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_projects', 'contributor')
   @Post('projects/planning/roadmap/apply')
-  applyRoadmapDates(
+  async applyRoadmapDates(
     @Body() body: RoadmapApplyInput,
     @Tenant() ctx: TenantRequest,
   ) {
+    if (!ctx.manager) throw requestContextMissing('Tenant context is not available');
+    const accessScope = await resolveBusinessContributorScopeForUser(
+      { manager: ctx.manager, userId: ctx.userId, tenantId: ctx.tenantId },
+      'portfolio_projects',
+      'contributor',
+    );
     return this.roadmapService.applyDates(
       ctx.tenantId,
       body,
       ctx.userId || null,
-      { manager: ctx.manager },
+      { manager: ctx.manager, accessScope },
     );
   }
 }

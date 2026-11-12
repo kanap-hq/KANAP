@@ -54,12 +54,13 @@ import { listAllPages as paginatedList } from '../../scripts/lib/list-all-pages.
 import { analyticsValuesText, fixtureDimensions, resolveFixtureLanguage, withFixtureDimensionValues } from './fixture-dimensions.mjs';
 import { planDemandScores, sameCriteriaValues } from './demand-scores.mjs';
 import { rewriteIncidentTaskLinks } from './incident-task-links.mjs';
+import { CAVE_PROJECT, CONTRACT_APPLICATIONS, caveProjectPhases, serviceDeskAgentTexts } from './sample-story.mjs';
 import { datasetTranslator, isTranslatedFile, resolveDatasetLanguage } from './translations/translate.mjs';
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULTS = {
-  baseUrl: 'https://fromage.dev.kanap.net',
+  baseUrl: 'http://fromage.lvh.me',
   org: 'Fromage & Co',
   countryIso: 'FR',
   year: DATASET_YEAR,
@@ -1046,8 +1047,8 @@ async function ensureCaveRequestConverted() {
     return;
   }
   await apiPost(`/portfolio/requests/${request.id}/convert`, {
-    planned_start: shiftedDate('2026-02-01'),
-    planned_end: shiftedDate('2027-09-30'),
+    planned_start: shiftedDate(CAVE_PROJECT.planned_start),
+    planned_end: shiftedDate(CAVE_PROJECT.planned_end),
     estimated_effort_it: 35,
     estimated_effort_business: 12,
   });
@@ -1800,6 +1801,20 @@ async function linkSpendToApps() {
   ok('Spend items linked to applications');
 }
 
+async function linkContractsToApplications() {
+  info('Linking contracts to applications');
+  for (const [contractName, appNames] of Object.entries(CONTRACT_APPLICATIONS)) {
+    const contractId = await contractIdByName(t(contractName));
+    if (!contractId) {
+      warn(`Contract '${contractName}' not found`);
+      continue;
+    }
+    const appIds = await appIdsFromNames(appNames);
+    if (appIds.length) await apiPost(`/contracts/${contractId}/applications/bulk-replace`, { application_ids: appIds });
+  }
+  ok('Contracts linked to applications');
+}
+
 // ── Portfolio teams, timeline, allocations ───────────────────────────────────
 
 const TEAMS = [
@@ -1868,12 +1883,7 @@ const PROJECT_PHASES = {
     [t('Italy Rollout'), '2026-03-01', '2026-08-31', 'pending'],
     [t('US Rollout'), '2026-08-01', '2026-12-31', 'pending'],
   ],
-  'Cave Climate Digital Twin': [
-    [t('Sensor history baseline'), '2026-02-01', '2026-06-30', 'completed'],
-    [t('Airflow and temperature model'), '2026-05-01', '2026-12-31', 'in_progress'],
-    [t('Cave master review'), '2026-10-01', '2027-03-31', 'pending'],
-    [t('Remote cave management'), '2027-01-15', '2027-09-30', 'pending'],
-  ],
+  'Cave Climate Digital Twin': caveProjectPhases(t),
 };
 
 async function ensureProjectPhases() {
@@ -1985,12 +1995,22 @@ async function ensureCaveProjectStory() {
   }
   await apiPatch(`/portfolio/projects/${projectId}`, {
     status: 'in_progress',
-    planned_start: shiftedDate('2026-02-01'),
-    planned_end: shiftedDate('2027-09-30'),
+    planned_start: shiftedDate(CAVE_PROJECT.planned_start),
+    planned_end: shiftedDate(CAVE_PROJECT.planned_end),
     estimated_effort_it: 35,
     estimated_effort_business: 12,
     execution_progress: 30,
   });
+  // Starting the project dates it on the day of the load. Its actual start is the start of its
+  // first phase, set like the other projects' dates: by the projects import (upsert on the name,
+  // a column left out is left as it is).
+  const project = await apiGet(`/portfolio/projects/${projectId}`);
+  const startCsv = `name;actual_start\n${csvCell(String(project?.name ?? ''))};${shiftedDate(CAVE_PROJECT.actual_start)}\n`;
+  const started = await request('POST', '/portfolio/projects/import?dryRun=false', undefined, {
+    uploadBytes: Buffer.from(startCsv, 'utf8'),
+    uploadName: 'cave-project-start.csv',
+  });
+  if (started?.ok === false) throw new Error(`Actual start of '${CAVE_REQUEST_NAME}' returned ok=false:\n${JSON.stringify(started, null, 2)}`);
 
   const appId = await appIdByName('CaveGuard IoT');
   if (appId) await apiPost(`/portfolio/projects/${projectId}/applications/bulk-replace`, { application_ids: [appId] });
@@ -2134,8 +2154,9 @@ async function ensureServiceDeskDocs() {
 
 // ── Demo AI agent (mock ticketing provider) ──────────────────────────────────
 
-const AGENT_NAME = t('Fromage Service Desk Agent');
-const SHARED_CONTEXT_NAME = t('Fromage & Co Company Context');
+const AGENT = serviceDeskAgentTexts(t);
+const AGENT_NAME = AGENT.name;
+const SHARED_CONTEXT_NAME = AGENT.sharedContext.name;
 
 async function ensureDemoAgent(serviceDeskLibrary) {
   info('Ensuring demo AI agent');
@@ -2153,14 +2174,8 @@ async function ensureDemoAgent(serviceDeskLibrary) {
   if (!profile) {
     const created = await apiPost(`${cp}/shared-context-profiles`, {
       name: SHARED_CONTEXT_NAME,
-      description: t('Shared facts about Fromage & Co for all agents'),
-      lines: [
-        t('Fromage & Co is a European cheese group: Fromage & Co SA (France, HQ), Kaasmeester BV (Netherlands), Formaggio Supremo SRL (Italy), Fromage & Co Inc. (US).'),
-        t('Core systems: SAP S/4HANA (ERP, production), Salesforce (CRM), Microsoft 365 (collaboration), Workday HCM (HR), ServiceNow (ITSM).'),
-        t('The Paris Data Center (PAR-DC1) hosts SAP production; site firewalls are FortiGate appliances.'),
-        t('Business hours are 08:00-18:00 CET; the production sites in Paris and Parma run until 22:00.'),
-        t('IT service desk language is English; requesters may write in French, Dutch or Italian.'),
-      ],
+      description: AGENT.sharedContext.description,
+      lines: AGENT.sharedContext.lines,
     });
     profile = created?.profile ?? created;
     ok(`Created shared context profile '${SHARED_CONTEXT_NAME}'`);
@@ -2169,7 +2184,7 @@ async function ensureDemoAgent(serviceDeskLibrary) {
   const agentBody = {
     name: AGENT_NAME,
     agent_type: 'helpdesk',
-    description: t('Demo helpdesk triage agent bound to the built-in mock ticketing provider.'),
+    description: AGENT.description,
     provider_bindings_json: { ticketing: { provider_kind: 'ticketing', provider_key: 'mock' } },
     // Scope follows the template shape: manual safe targets stay allowed (a
     // hard requirement of the triage runtime) and the bounded new-tickets
@@ -2209,14 +2224,10 @@ async function ensureDemoAgent(serviceDeskLibrary) {
       automatic_writes_enabled: false,
     },
     persona_json: {
-      mission: t('Support the Fromage & Co IT service desk: triage incoming tickets, investigate using the IT landscape, and prepare source-cited replies for technician approval.'),
-      instructions: [
-        t('Always cite the evidence used for a conclusion.'),
-        t('Prefer an internal note when evidence is incomplete or confidence is low.'),
-        t('Never promise delivery dates; route scheduling questions to the service desk lead.'),
-      ],
-      output_style: { tone: t('Professional, concise and friendly; address requesters by first name.'), language: options.language },
-      escalation_guidance: t('Escalate security incidents and anything touching SAP production to Pierre Martin.'),
+      mission: AGENT.persona.mission,
+      instructions: AGENT.persona.instructions,
+      output_style: { tone: AGENT.persona.tone, language: options.language },
+      escalation_guidance: AGENT.persona.escalationGuidance,
       shared_context: { enabled: true, profile_id: profile.id },
     },
   };
@@ -2884,6 +2895,7 @@ async function runRelations() {
   step('budget-links');
   await linkContractsToSpend();
   await linkSpendToApps();
+  await linkContractsToApplications();
   step('portfolio-teams');
   await ensurePortfolioTeamsAndCapacity();
   await ensureProjectPhases();

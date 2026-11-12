@@ -39,6 +39,31 @@ export function subscriptionPeriod(sub: any): { start: StripeTimestamp | null; e
 }
 
 /**
+ * When a subscription whose cancellation is set ends, else null: `cancel_at` (the customer
+ * portal sets it since basil, with `cancel_at_period_end` false), else the end of the current
+ * period for `cancel_at_period_end`. A payload with the flag but no period keeps `stored`.
+ * The webhook and the refresh from Stripe both write `canceled_at_effective` with it.
+ */
+export function cancellationEffectiveAt(sub: any, stored: Date | null): Date | null {
+  const cancelAt = timestamp(sub?.cancel_at);
+  if (cancelAt != null) return new Date(cancelAt * 1000);
+  if (!sub?.cancel_at_period_end) return null;
+  const end = subscriptionPeriod(sub).end;
+  return end != null ? new Date(end * 1000) : stored;
+}
+
+/**
+ * The payment term of an invoice (`days_until_due`) as Stripe sends it: null for a card
+ * subscription. A payload without the field keeps `stored`.
+ */
+export function subscriptionDaysUntilDue(sub: any, stored: number | null): number | null {
+  const value = sub?.days_until_due;
+  if (typeof value === 'number') return value;
+  if (value === null) return null;
+  return stored;
+}
+
+/**
  * The subscription an invoice bills: `invoice.subscription` before basil, then
  * `invoice.parent.subscription_details.subscription`, else the first line's
  * subscription item details.

@@ -88,7 +88,7 @@ Each row is one technology. Click a row to open it.
 | **Publisher** | Who publishes it |
 | **Servers** | Assets in service it is installed on. Clusters are not counted, nor the virtual machines of a host that carries it. The **Servers** badge of the record and the [End of support](end-of-support.md) report give the same number |
 | **Applications** | Applications that declare it or are hosted on a server that carries it |
-| **Next end of support** | The earliest end of standard support to come among the versions in use. Shown in orange when it falls within the next 12 months |
+| **Next end of support** | The nearest end of support to come among the versions in use: the standard one, or the extended one when the standard ends have passed. Hover the date to see which. Shown in orange when it falls within the next 12 months |
 | **Vulnerabilities to review** | The known vulnerabilities still to review on the versions in use that are in the alerts. Shown in orange with the count of critical or high ones (`3 · 1 critical or high`). Click it to open the [Vulnerabilities](vulnerabilities.md) page on this technology. Present when vulnerabilities are followed |
 
 **Additional columns** (through the column chooser): **Lifecycle**, **Versions in use**, **IT owner**.

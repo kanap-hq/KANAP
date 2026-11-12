@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  actionAttentionMessage,
+  actionNeedsAttention,
   actionUpdateSummary,
   buildTicketGroups,
   capabilityLabelFromName,
+  knownCapabilityLabel,
   executableActions,
   executableTerminalActions,
   ticketingProviderKeyForDefinition,
@@ -277,6 +280,13 @@ describe('capabilityLabelFromName', () => {
     expect(capabilityLabelFromName('ticketing.ticket.participant_update.prepare')).toBe('Observers');
   });
 
+  it('labels the approved changes of Kad, and leaves other keys to the fallback', () => {
+    expect(capabilityLabelFromName('kanap.mutation_preview.execute_approved')).toBe('Approved change');
+    expect(knownCapabilityLabel('kanap.mutation_preview.execute_approved')).toBe('Approved change');
+    expect(knownCapabilityLabel('vendor.thing.do_it')).toBeNull();
+    expect(knownCapabilityLabel(null)).toBeNull();
+  });
+
   it('does not label read-only context lookups as write actions', () => {
     expect(capabilityLabelFromName('ticketing.ticket.classification_context.get')).toBe('Classification context get');
     expect(capabilityLabelFromName('ticketing.ticket.participant_context.get')).toBe('Participant context get');
@@ -322,6 +332,30 @@ describe('ticketingProviderKeyForDefinition', () => {
         provider_key: 'prometheus',
       },
     })).toBeNull();
+  });
+});
+
+describe('actions that need attention', () => {
+  it('lists a failed action by its status when its message is not given to the reader', () => {
+    const failed = action({ status: 'failed', error_message: null, metadata_json: null });
+    expect(actionNeedsAttention(failed)).toBe(true);
+    // Its line carries no caption: the status says how it ended.
+    expect(actionAttentionMessage(failed)).toBeNull();
+    expect(actionNeedsAttention(action({ status: 'dead_letter', error_message: null, metadata_json: null }))).toBe(true);
+  });
+
+  it('shows the message of a failure when the reader is given it', () => {
+    const failed = action({ status: 'failed', error_message: 'Library not found' });
+    expect(actionNeedsAttention(failed)).toBe(true);
+    expect(actionAttentionMessage(failed)).toBe('Library not found');
+  });
+
+  it('leaves an acknowledged failure and an action that only waits out of the list', () => {
+    const acknowledged = { attention_acknowledged: { at: '2026-11-11T09:00:00.000Z' } };
+    expect(actionNeedsAttention(action({ status: 'failed', error_message: null, metadata_json: acknowledged }))).toBe(false);
+    expect(actionNeedsAttention(action({ status: 'approved', error_message: null, metadata_json: null }))).toBe(false);
+    expect(actionNeedsAttention(action({ status: 'expired', error_message: null, metadata_json: null }))).toBe(false);
+    expect(actionNeedsAttention(action({ status: 'approved', error_message: 'Provider unavailable' }))).toBe(true);
   });
 });
 

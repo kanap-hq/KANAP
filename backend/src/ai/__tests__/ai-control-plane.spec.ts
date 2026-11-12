@@ -10011,6 +10011,16 @@ async function testAgentControlQueueOverviewReturnsLinkedActionRequests() {
   const internalActionId = randomUUID();
   const publicActionId = randomUUID();
   const classificationActionId = randomUUID();
+  // The agent's run that prepared the three actions: they are read in full through it.
+  await manager.getRepository(AiRun).save(manager.getRepository(AiRun).create({
+    id: 'run-ticket-4',
+    tenant_id: context.tenantId,
+    user_id: null,
+    invocation_channel: 'internal',
+    trigger_kind: 'internal',
+    status: 'completed',
+    metadata_json: { agent_definition_id: seeded.definition.id },
+  }));
 
   await actionRepo.save(actionRepo.create({
     id: internalActionId,
@@ -10331,6 +10341,92 @@ async function testAgentControlActivityTimelineAndDailyMetrics() {
   assert.equal(today.acceptanceRate, 1);
   assert.equal(today.tokens, 321);
   assert.equal(today.costEur, 0.25);
+}
+
+// The Activity screen shows the object of an approved change by its business reference: Kad records
+// the object by id (target_type `tasks`, target_ref the uuid); the entry keeps the id and gains the
+// reference, resolved for the whole page in one tenant-scoped read.
+async function testAgentActivityShowsTheReferenceOfTheTarget() {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const bundle = await seedTestHelpdeskDefinition(context);
+  const service = new AiAgentControlService(
+    {} as any,
+    {} as any,
+    {} as any,
+    { findEnabledTargets: async () => [] } as any,
+    {} as any,
+    queue,
+  );
+  const actionRepo = manager.getRepository(AiActionRequest);
+  const now = new Date(Date.now() - 10_000);
+  const taskId = randomUUID();
+  const projectId = randomUUID();
+  const goneId = randomUUID();
+  const save = async (targetType: string, targetRef: string, minutes: number) => {
+    await actionRepo.save(actionRepo.create({
+      id: randomUUID(),
+      tenant_id: context.tenantId,
+      run_id: null,
+      tool_execution_id: null,
+      conversation_id: null,
+      user_id: context.userId,
+      preview_id: randomUUID(),
+      capability_name: EXECUTE_APPROVED_PREVIEW_CAPABILITY,
+      capability_version: '1.0.0',
+      effect: 'write',
+      status: 'executed',
+      target_type: targetType,
+      target_id: null,
+      target_ref: targetRef,
+      idempotency_key: null,
+      action_payload_json: null,
+      provider_kind: null,
+      provider_key: null,
+      input_hash: 'activity-target-hash',
+      input_summary: null,
+      evidence_ids: null,
+      expires_at: new Date(now.getTime() + 30 * 60_000),
+      approved_at: null,
+      rejected_at: null,
+      executed_at: new Date(now.getTime() + minutes * 1_000),
+      error_message: null,
+      metadata_json: { agent_definition_id: bundle.definition.id },
+      created_at: new Date(now.getTime() + minutes * 1_000),
+      updated_at: new Date(now.getTime() + minutes * 1_000),
+    }));
+  };
+  await save('tasks', taskId, 1);
+  await save('tasks', taskId, 2);
+  await save('projects', projectId, 3);
+  await save('tasks', goneId, 4);
+  await save('ticket', '4711', 5);
+
+  const reads: Array<{ sql: string; params: unknown[] }> = [];
+  (manager as any).query = async (sql: string, params: unknown[]) => {
+    reads.push({ sql, params });
+    return [
+      { entity_type: 'tasks', entity_id: taskId, label: 'Renew the VPN certificate', ref_number: 15, extra_json: null },
+      { entity_type: 'projects', entity_id: projectId, label: 'Move to the new ERP', ref_number: 3, extra_json: null },
+    ];
+  };
+
+  const activity = await service.listActivity(context, { types: ['execution'], limit: 20 });
+  const byRef = (ref: string) => activity.items.filter((entry) => entry.targetRef === ref);
+  assert.equal(activity.items.length, 5);
+  assert.deepEqual(byRef(taskId).map((entry) => entry.targetDisplay), ['T-15', 'T-15']);
+  assert.deepEqual(byRef(projectId).map((entry) => entry.targetDisplay), ['PRJ-3']);
+  assert.deepEqual(byRef(goneId).map((entry) => entry.targetDisplay), [null], 'a deleted object shows no id');
+  assert.deepEqual(byRef('4711').map((entry) => entry.targetDisplay), [null], 'a ticket number is left as it is');
+  assert.equal(activity.items.every((entry) => entry.capabilityName === EXECUTE_APPROVED_PREVIEW_CAPABILITY), true, 'the key stays in the API');
+  assert.equal(activity.items.find((entry) => entry.targetRef === taskId)?.targetRef, taskId, 'the id stays in the API');
+  // One read for the page, scoped by tenant, with the ids as a batch.
+  assert.equal(reads.length, 1);
+  assert.match(reads[0].sql, /tenant_id = \$1/);
+  assert.match(reads[0].sql, /= ANY\(\$3/);
+  assert.equal(reads[0].params[0], context.tenantId);
+  assert.deepEqual(new Set(reads[0].params[2] as string[]), new Set([taskId, projectId, goneId]));
 }
 
 // Round-2 UAT: the timeline filters became a multi-select, so a page must be the
@@ -17384,6 +17480,7 @@ async function run() {
   await testAgentScopedEmergencyPauseBlocksHumanApproveExecute();
   await testAgentControlQueueOverviewReturnsLinkedActionRequests();
   await testAgentControlActivityTimelineAndDailyMetrics();
+  await testAgentActivityShowsTheReferenceOfTheTarget();
   await testAgentActivityMultiTypeFilterAndSubsetPagination();
   await testAttentionAcknowledgementIsIdempotentTenantScopedAndAudited();
   await testAttentionAcknowledgementSurvivesDeletedAgent();

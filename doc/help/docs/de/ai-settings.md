@@ -262,7 +262,7 @@ Die Karte **MCP-Protokoll** listet jeden Werkzeugaufruf der MCP-Clients Ihrer Or
 
 Filtern Sie die Liste nach **Person**, **Schlüssel oder Verbindung**, **Ergebnis** und **Zeitraum** (letzte 24 Stunden, letzte 7 Tage, letzte 30 Tage oder gesamter Zeitraum). Sie zeigt 25 Aufrufe pro Seite. Mit **Zurück** und **Weiter** wechseln Sie zwischen den Seiten.
 
-Klicken Sie auf eine Zeile, um die Argumente des Aufrufs zu sehen, gekürzt, und bei einer Ablehnung oder einem Fehler die vollständige Ursache. Geheime Werte erscheinen als *Ausgeblendet*.
+Klicken Sie auf eine Zeile, um die Argumente des Aufrufs zu sehen, gekürzt. Bei einer Ablehnung oder einem Fehler zeigt die Zeile den Grund; die vollständige Ursache sehen die Person, die den Aufruf gemacht hat, und ein Administrator. Geheime Werte erscheinen als *Ausgeblendet*.
 
 Das Protokoll erfasst auch Aufrufe mit einem widerrufenen oder abgelaufenen Schlüssel. Es speichert nie einen Schlüssel oder ein Token.
 

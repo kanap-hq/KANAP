@@ -156,13 +156,35 @@ async function testCounts() {
     const counts = await reach.countsOfTechnologies(runner.manager, g.tenantId, [g.tech.vsphere, g.tech.sql]);
     assert.deepEqual(counts.get(g.tech.vsphere), {
       // The two hosts it is installed on, not their VMs nor the cluster (decision of 2026-10-24).
-      technology_id: g.tech.vsphere, servers: 2, applications: 1, versions_in_use: 1, next_support_end: '2027-10-11', ended_versions: 0,
+      technology_id: g.tech.vsphere, servers: 2, applications: 1, versions_in_use: 1, next_support_end: '2027-10-11', next_support_end_kind: 'standard', ended_versions: 0,
     });
     const sql = counts.get(g.tech.sql)!;
     assert.equal(sql.servers, 2, 'the two nodes, not the SQL cluster');
     assert.equal(sql.applications, 2);
     assert.equal(sql.versions_in_use, 2);
     assert.equal(sql.ended_versions, 2, 'SQL Server 2016 and 2019 are past their standard support');
+  });
+}
+
+async function testNextSupportEnd() {
+  await inRolledBackTransaction(async (runner) => {
+    const g = await seedGraph(runner, 'reach-next-end');
+    const { reach } = services();
+    const next = async (technologyId: string) => {
+      const row = (await reach.countsOfTechnologies(runner.manager, g.tenantId, [technologyId])).get(technologyId)!;
+      return { date: row.next_support_end, kind: row.next_support_end_kind };
+    };
+    // Every version in use is past its standard end, and none has an extended end: nothing to come.
+    assert.deepEqual(await next(g.tech.sql), { date: null, kind: null });
+    // The extended end of a version in use still to come is the next end, and the count says it is the extended one.
+    await runner.query(`UPDATE technology_versions SET extended_support_end = '2099-01-09' WHERE tenant_id = $1 AND id = $2`, [g.tenantId, g.versions.sql2019]);
+    assert.deepEqual(await next(g.tech.sql), { date: '2099-01-09', kind: 'extended' });
+    // A standard end still to come comes first, whatever the extended end of the same version.
+    await runner.query(`UPDATE technology_versions SET extended_support_end = '2099-10-11' WHERE tenant_id = $1 AND id = $2`, [g.tenantId, g.versions.v8]);
+    assert.deepEqual(await next(g.tech.vsphere), { date: '2027-10-11', kind: 'standard' });
+    // A version with an extended end only is dated by it.
+    await runner.query(`UPDATE technology_versions SET standard_support_end = NULL WHERE tenant_id = $1 AND id = $2`, [g.tenantId, g.versions.v8]);
+    assert.deepEqual(await next(g.tech.vsphere), { date: '2099-10-11', kind: 'extended' });
   });
 }
 
@@ -415,6 +437,7 @@ runSpecs('technology-reach.integration.spec', [
   ['applications both ways', testApplications],
   ['declare applications at a version', testDeclareApplicationsAtVersion],
   ['list counters', testCounts],
+  ['next end of support names the end it shows', testNextSupportEnd],
   ['retired asset', testRetiredAsset],
   ['servers of a technology on a cluster', testClusterServers],
   ['platform underneath', testThroughHost],

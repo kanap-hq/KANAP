@@ -209,7 +209,11 @@ export function approvedBatchExecutionAttempts(action: AiActionRequest): number 
   return numberFromMetadata(batch.execution_attempts);
 }
 
-export function actionExecutionSkipReason(action: AiActionRequest | null): string | null {
+/**
+ * Why an approved action was not executed. The message of a failure quotes the call: it is given
+ * with `resultsReadable` (evidence/run-result-visibility.ts), the status otherwise.
+ */
+export function actionExecutionSkipReason(action: AiActionRequest | null, resultsReadable: boolean): string | null {
   if (!action) {
     return 'Action request was not claimed for execution.';
   }
@@ -219,7 +223,7 @@ export function actionExecutionSkipReason(action: AiActionRequest | null): strin
   if (action.status === APPROVED_ACTION_EXECUTING_STATUS) {
     return 'Action request is already being executed.';
   }
-  if (action.error_message) {
+  if (action.error_message && resultsReadable) {
     return action.error_message;
   }
   if (action.status === 'approved') {

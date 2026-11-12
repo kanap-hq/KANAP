@@ -1,6 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { parseItemNumber } from '../common/parse-item-number';
+import { budgetLineReference } from '../spend/budget-nature';
+import type { AiContextEntityType, AiSearchEntityType } from './ai.types';
 
 /** Any uuid shape (not only v1-v5). */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -77,4 +79,21 @@ export async function resolveAiEntityReference(
   const rows: Array<{ id: string }> = await manager.query(lookup.sql, [tenantId, lookup.value(number)]);
   if (rows.length === 0) throw entityNotFound(entityType, value);
   return String(rows[0].id);
+}
+
+/**
+ * The business reference of a record from its item number (T-15, PRJ-3, DOC-2, BL-7...), for the
+ * families that number their rows. Applications and assets carry theirs as text (`APP-4`, `AST-2`)
+ * and are not built here.
+ */
+export function buildRef(type: AiSearchEntityType | AiContextEntityType, itemNumber?: number | null): string | null {
+  if (!itemNumber) return null;
+  if (type === 'projects') return `PRJ-${itemNumber}`;
+  if (type === 'requests') return `REQ-${itemNumber}`;
+  if (type === 'tasks') return `T-${itemNumber}`;
+  if (type === 'documents') return `DOC-${itemNumber}`;
+  if (type === 'incidents') return `INC-${itemNumber}`;
+  if (type === 'technologies') return `TEC-${itemNumber}`;
+  if (type === 'budget_lines') return budgetLineReference(itemNumber);
+  return null;
 }

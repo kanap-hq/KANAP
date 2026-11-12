@@ -6,7 +6,7 @@ import { PaymentMode, Subscription, SubscriptionType, SubscriptionStatus, Collec
 import { User } from '../users/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { StripeClientService, StripeConfigService, ensureInvoiceA4 } from './stripe';
-import { subscriptionPeriod } from './stripe/stripe-shapes.util';
+import { cancellationEffectiveAt, subscriptionDaysUntilDue, subscriptionPeriod } from './stripe/stripe-shapes.util';
 import { computePriceAmount, computeStripePriceAmount, normaliseStripePrice, type NormalisedPrice } from './price.util';
 import { euVatTaxIdValue, missingInvoiceFields, normaliseVatNumber, stripeAddress, toIsoCountry } from './billing-profile.util';
 import { customerSiren, invoiceCustomFields, invoiceLocale } from './invoice-mentions';
@@ -17,13 +17,14 @@ import { GTC_URLS, GTC_VERSION, type TermsPaymentPath } from './terms';
 import { computeTrialDeletionAt } from './subscription-freeze.util';
 import {
   PLANS,
-  HEALTHY_STATUSES,
   FREEZE_GRACE_DAYS,
   BANK_TRANSFER_MIN_AMOUNT_EUR_CENTS,
   CLOUD_SUBSCRIPTION_QUANTITY,
   INVOICE_PAYMENT_TERM_DAYS,
   getPriceId,
   isBankTransferEligible,
+  isHealthySubscription,
+  isLiveSubscriptionStatus,
   resolvePlanKeyFromPriceId,
   planNameForDisplay,
   resolvePlanKeyFromLegacyName,
@@ -193,9 +194,7 @@ export class BillingService {
 
     const now = Date.now();
     const statusStr = sub.status ?? '';
-    const isHealthy =
-      (HEALTHY_STATUSES as readonly string[]).includes(statusStr) &&
-      (statusStr !== 'trialing' || (sub.trial_end != null && sub.trial_end.getTime() > now));
+    const isHealthy = isHealthySubscription(sub.status, sub.trial_end, now);
 
     let trialDaysRemaining: number | null = null;
     if (statusStr === 'trialing' && sub.trial_end) {
@@ -216,9 +215,12 @@ export class BillingService {
       freezeEffectiveAt = new Date(freezeMs).toISOString();
     }
     const trialDeletionAt = computeTrialDeletionAt(sub, !Features.SINGLE_TENANT && this.stripeConfig.isConfigured());
-    const renewalAt = sub.current_period_end
-      ? sub.current_period_end.toISOString()
-      : (sub.next_payment_at ? sub.next_payment_at.toISOString() : paymentDueAt);
+    // A subscription whose cancellation is set ends on `canceled_at_effective`: it does not renew.
+    const renewalAt = sub.canceled_at_effective
+      ? null
+      : sub.current_period_end
+        ? sub.current_period_end.toISOString()
+        : (sub.next_payment_at ? sub.next_payment_at.toISOString() : paymentDueAt);
 
     return {
       // The current name of the plan: a subscription keeps the name of the version that stored it.
@@ -381,6 +383,12 @@ export class BillingService {
     const tenant = await this.requireTenant(opts.tenantId);
     const invoiceProfile = this.requireCompleteInvoiceProfile(tenant);
     const manager = opts.manager ?? null;
+    // A checkout starts a second subscription: refused, before any change in Stripe, while the
+    // tenant's own still runs (its plan is changed instead; an unpaid one is paid first).
+    const row = await (manager ?? this.subs.manager).getRepository(Subscription).findOne({ where: {} });
+    if (row && (await this.retrieveLiveSubscription(row))) {
+      throw new BadRequestException('SUBSCRIPTION_PAYMENT_PENDING');
+    }
     const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager, invoiceProfile });
 
     const successUrl = opts.successUrl ?? this.stripeConfig.getCheckoutSuccessUrl();
@@ -463,7 +471,8 @@ export class BillingService {
     const sub = await this.ensureSubscription(mg);
     const before = this.subscriptionAuditSnapshot(sub);
 
-    if (!sub.stripe_subscription_id || !sub.status || !(HEALTHY_STATUSES as readonly string[]).includes(sub.status)) {
+    // Any subscription that still runs, paid or not; an ended one is replaced through a new subscription.
+    if (!sub.stripe_subscription_id || !isLiveSubscriptionStatus(sub.status)) {
       throw new BadRequestException('NO_ACTIVE_SUBSCRIPTION');
     }
 
@@ -474,6 +483,7 @@ export class BillingService {
 
     const subscriptionId = sub.stripe_subscription_id;
     const stripeSub = await client.subscriptions.retrieve(subscriptionId);
+    this.assertSubscriptionCanChange(stripeSub);
     const existingItem = stripeSub.items?.data?.[0];
     if (!existingItem?.id) {
       throw new BadRequestException('Unable to resolve existing subscription item');
@@ -512,10 +522,29 @@ export class BillingService {
 
     // GTC art. 6.3: annual to monthly takes effect at the end of the annual period, never refunded.
     if (currentPrice?.recurring?.interval === 'year' && interval === 'monthly') {
-      const effectiveAt = await this.scheduleSwitchAtPeriodEnd(stripeSub, targetPriceId);
+      // Read for the audit entry only: a failure leaves it unknown and the change goes on.
+      const previousChange = await this.resolveScheduledChange(stripeSub).catch((error) => {
+        this.logger.warn(`Unable to read the schedule of subscription ${subscriptionId}: ${(error as Error).message}`);
+        return null;
+      });
+      const { effectiveAt, scheduleId } = await this.scheduleSwitchAtPeriodEnd(stripeSub, targetPriceId);
+      const planned: ScheduledChange = { interval: 'monthly', effective_at: effectiveAt };
+      await this.audit.log(
+        {
+          table: 'subscriptions',
+          recordId: sub.id,
+          action: 'update',
+          before: { stripe_subscription_id: sub.stripe_subscription_id, scheduled_change: previousChange },
+          after: { stripe_subscription_id: sub.stripe_subscription_id, scheduled_change: planned },
+          userId: userId ?? null,
+          sourceRef: scheduleId,
+        },
+        { manager: mg },
+      );
+      // The answer carries the switch just planned, without another read from Stripe.
       const summary = await this.getSubscriptionSummary({ manager: mg });
       const change: PlanChange = { status: 'scheduled', effective_at: effectiveAt };
-      return { ...summary, change };
+      return { ...summary, scheduled_change: planned, change };
     }
 
     // Any other change (monthly to annual) takes effect at once: a new period starts today, the
@@ -573,9 +602,13 @@ export class BillingService {
    * GTC art. 6.3, annual to monthly: the price changes at the end of the current annual period.
    * A subscription schedule keeps the current phase until its end, then bills the monthly price
    * by card; at the end of that phase it releases the subscription, which renews monthly. An
-   * existing schedule (a switch already planned) is updated. Returns when the switch applies.
+   * existing schedule (a switch already planned) is updated. Returns when the switch applies and
+   * the schedule's id.
    */
-  private async scheduleSwitchAtPeriodEnd(stripeSub: any, targetPriceId: string): Promise<string> {
+  private async scheduleSwitchAtPeriodEnd(
+    stripeSub: any,
+    targetPriceId: string,
+  ): Promise<{ effectiveAt: string; scheduleId: string }> {
     const client = this.getStripeClientOrThrow();
     if (stripeSub?.collection_method === 'send_invoice') {
       // A bank transfer subscription: Stripe refuses a card phase while the subscription keeps
@@ -616,7 +649,7 @@ export class BillingService {
         },
       ],
     });
-    return new Date(current.end_date * 1000).toISOString();
+    return { effectiveAt: new Date(current.end_date * 1000).toISOString(), scheduleId: schedule.id };
   }
 
   /** An immediate change replaces a switch planned for the period end. */
@@ -826,6 +859,37 @@ export class BillingService {
     };
   }
 
+  /**
+   * The tenant's Stripe subscription as Stripe has it now, when it still runs (any status but
+   * canceled and incomplete expired). Null without one, when it has ended, or when this Stripe
+   * account no longer has it; any other Stripe error is thrown.
+   */
+  private async retrieveLiveSubscription(sub: Subscription): Promise<any | null> {
+    if (!sub.stripe_subscription_id) return null;
+    let stripeSub: any;
+    try {
+      stripeSub = await this.getStripeClientOrThrow().subscriptions.retrieve(sub.stripe_subscription_id);
+    } catch (error: any) {
+      if (error?.statusCode === 404 || error?.code === 'resource_missing') return null;
+      throw error;
+    }
+    return stripeSub && isLiveSubscriptionStatus(stripeSub.status) ? stripeSub : null;
+  }
+
+  /**
+   * Only a Stripe subscription in good standing (active, or trialing before its end) is changed.
+   * One that still runs unpaid (past due, unpaid, incomplete, paused) is refused with
+   * SUBSCRIPTION_PAYMENT_PENDING, an ended one with NO_ACTIVE_SUBSCRIPTION: nothing changes in Stripe.
+   */
+  private assertSubscriptionCanChange(stripeSub: any): void {
+    if (!isLiveSubscriptionStatus(stripeSub?.status)) {
+      throw new BadRequestException('NO_ACTIVE_SUBSCRIPTION');
+    }
+    if (!isHealthySubscription(stripeSub.status, this.toDate(stripeSub.trial_end))) {
+      throw new BadRequestException('SUBSCRIPTION_PAYMENT_PENDING');
+    }
+  }
+
   /** The id of a Stripe reference, expanded or not. */
   private stripeObjectId(source: any): string | null {
     if (typeof source === 'string') return source || null;
@@ -858,14 +922,17 @@ export class BillingService {
     const mg = manager ?? this.subs.manager;
     const sub = await this.ensureSubscription(mg);
     const before = this.subscriptionAuditSnapshot(sub);
+    // A subscription that still runs (as Stripe has it now) is never doubled: changed when in
+    // good standing, refused while unpaid, before any change in Stripe.
+    const stripeSub = await this.retrieveLiveSubscription(sub);
+    if (stripeSub) this.assertSubscriptionCanChange(stripeSub);
     const customerId = await this.ensureStripeCustomerForTenant(tenant, { manager: mg, invoiceProfile: invoiceContact });
     const euBankTransferCountry = this.resolveEuBankTransferCountry(invoiceContact.address.country);
     let stripeSubResult: any | null = null;
     let previousLatestInvoiceId: string | null = null;
 
-    if (sub.stripe_subscription_id && sub.status && (HEALTHY_STATUSES as readonly string[]).includes(sub.status)) {
-      // Update existing subscription (like changePlan)
-      const stripeSub = await client.subscriptions.retrieve(sub.stripe_subscription_id);
+    if (stripeSub && sub.stripe_subscription_id) {
+      // Changed like changePlan.
       const existingItemId = stripeSub.items?.data?.[0]?.id;
       if (!existingItemId) {
         throw new BadRequestException('Unable to resolve existing subscription item');
@@ -891,7 +958,7 @@ export class BillingService {
         expand: ['latest_invoice'],
       });
     } else {
-      // Create a new Stripe subscription with send_invoice
+      // No subscription yet, or an ended one: a new Stripe subscription with send_invoice.
       const invoicePaymentMethodTypes = await this.resolveInvoicePaymentMethodTypes(customerId);
       const invoicePaymentSettings = this.buildSendInvoicePaymentSettings(invoicePaymentMethodTypes, euBankTransferCountry);
       stripeSubResult = await client.subscriptions.create({
@@ -1395,11 +1462,7 @@ export class BillingService {
     sub.trial_end = this.toDate(stripeSub?.trial_end);
     sub.cancel_at = this.toDate(stripeSub?.cancel_at);
     sub.canceled_at = this.toDate(stripeSub?.canceled_at);
-    if (!stripeSub?.cancel_at_period_end) {
-      sub.canceled_at_effective = null;
-    } else if (period.end != null) {
-      sub.canceled_at_effective = this.toDate(period.end);
-    }
+    sub.canceled_at_effective = cancellationEffectiveAt(stripeSub, sub.canceled_at_effective ?? null);
     sub.currency = typeof stripeSub?.currency === 'string' ? stripeSub.currency.toUpperCase() : sub.currency;
     if (!sub.currency) {
       const priceCurrency = stripeSub?.items?.data?.[0]?.price?.currency;
@@ -1410,7 +1473,7 @@ export class BillingService {
     sub.amount = this.computeStripeAmount(stripeSub);
     sub.stripe_product_id = stripeSub?.items?.data?.[0]?.price?.product ?? sub.stripe_product_id;
     sub.stripe_price_id = stripeSub?.items?.data?.[0]?.price?.id ?? sub.stripe_price_id;
-    sub.days_until_due = typeof stripeSub?.days_until_due === 'number' ? stripeSub.days_until_due : sub.days_until_due;
+    sub.days_until_due = subscriptionDaysUntilDue(stripeSub, sub.days_until_due ?? null);
     sub.stripe_customer_id = typeof stripeSub?.customer === 'string' ? stripeSub.customer : sub.stripe_customer_id;
 
     const paymentMethodInfo = await this.describeStripePaymentMethod(stripeSub?.default_payment_method);
@@ -1424,9 +1487,10 @@ export class BillingService {
     if (latestInvoice) {
       sub.latest_invoice_id = latestInvoice.id ?? sub.latest_invoice_id ?? null;
       sub.latest_invoice_status = latestInvoice.status ?? sub.latest_invoice_status ?? null;
-      sub.latest_invoice_number = latestInvoice.number ?? sub.latest_invoice_number ?? null;
-      sub.latest_invoice_url = latestInvoice.hosted_invoice_url ?? sub.latest_invoice_url ?? null;
-      sub.latest_invoice_pdf = latestInvoice.invoice_pdf ?? sub.latest_invoice_pdf ?? null;
+      // The invoice's own number and links: a draft has none yet.
+      sub.latest_invoice_number = latestInvoice.number ?? null;
+      sub.latest_invoice_url = latestInvoice.hosted_invoice_url ?? null;
+      sub.latest_invoice_pdf = latestInvoice.invoice_pdf ?? null;
       if (typeof latestInvoice.total === 'number') sub.latest_invoice_amount = latestInvoice.total;
       if (latestInvoice.currency) sub.latest_invoice_currency = String(latestInvoice.currency).toUpperCase();
       if (latestInvoice.created) sub.latest_invoice_created = this.toDate(latestInvoice.created);

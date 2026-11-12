@@ -1708,6 +1708,7 @@
       "unpaid": "Impago"
     },
     "subscription": {
+      "keepSubscription": "No cancelar",
       "scheduledChange": {
         "annual": "Pasa a anual el {{date}}.",
         "keepAnnual": "Mantener anual",
@@ -1983,6 +1984,7 @@
     "errors": {
       "noActiveSubscription": "No se encontró ninguna suscripción activa.",
       "planNotBankTransferEligible": "Este plan no es elegible para transferencia bancaria.",
+      "subscriptionPaymentPending": "Pague primero la factura pendiente y después cambie de plan.",
       "termsNotAccepted": "No se pudo confirmar la aceptación de las condiciones generales de venta. Vuelva a cargar la página y acéptelas de nuevo.",
       "vatNumberInvalid": "No se aceptó el número de IVA. Revíselo en la información de facturación."
     },

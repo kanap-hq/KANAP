@@ -264,7 +264,7 @@ The **MCP journal** card lists every tool call made by MCP clients in your organ
 
 Filter the list by **Person**, **Key or connection**, **Result** and **Period** (last 24 hours, last 7 days, last 30 days, or all time). It shows 25 calls a page; use **Previous** and **Next** to move between pages.
 
-Click a line to see the arguments the call sent, shortened, and for a refusal or a failure its full cause. Secret values show as *Hidden*.
+Click a line to see the arguments the call sent, shortened. For a refusal or a failure, the line shows its reason; its full cause is shown to the person who made the call and to an Administrator. Secret values show as *Hidden*.
 
 The journal also records calls made with a key that was revoked or has expired. It never keeps a key or a token.
 

@@ -1143,11 +1143,62 @@ async function datasetText(language: string, text: string): Promise<string> {
   return datasetTranslator(language)(text);
 }
 
+/** The contracts that cover an application are linked to it, by the contract's translated name. */
+async function assertContractApplications(tenantId: string, language: string) {
+  const rows: Array<{ contract: string; application: string }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT c.name AS contract, a.name AS application
+       FROM application_contracts ac
+       JOIN contracts c ON c.id = ac.contract_id AND c.tenant_id = ac.tenant_id
+       JOIN applications a ON a.id = ac.application_id AND a.tenant_id = ac.tenant_id
+      WHERE ac.tenant_id = $1
+      ORDER BY 1, 2`,
+    [tenantId],
+  ));
+  const sap = await datasetText(language, 'SAP Maintenance & Support');
+  const vmware = await datasetText(language, 'Broadcom VMware ELA');
+  const nearshore = await datasetText(language, 'Nearshore Digital — development');
+  const expected = [
+    { contract: sap, application: 'SAP BW/4HANA' },
+    { contract: sap, application: 'SAP Concur' },
+    { contract: sap, application: 'SAP S/4HANA' },
+    { contract: vmware, application: 'VMware vSphere' },
+    { contract: nearshore, application: 'Cornerstone OnDemand' },
+  ];
+  const key = (row: { contract: string; application: string }) => `${row.contract} > ${row.application}`;
+  assert.deepEqual(rows.map(key).sort(), expected.map(key).sort(), `${language}: contracts linked to applications`);
+}
+
+/** The converted cave project started with its first phase: its dates fall within its phases. */
+async function assertCaveProjectDates(tenantId: string, name: string, language: string) {
+  const [row] = await inTenant(tenantId, (m) => m.query(
+    `SELECT p.planned_start::text AS planned_start, p.planned_end::text AS planned_end,
+            p.actual_start::text AS actual_start,
+            min(ph.planned_start)::text AS first_phase, max(ph.planned_end)::text AS last_phase
+       FROM portfolio_projects p
+       JOIN portfolio_project_phases ph ON ph.project_id = p.id AND ph.tenant_id = p.tenant_id
+      WHERE p.tenant_id = $1 AND p.name = $2
+      GROUP BY p.id`,
+    [tenantId, name],
+  ));
+  assert.ok(row, `${language}: the cave project has phases`);
+  assert.ok(row.actual_start, `${language}: the cave project has an actual start`);
+  assert.notEqual(row.actual_start, localTodayYmd(), `${language}: the actual start is not the day of the load`);
+  assert.ok(
+    row.first_phase <= row.actual_start && row.actual_start <= row.last_phase,
+    `${language}: actual start ${row.actual_start} within the phases ${row.first_phase}..${row.last_phase}`,
+  );
+  assert.ok(
+    row.planned_start <= row.first_phase && row.last_phase <= row.planned_end,
+    `${language}: planned ${row.planned_start}..${row.planned_end} covers the phases ${row.first_phase}..${row.last_phase}`,
+  );
+}
+
 // The sample data in each language: a tenant activated in that language loads its own set (the
 // administrator's load takes the tenant's seed language). The load ends `loaded`, which proves
 // every record the loader looks up by name was found (a name not found is a warning, and a
 // warning fails the load); every table holds as many rows as after the English load; the
-// project converted from the best-scored demand carries the translated name.
+// project converted from the best-scored demand carries the translated name and is dated by its
+// phases; the contracts that cover an application are linked to it.
 async function testEachLanguage() {
   const svc: Services = buildServices();
   const served = await serve();
@@ -1168,6 +1219,8 @@ async function testEachLanguage() {
         `SELECT count(*)::int AS n FROM portfolio_projects WHERE tenant_id = $1 AND name = $2`, [t.tenantId, cave]));
       assert.equal(row.n, 1, `${language}: the converted project is "${cave}"`);
       if (language !== 'en') assert.notEqual(cave, 'Cave Climate Digital Twin', `${language}: the name is translated`);
+      await assertContractApplications(t.tenantId, language);
+      await assertCaveProjectDates(t.tenantId, cave, language);
     }
     for (const language of ['fr', 'de', 'es']) {
       assert.deepEqual(countDifferences(counts.get('en')!, counts.get(language)!, ['audit_log']), [], `${language}: the rows of the English load`);

@@ -268,7 +268,30 @@ async function testMissingPeriodKeepsTheStoredDates() {
   assert.equal(summary.current_period_end, STORED_END.toISOString());
   assert.equal(summary.next_payment_at, STORED_END.toISOString());
   assert.equal(summary.canceled_at_effective, STORED_END.toISOString());
-  assert.equal(summary.renewal_at, STORED_END.toISOString());
+  // The subscription ends on that date: it does not renew.
+  assert.equal(summary.renewal_at, null);
+}
+
+/**
+ * A live subscription whose cancellation is set (the portal's `cancel_at` since basil, or the
+ * older `cancel_at_period_end`) exposes its end date and no renewal date.
+ */
+async function testCancellationEndsInsteadOfRenewing() {
+  const cancelAt = PERIOD_END - 3 * 86400;
+  const cases: Array<[Record<string, unknown>, number]> = [
+    [{ cancel_at: cancelAt, cancel_at_period_end: false }, cancelAt],
+    [{ cancel_at: null, cancel_at_period_end: true }, PERIOD_END],
+  ];
+  for (const [cancellation, end] of cases) {
+    const { service, manager } = createService(
+      storedSubscription(),
+      3,
+      stripeSubscription(cancellation, { current_period_start: PERIOD_START, current_period_end: PERIOD_END }),
+    );
+    const summary = await service.getSubscriptionSummary({ manager: manager as any, forceStripeRefresh: true });
+    assert.equal(summary.canceled_at_effective, new Date(end * 1000).toISOString(), JSON.stringify(cancellation));
+    assert.equal(summary.renewal_at, null, JSON.stringify(cancellation));
+  }
 }
 
 async function testLegacyTopLevelPeriodStillWorks() {
@@ -284,6 +307,34 @@ async function testLegacyTopLevelPeriodStillWorks() {
   assert.equal(summary.next_payment_at, new Date(PERIOD_END * 1000).toISOString());
 }
 
+/** The refresh writes the payment term as Stripe sends it: null for a card subscription. */
+async function testRefreshClearsThePaymentTermOfACardSubscription() {
+  const { service, manager } = createService(
+    storedSubscription({ payment_mode: PaymentMode.BANK_TRANSFER, days_until_due: 30 }),
+    3,
+    stripeSubscription({ days_until_due: null }, { current_period_start: PERIOD_START, current_period_end: PERIOD_END }),
+  );
+  const summary = await service.getSubscriptionSummary({ manager: manager as any, forceStripeRefresh: true });
+  assert.equal(summary.payment_mode, PaymentMode.CARD);
+  assert.equal(summary.days_until_due, null);
+}
+
+/** The refresh takes the latest invoice's own number: a draft has none yet. */
+async function testRefreshGivesADraftNoNumber() {
+  const { service, manager } = createService(
+    storedSubscription({ latest_invoice_id: 'in_1', latest_invoice_number: 'KAN-0045', latest_invoice_status: 'paid' }),
+    3,
+    stripeSubscription(
+      { latest_invoice: { id: 'in_2', status: 'draft', number: null, hosted_invoice_url: null, invoice_pdf: null, total: 24900, currency: 'eur' } },
+      { current_period_start: PERIOD_START, current_period_end: PERIOD_END },
+    ),
+  );
+  const summary = await service.getSubscriptionSummary({ manager: manager as any, forceStripeRefresh: true });
+  assert.equal(summary.latest_invoice_id, 'in_2');
+  assert.equal(summary.latest_invoice_status, 'draft');
+  assert.equal(summary.latest_invoice_number, null);
+}
+
 async function run() {
   await testEstimateIsOneSubscription();
   await testTrialHasNoEstimate();
@@ -296,6 +347,9 @@ async function run() {
   await testCloverCancelAtPeriodEndUsesTheItemPeriod();
   await testMissingPeriodKeepsTheStoredDates();
   await testLegacyTopLevelPeriodStillWorks();
+  await testCancellationEndsInsteadOfRenewing();
+  await testRefreshClearsThePaymentTermOfACardSubscription();
+  await testRefreshGivesADraftNoNumber();
 }
 
 void run();

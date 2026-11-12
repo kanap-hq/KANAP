@@ -102,7 +102,30 @@
   "targetTypes": {
     "ticket": "Ticket",
     "alert": "Alerte",
-    "sensor": "Contrôle supervisé"
+    "sensor": "Contrôle supervisé",
+    "tasks": "Tâche",
+    "projects": "Projet",
+    "requests": "Demande",
+    "applications": "Application",
+    "assets": "Actif",
+    "technologies": "Technologie",
+    "incidents": "Incident",
+    "documents": "Document",
+    "budget_lines": "Ligne budgétaire",
+    "contracts": "Contrat",
+    "companies": "Société",
+    "contacts": "Contact",
+    "suppliers": "Fournisseur",
+    "departments": "Département",
+    "locations": "Site",
+    "connections": "Connexion",
+    "interfaces": "Interface",
+    "business_processes": "Processus métier",
+    "users": "Utilisateur",
+    "accounts": "Compte",
+    "analytics_categories": "Catégorie analytique",
+    "chart_of_accounts": "Plan comptable",
+    "vulnerabilities": "Vulnérabilité"
   },
   "targetLink": {
     "open": "Ouvrir dans votre outil de ticketing"
@@ -320,7 +343,8 @@
     "runStarted": "Démarré le {{value}}",
     "runCompleted": "terminé le {{value}}",
     "runDuration": "durée {{value}}",
-    "noTypesSelected": "Choisissez au moins un type d’activité pour afficher le journal."
+    "noTypesSelected": "Choisissez au moins un type d’activité pour afficher le journal.",
+    "otherAction": "Autre action"
   },
   "workspace": {
     "back": "Retour aux agents",
@@ -877,6 +901,7 @@
       "urgency": "Urgence",
       "impact": "Impact",
       "service": "Service"
-    }
+    },
+    "approvedChange": "Modification approuvée"
   }
 }

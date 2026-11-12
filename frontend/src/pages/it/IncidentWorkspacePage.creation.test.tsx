@@ -16,8 +16,17 @@ import IncidentWorkspacePage from './IncidentWorkspacePage';
 // severity "minor", the page moves to it with every tab open, and "Cancel creation" deletes it
 // while the person stays. "Cancel incident" stays hidden beside it.
 
+// These four strings are the words the properties selects announce, so the page test can find them by name.
+const drawerLabels: Record<string, string> = {
+  'workspace.incident.drawer.category': 'Category',
+  'workspace.incident.drawer.noCategory': 'No category',
+  'workspace.incident.drawer.severity': 'Severity',
+  'workspace.incident.drawer.status': 'Status',
+};
+
 const translation = {
   t: (key: string, opts?: Record<string, unknown>) => {
+    if (drawerLabels[key]) return drawerLabels[key];
     const args = opts ? Object.entries(opts).filter(([k]) => k !== 'defaultValue').map(([k, v]) => `${k}=${v}`).join(',') : '';
     return args ? `${key}(${args})` : key;
   },
@@ -141,9 +150,14 @@ describe('Incident creation at the title', () => {
     const previews = screen.getAllByTestId('creation-preview');
     expect(previews).toHaveLength(3);
     expect(previews.find((preview) => within(preview).queryByText('metadata minor'))).toBeTruthy();
-    const drawer = previews.find((preview) => within(preview).queryByText('workspace.incident.drawer.severity'));
+    const drawer = previews.find((preview) => within(preview).queryByText('Severity'));
     expect(drawer).toBeTruthy();
     expect(drawer).toHaveTextContent(/minor/i);
+    expect(drawer).toHaveTextContent('No category');
+    // The preview is out of reach, so the combobox is hidden from the tree until the incident exists.
+    expect(within(drawer!).getByRole('combobox', { name: 'Category', hidden: true })).toHaveTextContent('No category');
+    expect(within(drawer!).getByRole('combobox', { name: 'Severity', hidden: true })).toBeTruthy();
+    expect(within(drawer!).getByRole('combobox', { name: 'Status', hidden: true })).toBeTruthy();
     expect(previews.find((preview) => within(preview).queryByText('workspace.incident.overview.description'))).toBeTruthy();
     for (const preview of previews) {
       expect(preview).toHaveAttribute('inert');
@@ -190,6 +204,9 @@ describe('Incident creation at the title', () => {
     for (const tab of screen.getAllByRole('tab')) expect(tab).not.toBeDisabled();
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'workspace.incident.next' })).toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Category' })).toHaveTextContent('No category');
+    expect(screen.getByRole('combobox', { name: 'Severity' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Status' })).toBeTruthy();
   });
 
   it('cancels a creation with only its title at once, and goes back where it started', async () => {

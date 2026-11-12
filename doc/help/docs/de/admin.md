@@ -485,6 +485,8 @@ Im Cloud-Dienst erhält die Person, die die Testphase gestartet hat, während de
 
 Ist ein Wechsel zur monatlichen Abrechnung geplant, zeigt ihn eine dritte Zeile an, zum Beispiel „Wechselt am 7. Okt. 2027 zu monatlich.“ Klicken Sie in dieser Zeile auf **Jährlich beibehalten**, um den Wechsel abzubrechen.
 
+Sobald das Abonnement im Stripe-Kundenportal gekündigt ist, zeigt die zweite Zeile statt des Verlängerungsdatums sein Enddatum an, zum Beispiel „Aktiv · endet am 7. Okt. 2027“. Klicken Sie in dieser Zeile auf **Nicht kündigen**, um das Portal zu öffnen und die Kündigung zurückzunehmen. Erfordert Abrechnungsadministrator.
+
 ### Aktionen
 
 - **Plan wählen** / **Plan ändern**: Öffnet den Tarifdialog zum Abonnieren oder zum Wechsel zwischen monatlicher und jährlicher Abrechnung. Erfordert Abrechnungsadministrator.

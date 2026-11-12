@@ -20,6 +20,14 @@ const MarkdownEditor = React.lazy(() => import('../../../components/MarkdownEdit
 
 const TIME_LOGGING_EXCLUDED_TYPES = ['contract', 'spend_item', 'capex_item'];
 
+/** Lowers the first letter so a later action continues the sentence. A quoted status keeps its own capital. */
+function continueSentence(text: string, language: string): string {
+  const [first] = Array.from(text);
+  if (!first) return text;
+  const lower = first.toLocaleLowerCase(language);
+  return lower === first ? text : lower + text.slice(first.length);
+}
+
 interface UnifiedActivityFormProps {
   taskId: string;
   projectId?: string;
@@ -47,7 +55,7 @@ export default function UnifiedActivityForm({
   onImageUpload,
   onImageUrlImport,
 }: UnifiedActivityFormProps) {
-  const { t } = useTranslation(['portfolio', 'common', 'errors']);
+  const { t, i18n } = useTranslation(['portfolio', 'common', 'errors']);
   const locale = useLocale();
   const queryClient = useQueryClient();
   const [comment, setComment] = React.useState('');
@@ -90,6 +98,7 @@ export default function UnifiedActivityForm({
 
   const submitLabel = React.useMemo(() => {
     if (!hasAnyAction) return t('portfolio:workspace.task.activity.actions.submit');
+    const language = i18n.resolvedLanguage || i18n.language;
     const actions: string[] = [];
     if (hasComment) actions.push(t('portfolio:workspace.task.activity.actions.comment'));
     if (hasStatusChange) {
@@ -98,19 +107,20 @@ export default function UnifiedActivityForm({
       }));
     }
     if (hasTime) actions.push(t('portfolio:workspace.task.activity.actions.logHours', { hours: formatFigure(timeHours, locale, 1) }));
-    if (actions.length === 1) return actions[0];
-    if (actions.length === 2) {
+    const parts = actions.map((action, index) => (index === 0 ? action : continueSentence(action, language)));
+    if (parts.length === 1) return parts[0];
+    if (parts.length === 2) {
       return t('portfolio:workspace.task.activity.actions.combineTwo', {
-        first: actions[0],
-        second: actions[1],
+        first: parts[0],
+        second: parts[1],
       });
     }
     return t('portfolio:workspace.task.activity.actions.combineThree', {
-      first: actions[0],
-      second: actions[1],
-      third: actions[2],
+      first: parts[0],
+      second: parts[1],
+      third: parts[2],
     });
-  }, [hasAnyAction, hasComment, hasStatusChange, hasTime, locale, status, t, timeHours]);
+  }, [hasAnyAction, hasComment, hasStatusChange, hasTime, i18n.language, i18n.resolvedLanguage, locale, status, t, timeHours]);
 
   // Build success label based on what was submitted
   const getSuccessLabel = React.useCallback(() => {

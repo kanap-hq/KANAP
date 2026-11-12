@@ -264,6 +264,21 @@ describe('PlanSelectionDialog', () => {
     ).toBeInTheDocument();
   });
 
+  it('says to pay the pending invoice when the subscription is unpaid', async () => {
+    (api.post as any).mockRejectedValue({ response: { data: { message: 'SUBSCRIPTION_PAYMENT_PENDING' } } });
+    authState.subscription = { status: 'past_due', stripe_subscription_id: 'sub_1', is_subscription_healthy: false };
+    renderDialog({ invoiceMissingFields: [] });
+    await switchToAnnual();
+    acceptTerms();
+    const refusal = 'Pay the pending invoice first, then change your plan.';
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pay by card' }));
+    expect(await screen.findByText(refusal)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Pay by bank transfer' }));
+    expect(await screen.findByText(refusal)).toBeInTheDocument();
+    expect(screen.queryByText('SUBSCRIPTION_PAYMENT_PENDING')).not.toBeInTheDocument();
+  });
+
   it('shows the trial end and the days left under the title', async () => {
     const year = new Date().getFullYear();
     authState.subscription = { ...TRIAL, trial_end: `${year}-10-20`, trial_days_remaining: 14 };
