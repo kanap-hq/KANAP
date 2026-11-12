@@ -407,7 +407,7 @@ for (let i = 0; i < P.projects; i += 1) {
   const dept = departments.find((d) => d.company === company.name) ?? departments[0];
   const s = `${Y - int(0, 2)}-${pad(int(1, 12), 2)}-01`;
   const status = pick(PROJECT_STATUS);
-  projects.push([`Projet perf ${pad(i + 1, 3)}`, status, 'Projet du jeu de données de performance', 'standard', 'Plan stratégique', 'Applications métier', 'Socle SI', company.name, dept.name,
+  projects.push([`Projet perf ${pad(i + 1, 3)}`, status, 'Projet du jeu de données de performance', 'legacy', 'Plan stratégique', 'Applications métier', 'Socle SI', company.name, dept.name,
     s, `${Y + int(0, 2)}-12-31`, status === 'planned' || status === 'waiting_list' ? '' : s, status === 'done' ? `${Y}-06-30` : '', status === 'done' ? '100' : String(int(0, 90)),
     String(int(10, 200)), String(int(5, 100)), pick(owners).email, pick(owners).email, pick(owners).email, pick(owners).email]);
   for (let k = 0; k < 3; k += 1) projectLinks.push([`Projet perf ${pad(i + 1, 3)}`, pick(opexItems)[0]]);
