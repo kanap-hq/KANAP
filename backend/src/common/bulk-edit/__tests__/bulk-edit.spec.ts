@@ -79,7 +79,18 @@ async function main() {
     { name: 'company', value: 'id', optional: false },
     { name: 'kind', value: 'enum', values: ['run', 'build'], optional: true },
     { name: 'dims', value: 'id_map', optional: true },
+    { name: 'people', value: 'id_list', optional: true },
+    { name: 'members', value: 'id_list', optional: false },
   ] as const;
+  // A list of ids replaces the row's: lower case, without repeats; null or [] empties an optional one.
+  assert.deepEqual(parseBulkChanges({ people: [a.toUpperCase(), a, b] }, fields), { people: [a, b] });
+  assert.deepEqual(parseBulkChanges({ people: [] }, fields), { people: [] });
+  assert.deepEqual(parseBulkChanges({ people: null }, fields), { people: null });
+  assert.throws(() => parseBulkChanges({ members: [] }, fields), /members cannot be emptied/);
+  assert.throws(() => parseBulkChanges({ members: null }, fields), /members cannot be emptied/);
+  assert.throws(() => parseBulkChanges({ people: a }, fields), /must be a list of ids/);
+  assert.throws(() => parseBulkChanges({ people: [null] }, fields), /must be a list of ids/);
+  assert.throws(() => parseBulkChanges({ people: ['APP-3'] }, fields), /must be an id or null/);
   assert.deepEqual(parseBulkChanges({ owner: null, kind: 'run', dims: { [a.toUpperCase()]: null } }, fields), { owner: null, kind: 'run', dims: { [a]: null } });
   assert.throws(() => parseBulkChanges({ company: null }, fields), /cannot be emptied/);
   assert.throws(() => parseBulkChanges({ other: a }, fields), /cannot be changed in bulk/);

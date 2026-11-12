@@ -140,17 +140,18 @@ export function bulkFingerprint(ids: readonly string[]): string {
 /**
  * A field a list changes in bulk: `id`, a row id of the tenant (the list's update of one row
  * resolves it); `enum`, one of `values`; `id_map`, an object from ids to ids (a dimension to its
- * value), each entry changed alone. `optional`: null (the field emptied) is a value; an `id_map`
- * entry may always be null, the row's update says whether its dimension may be emptied.
+ * value), each entry changed alone; `id_list`, a list of ids that replaces the row's (the people of
+ * a role), without repeats. `optional`: null, or an empty list, (the field emptied) is a value; an
+ * `id_map` entry may always be null, the row's update says whether its dimension may be emptied.
  */
 export type BulkEditField = {
   name: string;
-  value: 'id' | 'enum' | 'id_map';
+  value: 'id' | 'enum' | 'id_map' | 'id_list';
   values?: readonly string[];
   optional: boolean;
 };
 
-export type BulkChanges = Record<string, string | null | Record<string, string | null>>;
+export type BulkChanges = Record<string, string | null | string[] | Record<string, string | null>>;
 
 /** `changes`: at least one declared field, each value of its type; ids in lower case. */
 export function parseBulkChanges(raw: unknown, fields: readonly BulkEditField[]): BulkChanges {
@@ -177,6 +178,14 @@ export function parseBulkChanges(raw: unknown, fields: readonly BulkEditField[])
         throw new BadRequestException(`${name} must be one of ${(field.values ?? []).join(', ')}${field.optional ? ' or null' : ''}.`);
       }
       changes[name] = value;
+    } else if (field.value === 'id_list') {
+      if (!Array.isArray(value)) throw new BadRequestException(`${name} must be a list of ids, or null.`);
+      const list = Array.from(new Set(value.map((entry) => {
+        if (entry === null) throw new BadRequestException(`${name} must be a list of ids, or null.`);
+        return id(entry, name)!;
+      })));
+      if (list.length === 0 && !field.optional) throw new BadRequestException(`${name} cannot be emptied.`);
+      changes[name] = list;
     } else {
       if (!value || typeof value !== 'object' || Array.isArray(value)) throw new BadRequestException(`${name} must map ids to ids or null.`);
       const entries: Record<string, string | null> = {};

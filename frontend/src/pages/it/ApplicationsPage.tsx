@@ -15,6 +15,10 @@ import { useQuery } from '@tanstack/react-query';
 import ForbiddenPage from '../ForbiddenPage';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import BulkEditButton from '../../components/bulk-edit/BulkEditButton';
+import BulkEditDialog from '../../components/bulk-edit/BulkEditDialog';
+import { BulkSelectionScope, bulkSelectionGridSx, useBulkSelection } from '../../components/bulk-edit/bulkSelection';
+import { useApplicationBulkFields } from './applicationBulkFields';
 import { removedWithLinks } from '../../utils/deleteRefusal';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { APPLICATION_NAME_MAX } from './applicationLimits';
@@ -174,8 +178,18 @@ export default function ApplicationsPage() {
   const { config, isLoading: featuresLoading } = useFeatures();
   const vulnerabilityFeed = config.features.vulnerabilityFeed === true;
   const gridApiRef = useRef<any>(null);
-  const [selectedRows, setSelectedRows] = useState<AppRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  // The applications ticked, or every application of the filter less the unticked ones ("Change the
+  // selection"). A change of the search, the filters or the scope clears it; a sort or a column shown keeps it.
+  const canEdit = hasLevel('applications', 'member');
+  const bulk = useBulkSelection<AppRow>({
+    rowLabel: (row) => t('common:bulkEdit.selectRow', { name: row.name }),
+    scopeKey: ({ q, filters, ownerUserId, ownerTeamId }) => ({ q, filters, ownerUserId, ownerTeamId }),
+  });
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const bulkFields = useApplicationBulkFields();
+  // Copy and Delete take the applications ticked one by one; none while the whole filter is taken.
+  const selectedRows = bulk.tickedRows;
   const { labelFor, byField } = useItOpsEnumOptions();
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const [includeFlags, setIncludeFlags] = useState<string>(() => includeFlagsFor(new Set(['name'])));
@@ -700,6 +714,7 @@ export default function ApplicationsPage() {
 
   const currentYear = new Date().getFullYear();
   const columns: EnhancedColDef<AppRow>[] = useMemo(() => [
+    ...(canEdit ? [bulk.column] : []),
     {
       // The business reference (APP-n), as the assets list shows AST-n. Sorted by its number on the server.
       field: 'sequential_id',
@@ -939,6 +954,8 @@ export default function ApplicationsPage() {
     RelationsSummaryCell,
     ResidencyCell,
     SuitesSummaryCell,
+    bulk.column,
+    canEdit,
     categoryLabel,
     catalogLabel,
     classificationCatalog,
@@ -1087,6 +1104,7 @@ export default function ApplicationsPage() {
       {canCreate && (
         <Button variant="action" onClick={() => void handleCopy()} disabled={selectedRows.length !== 1}>{t('pages.applications.copyItem')}</Button>
       )}
+      {canEdit && <BulkEditButton count={bulk.count} onClick={() => setBulkOpen(true)} />}
       {canAdmin && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
@@ -1117,8 +1135,10 @@ export default function ApplicationsPage() {
             // The kept list already names the application: the reason does not repeat it.
             keptReason: ({ usages, count }) => t('pages.applications.delete.keptReason', { usages, count }),
           }}
-          gridApi={gridApiRef.current}
-          onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
+          onDeleteSuccess={() => {
+            bulk.clear();
+            setRefreshKey((k) => k + 1);
+          }}
         />
       )}
     </Stack>
@@ -1133,6 +1153,8 @@ export default function ApplicationsPage() {
       {/* Waits for filters saved as a context (a reload, a link in a new tab). */}
       {/* A filter on the Vulnerabilities column also waits for the column: the grid drops a filter on a column it does not have. */}
       {urlFilterState.ready && !(searchFilters?.[VULNERABILITIES_FIELD] && featuresLoading) && (
+        <BulkSelectionScope value={bulk.scope}>
+        <Box sx={bulkSelectionGridSx}>
         <ServerDataGrid<AppRow>
           columns={columns}
           endpoint={'/applications'}
@@ -1159,9 +1181,11 @@ export default function ApplicationsPage() {
           columnPreferencesKey="it-apps-services"
           refreshKey={refreshKey}
           enableSearch
-          enableRowSelection={canCreate || canAdmin}
-          onSelectionChanged={setSelectedRows}
-          onListRequestChange={(request) => { listRequestRef.current = request; }}
+          onListRequestChange={(request) => {
+            listRequestRef.current = request;
+            bulk.onListRequestChange(request);
+          }}
+          onCellClicked={canEdit ? bulk.onCellClicked : undefined}
           onQueryStateChange={(state) => {
             lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
           }}
@@ -1189,6 +1213,21 @@ export default function ApplicationsPage() {
             } catch {}
           }}
           toolbarExtras={appScopeToolbar}
+        />
+        </Box>
+        </BulkSelectionScope>
+      )}
+      {canEdit && (
+        <BulkEditDialog
+          open={bulkOpen}
+          onClose={() => setBulkOpen(false)}
+          endpoint="/applications/bulk-update"
+          selection={bulk.body}
+          fields={bulkFields}
+          onDone={() => {
+            bulk.clear();
+            setRefreshKey((k) => k + 1);
+          }}
         />
       )}
       <CsvExportDialogV2
