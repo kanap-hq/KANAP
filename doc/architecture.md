@@ -620,9 +620,15 @@ restrictive RLS policies that target one role only, so nothing changes for anyon
     or a contract; notifications and "Send the link" use it;
   - `withFullDataAccess(manager, read)` opens a savepoint, makes it read only, leaves the limited
     role (`RESET ROLE`), runs `read`, rolls back to the savepoint (which restores the role) and
-    checks the role came back; only the chargeback report (`spend/chargeback-report.service.ts`)
-    and the contract coverage (`contracts/contract-budget.ts`) call it, and a spec checks those two
-    callers.
+    checks the role came back; only the chargeback report (`spend/chargeback-report.service.ts`),
+    the contract coverage (`contracts/contract-budget.ts`), the record history's existence read
+    (`audit/record-history/families.ts`) and the stored file reference check
+    (`common/storage-path-refs.ts`, below) call it, and a spec checks those callers.
+- **Stored files of attachments.** A stored file may be named by several attachment rows (the copy
+  of a task's attachment in the request made from the task, an inline image cloned into a managed
+  document). Every delete of an attachment, or of a record with its attachments, removes the file
+  only when no attachment row of the tenant still names it (`unreferencedPaths`,
+  `isStoragePathReferencedInAnyTable`); the check counts the rows a limited person cannot read.
 - **Reserved operations.** A limited person cannot run the operations reserved to unscoped persons
   (tenant settings, bulk line operations, deletes of a line or a contract, user and role
   administration, audit log, organisation data, updates and deletes of suppliers and shared
