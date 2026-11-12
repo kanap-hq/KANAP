@@ -15,6 +15,7 @@ import type { AiAgentControlAgentDefinition } from '../../ai/aiApi';
 const harness = vi.hoisted(() => ({
   canAdmin: true,
   updateAgent: vi.fn(),
+  previewAgentTargeting: vi.fn(),
   listKnowledgeLibraries: vi.fn(),
   webSearch: false,
   snapshot: (): Record<string, unknown> => ({}),
@@ -44,6 +45,7 @@ vi.mock('../../ai/aiApi', async () => {
     aiAgentControlApi: {
       ...actual.aiAgentControlApi,
       updateAgent: harness.updateAgent,
+      previewAgentTargeting: harness.previewAgentTargeting,
       listKnowledgeLibraries: harness.listKnowledgeLibraries,
     },
   };
@@ -436,5 +438,88 @@ describe('AgentWorkspacePage internal notes', { timeout: 20000 }, () => {
     renderPage('/agents/payroll?tab=settings');
     expect(await screen.findByLabelText('All libraries', {}, { timeout: 5000 })).toBeChecked();
     expect(screen.queryByText('Internal notes of the ticket')).not.toBeInTheDocument();
+  });
+});
+
+// The mission is long-form text of the settings tab: it saves once typing pauses, not on each key.
+describe('AgentWorkspacePage mission', { timeout: 20000 }, () => {
+  const PLACEHOLDER = 'e.g., draft a first response for new work';
+
+  beforeEach(async () => {
+    shownDefinition = definition;
+    harness.canAdmin = true;
+    harness.updateAgent.mockReset();
+    harness.updateAgent.mockImplementation(async () => ({ agent_definition: shownDefinition, diff: {} }));
+    harness.listKnowledgeLibraries.mockReset();
+    harness.listKnowledgeLibraries.mockResolvedValue([]);
+    await i18n.changeLanguage('en');
+  });
+
+  it('saves the mission once after typing pauses, not on each key', async () => {
+    renderPage('/agents/payroll?tab=settings');
+    const field = await screen.findByPlaceholderText(PLACEHOLDER, {}, { timeout: 5000 });
+    for (const text of ['P', 'PR', 'PRO']) {
+      fireEvent.change(field, { target: { value: text } });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    expect(harness.updateAgent).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(harness.updateAgent).toHaveBeenCalledTimes(1);
+    }, { timeout: 3000 });
+    expect(harness.updateAgent.mock.lastCall![1].persona_json.mission).toBe('PRO');
+  });
+});
+
+// The ticket check of the targeting section needs the automatic watching to be on. With it off the
+// screen asks nothing and says nothing; a real failure of the check keeps its message.
+describe('AgentWorkspacePage targeting preview', { timeout: 20000 }, () => {
+  const UNAVAILABLE = "Couldn't check matching tickets.";
+
+  function helpdesk(watching: boolean): AiAgentControlAgentDefinition {
+    return {
+      ...definition,
+      provider_bindings_json: { ticketing: { provider_kind: 'ticketing', provider_key: 'glpi' } },
+      trigger_policy_json: { scheduled_poll: { enabled: watching } },
+    };
+  }
+
+  beforeEach(async () => {
+    harness.canAdmin = true;
+    harness.updateAgent.mockReset();
+    harness.updateAgent.mockImplementation(async () => ({ agent_definition: shownDefinition, diff: {} }));
+    harness.previewAgentTargeting.mockReset();
+    harness.listKnowledgeLibraries.mockReset();
+    harness.listKnowledgeLibraries.mockResolvedValue([]);
+    await i18n.changeLanguage('en');
+  });
+
+  it('asks nothing and shows no error when the watching is off', async () => {
+    harness.previewAgentTargeting.mockRejectedValue(Object.assign(new Error('Forbidden'), {
+      isAxiosError: true,
+      response: { status: 403, data: { code: 'AGENT_WATCHING_OFF' } },
+    }));
+    shownDefinition = helpdesk(false);
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByText('Targeting', {}, { timeout: 5000 })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(harness.previewAgentTargeting).not.toHaveBeenCalled();
+    expect(screen.queryByText(UNAVAILABLE)).not.toBeInTheDocument();
+  });
+
+  it('shows how many tickets match when the watching is on', async () => {
+    harness.previewAgentTargeting.mockResolvedValue({ preview: { matchEstimate: 3, overlapEstimate: 0, capped: false } });
+    shownDefinition = helpdesk(true);
+    renderPage('/agents/payroll?tab=settings');
+    await waitFor(() => {
+      expect(harness.previewAgentTargeting).toHaveBeenCalled();
+    }, { timeout: 5000 });
+    expect(await screen.findByText(/3 tickets? match/)).toBeInTheDocument();
+  });
+
+  it('keeps the error for a check that fails with the watching on', async () => {
+    harness.previewAgentTargeting.mockRejectedValue(Object.assign(new Error('Network Error'), { isAxiosError: true }));
+    shownDefinition = helpdesk(true);
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByText(UNAVAILABLE, {}, { timeout: 5000 })).toBeInTheDocument();
   });
 });

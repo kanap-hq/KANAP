@@ -1671,12 +1671,15 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
       return '';
     }
   }, [definition, form, isHelpdesk]);
+  // The server refuses the ticket check (403 AGENT_WATCHING_OFF) while the automatic watching is
+  // off: the screen does not ask then, and shows nothing about it.
+  const watching = policyObject(policyObject(definition.trigger_policy_json).scheduled_poll).enabled === true;
   const targetingPreviewQuery = useQuery({
     queryKey: ['ai-agent-targeting-preview', definition.id, previewScopeJson],
     queryFn: () => aiAgentControlApi.previewAgentTargeting(definition.id, {
       scope_policy_json: JSON.parse(previewScopeJson || '{}') as Record<string, unknown>,
     }),
-    enabled: isHelpdesk && !!previewScopeJson,
+    enabled: isHelpdesk && watching && !!previewScopeJson,
     staleTime: 30_000,
     placeholderData: (previousData) => previousData,
   });
@@ -2084,11 +2087,13 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
           <SettingsField label={t('settings.targetingBuilder.filters')} hint={t('settings.targetingBuilder.hint')}>
             <HelpdeskTargetingFilterBuilder agentId={definition.id} filters={form.filters} onChange={updateFilters} />
           </SettingsField>
-          <TargetingPreviewSummary
-            loading={targetingPreviewQuery.isFetching}
-            error={targetingPreviewQuery.isError}
-            preview={targetingPreviewQuery.data?.preview}
-          />
+          {watching ? (
+            <TargetingPreviewSummary
+              loading={targetingPreviewQuery.isFetching}
+              error={targetingPreviewQuery.isError}
+              preview={targetingPreviewQuery.data?.preview}
+            />
+          ) : null}
         </Stack>
         </Section>
       )}
