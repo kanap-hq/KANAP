@@ -75,7 +75,7 @@ Anwendungen, die schon vor dieser Regel denselben Namen trugen, bleiben bearbeit
 
 **Berechtigungen**:
 - Anzeigen: `applications:reader`
-- Erstellen / Bearbeiten: `applications:member`
+- Erstellen / Bearbeiten, Änderung in großer Zahl: `applications:member`
 - Importieren / Exportieren / Löschen: `applications:admin`
 
 ---
@@ -131,8 +131,32 @@ Eine Zelle ohne Wert zeigt einen Strich.
 - **Neue Anwendung**: Einen neuen Eintrag erstellen (`applications:member`). Siehe [Erste Schritte](#getting-started)
 - **Importieren**: Massenimport aus einer CSV-Datei oder Excel-Arbeitsmappe (`applications:admin`)
 - **Exportieren**: Die Anwendungen, die die Liste anzeigt, in eine CSV-Datei oder Excel-Arbeitsmappe exportieren (`applications:admin`). Siehe [Exportoptionen](#export-options).
-- **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:member`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
-- **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Eine Anwendung, die Quelle oder Ziel einer Schnittstelle ist, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst ihre Schnittstellen. Vor der Bestätigung führt das Fenster diese Anwendungen als behalten auf, mit der Anzahl ihrer Schnittstellen. Die anderen werden mit ihren Bereitstellungen und Verknüpfungen zu anderen Einträgen gelöscht; die Bestätigung zählt die Bereitstellungen
+- **Element kopieren**: Die in der Liste angehakte Anwendung mit allen Kernbeziehungen duplizieren (`applications:member`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
+- **Auswahl ändern**: Ein Feld auf allen ausgewählten Anwendungen auf einmal ändern (`applications:member`). Siehe [Anwendungen in großer Zahl ändern](#changing-applications-in-bulk)
+- **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Sie löscht nur die einzeln angehakten Anwendungen und ist nicht verfügbar, solange das Kästchen in der Kopfzeile den ganzen Filter erfasst. Eine Anwendung, die Quelle oder Ziel einer Schnittstelle ist, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst ihre Schnittstellen. Vor der Bestätigung führt das Fenster diese Anwendungen als behalten auf, mit der Anzahl ihrer Schnittstellen. Die anderen werden mit ihren Bereitstellungen und Verknüpfungen zu anderen Einträgen gelöscht; die Bestätigung zählt die Bereitstellungen
+
+### Anwendungen in großer Zahl ändern { #changing-applications-in-bulk }
+
+**Anwendungen auswählen**: Mit dem Recht, Anwendungen zu bearbeiten, zeigt die Liste am Anfang jeder Zeile ein Kästchen. Haken Sie Anwendungen einzeln an, oder haken Sie das Kästchen in der Spaltenkopfzeile an, um alle Anwendungen des aktuellen Filters und der Suche zu erfassen, auch die noch nicht geladenen. Entfernen Sie den Haken einer Anwendung, um sie auszulassen. Eine Änderung der Filter, der Suche oder des Bereichs **Anzeigen** leert die Auswahl. Die Sortierung behält sie bei.
+
+**Ein Feld ändern**:
+
+1. Wählen Sie die Anwendungen aus und klicken Sie auf **Auswahl ändern** (Bearbeitungssymbol). Das Symbol zeigt die Anzahl der ausgewählten Anwendungen
+2. Wählen Sie das **Feld**: **Fachverantwortliche**, **IT-Verantwortliche**, **Lebenszyklus** oder **Geschäftskritikalität**
+3. Wählen Sie den **Neuen Wert**. Für Verantwortliche wählen Sie eine oder mehrere Personen. Der Dialog zählt die Anwendungen: wie viele geändert werden, wie viele diesen Wert bereits haben und wie viele abgelehnt werden. Bei jedem neuen Wert wird erneut gezählt
+4. Klicken Sie zur Bestätigung auf **12 Zeilen ändern** (mit Ihrer Zählung). Das Fenster zeigt danach das Ergebnis. Klicken Sie auf **Schließen**, um es zu schließen. Die Liste dahinter ist bereits aktuell
+
+**Verantwortliche**: Die gewählten Personen ersetzen auf jeder Anwendung die Verantwortlichen dieser Rolle. Die andere Rolle behält ihre Personen: Eine Änderung der **Fachverantwortlichen** lässt die **IT-Verantwortlichen** unverändert.
+
+**Ein Feld leeren**: Bei **Fachverantwortliche**, **IT-Verantwortliche** und **Geschäftskritikalität** klicken Sie neben dem Wert auf **Feld leeren** (Radiergummi-Symbol). Der Wert zeigt **Leer**. Bei Verantwortlichen bleibt die Rolle ohne Person. **Lebenszyklus** lässt sich nicht leeren.
+
+**Gut zu wissen**:
+
+- Eine Änderung umfasst höchstens 5.000 Anwendungen. Darüber grenzen Sie die Filter ein oder wählen weniger Anwendungen aus
+- Ändert sich die Liste zwischen der Zählung und Ihrer Bestätigung, zeigt der Dialog die neue Zählung. Prüfen Sie sie und bestätigen Sie erneut
+- Schlägt die Zählung fehl, klicken Sie neben der Meldung auf **Erneut versuchen**, um erneut zu zählen
+- Eine neue Geschäftskritikalität setzt eine geprüfte Anwendung auf **Erneut prüfen**, wie auf der Seite der Anwendung
+- Jede geänderte Anwendung erhält einen eigenen Eintrag in ihrem Tab **Verlauf**
 
 ---
 

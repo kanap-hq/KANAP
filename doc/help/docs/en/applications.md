@@ -75,7 +75,7 @@ Applications that already shared a name before this rule stay editable. Their na
 
 **Permissions**:
 - View: `applications:reader`
-- Create / edit: `applications:member`
+- Create / edit, change in bulk: `applications:member`
 - Import / Export / Delete: `applications:admin`
 
 ---
@@ -131,8 +131,32 @@ A cell with no value shows a dash.
 - **New application**: Create a new entry (`applications:member`). See [Getting started](#getting-started)
 - **Import**: Bulk import from a CSV file or an Excel workbook (`applications:admin`)
 - **Export**: Export the applications the list shows to a CSV file or an Excel workbook (`applications:admin`). See [Export options](#export-options).
-- **Copy item**: Duplicate a selected application with all its core relations (`applications:member`). See [Copying applications](#copying-applications) for what is and is not copied.
-- **Delete Selected**: Remove selected applications (`applications:admin`). An application that is the source or target of an interface cannot be deleted: disable it instead, or delete its interfaces first. Before the confirmation, the window lists those applications as kept, with their count of interfaces. The others are deleted with their deployments and their links to other records; the confirmation counts the deployments
+- **Copy item**: Duplicate the application ticked in the list, with all its core relations (`applications:member`). See [Copying applications](#copying-applications) for what is and is not copied.
+- **Change the selection**: Change one field on the selected applications at once (`applications:member`). See [Changing applications in bulk](#changing-applications-in-bulk)
+- **Delete Selected**: Remove selected applications (`applications:admin`). It deletes only the applications ticked one by one, and is not available while the header box takes the whole filter. An application that is the source or target of an interface cannot be deleted: disable it instead, or delete its interfaces first. Before the confirmation, the window lists those applications as kept, with their count of interfaces. The others are deleted with their deployments and their links to other records; the confirmation counts the deployments
+
+### Changing applications in bulk { #changing-applications-in-bulk }
+
+**Selecting applications**: With the right to edit applications, the list shows a box at the start of each row. Tick applications one by one, or tick the box in the column header to take every application of the current filter and search, including those not loaded yet. Untick an application to leave it out. Changing the filters, the search or the **Show** scope clears the selection. Sorting keeps it.
+
+**Changing a field**:
+
+1. Select the applications, then click **Change the selection** (edit icon). The icon shows the number of applications selected
+2. Choose the **Field**: **Business owners**, **IT owners**, **Lifecycle** or **Business criticality**
+3. Choose the **New value**. For owners, pick one or more people. The dialog counts the applications: how many will change, how many already have this value, and how many are refused. The count runs again at each new value
+4. Click **Change 12 rows** (with your count) to confirm. The window then shows the outcome. Click **Close** to close it. The list behind it is already up to date
+
+**Owners**: The people you choose replace the owners of that role on each application. The other role keeps its people: changing the **Business owners** leaves the **IT owners** as they are.
+
+**Emptying a field**: For **Business owners**, **IT owners** and **Business criticality**, click **Empty the field** (eraser icon) beside the value. The value reads **Empty**. For owners, the role is left with nobody. **Lifecycle** cannot be emptied.
+
+**Good to know**:
+
+- One change covers up to 5,000 applications. Above that, narrow the filters or select fewer applications
+- If the list changes between the count and your confirmation, the dialog shows the new count. Check it, then confirm again
+- If the count fails, click **Retry** beside the message to count again
+- A new business criticality marks a reviewed application **Review needed**, as on the application page
+- Each changed application gets its own entry in its **History** tab
 
 ---
 

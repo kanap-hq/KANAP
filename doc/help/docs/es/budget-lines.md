@@ -216,6 +216,8 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 - Una modificación abarca como máximo 5000 líneas. Por encima, acote los filtros o seleccione menos líneas
 - Una selección grande puede tardar hasta un minuto en el recuento, y lo mismo en el guardado
 - Si la lista cambia entre el recuento y su confirmación, el diálogo muestra el nuevo recuento. Revíselo y vuelva a confirmar
+- Mientras hay otra operación de presupuesto en curso (una copia de columnas, una importación de archivo de presupuesto o una congelación, por ejemplo), el cambio se rechaza de inmediato con el mensaje "Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado."
+- Si el recuento falla, haga clic en **Reintentar** junto al mensaje para volver a contar
 - Los importes no se modifican así. Modifíquelos en la línea o en el [archivo de presupuesto](budget-file.md)
 - Cada línea modificada tiene su propia entrada en su pestaña **Historial**
 - Con un acceso a los datos limitado, usted modifica las líneas de su acceso. Un cambio que sacaría una línea de su acceso se rechaza para esa línea

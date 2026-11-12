@@ -75,7 +75,7 @@ Les applications qui portaient déjà le même nom avant cette règle restent mo
 
 **Autorisations** :
 - Consultation : `applications:reader`
-- Création / modification : `applications:member`
+- Création / modification, modification en masse : `applications:member`
 - Import / Export / Suppression : `applications:admin`
 
 ---
@@ -131,8 +131,32 @@ Une cellule sans valeur affiche un tiret.
 - **Nouvelle application** : Créer une nouvelle entrée (`applications:member`). Voir [Premiers pas](#getting-started)
 - **Importer** : Import en masse depuis un fichier CSV ou un classeur Excel (`applications:admin`)
 - **Exporter** : Exporter les applications que la liste affiche dans un fichier CSV ou un classeur Excel (`applications:admin`). Voir [Options d'export](#export-options).
-- **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:member`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
-- **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Une application source ou cible d’une interface ne peut pas être supprimée : désactivez-la plutôt, ou supprimez d’abord ses interfaces. Avant la confirmation, la fenêtre liste ces applications comme conservées, avec leur nombre d’interfaces. Les autres sont supprimées avec leurs déploiements et leurs liens vers d’autres éléments ; la confirmation compte les déploiements
+- **Copier l'élément** : Dupliquer l'application cochée dans la liste, avec toutes ses relations principales (`applications:member`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
+- **Modifier la sélection** : Modifier un champ sur toutes les applications sélectionnées à la fois (`applications:member`). Voir [Modifier des applications en masse](#changing-applications-in-bulk)
+- **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Elle ne supprime que les applications cochées une à une, et n'est pas disponible tant que la case de l'en-tête prend tout le filtre. Une application source ou cible d’une interface ne peut pas être supprimée : désactivez-la plutôt, ou supprimez d’abord ses interfaces. Avant la confirmation, la fenêtre liste ces applications comme conservées, avec leur nombre d’interfaces. Les autres sont supprimées avec leurs déploiements et leurs liens vers d’autres éléments ; la confirmation compte les déploiements
+
+### Modifier des applications en masse { #changing-applications-in-bulk }
+
+**Sélectionner des applications** : Avec le droit de modifier les applications, la liste affiche une case au début de chaque ligne. Cochez les applications une à une, ou cochez la case de l'en-tête de colonne pour prendre toutes les applications du filtre et de la recherche en cours, y compris celles qui ne sont pas encore chargées. Décochez une application pour l'en retirer. Changer les filtres, la recherche ou le périmètre **Afficher** vide la sélection. Le tri la conserve.
+
+**Modifier un champ** :
+
+1. Sélectionnez les applications, puis cliquez sur **Modifier la sélection** (icône de modification). L'icône affiche le nombre d'applications sélectionnées
+2. Choisissez le **Champ** : **Responsables métier**, **Responsables IT**, **Cycle de vie** ou **Criticité business**
+3. Choisissez la **Nouvelle valeur**. Pour les responsables, choisissez une ou plusieurs personnes. La boîte de dialogue compte les applications : combien changeront, combien ont déjà cette valeur, et combien sont refusées. Le comptage reprend à chaque nouvelle valeur
+4. Cliquez sur **Modifier 12 lignes** (avec votre comptage) pour confirmer. La fenêtre affiche ensuite le résultat. Cliquez sur **Fermer** pour la fermer. La liste derrière elle est déjà à jour
+
+**Responsables** : Les personnes choisies remplacent les responsables de ce rôle sur chaque application. L'autre rôle garde ses personnes : modifier les **Responsables métier** laisse les **Responsables IT** tels quels.
+
+**Vider un champ** : Pour **Responsables métier**, **Responsables IT** et **Criticité business**, cliquez sur **Vider le champ** (icône de gomme) à côté de la valeur. La valeur affiche **Vide**. Pour les responsables, le rôle reste sans personne. Le **Cycle de vie** ne peut pas être vidé.
+
+**Bon à savoir** :
+
+- Une modification porte sur 5 000 applications au plus. Au-delà, resserrez les filtres ou sélectionnez moins d'applications
+- Si la liste change entre le comptage et votre confirmation, la boîte de dialogue affiche le nouveau comptage. Vérifiez-le, puis confirmez à nouveau
+- Si le comptage échoue, cliquez sur **Réessayer** à côté du message pour compter à nouveau
+- Une nouvelle criticité business fait passer une application revue à **À revoir**, comme sur la page de l'application
+- Chaque application modifiée a sa propre entrée dans son onglet **Historique**
 
 ---
 

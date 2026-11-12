@@ -216,6 +216,8 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - Eine Änderung umfasst höchstens 5.000 Zeilen. Darüber grenzen Sie die Filter ein oder wählen weniger Zeilen aus
 - Eine große Auswahl kann bis zu einer Minute zum Zählen brauchen, und ebenso lange zum Speichern
 - Ändert sich die Liste zwischen der Zählung und Ihrer Bestätigung, zeigt der Dialog die neue Zählung. Prüfen Sie sie und bestätigen Sie erneut
+- Während ein anderer Budgetvorgang läuft (zum Beispiel eine Spaltenkopie, ein Import einer Budgetdatei oder ein Einfrieren), wird die Änderung sofort abgelehnt, mit der Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“
+- Schlägt die Zählung fehl, klicken Sie neben der Meldung auf **Erneut versuchen**, um erneut zu zählen
 - Beträge lassen sich so nicht ändern. Ändern Sie sie auf der Zeile oder in der [Budgetdatei](budget-file.md)
 - Jede geänderte Zeile erhält einen eigenen Eintrag in ihrem Tab **Verlauf**
 - Mit begrenztem Datenzugriff ändern Sie die Zeilen Ihres Zugriffs. Eine Änderung, durch die eine Zeile Ihren Zugriff verlassen würde, wird für diese Zeile abgelehnt

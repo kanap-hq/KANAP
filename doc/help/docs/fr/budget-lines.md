@@ -216,6 +216,8 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - Une modification porte sur 5 000 lignes au plus. Au-delà, resserrez les filtres ou sélectionnez moins de lignes
 - Une grande sélection peut prendre jusqu'à une minute au comptage, et autant à l'enregistrement
 - Si la liste change entre le comptage et votre confirmation, la boîte de dialogue affiche le nouveau comptage. Vérifiez-le, puis confirmez à nouveau
+- Pendant une autre opération sur le budget (une copie de colonnes, un import de fichier budgétaire ou un gel, par exemple), la modification est refusée tout de suite avec le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. »
+- Si le comptage échoue, cliquez sur **Réessayer** à côté du message pour compter à nouveau
 - Les montants ne se modifient pas ainsi. Modifiez-les sur la ligne ou dans le [fichier budgétaire](budget-file.md)
 - Chaque ligne modifiée a sa propre entrée dans son onglet **Historique**
 - Avec un accès aux données limité, vous modifiez les lignes de votre accès. Une modification qui ferait sortir une ligne de votre accès est refusée pour cette ligne
