@@ -10875,6 +10875,39 @@ async function testAgentPersonaCannotWidenCapabilityFrameAndSeedingSkipsUserEdit
   assert.equal(hashStableJson(afterEnsure.forbidden_capabilities_json), beforeForbidden);
 }
 
+// A save that changes nothing (the mission typed back to what it was, the same text sent twice)
+// leaves the agent as it is: no new version and no line in the audit trail.
+async function testAgentSaveWithoutChangeCreatesNoVersionNorAuditLine() {
+  const { manager, stores } = createMemoryManager();
+  const context = createContext(manager);
+  const { queue, definition } = await seedAgentDefinitionForAutonomy(context);
+  const service = new AiAgentControlService({} as any, {} as any, {} as any, {} as any, {} as any, queue);
+  const configEvents = () => (stores.get(AiAgentAuditEvent.name) ?? [])
+    .filter((event: AiAgentAuditEvent) => event.event_type === 'agent_config_updated').length;
+  const stored = () => (stores.get(AiAgentDefinition.name) ?? []).find((row: AiAgentDefinition) => row.id === definition.id);
+
+  await service.updateAgentDefinition(context, definition.id, { persona_json: { mission: 'Triage incoming work.' } });
+  const versionAfterChange = stored().config_version;
+  const eventsAfterChange = configEvents();
+  assert.equal(eventsAfterChange > 0, true);
+
+  const again = await service.updateAgentDefinition(context, definition.id, { persona_json: { mission: 'Triage incoming work.' } });
+  assert.equal(stored().config_version, versionAfterChange);
+  assert.equal(configEvents(), eventsAfterChange);
+  assert.deepEqual(again.diff, {});
+  assert.equal(again.agent_definition.config_version, versionAfterChange);
+
+  // The same holds for a save that sends back what is stored for other fields.
+  await service.updateAgentDefinition(context, definition.id, { name: definition.name, agent_priority: definition.agent_priority });
+  assert.equal(stored().config_version, versionAfterChange);
+  assert.equal(configEvents(), eventsAfterChange);
+
+  const changed = await service.updateAgentDefinition(context, definition.id, { persona_json: { mission: 'Triage incoming work now.' } });
+  assert.equal(stored().config_version, versionAfterChange + 1);
+  assert.equal(configEvents(), eventsAfterChange + 1);
+  assert.deepEqual(Object.keys(changed.diff), ['persona_json', 'config_version']);
+}
+
 async function testAgentPersonaRejectsOverLimitAndClearsEmptyFields() {
   const { manager, stores } = createMemoryManager();
   const context = createContext(manager);
@@ -17500,6 +17533,7 @@ async function run() {
   await testAttentionAcknowledgementSurvivesDeletedAgent();
   await testAttentionRerunEnqueuesWithManualTrigger();
   await testAgentPersonaCannotWidenCapabilityFrameAndSeedingSkipsUserEdits();
+  await testAgentSaveWithoutChangeCreatesNoVersionNorAuditLine();
   await testAgentPersonaRejectsOverLimitAndClearsEmptyFields();
   await testEffectivePromptExposesBoundsApplied();
   await testAgentConfigRejectsCapabilityBeyondFrame();

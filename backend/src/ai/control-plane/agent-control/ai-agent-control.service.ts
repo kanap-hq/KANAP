@@ -2359,6 +2359,11 @@ export class AiAgentControlService {
       }
       definition.llm_model_config_id = configId;
     }
+    // A save that changes nothing (the same text sent again) leaves the agent as it is: no new
+    // version and no line in the audit trail.
+    if (Object.keys(changedConfigDiff(before, configSnapshot(definition))).length === 0) {
+      return { agent_definition: serializeAgentDefinition(definition), diff: {} };
+    }
     definition.metadata_json = {
       ...metadataObject(definition.metadata_json),
       user_modified: true,
