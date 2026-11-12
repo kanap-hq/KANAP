@@ -64,10 +64,9 @@ export default function UserDialog({
         api.get(`/users/${userId}/roles`),
       ]);
       if (userRes.status === 'rejected') throw userRes.reason;
-      return {
-        ...userRes.value.data,
-        roles: rolesRes.status === 'fulfilled' ? rolesRes.value.data?.items ?? [] : [],
-      };
+      // Roles that could not be read are neither shown as "no role" nor saved.
+      if (rolesRes.status === 'rejected') return { ...userRes.value.data, roles: undefined, rolesUnread: true };
+      return { ...userRes.value.data, roles: rolesRes.value.data?.items ?? [] };
     },
     enabled: open && editing,
     refetchOnWindowFocus: false,
@@ -75,6 +74,7 @@ export default function UserDialog({
   });
   // A person with more rights than the reader (the server says so): shown, never changed.
   const readOnly = editing && userQuery.data?.above_own_rights === true;
+  const rolesUnread = editing && userQuery.data?.rolesUnread === true;
   const showAccessTab = editing && canAdminDataAccess && !ownAccount && !readOnly;
 
   const [activeTab, setActiveTab] = React.useState<UserDialogTab>(initialTab);
@@ -138,7 +138,7 @@ export default function UserDialog({
       }
       if (userId == null) return false;
       // The profile and the roles in one request: a refusal of either writes neither.
-      await api.patch(`/users/${userId}`, { ...userPayload, role_ids });
+      await api.patch(`/users/${userId}`, rolesUnread ? userPayload : { ...userPayload, role_ids });
       void queryClient.invalidateQueries({ queryKey: ['users'] });
       return true;
     } catch (e: any) {
@@ -150,7 +150,7 @@ export default function UserDialog({
       );
       return false;
     }
-  }, [confirmInvite, mode, queryClient, t, userId]);
+  }, [confirmInvite, mode, queryClient, rolesUnread, t, userId]);
 
   const handleSave = React.useCallback(async (intent: UserFormIntent) => {
     if (saving) return;
@@ -223,6 +223,7 @@ export default function UserDialog({
       onStateChange={setIdentityState}
       managedByEntra={managedByEntra}
       readOnly={readOnly}
+      rolesLocked={rolesUnread}
     />
   );
 

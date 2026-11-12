@@ -97,6 +97,8 @@ const UserForm = forwardRef<UserFormHandle, {
   managedByEntra?: boolean;
   /** Every field shown and none changed: a person with more rights than the reader. */
   readOnly?: boolean;
+  /** The person's roles could not be read: shown from their main role, not changed. */
+  rolesLocked?: boolean;
 }>(function UserForm({
   defaultValues,
   onSubmit,
@@ -104,6 +106,7 @@ const UserForm = forwardRef<UserFormHandle, {
   onStateChange,
   managedByEntra = false,
   readOnly = false,
+  rolesLocked = false,
 }, ref) {
   const { t } = useTranslation(['admin', 'validation']);
   const locale = useLocale();
@@ -250,7 +253,7 @@ const UserForm = forwardRef<UserFormHandle, {
                 label={t('userForm.fields.roles')}
                 value={field.value ?? []}
                 onChange={(v) => field.onChange(v)}
-                disabled={readOnly}
+                disabled={readOnly || rolesLocked}
                 heldRoleIds={heldRoleIds}
                 error={!!err.role_ids}
                 helperText={(err.role_ids?.message as string)

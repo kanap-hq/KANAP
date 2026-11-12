@@ -254,6 +254,25 @@ describe('UserDialog save', () => {
     expect(put).not.toHaveBeenCalledWith('/users/u-1/data-access', expect.anything());
   });
 
+  it('leaves the roles out of the save when they could not be read', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/users/u-1') return { data: USER };
+      if (url === '/users/u-1/roles') throw new Error('roles unavailable');
+      if (url === '/users/u-1/data-access') return { data: PERSON_ACCESS };
+      if (url === '/roles') return { data: { items: [ROLE] } };
+      return { data: { items: [] } };
+    });
+    renderDialog();
+    const firstName = await screen.findByRole('textbox', { name: 'userForm.fields.firstName' });
+    expect(screen.getByRole('combobox', { name: 'userForm.fields.roles' })).toBeDisabled();
+    fireEvent.change(firstName, { target: { value: 'Marta2' } });
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(patch).toHaveBeenCalledWith('/users/u-1', expect.objectContaining({ first_name: 'Marta2' })));
+    expect(patch.mock.calls[0][1]).not.toHaveProperty('role_ids');
+    expect(put).not.toHaveBeenCalledWith('/users/u-1/roles', expect.anything());
+  });
+
   it('saves only the access when only it changed', async () => {
     renderDialog({ initialTab: 'access' });
     await screen.findByText('Alpha Spain');
