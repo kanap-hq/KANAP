@@ -118,9 +118,8 @@ describe('LocationWorkspacePage typing while the site is created', () => {
     fireEvent.blur(title);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
-      // The answer of the real create has no reference: the database gives it, a read returns it.
-      const { location_reference: _reference, ...posted } = STORED;
-      await act(async () => { answer({ data: { ...posted, creation_token: 'tok' } }); });
+      // The create answers with the stored site, its reference included.
+      await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });
       await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/locations/LOC-9/overview'));
       // Let the page settle: it must not read the site again and replace what is typed.
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });

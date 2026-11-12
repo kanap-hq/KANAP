@@ -107,9 +107,7 @@ describe('LocationWorkspacePage name refusals', () => {
   });
 
   it('creates the site with the drawer fields once its name is committed, then opens it', async () => {
-    // The answer of the create has no reference (the database gives it): the site is read for it.
-    mocked.post.mockResolvedValueOnce({ data: { id: 'loc-new', name: 'Lyon DC', creation_token: 'token-1' } });
-    mocked.get.mockImplementation(async (url: string) => (url === '/locations/loc-new' ? { data: { ...LOCATION, id: 'loc-new', location_reference: 'LOC-9', name: 'Lyon DC' } } : { data: [] }));
+    mocked.post.mockResolvedValueOnce({ data: { id: 'loc-new', location_reference: 'LOC-9', name: 'Lyon DC', creation_token: 'token-1' } });
     renderAt('/it/locations/new/overview');
     expect(screen.queryByPlaceholderText('workspace.location.namePlaceholder')).toBeNull();
     const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
@@ -126,9 +124,8 @@ describe('LocationWorkspacePage name refusals', () => {
       region: null,
       additional_info: null,
     }));
-    // The page holds the site it created: it reads it once, before moving to it.
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/locations/loc-new'));
-    expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/locations/LOC-9'))).toEqual([]);
+    // The page holds the site it created: it does not read the site, only what hangs off it.
+    expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/locations/LOC-9') || url === '/locations/loc-new')).toEqual([]);
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/locations/LOC-9/overview', { replace: true }));
   });
 
