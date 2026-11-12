@@ -55,7 +55,7 @@ If you close the dialog, the choice waits in **About Kadratis**. The line **Path
 
 ### Your first five steps
 
-Once a path is chosen, the **Your first five steps** tile comes first on the home page. It lists the five steps of the path and your progress, for example **2/5**. Each step opens its screen and outlines what to look at there, with one sentence of guidance in the bottom-right corner of the window. The guidance stays on every screen until you close it. Once the step is done, **Next step** opens the next step left to do (**Finish** after the last one).
+Once a path is chosen, the **Your first five steps** tile comes first on the home page. It lists the five steps of the path and your progress, for example **2/5**. Each step opens its screen and says in one sentence what to look at there, in the bottom-right corner of the window. The guidance stays on every screen until you close it, and moves aside from the buttons and fields under it. Once the step is done, **Next step** opens the next step left to do (**Finish** after the last one).
 
 - With the example, opening a step marks it done.
 - With your own data, a step that creates something is marked done as soon as it exists. For the other steps, click **Done** in the guidance, or the mark next to the step in the tile. The mark also undoes a step, except one whose item exists.

@@ -55,7 +55,7 @@ Si vous fermez la fenêtre, le choix vous attend dans **À propos de Kadratis**.
 
 ### Vos cinq premiers pas
 
-Une fois le parcours choisi, la tuile **Vos cinq premiers pas** vient en premier sur la page d'accueil. Elle liste les cinq étapes du parcours et votre progression, par exemple **2/5**. Chaque étape ouvre son écran et y met en évidence ce qu'il faut regarder, avec une phrase d'explication en bas à droite de la fenêtre. L'explication reste sur chaque écran jusqu'à ce que vous la fermiez. Une fois l'étape faite, **Étape suivante** ouvre la prochaine étape à faire (**Terminer** après la dernière).
+Une fois le parcours choisi, la tuile **Vos cinq premiers pas** vient en premier sur la page d'accueil. Elle liste les cinq étapes du parcours et votre progression, par exemple **2/5**. Chaque étape ouvre son écran et dit en une phrase ce qu'il faut y regarder, en bas à droite de la fenêtre. L'explication reste sur chaque écran jusqu'à ce que vous la fermiez, et s'écarte des boutons et des champs qui se trouvent sous elle. Une fois l'étape faite, **Étape suivante** ouvre la prochaine étape à faire (**Terminer** après la dernière).
 
 - Avec l'exemple, ouvrir une étape la marque comme faite.
 - Avec vos données, une étape qui crée quelque chose est marquée comme faite dès que cet élément existe. Pour les autres étapes, cliquez sur **Fait** dans l'explication, ou sur la marque à côté de l'étape dans la tuile. La marque annule aussi une étape, sauf celle dont l'élément existe.
