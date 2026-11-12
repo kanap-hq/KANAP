@@ -124,7 +124,7 @@ export class KnowledgeRelationsService {
     opts?: RelationMutationOptions,
   ) {
     const { manager, documentId } = await this.resolveMutableDocumentId(idOrRef, opts);
-    await this.knowledge.assertRelationWriteAllowed(documentId, { [entity]: [] }, manager, opts?.userId || null, 'remove');
+    await this.knowledge.assertRelationWriteAllowed(documentId, { [entity]: [String(targetId || '').trim()] }, manager, opts?.userId || null, 'remove');
     return this.knowledge.removeDocumentRelationByEntity(documentId, entity, targetId, manager);
   }
 }
