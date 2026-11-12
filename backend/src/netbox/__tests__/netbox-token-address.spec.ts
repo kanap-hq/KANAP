@@ -42,7 +42,7 @@ function harness() {
 async function main() {
   {
     const { manager, sync, calls } = harness();
-    const result = await sync.testConnection(manager, 'tenant-1', { base_url: 'https://netbox.attacker.example' });
+    const result = await sync.testConnection(manager, 'tenant-1', { base_url: 'https://netbox-new.example.com' });
     assert.equal(result.ok, false);
     assert.equal(result.code, 'netbox_token_needed_for_address');
     assert.equal(calls.length, 0, 'no request leaves for another address without its token');

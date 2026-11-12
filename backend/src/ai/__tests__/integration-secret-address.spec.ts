@@ -84,14 +84,14 @@ function settingsService(row: AiSettings) {
 
 async function testGlpiNewAddressWithoutTokensEmptiesThem() {
   const { service, audits } = settingsService(settingsRow());
-  const saved = await service.update(TENANT_ID, { glpi_url: 'https://glpi.attacker.example/helpdesk' });
-  assert.equal(saved.glpi_url, 'https://glpi.attacker.example/helpdesk');
+  const saved = await service.update(TENANT_ID, { glpi_url: 'https://glpi-new.example.com/helpdesk' });
+  assert.equal(saved.glpi_url, 'https://glpi-new.example.com/helpdesk');
   assert.equal(saved.glpi_user_token_encrypted, null);
   assert.equal(saved.glpi_app_token_encrypted, null);
   // The trace names the address change and the emptied tokens, never a token.
   const entry = audits.at(-1);
   assert.equal(entry.before.glpi_url, 'https://glpi.example.com/helpdesk');
-  assert.equal(entry.after.glpi_url, 'https://glpi.attacker.example/helpdesk');
+  assert.equal(entry.after.glpi_url, 'https://glpi-new.example.com/helpdesk');
   assert.equal(entry.before.has_glpi_user_token, true);
   assert.equal(entry.after.has_glpi_user_token, false);
   assert.equal(entry.after.has_glpi_app_token, false);
