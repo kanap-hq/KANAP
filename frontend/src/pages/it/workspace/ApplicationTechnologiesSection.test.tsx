@@ -6,7 +6,12 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectAnchoredLeft, expectAnchoredRight, placeAnchor, stubPopoverPaperWidth } from '../../../test/popoverAnchor';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { frenchSpacing } from '../../../i18n/formatters';
 import api from '../../../api';
+import deIt from '../../../locales/de/it.json';
+import enIt from '../../../locales/en/it.json';
+import esIt from '../../../locales/es/it.json';
+import frIt from '../../../locales/fr/it.json';
 import ApplicationTechnologiesSection from './ApplicationTechnologiesSection';
 import type { ApplicationRelationsData } from './ApplicationRelationsTab';
 
@@ -69,6 +74,24 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
 
 function Location() {
   return <div data-testid="location">{useLocation().pathname}</div>;
+}
+
+/** A local day `months` from today, clamped like the support horizon. */
+function shiftMonths(months: number): string {
+  const date = new Date();
+  const day = date.getDate();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + months);
+  date.setDate(Math.min(day, new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()));
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const dayText = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${dayText}`;
+}
+
+/** The record's tooltip sentence for a count, as the locale files state it. */
+function endsWithinMonths(relations: { endsWithinMonths_one: string; endsWithinMonths_other: string }, count: number): string {
+  const template = count === 1 ? relations.endsWithinMonths_one : relations.endsWithinMonths_other;
+  return template.split('{{count}}').join(String(count));
 }
 
 function renderSection(data: ApplicationRelationsData) {
@@ -157,6 +180,34 @@ describe('ApplicationTechnologiesSection', () => {
     expect(ended.getAttribute('title')).toMatch(/^pages\.endOfSupport\.states\.out_of_support · /);
     expect(getComputedStyle(ended).color).not.toBe(getComputedStyle(extended).color);
     expect(rows[2].querySelectorAll('td')[6]?.textContent).toBe('—');
+  });
+
+  it('names the 12-month window on a version that ends within it', async () => {
+    const base = relations().technologies!;
+    const soon = shiftMonths(6);
+    const later = shiftMonths(18);
+    renderSection(relations({
+      technologies: [
+        { ...base[1], standard_support_end: soon, support_end: soon, support_state: null },
+        { ...base[3], standard_support_end: later, support_end: later, support_state: 'supported' },
+      ],
+    }));
+    const table = await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
+    const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
+    const ending = rows[0].querySelector('[data-state]') as HTMLElement;
+    expect(ending.getAttribute('data-state')).toBe('ending_soon');
+    const title = ending.getAttribute('title') ?? '';
+    expect(title).toContain('workspace.application.relations.endsWithinMonths(count=12)');
+    expect(title).toContain('workspace.asset.technical.standardSupportEnds(');
+    expect(title).not.toContain('upcoming');
+    const supported = rows[1].querySelector('[data-state]') as HTMLElement;
+    expect(supported.getAttribute('data-state')).toBe('supported');
+    expect(getComputedStyle(ending).color).not.toBe(getComputedStyle(supported).color);
+
+    expect(endsWithinMonths(enIt.workspace.application.relations, 12)).toBe('Ends within 12 months');
+    expect(frenchSpacing(endsWithinMonths(frIt.workspace.application.relations, 12))).toBe('Fin dans les 12 mois');
+    expect(endsWithinMonths(deIt.workspace.application.relations, 12)).toBe('Endet innerhalb von 12 Monaten');
+    expect(endsWithinMonths(esIt.workspace.application.relations, 12)).toBe('Termina dentro de 12 meses');
   });
 
   it('wraps several long server names in Via instead of cutting them', async () => {

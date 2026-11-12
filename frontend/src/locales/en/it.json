@@ -1950,6 +1950,8 @@
           "both": "Declared and hosted"
         },
         "versionUnknown": "Unknown version",
+        "endsWithinMonths_one": "Ends within {{count}} month",
+        "endsWithinMonths_other": "Ends within {{count}} months",
         "also": {
           "prefix": "Also related:",
           "assets_one": "{{count}} asset (deployments)",
