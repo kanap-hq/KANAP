@@ -29,6 +29,8 @@ function makeService() {
   service.validateLinkedIds = async () => undefined;
   service.listTaskLinkedTargetIds = async () => [];
   service.resolveLinkNames = async () => [];
+  // The person reads the linked modules (`task-link-writes-module-read.integration.spec.ts` covers the other case).
+  service.writesTaskLinks = async () => true;
   // Not a limited transaction, no stored link, and the writes succeed.
   const manager = { query: async () => [] } as any;
   return { service: service as TasksUnifiedService, logged, manager };
