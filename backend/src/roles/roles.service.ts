@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Role } from './role.entity';
 import { RolePermission } from '../permissions/role-permission.entity';
 import { RESOURCES } from '../permissions/permissions.service';
 import { userAssignedRolesSql } from '../users/user-access-sql';
+import { isSystemRoleName, roleNameKey } from './system-roles';
 
 @Injectable()
 export class RolesService {
@@ -44,6 +45,15 @@ export class RolesService {
   async findByName(role_name: string, opts?: { manager?: EntityManager }) {
     const repo = (opts?.manager ?? this.repo.manager).getRepository(Role);
     return repo.findOne({ where: { role_name } });
+  }
+
+  /** Another role holding the name of a system role in another case or with surrounding spaces. */
+  private async systemNameHolder(roleName: string, exceptId: string | null, opts?: { manager?: EntityManager }) {
+    if (!isSystemRoleName(roleName)) return null;
+    const repo = (opts?.manager ?? this.repo.manager).getRepository(Role);
+    const query = repo.createQueryBuilder('r').where('lower(trim(r.role_name)) = :key', { key: roleNameKey(roleName) });
+    if (exceptId) query.andWhere('r.id <> :exceptId', { exceptId });
+    return query.getOne();
   }
 
   async findById(id: string, opts?: { manager?: EntityManager }) {
@@ -97,6 +107,10 @@ export class RolesService {
       }
       return existing;
     }
+    // The name of a system role stays theirs, whatever its case.
+    if (await this.systemNameHolder(params.role_name, null, opts)) {
+      throw new BadRequestException('Role name must be unique');
+    }
 
     const role = repo.create({
       role_name: params.role_name,
@@ -118,6 +132,7 @@ export class RolesService {
     if (params.role_name && params.role_name !== role.role_name) {
       const exists = await this.findByName(params.role_name, opts);
       if (exists && exists.id !== id) throw new Error('Role name must be unique');
+      if (await this.systemNameHolder(params.role_name, id, opts)) throw new Error('Role name must be unique');
       role.role_name = params.role_name;
     }
     if (params.role_description !== undefined) role.role_description = params.role_description;
