@@ -744,6 +744,27 @@ async function testPersonAndClockCloseThePromptAfterTheCacheablePrefix() {
   assert.notEqual(second.text, first.text);
 }
 
+// A support article may be written in another language than the question: Kad searches in the
+// product's four languages before it says nothing matches, and says the status of a document it
+// cites that is not published (the chat and MCP keep every document the person may read).
+async function testKnowledgePromptSearchesTheDocumentLanguagesAndSaysTheStatus() {
+  const service = new AiSystemPromptService();
+  const contextProfile = selectAiContextProfile('Find the knowledge article about the label printer');
+  assert.equal(contextProfile.promptMode, 'knowledge');
+  const prompt = service.build({
+    ...baseParams,
+    availableTools: [
+      { name: 'search_knowledge', category: 'discovery', description: 'Search knowledge.', input_summary: {}, read_only: true, surfaces: ['chat'] },
+    ],
+    contextProfile,
+  });
+
+  assert.match(prompt, /English, French, German (?:or|and) Spanish/);
+  assert.match(prompt, /before (?:answering|concluding) (?:that )?no(?:thing| document)? matches/i);
+  assert.match(prompt, /not published/i);
+  assert.doesNotMatch(prompt, /try one concise alternate wording/);
+}
+
 async function run() {
   await testPromptSaysWhatItDoesWithAccessAndHistory();
   await testPromptKeepsTheUserLanguageBetweenToolCalls();
@@ -762,6 +783,7 @@ async function run() {
   await testPromptBuildsWriteGuidanceFromToolMetadata();
   await testPromptIncludesDocumentRelationPivotGuidanceFromToolMetadata();
   await testAnalyticsDimensionsFollowOpexOrCapexRead();
+  await testKnowledgePromptSearchesTheDocumentLanguagesAndSaysTheStatus();
 }
 
 void run();
