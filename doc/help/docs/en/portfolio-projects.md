@@ -207,7 +207,7 @@ Use the **History** tab when you need to know what changed. Use the comments whe
 The **Tasks** tab is the project's execution queue. The tab badge shows the number of project tasks.
 
 - tasks created here are linked to the project automatically
-- **Add task** is offered to people who create tasks (`tasks:member`) and contribute to the project (`portfolio_projects:contributor`)
+- **Add task** is offered to people who create tasks (`tasks:member`) and contribute to the project (`portfolio_projects:contributor`). A Business Contributor contributes only to the projects they take part in.
 - tasks can also be created from a timeline phase, which links them to both the project and the selected phase
 - the tab supports status filtering and phase filtering
 - the default task view focuses on active work by hiding done and cancelled items

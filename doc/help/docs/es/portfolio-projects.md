@@ -207,7 +207,7 @@ Use la pestaña **Historial** cuando necesite saber qué cambió. Use los coment
 La pestaña **Tareas** es la cola de ejecución del proyecto. La insignia de la pestaña muestra el número de tareas del proyecto.
 
 - las tareas creadas aquí se vinculan al proyecto automáticamente
-- **Añadir tarea** se ofrece a las personas que crean tareas (`tasks:member`) y contribuyen al proyecto (`portfolio_projects:contributor`)
+- **Añadir tarea** se ofrece a las personas que crean tareas (`tasks:member`) y contribuyen al proyecto (`portfolio_projects:contributor`). Un Colaborador de negocio solo contribuye a los proyectos en los que participa.
 - las tareas también pueden crearse desde una fase del cronograma, lo que las vincula tanto al proyecto como a la fase seleccionada
 - la pestaña admite filtrado por estado y filtrado por fase
 - la vista de tareas predeterminada se centra en el trabajo activo ocultando los elementos hechos y cancelados

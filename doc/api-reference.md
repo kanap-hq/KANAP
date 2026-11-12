@@ -1720,6 +1720,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 
 ## Portfolio Projects
 - GET `/portfolio/projects/:id?include=activities` — load project (include activity feed via `include=activities`) **[Requires: portfolio_projects:reader]**
+  - `can_contribute`: whether the reader may contribute to the project (tasks, time entries, managed documents), with the check those writes make. A Business Contributor who reads every project through another role contributes only to the projects they take part in.
   - Activity rows are ordered newest-first and tenant-scoped in SQL (`a.tenant_id = app_current_tenant()`).
 - PATCH `/portfolio/projects/:id` — update project **[Requires: portfolio_projects:contributor]**
   - Auto-writes `type='change'` history for tracked fields.

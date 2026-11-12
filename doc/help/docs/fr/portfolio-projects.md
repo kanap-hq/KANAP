@@ -207,7 +207,7 @@ Utilisez l'onglet **Historique** quand vous avez besoin de savoir ce qui a chang
 L'onglet **Tâches** est la file d'exécution du projet. Le badge de l'onglet affiche le nombre de tâches du projet.
 
 - les tâches créées ici sont liées automatiquement au projet
-- **Ajouter une tâche** est proposé aux personnes qui créent des tâches (`tasks:member`) et contribuent au projet (`portfolio_projects:contributor`)
+- **Ajouter une tâche** est proposé aux personnes qui créent des tâches (`tasks:member`) et contribuent au projet (`portfolio_projects:contributor`). Un Contributeur métier ne contribue qu'aux projets auxquels il participe.
 - les tâches peuvent également être créées depuis une phase du planning, ce qui les lie à la fois au projet et à la phase sélectionnée
 - l'onglet prend en charge le filtrage par statut et par phase
 - la vue par défaut des tâches se concentre sur le travail actif en masquant les éléments terminés et annulés
