@@ -17,6 +17,43 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.11.7 (2026-11-12)
+
+A grace period of 14 days after an unpaid invoice, rules on who gives which rights, a closed list of formats for rich text, library and internal notes settings for agents, and a first-steps hint in the corner of the window.
+
+### Changes
+- Subscription and payment: after a failed payment, the workspace stays usable for 14 days, with a banner that gives the amount due and the date access becomes limited. The billing page shows the unpaid invoice with the reason of the refusal and pays it right after a card update. Access is limited 14 days after the unpaid invoice, whatever the payment method (from the due date for a bank transfer). While an invoice is unpaid or incomplete, plan changes, bank transfer requests and new card subscriptions ask to pay it first. A plan change asked while a cancellation is set asks to undo the cancellation first. A subscription whose cancellation is set shows its end date. A workspace has one subscription, and the Stripe sync keeps the payment mode, the payment term and the latest invoice in step with Stripe, applying the events of a workspace one after the other. (#1540, #1573)
+- Users and roles: a person who administers users gives only the rights they hold, and changes only people whose rights do not exceed their own. An Administrator is not limited. A workspace always keeps at least one enabled Administrator. A new role cannot take the name of a system or built-in role. (#1575)
+- Rights on records: linking records needs a read of the linked module, and a Business Contributor links only the projects they take part in. A phase, a milestone or a time entry is changed through its own project or task, and an attachment of a request or a project is deleted from its own record. Applying the dates of a roadmap changes the projects the person may edit from the project page; a list that holds any other project is refused as a whole. Deleting a single application needs the Applications administrator level, as the bulk delete does. A document page, Kad and the MCP server list the linked records the person may read, and saving the document's links keeps those the person does not see. (#1536, #1545, #1575)
+- Rich text: rich-text fields accept a closed list of HTML elements (underline, subscript, superscript, line break, image). A write with any other tag is refused, and the editor shows such a tag as text. A link opens a web, mail or phone address, a page of the application or an anchor; a link with another address is refused with its own message. (#1556)
+- Agents: a new agent starts with the knowledge base search off and cites no library until an administrator opens one, some or all of them on the agent screen. An agent searches and cites only its libraries. Agents created before keep their setting. Service desk agents have an internal notes setting: used (the default) or ignored, in which case the agent reads only the public messages of a ticket. A GLPI follow-up counts as public only when GLPI marks it not private. (#1577, #1579)
+- Agents screens: a conversation or an MCP call made by someone else shows its tool, argument names, status and failure code. Argument values, failure messages and results are read by the person who made the call and by an Administrator. The Activity screen names the changes approved in Kad in plain words, with the reference of the record they concern (`T-15`). Kept tool evidence, error messages and the MCP journal hide tokens, API keys, cookies and `Authorization` values. (#1544, #1555, #1577)
+- Kad imports a ticket when asked in French, German or Spanish, as in English. It imports a budget file in one card: on approval, it creates the missing suppliers for people who may create suppliers, and it needs no company in a workspace with one company. "Approve all" leaves out a card whose check failed. Kad names a failed file check as such, translates the errors on dimension values, names the lines of an import check by their number in the file, as the card does, and quotes the states of a record's history with the words of the History tab, in the person's language. (#1541, #1574)
+- First steps: the hint of a step is a bubble in the bottom-left corner of the window. It shows in dark mode, outlines no zone of the screen, and stays from screen to screen until it is closed. The texts name the screens they open, the portfolio path has one name, and in French the path calls each step « étape » and the hint button reads « Étape suivante ». Changing the path from a sample record that the change erases returns to the home page. (#1539, #1542, #1576, #1580)
+- Trial workspaces on the cloud service: the note and date of a discovery call are erased sixty days after the call. (#1543)
+- Sample data: the service desk agent is described by its mission, five contracts are linked to the applications they cover, and the converted cave project starts on the date of its first phase. Sample data and the audit log call deployments "Deployments" and "Deployment assets" in the four languages. (#1533, #1538)
+- Microsoft directory consent: the consent return is accepted only with a state the application issued for that workspace, and consent is recorded as granted only for the directory the workspace is connected to. A return that arrives after the link has expired leads back to the settings. The audit entry of a consent names the administrator who opened it, and the sign-in state carries the workspace identifier in a form that cannot be read. (#1535)
+- Top bar: the workspace logo keeps one size whatever the window width, and the section tabs scroll when they do not fit. The workspace logo is served within a wide limit per address (600 requests a minute). (#1545, #1578)
+- Budget and contracts: a new budget line starts on 1 January of the year shown. The Created and Updated dates of a budget line always show the year. Entering the yearly amount or a month field of a contract selects its content, so typing replaces it. (#1529, #1567, #1568)
+- Portfolio: empty Skills, Teams, Effort, Planning and Contributors views show one short line. Decimal numbers in the contributor, project effort and task time screens use the decimal separator of the interface language (for example 6,5 j/mois). (#1527, #1566)
+- Technologies: the list shows the nearest end of support to come, standard or extended, and says which in a tooltip. On the Overview tab, the missing-identifier warning shows once, in the Vulnerability identifiers group. On the End of support report, links open technologies, applications and assets by their reference (`TEC-n`, `APP-n`, `AST-n`). (#1542, #1546, #1565)
+- Wording: the CSV import and export dialogs use plain words ("What the import does", "Fields to export") in the four languages. The suppliers import help names the Status and Disabled on columns by the titles of the template. The submit button of the task activity form reads as a sentence in the four languages, for example "Passer à « En cours »" in French. The incident properties panel names its Category, Severity and Status lists for screen readers, and an empty category shows "No category". (#1531, #1532, #1547, #1569)
+- Website and user manual: the free trial form shows the workspace address under `.kadratis.com`. The renaming article says that e-mails now come from `no-reply@kadratis.com`. The French and Spanish user manual name the properties panel as the interface does. (#1515, #1516, #1570)
+
+### Fixes
+- Knowledge base: a document stays in full-text search after every save. Documents saved before this version are re-indexed on upgrade. (#1581)
+- A step ticked by a record being created is unticked when that creation is cancelled. (#1539)
+- A long rich text made of brackets or marks that open or close nothing opens without delay. (#1556)
+- The underline of the active section in the top bar stays under that section when the workspace logo loads after the page. (#1572)
+- On My profile, "Save changes" clicked right after choosing a language saves that language on the first click, with the mouse or the keyboard. (#1571)
+- A user without any role opens with an empty Roles field in the user dialog, and saving other changes keeps the list empty. (#1534)
+- The Status and Origin filters of the project and request lists show translated labels for every selected value, including statuses no record has yet. (#1528)
+
+### On-premise
+- Action required: none
+- Migrations: run automatically at start (1856190000000-document-search-vector-repair). It re-indexes for full-text search the knowledge base documents saved before this version, one workspace at a time, and logs the number of documents re-indexed. Its duration grows with the number of documents: a few seconds for a few thousand documents, several minutes for a workspace of several tens of thousands. (#1581)
+- Recommended: none
+
 ## 26.11.6 (2026-11-11)
 
 The platform console answers on each domain of an environment served under several domains. This fix concerns the cloud service.
@@ -27,9 +64,9 @@ The platform console answers on each domain of an environment served under sever
 - An environment served under two domains had the platform console on one domain only. Under the other domain, the console's address opened the system workspace as an ordinary workspace. The setting `PLATFORM_ADMIN_HOST` now accepts several hosts, comma-separated, one per domain. With one host, nothing changes. (#1513)
 
 ### On-premise
-- Action required: none. `.env` is unchanged.
+- Action required: none
 - Migrations: none.
-- Recommended: none.
+- Recommended: none
 
 ## 26.11.5 (2026-11-11)
 
@@ -45,7 +82,7 @@ The texts that still named KANAP now name Kadratis: e-mails, the included AI mod
 - The company is named KANAP SARL in the license notices and on the site's legal pages. (#1509, #1511)
 
 ### On-premise
-- Action required: none. `.env` is unchanged.
+- Action required: none
 - The configuration example (`infra/.env.onprem.example`) and the operator scripts name Kadratis. File names and variables are unchanged. (#1509)
 - An installation that sends e-mails through Resend sets `RESEND_FROM_EMAIL` to an address of its own domain, as the configuration guide says and as with earlier versions. Without it, e-mails would go from `no-reply@kadratis.com`, an address only the cloud service may use. (#1509)
 - Migrations: none.
@@ -67,10 +104,10 @@ The product is renamed Kadratis and its assistant Kad. The publishing company re
 ### Fixes
 
 ### On-premise
-- Action required: none. `.env` is unchanged.
+- Action required: none
 - The published images are now named `kadratis-api`, `kadratis-web` and `kadratis-api-tools`. The compose file of this version names them, so the usual update pulls them. Earlier versions stay under `kanap-*`. (#1502)
 - Migrations: none.
-- Recommended: none.
+- Recommended: none
 
 ## 26.11.3 (2026-11-09)
 
@@ -88,9 +125,9 @@ First steps that follow your own data, a path changed at any time from the first
 - First-steps hints no longer hide a record's tabs or Plaid's suggested questions. (#1495)
 
 ### On-premise
-- Action required: none. `.env` is unchanged.
+- Action required: none
 - Migrations: none.
-- Recommended: none.
+- Recommended: none
 
 ## 26.11.2 (2026-11-09)
 
@@ -104,7 +141,7 @@ A fix version for 26.11.1: the sample data loads again, and an asset can again b
 - Creating an asset by typing its name in the title works again in workspaces whose provider list has no on-premises provider, which includes every new workspace. (#1491)
 
 ### On-premise
-- Action required: none. `.env` is unchanged.
+- Action required: none
 - Migrations: none.
 - Recommended: take this version before loading the sample data.
 
@@ -363,9 +400,9 @@ CSV imports that handle real files, longer account numbers, and the launch artic
 - Import and export messages of the CSV dialogs, presets and buttons are translated. (#589, #590, #592)
 
 ### On-premise
-- Action required: none. `.env` is unchanged.
+- Action required: none
 - Migrations: run automatically at start (1854060000000-account-number-bigint). It widens the account number columns and needs no action.
-- Recommended: none.
+- Recommended: none
 
 ## 26.10.2 (2026-10-15)
 
@@ -379,9 +416,9 @@ A small follow-up to 26.10.1: one fix on the budget line workspace, and the laun
 - The 26.10.1 entry links the on-premise operations page at its real address. (#582)
 
 ### On-premise
-- Action required: none. `.env` is unchanged.
+- Action required: none
 - Migrations: none.
-- Recommended: none.
+- Recommended: none
 
 ## 26.10.1 (2026-10-15)
 
@@ -416,7 +453,7 @@ First published version of KANAP. From now on, KANAP comes in numbered and dated
 - A failing AI tool call no longer ends the assistant's answer, and an unknown name gets a clear "not found". (#472, #473)
 
 ### On-premise
-- Action required: none. `.env` is unchanged.
+- Action required: none
 - Migrations: run automatically at start (1853890000000-account-nature, 1853900000000-analytics-axis-applies-to, 1853910000000-analytics-value-applies-to, 1853920000000-analytics-axis-required, 1853930000000-analytics-value-order, 1853940000000-search-index-analytics-values, 1853950000000-budget-line-nature, 1853960000000-budget-lines-nature, 1853970000000-budget-lines-merge, 1853980000000-capex-criteria-dimensions, 1853990000000-budget-right, 1854000000000-budget-line-predecessor, 1854010000000-capex-notes-to-description, 1854020000000-budget-line-search-ref, 1854030000000-budget-dashboard-config, 1854040000000-contract-compliance-items, 1854050000000-ai-api-keys-oauth-grants).
 - An installation on the build of 2026-09-27 also gets the migrations in between: see https://github.com/kanap-hq/KANAP/compare/0b51024a...v26.10.1.
 - Budget lines have a single Budget right. A role with `opex=admin, capex=reader` becomes a budget administrator, and the migration log names each widened role.
