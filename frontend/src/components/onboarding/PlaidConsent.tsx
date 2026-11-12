@@ -61,14 +61,14 @@ export default function PlaidConsent() {
 
   if (!canAccept) {
     return (
-      <Box sx={surfaceSx} data-plaid-composer>
+      <Box sx={surfaceSx}>
         <Typography variant="body2" color="text.secondary">{t('workspace.messages.builtinNotAccepted')}</Typography>
       </Box>
     );
   }
 
   return (
-    <Stack spacing={1} sx={surfaceSx} data-plaid-composer>
+    <Stack spacing={1} sx={surfaceSx}>
       {error ? <Alert severity="warning">{error}</Alert> : null}
       {identity ? (
         <FormControlLabel

@@ -1,13 +1,6 @@
 import type { OnboardingAngle } from './onboardingApi';
 
 /**
- * Where each step opens, and what its hint points at on that screen: the page title by default,
- * the composer of Plaid, the tab row of a record or the list's Export button. The step keys and their order come from the API
- * (`backend/src/onboarding/onboarding-paths.ts`); a key missing here is left out of the list.
- */
-export type StepTarget = 'title' | 'composer' | 'tabs' | 'export';
-
-/**
  * `opensRecord`: the step opens one record of its list rather than the list (the largest budget
  * line of the year, the first of the most critical applications, the best-scored request on its
  * scoring tab, the project resulting from the best-scored converted request), the list when there
@@ -15,46 +8,48 @@ export type StepTarget = 'title' | 'composer' | 'tabs' | 'export';
  */
 export type OpenedRecord = 'topBudgetLine' | 'mostCriticalApplication' | 'topScoredRequest' | 'projectFromRequest';
 
-/** `tab`: the tab (or the properties panel section, `team`) the opened project shows; its summary by default. */
-export type StepScreen = { to: string; target: StepTarget; opensRecord?: OpenedRecord; tab?: string };
-
-const title = (to: string): StepScreen => ({ to, target: 'title' });
+/**
+ * Where each step opens. The step keys and their order come from the API
+ * (`backend/src/onboarding/onboarding-paths.ts`); a key missing here is left out of the list.
+ * `tab`: the tab (or the properties panel section, `team`) the opened project shows; its summary by default.
+ */
+export type StepScreen = { to: string; opensRecord?: OpenedRecord; tab?: string };
 
 export const STEP_SCREENS: Record<string, StepScreen> = {
-  budget_overview: title('/ops/budget'),
-  budget_line: { to: '/ops/budget', target: 'tabs', opensRecord: 'topBudgetLine' },
-  budget_report: title('/ops/reports/top-opex'),
-  budget_plaid: { to: '/ai', target: 'composer' },
-  budget_import: { to: '/ops/budget', target: 'export' },
-  own_company: title('/master-data/companies'),
-  own_budget_lines: title('/ops/budget'),
-  own_contract: title('/ops/contracts'),
-  own_report: title('/ops/reports/top-opex'),
-  own_invite: title('/admin/users'),
-  map_applications: title('/it/applications'),
-  map_application: { to: '/it/applications', target: 'tabs', opensRecord: 'mostCriticalApplication' },
-  map_assets: title('/it/assets'),
-  map_technologies: title('/it/technologies/end-of-support'),
-  map_import: { to: '/it/applications', target: 'export' },
-  own_sites: title('/it/locations'),
-  own_applications: title('/it/applications'),
-  own_technologies: title('/it/technologies'),
-  own_assets: title('/it/assets'),
-  portfolio_request: { to: '/portfolio/requests', target: 'tabs', opensRecord: 'topScoredRequest' },
-  portfolio_project: { to: '/portfolio/projects', target: 'tabs', opensRecord: 'projectFromRequest' },
-  portfolio_tasks: title('/portfolio/tasks'),
+  budget_overview: { to: '/ops/budget' },
+  budget_line: { to: '/ops/budget', opensRecord: 'topBudgetLine' },
+  budget_report: { to: '/ops/reports/top-opex' },
+  budget_plaid: { to: '/ai' },
+  budget_import: { to: '/ops/budget' },
+  own_company: { to: '/master-data/companies' },
+  own_budget_lines: { to: '/ops/budget' },
+  own_contract: { to: '/ops/contracts' },
+  own_report: { to: '/ops/reports/top-opex' },
+  own_invite: { to: '/admin/users' },
+  map_applications: { to: '/it/applications' },
+  map_application: { to: '/it/applications', opensRecord: 'mostCriticalApplication' },
+  map_assets: { to: '/it/assets' },
+  map_technologies: { to: '/it/technologies/end-of-support' },
+  map_import: { to: '/it/applications' },
+  own_sites: { to: '/it/locations' },
+  own_applications: { to: '/it/applications' },
+  own_technologies: { to: '/it/technologies' },
+  own_assets: { to: '/it/assets' },
+  portfolio_request: { to: '/portfolio/requests', opensRecord: 'topScoredRequest' },
+  portfolio_project: { to: '/portfolio/projects', opensRecord: 'projectFromRequest' },
+  portfolio_tasks: { to: '/portfolio/tasks' },
   // The key stays (it is stored): the step now shows the portfolio reports.
-  portfolio_time: title('/portfolio/reports'),
-  portfolio_import: { to: '/portfolio/projects', target: 'export' },
-  own_request: title('/portfolio/requests'),
-  own_projects: { to: '/portfolio/projects', target: 'tabs', opensRecord: 'projectFromRequest' },
-  own_tasks: title('/portfolio/tasks'),
-  own_project_budget: { to: '/portfolio/projects', target: 'tabs', opensRecord: 'projectFromRequest', tab: 'relations' },
+  portfolio_time: { to: '/portfolio/reports' },
+  portfolio_import: { to: '/portfolio/projects' },
+  own_request: { to: '/portfolio/requests' },
+  own_projects: { to: '/portfolio/projects', opensRecord: 'projectFromRequest' },
+  own_tasks: { to: '/portfolio/tasks' },
+  own_project_budget: { to: '/portfolio/projects', opensRecord: 'projectFromRequest', tab: 'relations' },
 };
 
 /** The screens a step opens on one path only: on the portfolio, the person sets up their own contributor profile. */
 const ANGLE_SCREENS: Record<string, Partial<Record<OnboardingAngle, StepScreen>>> = {
-  own_invite: { portfolio: title('/portfolio/contributors/me') },
+  own_invite: { portfolio: { to: '/portfolio/contributors/me' } },
 };
 
 export function stepScreen(key: string, angle: OnboardingAngle | null): StepScreen | null {
