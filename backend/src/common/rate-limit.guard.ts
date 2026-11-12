@@ -41,7 +41,7 @@ function budgetCounterOf(storage: ThrottlerStorage): HitCounter {
  * Takes the amounts of one request from budgets that are not the route's own count (recipients
  * per user and per tenant, support invoices per billing address and for the platform), all or
  * nothing: when one budget would pass its limit, the request takes nothing from any of them and
- * the caller refuses it with the guards' 429 (`ThrottlerException`). The key is a SHA-256 of the
+ * the caller refuses it with a 429. The key is a SHA-256 of the
  * budget name and the tracker: nothing of the tracker is kept in clear. Off with the other limits
  * (`RATE_LIMIT_ENABLED=false`).
  */
