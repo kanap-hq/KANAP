@@ -257,6 +257,12 @@ export const en = {
       intro: 'We received a request to reset your password. The button below lets you choose a new one; it remains valid for {{duration}}.',
       ignore: 'If you did not make this request, ignore this message: your current password remains valid.',
     },
+    entraLinkConfirmation: {
+      subject: 'Confirm your Microsoft sign-in on {{organisation}}',
+      intro: 'A sign-in with Microsoft used your address. The button below links this Microsoft account to your account; it remains valid for {{duration}}.',
+      ignore: 'If you did not sign in with Microsoft, ignore this message: nothing changes on your account.',
+      button: 'Link my Microsoft account',
+    },
     userInvite: {
       subject: 'Invitation to join {{organisation}}',
       intro: '{{inviterName}} invites you to join {{place}}.',

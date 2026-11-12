@@ -168,9 +168,10 @@ async function testHandleLoginCallbackRedirectsToTenantSessionHandoff() {
 }
 
 /**
- * An invitation ends at the first sign-in: a local account invited by e-mail (status "invited")
- * is linked to its Microsoft identity and enabled by its first Microsoft sign-in. A disabled
- * account is linked but stays disabled, and the session is then refused as before.
+ * An invitation ends at the first sign-in: an invited account (status "invited") linked to its
+ * Microsoft identity is enabled by its first Microsoft sign-in. A disabled account stays disabled,
+ * and the session is then refused as before. (How an existing account gets linked:
+ * entra-account-link.integration.spec.ts.)
  */
 async function testFirstMicrosoftSignInEndsTheInvitation() {
   for (const status of ['invited', 'disabled', 'enabled']) {
@@ -181,19 +182,14 @@ async function testFirstMicrosoftSignInEndsTheInvitation() {
       role: { role_name: 'Reader' },
       first_name: 'Julie',
       last_name: 'Martin',
-      external_auth_provider: null,
-      external_subject: null,
+      external_auth_provider: 'entra',
+      external_subject: 'entra-oid-2',
     };
     const saved: any[] = [];
     const repo = {
-      // No account carries this Microsoft identity yet: the local account is found by its e-mail.
-      findOne: async () => null,
+      // The account carries this Microsoft identity.
+      findOne: async () => localUser,
       save: async (value: any) => { saved.push({ ...value }); return value; },
-      createQueryBuilder: () => ({
-        leftJoinAndSelect: () => repo.createQueryBuilder(),
-        where: () => repo.createQueryBuilder(),
-        getOne: async () => localUser,
-      }),
     };
     const { dataSource } = createMockDataSource(repo);
     const enabled: Array<{ id: string; manager: unknown }> = [];
@@ -225,8 +221,7 @@ async function testFirstMicrosoftSignInEndsTheInvitation() {
     );
 
     const last = saved.at(-1);
-    assert.equal(last.external_auth_provider, 'entra', `${status}: linked`);
-    assert.equal(last.external_subject, 'entra-oid-2');
+    assert.equal(last.external_subject, 'entra-oid-2', `${status}: same link`);
     if (status === 'invited') {
       assert.deepEqual(enabled.map((call) => call.id), ['user-2'], 'the invited account is enabled');
       assert.ok(enabled[0].manager, 'inside the sign-in transaction');

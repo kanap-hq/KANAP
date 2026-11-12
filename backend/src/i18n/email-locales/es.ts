@@ -250,6 +250,12 @@ export const es: EmailStrings = {
       intro: 'Hemos recibido una solicitud para restablecer su contraseña. El botón de abajo le permite elegir una nueva; es válido durante {{duration}}.',
       ignore: 'Si usted no hizo esta solicitud, ignore este mensaje: su contraseña actual sigue siendo válida.',
     },
+    entraLinkConfirmation: {
+      subject: 'Confirme su inicio de sesión con Microsoft en {{organisation}}',
+      intro: 'Un inicio de sesión con Microsoft ha usado su dirección. El botón de abajo vincula esta cuenta de Microsoft a su cuenta; es válido durante {{duration}}.',
+      ignore: 'Si usted no inició sesión con Microsoft, ignore este mensaje: su cuenta no cambia.',
+      button: 'Vincular mi cuenta de Microsoft',
+    },
     userInvite: {
       subject: 'Invitación para unirse a {{organisation}}',
       intro: '{{inviterName}} le invita a unirse {{place}}.',

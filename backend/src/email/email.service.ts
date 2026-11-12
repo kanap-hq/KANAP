@@ -282,6 +282,51 @@ export class EmailService {
     await this.send({ to: params.to, subject, html: wrapper.html, text, attachments: wrapper.attachments, ...(from ? { from } : {}) });
   }
 
+  /**
+   * The link that confirms the link of an existing account to the Microsoft account that signed in
+   * with its address. Sent to the account's address only.
+   */
+  async sendEntraLinkConfirmationEmail(params: {
+    to: string;
+    confirmUrl: string;
+    expiresInMinutes?: number;
+    firstName?: string | null;
+    branding?: EmailBranding;
+    /** The tenant whose branding and organisation name the e-mail takes, when `branding` is not given. */
+    tenantId?: string | null;
+    locale?: string;
+  }) {
+    const strings = getEmailStrings(params.locale);
+    const s = strings.auth.entraLinkConfirmation;
+    const branding = params.branding ?? await this.tenantBranding(params.tenantId);
+    const pc = branding?.primaryColor ?? DEFAULT_EMAIL_PRIMARY_COLOR;
+    const subject = interpolate(s.subject, { organisation: emailWorkspaceName(branding) });
+    const greeting = greetingOf(strings, params.firstName);
+    const intro = interpolate(s.intro, { duration: formatEmailDuration(params.expiresInMinutes ?? 60, params.locale) });
+    const button = { label: s.button, url: params.confirmUrl };
+    const body = `
+      ${buildEmailIntro({ title: subject })}
+      ${buildParagraphs([greeting, intro])}
+      ${buildActionButtons([button], pc, { marginTop: 4 })}
+      ${buildUrlPanel(strings.common.labels.copyLink, params.confirmUrl, pc)}
+      ${buildSurfacePanel({
+        marginTop: 20,
+        tone: 'warning',
+        contentHtml: `<p style="margin:0;">${escapeHtml(s.ignore)}</p>`,
+      })}
+    `;
+    // No notification preferences link: this e-mail is not a notification.
+    const wrapper = emailWrapper(body, { branding, locale: params.locale });
+    const text = [
+      greeting,
+      intro,
+      interpolate(strings.common.labels.linkText, button),
+      s.ignore,
+    ].join('\n\n');
+    const from = workspaceEmailSender(branding?.organisationName);
+    await this.send({ to: params.to, subject, html: wrapper.html, text, attachments: wrapper.attachments, ...(from ? { from } : {}) });
+  }
+
   async sendUserInviteEmail(params: {
     to: string;
     inviteUrl: string;

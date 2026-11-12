@@ -1,11 +1,17 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { StringValue } from 'ms';
 import * as jwt from 'jsonwebtoken';
 import { createCipheriv, createDecipheriv, createHmac, createPublicKey, KeyObject, randomBytes } from 'crypto';
 import * as https from 'https';
 import { DirectoryProfile } from './entra-directory-sync.util';
 import { URL, URLSearchParams } from 'url';
-import { ENTRA_CONSENT_STATE_PURPOSE, ENTRA_LOGIN_HANDOFF_TYPE, ENTRA_STATE_PURPOSE } from './access-token.util';
+import {
+  ENTRA_CONSENT_STATE_PURPOSE,
+  ENTRA_LINK_CONFIRMATION_PURPOSE,
+  ENTRA_LOGIN_HANDOFF_TYPE,
+  ENTRA_STATE_PURPOSE,
+} from './access-token.util';
 import { getEntraStateSecret } from './token-secret.util';
 import { ENTRA_ID_TOKEN_ALGORITHMS, ISSUED_TOKEN_ALGORITHM, ISSUED_TOKEN_ALGORITHMS } from './jwt-algorithms';
 
@@ -50,6 +56,18 @@ type EntraLoginHandoff = {
   redirectTo?: string;
 };
 
+/**
+ * What a link confirmation names: the account, its address when the link was sent, and the
+ * Microsoft account (`oid` in the directory `tid`) it will be linked to.
+ */
+export type EntraLinkConfirmation = {
+  tenantId: string;
+  userId: string;
+  email: string;
+  oid: string;
+  tid: string;
+};
+
 type OpenIdConfiguration = {
   issuer: string;
   authorization_endpoint: string;
@@ -88,6 +106,7 @@ export class EntraAuthService {
   private readonly logger = new Logger(EntraAuthService.name);
   private readonly stateSecret: string;
   private readonly tenantReferenceKey: Buffer;
+  private readonly linkConfirmationKey: string;
 
   private metadataPromise: Promise<OpenIdConfiguration> | null = null;
   private jwksPromise: Promise<JwksResponse> | null = null;
@@ -97,6 +116,7 @@ export class EntraAuthService {
     // `kanap:v1:entra-state` key. Never the shared access-token secret.
     this.stateSecret = getEntraStateSecret();
     this.tenantReferenceKey = createHmac('sha256', this.stateSecret).update(TENANT_REFERENCE_KEY_LABEL).digest();
+    this.linkConfirmationKey = createHmac('sha256', this.stateSecret).update(ENTRA_LINK_CONFIRMATION_PURPOSE).digest('hex');
   }
 
   private getClientId(): string {
@@ -397,6 +417,33 @@ export class EntraAuthService {
     } catch (err: any) {
       this.logger.warn(`Invalid Entra login handoff: ${err?.message || String(err)}`);
       throw new BadRequestException('Invalid Entra login session');
+    }
+  }
+
+  /** The link that confirms an account's link to a Microsoft account, valid for `expiresIn`. */
+  signLinkConfirmation(payload: EntraLinkConfirmation, expiresIn: StringValue | number): { token: string; expiresAt: Date } {
+    const token = jwt.sign(
+      { purpose: ENTRA_LINK_CONFIRMATION_PURPOSE, ...payload, jti: randomBytes(16).toString('hex') },
+      this.linkConfirmationKey,
+      { algorithm: ISSUED_TOKEN_ALGORITHM, expiresIn },
+    );
+    const exp = (jwt.decode(token) as { exp?: number } | null)?.exp;
+    return { token, expiresAt: new Date((exp ?? Math.floor(Date.now() / 1000)) * 1000) };
+  }
+
+  /** What a link confirmation this application signed names; refused when expired or anything else. */
+  verifyLinkConfirmation(token: unknown): EntraLinkConfirmation {
+    try {
+      if (typeof token !== 'string' || !token) throw new Error('missing');
+      const decoded = jwt.verify(token, this.linkConfirmationKey, { algorithms: [...ISSUED_TOKEN_ALGORITHMS] }) as any;
+      const fields = ['tenantId', 'userId', 'email', 'oid', 'tid'] as const;
+      if (!decoded || decoded.purpose !== ENTRA_LINK_CONFIRMATION_PURPOSE || fields.some((f) => typeof decoded[f] !== 'string' || !decoded[f])) {
+        throw new Error('invalid payload');
+      }
+      return { tenantId: decoded.tenantId, userId: decoded.userId, email: decoded.email, oid: decoded.oid, tid: decoded.tid };
+    } catch (err: any) {
+      this.logger.warn(`Invalid Entra link confirmation: ${err?.message || String(err)}`);
+      throw new BadRequestException('ENTRA_LINK_INVALID');
     }
   }
 
