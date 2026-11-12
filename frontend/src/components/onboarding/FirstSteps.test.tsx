@@ -143,7 +143,7 @@ describe('FirstStepsTile', () => {
     renderAt('/', <FirstStepsTile />);
     const links = await screen.findAllByRole('link');
     expect(links.map((link) => link.textContent)).toEqual([
-      'Your locations', 'Your applications', 'Your technologies', 'Your servers', 'A colleague',
+      'Your locations', 'Your applications', 'Your technologies', 'Your assets', 'A colleague',
     ]);
     expect(links[4]).toHaveAttribute('href', '/admin/users?step=own_invite');
   });

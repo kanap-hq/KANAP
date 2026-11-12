@@ -1,6 +1,6 @@
 ---
 title: "Votre portefeuille dans Kadratis en dix minutes : découvrir avec l'exemple"
-description: Les cinq pas du parcours projets et demandes sur l'exemple Fromage & Co, d'une demande notée aux rapports du portefeuille et à votre propre fichier.
+description: Les cinq pas du parcours portefeuille sur l'exemple Fromage & Co, d'une demande notée aux rapports du portefeuille et à votre propre fichier.
 ---
 
 # Votre portefeuille dans Kadratis en dix minutes
@@ -9,11 +9,11 @@ description: Les cinq pas du parcours projets et demandes sur l'exemple Fromage 
 
 Fromage & Co est un groupe fromager fictif dont l'exemple est chargé dans votre espace de travail. En dix minutes sur son portefeuille, vous lisez comment une demande est notée, la suivez jusqu'au projet, trouvez les tâches, lisez les rapports et voyez comment votre propre fichier entre dans Kadratis.
 
-Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Les projets et les demandes** avec **Découvrir avec l'exemple complet**. Chaque pas de la tuile ouvre son écran avec une courte indication, et l'ouvrir le marque comme fait. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
+Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **Portefeuille** avec **Découvrir avec l'exemple complet**. Chaque pas de la tuile ouvre son écran avec une courte indication, et l'ouvrir le marque comme fait. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
 ## 1. Une demande et son score
 
-**La demande la mieux notée**, ouverte par le pas sur son onglet **Évaluation**
+**La mieux notée des demandes non converties**, ouverte par le pas sur son onglet **Évaluation**
 
 ![Une demande et son score](images/portfolio-example-1.webp)
 

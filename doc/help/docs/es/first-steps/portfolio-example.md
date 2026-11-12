@@ -1,6 +1,6 @@
 ---
 title: "Su portafolio en Kadratis en diez minutos: descubrir con el ejemplo"
-description: Los cinco pasos del recorrido proyectos y solicitudes con el ejemplo Fromage & Co, de una solicitud puntuada a los informes del portafolio y a su propio archivo.
+description: Los cinco pasos del recorrido portafolio con el ejemplo Fromage & Co, de una solicitud puntuada a los informes del portafolio y a su propio archivo.
 ---
 
 # Su portafolio en Kadratis en diez minutos
@@ -9,11 +9,11 @@ description: Los cinco pasos del recorrido proyectos y solicitudes con el ejempl
 
 Fromage & Co es un grupo quesero ficticio cuyo ejemplo está cargado en su espacio de trabajo. En diez minutos sobre su portafolio, usted lee cómo se puntúa una solicitud, la sigue hasta el proyecto, encuentra las tareas, lee los informes y ve cómo entra su propio archivo en Kadratis.
 
-Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **Los proyectos y las solicitudes** con **Descubrir con el ejemplo completo**. Cada paso del mosaico abre su pantalla con una indicación breve, y abrirlo lo marca como hecho. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
+Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **Portafolio** con **Descubrir con el ejemplo completo**. Cada paso del mosaico abre su pantalla con una indicación breve, y abrirlo lo marca como hecho. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
 
 ## 1. Una solicitud y su puntuación
 
-**La solicitud mejor puntuada**, abierta por el paso en su pestaña **Evaluación**
+**La solicitud mejor puntuada aún no convertida**, abierta por el paso en su pestaña **Evaluación**
 
 ![Una solicitud y su puntuación](images/portfolio-example-1.webp)
 

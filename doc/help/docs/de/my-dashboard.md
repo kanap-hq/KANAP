@@ -44,7 +44,7 @@ In einem leeren Cloud-Arbeitsbereich, in den noch nie Beispieldaten geladen wurd
 
 In einem Arbeitsbereich in der Testphase öffnet sich beim ersten Öffnen von Kadratis ein Dialog. Er stellt eine Frage pro Bildschirm:
 
-1. **Was führt Sie zu Kadratis?** **Das IT-Budget**, **Die IT-Landkarte**, **Projekte und Anfragen** oder **Ich schaue mich um**.
+1. **Was führt Sie zu Kadratis?** **Das IT-Budget**, **Die IT-Landkarte**, **Das Portfolio** oder **Ich schaue mich um**.
 2. **Wie möchten Sie beginnen?** **Mit dem vollständigen Beispiel entdecken** oder **Mit meinen eigenen Daten beginnen**.
 
 Wer mit den eigenen Daten beginnt, löscht das Beispiel. Wurden seit dem Laden des Beispiels Elemente angelegt, nennt eine Bestätigung deren Anzahl, bevor etwas gelöscht wird. Solange der Arbeitsbereich das Beispiel enthält, kann nur ein Administrator die eigenen Daten wählen. Das Beispiel lässt sich nur in einen leeren Arbeitsbereich laden. Wählt ein Administrator während der Testphase das Beispiel, obwohl der Arbeitsbereich Daten enthält, muss er ihn zuerst löschen: Die Bestätigung fragt nach dem Namen des Arbeitsbereichs und bietet **Inhalt des Arbeitsbereichs ansehen** an. Der Arbeitsbereich wird gelöscht, dann wird das Beispiel geladen. Nach der Testphase wird die Wahl abgelehnt und Ihr Pfad bleibt unverändert.
@@ -67,8 +67,8 @@ Während der Testphase bietet die Kachel außerdem **Kennenlerngespräch vereinb
 | Pfad | Mit dem Beispiel | Mit Ihren eigenen Daten |
 |---|---|---|
 | IT-Budget | Die Übersicht, Eine Budgetzeile, Ein Bericht, Eine Frage an Kad, Ihre Daten | Ihr Unternehmen, Ihre Budgetzeilen, Ein verknüpfter Vertrag, Ihr erster Bericht, Eine Kollegin, ein Kollege |
-| IT-Landkarte | Die Anwendungsliste, Ein Anwendungsdatensatz, Die Server, Technologien, Supportende und Schwachstellen, Ihre Daten | Ihre Standorte, Ihre Anwendungen, Ihre Technologien, Ihre Server, Eine Kollegin, ein Kollege |
-| Projekte und Anfragen | Eine Anfrage und ihre Bewertung, Das aus der Anfrage entstandene Projekt, Die Aufgaben, Die Berichte, Ihre Daten | Ihre erste Anfrage, Ihr Projekt, Die ersten Aufgaben, Das Budget des Projekts, Ihr Mitwirkendenprofil |
+| IT-Landkarte | Die Anwendungsliste, Ein Anwendungsdatensatz, Die Assets, Technologien, Supportende und Schwachstellen, Ihre Daten | Ihre Standorte, Ihre Anwendungen, Ihre Technologien, Ihre Assets, Eine Kollegin, ein Kollege |
+| Portfolio | Eine Anfrage und ihre Bewertung, Das aus der Anfrage entstandene Projekt, Die Aufgaben, Die Berichte, Ihre Daten | Ihre erste Anfrage, Ihr Projekt, Die ersten Aufgaben, Das Budget des Projekts, Ihr Mitwirkendenprofil |
 
 ### Die Startseite folgt Ihrem Pfad
 
@@ -76,7 +76,7 @@ Während einer Testphase steht der Bereich Ihres Pfads an erster Stelle, angefü
 
 - **IT-Budget**: **Budgetverwaltung**.
 - **IT-Landkarte**: **IT-Landschaft**.
-- **Projekte und Anfragen**: **Portfolio**.
+- **Portfolio**: **Portfolio**.
 
 Ohne Pfad behalten die Bereiche ihre Standardreihenfolge. Sobald Sie die Bereiche selbst ordnen, gilt Ihre Reihenfolge.
 

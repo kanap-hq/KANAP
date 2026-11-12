@@ -1,13 +1,13 @@
 ---
 title: "Votre système d'information dans Kadratis en dix minutes : commencer avec vos données"
-description: Les cinq pas du parcours cartographie du SI sur vos propres données, de vos sites à vos serveurs, puis un collègue.
+description: Les cinq pas du parcours cartographie du SI sur vos propres données, de vos sites à vos actifs, puis un collègue.
 ---
 
 # Votre système d'information dans Kadratis en dix minutes
 
 [Découvrir avec l'exemple](landscape-example.md) · **Commencer avec mes données**
 
-En dix minutes, vos sites, vos applications, leurs technologies et vos serveurs sont dans Kadratis, vos premières dates de fin de support s'affichent, et un collègue peut tenir la cartographie à jour. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
+En dix minutes, vos sites, vos applications, leurs technologies et vos actifs sont dans Kadratis, vos premières dates de fin de support s'affichent, et un collègue peut tenir la cartographie à jour. Commencer avec vos données efface l'exemple : ce que vous voyez à la fin vient de vous.
 
 Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le parcours **La cartographie du SI** avec **Commencer avec mes données**. Chaque pas de la tuile ouvre son écran avec une courte indication. Chaque pas crée quelque chose et est marqué comme fait dès que cet élément existe dans l'espace. Pour marquer comme fait un pas que vous sautez, cliquez sur la marque à côté. Voir [Essai : votre parcours et vos premiers pas](../my-dashboard.md#trial-first-steps).
 
@@ -17,7 +17,7 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Le geste.** Cliquez sur **Ajouter un site** et créez vos salles serveurs, datacenters ou clouds : un code, un nom et un type d'hébergement.
 
-**Ce que vous lisez.** Chaque serveur est rattaché à un site, qui lui donne son fournisseur, son type d'hébergement et son pays. Un site qui manque plus tard se crée aussi depuis le champ **Site** d'un serveur.
+**Ce que vous lisez.** Chaque actif est rattaché à un site, qui lui donne son fournisseur, son type d'hébergement et son pays. Un site qui manque plus tard se crée aussi depuis le champ **Site** d'un actif.
 
 ## 2. Vos applications
 
@@ -38,13 +38,13 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Ce que vous lisez.** Votre espace de travail contient déjà Windows Server et Ubuntu. Une technologie prise dans le catalogue arrive avec ses versions et leurs dates de fin de support, que Kadratis tient à jour. La fin de support s'affiche alors sur l'application, et **Cartographie SI > Fins de support** liste ce qui l'atteint.
 
-## 4. Vos serveurs
+## 4. Vos actifs
 
 **Cartographie SI > Actifs**
 
-**Le geste.** Cliquez sur **Ajouter un actif**, ou **Importer** un fichier pour de nombreux serveurs. Choisissez le type d'actif et le site, puis **Créer**. Pour relier un serveur à une application, ouvrez l'application, onglet **Déploiements** : **Ajouter un déploiement** pour l'environnement, puis **Ajouter un serveur**.
+**Le geste.** Cliquez sur **Ajouter un actif**, ou **Importer** un fichier pour de nombreux actifs. Choisissez le type d'actif et le site, puis **Créer**. Pour relier un actif à une application, ouvrez l'application, onglet **Déploiements** : **Ajouter un déploiement** pour l'environnement, puis **Ajouter un serveur**.
 
-**Ce que vous lisez.** Le bloc de déploiement de l'application liste ses serveurs, et le serveur liste l'application sous **Applications hébergées** dans son onglet **Exploitation**. Les fins de support et les vulnérabilités de ses technologies remontent désormais jusqu'au serveur.
+**Ce que vous lisez.** Le bloc de déploiement de l'application liste ses serveurs, et l'actif liste l'application sous **Applications hébergées** dans son onglet **Exploitation**. Les fins de support de ses technologies remontent désormais jusqu'à l'actif. Les vulnérabilités d'un système d'exploitation ne figurent pas dans les alertes au départ, car Kadratis ne connaît pas le niveau de correctifs d'un serveur. Pour les voir, ouvrez **Cartographie SI > Vulnérabilités** et choisissez **Exclues** dans le filtre **Alertes**, ou **Afficher les exclues** quand la liste est vide.
 
 ## 5. Un collègue
 

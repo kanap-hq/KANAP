@@ -1,6 +1,6 @@
 ---
 title: "Su portafolio en Kadratis en diez minutos: empezar con sus datos"
-description: Los cinco pasos del recorrido proyectos y solicitudes con sus propios datos, de una primera solicitud a su proyecto, sus tareas y su presupuesto, y después su perfil de colaborador.
+description: Los cinco pasos del recorrido portafolio con sus propios datos, de una primera solicitud a su proyecto, sus tareas y su presupuesto, y después su perfil de colaborador.
 ---
 
 # Su portafolio en Kadratis en diez minutos
@@ -9,7 +9,7 @@ description: Los cinco pasos del recorrido proyectos y solicitudes con sus propi
 
 En diez minutos, una primera solicitud está puntuada y convertida en proyecto, el proyecto tiene sus primeras tareas y su presupuesto, y su perfil de colaborador está listo para la planificación. Empezar con sus datos borra el ejemplo: lo que ve al final procede de usted.
 
-Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **Los proyectos y las solicitudes** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Un paso que crea algo queda marcado como hecho en cuanto ese elemento existe en el espacio de trabajo. Para **Su proyecto**, haga clic en **Hecho** en la indicación, o en la marca junto al paso. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
+Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de inicio, para el recorrido **Portafolio** con **Empezar con mis datos**. Cada paso del mosaico abre su pantalla con una indicación breve. Un paso que crea algo queda marcado como hecho en cuanto ese elemento existe en el espacio de trabajo. Para **Su proyecto**, haga clic en **Hecho** en la indicación, o en la marca junto al paso. Consulte [Prueba: su recorrido y sus primeros pasos](../my-dashboard.md#trial-first-steps).
 
 ## 1. Su primera solicitud
 

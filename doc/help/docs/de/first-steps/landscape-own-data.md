@@ -1,13 +1,13 @@
 ---
 title: "Ihre IT-Landschaft in Kadratis in zehn Minuten: mit Ihren eigenen Daten beginnen"
-description: Die fünf Schritte des Pfads IT-Landkarte mit Ihren eigenen Daten, von Ihren Standorten bis zu Ihren Servern, dann eine Kollegin oder ein Kollege.
+description: Die fünf Schritte des Pfads IT-Landkarte mit Ihren eigenen Daten, von Ihren Standorten bis zu Ihren Assets, dann eine Kollegin oder ein Kollege.
 ---
 
 # Ihre IT-Landschaft in Kadratis in zehn Minuten
 
 [Mit dem Beispiel entdecken](landscape-example.md) · **Mit meinen eigenen Daten beginnen**
 
-In zehn Minuten sind Ihre Standorte, Ihre Anwendungen, deren Technologien und Ihre Server in Kadratis, Ihre ersten Supportende-Daten erscheinen, und eine Kollegin oder ein Kollege kann die Landkarte aktuell halten. Der Beginn mit Ihren eigenen Daten löscht das Beispiel: Was Sie am Ende sehen, stammt von Ihnen.
+In zehn Minuten sind Ihre Standorte, Ihre Anwendungen, deren Technologien und Ihre Assets in Kadratis, Ihre ersten Supportende-Daten erscheinen, und eine Kollegin oder ein Kollege kann die Landkarte aktuell halten. Der Beginn mit Ihren eigenen Daten löscht das Beispiel: Was Sie am Ende sehen, stammt von Ihnen.
 
 Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der Startseite, für den Pfad **Die IT-Landkarte** mit **Mit meinen eigenen Daten beginnen**. Jeder Schritt der Kachel öffnet seinen Bildschirm mit einem kurzen Hinweis. Jeder Schritt legt etwas an und gilt als erledigt, sobald es im Arbeitsbereich existiert. Um einen übersprungenen Schritt als erledigt zu markieren, klicken Sie auf die Markierung daneben. Siehe [Testphase: Ihr Pfad und Ihre ersten Schritte](../my-dashboard.md#trial-first-steps).
 
@@ -17,7 +17,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Klicken Sie auf **Standort hinzufügen** und legen Sie Ihre Serverräume, Rechenzentren oder Clouds an: ein Code, ein Name und ein Hosting-Typ.
 
-**Was Sie sehen.** Jeder Server gehört zu einem Standort, der ihm Anbieter, Hosting-Typ und Land gibt. Ein später fehlender Standort lässt sich auch im Feld **Standort** eines Servers anlegen.
+**Was Sie sehen.** Jedes Asset gehört zu einem Standort, der ihm Anbieter, Hosting-Typ und Land gibt. Ein später fehlender Standort lässt sich auch im Feld **Standort** eines Assets anlegen.
 
 ## 2. Ihre Anwendungen
 
@@ -38,13 +38,13 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie sehen.** Ihr Arbeitsbereich enthält bereits Windows Server und Ubuntu. Eine Technologie aus dem Katalog kommt mit ihren Versionen und deren Supportende-Daten, die Kadratis aktuell hält. Das Supportende erscheint dann an der Anwendung, und **IT-Landschaft > Supportende** listet, was es erreicht.
 
-## 4. Ihre Server
+## 4. Ihre Assets
 
 **IT-Landschaft > Assets**
 
-**Was Sie tun.** Klicken Sie auf **Asset hinzufügen**, oder **importieren** Sie eine Datei für viele Server. Wählen Sie den Asset-Typ und den Standort, dann **Erstellen**. Um einen Server mit einer Anwendung zu verknüpfen, öffnen Sie die Anwendung, Reiter **Bereitstellungen**: **Bereitstellung hinzufügen** für die Umgebung, dann **Server hinzufügen**.
+**Was Sie tun.** Klicken Sie auf **Asset hinzufügen**, oder **importieren** Sie eine Datei für viele Assets. Wählen Sie den Asset-Typ und den Standort, dann **Erstellen**. Um ein Asset mit einer Anwendung zu verknüpfen, öffnen Sie die Anwendung, Reiter **Bereitstellungen**: **Bereitstellung hinzufügen** für die Umgebung, dann **Server hinzufügen**.
 
-**Was Sie sehen.** Der Bereitstellungsblock der Anwendung listet ihre Server, und der Server listet die Anwendung unter **Gehostete Anwendungen** in seinem Reiter **Betrieb**. Supportende und Schwachstellen seiner Technologien reichen nun bis zum Server.
+**Was Sie sehen.** Der Bereitstellungsblock der Anwendung listet ihre Server, und das Asset listet die Anwendung unter **Gehostete Anwendungen** in seinem Reiter **Betrieb**. Das Supportende seiner Technologien reicht nun bis zum Asset. Die Schwachstellen eines Betriebssystems stehen zunächst nicht in den Warnungen, weil Kadratis den Patchstand eines Servers nicht kennt. Um sie zu sehen, öffnen Sie **IT-Landschaft > Schwachstellen** und wählen Sie im Filter **Warnungen** den Wert **Ausgeschlossen**, oder **Ausgeschlossene anzeigen**, wenn die Liste leer ist.
 
 ## 5. Eine Kollegin, ein Kollege
 

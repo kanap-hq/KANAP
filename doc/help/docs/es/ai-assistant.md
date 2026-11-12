@@ -46,7 +46,7 @@ Cuando se eligió un recorrido para el espacio de trabajo en su primera apertura
 |---|---|
 | Presupuesto de TI | *¿Cuáles son las principales oportunidades de ahorro en el OPEX de TI?*, *¿Qué líneas presupuestarias no tienen responsable?* |
 | Mapa del SI | *¿Qué tecnologías llegan al fin de soporte en los próximos seis meses?*, *¿Qué aplicaciones críticas no tienen plan de recuperación?* |
-| Proyectos y solicitudes | *¿Qué proyectos superan su presupuesto?*, *¿Qué solicitudes esperan una decisión?* |
+| Portafolio | *¿Qué proyectos superan su presupuesto?*, *¿Qué solicitudes esperan una decisión?* |
 
 Escriba un mensaje y pulse **Intro** para enviarlo. **Mayús+Intro** inserta un salto de línea. El botón de enviar se desactiva cuando no hay nada que enviar y se transforma en un botón rojo **Detener** mientras Kad responde.
 

@@ -1,6 +1,6 @@
 ---
 title: "Your portfolio in Kadratis in ten minutes: explore with the example"
-description: The five steps of the projects and requests path on the Fromage & Co example, from a scored request to the portfolio reports and your own file.
+description: The five steps of the portfolio path on the Fromage & Co example, from a scored request to the portfolio reports and your own file.
 ---
 
 # Your portfolio in Kadratis in ten minutes
@@ -9,11 +9,11 @@ description: The five steps of the projects and requests path on the Fromage & C
 
 Fromage & Co is a fictional cheese group whose example is loaded in your workspace. In ten minutes on its portfolio, you read how a request is scored, follow it into a project, find the tasks, read the reports and see how your own file comes in.
 
-These are the five steps of the **Your first five steps** tile on the home page, for the path **Projects and requests** with **Explore with the complete example**. Each step in the tile opens its screen with a short hint, and opening it marks it done. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
+These are the five steps of the **Your first five steps** tile on the home page, for the path **Portfolio** with **Explore with the complete example**. Each step in the tile opens its screen with a short hint, and opening it marks it done. See [Trial: your path and first steps](../my-dashboard.md#trial-first-steps).
 
 ## 1. A request and its score
 
-**The best-scored request**, opened by the step on its **Scoring** tab
+**The best-scored request not yet converted**, opened by the step on its **Scoring** tab
 
 ![A request and its score](images/portfolio-example-1.webp)
 
