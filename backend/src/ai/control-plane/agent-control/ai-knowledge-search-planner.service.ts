@@ -85,19 +85,20 @@ const MAX_MODEL_PLAN_QUERIES = 8;
 const MAX_QUERY_CHARS = 120;
 const MAX_TERMS = 10;
 // Bounds of what the interpreter reads of the candidates. Every candidate (16 at most) shows its
-// title and its summary (280 characters). The first 8 by rank also show up to 3 passages of their
+// title (200 characters) and its summary (280 characters). The first 8 by rank also show up to 3 passages of their
 // body where the search words fall (480 characters each, a passage being 30 to 70 words); when no
 // search word falls in the body, the first 3 such candidates show the start of the body instead
 // (600 characters). A candidate without passages keeps its search snippet (280 characters).
 // Worst case of document text: 8 x (280 + 3 x 480) + 8 x (280 + 280) = 18,240 characters. Not
-// counted: the titles (not cut) and the search queries of each candidate (4 x 120 characters at
-// most, 7,680 for 16 candidates).
+// counted: the titles (16 x 200 = 3,200 characters at most) and the search queries of each
+// candidate (4 x 120 characters at most, 7,680 for 16 candidates).
 export const MAX_INTERPRETER_CANDIDATES = 16;
 export const MAX_INTERPRETER_PASSAGE_CANDIDATES = 8;
 export const MAX_INTERPRETER_PASSAGES_PER_CANDIDATE = 3;
 export const MAX_INTERPRETER_PASSAGE_CHARS = 480;
 export const MAX_INTERPRETER_BODY_LEAD_CANDIDATES = 3;
 export const MAX_INTERPRETER_BODY_LEAD_CHARS = 600;
+export const MAX_INTERPRETER_TITLE_CHARS = 200;
 const MAX_INTERPRETER_SUMMARY_CHARS = 280;
 const MAX_INTERPRETER_SNIPPET_CHARS = 280;
 // Background stage: give reasoning models room to think before emitting JSON.
@@ -332,7 +333,7 @@ export function interpreterCandidatePayload(candidates: KnowledgePlannerCandidat
     }
     return {
       ref: candidate.ref,
-      title: candidate.title,
+      title: candidate.title == null ? null : compact(candidate.title, MAX_INTERPRETER_TITLE_CHARS),
       summary: compact(candidate.summary, MAX_INTERPRETER_SUMMARY_CHARS),
       ...(bodyPassages.length > 0 ? { body_passages: bodyPassages } : {}),
       ...(bodyStart ? { body_start: bodyStart } : {}),

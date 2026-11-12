@@ -17,6 +17,7 @@ import {
   KnowledgeSearchPlan,
   MAX_INTERPRETER_BODY_LEAD_CANDIDATES,
   MAX_INTERPRETER_BODY_LEAD_CHARS,
+  MAX_INTERPRETER_TITLE_CHARS,
   MAX_INTERPRETER_CANDIDATES,
   MAX_INTERPRETER_PASSAGE_CANDIDATES,
   MAX_INTERPRETER_PASSAGE_CHARS,
@@ -73,7 +74,7 @@ async function testInterpreterPromptIsBounded() {
   const long = (label: string) => `${label} `.repeat(800);
   const candidates: KnowledgePlannerCandidate[] = Array.from({ length: 20 }, (_, index) => ({
     ref: `DOC-${index + 1}`,
-    title: `Document ${index + 1}`,
+    title: `Document ${index + 1} ${long('title')}`,
     summary: long('summary'),
     snippet: long('snippet'),
     status: 'published',
@@ -99,6 +100,8 @@ async function testInterpreterPromptIsBounded() {
       assert.equal(candidate.body_passages, undefined, `${candidate.ref} beyond the first 8 shows no passage`);
       assert.equal(candidate.body_start, undefined);
     }
+    assert.ok(String(candidate.title).length <= MAX_INTERPRETER_TITLE_CHARS, `${candidate.ref}: title of ${String(candidate.title).length} characters`);
+    assert.ok(String(candidate.title).startsWith(`Document ${index + 1} `));
     if (candidate.body_start) {
       bodyStarts += 1;
       assert.ok(candidate.body_start.length <= MAX_INTERPRETER_BODY_LEAD_CHARS);
