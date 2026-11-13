@@ -720,7 +720,9 @@
         },
         "platform": "Plateforme sous-jacente ({{count}})",
         "countLink_one": "Voir la vulnérabilité à traiter dans la page Vulnérabilités",
-        "countLink_other": "Voir les {{count}} vulnérabilités à traiter dans la page Vulnérabilités"
+        "countLink_other": "Voir les {{count}} vulnérabilités à traiter dans la page Vulnérabilités",
+        "excluded_one": "{{count, count}} vulnérabilité exclue des alertes",
+        "excluded_other": "{{count, count}} vulnérabilités exclues des alertes"
       },
       "severeBadge": {
         "label_one": "{{count}} grave",
@@ -1948,6 +1950,8 @@
           "both": "Déclarée et hébergée"
         },
         "versionUnknown": "Version inconnue",
+        "endsWithinMonths_one": "Fin dans {{count}} mois",
+        "endsWithinMonths_other": "Fin dans les {{count}} mois",
         "also": {
           "prefix": "Aussi relié :",
           "assets_one": "{{count}} actif (déploiements)",
@@ -2712,6 +2716,8 @@
         "leg": "Segment : {{type}}"
       },
       "untitled": "Connexion sans nom",
+      "notFound": "Connexion introuvable.",
+      "backToList": "Retour à la liste",
       "previous": "Connexion précédente",
       "next": "Connexion suivante",
       "viewInMap": "Voir sur la carte",

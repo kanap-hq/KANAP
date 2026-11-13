@@ -720,7 +720,9 @@
         },
         "platform": "Underlying platform ({{count}})",
         "countLink_one": "See the vulnerability to review on the Vulnerabilities page",
-        "countLink_other": "See the {{count}} vulnerabilities to review on the Vulnerabilities page"
+        "countLink_other": "See the {{count}} vulnerabilities to review on the Vulnerabilities page",
+        "excluded_one": "{{count, count}} vulnerability excluded from alerts",
+        "excluded_other": "{{count, count}} vulnerabilities excluded from alerts"
       },
       "severeBadge": {
         "label_one": "{{count}} severe",
@@ -1948,6 +1950,8 @@
           "both": "Declared and hosted"
         },
         "versionUnknown": "Unknown version",
+        "endsWithinMonths_one": "Ends within {{count}} month",
+        "endsWithinMonths_other": "Ends within {{count}} months",
         "also": {
           "prefix": "Also related:",
           "assets_one": "{{count}} asset (deployments)",
@@ -2712,6 +2716,8 @@
         "leg": "Leg: {{type}}"
       },
       "untitled": "Untitled connection",
+      "notFound": "Connection not found.",
+      "backToList": "Back to the list",
       "previous": "Previous connection",
       "next": "Next connection",
       "viewInMap": "View in map",

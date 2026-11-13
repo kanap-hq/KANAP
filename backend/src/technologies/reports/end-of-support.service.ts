@@ -19,7 +19,8 @@ import { END_OF_SUPPORT_EXPORT_LABELS } from './end-of-support-export-labels';
  * report from answering. Servers and applications touched by a technology version come from the
  * deductions of `TechnologyReachService`, its servers are those it is installed on
  * (`serversOfTechnologies`); an operating system or a piece of hardware touches its
- * assets and what they carry (`assetsCarriedBy`), then the applications that run on them; an
+ * assets and what they carry (`assetsCarriedBy`), then the applications that run on them, and an
+ * operating system also the applications that declare it; an
  * application touches the servers it runs on. Where an application runs is its effective
  * assignments (`effectiveAssignmentsSql`): on a cluster, the cluster and its members in service.
  * Retired assets take no part.
@@ -160,7 +161,8 @@ export class EndOfSupportService {
     }
 
     // An operating system or a piece of hardware touches its assets and what they carry (the VMs of
-    // a host), then the applications assigned to all of them.
+    // a host), then the applications assigned to all of them. An operating system keeps the
+    // applications that declare it (`applicationsOfTechnologies`), as the technologies list counts them.
     const named = candidates.filter((c) => c.type === 'operating_system' || c.type === 'hardware');
     if (named.length) {
       const touched = (c: Candidate) => c.touchedIds ?? c.serverIds;
@@ -176,7 +178,7 @@ export class EndOfSupportService {
       }
       if (applications) {
         const hosted = await this.applicationsOnAssets(mg, tenantId, named.flatMap(touched));
-        for (const c of named) c.applicationIds = Array.from(new Set(touched(c).flatMap((id) => hosted.get(id) ?? [])));
+        for (const c of named) c.applicationIds = Array.from(new Set([...c.applicationIds, ...touched(c).flatMap((id) => hosted.get(id) ?? [])]));
       }
     }
 

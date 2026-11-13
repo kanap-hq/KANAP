@@ -6,6 +6,7 @@ import { Application } from './application.entity';
 import { ApplicationAttachment } from './application-attachment.entity';
 import { AuditService } from '../audit/audit.service';
 import { StorageService } from '../common/storage/storage.service';
+import { unreferencedPaths } from '../common/storage-path-refs';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
@@ -157,10 +158,11 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
       );
     }
 
-    // Best effort, once the rows are gone
-    for (const a of attachments) {
+    // Best effort, once the rows are gone; a file another row still names stays.
+    const paths = await unreferencedPaths(manager, (app as any).tenant_id, [...new Set(attachments.map((a) => a.storage_path).filter(Boolean))]);
+    for (const storagePath of paths) {
       try {
-        await this.storage?.deleteObject((a as any).storage_path);
+        await this.storage?.deleteObject(storagePath);
       } catch (err: any) {
         this.logger.warn(`Failed to delete attachment storage object: ${err?.message || 'Unknown error'}`);
       }

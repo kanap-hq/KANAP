@@ -1875,6 +1875,11 @@
       "leaveDelete": "La supprimer",
       "leaveAnyway": "Quitter quand même",
       "completeFailed": "La ligne n’a pas pu être vérifiée."
+    },
+    "bulkEdit": {
+      "chartOf": "Plan comptable de",
+      "dimension": "Dimension",
+      "dimensionValue": "Valeur de dimension"
     }
   }
 }

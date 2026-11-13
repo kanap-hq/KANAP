@@ -1238,6 +1238,7 @@
     "tableNames": {
       "accounts": "Cuentas",
       "ai_action_requests": "Solicitudes de acción de la IA",
+      "ai_adapter_configs": "Conexiones de integración",
       "ai_api_keys": "Claves API de la IA",
       "ai_approvals": "Aprobaciones de la IA",
       "ai_evidence": "Evidencias de la IA",
@@ -1619,12 +1620,14 @@
       "consentNeeded": "Aún no autorizado. Un administrador de Microsoft Entra debe conceder a {{product}} permiso para leer los usuarios del directorio.",
       "grantAccess": "Conceder acceso en Microsoft Entra",
       "lastSynced": "Última sincronización {{date}}: {{synced}} cuentas actualizadas, {{disabled}} desactivadas.",
+      "keptAdministrator": "Cuenta mantenida activa (último administrador): {{name}}",
       "error": "La última sincronización falló: {{message}}",
       "syncNow": "Sincronizar ahora",
       "syncing": "Sincronizando…",
       "consentSuccess": "Acceso concedido. La primera sincronización está en curso.",
       "consentError": "Microsoft no concedió el acceso. Pida a un administrador de Microsoft Entra que apruebe la solicitud.",
-      "resultOk": "Sincronización completada: {{synced}} cuentas actualizadas, {{disabled}} desactivadas."
+      "resultOk": "Sincronización completada: {{synced}} cuentas actualizadas, {{disabled}} desactivadas.",
+      "alreadyRunning": "Ya hay una sincronización en curso."
     }
   },
   "billing": {
@@ -2200,7 +2203,9 @@
     "dialogs": {
       "createTitle": "Nuevo rol",
       "deleteMessage": "Esta acción es permanente. Solo puede eliminar roles sin usuarios asignados.",
-      "deleteTitle": "Eliminar rol"
+      "deleteTitle": "Eliminar rol",
+      "duplicateTitle": "Duplicar rol",
+      "duplicateName": "{{name}} (copia)"
     },
     "empty": "No se encontraron roles.",
     "fields": {
@@ -2534,6 +2539,7 @@
       "inviting": "Invitando…",
       "rowMenu": "Acciones de usuario",
       "edit": "Editar",
+      "view": "Ver",
       "enable": "Activar",
       "disable": "Desactivar",
       "sendInvite": "Enviar invitación",
@@ -2567,6 +2573,7 @@
     "dialogs": {
       "newUser": "Nuevo usuario",
       "editUser": "Editar usuario",
+      "viewUser": "Ver usuario",
       "identity": "Identidad",
       "saveAndInvite": "Guardar e invitar"
     },
@@ -2734,6 +2741,7 @@
     }
   },
   "integrations": {
+    "secretAddressChanged": "La dirección ha cambiado: vuelva a introducir este valor.",
     "netbox": {
       "title": "Inventario de Netbox",
       "description": "Incorpora tu inventario de Netbox como activos. Netbox sigue siendo la referencia para los equipos que describe.",

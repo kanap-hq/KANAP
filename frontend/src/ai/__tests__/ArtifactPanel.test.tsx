@@ -85,4 +85,43 @@ describe('ArtifactPanel', () => {
     expect(onApproveMany).toHaveBeenCalledWith(previews.map((preview) => preview.preview_id));
     expect(screen.getByText('previewBatch.title:3')).toBeInTheDocument();
   });
+
+  it('keeps the actions of a long card in view at the bottom of the panel', () => {
+    // jsdom lays nothing out: the structure says it. The card scrolls inside the panel, and its
+    // action row sticks to the bottom of that scroller, on the card's own background.
+    const preview = {
+      preview_id: '11111111-1111-4111-8111-111111111111',
+      tool_name: 'create_task' as const,
+      status: 'pending' as const,
+      target: { entity_type: 'tasks', entity_id: null, ref: null, title: 'Task 1' },
+      changes: { title: { label: 'Title', from: null, to: 'Task 1', format: 'text' as const } },
+      requires_confirmation: true,
+      actions: ['approve', 'reject'] as Array<'approve' | 'reject'>,
+      summary: 'Create task 1.',
+      error_message: null,
+      conversation_id: 'conversation-1',
+      created_at: '2026-03-28T17:00:00.000Z',
+      expires_at: '2026-03-28T17:10:00.000Z',
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+    };
+    renderWithTheme(
+      <ArtifactPanel
+        previews={[preview]}
+        selectedId={preview.preview_id}
+        open
+        onToggle={() => undefined}
+        onSelect={() => undefined}
+        onApprove={() => undefined}
+        onReject={() => undefined}
+        onApproveMany={() => undefined}
+      />,
+    );
+    const actions = screen.getByRole('button', { name: 'ai:previewCard.approve' }).parentElement!;
+    expect(actions).toContainElement(screen.getByRole('button', { name: 'ai:previewCard.reject' }));
+    // It reaches the bottom edge of the panel: the scroller's bottom padding (12px) is taken back.
+    expect(actions).toHaveStyle({ position: 'sticky', bottom: '-12px' });
+    expect(getComputedStyle(actions).backgroundColor).not.toBe('');
+  });
 });

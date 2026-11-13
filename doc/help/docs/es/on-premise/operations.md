@@ -13,13 +13,15 @@ Los comandos `curl` de esta página usan `-k`. Comprueban lo que responde Kadrat
 
 Kadratis publica una nueva versión aproximadamente una vez al mes. La rama `stable` siempre apunta a la última versión publicada. Cada versión tiene una entrada en `CHANGELOG.md` en la raíz del repositorio. Una entrada que requiere algo de usted (un parámetro que cambiar, un paso que ejecutar) lleva "Action required" en su título.
 
-**1. Lea el registro de cambios antes de descargar.** Obtenga el nuevo estado de `stable` y muestre solo las entradas que todavía no tiene. Lea primero las entradas marcadas "Action required" y haga lo que indican. Las mismas entradas están en la página de versiones (releases) del repositorio en GitHub.
+**1. Lea el registro de cambios antes de descargar.** Obtenga el nuevo estado de `stable` con las etiquetas de versión y muestre solo las entradas que todavía no tiene. Lea primero las entradas marcadas "Action required" y haga lo que indican. Las mismas entradas están en la página de versiones (releases) del repositorio en GitHub.
 
 ```bash
 cd /opt/kanap
-git fetch origin stable
+git fetch --tags origin stable
 git diff HEAD origin/stable -- CHANGELOG.md
 ```
+
+Mantenga `--tags`. Un `git fetch` o un `git pull` que nombra una rama no trae las etiquetas de versión. Sin ellas, `git describe --tags` muestra una versión anterior seguida de un número de commits (por ejemplo `v26.10.8-254-gcec464031`), y `git checkout v<versión>` no encuentra las versiones más recientes. El mismo comando trae las etiquetas que faltan a una instalación actualizada sin él.
 
 **2. Haga una copia de seguridad de la base de datos, los archivos y la configuración.** Ejecute los comandos de [Antes de una actualización](#antes-de-una-actualizacion). Escriben en un directorio propio, que la copia de seguridad diaria nunca toca. Las migraciones solo avanzan: esta copia es el camino de vuelta.
 
@@ -97,12 +99,12 @@ Las imágenes publicadas llevan un registro firmado de su compilación: a partir
 ```bash
 cd /opt/kanap
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[(entrypoint|VERSION|ENV|CONFIG|SECRETS|RATE-LIMIT|CORS|DB|on-prem|SECURITY|DATA-ACCESS|markdown|cluster|shutdown)\]|WARN|ERROR|successfully started|Email transport'
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
 
 - `ps` muestra `api` y `web` como `healthy` al cabo de un minuto aproximadamente.
-- El registro de la API muestra las migraciones (`[entrypoint] Migrations complete (N executed).`) y después el arranque de la API (`Nest application successfully started`). Lea también las demás líneas de arranque: [Configuración](configuration.md#que-muestra-el-registro-de-la-api-al-arrancar) explica cada una.
+- El registro de la API muestra las migraciones (`[entrypoint] Migrations complete (N executed).`), la versión (`[VERSION] Kadratis <versión>`) y después el arranque de la API (`Nest application successfully started`). Lea también las demás líneas de arranque: [Configuración](configuration.md#que-muestra-el-registro-de-la-api-al-arrancar) explica cada una. El filtro conserva unas 20 líneas por arranque. El registro abarca cada arranque del contenedor desde la actualización: tras un reinicio, las mismas líneas aparecen otra vez.
 - La dirección de estado responde `{"status":"ok","text_processing":"ready"}` (consulte [Monitorización](#monitorizacion)).
 
 **Acceso a los datos por ámbito.** Tras actualizar a una versión con [acceso a los datos](../data-access.md), todos siguen trabajando con todos los datos. Para limitar a algunas personas a una parte del presupuesto y de los contratos, ejecute una vez el paso opcional del [acceso a los datos por ámbito](installation.md#optional-data-scoped-access) y reinicie la API. El paso se hace una vez por servidor PostgreSQL: las actualizaciones siguientes no requieren nada más, porque la API define los permisos del rol en cada arranque.
@@ -119,6 +121,21 @@ unset KANAP_PASSWORD
 ```
 
 La última línea de la salida dice `0 failed`. Con `KANAP_INSECURE_TLS=1`, dos advertencias TLS al principio de la salida son normales: la del propio script y la advertencia de Node.js sobre `NODE_TLS_REJECT_UNAUTHORIZED`.
+
+**Elimine las imágenes de versiones anteriores.** Cada actualización descarga imágenes nuevas y deja en el disco las de las versiones anteriores, unos 1,4 GB por versión (2,8 GB con la imagen de las herramientas de mantenimiento). Conserve las imágenes de la versión que acaba de dejar mientras pueda volver a ella. Elimine las más antiguas. Liste las imágenes y el espacio que ocupan:
+
+```bash
+docker images "ghcr.io/kanap-hq/*"
+```
+
+La lista muestra las imágenes `kadratis-*` y, para las versiones hasta la 26.11.3, las imágenes `kanap-*`. Ponga en `OLD` una versión que eliminar y después elimine sus imágenes:
+
+```bash
+OLD=26.10.8   # una versión más antigua que la de una posible vuelta atrás
+docker image rm $(docker images --format '{{.Repository}}:{{.Tag}}' "ghcr.io/kanap-hq/*" | grep ":${OLD}$")
+```
+
+Repita para cada versión anterior. Docker se niega a eliminar una imagen que usa un contenedor: la versión en servicio se queda. Volver atrás a una versión cuyas imágenes eliminó las descarga de nuevo (paso 2 de la vuelta atrás, más abajo).
 
 **Vuelta atrás.** Las migraciones solo avanzan, así que volver atrás consiste en restaurar la copia de seguridad hecha antes de la actualización, con la versión anterior:
 

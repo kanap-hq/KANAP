@@ -31,6 +31,7 @@ import {
   missingCreationFields,
 } from './budget-line-creation';
 import { lockBudgetLine } from './budget-locks';
+import { bulkUpdateBudgetLines } from './budget-line-bulk-edit';
 
 type ReadOptions = { manager: EntityManager; access?: BudgetListAccess };
 
@@ -154,9 +155,27 @@ export class BudgetLinesService {
 
   async update(ref: string, body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
     const line = await resolveBudgetLine(ref, opts.manager);
+    await this.updateLine(line, body, userId, opts);
+    return this.get(line.id, opts);
+  }
+
+  /** The update of one line: the PATCH's, and each line's of a change in bulk. */
+  private async updateLine(line: { id: string; nature: BudgetNature }, body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
     const input = this.nativeBody(body, line.nature, true);
     await this.items(line.nature).update(line.id, input, userId, { ...opts, fields: 'columns', native: true });
-    return this.get(line.id, opts);
+  }
+
+  /**
+   * "Change the selection" of the list (`POST /budget-lines/bulk-update`, `budget-line-bulk-edit.ts`):
+   * the lines chosen, or those of the list's filters with the person's access, each through the
+   * update of one line, in the request's transaction.
+   */
+  bulkUpdate(body: unknown, userId: string | undefined, opts: ReadOptions) {
+    return bulkUpdateBudgetLines(body, {
+      manager: opts.manager,
+      listIds: (filters) => this.summaryIds(filters, opts),
+      updateLine: (line, input) => this.updateLine(line, input, userId, { manager: opts.manager }),
+    });
   }
 
   private deps(access?: BudgetListAccess) {

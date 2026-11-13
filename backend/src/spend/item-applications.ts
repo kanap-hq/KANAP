@@ -4,6 +4,7 @@ import { AuditService } from '../audit/audit.service';
 import { AmountScope } from './amounts-write.util';
 import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
 import { assertLinesEditable } from '../data-access/line-write-checks';
+import { replacedLinks } from '../common/relations/linked-reads';
 
 /**
  * Applications linked to an OPEX or CAPEX line, from the line's side: list and
@@ -61,6 +62,7 @@ export async function replaceItemApplications(
   item: ApplicationsItem,
   applicationIds: string[],
   userId: string | null,
+  removable?: string[],
 ) {
   const { manager } = deps;
   const t = SCOPES[scope];
@@ -89,25 +91,33 @@ export async function replaceItemApplications(
     [item.tenant_id, item.id],
   );
   const beforeIds = current.map((r) => r.application_id).sort();
+  // Only the stored links the person may remove leave (`removable`); the others stay untouched.
+  const { removed, added, after } = replacedLinks(beforeIds, nextIds, removable);
+  const afterIds = [...after].sort();
 
-  await manager.query(`DELETE FROM ${t.links} WHERE tenant_id = $1 AND ${t.itemFk} = $2`, [item.tenant_id, item.id]);
-  if (nextIds.length) {
+  if (removed.length) {
+    await manager.query(
+      `DELETE FROM ${t.links} WHERE tenant_id = $1 AND ${t.itemFk} = $2 AND application_id = ANY($3::uuid[])`,
+      [item.tenant_id, item.id, removed],
+    );
+  }
+  if (added.length) {
     await manager.query(
       `INSERT INTO ${t.links} (tenant_id, ${t.itemFk}, application_id)
        SELECT $1, $2, app_id FROM unnest($3::uuid[]) AS app_id
        ON CONFLICT (tenant_id, application_id, ${t.itemFk}) DO NOTHING`,
-      [item.tenant_id, item.id, nextIds],
+      [item.tenant_id, item.id, added],
     );
   }
 
-  if (JSON.stringify(beforeIds) !== JSON.stringify(nextIds)) {
+  if (JSON.stringify(beforeIds) !== JSON.stringify(afterIds)) {
     await deps.audit.log(
       {
         table: auditTableOf(scope, t.links),
         recordId: item.id,
         action: 'update',
         before: beforeIds,
-        after: nextIds,
+        after: afterIds,
         userId,
         // The label is shared with the application side, whose record is the application: the
         // line names itself (`audit-parent-rules.ts`).

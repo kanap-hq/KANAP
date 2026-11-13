@@ -11,14 +11,16 @@ type Props = {
 
 export default function ProjectTasksPanel({ projectId, phases = [], disabled = false, onTasksChange }: Props) {
   const { hasLevel } = useAuth();
-  const canManage = hasLevel('portfolio_projects', 'member');
+  // A project's task is created and changed through the project's address, which asks for a
+  // contribution to the project; the tasks right (create, delete) is checked by the panel.
+  const canContribute = hasLevel('portfolio_projects', 'contributor');
 
   return (
     <EntityTasksPanel
       entityType="project"
       entityId={projectId}
       phases={phases}
-      disabled={disabled || !canManage}
+      disabled={disabled || !canContribute}
       onTasksChange={onTasksChange}
     />
   );

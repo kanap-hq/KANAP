@@ -1355,6 +1355,7 @@
       "frontmatterEditor": {
         "addEntry": "Add entry",
         "dialogDescription": "Add, edit or remove the key-value entries of the document front matter.",
+        "invalidYaml": "This front matter cannot be edited as key-value fields. Edit the Markdown source instead.",
         "key": "Key",
         "title": "Edit document front matter",
         "value": "Value"
@@ -1439,7 +1440,9 @@
         "dialogTitle": "Upload an image",
         "height": "Height:",
         "title": "Title:",
+        "uploadError": "Image upload failed. Please try again.",
         "uploadInstructions": "Upload an image from your device:",
+        "uploading": "Uploading image…",
         "width": "Width:"
       }
     },
@@ -1766,5 +1769,47 @@
   },
   "discoveryCall": {
     "book": "Book a discovery call"
+  },
+  "bulkEdit": {
+    "title": "Change the selection",
+    "selectAll": "Select every row of the filter",
+    "selectRow": "Select {{name}}",
+    "field": "Field",
+    "value": "New value",
+    "empty": "Empty the field",
+    "emptied": "Empty",
+    "chooseValue": "Choose a value",
+    "counting": "Counting the rows…",
+    "willChange_one": "{{count}} row will change",
+    "willChange_other": "{{count}} rows will change",
+    "unchanged_one": "{{count}} already has this value",
+    "unchanged_other": "{{count}} already have this value",
+    "refused_one": "{{count}} refused:",
+    "refused_other": "{{count}} refused:",
+    "refusal": "{{reason}}: {{count}}",
+    "refusals": {
+      "not_found": "Not found",
+      "read_only": "Read only for you",
+      "placement": "Company or cost center outside your access",
+      "leaves_access": "Would leave your access",
+      "account_chart": "Account outside the company's chart of accounts",
+      "account_nature": "Account not for this type of line",
+      "dimension_required": "Required dimension",
+      "dimension_not_applicable": "Dimension not for this type of line",
+      "value_not_applicable": "Value not for this type of line",
+      "other": "Other reason"
+    },
+    "tooMany": "More than 5,000 rows: narrow the filters, or select fewer rows.",
+    "countFailed": "The rows could not be counted. Try again.",
+    "listChanged": "The list changed since the count. Check the new count, then confirm again.",
+    "failed": "The change could not be saved. Try again.",
+    "noAnswer": "The server did not answer. Reload the list to see whether the rows changed.",
+    "save_one": "Change {{count}} row",
+    "save_other": "Change {{count}} rows",
+    "saveIdle": "Change",
+    "saving": "Saving the change…",
+    "doneChanged_one": "{{count}} row changed",
+    "doneChanged_other": "{{count}} rows changed",
+    "applied": "{{field}}: {{value}}"
   }
 }

@@ -11,7 +11,7 @@ import { AccessNodeRow, AccessTree, loadAccessTree, nodeCoversCenter, nodeCovers
 import { lineEditableSql } from './line-write-checks';
 import { ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
-import { PERSON_ABOVE_OWN_RIGHTS_MESSAGE, personAboveActorRights, type RoleGrantActor } from '../roles/role-grant-ceiling';
+import { lockPeople, PERSON_ABOVE_OWN_RIGHTS_MESSAGE, personAboveActorRights, type RoleGrantActor } from '../roles/role-grant-ceiling';
 
 /**
  * Data-scoped access, lot 6 (planning/data-scoped-access/spec.md §7.1-§7.6, §8): the
@@ -678,6 +678,14 @@ export class DataAccessAdminService {
       companiesByName.set(key, [...(companiesByName.get(key) ?? []), company]);
     }
     const emails = Array.from(new Set(rows.map((row) => cellOf(row, 'email').toLowerCase()).filter(Boolean)));
+    // The rows of the people the file names are locked before their rights are read (see lockPeople).
+    if (emails.length > 0) {
+      const named: Array<{ id: string }> = await manager.query(
+        `SELECT id FROM users WHERE tenant_id = $1 AND lower(email) = ANY($2::text[])`,
+        [tenantId, emails],
+      );
+      await lockPeople(manager, named.map((row) => row.id));
+    }
     const users: Array<{ id: string; email: string; first_name: string | null; last_name: string | null; is_administrator: boolean }> = emails.length
       ? await manager.query(
         `SELECT u.id, u.email, u.first_name, u.last_name,

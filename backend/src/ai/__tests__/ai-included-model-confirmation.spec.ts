@@ -115,6 +115,7 @@ function queryBuilder(resolve: (params: Record<string, any>) => any) {
   const params: Record<string, any> = {};
   const qb: any = {
     addSelect: () => qb,
+    setLock: () => qb,
     where: (_condition: string, values?: Record<string, any>) => {
       Object.assign(params, values);
       return qb;

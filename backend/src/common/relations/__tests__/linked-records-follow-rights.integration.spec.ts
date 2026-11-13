@@ -638,12 +638,14 @@ async function testDocumentLinkWrites(h: Harness, runner: QueryRunner, s: Seed) 
   await write('k', { relations: { projects: [s.project] } });
   assert.equal(await linkCount(runner, 'document_projects', s.document), 1, 'K: the wrapped form too');
 
-  // E adds only the records they take part in; a link already there may stay.
+  // E names only the records they take part in, linked or not; the links to the others stay.
   await rejects(runner, () => write('e', { projects: [s.project, s.dependency] }), /only link projects you take part in/, 'E: no project outside their participation');
   await write('full', { requests: [] });
   await rejects(runner, () => family('e', 'requests', [s.request]), /only link requests you take part in/, 'E: no request outside their participation');
-  await write('e', { projects: [s.project], applications: [s.application] });
-  assert.equal(await linkCount(runner, 'document_applications', s.document), 1, 'E: the application already linked stays');
+  await rejects(runner, () => write('e', { projects: [s.project], applications: [s.application] }), /only link applications you take part in/, 'E: no application outside their participation, even linked');
+  assert.equal(await linkCount(runner, 'document_applications', s.document), 1, 'E: the refused write leaves the application link');
+  await write('e', { projects: [s.project], applications: [] });
+  assert.equal(await linkCount(runner, 'document_applications', s.document), 1, 'E: the application they do not read stays');
   await rejects(runner, () => write('e', { assets: [] }), /cannot change the assets/, 'E: no infrastructure write');
 
   await write('full', { projects: [s.project, s.dependency] });

@@ -209,6 +209,8 @@ Acciones de fila, desde el menú al final de cada fila:
 | **Acceso a los datos** | Abre el usuario en la pestaña **Acceso a los datos**. Se muestra a las personas con acceso a todos los datos, en las filas de otras personas. |
 | **Eliminar** | Eliminar el usuario permanentemente. Los registros en los que trabajó se conservan, sin él. No puede eliminar su propia cuenta. Para bloquear el acceso de una persona y conservar la cuenta, desactívela en su lugar. |
 
+Sin el rol Administrador, no modifica a ninguna persona que tenga más derechos que usted (un Administrador, o un nivel superior al suyo en un módulo): su menú ofrece **Ver** y **Enviar restablecimiento de contraseña**, su ventana de usuario se abre en solo lectura y su fila no se puede seleccionar. En los roles de un usuario, un rol por encima de sus derechos aparece en gris, salvo que la persona ya lo tenga.
+
 ### Archivo CSV de usuarios
 
 **Exportar** descarga la lista de usuarios como archivo CSV o libro de Excel. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
@@ -297,7 +299,7 @@ Si alguien es eliminado de su directorio, o su cuenta del directorio es desactiv
 
 ### Inicio de sesión inmediato con Microsoft
 
-Cuando el inicio de sesión único está conectado, una persona que inicia sesión con Microsoft por primera vez obtiene automáticamente una cuenta de Kadratis. Si ya existe una cuenta con la misma dirección de correo, se vincula a su identidad de Microsoft en lugar de crear otra, y una cuenta con el estado **Invitado** se activa.
+Cuando el inicio de sesión único está conectado, una persona que inicia sesión con Microsoft por primera vez obtiene automáticamente una cuenta de Kadratis. Si ya existe una cuenta con la misma dirección de correo, Kadratis envía en su lugar un enlace de confirmación a esa dirección. El correo indica la cuenta de Microsoft que lo solicitó, y otro inicio de sesión en los 5 minutos siguientes no envía un enlace nuevo. La cuenta se vincula a la identidad de Microsoft cuando la persona confirma desde ese enlace, en el plazo de 1 hora, y conserva su contraseña. Una cuenta con el estado **Invitado** que aún no tiene contraseña se vincula en su primer inicio de sesión con Microsoft, sin enlace de confirmación, y se activa. Otra cuenta con el estado **Invitado** se activa en su siguiente inicio de sesión con Microsoft. Una cuenta ya vinculada a otra identidad de Microsoft conserva ese vínculo. Sin servicio de correo, una cuenta existente no puede vincularse de esta forma.
 
 Una cuenta nueva empieza con el rol de sistema **Contacto** y sin permisos. La persona ve una página que dice:
 
@@ -444,7 +446,7 @@ La página de Roles tiene un diseño de dos paneles:
 
 **Acciones**:
 - **Nuevo rol**: Crear un rol personalizado desde cero. Un rol nuevo o renombrado no puede llevar un nombre que la página muestra para un rol del sistema o integrado, en cualquiera de sus idiomas.
-- **Duplicar**: Copiar un rol existente (incluyendo roles integrados) como punto de partida. No disponible para roles de Sistema.
+- **Duplicar**: Copiar un rol existente (incluyendo roles integrados) como punto de partida. La ventana pide el nombre de la copia. No disponible para roles de Sistema.
 - **Eliminar**: Eliminar un rol personalizado. Un rol asignado a usuarios no se puede eliminar: asígneles primero otro rol. La ventana lo indica antes de cualquier confirmación.
 - **Guardar detalles**: Actualizar nombre y descripción del rol
 - **Guardar permisos**: Aplicar cambios de permisos
@@ -596,7 +598,7 @@ Conecte Kadratis a su inquilino de Microsoft Entra ID para SSO:
 
 ### Sincronización diaria del directorio
 
-Este bloque aparece debajo de la tarjeta de Entra una vez conectado el inicio de sesión único. Cada noche a las 03:00 hora del servidor, Kadratis actualiza nombres, cargos, teléfonos, departamentos y empresas desde Microsoft Entra, actualiza el responsable de las personas que son colaboradores, y desactiva las cuentas eliminadas o desactivadas en el directorio.
+Este bloque aparece debajo de la tarjeta de Entra una vez conectado el inicio de sesión único. Cada noche a las 03:00 hora del servidor, Kadratis actualiza nombres, cargos, teléfonos, departamentos y empresas desde Microsoft Entra, actualiza el responsable de las personas que son colaboradores, y desactiva las cuentas eliminadas o desactivadas en el directorio. El último administrador activo del espacio de trabajo sigue activo, aunque el directorio lo haya eliminado o desactivado: su cuenta pasa a ser una cuenta local y recupera el acceso con **Contraseña olvidada** en la página de inicio de sesión.
 
 Los departamentos y las empresas se comparan por nombre con los registros que ya existen en Kadratis. No se crea nada automáticamente. Los valores vacíos del directorio nunca borran lo que ya está almacenado en Kadratis.
 
@@ -607,8 +609,10 @@ La sincronización necesita una aprobación única por parte de un administrador
 | **Aún no autorizado...** | Ningún administrador de Microsoft Entra ha aprobado la sincronización, o falta el permiso requerido en el registro de aplicación. |
 | **Conceder acceso en Microsoft Entra** | Le lleva a la página de aprobación de Microsoft. Se muestra mientras la sincronización no está autorizada. Vuelve con **Acceso concedido. La primera sincronización está en curso.** |
 | **Última sincronización {fecha}: N cuentas actualizadas, N desactivadas.** | Resultado de la última ejecución correcta. |
+| **Cuenta mantenida activa (último administrador): {nombre}** | El directorio eliminó o desactivó a esta persona. Su cuenta sigue activa porque es el último administrador activo del espacio de trabajo, y pasa a ser una cuenta local: **Contraseña olvidada** en la página de inicio de sesión le envía un enlace para definir una contraseña. Las sincronizaciones siguientes ya no modifican esta cuenta. |
 | **La última sincronización falló: {mensaje}** | La última ejecución no se completó. El mensaje proviene de Microsoft. |
 | **Sincronizar ahora** | Ejecuta la sincronización de inmediato en lugar de esperar a esta noche. Informa **Sincronización completada: N cuentas actualizadas, N desactivadas.** |
+| **Ya hay una sincronización en curso.** | Otra sincronización del espacio de trabajo está en curso (la nocturna, o una iniciada por otro administrador). **Sincronizar ahora** no hace nada; vuelva a intentarlo cuando haya terminado. |
 
 Los pasos de configuración del registro de aplicación de Entra están en [SSO con Microsoft Entra](on-premise/sso-entra.md).
 

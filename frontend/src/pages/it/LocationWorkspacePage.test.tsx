@@ -124,8 +124,8 @@ describe('LocationWorkspacePage name refusals', () => {
       region: null,
       additional_info: null,
     }));
-    // The new site reads nothing: no id to read with.
-    expect(mocked.get).not.toHaveBeenCalled();
+    // The page holds the site it created: it does not read the site, only what hangs off it.
+    expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/locations/LOC-9') || url === '/locations/loc-new')).toEqual([]);
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/locations/LOC-9/overview', { replace: true }));
   });
 

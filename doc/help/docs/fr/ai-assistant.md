@@ -92,7 +92,7 @@ Kadratis lit un tableur au moment où vous envoyez le message :
 
 - Un fichier peut contenir jusqu'à 5 Mo et 20 000 lignes. Seule la première feuille d'un classeur est lue.
 - Un fichier illisible (endommagé, vide, ancien format .xls, trop volumineux) est refusé immédiatement, avec la raison. Le message n'est pas envoyé.
-- Kad reçoit un résumé du fichier : les en-têtes de colonnes, le type de chaque colonne (texte, nombre ou date), les dix premières lignes et le nombre de lignes. Il peut décrire le fichier, dire ce que contient chaque colonne et repérer des problèmes dans les premières lignes. Il ne peut pas répondre sur les lignes au-delà des dix premières.
+- Kad reçoit un résumé du fichier : les en-têtes de colonnes, le type de chaque colonne (texte, nombre ou date), les dix premières lignes avec leur numéro de ligne dans votre fichier, et le nombre de lignes. Il peut décrire le fichier, dire ce que contient chaque colonne et repérer des problèmes dans les premières lignes. Il ne peut pas répondre sur les lignes au-delà des dix premières.
 - Le résumé reste attaché au message pendant toute la suite de la conversation.
 
 ### Importer un tableur
@@ -277,7 +277,7 @@ Pour les aperçus de modification en attente, le panneau propose deux boutons :
 - **Approuver** : confirme la modification et permet à Kad de l'appliquer
 - **Rejeter** : annule la modification. Kad indique que la modification a été rejetée et ne prépare rien à sa place. Si votre demande portait sur plusieurs modifications, il poursuit avec les autres.
 
-Un aperçu, et le message que Kad écrit après votre approbation ou votre rejet, sont dans la langue de votre profil, avec les noms de champs et les valeurs des écrans. Une ligne budgétaire demandée avec un montant arrive en un seul aperçu : une seule approbation crée la ligne, sa version budgétaire de l'année et le montant.
+Un aperçu, et le message que Kad écrit après votre approbation ou votre rejet, sont dans la langue de votre profil (celle de votre navigateur si votre profil n'en fixe pas), avec les noms de champs et les valeurs des écrans. Une ligne budgétaire demandée avec un montant arrive en un seul aperçu : une seule approbation crée la ligne, sa version budgétaire de l'année et le montant.
 
 Quand vous demandez une modification que Kad ne peut pas faire, comme supprimer un projet ou relancer le rapprochement des vulnérabilités, il le dit et nomme l'écran où vous pouvez la faire. Il ne prépare aucune autre modification à sa place.
 

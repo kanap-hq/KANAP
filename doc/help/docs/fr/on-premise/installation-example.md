@@ -389,7 +389,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml pull
 docker compose -f infra/compose.onprem.yml up -d --wait
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[(entrypoint|VERSION|ENV|CONFIG|SECRETS|RATE-LIMIT|CORS|DB|on-prem|SECURITY|DATA-ACCESS|markdown|cluster|shutdown)\]|WARN|ERROR|successfully started|Email transport'
 ```
 
 Si `pull` n'atteint pas `ghcr.io`, ouvrez l'accès sortant des [Règles de pare-feu](configuration.md#outbound-installation-and-upgrades), ou [construisez les images vous-même](installation.md#build-the-images-yourself).
@@ -692,4 +692,4 @@ curl -sSk -w '\n' "$(grep '^APP_BASE_URL=' .env | cut -d= -f2-)/api/config/publi
 
 Vérifiez PostgreSQL avec `pg_lsclusters`. `systemctl status postgresql` reste `active` même quand le cluster est arrêté. Le champ `version` de la dernière réponse est la version que l'API indique.
 
-Pour mettre à jour Kadratis, suivez la [procédure de mise à jour](operations.md#procedure-de-mise-a-jour) : lisez le changelog, sauvegardez, puis `git pull origin stable`, `pull` et `up -d`.
+Pour mettre à jour Kadratis, suivez la [procédure de mise à jour](operations.md#procedure-de-mise-a-jour) : récupérez la nouvelle version avec ses étiquettes (`git fetch --tags origin stable`), lisez le changelog, sauvegardez, puis `git pull origin stable`, `pull` et `up -d`.

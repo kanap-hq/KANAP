@@ -720,7 +720,9 @@
         },
         "platform": "Zugrunde liegende Plattform ({{count}})",
         "countLink_one": "Die zu prüfende Schwachstelle auf der Seite Schwachstellen ansehen",
-        "countLink_other": "Die {{count}} zu prüfenden Schwachstellen auf der Seite Schwachstellen ansehen"
+        "countLink_other": "Die {{count}} zu prüfenden Schwachstellen auf der Seite Schwachstellen ansehen",
+        "excluded_one": "{{count, count}} Schwachstelle von den Warnungen ausgeschlossen",
+        "excluded_other": "{{count, count}} Schwachstellen von den Warnungen ausgeschlossen"
       },
       "severeBadge": {
         "label_one": "{{count}} schwerwiegend",
@@ -1948,6 +1950,8 @@
           "both": "Deklariert und gehostet"
         },
         "versionUnknown": "Version unbekannt",
+        "endsWithinMonths_one": "Endet innerhalb von {{count}} Monat",
+        "endsWithinMonths_other": "Endet innerhalb von {{count}} Monaten",
         "also": {
           "prefix": "Ebenfalls verknüpft:",
           "assets_one": "{{count}} Asset (Bereitstellungen)",
@@ -2712,6 +2716,8 @@
         "leg": "Abschnitt: {{type}}"
       },
       "untitled": "Unbenannte Verbindung",
+      "notFound": "Verbindung nicht gefunden.",
+      "backToList": "Zurück zur Liste",
       "previous": "Vorherige Verbindung",
       "next": "Nächste Verbindung",
       "viewInMap": "In Karte anzeigen",

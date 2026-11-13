@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { useDataAccessAdmin } from '../../auth/dataAccess';
@@ -39,6 +39,10 @@ const NO_KINDS: CostCenterKind[] = [];
 const CREATE_FIELDS: ReadonlySet<CostCenterField> = new Set<CostCenterField>([
   'code', 'name', 'kind', 'parent_id', 'company_id', 'owner_user_id', 'description',
 ]);
+/** The draft's fields that Create sends and a patch can change. */
+const DRAFT_FIELDS = [
+  'code', 'name', 'kind', 'parent_id', 'company_id', 'owner_user_id', 'description', 'status', 'disabled_at',
+] as const;
 const UNAVAILABLE_FOR_PARENT: CostCenterKind[] = ['cost_center'];
 
 type TabKey = 'overview' | 'access';
@@ -66,6 +70,9 @@ export default function CostCenterWorkspacePage() {
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
+  // The cost center the draft has just created: its fields stay mounted, so that what is typed
+  // while it is written, and the field being typed in, are kept.
+  const fromDraft = useCreatedFromDraft('cost_centers', id);
   const rawTab = (params.tab as TabKey) || 'overview';
   const tab: TabKey = TAB_KEYS.includes(rawTab) && !(rawTab === 'access' && !canAdminDataAccess)
     ? rawTab
@@ -254,6 +261,12 @@ export default function CostCenterWorkspacePage() {
     if (form.kind === 'cost_center' && !form.company_id) missing.company_id = t('costCenters.messages.companyRequired');
     return missing;
   };
+  /** The draft as Create sends it: the trimmed name, the company only for a cost center. */
+  const draftAsSent = (): CostCenterDetail => ({
+    ...draftRef.current,
+    name: title.current().trim(),
+    company_id: draftRef.current.kind === 'cost_center' ? draftRef.current.company_id : null,
+  });
   const creation = useDraftCreation({
     isCreate,
     family: 'cost_centers',
@@ -264,15 +277,15 @@ export default function CostCenterWorkspacePage() {
     queryKeyPrefixes: ['cost-centers'],
     ready: () => !!title.current().trim() && Object.keys(missingFields(draftRef.current)).length === 0,
     post: async () => {
-      const form = draftRef.current;
+      const form = draftAsSent();
       setPageError(null);
       try {
         const created = await createCostCenter({
           code: form.code,
-          name: title.current().trim(),
+          name: form.name,
           kind: form.kind,
           parent_id: form.parent_id,
-          company_id: form.kind === 'cost_center' ? form.company_id : null,
+          company_id: form.company_id,
           owner_user_id: form.owner_user_id,
           description: form.description,
           status: form.status,
@@ -280,6 +293,23 @@ export default function CostCenterWorkspacePage() {
         });
         void queryClient.invalidateQueries({ queryKey: ['cost-centers'] });
         afterWrite();
+        // The page moves to the cost center with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the cost center was written): saved on the cost center.
+        const createdKey = ['cost-centers', 'detail', created.id] as const;
+        await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => getCostCenter(created.id) }).catch(() => undefined);
+        try {
+          await saveEditsSince({
+            sent: form,
+            now: draftAsSent,
+            fields: DRAFT_FIELDS,
+            save: async (edits) => {
+              queryClient.setQueryData(createdKey, await updateCostCenter(created.id, edits));
+              afterWrite();
+            },
+          });
+        } catch (e) {
+          setPageError(getApiErrorMessage(e, t, t('costCenters.messages.saveFailed')));
+        }
         return { id: created.id, token: created.creation_token, path: `${LIST_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}` };
       } catch (e) {
         const message = getApiErrorMessage(e, t, t('costCenters.messages.createFailed'));
@@ -364,7 +394,7 @@ export default function CostCenterWorkspacePage() {
         history={id && !isCreate ? { table: 'cost_centers', recordId: id } : undefined}
         properties={data && effectiveKind ? (
           <CostCenterPropertiesDrawer
-            key={data.id}
+            key={fromDraft || isCreate ? 'draft' : data.id}
             node={data}
             kind={effectiveKind}
             disabled={disabled}
@@ -398,7 +428,7 @@ export default function CostCenterWorkspacePage() {
               </Typography>
             )}
             <DescriptionField
-              key={data.id}
+              key={fromDraft || isCreate ? 'draft' : data.id}
               value={data.description ?? ''}
               disabled={disabled}
               error={errors.description}

@@ -42,7 +42,15 @@ export type TechnologyRow = {
   hosted: boolean;
   versions: string[];
   version_unknown: boolean;
+  /**
+   * The support of the most pressing version, on the End of support report's rule: `support_end` the
+   * date that matters (the end passed, or the next to come), `support_state` its state, and that
+   * version's standard and extended ends. Null when no version has an end.
+   */
   standard_support_end: string | null;
+  extended_support_end?: string | null;
+  support_end?: string | null;
+  support_state?: 'out_of_support' | 'extended_support' | 'supported' | null;
   via: Array<{ asset_id: string; asset_name: string | null; host_name: string | null }>;
   /** The application's own links of the technology, one per version declared. */
   declarations?: Array<{ link_id: string; technology_version_id: string | null; version_label: string | null }>;

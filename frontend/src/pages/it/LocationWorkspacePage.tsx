@@ -32,7 +32,7 @@ import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 
-import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, saveEditsSince, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 type TabKey = 'overview' | 'contacts' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 
 type LocationRecord = {
@@ -72,13 +72,22 @@ const TAB_KEYS: TabKey[] = ['overview', 'contacts', 'relations', RECORD_HISTORY_
 const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
 const HistoryTab = historyTab.Component;
 
+/** The draft's fields that Create sends and a patch can change. */
+const DRAFT_FIELDS = [
+  'name', 'hosting_type', 'operating_company_id', 'country_iso', 'city', 'provider', 'region', 'additional_info',
+] as const;
+
 export default function LocationWorkspacePage() {
-  const { id } = useParams();
+  const { id = '' } = useParams();
+  // The site the draft has just created (its address on the page): the page stays the draft's, so
+  // that what is typed while it is written, and the field being typed in, are kept.
+  const [written, setWritten] = React.useState<string | null>(null);
+  const fromDraft = !!written && id.toUpperCase() === written.toUpperCase();
   // A new site is a page of its own: nothing of a site seen before stays in its draft.
-  return <LocationEditor key={id === 'new' ? 'new' : 'record'} />;
+  return <LocationEditor key={id === 'new' || fromDraft ? 'draft' : 'record'} onDraftWritten={setWritten} />;
 }
 
-function LocationEditor() {
+function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) => void }) {
   const { t } = useTranslation(['it', 'common', 'errors']);
   const locale = useLocale();
   const dialogs = useKanapDialogs();
@@ -114,6 +123,11 @@ function LocationEditor() {
   const [pendingHostingType, setPendingHostingType] = React.useState<string | null>(null);
 
   const [createError, setCreateError] = React.useState<string | null>(null);
+  // The draft is the live site until it is written: the write reads what was typed since it was sent.
+  const dataRef = React.useRef(data);
+  dataRef.current = data;
+  // The address of the site the draft created: the page holds it already and does not read it.
+  const handedOver = React.useRef<string | null>(null);
 
   const subItemsAnchorRef = React.useRef<HTMLDivElement>(null);
   const locationId = React.useMemo(() => {
@@ -184,7 +198,10 @@ function LocationEditor() {
     }
   }, [isCreate, routeId, t]);
 
-  React.useEffect(() => { void load(); }, [load]);
+  React.useEffect(() => {
+    if (handedOver.current && routeId.toUpperCase() === handedOver.current.toUpperCase()) return;
+    void load();
+  }, [load, routeId]);
   React.useEffect(() => { setNameError(null); }, [routeId]);
 
   React.useEffect(() => {
@@ -207,29 +224,43 @@ function LocationEditor() {
     return () => { cancelled = true; };
   }, [locationId]);
 
+  // Saves go one after the other, and a save under way blocks nothing: the fields stay editable.
+  const saveChain = React.useRef<Promise<void>>(Promise.resolve());
+  const savesPending = React.useRef(0);
   const patchLocation = React.useCallback(
-    async (patch: Partial<LocationRecord>) => {
+    (patch: Partial<LocationRecord>): Promise<void> => {
       if (isCreate) {
         setCreateError(null);
         setData((prev) => (prev ? { ...prev, ...patch } : prev));
-        return;
+        return Promise.resolve();
       }
-      if (!locationId) return;
+      if (!locationId) return Promise.resolve();
+      savesPending.current += 1;
       setSaving(true);
       if ('name' in patch) setNameError(null);
       setData((prev) => (prev ? { ...prev, ...patch } as LocationRecord : prev));
-      try {
-        const res = await api.patch(`/locations/${locationId}`, patch);
-        // The saved record has no asset count: the loaded one stays.
-        setData((prev) => ({ ...(res.data as LocationRecord), usage_count: prev?.usage_count }));
-        setError(null);
-      } catch (e: any) {
-        if ('name' in patch && isDuplicateError(e)) setNameError(t('messages.locationNameTaken'));
-        else setError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
-        await load();
-      } finally {
-        setSaving(false);
-      }
+      const run = async () => {
+        try {
+          const res = await api.patch(`/locations/${locationId}`, patch);
+          // Only the last answer of a run of saves is shown: it holds the earlier ones, and a field
+          // edited since is not put back to what an earlier answer says.
+          if (savesPending.current === 1) {
+            // The saved record has no asset count: the loaded one stays.
+            setData((prev) => ({ ...(res.data as LocationRecord), usage_count: prev?.usage_count }));
+            setError(null);
+          }
+        } catch (e: any) {
+          if ('name' in patch && isDuplicateError(e)) setNameError(t('messages.locationNameTaken'));
+          else setError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
+          await load();
+        } finally {
+          savesPending.current -= 1;
+          if (savesPending.current === 0) setSaving(false);
+        }
+      };
+      const result = saveChain.current.then(run, run);
+      saveChain.current = result.catch(() => undefined);
+      return result;
     },
     [isCreate, load, locationId, t],
   );
@@ -270,15 +301,30 @@ function LocationEditor() {
       if (!data) return null;
       setCreateError(null);
       const { id: _id, location_reference: _reference, ...fields } = data;
+      const sent = { ...fields, name: creationTitle.current().trim() };
       try {
-        const { data: created } = await api.post<LocationRecord & { creation_token: string }>('/locations', {
-          ...fields, name: creationTitle.current().trim(),
-        });
+        const { data: created } = await api.post<LocationRecord & { creation_token: string }>('/locations', sent);
+        // The page moves to the site with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the site was written): saved on the site.
+        try {
+          await saveEditsSince({
+            sent,
+            now: () => ({ ...(dataRef.current ?? sent), name: creationTitle.current().trim() }),
+            fields: DRAFT_FIELDS,
+            save: async (edits) => { await api.patch(`/locations/${created.id}`, edits); },
+          });
+        } catch (e: any) {
+          setCreateError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
+        }
+        const address = created.location_reference || created.id;
+        handedOver.current = address;
+        onDraftWritten(address);
+        setData((prev) => (prev ? { ...prev, id: created.id, location_reference: created.location_reference, name: creationTitle.current().trim() } : prev));
         const qs = listContextParams.toString();
         return {
           id: created.id,
           token: created.creation_token,
-          path: `/it/locations/${created.location_reference || created.id}/overview${qs ? `?${qs}` : ''}`,
+          path: `/it/locations/${address}/overview${qs ? `?${qs}` : ''}`,
         };
       } catch (e: any) {
         if (isDuplicateError(e)) creationTitle.refuse(t('messages.locationNameTaken'));
@@ -314,7 +360,9 @@ function LocationEditor() {
       if (!data || next === data.hosting_type) return;
       const prevCategory = getHostingCategory(data.hosting_type);
       const nextCategory = getHostingCategory(next);
-      if (prevCategory !== nextCategory && !isCreate) {
+      // Asked only when the switch clears something: the operating company (to cloud), the provider or the region (to on-premises).
+      const clears = nextCategory === 'on_prem' ? !!(data.provider || data.region) : !!data.operating_company_id;
+      if (prevCategory !== nextCategory && !isCreate && clears) {
         setPendingHostingType(next);
         return;
       }
@@ -509,7 +557,7 @@ function LocationEditor() {
         city: data.city,
       }}
       category={category}
-      disabled={!canManage || saving}
+      disabled={!canManage}
       onHostingTypeChange={handleHostingTypeChange}
       onOperatingCompanyChange={handleOperatingCompanyChange}
       onProviderChange={handleProviderChange}
@@ -532,7 +580,7 @@ function LocationEditor() {
       countryIso={data.country_iso}
       city={data.city}
       subLocationsCount={subLocationsCount}
-      disabled={!canManage || saving}
+      disabled={!canManage}
       onHostingTypeChange={handleHostingTypeChange}
       onOperatingCompanyChange={handleOperatingCompanyChange}
       onProviderChange={handleProviderChange}
@@ -624,34 +672,27 @@ function LocationEditor() {
         actions={actions}
         properties={drawerProperties}
       >
-        {isCreate ? (
-          <Stack spacing={1.5}>
-            {createError && <Alert severity="error">{createError}</Alert>}
-            <LocationOverviewTab
-              locationId=""
-              initialNotes=""
-              canManage={canManage}
-              onNotesDraft={(next) => { void patchLocation({ additional_info: next.trim() ? next : null }); }}
-            />
-          </Stack>
-        ) : !data ? null : (
+        {data && (
           <>
-            {validTab === 'overview' && (
+            {createError && <Alert severity="error" sx={{ mb: 1.5 }}>{createError}</Alert>}
+            {/* One element from the draft to the site it creates: the notes being typed keep their editor and their focus. */}
+            {(isCreate || validTab === 'overview') && (
               <LocationOverviewTab
-                locationId={data.id}
-                initialNotes={data.additional_info || ''}
+                locationId={isCreate ? '' : data.id}
+                initialNotes={isCreate ? '' : data.additional_info || ''}
                 canManage={canManage}
-                onSubLocationsCountChange={setSubLocationsCount}
-                subItemsAnchorRef={subItemsAnchorRef}
+                onNotesDraft={isCreate ? (next) => { void patchLocation({ additional_info: next.trim() ? next : null }); } : undefined}
+                onSubLocationsCountChange={isCreate ? undefined : setSubLocationsCount}
+                subItemsAnchorRef={isCreate ? undefined : subItemsAnchorRef}
               />
             )}
-            {validTab === 'contacts' && (
+            {!isCreate && validTab === 'contacts' && (
               <LocationContactsTab locationId={data.id} canManage={canManage} />
             )}
-            {validTab === 'relations' && (
+            {!isCreate && validTab === 'relations' && (
               <LocationRelationsTab locationId={data.id} onRelationsChange={() => { void loadRelationCounts(); }} />
             )}
-            {validTab === RECORD_HISTORY_TAB_KEY && (
+            {!isCreate && validTab === RECORD_HISTORY_TAB_KEY && (
               <WorkspaceTabBoundary resetKey={validTab} onRetry={historyTab.retry}>
                 <React.Suspense fallback={null}>
                   <HistoryTab table="locations" recordId={data.id} />

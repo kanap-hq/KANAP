@@ -16,8 +16,8 @@ import {
  * 2. Role changes (`SET ROLE`, `RESET ROLE`, `set_config('role'`) appear only in the foundations
  *    migration (inside `data_access_apply`), in `withFullDataAccess` (`data-access/full-data-access.ts`)
  *    and in the data-access specs; `withFullDataAccess` is called from the chargeback report, from
- *    the contract coverage and from the record history's deleted-reference existence read (spec
- *    §6.6, §10.3 "Divulgations"), and nowhere else.
+ *    the contract coverage, from the record history's deleted-reference existence read (spec
+ *    §6.6, §10.3 "Divulgations") and from the stored file reference check, and nowhere else.
  * 3. Every path outside the tenant interceptor (`@SkipTenantTransaction()`, `{ transaction: false }`,
  *    `tenantExecutor.run(`, `withTenantExecution(`, `withTenant(`) is classified in
  *    `data-access/data-access-paths.inventory.ts`, and the inventory names no site that is gone.
@@ -156,13 +156,15 @@ const CANCEL_CREATION_CALL = /\.\s*cancelCreation\b|\[\s*['"`]cancelCreation['"`
 /**
  * `withFullDataAccess(` calls per file, outside its definition (spec §6.6, §10.3 "Divulgations"):
  * the chargeback report, the contract coverage (page and list, through
- * `readContractBudgetCoverage`), and the record history's existence read, which returns ids only
- * so that a deleted reference never reads as a withheld one.
+ * `readContractBudgetCoverage`), the record history's existence read, which returns ids only
+ * so that a deleted reference never reads as a withheld one, and the stored file reference check,
+ * which returns only the paths its caller passed, so that a file another row still names is kept.
  */
 const FULL_DATA_ACCESS_CALLS: Record<string, number> = {
   'spend/chargeback-report.service.ts': 1,
   'contracts/contract-budget.ts': 1,
   'audit/record-history/families.ts': 1,
+  'common/storage-path-refs.ts': 1,
 };
 
 /** A reference to the full-data-access module, whatever the binding it makes. */

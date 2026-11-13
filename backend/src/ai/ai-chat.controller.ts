@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
 import { AiChatOrchestratorService } from './ai-chat-orchestrator.service';
 import { AiExecutionContext } from './ai.types';
+import { screenLanguageOf } from './ai-write-texts';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
 import { AiBuiltinRateLimiter } from './platform/ai-builtin-rate-limiter';
 import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
@@ -34,6 +35,7 @@ export class AiChatController {
       authMethod: 'jwt',
       requestId: req?.id ?? null,
       aiApiKeyId: null,
+      screenLanguage: screenLanguageOf(req?.headers?.['accept-language']),
     };
   }
 

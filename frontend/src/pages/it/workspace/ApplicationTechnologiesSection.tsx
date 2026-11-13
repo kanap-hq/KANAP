@@ -1,13 +1,13 @@
 import React from 'react';
-import { Alert, Box, IconButton, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Tooltip, Typography, useTheme } from '@mui/material';
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
-import { formatShortDate } from '../../../lib/dateFormat';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { formatSupportDate, SUPPORT_HORIZON_MONTHS, supportStateColor, supportStateNeedsAttention, supportStateOf, type SupportState } from '../../../utils/supportState';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import ViaAssetNames from '../../../components/workspace/ViaAssetNames';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
@@ -19,10 +19,12 @@ import TechnologyServersProposal from './TechnologyServersProposal';
 
 const PAGE = 30;
 
-function todayYmd(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
+/**
+ * The End of support report's name of the states that call for attention (`pages.endOfSupport.states`).
+ * `ending_soon` is named apart: the record always counts {@link SUPPORT_HORIZON_MONTHS}, while the
+ * report's "Ends soon" means "within the horizon the report is open on".
+ */
+const REPORT_STATE: Partial<Record<SupportState, string>> = { ended: 'out_of_support', extended: 'extended_support' };
 
 type Declaration = NonNullable<TechnologyRow['declarations']>[number];
 
@@ -62,6 +64,7 @@ export default function ApplicationTechnologiesSection({
 }) {
   const { t, i18n } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
+  const theme = useTheme();
   const { labelFor } = useItOpsEnumOptions();
   const queryClient = useQueryClient();
   const [flow, setFlow] = React.useState<Flow | null>(null);
@@ -183,7 +186,6 @@ export default function ApplicationTechnologiesSection({
       });
     }
     : undefined;
-  const today = todayYmd();
   const dash = '—';
   const title = t('workspace.application.relations.sections.technologies');
   const familyLabel = (code: string | null) => (code ? labelFor('technologyFamily', code) || code : dash);
@@ -251,11 +253,28 @@ export default function ApplicationTechnologiesSection({
     },
     {
       key: 'supportEnd', header: t('workspace.application.relations.columns.supportEnd'), width: 100,
+      // The report's date and state: the end passed, or the next one to come, of the most pressing version.
       render: (row) => {
-        const ended = !!row.standard_support_end && row.standard_support_end < today;
+        if (!row.support_end) return dash;
+        const standardEnd = row.standard_support_end ?? null;
+        const extendedEnd = row.extended_support_end ?? null;
+        const state = supportStateOf(standardEnd, extendedEnd);
+        const ends = [
+          standardEnd ? t('workspace.asset.technical.standardSupportEnds', { date: formatSupportDate(standardEnd, lang) }) : '',
+          extendedEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: formatSupportDate(extendedEnd, lang) }) : '',
+        ].filter(Boolean).join(' / ');
+        const stateLabel = state === 'ending_soon'
+          ? t('workspace.application.relations.endsWithinMonths', { count: SUPPORT_HORIZON_MONTHS })
+          : REPORT_STATE[state] ? t(`pages.endOfSupport.states.${REPORT_STATE[state]}`) : '';
+        const title = [stateLabel, ends].filter(Boolean).join(' · ');
         return (
-          <Box component="span" sx={ended ? { color: 'kanap.orange' } : undefined}>
-            {row.standard_support_end ? formatShortDate(row.standard_support_end, lang, { year: 'always' }) : dash}
+          <Box
+            component="span"
+            title={title}
+            data-state={state}
+            sx={{ color: supportStateNeedsAttention(state) ? supportStateColor(state, theme) : 'inherit' }}
+          >
+            {formatSupportDate(row.support_end, lang)}
           </Box>
         );
       },

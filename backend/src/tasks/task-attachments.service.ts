@@ -14,6 +14,7 @@ import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
 import { assertMarkdownSize } from '../common/markdown-limits';
 import { assertTaskModifiable } from './task-data-access';
+import { isInlineAttachmentShownInContent, isStoragePathReferencedInAnyTable } from '../common/storage-path-refs';
 
 @Injectable()
 export class TaskAttachmentsService {
@@ -193,24 +194,21 @@ export class TaskAttachmentsService {
       if (!attachment) {
         continue;
       }
+      // Another text still shows it (the request made from the task): the weekly sweep takes it
+      // once no text does.
+      if (await isInlineAttachmentShownInContent(mg, attachment.id, { table: 'tasks', id: taskId })) {
+        continue;
+      }
 
-      const refs = await mg.query<Array<{ exists: number }>>(
-        `SELECT 1 AS exists
-         FROM task_attachments
-         WHERE storage_path = $1
-           AND id <> $2
-         LIMIT 1`,
-        [attachment.storage_path, attachment.id],
-      );
-      if (refs.length === 0) {
+      // The row first, then the check (`unreferencedPaths`), then the file.
+      await attachRepo.delete({ id: attachment.id });
+      if (!(await isStoragePathReferencedInAnyTable(mg, attachment.storage_path))) {
         try {
           await this.storage.deleteObject(attachment.storage_path);
         } catch {
           // Ignore storage errors during delete.
         }
       }
-
-      await attachRepo.delete({ id: attachment.id });
     }
   }
 
@@ -226,23 +224,17 @@ export class TaskAttachmentsService {
     // Before the stored file is deleted: a refused row would stay, pointing at nothing.
     await assertTaskModifiable(mg, found.task_id);
 
-    const refs = await mg.query<Array<{ exists: number }>>(
-      `SELECT 1 AS exists
-       FROM task_attachments
-       WHERE storage_path = $1
-         AND id <> $2
-       LIMIT 1`,
-      [found.storage_path, found.id],
-    );
-    if (refs.length === 0) {
+    const storagePath = found.storage_path;
+    await attachRepo.remove(found);
+    // Then the check (`unreferencedPaths`): a request made from the task names the same file, which
+    // stays while any row names it.
+    if (!(await isStoragePathReferencedInAnyTable(mg, storagePath))) {
       try {
-        await this.storage.deleteObject(found.storage_path);
+        await this.storage.deleteObject(storagePath);
       } catch {
         // Ignore storage errors during delete
       }
     }
-
-    await attachRepo.remove(found);
     await this.audit.log(
       { table: 'task_attachments', recordId: found.id, action: 'delete', before: found, after: null, userId },
       { manager: mg },

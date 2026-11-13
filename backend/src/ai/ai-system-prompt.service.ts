@@ -178,7 +178,8 @@ function toolUsageGuidelines(mode: AiContextProfile['promptMode']): string {
     return [
       ...core,
       '- Use search_knowledge for documentation queries and get_document only when the full content is needed.',
-      '- If a document search returns no result, try one concise alternate wording before answering no match.',
+      '- Documents may be written in English, French, German or Spanish, whatever the language of the question: search in those languages too before concluding that no document matches.',
+      '- When you cite a document that is not published (draft, in review, archived, obsolete), say its status.',
     ].join('\n');
   }
 

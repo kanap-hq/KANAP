@@ -207,6 +207,7 @@ Use la pestaña **Historial** cuando necesite saber qué cambió. Use los coment
 La pestaña **Tareas** es la cola de ejecución del proyecto. La insignia de la pestaña muestra el número de tareas del proyecto.
 
 - las tareas creadas aquí se vinculan al proyecto automáticamente
+- **Añadir tarea** se ofrece a las personas que crean tareas (`tasks:member`) y contribuyen al proyecto (`portfolio_projects:contributor`). Un Colaborador de negocio solo contribuye a los proyectos en los que participa.
 - las tareas también pueden crearse desde una fase del cronograma, lo que las vincula tanto al proyecto como a la fase seleccionada
 - la pestaña admite filtrado por estado y filtrado por fase
 - la vista de tareas predeterminada se centra en el trabajo activo ocultando los elementos hechos y cancelados
@@ -401,6 +402,7 @@ Las importaciones están diseñadas para cambios masivos controlados:
 - descargue primero una plantilla cuando necesite la estructura correcta, o un ejemplo para ver proyectos de ejemplo y los valores que admite cada columna ([Archivos de ejemplo](csv-files.md#example-files))
 - valide antes de importar
 - use opciones avanzadas para elegir el comportamiento de enriquecimiento vs reemplazo y las reglas de inserción/actualización
+- una fila nueva sin procedencia se guarda como Histórico. Una fila nueva cuya procedencia es `standard` se rechaza: la procedencia Solicitud proviene de la conversión de una solicitud. Un proyecto que ya tiene esa procedencia la conserva cuando el archivo actualiza la fila
 
 La importación masiva es útil para mantenimiento del portafolio a gran escala, pero no es un atajo a la gobernanza del proyecto. La planificación de fases, las tareas, el conocimiento y el control continuo de entrega siguen perteneciendo al espacio de trabajo.
 

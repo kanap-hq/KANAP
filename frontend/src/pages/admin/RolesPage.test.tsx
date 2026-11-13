@@ -1,10 +1,14 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import frAdmin from '../../locales/fr/admin.json';
+import enAdmin from '../../locales/en/admin.json';
+import deAdmin from '../../locales/de/admin.json';
+import esAdmin from '../../locales/es/admin.json';
+import { KanapDialogProvider } from '../../components/design';
 import RolesPage from './RolesPage';
 
 const api = vi.hoisted(() => ({ get: vi.fn(), delete: vi.fn(), post: vi.fn(), put: vi.fn() }));
@@ -41,7 +45,7 @@ function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
-      <QueryClientProvider client={client}><RolesPage /></QueryClientProvider>
+      <QueryClientProvider client={client}><KanapDialogProvider><RolesPage /></KanapDialogProvider></QueryClientProvider>
     </ThemeProvider>,
   );
 }
@@ -176,5 +180,53 @@ describe('RolesPage refused writes', () => {
     fireEvent.click(screen.getByRole('button', { name: 'roles.actions.savePermissions' }));
     expect(await screen.findByText('errors:administrator_required')).toBeTruthy();
     expect(within(screen.getByRole('combobox', { name: 'roles.resources.budget' })).getByText('roles.levels.reader')).toBeTruthy();
+  });
+});
+
+describe('RolesPage duplicate', () => {
+  beforeEach(() => {
+    i18nState.language = 'en';
+    i18nState.text = () => undefined;
+    api.get.mockReset();
+    api.post.mockReset();
+    api.get.mockImplementation(async (url: string) => (url === '/roles' ? { data: roles } : { data: {} }));
+  });
+
+  it('asks the name of the copy, proposed in the language on screen, and sends it', async () => {
+    roles.items = [{ id: 'r5', role_name: 'Acheteurs', role_description: null, user_count: 0 }];
+    api.post.mockResolvedValueOnce({ data: { id: 'r6', role_name: 'Acheteurs bis', role_description: null } });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'roles.actions.duplicate' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('roles.dialogs.duplicateTitle')).toBeTruthy();
+    const name = within(dialog).getByRole('textbox') as HTMLInputElement;
+    // The proposed name comes from the locale files (below), never an English suffix.
+    expect(name.value).toBe('roles.dialogs.duplicateName');
+    expect(api.post).not.toHaveBeenCalled();
+    fireEvent.change(name, { target: { value: 'Acheteurs bis' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'roles.actions.duplicate' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/roles/r5/duplicate', { role_name: 'Acheteurs bis' }));
+  });
+
+  it('proposes the copy name in each language', () => {
+    const names = [enAdmin, frAdmin, deAdmin, esAdmin].map((file) => file.roles.dialogs.duplicateName);
+    expect(names).toEqual(['{{name}} (copy)', '{{name}} (copie)', '{{name}} (Kopie)', '{{name}} (copia)']);
+  });
+
+  it('shows a role without a description with no React warning', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      roles.items = [
+        { id: 'r7', role_name: 'Acheteurs', role_description: 'Valide les achats', user_count: 0 },
+        { id: 'r8', role_name: 'Auditeurs', role_description: null, user_count: 0 },
+      ];
+      renderPage();
+      fireEvent.click(await screen.findByText('Auditeurs'));
+      await waitFor(() => expect((screen.getByLabelText('roles.fields.description') as HTMLInputElement).value).toBe(''));
+      const warnings = errors.mock.calls.map((call) => String(call[0])).filter((text) => /should not be null|uncontrolled|controlled/.test(text));
+      expect(warnings).toEqual([]);
+    } finally {
+      errors.mockRestore();
+    }
   });
 });

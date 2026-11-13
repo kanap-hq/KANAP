@@ -1,5 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
-import { SHARE_MAX_RECIPIENTS, type ShareItemDto } from './dto/share-item.dto';
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
+import { SHARE_MAX_RECIPIENTS, ShareItemDto } from './dto/share-item.dto';
 
 function uniqueIgnoringCase(values: readonly unknown[]): string[] {
   const seen = new Set<string>();
@@ -31,4 +33,20 @@ export function shareRecipientsOf(dto: ShareItemDto | null | undefined): { userI
     });
   }
   return { userIds, rawEmails };
+}
+
+/**
+ * The number of recipients of a share request body, read as the route reads it (the global
+ * validation, then `shareRecipientsOf`), or 0 for a body the route refuses. For the recipient
+ * budgets of `ShareRateLimitGuard`, which runs before the validation.
+ */
+export function shareRecipientCount(body: unknown): number {
+  const dto = plainToInstance(ShareItemDto, body && typeof body === 'object' ? body : {});
+  if (validateSync(dto, { whitelist: true }).length > 0) return 0;
+  try {
+    const { userIds, rawEmails } = shareRecipientsOf(dto);
+    return userIds.length + rawEmails.length;
+  } catch {
+    return 0;
+  }
 }

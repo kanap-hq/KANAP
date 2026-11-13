@@ -84,6 +84,21 @@ describe('KanapDialog Enter key', () => {
     fireEvent.keyDown(screen.getByLabelText('Code'), { key: 'Enter' });
     expect(onSave).not.toHaveBeenCalled();
   });
+
+  it('shows no save and never saves on a dialog that only shows', () => {
+    const onSave = vi.fn();
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialog open title="Dialog" onClose={vi.fn()} onSave={onSave} saveLabel="Save" showSave={false}>
+          <Fields />
+        </KanapDialog>
+      </ThemeProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'buttons.cancel' })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByLabelText('Code'), { key: 'Enter' });
+    expect(onSave).not.toHaveBeenCalled();
+  });
 });
 
 describe('KanapDialog optional slots', () => {

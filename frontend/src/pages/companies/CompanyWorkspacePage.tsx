@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, FormHelperText, Stack, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useTheme } from '@mui/material/styles';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
@@ -74,6 +74,14 @@ type TextKey = 'city' | 'address1' | 'address2' | 'postal_code' | 'state' | 'reg
 type CompanyField = 'name' | 'country_iso' | 'base_currency' | 'coa_id' | 'disabled_at' | TextKey;
 type FieldErrors = Partial<Record<CompanyField, string>>;
 
+/** The draft's fields that Create sends and a patch can change. */
+const DRAFT_FIELDS = [
+  'name', 'coa_id', 'country_iso', 'base_currency', 'city', 'address1', 'address2', 'postal_code', 'state',
+  'reg_number', 'vat_number', 'notes', 'status', 'disabled_at',
+] as const;
+
+const fetchCompany = async (companyId: string) => (await api.get<Company>(`/companies/${companyId}`)).data;
+
 const COMPANY_FIELDS: ReadonlySet<string> = new Set<CompanyField>([
   'name', 'country_iso', 'base_currency', 'coa_id', 'disabled_at',
   'city', 'address1', 'address2', 'postal_code', 'state', 'reg_number', 'vat_number', 'notes',
@@ -127,6 +135,9 @@ export default function CompanyWorkspacePage() {
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
+  // The company the draft has just created: its fields stay mounted, so that what is typed
+  // while it is written, and the field being typed in, are kept.
+  const fromDraft = useCreatedFromDraft('companies', id);
   const rawTab = (params.tab as TabKey) || 'overview';
   const tab: TabKey = TAB_KEYS.includes(rawTab)
     && !(isCreate && rawTab !== 'overview')
@@ -339,9 +350,27 @@ export default function CompanyWorkspacePage() {
     post: async () => {
       setCreateError(null);
       try {
-        const { id: _id, name: _name, ...fields } = draftRef.current;
-        const { data: created } = await api.post<Company & { creation_token: string }>('/companies', { ...fields, name: title.current().trim() });
+        const sent = { ...draftRef.current, name: title.current().trim() };
+        const { id: _id, ...fields } = sent;
+        const { data: created } = await api.post<Company & { creation_token: string }>('/companies', fields);
         void queryClient.invalidateQueries({ queryKey: ['companies'] });
+        // The page moves to the company with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the company was written): saved on the company.
+        const createdKey = ['companies', created.id] as const;
+        await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => fetchCompany(created.id) }).catch(() => undefined);
+        try {
+          await saveEditsSince({
+            sent,
+            now: () => ({ ...draftRef.current, name: title.current().trim() }),
+            fields: DRAFT_FIELDS,
+            save: async (edits) => {
+              const res = await api.patch<Company>(`/companies/${created.id}`, edits);
+              queryClient.setQueryData<Company>(createdKey, res.data);
+            },
+          });
+        } catch (e) {
+          setCreateError(getApiErrorMessage(e, t, t('companies.messages.saveFailed')));
+        }
         return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
       } catch (e) {
         const message = getApiErrorMessage(e, t, t('companies.messages.createFailed'));
@@ -537,7 +566,7 @@ export default function CompanyWorkspacePage() {
       >
         {data && tab === 'overview' && (
           // Keyed by company: drafts start afresh on the next record.
-          <Stack key={data.id} spacing={3} sx={{ maxWidth: 900 }}>
+          <Stack key={fromDraft || isCreate ? 'draft' : data.id} spacing={3} sx={{ maxWidth: 900 }}>
             <Box>
               <Typography sx={sectionLabelSx}>{t('companies.sections.address')}</Typography>
               <Box sx={twoColumnsSx}>{sections.address.map(renderTextRow)}</Box>

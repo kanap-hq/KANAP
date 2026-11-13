@@ -244,7 +244,7 @@ export class PortfolioProjectsService {
   bulkReplaceLinkedApplications(
     projectId: string,
     applicationIds: string[],
-    opts?: ServiceOpts,
+    opts?: ServiceOpts & { removable?: string[] },
   ) {
     return this.dependenciesService.bulkReplaceLinkedApplications(projectId, applicationIds, opts);
   }

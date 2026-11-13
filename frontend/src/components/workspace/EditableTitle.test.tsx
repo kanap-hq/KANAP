@@ -141,6 +141,49 @@ describe('EditableTitle', () => {
     expect(title).toHaveFocus();
   });
 
+  it('sends a name by Enter, and leaves the focus in the field the person went on to when the value arrives', () => {
+    const onSave = vi.fn();
+    const titleIn = (value: string) => (
+      <ThemeProvider theme={createAppTheme('light')}>
+        <EditableTitle value={value} fallback="New incident" canEdit autoEdit={!value} onSave={onSave} />
+        <input aria-label="next field" />
+      </ThemeProvider>
+    );
+    const { rerender } = render(titleIn(''));
+    const input = screen.getByRole('textbox', { name: LABEL });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSave).toHaveBeenCalledWith('Billing');
+    // The record is being created: the person clicks the next field, then types in it.
+    const next = screen.getByRole('textbox', { name: 'next field' });
+    next.focus();
+
+    rerender(titleIn('Billing'));
+    expect(screen.getByRole('button', { name: LABEL })).toHaveTextContent('Billing');
+    expect(next).toHaveFocus();
+  });
+
+  it('sends a name still to give on a blur, and leaves the focus where the person went when the value arrives', () => {
+    const onSave = vi.fn();
+    const titleIn = (value: string) => (
+      <ThemeProvider theme={createAppTheme('light')}>
+        <EditableTitle value={value} fallback="New incident" canEdit autoEdit={!value} onSave={onSave} />
+        <input aria-label="next field" />
+      </ThemeProvider>
+    );
+    const { rerender } = render(titleIn(''));
+    const input = screen.getByRole('textbox', { name: LABEL });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    const next = screen.getByRole('textbox', { name: 'next field' });
+    next.focus();
+    fireEvent.blur(input);
+    expect(onSave).toHaveBeenCalledWith('Billing');
+
+    rerender(titleIn('Billing'));
+    expect(screen.getByRole('button', { name: LABEL })).toHaveTextContent('Billing');
+    expect(next).toHaveFocus();
+  });
+
   it('commits on Tab and hands the focus on with onTab', () => {
     const onTab = vi.fn();
     const { onSave } = renderTitle({ onTab });

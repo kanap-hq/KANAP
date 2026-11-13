@@ -26,7 +26,11 @@ const mocked = api as unknown as { get: ReturnType<typeof vi.fn> };
 const CONTROLS = '[col-id="ag-Grid-ControlsColumn"]';
 const names = (container: HTMLElement) => Array.from(container.querySelectorAll('.ag-row [col-id="name"]')).map((cell) => cell.textContent).sort();
 
-function Grid({ selection, onSelectionChanged }: { selection?: boolean; onSelectionChanged?: (rows: any[]) => void }) {
+function Grid({ selection, onSelectionChanged, isRowSelectable }: {
+  selection?: boolean;
+  onSelectionChanged?: (rows: any[]) => void;
+  isRowSelectable?: (row: { id: string; name: string }) => boolean;
+}) {
   return (
     <MemoryRouter initialEntries={['/things']}>
       <ServerDataGrid<{ id: string; name: string }>
@@ -36,6 +40,7 @@ function Grid({ selection, onSelectionChanged }: { selection?: boolean; onSelect
         defaultSort={{ field: 'name', direction: 'ASC' }}
         enableRowSelection={selection}
         onSelectionChanged={onSelectionChanged}
+        isRowSelectable={isRowSelectable}
       />
     </MemoryRouter>
   );
@@ -79,5 +84,19 @@ describe('ServerDataGrid row selection', () => {
     const first = container.querySelector(`.ag-row ${CONTROLS} input`) as HTMLInputElement;
     await act(async () => { fireEvent.click(first); });
     await waitFor(() => expect(onSelectionChanged).toHaveBeenLastCalledWith([{ id: 'a', name: 'A' }]));
+  });
+
+  it('cannot check a row the list says is not selectable', async () => {
+    const onSelectionChanged = vi.fn();
+    const { container } = render(
+      <Grid selection onSelectionChanged={onSelectionChanged} isRowSelectable={(row) => row.id !== 'a'} />,
+    );
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1000)); });
+    expect(names(container)).toEqual(['A']);
+    const first = container.querySelector(`.ag-row ${CONTROLS} input`) as HTMLInputElement;
+    expect(first).toBeDisabled();
+    await act(async () => { fireEvent.click(first); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(onSelectionChanged).not.toHaveBeenCalledWith([{ id: 'a', name: 'A' }]);
   });
 });

@@ -23,6 +23,8 @@ import {
 // Pure, no database.
 
 const total = (days: string[]) => days.reduce((sum, value) => sum + Number(value), 0);
+// date-holidays 3.38.1 spells its English names with a typographic apostrophe: compare with a straight one.
+const plain = (name: string) => name.replace(/\u2019/g, "'");
 
 function testFrance2026() {
   const france = generateWorkingDays('FR', null, 2026, 'en');
@@ -32,7 +34,7 @@ function testFrance2026() {
   // Assumption and All Saints fall on a weekend: listed, flagged, not counted.
   const weekend = france.holidays.filter((holiday) => holiday.weekend).map((holiday) => holiday.date);
   assert.deepEqual(weekend, ['2026-08-15', '2026-11-01']);
-  assert.deepEqual(france.holidays[0], { date: '2026-01-01', name: "New Year's Day", weekend: false });
+  assert.deepEqual({ ...france.holidays[0], name: plain(france.holidays[0].name) }, { date: '2026-01-01', name: "New Year's Day", weekend: false });
   assert.ok(france.holidays.some((holiday) => holiday.date === '2026-04-06' && holiday.name === 'Easter Monday'));
   // Sorted by date.
   const dates = france.holidays.map((holiday) => holiday.date);
@@ -80,7 +82,7 @@ function testMultiDayHolidays() {
   );
   const eswatini2027 = generateWorkingDays('SZ', null, 2027, 'en');
   assert.deepEqual(
-    eswatini2027.holidays.filter((holiday) => holiday.date <= '2027-01-02').map((holiday) => [holiday.date, holiday.name]),
+    eswatini2027.holidays.filter((holiday) => holiday.date <= '2027-01-02').map((holiday) => [holiday.date, plain(holiday.name)]),
     [['2027-01-01', 'Incwala Festival'], ['2027-01-01', "New Year's Day"], ['2027-01-02', 'Incwala Festival']],
     'the days a holiday of the year before carries into this one; two holidays of one day are both listed',
   );
@@ -176,7 +178,7 @@ function testTimeZoneAndCache() {
   first.holidays[0].name = 'Changed';
   const again = generateWorkingDays('FR', null, 2026, 'en');
   assert.equal(again.days[0], '21');
-  assert.equal(again.holidays[0].name, "New Year's Day");
+  assert.equal(plain(again.holidays[0].name), "New Year's Day");
 
   assert.equal(holidayLanguage('FR-fr'), 'fr');
   assert.equal(holidayLanguage(undefined), 'en');

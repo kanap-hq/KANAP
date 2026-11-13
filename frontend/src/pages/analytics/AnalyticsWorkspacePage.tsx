@@ -4,7 +4,7 @@ import type { TFunction } from 'i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { KanapDialog, PropertyGroup, PropertyRow } from '../../components/design';
@@ -48,6 +48,8 @@ const NEW_VALUE: AnalyticsValueDetail = {
   id: '', axis_id: '', name: '', description: null, applies_to: null, sort_order: 0, status: 'enabled', disabled_at: null,
 };
 const LIST_CONTEXT_KEYS = ['sort', 'q', 'filters', 'scope'];
+/** The draft's fields that Create sends and a patch can change (the dimension is chosen at creation only). */
+const DRAFT_FIELDS = ['name', 'description', 'applies_to', 'status', 'disabled_at'] as const;
 
 /** A value of an analytics dimension, on the standard workspace shell with autosave. */
 export default function AnalyticsWorkspacePage() {
@@ -61,6 +63,9 @@ export default function AnalyticsWorkspacePage() {
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
+  // The value the draft has just created: its fields stay mounted, so that what is typed
+  // while it is written, and the field being typed in, are kept.
+  const fromDraft = useCreatedFromDraft('analytics_categories', id);
   const canEdit = hasLevel('analytics', 'member');
   const canDelete = hasLevel('analytics', 'admin');
 
@@ -87,6 +92,8 @@ export default function AnalyticsWorkspacePage() {
   // made under another dimension falls back to OPEX and CAPEX.
   const newAxis = newAxisId ? axes.byId.get(newAxisId) : undefined;
   const newAppliesTo = draft.applies_to && draft.applies_to === excludedLineType(newAxis) ? null : draft.applies_to;
+  const excludedRef = React.useRef<LineType | null>(null);
+  excludedRef.current = excludedLineType(newAxis);
   const data = isCreate ? { ...draft, axis_id: newAxisId ?? '', applies_to: newAppliesTo } : stored;
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
@@ -217,6 +224,15 @@ export default function AnalyticsWorkspacePage() {
     onCommit: () => creation.attempt(),
   });
   const dimensionMissing = axes.enabled.length > 0 && !newAxisId;
+  /** The draft as Create sends it: the trimmed name, no line type the dimension leaves out. */
+  const draftAsSent = (): AnalyticsValueDetail => {
+    const values = draftRef.current;
+    return {
+      ...values,
+      name: title.current().trim(),
+      applies_to: values.applies_to && values.applies_to === excludedRef.current ? null : values.applies_to,
+    };
+  };
   const creation = useDraftCreation({
     isCreate,
     family: 'analytics_categories',
@@ -227,20 +243,39 @@ export default function AnalyticsWorkspacePage() {
     queryKeyPrefixes: ['analytics'],
     ready: () => axes.ready && !!title.current().trim() && !dimensionMissing,
     post: async () => {
-      const { description, status, disabled_at } = draftRef.current;
+      const sent = draftAsSent();
+      const { name, description, applies_to, status, disabled_at } = sent;
       setPageError(null);
       try {
         const created = await createAnalyticsValue({
           ...(newAxisId ? { axis_id: newAxisId } : {}),
-          name: title.current().trim(),
+          name,
           description,
-          applies_to: newAppliesTo,
+          applies_to,
           status,
           disabled_at,
         });
         void queryClient.invalidateQueries({ queryKey: ['analytics-categories'] });
         void queryClient.invalidateQueries({ queryKey: ['analytics-ids'] });
         void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY });
+        // The page moves to the value with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the value was written): saved on the value.
+        const createdKey = ['analytics-categories', 'detail', created.id] as const;
+        await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => getAnalyticsValue(created.id) }).catch(() => undefined);
+        try {
+          await saveEditsSince({
+            sent,
+            now: draftAsSent,
+            fields: DRAFT_FIELDS,
+            save: async (edits) => {
+              const saved = await updateAnalyticsValue(created.id, edits);
+              queryClient.setQueryData(createdKey, (prev: AnalyticsValueDetail | undefined) => ({ ...prev, ...saved }));
+              afterWrite(created.id);
+            },
+          });
+        } catch (e) {
+          setPageError(getApiErrorMessage(e, t, t('analytics.messages.saveFailed')));
+        }
         return { id: created.id, token: created.creation_token, path: `${ANALYTICS_LIST_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}` };
       } catch (e) {
         const message = getApiErrorMessage(e, t, t('analytics.messages.createFailed'));
@@ -399,7 +434,7 @@ export default function AnalyticsWorkspacePage() {
               />
             </Typography>}
             <AnalyticsDescriptionField
-              key={data.id}
+              key={fromDraft || isCreate ? 'draft' : data.id}
               value={data.description ?? ''}
               disabled={disabled}
               error={errors.description}

@@ -1,4 +1,4 @@
-import { linkedReadsFromContext } from '../common/relations/linked-reads';
+import { linkedReadsFromContext, removableLinks } from '../common/relations/linked-reads';
 import { assertApplicationsInScope, idsInScope } from './portfolio-linked-reads';
 import { languageOf } from '../common/csv-sheet';
 import {
@@ -856,14 +856,14 @@ export class PortfolioRequestsController {
     }
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     const linked = await this.svc.listLinkedApplications(id, { manager: req?.queryRunner?.manager });
-    await assertApplicationsInScope(
-      req.queryRunner.manager,
-      [...linked.items.map((row) => row.id), ...(body?.application_ids ?? [])],
-      await resolveBusinessContributorScope(req, 'applications'),
-    );
+    const applicationScope = await resolveBusinessContributorScope(req, 'applications');
+    // Only the links to applications the person reads may leave; the answer counts the sent ones.
+    await assertApplicationsInScope(req.queryRunner.manager, body?.application_ids ?? [], applicationScope);
+    const removable = await removableLinks(req, 'applications', linked.items.map((row) => row.id));
     return this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], {
       manager: req?.queryRunner?.manager,
       userId: req.user?.sub ?? null,
+      removable,
     });
   }
 

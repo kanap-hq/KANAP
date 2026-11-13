@@ -27,6 +27,11 @@ type PreviewCardProps = {
   disabled?: boolean;
   onApprove: (previewId: string) => void;
   onReject: (previewId: string) => void;
+  /**
+   * The actions stay in view at the bottom of the scroller the card is in (the Artifacts panel): a
+   * long card, an import's mapping and check, keeps Approve, Reject and Download within reach.
+   */
+  stickyActions?: boolean;
 };
 
 function hasDisplayValue(value: string | null | undefined): boolean {
@@ -123,6 +128,7 @@ function PreviewCard({
   disabled,
   onApprove,
   onReject,
+  stickyActions,
 }: PreviewCardProps) {
   const { t, i18n } = useTranslation(['ai', 'common']);
   const mode = useTheme().palette.mode;
@@ -342,7 +348,25 @@ function PreviewCard({
         )}
 
         {(isPending || canDownload) && (
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            flexWrap="wrap"
+            sx={stickyActions ? (theme) => ({
+              position: 'sticky',
+              // A sticky box stops at the scroller's padding: the panel's bottom padding (1.5) is taken back,
+              // so the row reaches the bottom edge and nothing of the card shows under it.
+              bottom: theme.spacing(-1.5),
+              zIndex: 1,
+              // Across the card's inner width, on its own background, so the rows scrolling under it stay hidden.
+              mx: -1.75,
+              px: 1.75,
+              py: 1,
+              bgcolor: isPending ? theme.palette.kanap.bg.composer : theme.palette.kanap.bg.drawer,
+              borderTop: `1px solid ${theme.palette.kanap.border.soft}`,
+            }) : undefined}
+          >
             {isPending && (
               <>
                 <Button

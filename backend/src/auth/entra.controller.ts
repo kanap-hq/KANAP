@@ -1,7 +1,7 @@
-import { BadRequestException, Body, Controller, Get, Logger, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Logger, Optional, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { RequireLevel } from './require-level.decorator';
@@ -22,6 +22,15 @@ import { AuthEvent, AuthEventReason } from '../audit/security-events';
 import { NeverRejects } from '../common/never-rejects';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
+import { EmailService, maskEmailAddresses } from '../email/email.service';
+import { Features } from '../config/features';
+import { getPasswordResetExpirationMinutes, getPasswordResetTtl } from './password-reset.util';
+import {
+  consumeLinkConfirmation,
+  hasRecentLinkConfirmation,
+  lockAccountForLink,
+  storeLinkConfirmation,
+} from './entra-link-confirmation';
 
 /** The short code of a failed single sign-on, from the error; the provider's message is not kept. */
 export function ssoFailureReason(error: unknown): AuthEventReason {
@@ -32,6 +41,35 @@ export function ssoFailureReason(error: unknown): AuthEventReason {
   if (message.includes('Invalid Entra state')) return 'invalid_state';
   if (message.includes('Invalid Entra login session')) return 'invalid_token';
   return 'sso_failed';
+}
+
+/** Statuses of an account that may be linked to a Microsoft account and sign in with it. */
+const LINKABLE_STATUSES = new Set(['enabled', 'invited']);
+
+/**
+ * Whether a Microsoft sign-in whose account is not linked yet links the existing account that
+ * carries its address right away. Only an invited account that has no local password yet does:
+ * an administrator prepared it (an invitation to sign in with Microsoft, a password invitation not
+ * accepted yet, an import), and it has no other way in. Every other account waits for the
+ * confirmation e-mailed to its address. Decided from the account as locked at sign-in.
+ */
+export function linksWithoutConfirmation(account: { status: string; has_password: boolean }): boolean {
+  return account.status === 'invited' && !account.has_password;
+}
+
+/** The confirmation e-mail of a link request, sent once the sign-in transaction is committed. */
+type LinkConfirmationMail = Parameters<EmailService['sendEntraLinkConfirmationEmail']>[0];
+
+/**
+ * A link request recorded with the sign-in. `mail` is null when a confirmation sent a few minutes
+ * earlier is still pending: no new link, no new e-mail.
+ */
+type PendingLinkConfirmation = { email: string; userId: string; tenantId: string; token: string | null; mail: LinkConfirmationMail | null };
+
+/** A database error raised by a unique index. */
+function isUniqueViolation(error: unknown): boolean {
+  const failure = error as { code?: unknown; driverError?: { code?: unknown } } | null;
+  return failure?.code === '23505' || failure?.driverError?.code === '23505';
 }
 
 /** A query value as text, cut to `max` characters; null when it is not a single string. */
@@ -51,6 +89,8 @@ export class EntraController {
     private readonly notifications: NotificationsService,
     private readonly directorySync: EntraDirectorySyncService,
     private readonly securityEvents: SecurityEventsService,
+    // Absent where no module provides it: an existing account is then not linked (see requestLinkConfirmation).
+    @Optional() private readonly email?: EmailService,
   ) {}
 
   private readonly logger = new Logger(EntraController.name);
@@ -326,7 +366,8 @@ export class EntraController {
     if (!tenant) throw err;
 
     const message = String(err?.message || 'ENTRA_ERROR');
-    this.logger.warn(`Entra ${peek?.mode ?? 'callback'} failed for tenant ${tenant.slug}: ${message}`);
+    // Messages may quote an address (a transport, the directory): logged without it.
+    this.logger.warn(`Entra ${peek?.mode ?? 'callback'} failed for tenant ${tenant.slug}: ${maskEmailAddresses(message)}`);
     const base = resolveTenantAppBaseUrl(req, tenant.slug).replace(/\/$/, '');
 
     if (peek?.mode === 'setup') {
@@ -336,7 +377,7 @@ export class EntraController {
       return;
     }
     // End-user facing: a short code only, never provider internals.
-    const known = ['ENTRA_EMAIL_UNVERIFIED', 'ENTRA_TENANT_MISMATCH', 'SSO_NOT_CONFIGURED'];
+    const known = ['ENTRA_EMAIL_UNVERIFIED', 'ENTRA_TENANT_MISMATCH', 'SSO_NOT_CONFIGURED', 'ENTRA_ACCOUNT_LINKED', 'ENTRA_LINK_NEEDS_EMAIL'];
     const code = known.find((k) => message.includes(k)) ?? 'SSO_FAILED';
     res.redirect(`${base}/login?ssoError=${encodeURIComponent(code)}`);
   }
@@ -395,6 +436,172 @@ export class EntraController {
     }
 
     res.redirect(`${settingsUrl}?consent=${granted ? 'success' : 'error'}`);
+  }
+
+  /**
+   * A Microsoft sign-in found an existing account by its address: a link that confirms the link is
+   * stored and e-mailed to that address. A confirmation sent less than a few minutes ago stands:
+   * no new link, no new e-mail. Without an e-mail service, an existing account is not linked this
+   * way.
+   */
+  private async requestLinkConfirmation(
+    manager: EntityManager,
+    tenantId: string,
+    account: User,
+    claims: any,
+    req: any,
+    tenantSlug: string,
+  ): Promise<PendingLinkConfirmation> {
+    const oid = String(claims?.oid ?? '');
+    const tid = String(claims?.tid ?? '');
+    if (!LINKABLE_STATUSES.has(account.status)) {
+      throw new BadRequestException('Entra user is not allowed to sign in');
+    }
+    if (!Features.EMAIL_ENABLED || !this.email) {
+      throw new BadRequestException('ENTRA_LINK_NEEDS_EMAIL');
+    }
+    if (!tid) {
+      throw new BadRequestException('Entra tenant id (tid) is missing');
+    }
+    // Requests and confirmations of one account run one after the other.
+    const locked = await lockAccountForLink(manager, tenantId, account.id);
+    if (!locked || locked.external_auth_provider) {
+      throw new BadRequestException('ENTRA_ACCOUNT_LINKED');
+    }
+    const pending = { email: account.email, userId: account.id, tenantId };
+    if (await hasRecentLinkConfirmation(manager, tenantId, account.id)) {
+      return { ...pending, token: null, mail: null };
+    }
+    const { token, expiresAt } = this.entra.signLinkConfirmation(
+      {
+        tenantId,
+        userId: account.id,
+        email: account.email.trim().toLowerCase(),
+        oid,
+        tid,
+        name: claims?.name,
+        username: claims?.preferred_username,
+      },
+      getPasswordResetTtl(),
+    );
+    await storeLinkConfirmation(manager, { tenantId, userId: account.id, token, expiresAt });
+    const shown = this.entra.verifyLinkConfirmation(token);
+    const base = resolveTenantAppBaseUrl(req, tenantSlug).replace(/\/$/, '');
+    return {
+      ...pending,
+      token,
+      mail: {
+        to: account.email,
+        confirmUrl: `${base}/login/link-microsoft#${new URLSearchParams({ token }).toString()}`,
+        expiresInMinutes: getPasswordResetExpirationMinutes(),
+        microsoftAccount: { name: shown.name ?? null, username: shown.username ?? null },
+        requestedAt: new Date(),
+        firstName: account.first_name ?? null,
+        tenantId,
+        locale: account.locale ?? undefined,
+      },
+    };
+  }
+
+  /**
+   * Sends a link confirmation once the sign-in has answered. Never awaited by the route, never
+   * handed the request's entity manager, and never rejects: a failed send is logged without the
+   * link, its token or an address.
+   */
+  @NeverRejects()
+  private async deliverLinkConfirmation(link: PendingLinkConfirmation): Promise<void> {
+    if (!link.mail || !link.token || !this.email) return;
+    try {
+      await this.email.sendEntraLinkConfirmationEmail(link.mail);
+    } catch (error) {
+      let message = String((error as { message?: unknown } | null)?.message ?? error);
+      message = message.split(link.mail.confirmUrl).join('[link]').split(link.token).join('[token]');
+      this.logger.error(
+        `Microsoft link confirmation e-mail not sent (tenant ${link.tenantId}, user ${link.userId}): ${maskEmailAddresses(message)}`,
+      );
+    }
+  }
+
+  /**
+   * The owner of an account confirms, from the e-mailed link, its link to the Microsoft account
+   * that signed in. The link works once, until it expires, and only while it is the account's
+   * latest; the account must still carry the address it was sent to and have no link, and the
+   * Microsoft account must not be linked to another account. The local password stays.
+   */
+  @Post('link')
+  @HttpCode(200)
+  @UseGuards(RateLimitGuard)
+  @Throttle({ default: RATE_LIMITS.ssoSignIn })
+  async confirmLink(@Body() body: any, @Req() req: any) {
+    if (req?.isPlatformHost) {
+      throw new BadRequestException('Entra login is not available on the platform admin host');
+    }
+    const tenantId = req?.tenant?.id;
+    if (!tenantId) {
+      throw new BadRequestException('TENANT_REQUIRED');
+    }
+    const link = this.entra.verifyLinkConfirmation(body?.token);
+    if (link.tenantId !== tenantId) {
+      throw new BadRequestException('ENTRA_LINK_INVALID');
+    }
+    const tenant = await this.tenants.findById(tenantId);
+    if (!tenant || tenant.sso_provider !== 'entra' || tenant.entra_tenant_id !== link.tid) {
+      throw new BadRequestException('ENTRA_LINK_INVALID');
+    }
+
+    await withTenant(this.dataSource, tenantId, async (manager) => {
+      // Requests and confirmations of one account run one after the other.
+      const account = await lockAccountForLink(manager, tenantId, link.userId);
+      const userId = await consumeLinkConfirmation(manager, tenantId, body.token);
+      if (!account || !userId || userId !== link.userId) {
+        throw new BadRequestException('ENTRA_LINK_INVALID');
+      }
+      if (String(account.email).trim().toLowerCase() !== link.email || !LINKABLE_STATUSES.has(account.status)) {
+        throw new BadRequestException('ENTRA_LINK_INVALID');
+      }
+      const [taken] = await manager.query(
+        `SELECT 1 FROM users WHERE tenant_id = $1 AND external_auth_provider = 'entra' AND external_subject = $2 LIMIT 1`,
+        [tenantId, link.oid],
+      );
+      if (account.external_auth_provider || taken) {
+        throw new BadRequestException('ENTRA_ACCOUNT_LINKED');
+      }
+      // The two link columns only: the password and the rest of the account stay as they are. The
+      // same Microsoft account confirmed for another account at the same moment hits the unique
+      // index: the account stays unlinked.
+      let changed: Array<{ count: number }>;
+      try {
+        changed = await manager.query(
+          `WITH changed AS (
+             UPDATE users SET external_auth_provider = 'entra', external_subject = $3, updated_at = now()
+             WHERE tenant_id = $1 AND id = $2 AND external_auth_provider IS NULL
+             RETURNING 1
+           )
+           SELECT count(*)::int AS count FROM changed`,
+          [tenantId, userId, link.oid],
+        );
+      } catch (error) {
+        if (isUniqueViolation(error)) throw new BadRequestException('ENTRA_ACCOUNT_LINKED');
+        throw error;
+      }
+      if (changed[0]?.count !== 1) {
+        throw new BadRequestException('ENTRA_ACCOUNT_LINKED');
+      }
+      await this.audit.log(
+        {
+          table: 'users',
+          recordId: userId,
+          action: 'update',
+          before: { external_auth_provider: null, external_subject: null },
+          after: { external_auth_provider: 'entra', external_subject: link.oid, email: account.email },
+          userId,
+          source: 'system',
+          sourceRef: 'entra-link-confirmed',
+        },
+        { manager },
+      );
+    });
+    return { linked: true };
   }
 
   private async handleSetupCallback(
@@ -485,6 +692,8 @@ export class EntraController {
     const mobilePhone = (graphProfile?.mobilePhone as string | undefined) || null;
 
     let jitProvisioned = false;
+    // Set when the sign-in found an existing account that waits for its owner's confirmation.
+    const pending: { link?: PendingLinkConfirmation } = {};
     const userId = await withTenant(this.dataSource, tenantId, async (manager) => {
       const repo = manager.getRepository(User);
 
@@ -497,7 +706,7 @@ export class EntraController {
       });
 
       if (!found) {
-        found = await repo
+        const local = await repo
           .createQueryBuilder('u')
           .leftJoinAndSelect('u.role', 'role')
           .leftJoinAndSelect('u.company', 'company')
@@ -505,10 +714,29 @@ export class EntraController {
           .where('LOWER(u.email) = :email', { email })
           .getOne();
 
+        // An account linked to another Microsoft account keeps that link: only an administrator removes it.
+        if (local?.external_auth_provider) {
+          throw new BadRequestException('ENTRA_ACCOUNT_LINKED');
+        }
+        // Sign-ins and confirmations of one account run one after the other: the account is read
+        // again once locked, so two sign-ins at once never both link it.
+        const locked = local ? await lockAccountForLink(manager, tenantId, local.id) : null;
+        if (local && (!locked || locked.external_auth_provider)) {
+          throw new BadRequestException('ENTRA_ACCOUNT_LINKED');
+        }
+        if (local && locked && !linksWithoutConfirmation(locked)) {
+          // An existing account is linked only once its owner confirms from the link e-mailed to it.
+          pending.link = await this.requestLinkConfirmation(manager, tenantId, local, claims, req, tenantSlug);
+          return null;
+        }
+
+        found = local;
         if (found) {
+          // Saved once, below, with the profile. The account is read without its password and
+          // two-step secret: after a save TypeORM holds them as null, and a second save of the
+          // same object would write that null.
           found.external_auth_provider = 'entra' as any;
           found.external_subject = oid;
-          found = await repo.save(found);
           await this.audit.log(
             {
               table: 'users',
@@ -547,7 +775,8 @@ export class EntraController {
         }
         full.external_auth_provider = 'entra' as any;
         full.external_subject = oid;
-        found = await repo.save(full);
+        // Saved once, below, with the profile.
+        found = full;
         await this.audit.log(
           {
             table: 'users',
@@ -590,6 +819,15 @@ export class EntraController {
 
       return found.id;
     });
+
+    if (pending.link || !userId) {
+      // The confirmation e-mail goes out once the link request is committed, without holding the answer.
+      const link = pending.link as PendingLinkConfirmation;
+      void this.deliverLinkConfirmation(link);
+      const base = resolveTenantAppBaseUrl(req, tenantSlug).replace(/\/$/, '');
+      res.redirect(`${base}/login?ssoNotice=ENTRA_LINK_SENT#${new URLSearchParams({ to: link.email }).toString()}`);
+      return;
+    }
 
     if (jitProvisioned) {
       // Fire-and-forget: the login redirect must not wait on admin emails.

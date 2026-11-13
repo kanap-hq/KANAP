@@ -23,10 +23,11 @@ const header = vi.hoisted(() => ({ props: null as any }));
 vi.mock('../../components/PageHeader', () => ({ default: (props: any) => { header.props = props; return props.actions ?? null; } }));
 vi.mock('../../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../../components/csv/CsvImportDialog', () => ({ default: () => null }));
-const dialogs = vi.hoisted(() => ({ export: null as any, import: null as any, bulk: null as any }));
+const dialogs = vi.hoisted(() => ({ export: null as any, import: null as any, bulk: null as any, edit: null as any }));
 vi.mock('../../components/finance/BudgetFileExportDialog', () => ({ default: (props: any) => { dialogs.export = props; return null; } }));
 vi.mock('../../components/finance/BudgetFileImportDialog', () => ({ default: (props: any) => { dialogs.import = props; return null; } }));
 vi.mock('../../components/DeleteSelectedButton', () => ({ default: (props: any) => { dialogs.bulk = props; return null; } }));
+vi.mock('../../components/bulk-edit/BulkEditDialog', () => ({ default: (props: any) => { dialogs.edit = props; return null; } }));
 const grid = vi.fn();
 vi.mock('../../components/ServerDataGrid', async (importOriginal) => {
   const { useEffect } = await import('react');
@@ -84,10 +85,13 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const { useSyncExternalStore } = await import('react');
   const t = ((key: string) => key) as unknown as Parameters<typeof mod.buildAnalyticsAxes>[1];
   type Scope = 'opex' | 'capex' | null;
-  let cache: { list: unknown[]; ready: boolean; scope: Scope; value: ReturnType<typeof mod.buildAnalyticsAxes> } | null = null;
+  // One entry per scope: the list reads every nature, the change of the selection the Type filter's.
+  const caches = new Map<Scope, { list: unknown[]; ready: boolean; value: ReturnType<typeof mod.buildAnalyticsAxes> }>();
   const snapshot = (scope: Scope) => {
-    if (!cache || cache.list !== dimensions.list || cache.ready !== dimensions.ready || cache.scope !== scope) {
-      cache = { list: dimensions.list, ready: dimensions.ready, scope, value: mod.buildAnalyticsAxes(dimensions.list as never, t, dimensions.ready, false, undefined, scope) };
+    let cache = caches.get(scope);
+    if (!cache || cache.list !== dimensions.list || cache.ready !== dimensions.ready) {
+      cache = { list: dimensions.list, ready: dimensions.ready, value: mod.buildAnalyticsAxes(dimensions.list as never, t, dimensions.ready, false, undefined, scope) };
+      caches.set(scope, cache);
     }
     return cache.value;
   };
@@ -137,7 +141,8 @@ type GridProps = {
   queryKey: string;
   columnPreferencesKey: string;
   initialState?: { filter?: { filterModel?: any } };
-  onSelectionChanged: (rows: any[]) => void;
+  onListRequestChange: (request: { params: Record<string, unknown>; total: number }) => void;
+  onCellClicked?: (event: unknown) => void;
   onColumnStateChange: (state: Array<{ colId: string; hide?: boolean }>) => void;
 };
 const location = { search: '', pathname: '' };
@@ -156,6 +161,16 @@ const DEFAULT_DIMENSION = dimension('default', null, 0, { is_default: true });
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const lastProps = () => grid.mock.calls[grid.mock.calls.length - 1][0] as GridProps;
 const column = (id: string) => lastProps().columns.find((c) => (c.colId ?? c.field) === id);
+/** A click in a line's selection cell, as the grid reports it. */
+const tick = (row: Record<string, unknown>) => act(() => lastProps().onCellClicked!({
+  data: row, node: {}, column: { getColId: () => 'select' }, event: { target: document.createElement('div') },
+}));
+/** Space on the selection column's header: every line of the filter. */
+const tickHeader = () => act(() => {
+  (column('select') as any).suppressHeaderKeyboardEvent({ event: { key: ' ', type: 'keydown', preventDefault: () => {} } });
+});
+const listRequest = (params: Record<string, unknown>, total: number) => act(() => lastProps().onListRequestChange({ params, total }));
+const editButton = () => screen.queryByRole('button', { name: /^bulkEdit\.title/ });
 
 async function renderPage(path = '/ops/budget') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -176,7 +191,7 @@ describe('BudgetListPage', () => {
     vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key), clear: () => values.clear() });
     auth.level = 'admin';
     auth.limited = false;
-    dialogs.bulk = dialogs.import = dialogs.export = null;
+    dialogs.bulk = dialogs.import = dialogs.export = dialogs.edit = null;
     grid.mockReset();
     get.mockReset();
     window.sessionStorage.clear();
@@ -878,7 +893,7 @@ describe('BudgetListPage', () => {
   it('shows native BL references and a filterable Type column after the reference', async () => {
     await renderPage();
     expect(lastProps()).toMatchObject({ endpoint: '/budget-lines/summary', queryKey: 'budget-lines-summary', columnPreferencesKey: 'budget-summary' });
-    expect(lastProps().columns.slice(0, 3).map((c) => c.colId ?? c.field)).toEqual(['item_number', 'nature', 'product_name']);
+    expect(lastProps().columns.slice(1, 4).map((c) => c.colId ?? c.field)).toEqual(['item_number', 'nature', 'product_name']);
     expect(column('item_number')!.valueGetter!({ data: { item_number: 37 } })).toBe('BL-37');
     expect(column('nature')).toMatchObject({ headerName: 'budget.type', filter: CheckboxSetFilter });
     expect(column('description')).toMatchObject({ defaultHidden: true });
@@ -950,7 +965,8 @@ describe('BudgetListPage', () => {
 
   it('asks which selected lines a frozen column keeps before the delete confirmation', async () => {
     await renderPage();
-    act(() => lastProps().onSelectionChanged([{ id: 'line-1', product_name: 'Servers' }]));
+    tick({ id: 'line-1', product_name: 'Servers' });
+    expect(dialogs.bulk.selectedRows).toEqual([{ id: 'line-1', product_name: 'Servers' }]);
     const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
     post.mockResolvedValueOnce({ data: { refused: [{ id: 'line-1', name: 'Servers', code: 'BUDGET_LINE_FROZEN', usages: [] }] } });
     expect(await dialogs.bulk.checkDelete(['line-1'])).toEqual({ refused: [{ id: 'line-1', name: 'Servers', code: 'BUDGET_LINE_FROZEN', usages: [] }] });
@@ -966,7 +982,7 @@ describe('BudgetListPage', () => {
     expect(dialogs.export).toMatchObject({ open: true, scope: 'all', list: { filters: JSON.stringify({ nature: { filterType: 'set', values: ['capex'] } }) } });
     fireEvent.click(screen.getByRole('button', { name: 'opex.importCsv' }));
     expect(dialogs.import).toMatchObject({ open: true, scope: 'capex' });
-    act(() => lastProps().onSelectionChanged([{ id: 'capex-id', product_name: 'Servers' }]));
+    tick({ id: 'capex-id', product_name: 'Servers' });
     expect(dialogs.bulk).toMatchObject({ endpoint: '/budget-lines/bulk', selectedRows: [{ id: 'capex-id', product_name: 'Servers' }] });
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     const before = get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length;
@@ -976,7 +992,7 @@ describe('BudgetListPage', () => {
     expect(dialogs.import.scope).toBe('opex');
   });
 
-  it('a limited person: no bulk delete or selection, file actions kept', async () => {
+  it('a limited person: selection and change of the selection, no bulk delete, file actions kept', async () => {
     auth.limited = true;
     get.mockImplementation(async (url: string) => {
       if (url === '/users') return { data: { items: [] } };
@@ -985,7 +1001,9 @@ describe('BudgetListPage', () => {
     });
     await renderPage();
     expect(dialogs.bulk).toBeNull();
-    expect(lastProps().enableRowSelection).toBe(false);
+    expect(lastProps().enableRowSelection).toBeFalsy();
+    expect(lastProps().columns[0].colId).toBe('select');
+    expect(editButton()).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'opex.importCsv' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'common:export.button' })).toBeInTheDocument();
   });
@@ -993,7 +1011,7 @@ describe('BudgetListPage', () => {
   it('an unscoped administrator keeps bulk delete', async () => {
     await renderPage();
     expect(dialogs.bulk).not.toBeNull();
-    expect(lastProps().enableRowSelection).toBe(true);
+    expect(lastProps().columns[0].colId).toBe('select');
     expect(lastProps().footer).toBeUndefined();
   });
 
@@ -1004,10 +1022,69 @@ describe('BudgetListPage', () => {
     expect(screen.queryByRole('button', { name: 'opex.importCsv' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'common:export.button' })).toBeNull();
     expect(dialogs.bulk).toBeNull();
+    expect(editButton()).toBeNull();
+    expect(column('select')).toBeUndefined();
+    expect(dialogs.edit).toBeNull();
     auth.level = 'manager';
     act(() => lastProps().onQueryStateChange({ sort: '', filterModel: {}, q: 'refresh', statusScope: 'enabled' }));
     expect(screen.getByRole('button', { name: 'budget.newLine' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'common:export.button' })).toBeNull();
+  });
+
+  it('offers the change of the selection to a member, off until a line is chosen', async () => {
+    auth.level = 'member';
+    await renderPage();
+    expect(dialogs.bulk).toBeNull();
+    expect(column('select')).toBeDefined();
+    expect(editButton()).toHaveAccessibleName('bulkEdit.title (0)');
+    expect(editButton()).toBeDisabled();
+    tick({ id: 'line-1', product_name: 'Servers' });
+    expect(editButton()).toHaveAccessibleName('bulkEdit.title (1)');
+    expect(editButton()).toBeEnabled();
+    fireEvent.click(editButton()!);
+    expect(dialogs.edit).toMatchObject({ open: true, endpoint: '/budget-lines/bulk-update', selection: { ids: ['line-1'] } });
+    expect(dialogs.edit.fields.map((f: { key: string }) => f.key)).toEqual([
+      'cost_center_id', 'account_id', 'paying_company_id', 'supplier_id', 'owner_it_id', 'owner_business_id', 'analytics_values', 'run_build',
+    ]);
+  });
+
+  it('takes every line of the filter less the unticked ones; the delete then takes none', async () => {
+    await renderPage();
+    listRequest({ q: 'srv', filters: '{"nature":{"filterType":"set","values":["opex"]}}', status: 'enabled', sort: 'yBudget:DESC', shape: 'grid', fte: '' }, 118);
+    tick({ id: 'line-1', product_name: 'Servers' });
+    tickHeader();
+    expect(editButton()).toHaveAccessibleName('bulkEdit.title (118)');
+    expect(dialogs.bulk.selectedRows).toEqual([]);
+    tick({ id: 'line-2', product_name: 'Licences' });
+    expect(editButton()).toHaveAccessibleName('bulkEdit.title (117)');
+    expect(dialogs.edit.selection).toEqual({
+      all: true,
+      filters: { q: 'srv', filters: '{"nature":{"filterType":"set","values":["opex"]}}', status: 'enabled', shape: 'grid', fte: '' },
+      exclude_ids: ['line-2'],
+    });
+    // A sort or a column shown keeps the selection; a filter clears it.
+    listRequest({ q: 'srv', filters: '{"nature":{"filterType":"set","values":["opex"]}}', status: 'enabled', sort: 'product_name:ASC', shape: 'grid', fte: 'yBudget' }, 118);
+    expect(editButton()).toHaveAccessibleName('bulkEdit.title (117)');
+    listRequest({ q: 'srv', filters: '', status: 'enabled', sort: 'product_name:ASC', shape: 'grid', fte: 'yBudget' }, 133);
+    expect(editButton()).toHaveAccessibleName('bulkEdit.title (0)');
+    expect(dialogs.edit.selection).toEqual({ ids: [] });
+  });
+
+  it('after the change: the dialog stays on its outcome, the selection empties and the list and totals reload', async () => {
+    await renderPage();
+    tick({ id: 'line-1', product_name: 'Servers' });
+    fireEvent.click(editButton()!);
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    const before = get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length;
+    const refreshKey = (lastProps() as any).refreshKey;
+    act(() => dialogs.edit.onDone({ rows: 1, changed: 1, unchanged: 0, refused: {} }));
+    expect(dialogs.edit.open).toBe(true);
+    expect(editButton()).toHaveAccessibleName('bulkEdit.title (0)');
+    expect((lastProps() as any).refreshKey).toBe(refreshKey + 1);
+    await waitFor(() => expect(get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length).toBe(before + 1));
+    // Close, on the outcome, closes it.
+    act(() => dialogs.edit.onClose());
+    expect(dialogs.edit.open).toBe(false);
   });
 
   it('shows one Total row from one totals GET, with no nature filter added, when the list holds both types', async () => {

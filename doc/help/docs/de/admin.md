@@ -209,6 +209,8 @@ Zeilenaktionen über das Menü am Ende jeder Zeile:
 | **Datenzugriff** | Öffnet den Benutzer auf dem Reiter **Datenzugriff**. Sichtbar für Personen mit Zugriff auf alle Daten, in den Zeilen anderer Personen. |
 | **Löschen** | Entfernt den Benutzer dauerhaft. Die Datensätze, an denen er gearbeitet hat, bleiben ohne ihn erhalten. Ihr eigenes Konto können Sie nicht löschen. Um den Zugang einer Person zu sperren und das Konto zu behalten, deaktivieren Sie es stattdessen. |
 
+Ohne die Rolle Administrator ändern Sie keine Person, die mehr Rechte hat als Sie (einen Administrator oder eine Person mit einer höheren Stufe als Ihrer in einem Modul): Ihr Menü bietet **Anzeigen** und **Passwort-Zurücksetzung senden**, ihr Benutzerfenster öffnet sich schreibgeschützt und ihre Zeile lässt sich nicht auswählen. In den Rollen eines Benutzers ist eine Rolle über Ihren Rechten ausgegraut, außer die Person hat sie bereits.
+
 ### CSV-Datei der Benutzer
 
 **Exportieren** lädt die Benutzerliste als CSV-Datei oder Excel-Arbeitsmappe herunter. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
@@ -297,7 +299,7 @@ Wenn jemand aus Ihrem Verzeichnis entfernt wird oder sein Verzeichniskonto deakt
 
 ### Just-in-time-Anmeldung mit Microsoft
 
-Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal mit Microsoft anmeldet, automatisch ein Kadratis-Konto. Existiert bereits ein Konto mit derselben E-Mail-Adresse, wird stattdessen dieses mit ihrer Microsoft-Identität verknüpft, und ein Konto mit dem Status **Eingeladen** wird aktiviert.
+Wenn Single Sign-On verbunden ist, erhält eine Person, die sich zum ersten Mal mit Microsoft anmeldet, automatisch ein Kadratis-Konto. Existiert bereits ein Konto mit derselben E-Mail-Adresse, sendet Kadratis stattdessen einen Bestätigungslink an diese Adresse. Die E-Mail nennt das Microsoft-Konto, das ihn angefordert hat, und eine weitere Anmeldung innerhalb von 5 Minuten sendet keinen neuen Link. Das Konto wird mit der Microsoft-Identität verknüpft, sobald die Person über diesen Link bestätigt, innerhalb von 1 Stunde, und behält sein Passwort. Ein Konto mit dem Status **Eingeladen**, das noch kein Passwort hat, wird bei der ersten Anmeldung mit Microsoft ohne Bestätigungslink verknüpft und aktiviert. Ein anderes Konto mit dem Status **Eingeladen** wird bei der nächsten Anmeldung mit Microsoft aktiviert. Ein Konto, das bereits mit einer anderen Microsoft-Identität verknüpft ist, behält diese Verknüpfung. Ohne E-Mail-Dienst kann ein bestehendes Konto auf diese Weise nicht verknüpft werden.
 
 Ein neues Konto startet mit der Systemrolle **Kontakt** und ohne Berechtigungen. Die Person sieht eine Seite mit dem Hinweis:
 
@@ -444,7 +446,7 @@ Die Rollenseite hat ein zweispaltiges Layout:
 
 **Aktionen**:
 - **Neue Rolle**: Benutzerdefinierte Rolle von Grund auf erstellen. Eine neue oder umbenannte Rolle kann keinen Namen tragen, den die Seite für eine System- oder integrierte Rolle anzeigt, in einer ihrer Sprachen.
-- **Duplizieren**: Bestehende Rolle (einschließlich integrierter Rollen) als Ausgangspunkt kopieren. Nicht verfügbar für Systemrollen.
+- **Duplizieren**: Bestehende Rolle (einschließlich integrierter Rollen) als Ausgangspunkt kopieren. Das Fenster fragt nach dem Namen der Kopie. Nicht verfügbar für Systemrollen.
 - **Löschen**: Benutzerdefinierte Rolle entfernen. Eine Rolle, die Benutzern zugewiesen ist, kann nicht gelöscht werden: Weisen Sie ihnen zuerst eine andere Rolle zu. Das Fenster weist vor jeder Bestätigung darauf hin.
 - **Details speichern**: Rollenname und -beschreibung aktualisieren
 - **Berechtigungen speichern**: Berechtigungsänderungen anwenden
@@ -596,7 +598,7 @@ Verbinden Sie Kadratis mit Ihrem Microsoft Entra ID-Mandanten für SSO:
 
 ### Tägliche Verzeichnissynchronisierung
 
-Dieser Block erscheint unterhalb der Entra-Karte, sobald Single Sign-On verbunden ist. Jede Nacht um 03:00 Uhr Serverzeit aktualisiert Kadratis Namen, Titel, Telefonnummern, Abteilungen und Unternehmen aus Microsoft Entra, aktualisiert den Vorgesetzten der Personen, die Mitwirkende sind, und deaktiviert Konten, die im Verzeichnis entfernt oder deaktiviert wurden.
+Dieser Block erscheint unterhalb der Entra-Karte, sobald Single Sign-On verbunden ist. Jede Nacht um 03:00 Uhr Serverzeit aktualisiert Kadratis Namen, Titel, Telefonnummern, Abteilungen und Unternehmen aus Microsoft Entra, aktualisiert den Vorgesetzten der Personen, die Mitwirkende sind, und deaktiviert Konten, die im Verzeichnis entfernt oder deaktiviert wurden. Der letzte aktive Administrator des Arbeitsbereichs bleibt aktiv, auch wenn das Verzeichnis ihn entfernt oder deaktiviert hat: Sein Konto wird ein lokales Konto, und er erhält den Zugang über **Passwort vergessen** auf der Anmeldeseite zurück.
 
 Abteilungen und Unternehmen werden nach Namen mit bereits in Kadratis vorhandenen Datensätzen abgeglichen. Es wird nichts automatisch angelegt. Leere Werte im Verzeichnis löschen niemals das, was bereits in Kadratis gespeichert ist.
 
@@ -607,8 +609,10 @@ Die Synchronisierung erfordert eine einmalige Genehmigung durch einen Microsoft 
 | **Noch nicht autorisiert...** | Kein Microsoft Entra-Administrator hat die Synchronisierung genehmigt, oder die erforderliche Berechtigung fehlt in der App-Registrierung. |
 | **Zugriff in Microsoft Entra gewähren** | Führt Sie zur Genehmigungsseite von Microsoft. Wird angezeigt, solange die Synchronisierung nicht autorisiert ist. Sie kehren zurück mit **Zugriff gewährt. Die erste Synchronisierung läuft.** |
 | **Zuletzt synchronisiert {Datum}: N Konten aktualisiert, N deaktiviert.** | Ergebnis des letzten erfolgreichen Laufs. |
+| **Konto aktiv gelassen (letzter Administrator): {Name}** | Das Verzeichnis hat diese Person entfernt oder deaktiviert. Ihr Konto bleibt aktiv, weil sie der letzte aktive Administrator des Arbeitsbereichs ist, und wird ein lokales Konto: **Passwort vergessen** auf der Anmeldeseite sendet ihr einen Link, um ein Passwort festzulegen. Die folgenden Synchronisierungen lassen dieses Konto unverändert. |
 | **Die letzte Synchronisierung ist fehlgeschlagen: {Meldung}** | Der letzte Lauf wurde nicht abgeschlossen. Die Meldung stammt von Microsoft. |
 | **Jetzt synchronisieren** | Startet die Synchronisierung sofort, statt auf die kommende Nacht zu warten. Meldet **Synchronisierung abgeschlossen: N Konten aktualisiert, N deaktiviert.** |
+| **Eine Synchronisierung läuft bereits.** | Eine andere Synchronisierung des Arbeitsbereichs läuft (die nächtliche oder eine, die ein anderer Administrator gestartet hat). **Jetzt synchronisieren** tut nichts; versuchen Sie es erneut, sobald sie beendet ist. |
 
 Die Einrichtungsschritte für die Entra-App-Registrierung finden Sie unter [Microsoft Entra SSO](on-premise/sso-entra.md).
 

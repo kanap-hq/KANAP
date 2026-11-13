@@ -19,6 +19,8 @@ type Options = {
   focus: (key: string) => void;
   /** « Delete it » of a record being created: true once deleted (its own confirmation may keep it). */
   onDelete: () => Promise<boolean>;
+  /** A reload or a closed tab left with the record incomplete: sends its cancel (`useRecordCreation`). */
+  discardOnUnload: () => void;
 };
 
 type Asking = { labels: string[]; firstKey: string };
@@ -28,11 +30,13 @@ type Asking = { labels: string[]; firstKey: string };
  * a record being created asks « Complete it » (stay, focus the first missing field) or « Delete it »
  * (the page's Cancel); a record left incomplete earlier asks « Complete it » or « Leave anyway ».
  * `confirm()` resolves true when the move may go on. A question left unanswered (the page goes) stays.
+ * A reload or a closed tab with a record being created and incomplete asks the browser's own
+ * question and, if the person leaves, deletes the record as « Delete it » does.
  */
-export default function useIncompleteLeave({ keys, beingCreated, missing, focus, onDelete }: Options) {
+export default function useIncompleteLeave({ keys, beingCreated, missing, focus, onDelete, discardOnUnload }: Options) {
   const { t, i18n } = useTranslation(['common']);
-  const latest = React.useRef({ beingCreated, missing, focus, onDelete });
-  latest.current = { beingCreated, missing, focus, onDelete };
+  const latest = React.useRef({ beingCreated, missing, focus, onDelete, discardOnUnload });
+  latest.current = { beingCreated, missing, focus, onDelete, discardOnUnload };
   const [asking, setAsking] = React.useState<Asking | null>(null);
   const pending = React.useRef<((leave: boolean) => void) | null>(null);
   const settle = React.useCallback((leave: boolean) => {
@@ -45,6 +49,29 @@ export default function useIncompleteLeave({ keys, beingCreated, missing, focus,
     const resolve = pending.current;
     pending.current = null;
     resolve?.(false);
+  }, []);
+
+  // A reload or a closed tab leaves no time for the question above: while the record is being
+  // created and lacks a field, the browser asks, and a page that is really gone sends the cancel
+  // (the record does not stay without a field it needs). `persisted` is a page the browser keeps
+  // in memory (back-forward cache): it comes back as it was, nothing is sent.
+  React.useEffect(() => {
+    const incomplete = () => latest.current.beingCreated && latest.current.missing().length > 0;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!incomplete()) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    const onPageHide = (event: PageTransitionEvent) => {
+      if (event.persisted || !incomplete()) return;
+      latest.current.discardOnUnload();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    window.addEventListener('pagehide', onPageHide);
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      window.removeEventListener('pagehide', onPageHide);
+    };
   }, []);
 
   const confirm = React.useCallback((): Promise<boolean> => {

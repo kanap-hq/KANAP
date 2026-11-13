@@ -26,6 +26,7 @@ import {
 import InfoHint from '../workspace/InfoHint';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
+import { isNewSecretAddress } from '../../utils/secretAddress';
 
 type PrtgForm = {
   enabled: boolean;
@@ -153,7 +154,12 @@ export default function MonitoringIntegrationCard() {
 
   const status = derivePrtgStatus(prtg);
   const statusColor = getDotColor(status === 'connected' ? 'success' : 'default', theme.palette.mode);
-  const hasStoredKey = prtg?.credential.present ?? false;
+  const savedKey = prtg?.credential.present ?? false;
+  // The saved key only goes to the saved address: a new one empties it on save.
+  const addressChanged = !!prtg && isNewSecretAddress(form.base_url, prtg.base_url);
+  const keyEmptiedByAddress = addressChanged && savedKey;
+  const hasStoredKey = savedKey && !keyEmptiedByAddress;
+  const keyMissingForAddress = addressChanged && savedKey && !form.api_token.trim();
 
   return (
     <Card>
@@ -212,6 +218,7 @@ export default function MonitoringIntegrationCard() {
               label={t('aiAdmin.prtg.fields.apiKey')}
               type="password"
               autoComplete="new-password"
+              required={keyEmptiedByAddress}
               value={form.api_token}
               onChange={(event) => setForm((prev) => ({ ...prev, api_token: event.target.value }))}
               placeholder={
@@ -219,7 +226,7 @@ export default function MonitoringIntegrationCard() {
                   ? t('aiAdmin.prtg.placeholders.apiKeySaved')
                   : t('aiAdmin.prtg.placeholders.enterApiKey')
               }
-              helperText={t('aiAdmin.prtg.hints.apiKey')}
+              helperText={keyEmptiedByAddress ? t('integrations.secretAddressChanged') : t('aiAdmin.prtg.hints.apiKey')}
             />
 
             <Autocomplete<string, false, true, false>
@@ -279,14 +286,14 @@ export default function MonitoringIntegrationCard() {
               <Button
                 variant="contained"
                 onClick={() => saveMutation.mutate(form)}
-                disabled={saveMutation.isPending}
+                disabled={saveMutation.isPending || (keyEmptiedByAddress && !form.api_token.trim() && form.enabled)}
               >
                 {saveMutation.isPending ? t('common:status.saving') : t('aiAdmin.actions.saveSettings')}
               </Button>
               <Button
                 variant="outlined"
                 onClick={() => testMutation.mutate(form)}
-                disabled={testMutation.isPending}
+                disabled={testMutation.isPending || keyMissingForAddress}
               >
                 {testMutation.isPending ? t('aiAdmin.actions.testing') : t('aiAdmin.actions.testConnection')}
               </Button>

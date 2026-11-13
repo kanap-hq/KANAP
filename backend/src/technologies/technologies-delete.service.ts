@@ -5,6 +5,7 @@ import { checkIds, refusalDetails, type DeleteRefusal, type UsageCount } from '.
 import { assertNoHiddenLinks, hiddenLinksRefusals } from '../data-access/hidden-links';
 import { withSavepoint } from '../common/savepoint.util';
 import { StorageService } from '../common/storage/storage.service';
+import { unreferencedPaths } from '../common/storage-path-refs';
 import { readTechnology } from './technology-rows';
 
 type DeleteOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
@@ -75,9 +76,11 @@ export class TechnologiesDeleteService {
     );
     await mg.query(`DELETE FROM technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, tech.id]);
     await this.audit.log({ table: 'technologies', recordId: tech.id, action: 'delete', before: tech, after: null, userId: opts.userId ?? null }, { manager: mg });
-    for (const attachment of attachments) {
+    // A file another row still names stays.
+    const paths = await unreferencedPaths(mg, tenantId, [...new Set(attachments.map((a) => a.storage_path).filter(Boolean))]);
+    for (const storagePath of paths) {
       try {
-        await this.storage.deleteObject(attachment.storage_path);
+        await this.storage.deleteObject(storagePath);
       } catch (err: any) {
         this.logger.warn(`Failed to delete attachment storage object: ${err?.message || 'Unknown error'}`);
       }

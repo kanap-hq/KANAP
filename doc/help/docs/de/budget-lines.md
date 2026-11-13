@@ -20,7 +20,7 @@ Solange die Zeile erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrec
 - **Erstellen** prüft die unten genannten Pflichtfelder. Fehlt eines, nennt eine Meldung die fehlenden Felder, sie werden im Bereich **Eigenschaften** markiert, und der Cursor springt in das erste. Andernfalls schließt sich die Zeile, und Sie kehren dorthin zurück, wo Sie begonnen haben: zum vorherigen Bildschirm, sonst zur Liste
 - **Abbrechen** löscht die Zeile und alles, was darin erfasst wurde, Beträge eingeschlossen. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Zeilen abbrechen. Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht abgebrochen werden
 
-Verlassen Sie die Zeile auf andere Weise, während ein Pflichtfeld fehlt, fragt Kadratis, ob Sie sie vervollständigen oder löschen möchten. Eine Zeile, die ohne zahlendes Unternehmen verlassen wurde, zeigt eine Warnung mit den fehlenden Feldern und fragt bei jedem Verlassen erneut. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+Verlassen Sie die Zeile auf andere Weise, während ein Pflichtfeld fehlt, fragt Kadratis, ob Sie sie vervollständigen oder löschen möchten. Wenn Sie die Seite neu laden oder den Tab schließen, solange der neuen Zeile noch ein Pflichtfeld fehlt, bittet Ihr Browser um Bestätigung, und die Zeile wird gelöscht, wenn Sie die Seite trotzdem verlassen. Eine Zeile, die ohne zahlendes Unternehmen verlassen wurde, zeigt eine Warnung mit den fehlenden Feldern und fragt bei jedem Verlassen erneut. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
 **Pflichtfelder**:
 
@@ -185,7 +185,8 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - **Neue Zeile**: Eine Zeile erstellen (erfordert `budget:member`)
 - **Importieren**: Zeilen aus einer Budgetdatei in großer Zahl laden (erfordert `budget:admin`)
 - **Exportieren**: Die Zeilen in eine Budgetdatei exportieren (erfordert `budget:admin`)
-- **Auswahl löschen**: Massenlöschung ausgewählter Zeilen (erfordert `budget:admin`; Zeilen über Kontrollkästchen auswählen). Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden. Vor dem Löschen nennt die Bestätigung die behaltenen Zeilen mit der eingefrorenen Spalte. Die anderen werden gelöscht. Dieselbe Löschung gibt es auf der Zeile: **Löschen** (Papierkorbsymbol) in ihrer Kopfzeile, für eine Person mit `budget:admin`, deren Zugriff alle Daten umfasst. Die Prüfung ist dieselbe. Eine Zeile mit Beträgen in einer eingefrorenen Spalte zeigt die Ablehnung und ihren Grund. Wenn die Zeile gelöscht werden kann, bestätigen Sie, die Zeile wird gelöscht und die Liste öffnet sich wieder
+- **Auswahl ändern**: Ein Feld auf allen ausgewählten Zeilen auf einmal ändern (erfordert `budget:member`). Siehe [Zeilen in großer Zahl ändern](#zeilen-in-groer-zahl-andern)
+- **Auswahl löschen**: Massenlöschung ausgewählter Zeilen (erfordert `budget:admin`). Sie löscht nur die einzeln angehakten Zeilen und ist nicht verfügbar, solange das Kästchen in der Kopfzeile den ganzen Filter erfasst. Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden. Vor dem Löschen nennt die Bestätigung die behaltenen Zeilen mit der eingefrorenen Spalte. Die anderen werden gelöscht. Dieselbe Löschung gibt es auf der Zeile: **Löschen** (Papierkorbsymbol) in ihrer Kopfzeile, für eine Person mit `budget:admin`, deren Zugriff alle Daten umfasst. Die Prüfung ist dieselbe. Eine Zeile mit Beträgen in einer eingefrorenen Spalte zeigt die Ablehnung und ihren Grund. Wenn die Zeile gelöscht werden kann, bestätigen Sie, die Zeile wird gelöscht und die Liste öffnet sich wieder
 
 **Zurück/Weiter-Navigation**:
 
@@ -195,6 +196,29 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - Ihr Listenkontext (Sortierung, Filter, Suche) bleibt erhalten, wenn Sie den Arbeitsbereich schließen
 
 **Tipp**: Verwenden Sie Spaltenfilter und Schnellsuche, um fokussierte Ansichten zu erstellen (z. B. „Alle Cloud-Ausgaben über 10k“, oder **CAPEX** in **Typ** mit **High** in **Priority**), und navigieren Sie dann mit **Zurück**/**Weiter** von Zeile zu Zeile, um Budgets zu überprüfen.
+
+### Zeilen in großer Zahl ändern
+
+**Zeilen auswählen**: Mit dem Recht, Zeilen zu bearbeiten, zeigt die Liste am Anfang jeder Zeile ein Kästchen. Haken Sie Zeilen einzeln an, oder haken Sie das Kästchen in der Spaltenkopfzeile an, um alle Zeilen des aktuellen Filters und der Suche zu erfassen, auch die noch nicht geladenen. Entfernen Sie den Haken einer Zeile, um sie auszulassen. Eine Änderung der Filter oder der Suche leert die Auswahl. Die Sortierung behält sie bei.
+
+**Ein Feld ändern**:
+
+1. Wählen Sie die Zeilen aus und klicken Sie auf **Auswahl ändern** (Bearbeitungssymbol). Das Symbol zeigt die Anzahl der ausgewählten Zeilen
+2. Wählen Sie das **Feld**: **Kostenstelle**, **Konto**, **Zahlendes Unternehmen**, **Lieferant**, **IT-Verantwortlicher**, **Fachverantwortlicher**, **Dimensionswert** oder **Run oder Build**. Für ein Konto wählen Sie zuerst das Unternehmen unter **Kontenplan von**, dann das Konto. Für einen Dimensionswert wählen Sie zuerst die **Dimension**, dann den Wert
+3. Wählen Sie den **Neuen Wert**. Der Dialog zählt die Zeilen: wie viele geändert werden, wie viele diesen Wert bereits haben und wie viele abgelehnt werden, jeweils mit dem Grund (zum Beispiel „Für Sie nur lesbar“ oder „Konto nicht für diese Zeilenart vorgesehen“). Bei jedem neuen Wert wird erneut gezählt
+4. Klicken Sie zur Bestätigung auf **12 Zeilen ändern** (mit Ihrer Zählung). Die abgelehnten Zeilen bleiben unverändert, die anderen werden geändert. Das Fenster zeigt danach das Ergebnis: die geänderten Zeilen, die Zeilen, die den Wert bereits hatten, und die abgelehnten Zeilen mit ihren Gründen. Klicken Sie auf **Schließen**, um es zu schließen. Die Liste dahinter ist bereits aktuell
+
+**Ein Feld leeren**: Bei einem optionalen Feld klicken Sie neben dem Wert auf **Feld leeren** (Radiergummi-Symbol). Der Wert zeigt **Leer**, und das Feld wird auf jeder ausgewählten Zeile geleert. **Konto** und **Zahlendes Unternehmen** lassen sich nicht leeren, ebenso wenig eine Pflichtdimension.
+
+**Gut zu wissen**:
+
+- Wenn der Filter **Typ** einen einzigen Typ behält, werden die Konten und Dimensionswerte dieses Typs angeboten. Mit beiden Typen werden die Zeilen, zu denen ein Wert nicht passt, mit dem Grund abgelehnt
+- Eine Änderung umfasst höchstens 5.000 Zeilen. Darüber grenzen Sie die Filter ein oder wählen weniger Zeilen aus
+- Eine große Auswahl kann bis zu einer Minute zum Zählen brauchen, und ebenso lange zum Speichern
+- Ändert sich die Liste zwischen der Zählung und Ihrer Bestätigung, zeigt der Dialog die neue Zählung. Prüfen Sie sie und bestätigen Sie erneut
+- Beträge lassen sich so nicht ändern. Ändern Sie sie auf der Zeile oder in der [Budgetdatei](budget-file.md)
+- Jede geänderte Zeile erhält einen eigenen Eintrag in ihrem Tab **Verlauf**
+- Mit begrenztem Datenzugriff ändern Sie die Zeilen Ihres Zugriffs. Eine Änderung, durch die eine Zeile Ihren Zugriff verlassen würde, wird für diese Zeile abgelehnt
 
 ---
 
@@ -724,12 +748,12 @@ Eine Budgetdatei ändert den Typ einer Zeile nie. Siehe [Ein Budget aus einer Ta
 Der Zugriff auf Budgetzeilen wird durch die Ressource Budget gesteuert, die für OPEX- und CAPEX-Zeilen gleichermaßen gilt. Sie hat drei Stufen:
 
 - `budget:reader`: Liste anzeigen, Zeilen öffnen, Budgets und Zuordnungen einsehen (schreibgeschützt), Anhänge herunterladen
-- `budget:member`: Zeilen erstellen und bearbeiten, ihren Typ ändern, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten
+- `budget:member`: Zeilen erstellen und bearbeiten, ihren Typ ändern, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten, Zeilen in großer Zahl ändern
 - `budget:admin`: Alle Mitglied-Rechte plus Import und Export, Budget-Operationen (Budgetspalten kopieren, mit Beträgen und Zuordnungen, und Budgetspalte zurücksetzen) und das Löschen von Zeilen aus der Liste oder von der Zeile
 
 Das Einfrieren von Budgetspalten erfordert die Budgetadministration (`budget_ops:admin`).
 
-Der Datenzugriff kann eine Person auf die Zeilen bestimmter Unternehmen oder Kostenstellen begrenzen. Sie sieht dann diese Zeilen und die, auf denen sie benannt ist, eine mit Lesen sichtbare Zeile zeigt „Schreibgeschützt in Ihrem Zugriff“, und das Löschen von Zeilen sowie Massenvorgänge sind Personen mit Zugriff auf alle Daten vorbehalten. Siehe [Datenzugriff](data-access.md).
+Der Datenzugriff kann eine Person auf die Zeilen bestimmter Unternehmen oder Kostenstellen begrenzen. Sie sieht dann diese Zeilen und die, auf denen sie benannt ist, eine mit Lesen sichtbare Zeile zeigt „Schreibgeschützt in Ihrem Zugriff“, und das Löschen von Zeilen sowie die Budget-Operationen sind Personen mit Zugriff auf alle Daten vorbehalten. Zeilen in großer Zahl ändern kann sie auf den Zeilen ihres Zugriffs. Siehe [Datenzugriff](data-access.md).
 
 Zusätzlich:
 

@@ -209,6 +209,8 @@ Row actions, from the menu at the end of each row:
 | **Data access** | Open the user on the **Data access** tab. Shown to people with access to all data, on other people's rows. |
 | **Delete** | Remove the user permanently. The records the user worked on stay, without the user. You cannot delete your own account. To block a person's access and keep the account, disable it instead. |
 
+Without the Administrator role, you change no person who has more rights than you (an Administrator, or a module level above yours): their menu offers **View** and **Send password reset**, their user window opens read-only, and their row cannot be selected. In the roles of a user, a role above your own rights is greyed out unless the person already holds it.
+
 ### Users CSV
 
 **Export** downloads the user list as a CSV file or an Excel workbook. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
@@ -297,7 +299,7 @@ If someone is removed from your directory, or their directory account is deactiv
 
 ### Just-in-time sign-in with Microsoft
 
-When single sign-on is connected, a person who signs in with Microsoft for the first time gets a Kadratis account automatically. If an account with the same email address already exists, it is linked to their Microsoft identity instead, and an **Invited** account is enabled.
+When single sign-on is connected, a person who signs in with Microsoft for the first time gets a Kadratis account automatically. If an account with the same email address already exists, Kadratis e-mails a confirmation link to that address instead. The e-mail names the Microsoft account that asked for it, and another sign-in within 5 minutes sends no new link. The account is linked to the Microsoft identity once the person confirms from that link, within 1 hour, and keeps its password. An **Invited** account that has no password yet is linked at its first Microsoft sign-in without a confirmation link, and enabled. Another **Invited** account is enabled at its next Microsoft sign-in. An account already linked to another Microsoft identity keeps that link. Without an email service, an existing account cannot be linked this way.
 
 A new account starts with the **Contact** system role and no permissions. The person sees a page saying:
 
@@ -444,7 +446,7 @@ The Roles page has a two-panel layout:
 
 **Actions**:
 - **New Role**: Create a custom role from scratch. A new or renamed role cannot take a name the page shows for a system or built-in role, in any of its languages.
-- **Duplicate**: Copy an existing role (including built-in roles) as a starting point. Not available for System roles.
+- **Duplicate**: Copy an existing role (including built-in roles) as a starting point. The window asks for the name of the copy. Not available for System roles.
 - **Delete**: Remove a custom role. A role given to users cannot be deleted: give them another role first. The window says so before any confirmation.
 - **Save Details**: Update the role name and description
 - **Save Permissions**: Apply permission changes
@@ -596,7 +598,7 @@ Connect Kadratis to your Microsoft Entra ID tenant for SSO:
 
 ### Daily directory sync
 
-This block appears below the Entra card once single sign-on is connected. Every night at 03:00 server time, Kadratis refreshes names, titles, phones, departments and companies from Microsoft Entra, refreshes the manager of the people who are contributors, and disables accounts that were removed or deactivated in the directory.
+This block appears below the Entra card once single sign-on is connected. Every night at 03:00 server time, Kadratis refreshes names, titles, phones, departments and companies from Microsoft Entra, refreshes the manager of the people who are contributors, and disables accounts that were removed or deactivated in the directory. The workspace's last active administrator stays active, even when the directory removed or deactivated them: their account becomes a local account, and they get access back with **Forgot password** on the sign-in page.
 
 Departments and companies are matched by name against records that already exist in Kadratis. Nothing is created automatically. Empty values in the directory never clear what is already stored in Kadratis.
 
@@ -607,8 +609,10 @@ The sync needs a one-time approval by a Microsoft Entra administrator. Until it 
 | **Not authorized yet...** | No Microsoft Entra administrator has approved the sync, or the required permission is missing from the app registration. |
 | **Grant access in Microsoft Entra** | Sends you to Microsoft's approval page. Shown while the sync is not authorized. You return with **Access granted. The first sync is running.** |
 | **Last synced {date}: N accounts refreshed, N disabled.** | Result of the last successful run. |
+| **Account kept active (last administrator): {name}** | The directory removed or deactivated this person. Their account stays active because they are the workspace's last active administrator, and becomes a local account: **Forgot password** on the sign-in page sends them a link to set a password. The next syncs leave this account alone. |
 | **The last sync failed: {message}** | The last run did not complete. The message comes from Microsoft. |
 | **Sync now** | Runs the sync immediately instead of waiting for tonight. Reports **Sync complete: N accounts refreshed, N disabled.** |
+| **A sync is already running.** | Another sync of the workspace is in progress (the nightly one, or one started by another administrator). **Sync now** does nothing; try again once it has finished. |
 
 Setup steps for the Entra app registration are in [Microsoft Entra SSO](on-premise/sso-entra.md).
 

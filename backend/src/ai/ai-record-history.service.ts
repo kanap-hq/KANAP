@@ -257,7 +257,7 @@ export class AiRecordHistoryService {
       throw error;
     }
 
-    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId);
+    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
     const items = page.items.map((item): AiRecordHistoryEntryDto => ({
       at: item.at,
       action: item.action,

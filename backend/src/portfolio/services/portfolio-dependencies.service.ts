@@ -10,6 +10,7 @@ import { PortfolioProjectUrl } from '../portfolio-project-url.entity';
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { AuditService } from '../../audit/audit.service';
 import { singleChangedId } from '../../audit/audit-parent-rules';
+import { replacedLinks } from '../../common/relations/linked-reads';
 
 /**
  * Service for managing project dependencies and source request links.
@@ -323,12 +324,12 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
   async bulkReplaceLinkedApplications(
     projectId: string,
     applicationIds: string[],
-    opts?: ServiceOpts,
+    opts?: ServiceOpts & { removable?: string[] },
   ) {
     const mg = this.getManager(opts);
     const actorId = this.requireActivityAuthor(opts?.userId);
     const project = await this.ensureProject(projectId, mg);
-    const unique = Array.from(new Set((applicationIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+    const unique = Array.from(new Set((applicationIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean)));
 
     if (unique.length > 0) {
       const rows = await mg.query<Array<{ id: string }>>(
@@ -352,28 +353,35 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
     );
     const beforeIds = Array.from(new Set(existing.map((row) => row.application_id)));
 
-    await mg.query(
-      `DELETE FROM application_projects
-       WHERE project_id = $1
-         AND tenant_id = $2`,
-      [projectId, project.tenant_id],
-    );
-
-    if (unique.length > 0) {
+    // Only the stored links the person may remove leave (`removable`); the others stay untouched.
+    const { removed, added, after } = replacedLinks(beforeIds, unique, opts?.removable);
+    if (removed.length > 0) {
       await mg.query(
-        `INSERT INTO application_projects (tenant_id, application_id, project_id)
-         SELECT $1, application_id, $2
-         FROM unnest($3::uuid[]) AS application_id`,
-        [project.tenant_id, projectId, unique],
+        `DELETE FROM application_projects
+         WHERE project_id = $1
+           AND tenant_id = $2
+           AND application_id = ANY($3::uuid[])`,
+        [projectId, project.tenant_id, removed],
       );
     }
 
-    const beforeSorted = [...beforeIds].sort();
-    const afterSorted = [...unique].sort();
+    if (added.length > 0) {
+      await mg.query(
+        `INSERT INTO application_projects (tenant_id, application_id, project_id)
+         SELECT $1, application_id, $2
+         FROM unnest($3::uuid[]) AS application_id
+         ON CONFLICT DO NOTHING`,
+        [project.tenant_id, projectId, added],
+      );
+    }
+
+    const beforeSorted = beforeIds.map((id) => id.toLowerCase()).sort();
+    const afterSorted = [...after].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      // One after the other: the request's single connection runs its queries in turn anyway.
-      const beforeLabels = await this.resolveApplicationLabelsByIds(mg, beforeSorted);
-      const afterLabels = await this.resolveApplicationLabelsByIds(mg, afterSorted);
+      // One after the other: the request's single connection runs its queries in turn anyway. The
+      // activity names the applications the author reads (`removable` and the sent list) only.
+      const beforeLabels = await this.resolveApplicationLabelsByIds(mg, opts?.removable ? [...opts.removable].sort() : beforeSorted);
+      const afterLabels = await this.resolveApplicationLabelsByIds(mg, opts?.removable ? [...unique].sort() : afterSorted);
       await this.logActivity(mg, {
         project_id: projectId,
         tenant_id: project.tenant_id,

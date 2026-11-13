@@ -207,6 +207,7 @@ Utilisez l'onglet **Historique** quand vous avez besoin de savoir ce qui a chang
 L'onglet **Tâches** est la file d'exécution du projet. Le badge de l'onglet affiche le nombre de tâches du projet.
 
 - les tâches créées ici sont liées automatiquement au projet
+- **Ajouter une tâche** est proposé aux personnes qui créent des tâches (`tasks:member`) et contribuent au projet (`portfolio_projects:contributor`). Un Contributeur métier ne contribue qu'aux projets auxquels il participe.
 - les tâches peuvent également être créées depuis une phase du planning, ce qui les lie à la fois au projet et à la phase sélectionnée
 - l'onglet prend en charge le filtrage par statut et par phase
 - la vue par défaut des tâches se concentre sur le travail actif en masquant les éléments terminés et annulés
@@ -401,6 +402,7 @@ Les imports sont conçus pour des changements en masse contrôlés :
 - téléchargez d'abord un modèle quand vous avez besoin de la structure correcte, ou un exemple pour voir des projets d'exemple et les valeurs que chaque colonne accepte ([Fichiers d'exemple](csv-files.md#example-files))
 - validez avant d'importer
 - utilisez les options avancées pour choisir le comportement enrichissement vs remplacement et les règles d'insertion/mise à jour
+- une nouvelle ligne sans origine est enregistrée comme Historique. Une nouvelle ligne dont l'origine est `standard` est refusée : l'origine Demande vient de la conversion d'une demande. Un projet qui a déjà cette origine la conserve lorsque le fichier met la ligne à jour
 
 L'import en masse est utile pour la maintenance à grande échelle du portefeuille, mais ce n'est pas un raccourci pour contourner la gouvernance projet. La planification des phases, les tâches, les connaissances et le contrôle continu de la livraison restent dans l'espace de travail.
 

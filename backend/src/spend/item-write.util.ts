@@ -149,6 +149,9 @@ export function parseRunBuild(value: unknown): RunBuild | null | undefined {
   return (RUN_BUILD_VALUES as readonly string[]).includes(text) ? (text as RunBuild) : undefined;
 }
 
+/** The refusal of an account outside the chart of accounts of the line's paying company. */
+export const ACCOUNT_CHART_REFUSAL = 'Selected account does not belong to the paying company\'s Chart of Accounts';
+
 /** The refusal of an account kept for the other type of line. */
 export function accountNatureRefusal(scope: ItemWriteScope): string {
   return scope === 'opex'
@@ -326,7 +329,7 @@ export async function resolveItemWrite(
     const account = found.get(`accounts:${accountId}`);
     const company = found.get(`companies:${companyId}`);
     if (account?.coa_id && company?.coa_id && account.coa_id !== company.coa_id) {
-      throw new BadRequestException('Selected account does not belong to the paying company\'s Chart of Accounts');
+      throw new BadRequestException(ACCOUNT_CHART_REFUSAL);
     }
   }
   if (checkNature) {

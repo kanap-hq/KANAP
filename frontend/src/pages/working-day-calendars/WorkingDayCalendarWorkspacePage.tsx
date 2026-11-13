@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useKanapDialogs } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
-import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import {
   WORKING_DAY_PROFILES_QUERY_KEY,
   useCalendarCountries,
@@ -63,6 +63,22 @@ function mergeDraftDays(days: CalendarDays, patch: Record<string, string[] | nul
   return next;
 }
 
+/**
+ * The draft's fields that Create sends and a patch can change. The country and region are set at
+ * creation only, and a standard calendar's days come from the server.
+ */
+const DRAFT_FIELDS = ['code', 'name', 'description', 'status', 'disabled_at', 'days_by_year'] as const;
+
+/** The years of `now` that differ from `sent`, a year no longer there as `null`: what a patch sends. */
+function yearsChanged(sent: CalendarDays, now: CalendarDays): Record<string, string[] | null> {
+  const years: Record<string, string[] | null> = {};
+  for (const [year, values] of Object.entries(now)) {
+    if (values.join() !== sent[year]?.join()) years[year] = values;
+  }
+  for (const year of Object.keys(sent)) if (!(year in now)) years[year] = null;
+  return years;
+}
+
 export default function WorkingDayCalendarWorkspacePage() {
   const { t } = useTranslation(['master-data', 'common']);
   const dialogs = useKanapDialogs();
@@ -75,6 +91,9 @@ export default function WorkingDayCalendarWorkspacePage() {
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
+  // The calendar the draft has just created: its fields stay mounted, so that what is typed
+  // while it is written, and the field being typed in, are kept.
+  const fromDraft = useCreatedFromDraft('working_day_profiles', id);
   const canEdit = hasLevel('working_day_profiles', 'member');
   const canDelete = hasLevel('working_day_profiles', 'admin');
 
@@ -256,12 +275,12 @@ export default function WorkingDayCalendarWorkspacePage() {
     queryKeyPrefixes: ['working-day-profiles'],
     ready: () => !!title.current().trim() && !!draftRef.current.code,
     post: async () => {
-      const form = draftRef.current;
+      const form = { ...draftRef.current, name: title.current().trim() };
       setPageError(null);
       try {
         const created = await createWorkingDayProfile({
           code: form.code,
-          name: title.current().trim(),
+          name: form.name,
           description: form.description,
           status: form.status,
           disabled_at: form.disabled_at,
@@ -271,6 +290,30 @@ export default function WorkingDayCalendarWorkspacePage() {
         });
         void queryClient.invalidateQueries({ queryKey: ['working-day-profiles'] });
         afterWrite();
+        // The page moves to the calendar with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the calendar was written): saved on the calendar.
+        const createdKey = workingDayProfileDetailKey(created.id, lang);
+        await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => getWorkingDayProfile(created.id, lang) }).catch(() => undefined);
+        try {
+          let daysSaved = form.days_by_year;
+          await saveEditsSince({
+            sent: form,
+            now: () => ({ ...draftRef.current, name: title.current().trim() }),
+            fields: DRAFT_FIELDS,
+            save: async ({ days_by_year: days, ...rest }) => {
+              const body: WorkingDayProfilePatch = { ...rest };
+              if (days) {
+                body.days_by_year = yearsChanged(daysSaved, days);
+                daysSaved = days;
+              }
+              queryClient.setQueryData(createdKey, await updateWorkingDayProfile(created.id, body, lang));
+              afterWrite();
+              if (days) void queryClient.invalidateQueries({ queryKey: workingDayProfileYearsKey(created.id) });
+            },
+          });
+        } catch (e) {
+          setPageError(getApiErrorMessage(e, t, t('workingDayCalendars.messages.saveFailed')));
+        }
         return { id: created.id, token: created.creation_token, path: `${WORKING_DAY_CALENDARS_PATH}/${created.id}/overview${listContext ? `?${listContext}` : ''}` };
       } catch (e) {
         const message = getApiErrorMessage(e, t, t('workingDayCalendars.messages.createFailed'));
@@ -359,7 +402,7 @@ export default function WorkingDayCalendarWorkspacePage() {
         history={data && !isCreate ? { table: 'working_day_profiles', recordId: data.id } : undefined}
         properties={data ? (
           <WorkingDayCalendarPropertiesDrawer
-            key={data.id}
+            key={fromDraft || isCreate ? 'draft' : data.id}
             calendar={data}
             disabled={disabled}
             errors={errors}
@@ -391,7 +434,7 @@ export default function WorkingDayCalendarWorkspacePage() {
               </Typography>
             )}
             <DescriptionField
-              key={`description-${data.id}`}
+              key={`description-${fromDraft || isCreate ? 'draft' : data.id}`}
               value={data.description ?? ''}
               disabled={disabled}
               error={errors.description}
@@ -399,7 +442,7 @@ export default function WorkingDayCalendarWorkspacePage() {
             />
             {/* A new standard calendar shows its years once created: they come from the server. */}
             {!(isCreate && standard) && <WorkingDayProfileEditor
-              key={`days-${data.id}`}
+              key={`days-${fromDraft || isCreate ? 'draft' : data.id}`}
               daysByYear={data.days_by_year ?? {}}
               disabled={disabled}
               error={errors.days_by_year}

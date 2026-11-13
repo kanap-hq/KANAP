@@ -43,6 +43,7 @@ import {
   resolveCurrentTenantId,
 } from './document-entity-visibility';
 import { incidentVisibilitySql, resolveIncidentViewer } from '../incidents/incident-visibility';
+import { lockStoragePaths } from '../common/storage-path-refs';
 
 type SourceScopedEntityType = 'requests' | 'projects' | 'interfaces' | 'applications' | 'incidents';
 type SourceAccessMode = 'read' | 'edit';
@@ -1625,7 +1626,10 @@ export class IntegratedDocumentsService {
     }
 
     const { tableName, relationIdColumn } = this.getLegacyAttachmentTable(sourceEntityType);
-    return manager.query<Array<LegacyAttachmentRow>>(
+    // The managed document's clones name these rows' files: the files are locked, then the rows
+    // read again, so a delete of one of them running at the same time either sees the clone or
+    // leaves it out (`lockStoragePaths`).
+    const read = () => manager.query<Array<LegacyAttachmentRow>>(
       `SELECT id,
               original_filename,
               stored_filename,
@@ -1640,6 +1644,8 @@ export class IntegratedDocumentsService {
        ORDER BY created_at ASC`,
       [sourceEntityId, sourceField, normalizedAttachmentIds],
     );
+    await lockStoragePaths(manager, (await read()).map((row) => row.storage_path));
+    return read();
   }
 
   private async importLegacyInlineAttachments(

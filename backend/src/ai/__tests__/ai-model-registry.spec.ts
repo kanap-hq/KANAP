@@ -76,6 +76,7 @@ function createConfigRepo(state: State) {
       const params: Record<string, any> = {};
       const qb: any = {
         addSelect: () => qb,
+        setLock: () => qb,
         select: () => qb,
         orderBy: () => qb,
         addOrderBy: () => qb,

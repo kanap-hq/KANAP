@@ -106,6 +106,12 @@ const InternalKnowledgeSearchInputSchema = z.object({
 
 const InternalKnowledgeDocumentInputSchema = z.object({
   document_id: z.string().trim().min(1),
+  // Passages mode: the passages of the body around the words of this query, in place of the
+  // body (KnowledgeService.getDocumentSearchPassages), for a model that judges the document.
+  passages_query: z.string().trim().min(1).max(600).optional(),
+  max_passages: z.number().int().min(1).max(8).optional(),
+  // Passages mode: only a document of one of these libraries (the agent's list).
+  library_ids: z.array(z.string().trim().uuid()).max(50).optional(),
 }).strict();
 
 const InternalWebSearchInputSchema = z.object({
@@ -488,6 +494,9 @@ function internalKnowledgeDocumentContract(): CapabilityContract {
       type: 'object',
       properties: {
         document_id: { type: 'string', minLength: 1 },
+        passages_query: { type: 'string', minLength: 1, maxLength: 600 },
+        max_passages: { type: 'number', minimum: 1, maximum: 8 },
+        library_ids: { type: 'array', items: { type: 'string' }, maxItems: 50 },
       },
       required: ['document_id'],
       additionalProperties: false,
@@ -508,7 +517,7 @@ function internalKnowledgeDocumentContract(): CapabilityContract {
     business_resources: ['knowledge'],
     timeout_seconds: 30,
     retry_policy: { automatic_retry: false, max_attempts: 1 },
-    idempotency: { mode: 'idempotent', key_fields: ['document_id'] },
+    idempotency: { mode: 'idempotent', key_fields: ['document_id', 'passages_query', 'max_passages', 'library_ids'] },
     rollback: { supported: false },
     cost: { estimated_unit_cost: null, metered: false },
     redaction_policy: { fields: [] },
@@ -2378,6 +2387,7 @@ export class AiCapabilityRegistry {
         returned: 0,
         truncated: false,
         complete: true,
+        fallback: false,
       };
     }
     const result = await knowledge.search(
@@ -2388,7 +2398,9 @@ export class AiCapabilityRegistry {
         matchMode: 'any',
         ...(parsed.data.library_ids ? { library_ids: parsed.data.library_ids } : {}),
       },
-      { manager: context.manager, userId: context.userId },
+      // An agent cites published documents only (Fried, 12/11): drafts, documents in review,
+      // archived and obsolete ones never reach it. Kad and the MCP server keep every status.
+      { manager: context.manager, userId: context.userId, publishedOnly: true },
     );
     return {
       items: (result.items || []).map((item: any): AiKnowledgeSearchResultDto => ({
@@ -2401,6 +2413,7 @@ export class AiCapabilityRegistry {
         score: Number.isFinite(Number(item.score ?? item.rank))
           ? Number(item.score ?? item.rank)
           : null,
+        fallback: item.fallback === true,
         library: {
           id: item.library_id ?? null,
           name: item.library_name ?? null,
@@ -2413,6 +2426,7 @@ export class AiCapabilityRegistry {
       returned: Array.isArray(result.items) ? result.items.length : 0,
       truncated: result.truncated === true,
       complete: result.truncated !== true,
+      fallback: result.fallback === true,
     };
   }
 
@@ -2454,9 +2468,33 @@ export class AiCapabilityRegistry {
       throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     await policy.assertKnowledgeReadAccess(context, context.manager);
+    if (parsed.data.passages_query) {
+      // The passages of a published document of the agent's libraries, never of another one.
+      const passages = await knowledge.getDocumentSearchPassages(parsed.data.document_id, parsed.data.passages_query, {
+        manager: context.manager,
+        userId: context.userId,
+        publishedOnly: true,
+        maxPassages: parsed.data.max_passages,
+        libraryIds: parsed.data.library_ids ?? null,
+      });
+      if (!passages) {
+        throw new NotFoundException('Document not found.');
+      }
+      return passages;
+    }
     const document = await knowledge.get(parsed.data.document_id, { manager: context.manager, userId: context.userId });
     if (!document) {
       throw new NotFoundException('Document not found.');
+    }
+    if (document.status !== 'published') {
+      // An agent reads published documents only (Fried, 12/11): the refusal says why, with no content.
+      const ref = document.item_ref ?? `DOC-${document.item_number}`;
+      const status = String(document.status || 'unknown').replace(/_/g, ' ');
+      throw codedForbidden(
+        'DOCUMENT_NOT_PUBLISHED',
+        `${ref} is not published (status: ${status}): an agent reads published documents only.`,
+        { ref, status: document.status ?? null },
+      );
     }
     const result: AiDocumentDto = {
       id: document.id,

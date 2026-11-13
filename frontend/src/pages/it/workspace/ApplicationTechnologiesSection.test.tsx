@@ -6,7 +6,12 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectAnchoredLeft, expectAnchoredRight, placeAnchor, stubPopoverPaperWidth } from '../../../test/popoverAnchor';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { frenchSpacing } from '../../../i18n/formatters';
 import api from '../../../api';
+import deIt from '../../../locales/de/it.json';
+import enIt from '../../../locales/en/it.json';
+import esIt from '../../../locales/es/it.json';
+import frIt from '../../../locales/fr/it.json';
 import ApplicationTechnologiesSection from './ApplicationTechnologiesSection';
 import type { ApplicationRelationsData } from './ApplicationRelationsTab';
 
@@ -44,7 +49,8 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
       },
       {
         id: 'tec-1', reference: 'TEC-1', name: 'SQL Server', family: 'database', declared: false, hosted: true, versions: ['2019'], version_unknown: false,
-        standard_support_end: '2020-01-14', via: [{ asset_id: 'srv-1', asset_name: 'srv-etl-1', host_name: null }],
+        standard_support_end: '2020-01-14', support_end: '2020-01-14', support_state: 'out_of_support',
+        via: [{ asset_id: 'srv-1', asset_name: 'srv-etl-1', host_name: null }],
       },
       {
         id: 'tec-3', reference: 'TEC-3', name: 'Tomcat', family: 'middleware', declared: true, hosted: true, versions: [], version_unknown: true,
@@ -53,7 +59,8 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
       },
       {
         id: 'tec-2', reference: 'TEC-2', name: 'vSphere', family: 'virtualization', declared: false, hosted: true, versions: ['8'], version_unknown: false,
-        standard_support_end: '2099-10-11', via: [{ asset_id: 'srv-2', asset_name: 'srv-etl-2', host_name: 'esx-01' }],
+        standard_support_end: '2099-10-11', support_end: '2099-10-11', support_state: 'supported',
+        via: [{ asset_id: 'srv-2', asset_name: 'srv-etl-2', host_name: 'esx-01' }],
       },
     ],
     deployment_servers: [],
@@ -67,6 +74,24 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
 
 function Location() {
   return <div data-testid="location">{useLocation().pathname}</div>;
+}
+
+/** A local day `months` from today, clamped like the support horizon. */
+function shiftMonths(months: number): string {
+  const date = new Date();
+  const day = date.getDate();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + months);
+  date.setDate(Math.min(day, new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()));
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const dayText = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${dayText}`;
+}
+
+/** The record's tooltip sentence for a count, as the locale files state it. */
+function endsWithinMonths(relations: { endsWithinMonths_one: string; endsWithinMonths_other: string }, count: number): string {
+  const template = count === 1 ? relations.endsWithinMonths_one : relations.endsWithinMonths_other;
+  return template.split('{{count}}').join(String(count));
 }
 
 function renderSection(data: ApplicationRelationsData) {
@@ -128,6 +153,61 @@ describe('ApplicationTechnologiesSection', () => {
     // A hosted row changes on the server's page.
     fireEvent.click(sql.getByRole('link', { name: 'srv-etl-1' }));
     expect(screen.getByTestId('location').textContent).toBe('/it/assets/srv-1/operations');
+  });
+
+  it('shows the end of support as the End of support report does: the date that matters, its state and both ends', async () => {
+    const base = relations().technologies!;
+    renderSection(relations({
+      technologies: [
+        // Standard support passed, extended support to come: the extended end, in extended support.
+        { ...base[1], standard_support_end: '2022-10-11', extended_support_end: '2098-10-12', support_end: '2098-10-12', support_state: 'extended_support' },
+        // Both passed: the last end, out of support.
+        { ...base[3], standard_support_end: '2019-12-31', extended_support_end: '2022-12-31', support_end: '2022-12-31', support_state: 'out_of_support' },
+        // No version with an end: a dash.
+        { ...base[2] },
+      ],
+    }));
+    const table = await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
+    const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
+    const extended = within(rows[0]).getByText(/2098/);
+    expect(extended.getAttribute('data-state')).toBe('extended');
+    expect(extended.getAttribute('title')).toBe(
+      'pages.endOfSupport.states.extended_support · workspace.asset.technical.standardSupportEnds(date=11 Oct 2022) / workspace.asset.technical.extendedSupportEnds(date=12 Oct 2098)',
+    );
+    expect(within(rows[0]).queryByText(/2022/)).toBeNull();
+    const ended = within(rows[1]).getByText(/2022/);
+    expect(ended.getAttribute('data-state')).toBe('ended');
+    expect(ended.getAttribute('title')).toMatch(/^pages\.endOfSupport\.states\.out_of_support · /);
+    expect(getComputedStyle(ended).color).not.toBe(getComputedStyle(extended).color);
+    expect(rows[2].querySelectorAll('td')[6]?.textContent).toBe('—');
+  });
+
+  it('names the 12-month window on a version that ends within it', async () => {
+    const base = relations().technologies!;
+    const soon = shiftMonths(6);
+    const later = shiftMonths(18);
+    renderSection(relations({
+      technologies: [
+        { ...base[1], standard_support_end: soon, support_end: soon, support_state: null },
+        { ...base[3], standard_support_end: later, support_end: later, support_state: 'supported' },
+      ],
+    }));
+    const table = await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
+    const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
+    const ending = rows[0].querySelector('[data-state]') as HTMLElement;
+    expect(ending.getAttribute('data-state')).toBe('ending_soon');
+    const title = ending.getAttribute('title') ?? '';
+    expect(title).toContain('workspace.application.relations.endsWithinMonths(count=12)');
+    expect(title).toContain('workspace.asset.technical.standardSupportEnds(');
+    expect(title).not.toContain('upcoming');
+    const supported = rows[1].querySelector('[data-state]') as HTMLElement;
+    expect(supported.getAttribute('data-state')).toBe('supported');
+    expect(getComputedStyle(ending).color).not.toBe(getComputedStyle(supported).color);
+
+    expect(endsWithinMonths(enIt.workspace.application.relations, 12)).toBe('Ends within 12 months');
+    expect(frenchSpacing(endsWithinMonths(frIt.workspace.application.relations, 12))).toBe('Fin dans les 12 mois');
+    expect(endsWithinMonths(deIt.workspace.application.relations, 12)).toBe('Endet innerhalb von 12 Monaten');
+    expect(endsWithinMonths(esIt.workspace.application.relations, 12)).toBe('Termina dentro de 12 meses');
   });
 
   it('wraps several long server names in Via instead of cutting them', async () => {

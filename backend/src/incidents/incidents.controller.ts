@@ -362,7 +362,8 @@ export class IncidentsController {
     // A set the caller cannot read is never replaced (an empty list would remove every link).
     if (!canReadResource(ctx, 'applications')) throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
     const id = await this.visibleId(idOrRef, ctx);
-    return this.relations.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, this.opts(ctx));
+    // A Business Contributor's applications: inside their participation only, as one link at a time.
+    return this.relations.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, await this.viewOpts(ctx));
   }
 
   /** Assets, applications and technologies, in one round trip. */

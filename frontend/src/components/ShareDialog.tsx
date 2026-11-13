@@ -24,7 +24,7 @@ import { formatUserOption, USERS_LOOKUP_ENDPOINT, type UserOption } from './fiel
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../config/ThemeContext';
 import { formatItemRef } from '../utils/item-ref';
-import { getApiErrorMessage } from '../utils/apiErrorMessage';
+import { getApiErrorCode, getApiErrorMessage } from '../utils/apiErrorMessage';
 
 export type ShareItemType = 'task' | 'project' | 'request' | 'contract' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
 
@@ -183,10 +183,12 @@ export default function ShareDialog({
       setMessage('');
       setCannotOpen(names);
     } catch (e: any) {
-      // The "Send link" budget is counted over one hour: say so rather than "a few minutes".
+      // Both budgets are counted over one hour, so neither says "a few minutes". A 429 with no
+      // code is the 30-send limit. The recipient budgets name themselves.
+      const recipientsLimited = e?.response?.status === 429 && getApiErrorCode(e) === 'SHARE_RECIPIENTS_RATE_LIMITED';
       setError(
         e?.response?.status === 429
-          ? t('errors:SHARE_RATE_LIMITED')
+          ? t(recipientsLimited ? 'errors:SHARE_RECIPIENTS_RATE_LIMITED' : 'errors:SHARE_RATE_LIMITED')
           : getApiErrorMessage(e, t, t('messages.failedToSend')),
       );
     } finally {

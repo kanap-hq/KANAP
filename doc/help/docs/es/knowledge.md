@@ -199,6 +199,8 @@ El estado no es decoración. Le dice a los lectores con qué seriedad deben trat
 | **Archivado** | Conservado para registro | Generalmente sigue siendo útil para historial, no para guía activa |
 | **Obsoleto** | Reemplazado o ya no válido | Los lectores no deben seguirlo como práctica actual |
 
+Los agentes IA solo leen y citan documentos publicados. Kad lee todos los documentos que usted puede abrir e indica el estado de un documento no publicado que cite.
+
 La Base de conocimiento permite la publicación directa incluso sin un flujo de trabajo de revisión formal. Eso es útil para material de bajo riesgo, pero también significa que los equipos necesitan disciplina sobre cuándo la revisión es opcional y cuándo debería esperarse.
 
 ## Escritura, bloqueos y autoguardado

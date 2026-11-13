@@ -293,6 +293,8 @@ function createDispatcher(input: {
   monitoredObject?: Record<string, unknown> | null;
   assetSearchItems?: Array<Record<string, unknown>>;
   assetDetailIps?: Record<string, string[]>;
+  // Documents the search found by its whole-word fallback only (marked `fallback: true`).
+  knowledgeFallbackRefs?: string[];
 } = {}) {
   const mockProvider = new MockMonitoringProvider();
   const dispatched: Array<{ capability: string; input: any }> = [];
@@ -376,7 +378,11 @@ function createDispatcher(input: {
           };
           break;
         case 'search_knowledge':
-          output = { items: [CANNED_DOCS['DOC-9'], CANNED_DOCS['DOC-10']] };
+          output = {
+            items: [CANNED_DOCS['DOC-9'], CANNED_DOCS['DOC-10']].map((doc: any) => (
+              input.knowledgeFallbackRefs?.includes(doc.ref) ? { ...doc, fallback: true } : doc
+            )),
+          };
           break;
         case 'get_document':
           output = CANNED_DOCS[request.input.document_id] ?? {};
@@ -609,6 +615,27 @@ async function testHappyPathPersistsCitedRecommendation() {
   ]) {
     assert.equal(capabilities.includes(expected), true, `expected dispatched capability ${expected}`);
   }
+}
+
+// A document the search found by its whole-word fallback only is no source of the diagnosis:
+// no interpreter judges it in this flow (lot R1 of 26.11.8).
+async function testFallbackKnowledgeIsNoDiagnosisSource() {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const definition = await enableSreMonitoring(context, queue);
+  const { dispatcher, dispatched, mockProvider } = createDispatcher({ knowledgeFallbackRefs: ['DOC-10'] });
+  const { client, calls } = fakeLlmClient(() => structuredSuccess(validBriefValue()));
+  const control = createControl({ queue, dispatcher, mockProvider, briefService: new AiDiagnosticBriefSynthesisService(client) });
+
+  const result = await control.runMonitoringDiagnosis(context, { agent_definition_id: definition.id, alert_id: ALERT_ID });
+
+  assert.equal(result.status, 'completed');
+  const fetched = dispatched.filter((entry) => entry.capability === 'get_document').map((entry) => entry.input.document_id);
+  assert.deepEqual(fetched, ['DOC-9'], 'the fallback result is not read');
+  const prompt = JSON.stringify(calls[0]);
+  assert.ok(prompt.includes('DOC-9'), 'the relevant document is a source');
+  assert.ok(!prompt.includes('DOC-10'), 'the fallback result is not a source of the diagnosis');
 }
 
 // ---------------------------------------------------------------------------
@@ -1226,6 +1253,7 @@ async function testSreCreateAcceptsMonitoringCapabilitiesAndIsRunnable() {
 
 async function run() {
   await testHappyPathPersistsCitedRecommendation();
+  await testFallbackKnowledgeIsNoDiagnosisSource();
   await testCitationGateDropsUnknownRefs();
   await testTimeoutProducesConservativeFallback();
   await testOverCapProjectionSkipsLlm();

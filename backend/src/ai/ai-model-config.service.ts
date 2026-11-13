@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { modelKeyDestination } from '../common/secret-destination';
 import { assertPublicHttpUrl } from '../common/ssrf-guard';
 import { AiModelConfig, AiModelProvider } from './ai-model-config.entity';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
@@ -110,13 +111,24 @@ export class AiModelConfigService {
     ));
   }
 
-  async getById(tenantId: string, id: string, manager?: EntityManager): Promise<AiModelConfig> {
-    const config = await this.getRepo(manager)
+  /**
+   * The entry with its key. `forUpdate` locks it until the request's transaction ends:
+   * every path that saves the entry reads it that way, so a save running at the same time
+   * waits and then reads what this one wrote, instead of writing its stale key back.
+   */
+  async getById(
+    tenantId: string,
+    id: string,
+    manager?: EntityManager,
+    opts?: { forUpdate?: boolean },
+  ): Promise<AiModelConfig> {
+    const query = this.getRepo(manager)
       .createQueryBuilder('config')
       .addSelect('config.api_key_encrypted')
       .where('config.id = :id', { id })
-      .andWhere('config.tenant_id = :tenantId', { tenantId })
-      .getOne();
+      .andWhere('config.tenant_id = :tenantId', { tenantId });
+    if (opts?.forUpdate) query.setLock('pessimistic_write');
+    const config = await query.getOne();
     if (!config) {
       throw new NotFoundException('AI model configuration not found.');
     }
@@ -155,7 +167,7 @@ export class AiModelConfigService {
     opts?: { manager?: EntityManager; userId?: string | null; sourceRef?: string | null },
   ): Promise<AiModelConfigView> {
     const repo = this.getRepo(opts?.manager);
-    const config = await this.getById(tenantId, id, opts?.manager);
+    const config = await this.getById(tenantId, id, opts?.manager, { forUpdate: true });
     if (config.status === 'archived') {
       throw new BadRequestException('An archived AI model configuration cannot be edited; restore it first.');
     }
@@ -183,7 +195,7 @@ export class AiModelConfigService {
     opts?: { manager?: EntityManager; userId?: string | null; sourceRef?: string | null },
   ): Promise<AiModelConfigView> {
     const repo = this.getRepo(opts?.manager);
-    const config = await this.getById(tenantId, id, opts?.manager);
+    const config = await this.getById(tenantId, id, opts?.manager, { forUpdate: true });
     if (config.status === 'archived') {
       return this.toView(config, { chat: false, agents: [] });
     }
@@ -214,7 +226,7 @@ export class AiModelConfigService {
     opts?: { manager?: EntityManager; userId?: string | null; sourceRef?: string | null },
   ): Promise<AiModelConfigView> {
     const repo = this.getRepo(opts?.manager);
-    const config = await this.getById(tenantId, id, opts?.manager);
+    const config = await this.getById(tenantId, id, opts?.manager, { forUpdate: true });
     if (config.status === 'active') {
       const usage = await this.loadUsage(tenantId, [id], opts?.manager);
       return this.toView(config, usage.get(id) ?? { chat: false, agents: [] });
@@ -234,7 +246,7 @@ export class AiModelConfigService {
     opts?: { manager?: EntityManager; userId?: string | null; sourceRef?: string | null },
   ): Promise<AiModelConfigView> {
     const repo = this.getRepo(opts?.manager);
-    const config = await this.getById(tenantId, id, opts?.manager);
+    const config = await this.getById(tenantId, id, opts?.manager, { forUpdate: true });
     if (config.status === 'archived') {
       throw new BadRequestException('An archived AI model configuration cannot be the default.');
     }
@@ -256,7 +268,7 @@ export class AiModelConfigService {
     opts?: { manager?: EntityManager; userId?: string | null; sourceRef?: string | null },
   ): Promise<AiModelConfigView> {
     const repo = this.getRepo(opts?.manager);
-    const config = await this.getById(tenantId, id, opts?.manager);
+    const config = await this.getById(tenantId, id, opts?.manager, { forUpdate: true });
     if (config.is_default) {
       config.is_default = false;
       config.updated_by = opts?.userId ?? null;
@@ -402,6 +414,7 @@ export class AiModelConfigService {
     input: UpdateAiModelConfigInput,
     opts: { isCreate: boolean },
   ): void {
+    const previousDestination = opts.isCreate ? null : modelKeyDestination(config.provider, config.endpoint_url);
     if (opts.isCreate || Object.prototype.hasOwnProperty.call(input, 'name')) {
       const name = normalizeNullableString(input.name);
       if (!name) {
@@ -451,6 +464,15 @@ export class AiModelConfigService {
     if (Object.prototype.hasOwnProperty.call(input, 'api_key')) {
       const raw = normalizeNullableString(input.api_key);
       config.api_key_encrypted = raw ? this.cipher.encrypt(raw) : null;
+    }
+    // A stored key only goes to the destination it was entered for: a new provider
+    // service or address empties it unless the same request brings a key.
+    if (
+      !opts.isCreate
+      && previousDestination !== modelKeyDestination(config.provider, config.endpoint_url)
+      && !normalizeNullableString(input.api_key)
+    ) {
+      config.api_key_encrypted = null;
     }
     if (Object.prototype.hasOwnProperty.call(input, 'supports_vision')) {
       config.supports_vision = input.supports_vision !== false;

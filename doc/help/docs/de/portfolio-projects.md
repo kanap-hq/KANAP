@@ -207,6 +207,7 @@ Verwenden Sie den Reiter **Verlauf**, wenn Sie wissen müssen, was sich geänder
 Der Reiter **Aufgaben** ist die Ausführungswarteschlange des Projekts. Das Reiter-Badge zeigt die Anzahl der Projektaufgaben.
 
 - hier erstellte Aufgaben werden automatisch mit dem Projekt verknüpft
+- **Aufgabe hinzufügen** wird Personen angeboten, die Aufgaben erstellen (`tasks:member`) und zum Projekt beitragen (`portfolio_projects:contributor`). Ein Business Contributor trägt nur zu den Projekten bei, an denen er beteiligt ist.
 - Aufgaben können auch aus einer Zeitleisten-Phase erstellt werden, was sie sowohl mit dem Projekt als auch mit der ausgewählten Phase verknüpft
 - der Reiter unterstützt Statusfilterung und Phasenfilterung
 - die standardmäßige Aufgabenansicht konzentriert sich auf aktive Arbeit, indem erledigte und stornierte Elemente ausgeblendet werden
@@ -401,6 +402,7 @@ Importe sind für kontrollierte Massenänderungen ausgelegt:
 - laden Sie zuerst eine Vorlage herunter, wenn Sie die korrekte Struktur benötigen, oder ein Beispiel, um Beispielprojekte und die Werte jeder Spalte zu sehen ([Beispieldateien](csv-files.md#example-files))
 - validieren Sie vor dem Import
 - verwenden Sie erweiterte Optionen, um Anreicherungs- vs. Ersetzungsverhalten und Einfüge-/Aktualisierungsregeln zu wählen
+- eine neue Zeile ohne Herkunft wird als Altbestand gespeichert. Eine neue Zeile mit der Herkunft `standard` wird abgelehnt: Die Herkunft Anfrage entsteht durch die Umwandlung einer Anfrage. Ein Projekt, das diese Herkunft bereits hat, behält sie, wenn die Datei die Zeile aktualisiert
 
 Massenimport ist nützlich für die Pflege großer Portfolios, aber er ist keine Abkürzung um die Projekt-Governance herum. Phasenplanung, Aufgaben, Wissen und laufende Lieferkontrolle gehören weiterhin in den Arbeitsbereich.
 

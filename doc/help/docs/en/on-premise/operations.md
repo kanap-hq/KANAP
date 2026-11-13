@@ -13,13 +13,15 @@ The `curl` commands on this page use `-k`. They check what Kadratis answers, so 
 
 Kadratis publishes a new version about once a month. The `stable` branch always points to the latest published version. Every version has an entry in `CHANGELOG.md` at the root of the repository. An entry that needs something from you (a setting to change, a step to run) has "Action required" in its title.
 
-**1. Read the changelog before you pull.** Fetch the new state of `stable` and show only the entries you do not have yet. Read the entries marked "Action required" first, and do what they say. The same entries are on the GitHub releases page of the repository.
+**1. Read the changelog before you pull.** Fetch the new state of `stable` with the version tags, and show only the entries you do not have yet. Read the entries marked "Action required" first, and do what they say. The same entries are on the GitHub releases page of the repository.
 
 ```bash
 cd /opt/kanap
-git fetch origin stable
+git fetch --tags origin stable
 git diff HEAD origin/stable -- CHANGELOG.md
 ```
+
+Keep `--tags`. A `git fetch` or `git pull` that names a branch does not bring the version tags. Without them, `git describe --tags` prints an older version followed by a commit count (for example `v26.10.8-254-gcec464031`), and `git checkout v<version>` does not find the newer versions. The same command brings the missing tags to an installation that upgraded without it.
 
 **2. Back up the database, the files and the configuration.** Run the commands of [Before an upgrade](#before-an-upgrade). They write to a directory of their own, which the daily backup never touches. Migrations only go forward: this backup is the way back.
 
@@ -97,12 +99,12 @@ The published images carry a signed record of how they were built: from the vers
 ```bash
 cd /opt/kanap
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[(entrypoint|VERSION|ENV|CONFIG|SECRETS|RATE-LIMIT|CORS|DB|on-prem|SECURITY|DATA-ACCESS|markdown|cluster|shutdown)\]|WARN|ERROR|successfully started|Email transport'
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
 
 - `ps` shows `api` and `web` as `healthy` after about a minute.
-- The API log shows the migrations (`[entrypoint] Migrations complete (N executed).`) and then the start of the API (`Nest application successfully started`). Read the other start-up lines too: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains each one.
+- The API log shows the migrations (`[entrypoint] Migrations complete (N executed).`), the version (`[VERSION] Kadratis <version>`) and then the start of the API (`Nest application successfully started`). Read the other start-up lines too: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains each one. The filter keeps about 20 lines per start. The log covers every start of the container since the upgrade, so after a restart the same lines appear once more.
 - The health address answers `{"status":"ok","text_processing":"ready"}` (see [Monitoring](#monitoring)).
 
 **Data-scoped access.** After an upgrade to a version with [data access](../data-access.md), everyone keeps working with all data. To limit people to part of the budget and the contracts, run the optional step of [Data-scoped access](installation.md#optional-data-scoped-access) once, then restart the API. The step is done once per PostgreSQL server: later upgrades need nothing more, because the API sets the permissions of the role at each start.
@@ -119,6 +121,21 @@ unset KANAP_PASSWORD
 ```
 
 The last line of the output reads `0 failed`. With `KANAP_INSECURE_TLS=1`, two TLS warnings at the top of the output are expected: the script's own and the Node.js warning about `NODE_TLS_REJECT_UNAUTHORIZED`.
+
+**Remove the images of older versions.** Each upgrade downloads new images and leaves those of the earlier versions on the disk, about 1.4 GB per version (2.8 GB with the maintenance tools image). Keep the images of the version you just left for as long as you may roll back to it. Remove the older ones. List the images and the space they take:
+
+```bash
+docker images "ghcr.io/kanap-hq/*"
+```
+
+The list shows the `kadratis-*` images and, from versions up to 26.11.3, the `kanap-*` images. Set `OLD` to a version to remove, then remove its images:
+
+```bash
+OLD=26.10.8   # a version older than the one you may roll back to
+docker image rm $(docker images --format '{{.Repository}}:{{.Tag}}' "ghcr.io/kanap-hq/*" | grep ":${OLD}$")
+```
+
+Repeat for each older version. Docker refuses to remove an image that a container uses, so the version in service stays. A rollback to a version whose images you removed downloads them again (step 2 of the rollback below).
 
 **Rollback.** Migrations only go forward, so a rollback puts back the backup taken before the upgrade, under the previous version:
 

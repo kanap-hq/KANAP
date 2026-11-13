@@ -18,6 +18,8 @@ import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiTaskMutationSupportService, toDisplayStatus } from '../ai-task-mutation-support.service';
 import { resolveAiIncidentViewer } from '../../query/ai-query-scope.util';
 import { BUDGET_NATURES, naturesAnd } from '../../../spend/budget-nature';
+import { linkedParticipationScope } from '../../../common/relations/linked-reads';
+import { idsInScope } from '../../../portfolio/portfolio-linked-reads';
 import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-write-texts';
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -558,6 +560,12 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     );
     if (!rows[0]) throw new NotFoundException('Task not found.');
     const task = rows[0];
+    // The applications the person reads only, as the task's page: the others stay linked, unnamed.
+    const linkedIds: string[] = Array.isArray(task.application_ids) ? task.application_ids.map(String) : [];
+    const readable = await this.readableApplicationIds(context, linkedIds);
+    const names: unknown[] = Array.isArray(task.application_names) ? task.application_names : [];
+    task.application_names = names.filter((_name, index) => readable.has(linkedIds[index]));
+    task.application_ids = linkedIds.filter((id) => readable.has(id));
     task.start_date = task.start_date_text ?? null;
     task.due_date = task.due_date_text ?? null;
     delete task.start_date_text;
@@ -581,6 +589,13 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     return { id: String(rows[0].id), label: String(rows[0].label || rows[0].id) };
   }
 
+  /** The ids among `ids` of applications the person reads (a Business Contributor's participation). */
+  private async readableApplicationIds(context: AiExecutionContextWithManager, ids: string[]): Promise<Set<string>> {
+    if (ids.length === 0) return new Set();
+    const scope = await linkedParticipationScope(context.manager, context.userId, context.tenantId, 'applications');
+    return idsInScope(context.manager, 'applications', ids, scope);
+  }
+
   private async resolveEntityArray(
     context: AiExecutionContextWithManager,
     target: 'applications' | 'assets',
@@ -591,7 +606,7 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     const labels: string[] = [];
     for (const ref of Array.from(new Set(refs))) {
       const uuid = isUuid(ref);
-      const rows = target === 'applications'
+      let rows = target === 'applications'
         ? await context.manager.query(
           `SELECT id, name AS label
            FROM applications
@@ -610,6 +625,11 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
            LIMIT 6`,
           [context.tenantId, ref],
         );
+      // An application outside the person's participation reads as a missing one.
+      if (target === 'applications' && rows.length > 0) {
+        const readable = await this.readableApplicationIds(context, rows.map((row: { id: string }) => String(row.id)));
+        rows = rows.filter((row: { id: string }) => readable.has(String(row.id)));
+      }
       if (rows.length === 0) throw new NotFoundException(`${target.slice(0, -1)} "${ref}" not found.`);
       if (rows.length > 1) throw new BadRequestException(`Multiple ${target} matched "${ref}". Use a UUID or exact reference.`);
       ids.push(String(rows[0].id));

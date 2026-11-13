@@ -31,6 +31,8 @@ import {
   assertKeepsAnActiveAdministrator,
   assertPersonWithinActorRights,
   assertRoleGrantWithinActorRights,
+  lockPeople,
+  personAboveActorRights,
   type PersonChange,
   roleGrantActorOf,
 } from '../roles/role-grant-ceiling';
@@ -85,6 +87,7 @@ export class UsersController {
       adminView: canViewUserAdministration(req),
       // The data-access column (spec §7.4) is for unscoped users administrators only.
       dataAccessView: canViewUserAdministration(req) && req?.dataAccessMode === 'all',
+      roleGrant: roleGrantActorOf(req),
     });
   }
 
@@ -142,7 +145,9 @@ export class UsersController {
     const user = await this.svc.findById(userIdParam(id), { manager: req?.queryRunner?.manager });
     if (!user) return null;
     if (!canViewUserAdministration(req)) return toUserLookup(user);
-    return { ...user, password_hash: undefined };
+    // Whether the reader may change this person (the dialog opens read-only otherwise).
+    const aboveOwnRights = await personAboveActorRights(req?.queryRunner?.manager ?? this.userRepo.manager, roleGrantActorOf(req), user.id);
+    return { ...user, password_hash: undefined, above_own_rights: aboveOwnRights };
   }
 
   @ReservedToUnscopedDataAccess()
@@ -172,6 +177,16 @@ export class UsersController {
     const userId = userIdParam(id);
     const canManageUsers = req.isAdmin === true || req.permissionLevel === 'admin';
     const manager = req?.queryRunner?.manager ?? this.userRepo.manager;
+    const has = (field: string) => !!body && Object.prototype.hasOwnProperty.call(body, field);
+    // `role_ids`: all the roles of the person, set with the profile in the same request (the user
+    // dialog saves both at once, or neither). A list of role ids: anything else is refused, never
+    // read as "no role".
+    if (has('role_ids') && (!Array.isArray(body.role_ids) || body.role_ids.some((rid: unknown) => typeof rid !== 'string' || !USER_ID_RE.test(rid)))) {
+      throw new BadRequestException({ code: 'ROLE_IDS_INVALID', message: 'role_ids must be a list of role ids.' });
+    }
+    // The person's row is locked before their rights are read (see lockPeople).
+    await lockPeople(manager, [userId]);
+    const roleList = canManageUsers && has('role_ids') ? await this.readRoleList(userId, body.role_ids, req) : null;
     // A person does not change a person who has more rights than they do (their own profile aside).
     if (canManageUsers && userId !== req.user?.sub) {
       await assertPersonWithinActorRights(manager, roleGrantActorOf(req), userId);
@@ -179,19 +194,100 @@ export class UsersController {
     if (canManageUsers && body?.role_id) {
       await assertRoleGrantWithinActorRights(manager, roleGrantActorOf(req), userId, [body.role_id]);
     }
-    // The workspace keeps an enabled Administrator: the status or the main role of the last one stay.
-    const has = (field: string) => !!body && Object.prototype.hasOwnProperty.call(body, field);
-    if (canManageUsers && (has('status') || has('role_id'))) {
+    if (roleList) {
+      await assertRoleGrantWithinActorRights(manager, roleGrantActorOf(req), userId, roleList.roleIds);
+    }
+    // The workspace keeps an enabled Administrator: the status or the roles of the last one stay.
+    if (canManageUsers && (has('status') || has('role_id') || roleList)) {
       const change: PersonChange = { userId };
       if (has('status')) change.status = body.status;
       if (has('role_id')) change.mainRoleId = body.role_id;
+      if (roleList) change.roleIds = roleList.roleIds;
       await assertKeepsAnActiveAdministrator(manager, [change]);
     }
-    return this.svc.updateUser(
+    const saved = await this.svc.updateUser(
       userId,
       body,
       { actorUserId: req.user?.sub ?? null, canManageUsers },
       { manager: req?.queryRunner?.manager },
+    );
+    if (!roleList) return saved;
+    await this.writeRoles(userId, roleList, req);
+    return { ...saved, role_id: roleList.legacyRoleId };
+  }
+
+  /**
+   * The roles a request sets on `userId` (`PUT /users/:id/roles`, `role_ids` of `PATCH /users/:id`),
+   * checked before anything is written: an empty list falls back to the Contact system role, and a
+   * person does not take away their own last role.
+   */
+  private async readRoleList(userId: string, raw: unknown, req: any): Promise<{ roleIds: string[]; roles: Role[]; legacyRoleId: string }> {
+    const manager = req?.queryRunner?.manager;
+    const roleRepo = manager ? manager.getRepository(Role) : this.roleRepo;
+    const userRepo = manager ? manager.getRepository(User) : this.userRepo;
+    // Empty list is allowed: the user keeps no app access and falls back to
+    // the Contact system role (same state as a freshly provisioned SSO user).
+    const roleIds: string[] = Array.isArray(raw) ? raw : [];
+    if (roleIds.length === 0 && req.user?.sub === userId) {
+      throw new BadRequestException('You cannot remove your own last role.');
+    }
+    // Validate all roles exist
+    const roles = roleIds.length > 0 ? await roleRepo.find({ where: roleIds.map(rid => ({ id: rid })) }) : [];
+    if (roles.length !== roleIds.length) {
+      throw new BadRequestException('One or more roles not found');
+    }
+    const user = await userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('User not found');
+    // Legacy role_id column is NOT NULL: first role, or the Contact system
+    // role when the list is empty (no roles = no access -> pending).
+    let legacyRoleId = roleIds[0];
+    if (!legacyRoleId) {
+      const contact = await roleRepo.findOne({ where: { role_name: 'Contact' } as any });
+      if (!contact) throw new BadRequestException('Cannot clear roles: the Contact system role is missing.');
+      legacyRoleId = contact.id;
+    }
+    return { roleIds, roles, legacyRoleId };
+  }
+
+  /** Replaces the roles of `userId` with a checked list (`readRoleList`), and audits the change. */
+  private async writeRoles(userId: string, list: { roleIds: string[]; roles: Role[]; legacyRoleId: string }, req: any) {
+    const manager = req?.queryRunner?.manager;
+    const userRoleRepo = manager ? manager.getRepository(UserRole) : this.userRoleRepo;
+    const userRepo = manager ? manager.getRepository(User) : this.userRepo;
+    const user = await userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('User not found');
+    const { roleIds, roles } = list;
+
+    // Snapshot current roles for the audit trail before replacing them
+    const previousRoles = await userRoleRepo.find({ where: { user_id: userId }, relations: ['role'] });
+
+    // Delete existing user roles
+    await userRoleRepo.delete({ user_id: userId });
+
+    // Create new user roles (first role is considered primary for backwards compat)
+    for (let i = 0; i < roleIds.length; i++) {
+      await userRoleRepo.save(userRoleRepo.create({
+        tenant_id: user.tenant_id,
+        user_id: userId,
+        role_id: roleIds[i],
+        is_primary: i === 0,
+      }));
+    }
+
+    user.role_id = list.legacyRoleId;
+    await userRepo.save(user);
+
+    // Role assignment changes a user's effective permissions — always audit it.
+    await this.audit.log(
+      {
+        table: 'user_roles',
+        recordId: userId,
+        action: 'update',
+        before: { roles: previousRoles.map((ur: UserRole) => ({ id: ur.role_id, name: ur.role?.role_name ?? null })) },
+        after: { roles: roleIds.map((rid) => ({ id: rid, name: roles.find((r: Role) => r.id === rid)?.role_name ?? null })) },
+        userId: req.user?.sub ?? null,
+      },
+      manager ? { manager } : undefined,
     );
   }
 
@@ -302,73 +398,18 @@ export class UsersController {
   ) {
     const userId = userIdParam(id);
     const manager = req?.queryRunner?.manager;
-    const userRoleRepo = manager ? manager.getRepository(UserRole) : this.userRoleRepo;
-    const roleRepo = manager ? manager.getRepository(Role) : this.roleRepo;
-    const userRepo = manager ? manager.getRepository(User) : this.userRepo;
-
-    // Empty list is allowed: the user keeps no app access and falls back to
-    // the Contact system role (same state as a freshly provisioned SSO user).
-    const roleIds: string[] = Array.isArray(body?.role_ids) ? body.role_ids : [];
-    if (roleIds.length === 0 && req.user?.sub === userId) {
-      throw new BadRequestException('You cannot remove your own last role.');
-    }
-
-    // Validate all roles exist
-    const roles = roleIds.length > 0 ? await roleRepo.find({ where: roleIds.map(rid => ({ id: rid })) }) : [];
-    if (roles.length !== roleIds.length) {
-      throw new BadRequestException('One or more roles not found');
-    }
-
-    // Get user
-    const user = await userRepo.findOne({ where: { id: userId } });
-    if (!user) throw new BadRequestException('User not found');
+    // The person's row is locked before their rights are read (see lockPeople).
+    await lockPeople(manager ?? this.userRoleRepo.manager, [userId]);
+    const list = await this.readRoleList(userId, body?.role_ids, req);
 
     // A person does not change the roles of a person who has more rights than they do, and a role
     // the person does not hold yet stays within the rights of the one who gives it.
     await assertPersonWithinActorRights(manager ?? this.userRoleRepo.manager, roleGrantActorOf(req), userId);
-    await assertRoleGrantWithinActorRights(manager ?? this.userRoleRepo.manager, roleGrantActorOf(req), userId, roleIds);
+    await assertRoleGrantWithinActorRights(manager ?? this.userRoleRepo.manager, roleGrantActorOf(req), userId, list.roleIds);
     // The workspace keeps an enabled Administrator.
-    await assertKeepsAnActiveAdministrator(manager ?? this.userRoleRepo.manager, [{ userId, roleIds }]);
+    await assertKeepsAnActiveAdministrator(manager ?? this.userRoleRepo.manager, [{ userId, roleIds: list.roleIds }]);
 
-    // Snapshot current roles for the audit trail before replacing them
-    const previousRoles = await userRoleRepo.find({ where: { user_id: userId }, relations: ['role'] });
-
-    // Delete existing user roles
-    await userRoleRepo.delete({ user_id: userId });
-
-    // Create new user roles (first role is considered primary for backwards compat)
-    for (let i = 0; i < roleIds.length; i++) {
-      await userRoleRepo.save(userRoleRepo.create({
-        tenant_id: user.tenant_id,
-        user_id: userId,
-        role_id: roleIds[i],
-        is_primary: i === 0,
-      }));
-    }
-
-    // Legacy role_id column is NOT NULL: first role, or the Contact system
-    // role when the list is empty (no roles = no access -> pending).
-    let legacyRoleId = roleIds[0];
-    if (!legacyRoleId) {
-      const contact = await roleRepo.findOne({ where: { role_name: 'Contact' } as any });
-      if (!contact) throw new BadRequestException('Cannot clear roles: the Contact system role is missing.');
-      legacyRoleId = contact.id;
-    }
-    user.role_id = legacyRoleId;
-    await userRepo.save(user);
-
-    // Role assignment changes a user's effective permissions — always audit it.
-    await this.audit.log(
-      {
-        table: 'user_roles',
-        recordId: userId,
-        action: 'update',
-        before: { roles: previousRoles.map((ur: UserRole) => ({ id: ur.role_id, name: ur.role?.role_name ?? null })) },
-        after: { roles: roleIds.map((rid) => ({ id: rid, name: roles.find((r: Role) => r.id === rid)?.role_name ?? null })) },
-        userId: req.user?.sub ?? null,
-      },
-      manager ? { manager } : undefined,
-    );
+    await this.writeRoles(userId, list, req);
 
     return this.getUserRoles(userId, req);
   }

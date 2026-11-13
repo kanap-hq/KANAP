@@ -1238,6 +1238,7 @@
     "tableNames": {
       "accounts": "Konten",
       "ai_action_requests": "KI-Aktionsanfragen",
+      "ai_adapter_configs": "Integrationsverbindungen",
       "ai_api_keys": "KI-API-Schlüssel",
       "ai_approvals": "KI-Freigaben",
       "ai_evidence": "KI-Nachweise",
@@ -1619,12 +1620,14 @@
       "consentNeeded": "Noch nicht autorisiert. Ein Microsoft Entra-Administrator muss {{product}} die Berechtigung erteilen, Verzeichnisbenutzer zu lesen.",
       "grantAccess": "Zugriff in Microsoft Entra gewähren",
       "lastSynced": "Zuletzt synchronisiert {{date}}: {{synced}} Konten aktualisiert, {{disabled}} deaktiviert.",
+      "keptAdministrator": "Konto aktiv gelassen (letzter Administrator): {{name}}",
       "error": "Die letzte Synchronisierung ist fehlgeschlagen: {{message}}",
       "syncNow": "Jetzt synchronisieren",
       "syncing": "Synchronisierung…",
       "consentSuccess": "Zugriff gewährt. Die erste Synchronisierung läuft.",
       "consentError": "Microsoft hat den Zugriff nicht gewährt. Bitten Sie einen Microsoft Entra-Administrator, die Anfrage zu genehmigen.",
-      "resultOk": "Synchronisierung abgeschlossen: {{synced}} Konten aktualisiert, {{disabled}} deaktiviert."
+      "resultOk": "Synchronisierung abgeschlossen: {{synced}} Konten aktualisiert, {{disabled}} deaktiviert.",
+      "alreadyRunning": "Eine Synchronisierung läuft bereits."
     }
   },
   "billing": {
@@ -2200,7 +2203,9 @@
     "dialogs": {
       "createTitle": "Neue Rolle",
       "deleteMessage": "Diese Aktion ist endgültig. Sie können nur Rollen ohne zugewiesene Benutzer löschen.",
-      "deleteTitle": "Rolle löschen"
+      "deleteTitle": "Rolle löschen",
+      "duplicateTitle": "Rolle duplizieren",
+      "duplicateName": "{{name}} (Kopie)"
     },
     "empty": "Keine Rollen gefunden.",
     "fields": {
@@ -2534,6 +2539,7 @@
       "inviting": "Wird eingeladen…",
       "rowMenu": "Benutzeraktionen",
       "edit": "Bearbeiten",
+      "view": "Anzeigen",
       "enable": "Aktivieren",
       "disable": "Deaktivieren",
       "sendInvite": "Einladung senden",
@@ -2567,6 +2573,7 @@
     "dialogs": {
       "newUser": "Neuer Benutzer",
       "editUser": "Benutzer bearbeiten",
+      "viewUser": "Benutzer anzeigen",
       "identity": "Identität",
       "saveAndInvite": "Speichern und einladen"
     },
@@ -2734,6 +2741,7 @@
     }
   },
   "integrations": {
+    "secretAddressChanged": "Die Adresse hat sich geändert: Geben Sie den Wert erneut ein.",
     "netbox": {
       "title": "Netbox-Inventar",
       "description": "Übernehmen Sie Ihr Netbox-Inventar als Assets. Netbox bleibt die Referenz für die dort beschriebenen Geräte.",

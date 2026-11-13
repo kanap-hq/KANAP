@@ -33,11 +33,11 @@ function createMockSettings(overrides?: Partial<AiSettings>): AiSettings {
 }
 
 function createService(settings: AiSettings) {
-  const queryBuilder = {
+  const queryBuilder: any = {
     addSelect: () => queryBuilder,
-    where: () => ({
-      getOne: async () => settings,
-    }),
+    where: () => queryBuilder,
+    setLock: () => queryBuilder,
+    getOne: async () => settings,
   };
   const repo = {
     manager: {

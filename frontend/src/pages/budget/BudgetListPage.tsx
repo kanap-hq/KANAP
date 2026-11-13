@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ColDef } from 'ag-grid-community';
 import ServerDataGrid, { DATE_COLUMN_FILTER, DATE_COLUMN_FILTER_TWO_CONDITIONS, EnhancedColDef, StatusScope, gridSortModel } from '../../components/ServerDataGrid';
 import PageHeader from '../../components/PageHeader';
-import { Button, Chip, Stack, Typography } from '@mui/material';
+import { Box, Button, Chip, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import { withCostCenterGroups } from '../../components/grid/costCenterFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
@@ -14,6 +14,10 @@ import { isDataAccessLimited } from '../../auth/dataAccess';
 import BudgetFileExportDialog from '../../components/finance/BudgetFileExportDialog';
 import BudgetFileImportDialog from '../../components/finance/BudgetFileImportDialog';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import BulkEditButton from '../../components/bulk-edit/BulkEditButton';
+import BulkEditDialog from '../../components/bulk-edit/BulkEditDialog';
+import { BulkSelectionScope, bulkSelectionGridSx, useBulkSelection } from '../../components/bulk-edit/bulkSelection';
+import { useBudgetLineBulkFields } from './budgetLineBulkFields';
 import { recordsInUseCheck } from '../../utils/deleteCheck';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { formatItemRef } from '../../utils/item-ref';
@@ -159,6 +163,8 @@ function BudgetListPageView() {
   const [natureScope, setNatureScope] = useState<BudgetNatureScope>(
     () => natureScopeOf(parseListFilters(listFiltersOf(new URLSearchParams(location.search)))?.nature),
   );
+  // "Change the selection": the accounts and dimension values of the Type filter's nature.
+  const bulkFields = useBudgetLineBulkFields(natureScope);
   const Y = new Date().getFullYear();
   const listYear = new URLSearchParams(location.search).get('year');
 
@@ -208,7 +214,13 @@ function BudgetListPageView() {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [filteredCount, setFilteredCount] = useState<number | null>(null);
-  const [selectedRows, setSelectedRows] = useState<SummaryRow[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  // The lines ticked, or every line of the filter less the unticked ones ("Change the selection").
+  // A change of the search, the filters or the Show scope clears it; a sort or a column shown keeps it.
+  const bulk = useBulkSelection<SummaryRow>({
+    rowLabel: (row) => t('common:bulkEdit.selectRow', { name: row.product_name }),
+    scopeKey: ({ q, filters, status, includeDisabled }) => ({ q, filters, status, includeDisabled }),
+  });
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; filtersString: string; statusScope?: StatusScope } | null>(null);
   // A list opened from a report row is a one-off view (`?from=report`): it neither reads nor writes
   // the tab's stored list context, its state lives in its address only.
@@ -341,7 +353,9 @@ function BudgetListPageView() {
 
   const canCreate = hasLevel('budget', 'manager');
   const canAdmin = hasLevel('budget', 'admin');
-  // Deleting lines is reserved to people with access to all data (spec §2.7): no selection either.
+  // Changing lines in bulk: whoever may change a line, a limited person included (their lines only).
+  const canEdit = hasLevel('budget', 'member');
+  // Deleting lines is reserved to people with access to all data (spec §2.7).
   const canDelete = canAdmin && !isDataAccessLimited(dataAccess);
   const actions = (
     <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
@@ -355,9 +369,12 @@ function BudgetListPageView() {
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('opex.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
+      {canEdit && <BulkEditButton count={bulk.count} onClick={() => setBulkOpen(true)} />}
       {canDelete && (
         <DeleteSelectedButton
-          selectedRows={selectedRows}
+          // The lines ticked, named; none while the whole filter is taken: the delete never takes
+          // more lines than those ticked one by one.
+          selectedRows={bulk.tickedRows}
           endpoint="/budget-lines/bulk"
           // Asked on click: a line with amounts in a frozen column is kept, with the column and year.
           checkDelete={(ids) => recordsInUseCheck('/budget-lines', ids)}
@@ -368,8 +385,8 @@ function BudgetListPageView() {
           }}
           getItemId={(row) => row.id}
           getItemName={(row) => row.product_name}
-          gridApi={gridApiRef.current}
           onDeleteSuccess={() => {
+            bulk.clear();
             setRefreshKey((k) => k + 1);
           }}
         />
@@ -448,6 +465,7 @@ function BudgetListPageView() {
   const defaultAnalyticsLabel = analyticsAxes.label(analyticsAxes.defaultAxis ?? { name: null });
 
   const columns: ColDef<SummaryRow>[] = useMemo(() => [
+    ...(canEdit ? [bulk.column] : []),
     {
       colId: 'item_number',
       headerName: t('opex.columns.reference'),
@@ -1008,7 +1026,7 @@ function BudgetListPageView() {
         />
       ),
     },
-  ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getBudgetFilterValues, getBudgetHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
+  ], [Y, analyticsAxes, budgetColumns, bulk.column, canEdit, defaultAnalyticsLabel, getBudgetFilterValues, getBudgetHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
 
   if (!hasLevel('budget', 'reader')) {
     return <ForbiddenPage resource="budget" level="reader" />;
@@ -1022,7 +1040,10 @@ function BudgetListPageView() {
         // default sort and the dimension columns.
         <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', py: 1 }}>{t('common:status.loading')}</Typography>
       )}
-      {gridCanMount && <ServerDataGrid<SummaryRow>
+      {gridCanMount && (
+      <BulkSelectionScope value={bulk.scope}>
+      <Box sx={bulkSelectionGridSx}>
+      <ServerDataGrid<SummaryRow>
         columns={columns}
         endpoint={ROWS_ENDPOINT}
         queryKey="budget-lines-summary"
@@ -1068,8 +1089,8 @@ function BudgetListPageView() {
           // Before the grid is ready it reports its URL sync without the initial filter yet.
           if (gridApiRef.current) followTotalsQuery({ q: state.q || '', filters: filtersString, statusScope: scope });
         }}
-        enableRowSelection={canDelete}
-        onSelectionChanged={setSelectedRows}
+        onListRequestChange={bulk.onListRequestChange}
+        onCellClicked={canEdit ? bulk.onCellClicked : undefined}
         emptyState={(
           <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="budget-empty">
             <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('budget.empty')}</Typography>
@@ -1081,7 +1102,10 @@ function BudgetListPageView() {
           </Stack>
         )}
         footer={fxMissing?.length ? <FxMissingNotice items={fxMissing} /> : undefined}
-      />}
+      />
+      </Box>
+      </BulkSelectionScope>
+      )}
       <BudgetFileExportDialog
         open={exportOpen}
         onClose={() => setExportOpen(false)}
@@ -1096,6 +1120,19 @@ function BudgetListPageView() {
           statusScope: lastQueryRef.current?.statusScope ?? 'enabled',
         }}
       />
+      {canEdit && (
+        <BulkEditDialog
+          open={bulkOpen}
+          onClose={() => setBulkOpen(false)}
+          endpoint="/budget-lines/bulk-update"
+          selection={bulk.body}
+          fields={bulkFields}
+          onDone={() => {
+            bulk.clear();
+            setRefreshKey((k) => k + 1);
+          }}
+        />
+      )}
       <BudgetFileImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

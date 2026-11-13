@@ -1,6 +1,6 @@
 import React from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Box, Button, Stack, Typography } from '@mui/material';
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Alert, Box, Button, Link as MuiLink, Stack, Typography } from '@mui/material';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -158,6 +158,8 @@ export default function ConnectionWorkspacePage() {
   const [linkedInterfacesError, setLinkedInterfacesError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(!isCreate);
   const [error, setError] = React.useState<string | null>(null);
+  // The HTTP status of the last failed read (0 without a response), null once a read starts.
+  const [loadFailure, setLoadFailure] = React.useState<number | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
@@ -200,11 +202,14 @@ export default function ConnectionWorkspacePage() {
     if (isCreate || !routeId) return;
     setLoading(true);
     setError(null);
+    setLoadFailure(null);
     try {
       const res = await api.get<ConnectionDetail>(`/connections/${routeId}`, { params: { include: 'legs' } });
       setData(res.data);
       setLegs(res.data.legs || []);
     } catch (e: any) {
+      const status = e?.response?.status;
+      setLoadFailure(typeof status === 'number' ? status : 0);
       setError(getApiErrorMessage(e, t, t('messages.loadConnectionFailed')));
     } finally {
       setLoading(false);
@@ -323,6 +328,7 @@ export default function ConnectionWorkspacePage() {
     missing: () => missingOf(dataRef.current).map((key) => ({ key, label: fieldLabel(key) })),
     focus: focusField,
     onDelete: () => creation.cancelCreation({ leave: false }),
+    discardOnUnload: creation.discardOnUnload,
   });
   // Leaving a connection being created that still lacks a field asks first: complete it, or delete it.
   const leaveAsks = React.useCallback(
@@ -757,6 +763,34 @@ export default function ConnectionWorkspacePage() {
       onLinkedInterfacesChanged={connection.id ? handleLinkedInterfacesChanged : ignoreDraft}
     />
   );
+
+  // A connection that could not be read is a screen of its own: the empty record stays hidden.
+  // Only a 404 is "not found" (the English refusal stays hidden); any other failure says what
+  // went wrong and offers to read the connection again.
+  if (!isCreate && !data && loadFailure !== null) {
+    const notFound = loadFailure === 404;
+    return (
+      <Box sx={{ p: 2 }}>
+        {notFound ? (
+          <Alert severity="error">{t('workspace.connection.notFound')}</Alert>
+        ) : (
+          <Alert
+            severity="error"
+            action={<Button color="inherit" size="small" onClick={() => { void load(); }}>{t('common:buttons.retry')}</Button>}
+          >
+            {error || t('messages.loadConnectionFailed')}
+          </Alert>
+        )}
+        <MuiLink
+          component={RouterLink}
+          to={listPath}
+          sx={{ display: 'inline-block', mt: 2, fontSize: 13, fontWeight: 400, color: 'kanap.teal' }}
+        >
+          {t('workspace.connection.backToList')}
+        </MuiLink>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>

@@ -8,3 +8,5 @@ export { default as focusWhenMounted } from './focusWhenMounted';
 export { followCreationFields, useCreationFieldFocus, clearCreationFieldFocus } from './creationFieldFocus';
 export { default as useCreationLeave } from './useCreationLeave';
 export { default as useDraftCreation, type DraftCreated } from './useDraftCreation';
+export { default as useCreatedFromDraft } from './useCreatedFromDraft';
+export { changedFields, saveEditsSince } from './draftEdits';

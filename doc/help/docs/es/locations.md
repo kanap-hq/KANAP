@@ -71,7 +71,7 @@ Ambas categorías también muestran:
 - **Ciudad**: Nombre de la ciudad
 - **Información adicional**: Notas de texto libre sobre la ubicación
 
-**Cómo funciona**: Cambiar entre un tipo de alojamiento propio y uno en la nube borra los campos que pertenecen a la otra categoría. El editor pide confirmación antes de hacer el cambio.
+**Cómo funciona**: Cambiar entre un tipo de alojamiento propio y uno en la nube borra los campos que pertenecen a la otra categoría. El editor pide confirmación antes de un cambio que borra un valor.
 
 #### Sub-ubicaciones
 
