@@ -138,32 +138,40 @@ export default function NotificationsTab() {
     }
   }, [data]);
 
-  // Debounced save function
+  // Debounced save function. Changes made within the delay go out together, and any still waiting
+  // when the tab goes are sent then (once).
+  const pendingUpdatesRef = useRef<Partial<NotificationPreferencesData> | null>(null);
+  const sendPending = useCallback(async () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = null;
+    const updates = pendingUpdatesRef.current;
+    pendingUpdatesRef.current = null;
+    if (!updates) return;
+    setError(null);
+    try {
+      await api.patch('/users/me/notification-preferences', updates);
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, t('common:messages.saveFailed')));
+    }
+  }, [queryClient, t]);
+  const sendPendingRef = useRef(sendPending);
+  sendPendingRef.current = sendPending;
+
   const debouncedSave = useCallback(
     (updates: Partial<NotificationPreferencesData>) => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-      saveTimeoutRef.current = setTimeout(async () => {
-        setError(null);
-        try {
-          await api.patch('/users/me/notification-preferences', updates);
-          queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
-        } catch (e: any) {
-          setError(getApiErrorMessage(e, t, t('common:messages.saveFailed')));
-        }
-      }, 500);
+      pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates };
+      saveTimeoutRef.current = setTimeout(() => { void sendPendingRef.current(); }, 500);
     },
-    [queryClient, t]
+    []
   );
 
-  // Cleanup timeout on unmount
+  // The tab goes before the delay: what waits is sent now.
   useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
+    return () => { void sendPendingRef.current(); };
   }, []);
 
   const updatePrefs = useCallback(
