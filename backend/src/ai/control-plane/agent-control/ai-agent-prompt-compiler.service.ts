@@ -26,7 +26,7 @@ export const RUNTIME_SAFETY_FLOOR_INTERPRETER = [
 // Standing rule of the action planner, whatever the internal notes setting. When the agent
 // ignores internal notes, no internal item reaches the model, so the rule has nothing to apply
 // to. The reply synthesis and the administrative reply read the public items only.
-export const INTERNAL_NOTES_LINE = 'Ticket history items with visibility "internal" are notes from the support team: use them to handle the request and to answer, without quoting them word for word or saying that they exist.';
+export const INTERNAL_NOTES_LINE = 'Ticket history items with visibility "internal" are notes from the support team: use them to decide and to brief the technician; a reply to the requester is written from the public messages only, without quoting them or saying that they exist.';
 
 export const RUNTIME_SAFETY_FLOOR_SYNTHESIS = [
   `You compose sourced helpdesk replies for ${PRODUCT_NAME} ticket triage.`,

@@ -262,6 +262,10 @@ function testTheInternalNoteIsBuiltFromTheItemsTheAgentReads() {
 function testUsedInternalNotesAreExplainedToTheModels() {
   const line = INTERNAL_NOTES_LINE;
   assert.ok(RUNTIME_SAFETY_FLOOR_ACTION_PLANNER.includes(line));
+  // The rule as it stands: decide and brief the technician; the reply is written on public messages.
+  assert.match(line, /use them to decide and to brief the technician/);
+  assert.match(line, /reply to the requester is written from the public messages only/);
+  assert.doesNotMatch(line, /and to answer/);
   assert.ok(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF.some((entry) => entry.includes('visibility "internal"')));
   for (const floor of [RUNTIME_SAFETY_FLOOR_SYNTHESIS, RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY]) {
     assert.ok(!floor.some((entry) => entry.includes('internal')));
