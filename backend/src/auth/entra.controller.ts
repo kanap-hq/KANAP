@@ -746,6 +746,19 @@ export class EntraController {
         } as any,
         relations: ['role', 'company', 'department'],
       });
+      if (found) {
+        // Locked, then read again, as the directory sync does: an administrator may have unlinked
+        // the account meanwhile (Unlink from Microsoft, a disconnect, the sync keeping the last
+        // Administrator). An account no longer linked to this Microsoft account is not linked back
+        // here: it follows the rule of an existing account below.
+        const locked = await lockAccountForLink(manager, tenantId, found.id);
+        found = locked && locked.external_auth_provider === 'entra'
+          ? await repo.findOne({
+            where: { id: found.id, external_auth_provider: 'entra' as any, external_subject: oid } as any,
+            relations: ['role', 'company', 'department'],
+          })
+          : null;
+      }
 
       if (!found) {
         const local = await repo

@@ -21,7 +21,14 @@ function createMockDataSource(repo: any) {
   const manager = {
     getRepository: () => repo,
     // The workspace's connection, read under a share lock by a sign-in that links an account.
-    query: async (sql: string) => (/FROM tenants/.test(sql) ? [{ sso_provider: 'entra', entra_tenant_id: 'entra-tenant-1' }] : []),
+    query: async (sql: string, params?: any[]) => {
+      if (/FROM tenants/.test(sql)) return [{ sso_provider: 'entra', entra_tenant_id: 'entra-tenant-1' }];
+      // The account found by its Microsoft identity, locked and still linked.
+      if (/FROM users WHERE tenant_id = \$1 AND id = \$2 FOR UPDATE/.test(sql)) {
+        return [{ id: params?.[1], email: 'linked@example.test', status: 'enabled', external_auth_provider: 'entra', has_password: false }];
+      }
+      return [];
+    },
   };
 
   const runner = {
