@@ -10,6 +10,7 @@ import { Location } from '../../locations/location.entity';
 import { Tenant } from '../../tenants/tenant.entity';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { Application } from '../application.entity';
+import { bulkUpdateApplications } from '../application-bulk-edit';
 import { ApplicationsCrudService } from '../services/applications-crud.service';
 import { ApplicationsListService } from '../services/applications-list.service';
 import { ApplicationsOwnersService } from '../services/applications-owners.service';
@@ -235,6 +236,25 @@ const tests: Array<[string, () => Promise<void>]> = [
     const done = await ctx.svc.bulkUpdate(confirm, null, opts(ctx));
     assert.equal(done.changed, 4, 'the counted applications, and only them');
     assert.equal(await column(ctx, late.id, 'lifecycle'), 'active', 'the new application stays as it is');
+  })],
+
+  ['the cap counts the applications left once the unticked ones are out, as the budget lines do', () => inTenant(async (ctx) => {
+    // A filter that reaches 5,001 ids (none of them an application of the tenant: nothing is written).
+    const many = Array.from({ length: BULK_MAX_ROWS + 1 }, () => randomUUID());
+    const deps = {
+      manager: ctx.runner.manager,
+      tenantId: ctx.tenantId,
+      values: async () => ({ lifecycle: ['active'], criticality: [] }),
+      listIds: async (query: Record<string, unknown>) => ({ ids: many.slice(0, Number(query.limit)), total: many.length }),
+      update: async () => undefined,
+      replaceOwners: async () => undefined,
+    };
+    const body = { all: true, filters: {}, changes: { lifecycle: 'active' }, dry_run: true };
+    const tooMany = (err: any) => err.status === 400 && err.getResponse().code === 'bulk_too_many';
+    const dry = await bulkUpdateApplications({ ...body, exclude_ids: [many[BULK_MAX_ROWS]] }, deps);
+    assert.equal(dry.rows, 0, '5,001 less one unticked: counted');
+    await assert.rejects(bulkUpdateApplications(body, deps), tooMany);
+    await assert.rejects(bulkUpdateApplications({ ...body, exclude_ids: [randomUUID()] }, deps), tooMany, 'an unticked id the filter does not reach leaves 5,001');
   })],
 
   ['more than 5,000 applications: 400 bulk_too_many; with all, as_of, expected_rows and fingerprint are required', () => inTenant(async (ctx) => {

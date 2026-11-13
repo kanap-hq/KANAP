@@ -99,11 +99,14 @@ export async function bulkUpdateApplications(body: unknown, deps: ApplicationBul
       let ids = chosen.ids;
       if (chosen.all) {
         const excluded = new Set(chosen.excluded);
-        // The list's own query, its first ids past the cap: enough to refuse more.
+        // The list's own query. The cap counts the applications left once the unticked ones are out,
+        // as the budget lines do: the first ids past the cap plus the unticked ones are enough to
+        // tell. Ids beyond them (the list caps its answer at 10,000) leave more than the cap anyway.
         const { __classificationExport: _internal, page: _page, sort: _sort, ...query } = chosen.filters;
-        const found = await deps.listIds({ ...query, limit: String(BULK_MAX_ROWS + 1) });
-        if (found.total > BULK_MAX_ROWS) throw bulkTooMany(found.total);
+        const found = await deps.listIds({ ...query, limit: String(BULK_MAX_ROWS + excluded.size + 1) });
+        if (found.total > found.ids.length) throw bulkTooMany(found.total - excluded.size);
         ids = found.ids.filter((id) => !excluded.has(id.toLowerCase()));
+        if (ids.length > BULK_MAX_ROWS) throw bulkTooMany(ids.length);
       }
       if (ids.length === 0) return [];
       // The lock order of the update of one application: the tenant's classification catalog, then
