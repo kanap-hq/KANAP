@@ -2282,3 +2282,47 @@ describe('BudgetLinePage delete', () => {
 });
 
 });
+
+describe('BudgetLinePage load failure', () => {
+  const missing = (status: number, message: string) => Object.assign(new Error(message), { response: { status, data: { message } } });
+
+  beforeEach(() => {
+    nature = 'opex';
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+  });
+
+  it('shows a not-found screen and a link back to the list when the line is missing', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/budget-lines/BL-99999') throw missing(404, 'Budget line not found');
+      return { data: {} };
+    });
+    renderAt('/ops/budget/BL-99999/overview?year=2027&q=nyc');
+    expect(await screen.findByText('budget.notFound')).toBeInTheDocument();
+    expect(screen.queryByText('Budget line not found')).toBeNull();
+    expect(screen.queryByTestId('workspace-shell')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.retry' })).toBeNull();
+    fireEvent.click(screen.getByRole('link', { name: 'budget.backToList' }));
+    const list = await screen.findByTestId('list-page');
+    const search = new URLSearchParams(list.getAttribute('data-search') ?? '');
+    expect(search.get('year')).toBe('2027');
+    expect(search.get('q')).toBe('nyc');
+    expect(search.has('list')).toBe(false);
+  });
+
+  it('shows the failure and a retry when the line cannot be read', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/budget-lines/BL-99999') throw missing(503, 'Database unavailable');
+      return { data: {} };
+    });
+    renderAt('/ops/budget/BL-99999/overview');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Database unavailable');
+    expect(screen.queryByText('budget.notFound')).toBeNull();
+    expect(screen.queryByTestId('workspace-shell')).toBeNull();
+    const reads = () => mocked.get.mock.calls.filter(([url]) => url === '/budget-lines/BL-99999').length;
+    const before = reads();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.retry' }));
+    await waitFor(() => expect(reads()).toBe(before + 1));
+  });
+});

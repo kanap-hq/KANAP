@@ -56,13 +56,27 @@ describe('budget line route resolution', () => {
     // The workspace's line and dimensions are read during the same wait.
     expect(api.get).toHaveBeenCalledWith('/budget-lines/BL-127', expect.anything());
   });
-  it('shows the existing load error for an unavailable line without mounting child resources', async () => {
-    vi.mocked(api.get).mockRejectedValue(Object.assign(new Error('Not found'), { response: { status: 404 } }));
-    renderAt('/ops/budget/BL-999');
-    expect(await screen.findByRole('alert')).toHaveTextContent('opex.workspace.failedToLoad');
+  it('shows a not-found screen and a link back to the list when the reference does not exist', async () => {
+    vi.mocked(api.get).mockRejectedValue(Object.assign(new Error('Not found'), { response: { status: 404, data: { message: 'Budget line not found' } } }));
+    renderAt('/ops/budget/BL-99999/overview?year=2027&q=nyc&list=budget');
+    expect(await screen.findByRole('alert')).toHaveTextContent('budget.notFound');
+    expect(screen.queryByText('Budget line not found')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.retry' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'budget.backToList' })).toHaveAttribute('href', '/ops/budget?year=2027&q=nyc');
     expect(screen.queryByTestId('workspace')).toBeNull();
     // The second read is the query's refetch on mount, sent by an effect after the error shows.
     await waitFor(() => expect(resolveCalls()).toBe(2));
+  });
+  it('shows the failure and a retry when the line cannot be read', async () => {
+    vi.mocked(api.get).mockRejectedValue(Object.assign(new Error('down'), { response: { status: 503, data: { message: 'Database unavailable' } } }));
+    renderAt('/ops/budget/BL-99999/overview');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Database unavailable');
+    expect(screen.queryByText('budget.notFound')).toBeNull();
+    expect(screen.getByRole('link', { name: 'budget.backToList' })).toHaveAttribute('href', '/ops/budget');
+    expect(screen.queryByTestId('workspace')).toBeNull();
+    await waitFor(() => expect(resolveCalls()).toBe(2));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.retry' }));
+    await waitFor(() => expect(resolveCalls()).toBe(3));
   });
   it.each([['', 'opex'], ['?nature=capex', 'capex'], ['?nature=unknown', 'opex']])('creates with %s and no resolution request', async (search, nature) => {
     renderAt(`/ops/budget/new${search}`);

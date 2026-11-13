@@ -1,19 +1,17 @@
 import React from 'react';
-import { Alert } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useLocation, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import type { LineType } from '../../constants/lineTypeUsage';
 import { budgetLineDetailQuery } from '../../hooks/budgetItemDetailQuery';
 import { analyticsAxesQuery } from '../../hooks/useAnalyticsAxes';
 import BudgetLinePage from './BudgetLinePage';
+import BudgetLineUnavailable, { budgetLinesListPath } from './BudgetLineUnavailable';
 
 /** Resolve both natures and old references before mounting the workspace's child resources. */
 export default function BudgetLineRoute() {
   const { ref = 'new', tab } = useParams();
   const location = useLocation();
-  const { t } = useTranslation('ops');
   const isCreate = ref === 'new';
   const queryClient = useQueryClient();
   const resolveQuery = {
@@ -47,7 +45,18 @@ export default function BudgetLineRoute() {
     const nature = new URLSearchParams(location.search).get('nature') === 'capex' ? 'capex' : 'opex';
     return <BudgetLinePage nature={nature} />;
   }
-  if (resolved.error || (resolved.data === undefined && cached?.status === 'error')) return <Alert severity="error" sx={{ m: 2 }}>{t('opex.workspace.failedToLoad')}</Alert>;
+  // A line that could not be resolved is a screen of its own. Only a 404 is "not found";
+  // any other failure says what went wrong and offers to read the line again.
+  const loadError = resolved.error ?? (cached?.status === 'error' ? cached.error : undefined);
+  if (loadError && resolved.data === undefined) {
+    return (
+      <BudgetLineUnavailable
+        error={loadError}
+        onRetry={() => { void resolved.refetch(); }}
+        listPath={budgetLinesListPath(location.search)}
+      />
+    );
+  }
   if (!resolved.data) return null;
   if (ref !== resolved.data.reference) {
     return <Navigate replace to={`/ops/budget/${resolved.data.reference}${tab ? `/${tab}` : ''}${location.search}${location.hash}`} />;

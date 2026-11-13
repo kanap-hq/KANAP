@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -10,6 +10,7 @@ import { useBudgetLineNav } from '../../hooks/useBudgetLineNav';
 import type { LineType } from '../../constants/lineTypeUsage';
 import { BUDGET_NATURE_CONFIG } from './natureConfig';
 import { budgetLineDetailQuery } from '../../hooks/budgetItemDetailQuery';
+import BudgetLineUnavailable, { httpStatus } from './BudgetLineUnavailable';
 import { isReportView, useListFilters, writeListSnapshot } from '../../hooks/useListContextSearch';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import { compactListSearchCached } from '../../lib/listContext';
@@ -295,7 +296,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // What others changed (lot 3G): set once the page's parts are known, below.
   const othersPendingRef = React.useRef<() => boolean>(() => false);
   const noteRowVersionRef = React.useRef<(lineId: string, rowVersion: unknown) => void>(() => undefined);
-  const { data, error, isPlaceholderData, isFetchedAfterMount, isStale } = useQuery({
+  const { data, error, refetch, isPlaceholderData, isFetchedAfterMount, isStale } = useQuery({
     // Shared with the neighbours' prefetch (previous / next show at once).
     ...budgetLineDetailQuery(idParam),
     enabled: !isCreate && !deleted,
@@ -1101,12 +1102,31 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       ? t('common:status.saved', 'Saved')
       : null;
 
+  // A line that could not be read is a screen of its own: the empty record stays hidden.
+  // Only a 404 is "not found". A later read that fails another way keeps the line and says why.
+  if (!isCreate && error && (!data || isPlaceholderData || httpStatus(error) === 404)) {
+    return (
+      <BudgetLineUnavailable
+        error={error}
+        onRetry={() => { void refetch(); }}
+        listPath={listPath}
+      />
+    );
+  }
+
   return (
     <Box ref={rootRef} sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <PortfolioDetailWorkspaceShell
         notices={(!isCreate || !!error || !!saveError) ? (
           <>
-            {!!error && <Alert severity="error">{t('opex.workspace.failedToLoad')}</Alert>}
+            {!!error && (
+              <Alert
+                severity="error"
+                action={<Button color="inherit" size="small" onClick={() => { void refetch(); }}>{t('common:buttons.retry')}</Button>}
+              >
+                {getApiErrorMessage(error, t, t('opex.workspace.failedToLoad'))}
+              </Alert>
+            )}
             {!!saveError && <Alert severity="error" onClose={() => setSaveError(null)}>{saveError}</Alert>}
             {incompleteNotice.length > 0 && (
               <Alert severity="warning" data-testid="line-incomplete">

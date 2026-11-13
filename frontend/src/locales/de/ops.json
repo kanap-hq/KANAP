@@ -1855,6 +1855,8 @@
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
     "line": "Budgetzeile",
+    "notFound": "Budgetzeile nicht gefunden.",
+    "backToList": "Zurück zur Liste",
     "delete": {
       "toDelete_one": "{{count}} Budgetzeile wird gelöscht:",
       "toDelete_other": "{{count}} Budgetzeilen werden gelöscht:",
