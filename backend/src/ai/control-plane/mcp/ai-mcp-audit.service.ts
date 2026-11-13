@@ -135,15 +135,6 @@ const MAX_ARGUMENT_STRING_CHARS = 200;
 const MAX_ARGUMENT_ENTRIES = 20;
 const MAX_ARGUMENT_DEPTH = 4;
 const MAX_ARGUMENTS_JSON_CHARS = 2_000;
-// A KANAP key or OAuth refresh token (`kanap_mcp_…`, `kanap_mcprt_…`), or a JWT (an OAuth access
-// token or authorization code), wherever it appears in a value.
-const CREDENTIAL_PATTERNS = [
-  /kanap_mcp[a-z]*_[A-Za-z0-9_-]+/g,
-  /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]+/g,
-];
-// Argument names whose values the journal drops, on top of the evidence rule (api key, token,
-// secret, password, authorization, cookie, session).
-const SENSITIVE_ARGUMENT_NAME = /(passw|pwd|passphrase|credential|private[-_]?key|access[-_]?key|bearer|jwt|^auth$)/i;
 
 function hideCredentials(value: string): string {
   return String(redactSensitiveValue(value));
@@ -176,7 +167,7 @@ function previewValue(value: unknown, depth: number): unknown {
       .slice(0, MAX_ARGUMENT_ENTRIES)
       .map(([key, entry]) => [
         truncate(hideCredentials(key), 80),
-        SENSITIVE_ARGUMENT_NAME.test(key) ? '[REDACTED]' : previewValue(entry, depth + 1),
+        previewValue(entry, depth + 1),
       ]);
     if (entries.length > MAX_ARGUMENT_ENTRIES) {
       kept.push(['[more]', entries.length - MAX_ARGUMENT_ENTRIES]);
