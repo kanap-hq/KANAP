@@ -58,6 +58,7 @@ import { AiReplySynthesisService } from '../control-plane/agent-control/ai-reply
 import { AiTicketEvidenceExtractionService } from '../control-plane/agent-control/ai-ticket-evidence-extraction.service';
 import { AiTicketNeedRepresentationService } from '../control-plane/agent-control/ai-ticket-need-representation.service';
 import { Tenant } from '../../tenants/tenant.entity';
+import { withdrawnReplySentence } from '../control-plane/agent-control/agent-control-timeline-synthesis.util';
 import { AiReadonlyDiagnosticWorkflowService } from '../control-plane/diagnostics/ai-readonly-diagnostic-workflow.service';
 import { AiAgentHelpdeskTicketingIngestionService } from '../control-plane/agent/ai-agent-helpdesk-ticketing-ingestion.service';
 import { AiAgentApprovalLifecycleSweeperService } from '../control-plane/agent/ai-agent-approval-lifecycle-sweeper.service';
@@ -14448,9 +14449,14 @@ async function runTriageWithSimulatedModel(input: {
   // An inactivity threshold in the targeting and the age of the ticket: the ticket may be closed
   // when its age passes the threshold.
   closeTargeting?: { inactivitySeconds: number; ticketAgeHours: number };
+  // The tenant's language (the language of the note); none when undefined.
+  tenantLanguage?: string;
 }) {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
+  if (input.tenantLanguage) {
+    await manager.getRepository(Tenant).save({ id: context.tenantId, metadata: { language: input.tenantLanguage } });
+  }
   const previousWebReady = Features.AI_WEB_SEARCH_READY;
   (Features as any).AI_WEB_SEARCH_READY = true;
   const queue = new AiAgentWorkQueueService();
@@ -15154,7 +15160,7 @@ async function runR3Triage(
   internalNotes: 'used' | 'ignored',
   withInternalNotes = true,
   overrides: Record<string, R3Answer> = {},
-  extra: { lifecycle?: Record<string, unknown>; closeTargeting?: { inactivitySeconds: number; ticketAgeHours: number } } = {},
+  extra: { lifecycle?: Record<string, unknown>; closeTargeting?: { inactivitySeconds: number; ticketAgeHours: number }; tenantLanguage?: string } = {},
 ) {
   return runTriageWithSimulatedModel({
     notes: r3Notes(withInternalNotes),
@@ -15273,6 +15279,36 @@ async function testTheWebSearchReadsThePublicThreadOnly() {
   }
 }
 
+// A withdrawn reply is told in the note, in one sentence in the note's language and without a
+// code, whether the note was added for it or the plan had its own.
+async function testAWithdrawnReplyIsToldInTheNoteLanguage() {
+  const draft = (withNote: boolean): R3Answer => (payload) => ({
+    actions: [
+      ...(withNote ? [{ action_type: 'internal_note', reason: 'Documenter le poste.' }] : []),
+      {
+        action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: 'acknowledgement',
+        reason: 'Accuser réception.', body: `Brouillon ${r3Echo(payload)}`,
+      },
+    ],
+    rationale: 'Accuser réception.', confidence: 0.8,
+  });
+  const sentences = new Set<string>();
+  for (const language of ['en', 'fr', 'de', 'es'] as const) {
+    const sentence = withdrawnReplySentence('administrative', true, language);
+    sentences.add(sentence);
+    assert.doesNotMatch(sentence, /_/, sentence);
+    for (const withNote of [false, true]) {
+      const result = await runR3Triage(draft(withNote), 'used', true, { administrative_reply: () => null }, { tenantLanguage: language });
+      const label = `${language}, ${withNote ? 'the plan has a note' : 'a note is added'}`;
+      assert.equal(result.publicReply, null, label);
+      assert.ok(result.internalNote?.includes(sentence), `${label}: ${result.internalNote}`);
+      assert.equal(result.internalNote!.split(sentence).length, 2, `${label}: said once`);
+      assert.doesNotMatch(result.internalNote!, /administrative_reply_[a-z_]+|Escalate internally/, label);
+    }
+  }
+  assert.equal(sentences.size, 4, 'one sentence per language');
+}
+
 // The names of the workspace's applications are read once per triage, in the workspace only, and
 // only when a code opens the ticket title.
 async function testTheTitleCodesReadTheWorkspaceApplicationsOnce() {
@@ -15322,7 +15358,7 @@ async function testAWithdrawnClosingReplyWithdrawsTheClose() {
     const result = await runR3Triage(closePlan, 'used', true, overrides, extra);
     assert.equal(result.publicReply, null, `${label}: no closing reply`);
     assert.ok(!result.capabilityCalls.includes(TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY), `${label}: no close without its reply`);
-    assert.ok(result.internalNote?.includes('nothing is sent and the ticket is not closed'), `${label}: the note says so: ${result.internalNote}`);
+    assert.ok(result.internalNote?.includes(withdrawnReplySentence('close', true, 'en')), `${label}: the note says so: ${result.internalNote}`);
   }
 }
 
@@ -15722,7 +15758,8 @@ async function testGlpiTriageDowngradesUnusableSourcedReplyToInternalNoteAndHono
   assert.equal(statusUpdatePrepared, false);
   // Fix 3: the downgrade is an internal escalation, so the note carries the agent's escalation
   // rationale and NOT the misleading "synthesis unavailable / complete manually" boilerplate.
-  assert.match(internalNoteBody, /Escalate internally because sourced reply synthesis was not usable/);
+  assert.ok(internalNoteBody.includes(withdrawnReplySentence('sourced', true, 'en')), internalNoteBody);
+  assert.doesNotMatch(internalNoteBody, /invalid_or_ungrounded_synthesis/);
   assert.doesNotMatch(internalNoteBody, /complete the requester answer manually/i);
   assert.doesNotMatch(internalNoteBody, /Possible sources found \(fallback mode/);
   assert.equal(calls.some((call) => call.capabilityName === TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY), true);
@@ -18236,6 +18273,7 @@ async function run() {
   await testAWithdrawnClosingReplyWithdrawsTheClose();
   await testTheTitleCodesReadTheWorkspaceApplicationsOnce();
   await testTheWebSearchReadsThePublicThreadOnly();
+  await testAWithdrawnReplyIsToldInTheNoteLanguage();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();

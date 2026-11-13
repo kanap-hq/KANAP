@@ -377,6 +377,9 @@ import {
   buildTriageNote,
   configuredReplyLanguage,
   resolveReplyLanguage,
+  withdrawnReplySentence,
+  type WithdrawnReplyKind,
+  withNoteNotice,
   normalizeKnowledgeReplyText,
   sanitizeForProvider,
   sanitizeInlineForProvider,
@@ -6578,32 +6581,49 @@ export class AiAgentControlService {
         ? [{
           entry: sourcedReplyAction,
           reason: synthesisFallbackReason ?? replySynthesisResult?.fallback_reason ?? 'synthesis_unavailable_or_unusable',
-          why: 'sourced reply synthesis was not usable',
+          kind: 'sourced' as WithdrawnReplyKind,
         }]
         : []),
       ...(plannerDraftedReply && administrativeReplyFallbackReason
-        ? [{ entry: plannerDraftedReply, reason: administrativeReplyFallbackReason, why: 'the administrative reply could not be written from the public messages' }]
+        ? [{
+          entry: plannerDraftedReply,
+          reason: administrativeReplyFallbackReason,
+          kind: (plannerDraftedReply.action.administrative_intent === 'close_reply' ? 'close' : 'administrative') as WithdrawnReplyKind,
+        }]
         : []),
     ];
     const downgradedReply = withdrawnReplies[0] ?? null;
-    // A closing reply withdrawn takes its close with it: the ticket is never closed silently.
-    const withdrawnCloseReply = withdrawnReplies.some((withdrawn) => withdrawn.entry.action.administrative_intent === 'close_reply');
+    effectivePlannerActions = effectivePlannerActions.filter((entry) => !withdrawnReplies.some((withdrawn) => withdrawn.entry === entry));
+    // A closing reply that leaves the plan takes its close with it: the ticket is never closed
+    // without its closing reply.
+    const closeReplyLeft = plannerAuthorizedActions.some((entry) =>
+      entry.action.administrative_intent === 'close_reply' && !effectivePlannerActions.includes(entry));
+    if (closeReplyLeft) {
+      effectivePlannerActions = effectivePlannerActions.filter((entry) => {
+        if (entry.action.action_type !== 'status_update' || !entry.terminal) return true;
+        const closeDowngradeReason = `close_requires_its_closing_reply${downgradedReply ? `: ${downgradedReply.reason}` : ''}`;
+        plannerDowngradedActions.status_update = closeDowngradeReason;
+        plannerSkippedActions.status_update = closeDowngradeReason;
+        return false;
+      });
+    }
+    // The note says, in its own language and in one sentence, that a planned reply was withdrawn.
+    const withdrawnReplyNotice = downgradedReply
+      ? withdrawnReplySentence(
+        withdrawnReplies.some((withdrawn) => withdrawn.kind === 'close') ? 'close' : downgradedReply.kind,
+        !effectivePlannerActions.some((entry) => entry.action.action_type === 'requester_reply'),
+        noteLanguage,
+      )
+      : null;
     if (downgradedReply) {
       const downgradeReason = downgradedReply.reason;
       plannerDowngradedActions.requester_reply = downgradeReason;
       plannerSkippedActions.requester_reply = downgradeReason;
-      effectivePlannerActions = effectivePlannerActions.filter((entry) => !withdrawnReplies.some((withdrawn) => withdrawn.entry === entry));
       effectivePlannerActions = effectivePlannerActions.filter((entry) => {
         if (entry.action.action_type !== 'status_update') {
           return true;
         }
         const transitionKey = normalizePlannerStatusTransitionKey(entry.action.transition_key);
-        if (withdrawnCloseReply && entry.terminal) {
-          const closeDowngradeReason = `close_requires_its_closing_reply: ${downgradeReason}`;
-          plannerDowngradedActions.status_update = closeDowngradeReason;
-          plannerSkippedActions.status_update = closeDowngradeReason;
-          return false;
-        }
         if (transitionKey !== 'pending') {
           return true;
         }
@@ -6621,9 +6641,7 @@ export class AiAgentControlService {
         delete plannerSkippedActions.internal_note;
         const downgradeAction: PlannerAction = {
           action_type: 'internal_note',
-          reason: withdrawnCloseReply
-            ? `Escalate internally because the closing reply could not be written from the public messages: nothing is sent and the ticket is not closed (${downgradeReason}).`
-            : `Escalate internally because ${downgradedReply.why}: ${downgradeReason}.`,
+          reason: withdrawnReplyNotice ?? '',
         };
         effectivePlannerActions.push({
           action: downgradeAction,
@@ -6728,13 +6746,14 @@ export class AiAgentControlService {
       stage: 'before_proposal_preparation',
       usage: currentRunLlmUsage(),
     });
-    const noteBody = isPlannerEscalation
+    const plannedNoteBody = isPlannerEscalation
       ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason }, noteLanguage)
       : (noteFromSynthesis && noteSynthesis
         ? renderSynthesizedTriageNote(ticket, agentTimeline, noteSynthesis, noteLanguage)
         : (isPlannerAdministrativeReply
           ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'administrative_reply', reason: administrativeReason }, noteLanguage)
           : buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, null, noteLanguage)));
+    const noteBody = withNoteNotice(plannedNoteBody, withdrawnReplyNotice);
 
     const plannerClassificationUpdate = effectivePlannerActions.find((entry) => entry.action.action_type === PLANNER_CLASSIFICATION_ACTION_TYPE) ?? null;
     const classificationUpdateInput = plannerClassificationUpdate?.action.proposed
