@@ -2556,7 +2556,8 @@
       "sendReset": "Envoyer une réinitialisation de mot de passe",
       "delete": "Supprimer",
       "disableSelected": "Désactiver ({{count}})",
-      "dataAccess": "Accès aux données"
+      "dataAccess": "Accès aux données",
+      "unlinkMicrosoft": "Délier de Microsoft"
     },
     "columns": {
       "lastName": "Nom",
@@ -2598,6 +2599,7 @@
       "inviteConfirm_one": "Envoyer une invitation à {{email}} ?",
       "inviteConfirm_other": "Envoyer des invitations à {{count}} utilisateurs ?",
       "disableConfirm": "{{name}} perdra l'accès et sera déconnecté immédiatement. Désactiver ce compte ?",
+      "unlinkMicrosoftConfirm": "{{name}} se connectera désormais avec un mot de passe. Délier ce compte de Microsoft ?",
       "deleteConfirm": "Supprimer {{name}} ? Cette action est irréversible.",
       "inviteSentOne": "Invitation envoyée à {{email}}",
       "resetSent": "E-mail de réinitialisation envoyé à {{email}}",

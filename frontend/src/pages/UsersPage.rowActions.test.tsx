@@ -1,5 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import api from '../api';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -77,6 +78,27 @@ describe('UsersPage row actions', () => {
       'users.actions.delete',
     ]);
     expect(grid.props!.isRowSelectable({ ...PERSON, above_own_rights: false })).toBe(true);
+  });
+
+  it('offers to unlink a person linked to Microsoft, after a confirmation', async () => {
+    const items = openRowMenu({ ...PERSON, external_auth_provider: 'entra', above_own_rights: false });
+    expect(items).toEqual([
+      'users.actions.edit',
+      'users.actions.dataAccess',
+      'users.actions.disable',
+      'users.actions.unlinkMicrosoft',
+      'users.actions.delete',
+    ]);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'users.actions.unlinkMicrosoft' }));
+    expect(await screen.findByText('users.messages.unlinkMicrosoftConfirm')).toBeInTheDocument();
+    expect(vi.mocked(api.post)).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'users.actions.unlinkMicrosoft' }));
+    await waitFor(() => expect(vi.mocked(api.post)).toHaveBeenCalledWith('/users/u-2/unlink-microsoft'));
+  });
+
+  it('does not offer to unlink a linked person with more rights than the reader', () => {
+    const items = openRowMenu({ ...PERSON, external_auth_provider: 'entra', above_own_rights: true });
+    expect(items).toEqual(['users.actions.view']);
   });
 
   it('only views a person with more rights than the reader, and keeps them out of the selection', () => {

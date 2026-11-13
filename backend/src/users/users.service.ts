@@ -1338,15 +1338,18 @@ export class UsersService {
    * Makes an account local: its link to the identity provider is removed (provider, subject, last
    * directory refresh), so it signs in with a password and "Forgot password" sends it a link. A
    * password it already has stays. Written to the person's history. No-op for a local account.
+   * With `roleGrant` (a person's request), refused on a person with more rights than the actor.
    */
   async unlinkExternalSignIn(
     id: string,
     actorId?: string | null,
-    opts?: { manager?: EntityManager; sourceRef?: string },
+    opts?: { manager?: EntityManager; sourceRef?: string; roleGrant?: RoleGrantActor },
   ) {
     const repo = this.getRepo(opts?.manager);
+    await lockPeople(opts?.manager ?? repo.manager, [id]);
     const user = await repo.findOne({ where: { id } });
     if (!user) throw new BadRequestException('User not found');
+    if (opts?.roleGrant) await assertPersonWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, id);
     if (!user.external_auth_provider && !user.external_subject) return user;
     const before = userAuditSnapshot(user);
     user.external_auth_provider = null;
