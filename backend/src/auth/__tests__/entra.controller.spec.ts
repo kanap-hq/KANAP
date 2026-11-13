@@ -8,6 +8,7 @@ import { waitForBackgroundWork } from '../../common/background-work';
 import { EntraController, ssoFailureReason } from '../entra.controller';
 import { AdminAuthController } from '../admin-auth.controller';
 import { Features } from '../../config/features';
+import { BULK_WRITE_TIMEOUTS, REQUEST_DB_TIMEOUTS_KEY } from '../../common/request-db-timeouts';
 
 function createMockDataSource(repo: any) {
   const state = {
@@ -868,6 +869,14 @@ async function testConsentEntryNamesTheAdministratorWhoOpenedIt() {
  * "Sync now" while another sync of the workspace runs is refused as the other "already running"
  * actions are: 409 `DIRECTORY_SYNC_RUNNING`. A sync that runs answers its result.
  */
+/**
+ * A disconnect writes every linked account of the workspace in one request: it gets the waits of
+ * the bulk writes (the search index trigger of each account makes one statement long).
+ */
+function testDisconnectHasTheBulkWriteWaits() {
+  assert.deepEqual(Reflect.getMetadata(REQUEST_DB_TIMEOUTS_KEY, AdminAuthController.prototype.disconnect), BULK_WRITE_TIMEOUTS);
+}
+
 async function testSyncNowWhileAnotherRunsIsAConflict() {
   const flags = Features as { ENTRA_SSO: boolean };
   const previous = flags.ENTRA_SSO;
@@ -945,6 +954,7 @@ async function run() {
   await testStartLoginDoesNotSetNonceCookie();
   await testStartLoginWithoutConnectionReturnsToTheSignInPage();
   await testSyncNowWhileAnotherRunsIsAConflict();
+  testDisconnectHasTheBulkWriteWaits();
   await testRefusedSsoSessionsAreRecorded();
   await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testFailedSsoRoundTripsAreRecordedInATrustedTenant);
   await withEnv({ ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' }, testConsentReturnNeedsAStateSignedForConsent);

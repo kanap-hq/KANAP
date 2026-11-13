@@ -6,7 +6,7 @@ import { TenantsService } from '../tenants/tenants.service';
 import { EntraAuthService } from './entra-auth.service';
 import { EntraDirectorySyncService } from './entra-directory-sync.service';
 import { Features } from '../config/features';
-import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
+import { BULK_WRITE_TIMEOUTS, LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 import { EntraDisconnectService } from './entra-disconnect.service';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
@@ -101,7 +101,10 @@ export class AdminAuthController {
    * Removes the workspace's Microsoft connection and makes every linked account local, in the
    * request's transaction (see EntraDisconnectService). 409 `SSO_NOT_CONNECTED` when it is not
    * connected; 400 `LOCAL_PASSWORD_REQUIRED` when the administrator has no password and gives none.
+   * The waits of the bulk writes: one statement writes every linked account, and the search index
+   * trigger of each account makes it long on a large workspace.
    */
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('disconnect')
   @RequireLevel('users', 'admin')
   async disconnect(@Req() req: any, @Body() body: DisconnectDto) {
