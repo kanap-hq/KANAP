@@ -37,6 +37,8 @@ import { classificationText } from '../../../utils/applicationClassification';
 
 const NOTES_DEBOUNCE_MS = 900;
 
+const writeDescription = (connectionId: string, next: string) =>
+  api.patch(`/connections/${connectionId}`, { description: next.trim().length > 0 ? next : null });
 
 type ConnectionTypeOption = { code: string; label: string; typicalPorts: string };
 
@@ -179,9 +181,7 @@ export default function ConnectionOverviewTab({
       setStatus('saving');
       setError(null);
       try {
-        await api.patch(`/connections/${connectionId}`, {
-          description: next.trim().length > 0 ? next : null,
-        });
+        await writeDescription(connectionId, next);
         baselineRef.current = next;
         setStatus('saved');
         onDescriptionSaved?.(next);
@@ -200,18 +200,35 @@ export default function ConnectionOverviewTab({
     setDescription(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
       void persistDescription(value);
     }, NOTES_DEBOUNCE_MS);
   };
 
-  React.useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
   const descriptionRef = React.useRef(description);
   descriptionRef.current = description;
+  const persistRef = React.useRef(persistDescription);
+  persistRef.current = persistDescription;
+  const connectionIdRef = React.useRef(connectionId);
+  connectionIdRef.current = connectionId;
+
+  // A description still waiting for its delay is written when the tab goes (the connection closes,
+  // Create, another tab or page) or shows another connection: once, with the last text, to the
+  // connection it was typed on.
+  React.useEffect(() => () => {
+    if (!debounceRef.current) return;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    // A connection still without its record has nothing to write to.
+    if (!connectionId) return;
+    const typed = descriptionRef.current;
+    if (connectionIdRef.current === connectionId) {
+      void persistRef.current(typed);
+    } else if (typed !== baselineRef.current) {
+      void writeDescription(connectionId, typed).catch(() => undefined);
+    }
+  }, [connectionId]);
+
   React.useEffect(() => {
     if (!descriptionFlushRef) return undefined;
     descriptionFlushRef.current = async () => {

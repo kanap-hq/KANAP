@@ -101,26 +101,39 @@ export default function ConnectionPathSection({
 
   const [error, setError] = React.useState<string | null>(null);
   const [protocolsAnchor, setProtocolsAnchor] = React.useState<{ hopId: string; anchor: HTMLElement } | null>(null);
-  const debounceRefs = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // A hop's typed port or notes wait for their delay here. Each entry holds the write it will do, with the
+  // connection it was typed on.
+  const pendingRef = React.useRef<Record<string, {
+    timer: ReturnType<typeof setTimeout>;
+    run: (quiet: boolean) => void;
+    saved: Record<string, unknown>;
+    typed: Record<string, unknown>;
+  }>>({});
 
-  React.useEffect(() => {
-    return () => {
-      Object.values(debounceRefs.current).forEach(clearTimeout);
-    };
-  }, []);
+  // What waits is written once when the section goes (the connection closes, Create, another tab or page)
+  // or shows another connection.
+  React.useEffect(() => () => {
+    Object.values(pendingRef.current).forEach((entry) => {
+      clearTimeout(entry.timer);
+      entry.run(true);
+    });
+  }, [connectionId]);
 
   const sortedHops = React.useMemo(
     () => [...hops].sort((a, b) => a.order_index - b.order_index),
     [hops],
   );
 
+  // `quiet`: the section is going away or shows another connection, so the answer is not put back in its list.
   const callPatch = React.useCallback(
-    async (hopId: string, patch: Partial<ConnectionPathHop>) => {
+    async (hopId: string, patch: Partial<ConnectionPathHop>, quiet = false) => {
       try {
         const res = await api.patch<ConnectionPathHop>(`/connections/${connectionId}/legs/${hopId}`, patch);
+        if (quiet) return;
         onChange(hops.map((l) => (l.id === hopId ? { ...l, ...res.data } : l)));
         setError(null);
       } catch (e: any) {
+        if (quiet) return;
         setError(getApiErrorMessage(e, t, t('workspace.connection.path.saveFailed')));
       }
     },
@@ -129,12 +142,21 @@ export default function ConnectionPathSection({
 
   const debouncedPatch = React.useCallback(
     (hopId: string, patch: Partial<ConnectionPathHop>) => {
-      if (debounceRefs.current[hopId]) clearTimeout(debounceRefs.current[hopId]);
-      debounceRefs.current[hopId] = setTimeout(() => {
-        void callPatch(hopId, patch);
-      }, PATCH_DEBOUNCE_MS);
+      const waiting = pendingRef.current[hopId];
+      if (waiting) clearTimeout(waiting.timer);
+      // The typed fields of a hop go in one write; a field typed back to its saved value is left out.
+      const hop = hops.find((l) => l.id === hopId) as Record<string, unknown> | undefined;
+      const saved: Record<string, unknown> = { ...waiting?.saved };
+      Object.keys(patch).forEach((key) => { if (!(key in saved)) saved[key] = hop?.[key]; });
+      const typed: Record<string, unknown> = { ...waiting?.typed, ...patch };
+      const run = (quiet: boolean) => {
+        delete pendingRef.current[hopId];
+        const changed = Object.fromEntries(Object.entries(typed).filter(([key, value]) => (value ?? '') !== (saved[key] ?? '')));
+        if (Object.keys(changed).length > 0) void callPatch(hopId, changed as Partial<ConnectionPathHop>, quiet);
+      };
+      pendingRef.current[hopId] = { timer: setTimeout(() => run(false), PATCH_DEBOUNCE_MS), run, saved, typed };
     },
-    [callPatch],
+    [callPatch, hops],
   );
 
   const updateLocal = (hopId: string, patch: Partial<ConnectionPathHop>) => {

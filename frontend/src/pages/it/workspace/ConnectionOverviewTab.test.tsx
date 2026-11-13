@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../../i18n';
 import { createAppTheme } from '../../../config/ThemeContext';
 
@@ -14,11 +14,16 @@ vi.mock('../../../hooks/useItOpsEnumOptions', () => ({
 }));
 vi.mock('../../../api', () => ({ default: { get: vi.fn(), patch: vi.fn(), post: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../../components/EntityKnowledgePanel', () => ({ default: () => null }));
-vi.mock('../../../components/MarkdownEditor', () => ({ default: () => null }));
+vi.mock('../../../components/MarkdownEditor', () => ({
+  default: ({ value, onChange }: { value: string; onChange: (next: string) => void }) => (
+    <textarea aria-label="markdown-editor" value={value ?? ''} onChange={(event) => onChange(event.target.value)} />
+  ),
+}));
 vi.mock('./ConnectionEndpointPicker', () => ({ default: () => null }));
 vi.mock('./ConnectionLinkInterfacesDialog', () => ({ default: () => null }));
 vi.mock('./ConnectionProtocolsTable', () => ({ default: () => null }));
 
+import api from '../../../api';
 import ConnectionOverviewTab from './ConnectionOverviewTab';
 
 const binding = (id: string, ref: string, name: string, environment: string) => ({
@@ -76,5 +81,101 @@ describe('ConnectionOverviewTab risk derivation', () => {
     expect(rows).toHaveLength(2);
     const hr = rows.find((row) => row.textContent?.includes('INT-1'))!;
     expect(hr.textContent).toContain('PROD, QA');
+  });
+});
+
+describe('ConnectionOverviewTab description waiting to be saved', () => {
+  const patch = (api as unknown as { patch: ReturnType<typeof vi.fn> }).patch;
+  const pause = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
+  const tab = (props: Partial<React.ComponentProps<typeof ConnectionOverviewTab>> = {}) => (
+    <ThemeProvider theme={createAppTheme('light')}>
+      <MemoryRouter>
+        <ConnectionOverviewTab
+          connectionId="c1"
+          topology="server_to_server"
+          initialDescription=""
+          canManage
+          source={{ asset_id: null, entity_code: null }}
+          destination={{ asset_id: null, entity_code: null }}
+          multiServerIds={[]}
+          assetMap={{}}
+          protocols={[]}
+          riskMode="manual"
+          linkedInterfaces={[]}
+          linkedInterfacesLoading={false}
+          linkedInterfacesError={null}
+          derivedInterfaceCount={0}
+          onEndpointChange={vi.fn()}
+          onMultiServerChange={vi.fn()}
+          onProtocolsChange={vi.fn()}
+          onLinkedInterfacesChanged={vi.fn()}
+          {...props}
+        />
+      </MemoryRouter>
+    </ThemeProvider>
+  );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    patch.mockResolvedValue({ data: {} });
+  });
+
+  it('writes the description once, with the last text, when the tab goes before the delay', async () => {
+    const onDescriptionSaved = vi.fn();
+    const view = render(tab({ onDescriptionSaved }));
+    const editor = await screen.findByLabelText('markdown-editor');
+    fireEvent.change(editor, { target: { value: 'Back' } });
+    fireEvent.change(editor, { target: { value: 'Backup link' } });
+    expect(patch).not.toHaveBeenCalled();
+    view.unmount();
+    await pause(0);
+    expect(patch).toHaveBeenCalledTimes(1);
+    expect(patch).toHaveBeenCalledWith('/connections/c1', { description: 'Backup link' });
+    await pause(1100);
+    expect(patch).toHaveBeenCalledTimes(1);
+    expect(onDescriptionSaved).toHaveBeenCalledWith('Backup link');
+  });
+
+  it('writes nothing when the text is back to the saved one, or was never typed', async () => {
+    const view = render(tab({ initialDescription: 'Backup link' }));
+    const editor = await screen.findByLabelText('markdown-editor');
+    fireEvent.change(editor, { target: { value: 'Backup links' } });
+    fireEvent.change(editor, { target: { value: 'Backup link' } });
+    view.unmount();
+    const idle = render(tab());
+    idle.unmount();
+    await pause(50);
+    expect(patch).not.toHaveBeenCalled();
+  });
+
+  it('does not write a second time when the delay already ran', async () => {
+    const view = render(tab());
+    fireEvent.change(await screen.findByLabelText('markdown-editor'), { target: { value: 'Backup link' } });
+    await pause(1100);
+    expect(patch).toHaveBeenCalledTimes(1);
+    view.unmount();
+    await pause(50);
+    expect(patch).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends the text to the connection it was typed on when the tab shows another one', async () => {
+    const view = render(tab({ connectionId: 'c1', initialDescription: 'one' }));
+    fireEvent.change(await screen.findByLabelText('markdown-editor'), { target: { value: 'one, typed' } });
+    view.rerender(tab({ connectionId: 'c2', initialDescription: 'two' }));
+    await pause(50);
+    expect(patch).toHaveBeenCalledTimes(1);
+    expect(patch).toHaveBeenCalledWith('/connections/c1', { description: 'one, typed' });
+    await pause(1100);
+    expect(patch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the page\'s own flush (Create, Cancel) to one write, and nothing more at unmount', async () => {
+    const descriptionFlushRef = { current: null } as React.MutableRefObject<(() => Promise<void>) | null>;
+    const view = render(tab({ descriptionFlushRef }));
+    fireEvent.change(await screen.findByLabelText('markdown-editor'), { target: { value: 'Backup link' } });
+    await act(async () => { await descriptionFlushRef.current?.(); });
+    view.unmount();
+    await pause(1100);
+    expect(patch).toHaveBeenCalledTimes(1);
   });
 });
