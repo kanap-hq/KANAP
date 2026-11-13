@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -23,6 +23,7 @@ import TaskDetailHeader from './components/TaskDetailHeader';
 import TaskPropertiesDrawer from './components/TaskPropertiesDrawer';
 import { taskDetailTokens, type PriorityLevel } from './theme/taskDetailTokens';
 import { RelatedObjectType } from '../../components/fields/RelatedObjectSelect';
+import type { ForbiddenState } from '../../components/ProtectedRoute';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { useDoneRequiresTime } from './hooks/useDoneRequiresTime';
 import { budgetLineLabel, type BudgetLineLabel } from '../../components/finance/budgetLineLabel';
@@ -629,13 +630,15 @@ export default function TaskWorkspacePage() {
   }, [id, isCreate]);
 
   // The project a task is created from: its classification is the new task's.
-  const { data: createProject, status: createProjectStatus } = useQuery({
+  const { data: createProject, status: createProjectStatus, error: createProjectError } = useQuery({
     queryKey: ['task-create-project', originProjectId],
     queryFn: async () => (await api.get<{
       source_id?: string | null;
       category_id?: string | null;
       stream_id?: string | null;
       company_id?: string | null;
+      /** Whether the reader may contribute to the project, as its task routes check it. */
+      can_contribute?: boolean;
     }>(`/portfolio/projects/${originProjectId}`)).data,
     enabled: isCreate && !!originProjectId,
   });
@@ -1446,7 +1449,15 @@ export default function TaskWorkspacePage() {
   const workspaceRef = React.useRef<HTMLDivElement>(null);
   useCreationFieldFocus(workspaceRef, `${isCreate ? 'new' : 'record'}:${activeTab}`);
 
-  if (!isCreate && isLoading && !task) {
+  // A task is added to a project only by a person who contributes to it: otherwise the address of
+  // a new project task leads to the access denied page, as the creation would be refused.
+  const createProjectRefusal = (createProjectError as { response?: { status?: number } } | null)?.response?.status;
+  if (isCreate && originProjectId && (createProject?.can_contribute === false || createProjectRefusal === 403 || createProjectRefusal === 404)) {
+    return <Navigate to="/403" replace state={{ from: location.pathname } satisfies ForbiddenState} />;
+  }
+
+  // Nothing of the new task shows before the project read says whether the person contributes.
+  if ((isCreate && originProjectId && createProjectStatus === 'pending') || (!isCreate && isLoading && !task)) {
     return (
       <Box sx={{ p: 3 }}>
         <Typography color="text.secondary">{t('portfolio:workspace.task.messages.loading')}</Typography>

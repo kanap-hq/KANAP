@@ -71,7 +71,9 @@ async function testFailedSendSaysTheInvitationIsSaved() {
   try {
     await assert.rejects(
       service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager, commitThenRun }),
-      (error: unknown) => error instanceof BadGatewayException && /saved, but its e-mail could not be sent/.test((error as Error).message),
+      (error: unknown) => error instanceof BadGatewayException
+        && /saved, but its e-mail could not be sent/.test((error as Error).message)
+        && (error.getResponse() as { code?: string }).code === 'INVITATION_EMAIL_NOT_SENT',
     );
   } finally {
     console.error = originalError;

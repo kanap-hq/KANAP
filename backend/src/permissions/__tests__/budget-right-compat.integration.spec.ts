@@ -133,9 +133,10 @@ async function testSavingOverLeftoverRows() {
     assert.deepEqual(after, { budget: 'reader', tasks: 'reader' });
     assert.deepEqual(await storedRows(runner, role), { budget: 'reader', tasks: 'reader' });
 
-    // A duplicate of a role with old rows holds `budget`.
+    // A duplicate of a role with old rows holds `budget` (by an administrator: a copy gives the
+    // rights of the role, within the rights of the one who duplicates).
     const old = await seedRole(runner, tenantId, 'Old to copy', { opex: 'member', capex: 'reader' });
-    const copy = await controller.duplicateRole(old, { role_name: 'Old copy' }, req);
+    const copy = await controller.duplicateRole(old, { role_name: 'Old copy' }, { ...req, isAdmin: true });
     assert.deepEqual(await storedRows(runner, copy.id), { budget: 'member', tasks: 'reader' });
     assert.deepEqual(await perms.getRolePermissionsMap(copy.id, { manager }), { budget: 'member', tasks: 'reader' });
   });

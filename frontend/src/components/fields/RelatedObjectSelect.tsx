@@ -3,6 +3,7 @@ import { Autocomplete, TextField, CircularProgress, Stack, Box, Typography } fro
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
+import { useAuth } from '../../auth/AuthContext';
 import { budgetLineLabel, type BudgetLineLabel } from '../finance/budgetLineLabel';
 import EnumAutocomplete from './EnumAutocomplete';
 import { FieldLabel } from '../design';
@@ -59,13 +60,16 @@ export default function RelatedObjectSelect({
   const { t } = useTranslation('common');
   const [inputValue, setInputValue] = React.useState('');
   const selectedType = typeValue(relationType);
+  // A task is added to a project, or moved to one, only by a person who contributes to it.
+  const { hasLevel } = useAuth();
+  const contributesToProjects = hasLevel('portfolio_projects', 'contributor');
 
   // Fetch items based on selected type. `inputValue` is only updated on actual
   // typing (`reason === 'input'`): Autocomplete also fires `reset` whenever the
   // selected label is written into the field, and feeding that label back as `q`
   // made incident options disappear (title vs `INC-N · title`) in a refetch loop.
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ['related-object-search', selectedType, inputValue],
+    queryKey: ['related-object-search', selectedType, inputValue, contributesToProjects],
     queryFn: async (): Promise<RelatedOption[]> => {
       if (!relationType) return [];
 
@@ -73,9 +77,11 @@ export default function RelatedObjectSelect({
 
       switch (selectedType) {
         case 'project': {
+          // The projects the person contributes to: the scope the project task routes check.
+          if (!contributesToProjects) return [];
           const res = await api.get<{ items: Array<{ id: string; name: string }> }>(
             '/portfolio/projects',
-            { params }
+            { params: { ...params, access: 'contributor' } }
           );
           return (res.data?.items || []).map((p) => ({ id: p.id, name: p.name }));
         }

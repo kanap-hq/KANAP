@@ -2591,7 +2591,6 @@
       "deleteConfirm": "¿Eliminar {{name}}? Esta acción no se puede deshacer.",
       "inviteSentOne": "Invitación enviada a {{email}}",
       "resetSent": "Correo de restablecimiento enviado a {{email}}",
-      "rolesSaveFailed": "El usuario se guardó pero los roles no se pudieron actualizar. Vuelva a abrir el usuario e inténtelo de nuevo.",
       "disableSelectedConfirm_one": "¿Desactivar {{count}} cuenta? Su sesión se cerrará inmediatamente.",
       "disableSelectedConfirm_other": "¿Desactivar {{count}} cuentas? Se cerrarán sus sesiones inmediatamente.",
       "disableSelectedResult_one": "{{count}} desactivado; {{failed}} con errores",

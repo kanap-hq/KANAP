@@ -89,7 +89,8 @@ type SelectOption = { label: string; value: string };
 function withCurrentOption(options: SelectOption[], currentId?: string | null, currentLabel?: string | null): SelectOption[] {
   if (!currentId) return options;
   if (options.some((o) => o.value === currentId)) return options;
-  return [...options, { value: currentId, label: currentLabel || currentId }];
+  // A value the person cannot name stays blank: never its raw id.
+  return [...options, { value: currentId, label: currentLabel || '' }];
 }
 
 function selectPlaceholder(text: string) {
@@ -168,9 +169,15 @@ export default function TaskPropertiesDrawer({
   const categories = classificationData?.categories?.filter((c) => c.is_active) || [];
   const streams = classificationData?.streams?.filter((s) => s.is_active) || [];
   const filteredStreams = React.useMemo(() => !task.category_id ? streams : streams.filter((s) => s.category_id === task.category_id), [streams, task.category_id]);
-  const sourceOptions = React.useMemo(() => withCurrentOption(sources.map((s) => ({ label: s.name, value: s.id })), task.source_id, task.source_name), [sources, task.source_id, task.source_name]);
-  const categoryOptions = React.useMemo(() => withCurrentOption(categories.map((c) => ({ label: c.name, value: c.id })), task.category_id, task.category_name), [categories, task.category_id, task.category_name]);
-  const streamOptions = React.useMemo(() => withCurrentOption(filteredStreams.map((s) => ({ label: s.name, value: s.id })), task.stream_id, task.stream_name), [filteredStreams, task.stream_id, task.stream_name]);
+  // A new task carries its project's classification as ids only: name a current value that is
+  // inactive or outside the task category from the full lists.
+  const nameIn = (list: Array<{ id: string; name: string }> | undefined, id?: string | null) => (id ? list?.find((item) => item.id === id)?.name ?? null : null);
+  const sourceName = task.source_name || nameIn(classificationData?.sources, task.source_id);
+  const categoryName = task.category_name || nameIn(classificationData?.categories, task.category_id);
+  const streamName = task.stream_name || nameIn(classificationData?.streams, task.stream_id);
+  const sourceOptions = React.useMemo(() => withCurrentOption(sources.map((s) => ({ label: s.name, value: s.id })), task.source_id, sourceName), [sources, task.source_id, sourceName]);
+  const categoryOptions = React.useMemo(() => withCurrentOption(categories.map((c) => ({ label: c.name, value: c.id })), task.category_id, categoryName), [categories, task.category_id, categoryName]);
+  const streamOptions = React.useMemo(() => withCurrentOption(filteredStreams.map((s) => ({ label: s.name, value: s.id })), task.stream_id, streamName), [filteredStreams, task.stream_id, streamName]);
 
   const { data: phases = [] } = useQuery({
     queryKey: ['project-phases', task.related_object_id],

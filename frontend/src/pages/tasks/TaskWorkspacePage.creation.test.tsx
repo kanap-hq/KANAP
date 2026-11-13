@@ -120,7 +120,9 @@ function renderPage(
     relation?: { type: string | null; id: string | null; name: string | null };
     taskTypes?: Promise<unknown>;
     /** Holds the project read until the test releases it, or rejects it. */
-    projectRead?: Promise<typeof PROJECT> | 'error';
+    projectRead?: Promise<typeof PROJECT> | 'error' | 'forbidden';
+    /** What the project read answers, besides the project itself. */
+    projectExtra?: Record<string, unknown>;
     /** Strict mode cancels the init effect and runs it again, as on dev. */
     strict?: boolean;
   } = {},
@@ -133,7 +135,8 @@ function renderPage(
     }
     if (url === '/portfolio/projects/project-a') {
       if (options.projectRead === 'error') throw new Error('forbidden');
-      return { data: options.projectRead ? await options.projectRead : PROJECT } as never;
+      if (options.projectRead === 'forbidden') throw Object.assign(new Error('forbidden'), { response: { status: 403, data: {} } });
+      return { data: { ...(options.projectRead ? await options.projectRead : PROJECT), ...options.projectExtra } } as never;
     }
     if (url === '/budget-lines/line-1') return { data: { id: 'line-1', item_number: 4, product_name: 'Cheese cellar' } } as never;
     if (url === '/tasks/T-9' || url === '/tasks/task-new') return { data: detail(relation) } as never;
@@ -153,6 +156,7 @@ function renderPage(
             <Location />
             <Routes>
               <Route path="/start" element={<StartPage />} />
+              <Route path="/403" element={<div data-testid="access-denied" />} />
               <Route path="/portfolio/tasks" element={<div data-testid="task-list" />} />
               <Route path="/portfolio/projects/:id/:tab" element={<div data-testid="project-page" />} />
               <Route path="/portfolio/tasks/:id/:tab" element={<TaskWorkspacePage />} />
@@ -281,6 +285,38 @@ describe('Task creation at the title', () => {
     expect(mocked.delete).toHaveBeenCalledWith('/portfolio/projects/project-a/tasks/task-new/creation', { data: { token: 'token-1' } });
   });
 
+  it('opens on a project the person contributes to', async () => {
+    renderPage(['/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks'], { projectExtra: { can_contribute: true } });
+    expect(await screen.findByRole('textbox', { name: TITLE })).toBeInTheDocument();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/portfolio/projects/project-a'));
+    expect(location()).toBe('/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks');
+  });
+
+  it('leads to the access denied page on a project the person only reads, nothing created', async () => {
+    renderPage(['/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks'], { projectExtra: { can_contribute: false } });
+    await waitFor(() => expect(location()).toBe('/403'));
+    expect(screen.getByTestId('access-denied')).toBeInTheDocument();
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('shows nothing of the new task while the project read is pending, then leads to access denied', async () => {
+    let release: (project: typeof PROJECT) => void = () => undefined;
+    const projectRead = new Promise<typeof PROJECT>((resolve) => { release = resolve; });
+    renderPage(['/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks'], { projectRead, projectExtra: { can_contribute: false } });
+    expect(await screen.findByText('portfolio:workspace.task.messages.loading')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: TITLE })).toBeNull();
+    expect(screen.queryByTestId('task-properties')).toBeNull();
+    release(PROJECT);
+    await waitFor(() => expect(location()).toBe('/403'));
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('leads to the access denied page when the project read is refused', async () => {
+    renderPage(['/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks'], { projectRead: 'forbidden' });
+    await waitFor(() => expect(location()).toBe('/403'));
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
   it('shows the project name in the preview when its read answers after a re-render', async () => {
     let release: (project: typeof PROJECT) => void = () => undefined;
     const projectRead = new Promise<typeof PROJECT>((resolve) => { release = resolve; });
@@ -288,8 +324,11 @@ describe('Task creation at the title', () => {
       strict: true,
       projectRead,
     });
-    // The init effect has been cancelled by the strict re-render; the read is still pending.
-    await waitFor(() => expect(screen.getByTestId('task-properties')).toHaveTextContent('related:portfolio:context.project'));
+    // The init effect has been cancelled by the strict re-render; the read is still pending: the
+    // page waits, nothing of the new task shows.
+    expect(await screen.findByText('portfolio:workspace.task.messages.loading')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: TITLE })).toBeNull();
+    expect(screen.queryByTestId('task-properties')).toBeNull();
     release(PROJECT);
     await waitFor(() => expect(screen.getByTestId('task-properties')).toHaveTextContent('related:Project A'));
   });

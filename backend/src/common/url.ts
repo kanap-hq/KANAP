@@ -6,6 +6,11 @@ import { listedDomainOfHost, tenantBaseDomains } from './tenant-base-domains';
 /** The answer of a feature that needs an application link when no address is configured. */
 export const APP_URL_NOT_CONFIGURED_MESSAGE = 'application URL is not configured: set APP_BASE_URL';
 
+/** 400 `APP_URL_NOT_CONFIGURED`: a link to send while the installation has no application address. */
+export function appUrlNotConfigured(): BadRequestException {
+  return new BadRequestException({ statusCode: 400, error: 'Bad Request', code: 'APP_URL_NOT_CONFIGURED', message: APP_URL_NOT_CONFIGURED_MESSAGE });
+}
+
 function normalizeProto(raw: string | undefined): 'http' | 'https' {
   const base = String(raw || '')
     .split(',')[0]
@@ -229,7 +234,7 @@ export function resolveAppBaseUrl(req: any): string {
   if (devOrigin) return devOrigin;
   const configured = resolveConfiguredAppBaseUrl(req?.tenant?.slug ?? null);
   if (configured) return configured;
-  throw new BadRequestException(APP_URL_NOT_CONFIGURED_MESSAGE);
+  throw appUrlNotConfigured();
 }
 
 /**
@@ -252,7 +257,7 @@ export function resolveTenantAppBaseUrl(req: any, tenantSlug: string) {
   if (configured) return configured;
 
   if (devHost) return `${getRequestProto(req)}://${devHost}`;
-  throw new BadRequestException(APP_URL_NOT_CONFIGURED_MESSAGE);
+  throw appUrlNotConfigured();
 }
 
 /**

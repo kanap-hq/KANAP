@@ -446,10 +446,10 @@ La página de Roles tiene un diseño de dos paneles:
 
 **Acciones**:
 - **Nuevo rol**: Crear un rol personalizado desde cero. Un rol nuevo o renombrado no puede llevar un nombre que la página muestra para un rol del sistema o integrado, en cualquiera de sus idiomas.
-- **Duplicar**: Copiar un rol existente (incluyendo roles integrados) como punto de partida. La ventana pide el nombre de la copia. No disponible para roles de Sistema.
+- **Duplicar**: Copiar un rol existente (incluyendo roles integrados) como punto de partida. La ventana pide el nombre de la copia. No disponible para roles de Sistema ni, sin el rol Administrador, para un rol por encima de sus derechos.
 - **Eliminar**: Eliminar un rol personalizado. Un rol asignado a usuarios no se puede eliminar: asígneles primero otro rol. La ventana lo indica antes de cualquier confirmación.
 - **Guardar detalles**: Actualizar nombre y descripción del rol
-- **Guardar permisos**: Aplicar cambios de permisos
+- **Guardar permisos**: Aplicar cambios de permisos. Sin el rol Administrador, un nivel por encima de sus derechos aparece en gris, salvo que el rol ya lo otorgue.
 
 Un administrador de usuarios con acceso a todos los datos también puede preguntar a [Kad](ai-assistant.md#tool-calls) por los roles, su número de usuarios y sus derechos. Los cambios se quedan en esta página.
 

@@ -12,10 +12,18 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
+const rights = vi.hoisted(() => ({ projectContributor: true }));
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({
+    hasLevel: (resource: string, level: string) => (
+      resource === 'portfolio_projects' && level === 'contributor' ? rights.projectContributor : true
+    ),
+  }),
+}));
 const enumProps = vi.hoisted(() => ({ current: null as null | { value: string; onChange: (value: string) => void; options: Array<{ label: string; value: string }> } }));
 vi.mock('./EnumAutocomplete', () => ({ default: (props: any) => { enumProps.current = props; return null; } }));
 const mocked = vi.mocked(api);
-beforeEach(() => mocked.get.mockReset());
+beforeEach(() => { mocked.get.mockReset(); rights.projectContributor = true; });
 
 describe.each([
   ['spend_item', 'opex', 'spend_item'],
@@ -75,5 +83,34 @@ describe('related object type picker', () => {
     ]);
     expect(screen.getByText('relatedObject.types.project')).toBeTruthy();
     expect(screen.getByPlaceholderText('filters.search')).toBeTruthy();
+  });
+});
+
+describe('task project picker', () => {
+  function renderProjectPicker() {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RelatedObjectSelect relationType="project" relationId={null} onChangeId={() => undefined} onChangeType={() => undefined} hideLabel />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('offers only the projects the person contributes to', async () => {
+    mocked.get.mockResolvedValue({ data: { items: [{ id: 'p-1', name: 'Cellar' }] } } as never);
+    renderProjectPicker();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/portfolio/projects', { params: { limit: 50, q: undefined, access: 'contributor' } }));
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    expect(await screen.findByRole('option', { name: 'Cellar' })).toBeTruthy();
+  });
+
+  it('offers no project to a person who only reads projects', async () => {
+    rights.projectContributor = false;
+    mocked.get.mockResolvedValue({ data: { items: [{ id: 'p-1', name: 'Cellar' }] } } as never);
+    renderProjectPicker();
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    await waitFor(() => expect(screen.queryByRole('option', { name: 'Cellar' })).toBeNull());
+    expect(mocked.get).not.toHaveBeenCalledWith('/portfolio/projects', expect.anything());
   });
 });
