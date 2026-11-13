@@ -281,14 +281,57 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
   };
 }
 
-/** A copy of the budget file's report whose `line` fields are the lines of the person's file. */
+/**
+ * A copy of the budget file's report whose `line` fields are the lines of the person's file, and so
+ * is the earlier row a row looks like (`BUDGET_FILE_LOOKS_LIKE_ROW`, its `row`).
+ */
 function relined(value: unknown, lines: readonly number[]): unknown {
   if (Array.isArray(value)) return value.map((item) => relined(item, lines));
   if (!value || typeof value !== 'object') return value;
-  return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+  const record = value as Record<string, unknown>;
+  const earlierRow = record.code === LOOKS_LIKE_ROW;
+  return Object.fromEntries(Object.entries(record).map(([key, item]) => [
     key,
-    key === 'line' && typeof item === 'number' ? personLine(item, lines) : relined(item, lines),
+    key === 'line' && typeof item === 'number'
+      ? personLine(item, lines)
+      : earlierRow && key === 'params' && item && typeof item === 'object'
+        ? relinedRow(relined(item, lines) as Record<string, unknown>, lines)
+        : relined(item, lines),
   ]));
+}
+
+function relinedRow(params: Record<string, unknown>, lines: readonly number[]): Record<string, unknown> {
+  return typeof params.row === 'number' ? { ...params, row: personLine(params.row, lines) } : params;
+}
+
+const LOOKS_LIKE_LINE = 'BUDGET_FILE_LOOKS_LIKE_LINE';
+const LOOKS_LIKE_ROW = 'BUDGET_FILE_LOOKS_LIKE_ROW';
+
+/** The lookalikes the model reads: the first ones, as the card lists them at once. */
+const MODEL_LOOKALIKES = 10;
+
+const SIMILAR_LINES_NOTE = 'New rows of the file that look like a budget line the person can read, or an earlier row of '
+  + 'the file: the import would create them as new lines. Tell the person in one sentence before they approve '
+  + '(file line and reference); the card lists them.';
+
+type Lookalike = { line?: number; code?: string; params?: Record<string, unknown> };
+
+/** The budget file's lookalikes for the model: their number and the first ones, on the person's lines. */
+function similarLines(warnings: Record<string, unknown> | undefined, lines: readonly number[]): AiImportRunDto['similar_lines'] {
+  const found = Array.isArray(warnings?.duplicates) ? warnings!.duplicates as Lookalike[] : [];
+  if (found.length === 0) return undefined;
+  const total = typeof warnings?.duplicatesCount === 'number' ? Math.max(warnings.duplicatesCount, found.length) : found.length;
+  type Similar = NonNullable<AiImportRunDto['similar_lines']>['first'][number];
+  const first = found.slice(0, MODEL_LOOKALIKES).flatMap((item): Similar[] => {
+    const line = typeof item.line === 'number' ? personLine(item.line, lines) : 0;
+    if (line <= 0) return [];
+    if (item.code === LOOKS_LIKE_LINE && typeof item.params?.ref === 'string') return [{ file_line: line, looks_like: item.params.ref }];
+    if (item.code === LOOKS_LIKE_ROW && typeof item.params?.row === 'number') {
+      return [{ file_line: line, looks_like_file_line: personLine(item.params.row, lines) }];
+    }
+    return [];
+  });
+  return { count: total, first, note: SIMILAR_LINES_NOTE };
 }
 
 /** The bilan of the budget file: its check as its dialog shows it, or the counts of its load. */
@@ -311,6 +354,7 @@ export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: re
   const shown: Record<string, unknown> = { ...answer };
   delete shown.snapshot;
   const isCheck = answer.changes !== undefined;
+  const similar = isCheck ? similarLines(answer.warnings, lines) : undefined;
   return {
     ok: answer.ok === true,
     dry_run: dryRun,
@@ -323,6 +367,7 @@ export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: re
     warning_count: warningCount,
     issues,
     new_suppliers: answer.creates?.supplierCount ?? 0,
+    ...(similar ? { similar_lines: similar } : {}),
     report: { kind: 'budget_file', file: isCheck ? relined(shown, lines) as Record<string, unknown> : null },
   };
 }

@@ -15,6 +15,7 @@ import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/prev
 import { getPreviewTitle } from '../utils/previewClassification';
 import { usePreviewChangeLabels } from './previewChangeLabels';
 import ImportMappingPreview from './ImportMappingPreview';
+import { ImportLookalikeCount, ImportLookalikeLines, importLookalikes } from './ImportLookalikes';
 import { downloadServerExport } from '../../components/csv/serverExport';
 
 const LINKED_MARKDOWN_IMAGE_RE = /\[\s*!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)\s*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
@@ -144,6 +145,8 @@ function PreviewCard({
   const { fieldLabel, valueLabel, amountsLabel, classificationLabel, relationItemsLabel } = usePreviewChangeLabels(preview);
   // The reference shows once: the server's title often starts with it ("APP-36 - CheeseTrack").
   const title = getPreviewTitle(preview);
+  // The rows of a budget file that look like existing lines: counted on the summary line, listed before the actions.
+  const lookalikes = importLookalikes(preview.import_mapping);
 
   return (
     <Box
@@ -336,16 +339,20 @@ function PreviewCard({
             </Typography>
           </Stack>
         ) : (
-          <Typography
-            variant="caption"
-            sx={{
-              fontSize: 12,
-              color: preview.error_message ? 'error.main' : 'kanap.text.tertiary',
-            }}
-          >
-            {preview.error_message || preview.summary}
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography
+              variant="caption"
+              sx={{
+                fontSize: 12,
+                color: preview.error_message ? 'error.main' : 'kanap.text.tertiary',
+              }}
+            >
+              {preview.error_message || preview.summary}
+            </Typography>
+            {lookalikes && <ImportLookalikeCount count={lookalikes.count} />}
+          </Stack>
         )}
+        {lookalikes && <ImportLookalikeLines lookalikes={lookalikes} />}
 
         {(isPending || canDownload) && (
           <Stack

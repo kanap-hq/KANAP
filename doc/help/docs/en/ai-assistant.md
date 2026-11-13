@@ -101,6 +101,7 @@ Attach a spreadsheet and ask Kad to import it into a Kadratis list: applications
 
 - Each column of the import, with the file column it reads (or one value for every row), how sure Kad is and how many values it read. Then the values it could not read, the file columns it leaves out, what it supposed, and the first rows as they will be imported.
 - The **Import check**: the same check as the list's own import. It counts the rows to create and to update, and lists the errors and warnings with the line numbers of your file.
+- For budget lines, the new rows that look like a line you can read, or like an earlier row of your file, are counted next to the summary of the preview and listed above **Approve**. Each reference opens its line. Kad names them before you approve.
 - When the check finds errors, **Approve** is unavailable and **Approve all** leaves the preview out. Tell Kad what a value stands for, or correct your file and attach it again. Kad prepares a new preview, which replaces the previous one.
 - **Approve** runs the import with your own rights, as the list's import would. You need the same right as for that import: `applications:admin` to import applications, `incidents:contributor` to import incidents. Read-only access is refused. The preview then shows what was created and updated.
 - A budget file creates the suppliers it names that Kadratis does not have yet, as the list's import does with **Create missing suppliers** ticked: the check lists them. This needs the right to create suppliers (`suppliers:member`); without it, the check reports them as errors. A new line without a company is paid by the company of its cost center, or by the workspace's only company.
@@ -109,7 +110,7 @@ Attach a spreadsheet and ask Kad to import it into a Kadratis list: applications
 - The **Download file (.xlsx)** button, next to **Reject**, gives the file Kad prepared, as an .xlsx file in the format of the list's import: the columns of the import, your values as the import reads them (list codes, dates), one row per row of your file. For the imports that replace every value, the file holds every column of the import, blank where your file had none. Fill in the missing values and import the file with the list's own **Import** button. The [Audit log](admin.md#audit-log) records each download, as for any export.
 - For budget lines, every row creates a new line. The suppliers the file names must already exist: Kad does not create them.
 - The [Audit log](admin.md#audit-log) records each import made through Kad, with the file name and the counts, under the source **AI chat**.
-- The AI model receives only the summary of the file (headers, column types, first ten rows) and the counts of the check, with the code and the column of each error. The other cells and the messages of the import stay on the preview.
+- The AI model receives only the summary of the file (headers, column types, first ten rows) and the counts of the check, with the code and the column of each error, and for budget lines the line numbers and references of the rows that look like existing lines. The other cells and the messages of the import stay on the preview.
 
 ### Mentioning records with `@`
 

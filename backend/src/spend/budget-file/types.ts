@@ -301,7 +301,10 @@ export interface BudgetFileReport {
   }>;
   changedSinceExportCount: number;
   warnings: {
+    /** New rows that look like a line the person reads, or an earlier row of the file: the first 20. */
     duplicates: Array<{ line: number } & BudgetFileSentence>;
+    /** How many there are in all. */
+    duplicatesCount: number;
     ignoredColumns: string[];
     supplierNames: Array<{ line: number } & BudgetFileSentence>;
     /** company_name names another company than the cost center's: accepted, said once per line. */

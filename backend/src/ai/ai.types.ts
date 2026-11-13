@@ -554,6 +554,16 @@ export type AiImportRunDto = {
   issues: Array<{ level: 'error' | 'warning'; code: string | null; column: string | null; count: number; file_lines?: number[] }>;
   /** The budget file: the suppliers its load creates, which the card lists (the person may create suppliers). */
   new_suppliers?: number;
+  /**
+   * The budget file's check: the new rows that look like a line the person reads (`looks_like`, its
+   * reference) or an earlier row of the file (`looks_like_file_line`), on the lines of the person's
+   * file. Present when there are some; `first` holds the first ones, as the card lists them.
+   */
+  similar_lines?: {
+    count: number;
+    first: Array<{ file_line: number; looks_like?: string; looks_like_file_line?: number }>;
+    note: string;
+  };
   report:
     /** The messages of a row import, the first ones, as its dialog lists them. */
     | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[] }

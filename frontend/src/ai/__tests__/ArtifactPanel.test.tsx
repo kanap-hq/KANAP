@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 import ArtifactPanel from '../components/ArtifactPanel';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -24,6 +25,10 @@ vi.mock('react-i18next', () => ({
     },
     ready: true,
   }),
+}));
+
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ hasLevel: () => true }),
 }));
 
 describe('ArtifactPanel', () => {
@@ -123,5 +128,76 @@ describe('ArtifactPanel', () => {
     // It reaches the bottom edge of the panel: the scroller's bottom padding (12px) is taken back.
     expect(actions).toHaveStyle({ position: 'sticky', bottom: '-12px' });
     expect(getComputedStyle(actions).backgroundColor).not.toBe('');
+  });
+
+  it('shows the lookalikes of a budget file above the actions that stay in view', () => {
+    const preview = {
+      preview_id: '22222222-2222-4222-8222-222222222222',
+      tool_name: 'prepare_import_mapping' as const,
+      status: 'pending' as const,
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Budget lines · budget.xlsx' },
+      changes: {},
+      import_mapping: {
+        import_key: 'budget_lines',
+        filename: 'budget.xlsx',
+        row_count: 2,
+        columns: [],
+        unread_values: {},
+        read_errors: {},
+        missing_required: [],
+        unplaced: [],
+        assumptions: [],
+        sample: { columns: [], rows: [], unread: [] },
+        rows_missing_required: 0,
+        validation: {
+          ok: true, dry_run: true, total: 2, inserted: 2, updated: 0, unchanged: 0, skipped: 0, error_count: 0, warning_count: 1,
+          report: {
+            kind: 'budget_file' as const,
+            file: {
+              ok: true, notices: {}, fileErrors: [], headerErrors: [], errors: [], errorCount: 0, missing: [], deleted: [], deletedCount: 0,
+              changes: { created: 2, updated: 0, unchanged: 0, createdLines: [], updatedLines: [] },
+              changedSinceExport: [], changedSinceExportCount: 0,
+              warnings: {
+                duplicates: [{ line: 3, message: 'row 3 looks like BL-7', code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line: 3, ref: 'BL-7' } }],
+                duplicatesCount: 1, ignoredColumns: [], supplierNames: [], ignoredCells: [],
+              },
+              creates: { dimensionValues: [], suppliers: [] },
+              supplierMessage: null,
+            } as any,
+          },
+        },
+      },
+      requires_confirmation: true,
+      actions: ['approve', 'reject'] as Array<'approve' | 'reject'>,
+      summary: 'Import "budget.xlsx" into the Budget lines list.',
+      error_message: null,
+      conversation_id: 'conversation-1',
+      created_at: '2026-03-28T17:00:00.000Z',
+      expires_at: '2026-03-28T17:10:00.000Z',
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+    };
+    // The budget file's check reads the tenant's column names.
+    renderWithTheme(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } })}>
+        <ArtifactPanel
+          previews={[preview]}
+          selectedId={preview.preview_id}
+          open
+          onToggle={() => undefined}
+          onSelect={() => undefined}
+          onApprove={() => undefined}
+          onReject={() => undefined}
+          onApproveMany={() => undefined}
+        />
+      </QueryClientProvider>,
+    );
+    const actions = screen.getByRole('button', { name: 'ai:previewCard.approve' }).parentElement!;
+    const lookalike = screen.getByText('errors:BUDGET_FILE_LOOKS_LIKE_LINE');
+    expect(screen.getByRole('img', { name: 'common:csv.warnings:1' })).toBeInTheDocument();
+    // Read just before the actions, not hidden under them.
+    expect(actions).not.toContainElement(lookalike);
+    expect(lookalike.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

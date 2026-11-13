@@ -359,12 +359,15 @@ export function ReportView({
   canCreateSuppliers,
   nothingToLoad,
   showStatus = true,
+  hideDuplicates = false,
 }: {
   report: BudgetFileReport;
   locale: string;
   canCreateSuppliers: boolean;
   nothingToLoad: boolean;
   showStatus?: boolean;
+  /** The rows that look like existing lines are shown elsewhere (Kad's import card). */
+  hideDuplicates?: boolean;
 }) {
   const { t } = useTranslation('ops');
   const columns = useBudgetColumns();
@@ -377,7 +380,8 @@ export function ReportView({
   const costCenterCompanies = report.warnings.costCenterCompanies ?? [];
   const calculationLines = report.warnings.calculationLines ?? [];
   const calculationLinesCount = report.warnings.calculationLinesCount ?? calculationLines.length;
-  const hasWarnings = report.warnings.duplicates.length > 0 || report.warnings.ignoredColumns.length > 0
+  const duplicates = hideDuplicates ? [] : report.warnings.duplicates;
+  const hasWarnings = duplicates.length > 0 || report.warnings.ignoredColumns.length > 0
     || report.warnings.supplierNames.length > 0 || ignoredCells.length > 0 || costCenterCompanies.length > 0
     || calculationLines.length > 0
     || report.firstSheetOnly !== undefined;
@@ -467,7 +471,7 @@ export function ReportView({
 
       {hasWarnings && (
         <Section title={t(`${K}warningsTitle`)}>
-          {report.warnings.duplicates.map((warning) => <Line key={`w-${warning.line}`} text={checkSentence(warning, t)} />)}
+          {duplicates.map((warning) => <Line key={`w-${warning.line}`} text={checkSentence(warning, t)} />)}
           {report.warnings.supplierNames.map((warning) => <Line key={`s-${warning.line}`} text={checkSentence(warning, t)} />)}
           {costCenterCompanies.map((warning) => (
             <Line
