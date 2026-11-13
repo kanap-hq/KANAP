@@ -169,7 +169,9 @@ export class AssetsCsvService {
     },
   ): Promise<CsvImportResult> {
     return opts.manager.transaction(async (manager) => {
-      await manager.query('SELECT id FROM tenants WHERE id = $1 FOR UPDATE', [opts.tenantId]);
+      // Against a settings save and the share lock every asset writer takes first (`lockAssetNames`):
+      // FOR NO KEY UPDATE, so the foreign key checks of the tenant's other tables do not wait for the import.
+      await manager.query('SELECT id FROM tenants WHERE id = $1 FOR NO KEY UPDATE', [opts.tenantId]);
       await lockAssetNames(manager, opts.tenantId);
       const itOpsSettings = await this.itOpsSettings.getSettingsForWrite(opts.tenantId, manager);
       return this.importSvc.import(assetCsvConfig, file, params, { ...opts, manager, itOpsSettings });
