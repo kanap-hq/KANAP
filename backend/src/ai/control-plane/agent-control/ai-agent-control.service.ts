@@ -94,7 +94,7 @@ import { AiCapabilityDispatcherService } from '../dispatcher/ai-capability-dispa
 import { AiReadonlyDiagnosticWorkflowService } from '../diagnostics/ai-readonly-diagnostic-workflow.service';
 import { AiTenantExecutionService } from '../../execution/ai-tenant-execution.service';
 import { AiActionRequest } from '../entities/ai-action-request.entity';
-import { agentActionWhere, whereAgentAction } from '../action-request/ai-action-request.service';
+import { ACTION_REQUEST_NOT_FOUND, agentActionWhere, isAgentAction, whereAgentAction } from '../action-request/ai-action-request.service';
 import { hashStableJson, redactSensitiveText } from '../evidence/ai-evidence.service';
 import { RunResultAccess, originWithoutRun, runResultAccess } from '../evidence/run-result-visibility';
 import { AiAgentAuditEvent } from '../entities/ai-agent-audit-event.entity';
@@ -1539,10 +1539,13 @@ export class AiAgentControlService {
         ? action.expires_at.getTime()
         : Date.parse(String(action.expires_at ?? ''));
       const expired = Number.isFinite(expiresAt) && expiresAt <= now;
-      const activeDecisionStatus = action.status === 'pending' || action.status === 'approved';
+      // A conversation preview is decided in its conversation: these routes answer for it as unknown.
+      const activeDecisionStatus = isAgentAction(action) && (action.status === 'pending' || action.status === 'approved');
       const providerBlockedReason = providerReadiness.get(action.id)?.blocked_reason ?? null;
       let blockedReason: string | null = null;
-      if (action.tenant_id !== context.tenantId) {
+      if (!isAgentAction(action)) {
+        blockedReason = ACTION_REQUEST_NOT_FOUND;
+      } else if (action.tenant_id !== context.tenantId) {
         blockedReason = 'Action request does not belong to this tenant.';
       } else if (!activeDecisionStatus) {
         blockedReason = `Action is ${action.status}.`;
@@ -1609,7 +1612,7 @@ export class AiAgentControlService {
           },
         })
         : directActionRequests;
-      const pendingActionCount = linkedActions.filter((action) => actionIsActivePending(action)).length;
+      const pendingActionCount = linkedActions.filter((action) => isAgentAction(action) && actionIsActivePending(action)).length;
       items.push({
         ...serializeRun(run, await resultsReadable(run)),
         counts: {

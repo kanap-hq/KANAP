@@ -23,6 +23,14 @@ export function agentActionWhere(): FindOptionsWhere<AiActionRequest> {
   return { preview_id: IsNull(), capability_name: Not(EXECUTE_APPROVED_PREVIEW_CAPABILITY) };
 }
 
+/** `agentActionWhere` for a row already read. */
+export function isAgentAction(action: Pick<AiActionRequest, 'preview_id' | 'capability_name'>): boolean {
+  return action.preview_id == null && action.capability_name !== EXECUTE_APPROVED_PREVIEW_CAPABILITY;
+}
+
+/** What the agent routes answer for an action request they do not handle, or that does not exist. */
+export const ACTION_REQUEST_NOT_FOUND = 'AI action request not found.';
+
 /** `agentActionWhere` for a query builder on `ai_action_requests` under `alias`. */
 export function whereAgentAction<T extends ObjectLiteral>(qb: SelectQueryBuilder<T>, alias: string): SelectQueryBuilder<T> {
   return qb
@@ -477,7 +485,7 @@ export class AiActionRequestService {
       },
     });
     if (!action) {
-      throw new NotFoundException('AI action request not found.');
+      throw new NotFoundException(ACTION_REQUEST_NOT_FOUND);
     }
     return action;
   }

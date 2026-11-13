@@ -14,6 +14,7 @@ import { AiPolicyService } from '../ai-policy.service';
 import { AiAgentControlService } from '../control-plane/agent-control/ai-agent-control.service';
 import { AiActionRequestService } from '../control-plane/action-request/ai-action-request.service';
 import { AiApprovalService } from '../control-plane/approval/ai-approval.service';
+import { purgeAiConversations } from '../ai-conversation-purge';
 import { AiEvidenceService } from '../control-plane/evidence/ai-evidence.service';
 import { AiMcpAuditService } from '../control-plane/mcp/ai-mcp-audit.service';
 import { AiTenantExecutionService } from '../execution/ai-tenant-execution.service';
@@ -651,25 +652,30 @@ type PreviewRow = { preview: string; action: string };
 
 async function seedConversationPreviews(s: Seed) {
   const conversation = randomUUID();
+  const purgedConversation = randomUUID();
   const rows: Record<string, PreviewRow> = {};
+  const witness = randomUUID();
+  let orphan = '';
   await as(s, s.people.author, async ({ manager }) => {
-    await manager.query(
-      `INSERT INTO ai_conversations (id, tenant_id, user_id, title) VALUES ($1, $2, $3, $4)`,
-      [conversation, s.tenantId, s.people.author, `Previews ${TAG}`],
-    );
-    const add = async (key: string, decidedOnAgentScreen: string | null) => {
+    for (const id of [conversation, purgedConversation]) {
+      await manager.query(
+        `INSERT INTO ai_conversations (id, tenant_id, user_id, title) VALUES ($1, $2, $3, $4)`,
+        [id, s.tenantId, s.people.author, `Previews ${TAG}`],
+      );
+    }
+    const add = async (key: string, decidedOnAgentScreen: string | null, inConversation = conversation) => {
       const row = { preview: randomUUID(), action: randomUUID() };
       const task = randomUUID();
       await manager.query(
         `INSERT INTO ai_mutation_previews (id, tenant_id, conversation_id, user_id, tool_name, target_entity_type, target_entity_id, mutation_input, status, expires_at)
          VALUES ($1, $2, $3, $4, 'update_task_status', 'tasks', $5, '{}'::jsonb, 'pending', now() + interval '1 hour')`,
-        [row.preview, s.tenantId, conversation, s.people.author, task],
+        [row.preview, s.tenantId, inConversation, s.people.author, task],
       );
       await manager.query(
-        `INSERT INTO ai_action_requests (id, tenant_id, conversation_id, user_id, preview_id, capability_name, capability_version, effect, status, target_type, target_id, target_ref, input_hash, input_summary, expires_at, approved_at, rejected_at)
-         VALUES ($1, $2, $3, $4, $5, 'kanap.mutation_preview.execute_approved', '1.0.0', 'write', $6::text, 'tasks', $7::uuid, $7::text, $8, '{}'::jsonb, now() + interval '1 hour',
+        `INSERT INTO ai_action_requests (id, tenant_id, run_id, conversation_id, user_id, preview_id, capability_name, capability_version, effect, status, target_type, target_id, target_ref, input_hash, input_summary, expires_at, approved_at, rejected_at)
+         VALUES ($1, $2, $9, $3, $4, $5, 'kanap.mutation_preview.execute_approved', '1.0.0', 'write', $6::text, 'tasks', $7::uuid, $7::text, $8, '{}'::jsonb, now() + interval '1 hour',
                  CASE WHEN $6::text = 'approved' THEN now() END, CASE WHEN $6::text = 'rejected' THEN now() END)`,
-        [row.action, s.tenantId, conversation, s.people.author, row.preview, decidedOnAgentScreen ?? 'pending', task, randomBytes(32).toString('hex')],
+        [row.action, s.tenantId, inConversation, s.people.author, row.preview, decidedOnAgentScreen ?? 'pending', task, randomBytes(32).toString('hex'), s.runs.chat],
       );
       if (decidedOnAgentScreen) {
         await manager.query(
@@ -686,8 +692,24 @@ async function seedConversationPreviews(s: Seed) {
       await add(`${state}:approve`, state);
       await add(`${state}:reject`, state);
     }
+    // Its conversation deleted: the action keeps the capability, the preview link is cleared.
+    await add('purged', null, purgedConversation);
+    orphan = rows.purged.action;
+    delete rows.purged;
+    await purgeAiConversations(manager, s.tenantId, [purgedConversation]);
+    // An agent's pending proposal, which the agent screens keep.
+    await manager.query(
+      `INSERT INTO ai_action_requests (id, tenant_id, capability_name, capability_version, effect, status, target_type, target_ref, idempotency_key, action_payload_json, provider_kind, provider_key, input_hash, input_summary, metadata_json, expires_at)
+       VALUES ($1, $2, 'ticketing.ticket.internal_note.add_approved', '1.0.0', 'write', 'pending', 'ticket', $3, $4, $5::jsonb, 'ticketing', 'mock', $6, '{}'::jsonb, $7::jsonb, now() + interval '1 hour')`,
+      [witness, s.tenantId, `T-${TAG}-witness`, randomBytes(16).toString('hex'), JSON.stringify({ ticketId: `T-${TAG}-witness`, body: 'Witness note.' }), randomBytes(32).toString('hex'), JSON.stringify({ agent_definition_id: randomUUID() })],
+    );
   });
-  return { conversation, rows };
+  const [purged] = await as(s, s.people.administrator, ({ manager }) => manager.query(
+    `SELECT preview_id, conversation_id FROM ai_action_requests WHERE tenant_id = $1 AND id = $2`,
+    [s.tenantId, orphan],
+  ));
+  assert.deepEqual(purged, { preview_id: null, conversation_id: null }, 'the purge kept the preview link');
+  return { conversation, rows, orphan, witness };
 }
 
 async function decisionState(s: Seed, actionIds: string[]) {
@@ -702,8 +724,8 @@ async function decisionState(s: Seed, actionIds: string[]) {
 }
 
 async function testAChangePreparedInAConversationIsDecidedThereByItsAuthorOnly(s: Seed) {
-  const { conversation, rows } = await seedConversationPreviews(s);
-  const actionIds = Object.values(rows).map((row) => row.action);
+  const { conversation, rows, orphan, witness } = await seedConversationPreviews(s);
+  const actionIds = [...Object.values(rows).map((row) => row.action), orphan];
   const people = [s.people.agentReader, s.people.settingsAdmin, s.people.administrator, s.people.author];
 
   // The agent screens: no row, no count, no entry.
@@ -712,23 +734,35 @@ async function testAChangePreparedInAConversationIsDecidedThereByItsAuthorOnly(s
     assert.deepEqual(listed.items.filter((item: any) => actionIds.includes(item.id)), [], 'GET actions lists a conversation preview');
     assert.ok(listed.items.some((item: any) => item.id === ACTIONS.agent.id), 'GET actions lost the agent action');
     const pending = await as(s, reader, (ctx) => control.listActionRequests(ctx as any, { status: 'pending', limit: 100 }));
-    assert.deepEqual(pending.items, [], 'GET actions?status=pending lists a conversation preview');
-    assert.deepEqual(await as(s, reader, (ctx) => control.getBadges(ctx as any)), { pendingApprovals: 0 });
+    assert.deepEqual(pending.items.map((item: any) => item.id), [witness], 'GET actions?status=pending lists a conversation preview');
+    assert.deepEqual(await as(s, reader, (ctx) => control.getBadges(ctx as any)), { pendingApprovals: 1 });
+    // The trace of the conversation's run reads them, offers no decision and counts none as pending.
+    const detail: any = await as(s, reader, (ctx) => control.getRunDetail(ctx as any, s.runs.chat));
+    for (const id of [rows.fresh.action, orphan]) {
+      const traced = detail.action_requests.find((action: any) => action.id === id);
+      assert.deepEqual(
+        { can_execute: traced?.execution_readiness?.can_execute, can_reject: traced?.execution_readiness?.can_reject, blocked_reason: traced?.execution_readiness?.blocked_reason },
+        { can_execute: false, can_reject: false, blocked_reason: 'AI action request not found.' },
+        'the run trace offers a decision on a conversation preview',
+      );
+    }
+    const runs = await as(s, reader, (ctx) => control.listRuns(ctx as any, { limit: 100 }));
+    assert.equal(runs.items.find((item: any) => item.id === s.runs.chat)?.counts.pending_actions, 0, 'GET runs counts a conversation preview as pending');
     const activity = await as(s, reader, (ctx) => control.listActivity(ctx as any, { limit: 100 }));
     assert.deepEqual(activity.items.filter((entry: any) => actionIds.includes(entry.actionRequestId)), [], 'the activity lists a conversation preview');
     assert.ok(activity.items.some((entry: any) => entry.actionRequestId === ACTIONS.agent.id), 'the activity lost the agent action');
   }
 
   // Nobody decides it from the agent screens, and nobody but its author from a conversation.
-  const before = await decisionState(s, actionIds);
+  const before = await decisionState(s, [...actionIds, witness]);
   const unknownId = randomUUID();
   const refusedLikeAnUnknownId = async (who: string, label: string, call: (ctx: any, id: string) => Promise<unknown>) => {
     let unknown: unknown = null;
     await as(s, who, (ctx) => call(ctx, unknownId)).catch((error) => { unknown = error; });
     assert.ok(unknown instanceof NotFoundException, `${label}: an unknown id is not refused as unknown`);
-    for (const row of Object.values(rows)) {
+    for (const action of actionIds) {
       await assert.rejects(
-        () => as(s, who, (ctx) => call(ctx, row.action)),
+        () => as(s, who, (ctx) => call(ctx, action)),
         (error: unknown) => error instanceof NotFoundException && error.message === (unknown as Error).message,
         `${label} decided a conversation preview`,
       );
@@ -739,6 +773,10 @@ async function testAChangePreparedInAConversationIsDecidedThereByItsAuthorOnly(s
     await refusedLikeAnUnknownId(who, 'reject', (ctx, id) => decisions.rejectActionRequest(ctx, id, null));
     await refusedLikeAnUnknownId(who, 'dismiss', (ctx, id) => decisions.dismissActionRequest(ctx, id, null));
     await refusedLikeAnUnknownId(who, 'bulk approve', (ctx, id) => decisions.approveActionRequestsBulk(ctx, { action_request_ids: [id], execute: false }));
+    await refusedLikeAnUnknownId(who, 'bulk approve with an agent action', (ctx, id) => decisions.approveActionRequestsBulk(ctx, {
+      action_request_ids: [witness, id],
+      execute: false,
+    }));
   }
   for (const who of [s.people.agentReader, s.people.administrator]) {
     for (const row of Object.values(rows)) {
@@ -747,7 +785,7 @@ async function testAChangePreparedInAConversationIsDecidedThereByItsAuthorOnly(s
       await assert.rejects(() => as(s, who, (ctx) => approvalsService.rejectPreviewFromChat(chat(ctx), row.preview)), NotFoundException);
     }
   }
-  assert.equal(await decisionState(s, actionIds), before, 'a refused decision changed the action or wrote an approval');
+  assert.equal(await decisionState(s, [...actionIds, witness]), before, 'a refused decision changed an action or wrote an approval');
 
   // Its author approves or rejects it in the conversation, whatever the agent screen decided before.
   for (const key of ['fresh', ...PREVIEW_STATES.flatMap((state) => [`${state}:approve`, `${state}:reject`])]) {
