@@ -15229,6 +15229,20 @@ async function testAPlanWithTwoRepliesSendsNoPlannerBody() {
   assert.ok(backup.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `the draft after the withdrawn sourced answer is rewritten: ${backup.publicReply}`);
 }
 
+// The language of the reply comes from a model that read the internal notes: only a language
+// code passes; anything else gives the language of the public ticket.
+async function testTheReplyLanguageIsALanguageCode() {
+  const need = (language: string): R3Answer => () => ({ intent: 'Besoin', language, symptoms: ['ne démarre pas'], search_terms: { fr: ['licence'] }, confidence: 0.7 });
+  for (const [language, expected] of [[R3_INTERNAL_MARKER, 'fr'], ['fr, licence expirée', 'fr'], ['DE', 'de'], ['en-gb', 'en-gb']] as const) {
+    for (const kind of ['sourced', 'administrative'] as const) {
+      const result = await runR3Triage(kind, 'used', true, { ticket_need_representation: need(language) });
+      for (const call of result.calls.filter((entry) => R3_REPLY_TASKS.includes(entry.taskName))) {
+        assert.equal((call.payload as any).requested_language, expected, `${kind}, ${language}: ${call.taskName}`);
+      }
+    }
+  }
+}
+
 async function testThePublicReplyReadsThePublicThreadOnly() {
   const before = ['ticket_image_evidence_extraction', 'ticket_need_representation', 'knowledge_result_interpretation', 'reply_synthesis', 'action_planner'];
   const expected: Record<string, string[]> = {
@@ -18119,6 +18133,7 @@ async function run() {
   await testTriageWithInternalNotesUsedReadsEveryItem();
   await testThePublicReplyReadsThePublicThreadOnly();
   await testAPlanWithTwoRepliesSendsNoPlannerBody();
+  await testTheReplyLanguageIsALanguageCode();
   await testThePlannerWritesItsReasonsInTheNoteLanguage();
   await testTheFallbackNoteSaysOnlyWhatIsPrepared();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();

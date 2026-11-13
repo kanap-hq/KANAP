@@ -5951,7 +5951,7 @@ export class AiAgentControlService {
       }
     }
 
-    const synthesisLanguage = resolveReplyLanguage(agentDefinition, ticket, knowledgeSearchPlan.language);
+    const synthesisLanguage = resolveReplyLanguage(agentDefinition, ticket, knowledgeSearchPlan.language, publicTimeline);
     // Assigned inside the `runReplySynthesis` closure below. Flow analysis cannot see that write,
     // so without keeping the declared union here the reads after the closure call narrow to `null`.
     let replySynthesisResult: ReplySynthesisResult | null = null as ReplySynthesisResult | null;

@@ -585,14 +585,22 @@ export function configuredReplyLanguage(definition: AiAgentDefinition | null): s
   return ['fr', 'en', 'de', 'es'].includes(language) ? language : null;
 }
 
+/**
+ * The language of the reply: the agent's setting, else the language a model found in the ticket
+ * when it is a language code (that model may have read internal notes: no other text passes),
+ * else the language of the public ticket.
+ */
 export function resolveReplyLanguage(
   definition: AiAgentDefinition | null,
   ticket: TicketLike,
   knowledgeLanguage: string | null | undefined,
+  publicTimeline: readonly Pick<TicketTimelineEntry, 'visibility' | 'body'>[] = [],
 ): string {
+  const code = String(knowledgeLanguage ?? '').trim().toLowerCase();
+  const publicText = publicTimeline.filter(isPublicTicketItem).map((item) => item.body).join(' ');
   return configuredReplyLanguage(definition)
-    ?? knowledgeLanguage
-    ?? (ticketLooksFrench(ticket) ? 'fr' : 'en');
+    ?? (/^[a-z]{2}(-[a-z]{2})?$/.test(code) ? code : null)
+    ?? (ticketLooksFrench({ ...ticket, description: `${ticket.description ?? ''} ${publicText}` }) ? 'fr' : 'en');
 }
 
 // Angle brackets from the source become square brackets in reply text.
