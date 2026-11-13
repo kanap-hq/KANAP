@@ -60,6 +60,7 @@ import {
   looksLikeMarkdown,
   shouldHandleRichClipboardImport,
 } from '../lib/richClipboardMarkdown';
+import { boundedAutoLinkPlugin } from './markdownEditorAutoLink';
 import { htmlAsTextPlugin, watchLinkAddresses } from './markdownEditorHtmlGuard';
 import MarkdownLinkDialog from './MarkdownLinkDialog';
 import { markdownEditorTranslation } from './markdownEditorTranslation';
@@ -675,7 +676,8 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
       headingsPlugin({ allowedHeadingLevels: toolbarConfig.allowedHeadingLevels }),
       listsPlugin(),
       quotePlugin(),
-      linkPlugin(),
+      linkPlugin({ disableAutoLink: true }),
+      boundedAutoLinkPlugin(),
       linkDialogPlugin({ LinkDialog: MarkdownLinkDialog }),
       imagePlugin({
         imageUploadHandler: async (file: File) => {
