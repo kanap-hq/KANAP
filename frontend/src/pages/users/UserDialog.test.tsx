@@ -483,6 +483,24 @@ describe('UserDialog save and invite', () => {
     expect(screen.getByText('users.dialogs.newUser')).toBeInTheDocument();
   });
 
+  it('says that the address is taken, in the language of the screen, and creates nothing', async () => {
+    post.mockImplementation(async (url: string) => {
+      if (url === '/users') {
+        throw { response: { status: 409, data: { code: 'USER_EMAIL_TAKEN', message: 'A person already has this e-mail address.' } } };
+      }
+      return { data: {} };
+    });
+    const { onClose } = renderDialog({ mode: 'create', userId: undefined, personName: undefined });
+    fireEvent.change(screen.getByRole('textbox', { name: 'userForm.fields.email' }), {
+      target: { value: email },
+    });
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    fireEvent.click(saveButton());
+    expect(await screen.findByRole('alert')).toHaveTextContent('errors:USER_EMAIL_TAKEN');
+    expect(onClose).not.toHaveBeenCalled();
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
   it('asks no sign-in choice in a workspace without Microsoft sign-in', async () => {
     const dialog = await askToInvite();
     expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();

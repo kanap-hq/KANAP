@@ -135,8 +135,8 @@ export default function UserDialog({
       void queryClient.invalidateQueries({ queryKey: ['users'] });
       return true;
     } catch (e: any) {
-      // A taken e-mail answers 409 `duplicate`; the coded refusals (roles, last administrator)
-      // are worded by the form's alert.
+      // A taken e-mail on a change answers 409 `duplicate`; the coded refusals (a taken e-mail on a
+      // creation, roles, last administrator) are worded by the form's alert.
       const code = e?.response?.data?.code;
       setIdentityError(
         e?.response?.status === 409 && (!code || code === 'duplicate') ? new Error(t('users.messages.emailUnique')) : e,

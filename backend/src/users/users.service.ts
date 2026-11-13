@@ -1,4 +1,4 @@
-import { BadGatewayException, BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -58,6 +58,7 @@ import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { uploadedBytes } from '../common/upload';
 import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import { mapDatabaseError, sqlStateOf } from '../common/filters/database-error.mapping';
 import {
   assertKeepsAnActiveAdministrator,
   assertPersonWithinActorRights,
@@ -130,6 +131,13 @@ const buildAiUserExpertiseSql = (configAlias: string): string =>
   ), '')`;
 
 const AI_USER_CONTRIBUTOR_PROFILE_SQL = `CASE WHEN tmc.id IS NULL THEN 'not_configured' ELSE 'configured' END`;
+
+export const USER_EMAIL_TAKEN_MESSAGE = 'A person already has this e-mail address.';
+
+/** 409 `USER_EMAIL_TAKEN`: a new person with the address of an existing one. */
+export function userEmailTaken(): ConflictException {
+  return new ConflictException({ statusCode: 409, error: 'Conflict', code: 'USER_EMAIL_TAKEN', message: USER_EMAIL_TAKEN_MESSAGE });
+}
 
 /** A user as written to the audit log: a copy without its password hash or MFA secret. */
 export function userAuditSnapshot(user: Partial<User>): Record<string, unknown> {
@@ -760,8 +768,11 @@ export class UsersService {
     tenant_id?: string;
   }, opts?: { manager?: EntityManager; roleGrant?: RoleGrantActor }) {
     const repo = this.getRepo(opts?.manager);
+    // The address of an existing person, whatever their status, is refused and that person left
+    // as they are. A caller that finds or creates looks the person up first (Microsoft sign-in, the
+    // sample data script).
     const existing = await repo.findOne({ where: { email: params.email } });
-    if (existing) return existing;
+    if (existing) throw userEmailTaken();
 
     // Find or create role
     let role: Role | null = null;
@@ -804,7 +815,14 @@ export class UsersService {
       department_id: params.department_id ?? null,
       status,
     });
-    const saved = await repo.save(user);
+    let saved: User;
+    try {
+      saved = await repo.save(user);
+    } catch (error) {
+      // The same address created at the same time by another request: its row came first.
+      if (sqlStateOf(error) === '23505' && mapDatabaseError(error)?.constraint === 'uq_users_tenant_email') throw userEmailTaken();
+      throw error;
+    }
     const manager = opts?.manager ?? repo.manager;
     const userRoleRepo = manager.getRepository(UserRole);
     const tenantId = saved.tenant_id ?? params.tenant_id ?? (await manager.query(`SELECT app_current_tenant()::text AS tenant_id`))?.[0]?.tenant_id;

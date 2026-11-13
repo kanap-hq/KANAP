@@ -222,6 +222,7 @@
   "USER_OWN_ACCOUNT": "Vous ne pouvez pas supprimer votre propre compte. Désactivez-le si nécessaire.",
   "PERSON_ABOVE_OWN_RIGHTS": "Cette personne a plus de droits que vous.",
   "LAST_ADMINISTRATOR": "L'espace de travail doit garder au moins un administrateur actif.",
+  "USER_EMAIL_TAKEN": "Une personne a déjà cette adresse e-mail.",
   "ACCOUNT_IN_USE": "Ce compte est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "CHART_OF_ACCOUNTS_IN_USE_one": "Ce plan comptable est utilisé par {{usages}}. Rattachez-la d’abord à un autre plan comptable.",
   "CHART_OF_ACCOUNTS_IN_USE_other": "Ce plan comptable est utilisé par {{usages}}. Rattachez-les d’abord à un autre plan comptable.",
