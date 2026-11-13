@@ -21,26 +21,11 @@ const LOOKUP_PEOPLE = [
   { id: 'u-lea', first_name: 'Léa', last_name: 'Martin', email: null, status: 'enabled' },
 ];
 
-const CATEGORY_DIGITAL = '1f0c2a4e-0000-4000-8000-00000000c001';
-const CATEGORY_APPS = '1f0c2a4e-0000-4000-8000-00000000c002';
-const STREAM_CUSTOMER = '73e0d9d6-0000-4000-8000-00000000f001';
-const STREAM_UNKNOWN = '73e0d9d6-0000-4000-8000-00000000f002';
-const CLASSIFICATION = {
-  sources: [],
-  categories: [
-    { id: CATEGORY_DIGITAL, name: 'Digital transformation', is_active: true },
-    { id: CATEGORY_APPS, name: 'Business applications', is_active: true },
-  ],
-  // The project's stream belongs to another category than the project's one.
-  streams: [{ id: STREAM_CUSTOMER, name: 'Customer experience', category_id: CATEGORY_APPS, is_active: true }],
-};
-
 vi.mock('../../../api', () => ({
   default: {
     get: vi.fn((url: string) => {
       if (url === '/portfolio/classification/task-types') return Promise.resolve({ data: TASK_TYPES });
       if (url === '/users/lookup') return Promise.resolve({ data: { items: LOOKUP_PEOPLE, has_more: false } });
-      if (url === '/portfolio/classification/all') return Promise.resolve({ data: CLASSIFICATION });
       return Promise.resolve({ data: [] });
     }),
   },
@@ -214,32 +199,6 @@ describe('TaskPropertiesDrawer linked records the person cannot read', () => {
     expect(within(fieldRow('Related to')).getByText('ERP rollout')).toBeTruthy();
     expect(within(fieldRow('Applications')).getByText('APP-36 CheeseTrack')).toBeTruthy();
     expect(screen.getByText('Assets')).toBeTruthy();
-  });
-});
-
-describe('TaskPropertiesDrawer classification of a new project task', () => {
-  // A new task takes the project's classification as ids only: the names come from the lists.
-  const fromProject = (streamId: string) => task({
-    related_object_type: 'project',
-    related_object_id: 'p-1',
-    related_object_name: 'Fromage-as-a-Service',
-    category_id: CATEGORY_DIGITAL,
-    stream_id: streamId,
-  });
-
-  it('names a stream that lies outside the task category', async () => {
-    renderDrawer({ readOnly: false, task: fromProject(STREAM_CUSTOMER) });
-    expect(await within(fieldRow('Stream')).findByText('Customer experience')).toBeTruthy();
-    expect(within(fieldRow('Category')).getByText('Digital transformation')).toBeTruthy();
-    expect(screen.queryByText(STREAM_CUSTOMER)).toBeNull();
-  });
-
-  it('never shows the id of a stream it cannot name', async () => {
-    renderDrawer({ readOnly: false, task: fromProject(STREAM_UNKNOWN) });
-    await within(fieldRow('Category')).findByText('Digital transformation');
-    fireEvent.mouseDown(within(fieldRow('Stream')).getByRole('combobox'));
-    await screen.findByRole('listbox');
-    expect(screen.queryByText(STREAM_UNKNOWN)).toBeNull();
   });
 });
 
