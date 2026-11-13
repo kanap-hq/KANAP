@@ -13,12 +13,13 @@ const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) =>
   options?.name ? `${key} [${String(options.name)}]` : options?.count !== undefined ? `${key} (${String(options.count)})` : key);
 const features = vi.hoisted(() => ({ email: true }));
+const auth = vi.hoisted(() => ({ hasLevel: () => true, dataAccess: null as null | { mode: string } }));
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({ t, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => auth }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ isPlatformHost: false }) }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../api', () => ({ default: api }));
@@ -94,6 +95,16 @@ describe('AdminAuthPage disconnect', () => {
     api.get.mockReset();
     api.post.mockReset();
     features.email = true;
+    auth.dataAccess = null;
+  });
+
+  it('shows neither Disconnect nor Sync now to an administrator whose data access is limited', async () => {
+    auth.dataAccess = { mode: 'limited' };
+    api.get.mockResolvedValue({ data: { ...settings({}), disconnect: { keep_password: 1, need_password: 0, password_required: false } } });
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'auth.actions.testSignIn' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'auth.actions.disconnect' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'auth.sync.syncNow' })).toBeNull();
   });
 
   function connected(disconnect: Record<string, unknown>) {

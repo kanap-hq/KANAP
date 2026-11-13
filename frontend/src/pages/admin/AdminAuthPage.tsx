@@ -8,6 +8,7 @@ import { formatShortDateTime } from '../../lib/dateFormat';
 import PageHeader from '../../components/PageHeader';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { useDataAccessAdmin } from '../../auth/dataAccess';
 import { useTenant } from '../../tenant/TenantContext';
 import ForbiddenPage from '../ForbiddenPage';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -54,6 +55,9 @@ type SyncRunResult = { status: string; message?: string | null; synced: number; 
 export default function AdminAuthPage() {
   const { t } = useTranslation(['admin', 'common', 'validation']);
   const { hasLevel } = useAuth();
+  // Disconnect and Sync now write the persons of the whole workspace: reserved to people with
+  // access to all data, as the other person administration.
+  const unscopedAdmin = useDataAccessAdmin();
   const { isPlatformHost } = useTenant();
   const { config } = useFeatures();
 
@@ -244,14 +248,16 @@ export default function AdminAuthPage() {
                       <Button variant="outlined" onClick={handleTestSignIn} disabled={disconnecting}>
                         {t('auth.actions.testSignIn')}
                       </Button>
-                      <Button
-                        variant="text"
-                        color="error"
-                        onClick={openDisconnect}
-                        disabled={disconnecting || connecting}
-                      >
-                        {t('auth.actions.disconnect')}
-                      </Button>
+                      {unscopedAdmin && (
+                        <Button
+                          variant="text"
+                          color="error"
+                          onClick={openDisconnect}
+                          disabled={disconnecting || connecting}
+                        >
+                          {t('auth.actions.disconnect')}
+                        </Button>
+                      )}
                     </>
                   )}
                 </Stack>
@@ -296,9 +302,11 @@ export default function AdminAuthPage() {
                           {t('auth.sync.grantAccess')}
                         </Button>
                       )}
-                      <Button variant="outlined" onClick={handleSyncNow} disabled={syncing || disconnecting}>
-                        {syncing ? t('auth.sync.syncing') : t('auth.sync.syncNow')}
-                      </Button>
+                      {unscopedAdmin && (
+                        <Button variant="outlined" onClick={handleSyncNow} disabled={syncing || disconnecting}>
+                          {syncing ? t('auth.sync.syncing') : t('auth.sync.syncNow')}
+                        </Button>
+                      )}
                     </Stack>
                   </Stack>
                 )}
