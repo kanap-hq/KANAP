@@ -17,13 +17,14 @@ import {
   KnowledgeSearchPlan,
   MAX_INTERPRETER_BODY_LEAD_CANDIDATES,
   MAX_INTERPRETER_BODY_LEAD_CHARS,
+  MAX_INTERPRETER_TITLE_CHARS,
   MAX_INTERPRETER_CANDIDATES,
   MAX_INTERPRETER_PASSAGE_CANDIDATES,
   MAX_INTERPRETER_PASSAGE_CHARS,
   MAX_INTERPRETER_PASSAGES_PER_CANDIDATE,
 } from '../ai-knowledge-search-planner.service';
 import { AiReplySynthesisService, MAX_SOURCE_PASSAGE_CHARS, MAX_SOURCE_PASSAGES } from '../ai-reply-synthesis.service';
-import { AiTicketNeedRepresentationService, MAX_DERIVED_QUERIES } from '../ai-ticket-need-representation.service';
+import { AiTicketNeedRepresentationService, applicationNameKeys, MAX_DERIVED_QUERIES } from '../ai-ticket-need-representation.service';
 import type { TicketNeedRepresentation } from '../ai-ticket-need-representation.types';
 
 /**
@@ -73,7 +74,7 @@ async function testInterpreterPromptIsBounded() {
   const long = (label: string) => `${label} `.repeat(800);
   const candidates: KnowledgePlannerCandidate[] = Array.from({ length: 20 }, (_, index) => ({
     ref: `DOC-${index + 1}`,
-    title: `Document ${index + 1}`,
+    title: `Document ${index + 1} ${long('title')}`,
     summary: long('summary'),
     snippet: long('snippet'),
     status: 'published',
@@ -99,6 +100,8 @@ async function testInterpreterPromptIsBounded() {
       assert.equal(candidate.body_passages, undefined, `${candidate.ref} beyond the first 8 shows no passage`);
       assert.equal(candidate.body_start, undefined);
     }
+    assert.ok(String(candidate.title).length <= MAX_INTERPRETER_TITLE_CHARS, `${candidate.ref}: title of ${String(candidate.title).length} characters`);
+    assert.ok(String(candidate.title).startsWith(`Document ${index + 1} `));
     if (candidate.body_start) {
       bodyStarts += 1;
       assert.ok(candidate.body_start.length <= MAX_INTERPRETER_BODY_LEAD_CHARS);
@@ -198,6 +201,68 @@ function testQueriesCoverTheLanguagesOfTheDocuments() {
   }
 }
 
+// A code that opens the ticket title (« R8 R1 VPN ») names the ticket, not an application: it
+// prefixes no query, unless it names an application of the workspace. A name is never shortened.
+function testACodeOpeningTheTitleIsNoApplication() {
+  const builder = new AiTicketNeedRepresentationService({} as any);
+  const derive = (title: string, description: string, applications: string[], workspace: string[] = []) => builder.deriveKnowledgeQueries({
+    need: need({ entities: { applications, modules: [], screens: [], equipment: [], services: [] }, symptoms: ['connexion refusée'] }),
+    fallbackTitle: title,
+    fallbackDescription: description,
+    applicationKeys: applicationNameKeys(workspace),
+  });
+  for (const workspace of [[], ['VPN', 'Outlook', 'R2D2 Portail']]) {
+    const coded = derive('R8 R1 VPN ter', 'Le VPN refuse ma connexion.', ['R8', 'R1', 'R8 R1 VPN', 'VPN'], workspace);
+    for (const query of coded.queries) assert.doesNotMatch(query, /\bR[18]\b/i, `query ${query}`);
+    assert.ok(coded.facet_queries.some((query) => query.startsWith('VPN ')), 'the application after the code stays one');
+  }
+
+  const title = 'INC4521 Outlook plante';
+  const deterministic = builder.buildDeterministicNeedRepresentation({ ticket: { id: '9', title, description: '' }, timeline: [] }).need;
+  const fromDeterministic = builder.deriveKnowledgeQueries({ need: { ...deterministic, symptoms: ['plante'] }, fallbackTitle: title, fallbackDescription: '' });
+  for (const query of fromDeterministic.facet_queries) assert.doesNotMatch(query, /INC4521/, `query ${query}`);
+  assert.ok(fromDeterministic.facet_queries.some((query) => query.startsWith('Outlook ')));
+
+  // Real names that open a title stay whole when the workspace names them, whatever the case.
+  for (const [ticketTitle, name, workspace] of [
+    ['X3 bloqué', 'X3', ['Sage X3']],
+    ['M365 ne synchronise plus', 'M365', ['m365']],
+    ['AS400 lent', 'AS400', ['IBM AS400']],
+    ['S4 HANA plante', 'S4 HANA', ['SAP S4 HANA']],
+    ['D365 Finance en erreur', 'D365 Finance', ['D365 Finance']],
+    ['R8 R1 VPN ter', 'R8 R1 VPN', ['R8 R1 VPN']],
+  ] as Array<[string, string, string[]]>) {
+    const queries = derive(ticketTitle, '', [name], workspace).facet_queries;
+    assert.ok(queries.some((query) => query.startsWith(`${name} `)), `${name} in ${workspace.join(', ')}: ${queries.join(' | ')}`);
+  }
+  assert.ok(derive('Outlook plante', '', ['Outlook']).facet_queries.some((query) => query.startsWith('Outlook ')), 'a title without a code');
+}
+
+// A code that opens the title and names nothing of the workspace is no exact query, whatever kind
+// the model gives it. A code the description gives, or one the workspace names, stays searched.
+function testATitleCodeIsNoExactQuery() {
+  const builder = new AiTicketNeedRepresentationService({} as any);
+  const derive = (title: string, description: string, codes: Array<[string, string]>, workspace: string[] = []) => builder.deriveKnowledgeQueries({
+    need: need({
+      entities: { applications: ['VPN'], modules: [], screens: [], equipment: [], services: [] },
+      symptoms: ['connexion refusée'],
+      exact_codes: codes.map(([value, kind]) => ({ value, kind, source: 'ticket_description' })) as TicketNeedRepresentation['exact_codes'],
+    }),
+    fallbackTitle: title,
+    fallbackDescription: description,
+    applicationKeys: applicationNameKeys(workspace),
+  });
+  const coded = derive('R8 R3 VPN refuse la connexion', 'Le VPN affiche E1234 depuis ce matin.', [['R8 R3', 'other'], ['R8', 'sap_code'], ['E1234', 'error_code']]);
+  for (const query of coded.exact_queries) assert.doesNotMatch(query, /\bR[38]\b/, `exact query ${query}`);
+  assert.ok(coded.exact_queries.includes('E1234'), `the error code of the description: ${coded.exact_queries.join(' | ')}`);
+  assert.ok(coded.dropped_queries.some((entry) => entry.query === 'R8 R3' && entry.reason === 'title_code_names_nothing'), 'said in the derivation');
+
+  const described = derive('E1234 au démarrage', 'Le message E1234 apparaît au démarrage du VPN.', [['E1234', 'error_code']]);
+  assert.ok(described.exact_queries.includes('E1234'), 'a code the description gives too');
+  const named = derive('X3 bloqué', 'Plus rien ne répond.', [['X3', 'other']], ['Sage X3']);
+  assert.ok(named.exact_queries.includes('X3'), 'a code the workspace names');
+}
+
 // A word that only starts a sentence or links two is no application: it prefixes no query.
 function testLinkingWordsAreNoApplications() {
   const builder = new AiTicketNeedRepresentationService({} as any);
@@ -285,6 +350,8 @@ function testInternalNoteFollowsTheTenantLanguage() {
 
 async function run() {
   for (const test of [
+    testACodeOpeningTheTitleIsNoApplication,
+    testATitleCodeIsNoExactQuery,
     testInterpreterPromptIsBounded,
     testFallbackResultsAreCandidatesOnly,
     testQueriesCoverTheLanguagesOfTheDocuments,

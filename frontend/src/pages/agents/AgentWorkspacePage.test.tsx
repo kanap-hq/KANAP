@@ -350,7 +350,7 @@ describe('AgentWorkspacePage knowledge libraries', { timeout: 20000 }, () => {
 // A ticket agent uses the internal notes of a ticket, or ignores them. An agent saved without
 // the setting uses them.
 describe('AgentWorkspacePage internal notes', { timeout: 20000 }, () => {
-  const USED_STATE = 'The agent uses them to decide and to reply.';
+  const USED_STATE = 'The agent uses them to decide and to brief the technician; its replies to the requester draw on the public messages only.';
   const IGNORED_STATE = 'The agent reads only the public messages of the ticket.';
 
   function withInternalNotes(internalNotes: string | undefined, agentType = 'helpdesk'): AiAgentControlAgentDefinition {

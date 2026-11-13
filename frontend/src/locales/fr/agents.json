@@ -542,6 +542,8 @@
       "planner": "Planificateur",
       "interpreter": "Interpréteur",
       "synthesis": "Synthèse",
+      "technician_brief": "Note pour le technicien",
+      "administrative_reply": "Réécriture de la réponse",
       "monitoring_diagnosis": "Diagnostic"
     },
     "sharedContextDialog": {
@@ -687,7 +689,7 @@
       "ignored": "Ignorées"
     },
     "internalNotesState": {
-      "used": "L'agent s'en sert pour décider et pour répondre.",
+      "used": "L'agent s'en sert pour décider et pour informer le technicien ; ses réponses au demandeur ne s'appuient que sur les messages publics.",
       "ignored": "L'agent ne lit que les messages publics du ticket."
     },
     "webEnabled": "Rechercher sur le web",

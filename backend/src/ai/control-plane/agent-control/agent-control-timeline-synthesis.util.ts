@@ -9,7 +9,7 @@ import { ticketLooksFrench } from './agent-control-knowledge.util';
 import { clampText } from './agent-control-util';
 import { isPublicTicketItem } from './agent-ticket-sources';
 import type { ConversationActionGate, KnowledgeSearchItem, TicketLike, TicketNoteLike, TicketTimelineEntry, WebSearchResultItem } from './ai-agent-control.service';
-import { ReplySynthesisRejectedSource, ReplySynthesisResult, ReplySynthesisSource } from './ai-reply-synthesis.service';
+import type { ReplySynthesisRejectedSource, ReplySynthesisResult, ReplySynthesisSource } from './ai-reply-synthesis.service';
 import {
   HTML_TAGS,
   removeThematicBreakLines,
@@ -211,7 +211,11 @@ type TriageNoteTexts = {
   uncertainty: string;
   validationNote: (reason: string) => string;
   omitted: (count: number, kind: 'used' | 'rejected') => string;
+  replyWithdrawn: (kind: WithdrawnReplyKind, nothingSent: boolean) => string;
 };
+
+/** A reply the triage withdrew: a sourced answer, another reply, or a closing reply. */
+export type WithdrawnReplyKind = 'sourced' | 'administrative' | 'close';
 
 const TRIAGE_NOTE_TEXTS: Record<TriageNoteLanguage, TriageNoteTexts> = {
   en: {
@@ -244,10 +248,18 @@ const TRIAGE_NOTE_TEXTS: Record<TriageNoteLanguage, TriageNoteTexts> = {
     noneRecorded: '- None recorded',
     recommendedReply: 'Recommended reply to requester:',
     noSynthesisBrief: 'No synthesis brief was produced.',
-    noReliableAnswer: 'No reliable source-grounded answer was produced; the requester reply will ask a technician to follow up.',
+    noReliableAnswer: 'No reliable source-grounded answer was produced; no reply to the requester was prepared.',
     uncertainty: 'Uncertainty: technician confirmation is recommended before approval.',
     validationNote: (reason) => `Synthesis validation note: ${reason}.`,
     omitted: (count, kind) => `- ${count} more ${kind === 'used' ? 'used' : 'rejected'} source(s) omitted from this compact note.`,
+    replyWithdrawn: (kind, nothingSent) => {
+      const what = kind === 'close' ? 'The planned closing reply' : 'The planned reply to the requester';
+      const why = kind === 'sourced' ? 'no usable answer could be written from the sources' : 'it could not be written from the public messages';
+      const outcome = kind === 'close'
+        ? (nothingSent ? ', so nothing is sent and the ticket stays open' : ', and the ticket stays open')
+        : (nothingSent ? ', so nothing is sent to the requester' : '');
+      return `${what} was withdrawn because ${why}${outcome}.`;
+    },
   },
   fr: {
     header: `[Proposition de ${PRODUCT_NAME} pour le ticket]`,
@@ -279,10 +291,18 @@ const TRIAGE_NOTE_TEXTS: Record<TriageNoteLanguage, TriageNoteTexts> = {
     noneRecorded: '- Aucune enregistrée',
     recommendedReply: 'Réponse recommandée au demandeur :',
     noSynthesisBrief: 'Aucune note de synthèse n\'a été produite.',
-    noReliableAnswer: 'Aucune réponse fiable fondée sur une source n\'a été produite ; la réponse au demandeur indiquera qu\'un technicien va reprendre la demande.',
+    noReliableAnswer: 'Aucune réponse fiable fondée sur une source n\'a été produite ; aucune réponse au demandeur n\'a été préparée.',
     uncertainty: 'Incertitude : une confirmation par un technicien est recommandée avant approbation.',
     validationNote: (reason) => `Note de validation de la rédaction : ${reason}.`,
     omitted: (count, kind) => `- ${count} autre(s) source(s) ${kind === 'used' ? 'utilisée(s)' : 'écartée(s)'} non reprise(s) dans cette note courte.`,
+    replyWithdrawn: (kind, nothingSent) => {
+      const what = kind === 'close' ? 'La réponse de clôture prévue' : 'La réponse prévue au demandeur';
+      const why = kind === 'sourced' ? 'aucune réponse exploitable n\'a pu être tirée des sources' : 'elle n\'a pas pu être rédigée à partir des messages publics';
+      const outcome = kind === 'close'
+        ? (nothingSent ? ' : rien n\'est envoyé et le ticket reste ouvert' : ' ; le ticket reste ouvert')
+        : (nothingSent ? ' : rien n\'est envoyé au demandeur' : '');
+      return `${what} a été retirée, car ${why}${outcome}.`;
+    },
   },
   de: {
     header: `[${PRODUCT_NAME}-Vorschlag zum Ticket]`,
@@ -314,10 +334,18 @@ const TRIAGE_NOTE_TEXTS: Record<TriageNoteLanguage, TriageNoteTexts> = {
     noneRecorded: '- Keine erfasst',
     recommendedReply: 'Empfohlene Antwort an die anfragende Person:',
     noSynthesisBrief: 'Es wurde kein Hinweis aus der Antworterstellung erzeugt.',
-    noReliableAnswer: 'Es wurde keine verlässliche, auf Quellen gestützte Antwort erstellt; die Antwort an die anfragende Person kündigt die Rückmeldung eines Technikers an.',
+    noReliableAnswer: 'Es wurde keine verlässliche, auf Quellen gestützte Antwort erstellt; es wurde keine Antwort an die anfragende Person vorbereitet.',
     uncertainty: 'Unsicherheit: Eine Bestätigung durch einen Techniker wird vor der Freigabe empfohlen.',
     validationNote: (reason) => `Prüfhinweis zur Antworterstellung: ${reason}.`,
     omitted: (count, kind) => `- ${count} weitere ${kind === 'used' ? 'verwendete' : 'verworfene'} Quelle(n) in dieser kurzen Notiz ausgelassen.`,
+    replyWithdrawn: (kind, nothingSent) => {
+      const what = kind === 'close' ? 'Die geplante Abschlussantwort' : 'Die geplante Antwort an die anfragende Person';
+      const why = kind === 'sourced' ? 'aus den Quellen keine verwendbare Antwort erstellt werden konnte' : 'sie nicht aus den öffentlichen Nachrichten erstellt werden konnte';
+      const outcome = kind === 'close'
+        ? (nothingSent ? '; es wird nichts gesendet und das Ticket bleibt offen' : '; das Ticket bleibt offen')
+        : (nothingSent ? '; es wird nichts an die anfragende Person gesendet' : '');
+      return `${what} wurde zurückgezogen, da ${why}${outcome}.`;
+    },
   },
   es: {
     header: `[Propuesta de ${PRODUCT_NAME} para el ticket]`,
@@ -349,10 +377,18 @@ const TRIAGE_NOTE_TEXTS: Record<TriageNoteLanguage, TriageNoteTexts> = {
     noneRecorded: '- Ninguna registrada',
     recommendedReply: 'Respuesta recomendada al solicitante:',
     noSynthesisBrief: 'No se generó ninguna nota de la redacción.',
-    noReliableAnswer: 'No se generó ninguna respuesta fiable basada en fuentes; la respuesta al solicitante indicará que un técnico retomará la solicitud.',
+    noReliableAnswer: 'No se generó ninguna respuesta fiable basada en fuentes; no se ha preparado ninguna respuesta al solicitante.',
     uncertainty: 'Incertidumbre: se recomienda la confirmación de un técnico antes de aprobar.',
     validationNote: (reason) => `Nota de validación de la redacción: ${reason}.`,
     omitted: (count, kind) => `- ${count} fuente(s) ${kind === 'used' ? 'utilizada(s)' : 'descartada(s)'} más omitida(s) en esta nota breve.`,
+    replyWithdrawn: (kind, nothingSent) => {
+      const what = kind === 'close' ? 'La respuesta de cierre prevista' : 'La respuesta prevista al solicitante';
+      const why = kind === 'sourced' ? 'no se pudo redactar una respuesta utilizable a partir de las fuentes' : 'no se pudo redactar a partir de los mensajes públicos';
+      const outcome = kind === 'close'
+        ? (nothingSent ? '; no se envía nada y el ticket sigue abierto' : '; el ticket sigue abierto')
+        : (nothingSent ? '; no se envía nada al solicitante' : '');
+      return `${what} se ha retirado porque ${why}${outcome}.`;
+    },
   },
 };
 
@@ -364,6 +400,20 @@ export function triageNoteLanguage(value: string | null | undefined): TriageNote
 
 function noteTexts(language: TriageNoteLanguage | null | undefined): TriageNoteTexts {
   return TRIAGE_NOTE_TEXTS[language ?? 'en'] ?? TRIAGE_NOTE_TEXTS.en;
+}
+
+/** The sentence of the note saying that the triage withdrew a planned reply. */
+export function withdrawnReplySentence(kind: WithdrawnReplyKind, nothingSent: boolean, language: TriageNoteLanguage): string {
+  return noteTexts(language).replyWithdrawn(kind, nothingSent);
+}
+
+/** The note with a sentence of its own after the ticket lines (it survives a shortened note). */
+export function withNoteNotice(body: string, notice: string | null): string {
+  if (!notice || body.includes(notice)) return body;
+  const lines = body.split('\n');
+  const firstGap = lines.indexOf('');
+  if (firstGap < 0) return sanitizeForProvider(`${body}\n\n${notice}`, MAX_INTERNAL_NOTE_CHARS);
+  return sanitizeForProvider([...lines.slice(0, firstGap + 1), notice, '', ...lines.slice(firstGap + 1)].join('\n'), MAX_INTERNAL_NOTE_CHARS);
 }
 
 /** The header and the closing line of a triage note the agent posts in a ticket (English). */
@@ -585,14 +635,22 @@ export function configuredReplyLanguage(definition: AiAgentDefinition | null): s
   return ['fr', 'en', 'de', 'es'].includes(language) ? language : null;
 }
 
+/**
+ * The language of the reply: the agent's setting, else the language a model found in the ticket
+ * when it is a language code (that model may have read internal notes: no other text passes),
+ * else the language of the public ticket.
+ */
 export function resolveReplyLanguage(
   definition: AiAgentDefinition | null,
   ticket: TicketLike,
   knowledgeLanguage: string | null | undefined,
+  publicTimeline: readonly Pick<TicketTimelineEntry, 'visibility' | 'body'>[] = [],
 ): string {
+  const code = String(knowledgeLanguage ?? '').trim().toLowerCase();
+  const publicText = publicTimeline.filter(isPublicTicketItem).map((item) => item.body).join(' ');
   return configuredReplyLanguage(definition)
-    ?? knowledgeLanguage
-    ?? (ticketLooksFrench(ticket) ? 'fr' : 'en');
+    ?? (/^[a-z]{2}(-[a-z]{2})?$/.test(code) ? code : null)
+    ?? (ticketLooksFrench({ ...ticket, description: `${ticket.description ?? ''} ${publicText}` }) ? 'fr' : 'en');
 }
 
 // Angle brackets from the source become square brackets in reply text.
@@ -621,6 +679,22 @@ export function normalizeKnowledgeReplyText(value: string | null | undefined): s
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+/**
+ * A text within maxChars, cut after the last sentence that fits (or, without one, after the last
+ * whole word): never in the middle of a word.
+ */
+export function cutAtSentenceEnd(value: string, maxChars: number): string {
+  const text = value.trim();
+  if (text.length <= maxChars) return text;
+  const head = text.slice(0, maxChars);
+  const sentenceEnds = [...head.matchAll(/[.!?](?=\s)/g)].map((match) => match.index ?? -1);
+  if (/[.!?]$/.test(head) && /\s/.test(text[maxChars] ?? '')) sentenceEnds.push(head.length - 1);
+  const lastSentenceEnd = Math.max(-1, ...sentenceEnds);
+  if (lastSentenceEnd > 0) return head.slice(0, lastSentenceEnd + 1).trim();
+  const lastSpace = head.search(/\s\S*$/);
+  return (lastSpace > 0 ? head.slice(0, lastSpace) : head).trim();
 }
 
 export function sanitizeForProvider(value: string | null | undefined, maxChars: number): string {
@@ -831,8 +905,8 @@ export function renderSynthesizedTriageNote(
     'rejected',
     language,
   );
-  const technicianBrief = sanitizeForProvider(
-    synthesis.technician_brief || texts.noSynthesisBrief,
+  const technicianBrief = cutAtSentenceEnd(
+    sanitizeForProvider(synthesis.technician_brief || texts.noSynthesisBrief, Number.MAX_SAFE_INTEGER),
     MAX_INTERNAL_SYNTHESIS_BRIEF_CHARS,
   );
   const recommendedReply = synthesis.usable

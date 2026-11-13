@@ -16,16 +16,19 @@ import { citableKnowledgeDocuments, conversationGateTheAgentReads, ticketItemsTh
 import {
   INTERNAL_NOTES_LINE,
   RUNTIME_SAFETY_FLOOR_ACTION_PLANNER,
+  RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY,
   RUNTIME_SAFETY_FLOOR_SYNTHESIS,
+  RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF,
 } from '../ai-agent-prompt-compiler.service';
 import { helpdeskAgentDefaults } from '../../agent/agent-definition-defaults';
 import { AiCapabilityRegistry } from '../../capability/ai-capability.registry';
 
 /**
  * What a service desk agent reads of a ticket. With its internal notes setting at "used" (or
- * absent), every model call reads every item of the ticket; at "ignored", the public items
- * only. An item the ticketing system does not mark public is internal. A reply cites the
- * documents of the libraries the agent may cite.
+ * absent), the searches, the action planner and the brief to the technician read every item of
+ * the ticket; at "ignored", the public items only. A reply to the requester is written on the
+ * public items only. An item the ticketing system does not mark public is internal. A reply cites
+ * the documents of the libraries the agent may cite.
  */
 
 const INTERNAL_MARKER = 'marker-alpha-4417';
@@ -216,6 +219,21 @@ function testThePlannerReadsTheGateWithoutFingerprintsWhenNotesAreIgnored() {
   const ignored = conversationGateTheAgentReads(gate, 'ignored');
   assert.ok(!JSON.stringify(ignored).includes(UNMARKED_MARKER));
   assert.equal(ignored.can_prepare_public_reply, gate.can_prepare_public_reply);
+  // What the gate decides and why, nothing else: no date, counter or identifier of the thread,
+  // and a field added to the gate later stays out.
+  assert.deepEqual(Object.keys(ignored).sort(), [
+    'administrative_close_reply_reason',
+    'can_prepare_administrative_close_reply',
+    'can_prepare_internal_note',
+    'can_prepare_public_reply',
+    'can_prepare_sourced_answer',
+    'internal_note_reason',
+    'public_reply_reason',
+    'sourced_answer_reason',
+  ]);
+  const later = conversationGateTheAgentReads({ ...gate, latest_internal_note_excerpt: UNMARKED_MARKER }, 'ignored');
+  assert.ok(!('latest_internal_note_excerpt' in later));
+  assert.ok('latest_internal_note_excerpt' in conversationGateTheAgentReads({ ...gate, latest_internal_note_excerpt: UNMARKED_MARKER }, 'used'));
 }
 
 function testTheInternalNoteIsBuiltFromTheItemsTheAgentReads() {
@@ -239,10 +257,19 @@ function testTheInternalNoteIsBuiltFromTheItemsTheAgentReads() {
   assert.ok(!renderSynthesizedTriageNote(ticket, ticketItemsTheAgentReads(timeline(), 'ignored'), result).includes(INTERNAL_MARKER));
 }
 
+// The planner and the brief read internal items; the calls that write a reply to the requester
+// never get any, so their prompt does not speak of them.
 function testUsedInternalNotesAreExplainedToTheModels() {
   const line = INTERNAL_NOTES_LINE;
-  assert.ok(RUNTIME_SAFETY_FLOOR_SYNTHESIS.includes(line));
   assert.ok(RUNTIME_SAFETY_FLOOR_ACTION_PLANNER.includes(line));
+  // The rule as it stands: decide and brief the technician; the reply is written on public messages.
+  assert.match(line, /use them to decide and to brief the technician/);
+  assert.match(line, /reply to the requester is written from the public messages only/);
+  assert.doesNotMatch(line, /and to answer/);
+  assert.ok(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF.some((entry) => entry.includes('visibility "internal"')));
+  for (const floor of [RUNTIME_SAFETY_FLOOR_SYNTHESIS, RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY]) {
+    assert.ok(!floor.some((entry) => entry.includes('internal')));
+  }
 }
 
 function testKnowledgeItemsKeepTheirLibrary() {

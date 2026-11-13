@@ -535,8 +535,8 @@ export type AiAgentEffectivePrompt = {
   shared_context_resolved: boolean;
   shared_context_resolution_reason: string | null;
   bounds_applied?: string[];
-  // Helpdesk agents expose the four triage tasks; SRE agents expose monitoring_diagnosis only.
-  tasks: Partial<Record<'action_planner' | 'planner' | 'interpreter' | 'synthesis' | 'monitoring_diagnosis', AiAgentEffectivePromptTask>>;
+  // Helpdesk agents expose the six triage tasks; SRE agents expose monitoring_diagnosis only.
+  tasks: Partial<Record<'action_planner' | 'planner' | 'interpreter' | 'synthesis' | 'technician_brief' | 'administrative_reply' | 'monitoring_diagnosis', AiAgentEffectivePromptTask>>;
 };
 
 export type AiAgentControlAutonomyItem = {

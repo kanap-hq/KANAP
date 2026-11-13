@@ -137,6 +137,8 @@ import {
   RUNTIME_SAFETY_FLOOR_MONITORING_DIAGNOSIS,
   RUNTIME_SAFETY_FLOOR_PLANNER,
   RUNTIME_SAFETY_FLOOR_SYNTHESIS,
+  RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY,
+  RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF,
   VerbatimCandidate,
 } from './ai-agent-prompt-compiler.service';
 import {
@@ -172,13 +174,14 @@ import {
 } from './ai-knowledge-search-planner.service';
 import {
   AiReplySynthesisService,
+  operatingContextLeakDetected,
   estimateReplySynthesisUsage,
   ReplySynthesisEntitySource,
   ReplySynthesisRejectedSource,
   ReplySynthesisResult,
   ReplySynthesisSource,
 } from './ai-reply-synthesis.service';
-import { conversationGateTheAgentReads, ticketItemsTheAgentReads } from './agent-ticket-sources';
+import { conversationGateTheAgentReads, imageEvidenceOfPublicItems, ticketItemsTheAgentReads } from './agent-ticket-sources';
 import {
   AiSharedContextProfileService,
   SharedContextProfileInput,
@@ -191,9 +194,12 @@ import {
 } from './ai-ticket-evidence-extraction.service';
 import {
   AiTicketNeedRepresentationService,
+  applicationNameKeys,
   estimateTicketNeedRepresentationUsage,
   TicketNeedRepresentationBuildResult,
+  titleHeadCodes,
 } from './ai-ticket-need-representation.service';
+import { Application } from '../../../applications/application.entity';
 import { KnowledgeQueryDerivation } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { Tenant } from '../../../tenants/tenant.entity';
@@ -234,6 +240,7 @@ import {
   serializeKnowledgeQueryDerivation,
   serializeTicketImageExtraction,
   serializeKnowledgeInterpretation,
+  knowledgeInterpretationWithoutTexts,
   ticketLooksFrench,
   knowledgePassagesFromOutput,
   knowledgePassageQuery,
@@ -371,6 +378,9 @@ import {
   buildTriageNote,
   configuredReplyLanguage,
   resolveReplyLanguage,
+  withdrawnReplySentence,
+  type WithdrawnReplyKind,
+  withNoteNotice,
   normalizeKnowledgeReplyText,
   sanitizeForProvider,
   sanitizeInlineForProvider,
@@ -777,13 +787,17 @@ export type RunUsageStageKey =
   | 'need_representation'
   | 'evidence_extraction'
   | 'knowledge_interpretation'
-  | 'action_planner';
+  | 'action_planner'
+  | 'technician_brief'
+  | 'administrative_reply';
 
 export const RUN_STEP_STAGES = {
   synthesis: { kind: 'synthesis', capabilityName: 'answer_synthesis' },
   diagnosticBrief: { kind: 'synthesis', capabilityName: 'diagnostic_brief_synthesis' },
   needRepresentation: { kind: 'need_representation', capabilityName: 'ticket_need_representation' },
   evidenceExtraction: { kind: 'evidence_extraction', capabilityName: 'ticket_image_evidence_extraction' },
+  technicianBrief: { kind: 'synthesis', capabilityName: 'technician_brief_synthesis' },
+  administrativeReply: { kind: 'synthesis', capabilityName: 'administrative_reply_synthesis' },
 } as const;
 
 /**
@@ -972,6 +986,20 @@ export class AiAgentControlService {
     return rows.map((row) => row.id);
   }
 
+  // The names of the workspace's applications, read only when a code opens the ticket title: such
+  // a code is an application name only when it names one of them (one read per triage).
+  private async applicationKeysForTitleCodes(
+    context: AiExecutionContextWithManager,
+    title: string | null | undefined,
+  ): Promise<Set<string>> {
+    if (titleHeadCodes(title).length === 0) return new Set();
+    const applications = await context.manager.getRepository(Application).find({
+      select: { name: true },
+      where: { tenant_id: context.tenantId },
+    });
+    return applicationNameKeys(applications.map((application) => application.name));
+  }
+
   private async ticketTargetingEligibility(
     context: AiExecutionContextWithManager,
     definition: AiAgentDefinition,
@@ -1037,6 +1065,89 @@ export class AiAgentControlService {
       completed_at: now,
       created_at: now,
     }));
+  }
+
+  /**
+   * A model stage of the triage within the per-run cap: skipped when its projection would pass the
+   * cap, otherwise run, its usage recorded and charged; one run step either way. Returns why the
+   * stage gave nothing usable, null when it did.
+   */
+  private async runCappedStage(
+    context: AiExecutionContextWithManager,
+    input: {
+      stage: { kind: string; capabilityName: string };
+      usageKey: RunUsageStageKey;
+      runId: string;
+      stepIndex: () => number;
+      definition: AiAgentDefinition | null;
+      projection: { estimatedTokens: number; estimatedCostEur: number };
+      baseUsage: RunLlmUsageEstimate;
+      inputSummary: Record<string, unknown>;
+      overCapReason: string;
+      chargeRunLlmUsage: (usage: { estimated_tokens?: number | null; estimated_cost_eur?: number | null }) => void;
+      call: () => Promise<{
+        result: { model: string; usage: { input_tokens: number; output_tokens: number } | null; estimated_tokens: number; estimated_cost_eur: number; latency_ms: number };
+        outputSummary: Record<string, unknown>;
+        fallbackReason: string | null;
+        // The call answered (and is counted) but its answer is unusable.
+        failed?: boolean;
+      }>;
+    },
+  ): Promise<string | null> {
+    const guardrails = this.agentQueue && input.definition ? this.agentQueue.runGuardrails(input.definition) : null;
+    if (
+      guardrails
+      && (
+        input.baseUsage.estimatedTokens + input.projection.estimatedTokens > guardrails.maxEstimatedTokens
+        || input.baseUsage.estimatedCostEur + input.projection.estimatedCostEur > guardrails.maxEstimatedCostEur
+      )
+    ) {
+      await this.recordStageRunStep(context, input.stage, {
+        runId: input.runId,
+        stepIndex: input.stepIndex(),
+        status: 'skipped',
+        inputSummary: input.inputSummary,
+        outputSummary: {
+          fallback_reason: input.overCapReason,
+          base_estimated_tokens: input.baseUsage.estimatedTokens,
+          base_estimated_cost_eur: input.baseUsage.estimatedCostEur,
+          cap: guardrails,
+        },
+      });
+      return input.overCapReason;
+    }
+    const stepIndex = input.stepIndex();
+    try {
+      const { result, outputSummary, fallbackReason, failed } = await input.call();
+      await this.recordStageUsage(context, input.usageKey, input.runId, result);
+      input.chargeRunLlmUsage(result);
+      await this.recordStageRunStep(context, input.stage, {
+        runId: input.runId,
+        stepIndex,
+        status: failed ? 'failed' : 'completed',
+        ...(failed ? { errorMessage: fallbackReason } : {}),
+        inputSummary: { ...input.inputSummary, model: result.model },
+        outputSummary: {
+          ...outputSummary,
+          tokens: result.estimated_tokens,
+          cost_eur: result.estimated_cost_eur,
+          latency_ms: result.latency_ms,
+          fallback_reason: fallbackReason,
+        },
+      });
+      return fallbackReason;
+    } catch (error) {
+      const reason = `${input.usageKey}_error:${(error instanceof Error ? error.message : String(error)).slice(0, 180)}`;
+      await this.recordStageRunStep(context, input.stage, {
+        runId: input.runId,
+        stepIndex,
+        status: 'failed',
+        inputSummary: input.inputSummary,
+        outputSummary: { fallback_reason: reason },
+        errorMessage: reason,
+      });
+      return reason;
+    }
   }
 
   /**
@@ -1883,6 +1994,8 @@ export class AiAgentControlService {
     const planner = taskPreview(RUNTIME_SAFETY_FLOOR_PLANNER, runtime.plannerGuidance);
     const interpreter = taskPreview(RUNTIME_SAFETY_FLOOR_INTERPRETER, runtime.interpreterGuidance);
     const synthesis = taskPreview(RUNTIME_SAFETY_FLOOR_SYNTHESIS, runtime.synthesisGuidance);
+    const technicianBrief = taskPreview(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF, runtime.synthesisGuidance);
+    const administrativeReply = taskPreview(RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY, runtime.actionPlannerGuidance);
     return {
       agent_definition_id: definition.id,
       prompt_profile: runtime.promptProfileSummary,
@@ -1893,12 +2006,16 @@ export class AiAgentControlService {
         planner.bounds_applied,
         interpreter.bounds_applied,
         synthesis.bounds_applied,
+        technicianBrief.bounds_applied,
+        administrativeReply.bounds_applied,
       ]),
       tasks: {
         action_planner: actionPlanner,
         planner,
         interpreter,
         synthesis,
+        technician_brief: technicianBrief,
+        administrative_reply: administrativeReply,
       },
     };
   }
@@ -5328,22 +5445,26 @@ export class AiAgentControlService {
     const ticketTimeline = buildTicketTimeline(ticket, ticketNotesData.notes, kanapPublicBodies);
     const conversationGate = evaluateConversationGate(priorTargetActions, ticketTimeline, ticketNotesData.notes);
     // What the agent reads of the ticket, by its internal notes setting: every item, or the
-    // public items only. Every stage below that calls a model, the searches and the internal
-    // note proposed to the technician take these items; the conversation gate above and the
-    // run record read the whole thread.
+    // public items only. The searches, the action planner, the brief to the technician and the
+    // internal note proposed take these items; the conversation gate above and the run record
+    // read the whole thread. A reply to the requester is written on the public items only: with
+    // internal notes read, it comes from its own call, and the brief from another one.
     const internalNotesSetting = readAgentKnowledgeSources(agentDefinition).internalNotes;
     const agentTimeline = ticketItemsTheAgentReads(ticketTimeline, internalNotesSetting);
     const agentNotes = ticketItemsTheAgentReads(ticketNotesData.notes, internalNotesSetting);
-    const ticketForKnowledge = {
+    const publicTimeline = ticketItemsTheAgentReads(ticketTimeline, 'ignored');
+    const readsInternalItems = agentNotes.length > ticketItemsTheAgentReads(ticketNotesData.notes, 'ignored').length;
+    const withRequesterMessages = (timeline: TicketTimelineEntry[]) => ({
       ...ticket,
       description: [
         ticket.description,
-        ...agentTimeline
+        ...timeline
           .filter((entry) => entry.actor === 'requester_candidate')
           .slice(-4)
           .map((entry) => entry.body),
       ].filter((entry) => typeof entry === 'string' && entry.trim().length > 0).join('\n\n'),
-    };
+    });
+    const ticketForKnowledge = withRequesterMessages(agentTimeline);
 
     const preKnowledgeGuardrails = this.agentQueue && agentDefinition ? this.agentQueue.runGuardrails(agentDefinition) : null;
     const plannerSystemPrompt = compileSystemPrompt(RUNTIME_SAFETY_FLOOR_PLANNER, promptRuntime.plannerGuidance);
@@ -5582,6 +5703,7 @@ export class AiAgentControlService {
         need: knowledgeNeedRepresentation.need,
         fallbackTitle: ticket.title,
         fallbackDescription: ticket.description,
+        applicationKeys: await this.applicationKeysForTitleCodes(context, ticket.title),
       });
     }
     const deterministicKnowledgeQueries = knowledgeQueryDerivation.queries;
@@ -5827,7 +5949,9 @@ export class AiAgentControlService {
     let webSearchQuery: string | null = null;
     let webSearchError: string | null = null;
     const webQueryCandidates = knowledgeSources.webEnabled && Features.AI_WEB_SEARCH_READY
-      ? buildWebSearchQueryCandidates(ticketForKnowledge, agentTimeline, knowledgeQueryCandidates)
+      // The web reads the public thread only, whatever the setting: no query a model wrote after
+      // reading internal notes goes there.
+      ? buildWebSearchQueryCandidates(withRequesterMessages(publicTimeline), publicTimeline, readsInternalItems ? [] : knowledgeQueryCandidates)
       : [];
     if (knowledgeSources.webEnabled && Features.AI_WEB_SEARCH_READY) {
       const webQuery = webQueryCandidates[0] ?? trimmedString(ticket.title) ?? '';
@@ -5861,7 +5985,10 @@ export class AiAgentControlService {
       }
     }
 
-    const synthesisLanguage = resolveReplyLanguage(agentDefinition, ticket, knowledgeSearchPlan.language);
+    const synthesisLanguage = resolveReplyLanguage(agentDefinition, ticket, knowledgeSearchPlan.language, publicTimeline);
+    const noteLanguage = triageNoteLanguage(tenantSeedLanguage(
+      (await context.manager.getRepository(Tenant).findOne({ where: { id: context.tenantId } }))?.metadata,
+    ));
     // Assigned inside the `runReplySynthesis` closure below. Flow analysis cannot see that write,
     // so without keeping the declared union here the reads after the closure call narrow to `null`.
     let replySynthesisResult: ReplySynthesisResult | null = null as ReplySynthesisResult | null;
@@ -5873,6 +6000,24 @@ export class AiAgentControlService {
       web_source_count: webSearchResults.length,
       model: null,
       prompt_profile: promptRuntime.promptProfileSummary,
+    };
+    // The reply to the requester reads the public items of the ticket and their screenshots. With
+    // internal notes read, the interpreter read them too: the reply gets the documents it retained
+    // or rejected, without the texts it wrote. The documents themselves are the same.
+    const replySynthesisInput = {
+      ticket,
+      timeline: publicTimeline,
+      language: synthesisLanguage,
+      // The brief of the synthesis belongs to the note: it takes the note's language.
+      noteLanguage,
+      knowledgeDocs: enrichedKnowledgeItems.slice(0, MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY),
+      webResults: webSearchResults,
+      imageEvidence: imageEvidenceOfPublicItems(ticketImageExtraction.evidence, ticket, ticketNotesData.notes),
+      interpretation: readsInternalItems
+        ? knowledgeInterpretationWithoutTexts(knowledgeInterpretation)
+        : serializeKnowledgeInterpretation(knowledgeInterpretation),
+      profile: promptRuntime.synthesisGuidance,
+      citableLibraryIds: knowledgeSources.knowledgeLibraryIds,
     };
     const runReplySynthesis = async (): Promise<void> => {
       if (replySynthesisResult || synthesisFallbackReason) {
@@ -5900,17 +6045,7 @@ export class AiAgentControlService {
         });
         return;
       }
-      const synthesisPayload = this.replySynthesis.buildPromptPayload({
-        ticket,
-        timeline: agentTimeline,
-        language: synthesisLanguage,
-        knowledgeDocs: enrichedKnowledgeItems.slice(0, MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY),
-        webResults: webSearchResults,
-        imageEvidence: ticketImageExtraction.evidence,
-        interpretation: serializeKnowledgeInterpretation(knowledgeInterpretation),
-        profile: promptRuntime.synthesisGuidance,
-        citableLibraryIds: knowledgeSources.knowledgeLibraryIds,
-      });
+      const synthesisPayload = this.replySynthesis.buildPromptPayload(replySynthesisInput);
       synthesisProjection = estimateReplySynthesisUsage({
         systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_SYNTHESIS, promptRuntime.synthesisGuidance),
         userPayload: synthesisPayload,
@@ -5944,17 +6079,7 @@ export class AiAgentControlService {
       } else {
         const synthesisStepIndex = stepIndex++;
         try {
-          replySynthesisResult = await this.replySynthesis.synthesizeTicketReply(context, {
-            ticket,
-            timeline: agentTimeline,
-            language: synthesisLanguage,
-            knowledgeDocs: enrichedKnowledgeItems.slice(0, MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY),
-            webResults: webSearchResults,
-            imageEvidence: ticketImageExtraction.evidence,
-            interpretation: serializeKnowledgeInterpretation(knowledgeInterpretation),
-            profile: promptRuntime.synthesisGuidance,
-            citableLibraryIds: knowledgeSources.knowledgeLibraryIds,
-          });
+          replySynthesisResult = await this.replySynthesis.synthesizeTicketReply(context, replySynthesisInput);
           if (replySynthesisResult.fallback_reason) {
             synthesisFallbackReason = replySynthesisResult.fallback_reason;
           }
@@ -6074,6 +6199,8 @@ export class AiAgentControlService {
       target.provider_kind,
       target.provider_key,
     );
+    // The note's frame is in the tenant's language, as the reply is in the ticket's; the planner
+    // writes its rationale and reasons, copied into the note, in the same language.
     const actionPlannerInput = {
       ticket,
       timeline: agentTimeline,
@@ -6090,6 +6217,7 @@ export class AiAgentControlService {
         terminal: lifecycleContext?.terminal === true,
       },
       reply_language: synthesisLanguage,
+      note_language: noteLanguage,
       knowledge_summary: plannerKnowledgeSummary(knowledgeItems, knowledgeLowRelevance.length, knowledgeInterpretation, knowledgeSearchPlan, knowledgeQueryDerivation),
       web_summary: plannerWebSummary(webSearchResults, webSearchStatus, webSearchQuery),
       sourced_reply: plannerSourcedReplySummary(replySynthesisResult),
@@ -6140,6 +6268,8 @@ export class AiAgentControlService {
       plannerActionKey: string;
       replyBody: string | null;
       terminal: boolean;
+      // An administrative reply whose body the planner wrote (no configured exact message).
+      plannerDraft?: boolean;
     }> = [];
     const plannerSkippedActions: Record<string, string> = {};
     const markPlannerSkipped = (actionType: PlannerActionType, reason: string) => {
@@ -6189,6 +6319,7 @@ export class AiAgentControlService {
         let authorizedAction = action;
         let replyBody: string | null = null;
         let terminal = false;
+        let plannerDraft = false;
         if (actionType === 'internal_note') {
           if (!conversationGate.can_prepare_internal_note) {
             markPlannerSkipped(actionType, conversationGate.internal_note_reason);
@@ -6236,6 +6367,7 @@ export class AiAgentControlService {
               replyBody = bodyAsCandidate
                 ? bodyAsCandidate.text.replace(/\r\n/g, '\n').trim()
                 : sanitizeForProvider(action.body, MAX_SYNTHESIZED_REQUESTER_BODY_CHARS);
+              plannerDraft = !bodyAsCandidate;
             }
             if (!replyBody) {
               markPlannerSkipped(actionType, 'administrative_reply_body_missing');
@@ -6316,6 +6448,7 @@ export class AiAgentControlService {
           plannerActionKey: plannerActionKey(authorizedAction, actionPlannerGuidanceHash),
           replyBody,
           terminal,
+          plannerDraft,
         });
       }
     }
@@ -6388,12 +6521,70 @@ export class AiAgentControlService {
     if (plannerNeedsSourcedSynthesis || fallbackPreparePublicReply) {
       await runReplySynthesis();
     }
-    const runUsageEstimate = await this.recordAndEnforceHelpdeskRunCap(context, {
-      definition: agentDefinition,
-      runId: ticketResult.run_id,
-      stage: 'before_proposal_preparation',
-      usage: currentRunLlmUsage(),
-    });
+    // With internal notes read, a reply body the planner wrote may carry their text. The reply that
+    // goes out (the first one of the plan, a sourced answer without a usable synthesis set aside)
+    // is written again on the public items of the ticket when the planner wrote it; any other
+    // body the planner wrote is withdrawn, as is the rewritten one when the rewrite gives nothing.
+    const outgoingReply = plannerAuthorizedActions.find((entry) => entry.action.action_type === 'requester_reply'
+      && !(entry.action.reply_kind === 'sourced_answer' && replySynthesisResult?.usable !== true)) ?? null;
+    const plannerDraftedReply = readsInternalItems && outgoingReply?.plannerDraft ? outgoingReply : null;
+    let administrativeReplyFallbackReason: string | null = null;
+    if (plannerDraftedReply && this.actionPlanner) {
+      const administrativeReplyInput = {
+        ticket,
+        timeline: publicTimeline,
+        reply_language: synthesisLanguage,
+        administrative_intent: plannerDraftedReply.action.administrative_intent ?? null,
+        profile: promptRuntime.actionPlannerGuidance,
+      };
+      const projection = estimateActionPlannerUsage({
+        systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY, promptRuntime.actionPlannerGuidance),
+        userPayload: this.actionPlanner.buildAdministrativeReplyPayload(administrativeReplyInput),
+      }, llmPrices, this.actionPlanner.maxAdministrativeReplyOutputTokens());
+      const administrativeReplyInputSummary = {
+        language: synthesisLanguage,
+        administrative_intent: administrativeReplyInput.administrative_intent,
+        projected_tokens: projection.estimatedTokens,
+        projected_cost_eur: projection.estimatedCostEur,
+        prompt_profile: promptRuntime.promptProfileSummary,
+      };
+      administrativeReplyFallbackReason = await this.runCappedStage(context, {
+        stage: RUN_STEP_STAGES.administrativeReply,
+        usageKey: 'administrative_reply',
+        runId: ticketResult.run_id,
+        stepIndex: () => stepIndex++,
+        definition: agentDefinition,
+        projection,
+        baseUsage: currentRunLlmUsage(),
+        inputSummary: administrativeReplyInputSummary,
+        overCapReason: 'administrative_reply_projected_over_per_run_cap',
+        chargeRunLlmUsage,
+        call: async () => {
+          const drafted = await this.actionPlanner!.draftAdministrativeReply(context, administrativeReplyInput);
+          if (drafted.failure) {
+            return { result: drafted, outputSummary: { reply_length: 0 }, fallbackReason: `administrative_reply_error:${drafted.failure.slice(0, 180)}`, failed: true };
+          }
+          // The safeguards of a reply: a configured exact message is sent exactly, and a line of
+          // the operating context never goes to the requester.
+          const verbatim = drafted.body ? resolveVerbatimCandidate(verbatimCandidates, drafted.body) : null;
+          const body = verbatim
+            ? verbatim.text.replace(/\r\n/g, '\n').trim()
+            : sanitizeForProvider(drafted.body, MAX_SYNTHESIZED_REQUESTER_BODY_CHARS);
+          const leak = !verbatim && !!body && operatingContextLeakDetected({
+            requesterReply: body,
+            profile: promptRuntime.synthesisGuidance,
+            knowledgeDocs: [],
+            webResults: [],
+          });
+          if (body && !leak) plannerDraftedReply.replyBody = body;
+          return {
+            result: drafted,
+            outputSummary: { reply_length: body.length, verbatim: !!verbatim, operating_context_leak: leak },
+            fallbackReason: !body ? 'administrative_reply_body_missing' : leak ? 'administrative_reply_operating_context_leak' : null,
+          };
+        },
+      });
+    }
     const synthesisMetadata = buildSynthesisMetadata();
     // Fail closed (#47): in the legacy fallback (action planner unavailable), only prepare the
     // EXTERNAL requester reply and the pending transition when synthesis actually produced a
@@ -6408,13 +6599,56 @@ export class AiAgentControlService {
     const sourcedReplyAction = effectivePlannerActions.find((entry) =>
       entry.action.action_type === 'requester_reply' && entry.action.reply_kind === 'sourced_answer',
     ) ?? null;
-    if (sourcedReplyAction && (!replySynthesisResult || !replySynthesisResult.usable)) {
-      const downgradeReason = synthesisFallbackReason
-        ?? replySynthesisResult?.fallback_reason
-        ?? 'synthesis_unavailable_or_unusable';
+    // With internal notes read, a reply body the planner wrote that was not written again never
+    // goes out: it leaves the plan (it was never the reply prepared).
+    if (readsInternalItems) {
+      effectivePlannerActions = effectivePlannerActions.filter((entry) => !entry.plannerDraft || entry === plannerDraftedReply);
+    }
+    // A reply that cannot go out as planned is withdrawn: a sourced answer without a usable
+    // synthesis, or an administrative reply that could not be written on the public items.
+    const withdrawnReplies = [
+      ...(sourcedReplyAction && (!replySynthesisResult || !replySynthesisResult.usable)
+        ? [{
+          entry: sourcedReplyAction,
+          reason: synthesisFallbackReason ?? replySynthesisResult?.fallback_reason ?? 'synthesis_unavailable_or_unusable',
+          kind: 'sourced' as WithdrawnReplyKind,
+        }]
+        : []),
+      ...(plannerDraftedReply && administrativeReplyFallbackReason
+        ? [{
+          entry: plannerDraftedReply,
+          reason: administrativeReplyFallbackReason,
+          kind: (plannerDraftedReply.action.administrative_intent === 'close_reply' ? 'close' : 'administrative') as WithdrawnReplyKind,
+        }]
+        : []),
+    ];
+    const downgradedReply = withdrawnReplies[0] ?? null;
+    effectivePlannerActions = effectivePlannerActions.filter((entry) => !withdrawnReplies.some((withdrawn) => withdrawn.entry === entry));
+    // A closing reply that leaves the plan takes its close with it: the ticket is never closed
+    // without its closing reply.
+    const closeReplyLeft = plannerAuthorizedActions.some((entry) =>
+      entry.action.administrative_intent === 'close_reply' && !effectivePlannerActions.includes(entry));
+    if (closeReplyLeft) {
+      effectivePlannerActions = effectivePlannerActions.filter((entry) => {
+        if (entry.action.action_type !== 'status_update' || !entry.terminal) return true;
+        const closeDowngradeReason = `close_requires_its_closing_reply${downgradedReply ? `: ${downgradedReply.reason}` : ''}`;
+        plannerDowngradedActions.status_update = closeDowngradeReason;
+        plannerSkippedActions.status_update = closeDowngradeReason;
+        return false;
+      });
+    }
+    // The note says, in its own language and in one sentence, that a planned reply was withdrawn.
+    const withdrawnReplyNotice = downgradedReply
+      ? withdrawnReplySentence(
+        withdrawnReplies.some((withdrawn) => withdrawn.kind === 'close') ? 'close' : downgradedReply.kind,
+        !effectivePlannerActions.some((entry) => entry.action.action_type === 'requester_reply'),
+        noteLanguage,
+      )
+      : null;
+    if (downgradedReply) {
+      const downgradeReason = downgradedReply.reason;
       plannerDowngradedActions.requester_reply = downgradeReason;
       plannerSkippedActions.requester_reply = downgradeReason;
-      effectivePlannerActions = effectivePlannerActions.filter((entry) => entry !== sourcedReplyAction);
       effectivePlannerActions = effectivePlannerActions.filter((entry) => {
         if (entry.action.action_type !== 'status_update') {
           return true;
@@ -6437,11 +6671,11 @@ export class AiAgentControlService {
         delete plannerSkippedActions.internal_note;
         const downgradeAction: PlannerAction = {
           action_type: 'internal_note',
-          reason: `Escalate internally because sourced reply synthesis was not usable: ${downgradeReason}.`,
+          reason: withdrawnReplyNotice ?? '',
         };
         effectivePlannerActions.push({
           action: downgradeAction,
-          plannerActionKey: `downgrade:${sourcedReplyAction.plannerActionKey}:internal_note`,
+          plannerActionKey: `downgrade:${downgradedReply.entry.plannerActionKey}:internal_note`,
           replyBody: null,
           terminal: false,
         });
@@ -6478,23 +6712,82 @@ export class AiAgentControlService {
         effectiveInternalNoteAction.action.reason,
       ])
       : null;
-    // The note's frame is in the tenant's language, as the reply is in the ticket's.
-    const noteLanguage = triageNoteLanguage(tenantSeedLanguage(
-      (await context.manager.getRepository(Tenant).findOne({ where: { id: context.tenantId } }))?.metadata,
-    ));
     // The synthesis runs as soon as a document is retained, before the planner decides: its note
     // describes the reply only when a sourced answer is what goes out (or the planner is
     // unavailable). With an administrative reply, the note is the administrative one.
     const sourcedAnswerPrepared = effectivePlannerActions.some((entry) =>
       entry.action.action_type === 'requester_reply' && entry.action.reply_kind === 'sourced_answer');
     const noteFromSynthesis = !!replySynthesisResult && (!actionPlannerResult || sourcedAnswerPrepared);
-    const noteBody = isPlannerEscalation
+    // The synthesis read the public items only: with internal notes read, the brief of the note
+    // comes from its own call on the whole thread (the synthesis' own brief when it gives none).
+    let noteSynthesis = replySynthesisResult;
+    if (
+      readsInternalItems
+      && !isPlannerEscalation
+      && noteFromSynthesis
+      && replySynthesisResult
+      && this.replySynthesis
+      && (fallbackPrepareInternalNote || effectiveInternalNoteAction)
+    ) {
+      const reply = replySynthesisResult;
+      const briefInput = {
+        ticket,
+        timeline: agentTimeline,
+        // The brief is part of the note: it takes the language of the note, as its frame.
+        language: noteLanguage,
+        reply,
+        imageEvidence: ticketImageExtraction.evidence,
+        interpretation: serializeKnowledgeInterpretation(knowledgeInterpretation),
+        profile: promptRuntime.synthesisGuidance,
+      };
+      const projection = estimateReplySynthesisUsage({
+        systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF, promptRuntime.synthesisGuidance),
+        userPayload: this.replySynthesis.buildTechnicianBriefPayload(briefInput),
+      }, llmPrices, this.replySynthesis.maxTechnicianBriefOutputTokens());
+      await this.runCappedStage(context, {
+        stage: RUN_STEP_STAGES.technicianBrief,
+        usageKey: 'technician_brief',
+        runId: ticketResult.run_id,
+        stepIndex: () => stepIndex++,
+        definition: agentDefinition,
+        projection,
+        baseUsage: currentRunLlmUsage(),
+        inputSummary: {
+          language: noteLanguage,
+          projected_tokens: projection.estimatedTokens,
+          projected_cost_eur: projection.estimatedCostEur,
+          prompt_profile: promptRuntime.promptProfileSummary,
+        },
+        overCapReason: 'technician_brief_projected_over_per_run_cap',
+        chargeRunLlmUsage,
+        call: async () => {
+          const brief = await this.replySynthesis!.writeTechnicianBrief(context, briefInput);
+          if (brief.failure) {
+            return { result: brief, outputSummary: { brief_length: 0 }, fallbackReason: `technician_brief_error:${brief.failure.slice(0, 180)}`, failed: true };
+          }
+          if (brief.technician_brief) noteSynthesis = { ...reply, technician_brief: brief.technician_brief };
+          return {
+            result: brief,
+            outputSummary: { brief_length: brief.technician_brief.length },
+            fallbackReason: brief.technician_brief ? null : 'technician_brief_missing',
+          };
+        },
+      });
+    }
+    const runUsageEstimate = await this.recordAndEnforceHelpdeskRunCap(context, {
+      definition: agentDefinition,
+      runId: ticketResult.run_id,
+      stage: 'before_proposal_preparation',
+      usage: currentRunLlmUsage(),
+    });
+    const plannedNoteBody = isPlannerEscalation
       ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'escalation', reason: escalationReason }, noteLanguage)
-      : (noteFromSynthesis && replySynthesisResult
-        ? renderSynthesizedTriageNote(ticket, agentTimeline, replySynthesisResult, noteLanguage)
+      : (noteFromSynthesis && noteSynthesis
+        ? renderSynthesizedTriageNote(ticket, agentTimeline, noteSynthesis, noteLanguage)
         : (isPlannerAdministrativeReply
           ? buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, { kind: 'administrative_reply', reason: administrativeReason }, noteLanguage)
           : buildTriageNote(ticket, knowledgeItems, agentTimeline, webSearchResults, null, noteLanguage)));
+    const noteBody = withNoteNotice(plannedNoteBody, withdrawnReplyNotice);
 
     const plannerClassificationUpdate = effectivePlannerActions.find((entry) => entry.action.action_type === PLANNER_CLASSIFICATION_ACTION_TYPE) ?? null;
     const classificationUpdateInput = plannerClassificationUpdate?.action.proposed
@@ -6844,7 +7137,7 @@ export class AiAgentControlService {
     }
     const requesterReplyBody = replySynthesisResult
       ? renderSynthesizedRequesterReply(ticket, replySynthesisResult)
-      : buildRequesterReply(ticket, enrichedKnowledgeItems, agentTimeline, webSearchResults);
+      : buildRequesterReply(ticket, enrichedKnowledgeItems, publicTimeline, webSearchResults);
     const plannerRequesterReplyBody = plannerRequesterReply
       ? plannerRequesterReply.replyBody ?? requesterReplyBody
       : null;
