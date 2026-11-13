@@ -108,8 +108,9 @@ export async function bulkUpdateApplications(body: unknown, deps: ApplicationBul
       if (ids.length === 0) return [];
       // The lock order of the update of one application: the tenant's classification catalog, then
       // the application. Without it, a change in bulk holding applications would wait for the
-      // catalog an update of one of them holds.
-      if (columns.length > 0) await manager.query(`SELECT id FROM tenants WHERE id = $1 FOR UPDATE`, [tenantId]);
+      // catalog an update of one of them holds. The catalog's mode (`lockClassificationCatalog`):
+      // the tenant's other inserts do not wait for the change.
+      if (columns.length > 0) await manager.query(`SELECT id FROM tenants WHERE id = $1 FOR NO KEY UPDATE`, [tenantId]);
       const params: unknown[] = [tenantId, ids];
       let where = '';
       if (deps.accessScope) {
