@@ -25,7 +25,7 @@ function createMockDataSource(repo: any) {
     query: async (sql: string, params?: any[]) => {
       if (/FROM tenants/.test(sql)) return [{ sso_provider: 'entra', entra_tenant_id: 'entra-tenant-1' }];
       // The account found by its Microsoft identity, locked and still linked.
-      if (/FROM users WHERE tenant_id = \$1 AND id = \$2 FOR UPDATE/.test(sql)) {
+      if (/FROM users WHERE tenant_id = \$1 AND id = \$2 FOR NO KEY UPDATE/.test(sql)) {
         return [{ id: params?.[1], email: 'linked@example.test', status: 'enabled', external_auth_provider: 'entra', has_password: false }];
       }
       return [];

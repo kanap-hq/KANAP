@@ -8,6 +8,7 @@ import { purgeTenantTables } from '../../admin/tenants/tenant-data-purge';
 import { TENANT_PURGE_TABLES } from '../../admin/tenants/tenant-purge.inventory';
 import { Features } from '../../config/features';
 import { EntraController } from '../entra.controller';
+import { lockAccountForLink } from '../entra-link-confirmation';
 import { UsersService } from '../../users/users.service';
 
 // A Microsoft sign-in of a linked account and an administrator's "Unlink from Microsoft" at the
@@ -174,6 +175,29 @@ async function testUnlinkWhileTheSignInHoldsTheAccount(ds: DataSource, entra: En
   }
 }
 
+/**
+ * While a sign-in holds the account, a row that references it is written without waiting (its
+ * foreign key reads the account): a write that holds another lock first, then names the account
+ * (a manager named), cannot meet a sign-in that holds the account and asks for that lock.
+ */
+async function testHeldAccountLeavesItsReferencesFree(ds: DataSource) {
+  const w = await workspace(ds);
+  const signInTx = await openTransaction(ds, w.tenantId);
+  const writer = await openTransaction(ds, w.tenantId);
+  try {
+    await lockAccountForLink(signInTx.runner.manager, w.tenantId, w.userId);
+    await writer.runner.query(`SET LOCAL lock_timeout = '2s'`);
+    const [role] = await writer.runner.query(`SELECT role_id FROM users WHERE id = $1`, [w.userId]);
+    await writer.runner.query(
+      `INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, false)`,
+      [w.tenantId, w.userId, role.role_id],
+    );
+  } finally {
+    await end(writer.runner);
+    await end(signInTx.runner);
+  }
+}
+
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for entra-sign-in-unlink-race.integration.spec.ts.');
   const { AppModule } = require('../../app.module');
@@ -191,6 +215,7 @@ async function run() {
   const tests: Array<[string, () => Promise<void>]> = [
     ['unlinked while the sign-in reads the account', () => testUnlinkWhileTheSignInReads(ds, entra, users, mails)],
     ['unlinked while the sign-in holds the account', () => testUnlinkWhileTheSignInHoldsTheAccount(ds, entra, users)],
+    ['a held account leaves its references free', () => testHeldAccountLeavesItsReferencesFree(ds)],
   ];
   try {
     for (const [name, test] of tests) {

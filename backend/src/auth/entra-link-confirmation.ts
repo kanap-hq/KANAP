@@ -56,6 +56,9 @@ export async function lockTenantConnectionForChange(manager: EntityManager, tena
 /**
  * Locks the account's row for the rest of the transaction, so that requests and confirmations of
  * one account run one after the other. Returns the account, or null when it no longer exists.
+ * FOR NO KEY UPDATE: it excludes the other writers of the account (`lockPeople`, the unlink, the
+ * directory sync, all FOR UPDATE) and leaves free the key share lock a foreign key to the account
+ * takes. The sign-in never changes the account's keys (id, tenant, address) nor deletes it.
  */
 export async function lockAccountForLink(
   manager: EntityManager,
@@ -64,7 +67,7 @@ export async function lockAccountForLink(
 ): Promise<{ id: string; email: string; status: string; external_auth_provider: string | null; has_password: boolean } | null> {
   const rows = await manager.query(
     `SELECT id, email, status, external_auth_provider, COALESCE(password_hash, '') <> '' AS has_password
-     FROM users WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+     FROM users WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
     [tenantId, userId],
   );
   return rows[0] ?? null;
