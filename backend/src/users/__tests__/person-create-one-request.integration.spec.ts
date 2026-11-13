@@ -38,7 +38,7 @@ async function testRefusedRoleListCreatesNothing(users: any, dataSource: DataSou
   const email = s.email('unknown-role');
   await inRequest(dataSource, s, async (runner) => {
     const error = await caught(users.create({ email, role_ids: [randomUUID()] }, req(runner, s, 'admin')));
-    assert.ok(error instanceof BadRequestException, `unknown role: 400 (got ${String(error)})`);
+    refusedWith(error, BadRequestException, 'ROLE_NOT_FOUND', 'POST /users (unknown role)');
     await nothingFor(runner, email, 'unknown role');
   });
 }
@@ -74,9 +74,25 @@ async function testCreatedWithEveryRole(users: any, dataSource: DataSource, s: S
   });
 }
 
+/** A role the workspace does not have answers ROLE_NOT_FOUND on every role list; a role named twice counts once. */
+async function testRoleListCodes(users: any, dataSource: DataSource, s: Seed) {
+  const target = s.users.enabled;
+  await inRequest(dataSource, s, async (runner) => {
+    refusedWith(await caught(users.update(target, { role_ids: [s.roles.budgetReader, randomUUID()] }, req(runner, s, 'admin'))),
+      BadRequestException, 'ROLE_NOT_FOUND', 'PATCH /users/:id (unknown role)');
+    refusedWith(await caught(users.setUserRoles(target, { role_ids: [randomUUID()] }, req(runner, s, 'admin'))),
+      BadRequestException, 'ROLE_NOT_FOUND', 'PUT /users/:id/roles (unknown role)');
+    const result = await users.setUserRoles(target, { role_ids: [s.roles.budgetReader, s.roles.contact, s.roles.budgetReader] }, req(runner, s, 'admin'));
+    assert.deepEqual(result.items.map((item: { id: string }) => item.id), [s.roles.budgetReader, s.roles.contact], 'a role named twice counts once');
+    const created = await users.create({ email: s.email('twice'), role_ids: [s.roles.contact, s.roles.contact] }, req(runner, s, 'ua'));
+    assert.deepEqual(await heldRoles(runner, created.id), [{ role_id: s.roles.contact, is_primary: true }]);
+  });
+}
+
 withSeededWorkspace('person-create-one-request.integration.spec', async (users, dataSource, s) => {
   await testRefusedRoleListCreatesNothing(users, dataSource, s);
   await testCreatedWithEveryRole(users, dataSource, s);
+  await testRoleListCodes(users, dataSource, s);
 }).catch((error) => {
   console.error(error);
   process.exit(1);

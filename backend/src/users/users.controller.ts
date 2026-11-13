@@ -1,6 +1,6 @@
 import { exportListQuery } from '../common/pagination';
 import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Put, Query, Req, Res, UseGuards, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
-import { UsersService } from './users.service';
+import { roleNotFound, UsersService } from './users.service';
 import { UsersDeleteService } from './users-delete.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Response } from 'express';
@@ -251,15 +251,14 @@ export class UsersController {
     const userRepo = manager ? manager.getRepository(User) : this.userRepo;
     // Empty list is allowed: the user keeps no app access and falls back to
     // the Contact system role (same state as a freshly provisioned SSO user).
-    const roleIds: string[] = Array.isArray(raw) ? raw : [];
+    // A role named twice counts once (the first place keeps the order: the first role is the main one).
+    const roleIds: string[] = Array.isArray(raw) ? [...new Set(raw as string[])] : [];
     if (roleIds.length === 0 && req.user?.sub === userId) {
       throw new BadRequestException('You cannot remove your own last role.');
     }
     // Validate all roles exist
     const roles = roleIds.length > 0 ? await roleRepo.find({ where: roleIds.map(rid => ({ id: rid })) }) : [];
-    if (roles.length !== roleIds.length) {
-      throw new BadRequestException('One or more roles not found');
-    }
+    if (roles.length !== roleIds.length) throw roleNotFound();
     if (userId && !(await userRepo.findOne({ where: { id: userId } }))) throw new BadRequestException('User not found');
     // Legacy role_id column is NOT NULL: first role, or the Contact system
     // role when the list is empty (no roles = no access -> pending).
