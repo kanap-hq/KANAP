@@ -225,6 +225,8 @@
   "USER_OWN_ACCOUNT": "Vous ne pouvez pas supprimer votre propre compte. Désactivez-le si nécessaire.",
   "PERSON_ABOVE_OWN_RIGHTS": "Cette personne a plus de droits que vous.",
   "LAST_ADMINISTRATOR": "L'espace de travail doit garder au moins un administrateur actif.",
+  "LOCAL_PASSWORD_REQUIRED": "Définissez d'abord un mot de passe d'au moins 8 caractères pour votre propre compte.",
+  "SSO_NOT_CONNECTED": "La connexion avec Microsoft n'est pas activée pour cet espace de travail.",
   "ACCOUNT_IN_USE": "Ce compte est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "CHART_OF_ACCOUNTS_IN_USE_one": "Ce plan comptable est utilisé par {{usages}}. Rattachez-la d’abord à un autre plan comptable.",
   "CHART_OF_ACCOUNTS_IN_USE_other": "Ce plan comptable est utilisé par {{usages}}. Rattachez-les d’abord à un autre plan comptable.",

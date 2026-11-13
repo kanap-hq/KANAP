@@ -1600,6 +1600,16 @@
       "reconnect": "Erneut verbinden",
       "testSignIn": "Anmeldung testen"
     },
+    "disconnect": {
+      "title": "Microsoft Entra ID trennen",
+      "keepPassword_one": "{{count}} Konto behält sein Passwort",
+      "keepPassword_other": "{{count}} Konten behalten ihr Passwort",
+      "needPassword_one": "{{count}} Konto hat kein Passwort und legt eines über Passwort vergessen fest",
+      "needPassword_other": "{{count}} Konten haben kein Passwort und legen eines über Passwort vergessen fest",
+      "needPasswordNoEmail_one": "{{count}} Konto hat kein Passwort: Ein Administrator legt es fest (Passwort zurücksetzen im Betriebshandbuch)",
+      "needPasswordNoEmail_other": "{{count}} Konten haben kein Passwort: Ein Administrator legt sie fest (Passwort zurücksetzen im Betriebshandbuch)",
+      "ownPassword": "Ihr neues Passwort"
+    },
     "entra": {
       "connected": "Verbunden",
       "disconnectedDescription": "Single Sign-On ist für diesen Arbeitsbereich nicht verbunden.",

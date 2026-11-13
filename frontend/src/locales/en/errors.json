@@ -225,6 +225,8 @@
   "USER_OWN_ACCOUNT": "You cannot delete your own account. Disable it instead if needed.",
   "PERSON_ABOVE_OWN_RIGHTS": "This person has more rights than you.",
   "LAST_ADMINISTRATOR": "The workspace needs at least one active administrator.",
+  "LOCAL_PASSWORD_REQUIRED": "Set a password of at least 8 characters for your own account first.",
+  "SSO_NOT_CONNECTED": "Microsoft sign-in is not connected for this workspace.",
   "ACCOUNT_IN_USE": "This account is used by {{usages}}. Disable it instead of deleting it.",
   "CHART_OF_ACCOUNTS_IN_USE_one": "This chart of accounts is used by {{usages}}. Move it to another chart of accounts first.",
   "CHART_OF_ACCOUNTS_IN_USE_other": "This chart of accounts is used by {{usages}}. Move them to another chart of accounts first.",

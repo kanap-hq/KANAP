@@ -1600,6 +1600,16 @@
       "reconnect": "Reconectar",
       "testSignIn": "Probar inicio de sesión"
     },
+    "disconnect": {
+      "title": "Desconectar Microsoft Entra ID",
+      "keepPassword_one": "{{count}} cuenta conserva su contraseña",
+      "keepPassword_other": "{{count}} cuentas conservan su contraseña",
+      "needPassword_one": "{{count}} cuenta no tiene contraseña y creará una con Contraseña olvidada",
+      "needPassword_other": "{{count}} cuentas no tienen contraseña y crearán una con Contraseña olvidada",
+      "needPasswordNoEmail_one": "{{count}} cuenta no tiene contraseña: un administrador la define (Restablecimiento de contraseña, guía de operaciones)",
+      "needPasswordNoEmail_other": "{{count}} cuentas no tienen contraseña: un administrador las define (Restablecimiento de contraseña, guía de operaciones)",
+      "ownPassword": "Su nueva contraseña"
+    },
     "entra": {
       "connected": "Conectado",
       "disconnectedDescription": "El inicio de sesión único no está conectado para este espacio de trabajo.",

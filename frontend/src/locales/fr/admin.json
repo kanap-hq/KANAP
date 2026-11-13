@@ -1600,6 +1600,16 @@
       "reconnect": "Reconnecter",
       "testSignIn": "Tester la connexion"
     },
+    "disconnect": {
+      "title": "Déconnecter Microsoft Entra ID",
+      "keepPassword_one": "{{count}} compte garde son mot de passe",
+      "keepPassword_other": "{{count}} comptes gardent leur mot de passe",
+      "needPassword_one": "{{count}} compte n'a pas de mot de passe et en créera un par Mot de passe oublié",
+      "needPassword_other": "{{count}} comptes n'ont pas de mot de passe et en créeront un par Mot de passe oublié",
+      "needPasswordNoEmail_one": "{{count}} compte n'a pas de mot de passe : un administrateur le définit (Réinitialisation du mot de passe, guide d'exploitation)",
+      "needPasswordNoEmail_other": "{{count}} comptes n'ont pas de mot de passe : un administrateur les définit (Réinitialisation du mot de passe, guide d'exploitation)",
+      "ownPassword": "Votre nouveau mot de passe"
+    },
     "entra": {
       "connected": "Connecté",
       "disconnectedDescription": "L'authentification unique n'est pas connectée pour cet espace de travail.",

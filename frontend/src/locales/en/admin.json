@@ -1600,6 +1600,16 @@
       "reconnect": "Reconnect",
       "testSignIn": "Test sign-in"
     },
+    "disconnect": {
+      "title": "Disconnect Microsoft Entra ID",
+      "keepPassword_one": "{{count}} account keeps its password",
+      "keepPassword_other": "{{count}} accounts keep their password",
+      "needPassword_one": "{{count}} account has no password and will set one with Forgot password",
+      "needPassword_other": "{{count}} accounts have no password and will set one with Forgot password",
+      "needPasswordNoEmail_one": "{{count}} account has no password: an administrator sets it (Password Reset in the operations guide)",
+      "needPasswordNoEmail_other": "{{count}} accounts have no password: an administrator sets them (Password Reset in the operations guide)",
+      "ownPassword": "Your new password"
+    },
     "entra": {
       "connected": "Connected",
       "disconnectedDescription": "Single sign-on is not connected for this workspace.",
