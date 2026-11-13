@@ -26,7 +26,7 @@ const TECHNOLOGY = {
   ],
 } as TechnologyDetail;
 
-function renderTab(technology: TechnologyDetail = TECHNOLOGY, canManage = true, mode: 'light' | 'dark' = 'light') {
+function renderTab(technology: TechnologyDetail = TECHNOLOGY, canManage = true, mode: 'light' | 'dark' = 'light', onPatch: (patch: Record<string, unknown>) => unknown = vi.fn()) {
   const onVersionsChanged = vi.fn(async () => undefined);
   const onError = vi.fn();
   const client = new QueryClient();
@@ -38,7 +38,7 @@ function renderTab(technology: TechnologyDetail = TECHNOLOGY, canManage = true, 
           <TechnologyOverviewTab
             technology={technology}
             canManage={canManage}
-            onPatch={vi.fn()}
+            onPatch={onPatch as never}
             onVersionsChanged={onVersionsChanged}
             onError={onError}
           />
@@ -682,6 +682,46 @@ describe('TechnologyOverviewTab', () => {
       } finally {
         features.vulnerabilityFeed = true;
       }
+    });
+  });
+
+  describe('text waiting to be saved', () => {
+    const pause = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
+
+    it('saves the description once, with the last text, when the tab goes before the pause', async () => {
+      const onPatch = vi.fn();
+      const { unmount } = renderTab(TECHNOLOGY, true, 'light', onPatch);
+      const description = screen.getByRole('textbox', { name: 'Description' });
+      fireEvent.change(description, { target: { value: 'Relational' } });
+      fireEvent.change(description, { target: { value: 'Relational database' } });
+      expect(onPatch).not.toHaveBeenCalled();
+      unmount();
+      expect(onPatch).toHaveBeenCalledTimes(1);
+      expect(onPatch).toHaveBeenCalledWith({ description: 'Relational database' });
+      await pause(1700);
+      expect(onPatch).toHaveBeenCalledTimes(1);
+    });
+
+    it('saves nothing when the text is back to the saved one', async () => {
+      const onPatch = vi.fn();
+      const { unmount } = renderTab({ ...TECHNOLOGY, notes: 'Keep' }, true, 'light', onPatch);
+      const notes = screen.getByRole('textbox', { name: 'Notes' });
+      fireEvent.change(notes, { target: { value: 'Keep this' } });
+      fireEvent.change(notes, { target: { value: 'Keep' } });
+      unmount();
+      renderTab(TECHNOLOGY, true, 'light', onPatch).unmount();
+      await pause(50);
+      expect(onPatch).not.toHaveBeenCalled();
+    });
+
+    it('does not save a second time when the pause already ran', async () => {
+      const onPatch = vi.fn();
+      const { unmount } = renderTab(TECHNOLOGY, true, 'light', onPatch);
+      fireEvent.change(screen.getByRole('textbox', { name: 'Description' }), { target: { value: 'Relational' } });
+      await pause(1700);
+      expect(onPatch).toHaveBeenCalledTimes(1);
+      unmount();
+      expect(onPatch).toHaveBeenCalledTimes(1);
     });
   });
 });

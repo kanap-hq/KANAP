@@ -145,6 +145,8 @@ export function AutosaveText({ value, onSave, disabled, multiline, placeholder, 
   const [draft, setDraft] = React.useState(value ?? '');
   const saved = React.useRef(value ?? '');
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // What the waiting timer will save: it holds the text and the save of the record it was typed on.
+  const pending = React.useRef<(() => void) | null>(null);
   React.useEffect(() => {
     if (timer.current) return;
     setDraft(value ?? '');
@@ -156,7 +158,13 @@ export function AutosaveText({ value, onSave, disabled, multiline, placeholder, 
     saved.current = next;
     onSave(next.trim() === '' ? null : next);
   }, [onSave]);
-  React.useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  // A text still waiting for its pause is saved once when the field goes (the record closes, another tab or page).
+  React.useEffect(() => () => {
+    if (!timer.current) return;
+    clearTimeout(timer.current);
+    timer.current = null;
+    pending.current?.();
+  }, []);
   return (
     <TextField
       variant="standard"
@@ -171,6 +179,7 @@ export function AutosaveText({ value, onSave, disabled, multiline, placeholder, 
         const next = event.target.value;
         setDraft(next);
         if (timer.current) clearTimeout(timer.current);
+        pending.current = () => flush(next);
         timer.current = setTimeout(() => { timer.current = null; flush(next); }, multiline ? 1500 : 800);
       }}
       onBlur={() => flush(draft)}
