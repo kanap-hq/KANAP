@@ -7,7 +7,7 @@ import type { EntityManager } from 'typeorm';
  * (64 hex characters), which never starts with it, and a new confirmation replaces only the
  * previous confirmations of the account, never its password links.
  */
-const LINK_CONFIRMATION_HASH_PREFIX = 'entra-link:';
+export const LINK_CONFIRMATION_HASH_PREFIX = 'entra-link:';
 
 export function linkConfirmationHash(token: string): string {
   const digest = createHash('sha256').update(token).digest('hex');
@@ -16,6 +16,24 @@ export function linkConfirmationHash(token: string): string {
 
 /** How long a pending confirmation holds off a new one for the same account. */
 export const LINK_CONFIRMATION_RESEND_MINUTES = 5;
+
+/**
+ * Reads the workspace's Microsoft connection and holds its row (share lock) for the rest of the
+ * transaction. A sign-in or a confirmation that links an account takes it before the account's
+ * row: a disconnect, which locks the workspace's row to write it and then every linked account,
+ * waits for it, and one that starts after the disconnect reads the disconnected workspace and
+ * links nothing.
+ */
+export async function lockTenantConnection(
+  manager: EntityManager,
+  tenantId: string,
+): Promise<{ sso_provider: string | null; entra_tenant_id: string | null } | null> {
+  const rows = await manager.query(
+    `SELECT sso_provider, entra_tenant_id FROM tenants WHERE id = $1 FOR SHARE`,
+    [tenantId],
+  );
+  return rows[0] ?? null;
+}
 
 /**
  * Locks the account's row for the rest of the transaction, so that requests and confirmations of

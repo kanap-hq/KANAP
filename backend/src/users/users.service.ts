@@ -25,7 +25,7 @@ import {
 } from '../common/ag-grid-filtering';
 import { compileUserListFilters } from './users-list-filters';
 import { userAssignedRolesSql, userDataAccessModeSql } from './user-access-sql';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, writeAuditLogs } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 // import { PermissionsService, PermissionLevel } from '../permissions/permissions.service';
 import { Company } from '../companies/company.entity';
@@ -1369,6 +1369,47 @@ export class UsersService {
       );
     }
     return { ...saved, password_hash: undefined } as any;
+  }
+
+  /**
+   * `unlinkExternalSignIn` for many accounts at once (every account of a workspace whose Microsoft
+   * connection is removed): one read, one update and one write of their history entries, whatever
+   * their number. The caller holds the accounts' rows (`lockPeople` order). Each account changed
+   * gets the entry `unlinkExternalSignIn` writes; local accounts are left alone. Returns the ids
+   * of the accounts changed.
+   */
+  async unlinkExternalSignIns(
+    ids: string[],
+    actorId: string | null,
+    opts: { manager: EntityManager; sourceRef: string },
+  ): Promise<string[]> {
+    if (ids.length === 0) return [];
+    const repo = this.getRepo(opts.manager);
+    const linked = (await repo.find({ where: { id: In(ids) }, order: { id: 'ASC' } })).filter(
+      (user) => !!user.external_auth_provider || !!user.external_subject,
+    );
+    if (linked.length === 0) return [];
+    const changed = linked.map((user) => user.id);
+    await opts.manager.query(
+      `UPDATE users SET external_auth_provider = NULL, external_subject = NULL, external_synced_at = NULL
+        WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+      [changed],
+    );
+    if (this.audit) {
+      await writeAuditLogs(
+        opts.manager,
+        linked.map((user) => ({
+          table: 'users',
+          recordId: user.id,
+          action: 'update',
+          before: userAuditSnapshot(user),
+          after: userAuditSnapshot({ ...user, external_auth_provider: null, external_subject: null, external_synced_at: null }),
+          userId: actorId,
+          sourceRef: opts.sourceRef,
+        })),
+      );
+    }
+    return changed;
   }
 
   /**

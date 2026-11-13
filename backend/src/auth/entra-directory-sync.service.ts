@@ -232,10 +232,14 @@ export class EntraDirectorySyncService implements OnModuleInit {
 
         await inTenant(async (manager) => {
           const repo = manager.getRepository(User);
-          // Read again: the people may have changed during the Graph call (disabled, relinked).
+          // Read again: the people may have changed during the Graph call (disabled, relinked, made
+          // local by a disconnect). Locked by id until the end of the transaction, so that the save
+          // below never writes back a link removed meanwhile.
           const chunk = (
             await repo.find({
               where: { external_auth_provider: 'entra', external_subject: In(subjects), status: In(SYNCED_STATUSES) } as any,
+              order: { id: 'ASC' },
+              lock: { mode: 'pessimistic_write' },
             })
           ).filter((u) => !!u.external_subject);
           for (const user of chunk) {
@@ -262,9 +266,13 @@ export class EntraDirectorySyncService implements OnModuleInit {
       // run disables is counted.
       for (const { user, reason } of leaving) {
         const outcome = await inTenant(async (manager) => {
+          // Still the account the directory answered for: an account made local meanwhile (the
+          // workspace disconnected, the person unlinked) is out of the sync.
           const [current] = await manager.query(
-            `SELECT status FROM users WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
-            [tenantId, user.id],
+            `SELECT status FROM users
+              WHERE tenant_id = $1 AND id = $2 AND external_auth_provider = 'entra' AND external_subject = $3
+              FOR UPDATE`,
+            [tenantId, user.id, user.external_subject],
           );
           if (!current || current.status === 'disabled') return 'unchanged' as const;
           if ((await lastActiveAdministratorsLeaving(manager, [{ userId: user.id, status: 'disabled' }])).length > 0) {

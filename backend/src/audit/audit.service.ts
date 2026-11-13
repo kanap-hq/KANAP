@@ -76,10 +76,33 @@ export type AuditEntry = {
  * the new row's id.
  */
 export async function writeAuditLog(manager: EntityManager, params: AuditEntry): Promise<string | null> {
+  const result = await manager.getRepository(AuditLog).insert(await auditLogRow(manager, params));
+  const id = result?.identifiers?.[0]?.id;
+  return typeof id === 'string' ? id : null;
+}
+
+/** Rows per INSERT of `writeAuditLogs`: well below PostgreSQL's limit on the parameters of one statement. */
+const AUDIT_LOG_BATCH = 500;
+
+/**
+ * Writes one `audit_log` row per entry, as `writeAuditLog` does, in one INSERT per
+ * `AUDIT_LOG_BATCH` entries: a change made to many records at once (every account of a
+ * workspace) writes their history without one statement per record. A label with a parent rule
+ * still looks its parent up for each entry.
+ */
+export async function writeAuditLogs(manager: EntityManager, entries: AuditEntry[]): Promise<void> {
+  const rows = [];
+  for (const entry of entries) rows.push(await auditLogRow(manager, entry));
+  for (let i = 0; i < rows.length; i += AUDIT_LOG_BATCH) {
+    await manager.getRepository(AuditLog).insert(rows.slice(i, i + AUDIT_LOG_BATCH));
+  }
+}
+
+async function auditLogRow(manager: EntityManager, params: AuditEntry): Promise<any> {
   // One rule per audit label (`audit-parent-rules.ts`); an explicit `parent` wins. A label without
   // a rule (a line, a contract, a security event) keeps both columns NULL.
   const parent = await resolveAuditParent(manager, params);
-  const result = await manager.getRepository(AuditLog).insert({
+  return {
     table_name: params.table,
     record_id: params.recordId ?? null,
     action: params.action,
@@ -94,9 +117,7 @@ export async function writeAuditLog(manager: EntityManager, params: AuditEntry):
     // for a row lock is stamped after the one it waited for, so a record's history follows the
     // order its changes were committed in (plan planning/perf-scale, lot 3B).
     created_at: () => 'clock_timestamp()',
-  } as any);
-  const id = result?.identifiers?.[0]?.id;
-  return typeof id === 'string' ? id : null;
+  };
 }
 
 @Injectable()

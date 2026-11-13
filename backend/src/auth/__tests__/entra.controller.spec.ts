@@ -20,6 +20,8 @@ function createMockDataSource(repo: any) {
 
   const manager = {
     getRepository: () => repo,
+    // The workspace's connection, read under a share lock by a sign-in that links an account.
+    query: async (sql: string) => (/FROM tenants/.test(sql) ? [{ sso_provider: 'entra', entra_tenant_id: 'entra-tenant-1' }] : []),
   };
 
   const runner = {
@@ -129,6 +131,7 @@ async function testHandleLoginCallbackRedirectsToTenantSessionHandoff() {
     'alpha',
     '/dashboard',
     {
+      tid: 'entra-tenant-1',
       oid: 'entra-oid-1',
       email: 'user@example.com',
     },
@@ -214,7 +217,7 @@ async function testFirstMicrosoftSignInEndsTheInvitation() {
       'tenant-1',
       'alpha',
       '/',
-      { oid: 'entra-oid-2', email: 'julie.martin@example.com' },
+      { tid: 'entra-tenant-1', oid: 'entra-oid-2', email: 'julie.martin@example.com' },
       {},
       { headers: { host: 'alpha.lvh.me' }, protocol: 'http' },
       { cookie: () => undefined, redirect: () => undefined } as any,
@@ -821,8 +824,8 @@ async function testConsentEntryNamesTheAdministratorWhoOpenedIt() {
       const h = consentHarness();
       const settings = new AdminAuthController(
         { findById: async () => WORKSPACE_A } as any,
-        {} as any,
         h.entra,
+        {} as any,
         {} as any,
       );
       const { directory_sync: sync } = await settings.getSettings({ tenant: { id: WORKSPACE_A.id }, user: { sub: 'user-admin-1' } });

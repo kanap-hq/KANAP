@@ -29,6 +29,7 @@ import {
   consumeLinkConfirmation,
   hasRecentLinkConfirmation,
   lockAccountForLink,
+  lockTenantConnection,
   storeLinkConfirmation,
 } from './entra-link-confirmation';
 
@@ -550,6 +551,12 @@ export class EntraController {
     }
 
     await withTenant(this.dataSource, tenantId, async (manager) => {
+      // The workspace is still connected to the directory that signed the link, until the end of
+      // the transaction (a disconnect waits for it).
+      const connection = await lockTenantConnection(manager, tenantId);
+      if (connection?.sso_provider !== 'entra' || connection.entra_tenant_id !== link.tid) {
+        throw new BadRequestException('ENTRA_LINK_INVALID');
+      }
       // Requests and confirmations of one account run one after the other.
       const account = await lockAccountForLink(manager, tenantId, link.userId);
       const userId = await consumeLinkConfirmation(manager, tenantId, body.token);
@@ -695,6 +702,12 @@ export class EntraController {
     // Set when the sign-in found an existing account that waits for its owner's confirmation.
     const pending: { link?: PendingLinkConfirmation } = {};
     const userId = await withTenant(this.dataSource, tenantId, async (manager) => {
+      // The workspace is still connected to this directory, until the end of the transaction: a
+      // disconnect waits for this sign-in, and one made meanwhile is read here.
+      const connection = await lockTenantConnection(manager, tenantId);
+      if (connection?.sso_provider !== 'entra' || connection.entra_tenant_id !== (claims as any)?.tid) {
+        throw new BadRequestException('SSO_NOT_CONFIGURED');
+      }
       const repo = manager.getRepository(User);
 
       let found = await repo.findOne({
