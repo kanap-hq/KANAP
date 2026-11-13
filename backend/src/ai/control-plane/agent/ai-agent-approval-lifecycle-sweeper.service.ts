@@ -3,7 +3,7 @@ import { DataSource, EntityManager, In } from 'typeorm';
 import { ScheduledTasksService } from '../../../admin/scheduled-tasks/scheduled-tasks.service';
 import { withTenantExecution } from '../../../common/tenant-runner';
 import { AiExecutionContextWithManager } from '../../ai.types';
-import { AiActionRequestService } from '../action-request/ai-action-request.service';
+import { AiActionRequestService, agentActionWhere, isAgentAction } from '../action-request/ai-action-request.service';
 import { AiAgentControlService } from '../agent-control/ai-agent-control.service';
 import { AiActionRequest } from '../entities/ai-action-request.entity';
 import { AiAgentWorkQueueService } from './ai-agent-work-queue.service';
@@ -288,7 +288,10 @@ export class AiAgentApprovalLifecycleSweeperService implements OnModuleInit {
             ? 'Approved action request expired before execution.'
             : 'Action request expired before review.',
         );
-        summary.expiredActions += 1;
+        // A conversation preview expires too; the agents' record counts the agents' actions only.
+        if (isAgentAction(action)) {
+          summary.expiredActions += 1;
+        }
       } catch (error) {
         summary.errors.push(`Action ${action.id}: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -366,10 +369,12 @@ export class AiAgentApprovalLifecycleSweeperService implements OnModuleInit {
     }
     const now = opts.now;
     const repo = context.manager.getRepository(AiActionRequest);
+    // Queued executions are the agents' own: a conversation preview runs from its conversation.
     const candidates = await context.manager.getRepository(AiActionRequest).find({
       where: {
         tenant_id: context.tenantId,
         status: In(['approved', APPROVED_ACTION_EXECUTING_STATUS]),
+        ...agentActionWhere(),
       },
       order: { updated_at: 'ASC', created_at: 'ASC' },
       take: Math.max(opts.limit, Math.min(opts.limit * 5, 500)),

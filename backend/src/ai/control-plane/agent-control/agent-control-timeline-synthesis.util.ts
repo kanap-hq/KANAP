@@ -886,6 +886,13 @@ export function renderSynthesizedRequesterReply(
   ], MAX_PUBLIC_REPLY_CHARS);
 }
 
+// The number of sources a synthesized reply cites: its source lines still whole in the body that
+// goes out, so a line cut by the length cap is not counted.
+export function citedSourceCount(body: string, sources: ReplySynthesisSource[]): number {
+  const lines = new Set(body.split('\n'));
+  return sources.filter((source) => lines.has(synthesisSourceLine(source))).length;
+}
+
 export function renderSynthesizedTriageNote(
   ticket: TicketLike,
   timeline: TicketTimelineEntry[],

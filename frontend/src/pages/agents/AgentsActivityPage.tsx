@@ -161,7 +161,7 @@ function ActivityDetail({ detail }: { detail: AiAgentControlActivityDetail }) {
         </Box>
       )}
       {!!detail.evidenceCount && (
-        <Typography variant="caption" color="text.secondary">{t('activity.evidenceCount', { n: detail.evidenceCount })}</Typography>
+        <Typography variant="caption" color="text.secondary">{t('activity.evidenceCount', { count: detail.evidenceCount })}</Typography>
       )}
     </Stack>
   );

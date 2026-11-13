@@ -4487,12 +4487,8 @@ async function testAiAdminOverviewAggregatesUsageAndIsTenantScoped() {
     // Both user messages sit in the current month; the previous-month row is an
     // assistant message, so it never counts regardless of the 30-day boundary.
     assert.equal(overview.usage.last_30_days.message_count, firstQuestionIncludedInLast30Days ? 2 : 1);
-    assert.equal(overview.recent_activity.length, 3);
-    assert.equal(overview.recent_activity[0].conversation_id, tenantAConversation1);
-    assert.equal(
-      overview.recent_activity.some((item) => item.conversation_id === tenantBConversation),
-      false,
-    );
+    // The overview counts conversations; it names none of them (no title, author or model).
+    assert.equal('recent_activity' in overview, false);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

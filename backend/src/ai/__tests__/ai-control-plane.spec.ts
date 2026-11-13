@@ -45,6 +45,7 @@ import { AiAutomationJobCatalogService } from '../control-plane/automation/ai-au
 import { AiAgentControlService } from '../control-plane/agent-control/ai-agent-control.service';
 import { Application } from '../../applications/application.entity';
 import { proposalStillBlocksRegeneration } from '../control-plane/agent-control/agent-control-constants.util';
+import { activityActionDetail } from '../control-plane/agent-control/agent-control-serializers.util';
 import { auditActivityType, auditActivityTypeClauseSql } from '../control-plane/agent-control/ai-agent-activity-timeline';
 import {
   AiAgentPromptCompilerService,
@@ -170,7 +171,7 @@ function baseContract(overrides?: Partial<CapabilityContract>): CapabilityContra
 function createMemoryManager() {
   const stores = new Map<string, any[]>();
   let idCounter = 0;
-  const matchesValue = (rowValue: any, expected: any) => {
+  const matchesValue = (rowValue: any, expected: any): boolean => {
     if (expected && typeof expected === 'object' && '_type' in expected && '_value' in expected) {
       if ((expected as any)._type === 'moreThan') {
         return rowValue > (expected as any)._value;
@@ -180,6 +181,12 @@ function createMemoryManager() {
       }
       if ((expected as any)._type === 'in') {
         return Array.isArray((expected as any)._value) && (expected as any)._value.includes(rowValue);
+      }
+      if ((expected as any)._type === 'isNull') {
+        return rowValue == null;
+      }
+      if ((expected as any)._type === 'not') {
+        return !matchesValue(rowValue, (expected as any)._value);
       }
     }
     return rowValue === expected;
@@ -292,6 +299,11 @@ function createMemoryManager() {
     if (isNotNull) {
       const [, field] = isNotNull;
       return row[field] != null;
+    }
+    const inequality = condition.match(/^[a-z]+\.(\w+) <> :(\w+)$/i);
+    if (inequality) {
+      const [, field, param] = inequality;
+      return row[field] !== params[param];
     }
     const equality = condition.match(/^[a-z]+\.(\w+) = :(\w+)$/i);
     if (equality) {
@@ -10379,8 +10391,8 @@ async function testAgentActivityShowsTheReferenceOfTheTarget() {
       tool_execution_id: null,
       conversation_id: null,
       user_id: context.userId,
-      preview_id: randomUUID(),
-      capability_name: EXECUTE_APPROVED_PREVIEW_CAPABILITY,
+      preview_id: null,
+      capability_name: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY,
       capability_version: '1.0.0',
       effect: 'write',
       status: 'executed',
@@ -10426,7 +10438,7 @@ async function testAgentActivityShowsTheReferenceOfTheTarget() {
   assert.deepEqual(byRef(projectId).map((entry) => entry.targetDisplay), ['PRJ-3']);
   assert.deepEqual(byRef(goneId).map((entry) => entry.targetDisplay), [null], 'a deleted object shows no id');
   assert.deepEqual(byRef('4711').map((entry) => entry.targetDisplay), [null], 'a ticket number is left as it is');
-  assert.equal(activity.items.every((entry) => entry.capabilityName === EXECUTE_APPROVED_PREVIEW_CAPABILITY), true, 'the key stays in the API');
+  assert.equal(activity.items.every((entry) => entry.capabilityName === TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY), true, 'the key stays in the API');
   assert.equal(activity.items.find((entry) => entry.targetRef === taskId)?.targetRef, taskId, 'the id stays in the API');
   // One read for the page, scoped by tenant, with the ids as a batch.
   assert.equal(reads.length, 1);
@@ -10434,6 +10446,220 @@ async function testAgentActivityShowsTheReferenceOfTheTarget() {
   assert.match(reads[0].sql, /= ANY\(\$3/);
   assert.equal(reads[0].params[0], context.tenantId);
   assert.deepEqual(new Set(reads[0].params[2] as string[]), new Set([taskId, projectId, goneId]));
+}
+
+// A change Kad prepares in a conversation is approved there, by the person who asked for it. Its
+// action request stays off the agent screens: no row, no count, no decision. `orphan` is one whose
+// conversation was deleted, which clears the preview link.
+async function seedConversationPreviewActions(context: any, actions: AiActionRequestService) {
+  const repo = context.manager.getRepository(AiActionRequest);
+  const agentDefinitionId = randomUUID();
+  const witness = await actions.createOrEnsureProviderAction(context, providerActionSeed({
+    idempotencyKey: `preview-witness-${randomUUID()}`,
+    metadata: { agent_definition_id: agentDefinitionId },
+  }));
+  const expiredAgent = await actions.createOrEnsureProviderAction(context, providerActionSeed({
+    targetRef: 'preview-witness-expired',
+    idempotencyKey: `preview-witness-expired-${randomUUID()}`,
+    metadata: { agent_definition_id: agentDefinitionId },
+  }));
+  await actions.markExpired(context, expiredAgent);
+  const conversationAction = async (overrides: Record<string, unknown>) => {
+    const taskId = randomUUID();
+    const created = new Date(Date.now() - 5_000);
+    return repo.save(repo.create({
+      id: randomUUID(),
+      tenant_id: context.tenantId,
+      run_id: null,
+      tool_execution_id: null,
+      conversation_id: randomUUID(),
+      user_id: 'author-1',
+      preview_id: randomUUID(),
+      capability_name: EXECUTE_APPROVED_PREVIEW_CAPABILITY,
+      capability_version: '1.0.0',
+      effect: 'write',
+      status: 'pending',
+      target_type: 'tasks',
+      target_id: taskId,
+      target_ref: taskId,
+      idempotency_key: null,
+      action_payload_json: null,
+      provider_kind: null,
+      provider_key: null,
+      input_hash: `preview-hash-${taskId}`,
+      input_summary: { tool_name: 'update_task_status', target_entity_type: 'tasks', target_entity_id: taskId },
+      evidence_ids: null,
+      expires_at: new Date(Date.now() + 30 * 60_000),
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+      error_message: null,
+      metadata_json: null,
+      created_at: created,
+      updated_at: created,
+      ...overrides,
+    }));
+  };
+  const preview = await conversationAction({});
+  const orphan = await conversationAction({ preview_id: null, conversation_id: null });
+  const expired = await conversationAction({ status: 'expired', error_message: 'Action request expired before review.' });
+  const approvalRepo = context.manager.getRepository(AiApproval);
+  await approvalRepo.save(approvalRepo.create({
+    id: randomUUID(),
+    tenant_id: context.tenantId,
+    action_request_id: orphan.id,
+    capability_name: EXECUTE_APPROVED_PREVIEW_CAPABILITY,
+    capability_version: '1.0.0',
+    source: 'human_chat',
+    status: 'approved',
+    actor_user_id: 'author-1',
+    actor_label: null,
+    input_hash: orphan.input_hash,
+    evidence_ids: null,
+    reason: null,
+    matched_policy_id: null,
+    matched_policy_version: null,
+    decision_json: null,
+    expires_at: new Date(Date.now() + 30 * 60_000),
+    decided_at: new Date(Date.now() - 4_000),
+    created_at: new Date(Date.now() - 4_000),
+  }));
+  return { witness, expiredAgent, preview, orphan, expired };
+}
+
+async function testConversationPreviewsStayOffTheAgentScreens() {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const actions = new AiActionRequestService({} as any, {} as any);
+  const service = new AiAgentControlService(
+    {} as any,
+    {} as any,
+    {} as any,
+    { findEnabledTargets: async () => [] } as any,
+    {} as any,
+    new AiAgentWorkQueueService(),
+  );
+  const seeded = await seedConversationPreviewActions(context, actions);
+  const conversationIds = new Set([seeded.preview.id, seeded.orphan.id, seeded.expired.id]);
+
+  const pending = await service.listActionRequests(context, { status: 'pending', limit: 50 });
+  assert.deepEqual(pending.items.map((item: any) => item.id), [seeded.witness.id]);
+  const all = await service.listActionRequests(context, { status: 'all', limit: 50 });
+  assert.deepEqual(new Set(all.items.map((item: any) => item.id)), new Set([seeded.witness.id, seeded.expiredAgent.id]));
+  assert.deepEqual(await service.getBadges(context), { pendingApprovals: 1 });
+  assert.deepEqual(await service.getAttentionSummary(context), { actions: 1, work_items: 0, total: 1 });
+
+  const activity = await service.listActivity(context, { limit: 100 });
+  const onConversation = activity.items.filter((entry) => entry.actionRequestId && conversationIds.has(entry.actionRequestId));
+  assert.deepEqual(onConversation.map((entry) => `${entry.type}:${entry.titleKey}`), [], 'the activity lists a conversation preview');
+  assert.ok(activity.items.some((entry) => entry.actionRequestId === seeded.witness.id && entry.type === 'proposal'), 'the agent proposal left the activity');
+  assert.equal(activity.total, activity.items.length);
+}
+
+async function testAgentScreenDecisionsTreatAConversationPreviewAsUnknown() {
+  const { manager, stores } = createMemoryManager();
+  const context = createContext(manager);
+  const actions = new AiActionRequestService({} as any, {} as any);
+  const approvals = new AiApprovalService({} as any, actions);
+  const service = new AiAgentControlService({} as any, approvals, {} as any, {} as any, {} as any, new AiAgentWorkQueueService());
+  const seeded = await seedConversationPreviewActions(context, actions);
+  const snapshot = () => JSON.stringify({
+    actions: stores.get(AiActionRequest.name) ?? [],
+    approvals: stores.get(AiApproval.name) ?? [],
+    audit: stores.get(AiAgentAuditEvent.name) ?? [],
+  });
+  const before = snapshot();
+  const unknownId = randomUUID();
+  const refused = async (label: string, call: (id: string) => Promise<unknown>) => {
+    let unknown: unknown = null;
+    try {
+      await call(unknownId);
+    } catch (error) {
+      unknown = error;
+    }
+    assert.ok(unknown instanceof NotFoundException, `${label}: an unknown id is not refused as unknown`);
+    for (const target of [seeded.preview, seeded.orphan]) {
+      await assert.rejects(
+        () => call(target.id),
+        (error: unknown) => error instanceof NotFoundException && error.message === (unknown as Error).message,
+        `${label} acted on a conversation preview`,
+      );
+    }
+  };
+  await refused('approve', (id) => service.approveActionRequest(context, id, { execute: false }));
+  await refused('approve and run', (id) => service.approveActionRequest(context, id, {}));
+  await refused('reject', (id) => service.rejectActionRequest(context, id, 'not for the agents'));
+  await refused('dismiss', (id) => service.dismissActionRequest(context, id, 'not for the agents'));
+  await refused('acknowledge', (id) => service.acknowledgeAttention(context, { kind: 'action', id }));
+  await refused('bulk approve', (id) => service.approveActionRequestsBulk(context, { action_request_ids: [id], execute: false }));
+  await refused('bulk approve with an agent action', (id) => service.approveActionRequestsBulk(context, {
+    action_request_ids: [seeded.witness.id, id],
+    execute: false,
+  }));
+  await refused('planned execution', (id) => service.planApprovedBulkExecution(context, { action_request_ids: [id] }));
+  await refused('queued execution', (id) => service.executeSingleApprovedAction(context, id));
+  await refused('provider execution', (id) => actions.findProviderActionForExecution(context, id));
+  assert.equal(snapshot(), before, 'a refused decision wrote something');
+}
+
+async function testTheSweeperLeavesAQueuedConversationPreviewToItsConversation() {
+  const { manager, stores } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const actions = new AiActionRequestService({} as any, {} as any);
+  const approvals = new AiApprovalService({} as any, actions);
+  const service = new AiAgentControlService({} as any, approvals, {} as any, {} as any, {} as any, queue);
+  const seeded = await seedConversationPreviewActions(context, actions);
+  // Approved and queued from the agents screen before that screen left previews alone.
+  const repo = manager.getRepository(AiActionRequest);
+  const legacy = await repo.findOne({ where: { id: seeded.preview.id, tenant_id: context.tenantId } });
+  legacy.status = 'approved';
+  legacy.approved_at = new Date();
+  legacy.metadata_json = {
+    approved_batch_context: {
+      batch_id: 'legacy-batch',
+      action_request_ids: [legacy.id],
+      execution_queued: true,
+      execution_queued_at: new Date(Date.now() - 60_000).toISOString(),
+    },
+  };
+  await repo.save(legacy);
+  const before = JSON.stringify(stores.get(AiActionRequest.name));
+
+  const sweeper = new AiAgentApprovalLifecycleSweeperService(null, null, queue, actions, service);
+  const summary = await sweeper.sweepTenant(context, { limit: 25 });
+  assert.deepEqual(summary.errors, []);
+  assert.equal(summary.queuedExecutionsScanned, 0);
+  assert.equal(JSON.stringify(stores.get(AiActionRequest.name)), before, 'the sweeper ran a conversation preview');
+}
+
+async function testTheSweeperExpiresAConversationPreviewWithoutCountingIt() {
+  const { manager, stores } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const actions = new AiActionRequestService({} as any, {} as any);
+  const seeded = await seedConversationPreviewActions(context, actions);
+  const repo = manager.getRepository(AiActionRequest);
+  const lapse = async (id: string) => {
+    const row = await repo.findOne({ where: { id, tenant_id: context.tenantId } });
+    row.expires_at = new Date(Date.now() - 60_000);
+    await repo.save(row);
+  };
+  const swept = () => (stores.get(AiAgentAuditEvent.name) ?? []).filter((event: any) => event.event_type === 'approval_lifecycle_swept');
+  const sweeper = new AiAgentApprovalLifecycleSweeperService(null, null, queue, actions);
+
+  await lapse(seeded.preview.id);
+  const previewOnly = await sweeper.sweepTenant(context, { limit: 25 });
+  assert.equal((await repo.findOne({ where: { id: seeded.preview.id, tenant_id: context.tenantId } })).status, 'expired');
+  assert.equal(previewOnly.expiredActions, 0, 'the sweep counted a conversation preview');
+  assert.deepEqual(swept(), [], 'the sweep recorded an event for a conversation preview alone');
+
+  await lapse(seeded.witness.id);
+  const withAgent = await sweeper.sweepTenant(context, { limit: 25 });
+  assert.equal((await repo.findOne({ where: { id: seeded.witness.id, tenant_id: context.tenantId } })).status, 'expired');
+  assert.equal(withAgent.expiredActions, 1);
+  assert.equal(swept().length, 1);
+  assert.equal(swept()[0].metadata_json.expired_actions, 1);
 }
 
 // Round-2 UAT: the timeline filters became a multi-select, so a page must be the
@@ -11752,6 +11978,7 @@ function savePreparedTicketingAction(context: ReturnType<typeof createContext>, 
   // way the real capability registry would, so expiry-convergence assertions remain faithful.
   expiresAt?: Date;
   metadata?: Record<string, unknown> | null;
+  evidenceIds?: string[] | null;
 }) {
   const repo = context.manager.getRepository(AiActionRequest);
   const now = new Date();
@@ -11781,7 +12008,7 @@ function savePreparedTicketingAction(context: ReturnType<typeof createContext>, 
     provider_key: input.providerKey,
     input_hash: `${input.id}-hash`,
     input_summary: null,
-    evidence_ids: null,
+    evidence_ids: input.evidenceIds ?? null,
     expires_at: input.expiresAt ?? new Date(now.getTime() + 30 * 60 * 1000),
     approved_at: null,
     rejected_at: null,
@@ -13789,7 +14016,9 @@ async function testGlpiTriageFallbackFailsClosedWhenSynthesisFails() {
 // #3 nominal path: the LLM interpreter falls back (deterministic), so DOC-165 is retrieved but
 // not validated. It must (a) appear to the action planner as an unvalidated candidate, and (b)
 // reach synthesis tagged 'unvalidated'. A usable synthesis grounded on it then prepares a reply.
-async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
+// Ticket 49 asks for a dessert recipe; the knowledge base holds one (DOC-165) and the ticket read
+// leaves twenty evidence items. The planner answers with the actions it is given.
+async function runGlpiTriageForTicket49(plannerActions: Array<Record<string, unknown>>) {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
   const calls: Array<{ capabilityName: string; input: any }> = [];
@@ -13810,8 +14039,18 @@ async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
       const toolExecutionId = `tool-49-${calls.length}`;
       const ok = (data: unknown) => ({ run_id: 'run-glpi-49', step_id: `step-${calls.length}`, tool_execution_id: toolExecutionId, output: { ok: true, data, evidence: [] } });
       switch (request.capabilityName) {
-        case 'ticketing.ticket.get':
+        case 'ticketing.ticket.get': {
+          const evidenceRepo = (_context as any).manager.getRepository(AiEvidence);
+          for (let index = 1; index <= 20; index += 1) {
+            await evidenceRepo.save(evidenceRepo.create({
+              id: `evidence-49-${index}`, tenant_id: context.tenantId, run_id: 'run-glpi-49', tool_execution_id: toolExecutionId,
+              action_request_id: null, source_provider: 'glpi', source_object_type: 'ticket', source_object_id: '49',
+              trust_level: 'external', redaction_status: 'redacted', content_hash: `evidence-49-${index}`, summary: 'Ticket 49',
+              payload_json: {}, retention_class: 'audit', collected_at: now, created_at: now,
+            }));
+          }
           return ok({ id: '49', title: 'Je cherche une recette style dessert', status: 'processing_assigned', priority: 'medium', description: 'pour faire plaisir à mes collègues, une recette du Sud.' });
+        }
         case TICKETING_TICKET_NOTES_LIST_CAPABILITY: return ok({ notes: [] });
         case TICKETING_CLASSIFICATION_CONTEXT_CAPABILITY: return ok({ type: 'Request', priority: 'Medium', urgency: 'Medium' });
         case TICKETING_LIFECYCLE_CONTEXT_CAPABILITY: return ok({ terminal: false, status: 'Processing assigned', allowedTransitions: [] });
@@ -13822,11 +14061,11 @@ async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
         case 'get_document':
           return { run_id: 'run-glpi-49', step_id: `step-${calls.length}`, tool_execution_id: toolExecutionId, output: { id: 'doc-165', ref: 'DOC-165', title: 'Recette du Burnt Cheesecake', summary: 'Dessert.', status: 'published', content_markdown: '# Burnt Cheesecake\n\nMélanger, cuire.', updated_at: '2026-06-07T08:00:00.000Z' } };
         case TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY:
-          await savePreparedTicketingAction(_context as any, { id: 'internal-49', runId: 'run-glpi-49', toolExecutionId, capabilityName: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY, body: request.input.note_body, visibility: 'internal', providerKey: 'glpi', metadata: request.execution?.metadata ?? null });
+          await savePreparedTicketingAction(_context as any, { id: 'internal-49', runId: 'run-glpi-49', toolExecutionId, capabilityName: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY, body: request.input.note_body, visibility: 'internal', providerKey: 'glpi', metadata: request.execution?.metadata ?? null, evidenceIds: request.input.evidence_ids ?? null });
           return ok({ summary: 'Prepared internal note.', action_request_id: 'internal-49' });
         case TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY:
           publicReplyBody = request.input.reply_body;
-          await savePreparedTicketingAction(_context as any, { id: 'public-49', runId: 'run-glpi-49', toolExecutionId, capabilityName: TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY, body: request.input.reply_body, visibility: 'public', providerKey: 'glpi', metadata: request.execution?.metadata ?? null });
+          await savePreparedTicketingAction(_context as any, { id: 'public-49', runId: 'run-glpi-49', toolExecutionId, capabilityName: TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY, body: request.input.reply_body, visibility: 'public', providerKey: 'glpi', metadata: request.execution?.metadata ?? null, evidenceIds: request.input.evidence_ids ?? null });
           return ok({ summary: 'Prepared public reply.', action_request_id: 'public-49' });
         default:
           return { run_id: 'run-glpi-49', step_id: `step-${calls.length}`, tool_execution_id: toolExecutionId, output: { items: [], total: 0, returned: 0, truncated: false, complete: false } };
@@ -13857,10 +14096,7 @@ async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
       plannerValidatedCount = plannerInput.knowledge_summary?.count ?? -1;
       return {
         source: 'llm',
-        actions: [
-          { action_type: 'internal_note', reason: 'Audit the unvalidated candidate.' },
-          { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: 'Answer from the sourced synthesis.' },
-        ],
+        actions: plannerActions,
       };
     },
   };
@@ -13879,6 +14115,23 @@ async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
 
   const triageBundle = await seedTestHelpdeskDefinition(context);
   await service.runTicketingTriage(context, { provider_key: 'glpi', target_key: '49', agent_definition_id: triageBundle.definition.id });
+  const savedActions: AiActionRequest[] = await manager.getRepository(AiActionRequest).find();
+  return {
+    calls,
+    plannerUnvalidatedCount,
+    plannerValidatedCount,
+    synthDocs,
+    publicReplyBody,
+    publicAction: savedActions.find((action) => action.id === 'public-49') ?? null,
+    internalAction: savedActions.find((action) => action.id === 'internal-49') ?? null,
+  };
+}
+
+async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
+  const { calls, plannerUnvalidatedCount, plannerValidatedCount, synthDocs, publicReplyBody, publicAction } = await runGlpiTriageForTicket49([
+    { action_type: 'internal_note', reason: 'Audit the unvalidated candidate.' },
+    { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: 'Answer from the sourced synthesis.' },
+  ]);
 
   // (a) DOC-165 was NOT zeroed; the planner saw it as an unvalidated candidate, not validated.
   assert.equal(plannerUnvalidatedCount >= 1, true);
@@ -13890,10 +14143,44 @@ async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
   // (c) usable synthesis grounded on it → public reply prepared with the synthesized body.
   assert.equal(calls.some((c) => c.capabilityName === TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY), true);
   assert.match(publicReplyBody, /Burnt Cheesecake/);
-  const savedPublicAction = (await manager.getRepository(AiActionRequest).find()).find((action: AiActionRequest) => action.id === 'public-49');
+  const savedPublicAction = publicAction;
   assert.ok(savedPublicAction);
   assert.equal(savedPublicAction.metadata_json?.synthesis_usable, true);
   assert.equal(savedPublicAction.metadata_json?.synthesis_fallback_reason, null);
+}
+
+async function testTheActivityCountsTheSourcesTheReplyCites() {
+  // The reply cites one document of the twenty evidence items the run read.
+  const sourced = await runGlpiTriageForTicket49([
+    { action_type: 'internal_note', reason: 'Audit the unvalidated candidate.' },
+    { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: 'Answer from the sourced synthesis.' },
+  ]);
+  assert.ok(sourced.publicAction);
+  assert.ok(sourced.internalAction);
+  assert.equal(sourced.publicAction.evidence_ids?.length, 20);
+  assert.match(sourced.publicReplyBody, /DOC-165/);
+  assert.equal(sourced.publicAction.metadata_json?.cited_source_count, 1);
+  assert.equal(activityActionDetail(sourced.publicAction)?.evidenceCount, 1);
+  // The internal note carries no number: only a reply cites sources.
+  assert.equal(sourced.internalAction.evidence_ids?.length, 20);
+  assert.equal('cited_source_count' in (sourced.internalAction.metadata_json ?? {}), false);
+  assert.equal(activityActionDetail(sourced.internalAction)?.evidenceCount ?? null, null);
+
+  // A reply the planner wrote cites no source.
+  const administrative = await runGlpiTriageForTicket49([
+    { action_type: 'internal_note', reason: 'Audit the unvalidated candidate.' },
+    { action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: 'other', body: 'Bonjour, pour combien de personnes ?', reason: 'Ask the number of guests.' },
+  ]);
+  assert.ok(administrative.publicAction);
+  assert.equal(administrative.publicAction.evidence_ids?.length, 20);
+  assert.match(administrative.publicReplyBody, /combien de personnes/);
+  assert.equal('cited_source_count' in (administrative.publicAction.metadata_json ?? {}), false);
+  assert.equal(activityActionDetail(administrative.publicAction)?.evidenceCount ?? null, null);
+
+  // An action prepared before the number was stored shows none, whatever its evidence.
+  const old = { ...sourced.publicAction, metadata_json: { synthesis_usable: true } } as AiActionRequest;
+  assert.equal(activityActionDetail(old)?.evidenceCount ?? null, null);
+  assert.equal(activityActionDetail({ ...old, action_payload_json: null } as AiActionRequest), null);
 }
 
 async function testGlpiTriageSynthesisRejectsOffTopicKnowledgeAndUsesWeb() {
@@ -18404,6 +18691,10 @@ async function run() {
   await testAgentControlQueueOverviewReturnsLinkedActionRequests();
   await testAgentControlActivityTimelineAndDailyMetrics();
   await testAgentActivityShowsTheReferenceOfTheTarget();
+  await testConversationPreviewsStayOffTheAgentScreens();
+  await testAgentScreenDecisionsTreatAConversationPreviewAsUnknown();
+  await testTheSweeperLeavesAQueuedConversationPreviewToItsConversation();
+  await testTheSweeperExpiresAConversationPreviewWithoutCountingIt();
   await testAgentActivityMultiTypeFilterAndSubsetPagination();
   await testAttentionAcknowledgementIsIdempotentTenantScopedAndAudited();
   await testAttentionAcknowledgementSurvivesDeletedAgent();
@@ -18432,6 +18723,7 @@ async function run() {
   await testGlpiTriageLargeKnowledgeDocumentsDoNotConsumeRunCap();
   await testGlpiTriageFallbackFailsClosedWhenSynthesisFails();
   await testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis();
+  await testTheActivityCountsTheSourcesTheReplyCites();
   await testGlpiTriageSynthesisRejectsOffTopicKnowledgeAndUsesWeb();
   await testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale();
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();

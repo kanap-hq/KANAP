@@ -81,6 +81,7 @@ import {
   TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY,
   TICKETING_TICKET_ATTACHMENT_READ_CAPABILITY,
   TICKETING_TICKET_NOTES_LIST_CAPABILITY,
+  EXECUTE_APPROVED_PREVIEW_CAPABILITY,
 } from '../capability/capability-contract';
 import {
   AiCapabilityRegistry,
@@ -93,6 +94,7 @@ import { AiCapabilityDispatcherService } from '../dispatcher/ai-capability-dispa
 import { AiReadonlyDiagnosticWorkflowService } from '../diagnostics/ai-readonly-diagnostic-workflow.service';
 import { AiTenantExecutionService } from '../../execution/ai-tenant-execution.service';
 import { AiActionRequest } from '../entities/ai-action-request.entity';
+import { ACTION_REQUEST_NOT_FOUND, agentActionWhere, isAgentAction, whereAgentAction } from '../action-request/ai-action-request.service';
 import { hashStableJson, redactSensitiveText } from '../evidence/ai-evidence.service';
 import { RunResultAccess, originWithoutRun, runResultAccess } from '../evidence/run-result-visibility';
 import { AiAgentAuditEvent } from '../entities/ai-agent-audit-event.entity';
@@ -394,6 +396,7 @@ import {
   rejectedSynthesisSourceLine,
   limitedSourceLines,
   renderSynthesizedRequesterReply,
+  citedSourceCount,
   renderSynthesizedTriageNote,
   triageNoteLanguage,
   buildRequesterReply,
@@ -1648,10 +1651,13 @@ export class AiAgentControlService {
         ? action.expires_at.getTime()
         : Date.parse(String(action.expires_at ?? ''));
       const expired = Number.isFinite(expiresAt) && expiresAt <= now;
-      const activeDecisionStatus = action.status === 'pending' || action.status === 'approved';
+      // A conversation preview is decided in its conversation: these routes answer for it as unknown.
+      const activeDecisionStatus = isAgentAction(action) && (action.status === 'pending' || action.status === 'approved');
       const providerBlockedReason = providerReadiness.get(action.id)?.blocked_reason ?? null;
       let blockedReason: string | null = null;
-      if (action.tenant_id !== context.tenantId) {
+      if (!isAgentAction(action)) {
+        blockedReason = ACTION_REQUEST_NOT_FOUND;
+      } else if (action.tenant_id !== context.tenantId) {
         blockedReason = 'Action request does not belong to this tenant.';
       } else if (!activeDecisionStatus) {
         blockedReason = `Action is ${action.status}.`;
@@ -1718,7 +1724,7 @@ export class AiAgentControlService {
           },
         })
         : directActionRequests;
-      const pendingActionCount = linkedActions.filter((action) => actionIsActivePending(action)).length;
+      const pendingActionCount = linkedActions.filter((action) => isAgentAction(action) && actionIsActivePending(action)).length;
       items.push({
         ...serializeRun(run, await resultsReadable(run)),
         counts: {
@@ -1855,7 +1861,7 @@ export class AiAgentControlService {
 
   async listActionRequests(context: AiExecutionContextWithManager, options: AgentControlListActionsOptions = {}) {
     const limit = safeLimit(options.limit, 50, 100);
-    const where: FindOptionsWhere<AiActionRequest> = { tenant_id: context.tenantId };
+    const where: FindOptionsWhere<AiActionRequest> = { tenant_id: context.tenantId, ...agentActionWhere() };
     if (options.status && options.status !== 'all') {
       where.status = options.status;
     }
@@ -2989,9 +2995,9 @@ export class AiAgentControlService {
   }
 
   async getBadges(context: AiExecutionContextWithManager) {
-    const pendingApprovals = await context.manager.getRepository(AiActionRequest)
+    const pendingApprovals = await whereAgentAction(context.manager.getRepository(AiActionRequest)
       .createQueryBuilder('action')
-      .where('action.tenant_id = :tenantId', { tenantId: context.tenantId })
+      .where('action.tenant_id = :tenantId', { tenantId: context.tenantId }), 'action')
       .andWhere('action.status = :status', { status: 'pending' })
       .andWhere('(action.expires_at IS NULL OR action.expires_at > now())')
       .getCount();
@@ -3068,8 +3074,8 @@ export class AiAgentControlService {
     };
 
     const actionStream = (withCursor: boolean, orderColumn: string): SelectQueryBuilder<AiActionRequest> => {
-      const qb = context.manager.getRepository(AiActionRequest).createQueryBuilder('action')
-        .where('action.tenant_id = :tenantId', { tenantId: context.tenantId });
+      const qb = whereAgentAction(context.manager.getRepository(AiActionRequest).createQueryBuilder('action')
+        .where('action.tenant_id = :tenantId', { tenantId: context.tenantId }), 'action');
       if (agentDefinitionId) {
         qb.andWhere("action.metadata_json ->> 'agent_definition_id' = :agentDefinitionId", { agentDefinitionId });
       }
@@ -3163,8 +3169,12 @@ export class AiAgentControlService {
       // as EXISTS so the page stays exact instead of being thinned after the
       // fetch (which would leave holes between pages).
       const decisionStream = (withCursor: boolean) => {
+        // A decision on a conversation preview carries the preview's capability (see agentActionWhere).
         const qb = context.manager.getRepository(AiApproval).createQueryBuilder('approval')
-          .where('approval.tenant_id = :tenantId', { tenantId: context.tenantId });
+          .where('approval.tenant_id = :tenantId', { tenantId: context.tenantId })
+          .andWhere('approval.capability_name <> :conversationPreviewCapability', {
+            conversationPreviewCapability: EXECUTE_APPROVED_PREVIEW_CAPABILITY,
+          });
         if (status) {
           qb.andWhere('approval.status = :status', { status });
         }
@@ -7158,13 +7168,20 @@ export class AiAgentControlService {
     if (plannerRequesterReplySuppression) {
       plannerSuppressionReasons.requester_reply = plannerRequesterReplySuppression;
     }
+    const outgoingPublicReplyBody = plannerRequesterReplyBody ?? requesterReplyBody;
+    // Only the reply rendered from a usable synthesis lists sources. A body the planner wrote (a
+    // configured message, an administrative reply, written again on the public items or not)
+    // cites none, and the activity then shows no number.
+    const publicReplyCitedSourceCount = !plannerRequesterReply?.replyBody && replySynthesisResult?.usable === true
+      ? citedSourceCount(outgoingPublicReplyBody, replySynthesisResult.used_sources)
+      : null;
     const publicReplyProposal = ((fallbackPublicReplyUsable || plannerRequesterReply) && !plannerRequesterReplySuppression)
       ? await this.dispatcher.execute(context, {
         capabilityName: TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY,
         input: {
           provider_key: target.provider_key,
           ticket_id: ticket.id,
-          reply_body: plannerRequesterReplyBody ?? requesterReplyBody,
+          reply_body: outgoingPublicReplyBody,
           evidence_ids: allEvidenceIds,
           observation_id: observation.id,
           recommendation_id: recommendation.id,
@@ -7192,6 +7209,7 @@ export class AiAgentControlService {
                 triage_action: 'prepare_public_reply',
                 conversation_gate: conversationGate,
               }),
+            ...(publicReplyCitedSourceCount !== null ? { cited_source_count: publicReplyCitedSourceCount } : {}),
           },
         },
       })
@@ -7763,7 +7781,7 @@ export class AiAgentControlService {
   ) {
     if (options.execute !== false) {
       const pendingAction = await context.manager.getRepository(AiActionRequest).findOne({
-        where: { id: actionRequestId, tenant_id: context.tenantId },
+        where: { id: actionRequestId, tenant_id: context.tenantId, ...agentActionWhere() },
       });
       if (!pendingAction) {
         throw new NotFoundException('Action request not found.');
@@ -7919,10 +7937,12 @@ export class AiAgentControlService {
     }
 
     const repo = context.manager.getRepository(AiActionRequest);
+    // A conversation preview among the ids answers as an unknown id: the whole batch is refused.
     const found = await repo.find({
       where: {
         id: In(requestedIds),
         tenant_id: context.tenantId,
+        ...agentActionWhere(),
       },
     });
     const byId = new Map(found.map((action) => [action.id, action]));
@@ -8092,7 +8112,7 @@ export class AiAgentControlService {
   }> {
     const repo = context.manager.getRepository(AiActionRequest);
     const action = await repo.findOne({
-      where: { id: actionRequestId, tenant_id: context.tenantId },
+      where: { id: actionRequestId, tenant_id: context.tenantId, ...agentActionWhere() },
     });
     if (!action) {
       throw new NotFoundException('Action request not found.');
@@ -8206,10 +8226,12 @@ export class AiAgentControlService {
     }
 
     const repo = context.manager.getRepository(AiActionRequest);
+    // A conversation preview among the ids answers as an unknown id: the whole batch is refused.
     const found = await repo.find({
       where: {
         id: In(requestedIds),
         tenant_id: context.tenantId,
+        ...agentActionWhere(),
       },
     });
     const byId = new Map(found.map((action) => [action.id, action]));
@@ -8430,7 +8452,7 @@ export class AiAgentControlService {
     }
 
     const repo = context.manager.getRepository(AiActionRequest);
-    const action = await repo.findOne({ where: { id: input.id, tenant_id: context.tenantId } });
+    const action = await repo.findOne({ where: { id: input.id, tenant_id: context.tenantId, ...agentActionWhere() } });
     if (!action) {
       throw new NotFoundException('Action request not found.');
     }

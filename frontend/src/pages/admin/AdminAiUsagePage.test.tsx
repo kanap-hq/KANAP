@@ -25,7 +25,6 @@ function overview(costs: { chat_eur: number; chat_priced: boolean; chat_estimate
       current_month: { input_tokens: 0, output_tokens: 0, total_tokens: 0, message_count: 0 },
       last_30_days: { input_tokens: 0, output_tokens: 0, total_tokens: 0, message_count: 0 },
     },
-    recent_activity: [],
     agents: [],
     costs: {
       current_month: { agents_eur: 0, chat_eur: costs.chat_eur, total_eur: costs.chat_eur },
