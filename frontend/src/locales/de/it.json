@@ -2716,6 +2716,8 @@
         "leg": "Abschnitt: {{type}}"
       },
       "untitled": "Unbenannte Verbindung",
+      "notFound": "Verbindung nicht gefunden.",
+      "backToList": "Zurück zur Liste",
       "previous": "Vorherige Verbindung",
       "next": "Nächste Verbindung",
       "viewInMap": "In Karte anzeigen",

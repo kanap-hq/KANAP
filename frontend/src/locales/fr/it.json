@@ -2716,6 +2716,8 @@
         "leg": "Segment : {{type}}"
       },
       "untitled": "Connexion sans nom",
+      "notFound": "Connexion introuvable.",
+      "backToList": "Retour à la liste",
       "previous": "Connexion précédente",
       "next": "Connexion suivante",
       "viewInMap": "Voir sur la carte",
