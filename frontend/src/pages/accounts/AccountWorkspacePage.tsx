@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useAccountNav } from '../../hooks/useAccountNav';
@@ -68,6 +68,13 @@ type TypedField = TextKey | 'account_name' | 'account_number';
 type AccountField = 'account_name' | 'account_number' | 'coa_id' | 'consolidation_account_number' | 'disabled_at' | 'nature' | TextKey;
 type FieldErrors = Partial<Record<AccountField, string>>;
 
+/** The draft's fields that Create sends and a patch can change. */
+const DRAFT_FIELDS = [
+  'account_name', 'account_number', 'coa_id', 'native_name', 'description', 'consolidation_account_number', 'nature', 'status', 'disabled_at',
+] as const;
+
+const fetchAccount = async (accountId: string) => (await api.get<Account>(`/accounts/${accountId}`)).data;
+
 const ACCOUNT_FIELDS: ReadonlySet<string> = new Set<AccountField>([
   'account_name', 'account_number', 'coa_id', 'consolidation_account_number', 'disabled_at', 'nature', 'native_name', 'description',
 ]);
@@ -100,6 +107,9 @@ export default function AccountWorkspacePage() {
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
+  // The account the draft has just created: its fields stay mounted, so that what is typed
+  // while it is written, and the field being typed in, are kept.
+  const fromDraft = useCreatedFromDraft('accounts', id);
   const canEdit = hasLevel('accounts', 'manager');
   const coaId = searchParams.get('selected') || searchParams.get('coaId');
   const consolidationChart = coas.find((coa) => coa.is_consolidation);
@@ -274,6 +284,22 @@ export default function AccountWorkspacePage() {
   // The chart the draft holds, or the one preselected: read by the creation in the event that sets it.
   const newCoaIdRef = React.useRef(newCoaId);
   newCoaIdRef.current = draftRef.current.coa_id ?? preselectedCoaId;
+  /**
+   * The draft as Create sends it: the chart it holds or the one preselected, the trimmed name, the
+   * number parsed. A number that is not valid yet is left as it was (the field says why).
+   */
+  const sentNumber = React.useRef<number | string>('');
+  const draftAsSent = (): Account => {
+    const values = draftRef.current;
+    const number = parseAccountNumber(String(values.account_number));
+    if (number != null) sentNumber.current = number;
+    return {
+      ...values,
+      coa_id: newCoaIdRef.current,
+      account_name: title.current().trim(),
+      account_number: number ?? sentNumber.current,
+    };
+  };
   const creation = useDraftCreation({
     isCreate,
     family: 'accounts',
@@ -284,22 +310,40 @@ export default function AccountWorkspacePage() {
     queryKeyPrefixes: ['accounts'],
     ready: () => !!title.current().trim() && Object.keys(missingFields()).length === 0,
     post: async () => {
-      const values = draftRef.current;
-      const coaId = newCoaIdRef.current;
+      const sent = draftAsSent();
+      const coaId = sent.coa_id;
       setPageError(null);
       try {
         const { data: created } = await api.post<Account & { creation_token: string }>('/accounts', {
           coa_id: coaId,
-          account_number: parseAccountNumber(String(values.account_number)),
-          account_name: title.current().trim(),
-          native_name: values.native_name,
-          description: values.description,
-          consolidation_account_number: values.consolidation_account_number,
-          nature: values.nature,
-          status: values.status,
-          disabled_at: values.disabled_at,
+          account_number: sent.account_number,
+          account_name: sent.account_name,
+          native_name: sent.native_name,
+          description: sent.description,
+          consolidation_account_number: sent.consolidation_account_number,
+          nature: sent.nature,
+          status: sent.status,
+          disabled_at: sent.disabled_at,
         });
         afterWrite([coaId]);
+        // The page moves to the account with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the account was written): saved on the account.
+        const createdKey = ['accounts', created.id] as const;
+        await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => fetchAccount(created.id) }).catch(() => undefined);
+        try {
+          await saveEditsSince({
+            sent,
+            now: draftAsSent,
+            fields: DRAFT_FIELDS,
+            save: async (edits) => {
+              const res = await api.patch<Account>(`/accounts/${created.id}`, edits);
+              queryClient.setQueryData<Account>(createdKey, (prev) => ({ ...(prev as Account), ...res.data }));
+              afterWrite([coaId, res.data?.coa_id]);
+            },
+          });
+        } catch (e) {
+          setPageError(getApiErrorMessage(e, t, t('accounts.messages.saveFailed')));
+        }
         return { id: created.id, token: created.creation_token, path: withContext(`${ACCOUNT_PATH}/${created.id}/overview`) };
       } catch (e) {
         const message = getApiErrorMessage(e, t, t('accounts.messages.createFailed'));
@@ -346,7 +390,7 @@ export default function AccountWorkspacePage() {
           />
         </PropertyRow>
         <AccountNumberRow
-          key={data.id}
+          key={fromDraft || isCreate ? 'draft' : data.id}
           value={String(data.account_number)}
           disabled={disabled}
           error={errors.account_number}
@@ -440,7 +484,7 @@ export default function AccountWorkspacePage() {
       >
         {data && (
           // Keyed by account: drafts start afresh on the next record.
-          <Stack key={data.id} spacing={3} sx={{ maxWidth: 900 }}>
+          <Stack key={fromDraft || isCreate ? 'draft' : data.id} spacing={3} sx={{ maxWidth: 900 }}>
             <AccountTextRow
               label={t('accounts.fields.nativeName')}
               placeholder={t('accounts.placeholders.nativeName')}
