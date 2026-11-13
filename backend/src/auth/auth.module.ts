@@ -15,6 +15,7 @@ import { TenantsModule } from '../tenants/tenants.module';
 import { EntraAuthModule } from './entra-auth.module';
 import { EntraController } from './entra.controller';
 import { AdminAuthController } from './admin-auth.controller';
+import { EntraDisconnectService } from './entra-disconnect.service';
 import { EntraDirectorySyncService } from './entra-directory-sync.service';
 import { RefreshToken } from './refresh-token.entity';
 import { PasswordResetToken } from './password-reset-token.entity';
@@ -42,7 +43,7 @@ import { PortfolioModule } from '../portfolio/portfolio.module';
     // The directory sync writes the contributor reporting line.
     PortfolioModule,
   ],
-  providers: [AuthService, JwtAuthGuard, RolesGuard, PermissionGuard, RateLimitGuard, EntraDirectorySyncService, loginAttemptLimitProvider],
+  providers: [AuthService, JwtAuthGuard, RolesGuard, PermissionGuard, RateLimitGuard, EntraDirectorySyncService, EntraDisconnectService, loginAttemptLimitProvider],
   controllers: [AuthController, EntraController, AdminAuthController],
   exports: [JwtAuthGuard, RolesGuard, PermissionGuard, AuthService],
 })

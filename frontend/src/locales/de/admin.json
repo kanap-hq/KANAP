@@ -306,6 +306,7 @@
       "restored": "Wiederherstellen",
       "sso_login": "Anmeldung mit Microsoft",
       "sso_login_failed": "Fehlgeschlagene Anmeldung mit Microsoft",
+      "sso_link_requested": "Bestätigung der Microsoft-Verknüpfung angefordert",
       "update": "Aktualisieren"
     },
     "columns": {
@@ -1596,9 +1597,18 @@
       "connect": "Verbinden",
       "connecting": "Verbindung wird hergestellt…",
       "disconnect": "Trennen",
-      "disconnecting": "Wird getrennt…",
       "reconnect": "Erneut verbinden",
       "testSignIn": "Anmeldung testen"
+    },
+    "disconnect": {
+      "title": "Microsoft Entra ID trennen",
+      "keepPassword_one": "{{count}} Konto behält sein Passwort",
+      "keepPassword_other": "{{count}} Konten behalten ihr Passwort",
+      "needPassword_one": "{{count}} Konto hat kein Passwort und legt eines über Passwort vergessen fest",
+      "needPassword_other": "{{count}} Konten haben kein Passwort und legen eines über Passwort vergessen fest",
+      "needPasswordNoEmail_one": "{{count}} Konto hat kein Passwort: Ein Administrator legt es fest (Passwort zurücksetzen im Betriebshandbuch)",
+      "needPasswordNoEmail_other": "{{count}} Konten haben kein Passwort: Ein Administrator legt sie fest (Passwort zurücksetzen im Betriebshandbuch)",
+      "ownPassword": "Ihr neues Passwort"
     },
     "entra": {
       "connected": "Verbunden",
@@ -2546,7 +2556,8 @@
       "sendReset": "Passwort-Zurücksetzung senden",
       "delete": "Löschen",
       "disableSelected": "Deaktivieren ({{count}})",
-      "dataAccess": "Datenzugriff"
+      "dataAccess": "Datenzugriff",
+      "unlinkMicrosoft": "Von Microsoft trennen"
     },
     "columns": {
       "lastName": "Nachname",
@@ -2588,6 +2599,7 @@
       "inviteConfirm_one": "Eine Einladung an {{email}} senden?",
       "inviteConfirm_other": "Einladungen an {{count}} Benutzer senden?",
       "disableConfirm": "{{name}} verliert den Zugriff und wird sofort abgemeldet. Dieses Konto deaktivieren?",
+      "unlinkMicrosoftConfirm": "{{name}} meldet sich künftig mit einem Passwort an. Dieses Konto von Microsoft trennen?",
       "deleteConfirm": "{{name}} löschen? Dies kann nicht rückgängig gemacht werden.",
       "inviteSentOne": "Einladung an {{email}} gesendet",
       "resetSent": "E-Mail zum Zurücksetzen des Passworts an {{email}} gesendet",

@@ -157,12 +157,16 @@ Le dernier administrateur actif de l'espace de travail reste actif, même quand 
 
 Le bloc de **Administration → Authentification** indique le résultat : **Dernière synchronisation {date} : N comptes actualisés, N désactivés.** après une exécution réussie, ou **La dernière synchronisation a échoué : {message}** sinon. **Synchroniser maintenant** lance la même tâche à la demande.
 
+## Déconnexion
+
+**Déconnecter** dans **Administration → Authentification** retire la connexion et fait de chaque compte relié à Entra un compte local, après une confirmation qui indique combien de comptes gardent leur mot de passe et combien n'en ont pas. Aucun e-mail n'est envoyé. Avec l'e-mail configuré, un compte sans mot de passe en crée un avec **Mot de passe oublié** sur la page de connexion. Sans e-mail, définissez-le comme décrit dans [Réinitialisation du mot de passe](operations.md#reinitialisation-du-mot-de-passe). Un administrateur sans mot de passe en donne un dans la confirmation. La synchronisation quotidienne de l'annuaire s'arrête pour l'espace de travail.
+
 ## Dépannage
 
 - **SSO_NOT_CONFIGURED** : les variables d'environnement Entra manquent ou le tenant n'est pas connecté. Les utilisateurs voient « La connexion avec Microsoft n'est pas configurée pour cet espace de travail. »
 - **ENTRA_TENANT_MISMATCH** : vous avez connecté un tenant mais vous essayez de vous connecter depuis un autre. Les utilisateurs voient « Ce compte Microsoft appartient à une autre organisation que celle connectée à cet espace de travail. »
 - **ENTRA_EMAIL_UNVERIFIED** : l'adresse e-mail du compte Microsoft n'est pas vérifiée : elle ne peut donc pas servir à la connexion.
-- **ENTRA_ACCOUNT_LINKED** : le compte Kadratis qui porte cette adresse e-mail est déjà lié à un autre compte Microsoft et garde ce lien. Les utilisateurs voient « Ce compte est déjà relié à un autre compte Microsoft. Contactez votre administrateur. »
+- **ENTRA_ACCOUNT_LINKED** : le compte Kadratis qui porte cette adresse e-mail est déjà lié à un autre compte Microsoft et garde ce lien. Les utilisateurs voient « Ce compte est déjà relié à un autre compte Microsoft. Contactez votre administrateur. » Un administrateur retire ce lien avec **Délier de Microsoft** dans le menu de la ligne de la liste des utilisateurs.
 - **ENTRA_LINK_NEEDS_EMAIL** : un compte avec cette adresse e-mail existe déjà. Kadratis ne lie un compte existant à Microsoft qu'après un lien de confirmation envoyé à son adresse, et aucun service d'e-mail n'est configuré. Les comptes créés à une première connexion avec Microsoft, les comptes invités qui n'ont pas encore de mot de passe et la synchronisation quotidienne de l'annuaire ne sont pas concernés.
 - **Invalid Entra state / nonce** : l'état de connexion a expiré, ou la redirection Entra n'est pas revenue à l'URL de callback configurée. Relancez la connexion et vérifiez que `ENTRA_REDIRECT_URI` correspond exactement à l'enregistrement d'application Entra.
 - **Mauvaise redirection après la connexion** : vérifiez que `APP_BASE_URL` est l'adresse exacte ouverte par les utilisateurs. La redirection provient de `APP_BASE_URL`, et les en-têtes `Host` et `X-Forwarded-Host` ne la modifient pas. Vérifiez aussi que le proxy envoie `X-Forwarded-Proto`.

@@ -7,7 +7,7 @@ import type { EntityManager } from 'typeorm';
  * (64 hex characters), which never starts with it, and a new confirmation replaces only the
  * previous confirmations of the account, never its password links.
  */
-const LINK_CONFIRMATION_HASH_PREFIX = 'entra-link:';
+export const LINK_CONFIRMATION_HASH_PREFIX = 'entra-link:';
 
 export function linkConfirmationHash(token: string): string {
   const digest = createHash('sha256').update(token).digest('hex');
@@ -18,8 +18,47 @@ export function linkConfirmationHash(token: string): string {
 export const LINK_CONFIRMATION_RESEND_MINUTES = 5;
 
 /**
+ * First key of the workspace's Microsoft connection lock ("ECON"): the two-key form, a key space
+ * of its own, apart from the single-key locks and the other namespaces. The second key is the
+ * workspace id hashed.
+ */
+const CONNECTION_LOCK_NAMESPACE = 0x45434f4e;
+
+function connectionLockKey(tenantId: string): [number, string] {
+  return [CONNECTION_LOCK_NAMESPACE, `entra-connection:${tenantId}`];
+}
+
+/**
+ * Reads the workspace's Microsoft connection and holds it (transaction advisory lock, shared) for
+ * the rest of the transaction. A sign-in or a confirmation that links an account takes it before
+ * the account's row: a disconnect or a new connection (`lockTenantConnectionForChange`) waits for
+ * it, and a sign-in that starts after one reads the workspace as it left it. The workspace's row
+ * is read without a lock: a sign-in never waits for the workspace's other writers.
+ */
+export async function lockTenantConnection(
+  manager: EntityManager,
+  tenantId: string,
+): Promise<{ sso_provider: string | null; entra_tenant_id: string | null } | null> {
+  await manager.query(`SELECT pg_advisory_xact_lock_shared($1::int, hashtext($2))`, connectionLockKey(tenantId));
+  const rows = await manager.query(`SELECT sso_provider, entra_tenant_id FROM tenants WHERE id = $1`, [tenantId]);
+  return rows[0] ?? null;
+}
+
+/**
+ * Holds the workspace's Microsoft connection alone (exclusive) for the rest of the transaction,
+ * before it is changed (disconnect, connection): waits for the sign-ins and confirmations that
+ * hold it, and makes the next ones wait.
+ */
+export async function lockTenantConnectionForChange(manager: EntityManager, tenantId: string): Promise<void> {
+  await manager.query(`SELECT pg_advisory_xact_lock($1::int, hashtext($2))`, connectionLockKey(tenantId));
+}
+
+/**
  * Locks the account's row for the rest of the transaction, so that requests and confirmations of
  * one account run one after the other. Returns the account, or null when it no longer exists.
+ * FOR NO KEY UPDATE: it excludes the other writers of the account (`lockPeople`, the unlink, the
+ * directory sync, all FOR UPDATE) and leaves free the key share lock a foreign key to the account
+ * takes. The sign-in never changes the account's keys (id, tenant, address) nor deletes it.
  */
 export async function lockAccountForLink(
   manager: EntityManager,
@@ -28,7 +67,7 @@ export async function lockAccountForLink(
 ): Promise<{ id: string; email: string; status: string; external_auth_provider: string | null; has_password: boolean } | null> {
   const rows = await manager.query(
     `SELECT id, email, status, external_auth_provider, COALESCE(password_hash, '') <> '' AS has_password
-     FROM users WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+     FROM users WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
     [tenantId, userId],
   );
   return rows[0] ?? null;

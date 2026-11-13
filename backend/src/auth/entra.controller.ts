@@ -22,13 +22,16 @@ import { AuthEvent, AuthEventReason } from '../audit/security-events';
 import { NeverRejects } from '../common/never-rejects';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
-import { EmailService, maskEmailAddresses } from '../email/email.service';
+import { EmailService, isExampleRecipient, maskEmailAddresses } from '../email/email.service';
+import { clientAddress } from '../common/client-address';
 import { Features } from '../config/features';
 import { getPasswordResetExpirationMinutes, getPasswordResetTtl } from './password-reset.util';
 import {
   consumeLinkConfirmation,
   hasRecentLinkConfirmation,
   lockAccountForLink,
+  lockTenantConnection,
+  lockTenantConnectionForChange,
   storeLinkConfirmation,
 } from './entra-link-confirmation';
 
@@ -64,7 +67,15 @@ type LinkConfirmationMail = Parameters<EmailService['sendEntraLinkConfirmationEm
  * A link request recorded with the sign-in. `mail` is null when a confirmation sent a few minutes
  * earlier is still pending: no new link, no new e-mail.
  */
-type PendingLinkConfirmation = { email: string; userId: string; tenantId: string; token: string | null; mail: LinkConfirmationMail | null };
+type PendingLinkConfirmation = {
+  email: string;
+  userId: string;
+  tenantId: string;
+  token: string | null;
+  mail: LinkConfirmationMail | null;
+  /** The address and agent of the sign-in, read before it is answered, for the request's event. */
+  requestDetails: { ip: unknown; headers: Record<string, unknown> };
+};
 
 /** A database error raised by a unique index. */
 function isUniqueViolation(error: unknown): boolean {
@@ -144,7 +155,11 @@ export class EntraController {
       throw new BadRequestException('Tenant not found');
     }
     if (tenant.sso_provider !== 'entra' || !tenant.entra_tenant_id) {
-      throw new BadRequestException('SSO_NOT_CONFIGURED');
+      // A page loaded before the workspace was disconnected, or a bookmark: back to the sign-in
+      // page, which says why.
+      const base = resolveTenantAppBaseUrl(req, tenant.slug).replace(/\/$/, '');
+      res.redirect(`${base}/login?ssoError=SSO_NOT_CONFIGURED`);
+      return;
     }
 
     const redirectToRaw = req?.query?.redirectTo;
@@ -468,7 +483,12 @@ export class EntraController {
     if (!locked || locked.external_auth_provider) {
       throw new BadRequestException('ENTRA_ACCOUNT_LINKED');
     }
-    const pending = { email: account.email, userId: account.id, tenantId };
+    const pending = {
+      email: account.email,
+      userId: account.id,
+      tenantId,
+      requestDetails: { ip: clientAddress(req), headers: { 'user-agent': req?.headers?.['user-agent'] } },
+    };
     if (await hasRecentLinkConfirmation(manager, tenantId, account.id)) {
       return { ...pending, token: null, mail: null };
     }
@@ -504,22 +524,33 @@ export class EntraController {
   }
 
   /**
-   * Sends a link confirmation once the sign-in has answered. Never awaited by the route, never
-   * handed the request's entity manager, and never rejects: a failed send is logged without the
-   * link, its token or an address.
+   * Sends a link confirmation once the sign-in has answered, then records the
+   * `sso_link_requested` event, as a password reset request records its own: the account, the
+   * address and agent, and the reason `email_not_sent` when the e-mail could not be sent. Never
+   * awaited by the route, never handed the request's entity manager, and never rejects: a failed
+   * send is logged without the link, its token or an address. A request held off by a recent
+   * confirmation makes no link and records nothing.
    */
   @NeverRejects()
   private async deliverLinkConfirmation(link: PendingLinkConfirmation): Promise<void> {
     if (!link.mail || !link.token || !this.email) return;
+    // EmailService never writes to a reserved `.example` address: nothing goes out.
+    let reason: AuthEventReason | null = isExampleRecipient(link.mail.to) ? 'email_not_sent' : null;
     try {
       await this.email.sendEntraLinkConfirmationEmail(link.mail);
     } catch (error) {
+      reason = 'email_not_sent';
       let message = String((error as { message?: unknown } | null)?.message ?? error);
       message = message.split(link.mail.confirmUrl).join('[link]').split(link.token).join('[token]');
       this.logger.error(
         `Microsoft link confirmation e-mail not sent (tenant ${link.tenantId}, user ${link.userId}): ${maskEmailAddresses(message)}`,
       );
     }
+    await this.securityEvents.recordAuthEvent(
+      link.tenantId,
+      { action: 'sso_link_requested', userId: link.userId, reason },
+      link.requestDetails,
+    );
   }
 
   /**
@@ -550,6 +581,12 @@ export class EntraController {
     }
 
     await withTenant(this.dataSource, tenantId, async (manager) => {
+      // The workspace is still connected to the directory that signed the link, until the end of
+      // the transaction (a disconnect waits for it).
+      const connection = await lockTenantConnection(manager, tenantId);
+      if (connection?.sso_provider !== 'entra' || connection.entra_tenant_id !== link.tid) {
+        throw new BadRequestException('ENTRA_LINK_INVALID');
+      }
       // Requests and confirmations of one account run one after the other.
       const account = await lockAccountForLink(manager, tenantId, link.userId);
       const userId = await consumeLinkConfirmation(manager, tenantId, body.token);
@@ -612,21 +649,26 @@ export class EntraController {
     req: any,
     res: Response,
   ) {
-    await this.tenants.updateTenant(tenantId, {
-      sso_provider: 'entra' as any,
-      entra_tenant_id: entraTenantId,
-      sso_enabled: true as any,
-      entra_metadata: {
-        ...(claims?.name ? { display_name: claims.name } : {}),
-        ...(claims?.email || claims?.preferred_username
-          ? { primary_domain: String(claims.email || claims.preferred_username).split('@')[1] || null }
-          : {}),
-        connected_at: new Date().toISOString(),
-      } as any,
-    });
-
-    await withTenant(this.dataSource, tenantId, (manager) =>
-      this.audit.log(
+    await withTenant(this.dataSource, tenantId, async (manager) => {
+      // A connection changes the directory sign-ins check: it waits for the sign-ins in progress.
+      await lockTenantConnectionForChange(manager, tenantId);
+      await this.tenants.updateTenant(
+        tenantId,
+        {
+          sso_provider: 'entra' as any,
+          entra_tenant_id: entraTenantId,
+          sso_enabled: true as any,
+          entra_metadata: {
+            ...(claims?.name ? { display_name: claims.name } : {}),
+            ...(claims?.email || claims?.preferred_username
+              ? { primary_domain: String(claims.email || claims.preferred_username).split('@')[1] || null }
+              : {}),
+            connected_at: new Date().toISOString(),
+          } as any,
+        },
+        { manager },
+      );
+      await this.audit.log(
         {
           table: 'tenants',
           recordId: tenantId,
@@ -638,8 +680,8 @@ export class EntraController {
           sourceRef: 'entra-setup',
         },
         { manager },
-      ),
-    );
+      );
+    });
 
     const baseUrl = resolveTenantAppBaseUrl(req, tenantSlug);
     const normalized = baseUrl.replace(/\/$/, '');
@@ -695,6 +737,12 @@ export class EntraController {
     // Set when the sign-in found an existing account that waits for its owner's confirmation.
     const pending: { link?: PendingLinkConfirmation } = {};
     const userId = await withTenant(this.dataSource, tenantId, async (manager) => {
+      // The workspace is still connected to this directory, until the end of the transaction: a
+      // disconnect waits for this sign-in, and one made meanwhile is read here.
+      const connection = await lockTenantConnection(manager, tenantId);
+      if (connection?.sso_provider !== 'entra' || connection.entra_tenant_id !== (claims as any)?.tid) {
+        throw new BadRequestException('SSO_NOT_CONFIGURED');
+      }
       const repo = manager.getRepository(User);
 
       let found = await repo.findOne({
@@ -704,6 +752,19 @@ export class EntraController {
         } as any,
         relations: ['role', 'company', 'department'],
       });
+      if (found) {
+        // Locked, then read again, as the directory sync does: an administrator may have unlinked
+        // the account meanwhile (Unlink from Microsoft, a disconnect, the sync keeping the last
+        // Administrator). An account no longer linked to this Microsoft account is not linked back
+        // here: it follows the rule of an existing account below.
+        const locked = await lockAccountForLink(manager, tenantId, found.id);
+        found = locked && locked.external_auth_provider === 'entra'
+          ? await repo.findOne({
+            where: { id: found.id, external_auth_provider: 'entra' as any, external_subject: oid } as any,
+            relations: ['role', 'company', 'department'],
+          })
+          : null;
+      }
 
       if (!found) {
         const local = await repo

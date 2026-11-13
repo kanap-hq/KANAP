@@ -321,7 +321,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     controller: 'UsersController',
     reserved: [
         'bulkDelete', 'create', 'delete', 'deleteCheck', 'disable', 'enable', 'import', 'invite', 'setUserRoles',
-        'update',
+        'unlinkMicrosoft', 'update',
     ],
     allowed: {
       export: EXPORT, // GET export
@@ -330,6 +330,16 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       list: READ, // GET (root)
       lookup: LOOKUP, // GET lookup
       updateMe: OWN_PROFILE, // PATCH me
+    },
+  },
+  {
+    // Microsoft sign-in of the workspace: the disconnect makes every linked account local and the
+    // directory sync disables people, writes on persons of the whole workspace (spec §2.7).
+    file: 'auth/admin-auth.controller.ts',
+    controller: 'AdminAuthController',
+    reserved: ['disconnect', 'runDirectorySync'],
+    allowed: {
+      getSettings: 'the workspace\'s sign-in settings and the account counts of the disconnect confirmation (no budget data); its writes are reserved', // GET settings
     },
   },
   {

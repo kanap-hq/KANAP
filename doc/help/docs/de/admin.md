@@ -66,6 +66,7 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 | **Sitzungsverlängerung abgelehnt** | die Sitzung nicht verlängert werden konnte, zum Beispiel weil sie abgelaufen ist |
 | **Zurücksetzen des Passworts angefordert** / **Passwort zurückgesetzt** | jemand einen Link zum Zurücksetzen anfordert und danach mit diesem Link ein neues Passwort festlegt. Konnte die E-Mail mit dem Link nicht gesendet werden, nennt der **Grund** dies |
 | **Anmeldung mit Microsoft** / **Fehlgeschlagene Anmeldung mit Microsoft** | eine Anmeldung über Microsoft Entra ID gelingt oder fehlschlägt |
+| **Bestätigung der Microsoft-Verknüpfung angefordert** | eine Microsoft-Anmeldung hat ein bestehendes Konto mit derselben E-Mail-Adresse gefunden, und ihm wurde ein Bestätigungslink gesendet. Konnte die E-Mail nicht gesendet werden, sagt der **Grund** es |
 
 **Exporte** (Tabelle **Export**): jede Datei, die Kadratis aus Ihren Daten erzeugt: Listen- und Berichtsexporte als CSV oder Excel, Dokumente und PDF-Berichte. Die Zeile zeigt, was exportiert wurde und von wem. Ihre Details nennen das Format, die Parameter des Exports (Filter, Suche, Sortierung, Jahr usw.) und, bei einer Datei mit Zeilen, die Zahl der geschriebenen Zeilen. Auch der Export des Audit-Protokolls wird aufgezeichnet.
 
@@ -206,6 +207,7 @@ Zeilenaktionen über das Menü am Ende jeder Zeile:
 | **Aktivieren** / **Deaktivieren** | Schaltet das Konto ein oder aus. Beim Deaktivieren wird die Person sofort abgemeldet. |
 | **Einladung senden** | Sendet eine Einladung per E-Mail. Siehe [Einladungen](#einladungen). Für Microsoft Entra-Konten ausgeblendet. |
 | **Passwort-Zurücksetzung senden** | Sendet einen Link zum Zurücksetzen des Passworts per E-Mail. Nur für aktive lokale Konten sichtbar. |
+| **Von Microsoft trennen** | Macht ein Microsoft Entra-Konto nach einer Bestätigung lokal: Es meldet sich mit seinem Passwort an oder legt eines über **Passwort vergessen** fest. Für ein Konto, das mit dem falschen Microsoft-Konto verknüpft ist. Sichtbar für Microsoft Entra-Konten. |
 | **Datenzugriff** | Öffnet den Benutzer auf dem Reiter **Datenzugriff**. Sichtbar für Personen mit Zugriff auf alle Daten, in den Zeilen anderer Personen. |
 | **Löschen** | Entfernt den Benutzer dauerhaft. Die Datensätze, an denen er gearbeitet hat, bleiben ohne ihn erhalten. Ihr eigenes Konto können Sie nicht löschen. Um den Zugang einer Person zu sperren und das Konto zu behalten, deaktivieren Sie es stattdessen. |
 
@@ -293,7 +295,7 @@ Beim Bearbeiten eines solchen Benutzers sind die Felder E-Mail, Name, Position u
 
 Rollen, Unternehmen, Abteilung und den Aktiviert-Schalter können Sie weiterhin verwalten.
 
-Microsoft Entra-Konten haben nie ein Kadratis-Passwort. An sie kann weder eine Einladung noch eine Passwort-Zurücksetzung gesendet werden.
+An ein Microsoft Entra-Konto kann weder eine Einladung noch eine Passwort-Zurücksetzung gesendet werden. Ein Passwort, das es vor der Verknüpfung hatte, bleibt gültig. **Von Microsoft trennen** im Zeilenmenü macht es wieder zu einem lokalen Konto.
 
 Wenn jemand aus Ihrem Verzeichnis entfernt wird oder sein Verzeichniskonto deaktiviert wird, deaktiviert die nächtliche Synchronisierung sein Kadratis-Konto. Die Person wird sofort abgemeldet und ihre Daten bleiben erhalten.
 
@@ -594,7 +596,15 @@ Verbinden Sie Kadratis mit Ihrem Microsoft Entra ID-Mandanten für SSO:
 | **Verbinden** | Microsoft Entra-Einrichtungsablauf starten |
 | **Erneut verbinden** | Einrichtungsablauf erneut durchführen (wird angezeigt, wenn bereits verbunden) |
 | **Anmeldung testen** | SSO-Anmeldung mit Ihrem Microsoft-Konto testen |
-| **Trennen** | SSO-Konfiguration entfernen (kehrt zur lokalen Authentifizierung zurück) |
+| **Trennen** | Entfernt die Verbindung. Jedes Microsoft Entra-Konto wird ein lokales Konto. Siehe [Verbindung trennen](#verbindung-trennen) |
+
+Solange der Arbeitsbereich nicht verbunden ist, ist **Mit Microsoft anmelden** auf der Anmeldeseite ausgegraut, mit **Die Anmeldung mit Microsoft ist für diesen Arbeitsbereich nicht eingerichtet.** beim Darüberfahren. Eine Installation ohne Microsoft-Anmeldung zeigt diese Schaltfläche nicht.
+
+### Verbindung trennen
+
+**Trennen** öffnet eine Bestätigung mit zwei Zahlen: die Konten, die ihr Passwort behalten, und die Konten, die keines haben und eines über **Passwort vergessen** auf der Anmeldeseite festlegen. Ihnen wird keine E-Mail gesendet. Auf einer Installation ohne E-Mail sagt die zweite Zeile, dass ein Administrator ihr Passwort festlegt, wie unter [Passwort zurücksetzen](on-premise/operations.md#passwort-zurucksetzen) beschrieben. Hat Ihr eigenes Konto kein Passwort, fragt die Bestätigung Sie nach einem (mindestens 8 Zeichen).
+
+Nach dem Trennen ist jedes mit Microsoft verknüpfte Konto ein lokales Konto: Es behält sein Passwort, und sein Verlauf hält die Änderung fest. Bereits offene Sitzungen bleiben offen. Die tägliche Verzeichnissynchronisierung endet und lässt diese Konten unverändert. Verbinden Sie den Arbeitsbereich später erneut, werden bestehende Konten wieder verknüpft, wie unter [Just-in-time-Anmeldung mit Microsoft](#just-in-time-anmeldung-mit-microsoft) beschrieben.
 
 ### Tägliche Verzeichnissynchronisierung
 

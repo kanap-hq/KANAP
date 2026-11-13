@@ -48,6 +48,11 @@ export const AUTH_EVENT_ACTIONS = [
   'password_reset_completed',
   'sso_login',
   'sso_login_failed',
+  /**
+   * A Microsoft sign-in found an existing account by its address and a confirmation link was made
+   * for it (`email_not_sent` when its e-mail could not be sent).
+   */
+  'sso_link_requested',
   /** The account refused to connect an MCP client (OAuth consent screen, ai/oauth). */
   'mcp_connection_refused',
 ] as const;

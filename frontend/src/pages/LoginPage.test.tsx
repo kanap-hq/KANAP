@@ -8,6 +8,7 @@ import LoginPage from './LoginPage';
 const mocks = vi.hoisted(() => ({
   login: vi.fn(),
   sso: false,
+  microsoftSignIn: true,
 }));
 
 vi.mock('../api', () => ({
@@ -25,6 +26,7 @@ vi.mock('../auth/AuthContext', () => ({
 vi.mock('../tenant/TenantContext', () => ({
   useTenant: () => ({
     isPlatformHost: false,
+    microsoftSignIn: mocks.microsoftSignIn,
   }),
 }));
 
@@ -94,6 +96,7 @@ describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.sso = false;
+    mocks.microsoftSignIn = true;
     vi.mocked(api.post).mockResolvedValue({
       data: {
         access_token: 'access-token',
@@ -279,6 +282,29 @@ describe('LoginPage', () => {
       renderLogin(`/login?returnTo=${encodeURIComponent(consentPath)}`);
       fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
       expect(redirectToOf(assigned)).toBe(consentPath);
+    });
+
+    it('offers the button in a workspace connected to a directory', () => {
+      renderLogin('/login');
+      const button = screen.getByRole('button', { name: 'Sign in with Microsoft' }) as HTMLButtonElement;
+      expect(button.disabled).toBe(false);
+    });
+
+    it('greys the button out, with the reason on hover, in a workspace not connected', async () => {
+      mocks.microsoftSignIn = false;
+      renderLogin('/login');
+      const button = screen.getByRole('button', { name: 'Sign in with Microsoft' }) as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      fireEvent.click(button);
+      expect(assigned).toBe('');
+      fireEvent.mouseOver(button.parentElement as HTMLElement);
+      expect(await screen.findByText('auth:login.ssoNotConfigured')).toBeTruthy();
+    });
+
+    it('shows no button when the installation has no Microsoft sign-in', () => {
+      mocks.sso = false;
+      renderLogin('/login');
+      expect(screen.queryByRole('button', { name: 'Sign in with Microsoft' })).toBeNull();
     });
 
     it('passes the home page for any other return path', () => {

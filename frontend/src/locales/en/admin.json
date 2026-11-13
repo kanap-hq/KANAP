@@ -306,6 +306,7 @@
       "restored": "Restore",
       "sso_login": "Sign-in with Microsoft",
       "sso_login_failed": "Failed sign-in with Microsoft",
+      "sso_link_requested": "Microsoft link confirmation requested",
       "update": "Update"
     },
     "columns": {
@@ -1596,9 +1597,18 @@
       "connect": "Connect",
       "connecting": "Connecting…",
       "disconnect": "Disconnect",
-      "disconnecting": "Disconnecting…",
       "reconnect": "Reconnect",
       "testSignIn": "Test sign-in"
+    },
+    "disconnect": {
+      "title": "Disconnect Microsoft Entra ID",
+      "keepPassword_one": "{{count}} account keeps its password",
+      "keepPassword_other": "{{count}} accounts keep their password",
+      "needPassword_one": "{{count}} account has no password and will set one with Forgot password",
+      "needPassword_other": "{{count}} accounts have no password and will set one with Forgot password",
+      "needPasswordNoEmail_one": "{{count}} account has no password: an administrator sets it (Password Reset in the operations guide)",
+      "needPasswordNoEmail_other": "{{count}} accounts have no password: an administrator sets them (Password Reset in the operations guide)",
+      "ownPassword": "Your new password"
     },
     "entra": {
       "connected": "Connected",
@@ -2546,7 +2556,8 @@
       "sendReset": "Send password reset",
       "delete": "Delete",
       "disableSelected": "Disable ({{count}})",
-      "dataAccess": "Data access"
+      "dataAccess": "Data access",
+      "unlinkMicrosoft": "Unlink from Microsoft"
     },
     "columns": {
       "lastName": "Last name",
@@ -2588,6 +2599,7 @@
       "inviteConfirm_one": "Send an invitation to {{email}}?",
       "inviteConfirm_other": "Send invitations to {{count}} users?",
       "disableConfirm": "{{name}} will lose access and be signed out immediately. Disable this account?",
+      "unlinkMicrosoftConfirm": "{{name}} will sign in with a password from now on. Unlink this account from Microsoft?",
       "deleteConfirm": "Delete {{name}}? This cannot be undone.",
       "inviteSentOne": "Invitation sent to {{email}}",
       "resetSent": "Password reset email sent to {{email}}",

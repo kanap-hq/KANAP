@@ -66,6 +66,7 @@ La página de Registro de auditoría conserva el historial de los cambios de dat
 | **Renovación de sesión rechazada** | No se pudo renovar la sesión, por ejemplo porque caducó |
 | **Restablecimiento de contraseña solicitado** / **Restablecimiento de contraseña completado** | Alguien pide un enlace de restablecimiento y luego define una contraseña nueva con él. Si no se pudo enviar el correo electrónico con el enlace, el **motivo** lo indica |
 | **Inicio de sesión con Microsoft** / **Inicio de sesión con Microsoft fallido** | Un inicio de sesión mediante Microsoft Entra ID se completa o falla |
+| **Confirmación de vinculación con Microsoft solicitada** | Un inicio de sesión con Microsoft encontró una cuenta existente con la misma dirección de correo y se le envió un enlace de confirmación. Cuando el correo no pudo enviarse, el **Motivo** lo indica |
 
 **Exportaciones** (tabla **Exportación**): cada archivo que Kadratis genera a partir de sus datos: exportaciones de listas e informes en CSV o Excel, documentos e informes PDF. La fila indica qué se exportó y quién lo hizo. Sus detalles dan el formato, los parámetros de la exportación (filtros, búsqueda, orden, año, etc.) y, para un archivo de filas, el número de filas escritas. La exportación del propio registro de auditoría también se registra.
 
@@ -206,6 +207,7 @@ Acciones de fila, desde el menú al final de cada fila:
 | **Activar** / **Desactivar** | Activar o desactivar la cuenta. Al desactivarla se cierra la sesión de la persona de inmediato. |
 | **Enviar invitación** | Enviar por correo una invitación. Consulte [Invitaciones](#invitaciones). Oculta para las cuentas de Microsoft Entra. |
 | **Enviar restablecimiento de contraseña** | Enviar por correo un enlace de restablecimiento de contraseña. Se muestra solo para cuentas locales activadas. |
+| **Desvincular de Microsoft** | Convierte una cuenta de Microsoft Entra en local, tras una confirmación: inicia sesión con su contraseña, o crea una con **Contraseña olvidada**. Para una cuenta vinculada a la cuenta de Microsoft equivocada. Se muestra para las cuentas de Microsoft Entra. |
 | **Acceso a los datos** | Abre el usuario en la pestaña **Acceso a los datos**. Se muestra a las personas con acceso a todos los datos, en las filas de otras personas. |
 | **Eliminar** | Eliminar el usuario permanentemente. Los registros en los que trabajó se conservan, sin él. No puede eliminar su propia cuenta. Para bloquear el acceso de una persona y conservar la cuenta, desactívela en su lugar. |
 
@@ -293,7 +295,7 @@ Al editar uno de estos usuarios, los campos de correo, nombre, cargo y teléfono
 
 Aún puede gestionar sus roles, empresa, departamento y el interruptor Habilitado.
 
-Las cuentas de Microsoft Entra nunca tienen una contraseña de Kadratis. No se les puede enviar una invitación ni un restablecimiento de contraseña.
+A una cuenta de Microsoft Entra no se le puede enviar una invitación ni un restablecimiento de contraseña. Una contraseña que tenía antes de vincularse sigue siendo válida. **Desvincular de Microsoft** en el menú de la fila la convierte de nuevo en una cuenta local.
 
 Si alguien es eliminado de su directorio, o su cuenta del directorio es desactivada, la sincronización nocturna desactiva su cuenta de Kadratis. Se cierra su sesión de inmediato y sus datos se conservan.
 
@@ -594,7 +596,15 @@ Conecte Kadratis a su inquilino de Microsoft Entra ID para SSO:
 | **Conectar** | Iniciar el flujo de configuración de Microsoft Entra |
 | **Reconectar** | Volver a ejecutar el flujo de configuración (se muestra cuando ya está conectado) |
 | **Probar inicio de sesión** | Probar el inicio de sesión SSO con su cuenta de Microsoft |
-| **Desconectar** | Eliminar la configuración SSO (vuelve a autenticación local) |
+| **Desconectar** | Elimina la conexión. Cada cuenta de Microsoft Entra pasa a ser una cuenta local. Consulte [Desconexión](#desconexion) |
+
+Mientras el espacio de trabajo no está conectado, **Iniciar sesión con Microsoft** en la página de inicio de sesión aparece atenuado, con **El inicio de sesión con Microsoft no está configurado para este espacio de trabajo.** al pasar el cursor. Una instalación sin inicio de sesión con Microsoft no muestra este botón.
+
+### Desconexión
+
+**Desconectar** abre una confirmación con dos números: las cuentas que conservan su contraseña, y las cuentas que no tienen y crearán una con **Contraseña olvidada** en la página de inicio de sesión. No se les envía ningún correo. En una instalación sin correo, la segunda línea indica que un administrador define su contraseña, como se describe en [Restablecimiento de contraseña](on-premise/operations.md#restablecimiento-de-contrasena). Si su propia cuenta no tiene contraseña, la confirmación le pide una (al menos 8 caracteres).
+
+Tras la desconexión, cada cuenta vinculada a Microsoft es una cuenta local: conserva la contraseña que tiene, y su historial registra el cambio. Las sesiones ya abiertas siguen abiertas. La sincronización diaria del directorio se detiene y ya no modifica estas cuentas. Si vuelve a conectar el espacio de trabajo más adelante, las cuentas existentes se vinculan de nuevo como se describe en [Inicio de sesión inmediato con Microsoft](#inicio-de-sesion-inmediato-con-microsoft).
 
 ### Sincronización diaria del directorio
 

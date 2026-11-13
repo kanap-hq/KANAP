@@ -66,6 +66,7 @@ The Audit Log page keeps the history of data changes and of security events in y
 | **Session renewal refused** | The session could not be renewed, for example because it expired |
 | **Password reset requested** / **Password reset completed** | Someone asks for a reset link, then sets a new password with it. When the email with the link could not be sent, the **Reason** says so |
 | **Sign-in with Microsoft** / **Failed sign-in with Microsoft** | A sign-in through Microsoft Entra ID succeeds or fails |
+| **Microsoft link confirmation requested** | A Microsoft sign-in found an existing account with the same email address and a confirmation link was sent to it. When the email could not be sent, the **Reason** says so |
 
 **Exports** (table **Export**): every file Kadratis produces from your data: list and report exports in CSV or Excel, documents and PDF reports. The row says what was exported and by whom. Its details give the format, the parameters of the export (filters, search, sort, year and so on) and, for a file of rows, the number of rows written. Exporting the audit log is recorded too.
 
@@ -206,6 +207,7 @@ Row actions, from the menu at the end of each row:
 | **Enable** / **Disable** | Switch the account on or off. Disabling signs the person out immediately. |
 | **Send invite** | Email an invitation. See [Invitations](#invitations). Hidden for Microsoft Entra accounts. |
 | **Send password reset** | Email a password reset link. Shown for enabled local accounts only. |
+| **Unlink from Microsoft** | Make a Microsoft Entra account local, after a confirmation: it signs in with its password, or sets one with **Forgot password**. For an account linked to the wrong Microsoft account. Shown for Microsoft Entra accounts. |
 | **Data access** | Open the user on the **Data access** tab. Shown to people with access to all data, on other people's rows. |
 | **Delete** | Remove the user permanently. The records the user worked on stay, without the user. You cannot delete your own account. To block a person's access and keep the account, disable it instead. |
 
@@ -293,7 +295,7 @@ When editing one of these users, the email, name, job title and phone fields are
 
 You can still manage their roles, company, department and the Enabled switch.
 
-Microsoft Entra accounts never hold a Kadratis password. They cannot be sent an invitation or a password reset.
+A Microsoft Entra account cannot be sent an invitation or a password reset. A password it held before it was linked stays valid. **Unlink from Microsoft** in the row menu makes it a local account again.
 
 If someone is removed from your directory, or their directory account is deactivated, the nightly sync disables their Kadratis account. They are signed out immediately and their data is kept.
 
@@ -594,7 +596,15 @@ Connect Kadratis to your Microsoft Entra ID tenant for SSO:
 | **Connect** | Start the Microsoft Entra setup flow |
 | **Reconnect** | Re-run the setup flow (shown when already connected) |
 | **Test sign-in** | Test SSO login with your Microsoft account |
-| **Disconnect** | Remove SSO configuration (reverts to local auth) |
+| **Disconnect** | Remove the connection. Every Microsoft Entra account becomes a local account. See [Disconnecting](#disconnecting) |
+
+While the workspace is not connected, **Sign in with Microsoft** on the sign-in page is greyed out, with **Sign-in with Microsoft is not set up for this workspace.** on hover. An installation without Microsoft sign-in shows no such button.
+
+### Disconnecting
+
+**Disconnect** opens a confirmation with two numbers: the accounts that keep their password, and the accounts that have none and will set one with **Forgot password** on the sign-in page. No email is sent to them. On an installation without email, the second line says that an administrator sets their password, as described in [Password Reset](on-premise/operations.md#password-reset). If your own account has no password, the confirmation asks you for one (at least 8 characters).
+
+After the disconnect, every account linked to Microsoft is a local account: it keeps the password it has, and its history records the change. Sessions already open stay open. The daily directory sync stops and leaves these accounts alone. If you connect again later, existing accounts are linked again as described in [Just-in-time sign-in with Microsoft](#just-in-time-sign-in-with-microsoft).
 
 ### Daily directory sync
 

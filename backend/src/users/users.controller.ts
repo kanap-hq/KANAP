@@ -360,6 +360,21 @@ export class UsersController {
     return this.svc.disableUser(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, roleGrant: roleGrantActorOf(req) });
   }
 
+  /**
+   * Makes a person's account local: its Microsoft link is removed, a password it holds stays, and
+   * "Forgot password" works for it. For an account linked to the wrong Microsoft account.
+   */
+  @ReservedToUnscopedDataAccess()
+  @Post(':id/unlink-microsoft')
+  @UseGuards(PermissionGuard)
+  @RequireLevel('users', 'admin')
+  async unlinkMicrosoft(@Param('id') id: string, @Req() req: any) {
+    return this.svc.unlinkExternalSignIn(userIdParam(id), req.user?.sub ?? null, {
+      manager: req?.queryRunner?.manager,
+      roleGrant: roleGrantActorOf(req),
+    });
+  }
+
   @ReservedToUnscopedDataAccess()
   @Post(':id/invite')
   @UseGuards(PermissionGuard)

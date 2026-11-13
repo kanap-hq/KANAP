@@ -162,6 +162,18 @@ export default function UsersPage() {
       await dialogs.alert(t('users.messages.inviteSentOne', { email: row.email }));
     } catch (e: any) { await dialogs.alert(getApiErrorMessage(e, t, String(e))); }
   };
+  const handleRowUnlinkMicrosoft = async (row: any) => {
+    closeRowMenu();
+    const okToGo = await dialogs.confirm({
+      message: t('users.messages.unlinkMicrosoftConfirm', { name: userDisplayName(row) }),
+      confirmLabel: t('users.actions.unlinkMicrosoft'),
+    });
+    if (!okToGo) return;
+    try {
+      await api.post(`/users/${row.id}/unlink-microsoft`);
+      setRefreshKey((k) => k + 1);
+    } catch (e: any) { await dialogs.alert(getApiErrorMessage(e, t, String(e))); }
+  };
   const handleRowReset = async (row: any) => {
     closeRowMenu();
     try {
@@ -507,6 +519,9 @@ export default function UsersPage() {
         )}
         {!menuRow?.external_auth_provider && menuRow?.status === 'enabled' && (
           <MenuItem sx={{ fontSize: 13 }} onClick={() => menuRow && handleRowReset(menuRow)}>{t('users.actions.sendReset')}</MenuItem>
+        )}
+        {canManageUsers && menuRowChangeable && !!menuRow?.external_auth_provider && (
+          <MenuItem sx={{ fontSize: 13 }} onClick={() => menuRow && handleRowUnlinkMicrosoft(menuRow)}>{t('users.actions.unlinkMicrosoft')}</MenuItem>
         )}
         {menuRowChangeable && (
           <MenuItem sx={{ fontSize: 13, color: 'error.main' }} onClick={() => menuRow && handleRowDelete(menuRow)}>{t('users.actions.delete')}</MenuItem>

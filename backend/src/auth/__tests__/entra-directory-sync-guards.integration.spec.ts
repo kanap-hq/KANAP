@@ -527,6 +527,41 @@ async function testKeptAccountSignsInWithAPassword(
   }
 }
 
+/**
+ * A directory answer without the list of users (no `value`, or not a list) is an error of the
+ * sync, not an empty directory: nobody is disabled, and the run reports the error.
+ */
+async function testMalformedDirectoryAnswerDisablesNobody(sync: EntraDirectorySyncService, dir: FakeDirectory, ds: DataSource) {
+  const { EntraAuthService } = require('../entra-auth.service');
+  const w = await workspace(ds);
+  const one = await w.user('kim', { admin: true });
+  const two = await w.user('lou', { admin: false });
+  const fetchDirectoryUsers = dir.fetchDirectoryUsers;
+  try {
+    const kim = { id: 'oid-kim', accountEnabled: true };
+    const lou = { id: 'oid-lou', accountEnabled: true };
+    for (const answer of [
+      {}, { value: null }, { value: { id: 'x' } }, { value: 'none' }, null,
+      // A list whose elements cannot be read: lou's could be any of them, so nobody is disabled.
+      { value: [null] }, { value: ['oid-kim', 'oid-lou'] }, { value: [{}] }, { value: [{ id: '' }] }, { value: [{ id: 42 }] },
+      { value: [kim, { accountEnabled: true }] }, { value: [kim, lou, []] },
+    ]) {
+      // The real reading of Graph's answer, on a Graph that answers `answer`.
+      const graph = Object.create(EntraAuthService.prototype);
+      graph.fetchJsonWithAuth = async () => answer;
+      graph.logger = { warn: () => undefined, debug: () => undefined };
+      dir.fetchDirectoryUsers = (token: string, ids: string[]) => graph.fetchDirectoryUsers(token, ids);
+      const result = await sync.syncTenant(w.tenantId);
+      assert.equal(result.status, 'error', `an answer ${JSON.stringify(answer)} is an error`);
+      assert.equal(result.disabled + result.removed, 0);
+      assert.equal(await statusOf(ds, w.tenantId, one), 'enabled');
+      assert.equal(await statusOf(ds, w.tenantId, two), 'enabled', 'nobody is disabled');
+    }
+  } finally {
+    dir.fetchDirectoryUsers = fetchDirectoryUsers;
+  }
+}
+
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for entra-directory-sync-guards.integration.spec.ts.');
   const { AppModule } = require('../../app.module');
@@ -550,6 +585,7 @@ async function run() {
     ['an account disabled meanwhile is not counted', testAlreadyDisabledIsNotCounted],
     ['the person is locked before the Administrator role', testPersonBeforeRole],
     ['the kept account signs in with a password', testKeptAccountSignsInWithAPassword],
+    ['a malformed directory answer disables nobody', testMalformedDirectoryAnswerDisablesNobody],
   ];
   try {
     for (const [name, test] of tests) {

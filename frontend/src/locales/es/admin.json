@@ -306,6 +306,7 @@
       "restored": "Restaurar",
       "sso_login": "Inicio de sesión con Microsoft",
       "sso_login_failed": "Inicio de sesión con Microsoft fallido",
+      "sso_link_requested": "Confirmación de vinculación con Microsoft solicitada",
       "update": "Actualizar"
     },
     "columns": {
@@ -1596,9 +1597,18 @@
       "connect": "Conectar",
       "connecting": "Conectando…",
       "disconnect": "Desconectar",
-      "disconnecting": "Desconectando…",
       "reconnect": "Reconectar",
       "testSignIn": "Probar inicio de sesión"
+    },
+    "disconnect": {
+      "title": "Desconectar Microsoft Entra ID",
+      "keepPassword_one": "{{count}} cuenta conserva su contraseña",
+      "keepPassword_other": "{{count}} cuentas conservan su contraseña",
+      "needPassword_one": "{{count}} cuenta no tiene contraseña y creará una con Contraseña olvidada",
+      "needPassword_other": "{{count}} cuentas no tienen contraseña y crearán una con Contraseña olvidada",
+      "needPasswordNoEmail_one": "{{count}} cuenta no tiene contraseña: un administrador la define (Restablecimiento de contraseña, guía de operaciones)",
+      "needPasswordNoEmail_other": "{{count}} cuentas no tienen contraseña: un administrador las define (Restablecimiento de contraseña, guía de operaciones)",
+      "ownPassword": "Su nueva contraseña"
     },
     "entra": {
       "connected": "Conectado",
@@ -2546,7 +2556,8 @@
       "sendReset": "Enviar restablecimiento de contraseña",
       "delete": "Eliminar",
       "disableSelected": "Desactivar ({{count}})",
-      "dataAccess": "Acceso a los datos"
+      "dataAccess": "Acceso a los datos",
+      "unlinkMicrosoft": "Desvincular de Microsoft"
     },
     "columns": {
       "lastName": "Apellido",
@@ -2588,6 +2599,7 @@
       "inviteConfirm_one": "¿Enviar una invitación a {{email}}?",
       "inviteConfirm_other": "¿Enviar invitaciones a {{count}} usuarios?",
       "disableConfirm": "{{name}} perderá el acceso y se cerrará su sesión inmediatamente. ¿Desactivar esta cuenta?",
+      "unlinkMicrosoftConfirm": "{{name}} iniciará sesión con una contraseña a partir de ahora. ¿Desvincular esta cuenta de Microsoft?",
       "deleteConfirm": "¿Eliminar {{name}}? Esta acción no se puede deshacer.",
       "inviteSentOne": "Invitación enviada a {{email}}",
       "resetSent": "Correo de restablecimiento enviado a {{email}}",

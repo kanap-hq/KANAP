@@ -8,6 +8,7 @@ import { waitForBackgroundWork } from '../../common/background-work';
 import { EntraController, ssoFailureReason } from '../entra.controller';
 import { AdminAuthController } from '../admin-auth.controller';
 import { Features } from '../../config/features';
+import { BULK_WRITE_TIMEOUTS, REQUEST_DB_TIMEOUTS_KEY } from '../../common/request-db-timeouts';
 
 function createMockDataSource(repo: any) {
   const state = {
@@ -20,6 +21,15 @@ function createMockDataSource(repo: any) {
 
   const manager = {
     getRepository: () => repo,
+    // The workspace's connection, read under a share lock by a sign-in that links an account.
+    query: async (sql: string, params?: any[]) => {
+      if (/FROM tenants/.test(sql)) return [{ sso_provider: 'entra', entra_tenant_id: 'entra-tenant-1' }];
+      // The account found by its Microsoft identity, locked and still linked.
+      if (/FROM users WHERE tenant_id = \$1 AND id = \$2 FOR NO KEY UPDATE/.test(sql)) {
+        return [{ id: params?.[1], email: 'linked@example.test', status: 'enabled', external_auth_provider: 'entra', has_password: false }];
+      }
+      return [];
+    },
   };
 
   const runner = {
@@ -129,6 +139,7 @@ async function testHandleLoginCallbackRedirectsToTenantSessionHandoff() {
     'alpha',
     '/dashboard',
     {
+      tid: 'entra-tenant-1',
       oid: 'entra-oid-1',
       email: 'user@example.com',
     },
@@ -214,7 +225,7 @@ async function testFirstMicrosoftSignInEndsTheInvitation() {
       'tenant-1',
       'alpha',
       '/',
-      { oid: 'entra-oid-2', email: 'julie.martin@example.com' },
+      { tid: 'entra-tenant-1', oid: 'entra-oid-2', email: 'julie.martin@example.com' },
       {},
       { headers: { host: 'alpha.lvh.me' }, protocol: 'http' },
       { cookie: () => undefined, redirect: () => undefined } as any,
@@ -433,6 +444,21 @@ async function testStartLoginDoesNotSetNonceCookie() {
   });
   assert.equal(redirectTarget, 'https://login.microsoftonline.com/authorize');
   assert.equal(cookieCalls.length, 0);
+}
+
+/**
+ * "Sign in with Microsoft" opened for a workspace that is not connected (a page loaded before a
+ * disconnect, a bookmark) lands back on the sign-in page with the reason, not on an error answer.
+ */
+async function testStartLoginWithoutConnectionReturnsToTheSignInPage() {
+  let redirectTarget = '';
+  await withEnv({ APP_BASE_URL: 'http://lvh.me' }, async () => {
+    await ssoController({}, undefined, 'none').startLogin(
+      { ...browser, tenant: { id: 'tenant-1' }, query: {} },
+      { redirect: (url: string) => { redirectTarget = url; } } as any,
+    );
+  });
+  assert.equal(redirectTarget, 'http://alpha.lvh.me/login?ssoError=SSO_NOT_CONFIGURED');
 }
 
 /** Single sign-on set up for every tenant (`entra`), or for none (`none`). */
@@ -821,8 +847,8 @@ async function testConsentEntryNamesTheAdministratorWhoOpenedIt() {
       const h = consentHarness();
       const settings = new AdminAuthController(
         { findById: async () => WORKSPACE_A } as any,
-        {} as any,
         h.entra,
+        {} as any,
         {} as any,
       );
       const { directory_sync: sync } = await settings.getSettings({ tenant: { id: WORKSPACE_A.id }, user: { sub: 'user-admin-1' } });
@@ -834,6 +860,39 @@ async function testConsentEntryNamesTheAdministratorWhoOpenedIt() {
       assert.equal(h.auditEntries[0].entry.source, 'system');
       assert.equal(h.auditEntries[0].entry.sourceRef, 'entra-admin-consent');
     }
+  } finally {
+    flags.ENTRA_SSO = previous;
+  }
+}
+
+/**
+ * "Sync now" while another sync of the workspace runs is refused as the other "already running"
+ * actions are: 409 `DIRECTORY_SYNC_RUNNING`. A sync that runs answers its result.
+ */
+/**
+ * A disconnect writes every linked account of the workspace in one request: it gets the waits of
+ * the bulk writes (the search index trigger of each account makes one statement long).
+ */
+function testDisconnectHasTheBulkWriteWaits() {
+  assert.deepEqual(Reflect.getMetadata(REQUEST_DB_TIMEOUTS_KEY, AdminAuthController.prototype.disconnect), BULK_WRITE_TIMEOUTS);
+}
+
+async function testSyncNowWhileAnotherRunsIsAConflict() {
+  const flags = Features as { ENTRA_SSO: boolean };
+  const previous = flags.ENTRA_SSO;
+  flags.ENTRA_SSO = true;
+  try {
+    const answering = (status: string) => new AdminAuthController(
+      {} as any,
+      {} as any,
+      { syncTenant: async () => ({ status, message: null, synced: 0, disabled: 0, removed: 0, managers_updated: 0, managers_unresolved: 0, kept_administrator: null }) } as any,
+      {} as any,
+    );
+    const req = { tenant: { id: WORKSPACE_A.id }, user: { sub: 'user-admin-1' } };
+    const refusal = await answering('already_running').runDirectorySync(req).then(() => null, (error: any) => error);
+    assert.equal(refusal?.getStatus?.(), 409);
+    assert.equal(refusal?.getResponse?.().code, 'DIRECTORY_SYNC_RUNNING');
+    assert.equal((await answering('ok').runDirectorySync(req)).status, 'ok');
   } finally {
     flags.ENTRA_SSO = previous;
   }
@@ -893,6 +952,9 @@ async function run() {
   await testCompleteLoginSessionSignsTokensOnTenantHost();
   await testStartSetupDoesNotSetNonceCookie();
   await testStartLoginDoesNotSetNonceCookie();
+  await testStartLoginWithoutConnectionReturnsToTheSignInPage();
+  await testSyncNowWhileAnotherRunsIsAConflict();
+  testDisconnectHasTheBulkWriteWaits();
   await testRefusedSsoSessionsAreRecorded();
   await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testFailedSsoRoundTripsAreRecordedInATrustedTenant);
   await withEnv({ ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' }, testConsentReturnNeedsAStateSignedForConsent);

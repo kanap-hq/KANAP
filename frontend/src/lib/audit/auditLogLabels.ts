@@ -24,6 +24,7 @@ export const AUDIT_EVENT_ACTIONS = [
   'password_reset_completed',
   'sso_login',
   'sso_login_failed',
+  'sso_link_requested',
   'mcp_connection_refused',
   'export',
   'import',

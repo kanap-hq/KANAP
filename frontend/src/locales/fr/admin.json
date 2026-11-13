@@ -306,6 +306,7 @@
       "restored": "Restaurer",
       "sso_login": "Connexion avec Microsoft",
       "sso_login_failed": "Échec de connexion avec Microsoft",
+      "sso_link_requested": "Confirmation de liaison Microsoft demandée",
       "update": "Mettre à jour"
     },
     "columns": {
@@ -1596,9 +1597,18 @@
       "connect": "Connecter",
       "connecting": "Connexion en cours…",
       "disconnect": "Déconnecter",
-      "disconnecting": "Déconnexion en cours…",
       "reconnect": "Reconnecter",
       "testSignIn": "Tester la connexion"
+    },
+    "disconnect": {
+      "title": "Déconnecter Microsoft Entra ID",
+      "keepPassword_one": "{{count}} compte garde son mot de passe",
+      "keepPassword_other": "{{count}} comptes gardent leur mot de passe",
+      "needPassword_one": "{{count}} compte n'a pas de mot de passe et en créera un par Mot de passe oublié",
+      "needPassword_other": "{{count}} comptes n'ont pas de mot de passe et en créeront un par Mot de passe oublié",
+      "needPasswordNoEmail_one": "{{count}} compte n'a pas de mot de passe : un administrateur le définit (Réinitialisation du mot de passe, guide d'exploitation)",
+      "needPasswordNoEmail_other": "{{count}} comptes n'ont pas de mot de passe : un administrateur les définit (Réinitialisation du mot de passe, guide d'exploitation)",
+      "ownPassword": "Votre nouveau mot de passe"
     },
     "entra": {
       "connected": "Connecté",
@@ -2546,7 +2556,8 @@
       "sendReset": "Envoyer une réinitialisation de mot de passe",
       "delete": "Supprimer",
       "disableSelected": "Désactiver ({{count}})",
-      "dataAccess": "Accès aux données"
+      "dataAccess": "Accès aux données",
+      "unlinkMicrosoft": "Délier de Microsoft"
     },
     "columns": {
       "lastName": "Nom",
@@ -2588,6 +2599,7 @@
       "inviteConfirm_one": "Envoyer une invitation à {{email}} ?",
       "inviteConfirm_other": "Envoyer des invitations à {{count}} utilisateurs ?",
       "disableConfirm": "{{name}} perdra l'accès et sera déconnecté immédiatement. Désactiver ce compte ?",
+      "unlinkMicrosoftConfirm": "{{name}} se connectera désormais avec un mot de passe. Délier ce compte de Microsoft ?",
       "deleteConfirm": "Supprimer {{name}} ? Cette action est irréversible.",
       "inviteSentOne": "Invitation envoyée à {{email}}",
       "resetSent": "E-mail de réinitialisation envoyé à {{email}}",

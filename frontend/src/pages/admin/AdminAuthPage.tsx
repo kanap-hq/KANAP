@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Box, Button, Card, CardContent, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, CircularProgress, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -8,9 +8,12 @@ import { formatShortDateTime } from '../../lib/dateFormat';
 import PageHeader from '../../components/PageHeader';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { useDataAccessAdmin } from '../../auth/dataAccess';
 import { useTenant } from '../../tenant/TenantContext';
 import ForbiddenPage from '../ForbiddenPage';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { useFeatures } from '../../config/FeaturesContext';
+import { KanapDialog } from '../../components/design';
 
 type DirectorySyncInfo = {
   status: 'never' | 'ok' | 'consent_required' | 'error' | string;
@@ -25,24 +28,45 @@ type DirectorySyncInfo = {
   consent_url: string | null;
 };
 
+/**
+ * What a disconnect does to the linked accounts, from the server: how many keep a password, how
+ * many have none, and whether the administrator must set their own.
+ */
+type DisconnectSummary = {
+  keep_password: number;
+  need_password: number;
+  password_required: boolean;
+};
+
 type AuthSettings = {
   sso_provider: 'none' | 'entra' | string;
   entra_tenant_id: string | null;
   sso_enabled: boolean;
   entra_metadata: Record<string, any> | null;
   directory_sync: DirectorySyncInfo | null;
+  disconnect?: DisconnectSummary | null;
 };
+
+/** The shortest password, as for a password reset. */
+const PASSWORD_MIN_LENGTH = 8;
 
 type SyncRunResult = { status: string; message?: string | null; synced: number; disabled: number; removed: number };
 
 export default function AdminAuthPage() {
-  const { t } = useTranslation(['admin', 'common']);
+  const { t } = useTranslation(['admin', 'common', 'validation']);
   const { hasLevel } = useAuth();
+  // Disconnect and Sync now write the persons of the whole workspace: reserved to people with
+  // access to all data, as the other person administration.
+  const unscopedAdmin = useDataAccessAdmin();
   const { isPlatformHost } = useTenant();
+  const { config } = useFeatures();
 
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [connecting, setConnecting] = React.useState(false);
   const [disconnecting, setDisconnecting] = React.useState(false);
+  const [disconnectOpen, setDisconnectOpen] = React.useState(false);
+  const [ownPassword, setOwnPassword] = React.useState('');
+  const [disconnectError, setDisconnectError] = React.useState<string | null>(null);
   const [syncing, setSyncing] = React.useState(false);
   const [syncResult, setSyncResult] = React.useState<SyncRunResult | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -111,28 +135,45 @@ export default function AdminAuthPage() {
       setSyncResult(res.data as SyncRunResult);
       await refetch();
     } catch (e: any) {
-      setActionError(getApiErrorMessage(e, t, t('auth.sync.error', { message: '' })));
+      if (e?.response?.status === 409 && e?.response?.data?.code === 'DIRECTORY_SYNC_RUNNING') {
+        setSyncResult({ status: 'already_running', synced: 0, disabled: 0, removed: 0 });
+      } else {
+        setActionError(getApiErrorMessage(e, t, t('auth.sync.error', { message: '' })));
+      }
     } finally {
       setSyncing(false);
     }
   };
 
-  const handleDisconnect = async () => {
-    if (!connected || !data) return;
+  const summary = data?.disconnect ?? null;
+  const passwordRequired = !!summary?.password_required;
+  const passwordTooShort = passwordRequired && ownPassword.length < PASSWORD_MIN_LENGTH;
+
+  const openDisconnect = () => {
     setActionError(null);
+    setDisconnectError(null);
+    setOwnPassword('');
+    setDisconnectOpen(true);
+  };
+
+  const handleDisconnect = async () => {
+    if (!connected || passwordTooShort) return;
+    setDisconnectError(null);
     setDisconnecting(true);
     try {
-      await api.post('/admin/auth/disconnect', {});
-      // Refetch settings to reflect disconnected state
-      await (async () => {
-        const res = await api.get('/admin/auth/settings');
-        // This relies on react-query's automatic refetch when key is invalidated;
-        // simplest dev UX is to reload the page.
-        window.location.reload();
-        return res.data;
-      })();
+      await api.post('/admin/auth/disconnect', passwordRequired ? { password: ownPassword } : {});
+      setDisconnectOpen(false);
+      await refetch();
     } catch (e: any) {
-      setActionError(getApiErrorMessage(e, t, t('auth.messages.disconnectFailed')));
+      const message = getApiErrorMessage(e, t, t('auth.messages.disconnectFailed'));
+      setDisconnectError(message);
+      // The refusal may come from a state the page did not show (disconnected meanwhile, a password
+      // removed): read it again, and close the confirmation when there is nothing left to disconnect.
+      const fresh = await refetch();
+      if (fresh.data && !(fresh.data.sso_provider === 'entra' && fresh.data.entra_tenant_id)) {
+        setDisconnectOpen(false);
+        setActionError(message);
+      }
     } finally {
       setDisconnecting(false);
     }
@@ -207,14 +248,16 @@ export default function AdminAuthPage() {
                       <Button variant="outlined" onClick={handleTestSignIn} disabled={disconnecting}>
                         {t('auth.actions.testSignIn')}
                       </Button>
-                      <Button
-                        variant="text"
-                        color="error"
-                        onClick={handleDisconnect}
-                        disabled={disconnecting || connecting}
-                      >
-                        {disconnecting ? t('auth.actions.disconnecting') : t('auth.actions.disconnect')}
-                      </Button>
+                      {unscopedAdmin && (
+                        <Button
+                          variant="text"
+                          color="error"
+                          onClick={openDisconnect}
+                          disabled={disconnecting || connecting}
+                        >
+                          {t('auth.actions.disconnect')}
+                        </Button>
+                      )}
                     </>
                   )}
                 </Stack>
@@ -259,9 +302,11 @@ export default function AdminAuthPage() {
                           {t('auth.sync.grantAccess')}
                         </Button>
                       )}
-                      <Button variant="outlined" onClick={handleSyncNow} disabled={syncing || disconnecting}>
-                        {syncing ? t('auth.sync.syncing') : t('auth.sync.syncNow')}
-                      </Button>
+                      {unscopedAdmin && (
+                        <Button variant="outlined" onClick={handleSyncNow} disabled={syncing || disconnecting}>
+                          {syncing ? t('auth.sync.syncing') : t('auth.sync.syncNow')}
+                        </Button>
+                      )}
                     </Stack>
                   </Stack>
                 )}
@@ -270,6 +315,40 @@ export default function AdminAuthPage() {
           </Card>
         )}
       </Box>
+      {summary && (
+        <KanapDialog
+          open={disconnectOpen}
+          title={t('auth.disconnect.title')}
+          onClose={() => { if (!disconnecting) setDisconnectOpen(false); }}
+          onSave={handleDisconnect}
+          saveLabel={t('auth.actions.disconnect')}
+          saveVariant="action-danger"
+          saveDisabled={passwordTooShort}
+          saveLoading={disconnecting}
+        >
+          <Stack spacing={1.5}>
+            <Typography variant="body2">{t('auth.disconnect.keepPassword', { count: summary.keep_password })}</Typography>
+            <Typography variant="body2">
+              {t(config.features.email ? 'auth.disconnect.needPassword' : 'auth.disconnect.needPasswordNoEmail', { count: summary.need_password })}
+            </Typography>
+            {passwordRequired && (
+              <TextField
+                type="password"
+                size="small"
+                fullWidth
+                autoFocus
+                autoComplete="new-password"
+                label={t('auth.disconnect.ownPassword')}
+                value={ownPassword}
+                onChange={(event) => setOwnPassword(event.target.value)}
+                error={ownPassword.length > 0 && passwordTooShort}
+                helperText={ownPassword.length > 0 && passwordTooShort ? t('validation:minLengthPassword') : undefined}
+              />
+            )}
+            {disconnectError && <Alert severity="error">{disconnectError}</Alert>}
+          </Stack>
+        </KanapDialog>
+      )}
     </>
   );
 }

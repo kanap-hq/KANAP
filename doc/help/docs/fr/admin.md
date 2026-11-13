@@ -66,6 +66,7 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 | **Renouvellement de session refusé** | La session n'a pas pu être renouvelée, par exemple parce qu'elle a expiré |
 | **Réinitialisation du mot de passe demandée** / **Réinitialisation du mot de passe terminée** | Quelqu'un demande un lien de réinitialisation, puis définit un nouveau mot de passe avec ce lien. Si l'e-mail contenant le lien n'a pas pu être envoyé, le **motif** le signale |
 | **Connexion avec Microsoft** / **Échec de connexion avec Microsoft** | Une connexion via Microsoft Entra ID réussit ou échoue |
+| **Confirmation de liaison Microsoft demandée** | Une connexion Microsoft a trouvé un compte existant avec la même adresse e-mail, et un lien de confirmation lui a été envoyé. Quand l'e-mail n'a pas pu être envoyé, la **Raison** l'indique |
 
 **Exports** (table **Export**) : chaque fichier que Kadratis produit à partir de vos données : exports de listes et de rapports en CSV ou Excel, documents et rapports PDF. La ligne indique ce qui a été exporté et par qui. Ses détails donnent le format, les paramètres de l'export (filtres, recherche, tri, année, etc.) et, pour un fichier de lignes, le nombre de lignes écrites. L'export du journal d'audit est lui aussi enregistré.
 
@@ -206,6 +207,7 @@ Actions de ligne, depuis le menu au bout de chaque ligne :
 | **Activer** / **Désactiver** | Activer ou désactiver le compte. La désactivation déconnecte la personne immédiatement. |
 | **Envoyer une invitation** | Envoyer une invitation par e-mail. Voir [Invitations](#invitations). Masqué pour les comptes Microsoft Entra. |
 | **Envoyer une réinitialisation de mot de passe** | Envoyer un lien de réinitialisation de mot de passe par e-mail. Affiché uniquement pour les comptes locaux activés. |
+| **Délier de Microsoft** | Rend un compte Microsoft Entra local, après une confirmation : il se connecte avec son mot de passe, ou en crée un avec **Mot de passe oublié**. Pour un compte relié au mauvais compte Microsoft. Affiché pour les comptes Microsoft Entra. |
 | **Accès aux données** | Ouvre l'utilisateur sur l'onglet **Accès aux données**. Affiché aux personnes qui ont accès à toutes les données, sur les lignes des autres personnes. |
 | **Supprimer** | Supprimer définitivement l'utilisateur. Les enregistrements sur lesquels il a travaillé restent, sans lui. Vous ne pouvez pas supprimer votre propre compte. Pour bloquer l'accès d'une personne en gardant son compte, désactivez-le plutôt. |
 
@@ -293,7 +295,7 @@ Lors de la modification d'un de ces utilisateurs, les champs e-mail, nom, poste 
 
 Vous pouvez toujours gérer ses rôles, sa société, son département et le commutateur Activé.
 
-Les comptes Microsoft Entra n'ont jamais de mot de passe Kadratis. Ils ne peuvent recevoir ni invitation ni réinitialisation de mot de passe.
+Un compte Microsoft Entra ne peut recevoir ni invitation ni réinitialisation de mot de passe. Un mot de passe qu'il avait avant sa liaison reste valable. **Délier de Microsoft** dans le menu de la ligne en refait un compte local.
 
 Si une personne est supprimée de votre annuaire, ou si son compte d'annuaire est désactivé, la synchronisation nocturne désactive son compte Kadratis. Elle est déconnectée immédiatement et ses données sont conservées.
 
@@ -594,7 +596,15 @@ Connectez Kadratis à votre tenant Microsoft Entra ID pour le SSO :
 | **Connecter** | Lancer le flux de configuration Microsoft Entra |
 | **Reconnecter** | Relancer le flux de configuration (affiché lorsque déjà connecté) |
 | **Tester la connexion** | Tester la connexion SSO avec votre compte Microsoft |
-| **Déconnecter** | Supprimer la configuration SSO (revient à l'auth locale) |
+| **Déconnecter** | Retire la connexion. Chaque compte Microsoft Entra devient un compte local. Voir [Déconnexion](#deconnexion) |
+
+Tant que l'espace de travail n'est pas connecté, **Se connecter avec Microsoft** sur la page de connexion est grisé, avec **La connexion avec Microsoft n'est pas configurée pour cet espace de travail.** au survol. Une installation sans connexion Microsoft n'affiche pas ce bouton.
+
+### Déconnexion
+
+**Déconnecter** ouvre une confirmation avec deux nombres : les comptes qui gardent leur mot de passe, et les comptes qui n'en ont pas et en créeront un avec **Mot de passe oublié** sur la page de connexion. Aucun e-mail ne leur est envoyé. Sur une installation sans e-mail, la seconde ligne indique qu'un administrateur définit leur mot de passe, comme décrit dans [Réinitialisation du mot de passe](on-premise/operations.md#reinitialisation-du-mot-de-passe). Si votre propre compte n'a pas de mot de passe, la confirmation vous en demande un (au moins 8 caractères).
+
+Après la déconnexion, chaque compte relié à Microsoft est un compte local : il garde le mot de passe qu'il a, et son historique enregistre le changement. Les sessions déjà ouvertes restent ouvertes. La synchronisation quotidienne de l'annuaire s'arrête et ne touche plus ces comptes. Si vous connectez de nouveau l'espace plus tard, les comptes existants sont reliés de nouveau comme décrit dans [Connexion à la volée avec Microsoft](#connexion-a-la-volee-avec-microsoft).
 
 ### Synchronisation quotidienne de l'annuaire
 
