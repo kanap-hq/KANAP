@@ -208,6 +208,18 @@ describe('RolesPage duplicate', () => {
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/roles/r5/duplicate', { role_name: 'Acheteurs bis' }));
   });
 
+  it('does not offer to duplicate a role the reader may not give', async () => {
+    roles.items = [
+      { id: 'r7', role_name: 'Budget owners', role_description: '', user_count: 0, grantable: false },
+      { id: 'r8', role_name: 'Readers', role_description: '', user_count: 0, grantable: true },
+    ];
+    renderPage();
+    expect((await screen.findAllByText('Budget owners')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'roles.actions.duplicate' })).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: /Readers/ }));
+    expect(await screen.findByRole('button', { name: 'roles.actions.duplicate' })).toBeTruthy();
+  });
+
   it('proposes the copy name in each language', () => {
     const names = [enAdmin, frAdmin, deAdmin, esAdmin].map((file) => file.roles.dialogs.duplicateName);
     expect(names).toEqual(['{{name}} (copy)', '{{name}} (copie)', '{{name}} (Kopie)', '{{name}} (copia)']);

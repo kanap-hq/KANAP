@@ -13,7 +13,16 @@ import { roleDescription, roleLabel } from '../../utils/roleLabel';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { useKanapDialogs } from '../../components/design';
 
-type Role = { id: string; role_name: string; role_description: string; is_system?: boolean; is_built_in?: boolean; user_count?: number };
+type Role = {
+  id: string;
+  role_name: string;
+  role_description: string;
+  is_system?: boolean;
+  is_built_in?: boolean;
+  user_count?: number;
+  /** Whether the reader may give the role, as the server reads it: a copy gives its rights too. */
+  grantable?: boolean;
+};
 type PermissionLevel = 'reader'|'contributor'|'member'|'admin'|null;
 type ConcretePermissionLevel = Exclude<PermissionLevel, null>;
 
@@ -233,7 +242,7 @@ export default function RolesPage() {
         title={t('roles.title')}
         actions={canEdit ? (
           <Stack direction="row" spacing={1}>
-            {selected && !isSystem && (
+            {selected && !isSystem && selected.grantable !== false && (
               <Button variant="action" onClick={() => { void askDuplicate(); }} disabled={duplicating}>
                 {duplicating ? t('roles.actions.duplicating') : t('roles.actions.duplicate')}
               </Button>

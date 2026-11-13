@@ -2019,6 +2019,8 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 - POST `/roles` → create role `{ role_name, role_description }` (admin only)
   - The names of the system and built-in roles are theirs, as stored and as the screen shows them in its four languages (`SHIPPED_ROLE_NAMES`, `roles/system-roles.ts`, a copy of `roles.builtIn.<slug>.name` in the locale files): another role named so in any case or with surrounding spaces, by POST `/roles`, a duplicate, PUT `/roles/:id`, POST `/users` with `role_name` or a users file, is `400` `ROLE_NAME_RESERVED` (a row error in a users file) and nothing is written. A role already stored under such a name keeps it. PUT `/roles/:id` to the name of another role is `400` `ROLE_NAME_TAKEN`. The exact name of another role on POST `/roles` returns it.
 - DELETE `/roles/:id` → delete role (no users assigned, not system)
+- POST `/roles/:id/duplicate` → copy a role and its rights `{ role_name? }` (not a system role)
+  - A caller who is not an administrator copies only a role they could give (`grantable`): a role with a module level above theirs is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level) and nothing is written. The `tasks: reader` added with a right on budget, projects or contracts is added only when the caller reads tasks.
 - GET `/roles/:id/permissions` → returns per-page permission levels for the role
   - Example: `{ companies: 'manager', suppliers: null, ... }`
 - PUT `/roles/:id/permissions` → sets per-page permission levels for the role
