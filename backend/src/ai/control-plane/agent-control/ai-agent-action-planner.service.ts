@@ -11,7 +11,7 @@ import {
   RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY,
   VerbatimCandidate,
 } from './ai-agent-prompt-compiler.service';
-import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
+import { AiAgentLlmClient, agentCallCostEur, parsePositiveIntEnv } from './ai-agent-llm-client';
 import type { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { estimateJsonTokens } from './json-token-estimate';
@@ -150,6 +150,7 @@ const DEFAULT_LLM_TIMEOUT_MS = 120_000;
 // JSON (finish_reason=length). Override per deployment via AI_AGENT_ACTION_PLANNER_MAX_TOKENS.
 const MAX_ACTION_PLANNER_OUTPUT_TOKENS = 6000;
 const MAX_ADMINISTRATIVE_REPLY_OUTPUT_TOKENS = 3000;
+const ADMINISTRATIVE_REPLY_MAX_TOKENS_ENV = 'AI_AGENT_ADMINISTRATIVE_REPLY_MAX_TOKENS';
 
 const AdministrativeReplySchema = z.object({
   body: z.string().trim().min(1).max(12000).nullable().optional(),
@@ -428,8 +429,9 @@ export class AiAgentActionPlannerService {
     };
   }
 
+  // The limit the call uses (draftAdministrativeReply): its projection reads the same one.
   maxAdministrativeReplyOutputTokens(): number {
-    return MAX_ADMINISTRATIVE_REPLY_OUTPUT_TOKENS;
+    return parsePositiveIntEnv(process.env[ADMINISTRATIVE_REPLY_MAX_TOKENS_ENV], MAX_ADMINISTRATIVE_REPLY_OUTPUT_TOKENS);
   }
 
   /**
@@ -474,7 +476,7 @@ export class AiAgentActionPlannerService {
       systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY, input.profile),
       userPayload,
       maxTokens: MAX_ADMINISTRATIVE_REPLY_OUTPUT_TOKENS,
-      maxTokensEnvName: 'AI_AGENT_ADMINISTRATIVE_REPLY_MAX_TOKENS',
+      maxTokensEnvName: ADMINISTRATIVE_REPLY_MAX_TOKENS_ENV,
       timeoutEnvName: 'AI_AGENT_ACTION_PLANNER_TIMEOUT_MS',
       defaultTimeoutMs: DEFAULT_LLM_TIMEOUT_MS,
       schema: AdministrativeReplySchema,

@@ -15316,6 +15316,52 @@ async function testAWithdrawnReplyIsToldInTheNoteLanguage() {
   assert.equal(sentences.size, 4, 'one sentence per language');
 }
 
+async function withEnv<T>(name: string, value: string, run: () => Promise<T>): Promise<T> {
+  const previous = process.env[name];
+  process.env[name] = value;
+  try {
+    return await run();
+  } finally {
+    if (previous === undefined) delete process.env[name];
+    else process.env[name] = previous;
+  }
+}
+
+// The brief and the reply rewrite are projected with the token limit their call uses, and a
+// failed or over-limit call leaves the triage on its safe side: the synthesis' own brief, or no
+// reply at all.
+async function testTheBriefAndTheRewriteFailClosed() {
+  await withEnv('AI_AGENT_TECHNICIAN_BRIEF_MAX_TOKENS', '1234', async () => {
+    assert.equal(new AiReplySynthesisService({} as any).maxTechnicianBriefOutputTokens(), 1234);
+  });
+  await withEnv('AI_AGENT_ADMINISTRATIVE_REPLY_MAX_TOKENS', '4321', async () => {
+    assert.equal(new AiAgentActionPlannerService({} as any).maxAdministrativeReplyOutputTokens(), 4321);
+  });
+
+  const briefCases: Array<[string, () => Promise<Awaited<ReturnType<typeof runR3Triage>>>, boolean]> = [
+    ['brief over the run limit', () => withEnv('AI_AGENT_TECHNICIAN_BRIEF_MAX_TOKENS', '50000', () => runR3Triage('sourced', 'used')), false],
+    ['brief call fails', () => runR3Triage('sourced', 'used', true, { technician_brief: () => null }), true],
+  ];
+  for (const [label, run, called] of briefCases) {
+    const result = await run();
+    assert.equal(result.calls.some((call) => call.taskName === 'technician_brief'), called, `${label}: the call`);
+    assert.ok(result.publicReply?.includes('Relancez le service de licence'), `${label}: the reply still goes out: ${result.publicReply}`);
+    assert.ok(result.internalNote?.includes('Résumé public'), `${label}: the synthesis brief: ${result.internalNote}`);
+    assert.ok(!result.internalNote?.includes('Résumé complet'), label);
+  }
+
+  const rewriteCases: Array<[string, () => Promise<Awaited<ReturnType<typeof runR3Triage>>>, boolean]> = [
+    ['rewrite over the run limit', () => withEnv('AI_AGENT_ADMINISTRATIVE_REPLY_MAX_TOKENS', '50000', () => runR3Triage('administrative', 'used')), false],
+    ['rewrite call fails', () => runR3Triage('administrative', 'used', true, { administrative_reply: () => null }), true],
+  ];
+  for (const [label, run, called] of rewriteCases) {
+    const result = await run();
+    assert.equal(result.calls.some((call) => call.taskName === 'administrative_reply'), called, `${label}: the call`);
+    assert.equal(result.publicReply, null, `${label}: no reply`);
+    assert.ok(result.internalNote?.includes(withdrawnReplySentence('administrative', true, 'en')), `${label}: ${result.internalNote}`);
+  }
+}
+
 // The names of the workspace's applications are read once per triage, in the workspace only, and
 // only when a code opens the ticket title.
 async function testTheTitleCodesReadTheWorkspaceApplicationsOnce() {
@@ -18281,6 +18327,7 @@ async function run() {
   await testTheTitleCodesReadTheWorkspaceApplicationsOnce();
   await testTheWebSearchReadsThePublicThreadOnly();
   await testAWithdrawnReplyIsToldInTheNoteLanguage();
+  await testTheBriefAndTheRewriteFailClosed();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();

@@ -9,7 +9,7 @@ import {
   RUNTIME_SAFETY_FLOOR_SYNTHESIS,
   RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF,
 } from './ai-agent-prompt-compiler.service';
-import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
+import { AiAgentLlmClient, agentCallCostEur, parsePositiveIntEnv } from './ai-agent-llm-client';
 import type { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { estimateJsonTokens } from './json-token-estimate';
 import { HTML_TAGS, SPACES_BEFORE_LINE_BREAKS, hasHtmlTag } from '../../../common/text-scan';
@@ -116,6 +116,7 @@ export const MAX_SOURCE_PASSAGE_CHARS = 480;
 // JSON (finish_reason=length). Override per deployment via AI_AGENT_SYNTHESIS_MAX_TOKENS.
 const MAX_SYNTHESIS_OUTPUT_TOKENS = 8000;
 const MAX_TECHNICIAN_BRIEF_OUTPUT_TOKENS = 3000;
+const TECHNICIAN_BRIEF_MAX_TOKENS_ENV = 'AI_AGENT_TECHNICIAN_BRIEF_MAX_TOKENS';
 const MAX_TECHNICIAN_BRIEF_REPLY_CHARS = 1500;
 
 // Source fields are tolerant on purpose: the backend re-maps each source to a real known
@@ -282,8 +283,9 @@ export class AiReplySynthesisService {
     return MAX_SYNTHESIS_OUTPUT_TOKENS;
   }
 
+  // The limit the call uses (writeTechnicianBrief): its projection reads the same one.
   maxTechnicianBriefOutputTokens(): number {
-    return MAX_TECHNICIAN_BRIEF_OUTPUT_TOKENS;
+    return parsePositiveIntEnv(process.env[TECHNICIAN_BRIEF_MAX_TOKENS_ENV], MAX_TECHNICIAN_BRIEF_OUTPUT_TOKENS);
   }
 
   /**
@@ -345,7 +347,7 @@ export class AiReplySynthesisService {
       systemPrompt: compileSystemPrompt(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF, input.profile),
       userPayload: payload,
       maxTokens: MAX_TECHNICIAN_BRIEF_OUTPUT_TOKENS,
-      maxTokensEnvName: 'AI_AGENT_TECHNICIAN_BRIEF_MAX_TOKENS',
+      maxTokensEnvName: TECHNICIAN_BRIEF_MAX_TOKENS_ENV,
       timeoutEnvName: 'AI_AGENT_REPLY_SYNTHESIS_TIMEOUT_MS',
       defaultTimeoutMs: DEFAULT_LLM_TIMEOUT_MS,
       schema: TechnicianBriefSchema,

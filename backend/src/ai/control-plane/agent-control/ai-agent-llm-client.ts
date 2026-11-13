@@ -115,7 +115,7 @@ export function stripJsonFence(value: string): string {
   return trimmed;
 }
 
-function parsePositiveIntEnv(value: string | undefined, fallback: number): number {
+export function parsePositiveIntEnv(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(String(value ?? '').trim(), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
