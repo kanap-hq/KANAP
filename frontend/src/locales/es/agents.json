@@ -542,6 +542,8 @@
       "planner": "Planificador",
       "interpreter": "Intérprete",
       "synthesis": "Síntesis",
+      "technician_brief": "Nota para el técnico",
+      "administrative_reply": "Reescritura de la respuesta",
       "monitoring_diagnosis": "Diagnóstico"
     },
     "sharedContextDialog": {

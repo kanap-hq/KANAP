@@ -112,8 +112,8 @@ const AGENT_TEST_SECTION_ID = 'agent-test';
 const EFFECTIVE_PROMPT_OPEN_KEY = 'kanap.agentWorkspace.effectivePromptOpen';
 const OPERATING_MORE_OPEN_KEY = 'kanap.agentWorkspace.operatingMoreOpen';
 
-type EffectivePromptTaskKey = 'action_planner' | 'planner' | 'interpreter' | 'synthesis' | 'monitoring_diagnosis';
-const HELPDESK_EFFECTIVE_PROMPT_TASKS: EffectivePromptTaskKey[] = ['action_planner', 'planner', 'interpreter', 'synthesis'];
+type EffectivePromptTaskKey = 'action_planner' | 'planner' | 'interpreter' | 'synthesis' | 'technician_brief' | 'administrative_reply' | 'monitoring_diagnosis';
+const HELPDESK_EFFECTIVE_PROMPT_TASKS: EffectivePromptTaskKey[] = ['action_planner', 'planner', 'interpreter', 'synthesis', 'technician_brief', 'administrative_reply'];
 const SRE_EFFECTIVE_PROMPT_TASKS: EffectivePromptTaskKey[] = ['monitoring_diagnosis'];
 
 function numberField(value: string): number | null {

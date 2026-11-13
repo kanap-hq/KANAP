@@ -49,6 +49,9 @@ import { auditActivityType, auditActivityTypeClauseSql } from '../control-plane/
 import {
   AiAgentPromptCompilerService,
   RUNTIME_SAFETY_FLOOR_ACTION_PLANNER,
+  compileSystemPrompt,
+  RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY,
+  RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF,
 } from '../control-plane/agent-control/ai-agent-prompt-compiler.service';
 import { AiAgentActionPlannerService } from '../control-plane/agent-control/ai-agent-action-planner.service';
 import { AiAgentLlmClient } from '../control-plane/agent-control/ai-agent-llm-client';
@@ -11046,6 +11049,10 @@ async function testEffectivePromptExposesBoundsApplied() {
   assert.ok(preview.tasks.planner, 'the planner task must be exposed');
   assert.ok(preview.tasks.synthesis.bounds_applied.some((entry: string) => entry.startsWith('instructions_clamped')));
   assert.ok(preview.tasks.planner.bounds_applied.some((entry: string) => entry.startsWith('instructions_clamped')));
+  // The two calls that read the thread apart (lot R3 of 26.11.8) are previewed with their own floor.
+  assert.deepEqual(Object.keys(preview.tasks).sort(), ['action_planner', 'administrative_reply', 'interpreter', 'planner', 'synthesis', 'technician_brief']);
+  assert.equal(preview.tasks.technician_brief.system_prompt, compileSystemPrompt(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF, (await (service as any).compileAgentPromptRuntime(context, row)).synthesisGuidance));
+  assert.equal(preview.tasks.administrative_reply.system_prompt, compileSystemPrompt(RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY, (await (service as any).compileAgentPromptRuntime(context, row)).actionPlannerGuidance));
 }
 
 async function testAgentAutonomyGrantRequiresEligibilityAndAllowlist() {

@@ -1990,6 +1990,8 @@ export class AiAgentControlService {
     const planner = taskPreview(RUNTIME_SAFETY_FLOOR_PLANNER, runtime.plannerGuidance);
     const interpreter = taskPreview(RUNTIME_SAFETY_FLOOR_INTERPRETER, runtime.interpreterGuidance);
     const synthesis = taskPreview(RUNTIME_SAFETY_FLOOR_SYNTHESIS, runtime.synthesisGuidance);
+    const technicianBrief = taskPreview(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF, runtime.synthesisGuidance);
+    const administrativeReply = taskPreview(RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY, runtime.actionPlannerGuidance);
     return {
       agent_definition_id: definition.id,
       prompt_profile: runtime.promptProfileSummary,
@@ -2000,12 +2002,16 @@ export class AiAgentControlService {
         planner.bounds_applied,
         interpreter.bounds_applied,
         synthesis.bounds_applied,
+        technicianBrief.bounds_applied,
+        administrativeReply.bounds_applied,
       ]),
       tasks: {
         action_planner: actionPlanner,
         planner,
         interpreter,
         synthesis,
+        technician_brief: technicianBrief,
+        administrative_reply: administrativeReply,
       },
     };
   }
