@@ -93,6 +93,8 @@ export type ReplySynthesisResult = {
 
 export type TechnicianBriefResult = {
   technician_brief: string;
+  // Why the answer is not usable (it was paid for all the same); null when it is.
+  failure: string | null;
   model: string;
   usage: { input_tokens: number; output_tokens: number } | null;
   estimated_tokens: number;
@@ -358,14 +360,13 @@ export class AiReplySynthesisService {
     if (!response) {
       throw new Error('No LLM runtime is configured for the technician brief.');
     }
-    if (!response.ok) {
-      throw new Error(`Technician brief returned invalid JSON: ${response.metadata.failure?.message ?? 'invalid structured JSON'}`);
-    }
+    // A call that answered is paid for, usable or not: its tokens are reported either way.
     const actualInputTokens = response.usage ? response.usage.input_tokens : estimateJsonTokens(payload);
-    const actualOutputTokens = response.usage ? response.usage.output_tokens : estimateJsonTokens(response.text);
+    const actualOutputTokens = response.usage ? response.usage.output_tokens : estimateJsonTokens(response.text ?? '');
     return {
-      technician_brief: normalizeText(response.value.technician_brief),
-      model: `${response.runtime.providerId}:${response.runtime.model}`,
+      technician_brief: response.ok ? normalizeText(response.value.technician_brief) : '',
+      failure: response.ok ? null : `Technician brief returned invalid JSON: ${response.metadata.failure?.message ?? 'invalid structured JSON'}`,
+      model: response.runtime ? `${response.runtime.providerId}:${response.runtime.model}` : 'unknown',
       usage: response.usage,
       estimated_tokens: actualInputTokens + actualOutputTokens,
       estimated_cost_eur: agentCallCostEur(actualInputTokens, actualOutputTokens, response.runtime, response.usage),

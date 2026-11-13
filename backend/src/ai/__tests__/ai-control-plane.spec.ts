@@ -14461,8 +14461,8 @@ async function runTriageWithSimulatedModel(input: {
   // Persona instructions, and the lines of a shared context the agent is given.
   instructions?: string[];
   sharedContextLines?: string[];
-  // The answers are checked against the schema of their call, as the client does; an answer that
-  // fails it is a failed call that still reports its tokens.
+  // The answers of the brief and of the reply rewrite are checked against the schema of their
+  // call, as the client does; an answer that fails it is a failed call that reports its tokens.
   validateSchemas?: boolean;
 }) {
   const { manager, stores } = createMemoryManager();
@@ -14622,7 +14622,8 @@ async function runTriageWithSimulatedModel(input: {
     callStructuredJsonModel: async (_context: unknown, request: any) => {
       calls.push({ taskName: request.taskName, payload: request.userPayload, images: request.images ?? null });
       const answer = input.respond?.(request.taskName, request.userPayload);
-      if (answer && input.validateSchemas && request.schema && !request.schema.safeParse(answer).success) {
+      const validated = input.validateSchemas && ['technician_brief', 'administrative_reply'].includes(request.taskName);
+      if (answer && validated && request.schema && !request.schema.safeParse(answer).success) {
         return {
           ...structuredJsonSuccess(answer, { usage: { input_tokens: 900, output_tokens: 300 } }),
           ok: false,
@@ -14630,7 +14631,7 @@ async function runTriageWithSimulatedModel(input: {
           metadata: { failure: { kind: 'schema_invalid', message: 'schema invalid' }, retry_attempted: true },
         };
       }
-      if (answer !== undefined) return answer === null ? null : structuredJsonSuccess(answer, input.validateSchemas ? { usage: { input_tokens: 900, output_tokens: 300 } } : undefined);
+      if (answer !== undefined) return answer === null ? null : structuredJsonSuccess(answer, validated ? { usage: { input_tokens: 900, output_tokens: 300 } } : undefined);
       switch (request.taskName) {
         case 'action_planner':
           return input.plan ? structuredJsonSuccess(input.plan) : null;
@@ -15431,6 +15432,19 @@ async function testALongBriefIsCutAtASentence() {
   assert.ok(/\.$/.test(shown) && !shown.endsWith('...'), `cut at the end of a sentence: …${shown.slice(-60)}`);
   const brief = (result.calls.find((call) => call.taskName === 'technician_brief')?.payload ?? {}) as any;
   assert.ok((brief.rules as string[]).some((rule) => /1000 characters/.test(rule)), 'the length is asked in the prompt');
+}
+
+// A paid call counts in the run, whether its answer is usable or not.
+async function testAFailedCallCountsItsTokens() {
+  const brief = await runR3Triage('sourced', 'used', true, { technician_brief: () => ({ technician_brief: 42 }) }, { validateSchemas: true });
+  const briefStep = r3Step(brief, 'technician_brief_synthesis');
+  assert.equal(briefStep?.status, 'failed', 'the brief step fails');
+  assert.equal(briefStep?.output_summary?.tokens, 1200, `its tokens: ${JSON.stringify(briefStep?.output_summary)}`);
+  const rewrite = await runR3Triage('administrative', 'used', true, { administrative_reply: () => ({ body: 42 }) }, { validateSchemas: true });
+  const rewriteStep = r3Step(rewrite, 'administrative_reply_synthesis');
+  assert.equal(rewriteStep?.status, 'failed', 'the rewrite step fails');
+  assert.equal(rewriteStep?.output_summary?.tokens, 1200, `its tokens: ${JSON.stringify(rewriteStep?.output_summary)}`);
+  assert.equal(rewrite.publicReply, null);
 }
 
 // The names of the workspace's applications are read once per triage, in the workspace only, and
@@ -18401,6 +18415,7 @@ async function run() {
   await testTheBriefAndTheRewriteFailClosed();
   await testTheRewrittenReplyKeepsTheSafeguards();
   await testALongBriefIsCutAtASentence();
+  await testAFailedCallCountsItsTokens();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();

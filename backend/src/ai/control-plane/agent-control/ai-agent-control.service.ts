@@ -1089,6 +1089,8 @@ export class AiAgentControlService {
         result: { model: string; usage: { input_tokens: number; output_tokens: number } | null; estimated_tokens: number; estimated_cost_eur: number; latency_ms: number };
         outputSummary: Record<string, unknown>;
         fallbackReason: string | null;
+        // The call answered (and is counted) but its answer is unusable.
+        failed?: boolean;
       }>;
     },
   ): Promise<string | null> {
@@ -1116,13 +1118,14 @@ export class AiAgentControlService {
     }
     const stepIndex = input.stepIndex();
     try {
-      const { result, outputSummary, fallbackReason } = await input.call();
+      const { result, outputSummary, fallbackReason, failed } = await input.call();
       await this.recordStageUsage(context, input.usageKey, input.runId, result);
       input.chargeRunLlmUsage(result);
       await this.recordStageRunStep(context, input.stage, {
         runId: input.runId,
         stepIndex,
-        status: 'completed',
+        status: failed ? 'failed' : 'completed',
+        ...(failed ? { errorMessage: fallbackReason } : {}),
         inputSummary: { ...input.inputSummary, model: result.model },
         outputSummary: {
           ...outputSummary,
@@ -6556,6 +6559,9 @@ export class AiAgentControlService {
         chargeRunLlmUsage,
         call: async () => {
           const drafted = await this.actionPlanner!.draftAdministrativeReply(context, administrativeReplyInput);
+          if (drafted.failure) {
+            return { result: drafted, outputSummary: { reply_length: 0 }, fallbackReason: `administrative_reply_error:${drafted.failure.slice(0, 180)}`, failed: true };
+          }
           // The safeguards of a reply: a configured exact message is sent exactly, and a line of
           // the operating context never goes to the requester.
           const verbatim = drafted.body ? resolveVerbatimCandidate(verbatimCandidates, drafted.body) : null;
@@ -6753,6 +6759,9 @@ export class AiAgentControlService {
         chargeRunLlmUsage,
         call: async () => {
           const brief = await this.replySynthesis!.writeTechnicianBrief(context, briefInput);
+          if (brief.failure) {
+            return { result: brief, outputSummary: { brief_length: 0 }, fallbackReason: `technician_brief_error:${brief.failure.slice(0, 180)}`, failed: true };
+          }
           if (brief.technician_brief) noteSynthesis = { ...reply, technician_brief: brief.technician_brief };
           return {
             result: brief,

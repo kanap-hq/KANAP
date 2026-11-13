@@ -135,6 +135,8 @@ export type AdministrativeReplyPromptInput = {
 
 export type AdministrativeReplyResult = {
   body: string;
+  // Why the answer is not usable (it was paid for all the same); null when it is.
+  failure: string | null;
   model: string;
   usage: { input_tokens: number; output_tokens: number } | null;
   estimated_tokens: number;
@@ -484,14 +486,13 @@ export class AiAgentActionPlannerService {
     if (!response) {
       throw new Error('No LLM runtime is configured for the administrative reply.');
     }
-    if (!response.ok) {
-      throw new Error(`Administrative reply returned invalid JSON: ${response.metadata.failure?.message ?? 'invalid structured JSON'}`);
-    }
+    // A call that answered is paid for, usable or not: its tokens are reported either way.
     const actualInputTokens = response.usage ? response.usage.input_tokens : estimateJsonTokens(userPayload);
-    const actualOutputTokens = response.usage ? response.usage.output_tokens : estimateJsonTokens(response.text);
+    const actualOutputTokens = response.usage ? response.usage.output_tokens : estimateJsonTokens(response.text ?? '');
     return {
-      body: typeof response.value.body === 'string' ? response.value.body.trim() : '',
-      model: `${response.runtime.providerId}:${response.runtime.model}`,
+      body: response.ok && typeof response.value.body === 'string' ? response.value.body.trim() : '',
+      failure: response.ok ? null : `Administrative reply returned invalid JSON: ${response.metadata.failure?.message ?? 'invalid structured JSON'}`,
+      model: response.runtime ? `${response.runtime.providerId}:${response.runtime.model}` : 'unknown',
       usage: response.usage,
       estimated_tokens: actualInputTokens + actualOutputTokens,
       estimated_cost_eur: agentCallCostEur(actualInputTokens, actualOutputTokens, response.runtime, response.usage),
