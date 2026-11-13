@@ -321,7 +321,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     controller: 'UsersController',
     reserved: [
         'bulkDelete', 'create', 'delete', 'deleteCheck', 'disable', 'enable', 'import', 'invite', 'setUserRoles',
-        'update',
+        'unlinkMicrosoft', 'update',
     ],
     allowed: {
       export: EXPORT, // GET export
