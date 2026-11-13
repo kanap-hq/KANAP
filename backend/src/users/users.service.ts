@@ -139,6 +139,13 @@ export function userEmailTaken(): ConflictException {
   return new ConflictException({ statusCode: 409, error: 'Conflict', code: 'USER_EMAIL_TAKEN', message: USER_EMAIL_TAKEN_MESSAGE });
 }
 
+export const ROLE_NOT_FOUND_MESSAGE = 'This role does not exist.';
+
+/** 400 `ROLE_NOT_FOUND`: a new person named with a role the workspace does not have. */
+export function roleNotFound(): BadRequestException {
+  return new BadRequestException({ statusCode: 400, error: 'Bad Request', code: 'ROLE_NOT_FOUND', message: ROLE_NOT_FOUND_MESSAGE });
+}
+
 /** A user as written to the audit log: a copy without its password hash or MFA secret. */
 export function userAuditSnapshot(user: Partial<User>): Record<string, unknown> {
   const snapshot: Record<string, unknown> = { ...user };
@@ -774,24 +781,15 @@ export class UsersService {
     const existing = await repo.findOne({ where: { email: params.email } });
     if (existing) throw userEmailTaken();
 
-    // Find or create role
-    let role: Role | null = null;
-    if (params.role_id) {
-      role = await this.rolesService.findById(params.role_id, { manager: opts?.manager });
-    }
-    const roleName = params.role_name ?? 'Contact';
-    if (!role) {
-      role = await this.rolesService.findByNameOrSystemName(roleName, { manager: opts?.manager });
-    }
+    // The role the person gets: `role_id`, else `role_name` (the Contact role when neither is
+    // given). A role the workspace does not have is refused, never made on the fly.
+    const role = params.role_id
+      ? await this.rolesService.findById(params.role_id, { manager: opts?.manager })
+      : await this.rolesService.findByNameOrSystemName(params.role_name ?? 'Contact', { manager: opts?.manager });
+    if (!role) throw roleNotFound();
     // A person created from a request gets a role within the rights of the one who creates them.
-    if (role && opts?.roleGrant) {
+    if (opts?.roleGrant) {
       await assertRoleGrantWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, null, [role.id]);
-    }
-    if (!role) {
-      role = await this.rolesService.createRole({
-        role_name: roleName,
-        role_description: `${roleName} role`,
-      }, { manager: opts?.manager });
     }
 
     const passwordToHash = params.password && params.password.trim().length > 0 ? params.password : null;

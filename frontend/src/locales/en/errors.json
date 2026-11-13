@@ -260,6 +260,7 @@
   "ROLE_IN_USE_other": "This role is given to {{usages}}. Give them another role first.",
   "ROLE_NAME_RESERVED": "This name belongs to a system or built-in role.",
   "ROLE_NAME_TAKEN": "A role already has this name.",
+  "ROLE_NOT_FOUND": "This role does not exist.",
   "DEPLOYMENT_IN_USE_one": "This deployment still has {{usages}}. Remove it first.",
   "DEPLOYMENT_IN_USE_other": "This deployment still has {{usages}}. Remove them first.",
   "INTERFACE_HAS_BINDINGS_one": "This interface has {{usages}}. Delete its binding with it, or remove it first.",

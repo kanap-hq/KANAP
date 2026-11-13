@@ -260,6 +260,7 @@
   "ROLE_IN_USE_other": "Este rol está asignado a {{usages}}. Asígneles primero otro rol.",
   "ROLE_NAME_RESERVED": "Este nombre pertenece a un rol del sistema o integrado.",
   "ROLE_NAME_TAKEN": "Ya hay un rol con este nombre.",
+  "ROLE_NOT_FOUND": "Este rol no existe.",
   "DEPLOYMENT_IN_USE_one": "Este despliegue todavía tiene {{usages}}. Quítelo primero.",
   "DEPLOYMENT_IN_USE_other": "Este despliegue todavía tiene {{usages}}. Quítelos primero.",
   "INTERFACE_HAS_BINDINGS_one": "Esta interfaz tiene {{usages}}. Elimine su enlace con ella, o quítelo primero.",

@@ -260,6 +260,7 @@
   "ROLE_IN_USE_other": "Ce rôle est attribué à {{usages}}. Attribuez-leur d’abord un autre rôle.",
   "ROLE_NAME_RESERVED": "Ce nom est celui d’un rôle système ou intégré.",
   "ROLE_NAME_TAKEN": "Un rôle porte déjà ce nom.",
+  "ROLE_NOT_FOUND": "Ce rôle n'existe pas.",
   "DEPLOYMENT_IN_USE_one": "Ce déploiement a encore {{usages}}. Retirez-le d'abord.",
   "DEPLOYMENT_IN_USE_other": "Ce déploiement a encore {{usages}}. Retirez-les d'abord.",
   "INTERFACE_HAS_BINDINGS_one": "Cette interface a {{usages}}. Supprimez sa liaison avec elle, ou retirez-la d’abord.",
