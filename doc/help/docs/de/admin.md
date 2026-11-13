@@ -449,7 +449,7 @@ Die Rollenseite hat ein zweispaltiges Layout:
 - **Duplizieren**: Bestehende Rolle (einschließlich integrierter Rollen) als Ausgangspunkt kopieren. Das Fenster fragt nach dem Namen der Kopie. Nicht verfügbar für Systemrollen und, ohne die Rolle Administrator, für eine Rolle über Ihren Rechten.
 - **Löschen**: Benutzerdefinierte Rolle entfernen. Eine Rolle, die Benutzern zugewiesen ist, kann nicht gelöscht werden: Weisen Sie ihnen zuerst eine andere Rolle zu. Das Fenster weist vor jeder Bestätigung darauf hin.
 - **Details speichern**: Rollenname und -beschreibung aktualisieren
-- **Berechtigungen speichern**: Berechtigungsänderungen anwenden
+- **Berechtigungen speichern**: Berechtigungsänderungen anwenden. Ohne die Rolle Administrator ist eine Stufe über Ihren Rechten ausgegraut, außer die Rolle gibt sie bereits.
 
 Ein Benutzeradministrator mit Zugriff auf alle Daten kann [Kad](ai-assistant.md#tool-calls) auch nach den Rollen, ihrer Benutzerzahl und ihren Rechten fragen. Änderungen bleiben auf dieser Seite.
 
