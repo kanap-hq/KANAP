@@ -1,8 +1,9 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import { AuditService } from '../../audit/audit.service';
 import { assertSetFilterModes } from '../../common/ag-grid-filtering';
+import { BULK_MAX_ROWS, bulkListChanged, bulkTooMany, parseBulkConfirmation, parseBulkSelection } from '../../common/bulk-edit/bulk-edit';
 import { languageOf } from '../../common/csv-sheet';
 import { numberCell, writeListExport, type ListExportFile } from '../../common/csv/list-export';
 import type { ExportFileFormat } from '../../common/xlsx/format';
@@ -11,7 +12,7 @@ import type { CsvLanguage } from '../../common/csv-sheet/types';
 import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
 import { ItOpsSettingsService, type AdminZoneOption, type DomainOption, type DomainTrustDirection } from '../../it-ops-settings/it-ops-settings.service';
 import { gridTextClause, gridTextModel } from '../technologies.service';
-import { technologyReference, UUID_RE } from '../technology-rows';
+import { technologyReference } from '../technology-rows';
 import { inServiceSql } from '../technology-reach.service';
 
 /**
@@ -45,8 +46,8 @@ import { inServiceSql } from '../technology-reach.service';
 export const DIRECTORY_FAMILY = 'directory';
 export const DOMAIN_CONTROLLER_ROLE = 'domain-controller';
 
-/** At most this many assets in one assignment. The same cap as the vulnerabilities bulk change. */
-export const BULK_MAX_ROWS = 5000;
+/** At most this many assets in one assignment: the cap of every change in bulk (`common/bulk-edit`). */
+export { BULK_MAX_ROWS };
 /** Rows written by one statement of a bulk assignment. */
 const BULK_BATCH = 500;
 /** Direct links, hosted applications and trust peers returned on one asset row. `total` keeps the full count. */
@@ -529,23 +530,8 @@ export class AdministrationViewService {
     // zone waits for the assignment, or the assignment sees the saved catalog.
     const ctx = await this.context(opts, body.dry_run !== true);
     const zone = this.resolveZone(body, ctx.catalog);
-    const all = body.all === true;
-    const rowIds = (name: 'ids' | 'exclude_ids'): string[] => {
-      const raw = body[name];
-      if (raw === undefined || raw === null) return [];
-      if (!Array.isArray(raw)) throw new BadRequestException(`${name} must be a list of asset ids.`);
-      const ids = Array.from(new Set(raw.map((value) => String(value ?? '').trim().toLowerCase())));
-      if (ids.some((id) => !UUID_RE.test(id))) throw new BadRequestException(`${name} must be asset ids.`);
-      if (ids.length > BULK_MAX_ROWS) {
-        throw new BadRequestException({ code: 'bulk_too_many', message: `At most ${BULK_MAX_ROWS} rows at once: narrow the filters.` });
-      }
-      return ids;
-    };
-    const ids = rowIds('ids');
-    const excluded = rowIds('exclude_ids');
-    if (all && ids.length > 0) throw new BadRequestException('Send the chosen rows (ids) or every row of the filter (all: true), not both.');
-    if (!all && excluded.length > 0) throw new BadRequestException('exclude_ids goes with all: true.');
-    if (!all && ids.length === 0) throw new BadRequestException('Choose the rows (ids), or every row of the filter (all: true).');
+    // The contract shared with the other lists (`common/bulk-edit`); the filters are the asset list's own.
+    const { all, ids, excluded } = parseBulkSelection(body);
     const params: unknown[] = [tenantId];
     let where: string;
     if (all) {
@@ -558,20 +544,10 @@ export class AdministrationViewService {
       params.push(ids);
       where = `a.tenant_id = $1 AND a.status <> 'retired' AND a.id = ANY($${params.length}::uuid[])`;
     }
-    if (all && body.dry_run !== true && (body.as_of === undefined || body.as_of === null)) {
-      throw new BadRequestException('as_of is required with all: send the instant the dry run returned.');
-    }
-    let expectedRows: number | null = null;
-    if (body.expected_rows !== undefined && body.expected_rows !== null) {
-      expectedRows = Number(body.expected_rows);
-      if (!Number.isSafeInteger(expectedRows) || expectedRows < 0) throw new BadRequestException('expected_rows must be the rows the dry run counted.');
-    } else if (all && body.dry_run !== true) {
-      throw new BadRequestException('expected_rows is required with all: send the rows the dry run counted.');
-    }
-    if (body.as_of !== undefined && body.as_of !== null) {
-      const asOf = new Date(String(body.as_of));
-      if (Number.isNaN(asOf.getTime())) throw new BadRequestException('as_of must be the instant a dry run returned.');
-      params.push(asOf.toISOString());
+    // `as_of` (required with all) and `expected_rows`, the rows the user confirmed, checked under the lock.
+    const { asOf, expectedRows } = parseBulkConfirmation(body, all);
+    if (asOf !== null) {
+      params.push(asOf);
       where += ` AND a.created_at <= $${params.length}::timestamptz`;
     }
     const scopeParams = [...params];
@@ -585,9 +561,7 @@ export class AdministrationViewService {
       params,
     );
     const rows = Number(count?.rows ?? 0);
-    if (rows > BULK_MAX_ROWS) {
-      throw new BadRequestException({ code: 'bulk_too_many', message: `These filters reach ${rows} rows, more than ${BULK_MAX_ROWS} at once: narrow them.` });
-    }
+    if (rows > BULK_MAX_ROWS) throw bulkTooMany(rows);
     if (body.dry_run === true) {
       const [{ as_of: asOf }] = await mg.query(`SELECT clock_timestamp() AS as_of`);
       return { ok: true, dry_run: true, rows, changes: Number(count?.changes ?? 0), as_of: new Date(asOf).toISOString() };
@@ -602,7 +576,7 @@ export class AdministrationViewService {
       scopeParams,
     );
     if (expectedRows !== null && before.length > expectedRows) {
-      throw new ConflictException({ code: 'bulk_list_changed', message: 'The list changed since the count: count again.' });
+      throw bulkListChanged();
     }
     const toChange = before.filter((row) => row.admin_zone !== zone);
     let changed = 0;

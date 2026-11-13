@@ -1773,6 +1773,7 @@
   "bulkEdit": {
     "title": "Modificar la selección",
     "selectAll": "Seleccionar todas las filas del filtro",
+    "selectAll_applications": "Seleccionar todas las aplicaciones del filtro",
     "selectRow": "Seleccionar {{name}}",
     "field": "Campo",
     "value": "Nuevo valor",
@@ -1780,8 +1781,11 @@
     "emptied": "Vacío",
     "chooseValue": "Elegir un valor",
     "counting": "Contando las filas…",
+    "counting_applications": "Contando las aplicaciones…",
     "willChange_one": "{{count}} fila cambiará",
+    "willChange_applications_one": "{{count}} aplicación cambiará",
     "willChange_other": "{{count}} filas cambiarán",
+    "willChange_applications_other": "{{count}} aplicaciones cambiarán",
     "unchanged_one": "{{count}} ya tiene este valor",
     "unchanged_other": "{{count}} ya tienen este valor",
     "refused_one": "{{count}} rechazada:",
@@ -1800,16 +1804,23 @@
       "other": "Otro motivo"
     },
     "tooMany": "Más de 5000 filas: acote los filtros o seleccione menos filas.",
+    "tooMany_applications": "Más de 5000 aplicaciones: acote los filtros o seleccione menos aplicaciones.",
     "countFailed": "No se pudieron contar las filas. Inténtelo de nuevo.",
+    "countFailed_applications": "No se pudieron contar las aplicaciones. Inténtelo de nuevo.",
     "listChanged": "La lista ha cambiado desde el recuento. Revise el nuevo recuento y vuelva a confirmar.",
     "failed": "No se pudo guardar el cambio. Inténtelo de nuevo.",
     "noAnswer": "El servidor no respondió. Recargue la lista para ver si las filas cambiaron.",
+    "noAnswer_applications": "El servidor no respondió. Recargue la lista para ver si las aplicaciones cambiaron.",
     "save_one": "Modificar {{count}} fila",
+    "save_applications_one": "Modificar {{count}} aplicación",
     "save_other": "Modificar {{count}} filas",
+    "save_applications_other": "Modificar {{count}} aplicaciones",
     "saveIdle": "Modificar",
     "saving": "Guardando el cambio…",
     "doneChanged_one": "{{count}} fila modificada",
+    "doneChanged_applications_one": "{{count}} aplicación modificada",
     "doneChanged_other": "{{count}} filas modificadas",
+    "doneChanged_applications_other": "{{count}} aplicaciones modificadas",
     "applied": "{{field}}: {{value}}"
   }
 }

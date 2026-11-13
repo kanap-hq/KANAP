@@ -318,7 +318,7 @@ export async function assetsWithFqdn(
 
 /**
  * Serializes the name and FQDN checks of a tenant until the end of the transaction. The tenant
- * row is locked first (FOR SHARE), then the names: the order the import takes (tenant FOR UPDATE,
+ * row is locked first (FOR SHARE), then the names: the order the import takes (tenant FOR NO KEY UPDATE,
  * then the names) and the settings reads of a write (`getSettingsForWrite`, FOR SHARE) follow, so
  * two writers never wait on each other in opposite orders.
  */

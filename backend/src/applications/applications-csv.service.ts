@@ -3,7 +3,7 @@ import { ApplicationsListService } from './services/applications-list.service';
 import { classificationReadState } from './services/application-classification';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
-import { lockApplicationNames } from './application-rules';
+import { lockApplicationNames, lockApplicationRow } from './application-rules';
 import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, In } from 'typeorm';
@@ -265,7 +265,9 @@ export class ApplicationsCsvService {
     },
   ): Promise<CsvImportResult> {
     return opts.manager.transaction(async (manager) => {
-      await manager.query('SELECT id FROM tenants WHERE id = $1 FOR UPDATE', [opts.tenantId]);
+      // The catalogs against a settings save (`lockClassificationCatalog`): FOR NO KEY UPDATE, so the
+      // foreign key checks of the tenant's other tables do not wait for the import.
+      await manager.query('SELECT id FROM tenants WHERE id = $1 FOR NO KEY UPDATE', [opts.tenantId]);
       await lockApplicationNames(manager, opts.tenantId);
       const result = await this.importLocked(file, params, { ...opts, manager });
       if (!params.dryRun && !result.ok && result.errors.some((error) => error.row === 0)) throw new BadRequestException(result);
@@ -274,7 +276,7 @@ export class ApplicationsCsvService {
   }
 
   private async importLocked(file: Express.Multer.File, params: CsvImportParams, opts: { manager: EntityManager; tenantId: string; userId?: string | null; language?: CsvLanguage }): Promise<CsvImportResult> {
-    // The tenant row is locked FOR UPDATE by import(): the catalogs read here cannot change underneath.
+    // The tenant row is locked FOR NO KEY UPDATE by import(): the catalogs read here cannot change underneath.
     const itOpsSettings = await this.itOpsSettings.getSettings(opts.tenantId, { manager: opts.manager });
     // The applications the load wrote: a row the operation skipped (an existing application in
     // "add new only", a new one in "update only") or found unchanged keeps its owners and residency.
@@ -358,6 +360,8 @@ export class ApplicationsCsvService {
       const appId = await this.importedApplicationId(manager, tenantId, row);
       if (!appId || !written.has(String(appId))) continue;
 
+      // The application, then its owners (`lockApplicationRow`), as every writer of them.
+      await lockApplicationRow(manager, tenantId, appId);
       const ownerRepo = manager.getRepository(ApplicationOwner);
       const beforeRows = await ownerRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });
 

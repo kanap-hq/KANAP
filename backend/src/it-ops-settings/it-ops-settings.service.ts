@@ -1051,7 +1051,7 @@ export class ItOpsSettingsService {
 
   /**
    * Settings read by a write path that will store catalog codes. Takes a shared lock on the tenant row so
-   * the read serializes with a concurrent settings PATCH (which locks it FOR UPDATE): a value counted as
+   * the read serializes with a concurrent settings PATCH (which locks it FOR NO KEY UPDATE): a value counted as
    * unused cannot be referenced by a write that validated against the older catalog.
    */
   async getSettingsForWrite(tenantId: string, manager?: EntityManager): Promise<ItOpsSettings> {
@@ -1317,15 +1317,22 @@ export class ItOpsSettingsService {
     return catalogFromMetadata(tenant.metadata?.it_ops as any);
   }
 
+  /**
+   * The catalog as of now, locked until the end of the transaction against a settings save and the
+   * other writers that lock it. FOR NO KEY UPDATE, as the settings save: the two still exclude each
+   * other (and the share lock of `getSettingsForWrite`), while the foreign key checks of the tenant's
+   * other tables (KEY SHARE) do not wait for a long writer, a change of applications in bulk.
+   */
   async lockClassificationCatalog(tenantId: string, manager: EntityManager): Promise<ClassificationCatalog> {
-    await manager.query('SELECT id FROM tenants WHERE id = $1 FOR UPDATE', [tenantId]);
+    await manager.query('SELECT id FROM tenants WHERE id = $1 FOR NO KEY UPDATE', [tenantId]);
     return this.getClassificationCatalog(tenantId, { manager });
   }
 
   async updateSettings(tenantId: string, patch: Partial<ItOpsSettings>, opts?: { manager?: EntityManager; userId?: string | null }): Promise<ItOpsSettings> {
     const manager = opts?.manager ?? this.tenants.manager;
     return manager.transaction(async (tx) => {
-      await tx.query('SELECT id FROM tenants WHERE id = $1 FOR UPDATE', [tenantId]);
+      // The mode of its own UPDATE of the row (the id never changes): no wait for KEY SHARE.
+      await tx.query('SELECT id FROM tenants WHERE id = $1 FOR NO KEY UPDATE', [tenantId]);
       return this.updateSettingsLocked(tenantId, patch, { ...opts, manager: tx });
     });
   }

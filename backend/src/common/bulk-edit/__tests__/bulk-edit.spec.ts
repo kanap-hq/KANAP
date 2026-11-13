@@ -4,6 +4,7 @@ import { BadRequestException } from '@nestjs/common';
 import {
   BULK_MAX_ROWS,
   BulkEditList,
+  bulkFingerprint,
   parseBulkChanges,
   parseBulkConfirmation,
   parseBulkSelection,
@@ -57,13 +58,13 @@ async function main() {
   assert.throws(() => parseBulkSelection({ ids: ids(BULK_MAX_ROWS + 1) }), (err: any) => err.getResponse().code === 'bulk_too_many');
 
   // Confirmation: as_of and expected_rows required with all, outside the dry run.
-  assert.deepEqual(parseBulkConfirmation({ dry_run: true }, true), { dryRun: true, asOf: null, expectedRows: null });
+  assert.deepEqual(parseBulkConfirmation({ dry_run: true }, true), { dryRun: true, asOf: null, expectedRows: null, fingerprint: null });
   assert.throws(() => parseBulkConfirmation({ expected_rows: 3 }, true), /as_of is required/);
   assert.throws(() => parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z' }, true), /expected_rows is required/);
   assert.throws(() => parseBulkConfirmation({ as_of: 'soon', expected_rows: 1 }, true), /as_of must be/);
   assert.throws(() => parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z', expected_rows: -1 }, true), /expected_rows must be/);
-  assert.deepEqual(parseBulkConfirmation({}, false), { dryRun: false, asOf: null, expectedRows: null });
-  assert.deepEqual(parseBulkConfirmation({ dry_run: false }, false), { dryRun: false, asOf: null, expectedRows: null });
+  assert.deepEqual(parseBulkConfirmation({}, false), { dryRun: false, asOf: null, expectedRows: null, fingerprint: null });
+  assert.deepEqual(parseBulkConfirmation({ dry_run: false }, false), { dryRun: false, asOf: null, expectedRows: null, fingerprint: null });
   // dry_run, when given, is a boolean: "true" or 1 would otherwise write without a count. Refused by
   // the first parse a route makes, before it reads anything.
   for (const dryRun of ['true', 'false', 1, 0, {}]) {
@@ -78,7 +79,18 @@ async function main() {
     { name: 'company', value: 'id', optional: false },
     { name: 'kind', value: 'enum', values: ['run', 'build'], optional: true },
     { name: 'dims', value: 'id_map', optional: true },
+    { name: 'people', value: 'id_list', optional: true },
+    { name: 'members', value: 'id_list', optional: false },
   ] as const;
+  // A list of ids replaces the row's: lower case, without repeats; null or [] empties an optional one.
+  assert.deepEqual(parseBulkChanges({ people: [a.toUpperCase(), a, b] }, fields), { people: [a, b] });
+  assert.deepEqual(parseBulkChanges({ people: [] }, fields), { people: [] });
+  assert.deepEqual(parseBulkChanges({ people: null }, fields), { people: null });
+  assert.throws(() => parseBulkChanges({ members: [] }, fields), /members cannot be emptied/);
+  assert.throws(() => parseBulkChanges({ members: null }, fields), /members cannot be emptied/);
+  assert.throws(() => parseBulkChanges({ people: a }, fields), /must be a list of ids/);
+  assert.throws(() => parseBulkChanges({ people: [null] }, fields), /must be a list of ids/);
+  assert.throws(() => parseBulkChanges({ people: ['APP-3'] }, fields), /must be an id or null/);
   assert.deepEqual(parseBulkChanges({ owner: null, kind: 'run', dims: { [a.toUpperCase()]: null } }, fields), { owner: null, kind: 'run', dims: { [a]: null } });
   assert.throws(() => parseBulkChanges({ company: null }, fields), /cannot be emptied/);
   assert.throws(() => parseBulkChanges({ other: a }, fields), /cannot be changed in bulk/);
@@ -87,14 +99,18 @@ async function main() {
   assert.throws(() => parseBulkChanges({ dims: {} }, fields), /at least one field/);
   assert.throws(() => parseBulkChanges(null, fields), /at least one field/);
 
+  // The change every run below counts or writes.
+  const change = parseBulkChanges({ kind: 'run' }, fields);
+
   // The dry run: counted under a savepoint rolled back, nothing kept; the write: refusals counted, the rest written.
   const rows: Row[] = ids(5).sort().map((id, i) => ({ id, value: i === 0 ? 'x' : null }));
   const refuse = { [rows[1].id]: 'read_only', [rows[2].id]: 'read_only' };
   {
     const { manager, statements } = fakeManager();
     const list = fakeList(rows, refuse);
-    const dry = await runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ dry_run: true }, true));
-    assert.deepEqual(dry, { dry_run: true, rows: 5, changes: 2, unchanged: 1, refused: { read_only: 2 }, as_of: '2026-11-12T10:00:00.000Z' });
+    const dry = await runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ dry_run: true }, true), change);
+    assert.deepEqual(dry, { dry_run: true, rows: 5, changes: 2, unchanged: 1, refused: { read_only: 2 }, as_of: '2026-11-12T10:00:00.000Z', fingerprint: bulkFingerprint(rows.map((row) => row.id), change) });
+    assert.equal(bulkFingerprint([...rows].reverse().map((row) => row.id.toUpperCase()), change), dry.fingerprint, 'the same rows, whatever their order and case');
     assert.equal(statements[1], 'SAVEPOINT bulk_edit_dry_run');
     assert.deepEqual(statements.slice(-2), ['ROLLBACK TO SAVEPOINT bulk_edit_dry_run', 'RELEASE SAVEPOINT bulk_edit_dry_run']);
     assert.equal(statements.filter((s) => s === 'ROLLBACK TO SAVEPOINT bulk_edit_row').length, 2, 'each refused row rolled back alone');
@@ -102,7 +118,7 @@ async function main() {
   {
     const { manager, statements } = fakeManager();
     const list = fakeList(rows, refuse);
-    const done = await runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z', expected_rows: 5 }, true));
+    const done = await runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z', expected_rows: 5, fingerprint: bulkFingerprint(rows.map((row) => row.id), change) }, true), change);
     assert.deepEqual(done, { dry_run: false, rows: 5, changed: 2, unchanged: 1, refused: { read_only: 2 } });
     assert.deepEqual(list.written, [rows[3].id, rows[4].id]);
     assert.ok(!statements.some((s) => s.includes('bulk_edit_dry_run')));
@@ -112,15 +128,56 @@ async function main() {
     const { manager } = fakeManager();
     const list = fakeList(rows);
     await assert.rejects(
-      runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z', expected_rows: 4 }, true)),
+      runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z', expected_rows: 4, fingerprint: bulkFingerprint(rows.slice(0, 4).map((row) => row.id), change) }, true), change),
       (err: any) => err.status === 409 && err.getResponse().code === 'bulk_list_changed',
     );
     assert.deepEqual(list.written, []);
   }
+  // As many rows as counted, not the same ones (one swapped for another): 409, nothing written.
+  {
+    const { manager } = fakeManager();
+    const list = fakeList(rows);
+    const counted = bulkFingerprint([...rows.slice(0, 4), { id: randomUUID() }].map((row) => row.id), change);
+    await assert.rejects(
+      runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z', expected_rows: 5, fingerprint: counted }, true), change),
+      (err: any) => err.status === 409 && err.getResponse().code === 'bulk_list_changed',
+    );
+    assert.deepEqual(list.written, []);
+  }
+  // The same rows, another change than the one counted: 409, nothing written. The fingerprint names
+  // the change as parsed: the people of a list in another order are the same change.
+  {
+    const { manager } = fakeManager();
+    const list = fakeList(rows);
+    await assert.rejects(
+      runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z', expected_rows: 5, fingerprint: bulkFingerprint(rows.map((row) => row.id), change) }, true), parseBulkChanges({ kind: 'build' }, fields)),
+      (err: any) => err.status === 409 && err.getResponse().code === 'bulk_list_changed',
+    );
+    assert.deepEqual(list.written, []);
+    const [a, b] = ids(2);
+    const ids3 = rows.map((row) => row.id);
+    assert.equal(
+      bulkFingerprint(ids3, parseBulkChanges({ people: [a, b], kind: 'run' }, fields)),
+      bulkFingerprint(ids3, parseBulkChanges({ kind: 'run', people: [b.toUpperCase(), a] }, fields)),
+    );
+    assert.notEqual(bulkFingerprint(ids3, parseBulkChanges({ kind: 'run' }, fields)), bulkFingerprint(ids3, parseBulkChanges({ kind: null }, fields)));
+  }
+  // With all, the write sends the count's fingerprint back; a fingerprint is the dry run's or a 400.
+  {
+    const { manager } = fakeManager();
+    const list = fakeList(rows);
+    await assert.rejects(
+      runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z', expected_rows: 5 }, true), change),
+      (err: any) => err.status === 400 && /fingerprint is required/.test(err.message),
+    );
+    assert.deepEqual(list.written, []);
+    assert.throws(() => parseBulkConfirmation({ fingerprint: 'abc' }, false), /fingerprint must be/);
+    assert.throws(() => parseBulkConfirmation({ fingerprint: 42 }, false), /fingerprint must be/);
+  }
   // Chosen rows the list does not return: not_found, without saying why.
   {
     const { manager } = fakeManager();
-    const done = await runBulkEdit(manager, fakeList(rows), parseBulkSelection({ ids: [rows[3].id, randomUUID()] }), parseBulkConfirmation({}, false));
+    const done = await runBulkEdit(manager, fakeList(rows), parseBulkSelection({ ids: [rows[3].id, randomUUID()] }), parseBulkConfirmation({}, false), change);
     assert.deepEqual(done, { dry_run: false, rows: 2, changed: 1, unchanged: 0, refused: { not_found: 1 } });
   }
   // A filter over the cap: 400 bulk_too_many, before any write.
@@ -129,7 +186,7 @@ async function main() {
     const many: Row[] = ids(BULK_MAX_ROWS + 1).map((id) => ({ id, value: null }));
     const list = fakeList(many);
     await assert.rejects(
-      runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ dry_run: true }, true)),
+      runBulkEdit(manager, list, parseBulkSelection({ all: true }), parseBulkConfirmation({ dry_run: true }, true), change),
       (err: any) => err.status === 400 && err.getResponse().code === 'bulk_too_many',
     );
     assert.deepEqual(list.written, []);
@@ -137,12 +194,12 @@ async function main() {
   // An error that is no refusal of the row fails the whole change.
   {
     const { manager } = fakeManager();
-    await assert.rejects(runBulkEdit(manager, fakeList(rows, {}, rows[2].id), parseBulkSelection({ all: true }), parseBulkConfirmation({ dry_run: true }, true)), /boom/);
+    await assert.rejects(runBulkEdit(manager, fakeList(rows, {}, rows[2].id), parseBulkSelection({ all: true }), parseBulkConfirmation({ dry_run: true }, true), change), /boom/);
   }
   // Outside a transaction: refused (the dry run could not roll back).
   {
     const manager = { queryRunner: { isTransactionActive: false }, query: async () => [] } as any;
-    await assert.rejects(runBulkEdit(manager, fakeList(rows), parseBulkSelection({ all: true }), parseBulkConfirmation({ dry_run: true }, true)), /request transaction/);
+    await assert.rejects(runBulkEdit(manager, fakeList(rows), parseBulkSelection({ all: true }), parseBulkConfirmation({ dry_run: true }, true), change), /request transaction/);
   }
   console.log('bulk-edit: ok');
 }

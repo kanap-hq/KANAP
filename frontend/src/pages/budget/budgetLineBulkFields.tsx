@@ -1,44 +1,16 @@
-import React, { useMemo } from 'react';
-import { MenuItem, TextField } from '@mui/material';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BulkEditField } from '../../components/bulk-edit/BulkEditDialog';
+import FlatSelect from '../../components/bulk-edit/BulkEditFlatSelect';
 import AccountSelect from '../../components/fields/AccountSelect';
 import AnalyticsCategorySelect from '../../components/fields/AnalyticsCategorySelect';
 import CompanySelect from '../../components/fields/CompanySelect';
 import CostCenterSelect from '../../components/fields/CostCenterSelect';
 import SupplierSelect from '../../components/fields/SupplierSelect';
 import UserSelect from '../../components/fields/UserSelect';
-import { reportFilterMenuProps } from '../../components/reports/ReportLayout';
 import { axisRequiredFor, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { useLinePlacementFilter } from '../../hooks/usePlacementOptions';
-import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import type { BudgetNatureScope } from './listPreferences';
-
-/** A plain select of the dialog (run or build, the dimension): flat items, the drawer's look. */
-function FlatSelect({ value, onChange, label, disabled, options }: {
-  value: string | null;
-  onChange: (next: string | null) => void;
-  label: string;
-  disabled: boolean;
-  options: Array<{ value: string; label: string }>;
-}) {
-  return (
-    <TextField
-      select
-      variant="standard"
-      fullWidth
-      value={value ?? ''}
-      onChange={(event) => onChange(event.target.value || null)}
-      SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': label } }}
-      sx={drawerSelectSx}
-      disabled={disabled}
-    >
-      {options.map((option) => (
-        <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>{option.label}</MenuItem>
-      ))}
-    </TextField>
-  );
-}
 
 /**
  * The fields "Change the selection" changes on budget lines (`POST /budget-lines/bulk-update`,

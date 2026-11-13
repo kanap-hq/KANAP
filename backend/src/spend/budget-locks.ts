@@ -9,8 +9,9 @@ import { assertLinesEditable, assertVersionsEditable } from '../data-access/line
  * planning/perf-scale, lot 3B):
  *
  *   0. a bulk operation (column copy or clear, allocation copy, budget file
- *      load, and a freeze or unfreeze that pins or unpins the year's FX rate
- *      set): the tenant's budget-operations
+ *      load, a change in bulk of the lines, its count included, and a freeze
+ *      or unfreeze that pins or unpins the year's FX rate set): the tenant's
+ *      budget-operations
  *      advisory lock (`lockTenantBudgetOperations`), so two of them never run
  *      at once;
  *   1. the line (`spend_items`, of the scope's nature) FOR NO KEY UPDATE (FOR UPDATE
@@ -286,7 +287,7 @@ export async function lockBudgetYear(manager: EntityManager, scope: AmountScope,
 export const BUDGET_OPERATION_RUNNING_CODE = 'operation_running';
 
 export const BUDGET_OPERATION_RUNNING =
-  'Another budget operation (a column copy or clear, an allocation copy, a CSV import, or a freeze or unfreeze of a year) is running for this workspace. Try again when it has finished.';
+  'Another budget operation (a column copy or clear, an allocation copy, a CSV import, a change of several lines at once, or a freeze or unfreeze of a year) is running for this workspace. Try again when it has finished.';
 
 /**
  * The advisory lock namespace of the tenant budget-operations lock ("BOPS"):
@@ -297,8 +298,8 @@ const BUDGET_OPERATIONS_LOCK_NAMESPACE = 0x424f5053;
 
 /**
  * The tenant's budget-operations lock: a transaction advisory lock shared by
- * the column copy and clear, the allocation copy, the budget file load and a
- * freeze or unfreeze that pins or unpins FX rates,
+ * the column copy and clear, the allocation copy, the budget file load, the
+ * change in bulk of the lines and a freeze or unfreeze that pins or unpins FX rates,
  * held until the request transaction ends. A second operation does not wait:
  * it is refused with a 409 `operation_running` (its own code, not the `retry`
  * of a deadlock that a client may send again at once), whose message says

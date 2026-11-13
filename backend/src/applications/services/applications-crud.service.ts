@@ -6,7 +6,7 @@ import { classificationPatch, classificationReadState } from './application-clas
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { requestContextMissing, businessContributorScope } from '../../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { assertWebLinkUrl } from '../../common/web-link-url';
 import { Application } from '../application.entity';
@@ -561,6 +561,21 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       await this.audit.log({ table: 'applications', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager });
       return saved;
     });
+  }
+
+  /**
+   * The values a change in bulk accepts (`application-bulk-edit.ts`): the tenant's lifecycle states,
+   * and its business criticality levels still offered (a level no longer offered is never newly
+   * assigned, as on the page).
+   */
+  async bulkEditValues(manager: EntityManager): Promise<{ lifecycle: string[]; criticality: string[] }> {
+    const tenantId = await this.getCurrentTenantId(manager);
+    const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
+    const catalog = await this.itOpsSettings.getClassificationCatalog(tenantId, { manager });
+    return {
+      lifecycle: (settings.lifecycleStates || []).map((state) => state.code),
+      criticality: catalog.businessCriticalityLevels.filter((level) => !level.deprecated).map((level) => level.code),
+    };
   }
 
   async normalizeLifecycle(

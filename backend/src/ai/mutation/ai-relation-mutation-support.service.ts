@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../../audit/audit.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
+import { lockApplicationRow } from '../../applications/application-rules';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { assertContractReadable, assertContractsEditable } from '../../data-access/contract-write-checks';
 import { parseItemNumber } from '../../common/parse-item-number';
@@ -527,6 +528,11 @@ export class AiRelationMutationSupportService {
       if (!(await lockBudgetLine(context.manager, sourceNature, context.tenantId, preview.target_entity_id))) {
         throw new NotFoundException(`${config.label}: the line was not found.`);
       }
+    }
+    // An application's owners: the application is locked before they are compared and replaced,
+    // the lock order of every writer of them (`lockApplicationRow`).
+    if (config.kind === 'owner_role' && !(await lockApplicationRow(context.manager, context.tenantId, preview.target_entity_id))) {
+      throw new NotFoundException(`${config.label}: the application was not found.`);
     }
     // A cluster's members follow the rules of the members endpoint; the cluster row is locked first.
     await this.assertClusterMemberAdds(context, config, preview.target_entity_id, expectedItems, nextItems);

@@ -77,6 +77,18 @@ export async function lockApplicationSuites(manager: any, tenantId: string): Pro
   await manager.query(`SELECT pg_advisory_xact_lock(hashtext('applications:suites:' || $1))`, [tenantId]);
 }
 
+/**
+ * Locks one application until the end of the transaction: the first lock of every writer of its
+ * owners (`application_owners`), as of the change in bulk (`application-bulk-edit.ts`) and the
+ * update of one application. The application, then its owners: a writer that deleted owners before
+ * the insert's foreign key check waited for the application deadlocked with one holding it.
+ * False when the application is not found.
+ */
+export async function lockApplicationRow(manager: any, tenantId: string, id: string): Promise<boolean> {
+  const rows = await manager.query(`SELECT id FROM applications WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, [tenantId, id]);
+  return rows.length > 0;
+}
+
 /** 409 `name_taken` when another application of the tenant already has this name. */
 export async function assertApplicationNameFree(manager: any, tenantId: string, name: string, excludeId?: string | null): Promise<void> {
   const [holder] = await applicationsNamed(manager, tenantId, name, excludeId);

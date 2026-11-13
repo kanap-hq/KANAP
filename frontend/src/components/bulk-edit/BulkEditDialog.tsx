@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, CircularProgress, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import BackspaceOutlined from '@mui/icons-material/BackspaceOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,7 @@ import { KanapDialog, PropertyRow } from '../design';
 import { reportFilterMenuProps } from '../reports/ReportLayout';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import type { BulkEditFamily } from './bulkSelection';
 
 /** A picker of the dialog: the value, or null (nothing picked); `disabled` while the change is written. */
 export type BulkEditPickerProps = { value: string | null; onChange: (next: string | null) => void; label: string; disabled: boolean };
@@ -38,7 +39,7 @@ export type BulkEditField = {
 };
 
 /** The count of a dry run (`common/bulk-edit/bulk-edit.ts`). */
-type BulkCount = { rows: number; changes: number; unchanged: number; refused: Record<string, number>; as_of: string };
+type BulkCount = { rows: number; changes: number; unchanged: number; refused: Record<string, number>; as_of: string; fingerprint?: string };
 /** The answer of the write. */
 export type BulkEditWriteResult = { rows: number; changed: number; unchanged: number; refused: Record<string, number> };
 
@@ -112,16 +113,18 @@ const refusalTotal = (refused: Record<string, number> | undefined) => Object.val
 /**
  * "Change the selection" of a list: a field, then its value (for a dimension, the dimension then the
  * value); a dry run counts the rows that will change, those that already hold the value and the
- * refused ones by reason, each time the value changes; the write sends back the count's `as_of` and
- * `expected_rows`. The rows: `selection`, the body part of `useBulkSelection`. Once written, the
+ * refused ones by reason, each time the value changes; the write sends back the count's `as_of`,
+ * `expected_rows` and `fingerprint`. The rows: `selection`, the body part of `useBulkSelection`. Once written, the
  * dialog stays on the write's outcome (rows changed, already holding the value, refused by reason)
  * with Close alone, and `onDone` reloads the list behind it.
  */
-export default function BulkEditDialog({ open, onClose, endpoint, selection, fields, onDone }: {
+export default function BulkEditDialog({ open, onClose, endpoint, selection, fields, onDone, family }: {
   open: boolean;
   onClose: () => void;
   /** The bulk route (`/budget-lines/bulk-update`). */
   endpoint: string;
+  /** What the rows are, for the texts that name them ("3 applications will change"); none: rows. */
+  family?: BulkEditFamily;
   selection: Record<string, unknown>;
   fields: BulkEditField[];
   onDone: (result: BulkEditWriteResult) => void;
@@ -213,10 +216,14 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
   const countError = shown?.error as any;
   const countFailed = !!shown && shown.error !== undefined;
   const tooMany = countFailed && countError?.response?.data?.code === 'bulk_too_many';
-  // A change the route refuses as a whole (a value that names nothing, a disabled cost center): its reason.
-  const refusedChange = countFailed && !tooMany && countError?.response?.status === 400
-    ? getApiErrorMessage(countError, t, t('bulkEdit.countFailed'))
+  // A change the route refuses as a whole (a value that names nothing, a disabled cost center), or
+  // another operation of the list running (409 `operation_running`): its reason.
+  const refusedChange = countFailed && !tooMany && [400, 409].includes(countError?.response?.status)
+    ? getApiErrorMessage(countError, t, t('bulkEdit.countFailed', { context: family }))
     : null;
+  // The count asked again (`common:buttons.retry`): after no answer, a server error or another operation
+  // running; a change refused as a whole would be refused again.
+  const canRecount = countFailed && !tooMany && countError?.response?.status !== 400;
   const result = shown && !countFailed ? shown.data ?? null : null;
 
   const choose = (key: string) => {
@@ -244,10 +251,10 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
     setSaving(true);
     setError(null);
     try {
-      // Only the rows of the count: more rows than counted is refused (409), rows created since stay out.
+      // Only the rows of the count: other rows than counted is refused (409), rows created since stay out.
       const res = await api.post<BulkEditWriteResult>(
         endpoint,
-        { ...body, as_of: result.as_of, expected_rows: result.rows },
+        { ...body, as_of: result.as_of, expected_rows: result.rows, fingerprint: result.fingerprint },
         { timeout: BULK_EDIT_TIMEOUT_MS },
       );
       // The dialog says the outcome itself (no notice besides it); the list reloads behind it.
@@ -255,16 +262,19 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
       onDone(res.data);
     } catch (failure: any) {
       const status = failure?.response?.status;
-      if (status === 409) {
+      if (status === 409 && failure?.response?.data?.code === 'bulk_list_changed') {
         setError(t('bulkEdit.listChanged'));
         recount();
+      } else if (status === 409) {
+        // Another operation of the list runs (`operation_running`): in the words of the other operations.
+        setError(getApiErrorMessage(failure, t, t('bulkEdit.failed')));
       } else if (failure?.response?.data?.code === 'bulk_too_many') {
-        setError(t('bulkEdit.tooMany'));
+        setError(t('bulkEdit.tooMany', { context: family }));
       } else if (status === 400) {
         setError(getApiErrorMessage(failure, t, t('bulkEdit.failed')));
       } else if (!failure?.response || proxyAnswered(failure)) {
         // No answer of the route (network, time out, an answer of the proxy): the change may have gone through.
-        setError(t('bulkEdit.noAnswer'));
+        setError(t('bulkEdit.noAnswer', { context: family }));
       } else {
         setError(getApiErrorMessage(failure, t, t('bulkEdit.failed')));
       }
@@ -287,7 +297,7 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
         <Stack spacing={0.25} ref={outcomeRef} data-testid="bulk-edit-done">
           <Stack direction="row" alignItems="center" spacing={1}>
             <CheckCircleOutlineIcon sx={{ fontSize: 16, color: 'kanap.teal', flexShrink: 0 }} />
-            <Typography sx={{ ...statusSx, color: 'kanap.text.primary' }}>{t('bulkEdit.doneChanged', { count: written.result.changed })}</Typography>
+            <Typography sx={{ ...statusSx, color: 'kanap.text.primary' }}>{t('bulkEdit.doneChanged', { count: written.result.changed, context: family })}</Typography>
           </Stack>
           <Typography sx={statusSx}>{written.applied}</Typography>
           <OtherRows unchanged={written.result.unchanged} refused={written.result.refused ?? {}} />
@@ -304,7 +314,7 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
       // close button and Cancel all come through onClose).
       onClose={() => { if (!saving) onClose(); }}
       onSave={save}
-      saveLabel={result ? t('bulkEdit.save', { count: result.changes }) : t('bulkEdit.saveIdle')}
+      saveLabel={result ? t('bulkEdit.save', { count: result.changes, context: family }) : t('bulkEdit.saveIdle')}
       saveDisabled={!result || result.changes === 0 || counting}
       saveLoading={saving}
     >
@@ -369,17 +379,20 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
             {counting ? (
               <Stack direction="row" alignItems="center" spacing={1}>
                 <CircularProgress size={12} />
-                <Typography sx={statusSx}>{t('bulkEdit.counting')}</Typography>
+                <Typography sx={statusSx}>{t('bulkEdit.counting', { context: family })}</Typography>
               </Stack>
             ) : tooMany ? (
-              <Typography sx={statusSx}>{t('bulkEdit.tooMany')}</Typography>
-            ) : refusedChange ? (
-              <Typography sx={statusSx}>{refusedChange}</Typography>
+              <Typography sx={statusSx}>{t('bulkEdit.tooMany', { context: family })}</Typography>
             ) : countFailed ? (
-              <Typography sx={statusSx}>{t('bulkEdit.countFailed')}</Typography>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                <Typography sx={statusSx}>{refusedChange ?? t('bulkEdit.countFailed', { context: family })}</Typography>
+                {canRecount && (
+                  <Button size="small" variant="text" onClick={recount}>{t('buttons.retry')}</Button>
+                )}
+              </Stack>
             ) : result ? (
               <Stack spacing={0.25}>
-                <Typography sx={statusSx}>{t('bulkEdit.willChange', { count: result.changes })}</Typography>
+                <Typography sx={statusSx}>{t('bulkEdit.willChange', { count: result.changes, context: family })}</Typography>
                 <OtherRows unchanged={result.unchanged} refused={result.refused ?? {}} />
               </Stack>
             ) : null}

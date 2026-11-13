@@ -59,7 +59,7 @@ void runSpecs('data-access-line-bulk-update', [
     assert.equal(dry.rows, 4, 'only the lines she reads are counted');
     assert.equal(dry.changes, 3);
     assert.deepEqual(dry.refused, { read_only: 1 });
-    const done = await svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows }, s.persons.marta, opts);
+    const done = await svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, s.persons.marta, opts);
     assert.equal(done.changed, 3);
     assert.deepEqual(done.refused, { read_only: 1 });
     // A line she cannot read, named by id: the same answer as an id that names nothing.

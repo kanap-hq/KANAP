@@ -9,6 +9,7 @@ import { ApplicationSupportContact } from '../application-support-contact.entity
 import { ExternalContact } from '../../contacts/external-contact.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
+import { lockApplicationRow } from '../application-rules';
 
 /**
  * Service for managing application owners, companies, departments, and support contacts.
@@ -34,6 +35,8 @@ export class ApplicationsOwnersService extends ApplicationsBaseService {
     const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
     const app = await mg.getRepository(Application).findOne({ where: { id: resolvedAppId } });
     if (!app) throw new NotFoundException('Application not found');
+    // The application, then its owners (`lockApplicationRow`): read and replaced under its lock.
+    if (!(await lockApplicationRow(mg, app.tenant_id, resolvedAppId))) throw new NotFoundException('Application not found');
     const repo = mg.getRepository(ApplicationOwner);
     const existing = await repo.find({ where: { application_id: resolvedAppId } as any });
     const beforeState = existing.map((o) => `${o.owner_type}:${o.user_id}`).sort();
