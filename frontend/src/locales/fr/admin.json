@@ -1620,12 +1620,14 @@
       "consentNeeded": "Pas encore autorisé. Un administrateur Microsoft Entra doit autoriser {{product}} à lire les utilisateurs de l'annuaire.",
       "grantAccess": "Autoriser dans Microsoft Entra",
       "lastSynced": "Dernière synchronisation {{date}} : {{synced}} comptes actualisés, {{disabled}} désactivés.",
+      "keptAdministrator": "Compte gardé actif (dernier administrateur) : {{name}}",
       "error": "La dernière synchronisation a échoué : {{message}}",
       "syncNow": "Synchroniser maintenant",
       "syncing": "Synchronisation…",
       "consentSuccess": "Accès accordé. La première synchronisation est en cours.",
       "consentError": "Microsoft n'a pas accordé l'accès. Demandez à un administrateur Microsoft Entra d'approuver la demande.",
-      "resultOk": "Synchronisation terminée : {{synced}} comptes actualisés, {{disabled}} désactivés."
+      "resultOk": "Synchronisation terminée : {{synced}} comptes actualisés, {{disabled}} désactivés.",
+      "alreadyRunning": "Une synchronisation est déjà en cours."
     }
   },
   "billing": {

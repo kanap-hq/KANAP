@@ -598,7 +598,7 @@ Verbinden Sie Kadratis mit Ihrem Microsoft Entra ID-Mandanten für SSO:
 
 ### Tägliche Verzeichnissynchronisierung
 
-Dieser Block erscheint unterhalb der Entra-Karte, sobald Single Sign-On verbunden ist. Jede Nacht um 03:00 Uhr Serverzeit aktualisiert Kadratis Namen, Titel, Telefonnummern, Abteilungen und Unternehmen aus Microsoft Entra, aktualisiert den Vorgesetzten der Personen, die Mitwirkende sind, und deaktiviert Konten, die im Verzeichnis entfernt oder deaktiviert wurden.
+Dieser Block erscheint unterhalb der Entra-Karte, sobald Single Sign-On verbunden ist. Jede Nacht um 03:00 Uhr Serverzeit aktualisiert Kadratis Namen, Titel, Telefonnummern, Abteilungen und Unternehmen aus Microsoft Entra, aktualisiert den Vorgesetzten der Personen, die Mitwirkende sind, und deaktiviert Konten, die im Verzeichnis entfernt oder deaktiviert wurden. Der letzte aktive Administrator des Arbeitsbereichs bleibt aktiv, auch wenn das Verzeichnis ihn entfernt oder deaktiviert hat: Sein Konto wird ein lokales Konto, und er erhält den Zugang über **Passwort vergessen** auf der Anmeldeseite zurück.
 
 Abteilungen und Unternehmen werden nach Namen mit bereits in Kadratis vorhandenen Datensätzen abgeglichen. Es wird nichts automatisch angelegt. Leere Werte im Verzeichnis löschen niemals das, was bereits in Kadratis gespeichert ist.
 
@@ -609,8 +609,10 @@ Die Synchronisierung erfordert eine einmalige Genehmigung durch einen Microsoft 
 | **Noch nicht autorisiert...** | Kein Microsoft Entra-Administrator hat die Synchronisierung genehmigt, oder die erforderliche Berechtigung fehlt in der App-Registrierung. |
 | **Zugriff in Microsoft Entra gewähren** | Führt Sie zur Genehmigungsseite von Microsoft. Wird angezeigt, solange die Synchronisierung nicht autorisiert ist. Sie kehren zurück mit **Zugriff gewährt. Die erste Synchronisierung läuft.** |
 | **Zuletzt synchronisiert {Datum}: N Konten aktualisiert, N deaktiviert.** | Ergebnis des letzten erfolgreichen Laufs. |
+| **Konto aktiv gelassen (letzter Administrator): {Name}** | Das Verzeichnis hat diese Person entfernt oder deaktiviert. Ihr Konto bleibt aktiv, weil sie der letzte aktive Administrator des Arbeitsbereichs ist, und wird ein lokales Konto: **Passwort vergessen** auf der Anmeldeseite sendet ihr einen Link, um ein Passwort festzulegen. Die folgenden Synchronisierungen lassen dieses Konto unverändert. |
 | **Die letzte Synchronisierung ist fehlgeschlagen: {Meldung}** | Der letzte Lauf wurde nicht abgeschlossen. Die Meldung stammt von Microsoft. |
 | **Jetzt synchronisieren** | Startet die Synchronisierung sofort, statt auf die kommende Nacht zu warten. Meldet **Synchronisierung abgeschlossen: N Konten aktualisiert, N deaktiviert.** |
+| **Eine Synchronisierung läuft bereits.** | Eine andere Synchronisierung des Arbeitsbereichs läuft (die nächtliche oder eine, die ein anderer Administrator gestartet hat). **Jetzt synchronisieren** tut nichts; versuchen Sie es erneut, sobald sie beendet ist. |
 
 Die Einrichtungsschritte für die Entra-App-Registrierung finden Sie unter [Microsoft Entra SSO](on-premise/sso-entra.md).
 

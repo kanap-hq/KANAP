@@ -1620,12 +1620,14 @@
       "consentNeeded": "Noch nicht autorisiert. Ein Microsoft Entra-Administrator muss {{product}} die Berechtigung erteilen, Verzeichnisbenutzer zu lesen.",
       "grantAccess": "Zugriff in Microsoft Entra gewähren",
       "lastSynced": "Zuletzt synchronisiert {{date}}: {{synced}} Konten aktualisiert, {{disabled}} deaktiviert.",
+      "keptAdministrator": "Konto aktiv gelassen (letzter Administrator): {{name}}",
       "error": "Die letzte Synchronisierung ist fehlgeschlagen: {{message}}",
       "syncNow": "Jetzt synchronisieren",
       "syncing": "Synchronisierung…",
       "consentSuccess": "Zugriff gewährt. Die erste Synchronisierung läuft.",
       "consentError": "Microsoft hat den Zugriff nicht gewährt. Bitten Sie einen Microsoft Entra-Administrator, die Anfrage zu genehmigen.",
-      "resultOk": "Synchronisierung abgeschlossen: {{synced}} Konten aktualisiert, {{disabled}} deaktiviert."
+      "resultOk": "Synchronisierung abgeschlossen: {{synced}} Konten aktualisiert, {{disabled}} deaktiviert.",
+      "alreadyRunning": "Eine Synchronisierung läuft bereits."
     }
   },
   "billing": {

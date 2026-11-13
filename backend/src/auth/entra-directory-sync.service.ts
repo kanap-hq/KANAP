@@ -1,12 +1,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { DataSource, EntityManager, In } from 'typeorm';
+import { DataSource, EntityManager, In, QueryRunner } from 'typeorm';
 import { EntraAuthService } from './entra-auth.service';
 import { UsersService } from '../users/users.service';
 import { TenantsService } from '../tenants/tenants.service';
 import { Tenant } from '../tenants/tenant.entity';
 import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.service';
 import { Features } from '../config/features';
-import { withTenant } from '../common/tenant-runner';
+import { withTenantExecution } from '../common/tenant-runner';
 import { User } from '../users/user.entity';
 import { Company } from '../companies/company.entity';
 import { Department } from '../departments/department.entity';
@@ -18,13 +18,20 @@ import {
   resolveDirectoryNames,
 } from './entra-directory-sync.util';
 import { TeamMemberConfigService } from '../portfolio/team-member-config.service';
+import { lastActiveAdministratorsLeaving } from '../roles/role-grant-ceiling';
 
 export const ENTRA_DIRECTORY_SYNC_TASK = 'entra-directory-sync';
 
 /** Graph `$filter=id in (...)` stays well below URL/operator limits at this size. */
 const GRAPH_ID_BATCH = 15;
 
-export type DirectorySyncStatus = 'ok' | 'consent_required' | 'error';
+/** First key of the sync's advisory lock (two-key form); the second is the workspace id hashed. */
+const DIRECTORY_SYNC_LOCK_NAMESPACE = 0x45445359;
+
+/** The accounts the sync refreshes or disables. */
+const SYNCED_STATUSES = ['enabled', 'invited', 'contact'];
+
+export type DirectorySyncStatus = 'ok' | 'consent_required' | 'error' | 'already_running';
 
 export type TenantSyncResult = {
   status: DirectorySyncStatus;
@@ -36,6 +43,12 @@ export type TenantSyncResult = {
   managers_updated: number;
   /** Directory managers left aside: not a KANAP user yet, or refused. */
   managers_unresolved: number;
+  /**
+   * The name of the workspace's last enabled Administrator, kept enabled (and made a local
+   * account, out of the sync from then on) although the directory
+   * removed or deactivated them; null otherwise.
+   */
+  kept_administrator: string | null;
 };
 
 /** One synced user and the object id of their manager in the directory. */
@@ -91,17 +104,24 @@ export class EntraDirectorySyncService implements OnModuleInit {
       managers_updated: 0,
       managers_unresolved: 0,
       consentRequired: 0,
+      alreadyRunning: 0,
+      keptAdministrators: 0,
       errors: [] as string[],
     };
     for (const tenant of tenants) {
       try {
         const result = await this.syncTenant(tenant.id);
+        if (result.status === 'already_running') {
+          summary.alreadyRunning++;
+          continue;
+        }
         summary.tenantsProcessed++;
         summary.synced += result.synced;
         summary.disabled += result.disabled;
         summary.removed += result.removed;
         summary.managers_updated += result.managers_updated;
         summary.managers_unresolved += result.managers_unresolved;
+        if (result.kept_administrator) summary.keptAdministrators++;
         if (result.status === 'consent_required') summary.consentRequired++;
         else if (result.status === 'error') summary.errors.push(`${tenant.slug}: ${result.message}`);
       } catch (err: any) {
@@ -112,72 +132,117 @@ export class EntraDirectorySyncService implements OnModuleInit {
     return summary;
   }
 
+  /**
+   * One run at a time per workspace (the nightly task, "Sync now", the first sync after consent,
+   * several API instances): a run that finds another one in progress does nothing, records
+   * nothing, and answers `already_running` at once.
+   */
   async syncTenant(tenantId: string): Promise<TenantSyncResult> {
     const tenant = await this.tenants.findById(tenantId);
     if (!tenant || tenant.sso_provider !== 'entra' || !tenant.entra_tenant_id) {
-      return {
-        status: 'error',
-        message: 'SSO_NOT_CONFIGURED',
-        synced: 0,
-        disabled: 0,
-        removed: 0,
-        managers_updated: 0,
-        managers_unresolved: 0,
-      };
+      return { ...emptyResult('error'), message: 'SSO_NOT_CONFIGURED' };
     }
+    const outcome = await this.whileHoldingSyncLock(tenantId, (runner) => this.runTenantSync(tenant, runner));
+    return outcome ?? emptyResult('already_running');
+  }
 
-    const result: TenantSyncResult = {
-      status: 'ok',
-      message: null,
-      synced: 0,
-      disabled: 0,
-      removed: 0,
-      managers_updated: 0,
-      managers_unresolved: 0,
-    };
+  /**
+   * Runs `fn` under the workspace's sync lock, or returns null when another run holds it.
+   *
+   * A session advisory lock on one connection, and the whole run works on that same connection
+   * (`fn` gets it): its short transactions, its status. The run so takes no more connections than
+   * one without the lock, and it cannot outlive its lock: when the connection is lost, the lock
+   * goes with the session and the run's next statement fails. No transaction is open during the
+   * Microsoft calls. The lock is released by `pg_advisory_unlock`; when that fails, the connection
+   * is destroyed rather than returned to the pool still holding it. PostgreSQL keys advisory locks
+   * by database.
+   */
+  private async whileHoldingSyncLock<T>(
+    tenantId: string,
+    fn: (runner: QueryRunner) => Promise<T>,
+  ): Promise<T | null> {
+    const key = [DIRECTORY_SYNC_LOCK_NAMESPACE, `entra-directory-sync:${tenantId}`];
+    const runner = this.dataSource.createQueryRunner();
+    await runner.connect();
+    let locked = false;
+    let broken: unknown = null;
+    try {
+      const [row] = await runner.query(`SELECT pg_try_advisory_lock($1::int, hashtext($2)) AS locked`, key);
+      locked = row?.locked === true;
+      if (!locked) return null;
+      return await fn(runner);
+    } finally {
+      if (locked) {
+        try {
+          const [row] = await runner.query(`SELECT pg_advisory_unlock($1::int, hashtext($2)) AS unlocked`, key);
+          if (row?.unlocked !== true) broken = new Error('directory sync lock not held at release');
+        } catch (err) {
+          broken = err;
+        }
+      }
+      if (broken) {
+        this.logger.warn(
+          `[${ENTRA_DIRECTORY_SYNC_TASK}] tenant ${tenantId}: sync lock connection discarded: ${(broken as any)?.message || broken}`,
+        );
+      }
+      await releaseOrDestroy(runner, broken);
+    }
+  }
+
+  private async runTenantSync(tenant: Tenant, runner: QueryRunner): Promise<TenantSyncResult> {
+    const tenantId = tenant.id;
+    const entraTenantId = tenant.entra_tenant_id as string;
+    const result = emptyResult('ok');
+    // Every transaction of the run is a short one on the lock's connection.
+    const inTenant = <R>(fn: (manager: EntityManager) => Promise<R>) =>
+      withTenantExecution(this.dataSource, tenantId, fn, { runner });
 
     let token: string;
     try {
-      token = await this.entra.acquireAppToken(tenant.entra_tenant_id);
+      token = await this.entra.acquireAppToken(entraTenantId);
       // A token is issued even without admin consent; only Graph tells the truth.
       // Probe once so tenants with no linked users still report consent_required.
       await this.entra.probeDirectoryAccess(token);
     } catch (err: any) {
       // Never keep a token that Graph refused: the next run must re-acquire.
-      this.entra.invalidateAppToken(tenant.entra_tenant_id);
+      this.entra.invalidateAppToken(entraTenantId);
       result.status = this.entra.isConsentError(err) ? 'consent_required' : 'error';
       result.message = err?.message || String(err);
-      await this.recordStatus(tenant, result);
+      await this.recordStatus(tenant, result, runner.manager);
       return result;
     }
 
     const managerEntries: DirectoryManagerEntry[] = [];
+    const leaving: Array<{ user: User; reason: 'removed' | 'deactivated' }> = [];
 
     try {
-      await withTenant(this.dataSource, tenantId, async (manager) => {
-        const repo = manager.getRepository(User);
-        const users = (
-          await repo.find({
-            where: { external_auth_provider: 'entra', status: In(['enabled', 'invited', 'contact']) } as any,
-          })
-        ).filter((u) => !!u.external_subject);
+      const linked = (
+        await inTenant((manager) =>
+          manager.getRepository(User).find({
+            where: { external_auth_provider: 'entra', status: In(SYNCED_STATUSES) } as any,
+          }),
+        )
+      ).filter((u) => !!u.external_subject);
 
-        for (let i = 0; i < users.length; i += GRAPH_ID_BATCH) {
-          const chunk = users.slice(i, i + GRAPH_ID_BATCH);
-          const profiles = await this.entra.fetchDirectoryUsers(
-            token,
-            chunk.map((u) => u.external_subject as string),
-          );
-          const byId = new Map(profiles.filter((p) => p.id).map((p) => [p.id as string, p]));
+      for (let i = 0; i < linked.length; i += GRAPH_ID_BATCH) {
+        const subjects = linked.slice(i, i + GRAPH_ID_BATCH).map((u) => u.external_subject as string);
+        // Outside any transaction: Graph may be slow.
+        const profiles = await this.entra.fetchDirectoryUsers(token, subjects);
+        const byId = new Map(profiles.filter((p) => p.id).map((p) => [p.id as string, p]));
 
+        await inTenant(async (manager) => {
+          const repo = manager.getRepository(User);
+          // Read again: the people may have changed during the Graph call (disabled, relinked).
+          const chunk = (
+            await repo.find({
+              where: { external_auth_provider: 'entra', external_subject: In(subjects), status: In(SYNCED_STATUSES) } as any,
+            })
+          ).filter((u) => !!u.external_subject);
           for (const user of chunk) {
             const profile = byId.get(user.external_subject as string);
             const action = decideDirectoryAction(profile);
             if (action !== 'sync') {
-              const reason = action === 'disable_removed' ? 'removed' : 'deactivated';
-              await this.users.disableUser(user.id, null, { manager, sourceRef: `entra-sync:${reason}` });
-              if (action === 'disable_removed') result.removed++;
-              else result.disabled++;
+              leaving.push({ user, reason: action === 'disable_removed' ? 'removed' : 'deactivated' });
               continue;
             }
             await this.applyDirectoryProfile(user, profile as DirectoryProfile, manager);
@@ -186,26 +251,56 @@ export class EntraDirectorySyncService implements OnModuleInit {
             const managerExternalId = readManagerExternalId(profile);
             if (managerExternalId) managerEntries.push({ userId: user.id, managerExternalId });
           }
-        }
-      });
+        });
+      }
 
-      // The reporting line gets its own short transaction: the pass above spans
-      // Graph calls, and the cycle guard's advisory lock must not be held for
-      // that long against someone editing a manager by hand.
+      // The workspace keeps an enabled Administrator: the directory does not disable the last
+      // one, it becomes a local account, and the report names them. One short transaction per account, taking its locks as
+      // every write on a person does: the person first, then the Administrator role (locked by
+      // the last-administrator check until the transaction ends). A transaction for the whole list
+      // would hold the role while locking the next person, the reverse order. Only an account this
+      // run disables is counted.
+      for (const { user, reason } of leaving) {
+        const outcome = await inTenant(async (manager) => {
+          const [current] = await manager.query(
+            `SELECT status FROM users WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+            [tenantId, user.id],
+          );
+          if (!current || current.status === 'disabled') return 'unchanged' as const;
+          if ((await lastActiveAdministratorsLeaving(manager, [{ userId: user.id, status: 'disabled' }])).length > 0) {
+            // Kept enabled, and made a local account: "Forgot password" gives it back access. Out
+            // of the sync from then on.
+            await this.users.unlinkExternalSignIn(user.id, null, { manager, sourceRef: 'entra-sync:last-administrator' });
+            return 'kept' as const;
+          }
+          await this.users.disableUser(user.id, null, { manager, sourceRef: `entra-sync:${reason}` });
+          return 'disabled' as const;
+        });
+        if (outcome === 'kept') {
+          result.kept_administrator = personName(user);
+          this.logger.warn(
+            `[${ENTRA_DIRECTORY_SYNC_TASK}] tenant ${tenantId}: user ${user.id} ${reason} in the directory, kept enabled as the last administrator and made a local account`,
+          );
+        } else if (outcome === 'disabled') {
+          if (reason === 'removed') result.removed++;
+          else result.disabled++;
+        }
+      }
+
+      // The reporting line gets its own short transaction: the cycle guard's
+      // advisory lock must not be held long against someone editing a manager by hand.
       if (managerEntries.length > 0) {
-        const managers = await withTenant(this.dataSource, tenantId, (manager) =>
-          this.syncDirectoryManagers(tenantId, managerEntries, manager),
-        );
+        const managers = await inTenant((manager) => this.syncDirectoryManagers(tenantId, managerEntries, manager));
         result.managers_updated = managers.updated;
         result.managers_unresolved = managers.unresolved;
       }
     } catch (err: any) {
-      this.entra.invalidateAppToken(tenant.entra_tenant_id);
+      this.entra.invalidateAppToken(entraTenantId);
       result.status = this.entra.isConsentError(err) ? 'consent_required' : 'error';
       result.message = err?.message || String(err);
     }
 
-    await this.recordStatus(tenant, result);
+    await this.recordStatus(tenant, result, runner.manager);
     return result;
   }
 
@@ -329,7 +424,7 @@ export class EntraDirectorySyncService implements OnModuleInit {
     return { updated, unresolved };
   }
 
-  private async recordStatus(tenant: Tenant, result: TenantSyncResult): Promise<void> {
+  private async recordStatus(tenant: Tenant, result: TenantSyncResult, manager: EntityManager): Promise<void> {
     const previous = ((tenant.entra_metadata as any)?.directory_sync ?? {}) as Record<string, any>;
     const now = new Date().toISOString();
     const directory_sync = {
@@ -344,6 +439,7 @@ export class EntraDirectorySyncService implements OnModuleInit {
             removed: result.removed,
             managers_updated: result.managers_updated,
             managers_unresolved: result.managers_unresolved,
+            kept_administrator: result.kept_administrator,
           }
         : {}),
     };
@@ -352,10 +448,50 @@ export class EntraDirectorySyncService implements OnModuleInit {
       // and the rest of entra_metadata may have changed since. Nothing is written
       // when SSO was disconnected or moved to another directory meanwhile.
       await this.tenants.setEntraMetadataKey(tenant.id, 'directory_sync', directory_sync, {
+        manager,
         whenEntraTenantId: tenant.entra_tenant_id,
       });
     } catch (err: any) {
       this.logger.warn(`[${ENTRA_DIRECTORY_SYNC_TASK}] could not record status for tenant ${tenant.id}: ${err?.message || err}`);
     }
+  }
+}
+
+function emptyResult(status: DirectorySyncStatus): TenantSyncResult {
+  return {
+    status,
+    message: null,
+    synced: 0,
+    disabled: 0,
+    removed: 0,
+    managers_updated: 0,
+    managers_unresolved: 0,
+    kept_administrator: null,
+  };
+}
+
+/** The name the sync report shows for a person: first and last name, or the e-mail without them. */
+function personName(user: User): string {
+  return [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.email;
+}
+
+/**
+ * Returns the connection to the pool, or destroys it when `broken` is set or the return fails (an
+ * advisory lock may be left on it). TypeORM's own path for a broken connection: pg-pool discards a
+ * client released with an error.
+ */
+async function releaseOrDestroy(runner: QueryRunner, broken: unknown): Promise<void> {
+  const discard = (err: unknown) =>
+    (runner as unknown as { releasePostgresConnection(err: Error): Promise<void> }).releasePostgresConnection(
+      err instanceof Error ? err : new Error(String(err)),
+    );
+  if (broken) {
+    await discard(broken);
+    return;
+  }
+  try {
+    await runner.release();
+  } catch (err) {
+    await discard(err ?? new Error('release failed')).catch(() => undefined);
   }
 }
