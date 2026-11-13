@@ -513,7 +513,7 @@ describe('UserDialog save and invite', () => {
     post.mockImplementation(async (url: string) => {
       if (url === '/users') return { data: { id: 'new-1' } };
       if (url === '/users/new-1/invite' && invites++ === 0) {
-        throw { response: { status: 502, data: { message: 'The invitation is saved, but its e-mail could not be sent. Send the invitation again.' } } };
+        throw { response: { status: 502, data: { code: 'INVITATION_EMAIL_NOT_SENT', message: 'The invitation is saved, but its e-mail could not be sent. Send the invitation again.' } } };
       }
       return { data: {} };
     });
@@ -525,7 +525,8 @@ describe('UserDialog save and invite', () => {
     fireEvent.click(invite);
     fireEvent.click(within((await screen.findByText(confirmText)).closest('[role="dialog"]') as HTMLElement)
       .getByRole('button', { name: 'users.actions.sendInvite' }));
-    expect(await screen.findByText(/its e-mail could not be sent/)).toBeInTheDocument();
+    // The refusal is shown in the language of the screen.
+    expect(await screen.findByRole('alert')).toHaveTextContent('errors:INVITATION_EMAIL_NOT_SENT');
     // The person exists: the dialog shows them, the list is refreshed, nothing is closed.
     await waitFor(() => expect(get).toHaveBeenCalledWith('/users/new-1'));
     expect(onSaved).toHaveBeenCalled();

@@ -44,7 +44,7 @@ import { RolePermission } from '../permissions/role-permission.entity';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import type { CommitThenRunFn } from '../common/import-connection';
-import { APP_URL_NOT_CONFIGURED_MESSAGE } from '../common/url';
+import { appUrlNotConfigured } from '../common/url';
 import {
   cellOf,
   CsvDateOrder,
@@ -144,6 +144,23 @@ export const ROLE_NOT_FOUND_MESSAGE = 'This role does not exist.';
 /** 400 `ROLE_NOT_FOUND`: a new person named with a role the workspace does not have. */
 export function roleNotFound(): BadRequestException {
   return new BadRequestException({ statusCode: 400, error: 'Bad Request', code: 'ROLE_NOT_FOUND', message: ROLE_NOT_FOUND_MESSAGE });
+}
+
+const INVITATION_EMAIL_NOT_SENT_MESSAGE = 'The invitation is saved, but its e-mail could not be sent. Send the invitation again.';
+
+/** 502 `INVITATION_EMAIL_NOT_SENT`: the invitation is committed, its e-mail failed. */
+function invitationEmailNotSent(): BadGatewayException {
+  return new BadGatewayException({ statusCode: 502, error: 'Bad Gateway', code: 'INVITATION_EMAIL_NOT_SENT', message: INVITATION_EMAIL_NOT_SENT_MESSAGE });
+}
+
+/** 400 `MICROSOFT_SIGN_IN_NOT_SET_UP`: a Microsoft invitation in a workspace without Microsoft sign-in. */
+function microsoftSignInNotSetUp(): BadRequestException {
+  return new BadRequestException({
+    statusCode: 400,
+    error: 'Bad Request',
+    code: 'MICROSOFT_SIGN_IN_NOT_SET_UP',
+    message: 'Microsoft sign-in is not set up for this workspace.',
+  });
 }
 
 /** A user as written to the audit log: a copy without its password hash or MFA secret. */
@@ -1399,7 +1416,7 @@ export class UsersService {
     if (signIn === 'microsoft') {
       const tenant = await repo.manager.getRepository(Tenant).findOne({ where: { id: user.tenant_id } });
       if (!tenantSignsInWithEntra(tenant)) {
-        throw new BadRequestException('Microsoft sign-in is not set up for this workspace.');
+        throw microsoftSignInNotSetUp();
       }
     }
 
@@ -1408,7 +1425,7 @@ export class UsersService {
     // multi-tenant mode.
     const resolvedBaseUrl = baseUrl?.trim();
     if (!resolvedBaseUrl) {
-      throw new BadRequestException(APP_URL_NOT_CONFIGURED_MESSAGE);
+      throw appUrlNotConfigured();
     }
     const normalizedBase = resolvedBaseUrl.replace(/\/$/, '');
 
@@ -1477,7 +1494,7 @@ export class UsersService {
     if (sendError) {
       // eslint-disable-next-line no-console
       console.error(`[users] invitation of user ${user.id}: saved, but its e-mail could not be sent:`, sendError);
-      throw new BadGatewayException('The invitation is saved, but its e-mail could not be sent. Send the invitation again.');
+      throw invitationEmailNotSent();
     }
     return result;
   }

@@ -183,7 +183,9 @@ async function testMicrosoftInvitationNeedsEntraSignIn() {
     const { service, manager, tokens, saves, passwordMails, microsoftMails } = buildInviteService({ tenant });
     await assert.rejects(
       service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager, signIn: 'microsoft' }),
-      (err: unknown) => err instanceof BadRequestException && /Microsoft sign-in is not set up/.test(err.message),
+      (err: unknown) => err instanceof BadRequestException
+        && /Microsoft sign-in is not set up/.test(err.message)
+        && (err.getResponse() as { code?: string }).code === 'MICROSOFT_SIGN_IN_NOT_SET_UP',
     );
     assert.equal(microsoftMails.length + passwordMails.length + tokens.length + saves.length, 0);
   }
@@ -220,6 +222,15 @@ async function testTheRouteReadsTheChoice() {
     await controller.invite('u-1', req, undefined);
     assert.deepEqual(calls, ['microsoft', 'password', 'password'], 'no choice is a password link, as before');
     await assert.rejects(controller.invite('u-1', req, { sign_in: 'sms' }), BadRequestException);
+    assert.equal(calls.length, 3);
+    // Without an application address the route refuses with a code the screen translates.
+    delete process.env.APP_BASE_URL;
+    await assert.rejects(
+      controller.invite('u-1', req, undefined),
+      (err: unknown) => err instanceof BadRequestException
+        && /application URL is not configured/.test(err.message)
+        && (err.getResponse() as { code?: string }).code === 'APP_URL_NOT_CONFIGURED',
+    );
     assert.equal(calls.length, 3);
   } finally {
     for (const key of ENV_KEYS) {

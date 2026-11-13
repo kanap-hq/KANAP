@@ -2004,9 +2004,10 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Requires: users:admin level
   - Body (optional): `{ sign_in: 'password' | 'microsoft' }`, `password` when absent. Another value: `400`.
   - `password`: e-mails a password setup CTA pointing to `/accept-invite#token=...`. The token reuses the password-reset pipeline (same `purpose` and signing key) with its own lifetime, `INVITE_LINK_TTL` (default 7 days; reset links keep `PASSWORD_RESET_TTL`), and automatically enables the user once a password is set.
-  - `microsoft`: only in a workspace with Microsoft Entra sign-in connected (`sso_provider='entra'`, `sso_enabled`, an Entra tenant id), else `400` `Microsoft sign-in is not set up for this workspace.` E-mails a button to the workspace address and asks the person to sign in with Microsoft; no token is issued. The first Microsoft sign-in links the account (by e-mail) and enables an `invited` account.
+  - `microsoft`: only in a workspace with Microsoft Entra sign-in connected (`sso_provider='entra'`, `sso_enabled`, an Entra tenant id), else `400` `MICROSOFT_SIGN_IN_NOT_SET_UP` (`Microsoft sign-in is not set up for this workspace.`). E-mails a button to the workspace address and asks the person to sign in with Microsoft; no token is issued. The first Microsoft sign-in links the account (by e-mail) and enables an `invited` account.
   - An account already linked to Entra (`external_auth_provider='entra'`) is refused (`400`) with either value.
-  - The link uses the same address as password reset links (the tenant's address in multi-tenant mode). Without a configured address: `400` `application URL is not configured: set APP_BASE_URL`.
+  - The link uses the same address as password reset links (the tenant's address in multi-tenant mode). Without a configured address: `400` `APP_URL_NOT_CONFIGURED` (`application URL is not configured: set APP_BASE_URL`), on every route that sends such a link.
+  - The invitation is committed before its e-mail is sent: a failed send answers `502` `INVITATION_EMAIL_NOT_SENT`; the invitation stays saved and inviting again sends a new link.
 
 ### Users CSV
 - GET `/users/export?scope=template|data&language=…` → `text/csv`
