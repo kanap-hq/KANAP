@@ -438,6 +438,21 @@ async function testStartLoginDoesNotSetNonceCookie() {
   assert.equal(cookieCalls.length, 0);
 }
 
+/**
+ * "Sign in with Microsoft" opened for a workspace that is not connected (a page loaded before a
+ * disconnect, a bookmark) lands back on the sign-in page with the reason, not on an error answer.
+ */
+async function testStartLoginWithoutConnectionReturnsToTheSignInPage() {
+  let redirectTarget = '';
+  await withEnv({ APP_BASE_URL: 'http://lvh.me' }, async () => {
+    await ssoController({}, undefined, 'none').startLogin(
+      { ...browser, tenant: { id: 'tenant-1' }, query: {} },
+      { redirect: (url: string) => { redirectTarget = url; } } as any,
+    );
+  });
+  assert.equal(redirectTarget, 'http://alpha.lvh.me/login?ssoError=SSO_NOT_CONFIGURED');
+}
+
 /** Single sign-on set up for every tenant (`entra`), or for none (`none`). */
 function ssoController(entra: Record<string, unknown>, repo: any = { findOne: async () => null }, sso: 'entra' | 'none' = 'entra') {
   const { dataSource } = createMockDataSource(repo);
@@ -896,6 +911,7 @@ async function run() {
   await testCompleteLoginSessionSignsTokensOnTenantHost();
   await testStartSetupDoesNotSetNonceCookie();
   await testStartLoginDoesNotSetNonceCookie();
+  await testStartLoginWithoutConnectionReturnsToTheSignInPage();
   await testRefusedSsoSessionsAreRecorded();
   await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testFailedSsoRoundTripsAreRecordedInATrustedTenant);
   await withEnv({ ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' }, testConsentReturnNeedsAStateSignedForConsent);

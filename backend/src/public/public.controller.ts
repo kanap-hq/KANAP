@@ -294,6 +294,9 @@ export class PublicController {
         useLogoInDark: branding.use_logo_in_dark,
         primaryColorLight: branding.primary_color_light,
         primaryColorDark: branding.primary_color_dark,
+        // Whether "Sign in with Microsoft" works here: the installation has it and the workspace is
+        // connected to a directory. Nothing else about the connection.
+        microsoftSignIn: Features.ENTRA_SSO && detail?.sso_provider === 'entra' && !!detail?.entra_tenant_id,
       };
     }
     return { marketing: true };

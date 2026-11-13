@@ -145,7 +145,11 @@ export class EntraController {
       throw new BadRequestException('Tenant not found');
     }
     if (tenant.sso_provider !== 'entra' || !tenant.entra_tenant_id) {
-      throw new BadRequestException('SSO_NOT_CONFIGURED');
+      // A page loaded before the workspace was disconnected, or a bookmark: back to the sign-in
+      // page, which says why.
+      const base = resolveTenantAppBaseUrl(req, tenant.slug).replace(/\/$/, '');
+      res.redirect(`${base}/login?ssoError=SSO_NOT_CONFIGURED`);
+      return;
     }
 
     const redirectToRaw = req?.query?.redirectTo;

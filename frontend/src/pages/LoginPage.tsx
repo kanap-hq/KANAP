@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -97,7 +97,7 @@ export default function LoginPage() {
     return map[code] ?? 'ssoFailed';
   });
   const { login } = useAuth();
-  const { isPlatformHost } = useTenant();
+  const { isPlatformHost, microsoftSignIn } = useTenant();
   const { config } = useFeatures();
 
   useEffect(() => {
@@ -157,15 +157,21 @@ export default function LoginPage() {
 
           <Stack spacing={3}>
             {!isPlatformHost && config.features.sso && (
-              <Button
-                type="button"
-                variant="contained"
-                color="primary"
-                fullWidth
-                onClick={onMicrosoftSignIn}
-              >
-                {t('auth:login.ssoMicrosoft')}
-              </Button>
+              // Greyed out, with the reason on hover, while the workspace is not connected to a directory.
+              <Tooltip title={microsoftSignIn ? '' : t('auth:login.ssoNotConfigured')}>
+                <Box component="span" sx={{ display: 'block' }}>
+                  <Button
+                    type="button"
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    disabled={!microsoftSignIn}
+                    onClick={onMicrosoftSignIn}
+                  >
+                    {t('auth:login.ssoMicrosoft')}
+                  </Button>
+                </Box>
+              </Tooltip>
             )}
 
             <Stack spacing={2}>

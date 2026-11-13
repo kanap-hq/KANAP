@@ -49,6 +49,11 @@ export type TenantContextValue = {
   useLogoInDark: boolean;
   primaryColorLight: string | null;
   primaryColorDark: string | null;
+  /**
+   * Whether "Sign in with Microsoft" works for this workspace (the workspace is connected to a
+   * directory). True when the server does not say.
+   */
+  microsoftSignIn: boolean;
   refreshTenantInfo: () => Promise<void>;
 };
 
@@ -68,6 +73,7 @@ type State =
     useLogoInDark: boolean;
     primaryColorLight: string | null;
     primaryColorDark: string | null;
+    microsoftSignIn: boolean;
   }
   | { status: 'missing'; marketingUrl: string };
 
@@ -99,6 +105,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         useLogoInDark: data.useLogoInDark !== false,
         primaryColorLight: normalizeHex(data.primaryColorLight),
         primaryColorDark: normalizeHex(data.primaryColorDark),
+        microsoftSignIn: data.microsoftSignIn !== false,
       };
     } catch (error: any) {
       const marketing = error?.response?.data?.marketingUrl || marketingUrl;
@@ -117,6 +124,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         useLogoInDark: true,
         primaryColorLight: null,
         primaryColorDark: null,
+        microsoftSignIn: true,
       };
     }
   }, [marketingUrl]);
@@ -138,6 +146,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         useLogoInDark: true,
         primaryColorLight: null,
         primaryColorDark: null,
+        microsoftSignIn: true,
         refreshTenantInfo,
       };
     }
@@ -155,6 +164,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         useLogoInDark: state.useLogoInDark,
         primaryColorLight: state.primaryColorLight,
         primaryColorDark: state.primaryColorDark,
+        microsoftSignIn: state.microsoftSignIn,
         refreshTenantInfo,
       };
     }
@@ -168,6 +178,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       useLogoInDark: true,
       primaryColorLight: null,
       primaryColorDark: null,
+      microsoftSignIn: true,
       refreshTenantInfo,
     };
   }, [apiBase, refreshTenantInfo, state]);
