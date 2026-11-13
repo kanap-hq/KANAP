@@ -31,6 +31,7 @@ import {
   hasRecentLinkConfirmation,
   lockAccountForLink,
   lockTenantConnection,
+  lockTenantConnectionForChange,
   storeLinkConfirmation,
 } from './entra-link-confirmation';
 
@@ -648,21 +649,26 @@ export class EntraController {
     req: any,
     res: Response,
   ) {
-    await this.tenants.updateTenant(tenantId, {
-      sso_provider: 'entra' as any,
-      entra_tenant_id: entraTenantId,
-      sso_enabled: true as any,
-      entra_metadata: {
-        ...(claims?.name ? { display_name: claims.name } : {}),
-        ...(claims?.email || claims?.preferred_username
-          ? { primary_domain: String(claims.email || claims.preferred_username).split('@')[1] || null }
-          : {}),
-        connected_at: new Date().toISOString(),
-      } as any,
-    });
-
-    await withTenant(this.dataSource, tenantId, (manager) =>
-      this.audit.log(
+    await withTenant(this.dataSource, tenantId, async (manager) => {
+      // A connection changes the directory sign-ins check: it waits for the sign-ins in progress.
+      await lockTenantConnectionForChange(manager, tenantId);
+      await this.tenants.updateTenant(
+        tenantId,
+        {
+          sso_provider: 'entra' as any,
+          entra_tenant_id: entraTenantId,
+          sso_enabled: true as any,
+          entra_metadata: {
+            ...(claims?.name ? { display_name: claims.name } : {}),
+            ...(claims?.email || claims?.preferred_username
+              ? { primary_domain: String(claims.email || claims.preferred_username).split('@')[1] || null }
+              : {}),
+            connected_at: new Date().toISOString(),
+          } as any,
+        },
+        { manager },
+      );
+      await this.audit.log(
         {
           table: 'tenants',
           recordId: tenantId,
@@ -674,8 +680,8 @@ export class EntraController {
           sourceRef: 'entra-setup',
         },
         { manager },
-      ),
-    );
+      );
+    });
 
     const baseUrl = resolveTenantAppBaseUrl(req, tenantSlug);
     const normalized = baseUrl.replace(/\/$/, '');

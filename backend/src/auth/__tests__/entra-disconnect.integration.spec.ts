@@ -494,6 +494,39 @@ async function testDisconnectLeavesOtherWritesFree(c: Ctx) {
   }
 }
 
+/**
+ * A Microsoft sign-in never waits for a transaction that holds the workspace's row (an import of
+ * applications, a settings change): only a disconnect or a connection make it wait.
+ */
+async function testSignInDoesNotWaitForTheWorkspaceRow(c: Ctx) {
+  const w = await workspace(c.ds);
+  const ada = await w.user('ada', { admin: true });
+  await w.user('bob');
+  const holder = await openTransaction(c, w);
+  try {
+    await holder.runner.query(`SELECT id FROM tenants WHERE id = $1 FOR UPDATE`, [w.tenantId]);
+    let location = '';
+    const signIn = (c.entraController as any).handleLoginCallback(
+      w.tenantId, w.slug, '/',
+      { tid: w.directoryId, oid: 'oid-bob', email: w.email('bob'), name: 'bob Tester' },
+      null,
+      request(w, ada),
+      { redirect: (url: string) => { location = url; } },
+    ) as Promise<void>;
+    signIn.catch(() => undefined);
+    const outcome = await Promise.race([
+      signIn.then(() => 'signed in'),
+      new Promise<string>((resolve) => setTimeout(() => resolve('still waiting after 3 s'), 3000)),
+    ]);
+    await holder.runner.commitTransaction();
+    await signIn;
+    assert.equal(outcome, 'signed in');
+    assert.match(location, /handoff=/);
+  } finally {
+    await endAll(holder.runner);
+  }
+}
+
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for entra-disconnect.integration.spec.ts.');
   const { AppModule } = require('../../app.module');
@@ -536,6 +569,7 @@ async function run() {
     ['connected again, the usual link rule applies', testReconnectUsesTheLinkRule],
     ['a disconnect and a linking sign-in exclude each other', testDisconnectAndLinkingSignInExcludeEachOther],
     ["a disconnect leaves the workspace's other writes free", testDisconnectLeavesOtherWritesFree],
+    ["a sign-in does not wait for the workspace's row", testSignInDoesNotWaitForTheWorkspaceRow],
   ];
   const only = process.argv[2];
   try {

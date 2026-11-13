@@ -4,7 +4,7 @@ import type { EntityManager } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { TenantsService } from '../tenants/tenants.service';
 import { writeAuditLog } from '../audit/audit.service';
-import { LINK_CONFIRMATION_HASH_PREFIX } from './entra-link-confirmation';
+import { LINK_CONFIRMATION_HASH_PREFIX, lockTenantConnectionForChange } from './entra-link-confirmation';
 
 /** The shortest password, as for a password reset (`CompletePasswordResetDto`). */
 export const LOCAL_PASSWORD_MIN_LENGTH = 8;
@@ -63,11 +63,12 @@ export class EntraDisconnectService {
 
   /**
    * Removes the connection in the caller's transaction (the request's). Locks, in this order: the
-   * workspace's row, which a Microsoft sign-in that links an account holds while it does
-   * (`lockTenantConnection`, FOR SHARE), then the accounts' rows by id (`lockPeople` order). The
-   * workspace's row is taken FOR NO KEY UPDATE: it excludes that share lock, and leaves free the
-   * key share lock every foreign key to the workspace takes, so the workspace's other writes go on
-   * during a disconnect. An administrator
+   * workspace's Microsoft connection, alone (`lockTenantConnectionForChange`), which a Microsoft
+   * sign-in that links an account holds shared while it does (`lockTenantConnection`), then the
+   * accounts' rows by id (`lockPeople` order). It is an advisory lock: the workspace's row is
+   * read without a lock and updated at the end like any write of the workspace, so the
+   * workspace's other writes go on during a disconnect, and sign-ins never wait for them. Two
+   * disconnects at once: the second reads the workspace once the first has committed. An administrator
    * without a password gives one (`password`, at least `LOCAL_PASSWORD_MIN_LENGTH` characters),
    * written with the rest; one who has a password keeps it and `password` is ignored. A refusal
    * writes nothing. Pending link confirmations stop working: once connected again, an existing
@@ -78,8 +79,9 @@ export class EntraDisconnectService {
     input: { tenantId: string; actorId: string | null; password?: unknown },
   ): Promise<{ unlinked: number; entraTenantId: string }> {
     const { tenantId, actorId } = input;
+    await lockTenantConnectionForChange(manager, tenantId);
     const [tenant] = await manager.query(
-      `SELECT sso_provider, sso_enabled, entra_tenant_id FROM tenants WHERE id = $1 FOR NO KEY UPDATE`,
+      `SELECT sso_provider, sso_enabled, entra_tenant_id FROM tenants WHERE id = $1`,
       [tenantId],
     );
     if (!tenant || tenant.sso_provider !== 'entra' || !tenant.entra_tenant_id) {

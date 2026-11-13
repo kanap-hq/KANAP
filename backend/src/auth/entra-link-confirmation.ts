@@ -18,21 +18,39 @@ export function linkConfirmationHash(token: string): string {
 export const LINK_CONFIRMATION_RESEND_MINUTES = 5;
 
 /**
- * Reads the workspace's Microsoft connection and holds its row (share lock) for the rest of the
- * transaction. A sign-in or a confirmation that links an account takes it before the account's
- * row: a disconnect, which locks the workspace's row to write it and then every linked account,
- * waits for it, and one that starts after the disconnect reads the disconnected workspace and
- * links nothing.
+ * First key of the workspace's Microsoft connection lock ("ECON"): the two-key form, a key space
+ * of its own, apart from the single-key locks and the other namespaces. The second key is the
+ * workspace id hashed.
+ */
+const CONNECTION_LOCK_NAMESPACE = 0x45434f4e;
+
+function connectionLockKey(tenantId: string): [number, string] {
+  return [CONNECTION_LOCK_NAMESPACE, `entra-connection:${tenantId}`];
+}
+
+/**
+ * Reads the workspace's Microsoft connection and holds it (transaction advisory lock, shared) for
+ * the rest of the transaction. A sign-in or a confirmation that links an account takes it before
+ * the account's row: a disconnect or a new connection (`lockTenantConnectionForChange`) waits for
+ * it, and a sign-in that starts after one reads the workspace as it left it. The workspace's row
+ * is read without a lock: a sign-in never waits for the workspace's other writers.
  */
 export async function lockTenantConnection(
   manager: EntityManager,
   tenantId: string,
 ): Promise<{ sso_provider: string | null; entra_tenant_id: string | null } | null> {
-  const rows = await manager.query(
-    `SELECT sso_provider, entra_tenant_id FROM tenants WHERE id = $1 FOR SHARE`,
-    [tenantId],
-  );
+  await manager.query(`SELECT pg_advisory_xact_lock_shared($1::int, hashtext($2))`, connectionLockKey(tenantId));
+  const rows = await manager.query(`SELECT sso_provider, entra_tenant_id FROM tenants WHERE id = $1`, [tenantId]);
   return rows[0] ?? null;
+}
+
+/**
+ * Holds the workspace's Microsoft connection alone (exclusive) for the rest of the transaction,
+ * before it is changed (disconnect, connection): waits for the sign-ins and confirmations that
+ * hold it, and makes the next ones wait.
+ */
+export async function lockTenantConnectionForChange(manager: EntityManager, tenantId: string): Promise<void> {
+  await manager.query(`SELECT pg_advisory_xact_lock($1::int, hashtext($2))`, connectionLockKey(tenantId));
 }
 
 /**
