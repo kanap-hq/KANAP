@@ -14461,8 +14461,11 @@ async function runTriageWithSimulatedModel(input: {
   // Persona instructions, and the lines of a shared context the agent is given.
   instructions?: string[];
   sharedContextLines?: string[];
+  // The answers are checked against the schema of their call, as the client does; an answer that
+  // fails it is a failed call that still reports its tokens.
+  validateSchemas?: boolean;
 }) {
-  const { manager } = createMemoryManager();
+  const { manager, stores } = createMemoryManager();
   const context = createContext(manager);
   if (input.tenantLanguage) {
     await manager.getRepository(Tenant).save({ id: context.tenantId, metadata: { language: input.tenantLanguage } });
@@ -14619,7 +14622,15 @@ async function runTriageWithSimulatedModel(input: {
     callStructuredJsonModel: async (_context: unknown, request: any) => {
       calls.push({ taskName: request.taskName, payload: request.userPayload, images: request.images ?? null });
       const answer = input.respond?.(request.taskName, request.userPayload);
-      if (answer !== undefined) return answer === null ? null : structuredJsonSuccess(answer);
+      if (answer && input.validateSchemas && request.schema && !request.schema.safeParse(answer).success) {
+        return {
+          ...structuredJsonSuccess(answer, { usage: { input_tokens: 900, output_tokens: 300 } }),
+          ok: false,
+          value: null,
+          metadata: { failure: { kind: 'schema_invalid', message: 'schema invalid' }, retry_attempted: true },
+        };
+      }
+      if (answer !== undefined) return answer === null ? null : structuredJsonSuccess(answer, input.validateSchemas ? { usage: { input_tokens: 900, output_tokens: 300 } } : undefined);
       switch (request.taskName) {
         case 'action_planner':
           return input.plan ? structuredJsonSuccess(input.plan) : null;
@@ -14669,7 +14680,7 @@ async function runTriageWithSimulatedModel(input: {
   } finally {
     (Features as any).AI_WEB_SEARCH_READY = previousWebReady;
   }
-  return { calls, ...prepared, capabilityCalls, capabilityInputs };
+  return { calls, ...prepared, capabilityCalls, capabilityInputs, stores };
 }
 
 // The chain of the support agent on knowledge (lot R1 of 26.11.8, tickets 94 to 96 of fromage):
@@ -15187,6 +15198,7 @@ async function runR3Triage(
     tenantLanguage?: string;
     instructions?: string[];
     sharedContextLines?: string[];
+    validateSchemas?: boolean;
   } = {},
 ) {
   return runTriageWithSimulatedModel({
@@ -15400,6 +15412,25 @@ async function testTheRewrittenReplyKeepsTheSafeguards() {
     administrative_reply: () => ({ body: exact.toLocaleUpperCase() }),
   }, { instructions: [`Pour accuser réception, répondre exactement "${exact}"`] });
   assert.equal(snapped.publicReply, exact, 'the configured message, exactly');
+}
+
+function r3Step(result: { stores: Map<string, any[]> }, capabilityName: string) {
+  return (result.stores.get(AiRunStep.name) ?? []).find((step: any) => step.capability_name === capabilityName);
+}
+
+// A brief longer than the note shows is no failure: the note shows it cut at the end of a sentence.
+async function testALongBriefIsCutAtASentence() {
+  const sentence = (index: number) => `Point ${index} du résumé complet pour le technicien, vérifié sur tout le fil.`;
+  const long = Array.from({ length: 40 }, (_entry, index) => sentence(index + 1)).join(' ');
+  assert.ok(long.length > 2500);
+  const result = await runR3Triage('sourced', 'used', true, { technician_brief: () => ({ technician_brief: long }) }, { validateSchemas: true });
+  assert.equal(r3Step(result, 'technician_brief_synthesis')?.status, 'completed', 'the step succeeds');
+  const note = result.internalNote ?? '';
+  assert.ok(note.includes(sentence(1)), `the note shows the brief of the step: ${note}`);
+  const shown = note.slice(note.indexOf(sentence(1))).split('\n')[0];
+  assert.ok(/\.$/.test(shown) && !shown.endsWith('...'), `cut at the end of a sentence: …${shown.slice(-60)}`);
+  const brief = (result.calls.find((call) => call.taskName === 'technician_brief')?.payload ?? {}) as any;
+  assert.ok((brief.rules as string[]).some((rule) => /1000 characters/.test(rule)), 'the length is asked in the prompt');
 }
 
 // The names of the workspace's applications are read once per triage, in the workspace only, and
@@ -18369,6 +18400,7 @@ async function run() {
   await testAWithdrawnReplyIsToldInTheNoteLanguage();
   await testTheBriefAndTheRewriteFailClosed();
   await testTheRewrittenReplyKeepsTheSafeguards();
+  await testALongBriefIsCutAtASentence();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();

@@ -9,7 +9,7 @@ import { ticketLooksFrench } from './agent-control-knowledge.util';
 import { clampText } from './agent-control-util';
 import { isPublicTicketItem } from './agent-ticket-sources';
 import type { ConversationActionGate, KnowledgeSearchItem, TicketLike, TicketNoteLike, TicketTimelineEntry, WebSearchResultItem } from './ai-agent-control.service';
-import { ReplySynthesisRejectedSource, ReplySynthesisResult, ReplySynthesisSource } from './ai-reply-synthesis.service';
+import type { ReplySynthesisRejectedSource, ReplySynthesisResult, ReplySynthesisSource } from './ai-reply-synthesis.service';
 import {
   HTML_TAGS,
   removeThematicBreakLines,
@@ -681,6 +681,22 @@ export function normalizeKnowledgeReplyText(value: string | null | undefined): s
     .trim();
 }
 
+/**
+ * A text within maxChars, cut after the last sentence that fits (or, without one, after the last
+ * whole word): never in the middle of a word.
+ */
+export function cutAtSentenceEnd(value: string, maxChars: number): string {
+  const text = value.trim();
+  if (text.length <= maxChars) return text;
+  const head = text.slice(0, maxChars);
+  const sentenceEnds = [...head.matchAll(/[.!?](?=\s)/g)].map((match) => match.index ?? -1);
+  if (/[.!?]$/.test(head) && /\s/.test(text[maxChars] ?? '')) sentenceEnds.push(head.length - 1);
+  const lastSentenceEnd = Math.max(-1, ...sentenceEnds);
+  if (lastSentenceEnd > 0) return head.slice(0, lastSentenceEnd + 1).trim();
+  const lastSpace = head.search(/\s\S*$/);
+  return (lastSpace > 0 ? head.slice(0, lastSpace) : head).trim();
+}
+
 export function sanitizeForProvider(value: string | null | undefined, maxChars: number): string {
   const sanitized = String(value ?? '')
     .replace(/\r\n/g, '\n')
@@ -889,8 +905,8 @@ export function renderSynthesizedTriageNote(
     'rejected',
     language,
   );
-  const technicianBrief = sanitizeForProvider(
-    synthesis.technician_brief || texts.noSynthesisBrief,
+  const technicianBrief = cutAtSentenceEnd(
+    sanitizeForProvider(synthesis.technician_brief || texts.noSynthesisBrief, Number.MAX_SAFE_INTEGER),
     MAX_INTERNAL_SYNTHESIS_BRIEF_CHARS,
   );
   const recommendedReply = synthesis.usable
