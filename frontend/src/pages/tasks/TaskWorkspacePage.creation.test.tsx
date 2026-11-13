@@ -299,6 +299,18 @@ describe('Task creation at the title', () => {
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
+  it('shows nothing of the new task while the project read is pending, then leads to access denied', async () => {
+    let release: (project: typeof PROJECT) => void = () => undefined;
+    const projectRead = new Promise<typeof PROJECT>((resolve) => { release = resolve; });
+    renderPage(['/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks'], { projectRead, projectExtra: { can_contribute: false } });
+    expect(await screen.findByText('portfolio:workspace.task.messages.loading')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: TITLE })).toBeNull();
+    expect(screen.queryByTestId('task-properties')).toBeNull();
+    release(PROJECT);
+    await waitFor(() => expect(location()).toBe('/403'));
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
   it('leads to the access denied page when the project read is refused', async () => {
     renderPage(['/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks'], { projectRead: 'forbidden' });
     await waitFor(() => expect(location()).toBe('/403'));
@@ -312,8 +324,11 @@ describe('Task creation at the title', () => {
       strict: true,
       projectRead,
     });
-    // The init effect has been cancelled by the strict re-render; the read is still pending.
-    await waitFor(() => expect(screen.getByTestId('task-properties')).toHaveTextContent('related:portfolio:context.project'));
+    // The init effect has been cancelled by the strict re-render; the read is still pending: the
+    // page waits, nothing of the new task shows.
+    expect(await screen.findByText('portfolio:workspace.task.messages.loading')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: TITLE })).toBeNull();
+    expect(screen.queryByTestId('task-properties')).toBeNull();
     release(PROJECT);
     await waitFor(() => expect(screen.getByTestId('task-properties')).toHaveTextContent('related:Project A'));
   });

@@ -1456,7 +1456,8 @@ export default function TaskWorkspacePage() {
     return <Navigate to="/403" replace state={{ from: location.pathname } satisfies ForbiddenState} />;
   }
 
-  if (!isCreate && isLoading && !task) {
+  // Nothing of the new task shows before the project read says whether the person contributes.
+  if ((isCreate && originProjectId && createProjectStatus === 'pending') || (!isCreate && isLoading && !task)) {
     return (
       <Box sx={{ p: 3 }}>
         <Typography color="text.secondary">{t('portfolio:workspace.task.messages.loading')}</Typography>
