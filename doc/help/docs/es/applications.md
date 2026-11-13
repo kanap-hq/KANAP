@@ -137,14 +137,14 @@ Una celda sin valor muestra un guion.
 
 ### Modificar aplicaciones en bloque { #changing-applications-in-bulk }
 
-**Seleccionar aplicaciones**: Con el derecho de editar aplicaciones, la lista muestra una casilla al inicio de cada fila. Marque las aplicaciones una a una, o marque la casilla del encabezado de columna para tomar todas las aplicaciones del filtro y la búsqueda actuales, incluidas las que aún no se han cargado. Desmarque una aplicación para dejarla fuera. Cambiar los filtros, la búsqueda o el alcance **Mostrar** vacía la selección. La ordenación la conserva.
+**Seleccionar aplicaciones**: Con el derecho de editar aplicaciones, la lista muestra una casilla delante de cada aplicación. Marque las aplicaciones una a una, o marque la casilla del encabezado de columna para tomar todas las aplicaciones del filtro y la búsqueda actuales, incluidas las que aún no se han cargado. Desmarque una aplicación para dejarla fuera. Cambiar los filtros, la búsqueda o el alcance **Mostrar** vacía la selección. La ordenación la conserva.
 
 **Modificar un campo**:
 
 1. Seleccione las aplicaciones y haga clic en **Modificar la selección** (icono de edición). El icono muestra el número de aplicaciones seleccionadas
 2. Elija el **Campo**: **Responsables de negocio**, **Responsables IT**, **Ciclo de vida** o **Criticidad de negocio**
 3. Elija el **Nuevo valor**. Para los responsables, elija una o varias personas. El diálogo cuenta las aplicaciones: cuántas cambiarán, cuántas ya tienen este valor y cuántas se rechazan. El recuento se repite con cada nuevo valor
-4. Haga clic en **Modificar 12 filas** (con su recuento) para confirmar. La ventana muestra entonces el resultado. Haga clic en **Cerrar** para cerrarla. La lista detrás ya está actualizada
+4. Haga clic en **Modificar 12 aplicaciones** (con su recuento) para confirmar. La ventana muestra entonces el resultado. Haga clic en **Cerrar** para cerrarla. La lista detrás ya está actualizada
 
 **Responsables**: Las personas elegidas sustituyen a los responsables de ese rol en cada aplicación. El otro rol conserva sus personas: modificar los **Responsables de negocio** deja los **Responsables IT** como estaban.
 

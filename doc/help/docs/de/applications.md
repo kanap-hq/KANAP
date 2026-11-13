@@ -137,14 +137,14 @@ Eine Zelle ohne Wert zeigt einen Strich.
 
 ### Anwendungen in großer Zahl ändern { #changing-applications-in-bulk }
 
-**Anwendungen auswählen**: Mit dem Recht, Anwendungen zu bearbeiten, zeigt die Liste am Anfang jeder Zeile ein Kästchen. Haken Sie Anwendungen einzeln an, oder haken Sie das Kästchen in der Spaltenkopfzeile an, um alle Anwendungen des aktuellen Filters und der Suche zu erfassen, auch die noch nicht geladenen. Entfernen Sie den Haken einer Anwendung, um sie auszulassen. Eine Änderung der Filter, der Suche oder des Bereichs **Anzeigen** leert die Auswahl. Die Sortierung behält sie bei.
+**Anwendungen auswählen**: Mit dem Recht, Anwendungen zu bearbeiten, zeigt die Liste vor jeder Anwendung ein Kästchen. Haken Sie Anwendungen einzeln an, oder haken Sie das Kästchen in der Spaltenkopfzeile an, um alle Anwendungen des aktuellen Filters und der Suche zu erfassen, auch die noch nicht geladenen. Entfernen Sie den Haken einer Anwendung, um sie auszulassen. Eine Änderung der Filter, der Suche oder des Bereichs **Anzeigen** leert die Auswahl. Die Sortierung behält sie bei.
 
 **Ein Feld ändern**:
 
 1. Wählen Sie die Anwendungen aus und klicken Sie auf **Auswahl ändern** (Bearbeitungssymbol). Das Symbol zeigt die Anzahl der ausgewählten Anwendungen
 2. Wählen Sie das **Feld**: **Fachverantwortliche**, **IT-Verantwortliche**, **Lebenszyklus** oder **Geschäftskritikalität**
 3. Wählen Sie den **Neuen Wert**. Für Verantwortliche wählen Sie eine oder mehrere Personen. Der Dialog zählt die Anwendungen: wie viele geändert werden, wie viele diesen Wert bereits haben und wie viele abgelehnt werden. Bei jedem neuen Wert wird erneut gezählt
-4. Klicken Sie zur Bestätigung auf **12 Zeilen ändern** (mit Ihrer Zählung). Das Fenster zeigt danach das Ergebnis. Klicken Sie auf **Schließen**, um es zu schließen. Die Liste dahinter ist bereits aktuell
+4. Klicken Sie zur Bestätigung auf **12 Anwendungen ändern** (mit Ihrer Zählung). Das Fenster zeigt danach das Ergebnis. Klicken Sie auf **Schließen**, um es zu schließen. Die Liste dahinter ist bereits aktuell
 
 **Verantwortliche**: Die gewählten Personen ersetzen auf jeder Anwendung die Verantwortlichen dieser Rolle. Die andere Rolle behält ihre Personen: Eine Änderung der **Fachverantwortlichen** lässt die **IT-Verantwortlichen** unverändert.
 

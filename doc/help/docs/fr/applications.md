@@ -137,14 +137,14 @@ Une cellule sans valeur affiche un tiret.
 
 ### Modifier des applications en masse { #changing-applications-in-bulk }
 
-**Sélectionner des applications** : Avec le droit de modifier les applications, la liste affiche une case au début de chaque ligne. Cochez les applications une à une, ou cochez la case de l'en-tête de colonne pour prendre toutes les applications du filtre et de la recherche en cours, y compris celles qui ne sont pas encore chargées. Décochez une application pour l'en retirer. Changer les filtres, la recherche ou le périmètre **Afficher** vide la sélection. Le tri la conserve.
+**Sélectionner des applications** : Avec le droit de modifier les applications, la liste affiche une case devant chaque application. Cochez les applications une à une, ou cochez la case de l'en-tête de colonne pour prendre toutes les applications du filtre et de la recherche en cours, y compris celles qui ne sont pas encore chargées. Décochez une application pour l'en retirer. Changer les filtres, la recherche ou le périmètre **Afficher** vide la sélection. Le tri la conserve.
 
 **Modifier un champ** :
 
 1. Sélectionnez les applications, puis cliquez sur **Modifier la sélection** (icône de modification). L'icône affiche le nombre d'applications sélectionnées
 2. Choisissez le **Champ** : **Responsables métier**, **Responsables IT**, **Cycle de vie** ou **Criticité business**
 3. Choisissez la **Nouvelle valeur**. Pour les responsables, choisissez une ou plusieurs personnes. La boîte de dialogue compte les applications : combien changeront, combien ont déjà cette valeur, et combien sont refusées. Le comptage reprend à chaque nouvelle valeur
-4. Cliquez sur **Modifier 12 lignes** (avec votre comptage) pour confirmer. La fenêtre affiche ensuite le résultat. Cliquez sur **Fermer** pour la fermer. La liste derrière elle est déjà à jour
+4. Cliquez sur **Modifier 12 applications** (avec votre comptage) pour confirmer. La fenêtre affiche ensuite le résultat. Cliquez sur **Fermer** pour la fermer. La liste derrière elle est déjà à jour
 
 **Responsables** : Les personnes choisies remplacent les responsables de ce rôle sur chaque application. L'autre rôle garde ses personnes : modifier les **Responsables métier** laisse les **Responsables IT** tels quels.
 

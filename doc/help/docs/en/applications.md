@@ -137,14 +137,14 @@ A cell with no value shows a dash.
 
 ### Changing applications in bulk { #changing-applications-in-bulk }
 
-**Selecting applications**: With the right to edit applications, the list shows a box at the start of each row. Tick applications one by one, or tick the box in the column header to take every application of the current filter and search, including those not loaded yet. Untick an application to leave it out. Changing the filters, the search or the **Show** scope clears the selection. Sorting keeps it.
+**Selecting applications**: With the right to edit applications, the list shows a box in front of each application. Tick applications one by one, or tick the box in the column header to take every application of the current filter and search, including those not loaded yet. Untick an application to leave it out. Changing the filters, the search or the **Show** scope clears the selection. Sorting keeps it.
 
 **Changing a field**:
 
 1. Select the applications, then click **Change the selection** (edit icon). The icon shows the number of applications selected
 2. Choose the **Field**: **Business owners**, **IT owners**, **Lifecycle** or **Business criticality**
 3. Choose the **New value**. For owners, pick one or more people. The dialog counts the applications: how many will change, how many already have this value, and how many are refused. The count runs again at each new value
-4. Click **Change 12 rows** (with your count) to confirm. The window then shows the outcome. Click **Close** to close it. The list behind it is already up to date
+4. Click **Change 12 applications** (with your count) to confirm. The window then shows the outcome. Click **Close** to close it. The list behind it is already up to date
 
 **Owners**: The people you choose replace the owners of that role on each application. The other role keeps its people: changing the **Business owners** leaves the **IT owners** as they are.
 
