@@ -167,7 +167,9 @@ export class UsersController {
   @RequireLevel('users', 'admin')
   async create(@Body() body: any, @Req() req: any) {
     const roleGrant = roleGrantActorOf(req);
-    if (!hasField(body, 'role_ids')) return this.svc.createUser(body, { manager: req?.queryRunner?.manager, roleGrant });
+    // The history names the person who creates.
+    const actorUserId = req.user?.sub ?? null;
+    if (!hasField(body, 'role_ids')) return this.svc.createUser(body, { manager: req?.queryRunner?.manager, roleGrant, actorUserId });
     // `role_ids`: all the roles of the new person, given with their profile in the same request
     // (the user dialog creates both at once, or neither), under the checks of `PUT /users/:id/roles`.
     // A refused role is refused before anything is written.
@@ -177,7 +179,7 @@ export class UsersController {
     await assertRoleGrantWithinActorRights(req?.queryRunner?.manager ?? this.userRepo.manager, roleGrant, null, roleList.roleIds);
     const created = await this.svc.createUser(
       { ...profile, role_id: roleList.legacyRoleId },
-      { manager: req?.queryRunner?.manager, roleGrant },
+      { manager: req?.queryRunner?.manager, roleGrant, actorUserId },
     );
     await this.writeRoles(created.id, roleList, req);
     return { ...created, role_id: roleList.legacyRoleId };

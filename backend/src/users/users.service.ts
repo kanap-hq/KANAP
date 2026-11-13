@@ -773,7 +773,12 @@ export class UsersService {
     department_id?: string | null;
     status?: string | null;
     tenant_id?: string;
-  }, opts?: { manager?: EntityManager; roleGrant?: RoleGrantActor }) {
+  }, opts?: {
+    manager?: EntityManager;
+    roleGrant?: RoleGrantActor;
+    /** Who creates the person, for the history; absent, the person themselves (a sign-in, an activation). */
+    actorUserId?: string | null;
+  }) {
     const repo = this.getRepo(opts?.manager);
     // The address of an existing person, whatever their status and in any case, is refused and that
     // person left as they are. A caller that finds or creates looks the person up first (Microsoft
@@ -843,7 +848,7 @@ export class UsersService {
           action: 'create',
           before: null,
           after: userAuditSnapshot(saved),
-          userId: saved.id,
+          userId: opts?.actorUserId !== undefined ? opts.actorUserId : saved.id,
         },
         { manager: opts?.manager ?? repo.manager },
       );

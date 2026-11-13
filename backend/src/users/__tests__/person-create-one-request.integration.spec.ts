@@ -9,7 +9,8 @@ import { caught, heldRoles, inRequest, nothingFor, refusedWith, req, type Seed, 
 // A person and their roles are created in one request (`POST /users` with `role_ids`), under the
 // checks of `PUT /users/:id/roles`: a refused role list creates nothing (no person, no role, no
 // audit entry), whoever creates. The first role is the main one; an empty list leaves the Contact
-// role alone, as `PUT /users/:id/roles` does. An administrator gives every role.
+// role alone, as `PUT /users/:id/roles` does. An administrator gives every role. The creation is
+// written to the history under the person who creates.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret-of-at-least-32-characters';
@@ -49,6 +50,12 @@ async function testCreatedWithEveryRole(users: any, dataSource: DataSource, s: S
       req(runner, s, 'ua'),
     );
     assert.equal(created.role_id, s.roles.budgetReader, 'the first role is the main role');
+    // The history names the person who created them, not the person created.
+    const [entry] = await runner.query(
+      `SELECT user_id FROM audit_log WHERE table_name = 'users' AND record_id = $1 AND action = 'create'`,
+      [created.id],
+    );
+    assert.equal(entry?.user_id, s.users.ua, 'the creation is the creator\'s in the history');
     assert.deepEqual(await heldRoles(runner, created.id), [
       { role_id: s.roles.budgetReader, is_primary: true },
       { role_id: s.roles.contact, is_primary: false },
