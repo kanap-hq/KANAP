@@ -185,6 +185,7 @@ export default function ApplicationsPage() {
   const bulk = useBulkSelection<AppRow>({
     rowLabel: (row) => t('common:bulkEdit.selectRow', { name: row.name }),
     scopeKey: ({ q, filters, ownerUserId, ownerTeamId }) => ({ q, filters, ownerUserId, ownerTeamId }),
+    family: 'applications',
   });
   const [bulkOpen, setBulkOpen] = useState(false);
   const bulkFields = useApplicationBulkFields();
@@ -1222,6 +1223,7 @@ export default function ApplicationsPage() {
           open={bulkOpen}
           onClose={() => setBulkOpen(false)}
           endpoint="/applications/bulk-update"
+          family="applications"
           selection={bulk.body}
           fields={bulkFields}
           onDone={() => {

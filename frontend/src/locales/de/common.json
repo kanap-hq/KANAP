@@ -1773,6 +1773,7 @@
   "bulkEdit": {
     "title": "Auswahl ändern",
     "selectAll": "Alle Zeilen des Filters auswählen",
+    "selectAll_applications": "Alle Anwendungen des Filters auswählen",
     "selectRow": "{{name}} auswählen",
     "field": "Feld",
     "value": "Neuer Wert",
@@ -1780,8 +1781,11 @@
     "emptied": "Leer",
     "chooseValue": "Wert wählen",
     "counting": "Zeilen werden gezählt…",
+    "counting_applications": "Anwendungen werden gezählt…",
     "willChange_one": "{{count}} Zeile wird geändert",
+    "willChange_applications_one": "{{count}} Anwendung wird geändert",
     "willChange_other": "{{count}} Zeilen werden geändert",
+    "willChange_applications_other": "{{count}} Anwendungen werden geändert",
     "unchanged_one": "{{count}} hat diesen Wert bereits",
     "unchanged_other": "{{count}} haben diesen Wert bereits",
     "refused_one": "{{count}} abgelehnt:",
@@ -1800,16 +1804,23 @@
       "other": "Anderer Grund"
     },
     "tooMany": "Mehr als 5.000 Zeilen: Grenzen Sie die Filter ein oder wählen Sie weniger Zeilen aus.",
+    "tooMany_applications": "Mehr als 5.000 Anwendungen: Grenzen Sie die Filter ein oder wählen Sie weniger Anwendungen aus.",
     "countFailed": "Die Zeilen konnten nicht gezählt werden. Versuchen Sie es erneut.",
+    "countFailed_applications": "Die Anwendungen konnten nicht gezählt werden. Versuchen Sie es erneut.",
     "listChanged": "Die Liste hat sich seit der Zählung geändert. Prüfen Sie die neue Zählung und bestätigen Sie erneut.",
     "failed": "Die Änderung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
     "noAnswer": "Der Server hat nicht geantwortet. Laden Sie die Liste neu, um zu sehen, ob sich die Zeilen geändert haben.",
+    "noAnswer_applications": "Der Server hat nicht geantwortet. Laden Sie die Liste neu, um zu sehen, ob sich die Anwendungen geändert haben.",
     "save_one": "{{count}} Zeile ändern",
+    "save_applications_one": "{{count}} Anwendung ändern",
     "save_other": "{{count}} Zeilen ändern",
+    "save_applications_other": "{{count}} Anwendungen ändern",
     "saveIdle": "Ändern",
     "saving": "Änderung wird gespeichert…",
     "doneChanged_one": "{{count}} Zeile geändert",
+    "doneChanged_applications_one": "{{count}} Anwendung geändert",
     "doneChanged_other": "{{count}} Zeilen geändert",
+    "doneChanged_applications_other": "{{count}} Anwendungen geändert",
     "applied": "{{field}}: {{value}}"
   }
 }

@@ -1773,6 +1773,7 @@
   "bulkEdit": {
     "title": "Change the selection",
     "selectAll": "Select every row of the filter",
+    "selectAll_applications": "Select every application of the filter",
     "selectRow": "Select {{name}}",
     "field": "Field",
     "value": "New value",
@@ -1780,8 +1781,11 @@
     "emptied": "Empty",
     "chooseValue": "Choose a value",
     "counting": "Counting the rows…",
+    "counting_applications": "Counting the applications…",
     "willChange_one": "{{count}} row will change",
+    "willChange_applications_one": "{{count}} application will change",
     "willChange_other": "{{count}} rows will change",
+    "willChange_applications_other": "{{count}} applications will change",
     "unchanged_one": "{{count}} already has this value",
     "unchanged_other": "{{count}} already have this value",
     "refused_one": "{{count}} refused:",
@@ -1800,16 +1804,23 @@
       "other": "Other reason"
     },
     "tooMany": "More than 5,000 rows: narrow the filters, or select fewer rows.",
+    "tooMany_applications": "More than 5,000 applications: narrow the filters, or select fewer applications.",
     "countFailed": "The rows could not be counted. Try again.",
+    "countFailed_applications": "The applications could not be counted. Try again.",
     "listChanged": "The list changed since the count. Check the new count, then confirm again.",
     "failed": "The change could not be saved. Try again.",
     "noAnswer": "The server did not answer. Reload the list to see whether the rows changed.",
+    "noAnswer_applications": "The server did not answer. Reload the list to see whether the applications changed.",
     "save_one": "Change {{count}} row",
+    "save_applications_one": "Change {{count}} application",
     "save_other": "Change {{count}} rows",
+    "save_applications_other": "Change {{count}} applications",
     "saveIdle": "Change",
     "saving": "Saving the change…",
     "doneChanged_one": "{{count}} row changed",
+    "doneChanged_applications_one": "{{count}} application changed",
     "doneChanged_other": "{{count}} rows changed",
+    "doneChanged_applications_other": "{{count}} applications changed",
     "applied": "{{field}}: {{value}}"
   }
 }

@@ -10,6 +10,7 @@ vi.mock('../../api', () => ({ default: { post: vi.fn() } }));
 const notify = vi.hoisted(() => vi.fn());
 vi.mock('../notify/NotifyProvider', () => ({ useNotify: () => notify }));
 
+import i18n from 'i18next';
 import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
 import BulkEditDialog, { BULK_EDIT_TIMEOUT_MS, type BulkEditField } from './BulkEditDialog';
@@ -438,5 +439,46 @@ describe('BulkEditDialog', () => {
     await waitFor(() => expect(save()).toBeEnabled());
     fireEvent.click(save());
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('The server did not answer. Reload the list to see whether the rows changed.'));
+  });
+
+  it('names the applications in the texts of the applications list; the budget lines keep their rows', async () => {
+    post.mockResolvedValueOnce({ data: COUNT });
+    post.mockResolvedValueOnce({ data: { dry_run: false, rows: 10, changed: 6, unchanged: 2, refused: { not_found: 2 } } });
+    renderDialog({ family: 'applications', endpoint: '/applications/bulk-update' });
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status().textContent).toContain('6 applications will change'));
+    expect(status().textContent).toContain('2 already have this value');
+    expect(status().textContent).toContain('2 refused:');
+    expect(save()).toHaveTextContent('Change 6 applications');
+    fireEvent.click(save());
+    await waitFor(() => expect(screen.getByText('6 applications changed')).toBeInTheDocument());
+  });
+
+  it('says the cap, a failed count and the wait in applications for the applications list', async () => {
+    post.mockRejectedValueOnce({ response: { status: 400, data: { code: 'bulk_too_many', message: 'These filters reach 6000 rows' } } });
+    const { setSelection } = renderDialog({ family: 'applications' });
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status()).toHaveTextContent('More than 5,000 applications: narrow the filters, or select fewer applications.'));
+    post.mockReturnValueOnce(new Promise(() => {}) as any);
+    setSelection({ ids: ['a-1'] });
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-2' }));
+    await waitFor(() => expect(status()).toHaveTextContent('Counting the applications…'));
+  });
+
+  it('words the applications in French, with their plural and agreement', async () => {
+    await i18n.changeLanguage('fr');
+    try {
+      post.mockRejectedValueOnce({ message: 'Network Error' });
+      post.mockResolvedValueOnce({ data: COUNT });
+      renderDialog({ family: 'applications' });
+      fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+      await waitFor(() => expect(status().textContent).toContain("Les applications n'ont pas pu être comptées. Réessayez."));
+      fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+      await waitFor(() => expect(status().textContent).toContain('6 applications changeront'));
+      expect(status().textContent).toContain('2 refusées');
+      expect(screen.getByRole('button', { name: /^Modifier 6/ })).toHaveTextContent('Modifier 6 applications');
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });
