@@ -14444,6 +14444,9 @@ async function runTriageWithSimulatedModel(input: {
   description?: string;
   // The lifecycle context of the ticket; no transition when undefined.
   lifecycle?: Record<string, unknown>;
+  // An inactivity threshold in the targeting and the age of the ticket: the ticket may be closed
+  // when its age passes the threshold.
+  closeTargeting?: { inactivitySeconds: number; ticketAgeHours: number };
 }) {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
@@ -14459,8 +14462,20 @@ async function runTriageWithSimulatedModel(input: {
       precedence: 'knowledge_first',
       ...(input.internalNotes === undefined ? {} : { internal_notes: input.internalNotes }),
     },
+    ...(input.closeTargeting
+      ? {
+        targeting: {
+          schema_version: 1,
+          combinator: 'and',
+          predicates: [{ field: 'inactivity_age', operator: 'gte', value: { seconds: input.closeTargeting.inactivitySeconds } }],
+        },
+      }
+      : {}),
   };
   await manager.getRepository(AiAgentDefinition).save(definitionBundle.definition);
+  const ticketUpdatedAt = input.closeTargeting
+    ? new Date(Date.now() - input.closeTargeting.ticketAgeHours * 3600 * 1000).toISOString()
+    : null;
   const capabilityCalls: string[] = [];
   const capabilityInputs: Array<{ capabilityName: string; input: unknown }> = [];
   const prepared: { publicReply: string | null; internalNote: string | null } = { publicReply: null, internalNote: null };
@@ -14481,6 +14496,7 @@ async function runTriageWithSimulatedModel(input: {
             status: 'processing_assigned',
             priority: 'medium',
             description: input.description ?? 'Je clique ici et il ne se passe rien. Je dois faire quoi ?',
+            ...(ticketUpdatedAt ? { createdAt: ticketUpdatedAt, updatedAt: ticketUpdatedAt } : {}),
           });
         case TICKETING_TICKET_NOTES_LIST_CAPABILITY:
           return ok({ notes: input.notes });
@@ -14562,6 +14578,16 @@ async function runTriageWithSimulatedModel(input: {
             providerKey: 'glpi',
           });
           return ok({ action_request_id: 'internal-notes-setting-public-action' });
+        case TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY:
+          await savePreparedTicketingStatusAction(context, {
+            id: 'internal-notes-setting-status-action',
+            runId,
+            toolExecutionId,
+            transitionKey: request.input.transition_key,
+            providerKey: 'glpi',
+            metadata: request.execution?.metadata ?? null,
+          });
+          return ok({ action_request_id: 'internal-notes-setting-status-action' });
         default:
           throw new Error(`Unexpected capability ${request.capabilityName}`);
       }
@@ -15127,7 +15153,7 @@ async function runR3Triage(
   internalNotes: 'used' | 'ignored',
   withInternalNotes = true,
   overrides: Record<string, R3Answer> = {},
-  extra: { lifecycle?: Record<string, unknown> } = {},
+  extra: { lifecycle?: Record<string, unknown>; closeTargeting?: { inactivitySeconds: number; ticketAgeHours: number } } = {},
 ) {
   return runTriageWithSimulatedModel({
     notes: r3Notes(withInternalNotes),
@@ -15227,6 +15253,37 @@ async function testAPlanWithTwoRepliesSendsNoPlannerBody() {
   assert.ok(!rewritten.publicReply?.includes(R3_INTERNAL_MARKER));
   const backup = await runR3Triage(sourcedThenDraft, 'used', true, { reply_synthesis: unusable });
   assert.ok(backup.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `the draft after the withdrawn sourced answer is rewritten: ${backup.publicReply}`);
+}
+
+// A closing reply that cannot be written on the public thread is withdrawn with the close it came
+// with: nothing goes to the requester and the ticket stays open.
+async function testAWithdrawnClosingReplyWithdrawsTheClose() {
+  const closePlan: R3Answer = (payload) => ({
+    actions: [
+      {
+        action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: 'close_reply',
+        reason: 'Clore le ticket inactif.', body: `Nous clôturons ce ticket ${r3Echo(payload)}`,
+      },
+      { action_type: 'status_update', transition_key: 'resolved', reason: 'Ticket inactif.' },
+    ],
+    rationale: 'Clôture.', confidence: 0.8,
+  });
+  const extra = {
+    lifecycle: { terminal: false, allowedTransitions: [{ key: 'resolved', label: 'Resolved', destructive: true, terminal: true }] },
+    closeTargeting: { inactivitySeconds: 24 * 3600, ticketAgeHours: 48 },
+  };
+  const closed = await runR3Triage(closePlan, 'used', true, {}, extra);
+  assert.ok(closed.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `the closing reply is rewritten: ${closed.publicReply}`);
+  assert.ok(closed.capabilityCalls.includes(TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY), 'the close is prepared with its reply');
+  for (const [label, overrides] of [
+    ['rewrite fails', { administrative_reply: () => null }],
+    ['empty rewrite', { administrative_reply: () => ({ body: '' }) }],
+  ] as Array<[string, Record<string, R3Answer>]>) {
+    const result = await runR3Triage(closePlan, 'used', true, overrides, extra);
+    assert.equal(result.publicReply, null, `${label}: no closing reply`);
+    assert.ok(!result.capabilityCalls.includes(TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY), `${label}: no close without its reply`);
+    assert.ok(result.internalNote?.includes('nothing is sent and the ticket is not closed'), `${label}: the note says so: ${result.internalNote}`);
+  }
 }
 
 // The language of the reply comes from a model that read the internal notes: only a language
@@ -18136,6 +18193,7 @@ async function run() {
   await testTheReplyLanguageIsALanguageCode();
   await testThePlannerWritesItsReasonsInTheNoteLanguage();
   await testTheFallbackNoteSaysOnlyWhatIsPrepared();
+  await testAWithdrawnClosingReplyWithdrawsTheClose();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();

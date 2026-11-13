@@ -6565,6 +6565,8 @@ export class AiAgentControlService {
         : []),
     ];
     const downgradedReply = withdrawnReplies[0] ?? null;
+    // A closing reply withdrawn takes its close with it: the ticket is never closed silently.
+    const withdrawnCloseReply = withdrawnReplies.some((withdrawn) => withdrawn.entry.action.administrative_intent === 'close_reply');
     if (downgradedReply) {
       const downgradeReason = downgradedReply.reason;
       plannerDowngradedActions.requester_reply = downgradeReason;
@@ -6575,6 +6577,12 @@ export class AiAgentControlService {
           return true;
         }
         const transitionKey = normalizePlannerStatusTransitionKey(entry.action.transition_key);
+        if (withdrawnCloseReply && entry.terminal) {
+          const closeDowngradeReason = `close_requires_its_closing_reply: ${downgradeReason}`;
+          plannerDowngradedActions.status_update = closeDowngradeReason;
+          plannerSkippedActions.status_update = closeDowngradeReason;
+          return false;
+        }
         if (transitionKey !== 'pending') {
           return true;
         }
@@ -6592,7 +6600,9 @@ export class AiAgentControlService {
         delete plannerSkippedActions.internal_note;
         const downgradeAction: PlannerAction = {
           action_type: 'internal_note',
-          reason: `Escalate internally because ${downgradedReply.why}: ${downgradeReason}.`,
+          reason: withdrawnCloseReply
+            ? `Escalate internally because the closing reply could not be written from the public messages: nothing is sent and the ticket is not closed (${downgradeReason}).`
+            : `Escalate internally because ${downgradedReply.why}: ${downgradeReason}.`,
         };
         effectivePlannerActions.push({
           action: downgradeAction,
