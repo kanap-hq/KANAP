@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useDepartmentNav } from '../../hooks/useDepartmentNav';
@@ -43,6 +43,11 @@ type FieldErrors = Partial<Record<DepartmentField, string>>;
 /** What a new department starts from. */
 const NEW_DEPARTMENT: Department = { id: '', name: '', company_id: '', description: null, status: STATUS_ENABLED, disabled_at: null };
 
+/** The draft's fields that Create sends and a patch can change. */
+const DRAFT_FIELDS = ['name', 'company_id', 'description', 'status', 'disabled_at'] as const;
+
+const fetchDepartment = async (departmentId: string) => (await api.get<Department>(`/departments/${departmentId}`)).data;
+
 const DEPARTMENT_FIELDS: ReadonlySet<string> = new Set<DepartmentField>(['name', 'company_id', 'description', 'disabled_at']);
 
 /** The field a refusal names in its 400 body (`{ message, field }`), when the form shows it. */
@@ -62,6 +67,9 @@ export default function DepartmentWorkspacePage() {
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
+  // The department the draft has just created: its fields stay mounted, so that what is typed
+  // while it is written, and the field being typed in, are kept.
+  const fromDraft = useCreatedFromDraft('departments', id);
   const rawTab = (params.tab as TabKey) || 'overview';
   const tab: TabKey = TAB_KEYS.includes(rawTab) && !(isCreate && rawTab !== 'overview') ? rawTab : 'overview';
   const canEdit = hasLevel('departments', 'member');
@@ -181,11 +189,29 @@ export default function DepartmentWorkspacePage() {
     post: async () => {
       setCreateError(null);
       try {
-        const { company_id, description, status, disabled_at } = draftRef.current;
+        const sent = { ...draftRef.current, name: title.current().trim() };
+        const { company_id, description, status, disabled_at, name } = sent;
         const { data: created } = await api.post<Department & { creation_token: string }>('/departments', {
-          name: title.current().trim(), company_id, description, status, disabled_at,
+          name, company_id, description, status, disabled_at,
         });
         void queryClient.invalidateQueries({ queryKey: ['departments'] });
+        // The page moves to the department with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the department was written): saved on the department.
+        const createdKey = ['departments', created.id] as const;
+        await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => fetchDepartment(created.id) }).catch(() => undefined);
+        try {
+          await saveEditsSince({
+            sent,
+            now: () => ({ ...draftRef.current, name: title.current().trim() }),
+            fields: DRAFT_FIELDS,
+            save: async (edits) => {
+              const res = await api.patch<Department>(`/departments/${created.id}`, edits);
+              queryClient.setQueryData<Department>(createdKey, res.data);
+            },
+          });
+        } catch (e) {
+          setCreateError(getApiErrorMessage(e, t, t('departments.messages.saveFailed')));
+        }
         return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
       } catch (e) {
         const message = getApiErrorMessage(e, t, t('departments.messages.createFailed'));
@@ -313,7 +339,7 @@ export default function DepartmentWorkspacePage() {
         {data && tab === 'overview' && (
           <Stack spacing={3}>
             <DescriptionField
-              key={data.id}
+              key={fromDraft || isCreate ? 'draft' : data.id}
               value={data.description ?? ''}
               disabled={disabled}
               error={errors.description}
