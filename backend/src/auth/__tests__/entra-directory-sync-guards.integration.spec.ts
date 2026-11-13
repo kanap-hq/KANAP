@@ -538,7 +538,14 @@ async function testMalformedDirectoryAnswerDisablesNobody(sync: EntraDirectorySy
   const two = await w.user('lou', { admin: false });
   const fetchDirectoryUsers = dir.fetchDirectoryUsers;
   try {
-    for (const answer of [{}, { value: null }, { value: { id: 'x' } }, { value: 'none' }, null]) {
+    const kim = { id: 'oid-kim', accountEnabled: true };
+    const lou = { id: 'oid-lou', accountEnabled: true };
+    for (const answer of [
+      {}, { value: null }, { value: { id: 'x' } }, { value: 'none' }, null,
+      // A list whose elements cannot be read: lou's could be any of them, so nobody is disabled.
+      { value: [null] }, { value: ['oid-kim', 'oid-lou'] }, { value: [{}] }, { value: [{ id: '' }] }, { value: [{ id: 42 }] },
+      { value: [kim, { accountEnabled: true }] }, { value: [kim, lou, []] },
+    ]) {
       // The real reading of Graph's answer, on a Graph that answers `answer`.
       const graph = Object.create(EntraAuthService.prototype);
       graph.fetchJsonWithAuth = async () => answer;

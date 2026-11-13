@@ -692,6 +692,16 @@ export class EntraAuthService {
     if (!Array.isArray(response?.value)) {
       throw new Error('Graph users lookup: the answer holds no list of users');
     }
+    // Every element is a user with its id, else the whole answer is an error: an element that
+    // cannot be read may be any of the accounts asked for, and an account not found is disabled.
+    const unreadable = response.value.filter(
+      (profile: unknown) =>
+        !profile || typeof profile !== 'object' || Array.isArray(profile)
+        || typeof (profile as DirectoryProfile).id !== 'string' || !(profile as DirectoryProfile).id,
+    ).length;
+    if (unreadable > 0) {
+      throw new Error(`Graph users lookup: ${unreadable} of the ${response.value.length} users in the answer have no id`);
+    }
     return response.value;
   }
 
