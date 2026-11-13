@@ -522,13 +522,6 @@ export class AssetsController {
 
   // Projects
   @UseGuards(PermissionGuard)
-  @RequireLevel('infrastructure', 'reader')
-  @Get(':id/projects')
-  listProjects(@Param('id') id: string, @Req() req: any) {
-    return this.svc.listProjects(id, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
-  }
-
-  @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Post(':id/projects/bulk-replace')
   async bulkReplaceProjects(@Param('id') id: string, @Body() body: { project_ids: string[] }, @Req() req: any) {

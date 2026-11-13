@@ -147,8 +147,8 @@ export class PortfolioProjectsController {
 
   /** What the project detail may name of other portfolio records (`include=source_requests`). */
   private async projectLinkedReads(ctx: TenantRequest): Promise<PortfolioLinkedReads> {
-    const { requestScope } = await this.projectRelationsContext(ctx);
-    return { reads: linkedReadsFromContext(ctx), requestScope };
+    const { requestScope, applicationScope } = await this.projectRelationsContext(ctx);
+    return { reads: linkedReadsFromContext(ctx), requestScope, applicationScope };
   }
 
   // ==================== CRUD ====================
@@ -870,22 +870,6 @@ export class PortfolioProjectsController {
   // ==================== LINKED APPLICATIONS ====================
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'reader')
-  @Get(':id/applications')
-  async listLinkedApplications(
-    @Param('id') idOrRef: string,
-    @Tenant() ctx: TenantRequest,
-  ) {
-    // The applications are the applications module's: listed only to its readers, in their scope.
-    if (!hasLevel(ctx, 'applications', 'reader')) throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'reader');
-    const linked = await this.svc.listLinkedApplications(id, { manager: ctx.manager });
-    const { applicationScope } = await this.projectRelationsContext(ctx);
-    const visible = await idsInScope(this.requireManager(ctx), 'applications', linked.items.map((row: { id: string }) => row.id), applicationScope);
-    return { ...linked, items: linked.items.filter((row: { id: string }) => visible.has(String(row.id))) };
-  }
-
-  @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_projects', 'contributor')
   @Post(':id/applications/bulk-replace')
   async bulkReplaceLinkedApplications(
@@ -911,19 +895,6 @@ export class PortfolioProjectsController {
   }
 
   // ==================== LINKED ASSETS ====================
-
-  @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'reader')
-  @Get(':id/assets')
-  async listLinkedAssets(
-    @Param('id') idOrRef: string,
-    @Tenant() ctx: TenantRequest,
-  ) {
-    // The assets are the infrastructure's: listed only to its readers.
-    if (!hasLevel(ctx, 'infrastructure', 'reader')) throw moduleRightRequired('infrastructure', 'reader', 'You cannot read assets.');
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'reader');
-    return this.svc.listLinkedAssets(id, { manager: ctx.manager });
-  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_projects', 'contributor')

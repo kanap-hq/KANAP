@@ -18,7 +18,7 @@ import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiTaskMutationSupportService, toDisplayStatus } from '../ai-task-mutation-support.service';
 import { resolveAiIncidentViewer } from '../../query/ai-query-scope.util';
 import { BUDGET_NATURES, naturesAnd } from '../../../spend/budget-nature';
-import { linkedParticipationScope } from '../../../common/relations/linked-reads';
+import { linkedModuleNotReadable, linkedParticipationScope, loadLinkedReads } from '../../../common/relations/linked-reads';
 import { idsInScope } from '../../../portfolio/portfolio-linked-reads';
 import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-write-texts';
 
@@ -566,6 +566,11 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     const names: unknown[] = Array.isArray(task.application_names) ? task.application_names : [];
     task.application_names = names.filter((_name, index) => readable.has(linkedIds[index]));
     task.application_ids = linkedIds.filter((id) => readable.has(id));
+    // The assets: none named to a person who does not read them.
+    if (!(await loadLinkedReads(context.manager, context.userId, context.tenantId)).assets) {
+      task.asset_names = [];
+      task.asset_ids = [];
+    }
     task.start_date = task.start_date_text ?? null;
     task.due_date = task.due_date_text ?? null;
     delete task.start_date_text;
@@ -592,6 +597,7 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
   /** The ids among `ids` of applications the person reads (a Business Contributor's participation). */
   private async readableApplicationIds(context: AiExecutionContextWithManager, ids: string[]): Promise<Set<string>> {
     if (ids.length === 0) return new Set();
+    if (!(await loadLinkedReads(context.manager, context.userId, context.tenantId)).applications) return new Set();
     const scope = await linkedParticipationScope(context.manager, context.userId, context.tenantId, 'applications');
     return idsInScope(context.manager, 'applications', ids, scope);
   }
@@ -601,6 +607,9 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     target: 'applications' | 'assets',
     refs: string[],
   ): Promise<{ ids: string[]; labels: string[] }> {
+    // A person who does not read the module changes none of its links, as on the task route
+    // (`TasksUnifiedService.syncTaskLinks`), and no name is resolved for them.
+    if (!(await loadLinkedReads(context.manager, context.userId, context.tenantId))[target]) throw linkedModuleNotReadable(target);
     if (refs.length === 0) return { ids: [], labels: [] };
     const ids: string[] = [];
     const labels: string[] = [];

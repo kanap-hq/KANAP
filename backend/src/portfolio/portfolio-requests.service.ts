@@ -24,6 +24,7 @@ import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, OPEX_ITEMS_NOT_FOUND } from
 import { assertNoHiddenLines, auditedLinkSet, hiddenLineCount } from '../data-access/hidden-links';
 import { singleChangedId } from '../audit/audit-parent-rules';
 import { activityBudgetLines, budgetLineActivitiesForReader } from './budget-line-activity';
+import { readsPartOf, withCountedLinkChanges } from '../common/relations/linked-activity';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 import { PortfolioRequestDependency } from './portfolio-request-dependency.entity';
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
@@ -1117,8 +1118,15 @@ export class PortfolioRequestsService {
          ORDER BY a.created_at DESC, a.id`,
         [id]
       );
-      // Budget lines in the history: named only as far as the reader may read them.
-      result.activities = await budgetLineActivitiesForReader(mg, activities, opts?.readsBudget === true);
+      // Budget lines in the history: named only as far as the reader may read them. The
+      // applications and assets, and the task the request came from: named only to a reader of
+      // every record of the family.
+      const linked = opts?.linked;
+      result.activities = withCountedLinkChanges(await budgetLineActivitiesForReader(mg, activities, opts?.readsBudget === true), {
+        applications: readsPartOf(linked?.reads, 'applications', linked?.applicationScope),
+        assets: readsPartOf(linked?.reads, 'assets'),
+        created_from_task: readsPartOf(linked?.reads, 'tasks', linked?.taskScope),
+      });
       const creators = await resolveRecordCreators(mg, 'portfolio_requests', [id]);
       result.created_by_name = creators.get(id) ?? null;
     }

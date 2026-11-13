@@ -1361,8 +1361,7 @@ An asset is written from the line with the asset's audit shape. The table is `as
 - Contracts
   - GET `/capex-items/:id/contracts` → `{ items: [{ id, name }] }`
   - POST `/capex-items/:id/contracts/bulk-replace` → `{ contract_ids: uuid[] }`
-- Applications (same shape as `/spend-items/:id/applications`; `:id` is a UUID or a `CPX-n` reference)
-  - GET `/capex-items/:id/applications` (`budget` reader) → `{ items: [{ id, name }] }` sorted by name
+- Applications (`:id` is a UUID or a `CPX-n` reference; the line's applications are read through its Relations tab, `GET /budget-lines/:id/relations`)
   - POST `/capex-items/:id/applications/bulk-replace` (`budget` member) with `{ application_ids: uuid[] }` → replaces the whole set, returns the new list
     - `400` "One or more applications not found" when an id is not an application of the tenant
     - One audit row on `application_capex_items` when the set changes (`record_id` = the CAPEX item, before/after = sorted application ids); the OPEX route writes the same on `application_spend_items`
@@ -1504,6 +1503,7 @@ A POST that replaces the links to records of another module, even with an empty 
 - `/applications/:id/spend-items|capex-items/bulk-replace` and `/assets/:id/spend-items|capex-items`: `budget`.
 - `/applications/:id/contracts/bulk-replace`, `/assets/:id/contracts`, `/spend-items/:id/contracts/bulk-replace` and `/capex-items/:id/contracts/bulk-replace`: `contracts`.
 - `/applications/:id/projects/bulk-replace`, `/assets/:id/projects/bulk-replace`, `/spend-items/:id/projects/bulk-replace` and `/capex-items/:id/projects/bulk-replace`: `portfolio_projects`.
+- The older list routes `GET /assets/:id/projects`, `GET /spend-items/:id/projects|applications` (and their `/capex-items` alias), `GET /portfolio/projects/:id/applications|assets` and `GET /portfolio/requests/:id/applications|assets` are not served: each record's Relations tab reads its linked records, with the reads of each module and a Business Contributor's participation.
 - `/spend-items/:id/applications/bulk-replace` and `/capex-items/:id/applications/bulk-replace`: `applications`.
 
 ### Contract tasks, URLs, attachments

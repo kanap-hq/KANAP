@@ -1658,7 +1658,9 @@
           },
           "applications": {
             "linked": "Applications liées : {{refs}}.",
-            "unlinked": "Applications déliées : {{refs}}."
+            "unlinked": "Applications déliées : {{refs}}.",
+            "hidden_one": "1 non affichée",
+            "hidden_other": "{{count}} non affichées"
           },
           "technologies": {
             "linked": "Technologies liées : {{refs}}.",

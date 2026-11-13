@@ -28,6 +28,7 @@ import { loadSlotBodies } from '../../knowledge/integrated-document-bodies';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { activityBudgetLines, budgetLineActivitiesForReader } from '../budget-line-activity';
+import { readsPartOf, withCountedLinkChanges } from '../../common/relations/linked-activity';
 import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links';
 import { singleChangedId } from '../../audit/audit-parent-rules';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
@@ -231,8 +232,15 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
          ORDER BY a.created_at DESC, a.id`,
         [id]
       );
-      // Budget lines in the history: named only as far as the reader may read them.
-      result.activities = await budgetLineActivitiesForReader(mg, activities, opts?.readsBudget === true);
+      // Budget lines in the history: named only as far as the reader may read them. The
+      // applications and assets, and the request the project came from: named only to a reader
+      // of every record of the family.
+      const linked = opts?.linked;
+      result.activities = withCountedLinkChanges(await budgetLineActivitiesForReader(mg, activities, opts?.readsBudget === true), {
+        applications: readsPartOf(linked?.reads, 'applications', linked?.applicationScope),
+        assets: readsPartOf(linked?.reads, 'assets'),
+        created_from_request: readsPartOf(linked?.reads, 'requests', linked?.requestScope),
+      });
       const creators = await resolveRecordCreators(mg, 'portfolio_projects', [id]);
       result.created_by_name = creators.get(id) ?? null;
     }

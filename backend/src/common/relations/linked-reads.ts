@@ -47,10 +47,13 @@ function readsFrom(canRead: (resource: string) => boolean): LinkedReads {
  * (`KnowledgeService.assertRelationWriteAllowed`). For a request already through the permission guard.
  */
 export function assertLinkedModuleRead(ctx: { isAdmin?: boolean; permissions?: Record<string, string> } | null | undefined, module: LinkedModule): void {
+  if (!hasLevel(ctx ?? {}, LINKED_MODULE_RESOURCES[module], 'reader')) throw linkedModuleNotReadable(module);
+}
+
+/** The refusal of `assertLinkedModuleRead`, for a service that reads the person's rights itself (`loadLinkedReads`). */
+export function linkedModuleNotReadable(module: LinkedModule) {
   const resource = LINKED_MODULE_RESOURCES[module];
-  if (!hasLevel(ctx ?? {}, resource, 'reader')) {
-    throw codedForbidden('LINKED_MODULE_NOT_READABLE', `You cannot change the ${module} linked here: you do not read that module.`, { resources: [resource] });
-  }
+  return codedForbidden('LINKED_MODULE_NOT_READABLE', `You cannot change the ${module} linked here: you do not read that module.`, { resources: [resource] });
 }
 
 /** The linked modules a Business Contributor reads inside their participation only, with their resource. */

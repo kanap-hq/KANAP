@@ -121,7 +121,8 @@ export interface IncidentEntry {
   incident_id: string;
   kind: IncidentEntryKind;
   content: string | null;
-  changed_fields: Record<string, { from: unknown; to: unknown }> | null;
+  /** A link change may count the records the reader does not see (`hidden`), per direction. */
+  changed_fields: Record<string, { from: unknown; to: unknown; hidden?: { linked?: number; unlinked?: number } }> | null;
   occurred_at: string;
   author_id: string | null;
   author_name: string | null;

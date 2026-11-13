@@ -254,6 +254,7 @@ async function testLinkedGroups(harness: Harness, runner: QueryRunner, s: Seed) 
 
     const byApplication = await harness.aggregates.execute(ctx, { entity_type: 'incidents', group_by: 'application' });
     assert.deepEqual(groupCounts(byApplication), { 'Alpha App': 1, 'Beta App': 2 }, 'an incident counts once per linked application');
+    assert.equal(byApplication.fields_partial, undefined, 'a full reader: no partial note');
 
     const byTechnology = await harness.aggregates.execute(ctx, { entity_type: 'incidents', group_by: 'technology' });
     assert.deepEqual(groupCounts(byTechnology), { PostgreSQL: 1, 'Postgres Twelve': 2 }, 'an incident counts once per linked technology');
@@ -494,6 +495,8 @@ async function testBusinessContributorScope(harness: Harness, runner: QueryRunne
     const byApplication = await harness.aggregates.execute(ctx, { entity_type: 'incidents', group_by: 'application' });
     assert.deepEqual(groupCounts(byApplication), { 'Alpha App': 1 }, 'only the applications they take part in');
     assert.equal(byApplication.total, 7, 'the incidents themselves are not narrowed');
+    assert.deepEqual((byApplication.fields_partial ?? []).map((entry: { field: string }) => entry.field), ['application'],
+      'the groups said partial: an incident outside every group may be linked to applications they do not read');
 
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { application: ['APP-1'] } }), [r.one], 'an application of theirs filters');
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { application: ['APP-12'] } }), [], 'another application filters nothing');

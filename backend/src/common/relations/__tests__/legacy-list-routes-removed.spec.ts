@@ -4,13 +4,21 @@ import { RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { LocationsController } from '../../../locations/locations.controller';
 import { IncidentsController } from '../../../incidents/incidents.controller';
+import { AssetsController } from '../../../assets/assets.controller';
+import { SpendItemsController } from '../../../spend/spend-items.controller';
+import { CapexItemsController } from '../../../spend/capex-items.controller';
+import { PortfolioProjectsController } from '../../../portfolio/portfolio-projects.controller';
+import { PortfolioRequestsController } from '../../../portfolio/portfolio-requests.controller';
 
 // A location's linked records and an incident's linked assets and applications are read through
 // their Relations tab (`GET /locations/:id/relations`, `GET /incidents/:id/relations`), which
 // applies the reads of each module and the applications a Business Contributor may see. The
 // separate list routes `GET /locations/:id/servers|applications` and `GET
 // /incidents/:id/assets|applications` are not served; the Relations routes and the incident link
-// writes stay.
+// writes stay. Nor are the older reads of an asset's projects, of a budget line's projects and
+// applications (`/spend-items` and the `/capex-items` alias), and of a project's or a request's
+// applications and assets, which nothing calls: their Relations tabs read them, and the link
+// replacement routes stay.
 
 type Route = { method: string; path: string };
 
@@ -44,6 +52,19 @@ function run() {
     assert.ok(has(incidents, 'POST', path), `POST /incidents/${path} stays`);
   }
   assert.ok(has(incidents, 'GET', ':id/relations'), 'GET /incidents/:id/relations stays');
+
+  const older: Array<[string, any, string[], string[]]> = [
+    ['assets', AssetsController, [':id/projects'], [':id/projects/bulk-replace']],
+    ['spend-items', SpendItemsController, [':id/projects', ':id/applications'], [':id/projects/bulk-replace', ':id/applications/bulk-replace']],
+    ['capex-items', CapexItemsController, [':id/projects', ':id/applications'], [':id/projects/bulk-replace', ':id/applications/bulk-replace']],
+    ['portfolio/projects', PortfolioProjectsController, [':id/applications', ':id/assets'], [':id/applications/bulk-replace', ':id/assets/bulk-replace']],
+    ['portfolio/requests', PortfolioRequestsController, [':id/applications', ':id/assets'], [':id/applications/bulk-replace', ':id/assets/bulk-replace']],
+  ];
+  for (const [base, Controller, removed, kept] of older) {
+    const routes = routesOf(Controller);
+    for (const path of removed) assert.ok(!has(routes, 'GET', path), `GET /${base}/${path} is not served`);
+    for (const path of kept) assert.ok(has(routes, 'POST', path), `POST /${base}/${path} stays`);
+  }
   console.log('legacy-list-routes-removed.spec: ok');
 }
 
