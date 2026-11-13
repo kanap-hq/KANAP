@@ -131,6 +131,33 @@ describe('AdminAuthPage disconnect', () => {
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/admin/auth/disconnect', { password: 'Long-enough-1' }));
   });
 
+  it('reads the settings again after a refusal: a password asked by the server shows its field', async () => {
+    api.get
+      .mockResolvedValueOnce({ data: connected({ keep_password: 1, need_password: 0, password_required: false }) })
+      .mockResolvedValue({ data: connected({ keep_password: 1, need_password: 0, password_required: true }) });
+    api.post.mockRejectedValue({ response: { status: 400, data: { code: 'LOCAL_PASSWORD_REQUIRED' } } });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'auth.actions.disconnect' }));
+    expect(screen.queryByLabelText('auth.disconnect.ownPassword')).toBeNull();
+    const buttons = screen.getAllByRole('button', { name: 'auth.actions.disconnect' });
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(await screen.findByLabelText('auth.disconnect.ownPassword')).toBeTruthy();
+    expect(api.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads the settings again after a refusal: a workspace disconnected meanwhile shows as such', async () => {
+    api.get
+      .mockResolvedValueOnce({ data: connected({ keep_password: 2, need_password: 0, password_required: false }) })
+      .mockResolvedValue({ data: { ...settings({}), sso_provider: 'none', sso_enabled: false, entra_tenant_id: null, disconnect: null } });
+    api.post.mockRejectedValue({ response: { status: 409, data: { code: 'SSO_NOT_CONNECTED' } } });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'auth.actions.disconnect' }));
+    const buttons = screen.getAllByRole('button', { name: 'auth.actions.disconnect' });
+    fireEvent.click(buttons[buttons.length - 1]);
+    await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryAllByRole('button', { name: 'auth.actions.disconnect' })).toHaveLength(0));
+  });
+
   it('points to the administrator reset when the installation sends no e-mail', async () => {
     features.email = false;
     api.get.mockResolvedValue({ data: connected({ keep_password: 0, need_password: 4, password_required: false }) });

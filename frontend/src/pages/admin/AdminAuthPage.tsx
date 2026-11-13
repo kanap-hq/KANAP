@@ -161,7 +161,15 @@ export default function AdminAuthPage() {
       setDisconnectOpen(false);
       await refetch();
     } catch (e: any) {
-      setDisconnectError(getApiErrorMessage(e, t, t('auth.messages.disconnectFailed')));
+      const message = getApiErrorMessage(e, t, t('auth.messages.disconnectFailed'));
+      setDisconnectError(message);
+      // The refusal may come from a state the page did not show (disconnected meanwhile, a password
+      // removed): read it again, and close the confirmation when there is nothing left to disconnect.
+      const fresh = await refetch();
+      if (fresh.data && !(fresh.data.sso_provider === 'entra' && fresh.data.entra_tenant_id)) {
+        setDisconnectOpen(false);
+        setActionError(message);
+      }
     } finally {
       setDisconnecting(false);
     }
