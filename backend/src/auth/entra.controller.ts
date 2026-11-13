@@ -22,7 +22,8 @@ import { AuthEvent, AuthEventReason } from '../audit/security-events';
 import { NeverRejects } from '../common/never-rejects';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
-import { EmailService, maskEmailAddresses } from '../email/email.service';
+import { EmailService, isExampleRecipient, maskEmailAddresses } from '../email/email.service';
+import { clientAddress } from '../common/client-address';
 import { Features } from '../config/features';
 import { getPasswordResetExpirationMinutes, getPasswordResetTtl } from './password-reset.util';
 import {
@@ -65,7 +66,15 @@ type LinkConfirmationMail = Parameters<EmailService['sendEntraLinkConfirmationEm
  * A link request recorded with the sign-in. `mail` is null when a confirmation sent a few minutes
  * earlier is still pending: no new link, no new e-mail.
  */
-type PendingLinkConfirmation = { email: string; userId: string; tenantId: string; token: string | null; mail: LinkConfirmationMail | null };
+type PendingLinkConfirmation = {
+  email: string;
+  userId: string;
+  tenantId: string;
+  token: string | null;
+  mail: LinkConfirmationMail | null;
+  /** The address and agent of the sign-in, read before it is answered, for the request's event. */
+  requestDetails: { ip: unknown; headers: Record<string, unknown> };
+};
 
 /** A database error raised by a unique index. */
 function isUniqueViolation(error: unknown): boolean {
@@ -473,7 +482,12 @@ export class EntraController {
     if (!locked || locked.external_auth_provider) {
       throw new BadRequestException('ENTRA_ACCOUNT_LINKED');
     }
-    const pending = { email: account.email, userId: account.id, tenantId };
+    const pending = {
+      email: account.email,
+      userId: account.id,
+      tenantId,
+      requestDetails: { ip: clientAddress(req), headers: { 'user-agent': req?.headers?.['user-agent'] } },
+    };
     if (await hasRecentLinkConfirmation(manager, tenantId, account.id)) {
       return { ...pending, token: null, mail: null };
     }
@@ -509,22 +523,33 @@ export class EntraController {
   }
 
   /**
-   * Sends a link confirmation once the sign-in has answered. Never awaited by the route, never
-   * handed the request's entity manager, and never rejects: a failed send is logged without the
-   * link, its token or an address.
+   * Sends a link confirmation once the sign-in has answered, then records the
+   * `sso_link_requested` event, as a password reset request records its own: the account, the
+   * address and agent, and the reason `email_not_sent` when the e-mail could not be sent. Never
+   * awaited by the route, never handed the request's entity manager, and never rejects: a failed
+   * send is logged without the link, its token or an address. A request held off by a recent
+   * confirmation makes no link and records nothing.
    */
   @NeverRejects()
   private async deliverLinkConfirmation(link: PendingLinkConfirmation): Promise<void> {
     if (!link.mail || !link.token || !this.email) return;
+    // EmailService never writes to a reserved `.example` address: nothing goes out.
+    let reason: AuthEventReason | null = isExampleRecipient(link.mail.to) ? 'email_not_sent' : null;
     try {
       await this.email.sendEntraLinkConfirmationEmail(link.mail);
     } catch (error) {
+      reason = 'email_not_sent';
       let message = String((error as { message?: unknown } | null)?.message ?? error);
       message = message.split(link.mail.confirmUrl).join('[link]').split(link.token).join('[token]');
       this.logger.error(
         `Microsoft link confirmation e-mail not sent (tenant ${link.tenantId}, user ${link.userId}): ${maskEmailAddresses(message)}`,
       );
     }
+    await this.securityEvents.recordAuthEvent(
+      link.tenantId,
+      { action: 'sso_link_requested', userId: link.userId, reason },
+      link.requestDetails,
+    );
   }
 
   /**

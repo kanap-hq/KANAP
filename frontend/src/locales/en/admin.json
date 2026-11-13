@@ -306,6 +306,7 @@
       "restored": "Restore",
       "sso_login": "Sign-in with Microsoft",
       "sso_login_failed": "Failed sign-in with Microsoft",
+      "sso_link_requested": "Microsoft link confirmation requested",
       "update": "Update"
     },
     "columns": {

@@ -306,6 +306,7 @@
       "restored": "Restaurer",
       "sso_login": "Connexion avec Microsoft",
       "sso_login_failed": "Échec de connexion avec Microsoft",
+      "sso_link_requested": "Confirmation de liaison Microsoft demandée",
       "update": "Mettre à jour"
     },
     "columns": {

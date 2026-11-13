@@ -46,6 +46,11 @@ type Mail = { to: string; confirmUrl: string; microsoftAccount: { name: string |
 const mails: Mail[] = [];
 const errorLogs: string[] = [];
 const recordMail = { sendEntraLinkConfirmationEmail: async (mail: Mail) => { mails.push(mail); } };
+// The sign-in events the controller records, as SecurityEventsService receives them.
+const authEvents: Array<{ tenantId: string; event: { action: string; userId?: string | null; reason?: string | null }; details: any }> = [];
+const securityEvents = {
+  recordAuthEvent: async (tenantId: string, event: any, details: any) => { authEvents.push({ tenantId, event, details }); },
+};
 let roleId = '';
 
 async function inTenant(fn: (manager: any) => Promise<any>, tenantId = TENANT_ID): Promise<any> {
@@ -118,7 +123,7 @@ function controller(email: unknown = recordMail) {
     new AuditService(dataSource.getRepository(AuditLog)),
     { notifySsoUserProvisioned: async () => undefined } as any,
     directorySync,
-    {} as any,
+    securityEvents as any,
     email as any,
   );
 }
@@ -366,6 +371,34 @@ async function testFailedDeliveryIsLoggedWithoutAddress() {
   assert.ok(!logged.includes(person.email) && !logged.includes(token), logged);
 }
 
+/**
+ * A link request is a sign-in event, as a password reset request: the account, the address and
+ * agent of the sign-in, and `email_not_sent` when its e-mail could not be sent. A request held off
+ * by a recent confirmation makes no link and records nothing.
+ */
+async function testLinkRequestIsRecorded() {
+  const person = await seedAccount();
+  authEvents.length = 0;
+  await signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: person.email });
+  assert.deepEqual(
+    authEvents.map(({ tenantId, event }) => ({ tenantId, ...event })),
+    [{ tenantId: TENANT_ID, action: 'sso_link_requested', userId: person.id, reason: null }],
+  );
+  assert.ok('ip' in authEvents[0].details && 'headers' in authEvents[0].details, 'the address and agent of the sign-in');
+
+  authEvents.length = 0;
+  await signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: person.email });
+  assert.equal(authEvents.length, 0, 'a request held off records nothing');
+
+  const other = await seedAccount();
+  const failing = { sendEntraLinkConfirmationEmail: async () => { throw new Error('550 refused'); } };
+  await signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: other.email }, failing);
+  assert.deepEqual(
+    authEvents.map(({ event }) => ({ ...event })),
+    [{ action: 'sso_link_requested', userId: other.id, reason: 'email_not_sent' }],
+  );
+}
+
 async function testConcurrentRequestsLeaveOneLink() {
   const person = await seedAccount();
   await signInWithMicrosoft({ oid: `oid-${randomUUID()}`, email: person.email });
@@ -560,6 +593,7 @@ async function main() {
       testPasswordLinksAndConfirmationsAreIndependent,
       testRecentLinkHoldsOffAnother,
       testFailedDeliveryIsLoggedWithoutAddress,
+      testLinkRequestIsRecorded,
       testConcurrentRequestsLeaveOneLink,
       testConcurrentConfirmationsLinkOnce,
       testOneMicrosoftAccountForTwoAccountsAtOnce,

@@ -306,6 +306,7 @@
       "restored": "Wiederherstellen",
       "sso_login": "Anmeldung mit Microsoft",
       "sso_login_failed": "Fehlgeschlagene Anmeldung mit Microsoft",
+      "sso_link_requested": "Bestätigung der Microsoft-Verknüpfung angefordert",
       "update": "Aktualisieren"
     },
     "columns": {
