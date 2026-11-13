@@ -6,7 +6,7 @@ import { AiModelConfigService } from './ai-model-config.service';
 import { AiPolicyService } from './ai-policy.service';
 import { AiProviderTestService } from './ai-provider-test.service';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
-import { CreateAiModelConfigDto, UpdateAiModelConfigDto } from './dto/ai-model-config.dto';
+import { CreateAiModelConfigDto, TestAiModelConfigDto, UpdateAiModelConfigDto } from './dto/ai-model-config.dto';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
 import { reasoningEffortSupport } from './providers/reasoning-effort.capability';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
@@ -209,27 +209,43 @@ export class AiModelConfigsController {
     );
   }
 
-  // Connection test for a stored registry entry: decrypts the saved key
-  // server-side and runs the same one-shot probe as the ad-hoc settings test.
+  // Connection test of the model dialog as it stands (`test` for a new entry, `:id/test`
+  // for a saved one): the values sent are tested, a value not sent is the saved one. The
+  // saved key is decrypted server-side and only sent to the destination it was saved for.
   @ReservedToUnscopedDataAccess()
-  @Post(':id/test')
-  async test(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: AiModelConfigsRequest) {
+  @Post(['test', ':id/test'])
+  async test(
+    @Param('id', new ParseUUIDPipe({ optional: true })) id: string | undefined,
+    // A plain class type: the validation pipe reads it (a union would be emitted as Object).
+    // Without a body the pipe validates an empty object and passes undefined on.
+    @Body() body: TestAiModelConfigDto,
+    @Req() req: AiModelConfigsRequest,
+  ) {
     const context = this.buildContext(req);
     return this.tenantExecutor.run(
       context.tenantId,
       async (manager) => {
         await this.policy.assertSettingsAccess(context, manager);
-        const config = await this.modelConfigs.getById(context.tenantId, id, manager);
-        return this.providerTest.testProvider(
+        const config = id ? await this.modelConfigs.getById(context.tenantId, id, manager) : null;
+        return this.providerTest.testModelDraft(
           context.tenantId,
           {
-            llm_provider: config.provider,
-            llm_model: config.model,
-            llm_endpoint_url: config.endpoint_url,
-            llm_api_key: config.api_key_encrypted ? this.cipher.decrypt(config.api_key_encrypted) : null,
-            reasoning_effort: config.reasoning_effort ?? null,
+            provider: body?.provider,
+            model: body?.model,
+            endpoint_url: body?.endpoint_url,
+            api_key: body?.api_key,
+            reasoning_effort: body?.reasoning_effort,
           },
-          { manager, skipStoredFallback: true },
+          config
+            ? {
+              provider: config.provider,
+              model: config.model,
+              endpoint_url: config.endpoint_url,
+              api_key_encrypted: config.api_key_encrypted ?? null,
+              reasoning_effort: config.reasoning_effort ?? null,
+            }
+            : null,
+          { manager },
         );
       },
       { transaction: false },

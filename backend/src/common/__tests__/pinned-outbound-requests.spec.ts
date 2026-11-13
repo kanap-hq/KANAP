@@ -338,7 +338,7 @@ async function testRedirectsOnTheBoundPath(port: number) {
   await expectRefused('stream redirect');
 
   reset('redirect');
-  await assert.rejects(glpiService(base).initSession('tenant-1', {} as any), /GLPI request failed/);
+  await assert.rejects(glpiService(base).initSession('tenant-1', {} as any), /GLPI answered with a redirect \(HTTP 302\)/);
   await expectRefused('GLPI redirect');
 
   reset('redirect');

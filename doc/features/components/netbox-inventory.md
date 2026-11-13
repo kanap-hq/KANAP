@@ -68,6 +68,9 @@ The technology deductions (`technologies/technology-reach.service.ts`) cross `co
 - `managed_fields` lists the fields Netbox provided a value for on that object, refreshed at every run. The asset workspace locks only those fields. `NULL` means not known yet and locks the whole list. The lock is enforced in the frontend only.
 - The "missing" pass runs only when the fetch completed and returned at least one object.
 - The connection reuses `ai_adapter_configs` with `provider_kind = 'inventory'`. The token is stored with `AiSecretCipherService` (AES-GCM). `AI_SETTINGS_ENCRYPTION_SECRET` must be set to save it, even when AI is off.
+- `PUT /netbox/integration` with an empty `base_url` removes the connection when the row still holds an address or a token: `enabled = false`, `base_url` and `credential_ref_json` null, `auto_sync = false`, and `last_connection_test`, `sync_state`, `first_manual_sync_at` and `review_pending` removed, with an `update` audit entry. The matches, the records and the imported assets stay. On a row already removed, an empty address is a `400` `netbox_base_url_invalid`, as with no row.
+- A new address that is another destination (`sameSecretDestination`, `common/secret-destination.ts`) also removes `sync_state`, `first_manual_sync_at` and `review_pending`: the next server starts with a manual run before the hourly one. `auto_sync` and the matches stay.
+- The start of a run returns the address it runs on (`writeSyncState`), and its end writes its state only if the row still points to that destination. A run that ends after a removal or a move to another server leaves the row as the save left it.
 
 ## Transport rules
 

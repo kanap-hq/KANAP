@@ -30,9 +30,11 @@ import { useFeatures } from '../../config/FeaturesContext';
 import { useLocale } from '../../i18n/useLocale';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { secretAddressKey } from '../../utils/secretAddress';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import {
   AiModelConfig,
   AiModelConfigInput,
+  AiModelTestDraft,
   AiProviderTestResult,
   AiReasoningEffort,
   AI_REASONING_EFFORTS,
@@ -180,7 +182,7 @@ function DefaultStar({
 }
 
 export default function AdminAiModelsPage() {
-  const { t } = useTranslation(['admin', 'common']);
+  const { t } = useTranslation(['admin', 'common', 'errors']);
   const locale = useLocale();
   const { config } = useFeatures();
   const queryClient = useQueryClient();
@@ -219,7 +221,8 @@ export default function AdminAiModelsPage() {
     if (data?.used_by?.length) {
       return t('aiModels.errors.stillAssigned', { consumers: data.used_by.join(', ') });
     }
-    return data?.message ?? fallback;
+    // A coded refusal (a refused address) in the screen language; otherwise the server's sentence.
+    return getApiErrorMessage(err, t, fallback);
   };
 
   const saveMutation = useMutation({
@@ -245,7 +248,7 @@ export default function AdminAiModelsPage() {
     onError: (err) => setError(readError(err, t('aiModels.errors.saveFailed'))),
   });
   const testMutation = useMutation({
-    mutationFn: (id: string) => aiModelConfigsApi.test(id),
+    mutationFn: (input: { id: string | null; draft: AiModelTestDraft }) => aiModelConfigsApi.test(input.id, input.draft),
     onSuccess: (result) => setTestResult(result),
     onError: (err) => setError(readError(err, t('aiModels.errors.testFailed'))),
   });
@@ -276,7 +279,10 @@ export default function AdminAiModelsPage() {
   }, [effortSupport, draft.reasoning_effort]);
 
   const testResultLine = (result: AiProviderTestResult): string => {
-    if (!result.ok) return result.message;
+    if (!result.ok) {
+      const message = result.code ? t(`errors:${result.code}`, { defaultValue: result.message }) : result.message;
+      return [message, ...(result.validation_errors ?? []).filter((item) => item !== result.message)].join(' ');
+    }
     const parts = [t('aiModels.dialog.testOk', { latency: result.latency_ms ?? 0 })];
     parts.push(result.reasoning_effort_sent
       ? t('aiModels.dialog.testEffortSent', {
@@ -353,6 +359,26 @@ export default function AdminAiModelsPage() {
     || priceOutput === undefined
     || priceCacheRead === undefined
     || timeoutInvalid;
+
+  // « Test » tries what is on screen, saved or not. Like saving, it needs the key again
+  // when the address or provider changed: the saved key never goes to a new destination.
+  const testDisabled = testMutation.isPending
+    || draft.model.trim() === ''
+    || (keyRequired && draft.api_key.trim() === '');
+  const handleTest = () => {
+    if (testDisabled) return;
+    setTestResult(null);
+    testMutation.mutate({
+      id: editingId,
+      draft: {
+        provider: draft.provider,
+        model: draft.model.trim(),
+        endpoint_url: draft.endpoint_url.trim() || null,
+        reasoning_effort: effortValue || null,
+        ...(draft.api_key.trim() !== '' ? { api_key: draft.api_key.trim() } : {}),
+      },
+    });
+  };
 
   const handleSave = () => {
     if (saveDisabled) return;
@@ -762,18 +788,16 @@ export default function AdminAiModelsPage() {
               </PropertyRow>
               <Box sx={{ flex: 1 }} />
             </Stack>
-            {editingId && (
-              <Box>
-                <Button
-                  size="small"
-                  variant="action"
-                  disabled={testMutation.isPending}
-                  onClick={() => testMutation.mutate(editingId)}
-                >
-                  {testMutation.isPending ? t('aiModels.dialog.testing') : t('aiModels.dialog.test')}
-                </Button>
-              </Box>
-            )}
+            <Box>
+              <Button
+                size="small"
+                variant="action"
+                disabled={testDisabled}
+                onClick={handleTest}
+              >
+                {testMutation.isPending ? t('aiModels.dialog.testing') : t('aiModels.dialog.test')}
+              </Button>
+            </Box>
           </Stack>
         </KanapDialog>
       )}

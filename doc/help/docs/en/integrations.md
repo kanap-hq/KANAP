@@ -71,6 +71,12 @@ Configure the connection here, then open the **Netbox** tab of **IT Landscape > 
 
 ---
 
+## Removing a connection
+
+To remove the PRTG or the Netbox connection, empty its address, save, and confirm. Kadratis deletes the address and the stored secret, turns the connection off and writes an entry to the audit log. Nothing already imported is deleted. Agents that read PRTG report it as unavailable at their next run. To remove the GLPI connection, turn it off, empty the URL and save.
+
+---
+
 ## Tips
 
 - **Use a dedicated GLPI account**: create a service account in GLPI with just enough permissions to read the ticket categories you want exposed. That keeps the audit trail clean and lets you revoke access without affecting a real user. If agents will send replies and status changes, give the same account the write access those actions need.

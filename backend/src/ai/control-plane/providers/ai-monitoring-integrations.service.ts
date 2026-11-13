@@ -59,6 +59,15 @@ export type PrtgIntegrationTestResult = {
 
 const BASE_URL_MESSAGE = 'The PRTG server address must be a full web address starting with http:// or https:// '
   + '(for example https://prtg.example.com). You can copy it from the browser address bar when logged into PRTG.';
+/** The refused PRTG address, with the code the card translates. */
+function baseUrlRefusal(): BadRequestException {
+  return new BadRequestException({
+    statusCode: 400,
+    error: 'Bad Request',
+    code: 'prtg_base_url_invalid',
+    message: BASE_URL_MESSAGE,
+  });
+}
 const TIMEZONE_MESSAGE = 'The server time zone must be a valid IANA time zone name such as Europe/Paris. '
   + 'Use the time zone configured on the machine that runs the PRTG core server (its operating-system clock setting).';
 const CREDENTIAL_PAIR_MESSAGE = 'Enter both the PRTG user name and the passhash together. '
@@ -86,10 +95,10 @@ export function normalizePrtgBaseUrl(raw: string): string {
   try {
     parsed = new URL(trimmed);
   } catch {
-    throw new BadRequestException(BASE_URL_MESSAGE);
+    throw baseUrlRefusal();
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new BadRequestException(BASE_URL_MESSAGE);
+    throw baseUrlRefusal();
   }
   if (parsed.username || parsed.password || parsed.search || parsed.hash) {
     throw new BadRequestException('The PRTG server address must not contain a query string, fragment, or embedded credentials.');
@@ -203,7 +212,10 @@ export class AiMonitoringIntegrationsService {
   ): Promise<{ ok: true }> {
     const baseUrlRaw = textOrNull(input.base_url);
     if (!baseUrlRaw) {
-      throw new BadRequestException(BASE_URL_MESSAGE);
+      // An empty address removes a saved connection, as for GLPI.
+      const removed = await this.removePrtgConnection(context);
+      if (removed) return removed;
+      throw baseUrlRefusal();
     }
     const baseUrl = normalizePrtgBaseUrl(baseUrlRaw);
     assertPublicHttpUrl(baseUrl); // SSRF: block internal targets in cloud (no-op on-prem)
@@ -289,6 +301,40 @@ export class AiMonitoringIntegrationsService {
       recordId: saved.id,
       action: existing ? 'update' : 'create',
       before: existing ? toView(existing) : null,
+      after: toView(saved),
+      userId: context.userId || null,
+      sourceRef: context.requestId ?? null,
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Removes the saved connection: the address and the credential are emptied and the
+   * connection is switched off, with an audit entry. The row and its other settings
+   * (time zone, timeout) stay, as GLPI keeps its settings row. Agents bound to PRTG then
+   * report the connection as unavailable on their next cycle. Null when there is nothing
+   * to remove (no row, or one already removed): the caller then refuses the empty address,
+   * so a token typed with it is never dropped behind a reported save.
+   */
+  private async removePrtgConnection(context: AiExecutionContextWithManager): Promise<{ ok: true } | null> {
+    const existing = await this.adapterConfigs.getConfig(context, 'monitoring', PRTG_MONITORING_PROVIDER_KEY, { forUpdate: true });
+    if (!existing || (!textOrNull(existing.base_url) && !existing.credential_ref_json && !existing.enabled)) {
+      return null;
+    }
+    const saved = await this.adapterConfigs.saveConfig(context, {
+      provider_kind: 'monitoring',
+      provider_key: PRTG_MONITORING_PROVIDER_KEY,
+      implementation: existing.implementation,
+      environment: existing.environment,
+      enabled: false,
+      base_url: null,
+      credential_ref_json: null,
+    });
+    await writeAuditLog(context.manager, {
+      table: 'ai_adapter_configs',
+      recordId: saved.id,
+      action: 'update',
+      before: toView(existing),
       after: toView(saved),
       userId: context.userId || null,
       sourceRef: context.requestId ?? null,

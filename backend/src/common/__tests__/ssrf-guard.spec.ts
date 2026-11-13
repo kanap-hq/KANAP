@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import { BadRequestException } from '@nestjs/common';
 import { assertPublicHttpUrl, assertPublicHttpTarget, embeddedIpv4Address, LookupFn } from '../ssrf-guard';
 
 const ENFORCE = { enforcePrivateBlock: true } as const;
@@ -137,6 +138,35 @@ async function run() {
     if (prevAllow === undefined) delete process.env.SSRF_ALLOWED_HOSTS;
     else process.env.SSRF_ALLOWED_HOSTS = prevAllow;
   }
+
+  // --- the refusals of an address carry a code the screens translate; the English
+  // sentence and Nest's usual fields stay for the callers that read them ---
+  const refusal = async (fn: () => unknown) => {
+    try {
+      await fn();
+    } catch (error) {
+      assert.ok(error instanceof BadRequestException);
+      return error.getResponse() as Record<string, unknown>;
+    }
+    assert.fail('expected a refusal');
+  };
+  assert.deepEqual(await refusal(() => assertPublicHttpUrl('http://10.0.0.5', ENFORCE)), {
+    statusCode: 400,
+    error: 'Bad Request',
+    code: 'address_private_host',
+    message: 'Private or internal hosts are not allowed.',
+  });
+  assert.equal((await refusal(() => assertPublicHttpTarget('https://intranet.example', {
+    ...ENFORCE, lookupFn: async () => [{ address: '10.1.2.3' }],
+  })))?.code, 'address_private_host');
+  const unresolved = await refusal(() => assertPublicHttpTarget('https://nowhere.example', {
+    ...ENFORCE, lookupFn: async () => { throw new Error('ENOTFOUND'); },
+  }));
+  assert.equal(unresolved?.code, 'address_unresolved');
+  assert.equal(unresolved?.message, 'Unable to resolve target host.');
+  assert.equal((await refusal(() => assertPublicHttpTarget('https://empty.example', {
+    ...ENFORCE, lookupFn: async () => [],
+  })))?.code, 'address_unresolved');
 
   console.log('ssrf-guard.spec: all assertions passed');
 }

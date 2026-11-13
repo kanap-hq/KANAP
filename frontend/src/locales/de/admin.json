@@ -2741,6 +2741,10 @@
   },
   "integrations": {
     "secretAddressChanged": "Die Adresse hat sich geändert: Geben Sie den Wert erneut ein.",
+    "removeConnection": {
+      "title": "Verbindung {{name}} entfernen?",
+      "message": "Ihre Adresse und das gespeicherte Geheimnis werden gelöscht. Bereits importierte Daten bleiben erhalten."
+    },
     "netbox": {
       "title": "Netbox-Inventar",
       "description": "Übernehmen Sie Ihr Netbox-Inventar als Assets. Netbox bleibt die Referenz für die dort beschriebenen Geräte.",

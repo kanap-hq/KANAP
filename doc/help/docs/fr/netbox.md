@@ -32,7 +32,7 @@ Ouvrez **Administration > Intégrations**, puis la carte **Inventaire Netbox**.
 | Champ | Ce qu'il faut saisir |
 |-------|----------------------|
 | **Activer la synchronisation Netbox** | L'interrupteur principal. Désactivé, Kadratis n'appelle jamais Netbox, ni à la main ni automatiquement. |
-| **Adresse Netbox** | L'adresse que vous utilisez pour ouvrir Netbox dans un navigateur, par exemple `https://netbox.example.com`. |
+| **Adresse Netbox** | L'adresse que vous utilisez pour ouvrir Netbox dans un navigateur, par exemple `https://netbox.example.com`. Videz-la et enregistrez pour retirer la connexion. |
 | **Jeton d'API** | Le jeton créé dans Netbox. Il est stocké chiffré et n'est jamais réaffiché. Laissez le champ vide à l'enregistrement pour conserver le jeton déjà en place, tant que l'adresse ne change pas. Une nouvelle adresse vide le jeton enregistré : saisissez-le de nouveau. |
 | **Délai d'attente (secondes)** | Temps d'attente avant d'abandonner, entre 5 et 120. Laissez vide pour utiliser 30. |
 | **Ignorer les erreurs de certificat** | Désactivé par défaut. Voir ci-dessus. |
@@ -40,6 +40,8 @@ Ouvrez **Administration > Intégrations**, puis la carte **Inventaire Netbox**.
 | **Environnement des nouveaux actifs** | Appliqué aux actifs créés par cette intégration. Il n'est jamais modifié ensuite. |
 
 **Tester la connexion** effectue un appel en lecture seule et indique la version de Netbox trouvée, ou la raison de l'échec. Lancez-le après chaque changement d'adresse ou de jeton. La carte affiche **Configuré** une fois la connexion enregistrée et activée. À côté, elle donne le résultat et la date du dernier test : « Dernier test réussi le … » ou « Dernier test échoué le … ». Une fois les paramètres enregistrés, la carte propose un lien **Configurer la synchronisation**, qui mène à l'onglet **Netbox** de **Cartographie SI > Paramètres**.
+
+**Retirer la connexion.** Videz l'adresse, enregistrez, puis confirmez. Kadratis supprime l'adresse et le jeton, coupe la connexion et la synchronisation automatique, et écrit une entrée au journal d'audit. Les actifs importés restent, avec leur lien vers Netbox, ainsi que vos correspondances. Une nouvelle connexion repart d'une synchronisation que vous appliquez vous-même avant que l'exécution horaire ne reprenne.
 
 ---
 
@@ -223,7 +225,7 @@ Une synchronisation ne passe jamais un actif en **Retiré**. Retirer un équipem
 
 ## Synchronisation automatique
 
-Activez **Synchronisation automatique** sur la carte d'intégration : Kadratis exécute le même traitement toutes les heures et applique les changements sans aperçu. L'interrupteur est propre à chaque organisation, et seules celles qui l'ont activé sont traitées. Le traitement horaire ne fait jamais le premier import : il démarre une fois que vous avez appliqué vous-même une synchronisation et qu'elle s'est terminée sans erreur. D'ici là, l'interrupteur peut être activé sans que rien ne s'exécute. Il en va de même tant qu'une vérification n'est pas terminée : aussi longtemps que des objets attendent leur lot, le traitement horaire reste suspendu, car il importerait ce que personne n'a lu. Il reprend dès qu'une synchronisation que vous appliquez ne laisse plus rien en attente.
+Activez **Synchronisation automatique** sur la carte d'intégration : Kadratis exécute le même traitement toutes les heures et applique les changements sans aperçu. L'interrupteur est propre à chaque organisation, et seules celles qui l'ont activé sont traitées. Le traitement horaire ne fait jamais le premier import : il démarre une fois que vous avez appliqué vous-même une synchronisation et qu'elle s'est terminée sans erreur. D'ici là, l'interrupteur peut être activé sans que rien ne s'exécute. Une adresse qui mène à un autre serveur Netbox compte comme un nouveau premier import. Il en va de même tant qu'une vérification n'est pas terminée : aussi longtemps que des objets attendent leur lot, le traitement horaire reste suspendu, car il importerait ce que personne n'a lu. Il reprend dès qu'une synchronisation que vous appliquez ne laisse plus rien en attente.
 
 Les objets qui demandent une décision ne sont jamais tranchés automatiquement. Ils s'accumulent dans **À décider** et vous attendent.
 

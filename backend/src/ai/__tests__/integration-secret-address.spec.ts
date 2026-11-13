@@ -111,6 +111,29 @@ async function testGlpiNewAddressWithNewTokenKeepsTheNewOne() {
   assert.equal(saved.glpi_app_token_encrypted, null);
 }
 
+// The GLPI trace says whether each token is stored, on both sides, like the PRTG, Netbox
+// and model traces, and never holds a token. A field the save did not change (a token
+// typed again at a new address is still present) shows no change in the audit viewer.
+async function testGlpiTraceKeepsTokenPresence() {
+  const { service, audits } = settingsService(settingsRow());
+  await service.update(TENANT_ID, {
+    glpi_url: 'https://glpi2.example.com',
+    glpi_user_token: 'new-user-token',
+    glpi_app_token: 'new-app-token',
+  });
+  await service.update(TENANT_ID, { glpi_app_token: '' });
+  const [moved, appTokenEmptied] = audits;
+  for (const side of [moved.before, moved.after]) {
+    assert.equal(side.has_glpi_user_token, true);
+    assert.equal(side.has_glpi_app_token, true);
+  }
+  assert.equal(moved.after.glpi_url, 'https://glpi2.example.com/');
+  assert.equal(appTokenEmptied.before.has_glpi_app_token, true);
+  assert.equal(appTokenEmptied.after.has_glpi_app_token, false);
+  assert.equal(appTokenEmptied.after.has_glpi_user_token, true);
+  assert.doesNotMatch(JSON.stringify(audits), /new-user-token|new-app-token|stored-user-token|stored-app-token|enc:/);
+}
+
 async function testGlpiSameAddressKeepsTokens() {
   for (const input of [
     { glpi_enabled: true },
@@ -441,10 +464,56 @@ async function testPrtgTestKeepsTheStoredCredentialAtItsAddress() {
   assert.equal(harness.requests.at(-1)?.searchParams.get('apitoken'), 'stored-prtg-token');
 }
 
+async function testPrtgEmptyAddressRemovesTheConnection() {
+  const harness = prtgHarness();
+  await savePrtg(harness, {
+    base_url: 'https://prtg.example.test',
+    api_token: 'stored-prtg-token',
+    server_timezone: 'Europe/Paris',
+  });
+  await harness.service.savePrtgIntegration(harness.context, { enabled: true, base_url: '  ' });
+  const row = harness.rows[0];
+  assert.equal(harness.rows.length, 1, 'the row stays, with its other settings');
+  assert.equal(row.base_url, null);
+  assert.equal(row.credential_ref_json, null);
+  assert.equal(row.enabled, false, 'a removed connection is off whatever the switch said');
+  assert.equal(row.metadata_json?.server_timezone, 'Europe/Paris');
+  const entry = harness.audits.at(-1);
+  assert.equal(entry.action, 'update');
+  assert.equal(entry.before_json.base_url, 'https://prtg.example.test');
+  assert.equal(entry.before_json.credential.present, true);
+  assert.equal(entry.after_json.base_url, null);
+  assert.equal(entry.after_json.credential.present, false);
+  assert.equal(entry.after_json.enabled, false);
+  assert.doesNotMatch(JSON.stringify(harness.audits), /stored-prtg-token|ciphertext/);
+
+  // Once removed, an empty address is refused again, as with nothing saved: a token
+  // typed with it would otherwise be dropped while the screen reports a save.
+  const count = harness.audits.length;
+  await assert.rejects(
+    () => harness.service.savePrtgIntegration(harness.context, { enabled: false, base_url: '', api_token: 'typed-after-removal' }),
+    // With a code the card translates, and the English sentence for other callers.
+    (error: any) => error instanceof BadRequestException
+      && (error.getResponse() as any).code === 'prtg_base_url_invalid'
+      && /full web address/.test(error.message),
+  );
+  assert.equal(harness.audits.length, count, 'no entry without a change');
+  assert.equal(harness.rows[0].credential_ref_json, null);
+
+  // With nothing saved, an empty address is still refused.
+  const empty = prtgHarness();
+  await assert.rejects(
+    () => empty.service.savePrtgIntegration(empty.context, { enabled: false, base_url: '' }),
+    (error: any) => error instanceof BadRequestException,
+  );
+  assert.equal(empty.rows.length, 0);
+}
+
 async function run() {
   const tests: Array<[string, () => Promise<void>]> = [
     ['GLPI: a new address without tokens empties them, with a trace', testGlpiNewAddressWithoutTokensEmptiesThem],
     ['GLPI: a new address with a new token keeps the new one', testGlpiNewAddressWithNewTokenKeepsTheNewOne],
+    ['GLPI: the trace keeps the presence of each token, never a token', testGlpiTraceKeepsTokenPresence],
     ['GLPI: the same address, however spelled, keeps the tokens', testGlpiSameAddressKeepsTokens],
     ['GLPI: an address stored in an older form keeps the tokens', testGlpiAddressStoredInAnOlderFormKeepsTokens],
     ['GLPI: an enabled connection moved without its token is refused', testGlpiEnabledNewAddressAsksForTheToken],
@@ -454,6 +523,7 @@ async function run() {
     ['GLPI test sends the stored tokens only to their address', testGlpiTestKeepsStoredTokensAtTheirAddress],
     ['PRTG: the stored credential follows its address, with a trace', testPrtgCredentialFollowsItsAddress],
     ['PRTG test sends the stored credential only to its address', testPrtgTestKeepsTheStoredCredentialAtItsAddress],
+    ['PRTG: an empty address removes the connection, with a trace', testPrtgEmptyAddressRemovesTheConnection],
   ];
   let failed = 0;
   for (const [name, test] of tests) {

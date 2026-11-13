@@ -71,6 +71,12 @@ Configurez la connexion ici, puis ouvrez l'onglet **Netbox** de **Cartographie S
 
 ---
 
+## Retirer une connexion
+
+Pour retirer la connexion PRTG ou Netbox, videz son adresse, enregistrez, puis confirmez. Kadratis supprime l'adresse et le secret enregistré, coupe la connexion et écrit une entrée au journal d'audit. Rien de ce qui a déjà été importé n'est supprimé. Les agents qui lisent PRTG le signalent comme indisponible à leur exécution suivante. Pour retirer la connexion GLPI, coupez-la, videz l'URL et enregistrez.
+
+---
+
 ## Conseils
 
 - **Utilisez un compte GLPI dédié** : créez un compte de service dans GLPI avec juste assez d'autorisations pour lire les catégories de tickets que vous souhaitez exposer. Cela garde le journal d'audit propre et vous permet de révoquer l'accès sans affecter un utilisateur réel. Si les agents doivent envoyer des réponses et des changements de statut, accordez à ce même compte l'accès en écriture requis par ces actions.

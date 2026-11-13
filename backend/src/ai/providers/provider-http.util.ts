@@ -1,16 +1,17 @@
 import { APIError as AnthropicApiError } from '@anthropic-ai/sdk';
-import { Features } from '../../config/features';
+import { sameOriginRedirectFetch } from '../../common/outbound-redirects';
 import { isAbortError } from './streaming.util';
 
 const MAX_PROVIDER_ERROR_DETAIL_LENGTH = 300;
 const GENERIC_PROVIDER_ERROR = 'AI provider request failed.';
 const UNEXPECTED_PROVIDER_RESPONSE = 'The AI provider returned an unexpected response.';
 
-// Request options for the provider SDK clients. In multi-tenant mode a redirect is
-// returned to the SDK as is (never followed) and reported as an error, like the GLPI
-// and PRTG clients. Single-tenant installations keep the default behaviour.
-export function providerFetchOptions(): { redirect: 'manual' } | undefined {
-  return Features.SINGLE_TENANT ? undefined : { redirect: 'manual' };
+// The fetch of the provider SDK clients. A redirect to another origin is never
+// followed, so the key never leaves for another address; on-premise a redirect on the
+// same origin still is (outbound-redirects.ts). A redirect not followed reaches the
+// SDK as its 3xx answer and is reported by describeProviderError, like GLPI and PRTG.
+export function providerFetch(baseFetch: typeof fetch = globalThis.fetch): typeof fetch {
+  return wrapProviderErrorFetch(sameOriginRedirectFetch(baseFetch));
 }
 
 // The OpenAI SDK keeps only `body.error` (`APIError.generate`). A body with no

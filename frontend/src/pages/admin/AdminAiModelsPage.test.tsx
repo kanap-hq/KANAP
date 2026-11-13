@@ -305,6 +305,110 @@ describe('AdminAiModelsPage model dialog', () => {
     expect(await screen.findByText('Connection successful (300 ms). No effort sent.')).toBeInTheDocument();
   });
 
+  it('tests the values on screen, saved or not', async () => {
+    (api.post as any).mockResolvedValue({
+      data: {
+        ok: true, provider: 'openai', model: 'mistral-large-latest', latency_ms: 200,
+        message: 'Provider test succeeded.', validation_errors: [], reasoning_effort_sent: null, reasoning_tokens: null,
+      },
+    });
+    await openEditDialog();
+    fireEvent.change(screen.getByDisplayValue('mistral-medium-latest'), { target: { value: 'mistral-large-latest' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    expect((api.post as any).mock.calls[0][0]).toBe('/ai/model-configs/model-1/test');
+    expect((api.post as any).mock.calls[0][1]).toEqual({
+      provider: 'openai',
+      model: 'mistral-large-latest',
+      endpoint_url: 'https://api.mistral.ai/v1',
+      reasoning_effort: null,
+    });
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it('asks for the key again before testing a new address', async () => {
+    (api.post as any).mockResolvedValue({
+      data: {
+        ok: false, provider: 'openai', model: 'mistral-medium-latest', latency_ms: 10,
+        message: 'Provider settings are incomplete.', validation_errors: ['API key is required.'],
+      },
+    });
+    await openEditDialog();
+    const test = screen.getByRole('button', { name: 'Test connection' });
+    fireEvent.change(screen.getByPlaceholderText('e.g., https://ai.example.com'), { target: { value: 'https://ai.example.com/v1' } });
+    expect(screen.getByText('The address changed: enter it again.')).toBeInTheDocument();
+    expect(test).toBeDisabled();
+    fireEvent.click(test);
+    expect(api.post).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/^API key/), { target: { value: 'sk-new' } });
+    expect(test).toBeEnabled();
+    fireEvent.click(test);
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    expect((api.post as any).mock.calls[0][1]).toMatchObject({ endpoint_url: 'https://ai.example.com/v1', api_key: 'sk-new' });
+    expect(await screen.findByText('Provider settings are incomplete. API key is required.')).toBeInTheDocument();
+  });
+
+  it('tests a new model before it is created', async () => {
+    (api.post as any).mockResolvedValue({
+      data: {
+        ok: true, provider: 'openai', model: 'gpt-5-mini', latency_ms: 150,
+        message: 'Provider test succeeded.', validation_errors: [], reasoning_effort_sent: null, reasoning_tokens: null,
+      },
+    });
+    renderPage();
+    await screen.findByText('Mistral medium');
+    fireEvent.click(screen.getByRole('button', { name: 'New model' }));
+    const test = await screen.findByRole('button', { name: 'Test connection' });
+    expect(test).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText('e.g., claude-sonnet-5'), { target: { value: 'claude-sonnet-5' } });
+    fireEvent.change(screen.getByLabelText(/^API key/), { target: { value: 'sk-typed' } });
+    expect(test).toBeEnabled();
+    fireEvent.click(test);
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    expect((api.post as any).mock.calls[0][0]).toBe('/ai/model-configs/test');
+    expect((api.post as any).mock.calls[0][1]).toEqual({
+      provider: 'anthropic',
+      model: 'claude-sonnet-5',
+      endpoint_url: null,
+      reasoning_effort: null,
+      api_key: 'sk-typed',
+    });
+  });
+
+  it('shows a refused address in the language of the screen', async () => {
+    (api.post as any).mockResolvedValueOnce({
+      data: {
+        ok: false, provider: 'openai', model: 'mistral-medium-latest', latency_ms: 5,
+        message: 'Private or internal hosts are not allowed.', code: 'address_private_host',
+        validation_errors: ['Private or internal hosts are not allowed.'],
+      },
+    }).mockResolvedValueOnce({
+      data: {
+        ok: false, provider: 'openai', model: 'mistral-medium-latest', latency_ms: 5,
+        message: 'Unable to resolve target host.', code: 'address_unresolved',
+        validation_errors: ['Unable to resolve target host.'],
+      },
+    });
+    await openEditDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
+    expect(await screen.findByText('This address points at a private or internal network.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
+    expect(await screen.findByText('The server could not be found from its address.')).toBeInTheDocument();
+
+    (api.patch as any).mockRejectedValueOnce({
+      response: {
+        status: 400,
+        data: { statusCode: 400, error: 'Bad Request', code: 'address_private_host', message: 'Private or internal hosts are not allowed.' },
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('This address points at a private or internal network.', { selector: '.MuiAlert-message' })).toBeInTheDocument();
+    expect(screen.queryByText('Private or internal hosts are not allowed.')).toBeNull();
+  });
+
   async function switchToOllama() {
     const dialog = screen.getByRole('dialog');
     fireEvent.mouseDown(within(dialog).getByText('OpenAI'));

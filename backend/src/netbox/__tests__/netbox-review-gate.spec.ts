@@ -125,6 +125,32 @@ async function main() {
     assert.equal(config.metadata_json.review_pending, 12);
   }
 
+  // A run writes its outcome only on the connection it ran on. Removed or moved to
+  // another server while the run was going, the row keeps nothing from it: neither the
+  // mark of a first import read by a person, nor the run shown on the page.
+  {
+    const { config, manager, service } = harness({ auto_sync: false });
+    const runFor = await service.writeSyncState(manager, 'tenant-1', { ...manualSuccess(0), status: 'running', finished_at: null, counts: null });
+    assert.equal(runFor, 'https://netbox.example.test', 'the start of a run says which server it runs on');
+
+    // Removed during the run.
+    config.base_url = null;
+    config.metadata_json = { auto_sync: false };
+    assert.equal(await service.writeSyncState(manager, 'tenant-1', manualSuccess(0), { runFor }), null);
+    assert.deepEqual(config.metadata_json, { auto_sync: false });
+
+    // Another server connected meanwhile.
+    config.base_url = 'https://other.example.test';
+    assert.equal(await service.writeSyncState(manager, 'tenant-1', manualSuccess(0), { runFor }), null);
+    assert.deepEqual(config.metadata_json, { auto_sync: false });
+
+    // The same server, however spelled: the outcome is kept.
+    config.base_url = 'HTTPS://Netbox.Example.test:443/';
+    await service.writeSyncState(manager, 'tenant-1', manualSuccess(0), { runFor });
+    assert.equal(typeof config.metadata_json.first_manual_sync_at, 'string');
+    assert.equal((config.metadata_json.sync_state as any).status, 'success');
+  }
+
   console.log('netbox-review-gate.spec.ts OK');
 }
 
