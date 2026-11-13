@@ -3,7 +3,7 @@ import { ApplicationsListService } from './services/applications-list.service';
 import { classificationReadState } from './services/application-classification';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
-import { lockApplicationNames } from './application-rules';
+import { lockApplicationNames, lockApplicationRow } from './application-rules';
 import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, In } from 'typeorm';
@@ -358,6 +358,8 @@ export class ApplicationsCsvService {
       const appId = await this.importedApplicationId(manager, tenantId, row);
       if (!appId || !written.has(String(appId))) continue;
 
+      // The application, then its owners (`lockApplicationRow`), as every writer of them.
+      await lockApplicationRow(manager, tenantId, appId);
       const ownerRepo = manager.getRepository(ApplicationOwner);
       const beforeRows = await ownerRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });
 
