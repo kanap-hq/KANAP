@@ -14458,6 +14458,9 @@ async function runTriageWithSimulatedModel(input: {
   closeTargeting?: { inactivitySeconds: number; ticketAgeHours: number };
   // The tenant's language (the language of the note); none when undefined.
   tenantLanguage?: string;
+  // Persona instructions, and the lines of a shared context the agent is given.
+  instructions?: string[];
+  sharedContextLines?: string[];
 }) {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
@@ -14486,6 +14489,9 @@ async function runTriageWithSimulatedModel(input: {
       }
       : {}),
   };
+  if (input.instructions) {
+    definitionBundle.definition.persona_json = { ...(definitionBundle.definition.persona_json ?? {}), instructions: input.instructions };
+  }
   await manager.getRepository(AiAgentDefinition).save(definitionBundle.definition);
   const ticketUpdatedAt = input.closeTargeting
     ? new Date(Date.now() - input.closeTargeting.ticketAgeHours * 3600 * 1000).toISOString()
@@ -14646,6 +14652,14 @@ async function runTriageWithSimulatedModel(input: {
     input.everyStage ? new AiTicketEvidenceExtractionService(llmClient as any) : undefined,
   ) as any;
   service.getRunDetail = async () => ({ action_requests: [] });
+  if (input.sharedContextLines) {
+    service.sharedContextProfiles = {
+      resolveForAgent: async () => ({
+        resolved: true, reason: null, requested_profile_id: 'shared-r3',
+        context: { profile_id: 'shared-r3', version: 1, name: 'Contexte', lines: input.sharedContextLines },
+      }),
+    };
+  }
   try {
     await service.runTicketingTriage(context, {
       provider_key: 'glpi',
@@ -15167,7 +15181,13 @@ async function runR3Triage(
   internalNotes: 'used' | 'ignored',
   withInternalNotes = true,
   overrides: Record<string, R3Answer> = {},
-  extra: { lifecycle?: Record<string, unknown>; closeTargeting?: { inactivitySeconds: number; ticketAgeHours: number }; tenantLanguage?: string } = {},
+  extra: {
+    lifecycle?: Record<string, unknown>;
+    closeTargeting?: { inactivitySeconds: number; ticketAgeHours: number };
+    tenantLanguage?: string;
+    instructions?: string[];
+    sharedContextLines?: string[];
+  } = {},
 ) {
   return runTriageWithSimulatedModel({
     notes: r3Notes(withInternalNotes),
@@ -15360,6 +15380,26 @@ async function testTheBriefAndTheRewriteFailClosed() {
     assert.equal(result.publicReply, null, `${label}: no reply`);
     assert.ok(result.internalNote?.includes(withdrawnReplySentence('administrative', true, 'en')), `${label}: ${result.internalNote}`);
   }
+}
+
+// The rewritten reply keeps the safeguards of a reply: a line of the operating context never goes
+// to the requester, and a configured exact message is sent exactly.
+async function testTheRewrittenReplyKeepsTheSafeguards() {
+  const contextLine = 'Le serveur de licences interne est srv-lic-07.';
+  const leaked = await runR3Triage('administrative', 'used', true, {
+    administrative_reply: () => ({ body: `Bonjour, ${contextLine.toLocaleLowerCase()} Merci de patienter.` }),
+  }, { sharedContextLines: [contextLine] });
+  assert.ok(leaked.calls.some((call) => call.taskName === 'administrative_reply'), 'the rewrite runs');
+  assert.equal(leaked.publicReply, null, `no reply with the operating context: ${leaked.publicReply}`);
+  assert.ok(leaked.internalNote?.includes(withdrawnReplySentence('administrative', true, 'en')), `${leaked.internalNote}`);
+  const clean = await runR3Triage('administrative', 'used', true, {}, { sharedContextLines: [contextLine] });
+  assert.ok(clean.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `a reply without it goes out: ${clean.publicReply}`);
+
+  const exact = 'Bien reçu, nous revenons vers vous rapidement.';
+  const snapped = await runR3Triage('administrative', 'used', true, {
+    administrative_reply: () => ({ body: exact.toLocaleUpperCase() }),
+  }, { instructions: [`Pour accuser réception, répondre exactement "${exact}"`] });
+  assert.equal(snapped.publicReply, exact, 'the configured message, exactly');
 }
 
 // The names of the workspace's applications are read once per triage, in the workspace only, and
@@ -18328,6 +18368,7 @@ async function run() {
   await testTheWebSearchReadsThePublicThreadOnly();
   await testAWithdrawnReplyIsToldInTheNoteLanguage();
   await testTheBriefAndTheRewriteFailClosed();
+  await testTheRewrittenReplyKeepsTheSafeguards();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();

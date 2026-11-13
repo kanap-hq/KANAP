@@ -174,6 +174,7 @@ import {
 } from './ai-knowledge-search-planner.service';
 import {
   AiReplySynthesisService,
+  operatingContextLeakDetected,
   estimateReplySynthesisUsage,
   ReplySynthesisEntitySource,
   ReplySynthesisRejectedSource,
@@ -6555,9 +6556,24 @@ export class AiAgentControlService {
         chargeRunLlmUsage,
         call: async () => {
           const drafted = await this.actionPlanner!.draftAdministrativeReply(context, administrativeReplyInput);
-          const body = sanitizeForProvider(drafted.body, MAX_SYNTHESIZED_REQUESTER_BODY_CHARS);
-          if (body) plannerDraftedReply.replyBody = body;
-          return { result: drafted, outputSummary: { reply_length: body.length }, fallbackReason: body ? null : 'administrative_reply_body_missing' };
+          // The safeguards of a reply: a configured exact message is sent exactly, and a line of
+          // the operating context never goes to the requester.
+          const verbatim = drafted.body ? resolveVerbatimCandidate(verbatimCandidates, drafted.body) : null;
+          const body = verbatim
+            ? verbatim.text.replace(/\r\n/g, '\n').trim()
+            : sanitizeForProvider(drafted.body, MAX_SYNTHESIZED_REQUESTER_BODY_CHARS);
+          const leak = !verbatim && !!body && operatingContextLeakDetected({
+            requesterReply: body,
+            profile: promptRuntime.synthesisGuidance,
+            knowledgeDocs: [],
+            webResults: [],
+          });
+          if (body && !leak) plannerDraftedReply.replyBody = body;
+          return {
+            result: drafted,
+            outputSummary: { reply_length: body.length, verbatim: !!verbatim, operating_context_leak: leak },
+            fallbackReason: !body ? 'administrative_reply_body_missing' : leak ? 'administrative_reply_operating_context_leak' : null,
+          };
         },
       });
     }

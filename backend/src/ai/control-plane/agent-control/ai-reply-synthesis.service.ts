@@ -233,7 +233,7 @@ function uniqueSources<T extends ReplySynthesisSource>(sources: T[]): T[] {
   return result;
 }
 
-function operatingContextLeakDetected(input: {
+export function operatingContextLeakDetected(input: {
   requesterReply: string;
   profile?: CompiledGuidance | null;
   knowledgeDocs: ReplySynthesisKnowledgeDoc[];
