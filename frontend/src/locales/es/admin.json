@@ -1597,7 +1597,6 @@
       "connect": "Conectar",
       "connecting": "Conectando…",
       "disconnect": "Desconectar",
-      "disconnecting": "Desconectando…",
       "reconnect": "Reconectar",
       "testSignIn": "Probar inicio de sesión"
     },
