@@ -15461,6 +15461,25 @@ async function testTheBriefIsInTheNoteLanguage() {
   }
 }
 
+// The synthesis writes its brief in the language of the note and its reply in the language of the
+// ticket. When both are the same, its prompt and its payload are those of a single language.
+async function testTheSynthesisBriefIsInTheNoteLanguage() {
+  const englishNeed: R3Answer = () => ({ intent: 'Need', language: 'en', symptoms: ['does not start'], search_terms: { en: ['licence'] }, confidence: 0.7 });
+  const english = await runR3Triage('sourced', 'used', false, { ticket_need_representation: englishNeed }, { tenantLanguage: 'fr' });
+  const synthesis = english.calls.find((call) => call.taskName === 'reply_synthesis');
+  const payload = synthesis?.payload as any;
+  assert.equal(payload?.requested_language, 'en', 'the reply in the ticket language');
+  assert.equal(payload?.note_language, 'fr', 'the brief in the note language');
+  assert.ok((payload?.rules as string[]).some((rule) => rule.includes('note_language')), 'the prompt says which language goes where');
+  assert.ok(!english.calls.some((call) => call.taskName === 'technician_brief'), 'no internal note: no separate brief');
+
+  const builder = new AiReplySynthesisService({} as any);
+  const base = { ticket: { id: '1', title: 'T', description: 'D' }, timeline: [], language: 'fr', knowledgeDocs: [], webResults: [] };
+  const single = builder.buildPromptPayload(base as any);
+  assert.deepEqual(builder.buildPromptPayload({ ...base, noteLanguage: 'fr' } as any), single, 'same languages: the same payload');
+  assert.ok(!('note_language' in single));
+}
+
 // The names of the workspace's applications are read once per triage, in the workspace only, and
 // only when a code opens the ticket title.
 async function testTheTitleCodesReadTheWorkspaceApplicationsOnce() {
@@ -18431,6 +18450,7 @@ async function run() {
   await testALongBriefIsCutAtASentence();
   await testAFailedCallCountsItsTokens();
   await testTheBriefIsInTheNoteLanguage();
+  await testTheSynthesisBriefIsInTheNoteLanguage();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();

@@ -5986,6 +5986,9 @@ export class AiAgentControlService {
     }
 
     const synthesisLanguage = resolveReplyLanguage(agentDefinition, ticket, knowledgeSearchPlan.language, publicTimeline);
+    const noteLanguage = triageNoteLanguage(tenantSeedLanguage(
+      (await context.manager.getRepository(Tenant).findOne({ where: { id: context.tenantId } }))?.metadata,
+    ));
     // Assigned inside the `runReplySynthesis` closure below. Flow analysis cannot see that write,
     // so without keeping the declared union here the reads after the closure call narrow to `null`.
     let replySynthesisResult: ReplySynthesisResult | null = null as ReplySynthesisResult | null;
@@ -6005,6 +6008,8 @@ export class AiAgentControlService {
       ticket,
       timeline: publicTimeline,
       language: synthesisLanguage,
+      // The brief of the synthesis belongs to the note: it takes the note's language.
+      noteLanguage,
       knowledgeDocs: enrichedKnowledgeItems.slice(0, MAX_KNOWLEDGE_DOCUMENTS_FOR_REPLY),
       webResults: webSearchResults,
       imageEvidence: imageEvidenceOfPublicItems(ticketImageExtraction.evidence, ticket, ticketNotesData.notes),
@@ -6196,9 +6201,6 @@ export class AiAgentControlService {
     );
     // The note's frame is in the tenant's language, as the reply is in the ticket's; the planner
     // writes its rationale and reasons, copied into the note, in the same language.
-    const noteLanguage = triageNoteLanguage(tenantSeedLanguage(
-      (await context.manager.getRepository(Tenant).findOne({ where: { id: context.tenantId } }))?.metadata,
-    ));
     const actionPlannerInput = {
       ticket,
       timeline: agentTimeline,
