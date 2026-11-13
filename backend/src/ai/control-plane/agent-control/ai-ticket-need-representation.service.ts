@@ -945,7 +945,19 @@ export class AiTicketNeedRepresentationService {
     const primaryApp = firstAvailable([...applications, ...modules]);
     const primarySymptom = firstAvailable(symptoms);
 
+    // A code whose first word opens the title, names no application of the workspace and is not in
+    // the description is the ticket's label, whatever kind the model gives it: no exact query.
+    const titleCodes = new Set(titleHeadCodes(input.fallbackTitle).filter((code) => !input.applicationKeys?.has(code)));
+    const describedWords = new Set(codeWords(input.fallbackDescription ?? ''));
+    const isTitleLabel = (value: string) => {
+      const first = codeWords(value)[0] ?? '';
+      return titleCodes.has(first) && !describedWords.has(first);
+    };
     for (const code of need.exact_codes) {
+      if (isTitleLabel(code.value)) {
+        exactBucket.dropped.push({ query: code.value, reason: 'title_code_names_nothing' });
+        continue;
+      }
       addQuery(exactBucket, code.value, 'exact_code');
       if (primaryApp) addQuery(exactBucket, `${code.value} ${primaryApp}`, 'exact_code_with_application');
       if (primarySymptom) addQuery(exactBucket, `${code.value} ${primarySymptom}`, 'exact_code_with_symptom');

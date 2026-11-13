@@ -238,6 +238,31 @@ function testACodeOpeningTheTitleIsNoApplication() {
   assert.ok(derive('Outlook plante', '', ['Outlook']).facet_queries.some((query) => query.startsWith('Outlook ')), 'a title without a code');
 }
 
+// A code that opens the title and names nothing of the workspace is no exact query, whatever kind
+// the model gives it. A code the description gives, or one the workspace names, stays searched.
+function testATitleCodeIsNoExactQuery() {
+  const builder = new AiTicketNeedRepresentationService({} as any);
+  const derive = (title: string, description: string, codes: Array<[string, string]>, workspace: string[] = []) => builder.deriveKnowledgeQueries({
+    need: need({
+      entities: { applications: ['VPN'], modules: [], screens: [], equipment: [], services: [] },
+      symptoms: ['connexion refusée'],
+      exact_codes: codes.map(([value, kind]) => ({ value, kind, source: 'ticket_description' })) as TicketNeedRepresentation['exact_codes'],
+    }),
+    fallbackTitle: title,
+    fallbackDescription: description,
+    applicationKeys: applicationNameKeys(workspace),
+  });
+  const coded = derive('R8 R3 VPN refuse la connexion', 'Le VPN affiche E1234 depuis ce matin.', [['R8 R3', 'other'], ['R8', 'sap_code'], ['E1234', 'error_code']]);
+  for (const query of coded.exact_queries) assert.doesNotMatch(query, /\bR[38]\b/, `exact query ${query}`);
+  assert.ok(coded.exact_queries.includes('E1234'), `the error code of the description: ${coded.exact_queries.join(' | ')}`);
+  assert.ok(coded.dropped_queries.some((entry) => entry.query === 'R8 R3' && entry.reason === 'title_code_names_nothing'), 'said in the derivation');
+
+  const described = derive('E1234 au démarrage', 'Le message E1234 apparaît au démarrage du VPN.', [['E1234', 'error_code']]);
+  assert.ok(described.exact_queries.includes('E1234'), 'a code the description gives too');
+  const named = derive('X3 bloqué', 'Plus rien ne répond.', [['X3', 'other']], ['Sage X3']);
+  assert.ok(named.exact_queries.includes('X3'), 'a code the workspace names');
+}
+
 // A word that only starts a sentence or links two is no application: it prefixes no query.
 function testLinkingWordsAreNoApplications() {
   const builder = new AiTicketNeedRepresentationService({} as any);
@@ -326,6 +351,7 @@ function testInternalNoteFollowsTheTenantLanguage() {
 async function run() {
   for (const test of [
     testACodeOpeningTheTitleIsNoApplication,
+    testATitleCodeIsNoExactQuery,
     testInterpreterPromptIsBounded,
     testFallbackResultsAreCandidatesOnly,
     testQueriesCoverTheLanguagesOfTheDocuments,
