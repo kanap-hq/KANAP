@@ -64,7 +64,10 @@ export class EntraDisconnectService {
   /**
    * Removes the connection in the caller's transaction (the request's). Locks, in this order: the
    * workspace's row, which a Microsoft sign-in that links an account holds while it does
-   * (`lockTenantConnection`), then the accounts' rows by id (`lockPeople` order). An administrator
+   * (`lockTenantConnection`, FOR SHARE), then the accounts' rows by id (`lockPeople` order). The
+   * workspace's row is taken FOR NO KEY UPDATE: it excludes that share lock, and leaves free the
+   * key share lock every foreign key to the workspace takes, so the workspace's other writes go on
+   * during a disconnect. An administrator
    * without a password gives one (`password`, at least `LOCAL_PASSWORD_MIN_LENGTH` characters),
    * written with the rest; one who has a password keeps it and `password` is ignored. A refusal
    * writes nothing. Pending link confirmations stop working: once connected again, an existing
@@ -76,7 +79,7 @@ export class EntraDisconnectService {
   ): Promise<{ unlinked: number; entraTenantId: string }> {
     const { tenantId, actorId } = input;
     const [tenant] = await manager.query(
-      `SELECT sso_provider, sso_enabled, entra_tenant_id FROM tenants WHERE id = $1 FOR UPDATE`,
+      `SELECT sso_provider, sso_enabled, entra_tenant_id FROM tenants WHERE id = $1 FOR NO KEY UPDATE`,
       [tenantId],
     );
     if (!tenant || tenant.sso_provider !== 'entra' || !tenant.entra_tenant_id) {

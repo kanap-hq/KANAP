@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { NestFactory } from '@nestjs/core';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import { withTenantExecution } from '../../common/tenant-runner';
 import { purgeTenantTables } from '../../admin/tenants/tenant-data-purge';
 import { TENANT_PURGE_TABLES } from '../../admin/tenants/tenant-purge.inventory';
@@ -13,6 +13,7 @@ import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
 import { EntraController } from '../entra.controller';
 import { Features } from '../../config/features';
+import { lockTenantConnection } from '../entra-link-confirmation';
 
 // Removing a workspace's Microsoft connection (Administration > Authentication, Disconnect):
 // - makes every linked account of the workspace local, and none of another workspace: an account
@@ -25,6 +26,8 @@ import { Features } from '../../config/features';
 // - two disconnects at once: one does the work, the other is refused;
 // - the directory sync no longer touches the accounts, even when the disconnect happens while a
 //   sync is reading the directory, and even once the workspace is connected again;
+// - a disconnect and a Microsoft sign-in that links an account wait for each other, and the
+//   workspace's other writes go on during a disconnect;
 // - connected again, an existing account is linked by the usual rule (confirmation by e-mail, or the
 //   first sign-in of an invited account without a password); a confirmation sent before the
 //   disconnect no longer works.
@@ -399,6 +402,98 @@ async function testReconnectUsesTheLinkRule(c: Ctx) {
   assert.equal((await links(c.ds, w)).ivy, 'entra');
 }
 
+/** A transaction of the workspace, left open for the test to end. */
+async function openTransaction(c: Ctx, w: Workspace) {
+  const runner = c.ds.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [w.tenantId]);
+  const [{ pid }] = await runner.query(`SELECT pg_backend_pid() AS pid`);
+  return { runner, pid: pid as number };
+}
+
+async function waitUntilBlocked(c: Ctx, pid: number) {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const [row] = await c.ds.query(`SELECT wait_event_type FROM pg_stat_activity WHERE pid = $1`, [pid]);
+    if (row?.wait_event_type === 'Lock') return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.fail(`backend ${pid} never waited for a lock`);
+}
+
+async function endAll(...runners: QueryRunner[]) {
+  for (const runner of runners) {
+    if (runner.isTransactionActive) await runner.rollbackTransaction().catch(() => undefined);
+    if (!runner.isReleased) await runner.release();
+  }
+}
+
+/**
+ * A disconnect and a Microsoft sign-in that links an account exclude each other on the
+ * workspace's row: the disconnect waits for the sign-in, and a sign-in that comes during the
+ * disconnect waits for it and then reads the workspace disconnected.
+ */
+async function testDisconnectAndLinkingSignInExcludeEachOther(c: Ctx) {
+  const w = await workspace(c.ds);
+  const ada = await w.user('ada', { admin: true });
+  await w.user('bob');
+
+  const signIn = await openTransaction(c, w);
+  const disconnecting = await openTransaction(c, w);
+  try {
+    assert.equal((await lockTenantConnection(signIn.runner.manager, w.tenantId))?.sso_provider, 'entra');
+    let done = false;
+    const pending = c.admin.disconnect(request(w, ada, disconnecting.runner.manager) as any, {} as any).finally(() => { done = true; });
+    pending.catch(() => undefined);
+    await waitUntilBlocked(c, disconnecting.pid);
+    assert.equal(done, false, 'the disconnect waits for the sign-in');
+    await signIn.runner.commitTransaction();
+    await pending;
+    await disconnecting.runner.rollbackTransaction();
+  } finally {
+    await endAll(signIn.runner, disconnecting.runner);
+  }
+
+  const held = await openTransaction(c, w);
+  const late = await openTransaction(c, w);
+  try {
+    await c.admin.disconnect(request(w, ada, held.runner.manager) as any, {} as any);
+    const seen: { row?: Awaited<ReturnType<typeof lockTenantConnection>> } = {};
+    const pending = lockTenantConnection(late.runner.manager, w.tenantId).then((row) => { seen.row = row; });
+    pending.catch(() => undefined);
+    await waitUntilBlocked(c, late.pid);
+    assert.ok(!('row' in seen), 'the sign-in waits for the disconnect');
+    await held.runner.commitTransaction();
+    await pending;
+    assert.equal(seen.row?.sso_provider, 'none', 'and reads the workspace disconnected');
+    assert.equal(seen.row?.entra_tenant_id, null);
+  } finally {
+    await endAll(held.runner, late.runner);
+  }
+}
+
+/**
+ * While a disconnect is in progress, the workspace's other writes go on: a row that references the
+ * workspace (its foreign key reads the workspace's row) is written without waiting.
+ */
+async function testDisconnectLeavesOtherWritesFree(c: Ctx) {
+  const w = await workspace(c.ds);
+  const ada = await w.user('ada', { admin: true });
+  await w.user('bob');
+  const held = await openTransaction(c, w);
+  const writer = await openTransaction(c, w);
+  try {
+    await c.admin.disconnect(request(w, ada, held.runner.manager) as any, {} as any);
+    await writer.runner.query(`SET LOCAL lock_timeout = '2s'`);
+    await writer.runner.query(`INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Written during a disconnect')`, [w.tenantId]);
+    await writer.runner.rollbackTransaction();
+    await held.runner.commitTransaction();
+  } finally {
+    await endAll(held.runner, writer.runner);
+  }
+}
+
 async function run() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for entra-disconnect.integration.spec.ts.');
   const { AppModule } = require('../../app.module');
@@ -439,6 +534,8 @@ async function run() {
     ['the sync leaves the accounts alone', testSyncLeavesTheAccountsAlone],
     ['a disconnect during a directory read', testDisconnectDuringDirectoryRead],
     ['connected again, the usual link rule applies', testReconnectUsesTheLinkRule],
+    ['a disconnect and a linking sign-in exclude each other', testDisconnectAndLinkingSignInExcludeEachOther],
+    ["a disconnect leaves the workspace's other writes free", testDisconnectLeavesOtherWritesFree],
   ];
   const only = process.argv[2];
   try {
