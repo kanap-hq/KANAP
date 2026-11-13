@@ -6731,7 +6731,8 @@ export class AiAgentControlService {
       const briefInput = {
         ticket,
         timeline: agentTimeline,
-        language: synthesisLanguage,
+        // The brief is part of the note: it takes the language of the note, as its frame.
+        language: noteLanguage,
         reply,
         imageEvidence: ticketImageExtraction.evidence,
         interpretation: serializeKnowledgeInterpretation(knowledgeInterpretation),
@@ -6750,7 +6751,7 @@ export class AiAgentControlService {
         projection,
         baseUsage: currentRunLlmUsage(),
         inputSummary: {
-          language: synthesisLanguage,
+          language: noteLanguage,
           projected_tokens: projection.estimatedTokens,
           projected_cost_eur: projection.estimatedCostEur,
           prompt_profile: promptRuntime.promptProfileSummary,

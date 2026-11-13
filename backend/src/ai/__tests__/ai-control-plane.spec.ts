@@ -15447,6 +15447,18 @@ async function testAFailedCallCountsItsTokens() {
   assert.equal(rewrite.publicReply, null);
 }
 
+// The brief is written in the language of the note (the tenant's), as the planner's reasons; the
+// reply keeps the language of the ticket.
+async function testTheBriefIsInTheNoteLanguage() {
+  for (const language of ['de', 'en'] as const) {
+    const result = await runR3Triage('sourced', 'used', true, {}, { tenantLanguage: language });
+    const brief = result.calls.find((call) => call.taskName === 'technician_brief');
+    assert.equal((brief?.payload as any)?.requested_language, language, `${language}: the brief`);
+    const reply = result.calls.find((call) => call.taskName === 'reply_synthesis');
+    assert.equal((reply?.payload as any)?.requested_language, 'fr', `${language}: the reply`);
+  }
+}
+
 // The names of the workspace's applications are read once per triage, in the workspace only, and
 // only when a code opens the ticket title.
 async function testTheTitleCodesReadTheWorkspaceApplicationsOnce() {
@@ -18416,6 +18428,7 @@ async function run() {
   await testTheRewrittenReplyKeepsTheSafeguards();
   await testALongBriefIsCutAtASentence();
   await testAFailedCallCountsItsTokens();
+  await testTheBriefIsInTheNoteLanguage();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();
