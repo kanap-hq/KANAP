@@ -6485,11 +6485,13 @@ export class AiAgentControlService {
     if (plannerNeedsSourcedSynthesis || fallbackPreparePublicReply) {
       await runReplySynthesis();
     }
-    // With internal notes read, the planner's own draft of an administrative reply may carry their
-    // text: the reply is written again on the public items of the ticket. Without it, no reply.
-    const plannerDraftedReply = readsInternalItems
-      ? plannerAuthorizedActions.find((entry) => entry.action.action_type === 'requester_reply' && entry.plannerDraft) ?? null
-      : null;
+    // With internal notes read, a reply body the planner wrote may carry their text. The reply that
+    // goes out (the first one of the plan, a sourced answer without a usable synthesis set aside)
+    // is written again on the public items of the ticket when the planner wrote it; any other
+    // body the planner wrote is withdrawn, as is the rewritten one when the rewrite gives nothing.
+    const outgoingReply = plannerAuthorizedActions.find((entry) => entry.action.action_type === 'requester_reply'
+      && !(entry.action.reply_kind === 'sourced_answer' && replySynthesisResult?.usable !== true)) ?? null;
+    const plannerDraftedReply = readsInternalItems && outgoingReply?.plannerDraft ? outgoingReply : null;
     let administrativeReplyFallbackReason: string | null = null;
     if (plannerDraftedReply && this.actionPlanner) {
       const administrativeReplyInput = {
@@ -6543,22 +6545,31 @@ export class AiAgentControlService {
     const sourcedReplyAction = effectivePlannerActions.find((entry) =>
       entry.action.action_type === 'requester_reply' && entry.action.reply_kind === 'sourced_answer',
     ) ?? null;
+    // With internal notes read, a reply body the planner wrote that was not written again never
+    // goes out: it leaves the plan (it was never the reply prepared).
+    if (readsInternalItems) {
+      effectivePlannerActions = effectivePlannerActions.filter((entry) => !entry.plannerDraft || entry === plannerDraftedReply);
+    }
     // A reply that cannot go out as planned is withdrawn: a sourced answer without a usable
     // synthesis, or an administrative reply that could not be written on the public items.
-    const downgradedReply = sourcedReplyAction && (!replySynthesisResult || !replySynthesisResult.usable)
-      ? {
-        entry: sourcedReplyAction,
-        reason: synthesisFallbackReason ?? replySynthesisResult?.fallback_reason ?? 'synthesis_unavailable_or_unusable',
-        why: 'sourced reply synthesis was not usable',
-      }
-      : plannerDraftedReply && administrativeReplyFallbackReason
-        ? { entry: plannerDraftedReply, reason: administrativeReplyFallbackReason, why: 'the administrative reply could not be written from the public messages' }
-        : null;
+    const withdrawnReplies = [
+      ...(sourcedReplyAction && (!replySynthesisResult || !replySynthesisResult.usable)
+        ? [{
+          entry: sourcedReplyAction,
+          reason: synthesisFallbackReason ?? replySynthesisResult?.fallback_reason ?? 'synthesis_unavailable_or_unusable',
+          why: 'sourced reply synthesis was not usable',
+        }]
+        : []),
+      ...(plannerDraftedReply && administrativeReplyFallbackReason
+        ? [{ entry: plannerDraftedReply, reason: administrativeReplyFallbackReason, why: 'the administrative reply could not be written from the public messages' }]
+        : []),
+    ];
+    const downgradedReply = withdrawnReplies[0] ?? null;
     if (downgradedReply) {
       const downgradeReason = downgradedReply.reason;
       plannerDowngradedActions.requester_reply = downgradeReason;
       plannerSkippedActions.requester_reply = downgradeReason;
-      effectivePlannerActions = effectivePlannerActions.filter((entry) => entry !== downgradedReply.entry);
+      effectivePlannerActions = effectivePlannerActions.filter((entry) => !withdrawnReplies.some((withdrawn) => withdrawn.entry === entry));
       effectivePlannerActions = effectivePlannerActions.filter((entry) => {
         if (entry.action.action_type !== 'status_update') {
           return true;

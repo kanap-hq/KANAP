@@ -14442,6 +14442,8 @@ async function runTriageWithSimulatedModel(input: {
   withoutNeed?: boolean;
   // The ticket description; the default one when undefined.
   description?: string;
+  // The lifecycle context of the ticket; no transition when undefined.
+  lifecycle?: Record<string, unknown>;
 }) {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
@@ -14485,7 +14487,7 @@ async function runTriageWithSimulatedModel(input: {
         case TICKETING_CLASSIFICATION_CONTEXT_CAPABILITY:
           return ok({ type: 'Incident', priority: 'Medium', urgency: 'Medium' });
         case TICKETING_LIFECYCLE_CONTEXT_CAPABILITY:
-          return ok({ allowedTransitions: [] });
+          return ok(input.lifecycle ?? { allowedTransitions: [] });
         case TICKETING_ROUTING_CONTEXT_CAPABILITY:
         case TICKETING_PARTICIPANT_CONTEXT_CAPABILITY:
           return ok({});
@@ -15116,13 +15118,26 @@ function r3Echo(payload: unknown): string {
 
 const R3_REPLY_TASKS = ['reply_synthesis', 'administrative_reply'];
 
-async function runR3Triage(kind: 'sourced' | 'administrative' | 'fallback', internalNotes: 'used' | 'ignored', withInternalNotes = true) {
+type R3Answer = (payload: any) => Record<string, unknown> | null;
+
+// kind: one of the three replies, or the plan the simulated planner returns. overrides: the
+// answers of some calls (null for no answer: the call fails).
+async function runR3Triage(
+  kind: 'sourced' | 'administrative' | 'fallback' | R3Answer,
+  internalNotes: 'used' | 'ignored',
+  withInternalNotes = true,
+  overrides: Record<string, R3Answer> = {},
+  extra: { lifecycle?: Record<string, unknown> } = {},
+) {
   return runTriageWithSimulatedModel({
     notes: r3Notes(withInternalNotes),
     plan: null,
     internalNotes,
     everyStage: true,
+    ...extra,
     respond: (taskName, payload) => {
+      if (overrides[taskName]) return overrides[taskName](payload);
+      if (taskName === 'action_planner' && typeof kind === 'function') return kind(payload);
       switch (taskName) {
         case 'ticket_image_evidence_extraction':
           return {
@@ -15173,6 +15188,45 @@ async function runR3Triage(kind: 'sourced' | 'administrative' | 'fallback', inte
       }
     },
   });
+}
+
+// A plan with two replies to the requester, internal notes used: no body the planner wrote goes
+// out, whether the rewrite on the public items works, fails or passes the cap (lot R3, review).
+async function testAPlanWithTwoRepliesSendsNoPlannerBody() {
+  const draft = (intent: string) => (payload: any) => ({
+    action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: intent,
+    reason: `Réponse ${intent}.`, body: `Brouillon ${intent} ${r3Echo(payload)}`,
+  });
+  const twoDrafts: R3Answer = (payload) => ({
+    actions: [{ action_type: 'internal_note', reason: 'Documenter.' }, draft('acknowledgement')(payload), draft('other')(payload)],
+    rationale: 'Plan.', confidence: 0.8,
+  });
+  const sourcedThenDraft: R3Answer = (payload) => ({
+    actions: [
+      { action_type: 'internal_note', reason: 'Documenter.' },
+      { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: 'Répondre.' },
+      draft('other')(payload),
+    ],
+    rationale: 'Plan.', confidence: 0.8,
+  });
+  const unusable: R3Answer = () => ({ language: 'fr', usable: false, requester_reply: '', technician_brief: 'Rien.', used_sources: [], rejected_sources: [], confidence: 0.2 });
+  const cases: Array<[string, R3Answer, Record<string, R3Answer>]> = [
+    ['two drafts, rewrite fails', twoDrafts, { administrative_reply: () => null }],
+    ['two drafts, empty rewrite', twoDrafts, { administrative_reply: () => ({ body: '' }) }],
+    ['sourced and draft, unusable synthesis, rewrite fails', sourcedThenDraft, { reply_synthesis: unusable, administrative_reply: () => null }],
+  ];
+  for (const [label, plan, overrides] of cases) {
+    const result = await runR3Triage(plan, 'used', true, overrides);
+    assert.ok(result.calls.some((call) => call.taskName === 'administrative_reply'), `${label}: the rewrite is attempted`);
+    assert.equal(result.publicReply, null, `${label}: no reply goes out: ${result.publicReply}`);
+    assert.ok(result.internalNote, `${label}: an internal note`);
+  }
+  const rewritten = await runR3Triage(twoDrafts, 'used');
+  assert.equal(rewritten.calls.filter((call) => call.taskName === 'administrative_reply').length, 1, 'one rewrite');
+  assert.ok(rewritten.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `the rewritten reply: ${rewritten.publicReply}`);
+  assert.ok(!rewritten.publicReply?.includes(R3_INTERNAL_MARKER));
+  const backup = await runR3Triage(sourcedThenDraft, 'used', true, { reply_synthesis: unusable });
+  assert.ok(backup.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `the draft after the withdrawn sourced answer is rewritten: ${backup.publicReply}`);
 }
 
 async function testThePublicReplyReadsThePublicThreadOnly() {
@@ -18064,6 +18118,7 @@ async function run() {
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();
   await testTriageWithInternalNotesUsedReadsEveryItem();
   await testThePublicReplyReadsThePublicThreadOnly();
+  await testAPlanWithTwoRepliesSendsNoPlannerBody();
   await testThePlannerWritesItsReasonsInTheNoteLanguage();
   await testTheFallbackNoteSaysOnlyWhatIsPrepared();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
