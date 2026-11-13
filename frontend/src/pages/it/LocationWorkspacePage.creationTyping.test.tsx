@@ -76,12 +76,12 @@ function Where() {
   return <div data-testid="where">{useLocation().pathname}</div>;
 }
 
-function renderNew() {
+function renderNew(path = '/it/locations/new/overview') {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={new QueryClient()}>
         <KanapDialogProvider>
-          <MemoryRouter initialEntries={['/it/locations/new/overview']}>
+          <MemoryRouter initialEntries={[path]}>
             <Where />
             <Routes>
               <Route path="/it/locations/:id/:tab" element={<LocationWorkspacePage />} />
@@ -221,5 +221,20 @@ describe('LocationWorkspacePage typing while the site is created', () => {
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledTimes(1));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1100)); });
     expect(patchesWith('additional_info', 'Rack 4')).toHaveLength(1);
+  });
+
+  it('shows the notes typed before another tab again when the Overview tab is opened, and types on from them', async () => {
+    renderNew('/it/locations/LOC-9/overview');
+    const notes = await screen.findByLabelText('markdown-editor');
+    fireEvent.change(notes, { target: { value: 'Rack 4' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'workspace.location.tabs.contacts' }));
+    await until(() => { if (patchesWith('additional_info', 'Rack 4').length === 0) throw new Error('not written'); });
+    await until(() => expect(screen.queryByLabelText('markdown-editor')).toBeNull());
+    fireEvent.click(screen.getByRole('tab', { name: 'workspace.location.tabs.overview' }));
+    const back = (await screen.findByLabelText('markdown-editor')) as HTMLTextAreaElement;
+    expect(back.value).toBe('Rack 4');
+    fireEvent.change(back, { target: { value: 'Rack 4, row B' } });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1100)); });
+    expect(patchesWith('additional_info', 'Rack 4, row B')).toHaveLength(1);
   });
 });

@@ -50,7 +50,7 @@ describe('LocationOverviewTab notes waiting to be saved', () => {
     expect(patch).toHaveBeenCalledWith('/locations/loc-1', { additional_info: 'Rack 4' });
     await pause(1100);
     expect(patch).toHaveBeenCalledTimes(1);
-    expect(onNotesSaved).toHaveBeenCalledWith('Rack 4');
+    expect(onNotesSaved).toHaveBeenCalledWith('Rack 4', 'loc-1');
   });
 
   it('writes nothing when the notes are back to the saved text', async () => {
@@ -112,5 +112,56 @@ describe('LocationOverviewTab notes waiting to be saved', () => {
     await pause(50);
     expect(onNotesDraft).toHaveBeenCalledWith('Rack 4');
     expect(patch).not.toHaveBeenCalled();
+  });
+
+  /** The page's side: what the tab saves comes back as the text it hands to the tab. */
+  function Page({ locationId = 'loc-1' }: { locationId?: string }) {
+    const [stored, setStored] = React.useState<Record<string, string>>({ 'loc-1': '', 'loc-2': 'two' });
+    return wrap({
+      locationId,
+      initialNotes: stored[locationId] ?? '',
+      onNotesSaved: (next, id = locationId) => setStored((prev) => ({ ...prev, [id]: next.trim() ? next : '' })),
+    });
+  }
+
+  it('keeps the text typed while the save runs, and sends it after', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    patch.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
+    render(<Page />);
+    const editor = (await screen.findByLabelText('markdown-editor')) as HTMLTextAreaElement;
+    fireEvent.change(editor, { target: { value: 'Rack' } });
+    await pause(1000);
+    expect(patch).toHaveBeenCalledTimes(1);
+    fireEvent.change(editor, { target: { value: 'Rack 4' } });
+    await act(async () => { answer({ data: {} }); });
+    expect(editor.value).toBe('Rack 4');
+    await pause(1000);
+    expect(patch).toHaveBeenCalledTimes(2);
+    expect(patch).toHaveBeenLastCalledWith('/locations/loc-1', { additional_info: 'Rack 4' });
+  });
+
+  it('hands back a save to the site it was made on when the tab shows another site meanwhile', async () => {
+    const onNotesSaved = vi.fn();
+    let answer: (value: unknown) => void = () => undefined;
+    patch.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
+    const view = render(wrap({ locationId: 'loc-1', onNotesSaved }));
+    fireEvent.change(await screen.findByLabelText('markdown-editor'), { target: { value: 'one, typed' } });
+    await pause(1000);
+    view.rerender(wrap({ locationId: 'loc-2', initialNotes: 'two', onNotesSaved }));
+    await act(async () => { answer({ data: {} }); });
+    expect(onNotesSaved).toHaveBeenCalledWith('one, typed', 'loc-1');
+    expect((screen.getByLabelText('markdown-editor') as HTMLTextAreaElement).value).toBe('two');
+    await pause(1000);
+    expect(patch).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands back the write made when the tab shows another site, with the site it was typed on', async () => {
+    const onNotesSaved = vi.fn();
+    const view = render(wrap({ locationId: 'loc-1', onNotesSaved }));
+    fireEvent.change(await screen.findByLabelText('markdown-editor'), { target: { value: 'one, typed' } });
+    view.rerender(wrap({ locationId: 'loc-2', initialNotes: 'two', onNotesSaved }));
+    await pause(50);
+    expect(onNotesSaved).toHaveBeenCalledWith('one, typed', 'loc-1');
+    expect(onNotesSaved).toHaveBeenCalledTimes(1);
   });
 });

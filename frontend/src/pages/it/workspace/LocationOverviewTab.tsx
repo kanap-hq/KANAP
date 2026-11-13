@@ -14,7 +14,8 @@ type Props = {
   locationId: string;
   initialNotes: string;
   canManage: boolean;
-  onNotesSaved?: (next: string) => void;
+  /** The text just saved, with the site it was saved on (it may no longer be the one shown). */
+  onNotesSaved?: (next: string, locationId: string) => void;
   /** A new site: the notes go to its draft, and what needs a saved site stays hidden. */
   onNotesDraft?: (next: string) => void;
   /** Set to a function that saves notes still waiting for their delay ("Cancel" counts them first). */
@@ -24,6 +25,9 @@ type Props = {
 };
 
 const NOTES_DEBOUNCE_MS = 900;
+
+// A text of spaces only is an empty note.
+const blank = (text: string) => (text.trim().length > 0 ? text : '');
 
 const writeNotes = (locationId: string, next: string) =>
   api.patch(`/locations/${locationId}`, { additional_info: next.trim().length > 0 ? next : null });
@@ -48,7 +52,14 @@ export default function LocationOverviewTab({
   const locationIdRef = React.useRef(locationId);
   locationIdRef.current = locationId;
 
+  // The notes shown start again from the page's text when the site changes, or when that text is not
+  // what this tab saved last (the page handing the saved text back changes nothing: a newer text
+  // being typed stays).
+  const shownIdRef = React.useRef(locationId);
   React.useEffect(() => {
+    const sameSite = shownIdRef.current === locationId;
+    shownIdRef.current = locationId;
+    if (sameSite && blank(initialNotes) === blank(baselineRef.current)) return;
     setNotes(initialNotes);
     latestRef.current = initialNotes;
     baselineRef.current = initialNotes;
@@ -63,7 +74,7 @@ export default function LocationOverviewTab({
         await writeNotes(locationId, next);
         baselineRef.current = next;
         setStatus('saved');
-        onNotesSaved?.(next);
+        onNotesSaved?.(next, locationId);
         setTimeout(() => {
           setStatus((current) => (current === 'saved' ? 'idle' : current));
         }, 1500);
@@ -76,6 +87,8 @@ export default function LocationOverviewTab({
   );
   const persistRef = React.useRef(persist);
   persistRef.current = persist;
+  const onSavedRef = React.useRef(onNotesSaved);
+  onSavedRef.current = onNotesSaved;
 
   const handleNotesChange = (value: string) => {
     setNotes(value);
@@ -101,7 +114,7 @@ export default function LocationOverviewTab({
     if (locationIdRef.current === locationId) {
       void persistRef.current(typed);
     } else if (typed !== baselineRef.current) {
-      void writeNotes(locationId, typed).catch(() => undefined);
+      void writeNotes(locationId, typed).then(() => onSavedRef.current?.(typed, locationId), () => undefined);
     }
   }, [locationId]);
 

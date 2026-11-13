@@ -445,6 +445,12 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
     await creation.cancelCreation();
   };
 
+  // The notes the tab saved come back into the page's copy of the site, so the tab shows them when it is
+  // opened again. A save that ends after the page moved to another site is not put on that one.
+  const handleNotesSaved = React.useCallback((next: string, savedId: string) => {
+    setData((prev) => (prev && prev.id === savedId ? { ...prev, additional_info: next.trim() ? next : null } : prev));
+  }, []);
+
   const handleCreate = () => {
     if (creation.beingCreated) {
       creation.finishCreation();
@@ -690,6 +696,7 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
                 initialNotes={isCreate ? '' : data.additional_info || ''}
                 canManage={canManage}
                 notesFlushRef={isCreate ? undefined : notesFlushRef}
+                onNotesSaved={isCreate ? undefined : handleNotesSaved}
                 onNotesDraft={isCreate ? (next) => { void patchLocation({ additional_info: next.trim() ? next : null }); } : undefined}
                 onSubLocationsCountChange={isCreate ? undefined : setSubLocationsCount}
                 subItemsAnchorRef={isCreate ? undefined : subItemsAnchorRef}
