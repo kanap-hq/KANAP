@@ -5441,16 +5441,17 @@ export class AiAgentControlService {
     const agentNotes = ticketItemsTheAgentReads(ticketNotesData.notes, internalNotesSetting);
     const publicTimeline = ticketItemsTheAgentReads(ticketTimeline, 'ignored');
     const readsInternalItems = agentNotes.length > ticketItemsTheAgentReads(ticketNotesData.notes, 'ignored').length;
-    const ticketForKnowledge = {
+    const withRequesterMessages = (timeline: TicketTimelineEntry[]) => ({
       ...ticket,
       description: [
         ticket.description,
-        ...agentTimeline
+        ...timeline
           .filter((entry) => entry.actor === 'requester_candidate')
           .slice(-4)
           .map((entry) => entry.body),
       ].filter((entry) => typeof entry === 'string' && entry.trim().length > 0).join('\n\n'),
-    };
+    });
+    const ticketForKnowledge = withRequesterMessages(agentTimeline);
 
     const preKnowledgeGuardrails = this.agentQueue && agentDefinition ? this.agentQueue.runGuardrails(agentDefinition) : null;
     const plannerSystemPrompt = compileSystemPrompt(RUNTIME_SAFETY_FLOOR_PLANNER, promptRuntime.plannerGuidance);
@@ -5935,7 +5936,9 @@ export class AiAgentControlService {
     let webSearchQuery: string | null = null;
     let webSearchError: string | null = null;
     const webQueryCandidates = knowledgeSources.webEnabled && Features.AI_WEB_SEARCH_READY
-      ? buildWebSearchQueryCandidates(ticketForKnowledge, agentTimeline, knowledgeQueryCandidates)
+      // The web reads the public thread only, whatever the setting: no query a model wrote after
+      // reading internal notes goes there.
+      ? buildWebSearchQueryCandidates(withRequesterMessages(publicTimeline), publicTimeline, readsInternalItems ? [] : knowledgeQueryCandidates)
       : [];
     if (knowledgeSources.webEnabled && Features.AI_WEB_SEARCH_READY) {
       const webQuery = webQueryCandidates[0] ?? trimmedString(ticket.title) ?? '';

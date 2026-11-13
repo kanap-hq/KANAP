@@ -15256,6 +15256,23 @@ async function testAPlanWithTwoRepliesSendsNoPlannerBody() {
   assert.ok(backup.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `the draft after the withdrawn sourced answer is rewritten: ${backup.publicReply}`);
 }
 
+// The web search reads the public thread and the public description only: what the internal notes
+// say never leaves for the web, nor a query a model wrote after reading them.
+async function testTheWebSearchReadsThePublicThreadOnly() {
+  const needWithNoteWords: R3Answer = (payload) => ({
+    intent: `Besoin ${r3Echo(payload)}`, language: 'fr', symptoms: [`symptôme ${r3Echo(payload)}`],
+    search_terms: { fr: [`licence ${r3Echo(payload)}`] }, confidence: 0.7,
+  });
+  for (const internalNotes of ['used', 'ignored'] as const) {
+    for (const kind of ['sourced', 'administrative', 'fallback'] as const) {
+      const result = await runR3Triage(kind, internalNotes, true, { ticket_need_representation: needWithNoteWords });
+      const queries = result.capabilityInputs.filter((entry) => entry.capabilityName === 'web_search').map((entry) => String((entry.input as any).query));
+      assert.ok(queries.length > 0, `${internalNotes}, ${kind}: a web search`);
+      for (const query of queries) assert.ok(!query.includes(R3_INTERNAL_MARKER), `${internalNotes}, ${kind}: ${query}`);
+    }
+  }
+}
+
 // The names of the workspace's applications are read once per triage, in the workspace only, and
 // only when a code opens the ticket title.
 async function testTheTitleCodesReadTheWorkspaceApplicationsOnce() {
@@ -18218,6 +18235,7 @@ async function run() {
   await testTheFallbackNoteSaysOnlyWhatIsPrepared();
   await testAWithdrawnClosingReplyWithdrawsTheClose();
   await testTheTitleCodesReadTheWorkspaceApplicationsOnce();
+  await testTheWebSearchReadsThePublicThreadOnly();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();
