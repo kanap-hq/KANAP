@@ -333,6 +333,16 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     },
   },
   {
+    // Microsoft sign-in of the workspace: the disconnect makes every linked account local and the
+    // directory sync disables people, writes on persons of the whole workspace (spec §2.7).
+    file: 'auth/admin-auth.controller.ts',
+    controller: 'AdminAuthController',
+    reserved: ['disconnect', 'runDirectorySync'],
+    allowed: {
+      getSettings: 'the workspace\'s sign-in settings and the account counts of the disconnect confirmation (no budget data); its writes are reserved', // GET settings
+    },
+  },
+  {
     file: 'roles/roles.controller.ts',
     controller: 'RolesController',
     reserved: ['createRole', 'deleteRole', 'duplicateRole', 'setRolePermissions', 'updateRole'],

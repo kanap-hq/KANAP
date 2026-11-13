@@ -8,6 +8,7 @@ import { EntraDirectorySyncService } from './entra-directory-sync.service';
 import { Features } from '../config/features';
 import { BULK_WRITE_TIMEOUTS, LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 import { EntraDisconnectService } from './entra-disconnect.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 class DisconnectDto {
@@ -73,6 +74,7 @@ export class AdminAuthController {
    * `DIRECTORY_SYNC_RUNNING` while another sync of the workspace runs.
    */
   @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
+  @ReservedToUnscopedDataAccess()
   @Post('directory-sync')
   @RequireLevel('users', 'admin')
   async runDirectorySync(@Req() req: any) {
@@ -105,6 +107,7 @@ export class AdminAuthController {
    * trigger of each account makes it long on a large workspace.
    */
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ReservedToUnscopedDataAccess()
   @Post('disconnect')
   @RequireLevel('users', 'admin')
   async disconnect(@Req() req: any, @Body() body: DisconnectDto) {
