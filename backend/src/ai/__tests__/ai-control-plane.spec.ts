@@ -43,6 +43,7 @@ import {
 import { AiCapabilityRegistry, providerCapabilityContracts, routingDriftSnapshot } from '../control-plane/capability/ai-capability.registry';
 import { AiAutomationJobCatalogService } from '../control-plane/automation/ai-automation-job-catalog.service';
 import { AiAgentControlService } from '../control-plane/agent-control/ai-agent-control.service';
+import { Application } from '../../applications/application.entity';
 import { proposalStillBlocksRegeneration } from '../control-plane/agent-control/agent-control-constants.util';
 import { auditActivityType, auditActivityTypeClauseSql } from '../control-plane/agent-control/ai-agent-activity-timeline';
 import {
@@ -15255,6 +15256,28 @@ async function testAPlanWithTwoRepliesSendsNoPlannerBody() {
   assert.ok(backup.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `the draft after the withdrawn sourced answer is rewritten: ${backup.publicReply}`);
 }
 
+// The names of the workspace's applications are read once per triage, in the workspace only, and
+// only when a code opens the ticket title.
+async function testTheTitleCodesReadTheWorkspaceApplicationsOnce() {
+  const reads: unknown[] = [];
+  const context = {
+    tenantId: 'tenant-r3',
+    manager: {
+      getRepository: (entity: unknown) => {
+        assert.equal(entity, Application);
+        return { find: async (options: unknown) => { reads.push(options); return [{ name: 'Sage X3' }]; } };
+      },
+    },
+  };
+  const service = Object.create(AiAgentControlService.prototype);
+  assert.deepEqual([...await service.applicationKeysForTitleCodes(context, 'Outlook plante')], []);
+  assert.equal(reads.length, 0, 'no read without a code');
+  const keys: Set<string> = await service.applicationKeysForTitleCodes(context, 'X3 R8 bloqué');
+  assert.equal(reads.length, 1, 'one read');
+  assert.deepEqual((reads[0] as any).where, { tenant_id: 'tenant-r3' });
+  assert.ok(keys.has('x3') && keys.has('sage x3') && !keys.has('r8'));
+}
+
 // A closing reply that cannot be written on the public thread is withdrawn with the close it came
 // with: nothing goes to the requester and the ticket stays open.
 async function testAWithdrawnClosingReplyWithdrawsTheClose() {
@@ -18194,6 +18217,7 @@ async function run() {
   await testThePlannerWritesItsReasonsInTheNoteLanguage();
   await testTheFallbackNoteSaysOnlyWhatIsPrepared();
   await testAWithdrawnClosingReplyWithdrawsTheClose();
+  await testTheTitleCodesReadTheWorkspaceApplicationsOnce();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();

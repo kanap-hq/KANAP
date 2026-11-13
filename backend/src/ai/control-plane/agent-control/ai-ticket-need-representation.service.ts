@@ -97,29 +97,40 @@ function codeWords(value: string): string[] {
   return stripAccents(normalizeText(value)).toLocaleLowerCase().split(/[^\p{L}\p{N}-]+/u).filter(Boolean);
 }
 
-/**
- * The application names without the codes that open the ticket title: such a code names the
- * ticket, not an application, unless the description gives it too. A name made of such codes only
- * is dropped; a name they open keeps its other words (« R8 R1 VPN » gives « VPN »).
- */
-export function withoutTitleHeadCodes(names: string[], title: string | null | undefined, description: string | null | undefined): string[] {
-  const codes = new Set<string>();
+/** The codes that open a ticket title, in lower case (« R8 R1 VPN » gives r8 and r1). */
+export function titleHeadCodes(title: string | null | undefined): string[] {
+  const codes: string[] = [];
   for (const word of codeWords(title ?? '')) {
     if (!TITLE_HEAD_CODE.test(word)) break;
-    codes.add(word);
+    codes.push(word);
   }
-  const described = new Set(codeWords(description ?? ''));
-  const isHeadCode = (word: string) => {
-    const key = codeWords(word)[0] ?? '';
-    return codes.has(key) && !described.has(key);
-  };
+  return codes;
+}
+
+/** The keys a code is compared with: each application name and each word of it, in lower case. */
+export function applicationNameKeys(names: readonly string[]): Set<string> {
+  const keys = new Set<string>();
+  for (const name of names) {
+    const whole = stripAccents(normalizeText(name)).toLocaleLowerCase();
+    if (whole) keys.add(whole);
+    for (const word of codeWords(name)) keys.add(word);
+  }
+  return keys;
+}
+
+/**
+ * The application names without those opened by a code of the ticket title that names no
+ * application of the workspace: such a code names the ticket. A name is kept or set aside whole,
+ * never shortened (« S4 HANA » stays « S4 HANA » when S4 names an application).
+ */
+export function withoutTitleHeadCodes(
+  names: string[],
+  title: string | null | undefined,
+  applicationKeys: ReadonlySet<string> = new Set(),
+): string[] {
+  const codes = new Set(titleHeadCodes(title).filter((code) => !applicationKeys.has(code)));
   if (codes.size === 0) return names;
-  return names.flatMap((name) => {
-    const words = normalizeText(name).split(/\s+/).filter(Boolean);
-    let start = 0;
-    while (start < words.length && isHeadCode(words[start])) start += 1;
-    return start < words.length ? [words.slice(start).join(' ')] : [];
-  });
+  return names.filter((name) => !codes.has(codeWords(name)[0] ?? ''));
 }
 
 const QUERY_STOPWORDS = new Set([
@@ -915,15 +926,18 @@ export class AiTicketNeedRepresentationService {
     need: TicketNeedRepresentation | null;
     fallbackTitle?: string | null;
     fallbackDescription?: string | null;
+    // The names of the workspace's applications and their words (applicationNameKeys): a code
+    // opening the title that is one of them stays an application name.
+    applicationKeys?: ReadonlySet<string>;
   }): KnowledgeQueryDerivation {
     const need = input.need ?? emptyNeed();
     const exactBucket = { queries: [] as string[], dropped: [] as KnowledgeQueryDerivation['dropped_queries'], seen: new Set<string>() };
     const facetBucket = { queries: [] as string[], dropped: [] as KnowledgeQueryDerivation['dropped_queries'], seen: exactBucket.seen };
     const fallbackBucket = { queries: [] as string[], dropped: [] as KnowledgeQueryDerivation['dropped_queries'], seen: exactBucket.seen };
 
-    const applications = withoutTitleHeadCodes(need.entities.applications, input.fallbackTitle, input.fallbackDescription)
+    const applications = withoutTitleHeadCodes(need.entities.applications, input.fallbackTitle, input.applicationKeys)
       .filter((application) => !isNonApplicationWord(application));
-    const modules = withoutTitleHeadCodes(need.entities.modules, input.fallbackTitle, input.fallbackDescription)
+    const modules = withoutTitleHeadCodes(need.entities.modules, input.fallbackTitle, input.applicationKeys)
       .filter((module) => !isNonApplicationWord(module));
     const screens = need.entities.screens;
     const symptoms = uniqueStrings([...need.symptoms, ...need.constraints.positive], MAX_FIELD_ITEMS);

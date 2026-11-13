@@ -193,9 +193,12 @@ import {
 } from './ai-ticket-evidence-extraction.service';
 import {
   AiTicketNeedRepresentationService,
+  applicationNameKeys,
   estimateTicketNeedRepresentationUsage,
   TicketNeedRepresentationBuildResult,
+  titleHeadCodes,
 } from './ai-ticket-need-representation.service';
+import { Application } from '../../../applications/application.entity';
 import { KnowledgeQueryDerivation } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { Tenant } from '../../../tenants/tenant.entity';
@@ -977,6 +980,20 @@ export class AiAgentControlService {
       },
     });
     return rows.map((row) => row.id);
+  }
+
+  // The names of the workspace's applications, read only when a code opens the ticket title: such
+  // a code is an application name only when it names one of them (one read per triage).
+  private async applicationKeysForTitleCodes(
+    context: AiExecutionContextWithManager,
+    title: string | null | undefined,
+  ): Promise<Set<string>> {
+    if (titleHeadCodes(title).length === 0) return new Set();
+    const applications = await context.manager.getRepository(Application).find({
+      select: { name: true },
+      where: { tenant_id: context.tenantId },
+    });
+    return applicationNameKeys(applications.map((application) => application.name));
   }
 
   private async ticketTargetingEligibility(
@@ -5672,6 +5689,7 @@ export class AiAgentControlService {
         need: knowledgeNeedRepresentation.need,
         fallbackTitle: ticket.title,
         fallbackDescription: ticket.description,
+        applicationKeys: await this.applicationKeysForTitleCodes(context, ticket.title),
       });
     }
     const deterministicKnowledgeQueries = knowledgeQueryDerivation.queries;
