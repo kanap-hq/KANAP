@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Stack, Switch, TextField, Typography } from '@mui/material';
-import { CreationActions, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { isDataAccessLimited } from '../../auth/dataAccess';
@@ -52,6 +52,8 @@ type FieldErrors = Partial<Record<AnalyticsField, string>>;
 type PatchSource = AnalyticsField | 'title';
 
 const DRAWER_KEY = 'kanap.analyticsDimensions.drawerOpen';
+/** The draft's fields that Create sends and a patch can change. */
+const DRAFT_FIELDS = ['name', 'code', 'description', 'applies_to', 'required', 'open_values', 'status', 'disabled_at'] as const;
 /** What a new dimension starts from. */
 const NEW_DIMENSION: AnalyticsAxisDetail = {
   id: '', code: '', name: '', description: null, sort_order: 0, is_default: false, applies_to: null, required: false,
@@ -68,6 +70,9 @@ export default function AnalyticsDimensionWorkspacePage() {
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
+  // The dimension the draft has just created: its fields stay mounted, so that what is typed
+  // while it is written, and the field being typed in, are kept.
+  const fromDraft = useCreatedFromDraft('analytics_axes', id);
   const canEdit = hasLevel('analytics', 'member');
   const canDelete = hasLevel('analytics', 'admin');
   // Who may create values from a line is set by people who administer dimensions with access to all
@@ -88,6 +93,7 @@ export default function AnalyticsDimensionWorkspacePage() {
   // The code follows the name typed in the header until the user types one.
   const [newName, setNewName] = React.useState('');
   const [codeTouched, setCodeTouched] = React.useState(false);
+  const codeTouchedRef = React.useRef(false);
   const newCode = codeTouched ? draft.code : proposeDimensionCode(newName);
   const data = isCreate ? { ...draft, name: newName, code: newCode } : stored;
 
@@ -123,7 +129,10 @@ export default function AnalyticsDimensionWorkspacePage() {
     (body: AnalyticsAxisPatch, source: PatchSource): Promise<boolean> => {
       if (isCreate) {
         if (source !== 'title') setErrors((prev) => ({ ...prev, [source]: undefined }));
-        if (body.code !== undefined) setCodeTouched(true);
+        if (body.code !== undefined) {
+          codeTouchedRef.current = true;
+          setCodeTouched(true);
+        }
         draftRef.current = { ...draftRef.current, ...body };
         setDraft(draftRef.current);
         return Promise.resolve(true);
@@ -203,6 +212,13 @@ export default function AnalyticsDimensionWorkspacePage() {
     if (!DIMENSION_CODE_PATTERN.test(code)) return t('analytics.messages.codeInvalid');
     return undefined;
   };
+  /** The draft as Create sends it: the trimmed name, and the code typed or the one the name proposes. */
+  const draftAsSent = (): AnalyticsAxisDetail => ({
+    ...draftRef.current,
+    name: title.current().trim(),
+    code: (codeTouchedRef.current ? draftRef.current.code : proposeDimensionCode(title.current())).trim(),
+    open_values: !!draftRef.current.open_values,
+  });
   const creation = useDraftCreation({
     isCreate,
     family: 'analytics_axes',
@@ -213,12 +229,12 @@ export default function AnalyticsDimensionWorkspacePage() {
     queryKeyPrefixes: ['analytics'],
     ready: () => !!title.current().trim() && !codeError(newCode.trim()),
     post: async () => {
-      const form = draftRef.current;
+      const form = draftAsSent();
       setPageError(null);
       try {
         const created = await createAnalyticsAxis({
-          code: newCode.trim(),
-          name: title.current().trim(),
+          code: form.code,
+          name: form.name,
           description: form.description,
           applies_to: form.applies_to,
           required: form.required,
@@ -227,6 +243,25 @@ export default function AnalyticsDimensionWorkspacePage() {
           disabled_at: form.disabled_at,
         });
         void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
+        // The page moves to the dimension with its data in hand, and keeps what was typed since the
+        // draft was sent (the next field, while the dimension was written): saved on the dimension.
+        const createdKey = [...ANALYTICS_AXIS_DETAIL_KEY, created.id];
+        await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => getAnalyticsAxis(created.id) }).catch(() => undefined);
+        try {
+          await saveEditsSince({
+            sent: form,
+            now: draftAsSent,
+            // A person who cannot set the open values never changes them on the draft.
+            fields: canSetOpenValues ? DRAFT_FIELDS : DRAFT_FIELDS.filter((field) => field !== 'open_values'),
+            save: async (edits) => {
+              const saved = await updateAnalyticsAxis(created.id, edits);
+              queryClient.setQueryData<AnalyticsAxisDetail>(createdKey, (prev) => (prev ? { ...prev, ...saved } : saved));
+              void queryClient.invalidateQueries({ queryKey: ANALYTICS_AXES_QUERY_KEY, exact: true });
+            },
+          });
+        } catch (e) {
+          setPageError(getApiErrorMessage(e, t, t('analytics.messages.dimensionSaveFailed')));
+        }
         return { id: created.id, token: created.creation_token, path: `${ANALYTICS_DIMENSIONS_PATH}/${created.id}/overview` };
       } catch (e) {
         const message = getApiErrorMessage(e, t, t('analytics.messages.dimensionCreateFailed'));
@@ -317,7 +352,7 @@ export default function AnalyticsDimensionWorkspacePage() {
         history={data && !isCreate ? { table: 'analytics_axes', recordId: data.id } : undefined}
         properties={data ? (
           <DimensionProperties
-            key={data.id}
+            key={fromDraft || isCreate ? 'draft' : data.id}
             axis={data}
             defaultLabel={t('analytics.analyticsCategoryFallback')}
             disabled={disabled}
@@ -360,7 +395,7 @@ export default function AnalyticsDimensionWorkspacePage() {
               </Typography>
             </Box>}
             <AnalyticsDescriptionField
-              key={data.id}
+              key={fromDraft || isCreate ? 'draft' : data.id}
               value={data.description ?? ''}
               disabled={disabled}
               error={errors.description}
