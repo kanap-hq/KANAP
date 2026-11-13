@@ -687,7 +687,12 @@ export class EntraAuthService {
       'Graph users lookup',
       accessToken,
     );
-    return Array.isArray(response?.value) ? response.value : [];
+    // An answer without the list is an error, never an empty directory: the sync would disable
+    // every account it does not find.
+    if (!Array.isArray(response?.value)) {
+      throw new Error('Graph users lookup: the answer holds no list of users');
+    }
+    return response.value;
   }
 
   /**
