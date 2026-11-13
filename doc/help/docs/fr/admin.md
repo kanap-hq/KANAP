@@ -446,10 +446,10 @@ La page Rôles a une disposition à deux panneaux :
 
 **Actions** :
 - **Nouveau rôle** : Créer un rôle personnalisé de zéro. Un rôle créé ou renommé ne peut pas prendre un nom que la page affiche pour un rôle système ou intégré, dans l'une de ses langues.
-- **Dupliquer** : Copier un rôle existant (y compris les rôles intégrés) comme point de départ. La fenêtre demande le nom de la copie. Non disponible pour les rôles Système.
+- **Dupliquer** : Copier un rôle existant (y compris les rôles intégrés) comme point de départ. La fenêtre demande le nom de la copie. Non disponible pour les rôles Système, ni, sans le rôle Administrateur, pour un rôle au-dessus de vos droits.
 - **Supprimer** : Supprimer un rôle personnalisé. Un rôle attribué à des utilisateurs ne peut pas être supprimé : attribuez-leur d'abord un autre rôle. La fenêtre l'indique avant toute confirmation.
 - **Enregistrer les détails** : Mettre à jour le nom et la description du rôle
-- **Enregistrer les autorisations** : Appliquer les modifications d'autorisations
+- **Enregistrer les autorisations** : Appliquer les modifications d'autorisations. Sans le rôle Administrateur, un niveau au-dessus de vos droits est grisé, sauf si le rôle le donne déjà.
 
 Un administrateur des utilisateurs qui a accès à toutes les données peut aussi interroger [Kad](ai-assistant.md#tool-calls) sur les rôles, leur nombre d'utilisateurs et leurs droits. Les modifications restent sur cette page.
 

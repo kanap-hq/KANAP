@@ -12,8 +12,15 @@ import type { EnhancedColDef, ListRequest } from '../ServerDataGrid';
  */
 export type BulkSelection<T> = { all: boolean; ids: ReadonlySet<string>; rows: ReadonlyMap<string, T> };
 
+/**
+ * What a list's rows are, for the texts of the selection and of its dialog that name them: the
+ * i18next context of their keys (`bulkEdit.willChange_applications_one`). None: rows.
+ */
+export type BulkEditFamily = 'applications';
+
 type SelectionApi = {
   all: boolean;
+  family?: BulkEditFamily;
   isSelected: (id: string) => boolean;
   /** Every row of the filter, none unticked. */
   whole: boolean;
@@ -64,7 +71,7 @@ function SelectAllHeader() {
       checked={api.whole}
       indeterminate={!api.whole && api.count > 0}
       onChange={api.toggleAll}
-      inputProps={{ 'aria-label': t('bulkEdit.selectAll') }}
+      inputProps={{ 'aria-label': t('bulkEdit.selectAll', { context: api.family }) }}
     />
   );
 }
@@ -81,6 +88,8 @@ const NO_ROWS: ReadonlyMap<string, any> = new Map();
 export function useBulkSelection<T extends { id: string }>(options: {
   /** The accessible name of a row's box ("Select Servers"). */
   rowLabel: (row: T) => string;
+  /** What the rows are, for the header box's name; none: rows. */
+  family?: BulkEditFamily;
   /** The parameters that make the list's rows; the others (sort, columns shown) keep the selection. */
   scopeKey?: (params: Record<string, unknown>) => unknown;
 }) {
@@ -127,6 +136,7 @@ export function useBulkSelection<T extends { id: string }>(options: {
     toggleRow: toggleRow as (row: { id: string }) => void,
     toggleAll,
     rowLabel: (row) => optionsRef.current.rowLabel(row),
+    family: optionsRef.current.family,
   }), [count, selection, toggleAll, toggleRow]);
 
   // The column, stable: the page's columns are not rebuilt on each tick.

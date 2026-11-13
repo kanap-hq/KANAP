@@ -117,12 +117,20 @@ async function addRoleLink(tenantId: string, userId: string, roleName: string) {
 
 async function addUser(tenantId: string, roleName: string, status = 'enabled'): Promise<string> {
   const svc = buildServices();
-  return inTenant(tenantId, async (manager) => (await svc.users.createUser({
-    email: `user-${randomUUID().slice(0, 8)}@bootstrap-spec.test`,
-    role_name: roleName,
-    status,
-    tenant_id: tenantId,
-  } as any, { manager })).id);
+  return inTenant(tenantId, async (manager) => {
+    // A workspace role the tenant does not have yet is made first: a new person names an existing role.
+    await manager.query(
+      `INSERT INTO roles (tenant_id, role_name) SELECT $1, $2
+        WHERE NOT EXISTS (SELECT 1 FROM roles WHERE tenant_id = $1 AND role_name = $2)`,
+      [tenantId, roleName],
+    );
+    return (await svc.users.createUser({
+      email: `user-${randomUUID().slice(0, 8)}@bootstrap-spec.test`,
+      role_name: roleName,
+      status,
+      tenant_id: tenantId,
+    } as any, { manager })).id;
+  });
 }
 
 async function markSignsInThroughProvider(tenantId: string, userId: string) {

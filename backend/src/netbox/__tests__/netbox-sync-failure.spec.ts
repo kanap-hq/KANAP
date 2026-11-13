@@ -10,7 +10,10 @@ import { NetboxApiError } from '../netbox.types';
 const LEAK = /ECONNREFUSED|10\.0\.0\.5|ETIMEDOUT/;
 
 function harness() {
-  const row: { metadata_json: Record<string, unknown> } = { metadata_json: {} };
+  const row: { base_url: string; metadata_json: Record<string, unknown> } = {
+    base_url: 'https://netbox.example.test',
+    metadata_json: {},
+  };
   const manager = {
     getRepository: () => ({
       findOne: async () => row,
@@ -48,13 +51,28 @@ async function failWith(error: unknown) {
   };
   const lock = { query: async () => undefined, release: async () => undefined };
   const result = await (service as unknown as {
-    runLocked: (tenantId: string, trigger: 'manual', runner: unknown, startedAt: Date) => Promise<{ status: string; error?: string }>;
-  }).runLocked('tenant-1', 'manual', lock, new Date('2026-10-27T10:00:00.000Z'));
+    runLocked: (tenantId: string, trigger: 'manual', runner: unknown, startedAt: Date, runFor: string | null) => Promise<{ status: string; error?: string }>;
+  }).runLocked('tenant-1', 'manual', lock, new Date('2026-10-27T10:00:00.000Z'), row.base_url);
   const stored = row.metadata_json.sync_state as { error?: string; error_code?: string; status?: string };
   return { result, stored, read: readSyncState(row.metadata_json) };
 }
 
 async function main(): Promise<void> {
+  // The connection was removed while the run was going: the end of the run writes
+  // nothing on the row.
+  {
+    const { row, service } = harness();
+    (service as unknown as { executeRun: () => Promise<never> }).executeRun = async () => {
+      row.base_url = null as unknown as string;
+      throw new Error('connect ECONNREFUSED 10.0.0.5:8999');
+    };
+    const lock = { query: async () => undefined, release: async () => undefined };
+    await (service as unknown as {
+      runLocked: (tenantId: string, trigger: 'manual', runner: unknown, startedAt: Date, runFor: string | null) => Promise<unknown>;
+    }).runLocked('tenant-1', 'manual', lock, new Date('2026-10-27T10:00:00.000Z'), 'https://netbox.example.test');
+    assert.equal(row.metadata_json.sync_state, undefined);
+  }
+
   {
     const { result, stored, read } = await failWith(new Error('connect ECONNREFUSED 10.0.0.5:8999'));
     assert.equal(result.status, 'failure');

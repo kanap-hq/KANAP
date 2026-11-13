@@ -632,6 +632,11 @@ describe('TaskWorkspacePage unsaved close', () => {
       '/portfolio/projects/project-a/tasks/task-1',
       expect.objectContaining({ title: 'Move me', description: 'Updated description' }),
     ));
+    // The save leaves the linked applications and assets alone: a person who does not read them
+    // saves the task as well (the API refuses any change of a module they do not read).
+    const saved = (api.patch as any).mock.calls.find(([url]: [string]) => url === '/portfolio/projects/project-a/tasks/task-1')[1];
+    expect(saved).not.toHaveProperty('application_ids');
+    expect(saved).not.toHaveProperty('asset_ids');
     expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks');
   });
 

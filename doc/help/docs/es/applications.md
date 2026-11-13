@@ -75,7 +75,7 @@ Las aplicaciones que ya compartían nombre antes de esta regla siguen siendo edi
 
 **Permisos**:
 - Ver: `applications:reader`
-- Crear / editar: `applications:member`
+- Crear / editar, modificar en bloque: `applications:member`
 - Importar / Exportar / Eliminar: `applications:admin`
 
 ---
@@ -131,8 +131,32 @@ Una celda sin valor muestra un guion.
 - **Nueva aplicación**: Crear una nueva entrada (`applications:member`). Consulte [Primeros pasos](#getting-started)
 - **Importar**: Importación masiva desde un archivo CSV o un libro de Excel (`applications:admin`)
 - **Exportar**: Exportar las aplicaciones que muestra la lista a un archivo CSV o un libro de Excel (`applications:admin`). Consulte [Opciones de exportación](#export-options).
-- **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:member`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
-- **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`). Una aplicación que es origen o destino de una interfaz no se puede eliminar: desactívela en su lugar, o elimine primero sus interfaces. Antes de la confirmación, la ventana muestra esas aplicaciones como conservadas, con su número de interfaces. Las demás se eliminan con sus despliegues y sus vínculos con otros elementos; la confirmación cuenta los despliegues
+- **Copiar elemento**: Duplicar la aplicación marcada en la lista, con todas sus relaciones principales (`applications:member`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
+- **Modificar la selección**: Modificar un campo en todas las aplicaciones seleccionadas a la vez (`applications:member`). Consulte [Modificar aplicaciones en bloque](#changing-applications-in-bulk)
+- **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`). Solo elimina las aplicaciones marcadas una a una, y no está disponible mientras la casilla del encabezado toma todo el filtro. Una aplicación que es origen o destino de una interfaz no se puede eliminar: desactívela en su lugar, o elimine primero sus interfaces. Antes de la confirmación, la ventana muestra esas aplicaciones como conservadas, con su número de interfaces. Las demás se eliminan con sus despliegues y sus vínculos con otros elementos; la confirmación cuenta los despliegues
+
+### Modificar aplicaciones en bloque { #changing-applications-in-bulk }
+
+**Seleccionar aplicaciones**: Con el derecho de editar aplicaciones, la lista muestra una casilla delante de cada aplicación. Marque las aplicaciones una a una, o marque la casilla del encabezado de columna para tomar todas las aplicaciones del filtro y la búsqueda actuales, incluidas las que aún no se han cargado. Desmarque una aplicación para dejarla fuera. Cambiar los filtros, la búsqueda o el alcance **Mostrar** vacía la selección. La ordenación la conserva.
+
+**Modificar un campo**:
+
+1. Seleccione las aplicaciones y haga clic en **Modificar la selección** (icono de edición). El icono muestra el número de aplicaciones seleccionadas
+2. Elija el **Campo**: **Responsables de negocio**, **Responsables IT**, **Ciclo de vida** o **Criticidad de negocio**
+3. Elija el **Nuevo valor**. Para los responsables, elija una o varias personas. El diálogo cuenta las aplicaciones: cuántas cambiarán, cuántas ya tienen este valor y cuántas se rechazan. El recuento se repite con cada nuevo valor
+4. Haga clic en **Modificar 12 aplicaciones** (con su recuento) para confirmar. La ventana muestra entonces el resultado. Haga clic en **Cerrar** para cerrarla. La lista detrás ya está actualizada
+
+**Responsables**: Las personas elegidas sustituyen a los responsables de ese rol en cada aplicación. El otro rol conserva sus personas: modificar los **Responsables de negocio** deja los **Responsables IT** como estaban.
+
+**Vaciar un campo**: En **Responsables de negocio**, **Responsables IT** y **Criticidad de negocio**, haga clic en **Vaciar el campo** (icono de goma) junto al valor. El valor muestra **Vacío**. En los responsables, el rol queda sin nadie. El **Ciclo de vida** no se puede vaciar.
+
+**Conviene saber**:
+
+- Una modificación abarca como máximo 5000 aplicaciones. Por encima, acote los filtros o seleccione menos aplicaciones
+- Si la lista cambia entre el recuento y su confirmación, el diálogo muestra el nuevo recuento. Revíselo y vuelva a confirmar
+- Si el recuento falla, haga clic en **Reintentar** junto al mensaje para volver a contar
+- Una nueva criticidad de negocio pasa una aplicación revisada a **Por revisar**, como en la página de la aplicación
+- Cada aplicación modificada tiene su propia entrada en su pestaña **Historial**
 
 ---
 

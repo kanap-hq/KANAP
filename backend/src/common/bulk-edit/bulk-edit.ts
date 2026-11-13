@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { UUID_RE } from '../relations/relation-target';
@@ -14,7 +15,11 @@ import { UUID_RE } from '../relations/relation-target';
  * - at most `BULK_MAX_ROWS` rows (400 `bulk_too_many`).
  *
  * `runBulkEdit` adds the write of a list whose rows are written one by one through the update of
- * one row (`BulkEditList`): every row in a savepoint of the request's transaction, the refusals of
+ * one row (`BulkEditList`). Its dry run also returns `fingerprint`, which names the rows it reached
+ * and the change it counted; the write sends it back (required with `all`) and refuses with the same
+ * 409 as soon as the rows it reaches are no longer those of the count, a row swapped for another
+ * included, or its change is not the one counted. Every row is written
+ * in a savepoint of the request's transaction, the refusals of
  * a row counted under a stable code (the screen and Kad word them) and the row left as it is, any
  * other error failing the whole request. The dry run plays the same writes under a savepoint, then
  * rolls them back: its counts are the write's. Each list declares the fields it changes in bulk
@@ -87,9 +92,14 @@ export type BulkConfirmation = {
   asOf: string | null;
   /** The rows the dry run counted; null when not sent. */
   expectedRows: number | null;
+  /** The `fingerprint` of the rows the dry run reached (`runBulkEdit`); null when not sent. */
+  fingerprint: string | null;
 };
 
-/** `dry_run`, and the `as_of` and `expected_rows` of the count the write confirms (required with `all`). */
+/**
+ * `dry_run`, and the `as_of`, `expected_rows` and `fingerprint` of the count the write confirms (the
+ * first two required with `all`; `runBulkEdit` requires the third with `all`).
+ */
 export function parseBulkConfirmation(body: Record<string, unknown>, all: boolean): BulkConfirmation {
   assertDryRunFlag(body);
   const dryRun = body.dry_run === true;
@@ -111,23 +121,55 @@ export function parseBulkConfirmation(body: Record<string, unknown>, all: boolea
     if (Number.isNaN(date.getTime())) throw new BadRequestException('as_of must be the instant a dry run returned.');
     asOf = date.toISOString();
   }
-  return { dryRun, asOf, expectedRows };
+  let fingerprint: string | null = null;
+  if (body.fingerprint !== undefined && body.fingerprint !== null) {
+    if (typeof body.fingerprint !== 'string' || !FINGERPRINT_RE.test(body.fingerprint)) {
+      throw new BadRequestException('fingerprint must be the one the dry run returned.');
+    }
+    fingerprint = body.fingerprint;
+  }
+  return { dryRun, asOf, expectedRows, fingerprint };
+}
+
+const FINGERPRINT_RE = /^[0-9a-f]{64}$/;
+
+/** A change as one value: its fields by name, a list of ids sorted, a map of ids by its keys. */
+function canonicalChanges(changes: BulkChanges): string {
+  return JSON.stringify(Object.keys(changes).sort().map((name) => {
+    const value = changes[name];
+    if (Array.isArray(value)) return [name, [...value].sort()];
+    if (value && typeof value === 'object') return [name, Object.keys(value).sort().map((key) => [key, value[key]])];
+    return [name, value];
+  }));
+}
+
+/**
+ * The rows a count reached and the change it counted, as one value: their ids, sorted, and the
+ * change (`parseBulkChanges`'s, in a stable order), hashed. A count confirms one change only.
+ */
+export function bulkFingerprint(ids: readonly string[], changes: BulkChanges): string {
+  return createHash('sha256')
+    .update([...ids].map((id) => id.toLowerCase()).sort().join(','))
+    .update('\n')
+    .update(canonicalChanges(changes))
+    .digest('hex');
 }
 
 /**
  * A field a list changes in bulk: `id`, a row id of the tenant (the list's update of one row
  * resolves it); `enum`, one of `values`; `id_map`, an object from ids to ids (a dimension to its
- * value), each entry changed alone. `optional`: null (the field emptied) is a value; an `id_map`
- * entry may always be null, the row's update says whether its dimension may be emptied.
+ * value), each entry changed alone; `id_list`, a list of ids that replaces the row's (the people of
+ * a role), without repeats. `optional`: null, or an empty list, (the field emptied) is a value; an
+ * `id_map` entry may always be null, the row's update says whether its dimension may be emptied.
  */
 export type BulkEditField = {
   name: string;
-  value: 'id' | 'enum' | 'id_map';
+  value: 'id' | 'enum' | 'id_map' | 'id_list';
   values?: readonly string[];
   optional: boolean;
 };
 
-export type BulkChanges = Record<string, string | null | Record<string, string | null>>;
+export type BulkChanges = Record<string, string | null | string[] | Record<string, string | null>>;
 
 /** `changes`: at least one declared field, each value of its type; ids in lower case. */
 export function parseBulkChanges(raw: unknown, fields: readonly BulkEditField[]): BulkChanges {
@@ -154,6 +196,14 @@ export function parseBulkChanges(raw: unknown, fields: readonly BulkEditField[])
         throw new BadRequestException(`${name} must be one of ${(field.values ?? []).join(', ')}${field.optional ? ' or null' : ''}.`);
       }
       changes[name] = value;
+    } else if (field.value === 'id_list') {
+      if (!Array.isArray(value)) throw new BadRequestException(`${name} must be a list of ids, or null.`);
+      const list = Array.from(new Set(value.map((entry) => {
+        if (entry === null) throw new BadRequestException(`${name} must be a list of ids, or null.`);
+        return id(entry, name)!;
+      })));
+      if (list.length === 0 && !field.optional) throw new BadRequestException(`${name} cannot be emptied.`);
+      changes[name] = list;
     } else {
       if (!value || typeof value !== 'object' || Array.isArray(value)) throw new BadRequestException(`${name} must map ids to ids or null.`);
       const entries: Record<string, string | null> = {};
@@ -201,6 +251,8 @@ export type BulkEditResult = {
   unchanged: number;
   refused: Record<string, number>;
   as_of?: string;
+  /** The dry run's: the rows it reached and the change it counted (`bulkFingerprint`), sent back by the write. */
+  fingerprint?: string;
 };
 
 const DRY_RUN_SAVEPOINT = 'bulk_edit_dry_run';
@@ -208,27 +260,37 @@ const ROW_SAVEPOINT = 'bulk_edit_row';
 
 /**
  * Runs a change in bulk in the request's transaction (required: the dry run is rolled back to its
- * savepoint). The dry run takes `as_of` before it reaches the rows. With `expected_rows`, rows
- * reached beyond it refuse the write whole (409); with `as_of`, the list leaves out the rows
- * created after it.
+ * savepoint). The dry run takes `as_of` before it reaches the rows, and the list leaves out the rows
+ * created after it, the dry run's as the write's. With `expected_rows`, rows reached beyond it
+ * refuse the write whole (409); with `fingerprint` (required with `all`), so do rows reached that
+ * are not those of the count, and `changes` that are not those it counted.
  */
 export async function runBulkEdit<Row extends { id: string }>(
   manager: EntityManager,
   list: BulkEditList<Row>,
   selection: BulkSelection,
   confirmation: BulkConfirmation,
+  changes: BulkChanges,
 ): Promise<BulkEditResult> {
   if (!manager.queryRunner?.isTransactionActive) throw new Error('A change in bulk runs in the request transaction.');
+  if (selection.all && !confirmation.dryRun && confirmation.fingerprint === null) {
+    throw new BadRequestException('fingerprint is required with all: send the fingerprint the dry run returned.');
+  }
   const asOf = confirmation.dryRun
     ? new Date((await manager.query(`SELECT clock_timestamp() AS now`))[0].now).toISOString()
     : confirmation.asOf;
   // Rolled back after the count; on an error, the request's transaction rolls back with it.
   if (confirmation.dryRun) await manager.query(`SAVEPOINT ${DRY_RUN_SAVEPOINT}`);
-  const rows = await list.reach(selection, confirmation.dryRun ? null : asOf);
+  // The dry run reaches as the write will: a row created after `as_of` is out of both.
+  const rows = await list.reach(selection, asOf);
   const notFound = selection.all ? 0 : selection.ids.length - rows.length;
   const reached = rows.length + notFound;
   if (reached > BULK_MAX_ROWS) throw bulkTooMany(reached);
   if (confirmation.expectedRows !== null && reached > confirmation.expectedRows) throw bulkListChanged();
+  // As many rows as counted is not enough: the same rows (one entering the filter while another
+  // leaves it is a change of the list, as is a row that left it), and the same change.
+  const fingerprint = bulkFingerprint(rows.map((row) => row.id), changes);
+  if (confirmation.fingerprint !== null && confirmation.fingerprint !== fingerprint) throw bulkListChanged();
   const refused: Record<string, number> = notFound > 0 ? { [BULK_REFUSAL_NOT_FOUND]: notFound } : {};
   let changed = 0;
   let unchanged = 0;
@@ -252,7 +314,7 @@ export async function runBulkEdit<Row extends { id: string }>(
   if (confirmation.dryRun) {
     await manager.query(`ROLLBACK TO SAVEPOINT ${DRY_RUN_SAVEPOINT}`);
     await manager.query(`RELEASE SAVEPOINT ${DRY_RUN_SAVEPOINT}`);
-    return { dry_run: true, rows: reached, changes: changed, unchanged, refused, as_of: asOf! };
+    return { dry_run: true, rows: reached, changes: changed, unchanged, refused, as_of: asOf!, fingerprint };
   }
   return { dry_run: false, rows: reached, changed, unchanged, refused };
 }

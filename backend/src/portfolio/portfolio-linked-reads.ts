@@ -11,11 +11,12 @@ import type { LinkedReads } from '../common/relations/linked-reads';
 
 /**
  * What a project or a request detail may name of other records: each module on its read right
- * (`reads`), and a Business Contributor's projects, requests and tasks inside their participation.
- * Without it, the detail names none of them.
+ * (`reads`), and a Business Contributor's projects, requests, tasks and applications inside their
+ * participation. Without it, the detail names none of them.
  */
 export type PortfolioLinkedReads = {
   reads: LinkedReads;
+  applicationScope?: ParticipationAccessScope;
   projectScope?: ParticipationAccessScope;
   requestScope?: ParticipationAccessScope;
   taskScope?: ParticipationAccessScope;

@@ -417,17 +417,6 @@ export class CapexItemsController {
 
   // Projects
   @UseGuards(PermissionGuard)
-  @RequireLevel('budget', 'reader')
-  @Get(':id/projects')
-  async listProjects(
-    @Param('id') idOrRef: string,
-    @Tenant() ctx: TenantRequest,
-  ) {
-    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.svc.listProjects(id, { manager: ctx.manager });
-  }
-
-  @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'member')
   @Post(':id/projects/bulk-replace')
   async bulkReplaceProjects(
@@ -445,17 +434,6 @@ export class CapexItemsController {
   }
 
   // Applications
-  @UseGuards(PermissionGuard)
-  @RequireLevel('budget', 'reader')
-  @Get(':id/applications')
-  async listApplications(
-    @Param('id') idOrRef: string,
-    @Tenant() ctx: TenantRequest,
-  ) {
-    const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
-    return this.svc.listApplications(id, { manager: ctx.manager });
-  }
-
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'member')
   @Post(':id/applications/bulk-replace')

@@ -269,16 +269,25 @@ function buildWhereConditions(
   ) => {
     const ids = normalizeMultiValue(value);
     if (ids.length === 0) return;
+    // On the records the person reads only: an id of a module they do not read, or of an
+    // application outside their participation, matches no task, so the filter tells nothing of the links.
+    if (!readsModule(table === 'task_applications' ? 'applications' : 'assets')) {
+      whereConditions += ' AND 1=0';
+      return;
+    }
     const placeholders = ids.map((id) => {
       params.push(id);
       return `$${params.length}::uuid`;
     });
+    const visible = table === 'task_applications' ? applicationVisible('rel_app') : 'TRUE';
     whereConditions += ` AND EXISTS (
       SELECT 1
       FROM ${table} rel
+      ${visible === 'TRUE' ? '' : 'JOIN applications rel_app ON rel_app.id = rel.application_id AND rel_app.tenant_id = rel.tenant_id'}
       WHERE rel.task_id = t.id
         AND rel.tenant_id = t.tenant_id
         AND rel.${column} IN (${placeholders.join(', ')})
+        ${visible === 'TRUE' ? '' : `AND ${visible}`}
     )`;
   };
 
@@ -638,7 +647,23 @@ function buildWhereConditions(
     }
   }
 
-  return { whereConditions, params, projectField, applicationVisible };
+  /**
+   * The sort key of a column of linked records, on the records the person reads only: the first
+   * application of their participation by name, none for a module they do not read, so that the
+   * order says nothing of the others. Undefined: the column's usual key. Call it after the count
+   * query: it may add the person's id to the parameters.
+   */
+  const linkedSortExpression = (field: string): string | undefined => {
+    if (field === 'application_name') {
+      if (!readsModule('applications')) return 'NULL::text';
+      const visible = applicationVisible('app');
+      return visible === 'TRUE' ? undefined : taskFirstApplicationNameSql(visible);
+    }
+    if (field === 'asset_name' && !readsModule('assets')) return 'NULL::text';
+    return undefined;
+  };
+
+  return { whereConditions, params, projectField, applicationVisible, linkedSortExpression };
 }
 
 const TASK_FILTER_VALUE_FIELDS: Record<string, string> = {
@@ -678,13 +703,17 @@ const TASK_ASSET_IDS_SQL = `
       AND asset_link.tenant_id = t.tenant_id
   ), '[]'::jsonb)`;
 
-/** A task's first linked application or asset by name: the sort key of the Applications and Assets columns. */
-const TASK_FIRST_APPLICATION_NAME_SQL = `(
+/**
+ * A task's first linked application or asset by name: the sort key of the Applications and Assets
+ * columns. `visible`: a condition on `app`, the applications the person reads.
+ */
+const taskFirstApplicationNameSql = (visible = 'TRUE') => `(
     SELECT MIN(app.name)
     FROM task_applications app_link
     JOIN applications app ON app.id = app_link.application_id AND app.tenant_id = app_link.tenant_id
     WHERE app_link.task_id = t.id
-      AND app_link.tenant_id = t.tenant_id
+      AND app_link.tenant_id = t.tenant_id${visible === 'TRUE' ? '' : `
+      AND ${visible}`}
   )`;
 
 const TASK_FIRST_ASSET_NAME_SQL = `(
@@ -814,7 +843,7 @@ const TASK_SORT_EXPRESSIONS: Record<string, string> = {
   company_name: 'comp.name',
   project_stream_name: 'project_pst.name',
   project_category_name: 'project_pc.name',
-  application_name: TASK_FIRST_APPLICATION_NAME_SQL,
+  application_name: taskFirstApplicationNameSql(),
   asset_name: TASK_FIRST_ASSET_NAME_SQL,
 };
 /** The task list columns that sort alphabetically (`textSortKey`). */
@@ -863,15 +892,20 @@ export type TaskVisibleLinks = {
  * object the task belongs to loses its id and its name (`related_object_hidden`, without a kind:
  * the screen shows nothing in its place), and so do the project's name, phase and classification
  * and the converted request. A record outside a Business Contributor's participation (`visible`)
- * reads the same way; one application outside it hides the field, which a save would replace whole.
- * The task keeps its own type of object, so an edit of another field leaves the link untouched.
+ * reads the same way; of the applications, only those of the participation show. The task keeps its
+ * own type of object, so an edit of another field leaves the link untouched.
  */
 export function withReadableTaskLinks<T extends Record<string, any>>(row: T, reads: LinkedReads, visible: TaskVisibleLinks = {}): T {
   const task: Record<string, any> = { ...row };
-  const applicationIds: string[] = Array.isArray(task.application_ids) ? task.application_ids.map(String) : [];
-  if (!reads.applications || (visible.applications && applicationIds.some((id) => !visible.applications!.has(id)))) {
+  if (!reads.applications) {
     task.applications = null;
     task.application_ids = null;
+  } else if (visible.applications) {
+    // A Business Contributor: the applications of their participation only. A save of the field
+    // keeps the links to the others (`TasksUnifiedService`), so the field stays.
+    const shown = visible.applications;
+    if (Array.isArray(task.application_ids)) task.application_ids = task.application_ids.filter((id: unknown) => shown.has(String(id)));
+    if (Array.isArray(task.applications)) task.applications = task.applications.filter((app: { id?: unknown }) => shown.has(String(app?.id)));
   }
   if (!reads.assets) {
     task.assets = null;
@@ -947,9 +981,12 @@ const TASK_LINKED_VALUE_FIELDS: Record<string, LinkedModule> = {
   asset_name: 'assets',
 };
 
-/** The ORDER BY key of a task list field: text alphabetically, the creation date by default. */
-async function taskSortKey(manager: EntityManager, field: string): Promise<string> {
-  const expr = TASK_SORT_EXPRESSIONS[field] ?? 't.created_at';
+/**
+ * The ORDER BY key of a task list field: text alphabetically, the creation date by default.
+ * `linked`: the key of a column of linked records on the records the person reads (`buildWhereConditions`).
+ */
+async function taskSortKey(manager: EntityManager, field: string, linked?: (field: string) => string | undefined): Promise<string> {
+  const expr = linked?.(field) ?? TASK_SORT_EXPRESSIONS[field] ?? 't.created_at';
   return TASK_TEXT_SORTS.has(field) ? (await textSortKey(manager))(expr) : expr;
 }
 
@@ -989,7 +1026,7 @@ export class TasksService {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
-    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads, opts?.linkedScopes);
+    const { whereConditions, params, linkedSortExpression } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads, opts?.linkedScopes);
 
     // Count total
     const countQuery = `
@@ -1017,7 +1054,7 @@ export class TasksService {
     const countResult = await manager.query(countQuery, params);
     const total = countResult[0]?.count || 0;
 
-    const sortField = await taskSortKey(manager, sort.field);
+    const sortField = await taskSortKey(manager, sort.field, linkedSortExpression);
 
     // Fetch paginated data
     const dataQuery = `
@@ -1115,9 +1152,8 @@ export class TasksService {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { sort, q, filters } = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
-    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads, opts?.linkedScopes);
+    const { whereConditions, params, linkedSortExpression } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads, opts?.linkedScopes);
 
-    const sortField = await taskSortKey(manager, sort.field);
     // The navigation reads at most 10,000 ids; the export (`__export`, set by the server only: a query
     // string never carries a boolean) reads up to the export bound.
     const cap = query?.__export === true ? MAX_EXPORT_LIMIT : 10000;
@@ -1145,6 +1181,7 @@ export class TasksService {
     `;
     const countRows: Array<{ total: number }> = await manager.query(countQuery, params);
     const total = Number(countRows[0]?.total) || 0;
+    const sortField = await taskSortKey(manager, sort.field, linkedSortExpression);
 
     const idsQuery = `
       SELECT t.id,

@@ -13,7 +13,7 @@ import { AuditService } from '../audit/audit.service';
 import { RecordInUseException } from '../common/record-in-use';
 import { sqlStateOf } from '../common/filters/database-error.mapping';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
-import { assertRolePermissionsWithinActorRights, roleGrantActorOf, rolesAboveActorRights } from './role-grant-ceiling';
+import { assertRoleGrantWithinActorRights, assertRolePermissionsWithinActorRights, roleGrantActorOf, rolesAboveActorRights } from './role-grant-ceiling';
 import { isAdministratorRole, roleNameReserved, roleNameTaken } from './system-roles';
 
 /** What the audit log keeps of a role: its name and description, and its permissions when given. */
@@ -158,6 +158,9 @@ export class RolesController {
     const role = await (mg ?? this.roleRepo.manager).getRepository(Role).findOne({ where: { id } });
     if (!role) throw new BadRequestException('Role not found');
     if (role.is_system) throw new BadRequestException('Cannot duplicate system role');
+    // A copy gives the rights of the role: only a role the person could give (`grantable`).
+    const actor = roleGrantActorOf(req);
+    await assertRoleGrantWithinActorRights(mg ?? this.roleRepo.manager, actor, null, [role.id]);
 
     // Generate unique name
     let newName = body?.role_name?.trim() || `${role.role_name} (Copy)`;
@@ -180,7 +183,10 @@ export class RolesController {
     // Copy permissions
     const perms = await this.perms.getRolePermissionsMap(id, { manager: mg });
     if (Object.keys(perms).length > 0) {
-      await this.perms.setRolePermissionsMap(saved.id, perms as any, { manager: mg });
+      // The tasks read added with a budget, projects or contracts right: only by a person who reads
+      // tasks, as on `PUT /roles/:id/permissions`.
+      const autoTasksRead = actor.isAdmin || !!actor.permissions.tasks;
+      await this.perms.setRolePermissionsMap(saved.id, perms as any, { manager: mg, autoTasksRead });
     }
     await this.logRoleChange(req, saved.id, 'create', null, {
       ...roleSnapshot(saved, await this.perms.getRolePermissionsMap(saved.id, { manager: mg })),

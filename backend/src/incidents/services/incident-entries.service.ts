@@ -5,6 +5,8 @@ import { Incident } from '../incident.entity';
 import { parseCreateEntry } from '../dto';
 import { INCIDENT_REVIEW_SLOT } from '../../knowledge/integrated-document.constants';
 import { IncidentsBaseService, ServiceOpts, userNameSql } from './incidents-base.service';
+import { applicationParticipantCondition, type ParticipationAccessScope } from '../../auth/business-contributor-scope';
+import { partlyCountedSide, type LinkedActivitySide } from '../../common/relations/linked-activity';
 
 const ENTRY_COLUMNS = `
   e.id, e.incident_id, e.kind, e.content, e.changed_fields, e.occurred_at,
@@ -42,6 +44,89 @@ function readableLinkChange(
   });
 }
 
+/** The families of a link change, in the order the sentence names them, with their label. */
+const LINK_CHANGE_LABELS: Array<[string, string]> = [['assets', 'Assets'], ['applications', 'Applications'], ['technologies', 'Technologies']];
+
+type JournalRow = { kind?: string; content?: string | null; changed_fields?: Record<string, any> | null };
+
+const refList = (value: unknown): string[] | null =>
+  (Array.isArray(value) && value.every((entry) => typeof entry === 'string') ? value as string[] : null);
+
+const hiddenOf = (side: LinkedActivitySide): number => (Array.isArray(side) ? 0 : side.hidden);
+
+/**
+ * The English sentence of a link change, from its snapshots: what each family gained and lost,
+ * with the number of the records the reader does not see (`hidden`).
+ */
+function linkChangeSentence(changed: Record<string, any>): string {
+  const parts: string[] = [];
+  for (const [family, label] of LINK_CHANGE_LABELS) {
+    const change = changed[family];
+    const from = refList(change?.from);
+    const to = refList(change?.to);
+    if (!from || !to) continue;
+    const refs = (shown: string[], hidden: number) => [...shown, ...(hidden > 0 ? [`${hidden} not shown`] : [])];
+    const linked = refs(to.filter((ref) => !from.includes(ref)), Number(change.hidden?.linked) || 0);
+    const unlinked = refs(from.filter((ref) => !to.includes(ref)), Number(change.hidden?.unlinked) || 0);
+    if (linked.length) parts.push(`${label} linked: ${linked.join(', ')}`);
+    if (unlinked.length) parts.push(`${label} unlinked: ${unlinked.join(', ')}`);
+  }
+  return parts.length ? `${parts.join('. ')}.` : '';
+}
+
+/**
+ * The application link changes of a Business Contributor's journal: the references of the
+ * applications of their participation, the others counted per direction (`hidden: { linked,
+ * unlinked }`), and the entry's sentence rebuilt the same way. A reference is the application's
+ * (`sequential_id`, unique in the tenant); a name stored for an application without one, or a
+ * reference that no longer resolves, counts as not shown. One query for the whole journal.
+ */
+async function withApplicationRefsForReader<T extends JournalRow>(
+  manager: EntityManager,
+  tenantId: string,
+  rows: T[],
+  scope: ParticipationAccessScope | undefined,
+): Promise<T[]> {
+  if (!scope) return rows;
+  const snapshots = (row: T) => {
+    const change = row.kind === 'link_change' ? row.changed_fields?.applications : null;
+    const from = refList(change?.from);
+    const to = refList(change?.to);
+    return from && to ? { from, to } : null;
+  };
+  const refs = new Set<string>();
+  for (const row of rows) {
+    const change = snapshots(row);
+    for (const ref of [...(change?.from ?? []), ...(change?.to ?? [])]) refs.add(ref);
+  }
+  if (refs.size === 0) return rows;
+  const visibleRows: Array<{ ref: string }> = await manager.query(
+    `SELECT a.sequential_id AS ref
+     FROM applications a
+     WHERE a.tenant_id = $1
+       AND a.sequential_id = ANY($2::text[])
+       AND ${applicationParticipantCondition('a', '$3')}`,
+    [tenantId, Array.from(refs), scope.userId],
+  );
+  const visible = new Set(visibleRows.map((row) => String(row.ref)));
+  const shown = (ref: string) => visible.has(ref);
+  return rows.map((row) => {
+    const change = snapshots(row);
+    if (!change || [...change.from, ...change.to].every(shown)) return row;
+    const linked = partlyCountedSide(change.to.filter((ref) => !change.from.includes(ref)), shown);
+    const unlinked = partlyCountedSide(change.from.filter((ref) => !change.to.includes(ref)), shown);
+    const changed = {
+      ...row.changed_fields,
+      applications: {
+        from: change.from.filter(shown),
+        to: change.to.filter(shown),
+        hidden: { linked: hiddenOf(linked), unlinked: hiddenOf(unlinked) },
+      },
+    };
+    return { ...row, changed_fields: changed, content: linkChangeSentence(changed) };
+  });
+}
+
 /**
  * Append-only journal: list + notes. Change entries are written by the other services.
  */
@@ -63,7 +148,9 @@ export class IncidentEntriesService extends IncidentsBaseService {
       [incidentId, tenantId],
     );
     await this.decorateReviewVersions(rows, incidentId, mg, tenantId);
-    return rows.filter((row: { kind?: string; changed_fields?: Record<string, unknown> | null }) => readableLinkChange(row, opts));
+    const readable = rows.filter((row: JournalRow) => readableLinkChange(row, opts));
+    // A Business Contributor's journal names only the applications of their participation.
+    return withApplicationRefsForReader(mg, tenantId, readable, opts?.applications ? opts.applicationScope : undefined);
   }
 
   /**

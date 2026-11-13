@@ -56,7 +56,7 @@ const LINK_FAMILIES = ['assets', 'applications', 'technologies'] as const;
 type LinkFamily = (typeof LINK_FAMILIES)[number];
 
 /** One line per family and direction, in the same order the server writes the English sentence. */
-const LINK_CHANGE_KEYS: Record<LinkFamily, { linked: string; unlinked: string }> = {
+const LINK_CHANGE_KEYS: Record<LinkFamily, { linked: string; unlinked: string; hidden?: string }> = {
   assets: {
     linked: 'workspace.incident.journal.linkChanges.assets.linked',
     unlinked: 'workspace.incident.journal.linkChanges.assets.unlinked',
@@ -64,6 +64,8 @@ const LINK_CHANGE_KEYS: Record<LinkFamily, { linked: string; unlinked: string }>
   applications: {
     linked: 'workspace.incident.journal.linkChanges.applications.linked',
     unlinked: 'workspace.incident.journal.linkChanges.applications.unlinked',
+    // The applications the reader does not see, counted by the server (`hidden`).
+    hidden: 'workspace.incident.journal.linkChanges.applications.hidden',
   },
   technologies: {
     linked: 'workspace.incident.journal.linkChanges.technologies.linked',
@@ -80,11 +82,12 @@ function stringList(value: unknown): string[] | null {
  * Link changes are stored as an English sentence. Added references are `to` minus `from`,
  * removed ones are `from` minus `to`, one line per family. Returns null when the snapshot
  * cannot be read, so an old row keeps its stored sentence. A conversion is the two lines
- * of its application and its technology.
+ * of its application and its technology. The records the reader does not see come as a number
+ * per direction (`hidden`), after the references they see.
  */
 function linkChangeLines(
   changed: IncidentEntry['changed_fields'],
-  translate: (key: string, options: { refs: string }) => string,
+  translate: (key: string, options: { refs: string } | { count: number }) => string,
 ): string[] | null {
   if (!changed) return null;
   const lines: string[] = [];
@@ -98,8 +101,14 @@ function linkChangeLines(
     readable = true;
     const added = to.filter((ref) => !from.includes(ref));
     const removed = from.filter((ref) => !to.includes(ref));
-    if (added.length > 0) lines.push(translate(LINK_CHANGE_KEYS[family].linked, { refs: added.join(', ') }));
-    if (removed.length > 0) lines.push(translate(LINK_CHANGE_KEYS[family].unlinked, { refs: removed.join(', ') }));
+    const keys = LINK_CHANGE_KEYS[family];
+    const withHidden = (refs: string[], count: unknown) => (keys.hidden && Number(count) > 0
+      ? [...refs, translate(keys.hidden, { count: Number(count) })]
+      : refs);
+    const linkedRefs = withHidden(added, change?.hidden?.linked);
+    const unlinkedRefs = withHidden(removed, change?.hidden?.unlinked);
+    if (linkedRefs.length > 0) lines.push(translate(keys.linked, { refs: linkedRefs.join(', ') }));
+    if (unlinkedRefs.length > 0) lines.push(translate(keys.unlinked, { refs: unlinkedRefs.join(', ') }));
   }
   return readable ? lines : null;
 }

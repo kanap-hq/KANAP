@@ -48,6 +48,17 @@ describe('getApiErrorMessage', () => {
       .toBe(`L'accès aux données est momentanément indisponible. Contactez la personne qui exploite ${PRODUCT_NAME}.`);
   });
 
+  it('words the refusals of an invitation in the language of the screen', () => {
+    const refusal = (status: number, code: string, message: string) => ({ response: { status, data: { statusCode: status, code, message } } });
+    const fr = i18n.getFixedT('fr');
+    expect(getApiErrorMessage(refusal(502, 'INVITATION_EMAIL_NOT_SENT', 'The invitation is saved, but its e-mail could not be sent. Send the invitation again.'), fr, 'fallback'))
+      .toBe("L'invitation est enregistrée, mais son e-mail n'a pas pu être envoyé. Envoyez l'invitation de nouveau.");
+    expect(getApiErrorMessage(refusal(400, 'APP_URL_NOT_CONFIGURED', 'application URL is not configured: set APP_BASE_URL'), fr, 'fallback'))
+      .toBe("L'adresse de l'application n'est pas configurée. Demandez à votre administrateur de la renseigner.");
+    expect(getApiErrorMessage(refusal(400, 'MICROSOFT_SIGN_IN_NOT_SET_UP', 'Microsoft sign-in is not set up for this workspace.'), fr, 'fallback'))
+      .toBe("La connexion avec Microsoft n'est pas configurée pour cet espace de travail.");
+  });
+
   it('translates a repeated data access query in French, with its parameter', () => {
     const repeated = (parameter: string) => ({
       response: {

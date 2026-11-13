@@ -10,6 +10,7 @@ vi.mock('../../api', () => ({ default: { post: vi.fn() } }));
 const notify = vi.hoisted(() => vi.fn());
 vi.mock('../notify/NotifyProvider', () => ({ useNotify: () => notify }));
 
+import i18n from 'i18next';
 import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
 import BulkEditDialog, { BULK_EDIT_TIMEOUT_MS, type BulkEditField } from './BulkEditDialog';
@@ -38,7 +39,7 @@ const FIELDS: BulkEditField[] = [
   },
 ];
 
-const COUNT = { dry_run: true, rows: 10, changes: 6, unchanged: 2, refused: { account_chart: 1, not_found: 1 }, as_of: '2026-11-12T10:00:00.000Z' };
+const COUNT = { dry_run: true, rows: 10, changes: 6, unchanged: 2, refused: { account_chart: 1, not_found: 1 }, as_of: '2026-11-12T10:00:00.000Z', fingerprint: 'f'.repeat(64) };
 
 function renderDialog(props: Partial<React.ComponentProps<typeof BulkEditDialog>> = {}) {
   const onDone = vi.fn();
@@ -169,7 +170,7 @@ describe('BulkEditDialog', () => {
     ));
   });
 
-  it('confirms with the count instant and rows, then says what changed and what was refused', async () => {
+  it('confirms with the count instant, rows and fingerprint, then says what changed and what was refused', async () => {
     post.mockResolvedValueOnce({ data: COUNT });
     post.mockResolvedValueOnce({ data: { dry_run: false, rows: 10, changed: 6, unchanged: 2, refused: { account_chart: 1, not_found: 1 } } });
     const { onDone } = renderDialog({ selection: { all: true, filters: { q: 'srv' }, exclude_ids: ['l-9'] } });
@@ -179,7 +180,7 @@ describe('BulkEditDialog', () => {
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(post).toHaveBeenLastCalledWith(
       '/budget-lines/bulk-update',
-      { all: true, filters: { q: 'srv' }, exclude_ids: ['l-9'], changes: { supplier_id: 's-2' }, as_of: COUNT.as_of, expected_rows: 10 },
+      { all: true, filters: { q: 'srv' }, exclude_ids: ['l-9'], changes: { supplier_id: 's-2' }, as_of: COUNT.as_of, expected_rows: 10, fingerprint: COUNT.fingerprint },
       { timeout: BULK_EDIT_TIMEOUT_MS },
     );
     // The dialog stays, on the outcome of the write; no notice besides it.
@@ -209,6 +210,46 @@ describe('BulkEditDialog', () => {
     expect(post).toHaveBeenCalledTimes(3);
     expect(post.mock.calls[2][1]).toMatchObject({ dry_run: true });
     expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('says another budget operation runs, at the count and at the write, in the words of the other operations', async () => {
+    const running = { response: { status: 409, data: { code: 'operation_running', message: 'Another budget operation (…) is running for this workspace.' } } };
+    post.mockRejectedValueOnce(running);
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status()).toHaveTextContent('Another budget operation is running. Try again when it has finished.'));
+    expect(save()).toBeDisabled();
+    post.mockResolvedValueOnce({ data: COUNT });
+    post.mockRejectedValueOnce(running);
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-2' }));
+    await waitFor(() => expect(save()).toBeEnabled());
+    fireEvent.click(save());
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Another budget operation is running. Try again when it has finished.'));
+    expect(screen.getByRole('alert')).not.toHaveTextContent('The list changed');
+    // Not a change of the list: nothing is counted again.
+    expect(post).toHaveBeenCalledTimes(3);
+  });
+
+  it('counts again with Retry after the count got no answer', async () => {
+    post.mockRejectedValueOnce({ code: 'ERR_NETWORK', message: 'Network Error' });
+    post.mockResolvedValueOnce({ data: COUNT });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status()).toHaveTextContent('The rows could not be counted. Try again.'));
+    expect(save()).toBeDisabled();
+    fireEvent.click(within(status()).getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(status().textContent).toContain('6 rows will change'));
+    expect(post).toHaveBeenCalledTimes(2);
+    expect(post.mock.calls[1][1]).toEqual(post.mock.calls[0][1]);
+    expect(save()).toBeEnabled();
+  });
+
+  it('offers no Retry for a change refused as a whole: the same value would be refused again', async () => {
+    post.mockRejectedValue({ response: { status: 400, data: { message: 'This cost center is disabled.' } } });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status()).toHaveTextContent('This cost center is disabled.'));
+    expect(within(status()).queryByRole('button', { name: 'Retry' })).toBeNull();
   });
 
   it('says the cap when the selection is too large', async () => {
@@ -398,5 +439,46 @@ describe('BulkEditDialog', () => {
     await waitFor(() => expect(save()).toBeEnabled());
     fireEvent.click(save());
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('The server did not answer. Reload the list to see whether the rows changed.'));
+  });
+
+  it('names the applications in the texts of the applications list; the budget lines keep their rows', async () => {
+    post.mockResolvedValueOnce({ data: COUNT });
+    post.mockResolvedValueOnce({ data: { dry_run: false, rows: 10, changed: 6, unchanged: 2, refused: { not_found: 2 } } });
+    renderDialog({ family: 'applications', endpoint: '/applications/bulk-update' });
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status().textContent).toContain('6 applications will change'));
+    expect(status().textContent).toContain('2 already have this value');
+    expect(status().textContent).toContain('2 refused:');
+    expect(save()).toHaveTextContent('Change 6 applications');
+    fireEvent.click(save());
+    await waitFor(() => expect(screen.getByText('6 applications changed')).toBeInTheDocument());
+  });
+
+  it('says the cap, a failed count and the wait in applications for the applications list', async () => {
+    post.mockRejectedValueOnce({ response: { status: 400, data: { code: 'bulk_too_many', message: 'These filters reach 6000 rows' } } });
+    const { setSelection } = renderDialog({ family: 'applications' });
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status()).toHaveTextContent('More than 5,000 applications: narrow the filters, or select fewer applications.'));
+    post.mockReturnValueOnce(new Promise(() => {}) as any);
+    setSelection({ ids: ['a-1'] });
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-2' }));
+    await waitFor(() => expect(status()).toHaveTextContent('Counting the applications…'));
+  });
+
+  it('words the applications in French, with their plural and agreement', async () => {
+    await i18n.changeLanguage('fr');
+    try {
+      post.mockRejectedValueOnce({ message: 'Network Error' });
+      post.mockResolvedValueOnce({ data: COUNT });
+      renderDialog({ family: 'applications' });
+      fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+      await waitFor(() => expect(status().textContent).toContain("Les applications n'ont pas pu être comptées. Réessayez."));
+      fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+      await waitFor(() => expect(status().textContent).toContain('6 applications changeront'));
+      expect(status().textContent).toContain('2 refusées');
+      expect(screen.getByRole('button', { name: /^Modifier 6/ })).toHaveTextContent('Modifier 6 applications');
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });

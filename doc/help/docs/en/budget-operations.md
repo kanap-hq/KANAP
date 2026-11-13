@@ -37,7 +37,7 @@ The built-in Budget Administrator role sees every card. Budget Member and Budget
 
 The budget columns are Budget, Revision, Forecast, Actuals and Expected landing. These are the standard names. Your organisation can rename them, hide some and choose a default column in [Budget columns](#budget-columns). Every page below shows the names your organisation chose.
 
-While one of these operations is running, budget lines cannot be saved: an edit shows the message "Another budget operation is running. Try again when it has finished." until the operation completes.
+While one of these operations is running, budget lines cannot be saved: an edit shows the message "Another budget operation is running. Try again when it has finished." until the operation completes. In the same way, an operation is refused with this message while a change on several lines at once is running.
 
 ---
 

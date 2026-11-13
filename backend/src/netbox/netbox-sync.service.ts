@@ -1140,8 +1140,8 @@ export class NetboxSyncService {
       });
     }
     const startedAt = new Date();
-    await this.persistState(tenantId, this.runningState('manual', startedAt));
-    void this.runLocked(tenantId, 'manual', runner, startedAt, decisions, reviewed).catch((error) => {
+    const runFor = await this.persistState(tenantId, this.runningState('manual', startedAt));
+    void this.runLocked(tenantId, 'manual', runner, startedAt, runFor, decisions, reviewed).catch((error) => {
       this.logger.error(`Netbox synchronisation could not start for tenant ${tenantId}: ${plainErrorMessage(error)}`);
     });
     return { ...status, sync: this.runningState('manual', startedAt) };
@@ -1229,8 +1229,8 @@ export class NetboxSyncService {
       return { status: 'skipped' };
     }
     const startedAt = new Date();
-    await this.persistState(tenantId, this.runningState(trigger, startedAt));
-    return this.runLocked(tenantId, trigger, runner, startedAt);
+    const runFor = await this.persistState(tenantId, this.runningState(trigger, startedAt));
+    return this.runLocked(tenantId, trigger, runner, startedAt, runFor);
   }
 
   private async runLocked(
@@ -1238,6 +1238,8 @@ export class NetboxSyncService {
     trigger: 'manual' | 'scheduled',
     runner: ReturnType<DataSource['createQueryRunner']>,
     startedAt: Date,
+    /** The address the run started on: its outcome is written only if the connection is still there. */
+    runFor: string | null,
     decisions: NetboxDecision[] = [],
     /** Objects a person was shown; null for the scheduled run, which has no reviewer. */
     reviewed: Set<string> | null = null,
@@ -1255,7 +1257,7 @@ export class NetboxSyncService {
         error: null,
         error_code: null,
         warnings: result.warnings,
-      });
+      }, { runFor });
       return { status: 'success', counts: result.counts };
     } catch (error) {
       const finishedAt = new Date();
@@ -1270,7 +1272,7 @@ export class NetboxSyncService {
         error: failure.message,
         error_code: failure.code,
         warnings: [],
-      });
+      }, { runFor });
       this.logger.warn(
         `Netbox synchronisation failed for tenant ${tenantId}: ${failure.detail ?? failure.message}`,
         (error as Error)?.stack,
@@ -1281,9 +1283,17 @@ export class NetboxSyncService {
     }
   }
 
-  private async persistState(tenantId: string, state: NetboxSyncStateView): Promise<void> {
-    await withTenantExecution(this.dataSource, tenantId, (manager) =>
-      this.config.writeSyncState(manager, tenantId, state));
+  /**
+   * Writes the run state. With `runFor` (the end of a run), only on the connection the
+   * run started on. Returns the address written for.
+   */
+  private async persistState(
+    tenantId: string,
+    state: NetboxSyncStateView,
+    opts?: { runFor: string | null },
+  ): Promise<string | null> {
+    return withTenantExecution(this.dataSource, tenantId, (manager) =>
+      this.config.writeSyncState(manager, tenantId, state, opts));
   }
 
   private async executeRun(

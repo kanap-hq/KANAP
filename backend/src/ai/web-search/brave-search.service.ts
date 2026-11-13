@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { sameOriginRedirectFetch } from '../../common/outbound-redirects';
 
 export type BraveSearchResult = {
   title: string;
@@ -76,7 +77,8 @@ export class BraveSearchService {
       ? AbortSignal.any([opts.signal, timeoutSignal])
       : timeoutSignal;
 
-    const response = await fetch(url, {
+    // The key travels in a header that a followed redirect would carry to another origin.
+    const response = await sameOriginRedirectFetch(globalThis.fetch)(url, {
       headers: {
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip',

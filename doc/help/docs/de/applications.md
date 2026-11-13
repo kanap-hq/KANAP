@@ -75,7 +75,7 @@ Anwendungen, die schon vor dieser Regel denselben Namen trugen, bleiben bearbeit
 
 **Berechtigungen**:
 - Anzeigen: `applications:reader`
-- Erstellen / Bearbeiten: `applications:member`
+- Erstellen / Bearbeiten, Änderung in großer Zahl: `applications:member`
 - Importieren / Exportieren / Löschen: `applications:admin`
 
 ---
@@ -85,8 +85,8 @@ Anwendungen, die schon vor dieser Regel denselben Namen trugen, bleiben bearbeit
 Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 
 **Oberer Bereichsfilter (Anzeigen)**:
-- **Meine Anwendungen**: zeigt Apps, bei denen Sie im Eigenschaftenbereich als **Business-Verantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
-- **Anwendungen meines Teams**: zeigt Apps, bei denen ein Mitglied Ihres Portfolio-Teams als Business-Verantwortlicher oder IT-Verantwortlicher gelistet ist. Ihre eigene Verantwortlichkeit ist in diesem Bereich ebenfalls enthalten. Deaktiviert, wenn Sie keinem Portfolio-Team zugewiesen sind.
+- **Meine Anwendungen**: zeigt Apps, bei denen Sie im Eigenschaftenbereich als **Fachverantwortlicher** oder **IT-Verantwortlicher** gelistet sind. Mehrfach-Verantwortliche werden unterstützt.
+- **Anwendungen meines Teams**: zeigt Apps, bei denen ein Mitglied Ihres Portfolio-Teams als Fachverantwortlicher oder IT-Verantwortlicher gelistet ist. Ihre eigene Verantwortlichkeit ist in diesem Bereich ebenfalls enthalten. Deaktiviert, wenn Sie keinem Portfolio-Team zugewiesen sind.
 - **Alle Anwendungen** (Standard): zeigt das vollständige Anwendungsraster mit dem standardmäßigen Lebenszyklus-Filterverhalten.
 - Ihre Auswahl wird sitzungsübergreifend gespeichert: bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt.
 
@@ -108,7 +108,7 @@ Eine Zelle ohne Wert zeigt einen Strich.
 **Zusätzliche Spalten** (über die Spaltenauswahl):
 - **Suites**: Übergeordnete Suites, zu denen diese Anwendung gehört
 - **Lieferant**: Verknüpfter Lieferantenname
-- **Business-Verantwortliche** / **IT-Verantwortliche**: Zugewiesene Verantwortliche (gekürzt, Mauszeiger oder Klick zum Anzeigen aller)
+- **Fachverantwortliche** / **IT-Verantwortliche**: Zugewiesene Verantwortliche (gekürzt, Mauszeiger oder Klick zum Anzeigen aller)
 - **Hosting**: Abgeleitet von Server-Standorten, die App-Bereitstellungen zugewiesen sind. Eine Anwendung auf einem Cluster übernimmt auch die Standorte seiner Mitglieder
 - **Extern erreichbar**: Ob die App aus dem Internet zugänglich ist
 - **SSO aktiviert** / **MFA aktiviert**: Authentifizierungsfunktionen
@@ -131,8 +131,32 @@ Eine Zelle ohne Wert zeigt einen Strich.
 - **Neue Anwendung**: Einen neuen Eintrag erstellen (`applications:member`). Siehe [Erste Schritte](#getting-started)
 - **Importieren**: Massenimport aus einer CSV-Datei oder Excel-Arbeitsmappe (`applications:admin`)
 - **Exportieren**: Die Anwendungen, die die Liste anzeigt, in eine CSV-Datei oder Excel-Arbeitsmappe exportieren (`applications:admin`). Siehe [Exportoptionen](#export-options).
-- **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:member`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
-- **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Eine Anwendung, die Quelle oder Ziel einer Schnittstelle ist, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst ihre Schnittstellen. Vor der Bestätigung führt das Fenster diese Anwendungen als behalten auf, mit der Anzahl ihrer Schnittstellen. Die anderen werden mit ihren Bereitstellungen und Verknüpfungen zu anderen Einträgen gelöscht; die Bestätigung zählt die Bereitstellungen
+- **Element kopieren**: Die in der Liste angehakte Anwendung mit allen Kernbeziehungen duplizieren (`applications:member`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
+- **Auswahl ändern**: Ein Feld auf allen ausgewählten Anwendungen auf einmal ändern (`applications:member`). Siehe [Anwendungen in großer Zahl ändern](#changing-applications-in-bulk)
+- **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Sie löscht nur die einzeln angehakten Anwendungen und ist nicht verfügbar, solange das Kästchen in der Kopfzeile den ganzen Filter erfasst. Eine Anwendung, die Quelle oder Ziel einer Schnittstelle ist, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst ihre Schnittstellen. Vor der Bestätigung führt das Fenster diese Anwendungen als behalten auf, mit der Anzahl ihrer Schnittstellen. Die anderen werden mit ihren Bereitstellungen und Verknüpfungen zu anderen Einträgen gelöscht; die Bestätigung zählt die Bereitstellungen
+
+### Anwendungen in großer Zahl ändern { #changing-applications-in-bulk }
+
+**Anwendungen auswählen**: Mit dem Recht, Anwendungen zu bearbeiten, zeigt die Liste vor jeder Anwendung ein Kästchen. Haken Sie Anwendungen einzeln an, oder haken Sie das Kästchen in der Spaltenkopfzeile an, um alle Anwendungen des aktuellen Filters und der Suche zu erfassen, auch die noch nicht geladenen. Entfernen Sie den Haken einer Anwendung, um sie auszulassen. Eine Änderung der Filter, der Suche oder des Bereichs **Anzeigen** leert die Auswahl. Die Sortierung behält sie bei.
+
+**Ein Feld ändern**:
+
+1. Wählen Sie die Anwendungen aus und klicken Sie auf **Auswahl ändern** (Bearbeitungssymbol). Das Symbol zeigt die Anzahl der ausgewählten Anwendungen
+2. Wählen Sie das **Feld**: **Fachverantwortliche**, **IT-Verantwortliche**, **Lebenszyklus** oder **Geschäftskritikalität**
+3. Wählen Sie den **Neuen Wert**. Für Verantwortliche wählen Sie eine oder mehrere Personen. Der Dialog zählt die Anwendungen: wie viele geändert werden, wie viele diesen Wert bereits haben und wie viele abgelehnt werden. Bei jedem neuen Wert wird erneut gezählt
+4. Klicken Sie zur Bestätigung auf **12 Anwendungen ändern** (mit Ihrer Zählung). Das Fenster zeigt danach das Ergebnis. Klicken Sie auf **Schließen**, um es zu schließen. Die Liste dahinter ist bereits aktuell
+
+**Verantwortliche**: Die gewählten Personen ersetzen auf jeder Anwendung die Verantwortlichen dieser Rolle. Die andere Rolle behält ihre Personen: Eine Änderung der **Fachverantwortlichen** lässt die **IT-Verantwortlichen** unverändert.
+
+**Ein Feld leeren**: Bei **Fachverantwortliche**, **IT-Verantwortliche** und **Geschäftskritikalität** klicken Sie neben dem Wert auf **Feld leeren** (Radiergummi-Symbol). Der Wert zeigt **Leer**. Bei Verantwortlichen bleibt die Rolle ohne Person. **Lebenszyklus** lässt sich nicht leeren.
+
+**Gut zu wissen**:
+
+- Eine Änderung umfasst höchstens 5.000 Anwendungen. Darüber grenzen Sie die Filter ein oder wählen weniger Anwendungen aus
+- Ändert sich die Liste zwischen der Zählung und Ihrer Bestätigung, zeigt der Dialog die neue Zählung. Prüfen Sie sie und bestätigen Sie erneut
+- Schlägt die Zählung fehl, klicken Sie neben der Meldung auf **Erneut versuchen**, um erneut zu zählen
+- Eine neue Geschäftskritikalität setzt eine geprüfte Anwendung auf **Erneut prüfen**, wie auf der Seite der Anwendung
+- Jede geänderte Anwendung erhält einen eigenen Eintrag in ihrem Tab **Verlauf**
 
 ---
 
@@ -173,7 +197,7 @@ Der Bereich ist die Identitätskarte der Anwendung. Er wird in jedem Reiter ange
 
 **Geschäftsprozesse und Verantwortliche**:
 - **Geschäftsprozesse**: die Prozesse, die die Anwendung unterstützt. Jeder Name öffnet den Prozess. Tippen Sie in das Feld, um einen Prozess zu suchen und hinzuzufügen; fahren Sie mit der Maus über einen Namen und klicken Sie auf das Kreuz, um ihn zu entfernen. Jede Änderung wird sofort gespeichert. Der Prozess zeigt dieselbe Verknüpfung in seinem eigenen Abschnitt **Anwendungen**. Ein deaktivierter Prozess bleibt ausgegraut aufgeführt. Das Ändern der Liste erfordert zusätzlich `business_processes:member`; ohne Leserecht für Geschäftsprozesse ist das Feld ausgeblendet.
-- **Business-Verantwortliche**: Geschäftliche Stakeholder, die für diese Anwendung rechenschaftspflichtig sind (Mehrfachauswahl)
+- **Fachverantwortliche**: Geschäftliche Stakeholder, die für diese Anwendung rechenschaftspflichtig sind (Mehrfachauswahl)
 - **IT-Verantwortliche**: IT-Teammitglieder, die für den technischen Support verantwortlich sind (Mehrfachauswahl)
 
 Um einen Verantwortlichen zu entfernen, fahren Sie mit der Maus über den Namen und klicken Sie auf das Kreuz am Zeilenende.
@@ -654,7 +678,7 @@ Eine leere Klassifizierungszelle behält im Modus Anreichern und Ersetzen den vo
 
 | CSV-Spalte | Beschreibung | Hinweise |
 |------------|-------------|-------|
-| `business_owner_email_1` bis `_4` | E-Mails der Business-Verantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
+| `business_owner_email_1` bis `_4` | E-Mails der Fachverantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
 | `it_owner_email_1` bis `_4` | E-Mails der IT-Verantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
 
 Im Modus `Anreichern` behält die Anwendung ihre Verantwortlichen eines Typs, wenn alle Verantwortlichen-Zellen dieses Typs leer sind.
@@ -701,7 +725,7 @@ Eine über ihre `id` gefundene Zeile mit einem anderen Namen benennt die Anwendu
 - **Bereitstellungen nicht enthalten**: Umgebungsbereitstellungen (Prod, QA, Dev) erfordern Arbeitsbereich-Konfiguration
 - **Server-Zuweisungen ausgeschlossen**: Server-Bindungen müssen im Reiter Bereitstellungen eingerichtet werden
 - **Schnittstellen ausgeschlossen**: Integrationsdefinitionen sind nicht Teil des Imports und Exports
-- **Maximal 4 Verantwortliche pro Typ**: Bis zu 4 Business-Verantwortliche und 4 IT-Verantwortliche können importiert/exportiert werden
+- **Maximal 4 Verantwortliche pro Typ**: Bis zu 4 Fachverantwortliche und 4 IT-Verantwortliche können importiert/exportiert werden
 - **Benutzermetriken nur Export**: Zielgruppen- und Benutzeranzahlfelder (`users_mode`, `users_year`, `users_override`) werden im Arbeitsbereich verwaltet
 - **Status nur Export**: Aktivieren oder deaktivieren Sie eine Anwendung in ihrem Arbeitsbereich
 

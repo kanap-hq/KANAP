@@ -110,6 +110,8 @@ export type AiProviderTestResult = {
   model: string | null;
   latency_ms: number | null;
   message: string;
+  // Code of a refusal shown in the screen language (`errors:<code>`), such as a refused address.
+  code?: string;
   validation_errors: string[];
   // The effort the test call sent; null when none was.
   reasoning_effort_sent?: AiReasoningEffort | null;
@@ -164,6 +166,8 @@ export type AiModelAssignmentOption = {
 // How much a reasoning model thinks before answering; null: the provider's default.
 export const AI_REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type AiReasoningEffort = (typeof AI_REASONING_EFFORTS)[number];
+
+export type AiModelTestDraft = Pick<AiModelConfigInput, 'provider' | 'model' | 'endpoint_url' | 'api_key' | 'reasoning_effort'>;
 
 export type AiModelConfigInput = {
   name?: string;
@@ -523,8 +527,8 @@ export type AiAgentEffectivePrompt = {
   shared_context_resolved: boolean;
   shared_context_resolution_reason: string | null;
   bounds_applied?: string[];
-  // Helpdesk agents expose the four triage tasks; SRE agents expose monitoring_diagnosis only.
-  tasks: Partial<Record<'action_planner' | 'planner' | 'interpreter' | 'synthesis' | 'monitoring_diagnosis', AiAgentEffectivePromptTask>>;
+  // Helpdesk agents expose the six triage tasks; SRE agents expose monitoring_diagnosis only.
+  tasks: Partial<Record<'action_planner' | 'planner' | 'interpreter' | 'synthesis' | 'technician_brief' | 'administrative_reply' | 'monitoring_diagnosis', AiAgentEffectivePromptTask>>;
 };
 
 export type AiAgentControlAutonomyItem = {
@@ -1475,8 +1479,9 @@ export const aiModelConfigsApi = {
     const res = await api.post(`/ai/model-configs/${id}/clear-default`);
     return res.data;
   },
-  async test(id: string): Promise<AiProviderTestResult> {
-    const res = await api.post(`/ai/model-configs/${id}/test`);
+  /** Tests the dialog as it stands; a saved entry (`id`) fills in what the draft leaves out. */
+  async test(id: string | null, draft: AiModelTestDraft): Promise<AiProviderTestResult> {
+    const res = await api.post(id ? `/ai/model-configs/${id}/test` : '/ai/model-configs/test', draft);
     return res.data;
   },
   async reasoningEfforts(provider: string, model: string): Promise<AiReasoningEffortSupport> {

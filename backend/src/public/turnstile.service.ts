@@ -142,6 +142,8 @@ export class TurnstileService {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: form.toString(),
+      // The secret is in the body: a 307 or 308 followed would carry it elsewhere.
+      redirect: 'manual',
     });
 
     if (!response.ok) {

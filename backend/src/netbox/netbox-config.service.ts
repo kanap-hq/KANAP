@@ -345,6 +345,11 @@ export class NetboxConfigService {
     let baseUrl = textOrNull(existing?.base_url);
     if (input.base_url !== undefined) {
       const raw = textOrNull(input.base_url);
+      if (!raw && existing && (textOrNull(existing.base_url) || existing.credential_ref_json)) {
+        // An empty address removes the saved connection, as for GLPI. Once removed, it
+        // is refused again below, as with nothing saved.
+        return this.removeConnection(manager, tenantId, existing, opts);
+      }
       if (!raw) throw netboxBadRequest('netbox_base_url_invalid');
       try {
         baseUrl = normalizeNetboxAddress(raw);
@@ -393,6 +398,14 @@ export class NetboxConfigService {
       credentialRef = this.encryptedCredentialRef(token);
     } else if (destinationChanged && credentialRef) {
       credentialRef = null;
+    }
+    if (destinationChanged) {
+      // Another server: its first import is read by a person before the hourly run
+      // applies anything, as after a removal, and the last run shown was the previous
+      // server's. The matches and the hourly setting stay.
+      delete metadata.first_manual_sync_at;
+      delete metadata.review_pending;
+      delete metadata.sync_state;
     }
     // A new address or a new token makes the stored connection test describe a
     // configuration that is gone. An empty token keeps the stored secret, so
@@ -448,6 +461,49 @@ export class NetboxConfigService {
       delete cleared.last_connection_test;
       return this.toView({ ...saved, metadata_json: cleared });
     }
+    return this.toView(saved);
+  }
+
+  /**
+   * Removes the saved connection: the address and the token are emptied and the
+   * connection is switched off, with an audit entry. What was imported stays, links to
+   * Netbox included, and so do the matches, which a new connection can reuse. What
+   * describes the removed server goes: its connection test, its last run, the hourly run
+   * and the mark of the first import read by a person, so a new server starts with a
+   * manual review.
+   */
+  private async removeConnection(
+    manager: EntityManager,
+    tenantId: string,
+    existing: AiAdapterConfig,
+    opts?: { userId?: string | null; sourceRef?: string | null },
+  ): Promise<NetboxIntegrationView> {
+    const metadata: Record<string, unknown> = { ...(asRecord(existing.metadata_json) ?? {}) };
+    delete metadata.last_connection_test;
+    delete metadata.sync_state;
+    delete metadata.first_manual_sync_at;
+    delete metadata.review_pending;
+    metadata.auto_sync = false;
+    const before = this.auditView(existing);
+    const repo = this.repo(manager);
+    const saved = await repo.save(repo.create({
+      ...existing,
+      tenant_id: tenantId,
+      enabled: false,
+      base_url: null,
+      credential_ref_json: null,
+      metadata_json: metadata,
+      updated_at: new Date(),
+    }));
+    await writeAuditLog(manager, {
+      table: 'ai_adapter_configs',
+      recordId: saved.id,
+      action: 'update',
+      before,
+      after: this.auditView(saved),
+      userId: opts?.userId ?? null,
+      sourceRef: opts?.sourceRef ?? null,
+    });
     return this.toView(saved);
   }
 
@@ -618,14 +674,28 @@ export class NetboxConfigService {
     return readSyncState(asRecord(config?.metadata_json), nowMs);
   }
 
-  /** Persists the run state; the page polls GET /netbox/status for it. */
+  /**
+   * Persists the run state; the page polls GET /netbox/status for it. Returns the address
+   * the state was written for, or null when nothing was written.
+   *
+   * `runFor` is the address returned when the run started. A run that ends after its
+   * connection was removed, or moved to another server, writes nothing: its outcome
+   * describes a server that is gone, and its first-import mark would let the hourly run
+   * import the next server with nobody having read it. A save that removes or moves the
+   * connection clears the state the run started, so nothing is left showing it as running.
+   */
   async writeSyncState(
     manager: EntityManager,
     tenantId: string,
     state: NetboxSyncStateView,
-  ): Promise<void> {
+    opts?: { runFor?: string | null },
+  ): Promise<string | null> {
     const config = await this.getConfig(manager, tenantId, { forUpdate: true });
-    if (!config) return;
+    if (!config) return null;
+    const baseUrl = textOrNull(config.base_url);
+    if (opts && 'runFor' in opts && (!baseUrl || !opts.runFor || !sameSecretDestination(baseUrl, opts.runFor))) {
+      return null;
+    }
     const metadata: Record<string, unknown> = { ...(asRecord(config.metadata_json) ?? {}) };
     metadata.sync_state = state;
     // The hourly run waits for this: a first import is read and applied by a
@@ -644,6 +714,7 @@ export class NetboxConfigService {
     config.metadata_json = metadata;
     config.updated_at = new Date();
     await this.repo(manager).save(config);
+    return baseUrl;
   }
 
   private encryptedCredentialRef(material: string): Record<string, unknown> {

@@ -24,6 +24,7 @@ import {
   type AiPrtgTestResult,
 } from '../../ai/aiApi';
 import InfoHint from '../workspace/InfoHint';
+import { useKanapDialogs } from '../design';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { isNewSecretAddress } from '../../utils/secretAddress';
@@ -78,6 +79,7 @@ export default function MonitoringIntegrationCard() {
   const { t } = useTranslation(['admin', 'common']);
   const theme = useTheme();
   const queryClient = useQueryClient();
+  const dialogs = useKanapDialogs();
 
   const [form, setForm] = React.useState<PrtgForm>(() => buildForm(null));
   const [saveSuccess, setSaveSuccess] = React.useState(false);
@@ -155,11 +157,26 @@ export default function MonitoringIntegrationCard() {
   const status = derivePrtgStatus(prtg);
   const statusColor = getDotColor(status === 'connected' ? 'success' : 'default', theme.palette.mode);
   const savedKey = prtg?.credential.present ?? false;
+  // An emptied address removes the saved connection (address and key) on save.
+  const removing = !!prtg?.base_url && !form.base_url.trim();
   // The saved key only goes to the saved address: a new one empties it on save.
-  const addressChanged = !!prtg && isNewSecretAddress(form.base_url, prtg.base_url);
+  const addressChanged = !!prtg && !removing && isNewSecretAddress(form.base_url, prtg.base_url);
   const keyEmptiedByAddress = addressChanged && savedKey;
-  const hasStoredKey = savedKey && !keyEmptiedByAddress;
+  const hasStoredKey = savedKey && !keyEmptiedByAddress && !removing;
   const keyMissingForAddress = addressChanged && savedKey && !form.api_token.trim();
+
+  const handleSave = async () => {
+    if (removing) {
+      const confirmed = await dialogs.confirm({
+        title: t('integrations.removeConnection.title', { name: 'PRTG' }),
+        message: t('integrations.removeConnection.message'),
+        confirmLabel: t('common:buttons.remove'),
+        intent: 'danger',
+      });
+      if (!confirmed) return;
+    }
+    saveMutation.mutate(form);
+  };
 
   return (
     <Card>
@@ -285,7 +302,7 @@ export default function MonitoringIntegrationCard() {
             <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
               <Button
                 variant="contained"
-                onClick={() => saveMutation.mutate(form)}
+                onClick={() => { void handleSave(); }}
                 disabled={saveMutation.isPending || (keyEmptiedByAddress && !form.api_token.trim() && form.enabled)}
               >
                 {saveMutation.isPending ? t('common:status.saving') : t('aiAdmin.actions.saveSettings')}
@@ -293,7 +310,7 @@ export default function MonitoringIntegrationCard() {
               <Button
                 variant="outlined"
                 onClick={() => testMutation.mutate(form)}
-                disabled={testMutation.isPending || keyMissingForAddress}
+                disabled={testMutation.isPending || keyMissingForAddress || removing}
               >
                 {testMutation.isPending ? t('aiAdmin.actions.testing') : t('aiAdmin.actions.testConnection')}
               </Button>

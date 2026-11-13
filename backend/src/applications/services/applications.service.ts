@@ -16,6 +16,7 @@ import { ApplicationsResidencyService } from './applications-residency.service';
 import { ApplicationsStructureService } from './applications-structure.service';
 import { ApplicationsLifecycleService } from './applications-lifecycle.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
+import { bulkUpdateApplications } from '../application-bulk-edit';
 
 /**
  * Options for service methods.
@@ -113,6 +114,24 @@ export class ApplicationsService {
 
   update(id: string, body: Partial<Application>, userId?: string | null, opts?: ServiceOpts) {
     return this.crudService.update(id, body, userId, opts);
+  }
+
+  /**
+   * "Change the selection" of the list (`POST /applications/bulk-update`, `application-bulk-edit.ts`):
+   * the applications chosen, or those of the list's filters with the person's scope, each through the
+   * update of one application, in the request's transaction.
+   */
+  bulkUpdate(body: unknown, userId: string | null, opts: ServiceOpts & { manager: EntityManager; tenantId: string }) {
+    const { manager } = opts;
+    return bulkUpdateApplications(body, {
+      manager,
+      tenantId: opts.tenantId,
+      accessScope: opts.accessScope,
+      values: () => this.crudService.bulkEditValues(manager),
+      listIds: (query) => this.listService.listIds(query, opts),
+      update: async (id, patch) => { await this.crudService.update(id, patch as Partial<Application>, userId, { manager }); },
+      replaceOwners: async (id, owners) => { await this.ownersService.bulkReplaceOwners(id, owners, userId, { manager }); },
+    });
   }
 
   shareApplication(id: string, body: ShareItemDto, tenantId: string, userId: string, opts?: ServiceOpts) {

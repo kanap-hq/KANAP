@@ -296,6 +296,8 @@ export type AiQueryResult = {
   /** The same amounts summed over the items returned only: the total of the records listed (a top N). */
   page_amount_totals?: AiAmountTotals;
   /** `limited`: a person with limited data access; the items and figures cover their access only. */
+  /** The linked applications a Business Contributor reads in part, and why (`ai-linked-read-notes.util.ts`). */
+  fields_partial?: AiWithheldField[];
   data_access?: 'limited';
   data_access_note?: string;
   /** `chargeback` and `chargeback_lines`: the report's parameters and total, its warnings in words, the company of the lines. */
@@ -356,6 +358,9 @@ export type AiAggregateResult = {
    * Shape of `TurnoverFxMissingItem`.
    */
   turnover_fx_missing?: Array<{ companyId: string; companyName: string; currency: string; year: number }>;
+  /** The linked applications the person does not read, or reads in part, and why (`ai-linked-read-notes.util.ts`). */
+  fields_withheld?: AiWithheldField[];
+  fields_partial?: AiWithheldField[];
   data_access?: 'limited';
   data_access_note?: string;
   /** `chargeback` and `chargeback_lines`: the report's parameters and total, its warnings in words, the company of the lines. */

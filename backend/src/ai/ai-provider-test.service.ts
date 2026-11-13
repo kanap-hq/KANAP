@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { modelKeyDestination } from '../common/secret-destination';
 import { assertPublicHttpTarget } from '../common/ssrf-guard';
@@ -28,6 +28,26 @@ export type AiProviderTestInput = {
   // model does not accept it), so the test shows a provider that refuses the value.
   reasoning_effort?: AiReasoningEffort | null;
 };
+
+/** What the model dialog holds when « Test » is pressed: the values on screen, saved or not. */
+export type AiModelTestDraft = {
+  provider?: string | null;
+  model?: string | null;
+  endpoint_url?: string | null;
+  api_key?: string | null;
+  reasoning_effort?: AiReasoningEffort | null;
+};
+
+/** The saved entry a draft edits: its key goes only to the destination it was saved for. */
+export type AiModelTestStoredEntry = {
+  provider: string | null;
+  model: string | null;
+  endpoint_url: string | null;
+  api_key_encrypted: string | null;
+  reasoning_effort: AiReasoningEffort | null;
+};
+
+export const MODEL_KEY_NEEDED_FOR_ADDRESS = 'The address changed: enter the API key again.';
 
 function normalizeNullableString(value: unknown): string | null {
   if (value == null) return null;
@@ -89,6 +109,7 @@ export class AiProviderTestService {
           startedAt,
           message: this.getErrorMessage(error),
           validationErrors: [this.getErrorMessage(error)],
+          error,
         });
       }
     }
@@ -199,8 +220,59 @@ export class AiProviderTestService {
         startedAt,
         message: this.getErrorMessage(error),
         validationErrors: [],
+        error,
       });
     }
+  }
+
+  /**
+   * Tests the model dialog as it stands: a value the draft does not carry is the saved one.
+   * The saved key is used only when the draft keeps its destination (provider and address);
+   * otherwise the key must be typed, as on save, and the saved one is never sent.
+   */
+  async testModelDraft(
+    tenantId: string,
+    draft: AiModelTestDraft,
+    stored: AiModelTestStoredEntry | null,
+    opts?: { manager?: EntityManager },
+  ): Promise<AiProviderTestResult> {
+    const pick = <K extends keyof AiModelTestDraft & keyof AiModelTestStoredEntry>(key: K) =>
+      (draft[key] !== undefined ? draft[key] : stored?.[key] ?? null) as AiModelTestStoredEntry[K];
+    const provider = normalizeNullableString(pick('provider'));
+    const model = normalizeNullableString(pick('model'));
+    const endpointUrl = normalizeNullableString(pick('endpoint_url'));
+    let apiKey = normalizeNullableString(draft.api_key);
+    if (!apiKey && stored?.api_key_encrypted) {
+      const sameDestination = modelKeyDestination(provider, endpointUrl)
+        === modelKeyDestination(stored.provider, stored.endpoint_url);
+      if (sameDestination) {
+        try {
+          apiKey = this.cipher.decrypt(stored.api_key_encrypted);
+        } catch (error) {
+          const message = this.getErrorMessage(error);
+          return this.fail({ provider, model, startedAt: Date.now(), message, validationErrors: [message] });
+        }
+      } else if (this.providerRegistry.get(provider)?.descriptor.capabilities.requiresApiKey !== false) {
+        return this.fail({
+          provider,
+          model,
+          startedAt: Date.now(),
+          message: MODEL_KEY_NEEDED_FOR_ADDRESS,
+          validationErrors: [MODEL_KEY_NEEDED_FOR_ADDRESS],
+        });
+      }
+    }
+    return this.testProvider(
+      tenantId,
+      {
+        llm_provider: provider,
+        llm_model: model,
+        llm_endpoint_url: endpointUrl,
+        llm_api_key: apiKey,
+        reasoning_effort: pick('reasoning_effort'),
+      },
+      { manager: opts?.manager, skipStoredFallback: true },
+    );
   }
 
   private fail(input: {
@@ -209,13 +281,17 @@ export class AiProviderTestService {
     startedAt: number;
     message: string;
     validationErrors: string[];
+    /** The failure, when it may carry a code the screen translates (a refused address). */
+    error?: unknown;
   }): AiProviderTestResult {
+    const code = errorCodeOf(input.error);
     return {
       ok: false,
       provider: input.provider,
       model: input.model,
       latency_ms: Date.now() - input.startedAt,
       message: input.message,
+      ...(code ? { code } : {}),
       validation_errors: input.validationErrors,
     };
   }
@@ -226,4 +302,12 @@ export class AiProviderTestService {
     }
     return 'Provider test failed.';
   }
+}
+
+/** The code of a refusal raised with one (`{ code, message }`), such as the address guard's. */
+function errorCodeOf(error: unknown): string | null {
+  if (!(error instanceof HttpException)) return null;
+  const response = error.getResponse();
+  const code = response && typeof response === 'object' ? (response as { code?: unknown }).code : null;
+  return typeof code === 'string' && code ? code : null;
 }

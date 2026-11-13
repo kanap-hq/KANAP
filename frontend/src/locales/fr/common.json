@@ -1773,6 +1773,7 @@
   "bulkEdit": {
     "title": "Modifier la sélection",
     "selectAll": "Sélectionner toutes les lignes du filtre",
+    "selectAll_applications": "Sélectionner toutes les applications du filtre",
     "selectRow": "Sélectionner {{name}}",
     "field": "Champ",
     "value": "Nouvelle valeur",
@@ -1780,8 +1781,11 @@
     "emptied": "Vide",
     "chooseValue": "Choisir une valeur",
     "counting": "Comptage des lignes…",
+    "counting_applications": "Comptage des applications…",
     "willChange_one": "{{count}} ligne changera",
+    "willChange_applications_one": "{{count}} application changera",
     "willChange_other": "{{count}} lignes changeront",
+    "willChange_applications_other": "{{count}} applications changeront",
     "unchanged_one": "{{count}} a déjà cette valeur",
     "unchanged_other": "{{count}} ont déjà cette valeur",
     "refused_one": "{{count}} refusée :",
@@ -1800,16 +1804,23 @@
       "other": "Autre raison"
     },
     "tooMany": "Plus de 5 000 lignes : resserrez les filtres ou sélectionnez moins de lignes.",
+    "tooMany_applications": "Plus de 5 000 applications : resserrez les filtres ou sélectionnez moins d'applications.",
     "countFailed": "Les lignes n'ont pas pu être comptées. Réessayez.",
+    "countFailed_applications": "Les applications n'ont pas pu être comptées. Réessayez.",
     "listChanged": "La liste a changé depuis le comptage. Vérifiez le nouveau comptage, puis confirmez à nouveau.",
     "failed": "La modification n'a pas pu être enregistrée. Réessayez.",
     "noAnswer": "Le serveur n'a pas répondu. Rechargez la liste pour voir si les lignes ont changé.",
+    "noAnswer_applications": "Le serveur n'a pas répondu. Rechargez la liste pour voir si les applications ont changé.",
     "save_one": "Modifier {{count}} ligne",
+    "save_applications_one": "Modifier {{count}} application",
     "save_other": "Modifier {{count}} lignes",
+    "save_applications_other": "Modifier {{count}} applications",
     "saveIdle": "Modifier",
     "saving": "Enregistrement de la modification…",
     "doneChanged_one": "{{count}} ligne modifiée",
+    "doneChanged_applications_one": "{{count}} application modifiée",
     "doneChanged_other": "{{count}} lignes modifiées",
+    "doneChanged_applications_other": "{{count}} applications modifiées",
     "applied": "{{field}} : {{value}}"
   }
 }

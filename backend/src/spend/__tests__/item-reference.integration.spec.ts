@@ -148,7 +148,6 @@ async function testMalformedIdIsA400(kind: Kind) {
       ['DELETE', () => ctl.delete('not-an-id', ctx)],
       ['GET', () => ctl.get('not-an-id', ctx)],
       ['GET links', () => ctl.listLinks('not-an-id', ctx)],
-      ['GET projects', () => ctl.listProjects('not-an-id', ctx)],
       ['service update', () => svc.update('not-an-id', body, USER, { manager: runner.manager })],
     ];
     for (const [label, call] of calls) {

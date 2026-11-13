@@ -15,7 +15,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   role as it was, as `PUT /roles/:id` does; other names stay free.
 // - A tenant reads only its own roles: the names of another tenant change nothing.
 // - The names the screen shows for the system and built-in roles, in its four languages, are
-//   reserved the same way, on creation, rename, duplicate, a new person and a users file. A role
+//   reserved the same way, on creation, rename, duplicate and a users file (a new person naming
+//   one gets ROLE_NOT_FOUND: `POST /users` makes no role). A role
 //   already stored under such a name keeps it.
 // - These refusals carry a code: ROLE_NAME_RESERVED for a name of a system or built-in role,
 //   ROLE_NAME_TAKEN for the name of another role.
@@ -123,8 +124,9 @@ async function testShownNamesAreReserved(h: Harness, runner: QueryRunner, s: See
     await refusedWith(() => h.roles.updateRole(s.analyst, { role_name: name }, req(runner, s)), 'ROLE_NAME_RESERVED', `PUT /roles/:id "${name}"`);
   }
   await refusedWith(() => h.roles.duplicateRole(s.analyst, { role_name: 'Administrador' }, req(runner, s)), 'ROLE_NAME_RESERVED', 'duplicate as "Administrador"');
+  // A new person names an existing role: an unknown name is refused before any role is made.
   await refusedWith(() => h.users.create({ email: `fr-${s.tenantId.slice(0, 8)}@example.test`, role_name: 'Administrateur' }, req(runner, s)),
-    'ROLE_NAME_RESERVED', 'POST /users role_name "Administrateur"');
+    'ROLE_NOT_FOUND', 'POST /users role_name "Administrateur"');
   for (const dryRun of ['true', 'false']) {
     const result = await h.users.import(csv(`csv-${s.tenantId.slice(0, 8)}@example.test`, 'Administrateur'), dryRun, 'en', undefined, undefined, req(runner, s));
     assert.equal(result.ok, false, `import (dryRun ${dryRun}): refused`);

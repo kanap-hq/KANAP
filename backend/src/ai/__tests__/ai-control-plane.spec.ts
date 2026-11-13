@@ -43,11 +43,16 @@ import {
 import { AiCapabilityRegistry, providerCapabilityContracts, routingDriftSnapshot } from '../control-plane/capability/ai-capability.registry';
 import { AiAutomationJobCatalogService } from '../control-plane/automation/ai-automation-job-catalog.service';
 import { AiAgentControlService } from '../control-plane/agent-control/ai-agent-control.service';
+import { Application } from '../../applications/application.entity';
 import { proposalStillBlocksRegeneration } from '../control-plane/agent-control/agent-control-constants.util';
 import { auditActivityType, auditActivityTypeClauseSql } from '../control-plane/agent-control/ai-agent-activity-timeline';
 import {
   AiAgentPromptCompilerService,
   RUNTIME_SAFETY_FLOOR_ACTION_PLANNER,
+  compileSystemPrompt,
+  INTERNAL_NOTES_LINE,
+  RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY,
+  RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF,
 } from '../control-plane/agent-control/ai-agent-prompt-compiler.service';
 import { AiAgentActionPlannerService } from '../control-plane/agent-control/ai-agent-action-planner.service';
 import { AiAgentLlmClient } from '../control-plane/agent-control/ai-agent-llm-client';
@@ -57,6 +62,7 @@ import { AiReplySynthesisService } from '../control-plane/agent-control/ai-reply
 import { AiTicketEvidenceExtractionService } from '../control-plane/agent-control/ai-ticket-evidence-extraction.service';
 import { AiTicketNeedRepresentationService } from '../control-plane/agent-control/ai-ticket-need-representation.service';
 import { Tenant } from '../../tenants/tenant.entity';
+import { withdrawnReplySentence } from '../control-plane/agent-control/agent-control-timeline-synthesis.util';
 import { AiReadonlyDiagnosticWorkflowService } from '../control-plane/diagnostics/ai-readonly-diagnostic-workflow.service';
 import { AiAgentHelpdeskTicketingIngestionService } from '../control-plane/agent/ai-agent-helpdesk-ticketing-ingestion.service';
 import { AiAgentApprovalLifecycleSweeperService } from '../control-plane/agent/ai-agent-approval-lifecycle-sweeper.service';
@@ -11269,6 +11275,11 @@ async function testEffectivePromptExposesBoundsApplied() {
   assert.ok(preview.tasks.planner, 'the planner task must be exposed');
   assert.ok(preview.tasks.synthesis.bounds_applied.some((entry: string) => entry.startsWith('instructions_clamped')));
   assert.ok(preview.tasks.planner.bounds_applied.some((entry: string) => entry.startsWith('instructions_clamped')));
+  // The two calls that read the thread apart (lot R3 of 26.11.8) are previewed with their own floor.
+  assert.deepEqual(Object.keys(preview.tasks).sort(), ['action_planner', 'administrative_reply', 'interpreter', 'planner', 'synthesis', 'technician_brief']);
+  assert.ok(preview.tasks.action_planner.system_prompt.includes(INTERNAL_NOTES_LINE), 'the preview shows the internal notes rule');
+  assert.equal(preview.tasks.technician_brief.system_prompt, compileSystemPrompt(RUNTIME_SAFETY_FLOOR_TECHNICIAN_BRIEF, (await (service as any).compileAgentPromptRuntime(context, row)).synthesisGuidance));
+  assert.equal(preview.tasks.administrative_reply.system_prompt, compileSystemPrompt(RUNTIME_SAFETY_FLOOR_ADMINISTRATIVE_REPLY, (await (service as any).compileAgentPromptRuntime(context, row)).actionPlannerGuidance));
 }
 
 async function testAgentAutonomyGrantRequiresEligibilityAndAllowlist() {
@@ -14653,8 +14664,11 @@ function triageNotesOfEveryKind() {
 
 async function runTriageWithSimulatedModel(input: {
   notes: Array<Record<string, unknown>>;
-  plan: Record<string, unknown>;
+  // null: the planner answers nothing usable (the triage falls back).
+  plan: Record<string, unknown> | null;
   reply?: Record<string, unknown>;
+  // A model of the test: the answer of a call (null for no answer), undefined for the default one.
+  respond?: (taskName: string, payload: any) => Record<string, unknown> | null | undefined;
   knowledge?: Record<string, unknown>;
   // The agent's internal notes setting; absent when undefined.
   internalNotes?: unknown;
@@ -14664,9 +14678,25 @@ async function runTriageWithSimulatedModel(input: {
   withoutNeed?: boolean;
   // The ticket description; the default one when undefined.
   description?: string;
+  // The lifecycle context of the ticket; no transition when undefined.
+  lifecycle?: Record<string, unknown>;
+  // An inactivity threshold in the targeting and the age of the ticket: the ticket may be closed
+  // when its age passes the threshold.
+  closeTargeting?: { inactivitySeconds: number; ticketAgeHours: number };
+  // The tenant's language (the language of the note); none when undefined.
+  tenantLanguage?: string;
+  // Persona instructions, and the lines of a shared context the agent is given.
+  instructions?: string[];
+  sharedContextLines?: string[];
+  // The answers of the brief and of the reply rewrite are checked against the schema of their
+  // call, as the client does; an answer that fails it is a failed call that reports its tokens.
+  validateSchemas?: boolean;
 }) {
-  const { manager } = createMemoryManager();
+  const { manager, stores } = createMemoryManager();
   const context = createContext(manager);
+  if (input.tenantLanguage) {
+    await manager.getRepository(Tenant).save({ id: context.tenantId, metadata: { language: input.tenantLanguage } });
+  }
   const previousWebReady = Features.AI_WEB_SEARCH_READY;
   (Features as any).AI_WEB_SEARCH_READY = true;
   const queue = new AiAgentWorkQueueService();
@@ -14679,8 +14709,23 @@ async function runTriageWithSimulatedModel(input: {
       precedence: 'knowledge_first',
       ...(input.internalNotes === undefined ? {} : { internal_notes: input.internalNotes }),
     },
+    ...(input.closeTargeting
+      ? {
+        targeting: {
+          schema_version: 1,
+          combinator: 'and',
+          predicates: [{ field: 'inactivity_age', operator: 'gte', value: { seconds: input.closeTargeting.inactivitySeconds } }],
+        },
+      }
+      : {}),
   };
+  if (input.instructions) {
+    definitionBundle.definition.persona_json = { ...(definitionBundle.definition.persona_json ?? {}), instructions: input.instructions };
+  }
   await manager.getRepository(AiAgentDefinition).save(definitionBundle.definition);
+  const ticketUpdatedAt = input.closeTargeting
+    ? new Date(Date.now() - input.closeTargeting.ticketAgeHours * 3600 * 1000).toISOString()
+    : null;
   const capabilityCalls: string[] = [];
   const capabilityInputs: Array<{ capabilityName: string; input: unknown }> = [];
   const prepared: { publicReply: string | null; internalNote: string | null } = { publicReply: null, internalNote: null };
@@ -14701,13 +14746,14 @@ async function runTriageWithSimulatedModel(input: {
             status: 'processing_assigned',
             priority: 'medium',
             description: input.description ?? 'Je clique ici et il ne se passe rien. Je dois faire quoi ?',
+            ...(ticketUpdatedAt ? { createdAt: ticketUpdatedAt, updatedAt: ticketUpdatedAt } : {}),
           });
         case TICKETING_TICKET_NOTES_LIST_CAPABILITY:
           return ok({ notes: input.notes });
         case TICKETING_CLASSIFICATION_CONTEXT_CAPABILITY:
           return ok({ type: 'Incident', priority: 'Medium', urgency: 'Medium' });
         case TICKETING_LIFECYCLE_CONTEXT_CAPABILITY:
-          return ok({ allowedTransitions: [] });
+          return ok(input.lifecycle ?? { allowedTransitions: [] });
         case TICKETING_ROUTING_CONTEXT_CAPABILITY:
         case TICKETING_PARTICIPANT_CONTEXT_CAPABILITY:
           return ok({});
@@ -14782,6 +14828,16 @@ async function runTriageWithSimulatedModel(input: {
             providerKey: 'glpi',
           });
           return ok({ action_request_id: 'internal-notes-setting-public-action' });
+        case TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY:
+          await savePreparedTicketingStatusAction(context, {
+            id: 'internal-notes-setting-status-action',
+            runId,
+            toolExecutionId,
+            transitionKey: request.input.transition_key,
+            providerKey: 'glpi',
+            metadata: request.execution?.metadata ?? null,
+          });
+          return ok({ action_request_id: 'internal-notes-setting-status-action' });
         default:
           throw new Error(`Unexpected capability ${request.capabilityName}`);
       }
@@ -14792,11 +14848,26 @@ async function runTriageWithSimulatedModel(input: {
     resolveRuntime: async () => VISION_TEST_RUNTIME,
     callStructuredJsonModel: async (_context: unknown, request: any) => {
       calls.push({ taskName: request.taskName, payload: request.userPayload, images: request.images ?? null });
+      const answer = input.respond?.(request.taskName, request.userPayload);
+      const validated = input.validateSchemas && ['technician_brief', 'administrative_reply'].includes(request.taskName);
+      if (answer && validated && request.schema && !request.schema.safeParse(answer).success) {
+        return {
+          ...structuredJsonSuccess(answer, { usage: { input_tokens: 900, output_tokens: 300 } }),
+          ok: false,
+          value: null,
+          metadata: { failure: { kind: 'schema_invalid', message: 'schema invalid' }, retry_attempted: true },
+        };
+      }
+      if (answer !== undefined) return answer === null ? null : structuredJsonSuccess(answer, validated ? { usage: { input_tokens: 900, output_tokens: 300 } } : undefined);
       switch (request.taskName) {
         case 'action_planner':
-          return structuredJsonSuccess(input.plan);
+          return input.plan ? structuredJsonSuccess(input.plan) : null;
         case 'reply_synthesis':
           return structuredJsonSuccess(input.reply ?? {});
+        case 'technician_brief':
+          return structuredJsonSuccess({ technician_brief: 'Résumé complet pour le technicien.' });
+        case 'administrative_reply':
+          return structuredJsonSuccess({ body: 'Bonjour, votre demande a bien été reçue.' });
         default:
           // The other stages fall back to their deterministic result.
           if (input.everyStage) return null;
@@ -14820,6 +14891,14 @@ async function runTriageWithSimulatedModel(input: {
     input.everyStage ? new AiTicketEvidenceExtractionService(llmClient as any) : undefined,
   ) as any;
   service.getRunDetail = async () => ({ action_requests: [] });
+  if (input.sharedContextLines) {
+    service.sharedContextProfiles = {
+      resolveForAgent: async () => ({
+        resolved: true, reason: null, requested_profile_id: 'shared-r3',
+        context: { profile_id: 'shared-r3', version: 1, name: 'Contexte', lines: input.sharedContextLines },
+      }),
+    };
+  }
   try {
     await service.runTicketingTriage(context, {
       provider_key: 'glpi',
@@ -14829,7 +14908,7 @@ async function runTriageWithSimulatedModel(input: {
   } finally {
     (Features as any).AI_WEB_SEARCH_READY = previousWebReady;
   }
-  return { calls, ...prepared, capabilityCalls, capabilityInputs };
+  return { calls, ...prepared, capabilityCalls, capabilityInputs, stores };
 }
 
 // The chain of the support agent on knowledge (lot R1 of 26.11.8, tickets 94 to 96 of fromage):
@@ -15151,6 +15230,38 @@ async function knowledgeChainAdministrativeReplyCase(usable: boolean) {
   assert.ok(result.internalNote.includes('Il faut d\'abord savoir de quelle imprimante il s\'agit.'), `the note carries the planner's reason: ${result.internalNote}`);
 }
 
+// The planner's rationale and reasons are copied into the internal note: the planner writes them
+// in the language of the note, the tenant's.
+async function testThePlannerWritesItsReasonsInTheNoteLanguage() {
+  for (const [tenantLanguage, expected] of [['fr', 'fr'], ['de-DE', 'de'], [undefined, 'en']] as const) {
+    const result = await runKnowledgeChainTriage({
+      documents: [KNOWLEDGE_CHAIN_DOC_44],
+      need: KNOWLEDGE_CHAIN_NEED,
+      interpretation: () => ({ selected_refs: [], rejected: [], confidence: 0.2, rationale: 'Rien.' }),
+      reply: () => ({ language: 'fr', usable: false, requester_reply: '', technician_brief: '', used_sources: [], rejected_sources: [], confidence: 0.2 }),
+      plan: () => KNOWLEDGE_CHAIN_ESCALATION_PLAN,
+      tenantLanguage,
+    });
+    const planner = result.calls.find((call) => call.taskName === 'action_planner')!.payload;
+    assert.equal(planner.note_language, expected, `tenant language ${String(tenantLanguage)}`);
+    assert.ok((planner.rules as string[]).some((rule) => rule.includes('note_language') && rule.includes('rationale')), 'the rule names the note language');
+  }
+}
+
+// Planner unavailable and synthesis unusable: no reply to the requester is prepared, and the
+// internal note says only what is prepared.
+async function testTheFallbackNoteSaysOnlyWhatIsPrepared() {
+  const result = await runTriageWithSimulatedModel({
+    notes: triageNotes(false),
+    plan: null,
+    reply: { language: 'fr', usable: false, needs_human_review: true, requester_reply: '', technician_brief: 'Aucune source ne répond.', used_sources: [], rejected_sources: [], confidence: 0.2 },
+  });
+  assert.equal(result.publicReply, null, 'no reply to the requester');
+  assert.ok(result.internalNote, 'an internal note');
+  assert.ok(!result.internalNote.includes('ask a technician to follow up'), `the note announces a reply: ${result.internalNote}`);
+  assert.ok(result.internalNote.includes('no reply to the requester was prepared'), `note: ${result.internalNote}`);
+}
+
 function payloadOf(calls: Array<{ taskName: string; payload: unknown }>, taskName: string): string {
   const call = calls.find((candidate) => candidate.taskName === taskName);
   assert.ok(call, `${taskName} is called`);
@@ -15213,19 +15324,22 @@ function triageCallTexts(result: { calls: Array<{ payload: unknown; images: unkn
   ];
 }
 
-// With internal notes used (the setting, or no setting), every model call reads every item of
-// the ticket, as the triage did before the setting.
+// With internal notes used (the setting, or no setting), the planner and the brief to the
+// technician read every item of the ticket; the call that writes the reply to the requester reads
+// its public items only.
 async function testTriageWithInternalNotesUsedReadsEveryItem() {
   for (const internalNotes of [undefined, 'used']) {
     const sourced = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan: TRIAGE_SOURCED_PLAN, reply: TRIAGE_SOURCED_REPLY, internalNotes });
-    assert.deepEqual(sourced.calls.map((call) => call.taskName), ['action_planner', 'reply_synthesis'], `calls for ${String(internalNotes)}`);
+    assert.deepEqual(sourced.calls.map((call) => call.taskName), ['action_planner', 'reply_synthesis', 'technician_brief'], `calls for ${String(internalNotes)}`);
     assert.ok(payloadOf(sourced.calls, 'action_planner').includes(TRIAGE_INTERNAL_MARKER), 'the planner reads the internal note');
-    assert.ok(payloadOf(sourced.calls, 'reply_synthesis').includes(TRIAGE_INTERNAL_MARKER), 'the reply reads the internal note');
+    assert.ok(payloadOf(sourced.calls, 'technician_brief').includes(TRIAGE_INTERNAL_MARKER), 'the brief reads the internal note');
+    assert.ok(!payloadOf(sourced.calls, 'reply_synthesis').includes(TRIAGE_INTERNAL_MARKER), 'the reply does not read the internal note');
     assert.ok(sourced.publicReply?.includes('Relancez le service de licence depuis le portail.'));
-    assert.ok(sourced.internalNote?.includes('Résumé écrit avec la réponse.'), 'the brief written with the reply');
+    assert.ok(sourced.internalNote?.includes('Résumé complet pour le technicien.'), 'the brief written on the whole thread');
 
     const administrative = await runTriageWithSimulatedModel({ notes: triageNotes(true), plan: TRIAGE_ADMINISTRATIVE_PLAN, internalNotes });
-    assert.deepEqual(administrative.calls.map((call) => call.taskName), ['action_planner'], 'the planner writes its administrative reply');
+    assert.deepEqual(administrative.calls.map((call) => call.taskName), ['action_planner', 'administrative_reply'], 'the administrative reply is written again');
+    assert.ok(!payloadOf(administrative.calls, 'administrative_reply').includes(TRIAGE_INTERNAL_MARKER));
     assert.equal(administrative.publicReply, 'Bonjour, votre demande a bien été reçue.');
 
     for (const withoutNeed of [false, true]) {
@@ -15245,14 +15359,453 @@ async function testTriageWithInternalNotesUsedReadsEveryItem() {
         'knowledge_result_interpretation',
         'action_planner',
         'reply_synthesis',
+        'technician_brief',
       ]);
       // The need and the interpreter read the requester's messages and the agent's previous
-      // answer only; the search planner, the action planner and the reply read every item.
-      for (const taskName of [...(withoutNeed ? ['knowledge_search_plan'] : []), 'action_planner', 'reply_synthesis']) {
+      // answer only; the search planner, the action planner and the brief read every item.
+      for (const taskName of [...(withoutNeed ? ['knowledge_search_plan'] : []), 'action_planner', 'technician_brief']) {
         assert.ok(payloadOf(everyStage.calls, taskName).includes(TRIAGE_INTERNAL_MARKER), `${taskName} reads the internal note`);
       }
+      assert.ok(!payloadOf(everyStage.calls, 'reply_synthesis').includes(TRIAGE_INTERNAL_MARKER), 'the reply does not read the internal note');
       assert.ok(JSON.stringify(everyStage.calls.map((call) => call.payload)).includes(TRIAGE_SCREENSHOT_MARKER), 'the screenshot of the internal note is read');
     }
+  }
+}
+
+// The rule of the internal notes setting (lot R3 of 26.11.8), on a simulated model that writes
+// back every marked phrase it is given. With "used", the planner and the brief to the technician
+// read the internal note; no call that writes a reply to the requester reads it, directly or
+// through what an earlier stage wrote after reading it, and the reply does not carry it, for every
+// kind of reply. With "ignored", no call reads it. Without an internal note, no call is added.
+const R3_INTERNAL_MARKER = 'MARQUE-NOTE-INTERNE-7f3a';
+const R3_PUBLIC_MARKER = 'MARQUE-SUIVI-PUBLIC-2c9d';
+
+function r3Notes(withInternalNotes: boolean) {
+  const screenshot = (id: string, noteId: string, filename: string) => ({
+    id, kind: 'image', source: 'ticket_note', sourceNoteId: noteId, target: `/front/document.send.php?docid=${id}`, filename, mimeType: 'image/png',
+  });
+  return [
+    {
+      id: '1', visibility: 'public', authorRole: 'requester', createdAt: '2026-06-02T08:00:00.000Z',
+      body: `L'application ne démarre toujours pas ${R3_PUBLIC_MARKER}.`,
+      attachments: [screenshot('7701', '1', 'ecran.png')],
+    },
+    ...(withInternalNotes ? [
+      {
+        id: '2', visibility: 'internal', authorRole: 'support', createdAt: '2026-06-02T09:00:00.000Z',
+        body: `Note du technicien ${R3_INTERNAL_MARKER} : licence expirée.`,
+        attachments: [screenshot('7702', '2', `capture-${R3_INTERNAL_MARKER}.png`)],
+      },
+      {
+        id: '5', visibility: 'internal', authorRole: 'requester', createdAt: '2026-06-02T11:00:00.000Z',
+        body: `Suivi privé du demandeur ${R3_INTERNAL_MARKER}.`,
+      },
+    ] : []),
+  ];
+}
+
+function r3Echo(payload: unknown): string {
+  const text = JSON.stringify(payload);
+  return [R3_INTERNAL_MARKER, R3_PUBLIC_MARKER].filter((marker) => text.includes(marker)).join(' ');
+}
+
+const R3_REPLY_TASKS = ['reply_synthesis', 'administrative_reply'];
+
+type R3Answer = (payload: any) => Record<string, unknown> | null;
+
+// kind: one of the three replies, or the plan the simulated planner returns. overrides: the
+// answers of some calls (null for no answer: the call fails).
+async function runR3Triage(
+  kind: 'sourced' | 'administrative' | 'fallback' | R3Answer,
+  internalNotes: 'used' | 'ignored',
+  withInternalNotes = true,
+  overrides: Record<string, R3Answer> = {},
+  extra: {
+    lifecycle?: Record<string, unknown>;
+    closeTargeting?: { inactivitySeconds: number; ticketAgeHours: number };
+    tenantLanguage?: string;
+    instructions?: string[];
+    sharedContextLines?: string[];
+    validateSchemas?: boolean;
+  } = {},
+) {
+  return runTriageWithSimulatedModel({
+    notes: r3Notes(withInternalNotes),
+    plan: null,
+    internalNotes,
+    everyStage: true,
+    ...extra,
+    respond: (taskName, payload) => {
+      if (overrides[taskName]) return overrides[taskName](payload);
+      if (taskName === 'action_planner' && typeof kind === 'function') return kind(payload);
+      switch (taskName) {
+        case 'ticket_image_evidence_extraction':
+          return {
+            verbatim_text: [String(payload.attachment?.filename)], error_codes: [], ui_labels: [], screen: null, visible_app: null,
+            language: 'fr', summary: `Capture ${String(payload.attachment?.filename)}`, confidence: 0.8, warnings: [],
+          };
+        case 'ticket_need_representation':
+          return { intent: `Besoin ${r3Echo(payload)}`, language: 'fr', symptoms: ['ne démarre pas'], search_terms: { fr: ['licence'] }, confidence: 0.7 };
+        case 'knowledge_result_interpretation':
+          return { selected_refs: ['DOC-64'], rejected: [], confidence: 0.8, rationale: `Retenu ${r3Echo(payload)}` };
+        case 'reply_synthesis':
+          return {
+            language: 'fr', usable: true, needs_human_review: false,
+            requester_reply: `Relancez le service de licence depuis le portail. ${r3Echo(payload)}`,
+            technician_brief: `Résumé public ${r3Echo(payload)}`,
+            used_sources: [{ kind: 'knowledge', ref: 'DOC-64', url: null, title: 'Démarrage de l\'application' }],
+            rejected_sources: [], confidence: 0.8,
+          };
+        case 'technician_brief':
+          return { technician_brief: `Résumé complet ${r3Echo(payload)}` };
+        case 'administrative_reply':
+          return { body: `Bonjour, pouvez-vous préciser le poste concerné ? ${r3Echo(payload)}` };
+        case 'action_planner':
+          if (kind === 'fallback') return null;
+          return kind === 'sourced'
+            ? {
+              actions: [
+                { action_type: 'internal_note', reason: `Documenter ${r3Echo(payload)}.` },
+                { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: `Répondre ${r3Echo(payload)}.` },
+              ],
+              rationale: `Raisonnement ${r3Echo(payload)}.`,
+              confidence: 0.8,
+            }
+            : {
+              actions: [
+                { action_type: 'internal_note', reason: 'Documenter.' },
+                {
+                  action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: 'other',
+                  reason: `Demander le poste ${r3Echo(payload)}.`,
+                  body: `Bonjour, pouvez-vous préciser le poste ? ${r3Echo(payload)}`,
+                },
+              ],
+              rationale: `Raisonnement ${r3Echo(payload)}.`,
+              confidence: 0.8,
+            };
+        default:
+          return undefined;
+      }
+    },
+  });
+}
+
+// A plan with two replies to the requester, internal notes used: no body the planner wrote goes
+// out, whether the rewrite on the public items works, fails or passes the cap (lot R3, review).
+async function testAPlanWithTwoRepliesSendsNoPlannerBody() {
+  const draft = (intent: string) => (payload: any) => ({
+    action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: intent,
+    reason: `Réponse ${intent}.`, body: `Brouillon ${intent} ${r3Echo(payload)}`,
+  });
+  const twoDrafts: R3Answer = (payload) => ({
+    actions: [{ action_type: 'internal_note', reason: 'Documenter.' }, draft('acknowledgement')(payload), draft('other')(payload)],
+    rationale: 'Plan.', confidence: 0.8,
+  });
+  const sourcedThenDraft: R3Answer = (payload) => ({
+    actions: [
+      { action_type: 'internal_note', reason: 'Documenter.' },
+      { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: 'Répondre.' },
+      draft('other')(payload),
+    ],
+    rationale: 'Plan.', confidence: 0.8,
+  });
+  const unusable: R3Answer = () => ({ language: 'fr', usable: false, requester_reply: '', technician_brief: 'Rien.', used_sources: [], rejected_sources: [], confidence: 0.2 });
+  const cases: Array<[string, R3Answer, Record<string, R3Answer>]> = [
+    ['two drafts, rewrite fails', twoDrafts, { administrative_reply: () => null }],
+    ['two drafts, empty rewrite', twoDrafts, { administrative_reply: () => ({ body: '' }) }],
+    ['sourced and draft, unusable synthesis, rewrite fails', sourcedThenDraft, { reply_synthesis: unusable, administrative_reply: () => null }],
+  ];
+  for (const [label, plan, overrides] of cases) {
+    const result = await runR3Triage(plan, 'used', true, overrides);
+    assert.ok(result.calls.some((call) => call.taskName === 'administrative_reply'), `${label}: the rewrite is attempted`);
+    assert.equal(result.publicReply, null, `${label}: no reply goes out: ${result.publicReply}`);
+    assert.ok(result.internalNote, `${label}: an internal note`);
+  }
+  const rewritten = await runR3Triage(twoDrafts, 'used');
+  assert.equal(rewritten.calls.filter((call) => call.taskName === 'administrative_reply').length, 1, 'one rewrite');
+  assert.ok(rewritten.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `the rewritten reply: ${rewritten.publicReply}`);
+  assert.ok(!rewritten.publicReply?.includes(R3_INTERNAL_MARKER));
+  const backup = await runR3Triage(sourcedThenDraft, 'used', true, { reply_synthesis: unusable });
+  assert.ok(backup.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `the draft after the withdrawn sourced answer is rewritten: ${backup.publicReply}`);
+}
+
+// The web search reads the public thread and the public description only: what the internal notes
+// say never leaves for the web, nor a query a model wrote after reading them.
+async function testTheWebSearchReadsThePublicThreadOnly() {
+  const needWithNoteWords: R3Answer = (payload) => ({
+    intent: `Besoin ${r3Echo(payload)}`, language: 'fr', symptoms: [`symptôme ${r3Echo(payload)}`],
+    search_terms: { fr: [`licence ${r3Echo(payload)}`] }, confidence: 0.7,
+  });
+  for (const internalNotes of ['used', 'ignored'] as const) {
+    for (const kind of ['sourced', 'administrative', 'fallback'] as const) {
+      const result = await runR3Triage(kind, internalNotes, true, { ticket_need_representation: needWithNoteWords });
+      const queries = result.capabilityInputs.filter((entry) => entry.capabilityName === 'web_search').map((entry) => String((entry.input as any).query));
+      assert.ok(queries.length > 0, `${internalNotes}, ${kind}: a web search`);
+      for (const query of queries) assert.ok(!query.includes(R3_INTERNAL_MARKER), `${internalNotes}, ${kind}: ${query}`);
+    }
+  }
+}
+
+// A withdrawn reply is told in the note, in one sentence in the note's language and without a
+// code, whether the note was added for it or the plan had its own.
+async function testAWithdrawnReplyIsToldInTheNoteLanguage() {
+  const draft = (withNote: boolean): R3Answer => (payload) => ({
+    actions: [
+      ...(withNote ? [{ action_type: 'internal_note', reason: 'Documenter le poste.' }] : []),
+      {
+        action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: 'acknowledgement',
+        reason: 'Accuser réception.', body: `Brouillon ${r3Echo(payload)}`,
+      },
+    ],
+    rationale: 'Accuser réception.', confidence: 0.8,
+  });
+  const sentences = new Set<string>();
+  for (const language of ['en', 'fr', 'de', 'es'] as const) {
+    const sentence = withdrawnReplySentence('administrative', true, language);
+    sentences.add(sentence);
+    assert.doesNotMatch(sentence, /_/, sentence);
+    for (const withNote of [false, true]) {
+      const result = await runR3Triage(draft(withNote), 'used', true, { administrative_reply: () => null }, { tenantLanguage: language });
+      const label = `${language}, ${withNote ? 'the plan has a note' : 'a note is added'}`;
+      assert.equal(result.publicReply, null, label);
+      assert.ok(result.internalNote?.includes(sentence), `${label}: ${result.internalNote}`);
+      assert.equal(result.internalNote!.split(sentence).length, 2, `${label}: said once`);
+      assert.doesNotMatch(result.internalNote!, /administrative_reply_[a-z_]+|Escalate internally/, label);
+    }
+  }
+  assert.equal(sentences.size, 4, 'one sentence per language');
+}
+
+async function withEnv<T>(name: string, value: string, run: () => Promise<T>): Promise<T> {
+  const previous = process.env[name];
+  process.env[name] = value;
+  try {
+    return await run();
+  } finally {
+    if (previous === undefined) delete process.env[name];
+    else process.env[name] = previous;
+  }
+}
+
+// The brief and the reply rewrite are projected with the token limit their call uses, and a
+// failed or over-limit call leaves the triage on its safe side: the synthesis' own brief, or no
+// reply at all.
+async function testTheBriefAndTheRewriteFailClosed() {
+  await withEnv('AI_AGENT_TECHNICIAN_BRIEF_MAX_TOKENS', '1234', async () => {
+    assert.equal(new AiReplySynthesisService({} as any).maxTechnicianBriefOutputTokens(), 1234);
+  });
+  await withEnv('AI_AGENT_ADMINISTRATIVE_REPLY_MAX_TOKENS', '4321', async () => {
+    assert.equal(new AiAgentActionPlannerService({} as any).maxAdministrativeReplyOutputTokens(), 4321);
+  });
+
+  const briefCases: Array<[string, () => Promise<Awaited<ReturnType<typeof runR3Triage>>>, boolean]> = [
+    ['brief over the run limit', () => withEnv('AI_AGENT_TECHNICIAN_BRIEF_MAX_TOKENS', '50000', () => runR3Triage('sourced', 'used')), false],
+    ['brief call fails', () => runR3Triage('sourced', 'used', true, { technician_brief: () => null }), true],
+  ];
+  for (const [label, run, called] of briefCases) {
+    const result = await run();
+    assert.equal(result.calls.some((call) => call.taskName === 'technician_brief'), called, `${label}: the call`);
+    assert.ok(result.publicReply?.includes('Relancez le service de licence'), `${label}: the reply still goes out: ${result.publicReply}`);
+    assert.ok(result.internalNote?.includes('Résumé public'), `${label}: the synthesis brief: ${result.internalNote}`);
+    assert.ok(!result.internalNote?.includes('Résumé complet'), label);
+  }
+
+  const rewriteCases: Array<[string, () => Promise<Awaited<ReturnType<typeof runR3Triage>>>, boolean]> = [
+    ['rewrite over the run limit', () => withEnv('AI_AGENT_ADMINISTRATIVE_REPLY_MAX_TOKENS', '50000', () => runR3Triage('administrative', 'used')), false],
+    ['rewrite call fails', () => runR3Triage('administrative', 'used', true, { administrative_reply: () => null }), true],
+  ];
+  for (const [label, run, called] of rewriteCases) {
+    const result = await run();
+    assert.equal(result.calls.some((call) => call.taskName === 'administrative_reply'), called, `${label}: the call`);
+    assert.equal(result.publicReply, null, `${label}: no reply`);
+    assert.ok(result.internalNote?.includes(withdrawnReplySentence('administrative', true, 'en')), `${label}: ${result.internalNote}`);
+  }
+}
+
+// The rewritten reply keeps the safeguards of a reply: a line of the operating context never goes
+// to the requester, and a configured exact message is sent exactly.
+async function testTheRewrittenReplyKeepsTheSafeguards() {
+  const contextLine = 'Le serveur de licences interne est srv-lic-07.';
+  const leaked = await runR3Triage('administrative', 'used', true, {
+    administrative_reply: () => ({ body: `Bonjour, ${contextLine.toLocaleLowerCase()} Merci de patienter.` }),
+  }, { sharedContextLines: [contextLine] });
+  assert.ok(leaked.calls.some((call) => call.taskName === 'administrative_reply'), 'the rewrite runs');
+  assert.equal(leaked.publicReply, null, `no reply with the operating context: ${leaked.publicReply}`);
+  assert.ok(leaked.internalNote?.includes(withdrawnReplySentence('administrative', true, 'en')), `${leaked.internalNote}`);
+  const clean = await runR3Triage('administrative', 'used', true, {}, { sharedContextLines: [contextLine] });
+  assert.ok(clean.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `a reply without it goes out: ${clean.publicReply}`);
+
+  const exact = 'Bien reçu, nous revenons vers vous rapidement.';
+  const snapped = await runR3Triage('administrative', 'used', true, {
+    administrative_reply: () => ({ body: exact.toLocaleUpperCase() }),
+  }, { instructions: [`Pour accuser réception, répondre exactement "${exact}"`] });
+  assert.equal(snapped.publicReply, exact, 'the configured message, exactly');
+}
+
+function r3Step(result: { stores: Map<string, any[]> }, capabilityName: string) {
+  return (result.stores.get(AiRunStep.name) ?? []).find((step: any) => step.capability_name === capabilityName);
+}
+
+// A brief longer than the note shows is no failure: the note shows it cut at the end of a sentence.
+async function testALongBriefIsCutAtASentence() {
+  const sentence = (index: number) => `Point ${index} du résumé complet pour le technicien, vérifié sur tout le fil.`;
+  const long = Array.from({ length: 40 }, (_entry, index) => sentence(index + 1)).join(' ');
+  assert.ok(long.length > 2500);
+  const result = await runR3Triage('sourced', 'used', true, { technician_brief: () => ({ technician_brief: long }) }, { validateSchemas: true });
+  assert.equal(r3Step(result, 'technician_brief_synthesis')?.status, 'completed', 'the step succeeds');
+  const note = result.internalNote ?? '';
+  assert.ok(note.includes(sentence(1)), `the note shows the brief of the step: ${note}`);
+  const shown = note.slice(note.indexOf(sentence(1))).split('\n')[0];
+  assert.ok(/\.$/.test(shown) && !shown.endsWith('...'), `cut at the end of a sentence: …${shown.slice(-60)}`);
+  const brief = (result.calls.find((call) => call.taskName === 'technician_brief')?.payload ?? {}) as any;
+  assert.ok((brief.rules as string[]).some((rule) => /1000 characters/.test(rule)), 'the length is asked in the prompt');
+}
+
+// A paid call counts in the run, whether its answer is usable or not.
+async function testAFailedCallCountsItsTokens() {
+  const brief = await runR3Triage('sourced', 'used', true, { technician_brief: () => ({ technician_brief: 42 }) }, { validateSchemas: true });
+  const briefStep = r3Step(brief, 'technician_brief_synthesis');
+  assert.equal(briefStep?.status, 'failed', 'the brief step fails');
+  assert.equal(briefStep?.output_summary?.tokens, 1200, `its tokens: ${JSON.stringify(briefStep?.output_summary)}`);
+  const rewrite = await runR3Triage('administrative', 'used', true, { administrative_reply: () => ({ body: 42 }) }, { validateSchemas: true });
+  const rewriteStep = r3Step(rewrite, 'administrative_reply_synthesis');
+  assert.equal(rewriteStep?.status, 'failed', 'the rewrite step fails');
+  assert.equal(rewriteStep?.output_summary?.tokens, 1200, `its tokens: ${JSON.stringify(rewriteStep?.output_summary)}`);
+  assert.equal(rewrite.publicReply, null);
+}
+
+// The brief is written in the language of the note (the tenant's), as the planner's reasons; the
+// reply keeps the language of the ticket.
+async function testTheBriefIsInTheNoteLanguage() {
+  for (const language of ['de', 'en'] as const) {
+    const result = await runR3Triage('sourced', 'used', true, {}, { tenantLanguage: language });
+    const brief = result.calls.find((call) => call.taskName === 'technician_brief');
+    assert.equal((brief?.payload as any)?.requested_language, language, `${language}: the brief`);
+    const reply = result.calls.find((call) => call.taskName === 'reply_synthesis');
+    assert.equal((reply?.payload as any)?.requested_language, 'fr', `${language}: the reply`);
+  }
+}
+
+// The synthesis writes its brief in the language of the note and its reply in the language of the
+// ticket. When both are the same, its prompt and its payload are those of a single language.
+async function testTheSynthesisBriefIsInTheNoteLanguage() {
+  const englishNeed: R3Answer = () => ({ intent: 'Need', language: 'en', symptoms: ['does not start'], search_terms: { en: ['licence'] }, confidence: 0.7 });
+  const english = await runR3Triage('sourced', 'used', false, { ticket_need_representation: englishNeed }, { tenantLanguage: 'fr' });
+  const synthesis = english.calls.find((call) => call.taskName === 'reply_synthesis');
+  const payload = synthesis?.payload as any;
+  assert.equal(payload?.requested_language, 'en', 'the reply in the ticket language');
+  assert.equal(payload?.note_language, 'fr', 'the brief in the note language');
+  assert.ok((payload?.rules as string[]).some((rule) => rule.includes('note_language')), 'the prompt says which language goes where');
+  assert.ok(!english.calls.some((call) => call.taskName === 'technician_brief'), 'no internal note: no separate brief');
+
+  const builder = new AiReplySynthesisService({} as any);
+  const base = { ticket: { id: '1', title: 'T', description: 'D' }, timeline: [], language: 'fr', knowledgeDocs: [], webResults: [] };
+  const single = builder.buildPromptPayload(base as any);
+  assert.deepEqual(builder.buildPromptPayload({ ...base, noteLanguage: 'fr' } as any), single, 'same languages: the same payload');
+  assert.ok(!('note_language' in single));
+}
+
+// The names of the workspace's applications are read once per triage, in the workspace only, and
+// only when a code opens the ticket title.
+async function testTheTitleCodesReadTheWorkspaceApplicationsOnce() {
+  const reads: unknown[] = [];
+  const context = {
+    tenantId: 'tenant-r3',
+    manager: {
+      getRepository: (entity: unknown) => {
+        assert.equal(entity, Application);
+        return { find: async (options: unknown) => { reads.push(options); return [{ name: 'Sage X3' }]; } };
+      },
+    },
+  };
+  const service = Object.create(AiAgentControlService.prototype);
+  assert.deepEqual([...await service.applicationKeysForTitleCodes(context, 'Outlook plante')], []);
+  assert.equal(reads.length, 0, 'no read without a code');
+  const keys: Set<string> = await service.applicationKeysForTitleCodes(context, 'X3 R8 bloqué');
+  assert.equal(reads.length, 1, 'one read');
+  assert.deepEqual((reads[0] as any).where, { tenant_id: 'tenant-r3' });
+  assert.ok(keys.has('x3') && keys.has('sage x3') && !keys.has('r8'));
+}
+
+// A closing reply that cannot be written on the public thread is withdrawn with the close it came
+// with: nothing goes to the requester and the ticket stays open.
+async function testAWithdrawnClosingReplyWithdrawsTheClose() {
+  const closePlan: R3Answer = (payload) => ({
+    actions: [
+      {
+        action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: 'close_reply',
+        reason: 'Clore le ticket inactif.', body: `Nous clôturons ce ticket ${r3Echo(payload)}`,
+      },
+      { action_type: 'status_update', transition_key: 'resolved', reason: 'Ticket inactif.' },
+    ],
+    rationale: 'Clôture.', confidence: 0.8,
+  });
+  const extra = {
+    lifecycle: { terminal: false, allowedTransitions: [{ key: 'resolved', label: 'Resolved', destructive: true, terminal: true }] },
+    closeTargeting: { inactivitySeconds: 24 * 3600, ticketAgeHours: 48 },
+  };
+  const closed = await runR3Triage(closePlan, 'used', true, {}, extra);
+  assert.ok(closed.publicReply?.startsWith('Bonjour, pouvez-vous préciser le poste concerné ?'), `the closing reply is rewritten: ${closed.publicReply}`);
+  assert.ok(closed.capabilityCalls.includes(TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY), 'the close is prepared with its reply');
+  for (const [label, overrides] of [
+    ['rewrite fails', { administrative_reply: () => null }],
+    ['empty rewrite', { administrative_reply: () => ({ body: '' }) }],
+  ] as Array<[string, Record<string, R3Answer>]>) {
+    const result = await runR3Triage(closePlan, 'used', true, overrides, extra);
+    assert.equal(result.publicReply, null, `${label}: no closing reply`);
+    assert.ok(!result.capabilityCalls.includes(TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY), `${label}: no close without its reply`);
+    assert.ok(result.internalNote?.includes(withdrawnReplySentence('close', true, 'en')), `${label}: the note says so: ${result.internalNote}`);
+  }
+}
+
+// The language of the reply comes from a model that read the internal notes: only a language
+// code passes; anything else gives the language of the public ticket.
+async function testTheReplyLanguageIsALanguageCode() {
+  const need = (language: string): R3Answer => () => ({ intent: 'Besoin', language, symptoms: ['ne démarre pas'], search_terms: { fr: ['licence'] }, confidence: 0.7 });
+  for (const [language, expected] of [[R3_INTERNAL_MARKER, 'fr'], ['fr, licence expirée', 'fr'], ['DE', 'de'], ['en-gb', 'en-gb']] as const) {
+    for (const kind of ['sourced', 'administrative'] as const) {
+      const result = await runR3Triage(kind, 'used', true, { ticket_need_representation: need(language) });
+      for (const call of result.calls.filter((entry) => R3_REPLY_TASKS.includes(entry.taskName))) {
+        assert.equal((call.payload as any).requested_language, expected, `${kind}, ${language}: ${call.taskName}`);
+      }
+    }
+  }
+}
+
+async function testThePublicReplyReadsThePublicThreadOnly() {
+  const before = ['ticket_image_evidence_extraction', 'ticket_need_representation', 'knowledge_result_interpretation', 'reply_synthesis', 'action_planner'];
+  const expected: Record<string, string[]> = {
+    sourced: [...before, 'technician_brief'],
+    administrative: [...before, 'administrative_reply'],
+    fallback: [...before, 'technician_brief'],
+  };
+  for (const kind of ['sourced', 'administrative', 'fallback'] as const) {
+    const used = await runR3Triage(kind, 'used');
+    const label = `${kind}, used`;
+    assert.deepEqual(used.calls.map((call) => call.taskName), ['ticket_image_evidence_extraction', ...expected[kind]], label);
+    assert.ok(payloadOf(used.calls, 'action_planner').includes(R3_INTERNAL_MARKER), `${label}: the planner reads the internal note`);
+    for (const call of used.calls.filter((entry) => R3_REPLY_TASKS.includes(entry.taskName))) {
+      const text = JSON.stringify(call.payload);
+      assert.ok(!text.includes(R3_INTERNAL_MARKER), `${label}: ${call.taskName} reads the internal note: ${text.slice(Math.max(0, text.indexOf(R3_INTERNAL_MARKER) - 200), text.indexOf(R3_INTERNAL_MARKER) + 40)}`);
+      assert.ok(text.includes(R3_PUBLIC_MARKER), `${label}: ${call.taskName} reads the public message`);
+    }
+    assert.ok(used.publicReply, `${label}: a reply to the requester`);
+    assert.ok(!used.publicReply.includes(R3_INTERNAL_MARKER), `${label}: the reply carries the internal note: ${used.publicReply}`);
+    assert.ok(used.publicReply.includes(R3_PUBLIC_MARKER), `${label}: the reply is written from the public message`);
+    if (kind !== 'administrative') {
+      assert.ok(payloadOf(used.calls, 'technician_brief').includes(R3_INTERNAL_MARKER), `${label}: the brief reads the internal note`);
+      assert.ok(used.internalNote?.includes(`Résumé complet ${R3_INTERNAL_MARKER}`), `${label}: the note carries the brief on the whole thread: ${used.internalNote}`);
+    }
+
+    const ignored = await runR3Triage(kind, 'ignored');
+    assert.deepEqual(ignored.calls.map((call) => call.taskName), before, `${kind}, ignored`);
+    for (const text of triageCallTexts(ignored)) assert.ok(!text.includes(R3_INTERNAL_MARKER), `${kind}, ignored: a call reads the internal note`);
+    assert.ok(!ignored.publicReply?.includes(R3_INTERNAL_MARKER));
+    assert.ok(!ignored.internalNote?.includes(R3_INTERNAL_MARKER));
+
+    // Without an internal note, the triage makes the calls it made before the rule.
+    const plain = await runR3Triage(kind, 'used', false);
+    assert.deepEqual(plain.calls.map((call) => call.taskName), before, `${kind}, no internal note`);
   }
 }
 
@@ -15601,7 +16154,8 @@ async function testGlpiTriageDowngradesUnusableSourcedReplyToInternalNoteAndHono
   assert.equal(statusUpdatePrepared, false);
   // Fix 3: the downgrade is an internal escalation, so the note carries the agent's escalation
   // rationale and NOT the misleading "synthesis unavailable / complete manually" boilerplate.
-  assert.match(internalNoteBody, /Escalate internally because sourced reply synthesis was not usable/);
+  assert.ok(internalNoteBody.includes(withdrawnReplySentence('sourced', true, 'en')), internalNoteBody);
+  assert.doesNotMatch(internalNoteBody, /invalid_or_ungrounded_synthesis/);
   assert.doesNotMatch(internalNoteBody, /complete the requester answer manually/i);
   assert.doesNotMatch(internalNoteBody, /Possible sources found \(fallback mode/);
   assert.equal(calls.some((call) => call.capabilityName === TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY), true);
@@ -18111,6 +18665,21 @@ async function run() {
   await testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale();
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();
   await testTriageWithInternalNotesUsedReadsEveryItem();
+  await testThePublicReplyReadsThePublicThreadOnly();
+  await testAPlanWithTwoRepliesSendsNoPlannerBody();
+  await testTheReplyLanguageIsALanguageCode();
+  await testThePlannerWritesItsReasonsInTheNoteLanguage();
+  await testTheFallbackNoteSaysOnlyWhatIsPrepared();
+  await testAWithdrawnClosingReplyWithdrawsTheClose();
+  await testTheTitleCodesReadTheWorkspaceApplicationsOnce();
+  await testTheWebSearchReadsThePublicThreadOnly();
+  await testAWithdrawnReplyIsToldInTheNoteLanguage();
+  await testTheBriefAndTheRewriteFailClosed();
+  await testTheRewrittenReplyKeepsTheSafeguards();
+  await testALongBriefIsCutAtASentence();
+  await testAFailedCallCountsItsTokens();
+  await testTheBriefIsInTheNoteLanguage();
+  await testTheSynthesisBriefIsInTheNoteLanguage();
   await testKnowledgeChainAnswersAFrenchTicketFromAnEnglishArticle();
   await testKnowledgeChainRetainedDocumentThatDoesNotAnswer();
   await testKnowledgeChainAdministrativeReplyKeepsItsNote();

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { linkedParticipationScope, linksOutsideScope } from '../common/relations/linked-reads';
+import { linkedModuleNotReadable, linkedParticipationScope, linksOutsideScope, loadLinkedReads } from '../common/relations/linked-reads';
 import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
@@ -256,9 +256,28 @@ export class TasksUnifiedService {
     );
   }
 
+  /**
+   * Whether the task side changes its links of `module`. A person who does not read the module
+   * neither adds nor removes them, and learns nothing of an id: any id is refused the same way
+   * (403 whatever it names), and an empty list (a creation form sends one) changes nothing. The
+   * application and asset sides need no such check: their routes require the module's read.
+   */
+  private async writesTaskLinks(
+    manager: EntityManager,
+    module: 'applications' | 'assets',
+    ids: unknown,
+    fieldName: 'application_ids' | 'asset_ids',
+    opts?: { tenantId?: string; userId?: string | null },
+  ): Promise<boolean> {
+    if (!opts?.userId) return true;
+    if ((await loadLinkedReads(manager, opts.userId, opts.tenantId ?? null))[module]) return true;
+    if (this.normalizeLinkIds(ids, fieldName).length > 0) throw linkedModuleNotReadable(module);
+    return false;
+  }
+
   async setApplicationLinks(taskId: string, applicationIds: string[], opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null; audit?: TaskAuditOptions }): Promise<void> {
     const manager = opts?.manager ?? this.repo.manager;
-    const run = (mg: EntityManager) => this.syncTaskLinks({
+    const run = async (mg: EntityManager) => (await this.writesTaskLinks(mg, 'applications', applicationIds, 'application_ids', opts)) ? this.syncTaskLinks({
       taskId,
       ids: applicationIds,
       table: 'task_applications',
@@ -270,14 +289,14 @@ export class TasksUnifiedService {
       userId: opts?.userId,
       audit: opts?.audit,
       manager: mg,
-    });
+    }) : undefined;
     if (opts?.manager) return run(manager);
     return this.dataSource.transaction(run);
   }
 
   async setAssetLinks(taskId: string, assetIds: string[], opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null; audit?: TaskAuditOptions }): Promise<void> {
     const manager = opts?.manager ?? this.repo.manager;
-    const run = (mg: EntityManager) => this.syncTaskLinks({
+    const run = async (mg: EntityManager) => (await this.writesTaskLinks(mg, 'assets', assetIds, 'asset_ids', opts)) ? this.syncTaskLinks({
       taskId,
       ids: assetIds,
       table: 'task_assets',
@@ -289,7 +308,7 @@ export class TasksUnifiedService {
       userId: opts?.userId,
       audit: opts?.audit,
       manager: mg,
-    });
+    }) : undefined;
     if (opts?.manager) return run(manager);
     return this.dataSource.transaction(run);
   }

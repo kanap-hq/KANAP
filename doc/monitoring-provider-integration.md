@@ -128,6 +128,8 @@ One row in `ai_adapter_configs` (RLS-protected, unique on `(tenant_id, provider_
 
 Secret material never goes in the row. The resolver maps the ref to an env var computed by `tenantSecretRefEnvName()` (`tenant-secret-resolver.service.ts`); the operator sets it on the backend runtime before enabling the row. Build your upsert script from `scripts/prtg-adapter-config-upsert.ts`: dry-run by default, apply requires both `<PROVIDER>_ADAPTER_CONFIG_APPLY=1` and a typed `_CONFIRM` value, prints only credential **presence/shape** and the computed env-var name. Run it with `npx ts-node scripts/prtg-adapter-config-upsert.ts` from `backend/` (header comment documents the full env set).
 
+From the settings card (`PUT` of the PRTG integration), an empty `base_url` removes a saved connection: `enabled = false`, `base_url` and `credential_ref_json` null, an `update` audit entry; the row and its other settings stay, and bound agents report the provider as unavailable on their next cycle. On a row with nothing left to remove, an empty address is a `400`, as with no row.
+
 ## 7. Agent binding, seeding, targeting
 
 The SRE agent binds via the multi-kind `provider_bindings_json` map — the `monitoring` key is required; `ticketing`/`automation` join in 15.B/15.C:

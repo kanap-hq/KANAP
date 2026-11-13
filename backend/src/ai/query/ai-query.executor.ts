@@ -64,9 +64,11 @@ import {
   AiFilterValue,
   AiFilterValuesResult,
   AiQueryResult,
+  AiWithheldField,
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
+import { aiLinkedReadNotes, mergeFieldNotes } from './ai-linked-read-notes.util';
 import { aiDataAccessCountsNote, aiDataAccessNote } from './ai-data-access-note.util';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { compareNullableText } from '../../common/list-engine/sql-fragments';
@@ -81,7 +83,7 @@ import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes
 import { entityNotFound, isUuid, resolveAiEntityReference } from '../ai-entity-reference.util';
 import { AiPolicyService } from '../ai-policy.service';
 import { LinkedReads, loadLinkedReads } from '../../common/relations/linked-reads';
-import type { PortfolioLinkedReads } from '../../portfolio/portfolio-linked-reads';
+import { idsInScope, type PortfolioLinkedReads } from '../../portfolio/portfolio-linked-reads';
 import {
   AiTechnologyRow,
   AiTechnologyVersionRow,
@@ -624,6 +626,26 @@ export function resolveAiQuerySort(
   if (!mappedField) return { ...fallback, ignored: [field] };
   const direction = sort?.direction === 'asc' ? 'asc' : 'desc';
   return { param: `${mappedField}:${direction.toUpperCase()}`, applied: { field, direction }, ignored: [] };
+}
+
+/**
+ * What a task's detail says of its linked applications and assets the person reads in part or not
+ * at all, so that the answer never turns a missing read into "none": `fields_withheld` for a family
+ * the person does not read (the field is null), `fields_partial` for a Business Contributor, whose
+ * list holds the applications of their participation only.
+ */
+function taskLinkedReadNotes(reads: LinkedReads, scopes: TaskLinkedScopes): { fields_withheld?: AiWithheldField[]; fields_partial?: AiWithheldField[] } {
+  const withheld: AiWithheldField[] = [];
+  const partial: AiWithheldField[] = [];
+  if (!reads.applications) {
+    withheld.push({ field: 'applications', reason: 'This person does not read applications (Applications, reader level): the linked applications are withheld (null), which does not mean there are none.' });
+  } else if (scopes.applications) {
+    partial.push({ field: 'applications', reason: 'This person reads only the applications they take part in (Business Contributor): the list names those, and the task may be linked to others.' });
+  }
+  if (!reads.assets) {
+    withheld.push({ field: 'assets', reason: 'This person does not read assets (Infrastructure, reader level): the linked assets are withheld (null), which does not mean there are none.' });
+  }
+  return { ...(withheld.length ? { fields_withheld: withheld } : {}), ...(partial.length ? { fields_partial: partial } : {}) };
 }
 
 /**
@@ -2053,15 +2075,22 @@ export class AiQueryExecutor {
       : {};
     const amounts = await aiAmountsCurrency(context, input.entity_type);
     const dataAccess = await aiDataAccessNote(context, input.entity_type);
-    if (!sort.ignored.length) return { ...result, sort: sort.applied, sort_ignored: [], ...limitCapped, ...amounts, ...dataAccess };
+    // The linked applications of a task or an incident the person reads in part or not at all.
+    const linked = await aiLinkedReadNotes(context, input.entity_type, this.readProbe(context));
+    const linkedNotes = {
+      ...(mergeFieldNotes(result.fields_withheld, linked.fields_withheld) ? { fields_withheld: mergeFieldNotes(result.fields_withheld, linked.fields_withheld) } : {}),
+      ...(linked.fields_partial ? { fields_partial: linked.fields_partial } : {}),
+    };
+    if (!sort.ignored.length) return { ...result, ...linkedNotes, sort: sort.applied, sort_ignored: [], ...limitCapped, ...amounts, ...dataAccess };
     // The items come in the default order, said so; a field withheld for lack of a right says why.
-    const withheld = (registry.withheldFields ?? []).filter((entry) => sort.ignored.includes(entry.field));
+    const withheld = mergeFieldNotes((registry.withheldFields ?? []).filter((entry) => sort.ignored.includes(entry.field)), linkedNotes.fields_withheld);
     return {
       ...result,
+      ...linkedNotes,
       complete: false,
       sort: sort.applied,
       sort_ignored: sort.ignored,
-      ...(withheld.length ? { fields_withheld: withheld } : {}),
+      ...(withheld ? { fields_withheld: withheld } : {}),
       sortable_fields: Object.keys(registry.sortFields),
       ...limitCapped,
       ...amounts,
@@ -3335,10 +3364,10 @@ export class AiQueryExecutor {
         id: lineId,
       }).catch(() => []);
     const linkedApplications = reads.applications
-      ? await this.budgetLines.listApplications(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] }))
+      ? await this.inParticipation(context, 'applications', await this.budgetLines.listApplications(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] })))
       : null;
     const linkedProjects = reads.projects
-      ? await this.budgetLines.listProjects(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] }))
+      ? await this.inParticipation(context, 'projects', await this.budgetLines.listProjects(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] })))
       : null;
     const linkedContracts = reads.contracts
       ? await (nature === 'opex'
@@ -3505,6 +3534,7 @@ export class AiQueryExecutor {
       projectScope: await resolveAiParticipationAccessScope(context, 'projects'),
       requestScope: await resolveAiParticipationAccessScope(context, 'requests'),
       taskScope: await resolveAiParticipationAccessScope(context, 'tasks'),
+      applicationScope: await resolveAiParticipationAccessScope(context, 'applications'),
     };
   }
 
@@ -3515,6 +3545,44 @@ export class AiQueryExecutor {
       requests: await resolveAiParticipationAccessScope(context, 'requests'),
       applications: await resolveAiParticipationAccessScope(context, 'applications'),
     };
+  }
+
+  /**
+   * The records of a linked list the caller reads: a Business Contributor's applications or projects
+   * are those of their participation, as on the Relations tab; everyone else's list is unchanged.
+   */
+  private async inParticipation<T extends { id: unknown }, L extends { items: T[] }>(
+    context: AiExecutionContextWithManager,
+    family: 'applications' | 'projects',
+    list: L,
+  ): Promise<L> {
+    const scope = await resolveAiParticipationAccessScope(context, family);
+    if (!scope || list.items.length === 0) return list;
+    const visible = await idsInScope(context.manager, family, list.items.map((item) => String(item.id)), scope);
+    return { ...list, items: list.items.filter((item) => visible.has(String(item.id))) };
+  }
+
+  /**
+   * What a detail says of its linked lists of applications or projects, so that the answer never
+   * turns a missing read into "none": `fields_withheld` for a list left null (the family is not
+   * read), `fields_partial` for a Business Contributor, whose list holds their participation only.
+   * Said whatever the list holds, so that it tells nothing of the records left out.
+   */
+  private async linkedListNotes(
+    context: AiExecutionContextWithManager,
+    row: Record<string, unknown>,
+    lists: Array<{ field: string; family: 'applications' | 'projects' }>,
+  ): Promise<{ fields_withheld?: AiWithheldField[]; fields_partial?: AiWithheldField[] }> {
+    const withheld: AiWithheldField[] = [];
+    const partial: AiWithheldField[] = [];
+    for (const { field, family } of lists) {
+      if (row[field] === null) {
+        withheld.push({ field, reason: `This person does not read ${family}: the linked ${family} are withheld (null), which does not mean there are none.` });
+      } else if (await resolveAiParticipationAccessScope(context, family)) {
+        partial.push({ field, reason: `This person reads only the ${family} they take part in (Business Contributor): the list names those, and the record may be linked to others.` });
+      }
+    }
+    return { ...(withheld.length ? { fields_withheld: withheld } : {}), ...(partial.length ? { fields_partial: partial } : {}) };
   }
 
   /** The modules the caller reads, for the linked records of a task, a project or a request. */
@@ -3591,19 +3659,21 @@ export class AiQueryExecutor {
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
     if (entityType === 'tasks') {
+      const linkedReads = await this.linkedReads(context);
+      const linkedScopes = await this.taskLinkedScopes(context);
       const row = await this.tasks.getOne(entityId, {
         manager: context.manager,
         accessScope,
         viewer: await resolveAiIncidentViewer(context),
-        linkedReads: await this.linkedReads(context),
-        linkedScopes: await this.taskLinkedScopes(context),
+        linkedReads,
+        linkedScopes,
       });
       if (!row) throw new NotFoundException('Task not found.');
       const task: any = withoutHiddenLine(row);
       // The stored `spend_item` / `capex_item` never reaches the model: both natures are one
       // `budget_line` family on the AI surface.
       if (task.related_object_type) task.related_object_type = taskRelatedFamily(task.related_object_type);
-      return this.toDetailResult(this.mapTask(row), task);
+      return { ...this.toDetailResult(this.mapTask(row), task), ...taskLinkedReadNotes(linkedReads, linkedScopes) };
     }
 
     if (entityType === 'projects') {
@@ -3728,14 +3798,14 @@ export class AiQueryExecutor {
         ? await this.assets.listLinkedContracts(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
         : null;
       row.projects = reads.projects
-        ? await this.assets.listProjects(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
+        ? await this.inParticipation(context, 'projects', await this.assets.listProjects(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] })))
         : null;
       row.cluster_members = await this.assets.listClusterMembers(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.clusters = await this.assets.listClustersForAsset(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.links = await this.assets.listLinks(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.attachments = await this.assets.listAttachments(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       Object.assign(row, vulnerabilityCountsOf((await assetVulnerabilityCounts(context.manager, context.tenantId, [row.id])).get(row.id)));
-      return this.toDetailResult(this.mapAsset(row), row);
+      return { ...this.toDetailResult(this.mapAsset(row), row), ...await this.linkedListNotes(context, row, [{ field: 'projects', family: 'projects' }]) };
     }
 
     if (entityType === 'budget_lines') {
@@ -3753,7 +3823,13 @@ export class AiQueryExecutor {
       // The id, not the reference the caller may have given (`get` accepts both).
       Object.assign(row, await this.loadBudgetLineDeepDetail(context, row.id as string, row.nature, registry));
       const consolidation = await this.consolidationLabels(context, [row], registry, await aiBudgetListAccess(this.policy, context));
-      return this.toDetailResult(this.mapBudgetLine(row, registry, consolidation), row);
+      return {
+        ...this.toDetailResult(this.mapBudgetLine(row, registry, consolidation), row),
+        ...await this.linkedListNotes(context, row, [
+          { field: 'linked_applications', family: 'applications' },
+          { field: 'projects', family: 'projects' },
+        ]),
+      };
     }
 
     if (entityType === 'contracts') {

@@ -796,6 +796,14 @@ async function testBulk() {
     await assert.rejects(svc.assignZone({ zone: 'tier_0' }, opts), (error: any) => /Choose the rows/.test(error.message));
     await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, filters: {} }, opts), (error: any) => /as_of is required/.test(error.message));
     await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, filters: {}, as_of: new Date().toISOString() }, opts), (error: any) => /expected_rows is required/.test(error.message));
+    // The common contract (`common/bulk-edit`): a dry_run that is not a boolean would write without a count.
+    for (const dryRun of ['true', 1]) {
+      await assert.rejects(
+        svc.assignZone({ zone: 'tier_0', ids: [a1], dry_run: dryRun }, opts),
+        (error: any) => error instanceof BadRequestException && /dry_run must be true or false/.test(error.message),
+      );
+    }
+    assert.equal(await zoneOf(runner, a1), 'tier_1', 'a refused dry run leaves the asset');
 
     // With all: true, filters is the list request { q?, filters? } and nothing else: a shape the
     // list would ignore must not widen the scope to every asset.

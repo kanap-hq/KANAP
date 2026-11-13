@@ -379,11 +379,9 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       get: READ, // GET :id
       importBudgetFile: BUDGET_FILE, // POST budget-file/import
       list: READ, // GET (root)
-      listApplications: READ, // GET :id/applications
       listAttachments: READ, // GET :id/attachments
       listContacts: READ, // GET :id/contacts
       listLinks: READ, // GET :id/links
-      listProjects: READ, // GET :id/projects
       listTechnologies: READ, // GET :id/technologies
       meta: READ, // GET :id/meta
       preflightBudgetFile: BUDGET_FILE, // POST budget-file/preflight
@@ -423,11 +421,9 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       get: READ, // GET :id
       importBudgetFile: BUDGET_FILE, // POST budget-file/import
       list: READ, // GET (root)
-      listApplications: READ, // GET :id/applications
       listAttachments: READ, // GET :id/attachments
       listContacts: READ, // GET :id/contacts
       listLinks: READ, // GET :id/links
-      listProjects: READ, // GET :id/projects
       listTechnologies: READ, // GET :id/technologies
       meta: READ, // GET :id/meta
       preflightBudgetFile: BUDGET_FILE, // POST budget-file/preflight

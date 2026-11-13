@@ -1,6 +1,12 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
+import { Features } from '../../config/features';
 import { GlpiService } from '../glpi/glpi.service';
+
+// The stand-in GLPI host of this spec is allowlisted, so the request-time address
+// check does not resolve it: the spec runs without DNS. Every other host is still
+// checked (testOtherHostsAreStillChecked).
+process.env.SSRF_ALLOWED_HOSTS = 'glpi.internal';
 
 function createService(glpiUrl = 'https://glpi.internal') {
   return new GlpiService(
@@ -1793,7 +1799,29 @@ async function testAFollowupIsPublicOnlyWhenGlpiMarksItNotPrivate() {
   assert.equal(isPrivate(undefined, false), true, 'is_private absent');
 }
 
+async function testOtherHostsAreStillChecked() {
+  const originalFetch = global.fetch;
+  const originalSingleTenant = Features.SINGLE_TENANT;
+  let calls = 0;
+  try {
+    (Features as any).SINGLE_TENANT = false;
+    global.fetch = (async () => {
+      calls += 1;
+      return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    await assert.rejects(
+      () => createService('https://10.0.0.5').initSession('tenant-1', {} as any),
+      (error: any) => String(error?.message || '').includes('Private or internal hosts are not allowed'),
+    );
+    assert.equal(calls, 0, 'a host outside the allowlist is refused before any request');
+  } finally {
+    (Features as any).SINGLE_TENANT = originalSingleTenant;
+    global.fetch = originalFetch;
+  }
+}
+
 async function run() {
+  await testOtherHostsAreStillChecked();
   await testAFollowupIsPublicOnlyWhenGlpiMarksItNotPrivate();
   await testInitSessionSendsJsonHeaders();
   await testInitSessionExplainsHtmlResponse();

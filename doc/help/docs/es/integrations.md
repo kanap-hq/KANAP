@@ -71,6 +71,12 @@ Configure aquí la conexión y abra después la pestaña **Netbox** de **Panoram
 
 ---
 
+## Quitar una conexión
+
+Para quitar la conexión de PRTG o de Netbox, vacíe su dirección, guarde y confirme. Kadratis elimina la dirección y el secreto almacenado, desactiva la conexión y escribe una entrada en el registro de auditoría. No se elimina nada de lo ya importado. Los agentes que leen PRTG lo indican como no disponible en su siguiente ejecución. Para quitar la conexión GLPI, desactívela, vacíe la URL y guarde.
+
+---
+
 ## Consejos
 
 - **Use una cuenta GLPI dedicada**: cree una cuenta de servicio en GLPI con justo los permisos suficientes para leer las categorías de tickets que desea exponer. Eso mantiene el registro de auditoría limpio y le permite revocar el acceso sin afectar a un usuario real. Si los agentes van a enviar respuestas y cambios de estado, otorgue a esa misma cuenta el acceso de escritura que esas acciones requieren.

@@ -10,7 +10,7 @@ import { AuditService } from '../audit/audit.service';
 import { displayName } from '../common/display-name';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { writeTaskColumns } from './task-column-write';
-import { linkedParticipationScope, loadLinkedReads } from '../common/relations/linked-reads';
+import { personReadsPartOf, withCountedLinkChanges } from '../common/relations/linked-activity';
 
 export interface TaskActivityItem {
   id: string;
@@ -176,31 +176,24 @@ export class TaskActivitiesService {
   }
 
   /**
-   * A change of the task's linked applications or assets stores their names. A reader who does not
-   * read every record of the family (no read of the module, or a Business Contributor's
-   * participation) gets each side as a count (`{ labels: null, hidden }`), as the record history
-   * says « an application ».
+   * A change of the task's linked applications or assets stores their names, its conversion the
+   * label of the request it became. A reader who does not read every record of the family (no read
+   * of the module, or a Business Contributor's participation) gets each side as a count
+   * (`{ labels: null, hidden }`), as the record history says « an application ».
    */
   private async withLinkNamesForReader<T extends { changed_fields: Record<string, [unknown, unknown]> | null }>(
     mg: EntityManager,
     rows: T[],
     userId: string | null | undefined,
   ): Promise<T[]> {
-    const changes = (row: T) => row.changed_fields?.linked_applications || row.changed_fields?.linked_assets;
+    const changes = (row: T) => row.changed_fields?.linked_applications || row.changed_fields?.linked_assets
+      || row.changed_fields?.converted_to_request;
     if (!userId || !rows.some(changes)) return rows;
-    const reads = await loadLinkedReads(mg, userId);
-    const bounded: Record<string, boolean> = {
-      linked_applications: !reads.applications || !!(await linkedParticipationScope(mg, userId, null, 'applications')),
-      linked_assets: !reads.assets,
-    };
-    const counted = (side: unknown) => (Array.isArray(side) ? { labels: null, hidden: side.length } : side);
-    return rows.map((row) => {
-      if (!changes(row)) return row;
-      const fields = { ...row.changed_fields } as Record<string, [unknown, unknown]>;
-      for (const key of Object.keys(bounded)) {
-        if (bounded[key] && Array.isArray(fields[key])) fields[key] = [counted(fields[key][0]), counted(fields[key][1])];
-      }
-      return { ...row, changed_fields: fields };
+    const partial = await personReadsPartOf(mg, userId, null, ['applications', 'assets', 'requests']);
+    return withCountedLinkChanges(rows, {
+      linked_applications: partial.applications,
+      linked_assets: partial.assets,
+      converted_to_request: partial.requests,
     });
   }
 

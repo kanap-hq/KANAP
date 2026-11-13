@@ -37,7 +37,17 @@ vi.mock('react-i18next', () => ({
     },
   }),
 }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
+// The reader's own rights: every level by default (an Administrator), or the levels listed.
+const reader = vi.hoisted(() => ({ rights: null as null | Record<string, string> }));
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({
+    hasLevel: (resource: string, level: string) => {
+      if (!reader.rights) return true;
+      const rank: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
+      return (rank[reader.rights[resource]] ?? 0) >= (rank[level] ?? 0);
+    },
+  }),
+}));
 vi.mock('../../api', () => ({ default: api }));
 vi.mock('../../components/PageHeader', () => ({ default: ({ actions }: { actions?: React.ReactNode }) => <>{actions}</> }));
 
@@ -183,6 +193,44 @@ describe('RolesPage refused writes', () => {
   });
 });
 
+describe('RolesPage levels above own rights', () => {
+  beforeEach(() => {
+    i18nState.language = 'en';
+    i18nState.text = () => undefined;
+    api.get.mockReset();
+    roles.items = [{ id: 'r1', role_name: 'Buyers', role_description: '', user_count: 0 }];
+    api.get.mockImplementation(async (url: string) => {
+      if (url === '/roles') return { data: roles };
+      if (url === '/roles/r1/permissions') return { data: { budget: 'member' } };
+      return { data: {} };
+    });
+  });
+  afterEach(() => { reader.rights = null; });
+
+  async function budgetOptions() {
+    const budget = await screen.findByRole('combobox', { name: 'roles.resources.budget' });
+    await within(budget).findByText('roles.levels.member');
+    fireEvent.mouseDown(budget);
+    return (name: string) => screen.getByRole('option', { name: `roles.levels.${name}` });
+  }
+
+  it('greys out a level above the reader\'s own, unless the role already gives it', async () => {
+    reader.rights = { users: 'admin', budget: 'reader' };
+    renderPage();
+    const option = await budgetOptions();
+    expect(option('admin')).toHaveAttribute('aria-disabled', 'true');
+    expect(option('member')).not.toHaveAttribute('aria-disabled', 'true');
+    expect(option('contributor')).not.toHaveAttribute('aria-disabled', 'true');
+    expect(option('reader')).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('offers every level to an Administrator', async () => {
+    renderPage();
+    const option = await budgetOptions();
+    expect(option('admin')).not.toHaveAttribute('aria-disabled', 'true');
+  });
+});
+
 describe('RolesPage duplicate', () => {
   beforeEach(() => {
     i18nState.language = 'en';
@@ -206,6 +254,18 @@ describe('RolesPage duplicate', () => {
     fireEvent.change(name, { target: { value: 'Acheteurs bis' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'roles.actions.duplicate' }));
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/roles/r5/duplicate', { role_name: 'Acheteurs bis' }));
+  });
+
+  it('does not offer to duplicate a role the reader may not give', async () => {
+    roles.items = [
+      { id: 'r7', role_name: 'Budget owners', role_description: '', user_count: 0, grantable: false },
+      { id: 'r8', role_name: 'Readers', role_description: '', user_count: 0, grantable: true },
+    ];
+    renderPage();
+    expect((await screen.findAllByText('Budget owners')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'roles.actions.duplicate' })).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: /Readers/ }));
+    expect(await screen.findByRole('button', { name: 'roles.actions.duplicate' })).toBeTruthy();
   });
 
   it('proposes the copy name in each language', () => {

@@ -33,6 +33,7 @@ import { CurrencySettingsService } from '../../currency/currency-settings.servic
 import { ManualRatesService } from '../../currency/manual-rates.service';
 import { aggregateExchangeRateRows, readAiExchangeRates } from './ai-exchange-rates.query';
 import { aiDataAccessNote } from './ai-data-access-note.util';
+import { aiLinkedReadNotes } from './ai-linked-read-notes.util';
 import { CostCentersService } from '../../cost-centers/cost-centers.service';
 import { aggregateCostCenterRows, filterAiCostCenters } from './ai-cost-centers.query';
 import { WorkingDayProfilesService } from '../../working-day-profiles/working-day-profiles.service';
@@ -101,7 +102,7 @@ import {
   AiFilterValue,
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
-import { resolveAiEntityRegistry } from './registries';
+import { resolveAiEntityRegistry, type AiReadProbe } from './registries';
 import { COMPANY_AGGREGATE_METRIC_YEAR_SQL } from './registries/companies.registry';
 import { isMoneyVariant, resolveFteField, resolveFteVariantField } from '../../spend/spend-summary.builder';
 import {
@@ -1925,6 +1926,11 @@ export class AiAggregateExecutor {
     return { groups, total: result.total.count, groupCount: rows.length, overall };
   }
 
+  /** Whether the caller reads a family; nothing without the policy. */
+  private readProbe(context: AiExecutionContextWithManager): AiReadProbe {
+    return async (entityType) => !!(await this.policy?.canReadEntityType(context, entityType, context.manager));
+  }
+
   async execute(
     context: AiExecutionContextWithManager,
     input: {
@@ -1941,7 +1947,13 @@ export class AiAggregateExecutor {
       scope?: AiQueryScope;
     },
   ): Promise<AiAggregateResult> {
-    const result = { ...await this.executeAggregate(context, input), ...await aiDataAccessNote(context, input.entity_type) };
+    const result = {
+      ...await this.executeAggregate(context, input),
+      ...await aiDataAccessNote(context, input.entity_type),
+      // A group, a second group or a filter on the linked applications of a task or an incident,
+      // for a person who reads only part of them: the group without an application is not "none".
+      ...await aiLinkedReadNotes(context, input.entity_type, this.readProbe(context), [input.group_by, input.then_by, ...Object.keys(input.filters ?? {})]),
+    };
     // Company turnover (sum, avg, min, max) is in the reporting currency. A count has none.
     // Attached here, as the budget and contract notes are, so chat and MCP both carry it.
     if (input.entity_type === 'companies' && result.metric === 'turnover_year') {
@@ -1999,7 +2011,8 @@ export class AiAggregateExecutor {
       !!(await this.policy?.canReadEntityType(context, entityType, context.manager)));
     const field = registry.fields[input.group_by];
     // A field the person may not read is refused with the reason (the right), never grouped as one blank group.
-    const withheld = registry.withheldFields?.find((entry) => entry.field === input.group_by);
+    const withheld = registry.withheldFields?.find((entry) => entry.field === input.group_by)
+      ?? (await aiLinkedReadNotes(context, input.entity_type, this.readProbe(context), [input.group_by])).fields_withheld?.[0];
     if (withheld) throw codedForbidden('AI_FIELD_WITHHELD', `group_by ${withheld.field} is not available: ${withheld.reason}`);
     if (!field || field.groupable !== true) {
       throw new BadRequestException('Unsupported group_by field.');

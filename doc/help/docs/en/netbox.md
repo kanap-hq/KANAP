@@ -32,7 +32,7 @@ Go to **Administration > Integrations** and open the **Netbox inventory** card.
 | Field | What to enter |
 |-------|---------------|
 | **Enable Netbox synchronisation** | The master switch. When it is off, Kadratis never calls Netbox, by hand or on a schedule. |
-| **Netbox address** | The address you use to open Netbox in a browser, for example `https://netbox.example.com`. |
+| **Netbox address** | The address you use to open Netbox in a browser, for example `https://netbox.example.com`. Empty it and save to remove the connection. |
 | **API token** | The token you created in Netbox. It is stored encrypted and never shown again. Leave the field empty when saving to keep the token already stored, as long as the address stays the same. A new address empties the stored token: enter it again. |
 | **Request timeout (seconds)** | How long to wait for Netbox before giving up, between 5 and 120. Leave it empty to use 30. |
 | **Ignore certificate errors** | Off by default. See above. |
@@ -40,6 +40,8 @@ Go to **Administration > Integrations** and open the **Netbox inventory** card.
 | **Environment for new assets** | Applied to the assets this integration creates. It is never changed afterwards. |
 
 **Test connection** makes a read-only call and reports the Netbox version it found, or the reason it failed. Run it after every change to the address or the token. The card shows **Configured** once the connection is saved and switched on. Next to it, the card shows the result and the date of the last test: "Last test succeeded on …" or "Last test failed on …". Once the settings are saved, the card offers a link to **Set up the synchronisation**, which takes you to the **Netbox** tab of **IT Landscape > Settings**.
+
+**Removing the connection.** Empty the address, save, and confirm. Kadratis deletes the address and the token, turns the connection and the automatic synchronisation off, and writes an entry to the audit log. Imported assets stay, with their link to Netbox, and so do your matches. A new connection starts again with a synchronisation you apply yourself before the hourly run resumes.
 
 ---
 
@@ -223,7 +225,7 @@ A synchronisation never sets an asset to **Retired**. Retiring equipment is a de
 
 ## Automatic synchronisation
 
-Turn **Automatic synchronisation** on in the integration card and Kadratis runs the same job every hour, applying the changes without a preview. The switch is per tenant, and only tenants that turned it on are visited. The hourly job never does the first import: it starts once you have applied a synchronisation yourself and it finished without error. Until then the switch can be on and nothing runs. The same holds while a review is unfinished: as long as objects wait for their batch, the hourly job stays on hold, because it would import what nobody has read. It resumes once a synchronisation you apply leaves nothing waiting.
+Turn **Automatic synchronisation** on in the integration card and Kadratis runs the same job every hour, applying the changes without a preview. The switch is per tenant, and only tenants that turned it on are visited. The hourly job never does the first import: it starts once you have applied a synchronisation yourself and it finished without error. Until then the switch can be on and nothing runs. An address that points to another Netbox server counts as a new first import. The same holds while a review is unfinished: as long as objects wait for their batch, the hourly job stays on hold, because it would import what nobody has read. It resumes once a synchronisation you apply leaves nothing waiting.
 
 Objects that need a decision are never resolved automatically. They pile up under **To decide** and wait for you.
 

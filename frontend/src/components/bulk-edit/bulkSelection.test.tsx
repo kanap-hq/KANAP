@@ -101,4 +101,17 @@ describe('useBulkSelection', () => {
     act(() => result.current.onCellClicked(cellOf(BULK_SELECTION_COLUMN, row('a'))));
     expect(result.current.tickedRows).toEqual([row('a')]);
   });
+
+  it('names the rows of the header box by the family of the list: rows by default, applications for the applications', () => {
+    function Harness({ family }: { family?: 'applications' }) {
+      const bulk = useBulkSelection<Row>({ rowLabel: (r) => `Select ${r.name}`, family });
+      const Header = bulk.column.headerComponent as React.ComponentType;
+      return <BulkSelectionScope value={bulk.scope}><Header /></BulkSelectionScope>;
+    }
+    const { unmount } = render(<Harness />);
+    expect(screen.getByRole('checkbox', { name: 'Select every row of the filter' })).toBeInTheDocument();
+    unmount();
+    render(<Harness family="applications" />);
+    expect(screen.getByRole('checkbox', { name: 'Select every application of the filter' })).toBeInTheDocument();
+  });
 });

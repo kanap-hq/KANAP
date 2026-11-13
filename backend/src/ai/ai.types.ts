@@ -279,6 +279,8 @@ export type AiEntityContextPayloadDto = {
   };
   related: AiEntityRelationshipGroupDto[];
   knowledge: AiKnowledgeContextDto | null;
+  /** A group that holds only the records the person takes part in (Business Contributor), and why. */
+  fields_partial?: Array<{ field: string; reason: string }>;
 };
 
 export type AiEntityContextDto = AiEntityContextPayloadDto & {
@@ -323,6 +325,9 @@ export type AiEntityDetailDto = {
   /** The line counts of the detail are narrowed by the person's data access (`aiDataAccessCountsNote`). */
   data_access?: 'limited';
   data_access_note?: string;
+  /** A linked list the person does not read (null) or reads in part, and why. */
+  fields_withheld?: Array<{ field: string; reason: string }>;
+  fields_partial?: Array<{ field: string; reason: string }>;
   total: number;
   returned: number;
   truncated: boolean;

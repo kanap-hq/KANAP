@@ -216,6 +216,8 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 - One change covers up to 5,000 lines. Above that, narrow the filters or select fewer lines
 - A large selection can take up to a minute to count, and as long to save
 - If the list changes between the count and your confirmation, the dialog shows the new count. Check it, then confirm again
+- While another budget operation is running (a column copy, a budget file import or a freeze, for example), the change is refused at once with the message "Another budget operation is running. Try again when it has finished."
+- If the count fails, click **Retry** beside the message to count again
 - Amounts cannot be changed this way. Change them on the line or in the [budget file](budget-file.md)
 - Each changed line gets its own entry in its **History** tab
 - With limited data access, you change the lines of your access. A change that would take a line out of your access is refused for that line

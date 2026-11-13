@@ -202,6 +202,20 @@ describe('TaskPropertiesDrawer linked records the person cannot read', () => {
   });
 });
 
+describe('TaskPropertiesDrawer applications read in part', () => {
+  it('keeps the field with the applications the API sends, and nothing about the others', () => {
+    // A Business Contributor gets the applications of their participation only: the field shows
+    // them (here none), with no count or mention of the applications they do not read.
+    renderDrawer({
+      readOnly: true,
+      task: task({ applications: [], application_ids: [] }),
+    });
+    const row = fieldRow('Applications');
+    expect(row).toBeTruthy();
+    expect(row.textContent).not.toMatch(/\d|other|more/i);
+  });
+});
+
 describe('TaskPropertiesDrawer labels', () => {
   it('adds and removes a label through onPatch', async () => {
     const user = userEvent.setup();

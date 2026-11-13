@@ -750,6 +750,21 @@ export function serializeTicketImageExtraction(result: TicketEvidenceExtractionR
   };
 }
 
+/**
+ * What the reply to the requester reads of the interpretation when the agent read internal notes:
+ * the documents retained or rejected and the facets, without the texts the interpreter wrote after
+ * reading the ticket (its rationale, its reasons, its warnings).
+ */
+export function knowledgeInterpretationWithoutTexts(interpretation: KnowledgeResultInterpretation): Record<string, unknown> {
+  return {
+    source: interpretation.source,
+    selected_refs: interpretation.selected_refs,
+    rejected_refs: interpretation.rejected.map((entry) => entry.ref),
+    facet_match: interpretation.facet_match ?? null,
+    confidence: interpretation.confidence,
+  };
+}
+
 export function serializeKnowledgeInterpretation(interpretation: KnowledgeResultInterpretation): Record<string, unknown> {
   return {
     source: interpretation.source,

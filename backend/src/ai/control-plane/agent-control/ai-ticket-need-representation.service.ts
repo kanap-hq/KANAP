@@ -89,6 +89,50 @@ export function isNonApplicationWord(value: string): boolean {
   const key = stripAccents(words[0]).toLocaleLowerCase().replace(/['\u2019].*$/, '').replace(/[^\p{L}\p{N}]+/gu, '');
   return !key || NON_APPLICATION_WORDS.has(key);
 }
+
+// A code that opens a ticket title (« R8 R1 VPN », « INC4521 Outlook plante »): letters then digits.
+const TITLE_HEAD_CODE = /^[\p{L}]{1,4}-?\d{1,6}$/u;
+
+function codeWords(value: string): string[] {
+  return stripAccents(normalizeText(value)).toLocaleLowerCase().split(/[^\p{L}\p{N}-]+/u).filter(Boolean);
+}
+
+/** The codes that open a ticket title, in lower case (« R8 R1 VPN » gives r8 and r1). */
+export function titleHeadCodes(title: string | null | undefined): string[] {
+  const codes: string[] = [];
+  for (const word of codeWords(title ?? '')) {
+    if (!TITLE_HEAD_CODE.test(word)) break;
+    codes.push(word);
+  }
+  return codes;
+}
+
+/** The keys a code is compared with: each application name and each word of it, in lower case. */
+export function applicationNameKeys(names: readonly string[]): Set<string> {
+  const keys = new Set<string>();
+  for (const name of names) {
+    const whole = stripAccents(normalizeText(name)).toLocaleLowerCase();
+    if (whole) keys.add(whole);
+    for (const word of codeWords(name)) keys.add(word);
+  }
+  return keys;
+}
+
+/**
+ * The application names without those opened by a code of the ticket title that names no
+ * application of the workspace: such a code names the ticket. A name is kept or set aside whole,
+ * never shortened (« S4 HANA » stays « S4 HANA » when S4 names an application).
+ */
+export function withoutTitleHeadCodes(
+  names: string[],
+  title: string | null | undefined,
+  applicationKeys: ReadonlySet<string> = new Set(),
+): string[] {
+  const codes = new Set(titleHeadCodes(title).filter((code) => !applicationKeys.has(code)));
+  if (codes.size === 0) return names;
+  return names.filter((name) => !codes.has(codeWords(name)[0] ?? ''));
+}
+
 const QUERY_STOPWORDS = new Set([
   'avec', 'avoir', 'besoin', 'cest', 'cherche', 'chercher', 'comment', 'dans',
   'des', 'donc', 'elle', 'est', 'etes', 'etre', 'faire', 'faut', 'for', 'from',
@@ -882,21 +926,38 @@ export class AiTicketNeedRepresentationService {
     need: TicketNeedRepresentation | null;
     fallbackTitle?: string | null;
     fallbackDescription?: string | null;
+    // The names of the workspace's applications and their words (applicationNameKeys): a code
+    // opening the title that is one of them stays an application name.
+    applicationKeys?: ReadonlySet<string>;
   }): KnowledgeQueryDerivation {
     const need = input.need ?? emptyNeed();
     const exactBucket = { queries: [] as string[], dropped: [] as KnowledgeQueryDerivation['dropped_queries'], seen: new Set<string>() };
     const facetBucket = { queries: [] as string[], dropped: [] as KnowledgeQueryDerivation['dropped_queries'], seen: exactBucket.seen };
     const fallbackBucket = { queries: [] as string[], dropped: [] as KnowledgeQueryDerivation['dropped_queries'], seen: exactBucket.seen };
 
-    const applications = need.entities.applications.filter((application) => !isNonApplicationWord(application));
-    const modules = need.entities.modules.filter((module) => !isNonApplicationWord(module));
+    const applications = withoutTitleHeadCodes(need.entities.applications, input.fallbackTitle, input.applicationKeys)
+      .filter((application) => !isNonApplicationWord(application));
+    const modules = withoutTitleHeadCodes(need.entities.modules, input.fallbackTitle, input.applicationKeys)
+      .filter((module) => !isNonApplicationWord(module));
     const screens = need.entities.screens;
     const symptoms = uniqueStrings([...need.symptoms, ...need.constraints.positive], MAX_FIELD_ITEMS);
     const actions = need.actions_attempted;
     const primaryApp = firstAvailable([...applications, ...modules]);
     const primarySymptom = firstAvailable(symptoms);
 
+    // A code whose first word opens the title, names no application of the workspace and is not in
+    // the description is the ticket's label, whatever kind the model gives it: no exact query.
+    const titleCodes = new Set(titleHeadCodes(input.fallbackTitle).filter((code) => !input.applicationKeys?.has(code)));
+    const describedWords = new Set(codeWords(input.fallbackDescription ?? ''));
+    const isTitleLabel = (value: string) => {
+      const first = codeWords(value)[0] ?? '';
+      return titleCodes.has(first) && !describedWords.has(first);
+    };
     for (const code of need.exact_codes) {
+      if (isTitleLabel(code.value)) {
+        exactBucket.dropped.push({ query: code.value, reason: 'title_code_names_nothing' });
+        continue;
+      }
       addQuery(exactBucket, code.value, 'exact_code');
       if (primaryApp) addQuery(exactBucket, `${code.value} ${primaryApp}`, 'exact_code_with_application');
       if (primarySymptom) addQuery(exactBucket, `${code.value} ${primarySymptom}`, 'exact_code_with_symptom');

@@ -37,7 +37,7 @@ Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget e
 
 Les colonnes budgétaires sont Budget, Révision, Prévision, Réalisé et Atterrissage prévu. Ce sont les noms standard. Votre organisation peut les renommer, en masquer certaines et choisir une colonne par défaut dans [Colonnes budgétaires](#colonnes-budgetaires). Chaque page ci-dessous affiche les noms choisis par votre organisation.
 
-Tant qu'une de ces opérations est en cours, les lignes budgétaires ne peuvent pas être enregistrés : une modification affiche le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » jusqu'à la fin de l'opération.
+Tant qu'une de ces opérations est en cours, les lignes budgétaires ne peuvent pas être enregistrées : une modification affiche le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » jusqu'à la fin de l'opération. De même, une opération est refusée avec ce message tant qu'une modification de plusieurs lignes à la fois est en cours.
 
 ---
 

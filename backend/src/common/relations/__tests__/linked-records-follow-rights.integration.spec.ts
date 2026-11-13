@@ -478,26 +478,13 @@ async function testTaskScreens(h: Harness, runner: QueryRunner, s: Seed) {
 
 // 11. Portfolio routes.
 async function testPortfolioRoutes(h: Harness, runner: QueryRunner, s: Seed) {
-  const a = tenantRequest(runner, s, 'a');
-  await rejects(runner, () => h.projectsController.listLinkedApplications('PRJ-1', a), /cannot read applications/, 'A: project applications refused');
-  await rejects(runner, () => h.projectsController.listLinkedAssets('PRJ-1', a), /cannot read assets/, 'A: project assets refused');
-  const aReq = rawRequest(runner, s, 'a');
-  await rejects(runner, () => h.requestsController.listLinkedApplications('REQ-1', aReq), /cannot read applications/, 'A: request applications refused');
-  await rejects(runner, () => h.requestsController.listLinkedAssets('REQ-1', aReq), /cannot read assets/, 'A: request assets refused');
-
-  const e = tenantRequest(runner, s, 'e');
-  const eApps = await h.projectsController.listLinkedApplications('PRJ-1', e);
-  assert.deepEqual(eApps.items, [], 'E: the application is outside their participation');
-  const full = tenantRequest(runner, s, 'full');
-  assert.equal((await h.projectsController.listLinkedApplications('PRJ-1', full)).items.length, 1, 'full: the application');
-  assert.equal((await h.requestsController.listLinkedAssets('REQ-1', rawRequest(runner, s, 'full'))).items.length, 1, 'full: the asset');
-
+  // The linked applications and assets of a project or a request are read through its Relations tab.
   const pProject = await h.projectsController.get('PRJ-1', { include: 'source_requests,dependencies' }, tenantRequest(runner, s, 'p'));
   assert.equal(pProject.source_requests, null, 'P: no source request on the project page');
   const qRequest = await h.requestsController.get('REQ-1', { include: 'projects,dependencies' }, rawRequest(runner, s, 'q'));
   assert.equal(qRequest.resulting_projects, null, 'Q: no resulting project on the request page');
   assert.deepEqual(qRequest.dependencies, [], 'Q: no project dependency on the request page');
-  const aRequest = await h.requestsController.get('REQ-1', { include: 'projects,dependencies' }, aReq);
+  const aRequest = await h.requestsController.get('REQ-1', { include: 'projects,dependencies' }, rawRequest(runner, s, 'a'));
   assert.equal(aRequest.resulting_projects.length, 1, 'A: the resulting project');
 }
 
@@ -560,11 +547,11 @@ async function testTaskParticipation(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual([outside.related_object_id, outside.related_object_name], [null, null], 'E: no project id or name');
   assert.equal(outside.phase_name, null, 'E: no phase');
   assert.deepEqual([outside.converted_request_id, outside.converted_request_item_number], [null, null], 'E: no converted request');
-  assert.deepEqual([outside.applications, outside.application_ids], [null, null], 'E: no application field');
+  assert.deepEqual([outside.applications, outside.application_ids], [[], []], 'E: no application outside their participation');
   hasNot(outside, hidden, 'E, task page outside their participation');
   const inside = await h.tasksController.getOne('T-1', eReq);
   assert.equal(inside.related_object_name, PROJECT, 'E: the project they take part in');
-  assert.equal(inside.applications, null, 'E: an application outside their participation hides the field');
+  assert.deepEqual(inside.applications, [], 'E: an application outside their participation is left out of the field');
 
   const list = await h.tasksController.list({}, eReq);
   hasNot(list, hidden, 'E, tasks list');

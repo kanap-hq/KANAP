@@ -13,7 +13,16 @@ import { roleDescription, roleLabel } from '../../utils/roleLabel';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { useKanapDialogs } from '../../components/design';
 
-type Role = { id: string; role_name: string; role_description: string; is_system?: boolean; is_built_in?: boolean; user_count?: number };
+type Role = {
+  id: string;
+  role_name: string;
+  role_description: string;
+  is_system?: boolean;
+  is_built_in?: boolean;
+  user_count?: number;
+  /** Whether the reader may give the role, as the server reads it: a copy gives its rights too. */
+  grantable?: boolean;
+};
 type PermissionLevel = 'reader'|'contributor'|'member'|'admin'|null;
 type ConcretePermissionLevel = Exclude<PermissionLevel, null>;
 
@@ -27,6 +36,8 @@ const ALL_LEVEL_OPTIONS: Array<{ value: ConcretePermissionLevel; label: string }
   { value: 'member', label: 'roles.levels.member' },
   { value: 'admin', label: 'roles.levels.admin' },
 ];
+
+const LEVEL_RANK: Record<ConcretePermissionLevel, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 
 function getLevelOptions(resource: string): Array<{ value: ConcretePermissionLevel; label: string }> {
   if (resource === 'knowledge') {
@@ -226,6 +237,13 @@ export default function RolesPage() {
   const getGroupLabel = (groupName: string) => t(`roles.groups.${groupName}`, { defaultValue: groupName });
   const getResourceLabel = (resource: string) => t(`roles.resources.${resource}`, { defaultValue: RESOURCE_LABELS[resource] || resource });
   const getLevelLabel = (key: ConcretePermissionLevel) => t(`roles.levels.${key}`);
+  // A person gives only the rights they hold, as the server checks on save: a level above the
+  // role's saved one and above the reader's own cannot be chosen (an Administrator holds every level).
+  const levelAboveOwnRights = (resource: string, level: ConcretePermissionLevel) => {
+    const saved = perms?.[resource];
+    if (saved && LEVEL_RANK[level] <= (LEVEL_RANK[saved] ?? 0)) return false;
+    return !hasLevel(resource, level);
+  };
 
   return (
     <>
@@ -233,7 +251,7 @@ export default function RolesPage() {
         title={t('roles.title')}
         actions={canEdit ? (
           <Stack direction="row" spacing={1}>
-            {selected && !isSystem && (
+            {selected && !isSystem && selected.grantable !== false && (
               <Button variant="action" onClick={() => { void askDuplicate(); }} disabled={duplicating}>
                 {duplicating ? t('roles.actions.duplicating') : t('roles.actions.duplicate')}
               </Button>
@@ -313,7 +331,7 @@ export default function RolesPage() {
                               >
                                 <MenuItem value=""><em>{t('roles.levels.none')}</em></MenuItem>
                                 {getLevelOptions(r).map((option) => (
-                                  <MenuItem key={option.value} value={option.value}>
+                                  <MenuItem key={option.value} value={option.value} disabled={levelAboveOwnRights(r, option.value)}>
                                     {getLevelLabel(option.value)}
                                   </MenuItem>
                                 ))}

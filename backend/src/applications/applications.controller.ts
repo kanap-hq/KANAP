@@ -1,5 +1,5 @@
 import { languageOf } from '../common/csv-sheet';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { requestContextMissing, businessContributorNoAccess, businessContributorScope } from '../auth/module-right-required';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
@@ -269,6 +269,23 @@ export class ApplicationsController {
   ): Promise<ApplicationsBulkDeleteResult> {
     const ids: string[] = Array.isArray(body?.ids) ? body.ids : [];
     return this.deleteSvc.bulkDelete(ids, ctx.userId || null, { manager: ctx.manager });
+  }
+
+  /**
+   * "Change the selection" of the list: one change on the applications chosen (`ids`) or on every
+   * application of the list's filters (`all`, `filters`, `exclude_ids`), each through the update of
+   * one application (`application-bulk-edit.ts`). `dry_run` counts the applications that would change
+   * and the refused ones per code, writing nothing. Same level as the update of one application; a
+   * Business Contributor changes the applications they own only. Before the routes with `:id`.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('bulk-update')
+  @HttpCode(200)
+  async bulkUpdate(@Body() body: unknown, @Tenant() ctx: TenantRequest) {
+    const opts = await this.readApplicationOpts(ctx);
+    return this.svc.bulkUpdate(body, ctx.userId || null, { ...opts, manager: this.requireManager(ctx), tenantId: ctx.tenantId });
   }
 
   // Applications with server assignments (for Connection Map filtering)

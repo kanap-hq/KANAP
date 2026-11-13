@@ -2591,7 +2591,6 @@
       "deleteConfirm": "Supprimer {{name}} ? Cette action est irréversible.",
       "inviteSentOne": "Invitation envoyée à {{email}}",
       "resetSent": "E-mail de réinitialisation envoyé à {{email}}",
-      "rolesSaveFailed": "L'utilisateur a été enregistré mais les rôles n'ont pas pu être mis à jour. Rouvrez l'utilisateur et réessayez.",
       "disableSelectedConfirm_one": "Désactiver {{count}} compte ? Son utilisateur sera déconnecté immédiatement.",
       "disableSelectedConfirm_other": "Désactiver {{count}} comptes ? Ils seront déconnectés immédiatement.",
       "disableSelectedResult_one": "{{count}} désactivé ; {{failed}} en échec",
@@ -2742,6 +2741,10 @@
   },
   "integrations": {
     "secretAddressChanged": "L'adresse a changé : saisissez de nouveau cette valeur.",
+    "removeConnection": {
+      "title": "Retirer la connexion {{name}} ?",
+      "message": "Son adresse et le secret enregistré sont supprimés. Les données déjà importées restent."
+    },
     "netbox": {
       "title": "Inventaire Netbox",
       "description": "Importez l'inventaire Netbox en tant qu'actifs. Netbox reste la référence pour les équipements qu'il décrit.",

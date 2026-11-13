@@ -7,6 +7,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import NetboxIntegrationCard from './NetboxIntegrationCard';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../design';
 import { api as apiClient } from '../../api/client';
 
 vi.mock('../../api/client', () => ({
@@ -40,7 +41,9 @@ function renderCard() {
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter>
-          <NetboxIntegrationCard />
+          <KanapDialogProvider>
+            <NetboxIntegrationCard />
+          </KanapDialogProvider>
         </MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>,
@@ -185,5 +188,31 @@ describe('NetboxIntegrationCard', () => {
       base_url: 'https://netbox2.internal',
       api_token: 'nbt_new',
     });
+  });
+
+  it('removes the connection when the address is emptied, after a confirmation', async () => {
+    renderCard();
+    await screen.findByText('Netbox inventory');
+    const save = screen.getByText('Save settings').closest('button')!;
+    const test = screen.getByText('Test connection').closest('button')!;
+
+    fireEvent.change(screen.getByLabelText('Netbox address'), { target: { value: '  ' } });
+    expect(screen.getByLabelText(/^API token/)).not.toBeRequired();
+    expect(screen.queryByText('The address changed: enter it again.')).not.toBeInTheDocument();
+    expect(save).toBeEnabled();
+    expect(test).toBeDisabled();
+
+    // Cancelling keeps everything as it is.
+    fireEvent.click(save);
+    expect(await screen.findByText('Remove the Netbox connection?')).toBeInTheDocument();
+    expect(screen.getByText('Its address and saved secret are deleted. Data already imported stays.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByText('Remove the Netbox connection?')).not.toBeInTheDocument());
+    expect(apiClient.put).not.toHaveBeenCalled();
+
+    fireEvent.click(save);
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove' }));
+    await waitFor(() => expect(apiClient.put).toHaveBeenCalledTimes(1));
+    expect(apiClient.put).toHaveBeenCalledWith('/netbox/integration', { base_url: '' });
   });
 });

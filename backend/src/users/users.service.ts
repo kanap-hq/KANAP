@@ -1,4 +1,4 @@
-import { BadGatewayException, BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, In, Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -44,7 +44,7 @@ import { RolePermission } from '../permissions/role-permission.entity';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import type { CommitThenRunFn } from '../common/import-connection';
-import { APP_URL_NOT_CONFIGURED_MESSAGE } from '../common/url';
+import { appUrlNotConfigured } from '../common/url';
 import {
   cellOf,
   CsvDateOrder,
@@ -58,6 +58,7 @@ import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { uploadedBytes } from '../common/upload';
 import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import { mapDatabaseError, sqlStateOf } from '../common/filters/database-error.mapping';
 import {
   assertKeepsAnActiveAdministrator,
   assertPersonWithinActorRights,
@@ -130,6 +131,37 @@ const buildAiUserExpertiseSql = (configAlias: string): string =>
   ), '')`;
 
 const AI_USER_CONTRIBUTOR_PROFILE_SQL = `CASE WHEN tmc.id IS NULL THEN 'not_configured' ELSE 'configured' END`;
+
+export const USER_EMAIL_TAKEN_MESSAGE = 'A person already has this e-mail address.';
+
+/** 409 `USER_EMAIL_TAKEN`: a new person with the address of an existing one. */
+export function userEmailTaken(): ConflictException {
+  return new ConflictException({ statusCode: 409, error: 'Conflict', code: 'USER_EMAIL_TAKEN', message: USER_EMAIL_TAKEN_MESSAGE });
+}
+
+export const ROLE_NOT_FOUND_MESSAGE = 'This role does not exist.';
+
+/** 400 `ROLE_NOT_FOUND`: a new person named with a role the workspace does not have. */
+export function roleNotFound(): BadRequestException {
+  return new BadRequestException({ statusCode: 400, error: 'Bad Request', code: 'ROLE_NOT_FOUND', message: ROLE_NOT_FOUND_MESSAGE });
+}
+
+const INVITATION_EMAIL_NOT_SENT_MESSAGE = 'The invitation is saved, but its e-mail could not be sent. Send the invitation again.';
+
+/** 502 `INVITATION_EMAIL_NOT_SENT`: the invitation is committed, its e-mail failed. */
+function invitationEmailNotSent(): BadGatewayException {
+  return new BadGatewayException({ statusCode: 502, error: 'Bad Gateway', code: 'INVITATION_EMAIL_NOT_SENT', message: INVITATION_EMAIL_NOT_SENT_MESSAGE });
+}
+
+/** 400 `MICROSOFT_SIGN_IN_NOT_SET_UP`: a Microsoft invitation in a workspace without Microsoft sign-in. */
+function microsoftSignInNotSetUp(): BadRequestException {
+  return new BadRequestException({
+    statusCode: 400,
+    error: 'Bad Request',
+    code: 'MICROSOFT_SIGN_IN_NOT_SET_UP',
+    message: 'Microsoft sign-in is not set up for this workspace.',
+  });
+}
 
 /** A user as written to the audit log: a copy without its password hash or MFA secret. */
 export function userAuditSnapshot(user: Partial<User>): Record<string, unknown> {
@@ -758,29 +790,33 @@ export class UsersService {
     department_id?: string | null;
     status?: string | null;
     tenant_id?: string;
-  }, opts?: { manager?: EntityManager; roleGrant?: RoleGrantActor }) {
+  }, opts?: {
+    manager?: EntityManager;
+    roleGrant?: RoleGrantActor;
+    /** Who creates the person, for the history; absent, the person themselves (a sign-in, an activation). */
+    actorUserId?: string | null;
+  }) {
     const repo = this.getRepo(opts?.manager);
-    const existing = await repo.findOne({ where: { email: params.email } });
-    if (existing) return existing;
+    // The address of an existing person, whatever their status and in any case, is refused and that
+    // person left as they are. A caller that finds or creates looks the person up first (Microsoft
+    // sign-in, the sample data script).
+    const existing = await repo
+      .createQueryBuilder('u')
+      .select('u.id')
+      .where('u.tenant_id = app_current_tenant()')
+      .andWhere('lower(u.email) = lower(:email)', { email: params.email })
+      .getOne();
+    if (existing) throw userEmailTaken();
 
-    // Find or create role
-    let role: Role | null = null;
-    if (params.role_id) {
-      role = await this.rolesService.findById(params.role_id, { manager: opts?.manager });
-    }
-    const roleName = params.role_name ?? 'Contact';
-    if (!role) {
-      role = await this.rolesService.findByNameOrSystemName(roleName, { manager: opts?.manager });
-    }
+    // The role the person gets: `role_id`, else `role_name` (the Contact role when neither is
+    // given). A role the workspace does not have is refused, never made on the fly.
+    const role = params.role_id
+      ? await this.rolesService.findById(params.role_id, { manager: opts?.manager })
+      : await this.rolesService.findByNameOrSystemName(params.role_name ?? 'Contact', { manager: opts?.manager });
+    if (!role) throw roleNotFound();
     // A person created from a request gets a role within the rights of the one who creates them.
-    if (role && opts?.roleGrant) {
+    if (opts?.roleGrant) {
       await assertRoleGrantWithinActorRights(opts?.manager ?? repo.manager, opts.roleGrant, null, [role.id]);
-    }
-    if (!role) {
-      role = await this.rolesService.createRole({
-        role_name: roleName,
-        role_description: `${roleName} role`,
-      }, { manager: opts?.manager });
     }
 
     const passwordToHash = params.password && params.password.trim().length > 0 ? params.password : null;
@@ -804,7 +840,14 @@ export class UsersService {
       department_id: params.department_id ?? null,
       status,
     });
-    const saved = await repo.save(user);
+    let saved: User;
+    try {
+      saved = await repo.save(user);
+    } catch (error) {
+      // The same address created at the same time by another request: its row came first.
+      if (sqlStateOf(error) === '23505' && mapDatabaseError(error)?.constraint === 'uq_users_tenant_email') throw userEmailTaken();
+      throw error;
+    }
     const manager = opts?.manager ?? repo.manager;
     const userRoleRepo = manager.getRepository(UserRole);
     const tenantId = saved.tenant_id ?? params.tenant_id ?? (await manager.query(`SELECT app_current_tenant()::text AS tenant_id`))?.[0]?.tenant_id;
@@ -822,7 +865,7 @@ export class UsersService {
           action: 'create',
           before: null,
           after: userAuditSnapshot(saved),
-          userId: saved.id,
+          userId: opts?.actorUserId !== undefined ? opts.actorUserId : saved.id,
         },
         { manager: opts?.manager ?? repo.manager },
       );
@@ -1410,7 +1453,7 @@ export class UsersService {
     if (signIn === 'microsoft') {
       const tenant = await repo.manager.getRepository(Tenant).findOne({ where: { id: user.tenant_id } });
       if (!tenantSignsInWithEntra(tenant)) {
-        throw new BadRequestException('Microsoft sign-in is not set up for this workspace.');
+        throw microsoftSignInNotSetUp();
       }
     }
 
@@ -1419,7 +1462,7 @@ export class UsersService {
     // multi-tenant mode.
     const resolvedBaseUrl = baseUrl?.trim();
     if (!resolvedBaseUrl) {
-      throw new BadRequestException(APP_URL_NOT_CONFIGURED_MESSAGE);
+      throw appUrlNotConfigured();
     }
     const normalizedBase = resolvedBaseUrl.replace(/\/$/, '');
 
@@ -1488,7 +1531,7 @@ export class UsersService {
     if (sendError) {
       // eslint-disable-next-line no-console
       console.error(`[users] invitation of user ${user.id}: saved, but its e-mail could not be sent:`, sendError);
-      throw new BadGatewayException('The invitation is saved, but its e-mail could not be sent. Send the invitation again.');
+      throw invitationEmailNotSent();
     }
     return result;
   }

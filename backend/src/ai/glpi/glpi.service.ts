@@ -2,9 +2,9 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { EntityManager } from 'typeorm';
 import { decodeHtmlEntities, decodeNumericHtmlEntities } from '../../common/html-entities';
 import { markdownWorkBudget, resolveHtmlContentSource, resolveHtmlContentSources } from '../../common/markdown-worker';
+import { isRedirectStatus, sameOriginRedirectFetch } from '../../common/outbound-redirects';
 import { openValidatedFetch } from '../../common/pinned-fetch';
 import { sameSecretDestination } from '../../common/secret-destination';
-import { Features } from '../../config/features';
 import { AiSecretCipherService } from '../ai-secret-cipher.service';
 import { AiSettingsService } from '../ai-settings.service';
 import { normalizeGlpiPathname } from './glpi-url';
@@ -1801,20 +1801,26 @@ export class GlpiService {
   private async request<T>(url: string, init: RequestInit, read: (response: Response) => Promise<T>): Promise<T> {
     // SSRF guard: block internal targets in multi-tenant cloud (no-op on-prem where
     // a private GLPI base URL is legitimate), then connect to the validated
-    // addresses only. redirect:'error' in cloud additionally stops a public host
-    // 302-ing to an internal one after the DNS check.
+    // addresses only. A redirect is followed on-prem only when it stays on the same
+    // origin, so the tokens never leave for another address (outbound-redirects.ts).
     const target = await openValidatedFetch(url);
     try {
       let response: Response;
       try {
-        response = await target.fetch(url, {
+        response = await sameOriginRedirectFetch(target.fetch)(url, {
           ...init,
-          redirect: Features.SINGLE_TENANT ? 'follow' : 'error',
           signal: AbortSignal.timeout(GLPI_TIMEOUT_MS),
         });
       } catch (error: any) {
         throw new BadRequestException(
           `GLPI request failed: ${String(error?.message || error || 'request failed')}`,
+        );
+      }
+      if (isRedirectStatus(response.status)) {
+        await response.body?.cancel().catch(() => undefined);
+        throw new BadRequestException(
+          `GLPI answered with a redirect (HTTP ${response.status}), which is not followed.`
+          + ' Enter the address GLPI is actually served on.',
         );
       }
       return await read(response);

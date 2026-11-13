@@ -1,17 +1,22 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import i18n from '../../i18n';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminIntegrationsPage from './AdminIntegrationsPage';
 import api from '../../api';
 import { api as apiClient } from '../../api/client';
+import { ThemeProvider } from '@mui/material/styles';
+import { KanapDialogProvider } from '../../components/design';
+import { createAppTheme } from '../../config/ThemeContext';
 
 vi.mock('../../api', () => ({
   default: {
     get: vi.fn(),
     patch: vi.fn(),
     post: vi.fn(),
+    put: vi.fn(),
     delete: vi.fn(),
   },
 }));
@@ -56,9 +61,13 @@ function renderPage() {
 
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <AdminIntegrationsPage />
-      </MemoryRouter>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>
+          <KanapDialogProvider>
+            <AdminIntegrationsPage />
+          </KanapDialogProvider>
+        </MemoryRouter>
+      </ThemeProvider>
     </QueryClientProvider>,
   );
 }
@@ -171,6 +180,90 @@ describe('AdminIntegrationsPage', () => {
     fireEvent.change(within(card).getByLabelText(/^User token/), { target: { value: 'new-token' } });
     expect(save).toBeEnabled();
     expect(test).toBeEnabled();
+  });
+
+  it('removes the PRTG connection when the address is emptied, after a confirmation', async () => {
+    const settingsGet = (api.get as any).getMockImplementation();
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === '/ai/admin/integrations/monitoring') {
+        return Promise.resolve({
+          data: {
+            integrations: [{
+              provider_key: 'prtg',
+              implementation: 'prtg',
+              enabled: true,
+              environment: 'production',
+              base_url: 'https://prtg.internal',
+              server_timezone: 'UTC',
+              request_timeout_seconds: null,
+              credential: { present: true, shape: 'api_token' },
+              updated_at: '2026-09-18T10:00:00.000Z',
+            }],
+          },
+        });
+      }
+      return settingsGet(url);
+    });
+    (api.put as any).mockResolvedValue({ data: { ok: true } });
+    renderPage();
+    const card = (await screen.findByText('Monitoring: PRTG')).closest('.MuiCard-root') as HTMLElement;
+    const save = within(card).getByText('Save settings').closest('button')!;
+    const test = within(card).getByText('Test connection').closest('button')!;
+
+    fireEvent.change(within(card).getByLabelText('Server address'), { target: { value: '' } });
+    expect(within(card).getByLabelText(/^API key/)).not.toBeRequired();
+    expect(within(card).queryByText('The address changed: enter it again.')).not.toBeInTheDocument();
+    expect(save).toBeEnabled();
+    expect(test).toBeDisabled();
+
+    fireEvent.click(save);
+    expect(await screen.findByText('Remove the PRTG connection?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    await waitFor(() => expect(api.put).toHaveBeenCalledTimes(1));
+    expect((api.put as any).mock.calls[0][1]).toMatchObject({ base_url: '' });
+  });
+
+  it('shows a refused PRTG address in the language of the screen', async () => {
+    const settingsGet = (api.get as any).getMockImplementation();
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === '/ai/admin/integrations/monitoring') {
+        // A connection already removed: no address, no key.
+        return Promise.resolve({
+          data: {
+            integrations: [{
+              provider_key: 'prtg',
+              implementation: 'prtg',
+              enabled: false,
+              environment: 'production',
+              base_url: null,
+              server_timezone: 'UTC',
+              request_timeout_seconds: null,
+              credential: { present: false, shape: null },
+              updated_at: '2026-09-18T10:00:00.000Z',
+            }],
+          },
+        });
+      }
+      return settingsGet(url);
+    });
+    const message = 'The PRTG server address must be a full web address starting with http:// or https:// '
+      + '(for example https://prtg.example.com). You can copy it from the browser address bar when logged into PRTG.';
+    (api.put as any).mockRejectedValue({
+      response: { status: 400, data: { statusCode: 400, error: 'Bad Request', code: 'prtg_base_url_invalid', message } },
+    });
+    renderPage();
+    const card = (await screen.findByText('Monitoring: PRTG')).closest('.MuiCard-root') as HTMLElement;
+    fireEvent.change(within(card).getByLabelText(/^API key/), { target: { value: 'typed-key' } });
+    const save = within(card).getByText('Save settings').closest('button')!;
+    try {
+      await act(async () => { await i18n.changeLanguage('fr'); });
+      fireEvent.click(save);
+      await waitFor(() => expect(api.put).toHaveBeenCalledTimes(1));
+      expect(await screen.findByText(/^L'adresse du serveur PRTG doit être une adresse web complète/)).toBeInTheDocument();
+      expect(screen.queryByText(message)).toBeNull();
+    } finally {
+      await act(async () => { await i18n.changeLanguage('en'); });
+    }
   });
 
   it('empties the saved PRTG key when the address changes and asks for it again', async () => {

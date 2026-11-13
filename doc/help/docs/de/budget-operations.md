@@ -37,7 +37,7 @@ Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied un
 
 Die Budgetspalten sind Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert. Das sind die Standardnamen. Ihre Organisation kann sie umbenennen, einige ausblenden und unter [Budgetspalten](#budgetspalten) eine Standardspalte wählen. Jede der folgenden Seiten zeigt die Namen, die Ihre Organisation gewählt hat.
 
-Solange einer dieser Vorgänge läuft, können Budgetzeilen nicht gespeichert werden: Eine Änderung zeigt die Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“, bis der Vorgang abgeschlossen ist.
+Solange einer dieser Vorgänge läuft, können Budgetzeilen nicht gespeichert werden: Eine Änderung zeigt die Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“, bis der Vorgang abgeschlossen ist. Ebenso wird ein Vorgang mit dieser Meldung abgelehnt, solange eine Änderung mehrerer Zeilen auf einmal läuft.
 
 ---
 
