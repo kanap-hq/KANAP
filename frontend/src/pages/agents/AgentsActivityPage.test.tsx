@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -114,5 +114,43 @@ describe('AgentsActivityPage labels', () => {
     expect(screen.getAllByText('Tâche')).toHaveLength(2);
     expect(screen.getByText('Autre action')).toBeInTheDocument();
     expect(container.textContent).not.toContain('kanap.mutation');
+  });
+});
+
+describe('AgentsActivityPage cited sources', () => {
+  const reply = (evidenceCount: number) => entry({
+    targetType: 'ticket',
+    targetRef: `48${evidenceCount}`,
+    capabilityName: 'ticketing.ticket.public_reply.add_approved',
+    actionClass: 'public_reply',
+    detail: { capabilityName: 'ticketing.ticket.public_reply.add_approved', body: `Reply ${evidenceCount}`, changes: null, reason: null, rationale: null, evidenceCount },
+  });
+
+  beforeEach(() => {
+    items = [reply(1), reply(3)];
+  });
+
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  async function expandAll(label: string) {
+    renderPage();
+    const buttons = await screen.findAllByRole('button', { name: label });
+    buttons.forEach((button) => fireEvent.click(button));
+  }
+
+  it('counts one source and several sources', async () => {
+    await i18n.changeLanguage('en');
+    await expandAll('Show details');
+    expect(await screen.findByText('1 source cited')).toBeInTheDocument();
+    expect(screen.getByText('3 sources cited')).toBeInTheDocument();
+  });
+
+  it('counts the sources in French', async () => {
+    await i18n.changeLanguage('fr');
+    await expandAll('Afficher les détails');
+    expect(await screen.findByText('1 source citée')).toBeInTheDocument();
+    expect(screen.getByText('3 sources citées')).toBeInTheDocument();
   });
 });
