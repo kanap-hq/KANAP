@@ -1,6 +1,7 @@
 import { In } from 'typeorm';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiActionRequest } from '../entities/ai-action-request.entity';
+import { agentActionWhere } from '../action-request/ai-action-request.service';
 import { AiAgentWorkItem } from '../entities/ai-agent-work-item.entity';
 
 /**
@@ -64,7 +65,7 @@ function actionInScope(action: Pick<AiActionRequest, 'metadata_json'>, scope: At
 
 async function attentionActions(manager: Manager, tenantId: string, scope: AttentionScope): Promise<AiActionRequest[]> {
   const rows = await manager.getRepository(AiActionRequest).find({
-    where: { tenant_id: tenantId, status: In(ACTION_ATTENTION_STATUSES) },
+    where: { tenant_id: tenantId, status: In(ACTION_ATTENTION_STATUSES), ...agentActionWhere() },
   });
   return rows.filter((action) => actionInScope(action, scope) && actionRowNeedsAttention(action));
 }

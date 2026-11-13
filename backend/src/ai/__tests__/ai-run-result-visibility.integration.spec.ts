@@ -4,6 +4,7 @@ import * as assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import dataSource from '../../data-source';
 import { backendPath } from '../../common/__tests__/backend-root';
@@ -11,6 +12,8 @@ import { PermissionsService } from '../../permissions/permissions.service';
 import { User } from '../../users/user.entity';
 import { AiPolicyService } from '../ai-policy.service';
 import { AiAgentControlService } from '../control-plane/agent-control/ai-agent-control.service';
+import { AiActionRequestService } from '../control-plane/action-request/ai-action-request.service';
+import { AiApprovalService } from '../control-plane/approval/ai-approval.service';
 import { AiEvidenceService } from '../control-plane/evidence/ai-evidence.service';
 import { AiMcpAuditService } from '../control-plane/mcp/ai-mcp-audit.service';
 import { AiTenantExecutionService } from '../execution/ai-tenant-execution.service';
@@ -346,6 +349,7 @@ async function resultsSeen(s: Seed, userId: string) {
 }
 
 const JOURNAL = 'GET ai/admin/mcp-audit';
+const RUN_DETAIL = 'GET ai/admin/control-plane/runs/:id';
 // Every path that returns an action or its approval, by the run that prepared it.
 const ACTION_READS: Array<{ name: string; read: (ctx: Ctx, seed: Seed) => Promise<Record<ActionRun, unknown>> }> = [
   {
@@ -548,6 +552,12 @@ async function testAnActionOfAnotherPersonsRunShowsItsLineWithoutTheMessageOrThe
     const seen = await actionsSeen(s, reader);
     for (const path of ACTION_READS) {
       const text = seen[path.name].chat;
+      // A change Kad prepared in a conversation is approved there: the agent lists leave it out.
+      if (path.name !== RUN_DETAIL) {
+        assert.equal(text, '[]', `${path.name} lists a change prepared in a conversation`);
+        assert.ok(seen[path.name].agent.includes(ACTIONS.agent.error), `${path.name} lost the message of the agent's action`);
+        continue;
+      }
       for (const kept of actionMarkers('chat')) {
         assert.equal(text.includes(kept), false, `${path.name} gave ${kept.slice(0, 40)} of another person's action: ${text.slice(0, 400)}`);
       }
@@ -587,12 +597,12 @@ async function testAnActionOfAnotherPersonsRunShowsItsLineWithoutTheMessageOrThe
   for (const reader of [s.people.author, s.people.administrator]) {
     const seen = await actionsSeen(s, reader);
     for (const kept of actionMarkers('chat')) {
-      assert.ok(seen['GET ai/admin/control-plane/runs/:id'].chat.includes(kept), `the detail lost ${kept.slice(0, 40)} for its reader`);
+      assert.ok(seen[RUN_DETAIL].chat.includes(kept), `the detail lost ${kept.slice(0, 40)} for its reader`);
     }
-    for (const path of ACTION_READS) {
-      assert.ok(seen[path.name].chat.includes(ACTIONS.chat.error), `${path.name} lost the message of the action for its reader`);
+    for (const path of ACTION_READS.filter((entry) => entry.name !== RUN_DETAIL)) {
+      assert.equal(seen[path.name].chat, '[]', `${path.name} lists a change prepared in a conversation`);
     }
-    assert.ok(seen['GET ai/admin/control-plane/actions'].chat.includes(ACTIONS.chat.hash));
+    assert.ok(seen['GET ai/admin/control-plane/actions'].agent.includes(ACTIONS.agent.hash));
   }
 }
 
@@ -624,6 +634,141 @@ async function testTheAuthorReadsTheirOwnResults(s: Seed) {
 
 async function testAnAdministratorReadsEveryResult(s: Seed) {
   await assertReadsEveryResult(s, s.people.administrator, 'the Administrator');
+}
+
+// A change Kad prepares in a conversation is approved there, by the person who asked for it. The
+// agent screens neither list nor decide it, including a row an operator decided there before.
+const actionRequests = new AiActionRequestService(null as any, null as any);
+const approvalsService = new AiApprovalService(null as any, actionRequests);
+const decisions = new AiAgentControlService(
+  none, approvalsService, none, none, none,
+  undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+  undefined, undefined, undefined, undefined,
+  policy(),
+);
+const PREVIEW_STATES = ['approved', 'rejected', 'dismissed'] as const;
+type PreviewRow = { preview: string; action: string };
+
+async function seedConversationPreviews(s: Seed) {
+  const conversation = randomUUID();
+  const rows: Record<string, PreviewRow> = {};
+  await as(s, s.people.author, async ({ manager }) => {
+    await manager.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title) VALUES ($1, $2, $3, $4)`,
+      [conversation, s.tenantId, s.people.author, `Previews ${TAG}`],
+    );
+    const add = async (key: string, decidedOnAgentScreen: string | null) => {
+      const row = { preview: randomUUID(), action: randomUUID() };
+      const task = randomUUID();
+      await manager.query(
+        `INSERT INTO ai_mutation_previews (id, tenant_id, conversation_id, user_id, tool_name, target_entity_type, target_entity_id, mutation_input, status, expires_at)
+         VALUES ($1, $2, $3, $4, 'update_task_status', 'tasks', $5, '{}'::jsonb, 'pending', now() + interval '1 hour')`,
+        [row.preview, s.tenantId, conversation, s.people.author, task],
+      );
+      await manager.query(
+        `INSERT INTO ai_action_requests (id, tenant_id, conversation_id, user_id, preview_id, capability_name, capability_version, effect, status, target_type, target_id, target_ref, input_hash, input_summary, expires_at, approved_at, rejected_at)
+         VALUES ($1, $2, $3, $4, $5, 'kanap.mutation_preview.execute_approved', '1.0.0', 'write', $6::text, 'tasks', $7::uuid, $7::text, $8, '{}'::jsonb, now() + interval '1 hour',
+                 CASE WHEN $6::text = 'approved' THEN now() END, CASE WHEN $6::text = 'rejected' THEN now() END)`,
+        [row.action, s.tenantId, conversation, s.people.author, row.preview, decidedOnAgentScreen ?? 'pending', task, randomBytes(32).toString('hex')],
+      );
+      if (decidedOnAgentScreen) {
+        await manager.query(
+          `INSERT INTO ai_approvals (tenant_id, action_request_id, capability_name, capability_version, source, status, actor_user_id, input_hash, expires_at, decided_at)
+           SELECT tenant_id, id, capability_name, capability_version, 'human_ui', $3, $4, input_hash, now() + interval '1 hour', now()
+             FROM ai_action_requests WHERE tenant_id = $1 AND id = $2`,
+          [s.tenantId, row.action, decidedOnAgentScreen, s.people.agentReader],
+        );
+      }
+      rows[key] = row;
+    };
+    await add('fresh', null);
+    for (const state of PREVIEW_STATES) {
+      await add(`${state}:approve`, state);
+      await add(`${state}:reject`, state);
+    }
+  });
+  return { conversation, rows };
+}
+
+async function decisionState(s: Seed, actionIds: string[]) {
+  return as(s, s.people.administrator, async ({ manager }) => JSON.stringify(await manager.query(
+    `SELECT a.id, a.status, a.approved_at, a.rejected_at, a.metadata_json,
+            (SELECT count(*) FROM ai_approvals p WHERE p.tenant_id = a.tenant_id AND p.action_request_id = a.id) AS approvals
+       FROM ai_action_requests a
+      WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[])
+      ORDER BY a.id`,
+    [s.tenantId, actionIds],
+  )));
+}
+
+async function testAChangePreparedInAConversationIsDecidedThereByItsAuthorOnly(s: Seed) {
+  const { conversation, rows } = await seedConversationPreviews(s);
+  const actionIds = Object.values(rows).map((row) => row.action);
+  const people = [s.people.agentReader, s.people.settingsAdmin, s.people.administrator, s.people.author];
+
+  // The agent screens: no row, no count, no entry.
+  for (const reader of people) {
+    const listed = await as(s, reader, (ctx) => control.listActionRequests(ctx as any, { status: 'all', limit: 100 }));
+    assert.deepEqual(listed.items.filter((item: any) => actionIds.includes(item.id)), [], 'GET actions lists a conversation preview');
+    assert.ok(listed.items.some((item: any) => item.id === ACTIONS.agent.id), 'GET actions lost the agent action');
+    const pending = await as(s, reader, (ctx) => control.listActionRequests(ctx as any, { status: 'pending', limit: 100 }));
+    assert.deepEqual(pending.items, [], 'GET actions?status=pending lists a conversation preview');
+    assert.deepEqual(await as(s, reader, (ctx) => control.getBadges(ctx as any)), { pendingApprovals: 0 });
+    const activity = await as(s, reader, (ctx) => control.listActivity(ctx as any, { limit: 100 }));
+    assert.deepEqual(activity.items.filter((entry: any) => actionIds.includes(entry.actionRequestId)), [], 'the activity lists a conversation preview');
+    assert.ok(activity.items.some((entry: any) => entry.actionRequestId === ACTIONS.agent.id), 'the activity lost the agent action');
+  }
+
+  // Nobody decides it from the agent screens, and nobody but its author from a conversation.
+  const before = await decisionState(s, actionIds);
+  const unknownId = randomUUID();
+  const refusedLikeAnUnknownId = async (who: string, label: string, call: (ctx: any, id: string) => Promise<unknown>) => {
+    let unknown: unknown = null;
+    await as(s, who, (ctx) => call(ctx, unknownId)).catch((error) => { unknown = error; });
+    assert.ok(unknown instanceof NotFoundException, `${label}: an unknown id is not refused as unknown`);
+    for (const row of Object.values(rows)) {
+      await assert.rejects(
+        () => as(s, who, (ctx) => call(ctx, row.action)),
+        (error: unknown) => error instanceof NotFoundException && error.message === (unknown as Error).message,
+        `${label} decided a conversation preview`,
+      );
+    }
+  };
+  for (const who of people) {
+    await refusedLikeAnUnknownId(who, 'approve', (ctx, id) => decisions.approveActionRequest(ctx, id, { execute: false }));
+    await refusedLikeAnUnknownId(who, 'reject', (ctx, id) => decisions.rejectActionRequest(ctx, id, null));
+    await refusedLikeAnUnknownId(who, 'dismiss', (ctx, id) => decisions.dismissActionRequest(ctx, id, null));
+    await refusedLikeAnUnknownId(who, 'bulk approve', (ctx, id) => decisions.approveActionRequestsBulk(ctx, { action_request_ids: [id], execute: false }));
+  }
+  for (const who of [s.people.agentReader, s.people.administrator]) {
+    for (const row of Object.values(rows)) {
+      const chat = (ctx: Ctx) => ({ ...ctx, conversationId: conversation }) as any;
+      await assert.rejects(() => as(s, who, (ctx) => approvalsService.approvePreviewFromChat(chat(ctx), row.preview)), NotFoundException);
+      await assert.rejects(() => as(s, who, (ctx) => approvalsService.rejectPreviewFromChat(chat(ctx), row.preview)), NotFoundException);
+    }
+  }
+  assert.equal(await decisionState(s, actionIds), before, 'a refused decision changed the action or wrote an approval');
+
+  // Its author approves or rejects it in the conversation, whatever the agent screen decided before.
+  for (const key of ['fresh', ...PREVIEW_STATES.flatMap((state) => [`${state}:approve`, `${state}:reject`])]) {
+    const row = rows[key];
+    const approve = key === 'fresh' || key.endsWith(':approve');
+    await as(s, s.people.author, async (ctx) => {
+      const chat = { ...ctx, conversationId: conversation } as any;
+      const decided = approve
+        ? await approvalsService.approvePreviewFromChat(chat, row.preview)
+        : await approvalsService.rejectPreviewFromChat(chat, row.preview);
+      assert.equal(decided.action.id, row.action, `${key}: the decision went to another action`);
+      assert.equal(decided.approval.source, 'human_chat');
+      assert.equal(decided.approval.actor_user_id, s.people.author);
+      assert.equal(decided.action.status, approve ? 'approved' : 'rejected', key);
+      if (approve) {
+        // What the execution of the preview checks next.
+        const durable = await approvalsService.resolveApprovedAction(chat, decided.action);
+        assert.equal(durable.id, decided.approval.id, `${key}: the execution would not find the author's approval`);
+      }
+    });
+  }
 }
 
 // The non-test sources that name what a run, an action or an approval keeps of a call: its
@@ -692,6 +837,7 @@ async function main() {
     ['an agent run stays readable in full', testAnAgentRunStaysReadableInFull],
     ['the author reads their own results', testTheAuthorReadsTheirOwnResults],
     ['an Administrator reads every result', testAnAdministratorReadsEveryResult],
+    ['a change prepared in a conversation is decided there, by its author only', testAChangePreparedInAConversationIsDecidedThereByItsAuthorOnly],
     ['every source that names what a run keeps of a call is classified', testEverySourceThatNamesAKeptColumnIsClassified],
   ];
   let failed = 0;

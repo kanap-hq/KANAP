@@ -164,7 +164,7 @@ function baseContract(overrides?: Partial<CapabilityContract>): CapabilityContra
 function createMemoryManager() {
   const stores = new Map<string, any[]>();
   let idCounter = 0;
-  const matchesValue = (rowValue: any, expected: any) => {
+  const matchesValue = (rowValue: any, expected: any): boolean => {
     if (expected && typeof expected === 'object' && '_type' in expected && '_value' in expected) {
       if ((expected as any)._type === 'moreThan') {
         return rowValue > (expected as any)._value;
@@ -174,6 +174,12 @@ function createMemoryManager() {
       }
       if ((expected as any)._type === 'in') {
         return Array.isArray((expected as any)._value) && (expected as any)._value.includes(rowValue);
+      }
+      if ((expected as any)._type === 'isNull') {
+        return rowValue == null;
+      }
+      if ((expected as any)._type === 'not') {
+        return !matchesValue(rowValue, (expected as any)._value);
       }
     }
     return rowValue === expected;
@@ -286,6 +292,11 @@ function createMemoryManager() {
     if (isNotNull) {
       const [, field] = isNotNull;
       return row[field] != null;
+    }
+    const inequality = condition.match(/^[a-z]+\.(\w+) <> :(\w+)$/i);
+    if (inequality) {
+      const [, field, param] = inequality;
+      return row[field] !== params[param];
     }
     const equality = condition.match(/^[a-z]+\.(\w+) = :(\w+)$/i);
     if (equality) {
@@ -10373,8 +10384,8 @@ async function testAgentActivityShowsTheReferenceOfTheTarget() {
       tool_execution_id: null,
       conversation_id: null,
       user_id: context.userId,
-      preview_id: randomUUID(),
-      capability_name: EXECUTE_APPROVED_PREVIEW_CAPABILITY,
+      preview_id: null,
+      capability_name: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY,
       capability_version: '1.0.0',
       effect: 'write',
       status: 'executed',
@@ -10420,7 +10431,7 @@ async function testAgentActivityShowsTheReferenceOfTheTarget() {
   assert.deepEqual(byRef(projectId).map((entry) => entry.targetDisplay), ['PRJ-3']);
   assert.deepEqual(byRef(goneId).map((entry) => entry.targetDisplay), [null], 'a deleted object shows no id');
   assert.deepEqual(byRef('4711').map((entry) => entry.targetDisplay), [null], 'a ticket number is left as it is');
-  assert.equal(activity.items.every((entry) => entry.capabilityName === EXECUTE_APPROVED_PREVIEW_CAPABILITY), true, 'the key stays in the API');
+  assert.equal(activity.items.every((entry) => entry.capabilityName === TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY), true, 'the key stays in the API');
   assert.equal(activity.items.find((entry) => entry.targetRef === taskId)?.targetRef, taskId, 'the id stays in the API');
   // One read for the page, scoped by tenant, with the ids as a batch.
   assert.equal(reads.length, 1);
@@ -10428,6 +10439,191 @@ async function testAgentActivityShowsTheReferenceOfTheTarget() {
   assert.match(reads[0].sql, /= ANY\(\$3/);
   assert.equal(reads[0].params[0], context.tenantId);
   assert.deepEqual(new Set(reads[0].params[2] as string[]), new Set([taskId, projectId, goneId]));
+}
+
+// A change Kad prepares in a conversation is approved there, by the person who asked for it. Its
+// action request stays off the agent screens: no row, no count, no decision. `orphan` is one whose
+// conversation was deleted, which clears the preview link.
+async function seedConversationPreviewActions(context: any, actions: AiActionRequestService) {
+  const repo = context.manager.getRepository(AiActionRequest);
+  const agentDefinitionId = randomUUID();
+  const witness = await actions.createOrEnsureProviderAction(context, providerActionSeed({
+    idempotencyKey: `preview-witness-${randomUUID()}`,
+    metadata: { agent_definition_id: agentDefinitionId },
+  }));
+  const expiredAgent = await actions.createOrEnsureProviderAction(context, providerActionSeed({
+    targetRef: 'preview-witness-expired',
+    idempotencyKey: `preview-witness-expired-${randomUUID()}`,
+    metadata: { agent_definition_id: agentDefinitionId },
+  }));
+  await actions.markExpired(context, expiredAgent);
+  const conversationAction = async (overrides: Record<string, unknown>) => {
+    const taskId = randomUUID();
+    const created = new Date(Date.now() - 5_000);
+    return repo.save(repo.create({
+      id: randomUUID(),
+      tenant_id: context.tenantId,
+      run_id: null,
+      tool_execution_id: null,
+      conversation_id: randomUUID(),
+      user_id: 'author-1',
+      preview_id: randomUUID(),
+      capability_name: EXECUTE_APPROVED_PREVIEW_CAPABILITY,
+      capability_version: '1.0.0',
+      effect: 'write',
+      status: 'pending',
+      target_type: 'tasks',
+      target_id: taskId,
+      target_ref: taskId,
+      idempotency_key: null,
+      action_payload_json: null,
+      provider_kind: null,
+      provider_key: null,
+      input_hash: `preview-hash-${taskId}`,
+      input_summary: { tool_name: 'update_task_status', target_entity_type: 'tasks', target_entity_id: taskId },
+      evidence_ids: null,
+      expires_at: new Date(Date.now() + 30 * 60_000),
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+      error_message: null,
+      metadata_json: null,
+      created_at: created,
+      updated_at: created,
+      ...overrides,
+    }));
+  };
+  const preview = await conversationAction({});
+  const orphan = await conversationAction({ preview_id: null, conversation_id: null });
+  const expired = await conversationAction({ status: 'expired', error_message: 'Action request expired before review.' });
+  const approvalRepo = context.manager.getRepository(AiApproval);
+  await approvalRepo.save(approvalRepo.create({
+    id: randomUUID(),
+    tenant_id: context.tenantId,
+    action_request_id: orphan.id,
+    capability_name: EXECUTE_APPROVED_PREVIEW_CAPABILITY,
+    capability_version: '1.0.0',
+    source: 'human_chat',
+    status: 'approved',
+    actor_user_id: 'author-1',
+    actor_label: null,
+    input_hash: orphan.input_hash,
+    evidence_ids: null,
+    reason: null,
+    matched_policy_id: null,
+    matched_policy_version: null,
+    decision_json: null,
+    expires_at: new Date(Date.now() + 30 * 60_000),
+    decided_at: new Date(Date.now() - 4_000),
+    created_at: new Date(Date.now() - 4_000),
+  }));
+  return { witness, expiredAgent, preview, orphan, expired };
+}
+
+async function testConversationPreviewsStayOffTheAgentScreens() {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const actions = new AiActionRequestService({} as any, {} as any);
+  const service = new AiAgentControlService(
+    {} as any,
+    {} as any,
+    {} as any,
+    { findEnabledTargets: async () => [] } as any,
+    {} as any,
+    new AiAgentWorkQueueService(),
+  );
+  const seeded = await seedConversationPreviewActions(context, actions);
+  const conversationIds = new Set([seeded.preview.id, seeded.orphan.id, seeded.expired.id]);
+
+  const pending = await service.listActionRequests(context, { status: 'pending', limit: 50 });
+  assert.deepEqual(pending.items.map((item: any) => item.id), [seeded.witness.id]);
+  const all = await service.listActionRequests(context, { status: 'all', limit: 50 });
+  assert.deepEqual(new Set(all.items.map((item: any) => item.id)), new Set([seeded.witness.id, seeded.expiredAgent.id]));
+  assert.deepEqual(await service.getBadges(context), { pendingApprovals: 1 });
+  assert.deepEqual(await service.getAttentionSummary(context), { actions: 1, work_items: 0, total: 1 });
+
+  const activity = await service.listActivity(context, { limit: 100 });
+  const onConversation = activity.items.filter((entry) => entry.actionRequestId && conversationIds.has(entry.actionRequestId));
+  assert.deepEqual(onConversation.map((entry) => `${entry.type}:${entry.titleKey}`), [], 'the activity lists a conversation preview');
+  assert.ok(activity.items.some((entry) => entry.actionRequestId === seeded.witness.id && entry.type === 'proposal'), 'the agent proposal left the activity');
+  assert.equal(activity.total, activity.items.length);
+}
+
+async function testAgentScreenDecisionsTreatAConversationPreviewAsUnknown() {
+  const { manager, stores } = createMemoryManager();
+  const context = createContext(manager);
+  const actions = new AiActionRequestService({} as any, {} as any);
+  const approvals = new AiApprovalService({} as any, actions);
+  const service = new AiAgentControlService({} as any, approvals, {} as any, {} as any, {} as any, new AiAgentWorkQueueService());
+  const seeded = await seedConversationPreviewActions(context, actions);
+  const snapshot = () => JSON.stringify({
+    actions: stores.get(AiActionRequest.name) ?? [],
+    approvals: stores.get(AiApproval.name) ?? [],
+    audit: stores.get(AiAgentAuditEvent.name) ?? [],
+  });
+  const before = snapshot();
+  const unknownId = randomUUID();
+  const refused = async (label: string, call: (id: string) => Promise<unknown>) => {
+    let unknown: unknown = null;
+    try {
+      await call(unknownId);
+    } catch (error) {
+      unknown = error;
+    }
+    assert.ok(unknown instanceof NotFoundException, `${label}: an unknown id is not refused as unknown`);
+    for (const target of [seeded.preview, seeded.orphan]) {
+      await assert.rejects(
+        () => call(target.id),
+        (error: unknown) => error instanceof NotFoundException && error.message === (unknown as Error).message,
+        `${label} acted on a conversation preview`,
+      );
+    }
+  };
+  await refused('approve', (id) => service.approveActionRequest(context, id, { execute: false }));
+  await refused('approve and run', (id) => service.approveActionRequest(context, id, {}));
+  await refused('reject', (id) => service.rejectActionRequest(context, id, 'not for the agents'));
+  await refused('dismiss', (id) => service.dismissActionRequest(context, id, 'not for the agents'));
+  await refused('acknowledge', (id) => service.acknowledgeAttention(context, { kind: 'action', id }));
+  await refused('bulk approve', (id) => service.approveActionRequestsBulk(context, { action_request_ids: [id], execute: false }));
+  await refused('bulk approve with an agent action', (id) => service.approveActionRequestsBulk(context, {
+    action_request_ids: [seeded.witness.id, id],
+    execute: false,
+  }));
+  await refused('planned execution', (id) => service.planApprovedBulkExecution(context, { action_request_ids: [id] }));
+  await refused('queued execution', (id) => service.executeSingleApprovedAction(context, id));
+  await refused('provider execution', (id) => actions.findProviderActionForExecution(context, id));
+  assert.equal(snapshot(), before, 'a refused decision wrote something');
+}
+
+async function testTheSweeperLeavesAQueuedConversationPreviewToItsConversation() {
+  const { manager, stores } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const actions = new AiActionRequestService({} as any, {} as any);
+  const approvals = new AiApprovalService({} as any, actions);
+  const service = new AiAgentControlService({} as any, approvals, {} as any, {} as any, {} as any, queue);
+  const seeded = await seedConversationPreviewActions(context, actions);
+  // Approved and queued from the agents screen before that screen left previews alone.
+  const repo = manager.getRepository(AiActionRequest);
+  const legacy = await repo.findOne({ where: { id: seeded.preview.id, tenant_id: context.tenantId } });
+  legacy.status = 'approved';
+  legacy.approved_at = new Date();
+  legacy.metadata_json = {
+    approved_batch_context: {
+      batch_id: 'legacy-batch',
+      action_request_ids: [legacy.id],
+      execution_queued: true,
+      execution_queued_at: new Date(Date.now() - 60_000).toISOString(),
+    },
+  };
+  await repo.save(legacy);
+  const before = JSON.stringify(stores.get(AiActionRequest.name));
+
+  const sweeper = new AiAgentApprovalLifecycleSweeperService(null, null, queue, actions, service);
+  const summary = await sweeper.sweepTenant(context, { limit: 25 });
+  assert.deepEqual(summary.errors, []);
+  assert.equal(summary.queuedExecutionsScanned, 0);
+  assert.equal(JSON.stringify(stores.get(AiActionRequest.name)), before, 'the sweeper ran a conversation preview');
 }
 
 // Round-2 UAT: the timeline filters became a multi-select, so a page must be the
@@ -17850,6 +18046,9 @@ async function run() {
   await testAgentControlQueueOverviewReturnsLinkedActionRequests();
   await testAgentControlActivityTimelineAndDailyMetrics();
   await testAgentActivityShowsTheReferenceOfTheTarget();
+  await testConversationPreviewsStayOffTheAgentScreens();
+  await testAgentScreenDecisionsTreatAConversationPreviewAsUnknown();
+  await testTheSweeperLeavesAQueuedConversationPreviewToItsConversation();
   await testAgentActivityMultiTypeFilterAndSubsetPagination();
   await testAttentionAcknowledgementIsIdempotentTenantScopedAndAudited();
   await testAttentionAcknowledgementSurvivesDeletedAgent();

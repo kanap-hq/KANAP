@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, FindOptionsWhere, IsNull, Not, ObjectLiteral, Repository, SelectQueryBuilder } from 'typeorm';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewDto } from '../../ai.types';
 import { EXECUTE_APPROVED_PREVIEW_CAPABILITY } from '../capability/capability-contract';
@@ -12,6 +12,25 @@ import { isRecord } from '../../../common/object-guards';
 import { codedForbidden, requestContextMissing } from '../../../auth/module-right-required';
 
 const DEFAULT_PROVIDER_ACTION_TTL_MS = 30 * 60 * 1000;
+
+/**
+ * The action requests the agent screens and their routes handle: the agents' own. A change Kad
+ * prepares in a conversation is approved in that conversation, by the person who asked for it
+ * (`approvePreviewFromChat`), so its action request never reaches those screens. It is known by its
+ * preview, and by its capability once a deleted conversation has cleared the preview link.
+ */
+export function agentActionWhere(): FindOptionsWhere<AiActionRequest> {
+  return { preview_id: IsNull(), capability_name: Not(EXECUTE_APPROVED_PREVIEW_CAPABILITY) };
+}
+
+/** `agentActionWhere` for a query builder on `ai_action_requests` under `alias`. */
+export function whereAgentAction<T extends ObjectLiteral>(qb: SelectQueryBuilder<T>, alias: string): SelectQueryBuilder<T> {
+  return qb
+    .andWhere(`${alias}.preview_id IS NULL`)
+    .andWhere(`${alias}.capability_name <> :conversationPreviewCapability`, {
+      conversationPreviewCapability: EXECUTE_APPROVED_PREVIEW_CAPABILITY,
+    });
+}
 const PROVIDER_ACTION_RETRYABLE_TERMINAL_STATUSES = new Set(['expired', 'failed', 'rejected', 'dismissed']);
 
 export type ProviderActionRequestSeed = {
@@ -449,10 +468,12 @@ export class AiActionRequestService {
     context: AiExecutionContextWithManager,
     actionRequestId: string,
   ): Promise<AiActionRequest> {
+    // An action request of a conversation preview answers as an unknown one here.
     const action = await this.actionRepository(context.manager).findOne({
       where: {
         id: actionRequestId,
         tenant_id: context.tenantId,
+        ...agentActionWhere(),
       },
     });
     if (!action) {
