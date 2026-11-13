@@ -10626,6 +10626,35 @@ async function testTheSweeperLeavesAQueuedConversationPreviewToItsConversation()
   assert.equal(JSON.stringify(stores.get(AiActionRequest.name)), before, 'the sweeper ran a conversation preview');
 }
 
+async function testTheSweeperExpiresAConversationPreviewWithoutCountingIt() {
+  const { manager, stores } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const actions = new AiActionRequestService({} as any, {} as any);
+  const seeded = await seedConversationPreviewActions(context, actions);
+  const repo = manager.getRepository(AiActionRequest);
+  const lapse = async (id: string) => {
+    const row = await repo.findOne({ where: { id, tenant_id: context.tenantId } });
+    row.expires_at = new Date(Date.now() - 60_000);
+    await repo.save(row);
+  };
+  const swept = () => (stores.get(AiAgentAuditEvent.name) ?? []).filter((event: any) => event.event_type === 'approval_lifecycle_swept');
+  const sweeper = new AiAgentApprovalLifecycleSweeperService(null, null, queue, actions);
+
+  await lapse(seeded.preview.id);
+  const previewOnly = await sweeper.sweepTenant(context, { limit: 25 });
+  assert.equal((await repo.findOne({ where: { id: seeded.preview.id, tenant_id: context.tenantId } })).status, 'expired');
+  assert.equal(previewOnly.expiredActions, 0, 'the sweep counted a conversation preview');
+  assert.deepEqual(swept(), [], 'the sweep recorded an event for a conversation preview alone');
+
+  await lapse(seeded.witness.id);
+  const withAgent = await sweeper.sweepTenant(context, { limit: 25 });
+  assert.equal((await repo.findOne({ where: { id: seeded.witness.id, tenant_id: context.tenantId } })).status, 'expired');
+  assert.equal(withAgent.expiredActions, 1);
+  assert.equal(swept().length, 1);
+  assert.equal(swept()[0].metadata_json.expired_actions, 1);
+}
+
 // Round-2 UAT: the timeline filters became a multi-select, so a page must be the
 // union of the selected types AND still be gapless when only a subset is asked
 // for (the keyset cursor walks every selected stream, not just the first one).
@@ -18049,6 +18078,7 @@ async function run() {
   await testConversationPreviewsStayOffTheAgentScreens();
   await testAgentScreenDecisionsTreatAConversationPreviewAsUnknown();
   await testTheSweeperLeavesAQueuedConversationPreviewToItsConversation();
+  await testTheSweeperExpiresAConversationPreviewWithoutCountingIt();
   await testAgentActivityMultiTypeFilterAndSubsetPagination();
   await testAttentionAcknowledgementIsIdempotentTenantScopedAndAudited();
   await testAttentionAcknowledgementSurvivesDeletedAgent();
