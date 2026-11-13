@@ -109,16 +109,41 @@ async function run() {
     console.log('  a Business Contributor: their applications, the read said partial: OK');
 
     // aggregate_entities on tasks grouped by application: the applications the person reads only.
-    const groups = async (userId: string) => (await aggregates.execute(ctx(userId), { entity_type: 'tasks', group_by: 'application', function: 'count' }))
-      .groups.map((group: { key: string }) => group.key).sort();
+    // A second task, linked only to the application the contributor does not read: it is in no group,
+    // and the result says a task outside the groups (or without an application) is not "none".
+    const second = await insertId(runner,
+      `INSERT INTO tasks (tenant_id, item_number, title, status, assignee_user_id, labels, owner_ids, viewer_ids) VALUES ($1, 2, 'Other task', 'open', $2, '[]', '[]', '[]')`,
+      [tenantId, bcId]);
+    await runner.query(`INSERT INTO task_applications (tenant_id, task_id, application_id) VALUES ($1, $2, $3)`, [tenantId, second, unseen]);
+    const aggregate = (userId: string) => aggregates.execute(ctx(userId), { entity_type: 'tasks', group_by: 'application', function: 'count' });
+    const groups = async (userId: string) => (await aggregate(userId)).groups.map((group: { key: string | null }) => group.key ?? '(none)').sort();
+    const partialFields = (result: any) => (result.fields_partial ?? []).map((entry: { field: string }) => entry.field);
+    const withheldFields = (result: any) => (result.fields_withheld ?? []).map((entry: { field: string }) => entry.field);
     assert.deepEqual(await groups(adminId), ['Secret app', 'Seen app'], 'full reader: every application group');
+    const adminAggregate = await aggregate(adminId);
+    assert.deepEqual([partialFields(adminAggregate), withheldFields(adminAggregate)], [[], []], 'full reader: no note on the groups');
+    const bcAggregate = await aggregate(bcId);
+    // The other task is in no group: its only application is not theirs.
     assert.deepEqual(await groups(bcId), ['Seen app'], 'contributor: the application groups of their participation');
-    console.log('  tasks grouped by application: the applications the person reads: OK');
+    assert.ok(!JSON.stringify(bcAggregate.groups).includes('Secret'), 'contributor: no unseen application in the groups');
+    assert.deepEqual(partialFields(bcAggregate), ['application'], 'contributor: the groups said partial, the group without an application is not "none"');
+    console.log('  tasks grouped by application: the applications the person reads, said partial: OK');
+
+    // query_entities on tasks: the same note for the contributor, none for a full reader.
+    const list = (userId: string, extra: Record<string, unknown> = {}) => executor.execute(ctx(userId), { entity_type: 'tasks', ...extra });
+    const adminList = await list(adminId);
+    assert.deepEqual([partialFields(adminList), withheldFields(adminList)], [[], []], 'full reader: no note on the list');
+    assert.deepEqual(partialFields(await list(bcId)), ['application'], 'contributor: the list said partial');
+    assert.deepEqual(partialFields(await list(bcId, { sort: { field: 'application', direction: 'asc' } })), ['application'], 'contributor: sorted by application, said partial');
+    console.log('  tasks listed: the applications column said partial to a contributor: OK');
 
     // A person who does not read applications: null, and the reason.
     const unread = await detail(readerId);
     assert.equal(unread.data.applications, null, 'no reader of applications: null');
     assert.ok(unread.fields_withheld?.some((entry: { field: string }) => entry.field === 'applications'), 'no reader of applications: withheld, with the reason');
+    assert.deepEqual(withheldFields(await list(readerId)), ['application'], 'no reader of applications: the list says the field is withheld');
+    const refusedGroup = await aggregate(readerId).then(() => null, (error: any) => error?.getResponse?.() ?? error);
+    assert.equal(refusedGroup?.code, 'AI_FIELD_WITHHELD', 'no reader of applications: grouping by application refused with the reason');
     console.log('  a person who does not read applications: withheld, with the reason: OK');
   } finally {
     await runner.rollbackTransaction();

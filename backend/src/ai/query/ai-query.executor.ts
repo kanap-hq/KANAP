@@ -68,6 +68,7 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
+import { aiLinkedReadNotes, mergeFieldNotes } from './ai-linked-read-notes.util';
 import { aiDataAccessCountsNote, aiDataAccessNote } from './ai-data-access-note.util';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { compareNullableText } from '../../common/list-engine/sql-fragments';
@@ -2074,15 +2075,22 @@ export class AiQueryExecutor {
       : {};
     const amounts = await aiAmountsCurrency(context, input.entity_type);
     const dataAccess = await aiDataAccessNote(context, input.entity_type);
-    if (!sort.ignored.length) return { ...result, sort: sort.applied, sort_ignored: [], ...limitCapped, ...amounts, ...dataAccess };
+    // The linked applications of a task or an incident the person reads in part or not at all.
+    const linked = await aiLinkedReadNotes(context, input.entity_type, this.readProbe(context));
+    const linkedNotes = {
+      ...(mergeFieldNotes(result.fields_withheld, linked.fields_withheld) ? { fields_withheld: mergeFieldNotes(result.fields_withheld, linked.fields_withheld) } : {}),
+      ...(linked.fields_partial ? { fields_partial: linked.fields_partial } : {}),
+    };
+    if (!sort.ignored.length) return { ...result, ...linkedNotes, sort: sort.applied, sort_ignored: [], ...limitCapped, ...amounts, ...dataAccess };
     // The items come in the default order, said so; a field withheld for lack of a right says why.
-    const withheld = (registry.withheldFields ?? []).filter((entry) => sort.ignored.includes(entry.field));
+    const withheld = mergeFieldNotes((registry.withheldFields ?? []).filter((entry) => sort.ignored.includes(entry.field)), linkedNotes.fields_withheld);
     return {
       ...result,
+      ...linkedNotes,
       complete: false,
       sort: sort.applied,
       sort_ignored: sort.ignored,
-      ...(withheld.length ? { fields_withheld: withheld } : {}),
+      ...(withheld ? { fields_withheld: withheld } : {}),
       sortable_fields: Object.keys(registry.sortFields),
       ...limitCapped,
       ...amounts,
