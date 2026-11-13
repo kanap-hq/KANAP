@@ -59,6 +59,8 @@ export default function ConnectionProtocolsTable({
   const codesKey = protocols.map((p) => p.code).join('|');
   const [portByCode, setPortByCode] = React.useState<Record<string, string>>({});
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // What the waiting timer will do; it holds the callback and the protocols of the connection it was typed on.
+  const pendingRef = React.useRef<(() => void) | null>(null);
 
   React.useEffect(() => {
     const next: Record<string, string> = {};
@@ -69,22 +71,29 @@ export default function ConnectionProtocolsTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [codesKey, connectionKey]);
 
-  React.useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+  // A port still waiting for its delay is saved once when the table goes (the connection closes, Create,
+  // another tab or page) or shows another connection.
+  const flushPending = React.useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    const run = pendingRef.current;
+    pendingRef.current = null;
+    run?.();
   }, []);
+  React.useEffect(() => flushPending, [connectionKey, flushPending]);
 
   const handlePortChange = (code: string, raw: string) => {
     if (!onProtocolsChange) return;
     const next = { ...portByCode, [code]: raw };
     setPortByCode(next);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onProtocolsChange(
-        protocols.map((p) => ({ code: p.code, port_override: (next[p.code] || '').trim() || null })),
-      );
-    }, PORT_DEBOUNCE_MS);
+    pendingRef.current = () => {
+      const ports = protocols.map((p) => ({ code: p.code, port_override: (next[p.code] || '').trim() || null }));
+      // Back to the saved ports: nothing to write.
+      if (ports.every((p, i) => p.port_override === ((protocols[i].port_override || '').trim() || null))) return;
+      onProtocolsChange(ports);
+    };
+    debounceRef.current = setTimeout(flushPending, PORT_DEBOUNCE_MS);
   };
 
   if (rows.length === 0) return null;

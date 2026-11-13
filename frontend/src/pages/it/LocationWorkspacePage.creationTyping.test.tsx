@@ -76,12 +76,12 @@ function Where() {
   return <div data-testid="where">{useLocation().pathname}</div>;
 }
 
-function renderNew() {
+function renderNew(path = '/it/locations/new/overview') {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={new QueryClient()}>
         <KanapDialogProvider>
-          <MemoryRouter initialEntries={['/it/locations/new/overview']}>
+          <MemoryRouter initialEntries={[path]}>
             <Where />
             <Routes>
               <Route path="/it/locations/:id/:tab" element={<LocationWorkspacePage />} />
@@ -187,5 +187,54 @@ describe('LocationWorkspacePage typing while the site is created', () => {
     expect(patchesWith('additional_info', 'Rack 4')).toHaveLength(1);
     fireEvent.change(shown, { target: { value: 'Rack 4, row B' } });
     await until(() => { if (patchesWith('additional_info', 'Rack 4, row B').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); }, 3000);
+  });
+
+  it('saves the notes typed in the last second when Create is clicked, once', async () => {
+    const { finish } = await startWrite();
+    await finish();
+    const notes = screen.getByLabelText('markdown-editor');
+    fireEvent.change(notes, { target: { value: 'Rack 4' } });
+    expect(patchesWith('additional_info', 'Rack 4')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await until(() => { if (patchesWith('additional_info', 'Rack 4').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1100)); });
+    expect(patchesWith('additional_info', 'Rack 4')).toHaveLength(1);
+    expect(server.additional_info).toBe('Rack 4');
+  });
+
+  it('saves the notes typed in the last second before the cancel counts them, and writes nothing to the deleted site', async () => {
+    const { finish } = await startWrite();
+    await finish();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/locations/loc-new/creation') return { data: { changes: { fields: server.additional_info ? 1 : 0, children: {} } } };
+      if (url === '/locations/LOC-9' || url === '/locations/loc-new') return { data: server };
+      return { data: [] };
+    });
+    mocked.delete.mockResolvedValue({ data: {} });
+    fireEvent.change(screen.getByLabelText('markdown-editor'), { target: { value: 'Rack 4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
+    // The notes are saved first, so the confirmation lists them.
+    await screen.findByRole('dialog');
+    expect(patchesWith('additional_info', 'Rack 4')).toHaveLength(1);
+    expect(mocked.delete).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledTimes(1));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1100)); });
+    expect(patchesWith('additional_info', 'Rack 4')).toHaveLength(1);
+  });
+
+  it('shows the notes typed before another tab again when the Overview tab is opened, and types on from them', async () => {
+    renderNew('/it/locations/LOC-9/overview');
+    const notes = await screen.findByLabelText('markdown-editor');
+    fireEvent.change(notes, { target: { value: 'Rack 4' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'workspace.location.tabs.contacts' }));
+    await until(() => { if (patchesWith('additional_info', 'Rack 4').length === 0) throw new Error('not written'); });
+    await until(() => expect(screen.queryByLabelText('markdown-editor')).toBeNull());
+    fireEvent.click(screen.getByRole('tab', { name: 'workspace.location.tabs.overview' }));
+    const back = (await screen.findByLabelText('markdown-editor')) as HTMLTextAreaElement;
+    expect(back.value).toBe('Rack 4');
+    fireEvent.change(back, { target: { value: 'Rack 4, row B' } });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1100)); });
+    expect(patchesWith('additional_info', 'Rack 4, row B')).toHaveLength(1);
   });
 });

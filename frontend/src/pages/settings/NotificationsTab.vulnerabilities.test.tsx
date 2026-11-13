@@ -1,5 +1,5 @@
 import '../../i18n';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -48,5 +48,52 @@ describe('NotificationsTab vulnerability email', () => {
       </ThemeProvider>,
     );
     expect(await screen.findByText(PHRASE)).toBeTruthy();
+  });
+});
+
+describe('NotificationsTab preferences waiting to be saved', () => {
+  beforeEach(() => {
+    vi.mocked(api.get).mockReset();
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === '/users/me/notification-preferences') return { data: PREFS } as any;
+      throw new Error(`unexpected ${url}`);
+    });
+    vi.mocked(api.patch).mockReset();
+    vi.mocked(api.patch).mockResolvedValue({ data: {} } as any);
+  });
+
+  const open = async () => {
+    const view = render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <NotificationsTab />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+    await screen.findByText(PHRASE);
+    return view;
+  };
+  const pause = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
+
+  it('sends a switch changed in the last half second once, when the tab goes', async () => {
+    const view = await open();
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    expect(api.patch).not.toHaveBeenCalled();
+    view.unmount();
+    expect(api.patch).toHaveBeenCalledTimes(1);
+    expect(api.patch).toHaveBeenCalledWith('/users/me/notification-preferences', { emails_enabled: false });
+    await pause(700);
+    expect(api.patch).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends nothing at unmount when nothing changed or the delay already ran', async () => {
+    const idle = await open();
+    idle.unmount();
+    const view = await open();
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    await pause(700);
+    expect(api.patch).toHaveBeenCalledTimes(1);
+    view.unmount();
+    expect(api.patch).toHaveBeenCalledTimes(1);
   });
 });

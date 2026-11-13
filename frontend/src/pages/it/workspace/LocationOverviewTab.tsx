@@ -14,14 +14,23 @@ type Props = {
   locationId: string;
   initialNotes: string;
   canManage: boolean;
-  onNotesSaved?: (next: string) => void;
+  /** The text just saved, with the site it was saved on (it may no longer be the one shown). */
+  onNotesSaved?: (next: string, locationId: string) => void;
   /** A new site: the notes go to its draft, and what needs a saved site stays hidden. */
   onNotesDraft?: (next: string) => void;
+  /** Set to a function that saves notes still waiting for their delay ("Cancel" counts them first). */
+  notesFlushRef?: React.MutableRefObject<(() => Promise<void>) | null>;
   onSubLocationsCountChange?: (count: number) => void;
   subItemsAnchorRef?: React.RefObject<HTMLDivElement>;
 };
 
 const NOTES_DEBOUNCE_MS = 900;
+
+// A text of spaces only is an empty note.
+const blank = (text: string) => (text.trim().length > 0 ? text : '');
+
+const writeNotes = (locationId: string, next: string) =>
+  api.patch(`/locations/${locationId}`, { additional_info: next.trim().length > 0 ? next : null });
 
 export default function LocationOverviewTab({
   locationId,
@@ -29,6 +38,7 @@ export default function LocationOverviewTab({
   canManage,
   onNotesSaved,
   onNotesDraft,
+  notesFlushRef,
   onSubLocationsCountChange,
   subItemsAnchorRef,
 }: Props) {
@@ -39,8 +49,17 @@ export default function LocationOverviewTab({
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestRef = React.useRef(initialNotes);
   const baselineRef = React.useRef(initialNotes);
+  const locationIdRef = React.useRef(locationId);
+  locationIdRef.current = locationId;
 
+  // The notes shown start again from the page's text when the site changes, or when that text is not
+  // what this tab saved last (the page handing the saved text back changes nothing: a newer text
+  // being typed stays).
+  const shownIdRef = React.useRef(locationId);
   React.useEffect(() => {
+    const sameSite = shownIdRef.current === locationId;
+    shownIdRef.current = locationId;
+    if (sameSite && blank(initialNotes) === blank(baselineRef.current)) return;
     setNotes(initialNotes);
     latestRef.current = initialNotes;
     baselineRef.current = initialNotes;
@@ -52,12 +71,10 @@ export default function LocationOverviewTab({
       setStatus('saving');
       setError(null);
       try {
-        await api.patch(`/locations/${locationId}`, {
-          additional_info: next.trim().length > 0 ? next : null,
-        });
+        await writeNotes(locationId, next);
         baselineRef.current = next;
         setStatus('saved');
-        onNotesSaved?.(next);
+        onNotesSaved?.(next, locationId);
         setTimeout(() => {
           setStatus((current) => (current === 'saved' ? 'idle' : current));
         }, 1500);
@@ -68,6 +85,10 @@ export default function LocationOverviewTab({
     },
     [locationId, onNotesSaved, t],
   );
+  const persistRef = React.useRef(persist);
+  persistRef.current = persist;
+  const onSavedRef = React.useRef(onNotesSaved);
+  onSavedRef.current = onNotesSaved;
 
   const handleNotesChange = (value: string) => {
     setNotes(value);
@@ -78,15 +99,35 @@ export default function LocationOverviewTab({
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
       void persist(latestRef.current);
     }, NOTES_DEBOUNCE_MS);
   };
 
+  // Notes still waiting for their delay are written when the tab goes (the site closes, Create, another
+  // tab or page) or shows another site: once, with the last text, to the site they were typed on.
+  React.useEffect(() => () => {
+    if (!debounceRef.current) return;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    const typed = latestRef.current;
+    if (locationIdRef.current === locationId) {
+      void persistRef.current(typed);
+    } else if (typed !== baselineRef.current) {
+      void writeNotes(locationId, typed).then(() => onSavedRef.current?.(typed, locationId), () => undefined);
+    }
+  }, [locationId]);
+
   React.useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!notesFlushRef) return undefined;
+    notesFlushRef.current = async () => {
+      if (!debounceRef.current) return;
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+      await persistRef.current(latestRef.current);
     };
-  }, []);
+    return () => { notesFlushRef.current = null; };
+  }, [notesFlushRef]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

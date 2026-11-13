@@ -756,7 +756,7 @@ export default function ConnectionWorkspacePage() {
       linkedInterfacesError={linkedInterfacesError}
       derivedInterfaceCount={connection.derived_interface_count || 0}
       descriptionFlushRef={connection.id ? descriptionFlushRef : undefined}
-      onDescriptionSaved={(next) => setData((prev) => prev ? { ...prev, description: next } : prev)}
+      onDescriptionSaved={(next, savedId) => setData((prev) => (prev && prev.id === savedId ? { ...prev, description: next } : prev))}
       onEndpointChange={connection.id ? handleEndpointChange : ignoreDraft}
       onMultiServerChange={connection.id ? handleMultiServerChange : ignoreDraft}
       onProtocolsChange={connection.id ? handleProtocolsRichChange : ignoreDraft}

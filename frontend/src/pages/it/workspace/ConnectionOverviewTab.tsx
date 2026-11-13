@@ -37,6 +37,8 @@ import { classificationText } from '../../../utils/applicationClassification';
 
 const NOTES_DEBOUNCE_MS = 900;
 
+const writeDescription = (connectionId: string, next: string) =>
+  api.patch(`/connections/${connectionId}`, { description: next.trim().length > 0 ? next : null });
 
 type ConnectionTypeOption = { code: string; label: string; typicalPorts: string };
 
@@ -75,7 +77,8 @@ type Props = {
   linkedInterfacesLoading: boolean;
   linkedInterfacesError: string | null;
   derivedInterfaceCount: number;
-  onDescriptionSaved?: (next: string) => void;
+  /** The text just saved, with the connection it was saved on (it may no longer be the one shown). */
+  onDescriptionSaved?: (next: string, connectionId: string) => void;
   /** Set to a function that saves a description still waiting for its debounce ("Create", "Cancel"). */
   descriptionFlushRef?: React.MutableRefObject<(() => Promise<void>) | null>;
   onEndpointChange: (
@@ -168,7 +171,14 @@ export default function ConnectionOverviewTab({
     [canManage, onLinkedInterfacesChanged, t],
   );
 
+  // The description shown starts again from the page's text when the connection changes, or when that
+  // text is not what this tab saved last (the page handing the saved text back changes nothing: a
+  // newer text being typed stays).
+  const shownIdRef = React.useRef(connectionId);
   React.useEffect(() => {
+    const sameConnection = shownIdRef.current === connectionId;
+    shownIdRef.current = connectionId;
+    if (sameConnection && initialDescription === baselineRef.current) return;
     setDescription(initialDescription);
     baselineRef.current = initialDescription;
   }, [initialDescription, connectionId]);
@@ -179,12 +189,10 @@ export default function ConnectionOverviewTab({
       setStatus('saving');
       setError(null);
       try {
-        await api.patch(`/connections/${connectionId}`, {
-          description: next.trim().length > 0 ? next : null,
-        });
+        await writeDescription(connectionId, next);
         baselineRef.current = next;
         setStatus('saved');
-        onDescriptionSaved?.(next);
+        onDescriptionSaved?.(next, connectionId);
         setTimeout(() => {
           setStatus((current) => (current === 'saved' ? 'idle' : current));
         }, 1500);
@@ -200,18 +208,35 @@ export default function ConnectionOverviewTab({
     setDescription(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
       void persistDescription(value);
     }, NOTES_DEBOUNCE_MS);
   };
 
-  React.useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
   const descriptionRef = React.useRef(description);
   descriptionRef.current = description;
+  const persistRef = React.useRef(persistDescription);
+  persistRef.current = persistDescription;
+  const connectionIdRef = React.useRef(connectionId);
+  connectionIdRef.current = connectionId;
+
+  // A description still waiting for its delay is written when the tab goes (the connection closes,
+  // Create, another tab or page) or shows another connection: once, with the last text, to the
+  // connection it was typed on.
+  React.useEffect(() => () => {
+    if (!debounceRef.current) return;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    // A connection still without its record has nothing to write to.
+    if (!connectionId) return;
+    const typed = descriptionRef.current;
+    if (connectionIdRef.current === connectionId) {
+      void persistRef.current(typed);
+    } else if (typed !== baselineRef.current) {
+      void writeDescription(connectionId, typed).catch(() => undefined);
+    }
+  }, [connectionId]);
+
   React.useEffect(() => {
     if (!descriptionFlushRef) return undefined;
     descriptionFlushRef.current = async () => {
