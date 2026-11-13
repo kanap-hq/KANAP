@@ -602,7 +602,7 @@ Mientras el espacio de trabajo no está conectado, **Iniciar sesión con Microso
 
 ### Desconexión
 
-**Desconectar** abre una confirmación con dos números: las cuentas que conservan su contraseña, y las cuentas que no tienen y crearán una con **Contraseña olvidada** en la página de inicio de sesión. No se les envía ningún correo. En una instalación sin correo, la segunda línea indica que un administrador define su contraseña, como se describe en [Restablecimiento de contraseña](on-premise/operations.md#password-reset). Si su propia cuenta no tiene contraseña, la confirmación le pide una (al menos 8 caracteres).
+**Desconectar** abre una confirmación con dos números: las cuentas que conservan su contraseña, y las cuentas que no tienen y crearán una con **Contraseña olvidada** en la página de inicio de sesión. No se les envía ningún correo. En una instalación sin correo, la segunda línea indica que un administrador define su contraseña, como se describe en [Restablecimiento de contraseña](on-premise/operations.md#restablecimiento-de-contrasena). Si su propia cuenta no tiene contraseña, la confirmación le pide una (al menos 8 caracteres).
 
 Tras la desconexión, cada cuenta vinculada a Microsoft es una cuenta local: conserva la contraseña que tiene, y su historial registra el cambio. Las sesiones ya abiertas siguen abiertas. La sincronización diaria del directorio se detiene y ya no modifica estas cuentas. Si vuelve a conectar el espacio de trabajo más adelante, las cuentas existentes se vinculan de nuevo como se describe en [Inicio de sesión inmediato con Microsoft](#inicio-de-sesion-inmediato-con-microsoft).
 

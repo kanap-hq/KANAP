@@ -602,7 +602,7 @@ Solange der Arbeitsbereich nicht verbunden ist, ist **Mit Microsoft anmelden** a
 
 ### Verbindung trennen
 
-**Trennen** öffnet eine Bestätigung mit zwei Zahlen: die Konten, die ihr Passwort behalten, und die Konten, die keines haben und eines über **Passwort vergessen** auf der Anmeldeseite festlegen. Ihnen wird keine E-Mail gesendet. Auf einer Installation ohne E-Mail sagt die zweite Zeile, dass ein Administrator ihr Passwort festlegt, wie unter [Passwort zurücksetzen](on-premise/operations.md#password-reset) beschrieben. Hat Ihr eigenes Konto kein Passwort, fragt die Bestätigung Sie nach einem (mindestens 8 Zeichen).
+**Trennen** öffnet eine Bestätigung mit zwei Zahlen: die Konten, die ihr Passwort behalten, und die Konten, die keines haben und eines über **Passwort vergessen** auf der Anmeldeseite festlegen. Ihnen wird keine E-Mail gesendet. Auf einer Installation ohne E-Mail sagt die zweite Zeile, dass ein Administrator ihr Passwort festlegt, wie unter [Passwort zurücksetzen](on-premise/operations.md#passwort-zurucksetzen) beschrieben. Hat Ihr eigenes Konto kein Passwort, fragt die Bestätigung Sie nach einem (mindestens 8 Zeichen).
 
 Nach dem Trennen ist jedes mit Microsoft verknüpfte Konto ein lokales Konto: Es behält sein Passwort, und sein Verlauf hält die Änderung fest. Bereits offene Sitzungen bleiben offen. Die tägliche Verzeichnissynchronisierung endet und lässt diese Konten unverändert. Verbinden Sie den Arbeitsbereich später erneut, werden bestehende Konten wieder verknüpft, wie unter [Just-in-time-Anmeldung mit Microsoft](#just-in-time-anmeldung-mit-microsoft) beschrieben.
 

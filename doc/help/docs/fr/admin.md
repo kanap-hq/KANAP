@@ -602,7 +602,7 @@ Tant que l'espace de travail n'est pas connecté, **Se connecter avec Microsoft*
 
 ### Déconnexion
 
-**Déconnecter** ouvre une confirmation avec deux nombres : les comptes qui gardent leur mot de passe, et les comptes qui n'en ont pas et en créeront un avec **Mot de passe oublié** sur la page de connexion. Aucun e-mail ne leur est envoyé. Sur une installation sans e-mail, la seconde ligne indique qu'un administrateur définit leur mot de passe, comme décrit dans [Réinitialisation du mot de passe](on-premise/operations.md#password-reset). Si votre propre compte n'a pas de mot de passe, la confirmation vous en demande un (au moins 8 caractères).
+**Déconnecter** ouvre une confirmation avec deux nombres : les comptes qui gardent leur mot de passe, et les comptes qui n'en ont pas et en créeront un avec **Mot de passe oublié** sur la page de connexion. Aucun e-mail ne leur est envoyé. Sur une installation sans e-mail, la seconde ligne indique qu'un administrateur définit leur mot de passe, comme décrit dans [Réinitialisation du mot de passe](on-premise/operations.md#reinitialisation-du-mot-de-passe). Si votre propre compte n'a pas de mot de passe, la confirmation vous en demande un (au moins 8 caractères).
 
 Après la déconnexion, chaque compte relié à Microsoft est un compte local : il garde le mot de passe qu'il a, et son historique enregistre le changement. Les sessions déjà ouvertes restent ouvertes. La synchronisation quotidienne de l'annuaire s'arrête et ne touche plus ces comptes. Si vous connectez de nouveau l'espace plus tard, les comptes existants sont reliés de nouveau comme décrit dans [Connexion à la volée avec Microsoft](#connexion-a-la-volee-avec-microsoft).
 

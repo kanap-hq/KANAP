@@ -159,7 +159,7 @@ Der Block unter **Administration → Authentifizierung** meldet das Ergebnis: **
 
 ## Verbindung trennen
 
-**Trennen** unter **Administration → Authentifizierung** entfernt die Verbindung und macht jedes mit Entra verknüpfte Konto zu einem lokalen Konto, nach einer Bestätigung, die angibt, wie viele Konten ihr Passwort behalten und wie viele keines haben. Es wird keine E-Mail gesendet. Mit konfigurierter E-Mail legt ein Konto ohne Passwort eines über **Passwort vergessen** auf der Anmeldeseite fest. Ohne E-Mail legen Sie es fest, wie unter [Passwort zurücksetzen](operations.md#password-reset) beschrieben. Ein Administrator ohne Passwort gibt eines in der Bestätigung an. Die tägliche Verzeichnissynchronisierung endet für den Arbeitsbereich.
+**Trennen** unter **Administration → Authentifizierung** entfernt die Verbindung und macht jedes mit Entra verknüpfte Konto zu einem lokalen Konto, nach einer Bestätigung, die angibt, wie viele Konten ihr Passwort behalten und wie viele keines haben. Es wird keine E-Mail gesendet. Mit konfigurierter E-Mail legt ein Konto ohne Passwort eines über **Passwort vergessen** auf der Anmeldeseite fest. Ohne E-Mail legen Sie es fest, wie unter [Passwort zurücksetzen](operations.md#passwort-zurucksetzen) beschrieben. Ein Administrator ohne Passwort gibt eines in der Bestätigung an. Die tägliche Verzeichnissynchronisierung endet für den Arbeitsbereich.
 
 ## Fehlerbehebung
 

@@ -159,7 +159,7 @@ El bloque de **Administración → Autenticación** indica el resultado: **Últi
 
 ## Desconexión
 
-**Desconectar** en **Administración → Autenticación** elimina la conexión y convierte cada cuenta vinculada a Entra en una cuenta local, tras una confirmación que indica cuántas cuentas conservan su contraseña y cuántas no tienen. No se envía ningún correo. Con el correo configurado, una cuenta sin contraseña crea una con **Contraseña olvidada** en la página de inicio de sesión. Sin correo, defínala como se describe en [Restablecimiento de contraseña](operations.md#password-reset). Un administrador sin contraseña indica una en la confirmación. La sincronización diaria del directorio se detiene para el espacio de trabajo.
+**Desconectar** en **Administración → Autenticación** elimina la conexión y convierte cada cuenta vinculada a Entra en una cuenta local, tras una confirmación que indica cuántas cuentas conservan su contraseña y cuántas no tienen. No se envía ningún correo. Con el correo configurado, una cuenta sin contraseña crea una con **Contraseña olvidada** en la página de inicio de sesión. Sin correo, defínala como se describe en [Restablecimiento de contraseña](operations.md#restablecimiento-de-contrasena). Un administrador sin contraseña indica una en la confirmación. La sincronización diaria del directorio se detiene para el espacio de trabajo.
 
 ## Solución de problemas
 

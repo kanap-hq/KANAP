@@ -159,7 +159,7 @@ Le bloc de **Administration → Authentification** indique le résultat : **Dern
 
 ## Déconnexion
 
-**Déconnecter** dans **Administration → Authentification** retire la connexion et fait de chaque compte relié à Entra un compte local, après une confirmation qui indique combien de comptes gardent leur mot de passe et combien n'en ont pas. Aucun e-mail n'est envoyé. Avec l'e-mail configuré, un compte sans mot de passe en crée un avec **Mot de passe oublié** sur la page de connexion. Sans e-mail, définissez-le comme décrit dans [Réinitialisation du mot de passe](operations.md#password-reset). Un administrateur sans mot de passe en donne un dans la confirmation. La synchronisation quotidienne de l'annuaire s'arrête pour l'espace de travail.
+**Déconnecter** dans **Administration → Authentification** retire la connexion et fait de chaque compte relié à Entra un compte local, après une confirmation qui indique combien de comptes gardent leur mot de passe et combien n'en ont pas. Aucun e-mail n'est envoyé. Avec l'e-mail configuré, un compte sans mot de passe en crée un avec **Mot de passe oublié** sur la page de connexion. Sans e-mail, définissez-le comme décrit dans [Réinitialisation du mot de passe](operations.md#reinitialisation-du-mot-de-passe). Un administrateur sans mot de passe en donne un dans la confirmation. La synchronisation quotidienne de l'annuaire s'arrête pour l'espace de travail.
 
 ## Dépannage
 
