@@ -131,7 +131,11 @@ export default function AdminAuthPage() {
       setSyncResult(res.data as SyncRunResult);
       await refetch();
     } catch (e: any) {
-      setActionError(getApiErrorMessage(e, t, t('auth.sync.error', { message: '' })));
+      if (e?.response?.status === 409 && e?.response?.data?.code === 'DIRECTORY_SYNC_RUNNING') {
+        setSyncResult({ status: 'already_running', synced: 0, disabled: 0, removed: 0 });
+      } else {
+        setActionError(getApiErrorMessage(e, t, t('auth.sync.error', { message: '' })));
+      }
     } finally {
       setSyncing(false);
     }

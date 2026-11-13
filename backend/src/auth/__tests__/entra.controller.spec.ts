@@ -857,6 +857,31 @@ async function testConsentEntryNamesTheAdministratorWhoOpenedIt() {
   }
 }
 
+/**
+ * "Sync now" while another sync of the workspace runs is refused as the other "already running"
+ * actions are: 409 `DIRECTORY_SYNC_RUNNING`. A sync that runs answers its result.
+ */
+async function testSyncNowWhileAnotherRunsIsAConflict() {
+  const flags = Features as { ENTRA_SSO: boolean };
+  const previous = flags.ENTRA_SSO;
+  flags.ENTRA_SSO = true;
+  try {
+    const answering = (status: string) => new AdminAuthController(
+      {} as any,
+      {} as any,
+      { syncTenant: async () => ({ status, message: null, synced: 0, disabled: 0, removed: 0, managers_updated: 0, managers_unresolved: 0, kept_administrator: null }) } as any,
+      {} as any,
+    );
+    const req = { tenant: { id: WORKSPACE_A.id }, user: { sub: 'user-admin-1' } };
+    const refusal = await answering('already_running').runDirectorySync(req).then(() => null, (error: any) => error);
+    assert.equal(refusal?.getStatus?.(), 409);
+    assert.equal(refusal?.getResponse?.().code, 'DIRECTORY_SYNC_RUNNING');
+    assert.equal((await answering('ok').runDirectorySync(req)).status, 'ok');
+  } finally {
+    flags.ENTRA_SSO = previous;
+  }
+}
+
 /** Runs `fn` with the given environment values, then restores them. */
 async function withEnv(values: Record<string, string | undefined>, fn: () => Promise<void>) {
   const previous = new Map<string, string | undefined>();
@@ -912,6 +937,7 @@ async function run() {
   await testStartSetupDoesNotSetNonceCookie();
   await testStartLoginDoesNotSetNonceCookie();
   await testStartLoginWithoutConnectionReturnsToTheSignInPage();
+  await testSyncNowWhileAnotherRunsIsAConflict();
   await testRefusedSsoSessionsAreRecorded();
   await withEnv({ APP_ENV: 'development', NODE_ENV: undefined }, testFailedSsoRoundTripsAreRecordedInATrustedTenant);
   await withEnv({ ENTRA_STATE_SECRET: 'entra-controller-spec-state-secret' }, testConsentReturnNeedsAStateSignedForConsent);

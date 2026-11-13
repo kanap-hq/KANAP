@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { RequireLevel } from './require-level.decorator';
@@ -68,7 +68,10 @@ export class AdminAuthController {
     };
   }
 
-  /** Run the directory sync for this tenant now (same code path as the nightly task). */
+  /**
+   * Run the directory sync for this tenant now (same code path as the nightly task). 409
+   * `DIRECTORY_SYNC_RUNNING` while another sync of the workspace runs.
+   */
   @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @Post('directory-sync')
   @RequireLevel('users', 'admin')
@@ -83,7 +86,15 @@ export class AdminAuthController {
     if (!Features.ENTRA_SSO) {
       throw new BadRequestException('SSO_NOT_CONFIGURED');
     }
-    return this.directorySync.syncTenant(tenantMeta.id);
+    const result = await this.directorySync.syncTenant(tenantMeta.id);
+    if (result.status === 'already_running') {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'DIRECTORY_SYNC_RUNNING',
+        message: 'A sync is already running. Wait for it to finish.',
+      });
+    }
+    return result;
   }
 
   /**

@@ -78,8 +78,9 @@ describe('AdminAuthPage directory sync report', () => {
 
   it('says a sync is already running when Sync now finds one in progress', async () => {
     api.get.mockResolvedValue({ data: settings({}) });
-    api.post.mockResolvedValue({
-      data: { status: 'already_running', message: null, synced: 0, disabled: 0, removed: 0, kept_administrator: null },
+    // The server refuses a second run: 409 with its code.
+    api.post.mockRejectedValue({
+      response: { status: 409, data: { statusCode: 409, code: 'DIRECTORY_SYNC_RUNNING', message: 'A sync is already running.' } },
     });
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'auth.sync.syncNow' }));
