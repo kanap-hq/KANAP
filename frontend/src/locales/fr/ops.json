@@ -1856,6 +1856,8 @@
     "typeOpex": "OPEX",
     "typeCapex": "CAPEX",
     "line": "Ligne budgétaire",
+    "notFound": "Ligne budgétaire introuvable.",
+    "backToList": "Retour à la liste",
     "delete": {
       "toDelete_one": "{{count}} ligne budgétaire sera supprimée :",
       "toDelete_other": "{{count}} lignes budgétaires seront supprimées :",
