@@ -77,7 +77,8 @@ type Props = {
   linkedInterfacesLoading: boolean;
   linkedInterfacesError: string | null;
   derivedInterfaceCount: number;
-  onDescriptionSaved?: (next: string) => void;
+  /** The text just saved, with the connection it was saved on (it may no longer be the one shown). */
+  onDescriptionSaved?: (next: string, connectionId: string) => void;
   /** Set to a function that saves a description still waiting for its debounce ("Create", "Cancel"). */
   descriptionFlushRef?: React.MutableRefObject<(() => Promise<void>) | null>;
   onEndpointChange: (
@@ -170,7 +171,14 @@ export default function ConnectionOverviewTab({
     [canManage, onLinkedInterfacesChanged, t],
   );
 
+  // The description shown starts again from the page's text when the connection changes, or when that
+  // text is not what this tab saved last (the page handing the saved text back changes nothing: a
+  // newer text being typed stays).
+  const shownIdRef = React.useRef(connectionId);
   React.useEffect(() => {
+    const sameConnection = shownIdRef.current === connectionId;
+    shownIdRef.current = connectionId;
+    if (sameConnection && initialDescription === baselineRef.current) return;
     setDescription(initialDescription);
     baselineRef.current = initialDescription;
   }, [initialDescription, connectionId]);
@@ -184,7 +192,7 @@ export default function ConnectionOverviewTab({
         await writeDescription(connectionId, next);
         baselineRef.current = next;
         setStatus('saved');
-        onDescriptionSaved?.(next);
+        onDescriptionSaved?.(next, connectionId);
         setTimeout(() => {
           setStatus((current) => (current === 'saved' ? 'idle' : current));
         }, 1500);

@@ -133,7 +133,7 @@ describe('ConnectionOverviewTab description waiting to be saved', () => {
     expect(patch).toHaveBeenCalledWith('/connections/c1', { description: 'Backup link' });
     await pause(1100);
     expect(patch).toHaveBeenCalledTimes(1);
-    expect(onDescriptionSaved).toHaveBeenCalledWith('Backup link');
+    expect(onDescriptionSaved).toHaveBeenCalledWith('Backup link', 'c1');
   });
 
   it('writes nothing when the text is back to the saved one, or was never typed', async () => {
@@ -177,5 +177,38 @@ describe('ConnectionOverviewTab description waiting to be saved', () => {
     view.unmount();
     await pause(1100);
     expect(patch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the text typed while the save runs once the page hands the saved text back, and sends it after', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    patch.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
+    function Page() {
+      const [stored, setStored] = React.useState('');
+      return tab({ initialDescription: stored, onDescriptionSaved: (next) => setStored(next) });
+    }
+    render(<Page />);
+    const editor = (await screen.findByLabelText('markdown-editor')) as HTMLTextAreaElement;
+    fireEvent.change(editor, { target: { value: 'Backup' } });
+    await pause(1000);
+    expect(patch).toHaveBeenCalledTimes(1);
+    fireEvent.change(editor, { target: { value: 'Backup link' } });
+    await act(async () => { answer({ data: {} }); });
+    expect(editor.value).toBe('Backup link');
+    await pause(1000);
+    expect(patch).toHaveBeenCalledTimes(2);
+    expect(patch).toHaveBeenLastCalledWith('/connections/c1', { description: 'Backup link' });
+  });
+
+  it('hands back a save to the connection it was made on when the tab shows another one meanwhile', async () => {
+    const onDescriptionSaved = vi.fn();
+    let answer: (value: unknown) => void = () => undefined;
+    patch.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
+    const view = render(tab({ connectionId: 'c1', onDescriptionSaved }));
+    fireEvent.change(await screen.findByLabelText('markdown-editor'), { target: { value: 'one, typed' } });
+    await pause(1000);
+    view.rerender(tab({ connectionId: 'c2', initialDescription: 'two', onDescriptionSaved }));
+    await act(async () => { answer({ data: {} }); });
+    expect(onDescriptionSaved).toHaveBeenCalledWith('one, typed', 'c1');
+    expect((screen.getByLabelText('markdown-editor') as HTMLTextAreaElement).value).toBe('two');
   });
 });
