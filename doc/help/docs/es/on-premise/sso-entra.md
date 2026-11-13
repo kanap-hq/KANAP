@@ -157,12 +157,16 @@ El último administrador activo del espacio de trabajo sigue activo, aunque el d
 
 El bloque de **Administración → Autenticación** indica el resultado: **Última sincronización {fecha}: N cuentas actualizadas, N desactivadas.** después de una ejecución correcta o, en caso contrario, **La última sincronización falló: {mensaje}**. **Sincronizar ahora** ejecuta el mismo trabajo bajo demanda.
 
+## Desconexión
+
+**Desconectar** en **Administración → Autenticación** elimina la conexión y convierte cada cuenta vinculada a Entra en una cuenta local, tras una confirmación que indica cuántas cuentas conservan su contraseña y cuántas no tienen. No se envía ningún correo. Con el correo configurado, una cuenta sin contraseña crea una con **Contraseña olvidada** en la página de inicio de sesión. Sin correo, defínala como se describe en [Restablecimiento de contraseña](operations.md#password-reset). Un administrador sin contraseña indica una en la confirmación. La sincronización diaria del directorio se detiene para el espacio de trabajo.
+
 ## Solución de problemas
 
 - **SSO_NOT_CONFIGURED**: faltan las variables de entorno de Entra o el inquilino no está conectado. Los usuarios ven "El inicio de sesión con Microsoft no está configurado para este espacio de trabajo."
 - **ENTRA_TENANT_MISMATCH**: conectó un inquilino pero intenta iniciar sesión desde otro. Los usuarios ven "Esta cuenta de Microsoft pertenece a una organización distinta de la conectada a este espacio de trabajo."
 - **ENTRA_EMAIL_UNVERIFIED**: la dirección de correo de la cuenta de Microsoft no está verificada, así que no puede usarse para iniciar sesión.
-- **ENTRA_ACCOUNT_LINKED**: la cuenta de Kadratis con esta dirección de correo ya está vinculada a otra cuenta de Microsoft y conserva ese vínculo. Los usuarios ven «Esta cuenta ya está vinculada a otra cuenta de Microsoft. Contacte con su administrador.»
+- **ENTRA_ACCOUNT_LINKED**: la cuenta de Kadratis con esta dirección de correo ya está vinculada a otra cuenta de Microsoft y conserva ese vínculo. Los usuarios ven «Esta cuenta ya está vinculada a otra cuenta de Microsoft. Contacte con su administrador.» Un administrador elimina ese vínculo con **Desvincular de Microsoft** en el menú de la fila de la lista de usuarios.
 - **ENTRA_LINK_NEEDS_EMAIL**: ya existe una cuenta con esta dirección de correo. Kadratis vincula una cuenta existente a Microsoft solo tras un enlace de confirmación enviado a su dirección, y no hay ningún servicio de correo configurado. Las cuentas creadas en un primer inicio de sesión con Microsoft, las cuentas invitadas que aún no tienen contraseña y la sincronización diaria del directorio no se ven afectadas.
 - **Estado o nonce de Entra no válido**: el estado del inicio de sesión caducó o la redirección de Entra no volvió a la URL de retorno configurada. Vuelva a intentar el inicio de sesión y compruebe que `ENTRA_REDIRECT_URI` coincide exactamente con el registro de aplicación de Entra.
 - **Redirección incorrecta tras el inicio de sesión**: compruebe que `APP_BASE_URL` es la dirección exacta que abren los usuarios. La redirección procede de `APP_BASE_URL`, y las cabeceras `Host` y `X-Forwarded-Host` no la cambian. Compruebe también que el proxy envía `X-Forwarded-Proto`.

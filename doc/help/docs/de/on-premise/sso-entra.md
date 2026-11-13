@@ -157,12 +157,16 @@ Der letzte aktive Administrator des Arbeitsbereichs bleibt aktiv, auch wenn das 
 
 Der Block unter **Administration → Authentifizierung** meldet das Ergebnis: **Zuletzt synchronisiert {date}: N Konten aktualisiert, N deaktiviert.** nach einem erfolgreichen Lauf, sonst **Die letzte Synchronisierung ist fehlgeschlagen: {message}**. **Jetzt synchronisieren** führt denselben Job auf Anforderung aus.
 
+## Verbindung trennen
+
+**Trennen** unter **Administration → Authentifizierung** entfernt die Verbindung und macht jedes mit Entra verknüpfte Konto zu einem lokalen Konto, nach einer Bestätigung, die angibt, wie viele Konten ihr Passwort behalten und wie viele keines haben. Es wird keine E-Mail gesendet. Mit konfigurierter E-Mail legt ein Konto ohne Passwort eines über **Passwort vergessen** auf der Anmeldeseite fest. Ohne E-Mail legen Sie es fest, wie unter [Passwort zurücksetzen](operations.md#password-reset) beschrieben. Ein Administrator ohne Passwort gibt eines in der Bestätigung an. Die tägliche Verzeichnissynchronisierung endet für den Arbeitsbereich.
+
 ## Fehlerbehebung
 
 - **SSO_NOT_CONFIGURED**: Die Entra-Umgebungsvariablen fehlen oder der Mandant ist nicht verbunden. Benutzer sehen "Die Anmeldung mit Microsoft ist für diesen Arbeitsbereich nicht eingerichtet."
 - **ENTRA_TENANT_MISMATCH**: Sie haben einen Mandanten verbunden, versuchen aber, sich aus einem anderen anzumelden. Benutzer sehen "Dieses Microsoft-Konto gehört zu einer anderen Organisation als der mit diesem Arbeitsbereich verbundenen."
 - **ENTRA_EMAIL_UNVERIFIED**: Die E-Mail-Adresse des Microsoft-Kontos ist nicht verifiziert und kann daher nicht zur Anmeldung verwendet werden.
-- **ENTRA_ACCOUNT_LINKED**: Das Kadratis-Konto mit dieser E-Mail-Adresse ist bereits mit einem anderen Microsoft-Konto verknüpft und behält diese Verknüpfung. Benutzer sehen „Dieses Konto ist bereits mit einem anderen Microsoft-Konto verknüpft. Wenden Sie sich an Ihren Administrator.“
+- **ENTRA_ACCOUNT_LINKED**: Das Kadratis-Konto mit dieser E-Mail-Adresse ist bereits mit einem anderen Microsoft-Konto verknüpft und behält diese Verknüpfung. Benutzer sehen „Dieses Konto ist bereits mit einem anderen Microsoft-Konto verknüpft. Wenden Sie sich an Ihren Administrator.“ Ein Administrator entfernt diese Verknüpfung mit **Von Microsoft trennen** im Zeilenmenü der Benutzerliste.
 - **ENTRA_LINK_NEEDS_EMAIL**: Ein Konto mit dieser E-Mail-Adresse existiert bereits. Kadratis verknüpft ein bestehendes Konto erst nach einem Bestätigungslink an seine Adresse mit Microsoft, und es ist kein E-Mail-Dienst eingerichtet. Konten, die bei einer ersten Anmeldung mit Microsoft angelegt werden, eingeladene Konten, die noch kein Passwort haben, und die tägliche Verzeichnissynchronisierung sind nicht betroffen.
 - **Invalid Entra state / nonce**: Der Anmeldestatus ist abgelaufen, oder die Entra-Weiterleitung ist nicht zur konfigurierten Callback-URL zurückgekehrt. Wiederholen Sie die Anmeldung und prüfen Sie, dass `ENTRA_REDIRECT_URI` genau der Entra-App-Registrierung entspricht.
 - **Falsche Weiterleitung nach der Anmeldung**: Prüfen Sie, dass `APP_BASE_URL` die genaue Adresse ist, die Benutzer öffnen. Die Weiterleitung stammt aus `APP_BASE_URL`, und die Header `Host` und `X-Forwarded-Host` ändern sie nicht. Prüfen Sie außerdem, dass der Proxy `X-Forwarded-Proto` sendet.

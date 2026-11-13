@@ -74,7 +74,7 @@ Rate limiting (default enabled):
   - The nonce is validated from signed `state`, not from a browser cookie, so callbacks work across tenant subdomains and custom/on-prem domains.
 - GET `/auth/entra/login?redirectTo=/path`
   - Public endpoint, but only available on tenant hosts that previously completed setup (`sso_provider='entra'`).
-  - Validates `redirectTo` (defaults to `/`), signs new `state` containing the nonce, sends the same nonce to Microsoft, and 302s to the Microsoft authorization endpoint. Errors return JSON (e.g., `{ message: 'SSO_NOT_CONFIGURED' }`).
+  - Validates `redirectTo` (defaults to `/`), signs new `state` containing the nonce, sends the same nonce to Microsoft, and 302s to the Microsoft authorization endpoint. A tenant without a Microsoft connection is redirected to `/login?ssoError=SSO_NOT_CONFIGURED` on the tenant host.
 - GET `/auth/entra/callback`
   - Shared callback for both setup & login.
   - Mode and nonce are embedded in the signed `state` payload (`mode='setup' | 'login'`). The endpoint exchanges the auth code for tokens using the shared app registration, validates the ID token (issuer, audience, nonce, `tid`, `oid`, email), and then:
@@ -93,13 +93,21 @@ Rate limiting (default enabled):
 
 - GET `/admin/auth/settings`
   - Requires `users:admin` and a tenant host.
-  - Returns `{ sso_provider, sso_enabled, entra_tenant_id, entra_metadata }` for the current tenant. Used by the **Admin → Authentication** UI to show status and surface the “Test Microsoft sign-in” button (which simply calls `/auth/entra/login`).
+  - Returns `{ sso_provider, sso_enabled, entra_tenant_id, entra_metadata, directory_sync, disconnect }` for the current tenant. Used by the **Admin → Authentication** UI to show status and surface the “Test Microsoft sign-in” button (which simply calls `/auth/entra/login`).
+  - `disconnect` (null when not connected): `{ keep_password, need_password, password_required }`, what a disconnect does. Among the linked accounts that may sign in with a password (`enabled` or `invited`, main role other than Contact), how many keep a password and how many have none; the caller counts with the first when `password_required` (they have no password and must give one).
+- POST `/admin/auth/directory-sync`
+  - Requires `users:admin`. Runs the directory sync now and returns its result; `409` `DIRECTORY_SYNC_RUNNING` while another sync of the tenant runs.
+- POST `/admin/auth/disconnect`
+  - Requires `users:admin`. Body (optional): `{ password?: string }`. In the request's transaction: locks the tenant row, then the linked accounts and the caller by id; clears `sso_provider`, `sso_enabled`, `entra_tenant_id`, `entra_metadata`; removes the link of every linked account of the tenant (`external_auth_provider`, `external_subject`, `external_synced_at`; the password stays; one `users` audit entry per account, `source_ref = 'entra-disconnect'`, written in one batch); voids the pending link confirmations; writes the tenant's audit entry. No e-mail is sent; open sessions stay open.
+  - A caller without a password must give one of at least 8 characters, written with the rest; a caller who has one is not asked and `password` is ignored.
+  - Returns `{ ok: true, accounts_made_local }`. `400` `LOCAL_PASSWORD_REQUIRED` (nothing written), `409` `SSO_NOT_CONNECTED` when the tenant is not connected (a second disconnect at the same time).
 
 ## Public Utilities
 - GET `/public/tenant-info`
   - Resolves tenant metadata for the current host.
   - Returns branding-aware tenant metadata for valid tenant hosts:
-    - `{ slug, name, displayName, logoPath, logoVersion, useLogoInDark, primaryColorLight, primaryColorDark }`
+    - `{ slug, name, displayName, logoPath, logoVersion, useLogoInDark, primaryColorLight, primaryColorDark, microsoftSignIn }`
+    - `microsoftSignIn` is true when the installation has Microsoft sign-in (`ENTRA_SSO`) and the tenant is connected to a directory; the sign-in page greys out its Microsoft button otherwise. Nothing else about the connection is given.
     - `displayName` is the organisation name the workspace shows (header, sign-in, tab title), or `null` when none was chosen (empty, or the on-premise default `My Organization`): the app then shows the product name.
     - `logoPath` is a relative API path (`/public/branding/logo`) or `null`.
     - `logoVersion` is a numeric cache-busting counter or `null` when no logo exists.
@@ -1988,7 +1996,7 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Password is optional; most flows leave it empty and rely on the invite/password-reset pipeline.
   - `role_id` preferred; falls back to `role_name` (defaults to system `Contact`). A `role_name` that is a system role's name in another case (`administrator`) names that system role.
   - A person who is not an administrator gives only the rights they hold: on POST `/users`, PATCH `/users/:id` (`role_id`), PUT `/users/:id/roles` and the users import, a role that is not already the person's and grants a module level above the caller's is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level), and the Administrator role is `403` `administrator_required`. Nothing is written.
-  - A person who is not an administrator changes no person who has more rights than they do (the Administrator role, or a module level above theirs, all roles counted): PATCH `/users/:id`, PUT `/users/:id/roles`, POST `/users/:id/enable|disable|invite`, PUT `/users/:id/data-access` are `403` `PERSON_ABOVE_OWN_RIGHTS`; DELETE `/users/:id`, DELETE `/users/bulk` and POST `/users/delete-check` report the refusal `PERSON_ABOVE_OWN_RIGHTS`; a row of POST `/users/import` or POST `/data-access/import` about such a person is refused with that code. One's own profile is not limited.
+  - A person who is not an administrator changes no person who has more rights than they do (the Administrator role, or a module level above theirs, all roles counted): PATCH `/users/:id`, PUT `/users/:id/roles`, POST `/users/:id/enable|disable|invite|unlink-microsoft`, PUT `/users/:id/data-access` are `403` `PERSON_ABOVE_OWN_RIGHTS`; DELETE `/users/:id`, DELETE `/users/bulk` and POST `/users/delete-check` report the refusal `PERSON_ABOVE_OWN_RIGHTS`; a row of POST `/users/import` or POST `/data-access/import` about such a person is refused with that code. One's own profile is not limited.
   - A workspace keeps at least one enabled Administrator: taking the role away from the last one (PUT `/users/:id/roles`, PATCH `/users/:id` `role_id`), disabling them (POST `/users/:id/disable`, PATCH `status`), deleting them, or an import row doing so is `409` `LAST_ADMINISTRATOR` (a delete refusal, an import row error) and nothing is written.
   - What the users screen offers follows these rules: for a users administrator who is not an administrator, `GET /users` rows and `GET /users/:id` carry `above_own_rights` (true for a person they may not change), and `GET /roles` items carry `grantable` (false for a role they may not give to a person who does not hold it yet). An administrator reads `false` and `true` everywhere.
   - PATCH `/users/:id` with `role_ids` sets all the roles of the person with the profile, in the same request, under the same checks as PUT `/users/:id/roles` (the first role is the main one; an empty list leaves the Contact system role): a refusal writes neither the profile nor the roles. The user dialog saves this way.
@@ -1998,6 +2006,8 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Enforces the user limit only when a platform administrator has set one on the tenant's plan (`seat_limit` not null): fails with 400 when the number of `enabled` users has reached it. No limit applies by default.
 - POST `/users/:id/disable` → sets user `status='disabled'`
   - Requires: users:admin level
+- POST `/users/:id/unlink-microsoft` → makes the account local: `external_auth_provider`, `external_subject` and `external_synced_at` cleared, the password kept, one audit entry. A local account is left as it is.
+  - Requires: users:admin level, reserved to unscoped data access. The person's row is locked first.
 - POST `/users/:id/invite` → sets user `status='invited'` (an invited user does not count toward a user limit); an `enabled` user keeps its status
   - Requires: users:admin level
   - Body (optional): `{ sign_in: 'password' | 'microsoft' }`, `password` when absent. Another value: `400`.

@@ -158,12 +158,16 @@ The workspace's last active administrator stays active, even when the directory 
 
 The block on **Admin → Authentication** reports the outcome: **Last synced {date}: N accounts refreshed, N disabled.** after a successful run, or **The last sync failed: {message}** otherwise. **Sync now** runs the same job on demand.
 
+## Disconnecting
+
+**Disconnect** on **Admin → Authentication** removes the connection and makes every account linked to Entra a local account, after a confirmation that gives how many accounts keep their password and how many have none. No email is sent. With email configured, an account without a password sets one with **Forgot password** on the sign-in page. Without email, set it as described in [Password Reset](operations.md#password-reset). An administrator without a password gives one in the confirmation. The daily directory sync stops for the workspace.
+
 ## Troubleshooting
 
 - **SSO_NOT_CONFIGURED**: Entra env vars are missing or tenant is not connected. Users see "Sign-in with Microsoft is not set up for this workspace."
 - **ENTRA_TENANT_MISMATCH**: You connected one tenant but are trying to sign in from another. Users see "This Microsoft account belongs to a different organization than the one connected to this workspace."
 - **ENTRA_EMAIL_UNVERIFIED**: The Microsoft account email address is not verified, so it cannot be used to sign in.
-- **ENTRA_ACCOUNT_LINKED**: The Kadratis account with this email address is already linked to another Microsoft account and keeps that link. Users see "This account is already linked to another Microsoft account. Ask your administrator."
+- **ENTRA_ACCOUNT_LINKED**: The Kadratis account with this email address is already linked to another Microsoft account and keeps that link. Users see "This account is already linked to another Microsoft account. Ask your administrator." An administrator removes that link with **Unlink from Microsoft** in the row menu of the users list.
 - **ENTRA_LINK_NEEDS_EMAIL**: An account with this email address already exists. Kadratis links an existing account to Microsoft only after a confirmation link sent to its address, and no email service is configured. Accounts created at a first Microsoft sign-in, invited accounts that have no password yet and the daily directory sync are not affected.
 - **Invalid Entra state / nonce**: The sign-in state expired or the Entra redirect did not return to the configured callback URL. Retry sign-in and verify `ENTRA_REDIRECT_URI` exactly matches the Entra app registration.
 - **Bad redirect after login**: Check that `APP_BASE_URL` is the exact address users open. The redirect comes from `APP_BASE_URL`, and the `Host` and `X-Forwarded-Host` headers do not change it. Also check that the proxy sends `X-Forwarded-Proto`.
