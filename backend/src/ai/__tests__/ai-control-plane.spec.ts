@@ -45,6 +45,7 @@ import { AiAutomationJobCatalogService } from '../control-plane/automation/ai-au
 import { AiAgentControlService } from '../control-plane/agent-control/ai-agent-control.service';
 import { Application } from '../../applications/application.entity';
 import { proposalStillBlocksRegeneration } from '../control-plane/agent-control/agent-control-constants.util';
+import { activityActionDetail } from '../control-plane/agent-control/agent-control-serializers.util';
 import { auditActivityType, auditActivityTypeClauseSql } from '../control-plane/agent-control/ai-agent-activity-timeline';
 import {
   AiAgentPromptCompilerService,
@@ -11977,6 +11978,7 @@ function savePreparedTicketingAction(context: ReturnType<typeof createContext>, 
   // way the real capability registry would, so expiry-convergence assertions remain faithful.
   expiresAt?: Date;
   metadata?: Record<string, unknown> | null;
+  evidenceIds?: string[] | null;
 }) {
   const repo = context.manager.getRepository(AiActionRequest);
   const now = new Date();
@@ -12006,7 +12008,7 @@ function savePreparedTicketingAction(context: ReturnType<typeof createContext>, 
     provider_key: input.providerKey,
     input_hash: `${input.id}-hash`,
     input_summary: null,
-    evidence_ids: null,
+    evidence_ids: input.evidenceIds ?? null,
     expires_at: input.expiresAt ?? new Date(now.getTime() + 30 * 60 * 1000),
     approved_at: null,
     rejected_at: null,
@@ -14014,7 +14016,9 @@ async function testGlpiTriageFallbackFailsClosedWhenSynthesisFails() {
 // #3 nominal path: the LLM interpreter falls back (deterministic), so DOC-165 is retrieved but
 // not validated. It must (a) appear to the action planner as an unvalidated candidate, and (b)
 // reach synthesis tagged 'unvalidated'. A usable synthesis grounded on it then prepares a reply.
-async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
+// Ticket 49 asks for a dessert recipe; the knowledge base holds one (DOC-165) and the ticket read
+// leaves twenty evidence items. The planner answers with the actions it is given.
+async function runGlpiTriageForTicket49(plannerActions: Array<Record<string, unknown>>) {
   const { manager } = createMemoryManager();
   const context = createContext(manager);
   const calls: Array<{ capabilityName: string; input: any }> = [];
@@ -14035,8 +14039,18 @@ async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
       const toolExecutionId = `tool-49-${calls.length}`;
       const ok = (data: unknown) => ({ run_id: 'run-glpi-49', step_id: `step-${calls.length}`, tool_execution_id: toolExecutionId, output: { ok: true, data, evidence: [] } });
       switch (request.capabilityName) {
-        case 'ticketing.ticket.get':
+        case 'ticketing.ticket.get': {
+          const evidenceRepo = (_context as any).manager.getRepository(AiEvidence);
+          for (let index = 1; index <= 20; index += 1) {
+            await evidenceRepo.save(evidenceRepo.create({
+              id: `evidence-49-${index}`, tenant_id: context.tenantId, run_id: 'run-glpi-49', tool_execution_id: toolExecutionId,
+              action_request_id: null, source_provider: 'glpi', source_object_type: 'ticket', source_object_id: '49',
+              trust_level: 'external', redaction_status: 'redacted', content_hash: `evidence-49-${index}`, summary: 'Ticket 49',
+              payload_json: {}, retention_class: 'audit', collected_at: now, created_at: now,
+            }));
+          }
           return ok({ id: '49', title: 'Je cherche une recette style dessert', status: 'processing_assigned', priority: 'medium', description: 'pour faire plaisir à mes collègues, une recette du Sud.' });
+        }
         case TICKETING_TICKET_NOTES_LIST_CAPABILITY: return ok({ notes: [] });
         case TICKETING_CLASSIFICATION_CONTEXT_CAPABILITY: return ok({ type: 'Request', priority: 'Medium', urgency: 'Medium' });
         case TICKETING_LIFECYCLE_CONTEXT_CAPABILITY: return ok({ terminal: false, status: 'Processing assigned', allowedTransitions: [] });
@@ -14047,11 +14061,11 @@ async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
         case 'get_document':
           return { run_id: 'run-glpi-49', step_id: `step-${calls.length}`, tool_execution_id: toolExecutionId, output: { id: 'doc-165', ref: 'DOC-165', title: 'Recette du Burnt Cheesecake', summary: 'Dessert.', status: 'published', content_markdown: '# Burnt Cheesecake\n\nMélanger, cuire.', updated_at: '2026-06-07T08:00:00.000Z' } };
         case TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY:
-          await savePreparedTicketingAction(_context as any, { id: 'internal-49', runId: 'run-glpi-49', toolExecutionId, capabilityName: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY, body: request.input.note_body, visibility: 'internal', providerKey: 'glpi', metadata: request.execution?.metadata ?? null });
+          await savePreparedTicketingAction(_context as any, { id: 'internal-49', runId: 'run-glpi-49', toolExecutionId, capabilityName: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY, body: request.input.note_body, visibility: 'internal', providerKey: 'glpi', metadata: request.execution?.metadata ?? null, evidenceIds: request.input.evidence_ids ?? null });
           return ok({ summary: 'Prepared internal note.', action_request_id: 'internal-49' });
         case TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY:
           publicReplyBody = request.input.reply_body;
-          await savePreparedTicketingAction(_context as any, { id: 'public-49', runId: 'run-glpi-49', toolExecutionId, capabilityName: TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY, body: request.input.reply_body, visibility: 'public', providerKey: 'glpi', metadata: request.execution?.metadata ?? null });
+          await savePreparedTicketingAction(_context as any, { id: 'public-49', runId: 'run-glpi-49', toolExecutionId, capabilityName: TICKETING_PUBLIC_REPLY_ADD_APPROVED_CAPABILITY, body: request.input.reply_body, visibility: 'public', providerKey: 'glpi', metadata: request.execution?.metadata ?? null, evidenceIds: request.input.evidence_ids ?? null });
           return ok({ summary: 'Prepared public reply.', action_request_id: 'public-49' });
         default:
           return { run_id: 'run-glpi-49', step_id: `step-${calls.length}`, tool_execution_id: toolExecutionId, output: { items: [], total: 0, returned: 0, truncated: false, complete: false } };
@@ -14082,10 +14096,7 @@ async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
       plannerValidatedCount = plannerInput.knowledge_summary?.count ?? -1;
       return {
         source: 'llm',
-        actions: [
-          { action_type: 'internal_note', reason: 'Audit the unvalidated candidate.' },
-          { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: 'Answer from the sourced synthesis.' },
-        ],
+        actions: plannerActions,
       };
     },
   };
@@ -14104,6 +14115,23 @@ async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
 
   const triageBundle = await seedTestHelpdeskDefinition(context);
   await service.runTicketingTriage(context, { provider_key: 'glpi', target_key: '49', agent_definition_id: triageBundle.definition.id });
+  const savedActions: AiActionRequest[] = await manager.getRepository(AiActionRequest).find();
+  return {
+    calls,
+    plannerUnvalidatedCount,
+    plannerValidatedCount,
+    synthDocs,
+    publicReplyBody,
+    publicAction: savedActions.find((action) => action.id === 'public-49') ?? null,
+    internalAction: savedActions.find((action) => action.id === 'internal-49') ?? null,
+  };
+}
+
+async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
+  const { calls, plannerUnvalidatedCount, plannerValidatedCount, synthDocs, publicReplyBody, publicAction } = await runGlpiTriageForTicket49([
+    { action_type: 'internal_note', reason: 'Audit the unvalidated candidate.' },
+    { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: 'Answer from the sourced synthesis.' },
+  ]);
 
   // (a) DOC-165 was NOT zeroed; the planner saw it as an unvalidated candidate, not validated.
   assert.equal(plannerUnvalidatedCount >= 1, true);
@@ -14115,10 +14143,44 @@ async function testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis() {
   // (c) usable synthesis grounded on it → public reply prepared with the synthesized body.
   assert.equal(calls.some((c) => c.capabilityName === TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY), true);
   assert.match(publicReplyBody, /Burnt Cheesecake/);
-  const savedPublicAction = (await manager.getRepository(AiActionRequest).find()).find((action: AiActionRequest) => action.id === 'public-49');
+  const savedPublicAction = publicAction;
   assert.ok(savedPublicAction);
   assert.equal(savedPublicAction.metadata_json?.synthesis_usable, true);
   assert.equal(savedPublicAction.metadata_json?.synthesis_fallback_reason, null);
+}
+
+async function testTheActivityCountsTheSourcesTheReplyCites() {
+  // The reply cites one document of the twenty evidence items the run read.
+  const sourced = await runGlpiTriageForTicket49([
+    { action_type: 'internal_note', reason: 'Audit the unvalidated candidate.' },
+    { action_type: 'requester_reply', reply_kind: 'sourced_answer', reason: 'Answer from the sourced synthesis.' },
+  ]);
+  assert.ok(sourced.publicAction);
+  assert.ok(sourced.internalAction);
+  assert.equal(sourced.publicAction.evidence_ids?.length, 20);
+  assert.match(sourced.publicReplyBody, /DOC-165/);
+  assert.equal(sourced.publicAction.metadata_json?.cited_source_count, 1);
+  assert.equal(activityActionDetail(sourced.publicAction)?.evidenceCount, 1);
+  // The internal note carries no number: only a reply cites sources.
+  assert.equal(sourced.internalAction.evidence_ids?.length, 20);
+  assert.equal('cited_source_count' in (sourced.internalAction.metadata_json ?? {}), false);
+  assert.equal(activityActionDetail(sourced.internalAction)?.evidenceCount ?? null, null);
+
+  // A reply the planner wrote cites no source.
+  const administrative = await runGlpiTriageForTicket49([
+    { action_type: 'internal_note', reason: 'Audit the unvalidated candidate.' },
+    { action_type: 'requester_reply', reply_kind: 'administrative', administrative_intent: 'other', body: 'Bonjour, pour combien de personnes ?', reason: 'Ask the number of guests.' },
+  ]);
+  assert.ok(administrative.publicAction);
+  assert.equal(administrative.publicAction.evidence_ids?.length, 20);
+  assert.match(administrative.publicReplyBody, /combien de personnes/);
+  assert.equal('cited_source_count' in (administrative.publicAction.metadata_json ?? {}), false);
+  assert.equal(activityActionDetail(administrative.publicAction)?.evidenceCount ?? null, null);
+
+  // An action prepared before the number was stored shows none, whatever its evidence.
+  const old = { ...sourced.publicAction, metadata_json: { synthesis_usable: true } } as AiActionRequest;
+  assert.equal(activityActionDetail(old)?.evidenceCount ?? null, null);
+  assert.equal(activityActionDetail({ ...old, action_payload_json: null } as AiActionRequest), null);
 }
 
 async function testGlpiTriageSynthesisRejectsOffTopicKnowledgeAndUsesWeb() {
@@ -18661,6 +18723,7 @@ async function run() {
   await testGlpiTriageLargeKnowledgeDocumentsDoNotConsumeRunCap();
   await testGlpiTriageFallbackFailsClosedWhenSynthesisFails();
   await testGlpiTriageUnvalidatedCandidatesReachPlannerAndSynthesis();
+  await testTheActivityCountsTheSourcesTheReplyCites();
   await testGlpiTriageSynthesisRejectsOffTopicKnowledgeAndUsesWeb();
   await testGlpiTriageAdministrativeReplyNoteCarriesPlannerRationale();
   await testAnAgentWithoutLibrariesSearchesNoKnowledge();

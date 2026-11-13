@@ -396,6 +396,7 @@ import {
   rejectedSynthesisSourceLine,
   limitedSourceLines,
   renderSynthesizedRequesterReply,
+  citedSourceCount,
   renderSynthesizedTriageNote,
   triageNoteLanguage,
   buildRequesterReply,
@@ -7167,13 +7168,20 @@ export class AiAgentControlService {
     if (plannerRequesterReplySuppression) {
       plannerSuppressionReasons.requester_reply = plannerRequesterReplySuppression;
     }
+    const outgoingPublicReplyBody = plannerRequesterReplyBody ?? requesterReplyBody;
+    // Only the reply rendered from a usable synthesis lists sources. A body the planner wrote (a
+    // configured message, an administrative reply, written again on the public items or not)
+    // cites none, and the activity then shows no number.
+    const publicReplyCitedSourceCount = !plannerRequesterReply?.replyBody && replySynthesisResult?.usable === true
+      ? citedSourceCount(outgoingPublicReplyBody, replySynthesisResult.used_sources)
+      : null;
     const publicReplyProposal = ((fallbackPublicReplyUsable || plannerRequesterReply) && !plannerRequesterReplySuppression)
       ? await this.dispatcher.execute(context, {
         capabilityName: TICKETING_PUBLIC_REPLY_PREPARE_CAPABILITY,
         input: {
           provider_key: target.provider_key,
           ticket_id: ticket.id,
-          reply_body: plannerRequesterReplyBody ?? requesterReplyBody,
+          reply_body: outgoingPublicReplyBody,
           evidence_ids: allEvidenceIds,
           observation_id: observation.id,
           recommendation_id: recommendation.id,
@@ -7201,6 +7209,7 @@ export class AiAgentControlService {
                 triage_action: 'prepare_public_reply',
                 conversation_gate: conversationGate,
               }),
+            ...(publicReplyCitedSourceCount !== null ? { cited_source_count: publicReplyCitedSourceCount } : {}),
           },
         },
       })

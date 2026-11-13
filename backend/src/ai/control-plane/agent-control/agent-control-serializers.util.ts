@@ -169,7 +169,10 @@ export function activityCheckDetail(event: AiAgentAuditEvent): ActivityActionDet
 
 export function activityActionDetail(action: AiActionRequest): ActivityActionDetail | null {
   const payload = isRecord(action.action_payload_json) ? action.action_payload_json : null;
-  const evidenceCount = Array.isArray(action.evidence_ids) ? action.evidence_ids.length : null;
+  // The sources the reply cites, stored when it was prepared; the evidence of the whole run is not
+  // a citation, and an action prepared without that number shows none.
+  const citedCount = metadataObject(action.metadata_json).cited_source_count;
+  const evidenceCount = typeof citedCount === 'number' && Number.isInteger(citedCount) && citedCount > 0 ? citedCount : null;
   const truncate = (value: unknown): string | null => {
     if (typeof value !== 'string') return null;
     const trimmed = value.trim();
