@@ -111,6 +111,40 @@ describe('auto links: what the bounded detectors find', () => {
     });
   });
 
+  it('links a web address whose extension is longer than six characters', () => {
+    expect(boundedWebAddressMatcher('voir www.example.solutions puis')).toMatchObject({
+      index: 5,
+      text: 'www.example.solutions',
+      url: 'https://www.example.solutions',
+    });
+    expect(boundedWebAddressMatcher('voir https://example.technology/page, puis')).toMatchObject({
+      index: 5,
+      text: 'https://example.technology/page',
+      url: 'https://example.technology/page',
+    });
+    expect(boundedWebAddressMatcher('http://example.international')).toMatchObject({
+      index: 0,
+      text: 'http://example.international',
+      url: 'http://example.international',
+    });
+  });
+
+  it('accepts a last label of 63 characters and refuses one of 64', () => {
+    const label = (length: number) => 'a'.repeat(length);
+    const of63 = `www.example.${label(63)}`;
+    expect(boundedWebAddressMatcher(`voir ${of63} puis`)).toMatchObject({
+      index: 5,
+      text: of63,
+      url: `https://${of63}`,
+    });
+    expect(boundedWebAddressMatcher(`https://example.${label(63)}/page`)).toMatchObject({
+      text: `https://example.${label(63)}/page`,
+      url: `https://example.${label(63)}/page`,
+    });
+    expect(boundedWebAddressMatcher(`www.example.${label(64)}`)).toBeNull();
+    expect(boundedWebAddressMatcher(`http://example.${label(64)}`)).toBeNull();
+  });
+
   it('opens only the schemes a rich text opens', () => {
     for (const text of CORPUS) {
       const match = firstMatch(AUTO_LINK_MATCHERS, text);

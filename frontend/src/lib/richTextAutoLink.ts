@@ -10,7 +10,8 @@ type LinkMatch = NonNullable<ReturnType<LinkMatcher>>;
  * formatted piece of a word without a space: a long word cut into pieces (`a*a*a*...`, 10 KB)
  * froze the tab for 20 seconds. These detectors answer at once on a text that holds none of the
  * marks of an address, and look for an address around its mark, over lengths that are capped.
- * They find what the editor's module found: the same addresses, the same link targets.
+ * They find what the editor's module found, and a web address whose last label is longer
+ * than six characters, up to the 63 a domain label may hold. The link targets stay the same.
  */
 
 /** Longest local part of an e-mail address (RFC 5321). */
@@ -23,8 +24,9 @@ export const WEB_ADDRESS_MAX = 2083;
 /** A character that cannot be part of the local part of an address. */
 const LOCAL_STOP = /[<>()[\]\\,;:\s@"]/;
 const DOMAIN = /^(?:\[[0-9]{1,3}(?:\.[0-9]{1,3}){3}\]|(?:[a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,63})/;
+/** Last label: at most 63 characters, the longest a domain label may be. The editor's own expression stopped at 6. */
 const WEB_ADDRESS =
-  /^(?:https?:\/\/(?:www\.)?|www\.)[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_+.~#?&/=]*/;
+  /^(?:https?:\/\/(?:www\.)?|www\.)[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,63}\b[-a-zA-Z0-9()@:%_+.~#?&/=]*/;
 
 /** The e-mail address whose `@` is at `at`, or null. */
 function emailAround(text: string, at: number): LinkMatch | null {
