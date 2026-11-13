@@ -775,10 +775,15 @@ export class UsersService {
     tenant_id?: string;
   }, opts?: { manager?: EntityManager; roleGrant?: RoleGrantActor }) {
     const repo = this.getRepo(opts?.manager);
-    // The address of an existing person, whatever their status, is refused and that person left
-    // as they are. A caller that finds or creates looks the person up first (Microsoft sign-in, the
-    // sample data script).
-    const existing = await repo.findOne({ where: { email: params.email } });
+    // The address of an existing person, whatever their status and in any case, is refused and that
+    // person left as they are. A caller that finds or creates looks the person up first (Microsoft
+    // sign-in, the sample data script).
+    const existing = await repo
+      .createQueryBuilder('u')
+      .select('u.id')
+      .where('u.tenant_id = app_current_tenant()')
+      .andWhere('lower(u.email) = lower(:email)', { email: params.email })
+      .getOne();
     if (existing) throw userEmailTaken();
 
     // The role the person gets: `role_id`, else `role_name` (the Contact role when neither is

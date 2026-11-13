@@ -7,7 +7,7 @@ import { caught, inRequest, personState, refusedWith, req, type Seed, withSeeded
 
 // @database-spec
 // `POST /users` with the address of an existing person (enabled, disabled or invited) is refused
-// with 409 `USER_EMAIL_TAKEN`, whoever creates and whatever the roles asked, and that person stays
+// in any case with 409 `USER_EMAIL_TAKEN`, whoever creates and whatever the roles asked, and that person stays
 // as they were. Two creations of the same address at the same time, on two connections, create one
 // person: the second waits for the first, then is refused the same way.
 
@@ -33,6 +33,20 @@ async function testTakenAddressRefused(users: any, dataSource: DataSource, s: Se
         });
       }
     }
+  }
+}
+
+/** The address of an existing person in another case is the same address: refused the same way. */
+async function testTakenAddressInAnotherCase(users: any, dataSource: DataSource, s: Seed) {
+  for (const key of ['enabled', 'disabled', 'invited'] as const) {
+    await inRequest(dataSource, s, async (runner) => {
+      const before = await personState(runner, s.users[key]);
+      const error = await caught(users.create({ email: s.email(key).toUpperCase(), role_ids: [s.roles.contact] }, req(runner, s, 'admin')));
+      refusedWith(error, ConflictException, 'USER_EMAIL_TAKEN', `POST /users: address of a ${key} person in capitals`);
+      assert.deepEqual(await personState(runner, s.users[key]), before, `${key} person unchanged`);
+      const [{ count }] = await runner.query(`SELECT count(*)::int AS count FROM users WHERE lower(email) = $1`, [s.email(key)]);
+      assert.equal(count, 1, 'no second account in another case');
+    });
   }
 }
 
@@ -71,6 +85,7 @@ async function testSameAddressAtOnce(users: any, dataSource: DataSource, s: Seed
 
 withSeededWorkspace('person-create-taken-address.integration.spec', async (users, dataSource, s) => {
   await testTakenAddressRefused(users, dataSource, s);
+  await testTakenAddressInAnotherCase(users, dataSource, s);
   await testSameAddressAtOnce(users, dataSource, s);
 }).catch((error) => {
   console.error(error);
