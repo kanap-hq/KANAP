@@ -501,6 +501,45 @@ describe('UserDialog save and invite', () => {
     expect(post).toHaveBeenCalledTimes(1);
   });
 
+  it('stays on the created person when the invitation fails, and sends only the invitation again', async () => {
+    const created = { ...USER, id: 'new-1', email, first_name: null, last_name: null, roles: [] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/users/new-1') return { data: created };
+      if (url === '/users/new-1/roles') return { data: { items: [] } };
+      if (url === '/roles') return { data: { items: [ROLE] } };
+      return { data: { items: [] } };
+    });
+    let invites = 0;
+    post.mockImplementation(async (url: string) => {
+      if (url === '/users') return { data: { id: 'new-1' } };
+      if (url === '/users/new-1/invite' && invites++ === 0) {
+        throw { response: { status: 502, data: { message: 'The invitation is saved, but its e-mail could not be sent. Send the invitation again.' } } };
+      }
+      return { data: {} };
+    });
+    const onSaved = vi.fn();
+    const { onClose } = renderDialog({ mode: 'create', userId: undefined, personName: undefined, onSaved });
+    fireEvent.change(screen.getByRole('textbox', { name: 'userForm.fields.email' }), { target: { value: email } });
+    const invite = screen.getByRole('button', { name: 'users.dialogs.saveAndInvite' });
+    await waitFor(() => expect(invite).toBeEnabled());
+    fireEvent.click(invite);
+    fireEvent.click(within((await screen.findByText(confirmText)).closest('[role="dialog"]') as HTMLElement)
+      .getByRole('button', { name: 'users.actions.sendInvite' }));
+    expect(await screen.findByText(/its e-mail could not be sent/)).toBeInTheDocument();
+    // The person exists: the dialog shows them, the list is refreshed, nothing is closed.
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/users/new-1'));
+    expect(onSaved).toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    const again = screen.getByRole('button', { name: 'users.dialogs.saveAndInvite' });
+    await waitFor(() => expect(again).toBeEnabled());
+    fireEvent.click(again);
+    fireEvent.click(within((await screen.findByText(confirmText)).closest('[role="dialog"]') as HTMLElement)
+      .getByRole('button', { name: 'users.actions.sendInvite' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(post.mock.calls.map((call: unknown[]) => call[0])).toEqual(['/users', '/users/new-1/invite', '/users/new-1/invite']);
+    expect(patch).not.toHaveBeenCalled();
+  });
+
   it('asks no sign-in choice in a workspace without Microsoft sign-in', async () => {
     const dialog = await askToInvite();
     expect(within(dialog).queryByRole('radiogroup')).not.toBeInTheDocument();

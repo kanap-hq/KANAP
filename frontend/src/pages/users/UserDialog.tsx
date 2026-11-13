@@ -53,15 +53,20 @@ export default function UserDialog({
   const canAdminDataAccess = useDataAccessAdmin();
   const queryClient = useQueryClient();
 
-  const editing = mode === 'edit' && userId != null;
-  const ownAccount = editing && String(userId) === String(profile?.id);
+  // The person this dialog created: once they exist, the dialog shows them as an edit, so a failure
+  // of what follows the creation (the invitation) is retried without creating them again.
+  const [createdId, setCreatedId] = React.useState<string | null>(null);
+  const personId = createdId ?? userId;
+  const isNew = mode === 'create' && !createdId;
+  const editing = !isNew && personId != null;
+  const ownAccount = editing && String(personId) === String(profile?.id);
 
   const userQuery = useQuery({
-    queryKey: ['user-dialog', userId],
+    queryKey: ['user-dialog', personId],
     queryFn: async () => {
       const [userRes, rolesRes] = await Promise.allSettled([
-        api.get(`/users/${userId}`),
-        api.get(`/users/${userId}/roles`),
+        api.get(`/users/${personId}`),
+        api.get(`/users/${personId}/roles`),
       ]);
       if (userRes.status === 'rejected') throw userRes.reason;
       // Roles that could not be read are neither shown as "no role" nor saved.
@@ -111,27 +116,28 @@ export default function UserDialog({
     setIdentityError(undefined);
     const { role_ids, ...userPayload } = values;
     try {
-      if (mode === 'create') {
+      if (isNew) {
         // The person and their roles in one request: a refused role creates nothing, so no
         // invitation leaves either.
         const created = await api.post<{ id: string }>('/users', { ...userPayload, role_ids });
-        const createdId = created.data?.id;
-        if (createdId) {
-          if (invite) {
-            try {
-              await postInvite(createdId, invite);
-            } catch (e) {
-              setIdentityError(e);
-              return false;
-            }
+        const newId = created.data?.id;
+        void queryClient.invalidateQueries({ queryKey: ['users'] });
+        if (newId && invite) {
+          try {
+            await postInvite(newId, invite);
+          } catch (e) {
+            // The person exists: the dialog stays on them, with the refusal of the invitation.
+            setCreatedId(newId);
+            onSaved?.();
+            setIdentityError(e);
+            return false;
           }
         }
-        void queryClient.invalidateQueries({ queryKey: ['users'] });
         return true;
       }
-      if (userId == null) return false;
+      if (personId == null) return false;
       // The profile and the roles in one request: a refusal of either writes neither.
-      await api.patch(`/users/${userId}`, rolesUnread ? userPayload : { ...userPayload, role_ids });
+      await api.patch(`/users/${personId}`, rolesUnread ? userPayload : { ...userPayload, role_ids });
       void queryClient.invalidateQueries({ queryKey: ['users'] });
       return true;
     } catch (e: any) {
@@ -143,14 +149,14 @@ export default function UserDialog({
       );
       return false;
     }
-  }, [confirmInvite, mode, queryClient, rolesUnread, t, userId]);
+  }, [confirmInvite, isNew, onSaved, personId, queryClient, rolesUnread, t]);
 
   const handleSave = React.useCallback(async (intent: UserFormIntent) => {
     if (saving) return;
     setIdentityError(undefined);
     setSaving(true);
     try {
-      if (mode === 'create') {
+      if (isNew) {
         const ok = (await identityRef.current?.submit(intent)) ?? false;
         if (!ok) {
           setActiveTab('identity');
@@ -174,19 +180,30 @@ export default function UserDialog({
           return;
         }
       }
+      // The person this dialog created, invited again: only the invitation is sent.
+      if (intent === 'save-invite' && createdId) {
+        const invite = await confirmInvite([userQuery.data?.email ?? '']);
+        if (!invite) return;
+        try {
+          await postInvite(createdId, invite);
+        } catch (e) {
+          setIdentityError(e);
+          setActiveTab('identity');
+          return;
+        }
+      }
       onSaved?.();
       onClose();
     } finally {
       setSaving(false);
     }
-  }, [accessState.dirty, identityState.isDirty, mode, onClose, onSaved, saving, showAccessTab]);
+  }, [accessState.dirty, confirmInvite, createdId, identityState.isDirty, isNew, onClose, onSaved, saving, showAccessTab, userQuery.data?.email]);
 
   const hasChanges = identityState.isDirty || (showAccessTab && accessState.dirty);
-  const identityMustBeValid = mode === 'create' || identityState.isDirty;
-  const saveDisabled = saving
-    || !hasChanges
-    || (identityMustBeValid && !identityState.isValid)
+  const identityMustBeValid = isNew || identityState.isDirty;
+  const invalidChanges = (identityMustBeValid && !identityState.isValid)
     || (showAccessTab && accessState.dirty && !accessState.canSave);
+  const saveDisabled = saving || !hasChanges || invalidChanges;
 
   const managedByEntra = tenantAuth?.sso_provider === 'entra'
     && tenantAuth?.sso_enabled
@@ -224,7 +241,8 @@ export default function UserDialog({
     <Button
       variant="action"
       onClick={() => { void handleSave('save-invite'); }}
-      disabled={saveDisabled}
+      // Once the person exists, inviting them again needs no change to the form.
+      disabled={isNew ? saveDisabled : saving || invalidChanges || readOnly}
     >
       {t('users.dialogs.saveAndInvite')}
     </Button>
@@ -233,7 +251,7 @@ export default function UserDialog({
   return (
     <KanapDialog
       open={open}
-      title={mode === 'create' ? t('users.dialogs.newUser') : readOnly ? t('users.dialogs.viewUser') : t('users.dialogs.editUser')}
+      title={isNew ? t('users.dialogs.newUser') : readOnly ? t('users.dialogs.viewUser') : t('users.dialogs.editUser')}
       onClose={onClose}
       onSave={() => { void handleSave('save'); }}
       showSave={!readOnly}
@@ -294,7 +312,7 @@ export default function UserDialog({
             <DataAccessPanel
               ref={accessRef}
               open={open}
-              userId={String(userId)}
+              userId={String(personId)}
               personName={accessName}
               onStateChange={setAccessState}
             />
