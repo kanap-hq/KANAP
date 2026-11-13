@@ -198,14 +198,6 @@ export type AiAdminOverview = {
     current_month: AiUsageWindow;
     last_30_days: AiUsageWindow;
   };
-  recent_activity: Array<{
-    conversation_id: string;
-    title: string | null;
-    user_id: string | null;
-    provider: string | null;
-    model: string | null;
-    updated_at: string;
-  }>;
   agents: Array<{
     agent_definition_id: string;
     name: string;

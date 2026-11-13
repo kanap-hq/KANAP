@@ -3,15 +3,6 @@ import { EntityManager } from 'typeorm';
 import { llmCostEur } from './ai-llm-cost.util';
 import { AiModelResolverService } from './ai-model-resolver.service';
 
-export type AiAdminOverviewRecentActivityItem = {
-  conversation_id: string;
-  title: string | null;
-  user_id: string | null;
-  provider: string | null;
-  model: string | null;
-  updated_at: string;
-};
-
 export type AiAdminOverviewAgentUsage = {
   agent_definition_id: string;
   name: string;
@@ -67,7 +58,6 @@ export type AiAdminOverviewResponse = {
       message_count: number;
     };
   };
-  recent_activity: AiAdminOverviewRecentActivityItem[];
   agents: AiAdminOverviewAgentUsage[];
   costs: AiAdminOverviewCosts;
 };
@@ -76,11 +66,6 @@ function toNumber(value: unknown): number {
   if (value == null) return 0;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function toIsoDate(value: unknown): string {
-  const date = value instanceof Date ? value : new Date(String(value));
-  return date.toISOString();
 }
 
 function roundCost(value: number): number {
@@ -262,23 +247,6 @@ export class AiAdminOverviewService {
       [tenantId],
     );
 
-    const recentActivityRows = await manager.query(
-      `
-      SELECT
-        id AS conversation_id,
-        title,
-        user_id,
-        provider,
-        model,
-        updated_at
-      FROM ai_conversations
-      WHERE tenant_id = $1
-      ORDER BY updated_at DESC, created_at DESC
-      LIMIT 10
-      `,
-      [tenantId],
-    );
-
     const totals = totalsRows[0] ?? {};
     const currentMonth = currentMonthRows[0] ?? {};
     const last30Days = last30DaysRows[0] ?? {};
@@ -330,14 +298,6 @@ export class AiAdminOverviewService {
           message_count: toNumber(last30Days.message_count),
         },
       },
-      recent_activity: recentActivityRows.map((row: Record<string, unknown>) => ({
-        conversation_id: String(row.conversation_id),
-        title: row.title == null ? null : String(row.title),
-        user_id: row.user_id == null ? null : String(row.user_id),
-        provider: row.provider == null ? null : String(row.provider),
-        model: row.model == null ? null : String(row.model),
-        updated_at: toIsoDate(row.updated_at),
-      })),
       agents: agentUsageRows.map((row: Record<string, unknown>) => ({
         agent_definition_id: String(row.agent_definition_id),
         name: String(row.name ?? ''),
