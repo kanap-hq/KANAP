@@ -203,6 +203,18 @@ const tests: Array<[string, () => Promise<void>]> = [
     );
   })],
 
+  ['the count binds the change too: a write of another value or field with its fingerprint is refused, nothing written', () => withSeed(async (runner, s) => {
+    const svc = service();
+    const dry: any = await svc.bulkUpdate({ all: true, filters: {}, changes: { run_build: 'run' }, dry_run: true }, undefined, { manager: runner.manager });
+    const confirm = { all: true, filters: {}, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint };
+    const changed = (err: any) => err.status === 409 && err.getResponse().code === 'bulk_list_changed';
+    await assert.rejects(svc.bulkUpdate({ ...confirm, changes: { run_build: 'build' } }, undefined, { manager: runner.manager }), changed);
+    await assert.rejects(svc.bulkUpdate({ ...confirm, changes: { run_build: 'run', supplier_id: null } }, undefined, { manager: runner.manager }), changed);
+    for (const line of s.lines) assert.equal(await column(runner, line.id, 'run_build'), null, 'nothing written');
+    const done = await svc.bulkUpdate({ ...confirm, changes: { run_build: 'run' } }, undefined, { manager: runner.manager });
+    assert.equal(done.changed, dry.changes, 'the change counted is written');
+  })],
+
   ['a line created after the count is left out, without a 409', () => withSeed(async (runner, s) => {
     const svc = service();
     const body = { all: true, filters: {}, changes: { run_build: 'run' } };

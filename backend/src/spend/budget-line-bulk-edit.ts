@@ -188,7 +188,7 @@ export async function bulkUpdateBudgetLines(body: unknown, deps: BudgetLineBulkD
       return null;
     },
   };
-  return runBulkEdit(manager, list, selection, confirmation);
+  return runBulkEdit(manager, list, selection, confirmation, changes);
 }
 
 /**

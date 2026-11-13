@@ -15,9 +15,10 @@ import { UUID_RE } from '../relations/relation-target';
  * - at most `BULK_MAX_ROWS` rows (400 `bulk_too_many`).
  *
  * `runBulkEdit` adds the write of a list whose rows are written one by one through the update of
- * one row (`BulkEditList`). Its dry run also returns `fingerprint`, which names the rows it reached;
- * the write sends it back (required with `all`) and refuses with the same 409 as soon as the rows it
- * reaches are no longer those of the count, a row swapped for another included. Every row is written
+ * one row (`BulkEditList`). Its dry run also returns `fingerprint`, which names the rows it reached
+ * and the change it counted; the write sends it back (required with `all`) and refuses with the same
+ * 409 as soon as the rows it reaches are no longer those of the count, a row swapped for another
+ * included, or its change is not the one counted. Every row is written
  * in a savepoint of the request's transaction, the refusals of
  * a row counted under a stable code (the screen and Kad word them) and the row left as it is, any
  * other error failing the whole request. The dry run plays the same writes under a savepoint, then
@@ -132,9 +133,26 @@ export function parseBulkConfirmation(body: Record<string, unknown>, all: boolea
 
 const FINGERPRINT_RE = /^[0-9a-f]{64}$/;
 
-/** The rows a count reached, as one value: their ids, sorted, hashed. */
-export function bulkFingerprint(ids: readonly string[]): string {
-  return createHash('sha256').update([...ids].map((id) => id.toLowerCase()).sort().join(',')).digest('hex');
+/** A change as one value: its fields by name, a list of ids sorted, a map of ids by its keys. */
+function canonicalChanges(changes: BulkChanges): string {
+  return JSON.stringify(Object.keys(changes).sort().map((name) => {
+    const value = changes[name];
+    if (Array.isArray(value)) return [name, [...value].sort()];
+    if (value && typeof value === 'object') return [name, Object.keys(value).sort().map((key) => [key, value[key]])];
+    return [name, value];
+  }));
+}
+
+/**
+ * The rows a count reached and the change it counted, as one value: their ids, sorted, and the
+ * change (`parseBulkChanges`'s, in a stable order), hashed. A count confirms one change only.
+ */
+export function bulkFingerprint(ids: readonly string[], changes: BulkChanges): string {
+  return createHash('sha256')
+    .update([...ids].map((id) => id.toLowerCase()).sort().join(','))
+    .update('\n')
+    .update(canonicalChanges(changes))
+    .digest('hex');
 }
 
 /**
@@ -233,7 +251,7 @@ export type BulkEditResult = {
   unchanged: number;
   refused: Record<string, number>;
   as_of?: string;
-  /** The dry run's: the rows it reached (`bulkFingerprint`), sent back by the write. */
+  /** The dry run's: the rows it reached and the change it counted (`bulkFingerprint`), sent back by the write. */
   fingerprint?: string;
 };
 
@@ -245,13 +263,14 @@ const ROW_SAVEPOINT = 'bulk_edit_row';
  * savepoint). The dry run takes `as_of` before it reaches the rows, and the list leaves out the rows
  * created after it, the dry run's as the write's. With `expected_rows`, rows reached beyond it
  * refuse the write whole (409); with `fingerprint` (required with `all`), so do rows reached that
- * are not those of the count.
+ * are not those of the count, and `changes` that are not those it counted.
  */
 export async function runBulkEdit<Row extends { id: string }>(
   manager: EntityManager,
   list: BulkEditList<Row>,
   selection: BulkSelection,
   confirmation: BulkConfirmation,
+  changes: BulkChanges,
 ): Promise<BulkEditResult> {
   if (!manager.queryRunner?.isTransactionActive) throw new Error('A change in bulk runs in the request transaction.');
   if (selection.all && !confirmation.dryRun && confirmation.fingerprint === null) {
@@ -269,8 +288,8 @@ export async function runBulkEdit<Row extends { id: string }>(
   if (reached > BULK_MAX_ROWS) throw bulkTooMany(reached);
   if (confirmation.expectedRows !== null && reached > confirmation.expectedRows) throw bulkListChanged();
   // As many rows as counted is not enough: the same rows (one entering the filter while another
-  // leaves it is a change of the list, as is a row that left it).
-  const fingerprint = bulkFingerprint(rows.map((row) => row.id));
+  // leaves it is a change of the list, as is a row that left it), and the same change.
+  const fingerprint = bulkFingerprint(rows.map((row) => row.id), changes);
   if (confirmation.fingerprint !== null && confirmation.fingerprint !== fingerprint) throw bulkListChanged();
   const refused: Record<string, number> = notFound > 0 ? { [BULK_REFUSAL_NOT_FOUND]: notFound } : {};
   let changed = 0;

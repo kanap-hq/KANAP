@@ -238,6 +238,22 @@ const tests: Array<[string, () => Promise<void>]> = [
     assert.equal(await column(ctx, late.id, 'lifecycle'), 'active', 'the new application stays as it is');
   })],
 
+  ['the count binds the change too: a write of another value or field with its fingerprint is refused; the people in another order are the same change', () => inTenant(async (ctx) => {
+    const filters = { q: 'bulk app' };
+    const dry = await ctx.svc.bulkUpdate({ all: true, filters, changes: { lifecycle: 'deprecated' }, dry_run: true }, null, opts(ctx));
+    const confirm = { all: true, filters, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint };
+    const changed = (err: any) => err.status === 409 && err.getResponse().code === 'bulk_list_changed';
+    await assert.rejects(ctx.svc.bulkUpdate({ ...confirm, changes: { lifecycle: 'proposed' } }, null, opts(ctx)), changed);
+    await assert.rejects(ctx.svc.bulkUpdate({ ...confirm, changes: { criticality: 'high' } }, null, opts(ctx)), changed);
+    for (const id of ctx.apps) assert.equal(await column(ctx, id, 'lifecycle'), 'active', 'nothing written');
+    const owners = await ctx.svc.bulkUpdate({ all: true, filters, changes: { owners_it: [ctx.people.ana, ctx.people.cleo] }, dry_run: true }, null, opts(ctx));
+    const done = await ctx.svc.bulkUpdate(
+      { all: true, filters, as_of: owners.as_of, expected_rows: owners.rows, fingerprint: owners.fingerprint, changes: { owners_it: [ctx.people.cleo.toUpperCase(), ctx.people.ana] } },
+      null, opts(ctx),
+    );
+    assert.equal(done.changed, owners.changes);
+  })],
+
   ['the cap counts the applications left once the unticked ones are out, as the budget lines do', () => inTenant(async (ctx) => {
     // A filter that reaches 5,001 ids (none of them an application of the tenant: nothing is written).
     const many = Array.from({ length: BULK_MAX_ROWS + 1 }, () => randomUUID());

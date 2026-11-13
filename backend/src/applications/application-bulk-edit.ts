@@ -178,5 +178,5 @@ export async function bulkUpdateApplications(body: unknown, deps: ApplicationBul
       return error instanceof NotFoundException ? BULK_REFUSAL_NOT_FOUND : null;
     },
   };
-  return runBulkEdit(manager, list, selection, confirmation);
+  return runBulkEdit(manager, list, selection, confirmation, changes);
 }
