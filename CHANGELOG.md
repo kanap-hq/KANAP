@@ -1,4 +1,4 @@
-# Changelog
+&# Changelog
 
 Every published version of Kadratis, newest first. Versions are numbered `YY.M.N` (year, month,
 number in the month: `26.10.1`, then `26.10.2`, then `26.11.1`), and each one has a Git tag of
@@ -16,6 +16,40 @@ version brings, followed by three lists:
 
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
+
+## 26.11.8 (2026-11-14)
+
+Bulk changes on budget lines and applications, an existing account linked to Microsoft only after its owner confirms, support agents that find knowledge documents across languages, creation pages that keep what is typed, and a nightly encrypted backup script for on-premise installations.
+
+### Changes
+- Bulk changes: budget lines and applications are changed in bulk from their list. Check records or take the whole filter, choose a field and its value, read how many will change and how many are refused, then confirm. The dialog shows the outcome. For budget lines, amounts are not changed this way; for applications, the fields are the owners, the lifecycle and the business criticality. (#1599, #1619)
+- Microsoft sign-in: a first Microsoft sign-in no longer links an existing account by its address alone. The owner of the account confirms the link from an e-mail that names the Microsoft account, and the account keeps its password. An invited person who has no password yet is linked at their first Microsoft sign-in. An administrator can unlink one account from Microsoft, and the Microsoft sign-in button is greyed out on a workspace without a connection. (#1598, #1622)
+- Disconnecting Microsoft sign-in makes every linked account a local account again: stored passwords stay valid, the others are set with "Forgot password", and an administrator without a password sets one while disconnecting. (#1622)
+- Microsoft directory sync: when the sync keeps the last active administrator of the workspace, their account becomes a local account that regains access through "Forgot password"; later syncs leave it unchanged. Two syncs of the same workspace no longer run at once. (#1613)
+- Users and roles: a person who administers users without being Administrator sees the people with more rights than their own read-only, and the roles they cannot give greyed out. A new person and their roles are saved together, and an address that another person already has is refused with a clear message. Duplicating a role asks the name of the copy, within the rights of the person who duplicates. A Business Contributor adds tasks only to the projects they contribute to, and "Add task" is offered to the contributors who hold the tasks right. (#1601, #1617)
+- Linked records: replacing the links of a record keeps the links to records the person does not read, from the screens and through Kad. The history of a project or a request, the journal of an incident and the Applications field of a task name only the linked records the person reads; the others are counted. Kad and the MCP server say when they read only part of a record's links. (#1596, #1620)
+- Kad: a change Kad prepares in a conversation is approved in that conversation by the person who asked for it, and no longer appears on the agent screens. The import card explains a refused import in plain sentences with the line numbers of the file, keeps its Approve and Reject buttons in view, and counts and lists the budget rows that look like existing lines, with a link to each line. Kad answers in the language of the screen when the profile sets none, and reads more values of a record's history with the labels of the History tab. (#1595, #1616, #1623)
+- Support agents: agents and Kad find knowledge documents across languages and cite the passage that answers, wherever it is in a long document. An agent drafts its sourced reply from the text of the documents it selected, and reads published documents only. With internal notes used, an agent writes its replies to the requester from the public messages only; internal notes still inform its choice of actions and its brief to the technician. The detail of a proposed reply shows the number of sources it cites. (#1600, #1621, #1623)
+- Integrations: changing the address of an integration (GLPI, PRTG, Netbox) or the server of an AI model asks for its token or key again. Calls to integrations follow no redirect to another address. Emptying the PRTG or Netbox address and saving removes the connection, after a confirmation. Connecting Netbox to another server starts again with a manual synchronisation. Testing an AI model tries the values shown in the dialog, also before the model is created. (#1594, #1618)
+- Sharing and support requests: share e-mails are limited per hour by number of recipients, per user and, in the cloud, per workspace, and a "Send link" refused for too many recipients says so. Support invoice requests are limited per mailbox and per day, and a request that fails does not count against the buyer. (#1597, #1609)
+- Creating records: a new supplier, contact, site, contract, department, account, cost center, company, working day calendar or analytics dimension or value keeps what is typed in its fields while it is being created. A new site opens at its reference; its city and region are saved when you leave the field, and changing its hosting type asks for confirmation only when the change clears a value. Reloading the page or closing the tab while a new asset, connection or budget line still lacks a required field asks the browser to confirm, and the record is deleted if you leave anyway. (#1591, #1604, #1608, #1615)
+- IT landscape: on an application, the end of support of each technology is the one of the End of support report, coloured by its state, and its tooltip says "Ends within 12 months". The report counts the applications that declare an operating system and accepts `horizon_months` in its address. A record says how many of its vulnerabilities are kept out of the alerts, with a link to them. (#1593, #1606)
+- A connection or a budget line that does not exist opens on its own screen with a link back to the list. (#1612, #1626)
+- Projects import: a project without an origin is recorded as Legacy, and a new project with the origin Request is refused. (#1605)
+- On-premise: a nightly backup script (`infra/backup/`) encrypts the database, the files and the configuration with `age` and stores them in an S3 bucket that the server can only write to and list. The manual explains how to set it up, check it and restore from it. The upgrade guide fetches the version tags, filters the start-up log down to the Kadratis lines, and explains how to remove the images of older versions. (#1584, #1629)
+
+### Fixes
+- Text typed in a site's notes, a connection's description, ports or path hops, a technology's text fields and the notification settings is saved when you leave the page within a second of typing it. (#1628)
+- An attachment or an image shared by two records (a task and the request made from it, an image reused in a document) stays available when one of the two is deleted. (#1589)
+- Typing or pasting a very long formatted word in a rich text no longer freezes the editor, and a web address is linked whatever the length of its extension. (#1590, #1627)
+- Saving an AI agent without changing anything creates no version and no audit line, and the Settings tab shows no error about matching tickets while the automatic watching is off. (#1588)
+- The AI usage overview no longer returns recent conversation titles. (#1623)
+
+### On-premise
+- Action required: none
+- Migrations: run automatically at start (1856200000000-template-plain-text-repair, 1856230000000-entra-disconnected-accounts-local). The first one indexes for full-text search the body of the templates created with the workspace, and logs their number. The second one makes local again the accounts still linked to Microsoft in a workspace that has no Microsoft connection: stored passwords stay valid, the others are set with "Forgot password". It logs the number of accounts changed. A workspace connected to Microsoft is not touched.
+- Recommended: check that the addresses of your integrations (GLPI, PRTG, AI model server) are their final addresses. A redirect to another scheme, host or port is no longer followed, for example from `http://` to `https://`.
+- Recommended: set up the nightly encrypted backup of the Operations guide ("Nightly encrypted backup to an S3 bucket").
 
 ## 26.11.7 (2026-11-12)
 
