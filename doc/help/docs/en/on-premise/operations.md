@@ -236,6 +236,8 @@ The script `infra/backup/kadratis-backup` runs every night and stores three obje
 - A write user for the server, limited to this bucket, with these actions only: `s3:PutObject`, `s3:ListBucket` and `s3:AbortMultipartUpload`. `s3:PutObject` also covers the uploads in several parts, which large objects use.
 - A read user for restores, limited to this bucket: `s3:GetObject`, `s3:GetObjectVersion` (where the provider has this action), `s3:GetObjectRetention`, `s3:ListBucket` and `s3:ListBucketVersions`.
 
+This write user is enough with the `rclone` of the distribution. `rclone` before 1.61 (Ubuntu 24.04 ships 1.60) adds an ACL header to every upload, and a policy that also denies ACL writes to the write user refuses these uploads. In that case, install `rclone` 1.61 or later ([rclone installation](https://rclone.org/install/)), or do not deny ACL writes.
+
 Note the endpoint (with `https://`), the region and the name of the bucket. Only the keys of the write user go on the server. The keys of the bucket owner and of the read user stay off it.
 
 **Create the encryption key** on another machine than the server, with `age` installed:
@@ -346,6 +348,7 @@ The list shows the size and name of the three objects. Each object shows `x-amz-
 - Volume: each night uploads every file of the storage. The bucket holds one full copy per day of retention. During the night, the server needs free space for twice the size of the files, and the upload time grows with that size.
 - The script keeps a copy of the files in `/var/lib/kadratis-backup/files`, in the clear, like the files copy of the local backup. It creates `/var/lib/kadratis-backup` in mode 700 and refuses a work directory that is a link, belongs to another account or can be written by other users.
 - When the storage bucket is empty and the local copy is not, the night fails and deletes nothing: the journal reads `the attachments bucket ... is empty, but the local copy ... holds N files`.
+- An upload refused by the bucket stops the night at the `upload` step. With `rclone` before 1.61 and a policy that denies ACL writes, the journal reads `ERROR : database.dump.age: Failed to copy: AccessDenied: Access Denied.` (see [Prepare the bucket](#nightly-encrypted-backup-to-an-s3-bucket)).
 - A failed night ends with exit code 1, the line `backup FAILED during step '...'` in the journal, `failed` in `systemctl status kadratis-backup.service`, and no call to `BACKUP_SUCCESS_URL`.
 
 ### Before an upgrade
