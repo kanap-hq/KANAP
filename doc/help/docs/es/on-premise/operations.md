@@ -236,6 +236,8 @@ El script `infra/backup/kadratis-backup` se ejecuta cada noche y guarda tres obj
 - Un usuario de escritura para el servidor, limitado a este bucket, solo con estas acciones: `s3:PutObject`, `s3:ListBucket` y `s3:AbortMultipartUpload`. `s3:PutObject` cubre también las subidas en varias partes, que usan los objetos grandes.
 - Un usuario de lectura para las restauraciones, limitado a este bucket: `s3:GetObject`, `s3:GetObjectVersion` (en los proveedores que tienen esta acción), `s3:GetObjectRetention`, `s3:ListBucket` y `s3:ListBucketVersions`.
 
+Este usuario de escritura basta con el `rclone` de la distribución. `rclone` anterior a 1.61 (Ubuntu 24.04 incluye la 1.60) añade un encabezado de ACL a cada subida, y una política que además niega al usuario de escritura las escrituras de ACL rechaza esas subidas. En ese caso, instale `rclone` 1.61 o posterior ([instalación de rclone](https://rclone.org/install/)), o no niegue las escrituras de ACL.
+
 Anote el punto de acceso (con `https://`), la región y el nombre del bucket. Solo las claves del usuario de escritura van al servidor. Las claves del propietario del bucket y del usuario de lectura se quedan fuera de él.
 
 **Cree la clave de cifrado** en una máquina distinta del servidor, con `age` instalado:
@@ -346,6 +348,7 @@ La lista muestra el tamaño y el nombre de los tres objetos. Cada objeto muestra
 - Volumen: cada noche sube todos los archivos del almacenamiento. El bucket guarda una copia completa por cada día de retención. Durante la noche, el servidor necesita espacio libre para el doble del tamaño de los archivos, y la duración de la subida crece con ese tamaño.
 - El script guarda una copia de los archivos en `/var/lib/kadratis-backup/files`, sin cifrar, como la copia de archivos de la copia local. Crea `/var/lib/kadratis-backup` en modo 700 y rechaza un directorio de trabajo que sea un enlace, pertenezca a otra cuenta o puedan escribir otros usuarios.
 - Si el bucket del almacenamiento está vacío y la copia local no, la noche falla sin borrar nada: el registro indica `the attachments bucket ... is empty, but the local copy ... holds N files`.
+- Una subida rechazada por el bucket detiene la noche en el paso `upload`. Con `rclone` anterior a 1.61 y una política que niega las escrituras de ACL, el registro indica `ERROR : database.dump.age: Failed to copy: AccessDenied: Access Denied.` (vea «Prepare el bucket» en [Copia de seguridad nocturna cifrada en un bucket S3](#copia-de-seguridad-nocturna-cifrada-en-un-bucket-s3)).
 - Una noche fallida termina con el código de salida 1, la línea `backup FAILED during step '...'` en el registro, `failed` en `systemctl status kadratis-backup.service` y ninguna llamada a `BACKUP_SUCCESS_URL`.
 
 ### Antes de una actualización

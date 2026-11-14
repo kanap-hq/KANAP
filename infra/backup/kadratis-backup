@@ -316,9 +316,11 @@ main() {
   STEP=upload
   t=$SECONDS
   for name in "${OBJECTS[@]}"; do
-    # Write only: no HEAD before or after the upload, no bucket check or creation.
+    # Write only: no HEAD before or after the upload, no bucket check or creation. Recent rclone
+    # versions send a file above --multi-thread-cutoff in parallel streams, then HEAD the object:
+    # --multi-thread-streams 0 keeps them on the single-stream upload (still in several parts).
     rclone_target copyto "$OUT/$name" "target:$BACKUP_S3_BUCKET/$night/$name" \
-      --s3-no-head --s3-no-check-bucket --no-check-dest --retries 1
+      --s3-no-head --s3-no-check-bucket --no-check-dest --multi-thread-streams 0 --retries 1
   done
   log "upload: ${#OBJECTS[@]} objects in $((SECONDS - t)) s"
 

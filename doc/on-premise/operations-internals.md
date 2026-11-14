@@ -38,6 +38,17 @@ kanap/
 └── doc/help/docs/en/on-premise/  # User docs
 ```
 
+## Nightly Backup Uploads (`infra/backup/kadratis-backup`)
+
+- `rclone copyto` runs with `--multi-thread-streams 0`. From 1.64, rclone sends a file above
+  `--multi-thread-cutoff` (256 MiB) in parallel streams and then reads it back with a `HEAD`, which
+  the write-only key may not do. The option keeps the single-stream upload in several parts, which
+  reads nothing (checked with 1.75.2 on a 301 MB night).
+- rclone 1.60 (the Ubuntu 24.04 package) adds `X-Amz-Acl: private` to every upload, with no option to
+  drop it: a bucket policy that denies ACL writes to the write key refuses the upload (403, the night
+  stops at the `upload` step). rclone 1.61 and later send no ACL header when no ACL is set
+  (changelog of v1.61.0; checked with 1.75.2).
+
 ## Versioning & Support
 
 - Semantic versioning (`v1.0.0`, `v1.1.0`, ...)

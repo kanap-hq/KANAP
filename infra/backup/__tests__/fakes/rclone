@@ -3,7 +3,7 @@
 printf 'rclone' >> "$FAKE_LOG"; printf ' %s' "$@" >> "$FAKE_LOG"; printf '\n' >> "$FAKE_LOG"
 args=(); skip=; for a in "$@"; do
   if [[ -n $skip ]]; then skip=; continue; fi
-  case $a in --config|--format|--retries) skip=1 ;; --*) ;; *) args+=("$a") ;; esac
+  case $a in --config|--format|--retries|--multi-thread-streams) skip=1 ;; --*) ;; *) args+=("$a") ;; esac
 done
 cmd=${args[0]}
 path() { local p=${1#*:}; printf '%s' "$p"; }

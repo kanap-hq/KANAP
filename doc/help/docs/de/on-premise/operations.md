@@ -236,6 +236,8 @@ Das Skript `infra/backup/kadratis-backup` läuft jede Nacht und legt drei Objekt
 - Ein Schreibbenutzer für den Server, auf diesen Bucket beschränkt, mit nur diesen Aktionen: `s3:PutObject`, `s3:ListBucket` und `s3:AbortMultipartUpload`. `s3:PutObject` deckt auch das Hochladen in mehreren Teilen ab, das große Objekte nutzen.
 - Ein Lesebenutzer für Wiederherstellungen, auf diesen Bucket beschränkt: `s3:GetObject`, `s3:GetObjectVersion` (wo der Anbieter diese Aktion hat), `s3:GetObjectRetention`, `s3:ListBucket` und `s3:ListBucketVersions`.
 
+Dieser Schreibbenutzer genügt mit dem `rclone` der Distribution. `rclone` vor 1.61 (Ubuntu 24.04 liefert 1.60) fügt jedem Upload einen ACL-Header hinzu, und eine Richtlinie, die dem Schreibbenutzer zusätzlich ACL-Schreibvorgänge verweigert, lehnt diese Uploads ab. Installieren Sie in diesem Fall `rclone` 1.61 oder neuer ([rclone-Installation](https://rclone.org/install/)), oder verweigern Sie die ACL-Schreibvorgänge nicht.
+
 Notieren Sie den Endpunkt (mit `https://`), die Region und den Namen des Buckets. Nur die Schlüssel des Schreibbenutzers kommen auf den Server. Die Schlüssel des Bucket-Eigentümers und des Lesebenutzers bleiben woanders.
 
 **Den Verschlüsselungsschlüssel erzeugen**, auf einem anderen Rechner als dem Server, auf dem `age` installiert ist:
@@ -346,6 +348,7 @@ Die Liste zeigt Größe und Namen der drei Objekte. Jedes Objekt zeigt `x-amz-ob
 - Volumen: Jede Nacht lädt alle Dateien des Speichers hoch. Der Bucket hält eine vollständige Kopie pro Aufbewahrungstag. Während der Nacht braucht der Server freien Platz für die doppelte Größe der Dateien, und die Dauer des Hochladens wächst mit dieser Größe.
 - Das Skript hält eine Kopie der Dateien in `/var/lib/kadratis-backup/files`, unverschlüsselt, wie die Dateikopie der lokalen Sicherung. Es legt `/var/lib/kadratis-backup` mit Modus 700 an und lehnt ein Arbeitsverzeichnis ab, das ein Link ist, einem anderen Konto gehört oder für andere Benutzer beschreibbar ist.
 - Ist der Bucket des Speichers leer, die lokale Kopie aber nicht, schlägt die Nacht fehl und löscht nichts: Das Journal meldet `the attachments bucket ... is empty, but the local copy ... holds N files`.
+- Ein vom Bucket abgelehnter Upload stoppt die Nacht beim Schritt `upload`. Mit `rclone` vor 1.61 und einer Richtlinie, die ACL-Schreibvorgänge verweigert, meldet das Journal `ERROR : database.dump.age: Failed to copy: AccessDenied: Access Denied.` (siehe „Den Bucket vorbereiten“ in [Nächtliche verschlüsselte Sicherung in einen S3-Bucket](#nachtliche-verschlusselte-sicherung-in-einen-s3-bucket)).
 - Eine fehlgeschlagene Nacht endet mit dem Exit-Code 1, der Zeile `backup FAILED during step '...'` im Journal, `failed` in `systemctl status kadratis-backup.service` und keinem Aufruf von `BACKUP_SUCCESS_URL`.
 
 ### Vor einem Upgrade
