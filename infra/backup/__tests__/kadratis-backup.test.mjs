@@ -159,6 +159,8 @@ test('the target only sees listings and write-only uploads: no sync, move, delet
       assert.match(c, / --s3-no-head( |$)/);
       assert.match(c, / --s3-no-check-bucket( |$)/);
       assert.match(c, / --no-check-dest( |$)/);
+      // A multi-thread upload (rclone 1.6x and later, above --multi-thread-cutoff) reads the object back.
+      assert.match(c, / --multi-thread-streams 0( |$)/, 'a large upload would read the object back');
       assert.match(c, / --retries 1( |$)/, 'an upload is never repeated as a whole');
       assert.match(c, /^rclone --config \/dev\/null copyto \/\S+ target:/, 'uploads go from a local file to the target');
     }
