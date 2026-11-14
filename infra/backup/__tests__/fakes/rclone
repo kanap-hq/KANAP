@@ -1,6 +1,6 @@
 #!/bin/bash
+. "${0%/*}/spy.sh" rclone
 printf 'rclone' >> "$FAKE_LOG"; printf ' %s' "$@" >> "$FAKE_LOG"; printf '\n' >> "$FAKE_LOG"
-env | grep -c '^RCLONE_CONFIG_TARGET_SECRET_ACCESS_KEY=' >> "$FAKE_DIR/rclone-target-env" || true
 args=(); skip=; for a in "$@"; do
   if [[ -n $skip ]]; then skip=; continue; fi
   case $a in --config|--format|--retries) skip=1 ;; --*) ;; *) args+=("$a") ;; esac
@@ -9,6 +9,10 @@ cmd=${args[0]}
 path() { local p=${1#*:}; printf '%s' "$p"; }
 case $cmd in
   lsf)
+    if [[ ${args[1]} == source:* ]]; then
+      [[ -d $FAKE_SOURCE ]] || exit 0
+      find "$FAKE_SOURCE" -type f -printf '%P\n'; exit 0
+    fi
     [[ -n ${FAKE_FAIL_LSF:-} ]] && { echo 'Failed to lsf: dial tcp: connection refused' >&2; exit 1; }
     d="$FAKE_S3/$(path "${args[1]}")"; [[ -d $d ]] || exit 0
     for f in "$d"/*; do [[ -f $f ]] && printf '%s;%s\n' "$(( $(stat -c %s "$f") + ${FAKE_LSF_SIZE_DELTA:-0} ))" "${f##*/}"; done; exit 0 ;;

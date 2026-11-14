@@ -1,4 +1,5 @@
 #!/bin/bash
+. "${0%/*}/spy.sh" pg_dump
 printf 'pg_dump' >> "$FAKE_LOG"; printf ' %s' "$@" >> "$FAKE_LOG"; printf '\n' >> "$FAKE_LOG"
 echo 'PGDMP clear dump start'
 [[ -n ${FAKE_FAIL_PG_DUMP:-} ]] && { echo 'pg_dump: error: connection to server failed' >&2; exit 1; }

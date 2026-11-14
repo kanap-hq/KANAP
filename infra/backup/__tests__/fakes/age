@@ -1,4 +1,5 @@
 #!/bin/bash
+. "${0%/*}/spy.sh" age
 printf 'age' >> "$FAKE_LOG"; printf ' %s' "$@" >> "$FAKE_LOG"; printf '\n' >> "$FAKE_LOG"
 out=; while (( $# )); do case $1 in -o) out=$2; shift 2 ;; *) shift ;; esac; done
 [[ -n ${FAKE_FAIL_AGE:-} ]] && { echo 'age: error: failed to encrypt' >&2; exit 1; }

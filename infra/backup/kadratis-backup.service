@@ -1,12 +1,12 @@
 # Install: /etc/systemd/system/kadratis-backup.service, with kadratis-backup.timer.
+# The script reads its settings file itself: no EnvironmentFile=, so no key sits in its environment.
 [Unit]
 Description=Kadratis backup to the target bucket
 Wants=network-online.target
-After=network-online.target postgresql.service
+After=network-online.target time-sync.target postgresql.service
 
 [Service]
 Type=oneshot
-EnvironmentFile=/etc/kadratis-backup.env
 ExecStart=/usr/local/sbin/kadratis-backup --env-file /etc/kadratis-backup.env
 UMask=0077
 PrivateTmp=true

@@ -11,14 +11,17 @@
 # The target keys only need to write and list. The script never reads, overwrites or deletes an
 # object in the target bucket: it uploads new names only and checks them by listing names and sizes.
 #
-# Settings: /etc/kadratis-backup.env (model: kadratis-backup.env.example), owned by root, mode 600.
+# Settings: /etc/kadratis-backup.env (model: kadratis-backup.env.example), owned by root, mode 600,
+# read by the script itself. Keep them out of the environment (no systemd EnvironmentFile=).
 # Usage: kadratis-backup [--env-file PATH]
-# Needs: bash, coreutils, tar, util-linux (flock, runuser), curl, pg_dump, rclone (1.60 or later), age.
+# Needs: bash, coreutils, tar, util-linux (flock, runuser), curl, pg_dump, rclone (1.60 or later), age;
+# jq only for the optional Hetzner check.
 set -euo pipefail
 umask 077
 cd /
 
 ENV_FILE=/etc/kadratis-backup.env
+# Upload order: config.tar.age goes last, so a night that holds it holds all three objects.
 OBJECTS=(database.dump.age attachments.tar.age config.tar.age)
 SETTINGS=(
   BACKUP_AGE_RECIPIENTS
@@ -56,7 +59,7 @@ is_setting() {
   return 1
 }
 
-# Reads NAME=value lines (the syntax systemd's EnvironmentFile= reads too) without executing them.
+# Reads NAME=value lines without executing them.
 load_settings() {
   local file=$1 line key value n=0 mode
   [[ -f $file ]] || die "settings file $file not found"
@@ -67,7 +70,9 @@ load_settings() {
     || die "$file can be read by other users (mode $mode): run chmod 600 $file"
   ! grep -qE 'AGE-SECRET-KEY-1[0-9A-Z]{58}' -- "$file" \
     || die "$file holds an age private key: keep the private key off this server"
-  for key in "${SETTINGS[@]}"; do unset "$key"; done
+  # Only the file counts: drop whatever the environment brought under these names, so that no
+  # setting (nor a read key) reaches a child process.
+  unset "${!BACKUP_@}" "${!ATTACHMENTS_@}" "${!HETZNER_@}" "${!RESTORE_S3_@}"
   while IFS= read -r line || [[ -n $line ]]; do
     n=$((n + 1))
     line=${line%$'\r'}
@@ -91,13 +96,20 @@ require() {
 
 check_url() { [[ $2 =~ ^https?://[^[:space:]\"\\]+$ ]] || die "$1 must be an http(s) address"; }
 
-# Scheme and host only: the path of a signal address works as a password.
-url_host() { local rest=${1#*://}; printf '%s://%s/...' "${1%%://*}" "${rest%%/*}"; }
+# Scheme, host and port only: the path, query, fragment or user part of a signal address may be
+# its password.
+url_host() {
+  local host=${1#*://}
+  host=${host%%[/?#]*}
+  host=${host##*@}
+  if [[ $host =~ ^[A-Za-z0-9.-]+(:[0-9]+)? ]]; then host=${BASH_REMATCH[0]}; else host='?'; fi
+  printf '%s://%s/...' "${1%%://*}" "$host"
+}
 
 # The URL goes to curl through its standard input, so it never shows in the process list.
 send_signal() {
   printf 'url = "%s"\n' "$1" \
-    | curl --config - --fail --silent --show-error --max-time 30 --retry 3 --output /dev/null
+    | curl --config - --fail --silent --show-error --max-time 30 --retry 3 --output /dev/null 9>&-
 }
 
 validate_settings() {
@@ -107,7 +119,7 @@ validate_settings() {
   : "${BACKUP_S3_PREFIX:=kadratis}" "${BACKUP_S3_PROVIDER:=Other}" "${BACKUP_S3_FORCE_PATH_STYLE:=true}"
   : "${ATTACHMENTS_S3_PROVIDER:=Other}" "${ATTACHMENTS_S3_FORCE_PATH_STYLE:=true}"
   : "${BACKUP_DB_OS_USER:=postgres}" "${BACKUP_CONFIG_FILES:=/opt/kanap/.env}"
-  : "${BACKUP_WORK_DIR:=/var/backups/kanap}"
+  : "${BACKUP_WORK_DIR:=/var/lib/kadratis-backup}"
   : "${HETZNER_API_URL:=https://api.hetzner.cloud/v1}" "${HETZNER_BACKUP_MAX_AGE_HOURS:=26}"
 
   local r recipients
@@ -121,7 +133,9 @@ validate_settings() {
   [[ $BACKUP_S3_PREFIX =~ ^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$ && $BACKUP_S3_PREFIX != *..* ]] \
     || die "BACKUP_S3_PREFIX must be a path such as kadratis or backups/kadratis"
   [[ $BACKUP_DB_NAME =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]*$ ]] || die "BACKUP_DB_NAME is not a database name"
-  [[ $BACKUP_WORK_DIR == /* ]] || die "BACKUP_WORK_DIR must be an absolute path"
+  BACKUP_WORK_DIR=${BACKUP_WORK_DIR%/}
+  [[ $BACKUP_WORK_DIR =~ ^(/[A-Za-z0-9._-]+)+$ && $BACKUP_WORK_DIR != *..* ]] \
+    || die "BACKUP_WORK_DIR must be an absolute path other than /, made of letters, digits, '.', '_' and '-'"
   local f
   read -ra CONFIG_FILES <<< "$BACKUP_CONFIG_FILES"
   (( ${#CONFIG_FILES[@]} > 0 )) || die "BACKUP_CONFIG_FILES is empty"
@@ -147,7 +161,7 @@ rclone_target() (
   export RCLONE_CONFIG_TARGET_ACCESS_KEY_ID="$BACKUP_S3_ACCESS_KEY_ID"
   export RCLONE_CONFIG_TARGET_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_ACCESS_KEY"
   if [[ -n ${BACKUP_S3_REGION:-} ]]; then export RCLONE_CONFIG_TARGET_REGION="$BACKUP_S3_REGION"; fi
-  exec rclone --config /dev/null "$@"
+  exec rclone --config /dev/null "$@" 9>&-
 )
 
 rclone_source() (
@@ -157,8 +171,24 @@ rclone_source() (
   export RCLONE_CONFIG_SOURCE_ACCESS_KEY_ID="$ATTACHMENTS_S3_ACCESS_KEY_ID"
   export RCLONE_CONFIG_SOURCE_SECRET_ACCESS_KEY="$ATTACHMENTS_S3_SECRET_ACCESS_KEY"
   if [[ -n ${ATTACHMENTS_S3_REGION:-} ]]; then export RCLONE_CONFIG_SOURCE_REGION="$ATTACHMENTS_S3_REGION"; fi
-  exec rclone --config /dev/null "$@"
+  exec rclone --config /dev/null "$@" 9>&-
 )
+
+# The work directory holds the clear copy of the attachments: only the user that runs the backup
+# may write there, and nothing in it may lead elsewhere. An existing directory keeps its mode.
+prepare_work_dir() {
+  local d=$BACKUP_WORK_DIR mode p
+  [[ ! -L $d ]] || die "BACKUP_WORK_DIR $d is a symbolic link: set BACKUP_WORK_DIR to a real directory"
+  if [[ ! -e $d ]]; then mkdir -p -m 700 -- "$d"; fi
+  [[ -d $d ]] || die "BACKUP_WORK_DIR $d is not a directory"
+  [[ $(stat -c %u -- "$d") == "$EUID" ]] \
+    || die "$d must belong to the user that runs the backup (chown root:root $d)"
+  mode=$(stat -c %a -- "$d")
+  (( (8#$mode & 8#022) == 0 )) || die "$d can be written by other users (mode $mode): run chmod 700 $d"
+  for p in "$d/files" "$d/kadratis-backup.lock" "$d"/outgoing.*; do
+    [[ ! -L $p ]] || die "$p is a symbolic link: remove it, the backup creates what it needs"
+  done
+}
 
 size_of() { numfmt --to=iec --suffix=B "$(stat -c %s -- "$1")"; }
 
@@ -167,22 +197,30 @@ size_of() { numfmt --to=iec --suffix=B "$(stat -c %s -- "$1")"; }
 check_host_backups() {
   [[ -n ${HETZNER_API_TOKEN:-} || -n ${HETZNER_SERVER_ID:-} ]] || return 0
   STEP='host backup check'
-  if [[ -z ${HETZNER_API_TOKEN:-} || ! ${HETZNER_SERVER_ID:-} =~ ^[0-9]+$ ]]; then
-    log "warning: host backup check skipped: set both HETZNER_API_TOKEN and HETZNER_SERVER_ID (a number)"
+  if [[ -z ${HETZNER_API_TOKEN:-} || ! ${HETZNER_SERVER_ID:-} =~ ^[1-9][0-9]*$ ]]; then
+    log "warning: host backup check skipped: set both HETZNER_API_TOKEN and HETZNER_SERVER_ID (a number with no leading zero)"
     return 0
   fi
-  if [[ ! $HETZNER_BACKUP_MAX_AGE_HOURS =~ ^[0-9]+$ || ! $HETZNER_API_URL =~ ^https?://[^[:space:]\"\\]+$ ]]; then
-    log "warning: host backup check skipped: HETZNER_BACKUP_MAX_AGE_HOURS or HETZNER_API_URL is not valid"
+  if [[ ! $HETZNER_BACKUP_MAX_AGE_HOURS =~ ^[1-9][0-9]{0,5}$ || ! $HETZNER_API_URL =~ ^https?://[^[:space:]\"\\]+$ ]]; then
+    log "warning: host backup check skipped: HETZNER_BACKUP_MAX_AGE_HOURS (hours, no leading zero) or HETZNER_API_URL is not valid"
+    return 0
+  fi
+  if ! command -v jq >/dev/null; then
+    log "warning: host backup check: jq is not installed (apt-get install -y jq): no signal sent"
     return 0
   fi
   local body dates newest d s age_h
   if ! body=$(printf 'header = "Authorization: Bearer %s"\nurl = "%s/images?type=backup&bound_to=%s"\n' \
       "$HETZNER_API_TOKEN" "${HETZNER_API_URL%/}" "$HETZNER_SERVER_ID" \
-      | curl --config - --fail --silent --show-error --max-time 30 --retry 2); then
+      | curl --config - --fail --silent --show-error --max-time 30 --retry 2 9>&-); then
     log "warning: host backup check: the provider API refused or did not answer"
     return 0
   fi
-  dates=$(grep -oE '"created"[[:space:]]*:[[:space:]]*"[^"]+"' <<< "$body" | sed -E 's/.*"([^"]+)"$/\1/') || true
+  # Backups still being written (status creating) do not count.
+  if ! dates=$(jq -r '.images[] | select(.status == "available") | .created' <<< "$body" 2>/dev/null 9>&-); then
+    log "warning: host backup check: the provider API answer is not the expected JSON: no signal sent"
+    return 0
+  fi
   newest=0
   while IFS= read -r d; do
     [[ -n $d ]] || continue
@@ -224,7 +262,8 @@ main() {
   validate_settings
 
   STEP=lock
-  install -d -m 700 -- "$BACKUP_WORK_DIR"
+  prepare_work_dir
+  # The lock descriptor (9) is closed for every child below (9>&-).
   exec 9>> "$BACKUP_WORK_DIR/kadratis-backup.lock"
   flock -n 9 || die "another backup is running (lock $BACKUP_WORK_DIR/kadratis-backup.lock)"
   # Encrypted leftovers of a run that was killed before its cleanup.
@@ -247,23 +286,31 @@ main() {
 
   STEP=database
   t=$SECONDS
-  runuser -u "$BACKUP_DB_OS_USER" -- pg_dump -Fc -d "$BACKUP_DB_NAME" \
-    | age -e "${RECIPIENT_ARGS[@]}" -o "$OUT/database.dump.age"
+  runuser -u "$BACKUP_DB_OS_USER" -- pg_dump -Fc -d "$BACKUP_DB_NAME" 9>&- \
+    | age -e "${RECIPIENT_ARGS[@]}" -o "$OUT/database.dump.age" 9>&-
   log "database: $(size_of "$OUT/database.dump.age") encrypted in $((SECONDS - t)) s"
 
   STEP=attachments
   t=$SECONDS
   local mirror="$BACKUP_WORK_DIR/files"
-  install -d -m 700 -- "$mirror"
+  if [[ ! -d $mirror ]]; then mkdir -m 700 -- "$mirror"; fi
+  # An empty bucket would empty the local copy at the sync: refuse it once the copy holds files
+  # (a new installation, with no copy yet, has no attachments either).
+  local source_files
+  source_files=$(rclone_source lsf --recursive --files-only "source:$ATTACHMENTS_S3_BUCKET" | wc -l)
+  if (( source_files == 0 )) && [[ -n $(find "$mirror" -type f -print -quit) ]]; then
+    die "the attachments bucket $ATTACHMENTS_S3_BUCKET is empty, but the local copy $mirror holds $(find "$mirror" -type f | wc -l) files: check the ATTACHMENTS_S3_* settings; if the bucket was emptied on purpose, delete $mirror and run again"
+  fi
   # Reads the attachments bucket only; the local copy follows the bucket from one night to the next.
   rclone_source sync "source:$ATTACHMENTS_S3_BUCKET" "$mirror"
-  tar -C "$mirror" -cf - . | age -e "${RECIPIENT_ARGS[@]}" -o "$OUT/attachments.tar.age"
+  tar -C "$mirror" -cf - . 9>&- | age -e "${RECIPIENT_ARGS[@]}" -o "$OUT/attachments.tar.age" 9>&-
   log "attachments: $(find "$mirror" -type f | wc -l) files, $(du -sh --apparent-size -- "$mirror" | cut -f1)B copied, $(size_of "$OUT/attachments.tar.age") encrypted in $((SECONDS - t)) s"
 
   STEP=configuration
   local f rel=()
   for f in "${CONFIG_FILES[@]}"; do rel+=("${f#/}"); done
-  tar -C / -cf - -- "${rel[@]}" | age -e "${RECIPIENT_ARGS[@]}" -o "$OUT/config.tar.age"
+  # --dereference: a link (certificates under /etc/letsencrypt/live, for one) goes in with its content.
+  tar -C / --dereference -cf - -- "${rel[@]}" 9>&- | age -e "${RECIPIENT_ARGS[@]}" -o "$OUT/config.tar.age" 9>&-
   log "configuration: ${#rel[@]} paths, $(size_of "$OUT/config.tar.age") encrypted"
 
   STEP=upload

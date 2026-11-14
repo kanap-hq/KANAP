@@ -1,0 +1,4 @@
+#!/bin/bash
+. "${0%/*}/spy.sh" tar
+# The real tar, found after this directory in PATH.
+PATH=${PATH#*:} exec tar "$@"
