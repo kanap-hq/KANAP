@@ -1,0 +1,11 @@
+# Install: /etc/systemd/system/kadratis-backup.timer, then: systemctl enable --now kadratis-backup.timer
+[Unit]
+Description=Run the Kadratis backup every night
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+RandomizedDelaySec=20min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

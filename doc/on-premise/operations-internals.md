@@ -31,6 +31,7 @@ kanap/
 │   ├── compose.onprem.yml   # On-prem Docker Compose reference (published images)
 │   ├── compose.onprem.build.yml  # Overlay that builds the images on the server
 │   ├── .env.onprem.example  # Configuration template
+│   ├── backup/              # Nightly encrypted backup to an S3 bucket (script, settings model, systemd units)
 │   └── postgres/kanap-pg-tune.sh  # PostgreSQL settings sized from the host's memory (applies nothing)
 ├── doc/
 │   └── on-premise/          # Maintainer docs

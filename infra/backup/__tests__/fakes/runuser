@@ -1,0 +1,4 @@
+#!/bin/bash
+. "${0%/*}/spy.sh" runuser
+printf 'runuser' >> "$FAKE_LOG"; printf ' %s' "$@" >> "$FAKE_LOG"; printf '\n' >> "$FAKE_LOG"
+while [[ $1 != -- ]]; do shift; done; shift; exec "$@"

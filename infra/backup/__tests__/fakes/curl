@@ -1,0 +1,12 @@
+#!/bin/bash
+. "${0%/*}/spy.sh" curl
+printf 'curl' >> "$FAKE_LOG"; printf ' %s' "$@" >> "$FAKE_LOG"; printf '\n' >> "$FAKE_LOG"
+cfg=$(cat); url=$(sed -nE 's/^url = "(.*)"$/\1/p' <<< "$cfg")
+printf '%s\n' "$url" >> "$FAKE_DIR/curl-urls"
+if [[ $url == */images\?* ]]; then
+  [[ -n ${FAKE_FAIL_HETZNER:-} ]] && { echo 'curl: (22) The requested URL returned error: 401' >&2; exit 22; }
+  grep -q 'Authorization: Bearer ' <<< "$cfg" || exit 22
+  cat "$FAKE_DIR/hetzner.json"; exit 0
+fi
+[[ -n ${FAKE_FAIL_SIGNAL:-} ]] && { echo 'curl: (6) Could not resolve host' >&2; exit 6; }
+exit 0

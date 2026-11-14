@@ -1,0 +1,343 @@
+#!/usr/bin/env bash
+# kadratis-backup: nightly backup of a Kadratis installation to an S3 bucket.
+#
+# Each run stores three objects under <BACKUP_S3_PREFIX>/<UTC date and time>/ in the target bucket:
+#   database.dump.age     the database, as `pg_dump -Fc` writes it
+#   attachments.tar.age   a tar archive of a local copy of the attachments bucket
+#   config.tar.age        a tar archive of the configuration files (BACKUP_CONFIG_FILES)
+# Everything is encrypted with age for the public recipients of BACKUP_AGE_RECIPIENTS before it
+# leaves the server. The private key stays off the server.
+#
+# The target keys only need to write and list. The script never reads, overwrites or deletes an
+# object in the target bucket: it uploads new names only and checks them by listing names and sizes.
+#
+# Settings: /etc/kadratis-backup.env (model: kadratis-backup.env.example), owned by root, mode 600,
+# read by the script itself. Keep them out of the environment (no systemd EnvironmentFile=).
+# Usage: kadratis-backup [--env-file PATH]
+# Needs: bash, coreutils, tar, util-linux (flock, runuser), curl, pg_dump, rclone (1.60 or later), age;
+# jq only for the optional Hetzner check.
+set -euo pipefail
+umask 077
+cd /
+
+ENV_FILE=/etc/kadratis-backup.env
+# Upload order: config.tar.age goes last, so a night that holds it holds all three objects.
+OBJECTS=(database.dump.age attachments.tar.age config.tar.age)
+SETTINGS=(
+  BACKUP_AGE_RECIPIENTS
+  BACKUP_S3_ENDPOINT BACKUP_S3_REGION BACKUP_S3_BUCKET BACKUP_S3_PREFIX
+  BACKUP_S3_ACCESS_KEY_ID BACKUP_S3_SECRET_ACCESS_KEY BACKUP_S3_PROVIDER BACKUP_S3_FORCE_PATH_STYLE
+  BACKUP_DB_NAME BACKUP_DB_OS_USER
+  ATTACHMENTS_S3_ENDPOINT ATTACHMENTS_S3_REGION ATTACHMENTS_S3_BUCKET
+  ATTACHMENTS_S3_ACCESS_KEY_ID ATTACHMENTS_S3_SECRET_ACCESS_KEY ATTACHMENTS_S3_PROVIDER
+  ATTACHMENTS_S3_FORCE_PATH_STYLE
+  BACKUP_CONFIG_FILES BACKUP_WORK_DIR BACKUP_SUCCESS_URL
+  HETZNER_API_TOKEN HETZNER_SERVER_ID HETZNER_API_URL HETZNER_BACKUP_MAX_AGE_HOURS
+  HETZNER_BACKUP_SUCCESS_URL
+)
+STEP=start
+OUT=
+
+log() { printf 'kadratis-backup: %s\n' "$*" >&2; }
+die() { log "error: $*"; exit 1; }
+
+on_exit() {
+  local status=$?
+  # Only encrypted files live in the outgoing directory; it goes in every case.
+  if [[ -n $OUT ]]; then rm -rf -- "$OUT"; fi
+  if (( status != 0 )); then
+    log "backup FAILED during step '$STEP' (exit $status): no success signal sent"
+  fi
+}
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+is_setting() {
+  local s
+  for s in "${SETTINGS[@]}"; do [[ $s == "$1" ]] && return 0; done
+  return 1
+}
+
+# Reads NAME=value lines without executing them.
+load_settings() {
+  local file=$1 line key value n=0 mode
+  [[ -f $file ]] || die "settings file $file not found"
+  [[ $(stat -c %u -- "$file") == "$EUID" ]] \
+    || die "$file must belong to the user that runs the backup (chown root:root $file)"
+  mode=$(stat -c %a -- "$file")
+  (( (8#$mode & 8#077) == 0 )) \
+    || die "$file can be read by other users (mode $mode): run chmod 600 $file"
+  ! grep -qE 'AGE-SECRET-KEY-1[0-9A-Z]{58}' -- "$file" \
+    || die "$file holds an age private key: keep the private key off this server"
+  # Only the file counts: drop whatever the environment brought under these names, so that no
+  # setting (nor a read key) reaches a child process.
+  unset "${!BACKUP_@}" "${!ATTACHMENTS_@}" "${!HETZNER_@}" "${!RESTORE_S3_@}"
+  while IFS= read -r line || [[ -n $line ]]; do
+    n=$((n + 1))
+    line=${line%$'\r'}
+    [[ $line =~ ^[[:space:]]*(#|$) ]] && continue
+    [[ $line =~ ^([A-Z][A-Z0-9_]*)=(.*)$ ]] || die "$file line $n: expected NAME=value"
+    key=${BASH_REMATCH[1]}
+    value=${BASH_REMATCH[2]}
+    case $key in
+      RESTORE_S3_*) die "$file line $n: $key does not belong on this server: the read keys stay on the restore machine" ;;
+    esac
+    is_setting "$key" || die "$file line $n: unknown setting $key"
+    if [[ $value =~ ^\"(.*)\"$ || $value =~ ^\'(.*)\'$ ]]; then value=${BASH_REMATCH[1]}; fi
+    printf -v "$key" '%s' "$value"
+  done < "$file"
+}
+
+require() {
+  local name
+  for name in "$@"; do [[ -n ${!name:-} ]] || die "$name is not set in $ENV_FILE"; done
+}
+
+check_url() { [[ $2 =~ ^https?://[^[:space:]\"\\]+$ ]] || die "$1 must be an http(s) address"; }
+
+# Scheme, host and port only: the path, query, fragment or user part of a signal address may be
+# its password.
+url_host() {
+  local host=${1#*://}
+  host=${host%%[/?#]*}
+  host=${host##*@}
+  if [[ $host =~ ^[A-Za-z0-9.-]+(:[0-9]+)? ]]; then host=${BASH_REMATCH[0]}; else host='?'; fi
+  printf '%s://%s/...' "${1%%://*}" "$host"
+}
+
+# The URL goes to curl through its standard input, so it never shows in the process list.
+send_signal() {
+  printf 'url = "%s"\n' "$1" \
+    | curl --config - --fail --silent --show-error --max-time 30 --retry 3 --output /dev/null 9>&-
+}
+
+validate_settings() {
+  require BACKUP_AGE_RECIPIENTS BACKUP_S3_ENDPOINT BACKUP_S3_BUCKET BACKUP_S3_ACCESS_KEY_ID \
+    BACKUP_S3_SECRET_ACCESS_KEY BACKUP_DB_NAME ATTACHMENTS_S3_ENDPOINT ATTACHMENTS_S3_BUCKET \
+    ATTACHMENTS_S3_ACCESS_KEY_ID ATTACHMENTS_S3_SECRET_ACCESS_KEY
+  : "${BACKUP_S3_PREFIX:=kadratis}" "${BACKUP_S3_PROVIDER:=Other}" "${BACKUP_S3_FORCE_PATH_STYLE:=true}"
+  : "${ATTACHMENTS_S3_PROVIDER:=Other}" "${ATTACHMENTS_S3_FORCE_PATH_STYLE:=true}"
+  : "${BACKUP_DB_OS_USER:=postgres}" "${BACKUP_CONFIG_FILES:=/opt/kanap/.env}"
+  : "${BACKUP_WORK_DIR:=/var/lib/kadratis-backup}"
+  : "${HETZNER_API_URL:=https://api.hetzner.cloud/v1}" "${HETZNER_BACKUP_MAX_AGE_HOURS:=26}"
+
+  local r recipients
+  RECIPIENT_ARGS=()
+  read -ra recipients <<< "$BACKUP_AGE_RECIPIENTS"
+  for r in "${recipients[@]}"; do
+    [[ $r =~ ^age1[0-9a-z]+$ ]] || die "BACKUP_AGE_RECIPIENTS holds '$r', which is not an age public key (age1...)"
+    RECIPIENT_ARGS+=(-r "$r")
+  done
+  BACKUP_S3_PREFIX=${BACKUP_S3_PREFIX%/}
+  [[ $BACKUP_S3_PREFIX =~ ^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$ && $BACKUP_S3_PREFIX != *..* ]] \
+    || die "BACKUP_S3_PREFIX must be a path such as kadratis or backups/kadratis"
+  [[ $BACKUP_DB_NAME =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]*$ ]] || die "BACKUP_DB_NAME is not a database name"
+  BACKUP_WORK_DIR=${BACKUP_WORK_DIR%/}
+  [[ $BACKUP_WORK_DIR =~ ^(/[A-Za-z0-9._-]+)+$ && $BACKUP_WORK_DIR != *..* ]] \
+    || die "BACKUP_WORK_DIR must be an absolute path other than /, made of letters, digits, '.', '_' and '-'"
+  local f
+  read -ra CONFIG_FILES <<< "$BACKUP_CONFIG_FILES"
+  (( ${#CONFIG_FILES[@]} > 0 )) || die "BACKUP_CONFIG_FILES is empty"
+  for f in "${CONFIG_FILES[@]}"; do
+    [[ $f == /* ]] || die "BACKUP_CONFIG_FILES: $f is not an absolute path"
+    [[ -e $f ]] || die "BACKUP_CONFIG_FILES: $f not found"
+  done
+  check_url BACKUP_S3_ENDPOINT "$BACKUP_S3_ENDPOINT"
+  check_url ATTACHMENTS_S3_ENDPOINT "$ATTACHMENTS_S3_ENDPOINT"
+  if [[ -n ${BACKUP_SUCCESS_URL:-} ]]; then check_url BACKUP_SUCCESS_URL "$BACKUP_SUCCESS_URL"; fi
+
+  local tool
+  for tool in pg_dump rclone age curl tar flock runuser; do
+    command -v "$tool" >/dev/null || die "$tool is not installed (apt-get install -y rclone age, PostgreSQL client tools)"
+  done
+}
+
+# rclone remotes from environment variables: no rclone.conf, and no key on a command line.
+rclone_target() (
+  export RCLONE_CONFIG_TARGET_TYPE=s3 RCLONE_CONFIG_TARGET_PROVIDER="$BACKUP_S3_PROVIDER"
+  export RCLONE_CONFIG_TARGET_ENDPOINT="$BACKUP_S3_ENDPOINT"
+  export RCLONE_CONFIG_TARGET_FORCE_PATH_STYLE="$BACKUP_S3_FORCE_PATH_STYLE"
+  export RCLONE_CONFIG_TARGET_ACCESS_KEY_ID="$BACKUP_S3_ACCESS_KEY_ID"
+  export RCLONE_CONFIG_TARGET_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_ACCESS_KEY"
+  if [[ -n ${BACKUP_S3_REGION:-} ]]; then export RCLONE_CONFIG_TARGET_REGION="$BACKUP_S3_REGION"; fi
+  exec rclone --config /dev/null "$@" 9>&-
+)
+
+rclone_source() (
+  export RCLONE_CONFIG_SOURCE_TYPE=s3 RCLONE_CONFIG_SOURCE_PROVIDER="$ATTACHMENTS_S3_PROVIDER"
+  export RCLONE_CONFIG_SOURCE_ENDPOINT="$ATTACHMENTS_S3_ENDPOINT"
+  export RCLONE_CONFIG_SOURCE_FORCE_PATH_STYLE="$ATTACHMENTS_S3_FORCE_PATH_STYLE"
+  export RCLONE_CONFIG_SOURCE_ACCESS_KEY_ID="$ATTACHMENTS_S3_ACCESS_KEY_ID"
+  export RCLONE_CONFIG_SOURCE_SECRET_ACCESS_KEY="$ATTACHMENTS_S3_SECRET_ACCESS_KEY"
+  if [[ -n ${ATTACHMENTS_S3_REGION:-} ]]; then export RCLONE_CONFIG_SOURCE_REGION="$ATTACHMENTS_S3_REGION"; fi
+  exec rclone --config /dev/null "$@" 9>&-
+)
+
+# The work directory holds the clear copy of the attachments: only the user that runs the backup
+# may write there, and nothing in it may lead elsewhere. An existing directory keeps its mode.
+prepare_work_dir() {
+  local d=$BACKUP_WORK_DIR mode p
+  [[ ! -L $d ]] || die "BACKUP_WORK_DIR $d is a symbolic link: set BACKUP_WORK_DIR to a real directory"
+  if [[ ! -e $d ]]; then mkdir -m 700 -- "$d"; fi
+  [[ -d $d ]] || die "BACKUP_WORK_DIR $d is not a directory"
+  [[ $(stat -c %u -- "$d") == "$EUID" ]] \
+    || die "$d must belong to the user that runs the backup (chown root:root $d)"
+  mode=$(stat -c %a -- "$d")
+  (( (8#$mode & 8#022) == 0 )) || die "$d can be written by other users (mode $mode): run chmod 700 $d"
+  for p in "$d/files" "$d/kadratis-backup.lock" "$d"/outgoing.*; do
+    [[ ! -L $p ]] || die "$p is a symbolic link: remove it, the backup creates what it needs"
+  done
+}
+
+size_of() { numfmt --to=iec --suffix=B "$(stat -c %s -- "$1")"; }
+
+# Optional, for a server with provider-side backups on Hetzner Cloud: checks that the newest one
+# is recent, then calls its own signal address. Its outcome never changes the backup's exit status.
+check_host_backups() {
+  [[ -n ${HETZNER_API_TOKEN:-} || -n ${HETZNER_SERVER_ID:-} ]] || return 0
+  STEP='host backup check'
+  if [[ -z ${HETZNER_API_TOKEN:-} || ! ${HETZNER_SERVER_ID:-} =~ ^[1-9][0-9]*$ ]]; then
+    log "warning: host backup check skipped: set both HETZNER_API_TOKEN and HETZNER_SERVER_ID (a number with no leading zero)"
+    return 0
+  fi
+  if [[ ! $HETZNER_BACKUP_MAX_AGE_HOURS =~ ^[1-9][0-9]{0,5}$ || ! $HETZNER_API_URL =~ ^https?://[^[:space:]\"\\]+$ ]]; then
+    log "warning: host backup check skipped: HETZNER_BACKUP_MAX_AGE_HOURS (hours, no leading zero) or HETZNER_API_URL is not valid"
+    return 0
+  fi
+  if ! command -v jq >/dev/null; then
+    log "warning: host backup check: jq is not installed (apt-get install -y jq): no signal sent"
+    return 0
+  fi
+  local body dates newest d s age_h
+  if ! body=$(printf 'header = "Authorization: Bearer %s"\nurl = "%s/images?type=backup&bound_to=%s"\n' \
+      "$HETZNER_API_TOKEN" "${HETZNER_API_URL%/}" "$HETZNER_SERVER_ID" \
+      | curl --config - --fail --silent --show-error --max-time 30 --retry 2 9>&-); then
+    log "warning: host backup check: the provider API refused or did not answer"
+    return 0
+  fi
+  # Backups still being written (status creating) do not count.
+  if ! dates=$(jq -r '.images[] | select(.status == "available") | .created' <<< "$body" 2>/dev/null 9>&-); then
+    log "warning: host backup check: the provider API answer is not the expected JSON: no signal sent"
+    return 0
+  fi
+  newest=0
+  while IFS= read -r d; do
+    [[ -n $d ]] || continue
+    s=$(date -u -d "$d" +%s 2>/dev/null) || continue
+    if (( s > newest )); then newest=$s; fi
+  done <<< "$dates"
+  if (( newest == 0 )); then
+    log "warning: host backup check: no provider backup found for server $HETZNER_SERVER_ID"
+    return 0
+  fi
+  age_h=$(( ($(date -u +%s) - newest) / 3600 ))
+  if (( $(date -u +%s) - newest >= HETZNER_BACKUP_MAX_AGE_HOURS * 3600 )); then
+    log "warning: host backup check: the newest provider backup is ${age_h} h old (limit ${HETZNER_BACKUP_MAX_AGE_HOURS} h): no signal sent"
+    return 0
+  fi
+  log "host backup check: newest provider backup is ${age_h} h old"
+  if [[ -n ${HETZNER_BACKUP_SUCCESS_URL:-} ]]; then
+    if [[ ! $HETZNER_BACKUP_SUCCESS_URL =~ ^https?://[^[:space:]\"\\]+$ ]]; then
+      log "warning: HETZNER_BACKUP_SUCCESS_URL must be an http(s) address: no signal sent"
+    elif send_signal "$HETZNER_BACKUP_SUCCESS_URL"; then
+      log "host backup signal sent to $(url_host "$HETZNER_BACKUP_SUCCESS_URL")"
+    else
+      log "warning: the host backup signal to $(url_host "$HETZNER_BACKUP_SUCCESS_URL") failed"
+    fi
+  fi
+}
+
+main() {
+  while (( $# > 0 )); do
+    case $1 in
+      --env-file) [[ $# -ge 2 ]] || die "--env-file needs a path"; ENV_FILE=$2; shift 2 ;;
+      -h | --help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+      *) die "unknown argument $1 (usage: kadratis-backup [--env-file PATH])" ;;
+    esac
+  done
+
+  STEP=settings
+  load_settings "$ENV_FILE"
+  validate_settings
+
+  STEP=lock
+  prepare_work_dir
+  # The lock descriptor (9) is closed for every child below (9>&-).
+  exec 9>> "$BACKUP_WORK_DIR/kadratis-backup.lock"
+  flock -n 9 || die "another backup is running (lock $BACKUP_WORK_DIR/kadratis-backup.lock)"
+  # Encrypted leftovers of a run that was killed before its cleanup.
+  rm -rf -- "$BACKUP_WORK_DIR"/outgoing.*
+
+  check_host_backups || log "warning: host backup check failed"
+
+  local started=$SECONDS t night listing name expected
+  local night_id
+  night_id=$(date -u +%Y-%m-%dT%H%M%SZ)
+  night="$BACKUP_S3_PREFIX/$night_id"
+  log "backup $night_id started"
+
+  STEP='target check'
+  # A listing proves that the target answers and takes the keys, and that this name is new.
+  listing=$(rclone_target lsf --format sp --files-only "target:$BACKUP_S3_BUCKET/$night/")
+  [[ -z $listing ]] || die "$night/ already exists in the target bucket: a name is never written twice"
+
+  OUT=$(mktemp -d "$BACKUP_WORK_DIR/outgoing.XXXXXX")
+
+  STEP=database
+  t=$SECONDS
+  runuser -u "$BACKUP_DB_OS_USER" -- pg_dump -Fc -d "$BACKUP_DB_NAME" 9>&- \
+    | age -e "${RECIPIENT_ARGS[@]}" -o "$OUT/database.dump.age" 9>&-
+  log "database: $(size_of "$OUT/database.dump.age") encrypted in $((SECONDS - t)) s"
+
+  STEP=attachments
+  t=$SECONDS
+  local mirror="$BACKUP_WORK_DIR/files"
+  if [[ ! -d $mirror ]]; then mkdir -m 700 -- "$mirror"; fi
+  # An empty bucket would empty the local copy at the sync: refuse it once the copy holds files
+  # (a new installation, with no copy yet, has no attachments either).
+  local source_files
+  source_files=$(rclone_source lsf --recursive --files-only "source:$ATTACHMENTS_S3_BUCKET" | wc -l)
+  if (( source_files == 0 )) && [[ -n $(find "$mirror" -type f -print -quit) ]]; then
+    die "the attachments bucket $ATTACHMENTS_S3_BUCKET is empty, but the local copy $mirror holds $(find "$mirror" -type f | wc -l) files: check the ATTACHMENTS_S3_* settings; if the bucket was emptied on purpose, delete $mirror and run again"
+  fi
+  # Reads the attachments bucket only; the local copy follows the bucket from one night to the next.
+  rclone_source sync "source:$ATTACHMENTS_S3_BUCKET" "$mirror"
+  tar -C "$mirror" -cf - . 9>&- | age -e "${RECIPIENT_ARGS[@]}" -o "$OUT/attachments.tar.age" 9>&-
+  log "attachments: $(find "$mirror" -type f | wc -l) files, $(du -sh --apparent-size -- "$mirror" | cut -f1)B copied, $(size_of "$OUT/attachments.tar.age") encrypted in $((SECONDS - t)) s"
+
+  STEP=configuration
+  local f rel=()
+  for f in "${CONFIG_FILES[@]}"; do rel+=("${f#/}"); done
+  # --dereference: a link (certificates under /etc/letsencrypt/live, for one) goes in with its content.
+  tar -C / --dereference -cf - -- "${rel[@]}" 9>&- | age -e "${RECIPIENT_ARGS[@]}" -o "$OUT/config.tar.age" 9>&-
+  log "configuration: ${#rel[@]} paths, $(size_of "$OUT/config.tar.age") encrypted"
+
+  STEP=upload
+  t=$SECONDS
+  for name in "${OBJECTS[@]}"; do
+    # Write only: no HEAD before or after the upload, no bucket check or creation.
+    rclone_target copyto "$OUT/$name" "target:$BACKUP_S3_BUCKET/$night/$name" \
+      --s3-no-head --s3-no-check-bucket --no-check-dest --retries 1
+  done
+  log "upload: ${#OBJECTS[@]} objects in $((SECONDS - t)) s"
+
+  STEP='upload check'
+  listing=$(rclone_target lsf --format sp --files-only "target:$BACKUP_S3_BUCKET/$night/")
+  for name in "${OBJECTS[@]}"; do
+    expected="$(stat -c %s -- "$OUT/$name");$name"
+    grep -qxF -- "$expected" <<< "$listing" \
+      || die "$night/$name is missing from the target listing or has the wrong size"
+  done
+  log "backup $night_id stored and listed in $((SECONDS - started)) s"
+
+  if [[ -n ${BACKUP_SUCCESS_URL:-} ]]; then
+    STEP='success signal'
+    send_signal "$BACKUP_SUCCESS_URL" \
+      || die "the backup is stored, but the success signal to $(url_host "$BACKUP_SUCCESS_URL") failed"
+    log "success signal sent to $(url_host "$BACKUP_SUCCESS_URL")"
+  fi
+  STEP=finished
+}
+
+main "$@"

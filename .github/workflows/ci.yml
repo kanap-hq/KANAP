@@ -315,14 +315,17 @@ jobs:
           node --test scripts/release/__tests__/*.test.mjs
           node scripts/sbom/check-licenses.mjs
       # The script that queues the ready pull requests (auto-queue.yml), the translation
-      # status of the user manual (read from git history), the sample data fixture and the
-      # helpers under backend/scripts/lib. These node tests have no dependency to install.
-      - name: Test the queueing script, the docs translation status, the sample data and the script helpers
+      # status of the user manual (read from git history), the sample data fixture, the helpers
+      # under backend/scripts/lib and the nightly backup script (with fake tools: neither rclone nor
+      # age is installed here). These node tests have no dependency to install.
+      - name: Test the queueing script, the docs translation status, the sample data, the script helpers and the backup script
         run: |
           node --test .github/scripts/__tests__/*.test.mjs
           node --test scripts/docs/__tests__/*.test.mjs
           node --test backend/fixtures/fromage-co/__tests__/*.test.mjs
           node --test backend/scripts/lib/__tests__/*.test.mjs
+          bash -n infra/backup/kadratis-backup
+          node --test infra/backup/__tests__/*.test.mjs
       - name: Build backend (onprem)
         if: ${{ needs.changes.outputs.builds != 'false' }}
         working-directory: backend

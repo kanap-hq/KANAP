@@ -221,9 +221,132 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 EOF
 ```
 
-**Copiez le répertoire de sauvegarde hors du serveur.** Une sauvegarde sur le même disque ne survit pas à la perte du serveur. Copiez `/var/backups/kanap` sur une autre machine chaque jour, par exemple avec `rsync -a /var/backups/kanap/ <user>@<backup host>:<directory>/` depuis une tâche planifiée, ou avec l'outil de sauvegarde que vous utilisez déjà. La copie contient des secrets et des données personnelles : protégez sa destination.
+**Copiez la sauvegarde hors du serveur.** Une sauvegarde sur le même disque ne survit pas à la perte du serveur. La [sauvegarde nocturne chiffrée](#sauvegarde-nocturne-chiffree-vers-un-bucket-s3) ci-dessous envoie chaque nuit la base de données, les fichiers et la configuration vers un bucket S3. Avec un autre outil, copiez `/var/backups/kanap` sur une autre machine chaque jour, par exemple avec `rsync -a /var/backups/kanap/ <user>@<backup host>:<directory>/` depuis une tâche planifiée. La copie contient des secrets et des données personnelles : protégez sa destination.
 
 **Testez une restauration tous les quelques mois**, sur un serveur de secours, pour savoir que les sauvegardes fonctionnent avant d'en avoir besoin.
+
+### Sauvegarde nocturne chiffrée vers un bucket S3
+
+Le script `infra/backup/kadratis-backup` tourne chaque nuit et dépose trois objets dans un dossier nommé d'après la date et l'heure (UTC) : `database.dump.age` (la base de données, telle que `pg_dump -Fc` l'écrit), `attachments.tar.age` (tous les fichiers du stockage) et `config.tar.age` (les fichiers de configuration). `age` les chiffre pour votre clé publique avant qu'ils ne quittent le serveur. Avec l'utilisateur d'écriture décrit plus bas, le serveur dépose et liste, et ne peut ni relire ni supprimer ce qu'il a déposé. Chaque nuit envoie de nouveau tous les fichiers du stockage.
+
+**Préparez le bucket.** Utilisez un service S3 chez un autre hébergeur que celui de votre serveur :
+
+- Un bucket réservé à cette sauvegarde, avec les versions et le verrouillage des objets activés, en mode conformité, avec une durée de conservation par défaut égale au nombre de jours à garder (30, par exemple). En mode conformité, personne ne peut supprimer un objet ni raccourcir sa conservation avant son échéance, pas même le propriétaire du bucket.
+- Une règle de cycle de vie qui supprime les objets et leurs versions antérieures une fois la conservation terminée (par exemple après 31 jours), et qui abandonne les envois en plusieurs parties restés inachevés (une nuit arrêtée pendant son envoi laisse des parties facturées).
+- Un utilisateur d'écriture pour le serveur, limité à ce bucket, avec ces seules actions : `s3:PutObject`, `s3:ListBucket` et `s3:AbortMultipartUpload`. `s3:PutObject` couvre aussi les envois en plusieurs parties, qu'utilisent les gros objets.
+- Un utilisateur de lecture pour les restaurations, limité à ce bucket : `s3:GetObject`, `s3:GetObjectVersion` (chez les hébergeurs qui ont cette action), `s3:GetObjectRetention`, `s3:ListBucket` et `s3:ListBucketVersions`.
+
+Notez le point d'accès (avec `https://`), la région et le nom du bucket. Seules les clés de l'utilisateur d'écriture vont sur le serveur. Les clés du propriétaire du bucket et de l'utilisateur de lecture restent ailleurs.
+
+**Créez la clé de chiffrement** sur une autre machine que le serveur, où `age` est installé :
+
+```bash
+age-keygen -o kadratis-backup-key.txt
+```
+
+La commande affiche `Public key: age1...` : le serveur a besoin de cette clé publique. Le fichier contient la clé privée. Elle reste hors du serveur, sauf pendant une [restauration](#restauration), et le quitte ensuite. Sans elle, aucune sauvegarde ne peut être relue : gardez-en deux exemplaires dans deux endroits sûrs distincts. `age-keygen -y kadratis-backup-key.txt` affiche de nouveau la clé publique.
+
+**Installez le script** sur le serveur :
+
+```bash
+sudo apt-get install -y rclone age
+cd /opt/kanap
+sudo install -m 0755 -o root -g root infra/backup/kadratis-backup /usr/local/sbin/kadratis-backup
+sudo install -m 0644 -o root -g root infra/backup/kadratis-backup.service infra/backup/kadratis-backup.timer /etc/systemd/system/
+sudo install -m 0600 -o root -g root infra/backup/kadratis-backup.env.example /etc/kadratis-backup.env
+sudo nano /etc/kadratis-backup.env
+sudo systemctl daemon-reload
+```
+
+Chaque réglage de `/etc/kadratis-backup.env` est commenté. Pour l'[exemple d'installation](installation-example.md) :
+
+- `BACKUP_AGE_RECIPIENTS` : la clé publique `age1...`.
+- `BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION` et `BACKUP_S3_BUCKET` : ceux du bucket. `BACKUP_S3_ACCESS_KEY_ID` et `BACKUP_S3_SECRET_ACCESS_KEY` : les clés de l'utilisateur d'écriture. `BACKUP_S3_PREFIX` nomme le dossier dans le bucket (`kadratis` par défaut).
+- `BACKUP_DB_NAME=kanap`.
+- `ATTACHMENTS_S3_ENDPOINT=http://172.17.0.1:9000`. `ATTACHMENTS_S3_REGION`, `ATTACHMENTS_S3_BUCKET`, `ATTACHMENTS_S3_ACCESS_KEY_ID` et `ATTACHMENTS_S3_SECRET_ACCESS_KEY` : les valeurs `S3_REGION`, `S3_BUCKET`, `AWS_ACCESS_KEY_ID` et `AWS_SECRET_ACCESS_KEY` de `/opt/kanap/.env`.
+- `BACKUP_CONFIG_FILES` liste `/opt/kanap/.env` et `/etc/default/rustfs`. Ajoutez-y le fichier de site nginx et les fichiers de certificat, séparés par des espaces, pour les garder aussi. Un chemin qui est un lien est archivé avec le contenu vers lequel il pointe (les certificats de `/etc/letsencrypt/live/`, par exemple).
+
+La dernière partie du fichier contrôle les sauvegardes de serveur de Hetzner Cloud : laissez-la vide, sauf si votre serveur y tourne avec ses sauvegardes activées. Ce contrôle demande `jq` (`sudo apt-get install -y jq`). Le script refuse de tourner quand d'autres utilisateurs peuvent lire le fichier, quand il contient une clé privée (`AGE-SECRET-KEY-...`) ou un réglage qu'il ne connaît pas.
+
+**Après une mise à jour**, vérifiez que les copies installées correspondent à la nouvelle version :
+
+```bash
+cd /opt/kanap
+cmp infra/backup/kadratis-backup /usr/local/sbin/kadratis-backup
+cmp infra/backup/kadratis-backup.service /etc/systemd/system/kadratis-backup.service
+cmp infra/backup/kadratis-backup.timer /etc/systemd/system/kadratis-backup.timer
+```
+
+Aucune sortie : elles correspondent. Une ligne comme `... differ: byte 1201, line 40` nomme un fichier que la mise à jour a changé : relancez sa ligne `install`, puis `sudo systemctl daemon-reload`. Le journal des modifications nomme tout nouveau réglage.
+
+**Lancez la première nuit à la main.** La première commande rend la main à la fin de la nuit :
+
+```bash
+sudo systemctl start kadratis-backup.service
+sudo journalctl -u kadratis-backup.service -o cat --since -10min
+```
+
+Le journal montre les étapes, puis `stored and listed` :
+
+```
+kadratis-backup: backup 2026-11-14T092950Z started
+kadratis-backup: database: 2.4MB encrypted in 0 s
+kadratis-backup: attachments: 303 files, 301MB copied, 301MB encrypted in 2 s
+kadratis-backup: configuration: 2 paths, 11KB encrypted
+kadratis-backup: upload: 3 objects in 26 s
+kadratis-backup: backup 2026-11-14T092950Z stored and listed in 28 s
+```
+
+Deux lignes `pam_unix` sur l'utilisateur `postgres` accompagnent l'étape de la base de données : elles sont normales.
+
+**Activez le minuteur.**
+
+```bash
+sudo systemctl enable --now kadratis-backup.timer
+systemctl list-timers kadratis-backup.timer
+```
+
+La liste montre le prochain passage. La sauvegarde part chaque nuit à 02:00, heure du serveur, plus 20 minutes au plus. Une nuit manquée pendant que le serveur était éteint tourne à son redémarrage.
+
+**Supervision (facultatif).** Mettez dans `BACKUP_SUCCESS_URL` l'adresse d'un service de supervision qui alerte quand un appel attendu n'arrive pas. Le script l'appelle une fois la nuit déposée et listée. Une nuit en échec n'appelle rien.
+
+**Contrôlez la sauvegarde depuis une autre machine**, celle qui garde la clé privée, où `rclone` et `age` sont installés. Posez les clés de lecture une fois par terminal : les valeurs sont celles de votre bucket, et les clés de l'utilisateur de lecture se tapent aux invites.
+
+```bash
+export RCLONE_CONFIG=/dev/null
+export RCLONE_CONFIG_BACKUP_TYPE=s3 RCLONE_CONFIG_BACKUP_PROVIDER=Other
+export RCLONE_CONFIG_BACKUP_ENDPOINT='https://s3.example.com'   # BACKUP_S3_ENDPOINT
+export RCLONE_CONFIG_BACKUP_REGION='us-east-1'                  # BACKUP_S3_REGION
+export RCLONE_CONFIG_BACKUP_FORCE_PATH_STYLE=true
+BUCKET=example-backup-bucket                                    # BACKUP_S3_BUCKET
+PREFIX=kadratis                                                 # BACKUP_S3_PREFIX
+read -rp 'Read access key: ' RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID
+read -rsp 'Read secret key: ' RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY; echo
+export RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY
+rclone lsf --dirs-only "backup:$BUCKET/$PREFIX/"
+```
+
+La dernière commande liste un dossier par nuit. Une nuit complète porte trois objets, et `config.tar.age` est déposé le dernier : une nuit arrêtée pendant son envoi laisse un dossier avec un ou deux objets. Choisissez une nuit qui a ses trois objets, puis listez ses trois objets, affichez leur verrouillage et déchiffrez le début de la base de données :
+
+```bash
+NIGHT=2026-11-14T092950Z   # a folder of the list, without the final /
+rclone lsf --format sp "backup:$BUCKET/$PREFIX/$NIGHT/"
+for f in database.dump.age attachments.tar.age config.tar.age; do
+  printf 'user = "%s:%s"\n' "$RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID" "$RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY" \
+    | curl -sS -K - -I --aws-sigv4 "aws:amz:${RCLONE_CONFIG_BACKUP_REGION}:s3" \
+      "${RCLONE_CONFIG_BACKUP_ENDPOINT}/${BUCKET}/${PREFIX}/${NIGHT}/${f}" | grep -i '^x-amz-object-lock'
+done
+rclone cat "backup:$BUCKET/$PREFIX/$NIGHT/database.dump.age" | age -d -i kadratis-backup-key.txt | head -c 5; echo
+```
+
+La liste montre la taille et le nom des trois objets. Chaque objet affiche `x-amz-object-lock-mode: COMPLIANCE` et la date jusqu'à laquelle il est verrouillé. La dernière ligne affiche `PGDMP`, le début d'un dump de base de données.
+
+**Limites.**
+
+- Volume : chaque nuit envoie tous les fichiers du stockage. Le bucket garde une copie complète par jour de conservation. Pendant la nuit, le serveur a besoin d'un espace libre de deux fois la taille des fichiers, et la durée de l'envoi croît avec cette taille.
+- Le script garde une copie des fichiers dans `/var/lib/kadratis-backup/files`, en clair, comme la copie des fichiers de la sauvegarde locale. Il crée `/var/lib/kadratis-backup` en mode 700 et refuse un répertoire de travail qui est un lien, appartient à un autre compte ou est inscriptible par d'autres utilisateurs.
+- Quand le bucket du stockage est vide alors que la copie locale ne l'est pas, la nuit échoue sans rien effacer : le journal indique `the attachments bucket ... is empty, but the local copy ... holds N files`.
+- Une nuit en échec se termine par le code de sortie 1, la ligne `backup FAILED during step '...'` dans le journal, `failed` dans `systemctl status kadratis-backup.service`, et aucun appel à `BACKUP_SUCCESS_URL`.
 
 ### Avant une mise à jour
 
@@ -268,6 +391,32 @@ Pour restaurer plutôt une sauvegarde quotidienne, définissez le dump de ce jou
 DUMP=/var/backups/kanap/db-2026-10-09.dump   # votre date
 FILES=/var/backups/kanap/files
 ```
+
+Pour restaurer une nuit de la [sauvegarde chiffrée](#sauvegarde-nocturne-chiffree-vers-un-bucket-s3), téléchargez-la et déchiffrez-la sur le serveur. Sur un nouveau serveur, installez d'abord `rclone` et `age` (`sudo apt-get install -y rclone age`). Copiez le fichier de la clé privée dans votre répertoire personnel sur le serveur (avec `scp`, par exemple). Posez les clés de lecture avec le premier bloc de « Contrôlez la sauvegarde depuis une autre machine » (dans [Sauvegarde nocturne chiffrée vers un bucket S3](#sauvegarde-nocturne-chiffree-vers-un-bucket-s3)), dans ce terminal. Puis :
+
+```bash
+NIGHT=2026-11-14T092950Z   # the folder of the night to restore
+rclone copy "backup:$BUCKET/$PREFIX/$NIGHT/" ~/kadratis-night/
+BACKUP=/var/backups/kanap-restore-$NIGHT
+sudo install -d -o postgres -g postgres -m 0700 "$BACKUP"
+sudo install -d -m 0700 "$BACKUP/files" "$BACKUP/config"
+sudo age -d -i ~/kadratis-backup-key.txt -o "$BACKUP/db.dump" ~/kadratis-night/database.dump.age
+age -d -i ~/kadratis-backup-key.txt ~/kadratis-night/attachments.tar.age | sudo tar -xf - -C "$BACKUP/files"
+age -d -i ~/kadratis-backup-key.txt ~/kadratis-night/config.tar.age | sudo tar -xf - -C "$BACKUP/config"
+DUMP="$BACKUP/db.dump"
+FILES="$BACKUP/files"
+```
+
+`$BACKUP/config` contient les fichiers de configuration sous leur chemin complet (`opt/kanap/.env`, `etc/default/rustfs`). Sur un nouveau serveur, remettez-les à leur place avant d'installer Kadratis. Une fois Kadratis relancé, retirez la clé et les objets téléchargés du serveur (`shred -u ~/kadratis-backup-key.txt` et `rm -r ~/kadratis-night`), puis fermez le terminal : les clés de lecture partent avec lui. Supprimez `$BACKUP` quand vous n'en avez plus besoin.
+
+Les clés d'écriture peuvent déposer un nouvel objet sous un nom existant, et les versions gardent le précédent. Si une nuit ne se déchiffre pas, listez les versions de ses objets, puis téléchargez la nuit telle qu'elle était à un instant donné (UTC, après la nuit et avant le remplacement), à la place de la ligne `rclone copy` ci-dessus :
+
+```bash
+rclone lsf --s3-versions --format tsp "backup:$BUCKET/$PREFIX/$NIGHT/"
+rclone copy --s3-version-at 2026-11-14T09:46:22Z "backup:$BUCKET/$PREFIX/$NIGHT/" ~/kadratis-night/
+```
+
+Téléchargez le dossier avec `rclone copy` : `rclone copyto --s3-version-at` sur un seul objet ne copie rien et ne signale aucune erreur.
 
 **1. Restaurez la base de données.** Ce bloc arrête Kadratis, recrée la base de données avec le rôle applicatif comme propriétaire et restaure le dump. Il n'exécute rien si le fichier de dump n'existe pas ou si `pg_restore` ne peut pas le lire :
 
