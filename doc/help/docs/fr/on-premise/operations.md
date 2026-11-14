@@ -236,6 +236,8 @@ Le script `infra/backup/kadratis-backup` tourne chaque nuit et dépose trois obj
 - Un utilisateur d'écriture pour le serveur, limité à ce bucket, avec ces seules actions : `s3:PutObject`, `s3:ListBucket` et `s3:AbortMultipartUpload`. `s3:PutObject` couvre aussi les envois en plusieurs parties, qu'utilisent les gros objets.
 - Un utilisateur de lecture pour les restaurations, limité à ce bucket : `s3:GetObject`, `s3:GetObjectVersion` (chez les hébergeurs qui ont cette action), `s3:GetObjectRetention`, `s3:ListBucket` et `s3:ListBucketVersions`.
 
+Cet utilisateur d'écriture suffit avec le `rclone` de la distribution. `rclone` avant 1.61 (Ubuntu 24.04 fournit la 1.60) joint un en-tête d'ACL à chaque envoi, et une politique qui refuse en plus les écritures d'ACL à l'utilisateur d'écriture refuse ces envois. Dans ce cas, installez `rclone` 1.61 ou plus récent ([installation de rclone](https://rclone.org/install/)), ou ne refusez pas les écritures d'ACL.
+
 Notez le point d'accès (avec `https://`), la région et le nom du bucket. Seules les clés de l'utilisateur d'écriture vont sur le serveur. Les clés du propriétaire du bucket et de l'utilisateur de lecture restent ailleurs.
 
 **Créez la clé de chiffrement** sur une autre machine que le serveur, où `age` est installé :
@@ -346,6 +348,7 @@ La liste montre la taille et le nom des trois objets. Chaque objet affiche `x-am
 - Volume : chaque nuit envoie tous les fichiers du stockage. Le bucket garde une copie complète par jour de conservation. Pendant la nuit, le serveur a besoin d'un espace libre de deux fois la taille des fichiers, et la durée de l'envoi croît avec cette taille.
 - Le script garde une copie des fichiers dans `/var/lib/kadratis-backup/files`, en clair, comme la copie des fichiers de la sauvegarde locale. Il crée `/var/lib/kadratis-backup` en mode 700 et refuse un répertoire de travail qui est un lien, appartient à un autre compte ou est inscriptible par d'autres utilisateurs.
 - Quand le bucket du stockage est vide alors que la copie locale ne l'est pas, la nuit échoue sans rien effacer : le journal indique `the attachments bucket ... is empty, but the local copy ... holds N files`.
+- Un envoi refusé par le bucket arrête la nuit à l'étape `upload`. Avec `rclone` avant 1.61 et une politique qui refuse les écritures d'ACL, le journal indique `ERROR : database.dump.age: Failed to copy: AccessDenied: Access Denied.` (voir « Préparez le bucket » dans [Sauvegarde nocturne chiffrée vers un bucket S3](#sauvegarde-nocturne-chiffree-vers-un-bucket-s3)).
 - Une nuit en échec se termine par le code de sortie 1, la ligne `backup FAILED during step '...'` dans le journal, `failed` dans `systemctl status kadratis-backup.service`, et aucun appel à `BACKUP_SUCCESS_URL`.
 
 ### Avant une mise à jour
