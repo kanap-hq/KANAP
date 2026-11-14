@@ -179,7 +179,7 @@ rclone_source() (
 prepare_work_dir() {
   local d=$BACKUP_WORK_DIR mode p
   [[ ! -L $d ]] || die "BACKUP_WORK_DIR $d is a symbolic link: set BACKUP_WORK_DIR to a real directory"
-  if [[ ! -e $d ]]; then mkdir -p -m 700 -- "$d"; fi
+  if [[ ! -e $d ]]; then mkdir -m 700 -- "$d"; fi
   [[ -d $d ]] || die "BACKUP_WORK_DIR $d is not a directory"
   [[ $(stat -c %u -- "$d") == "$EUID" ]] \
     || die "$d must belong to the user that runs the backup (chown root:root $d)"
