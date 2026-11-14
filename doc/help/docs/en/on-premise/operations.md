@@ -232,9 +232,9 @@ The script `infra/backup/kadratis-backup` runs every night and stores three obje
 **Prepare the bucket.** Use an S3 service at another provider than the one that hosts your server:
 
 - A bucket for this backup only, with versioning and object lock turned on, in compliance mode, with a default retention of the number of days you want to keep (30, for example). In compliance mode nobody can delete an object or shorten its retention before its date, the bucket owner included.
-- A lifecycle rule that deletes the objects and their older versions once the retention has ended (for example after 31 days).
+- A lifecycle rule that deletes the objects and their older versions once the retention has ended (for example after 31 days), and aborts the uploads in several parts left unfinished (a night stopped during its upload leaves parts that are billed).
 - A write user for the server, limited to this bucket, with these actions only: `s3:PutObject`, `s3:ListBucket` and `s3:AbortMultipartUpload`. `s3:PutObject` also covers the uploads in several parts, which large objects use.
-- A read user for restores, limited to this bucket: `s3:GetObject`, `s3:GetObjectVersion`, `s3:GetObjectRetention`, `s3:ListBucket` and `s3:ListBucketVersions`.
+- A read user for restores, limited to this bucket: `s3:GetObject`, `s3:GetObjectVersion` (where the provider has this action), `s3:GetObjectRetention`, `s3:ListBucket` and `s3:ListBucketVersions`.
 
 Note the endpoint (with `https://`), the region and the name of the bucket. Only the keys of the write user go on the server. The keys of the bucket owner and of the read user stay off it.
 
@@ -264,9 +264,9 @@ Each setting of `/etc/kadratis-backup.env` has a comment. For the [installation 
 - `BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION` and `BACKUP_S3_BUCKET`: those of the bucket. `BACKUP_S3_ACCESS_KEY_ID` and `BACKUP_S3_SECRET_ACCESS_KEY`: the keys of the write user. `BACKUP_S3_PREFIX` names the folder in the bucket (`kadratis` by default).
 - `BACKUP_DB_NAME=kanap`.
 - `ATTACHMENTS_S3_ENDPOINT=http://172.17.0.1:9000`. `ATTACHMENTS_S3_REGION`, `ATTACHMENTS_S3_BUCKET`, `ATTACHMENTS_S3_ACCESS_KEY_ID` and `ATTACHMENTS_S3_SECRET_ACCESS_KEY`: the `S3_REGION`, `S3_BUCKET`, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` of `/opt/kanap/.env`.
-- `BACKUP_CONFIG_FILES` lists `/opt/kanap/.env` and `/etc/default/rustfs`. Add the nginx site file and the certificate files, separated by spaces, to keep them too.
+- `BACKUP_CONFIG_FILES` lists `/opt/kanap/.env` and `/etc/default/rustfs`. Add the nginx site file and the certificate files, separated by spaces, to keep them too. A path that is a link goes in with the content it points to (the certificates of `/etc/letsencrypt/live/`, for example).
 
-The last part of the file checks the server backups of Hetzner Cloud: leave it empty unless your server runs there with its backups turned on. The script refuses to run when other users can read the file, when it holds a private key (`AGE-SECRET-KEY-...`) or a setting it does not know.
+The last part of the file checks the server backups of Hetzner Cloud: leave it empty unless your server runs there with its backups turned on. That check needs `jq` (`sudo apt-get install -y jq`). The script refuses to run when other users can read the file, when it holds a private key (`AGE-SECRET-KEY-...`) or a setting it does not know.
 
 **After an upgrade**, check that the installed copies match the new version:
 
@@ -326,7 +326,7 @@ export RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY
 rclone lsf --dirs-only "backup:$BUCKET/$PREFIX/"
 ```
 
-The last command lists one folder per night. Choose one, then list its three objects, show their lock and decrypt the start of the database:
+The last command lists one folder per night. A complete night holds three objects, and `config.tar.age` is uploaded last: a night stopped during its upload leaves a folder with one or two objects. Choose a night with its three objects, then list its three objects, show their lock and decrypt the start of the database:
 
 ```bash
 NIGHT=2026-11-14T092950Z   # a folder of the list, without the final /
@@ -344,7 +344,8 @@ The list shows the size and name of the three objects. Each object shows `x-amz-
 **Limits.**
 
 - Volume: each night uploads every file of the storage. The bucket holds one full copy per day of retention. During the night, the server needs free space for twice the size of the files, and the upload time grows with that size.
-- The script keeps a copy of the files in `/var/backups/kanap/files`, in the clear, like the files copy of the local backup. Only `root` can read it.
+- The script keeps a copy of the files in `/var/lib/kadratis-backup/files`, in the clear, like the files copy of the local backup. It creates `/var/lib/kadratis-backup` in mode 700 and refuses a work directory that is a link, belongs to another account or can be written by other users.
+- When the storage bucket is empty and the local copy is not, the night fails and deletes nothing: the journal reads `the attachments bucket ... is empty, but the local copy ... holds N files`.
 - A failed night ends with exit code 1, the line `backup FAILED during step '...'` in the journal, `failed` in `systemctl status kadratis-backup.service`, and no call to `BACKUP_SUCCESS_URL`.
 
 ### Before an upgrade
