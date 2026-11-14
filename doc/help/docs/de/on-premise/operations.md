@@ -232,9 +232,9 @@ Das Skript `infra/backup/kadratis-backup` läuft jede Nacht und legt drei Objekt
 **Den Bucket vorbereiten.** Nutzen Sie einen S3-Dienst bei einem anderen Anbieter als dem, der Ihren Server hostet:
 
 - Ein Bucket nur für diese Sicherung, mit aktivierter Versionierung und Objektsperre, im Compliance-Modus, mit einer Standard-Aufbewahrung von der Anzahl Tage, die Sie behalten möchten (zum Beispiel 30). Im Compliance-Modus kann niemand ein Objekt löschen oder seine Aufbewahrung vor dem Ablaufdatum verkürzen, auch nicht der Eigentümer des Buckets.
-- Eine Lebenszyklusregel, die die Objekte und ihre älteren Versionen löscht, sobald die Aufbewahrung abgelaufen ist (zum Beispiel nach 31 Tagen).
+- Eine Lebenszyklusregel, die die Objekte und ihre älteren Versionen löscht, sobald die Aufbewahrung abgelaufen ist (zum Beispiel nach 31 Tagen) und unvollendete Uploads in mehreren Teilen abbricht (eine Nacht, die während des Hochladens stoppt, hinterlässt Teile, die berechnet werden).
 - Ein Schreibbenutzer für den Server, auf diesen Bucket beschränkt, mit nur diesen Aktionen: `s3:PutObject`, `s3:ListBucket` und `s3:AbortMultipartUpload`. `s3:PutObject` deckt auch das Hochladen in mehreren Teilen ab, das große Objekte nutzen.
-- Ein Lesebenutzer für Wiederherstellungen, auf diesen Bucket beschränkt: `s3:GetObject`, `s3:GetObjectVersion`, `s3:GetObjectRetention`, `s3:ListBucket` und `s3:ListBucketVersions`.
+- Ein Lesebenutzer für Wiederherstellungen, auf diesen Bucket beschränkt: `s3:GetObject`, `s3:GetObjectVersion` (wo der Anbieter diese Aktion hat), `s3:GetObjectRetention`, `s3:ListBucket` und `s3:ListBucketVersions`.
 
 Notieren Sie den Endpunkt (mit `https://`), die Region und den Namen des Buckets. Nur die Schlüssel des Schreibbenutzers kommen auf den Server. Die Schlüssel des Bucket-Eigentümers und des Lesebenutzers bleiben woanders.
 
@@ -264,9 +264,9 @@ Jede Einstellung in `/etc/kadratis-backup.env` hat einen Kommentar. Für das [In
 - `BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION` und `BACKUP_S3_BUCKET`: die des Buckets. `BACKUP_S3_ACCESS_KEY_ID` und `BACKUP_S3_SECRET_ACCESS_KEY`: die Schlüssel des Schreibbenutzers. `BACKUP_S3_PREFIX` benennt den Ordner im Bucket (standardmäßig `kadratis`).
 - `BACKUP_DB_NAME=kanap`.
 - `ATTACHMENTS_S3_ENDPOINT=http://172.17.0.1:9000`. `ATTACHMENTS_S3_REGION`, `ATTACHMENTS_S3_BUCKET`, `ATTACHMENTS_S3_ACCESS_KEY_ID` und `ATTACHMENTS_S3_SECRET_ACCESS_KEY`: `S3_REGION`, `S3_BUCKET`, `AWS_ACCESS_KEY_ID` und `AWS_SECRET_ACCESS_KEY` aus `/opt/kanap/.env`.
-- `BACKUP_CONFIG_FILES` nennt `/opt/kanap/.env` und `/etc/default/rustfs`. Fügen Sie die nginx-Site-Datei und die Zertifikatsdateien hinzu, durch Leerzeichen getrennt, um sie ebenfalls zu sichern.
+- `BACKUP_CONFIG_FILES` nennt `/opt/kanap/.env` und `/etc/default/rustfs`. Fügen Sie die nginx-Site-Datei und die Zertifikatsdateien hinzu, durch Leerzeichen getrennt, um sie ebenfalls zu sichern. Ein Pfad, der ein Link ist, wird mit dem Inhalt gesichert, auf den er zeigt (zum Beispiel die Zertifikate in `/etc/letsencrypt/live/`).
 
-Der letzte Teil der Datei prüft die Serversicherungen von Hetzner Cloud: Lassen Sie ihn leer, außer Ihr Server läuft dort mit aktivierten Sicherungen. Das Skript verweigert den Start, wenn andere Benutzer die Datei lesen können, wenn sie einen privaten Schlüssel (`AGE-SECRET-KEY-...`) oder eine unbekannte Einstellung enthält.
+Der letzte Teil der Datei prüft die Serversicherungen von Hetzner Cloud: Lassen Sie ihn leer, außer Ihr Server läuft dort mit aktivierten Sicherungen. Diese Prüfung braucht `jq` (`sudo apt-get install -y jq`). Das Skript verweigert den Start, wenn andere Benutzer die Datei lesen können, wenn sie einen privaten Schlüssel (`AGE-SECRET-KEY-...`) oder eine unbekannte Einstellung enthält.
 
 **Nach einem Upgrade** prüfen Sie, ob die installierten Kopien zur neuen Version passen:
 
@@ -326,7 +326,7 @@ export RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY
 rclone lsf --dirs-only "backup:$BUCKET/$PREFIX/"
 ```
 
-Der letzte Befehl listet einen Ordner pro Nacht. Wählen Sie einen aus, listen Sie dann seine drei Objekte auf, zeigen Sie ihre Sperre an und entschlüsseln Sie den Anfang der Datenbank:
+Der letzte Befehl listet einen Ordner pro Nacht. Eine vollständige Nacht enthält drei Objekte, und `config.tar.age` wird zuletzt hochgeladen: Eine Nacht, die während des Hochladens stoppt, hinterlässt einen Ordner mit einem oder zwei Objekten. Wählen Sie eine Nacht mit ihren drei Objekten, listen Sie dann diese Objekte auf, zeigen Sie ihre Sperre an und entschlüsseln Sie den Anfang der Datenbank:
 
 ```bash
 NIGHT=2026-11-14T092950Z   # a folder of the list, without the final /
@@ -344,7 +344,8 @@ Die Liste zeigt Größe und Namen der drei Objekte. Jedes Objekt zeigt `x-amz-ob
 **Grenzen.**
 
 - Volumen: Jede Nacht lädt alle Dateien des Speichers hoch. Der Bucket hält eine vollständige Kopie pro Aufbewahrungstag. Während der Nacht braucht der Server freien Platz für die doppelte Größe der Dateien, und die Dauer des Hochladens wächst mit dieser Größe.
-- Das Skript hält eine Kopie der Dateien in `/var/backups/kanap/files`, unverschlüsselt, wie die Dateikopie der lokalen Sicherung. Nur `root` kann sie lesen.
+- Das Skript hält eine Kopie der Dateien in `/var/lib/kadratis-backup/files`, unverschlüsselt, wie die Dateikopie der lokalen Sicherung. Es legt `/var/lib/kadratis-backup` mit Modus 700 an und lehnt ein Arbeitsverzeichnis ab, das ein Link ist, einem anderen Konto gehört oder für andere Benutzer beschreibbar ist.
+- Ist der Bucket des Speichers leer, die lokale Kopie aber nicht, schlägt die Nacht fehl und löscht nichts: Das Journal meldet `the attachments bucket ... is empty, but the local copy ... holds N files`.
 - Eine fehlgeschlagene Nacht endet mit dem Exit-Code 1, der Zeile `backup FAILED during step '...'` im Journal, `failed` in `systemctl status kadratis-backup.service` und keinem Aufruf von `BACKUP_SUCCESS_URL`.
 
 ### Vor einem Upgrade

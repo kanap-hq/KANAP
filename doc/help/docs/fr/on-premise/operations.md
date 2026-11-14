@@ -232,9 +232,9 @@ Le script `infra/backup/kadratis-backup` tourne chaque nuit et dépose trois obj
 **Préparez le bucket.** Utilisez un service S3 chez un autre hébergeur que celui de votre serveur :
 
 - Un bucket réservé à cette sauvegarde, avec les versions et le verrouillage des objets activés, en mode conformité, avec une durée de conservation par défaut égale au nombre de jours à garder (30, par exemple). En mode conformité, personne ne peut supprimer un objet ni raccourcir sa conservation avant son échéance, pas même le propriétaire du bucket.
-- Une règle de cycle de vie qui supprime les objets et leurs versions antérieures une fois la conservation terminée (par exemple après 31 jours).
+- Une règle de cycle de vie qui supprime les objets et leurs versions antérieures une fois la conservation terminée (par exemple après 31 jours), et qui abandonne les envois en plusieurs parties restés inachevés (une nuit arrêtée pendant son envoi laisse des parties facturées).
 - Un utilisateur d'écriture pour le serveur, limité à ce bucket, avec ces seules actions : `s3:PutObject`, `s3:ListBucket` et `s3:AbortMultipartUpload`. `s3:PutObject` couvre aussi les envois en plusieurs parties, qu'utilisent les gros objets.
-- Un utilisateur de lecture pour les restaurations, limité à ce bucket : `s3:GetObject`, `s3:GetObjectVersion`, `s3:GetObjectRetention`, `s3:ListBucket` et `s3:ListBucketVersions`.
+- Un utilisateur de lecture pour les restaurations, limité à ce bucket : `s3:GetObject`, `s3:GetObjectVersion` (chez les hébergeurs qui ont cette action), `s3:GetObjectRetention`, `s3:ListBucket` et `s3:ListBucketVersions`.
 
 Notez le point d'accès (avec `https://`), la région et le nom du bucket. Seules les clés de l'utilisateur d'écriture vont sur le serveur. Les clés du propriétaire du bucket et de l'utilisateur de lecture restent ailleurs.
 
@@ -264,9 +264,9 @@ Chaque réglage de `/etc/kadratis-backup.env` est commenté. Pour l'[exemple d'i
 - `BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION` et `BACKUP_S3_BUCKET` : ceux du bucket. `BACKUP_S3_ACCESS_KEY_ID` et `BACKUP_S3_SECRET_ACCESS_KEY` : les clés de l'utilisateur d'écriture. `BACKUP_S3_PREFIX` nomme le dossier dans le bucket (`kadratis` par défaut).
 - `BACKUP_DB_NAME=kanap`.
 - `ATTACHMENTS_S3_ENDPOINT=http://172.17.0.1:9000`. `ATTACHMENTS_S3_REGION`, `ATTACHMENTS_S3_BUCKET`, `ATTACHMENTS_S3_ACCESS_KEY_ID` et `ATTACHMENTS_S3_SECRET_ACCESS_KEY` : les valeurs `S3_REGION`, `S3_BUCKET`, `AWS_ACCESS_KEY_ID` et `AWS_SECRET_ACCESS_KEY` de `/opt/kanap/.env`.
-- `BACKUP_CONFIG_FILES` liste `/opt/kanap/.env` et `/etc/default/rustfs`. Ajoutez-y le fichier de site nginx et les fichiers de certificat, séparés par des espaces, pour les garder aussi.
+- `BACKUP_CONFIG_FILES` liste `/opt/kanap/.env` et `/etc/default/rustfs`. Ajoutez-y le fichier de site nginx et les fichiers de certificat, séparés par des espaces, pour les garder aussi. Un chemin qui est un lien est archivé avec le contenu vers lequel il pointe (les certificats de `/etc/letsencrypt/live/`, par exemple).
 
-La dernière partie du fichier contrôle les sauvegardes de serveur de Hetzner Cloud : laissez-la vide, sauf si votre serveur y tourne avec ses sauvegardes activées. Le script refuse de tourner quand d'autres utilisateurs peuvent lire le fichier, quand il contient une clé privée (`AGE-SECRET-KEY-...`) ou un réglage qu'il ne connaît pas.
+La dernière partie du fichier contrôle les sauvegardes de serveur de Hetzner Cloud : laissez-la vide, sauf si votre serveur y tourne avec ses sauvegardes activées. Ce contrôle demande `jq` (`sudo apt-get install -y jq`). Le script refuse de tourner quand d'autres utilisateurs peuvent lire le fichier, quand il contient une clé privée (`AGE-SECRET-KEY-...`) ou un réglage qu'il ne connaît pas.
 
 **Après une mise à jour**, vérifiez que les copies installées correspondent à la nouvelle version :
 
@@ -326,7 +326,7 @@ export RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY
 rclone lsf --dirs-only "backup:$BUCKET/$PREFIX/"
 ```
 
-La dernière commande liste un dossier par nuit. Choisissez-en un, puis listez ses trois objets, affichez leur verrouillage et déchiffrez le début de la base de données :
+La dernière commande liste un dossier par nuit. Une nuit complète porte trois objets, et `config.tar.age` est déposé le dernier : une nuit arrêtée pendant son envoi laisse un dossier avec un ou deux objets. Choisissez une nuit qui a ses trois objets, puis listez ses trois objets, affichez leur verrouillage et déchiffrez le début de la base de données :
 
 ```bash
 NIGHT=2026-11-14T092950Z   # a folder of the list, without the final /
@@ -344,7 +344,8 @@ La liste montre la taille et le nom des trois objets. Chaque objet affiche `x-am
 **Limites.**
 
 - Volume : chaque nuit envoie tous les fichiers du stockage. Le bucket garde une copie complète par jour de conservation. Pendant la nuit, le serveur a besoin d'un espace libre de deux fois la taille des fichiers, et la durée de l'envoi croît avec cette taille.
-- Le script garde une copie des fichiers dans `/var/backups/kanap/files`, en clair, comme la copie des fichiers de la sauvegarde locale. Seul `root` peut la lire.
+- Le script garde une copie des fichiers dans `/var/lib/kadratis-backup/files`, en clair, comme la copie des fichiers de la sauvegarde locale. Il crée `/var/lib/kadratis-backup` en mode 700 et refuse un répertoire de travail qui est un lien, appartient à un autre compte ou est inscriptible par d'autres utilisateurs.
+- Quand le bucket du stockage est vide alors que la copie locale ne l'est pas, la nuit échoue sans rien effacer : le journal indique `the attachments bucket ... is empty, but the local copy ... holds N files`.
 - Une nuit en échec se termine par le code de sortie 1, la ligne `backup FAILED during step '...'` dans le journal, `failed` dans `systemctl status kadratis-backup.service`, et aucun appel à `BACKUP_SUCCESS_URL`.
 
 ### Avant une mise à jour
