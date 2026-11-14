@@ -1,0 +1,4 @@
+#!/bin/bash
+if [[ -n ${FAKE_NIGHT:-} && $* == '-u +%Y-%m-%dT%H%M%SZ' ]]; then echo "$FAKE_NIGHT"; exit 0; fi
+# Every other call goes to the real date, found after this directory in PATH.
+PATH=${PATH#*:} exec date "$@"

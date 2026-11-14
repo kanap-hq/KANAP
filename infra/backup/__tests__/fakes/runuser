@@ -1,0 +1,3 @@
+#!/bin/bash
+printf 'runuser' >> "$FAKE_LOG"; printf ' %s' "$@" >> "$FAKE_LOG"; printf '\n' >> "$FAKE_LOG"
+while [[ $1 != -- ]]; do shift; done; shift; exec "$@"

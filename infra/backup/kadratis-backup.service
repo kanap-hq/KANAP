@@ -1,0 +1,16 @@
+# Install: /etc/systemd/system/kadratis-backup.service, with kadratis-backup.timer.
+[Unit]
+Description=Kadratis backup to the target bucket
+Wants=network-online.target
+After=network-online.target postgresql.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/kadratis-backup.env
+ExecStart=/usr/local/sbin/kadratis-backup --env-file /etc/kadratis-backup.env
+UMask=0077
+PrivateTmp=true
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=6h

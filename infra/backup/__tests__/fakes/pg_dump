@@ -1,0 +1,5 @@
+#!/bin/bash
+printf 'pg_dump' >> "$FAKE_LOG"; printf ' %s' "$@" >> "$FAKE_LOG"; printf '\n' >> "$FAKE_LOG"
+echo 'PGDMP clear dump start'
+[[ -n ${FAKE_FAIL_PG_DUMP:-} ]] && { echo 'pg_dump: error: connection to server failed' >&2; exit 1; }
+echo 'PGDMP clear dump end'
