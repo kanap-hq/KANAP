@@ -17,6 +17,8 @@ import { usePreviewChangeLabels } from './previewChangeLabels';
 import ImportMappingPreview from './ImportMappingPreview';
 import { ImportLookalikeCount, ImportLookalikeLines, importLookalikes } from './ImportLookalikes';
 import { downloadServerExport } from '../../components/csv/serverExport';
+import { setImportChoices } from '../previewChains';
+import type { BudgetFileChoice } from '../../components/finance/budgetFile';
 
 const LINKED_MARKDOWN_IMAGE_RE = /\[\s*!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)\s*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
@@ -33,6 +35,11 @@ type PreviewCardProps = {
    * long card, an import's mapping and check, keeps Approve, Reject and Download within reach.
    */
   stickyActions?: boolean;
+  /**
+   * A choice of the person on a budget file's import card made a new card: it takes the place of
+   * this one. Without it the card's choices are read only.
+   */
+  onReplace?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
 };
 
 function hasDisplayValue(value: string | null | undefined): boolean {
@@ -130,6 +137,7 @@ function PreviewCard({
   onApprove,
   onReject,
   stickyActions,
+  onReplace,
 }: PreviewCardProps) {
   const { t, i18n } = useTranslation(['ai', 'common']);
   const mode = useTheme().palette.mode;
@@ -147,6 +155,26 @@ function PreviewCard({
   const title = getPreviewTitle(preview);
   // The rows of a budget file that look like existing lines: counted on the summary line, listed before the actions.
   const lookalikes = importLookalikes(preview.import_mapping);
+  // The person's choices on a budget file's check: sent whole, answered by the card that replaces this one.
+  const [choosing, setChoosing] = React.useState(false);
+  const [choiceError, setChoiceError] = React.useState<{ text: string; detail: string | null } | null>(null);
+  const canChoose = isPending && !!onReplace && !!preview.conversation_id
+    && preview.import_mapping?.validation?.report.kind === 'budget_file' && !preview.import_mapping.result;
+  const choose = React.useCallback((choices: BudgetFileChoice[]) => {
+    if (!onReplace || !preview.conversation_id) return;
+    setChoosing(true);
+    setChoiceError(null);
+    setImportChoices(preview.conversation_id, preview.preview_id, choices)
+      .then((next) => onReplace(preview, next))
+      .catch((error: unknown) => {
+        const response = (error as { response?: { status?: number; data?: { message?: unknown } } })?.response;
+        const message = typeof response?.data?.message === 'string' ? response.data.message : null;
+        setChoiceError(response?.status === 409
+          ? { text: t('ai:previewCard.importChoices.stale'), detail: null }
+          : { text: t('ai:previewCard.notApplied'), detail: message });
+      })
+      .finally(() => setChoosing(false));
+  }, [onReplace, preview, t]);
 
   return (
     <Box
@@ -231,7 +259,23 @@ function PreviewCard({
           </Typography>
         </Stack>
 
-        {preview.import_mapping && <ImportMappingPreview mapping={preview.import_mapping} />}
+        {preview.import_mapping && (
+          <ImportMappingPreview
+            mapping={preview.import_mapping}
+            onChoices={canChoose ? choose : undefined}
+            choicesDisabled={choosing || disabled}
+          />
+        )}
+        {choiceError && (
+          <Stack spacing={0.25}>
+            <Typography variant="caption" sx={{ fontSize: 12, color: 'error.main' }}>{choiceError.text}</Typography>
+            {choiceError.detail && (
+              <Typography variant="caption" sx={{ fontSize: 11, color: 'kanap.text.tertiary', overflowWrap: 'anywhere' }}>
+                {choiceError.detail}
+              </Typography>
+            )}
+          </Stack>
+        )}
 
         {Object.keys(preview.changes).length > 0 && (
         <Stack spacing={1.25}>
@@ -380,7 +424,7 @@ function PreviewCard({
                   size="small"
                   variant="contained"
                   // An import whose check refuses the file cannot run: the card says why.
-                  disabled={disabled || !isApprovable(preview)}
+                  disabled={disabled || choosing || !isApprovable(preview)}
                   onClick={() => onApprove(preview.preview_id)}
                 >
                   {t('ai:previewCard.approve')}
@@ -389,7 +433,7 @@ function PreviewCard({
                   size="small"
                   variant="outlined"
                   color="inherit"
-                  disabled={disabled}
+                  disabled={disabled || choosing}
                   onClick={() => onReject(preview.preview_id)}
                 >
                   {t('ai:previewCard.reject')}
