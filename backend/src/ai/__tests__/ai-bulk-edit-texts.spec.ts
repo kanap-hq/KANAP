@@ -2,6 +2,8 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { backendPath } from '../../common/__tests__/backend-root';
 import { BUDGET_LINE_BULK_REFUSALS } from '../../spend/budget-line-bulk-edit';
+import { BULK_LIST_CHANGED_MESSAGE, bulkTooMany } from '../../common/bulk-edit/bulk-edit';
+import { isFixedPreviewError, previewErrorText } from '../ai-write-texts';
 import {
   APPLICATION_BULK_FIELD_LABELS,
   APPLICATION_FILTER_LABELS,
@@ -122,7 +124,37 @@ function run() {
       assert.equal(BULK_EDIT_REFUSAL_WORDS[language][code], at(common, `bulkEdit.refusals.${code}`), `${language}: refusal ${code}`);
     }
   }
+  testApprovalRefusals();
   console.log('ai-bulk-edit-texts.spec: ok');
+}
+
+/**
+ * The refusals of a change in bulk that reach the approval are written by the backend itself: the
+ * card says them in the person's language, as a sentence (not a technical detail).
+ */
+function testApprovalRefusals() {
+  const cases: Array<[string, Record<'fr' | 'de' | 'es', string>]> = [
+    [bulkTooMany(5002).message, {
+      fr: 'Ces filtres atteignent 5\u202f002 lignes, plus de 5\u202f000 à la fois : demandez à Kad une nouvelle carte avec des filtres plus étroits.',
+      de: 'Diese Filter erfassen 5.002 Zeilen, mehr als 5.000 auf einmal: Bitten Sie Kad um eine neue Karte mit engeren Filtern.',
+      es: 'Estos filtros alcanzan 5002 filas, más de 5000 a la vez: pida a Kad una nueva tarjeta con filtros más acotados.',
+    }],
+    [bulkTooMany().message, {
+      fr: 'Au plus 5\u202f000 lignes à la fois : demandez à Kad une nouvelle carte avec des filtres plus étroits.',
+      de: 'Höchstens 5.000 Zeilen auf einmal: Bitten Sie Kad um eine neue Karte mit engeren Filtern.',
+      es: 'Como máximo 5000 filas a la vez: pida a Kad una nueva tarjeta con filtros más acotados.',
+    }],
+    [BULK_LIST_CHANGED_MESSAGE, {
+      fr: 'La liste a changé depuis le comptage : demandez une nouvelle carte à Kad.',
+      de: 'Die Liste hat sich seit der Zählung geändert: Bitten Sie Kad um eine neue Karte.',
+      es: 'La lista ha cambiado desde el recuento: pida a Kad una nueva tarjeta.',
+    }],
+  ];
+  for (const [message, words] of cases) {
+    assert.equal(previewErrorText('en', message), message);
+    for (const language of ['fr', 'de', 'es'] as const) assert.equal(previewErrorText(language, message), words[language], `${language}: ${message}`);
+    assert.equal(isFixedPreviewError(message), true, `a sentence of the backend, not a technical detail: ${message}`);
+  }
 }
 
 run();

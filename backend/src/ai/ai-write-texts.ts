@@ -1547,9 +1547,49 @@ const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
   },
 };
 
+/** A number as the person's language writes it (`5 002`, `5.002`, `5002`). */
+function countText(language: AiTranslatedWriteLanguage, digits: string): string {
+  return new Intl.NumberFormat(language).format(Number(digits));
+}
+
+const BULK_NARROWER_CARD: TranslatedTexts = {
+  fr: 'demandez à Kad une nouvelle carte avec des filtres plus étroits.',
+  de: 'Bitten Sie Kad um eine neue Karte mit engeren Filtern.',
+  es: 'pida a Kad una nueva tarjeta con filtros más acotados.',
+};
+
+/**
+ * The sentences the backend writes itself with a number in them: a change in bulk over the cap
+ * at its approval (`bulkTooMany`). Fixed, as `FIXED_PREVIEW_ERRORS`, and in every language.
+ */
+const FIXED_PREVIEW_ERROR_PATTERNS: Array<{
+  pattern: RegExp;
+  render: (language: AiTranslatedWriteLanguage, match: RegExpMatchArray) => string;
+}> = [
+  {
+    pattern: /^These filters reach (\d+) rows, more than (\d+) at once: narrow them\.$/,
+    render: (language, match) => {
+      const [rows, cap] = [countText(language, match[1]), countText(language, match[2])];
+      if (language === 'fr') return `Ces filtres atteignent ${rows} lignes, plus de ${cap} à la fois : ${BULK_NARROWER_CARD.fr}`;
+      if (language === 'de') return `Diese Filter erfassen ${rows} Zeilen, mehr als ${cap} auf einmal: ${BULK_NARROWER_CARD.de}`;
+      return `Estos filtros alcanzan ${rows} filas, más de ${cap} a la vez: ${BULK_NARROWER_CARD.es}`;
+    },
+  },
+  {
+    pattern: /^At most (\d+) rows at once: narrow the filters\.$/,
+    render: (language, match) => {
+      const cap = countText(language, match[1]);
+      if (language === 'fr') return `Au plus ${cap} lignes à la fois : ${BULK_NARROWER_CARD.fr}`;
+      if (language === 'de') return `Höchstens ${cap} Zeilen auf einmal: ${BULK_NARROWER_CARD.de}`;
+      return `Como máximo ${cap} filas a la vez: ${BULK_NARROWER_CARD.es}`;
+    },
+  },
+];
+
 /** Whether a preview error is one the backend writes itself (expired, data busy), in every language. */
 export function isFixedPreviewError(message: string | null | undefined): boolean {
-  return message != null && Object.prototype.hasOwnProperty.call(FIXED_PREVIEW_ERRORS, message);
+  return message != null && (Object.prototype.hasOwnProperty.call(FIXED_PREVIEW_ERRORS, message)
+    || FIXED_PREVIEW_ERROR_PATTERNS.some((row) => row.pattern.test(message)));
 }
 
 /**
@@ -1872,7 +1912,7 @@ export function previewErrorText(language: AiWriteLanguage, message: string | nu
   if (language === 'en') return message;
   const fixed = FIXED_PREVIEW_ERRORS[message]?.[language];
   if (fixed) return fixed;
-  for (const row of PREVIEW_ERROR_PATTERNS) {
+  for (const row of [...FIXED_PREVIEW_ERROR_PATTERNS, ...PREVIEW_ERROR_PATTERNS]) {
     const match = row.pattern.exec(message);
     if (match) return row.render(language, match);
   }
