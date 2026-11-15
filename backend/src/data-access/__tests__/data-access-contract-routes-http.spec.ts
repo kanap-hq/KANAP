@@ -34,6 +34,10 @@ import { ContractAttachment } from '../../contracts/contract-attachment.entity';
 import { ContractContactLink } from '../../contracts/contract-contact.entity';
 import { ExternalContact } from '../../contacts/external-contact.entity';
 import { ContractsService } from '../../contracts/contracts.service';
+import { FxRateService } from '../../currency/fx-rate.service';
+import { CurrencySettingsService } from '../../currency/currency-settings.service';
+import { CurrencyRateSet } from '../../currency/currency-rate-set.entity';
+import { Tenant } from '../../tenants/tenant.entity';
 import { ContractContactsService } from '../../contracts/contract-contacts.service';
 import { ContractRenewalService } from '../../contracts/contract-renewal.service';
 import { ContractsController } from '../../contracts/contracts.controller';
@@ -139,7 +143,8 @@ function testModule(): any {
     stub(),
     contacts,
     stub(),
-    stub(),
+    // The totals convert the amounts: the real rates service.
+    new FxRateService(dataSource.getRepository(CurrencyRateSet), new CurrencySettingsService(dataSource.getRepository(Tenant), audit)),
   );
   const renewal = new ContractRenewalService(
     dataSource,
@@ -461,9 +466,50 @@ async function testReference(app: INestApplication): Promise<void> {
   const unscoped = await call(app, 'GET', `contracts/CTR-${hidden}`, p.ulla);
   assert.equal(unscoped.status, 200, unscoped.text);
   assert.equal(unscoped.body.id, c.CH, 'an unscoped person opens it by its reference');
+
+  // Out of reach and missing answer alike, by the uuid and by the reference: the answer never
+  // tells "exists but hidden" from "does not exist".
+  const missingNumber = (await scalar<{ n: number }>(`SELECT max(item_number) + 1000 AS n FROM contracts`)).n;
+  const sameAnswer = (hiddenRes: Answer, missingRes: Answer, what: string) => {
+    assert.equal(hiddenRes.status, 404, `${what}: ${hiddenRes.text}`);
+    assert.equal(missingRes.status, hiddenRes.status, `${what}: the same status`);
+    assert.deepEqual(missingRes.body, hiddenRes.body, `${what}: the same body`);
+  };
+  sameAnswer(byUuid, await call(app, 'GET', `contracts/${randomUUID()}`, p.rita), 'by uuid');
+  sameAnswer(
+    await call(app, 'GET', `contracts/CTR-${hidden}`, p.rita),
+    await call(app, 'GET', `contracts/CTR-${missingNumber}`, p.rita),
+    'by reference',
+  );
+
+  // The list, its ids and its totals: the reference column filter and the quick search find the
+  // reached contract, never the one out of reach.
+  const listOf = async (query: string) => {
+    const list = await call(app, 'GET', `contracts?limit=100&${query}`, p.rita);
+    const ids = await call(app, 'GET', `contracts/ids?${query}`, p.rita);
+    const totals = await call(app, 'GET', `contracts/totals?${query}`, p.rita);
+    for (const res of [list, ids, totals]) assert.equal(res.status, 200, `${query}: ${res.text}`);
+    assert.deepEqual(ids.body.ids, (list.body.items ?? []).map((row: any) => row.id), `${query}: ids as the list`);
+    assert.equal(totals.body.count, list.body.total, `${query}: totals as the list`);
+    return { ids: (list.body.items ?? []).map((row: any) => row.id), refs: ids.body.refs, text: list.text + ids.text + totals.text };
+  };
+  const filterOf = (filter: string) => `filters=${encodeURIComponent(JSON.stringify({ item_number: { filterType: 'text', type: 'equals', filter } }))}`;
+  for (const query of [filterOf(`CTR-${reached}`), filterOf(String(reached)), `q=CTR-${reached}`]) {
+    const found = await listOf(query);
+    assert.deepEqual(found.ids, [c.CF], `${query}: the reached contract`);
+    assert.deepEqual(found.refs, [`CTR-${reached}`], `${query}: its reference`);
+  }
+  for (const query of [filterOf(`CTR-${hidden}`), filterOf(String(hidden)), `q=CTR-${hidden}`]) {
+    const none = await listOf(query);
+    assert.deepEqual(none.ids, [], `${query}: nothing out of reach`);
+    assert.equal(none.text.includes(c.CH), false, `${query}: no id of the hidden contract`);
+    assert.equal(none.text.includes('DA contract CH'), false, `${query}: no name of the hidden contract`);
+  }
+  const ullaFound = await call(app, 'GET', `contracts?q=CTR-${hidden}`, p.ulla);
+  assert.deepEqual((ullaFound.body.items ?? []).map((row: any) => row.id), [c.CH], 'an unscoped person finds it by its reference');
   const otherFamily = await call(app, 'GET', `contracts/SUP-${reached}`, p.ulla);
   assert.equal(otherFamily.status, 400, `another family's reference is refused: ${otherFamily.text}`);
-  console.log('  reference: CTR-n and the number open a reached contract, an out-of-reach one is not found as by its uuid: OK');
+  console.log('  reference: CTR-n and the number open a reached contract, an out-of-reach one is not found as by its uuid (same answer as a missing one); list filter, quick search, ids and totals the same: OK');
 }
 
 async function testCostCentre(app: INestApplication): Promise<void> {
@@ -524,7 +570,8 @@ async function testCostCentre(app: INestApplication): Promise<void> {
   assert.equal(exported.status, 200, exported.text);
   const [header, ...lines] = exported.text.split('\n');
   assert.ok(header.includes('Cost center'), `the CSV has the cost_center column: ${header}`);
-  const cfLine = lines.find((line) => line.startsWith(`DA contract CF`));
+  // The reference column comes first (`CTR-n`), then the name.
+  const cfLine = lines.find((line) => /^CTR-\d+,DA contract CF/.test(line));
   assert.ok(cfLine, 'the CSV has the CF contract');
   assert.ok(cfLine!.includes('INF-FR'), `the CSV writes the node name: ${cfLine}`);
   console.log('  cost centre: set, cleared, invalid and inactive 400, group accepted, detail, list filter, CSV column: OK');
