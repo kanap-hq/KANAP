@@ -554,6 +554,8 @@
     "importTitle": "Importar CSV",
     "exportDescription": "Exportar datos como CSV. Los archivos usan punto y coma como separador.",
     "exportDescriptionFlexible": "Exportar datos como CSV. El separador, el separador decimal y las fechas siguen el idioma de la pantalla.",
+    "csvFileNote": "Un archivo CSV usa punto y coma como separador.",
+    "csvFileNoteFlexible": "En un archivo CSV, el separador, el separador decimal y las fechas siguen el idioma de la pantalla.",
     "exportData": "Exportar datos",
     "exportPreset": "Campos a exportar",
     "fullExport": "Exportación completa",

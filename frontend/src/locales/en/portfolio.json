@@ -481,6 +481,8 @@
           "phaseComplete": "{{phase}} Complete"
         },
         "dialogs": {
+          "confirmDeletePhase": "Delete this phase?",
+          "confirmDeleteMilestone": "Delete this milestone?",
           "replaceAll": {
             "description": "This will delete all existing phases and milestones, then apply the selected template.",
             "title": "Replace all phases?"
