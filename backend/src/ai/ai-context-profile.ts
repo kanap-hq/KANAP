@@ -131,6 +131,7 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'update_technology_web_links',
   'set_technology_vulnerability_alerts',
   'change_vulnerability_state',
+  'bulk_update_budget_lines',
   'change_incident_state',
   'set_incident_confidentiality',
   'update_entity_relations',
@@ -161,6 +162,7 @@ const FINANCIAL_WRITE_TOOLS: AiToolName[] = [
   'get_entity_detail',
   'prepare_mutation_plan',
   'write_financial_plan',
+  'bulk_update_budget_lines',
   'delete_record',
   'undo_preview',
 ];
@@ -945,6 +947,29 @@ function hasVulnerabilityStateWrite(rawText: string, text: string): boolean {
   return VULNERABILITY_STATE_WORD_RE.test(text);
 }
 
+const BUDGET_LINE_BULK_VERBS = new Set([
+  'passe', 'passez', 'passer', 'mets', 'mettez', 'mettre', 'change', 'changez', 'changer', 'remplace', 'remplacez', 'remplacer',
+  'affecte', 'affectez', 'affecter', 'rattache', 'rattachez', 'rattacher', 'bascule', 'basculez', 'basculer', 'modifie', 'modifiez', 'modifier',
+  'deplace', 'deplacez', 'deplacer', 'déplace', 'déplacez', 'déplacer', 'vide', 'videz', 'vider',
+  'set', 'move', 'assign', 'replace', 'switch', 'put', 'update', 'clear',
+]);
+/** A field the change in bulk of budget lines writes (`bulk_update_budget_lines`). */
+const BUDGET_LINE_BULK_FIELD_RE = /\b(?:centres? de couts?|cost cent(?:er|re)s?|comptes?|accounts?|societes? payeuses?|paying compan(?:y|ies)|fournisseurs?|suppliers?|responsables?|owners?|run|build|dimensions?|axes? analytiques?)\b/;
+
+/**
+ * A change of one field on several budget lines: an imperative verb at the head, plural lines and
+ * a field of the list's "Change the selection": "Passe les lignes du fournisseur X sur le centre de
+ * coûts Y", "Move the OPEX lines of Acme to cost center IT-01". A question stays a read.
+ */
+function hasBudgetLineBulkEditWrite(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  if (first == null || !BUDGET_LINE_BULK_VERBS.has(first)) return false;
+  if (!/\b(?:lignes|lines)\b/.test(text)) return false;
+  if (VULNERABILITY_OTHER_FAMILY_RE.test(text.replace(/\b(?:bl|opx|cpx|opex)-\d+\b/g, ''))) return false;
+  return BUDGET_LINE_BULK_FIELD_RE.test(text);
+}
+
 /** Undoing the last mutation is a write, never a read: "Undo that", "Annule l'aperçu". */
 const UNDO_REQUEST_RE = /\bundo\b|\bannule (?:ce que|ceci|cela|la derniere|le dernier|la precedent|la precedente|les dernieres|l['’]apercu)\b|\bcancel (?:my |the )?(?:last|previous) (?:preview|change|modification|action)\b/;
 
@@ -1106,6 +1131,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const hasAccessAdministrationIntent = referencedTypes.size === 0 && !hasTechnologyPeopleIntent && !hasTaskNameIntent
     && !mentionsDocument && hasAccessAdministrationWrite(raw, text);
   const hasVulnerabilityStateIntent = hasVulnerabilityStateWrite(raw, text);
+  const hasBudgetLineBulkEditIntent = hasBudgetLineBulkEditWrite(raw, text);
   // Status changes the general verb list misses: "marque … comme" retired, "annule" on a contract
   // or a budget line. A technology declaration ("indique que … a … installé") and "make … the main
   // contact" are relation writes. Cancelling a request is none of these.
@@ -1115,7 +1141,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const hasInstalledDeclaration = declaresTechnologyInstalled(raw, text);
   const hasMainContactRelation = hasMainContactRelationWrite(raw, text);
   const isWrite = hasTechnologyPeopleIntent || hasTechnologyWebLinkIntent || hasTaskFieldStateWriteIntent
-    || hasUserAdministrationIntent || hasAccessAdministrationIntent || hasVulnerabilityStateIntent
+    || hasUserAdministrationIntent || hasAccessAdministrationIntent || hasVulnerabilityStateIntent || hasBudgetLineBulkEditIntent
     || hasApplicationRetirement || hasContractCancellationIntent || hasBudgetLineCancellationIntent
     || hasInstalledDeclaration || hasMainContactRelation || isTicketImport
     || containsAny(writeText, [
@@ -1176,6 +1202,10 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     // The state of vulnerability rows: "Traite toutes les failles critiques de TEC-3".
     if (hasVulnerabilityStateIntent) {
       return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
+    // One field on many budget lines: "Passe les lignes du fournisseur X sur le centre de coûts Y".
+    if (hasBudgetLineBulkEditIntent) {
+      return { profile: withWebCapability(PROFILES.write_financial, needsWeb), explicitIntent: true };
     }
     // A person's access or roles, before the budget word of a role name ("le rôle Budget Member")
     // sends it to the financial write: the general write profile, which refuses it in words.

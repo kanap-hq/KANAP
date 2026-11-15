@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiWriteLanguage, aiWriteLanguage, deletionImpactText, incidentLinkCardText, personWriteLanguage, screenLanguageOf } from '../ai-write-texts';
+import { AiWriteLanguage, aiWriteLanguage, deletionImpactText, incidentLinkCardText, personWriteLanguage, PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE, previewErrorText, screenLanguageOf } from '../ai-write-texts';
 import { AiBusinessRecordMutationSupportService } from '../mutation/ai-business-record-mutation-support.service';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
 import { AiFinancialPlanMutationSupportService } from '../mutation/ai-financial-plan-mutation-support.service';
@@ -19,6 +19,7 @@ import { UpdateIncidentLinksAiMutationOperation } from '../mutation/operations/u
 import { UpdateTechnologyLinksAiMutationOperation } from '../mutation/operations/update-technology-links.ai-mutation-operation';
 import { UpdateTechnologyPeopleAiMutationOperation } from '../mutation/operations/update-technology-people.ai-mutation-operation';
 import { UpdateTechnologyWebLinksAiMutationOperation } from '../mutation/operations/update-technology-web-links.ai-mutation-operation';
+import { BulkUpdateBudgetLinesAiMutationOperation } from '../mutation/operations/bulk-update-budget-lines.ai-mutation-operation';
 import { ChangeVulnerabilityStateAiMutationOperation } from '../mutation/operations/change-vulnerability-state.ai-mutation-operation';
 import { SetTechnologyVulnerabilityAlertsAiMutationOperation } from '../mutation/operations/set-technology-vulnerability-alerts.ai-mutation-operation';
 import { UpdateTechnologyVersionsAiMutationOperation } from '../mutation/operations/update-technology-versions.ai-mutation-operation';
@@ -497,6 +498,87 @@ function testTechnologyPeopleLinksAndAlertsCards() {
     + '\n- 2 version exceptions cleared: 14, 16'
     + '\n\n**Versions**\n- 17: follows the technology → alerts off\n  - the service packs 17 SP1 follow base version 17',
   );
+}
+
+/** K1 (26.11.9): the card of a change in bulk of budget lines, in four languages, by filter and by references. */
+function testBudgetLineBulkEditCards() {
+  const operation = make(BulkUpdateBudgetLinesAiMutationOperation);
+  const byFilter = preview({
+    tool_name: 'bulk_update_budget_lines',
+    target_entity_type: 'budget_lines',
+    mutation_input: {
+      field: 'cost_center',
+      value_label: 'IT-01 · Informatique',
+      filter_parts: [
+        { key: 'supplier', op: 'in', values: ['Acme', 'Beta'] },
+        { key: 'nature', op: 'in', values: ['opex'] },
+        { key: 'product_name', op: 'contains', values: ['licence'] },
+        { key: 'analytics:region', label: 'Région', op: 'not', values: ['Nord', null] },
+      ],
+      default_scope: true,
+    },
+    current_values: {
+      values: {
+        rows: 9, changes: 6, unchanged: 1, refused: { read_only: 1, account_chart: 1 },
+        examples: [{ ref: 'BL-3', title: 'Office licences' }, { ref: 'BL-7', title: 'Support' }],
+      },
+    },
+  });
+  const card = (value: AiMutationPreview, language: AiWriteLanguage) => operation.presentPreview(value, language).changes.budget_line_bulk_edit.to ?? '';
+  assert.equal(summary(operation, byFilter, 'en'), 'Change Cost center on 6 budget lines.');
+  assert.equal(
+    card(byFilter, 'en'),
+    'Filter: Supplier "Acme", "Beta"; Type OPEX; Product name contains "licence"; Région except "Nord", (empty)'
+    + '\n\nScope: enabled lines'
+    + '\n\nCost center → IT-01 · Informatique'
+    + "\n\n6 lines to change, 1 already has this value, 2 refused: Read only for you (1), Account outside the company's chart of accounts (1)"
+    + '\n\n- BL-3 Office licences\n- BL-7 Support\n- and 4 more',
+  );
+  assert.equal(summary(operation, byFilter, 'fr'), 'Modification du champ « Centre de coûts » sur 6 lignes budgétaires.');
+  assert.equal(
+    card(byFilter, 'fr'),
+    'Filtre : Fournisseur « Acme », « Beta » ; Type OPEX ; Nom du produit contient « licence » ; Région sauf « Nord », (vide)'
+    + '\n\nPérimètre : lignes activées'
+    + '\n\nCentre de coûts → IT-01 · Informatique'
+    + '\n\n6 lignes à modifier, 1 a déjà cette valeur, 2 refusées : En lecture seule pour vous (1), Compte hors du plan comptable de la société (1)'
+    + '\n\n- BL-3 Office licences\n- BL-7 Support\n- et 4 autres',
+  );
+  assert.equal(summary(operation, byFilter, 'de'), 'Feld „Kostenstelle“ in 6 Budgetzeilen ändern.');
+  assert.match(card(byFilter, 'de'), /^Filter: Lieferant „Acme“, „Beta“; Typ OPEX; Produktname enthält „licence“; Région außer „Nord“, \(leer\)\n\nUmfang: aktivierte Zeilen\n\nKostenstelle → IT-01 · Informatique\n\n6 Zeilen zu ändern, 1 hat diesen Wert bereits, 2 abgelehnt: Für Sie nur lesbar \(1\)/);
+  assert.equal(summary(operation, byFilter, 'es'), 'Modificación del campo «Centro de coste» en 6 líneas presupuestarias.');
+  assert.match(card(byFilter, 'es'), /^Filtro: Proveedor «Acme», «Beta»; Tipo OPEX; Nombre del producto contiene «licence»; Région excepto «Nord», \(vacío\)\n\nAlcance: líneas activadas\n\nCentro de coste → IT-01 · Informatique\n\n6 líneas por modificar, 1 ya tiene este valor, 2 rechazadas: Solo lectura para usted \(1\)/);
+  assert.equal(operation.presentPreview(byFilter, 'fr').changes.budget_line_bulk_edit.label, 'Modification en masse');
+  assert.equal(operation.presentPreview(byFilter, 'fr').target.title, '6 lignes budgétaires');
+
+  // By references, a status named (no scope line), a value emptied, run or build worded; then executed.
+  const byRows = preview({
+    tool_name: 'bulk_update_budget_lines',
+    target_entity_type: 'budget_lines',
+    mutation_input: { field: 'run_build', value_label: 'build', refs: ['BL-3', 'BL-7'] },
+    current_values: { values: { rows: 2, changes: 2, unchanged: 0, refused: {}, examples: [{ ref: 'BL-3', title: 'Office licences' }, { ref: 'BL-7', title: 'Support' }] } },
+  });
+  assert.equal(card(byRows, 'fr'), 'Lignes choisies : BL-3, BL-7\n\nRun ou build → Build\n\n2 lignes à modifier\n\n- BL-3 Office licences\n- BL-7 Support');
+  const emptied = preview({
+    tool_name: 'bulk_update_budget_lines',
+    target_entity_type: 'budget_lines',
+    status: 'executed',
+    mutation_input: { field: 'dimension', dimension: 'Région', value_label: null, filter_parts: [{ key: 'status', op: 'in', values: ['disabled'] }], default_scope: false },
+    current_values: { values: { rows: 1, changes: 1, unchanged: 0, refused: {}, examples: [] }, applied: { changed: 1, unchanged: 0, refused: {} } },
+  });
+  assert.equal(card(emptied, 'en'), 'Filter: Status Disabled\n\nRégion → Empty\n\n1 line to change');
+  assert.equal(summary(operation, emptied, 'en'), 'Région changed on 1 budget line.');
+  assert.equal(summary(operation, emptied, 'fr'), 'Appliqué : modification du champ « Région » sur 1 ligne budgétaire.');
+  // A list that changed since the card: the card's words in the person's language.
+  const changed = preview({
+    tool_name: 'bulk_update_budget_lines',
+    target_entity_type: 'budget_lines',
+    status: 'failed',
+    error_message: 'The list changed since the count: count again.',
+    mutation_input: { field: 'supplier', value_label: 'Acme', refs: ['BL-3'] },
+    current_values: { values: { rows: 1, changes: 1, unchanged: 0, refused: {}, examples: [] } },
+  });
+  assert.equal(previewErrorText('fr', changed.error_message), 'La liste a changé depuis le comptage : demandez une nouvelle carte à Kad.');
+  assert.equal(previewErrorText('fr', PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE), "Une autre opération budgétaire était en cours dans cet espace : rien n'a été modifié. Approuvez de nouveau une fois qu'elle est terminée.");
 }
 
 function testVulnerabilityStateCards() {
@@ -1385,6 +1467,7 @@ async function main() {
   testTechnologyVersions();
   testTechnologyPeopleLinksAndAlertsCards();
   testVulnerabilityStateCards();
+  testBudgetLineBulkEditCards();
   testIncidentStateAndConfidentialityCards();
   testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();

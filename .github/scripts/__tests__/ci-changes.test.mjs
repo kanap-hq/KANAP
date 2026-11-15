@@ -47,7 +47,7 @@ test('the user manual needs the specs and the frontend tests that read it, not t
 test('the frontend alone needs the frontend suite and the builds', (t) => {
   assert.deepEqual(needs(t, ['frontend/src/pages/suppliers/SuppliersPage.tsx', 'doc/help/docs/en/suppliers.md']),
     { backend: 'docs', frontend: 'true', builds: 'true', images: 'false' });
-  assert.deepEqual(needs(t, ['frontend/src/locales/fr/common.json']),
+  assert.deepEqual(needs(t, ['frontend/src/locales/fr/ai.json']),
     { backend: 'none', frontend: 'true', builds: 'true', images: 'false' });
 });
 
@@ -78,7 +78,9 @@ test('files read across the two trees bring the other suite', (t) => {
     'frontend/src/lib/richTextLinkAddress.ts',
     // Coded 403 messages (`coded-forbidden.inventory.spec.ts`).
     'frontend/src/locales/en/errors.json',
-    'frontend/src/locales/de/errors.json']) {
+    'frontend/src/locales/de/errors.json',
+    // The words of the "Change the selection" dialog on Kad's card (`ai-bulk-edit-texts.spec.ts`).
+    'frontend/src/locales/fr/common.json']) {
     assert.equal(needs(t, [file]).backend, 'full', file);
   }
   assert.equal(needs(t, ['backend/fixtures/fromage-co/setup-tenant.mjs']).frontend, 'true');

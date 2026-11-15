@@ -408,6 +408,15 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Passe la faille CVE-2026-59310 à acceptée', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
   { prompt: 'Passe CVE-2026-1 et CVE-2026-2 à traitée', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
   { prompt: "Quel est l'état de CVE-2024-3094 ?", profile: 'entity_inspection', mode: 'entity' },
+
+  // K1 (26.11.9): one field on many budget lines is the change in bulk, whatever family the value names.
+  { prompt: 'Passe les lignes du fournisseur Microsoft sur le centre de coûts IT-01', profile: 'write_financial', mode: 'write', tools: ['bulk_update_budget_lines'] },
+  { prompt: 'Mets Julie Bernard responsable IT de toutes les lignes OPEX de Acme', profile: 'write_financial', mode: 'write', tools: ['bulk_update_budget_lines'] },
+  { prompt: 'Change le compte des lignes de la société Fromage & Co pour le 6150', profile: 'write_financial', mode: 'write', tools: ['bulk_update_budget_lines'] },
+  { prompt: 'Passe les lignes BL-3, BL-7 et BL-9 en build', profile: 'write_financial', mode: 'write', tools: ['bulk_update_budget_lines'] },
+  { prompt: 'Move the lines of supplier Acme to cost center IT-01', profile: 'write_financial', mode: 'write', tools: ['bulk_update_budget_lines'] },
+  { prompt: 'Set the business owner of all CAPEX lines to Julie Bernard', profile: 'write_financial', mode: 'write', tools: ['bulk_update_budget_lines'] },
+  { prompt: 'Quelles lignes du fournisseur Microsoft sont sur le centre de coûts IT-01 ?', profile: 'entity_inspection', mode: 'entity' },
   { prompt: 'Combien de failles sont traitées ?', profile: 'read_query', mode: 'read' },
   { prompt: 'Failles non concernées de TEC-3', profile: 'entity_inspection', mode: 'entity' },
   { prompt: 'Liste les failles traitées sur PostgreSQL', profile: 'read_query', mode: 'read' },

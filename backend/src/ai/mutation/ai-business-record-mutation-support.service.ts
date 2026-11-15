@@ -1155,8 +1155,8 @@ export class AiBusinessRecordMutationSupportService {
     return { value: id, displayValue: value?.name ?? null, locked: !writable };
   }
 
-  /** The value of one dimension named by `ref` (its id, or its name, unique within the dimension). */
-  private async findDimensionValue(
+  /** The value of one dimension named by `ref` (its id, or its name, unique within the dimension); also Kad's change in bulk. */
+  async findDimensionValue(
     context: AiExecutionContextWithManager,
     axisId: string,
     ref: string,

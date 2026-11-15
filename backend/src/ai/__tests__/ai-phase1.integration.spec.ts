@@ -2205,6 +2205,7 @@ function buildToolIsolationCases(
     case 'update_technology_web_links':
     case 'set_technology_vulnerability_alerts':
     case 'change_vulnerability_state':
+    case 'bulk_update_budget_lines':
     case 'update_entity_relations':
     case 'update_task_fields':
     case 'update_task_status':

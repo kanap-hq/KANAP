@@ -34,6 +34,7 @@ import { AiHelpManualService, HELP_SECTION_MAX_CHARS } from './ai-help-manual.se
 import { AiImportMappingService } from './import/ai-import-mapping.service';
 import { AI_IMPORT_KEYS } from './import/ai-import-access';
 import { personWriteLanguage } from './ai-write-texts';
+import { AI_BULK_EDIT_TOOLS, BULK_EDIT_PLAN_REFUSAL } from './mutation/ai-bulk-edit';
 import {
   AI_CONTEXT_ENTITY_TYPES,
   AI_DETAIL_ENTITY_TYPES,
@@ -249,6 +250,9 @@ const PrepareMutationPlanOperationSchema = z.object({
     .describe('Step keys that must execute before this step can prepare its preview.'),
 }).refine((operation) => operation.tool_name !== 'delete_record', {
   message: 'delete_record prepares one record at a time and cannot be part of a mutation plan.',
+  path: ['tool_name'],
+}).refine((operation) => !AI_BULK_EDIT_TOOLS.has(operation.tool_name), {
+  message: BULK_EDIT_PLAN_REFUSAL,
   path: ['tool_name'],
 });
 

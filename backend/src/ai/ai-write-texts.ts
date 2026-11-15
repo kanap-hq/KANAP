@@ -1,3 +1,4 @@
+import { BULK_LIST_CHANGED_MESSAGE } from '../common/bulk-edit/bulk-edit';
 import type { EntityManager } from 'typeorm';
 import { PRODUCT_NAME } from '../config/product';
 
@@ -1504,7 +1505,26 @@ export const PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE =
 export const PREVIEW_IMPORT_CHECK_FAILED_MESSAGE =
   'The check of this file found errors, so nothing was imported. Correct the mapping or the file, then prepare the import again.';
 
+/**
+ * A card that met another budget operation of the workspace at its approval (a column copy, an
+ * import, a change in bulk on the screen: the 409 `operation_running` of `budget-locks.ts`): nothing
+ * was written and the card stays to approve.
+ */
+export const PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE =
+  'Another budget operation was running for this workspace, so nothing was changed. Approve it again once it has finished.';
+
 const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
+  // The list of a change in bulk changed between the card and its approval (`bulkListChanged`).
+  [BULK_LIST_CHANGED_MESSAGE]: {
+    fr: 'La liste a changé depuis le comptage : demandez une nouvelle carte à Kad.',
+    de: 'Die Liste hat sich seit der Zählung geändert: Bitten Sie Kad um eine neue Karte.',
+    es: 'La lista ha cambiado desde el recuento: pida a Kad una nueva tarjeta.',
+  },
+  [PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE]: {
+    fr: "Une autre opération budgétaire était en cours dans cet espace : rien n'a été modifié. Approuvez de nouveau une fois qu'elle est terminée.",
+    de: 'In diesem Arbeitsbereich lief ein anderer Budgetvorgang, daher wurde nichts geändert. Genehmigen Sie erneut, sobald er beendet ist.',
+    es: 'Había otra operación presupuestaria en curso en este espacio, así que no se ha modificado nada. Vuelva a aprobar cuando haya terminado.',
+  },
   [PREVIEW_IMPORT_CHECK_FAILED_MESSAGE]: {
     fr: "La vérification de ce fichier a trouvé des erreurs : rien n'a été importé. Corrigez la correspondance ou le fichier, puis préparez l'import de nouveau.",
     de: 'Die Prüfung dieser Datei hat Fehler gefunden, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.',

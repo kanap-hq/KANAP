@@ -25,6 +25,7 @@ import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/pr
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
 import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
+import { isBudgetOperationRunning } from '../spend/budget-locks';
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
 import { isReservedAiMutation } from './mutation/ai-mutation-reserved';
@@ -32,12 +33,14 @@ import { aiRelationTargetRequirement, aiWriteLevel, assertRecordInWriteScope } f
 import {
   AiWriteLanguage,
   PREVIEW_DATA_BUSY_MESSAGE,
+  PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE,
   PREVIEW_EXPIRED_MESSAGE,
   personWriteLanguage,
   previewErrorText,
   isFixedPreviewError,
 } from './ai-write-texts';
 import { AGENT_NAME } from '../config/product';
+import { AI_BULK_EDIT_TOOLS, BULK_EDIT_PLAN_REFUSAL } from './mutation/ai-bulk-edit';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
 const MAX_CONVERSATION_PREVIEWS = 50;
@@ -840,6 +843,9 @@ export class AiMutationPreviewService {
     if (operations.some((operation) => String(operation?.tool_name || '').trim() === 'delete_record')) {
       throw new BadRequestException('delete_record prepares one record at a time and cannot be part of a mutation plan.');
     }
+    if (operations.some((operation) => AI_BULK_EDIT_TOOLS.has(String(operation?.tool_name || '').trim()))) {
+      throw new BadRequestException(BULK_EDIT_PLAN_REFUSAL);
+    }
 
     await this.assertPlanStepsDisjoint(context, operations);
 
@@ -1320,6 +1326,12 @@ export class AiMutationPreviewService {
         const transient = mapDatabaseError(error);
         if (transient && (transient.code === 'busy' || transient.code === 'retry')) {
           preview.error_message = PREVIEW_DATA_BUSY_MESSAGE;
+          return this.toPreviewDto(await repo.save(preview), await this.languageOf(context));
+        }
+        // Another budget operation of the workspace held its lock (a column copy, an import, a
+        // change in bulk on the screen): nothing was written, the card stays to approve.
+        if (isBudgetOperationRunning(error)) {
+          preview.error_message = PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE;
           return this.toPreviewDto(await repo.save(preview), await this.languageOf(context));
         }
       }
