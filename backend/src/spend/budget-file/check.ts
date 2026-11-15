@@ -20,16 +20,19 @@ export interface CheckedBudgetFile {
 
 /**
  * The check of a budget file, the screen's and Kad's, and the load's own check: the catalog, the lines
- * the person reads (with their yearly totals when the file has rows to create, for the lookalikes of
- * lot I2 of 26.11.9), the lines the file names and the lines the person's choices update, read whole,
+ * the person reads (with their yearly totals when the file has rows to create or writes an amount, for
+ * the lookalikes and consistency checks of lot I2 of 26.11.9), the lines the file names and the lines the person's choices update, read whole,
  * the person's access to all of them, then the plan. Every read runs in the person's transaction:
  * their access applies through the policies.
  */
 export async function checkBudgetFile(manager: EntityManager, tenantId: string, input: BudgetFileCheckInput): Promise<CheckedBudgetFile> {
   const rows = interpretBudgetFile(input.read, input.scope);
   const creates = rows.some((row) => row.itemNumber.kind === 'blank');
+  // The yearly totals feed the lookalikes and the consistency checks of the amounts (the median of a
+  // supplier's lines): read them as soon as the file writes an amount.
+  const amounts = rows.some((row) => row.amounts.some((amount) => amount.cell.kind === 'value'));
   const catalog = await loadCatalog(manager, tenantId, input.allowedCurrencies);
-  const names = await loadNames(manager, tenantId, { years: creates });
+  const names = await loadNames(manager, tenantId, { years: creates || amounts });
   const labels = await loadColumnLabels(manager, tenantId);
   const base: PreflightInput = { ...input, catalog, names, labels, stored: [] };
   const targets = creates ? lookalikeTargets(base) : { ids: [], updates: [] };
