@@ -1032,7 +1032,9 @@ bare number or a legacy number; the card names them by their `BL-` key) or by
 `filters`, never both and never the whole list without a criterion (a status
 alone is no criterion, and neither is a filter part without a value: `[]`,
 `{ not: [] }` or a blank text, which would reach the whole list or open the
-disabled lines). The filters are
+disabled lines). The tool's description and hint tell the model to use only the
+criteria the person named and to ask for one, with no card, when a request covers
+every line. The filters are
 those of `query_entities`, limited to a dozen fields
 (`BUDGET_LINE_BULK_FILTER_FIELDS`: nature, status, title, supplier, paying
 company, account, cost center, contract, owners, run or build, default dimension,
@@ -1042,11 +1044,13 @@ are those of the screen's list: its enabled lines, all of them only when the
 filter names the status. A filter `adaptFilters` ignores or cannot read is
 refused with the accepted fields. The card is the common markdown change, its
 text built by the server in four languages (`ai-bulk-edit-texts.ts`; a spec
-compares its words with the frontend locales): the filter in words, the scope,
+compares its words with the frontend locales): the filter in words (every value
+quoted, a closed one worded as the list shows it), the scope,
 the field and its new value, the lines to change, those already holding the
 value, the refusals counted with the screen's words, and the first five lines to
 change by reference, read under the person's access (`runBulkEdit`'s
-`changedIds` option, dry runs only). A limited person's lines outside their access
+`changedIds` option, dry runs only). A card by references is titled by them, up
+to three ("Change in bulk: BL-3, BL-7"); a card by filter counts its lines. A limited person's lines outside their access
 are neither counted nor named; a line they read without edit right is counted
 refused. Approval replays the dry run's `as_of`, `expected_rows` and fingerprint:
 a list changed since fails the card ("count again"), and so does a list grown
@@ -1072,12 +1076,16 @@ route. Its fields are those of `applicationBulkFields`: business owners and IT
 owners (a list of people that replaces the role's, empty allowed), the lifecycle
 (a state of the workspace, never empty) and the business criticality (a level
 still offered, or empty); a state or a level is given by its name, a translated
-name or its code (`matchCatalogAliases`) and the card shows its name. The filters
+name, the name the screen shows for a shipped value, or its code
+(`matchCatalogAliases` with `shippedLabels`), and the card names it as the screen
+does in the person's language (`localizeCatalogItem`: the workspace's
+translation, else the shipped name while the value keeps its shipped label
+(`shippedLabelIn`), else its own name). The filters
 are a dozen fields of `query_entities` (`APPLICATION_BULK_FILTER_FIELDS`:
 lifecycle, business and cyber criticality, data class, recovery wave, category,
 supplier, publisher, IT and business owners, external facing, contains PII); the
 catalog fields (lifecycle, criticalities, data class, recovery wave, category)
-take a name, a translated name or a code too, and the card names them. They go into the list's parameters
+take the same names or a code, and the card names them the same way. They go into the list's parameters
 (`{ filters: <grid model> }`), so the applications are those of the screen's list:
 enabled ones, the retired ones left out unless the filter names the lifecycle.
 References are `APP-12` or a bare number, named `APP-12` on the card. A Business Contributor whose role was raised to member
