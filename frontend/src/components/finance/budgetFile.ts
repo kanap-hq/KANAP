@@ -380,7 +380,17 @@ export type CheckOptions = {
   dateOrder: DateReading | null;
   decimalMark: AmountReading | null;
   createSuppliers: boolean;
+  /** The person's choices (matches undone): the load sends the list of the check it follows. */
+  choices?: BudgetFileChoice[];
 };
+
+/** The file and the choices, in the form's body: a choice names values of the file, never in the address. */
+function checkBody(file: File, options: CheckOptions): FormData {
+  const body = new FormData();
+  body.append('file', file);
+  if (options.choices?.length) body.append('choices', JSON.stringify(options.choices));
+  return body;
+}
 
 function checkParams(options: CheckOptions): Record<string, string> {
   const params: Record<string, string> = {
@@ -397,8 +407,7 @@ export function isBudgetFileReport(value: unknown): value is BudgetFileReport {
 }
 
 export async function preflightBudgetFile(scope: BudgetFileScope, file: File, options: CheckOptions): Promise<BudgetFileReport> {
-  const body = new FormData();
-  body.append('file', file);
+  const body = checkBody(file, options);
   const response = await api.post(`${budgetFileBase(scope)}/preflight`, body, { params: checkParams(options) });
   if (!isBudgetFileReport(response.data)) throw new Error('Unexpected preflight answer.');
   return response.data;
@@ -411,8 +420,7 @@ export async function loadBudgetFile(
   snapshot: BudgetFileReport['snapshot'],
   options: CheckOptions,
 ): Promise<BudgetFileLoad | BudgetFileReport> {
-  const body = new FormData();
-  body.append('file', file);
+  const body = checkBody(file, options);
   body.append('snapshot', JSON.stringify(snapshot));
   const response = await api.post(`${budgetFileBase(scope)}/import`, body, { params: checkParams(options) });
   return response.data as BudgetFileLoad | BudgetFileReport;

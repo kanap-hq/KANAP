@@ -1091,7 +1091,20 @@
       "checkFailed": "The file could not be checked. Try again.",
       "loadFailed": "The file could not be loaded. Try again.",
       "dimensionValuesCreated": "{{dimension}}, will be created: {{names}}",
-      "dimensionValuesRefused": "{{dimension}}, refused: {{names}}"
+      "dimensionValuesRefused": "{{dimension}}, refused: {{names}}",
+      "matching": {
+        "count": "{{count}} values matched",
+        "count_one": "{{count}} value matched",
+        "match": "{{dimension}}: {{value}} → {{target}}",
+        "byKad": "Proposed by {{agent}}",
+        "undo": "Undo",
+        "redo": "Match again",
+        "refusedMissing": "{{dimension}}: {{value}} → {{target}}: no such value",
+        "refusedDisabled": "{{dimension}}: {{value}} → {{target}}: disabled value",
+        "closeTo": "Close to: {{names}}",
+        "lines": "Lines {{lines}}",
+        "lines_one": "Line {{lines}}"
+      }
     },
     "budgetAdminOnly": "You need budget administrator rights to use this page.",
     "budgetColumnsSettings": {
