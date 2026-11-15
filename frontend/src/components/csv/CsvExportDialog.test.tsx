@@ -139,10 +139,13 @@ describe('CsvExportDialog', () => {
     const listRequest = { params: { q: 'ok' }, total: 3 };
     render(<CsvExportDialog open onClose={onClose} endpoint="/suppliers" listRequest={listRequest} entity="suppliers" flexibleFormat />);
     expect(screen.getByRole('radio', { name: 'ops:operations.budgetFile.formatCsv' })).toBeChecked();
-    expect(screen.getByText('csv.exportDescriptionFlexible')).toBeInTheDocument();
+    // The separator note stays with the format choice: it names the CSV file, and the dialog does not call the export CSV only.
+    expect(screen.getByText('csv.csvFileNoteFlexible')).toBeInTheDocument();
+    expect(screen.queryByText('csv.exportDescription')).toBeNull();
+    expect(screen.queryByText('csv.exportDescriptionFlexible')).toBeNull();
     fireEvent.click(screen.getByRole('radio', { name: 'ops:operations.budgetFile.formatXlsx' }));
     expect(store.get('kanap.exportFormat')).toBe('xlsx');
-    // The CSV hints (separator, decimal mark) say nothing about a workbook.
+    expect(screen.getByText('csv.csvFileNoteFlexible')).toBeInTheDocument();
     expect(screen.queryByText('csv.exportDescriptionFlexible')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
@@ -157,7 +160,10 @@ describe('CsvExportDialog', () => {
     stubStorage({ 'kanap.exportFormat': 'xlsx' });
     render(<CsvExportDialog open onClose={() => undefined} endpoint="/contacts" />);
     expect(screen.getByRole('radio', { name: 'ops:operations.budgetFile.formatXlsx' })).toBeChecked();
+    // Opening on Excel keeps the same CSV note, so the dialog does not jump, and still does not call the export CSV only.
+    expect(screen.getByText('csv.csvFileNote')).toBeInTheDocument();
     expect(screen.queryByText('csv.exportDescription')).toBeNull();
+    expect(screen.queryByText('csv.exportDescriptionFlexible')).toBeNull();
   });
 
   it('keeps a stored CSV file in CSV, whatever was chosen elsewhere', async () => {
@@ -167,6 +173,7 @@ describe('CsvExportDialog', () => {
     render(<CsvExportDialog open onClose={onClose} endpoint="/admin/coa-templates/t1" csvOnly />);
     expect(screen.queryByText('ops:operations.budgetFile.format')).toBeNull();
     expect(screen.getByText('csv.exportDescription')).toBeInTheDocument();
+    expect(screen.queryByText('csv.csvFileNote')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(get).toHaveBeenLastCalledWith('/admin/coa-templates/t1/export', expect.objectContaining({ params: { language: 'en', scope: 'data' } }));
