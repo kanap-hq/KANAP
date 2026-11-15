@@ -150,6 +150,7 @@ const TASK_FIELDS: Record<string, string> = {
 
 const SCREEN_FIELD_KEYS: Record<string, Record<string, string>> = {
   applications: {
+    application_bulk_edit: 'ai:previewCard.fields.application_bulk_edit',
     name: 'it:common.name',
     supplier_id: 'it:workspace.application.overview.supplier',
     category: 'it:workspace.application.overview.category',

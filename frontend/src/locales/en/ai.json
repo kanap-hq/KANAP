@@ -193,6 +193,7 @@
       "applies_to": "Used for",
       "as_of_date": "As of date",
       "asset_ids": "Linked assets",
+      "application_bulk_edit": "Change in bulk",
       "asset_reference": "Asset reference",
       "assets": "Linked assets",
       "audit_logging": "Audit logging",

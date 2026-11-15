@@ -479,6 +479,34 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('et 1 autre')).toBeInTheDocument();
   });
 
+  it('shows a change in bulk of applications with its filter, scope, counts and first applications, in French', () => {
+    renderCard(preview({
+      tool_name: 'bulk_update_applications',
+      target: { entity_type: 'applications', entity_id: null, ref: null, title: '2 applications' },
+      summary: 'Modification du champ « Criticité business » sur 2 applications.',
+      changes: {
+        application_bulk_edit: {
+          label: 'Change in bulk',
+          from: null,
+          to: [
+            'Filtre : Fournisseur « Acme »',
+            'Périmètre : applications activées, hors retirées',
+            'Criticité business → Haute',
+            '2 applications à modifier, 1 a déjà cette valeur',
+            '- APP-1 Alpha\n- APP-6 Foxtrot',
+          ].join('\n\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+    expect(screen.getAllByText('Modification en masse').length).toBeGreaterThan(0);
+    expect(screen.getByText('Filtre : Fournisseur « Acme »')).toBeInTheDocument();
+    expect(screen.getByText('Périmètre : applications activées, hors retirées')).toBeInTheDocument();
+    expect(screen.getByText('Criticité business → Haute')).toBeInTheDocument();
+    expect(screen.getByText('2 applications à modifier, 1 a déjà cette valeur')).toBeInTheDocument();
+    expect(screen.getByText('APP-6 Foxtrot')).toBeInTheDocument();
+  });
+
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {
     renderCard(preview({
       tool_name: 'delete_record',

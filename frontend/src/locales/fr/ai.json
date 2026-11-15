@@ -193,6 +193,7 @@
       "applies_to": "Utilisé pour",
       "as_of_date": "Date de référence",
       "asset_ids": "Actifs liés",
+      "application_bulk_edit": "Modification en masse",
       "asset_reference": "Référence de l'actif",
       "assets": "Actifs liés",
       "audit_logging": "Journalisation d'audit",
