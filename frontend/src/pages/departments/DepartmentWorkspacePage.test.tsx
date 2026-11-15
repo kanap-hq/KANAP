@@ -25,6 +25,9 @@ vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.
 vi.mock('../../hooks/useDepartmentNav', () => ({
   useDepartmentNav: () => ({ ids: [], index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
+vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
+  useRecentlyViewed: () => ({ items: [], addToRecent: vi.fn(), clearRecent: vi.fn() }),
+}));
 vi.mock('../../hooks/useFreezeState', () => ({
   useFreezeState: () => ({ data: undefined, isLoading: false }),
 }));

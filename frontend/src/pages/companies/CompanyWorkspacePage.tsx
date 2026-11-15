@@ -26,6 +26,7 @@ import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { EditableTitleDisplay } from '../../components/workspace/EditableTitle';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
+import { formatItemRef } from '../../utils/item-ref';
 import { useCoaList } from '../coa/useCoaList';
 import { CoaField, CountryField, CurrencyField, defaultCoaFor } from './CompanyFields';
 import { currencyForCountry } from '../../constants/countryCurrency';
@@ -48,6 +49,8 @@ const SAVED_LINGER_MS = 1500;
 
 type Company = {
   id: string;
+  /** COMP-n once written; none on the draft. */
+  item_number?: number | null;
   name: string;
   coa_id: string | null;
   country_iso: string;
@@ -81,6 +84,17 @@ const DRAFT_FIELDS = [
 ] as const;
 
 const fetchCompany = async (companyId: string) => (await api.get<Company>(`/companies/${companyId}`)).data;
+
+/** The company's reference (`COMP-5`), the one its address and its cache entry name. */
+const companyReference = (company: Pick<Company, 'item_number'> | null | undefined) => (
+  company?.item_number ? formatItemRef('company', company.item_number) : null
+);
+/**
+ * The company's cache entry: `['companies', 'COMP-5']`, read by its page and written by every save.
+ * A page opened by a legacy address (a uuid, `comp-5`) reads under that address, then puts the
+ * company under its reference and moves there.
+ */
+const companyKey = (reference: string) => ['companies', reference] as const;
 
 const COMPANY_FIELDS: ReadonlySet<string> = new Set<CompanyField>([
   'name', 'country_iso', 'base_currency', 'coa_id', 'disabled_at',
@@ -133,6 +147,7 @@ export default function CompanyWorkspacePage() {
   const { coas } = useCoaList();
   const sections = useOptionalSections();
 
+  // The address names the company by its reference (`COMP-5`); a uuid or `comp-5` moves to it once read.
   const id = String(params.id || '');
   const isCreate = id === 'new';
   // The company the draft has just created: its fields stay mounted, so that what is typed
@@ -152,8 +167,19 @@ export default function CompanyWorkspacePage() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : new Date().getFullYear();
   }, [searchParams]);
 
+  const detailKey = React.useMemo(() => companyKey(id), [id]);
+  // Once deleted, the company is never loaded again, even while the page waits for the list.
+  const [deletedId, setDeletedId] = React.useState<string | null>(null);
+  const { data: stored, error: loadError } = useQuery({
+    queryKey: detailKey,
+    queryFn: () => fetchCompany(id),
+    enabled: !isCreate && !!id && deletedId !== id,
+  });
+  const reference = isCreate ? null : companyReference(stored);
+
   const nav = useCompanyNav({
-    id,
+    // The ids list carries uuids: the company read gives its own.
+    id: stored?.id ?? '',
     sort: searchParams.get('sort'),
     q: searchParams.get('q'),
     filters: searchParams.get('filters'),
@@ -162,33 +188,26 @@ export default function CompanyWorkspacePage() {
     enabled: !isCreate,
   });
 
-  const detailKey = React.useMemo(() => ['companies', id] as const, [id]);
-  // Once deleted, the company is never loaded again, even while the page waits for the list.
-  const [deletedId, setDeletedId] = React.useState<string | null>(null);
-  const { data: stored, error: loadError } = useQuery({
-    queryKey: detailKey,
-    queryFn: async () => (await api.get<Company>(`/companies/${id}`)).data,
-    enabled: !isCreate && !!id && deletedId !== id,
-  });
   // The new page is the company's own page on a draft: the fields write here, Create sends it.
   const [draft, setDraft] = React.useState<Company>(NEW_COMPANY);
   const draftRef = React.useRef(draft);
   const data = isCreate ? draft : stored;
 
   React.useEffect(() => {
-    if (!isCreate && data?.id && data.name) addToRecent('company', data.id, data.name);
-  }, [addToRecent, data?.id, data?.name, isCreate]);
+    if (!isCreate && data?.id && data.name) addToRecent('company', data.id, data.name, reference ?? undefined);
+  }, [addToRecent, data?.id, data?.name, isCreate, reference]);
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   // Autosave never blocks the fields: writes queue one after the other, so a response never
   // overwrites a newer one, and results for a record the user has left are dropped.
   const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
-  const currentIdRef = React.useRef(id);
-  currentIdRef.current = id;
+  // The company shown: a save answered for another one is dropped.
+  const currentIdRef = React.useRef(stored?.id);
+  currentIdRef.current = stored?.id;
 
   React.useEffect(() => {
     setErrors({});
-  }, [id]);
+  }, [stored?.id]);
 
   const listContext = React.useMemo(() => {
     const sp = new URLSearchParams();
@@ -204,6 +223,15 @@ export default function CompanyWorkspacePage() {
     if (isCreate || rawTab !== 'access' || canAdminDataAccess) return;
     navigate(`${LIST_PATH}/${id}/overview${listContext ? `?${listContext}` : ''}`, { replace: true });
   }, [canAdminDataAccess, id, isCreate, listContext, navigate, rawTab]);
+
+  // A legacy address (uuid, `comp-5`) becomes the reference's, tab and list context kept: the
+  // company read is put under the reference's entry first, so nothing is read again or mounted again.
+  React.useEffect(() => {
+    if (isCreate || !stored || !reference || id === reference) return;
+    queryClient.setQueryData(companyKey(reference), stored);
+    const search = searchParams.toString();
+    navigate(`${LIST_PATH}/${reference}/${tab}${search ? `?${search}` : ''}`, { replace: true });
+  }, [id, isCreate, navigate, queryClient, reference, searchParams, stored, tab]);
 
   const withContext = (path: string) => `${path}${listContext ? `?${listContext}` : ''}`;
 
@@ -222,13 +250,15 @@ export default function CompanyWorkspacePage() {
         return Promise.resolve(true);
       }
       const recordId = data?.id;
+      // The page's entry: the reference's, or the address's while a legacy address is replaced.
+      const recordRef = companyReference(data) ?? id;
       if (!recordId || !canEdit) return Promise.resolve(false);
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       const run = async (): Promise<boolean> => {
         try {
           const res = await api.patch<Company>(`/companies/${recordId}`, body);
-          queryClient.setQueryData(['companies', recordId], res.data);
-          void queryClient.invalidateQueries({ queryKey: ['companies'], predicate: (q) => q.queryKey[1] !== recordId });
+          queryClient.setQueryData(companyKey(recordRef), res.data);
+          void queryClient.invalidateQueries({ queryKey: ['companies'], predicate: (q) => q.queryKey[1] !== recordRef && q.queryKey[1] !== recordId });
           return true;
         } catch (e) {
           if (currentIdRef.current !== recordId) return false;
@@ -244,7 +274,7 @@ export default function CompanyWorkspacePage() {
       chainRef.current = result.then(() => undefined, () => undefined);
       return result;
     },
-    [canEdit, data?.id, isCreate, queryClient, t],
+    [canEdit, data, id, isCreate, queryClient, t],
   );
 
   // Fields saved on blur show Saving, then Saved. A skipped or refused save does not.
@@ -356,7 +386,8 @@ export default function CompanyWorkspacePage() {
         void queryClient.invalidateQueries({ queryKey: ['companies'] });
         // The page moves to the company with its data in hand, and keeps what was typed since the
         // draft was sent (the next field, while the company was written): saved on the company.
-        const createdKey = ['companies', created.id] as const;
+        const createdRef = companyReference(created) ?? created.id;
+        const createdKey = companyKey(createdRef);
         await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => fetchCompany(created.id) }).catch(() => undefined);
         try {
           await saveEditsSince({
@@ -371,7 +402,12 @@ export default function CompanyWorkspacePage() {
         } catch (e) {
           setCreateError(getApiErrorMessage(e, t, t('companies.messages.saveFailed')));
         }
-        return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
+        return {
+          id: created.id,
+          token: created.creation_token,
+          path: withContext(`${LIST_PATH}/${createdRef}/overview`),
+          reference: companyReference(created),
+        };
       } catch (e) {
         const message = getApiErrorMessage(e, t, t('companies.messages.createFailed'));
         const field = isDuplicateError(e) ? 'name' : companyRefusalField(e);
@@ -512,11 +548,13 @@ export default function CompanyWorkspacePage() {
         notices={loadError ? <Alert severity="error">{t('companies.loadError')}</Alert> : undefined}
         activeTab={tab}
         tabs={tabs}
-        onTabChange={(next) => goTo(id, next as TabKey)}
+        onTabChange={(next) => goTo(reference ?? id, next as TabKey)}
         drawerStorageKey="kanap.companies.drawerOpen"
         backLabel={t('companies.title')}
         onBack={isCreate ? leave : handleClose}
         {...(isCreate ? title.shellProps : { title: data?.name ?? '' })}
+        itemReference={reference}
+        onCopyReference={reference ? () => { void navigator.clipboard?.writeText(reference); } : undefined}
         titleFallback={isCreate ? t('companies.newCompany') : t('companies.companyFallback')}
         isCreate={isCreate}
         // A new record's required fields sit in the drawer: it stays open.
@@ -558,7 +596,7 @@ export default function CompanyWorkspacePage() {
               </Typography>
             )}
             {data && canDelete && (
-              <RecordDeleteButton base="/companies" id={data.id} name={data.name} deleteFailed="companies.messages.deleteFailed" onDeleted={() => { setDeletedId(data.id); handleClose(); }} />
+              <RecordDeleteButton base="/companies" id={data.id} name={data.name} deleteFailed="companies.messages.deleteFailed" onDeleted={() => { setDeletedId(id); handleClose(); }} />
             )}
           </>
         ) : undefined}
@@ -591,6 +629,7 @@ export default function CompanyWorkspacePage() {
             year={year}
             onYearChange={setYear}
             readOnly={!canEdit}
+            companyReference={reference}
             baseCurrency={data.base_currency ?? ''}
             onSave={trackSave}
           />
