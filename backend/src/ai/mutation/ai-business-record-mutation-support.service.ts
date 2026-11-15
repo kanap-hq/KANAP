@@ -2248,10 +2248,11 @@ export class AiBusinessRecordMutationSupportService {
       }
       throw error;
     }
-    // The incident and technology services write their own audit row, with the preview's source
-    // and reference; the detail they return stays the author's, even when the change makes the
-    // record invisible to them.
-    if (entityType === 'incidents' || entityType === 'technologies') return;
+    // The incident, technology and budget line services write their own audit row, with the
+    // preview's source and reference (a budget line's contacts too, when a new supplier brings
+    // theirs); the detail they return stays the author's, even when the change makes the record
+    // invisible to them.
+    if (entityType === 'incidents' || entityType === 'technologies' || entityType === 'budget_lines') return;
     const after = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
     await this.logAiAudit(context, preview, entityType, 'update', before, after);
   }
@@ -2404,7 +2405,7 @@ export class AiBusinessRecordMutationSupportService {
       case 'connections':
         return this.connections.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager });
       case 'budget_lines':
-        return this.budgetLines.update(id, fields, context.userId, { manager: context.manager });
+        return this.budgetLines.update(id, fields, context.userId, { manager: context.manager, ...(audit ? { audit } : {}) });
       case 'incidents':
         return this.incidents.update(id, fields, context.userId, await this.incidentWriteOptions(context, audit));
       case 'technologies':

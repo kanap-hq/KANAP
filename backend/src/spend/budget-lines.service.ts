@@ -157,7 +157,8 @@ export class BudgetLinesService {
     await deleter.deleteFiles(paths);
   }
 
-  async update(ref: string, body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
+  /** `audit`: the source of the line's audit rows (Kad's card), the PATCH's being the person's. */
+  async update(ref: string, body: unknown, userId: string | undefined, opts: { manager: EntityManager; audit?: BudgetLineAuditSource }) {
     const line = await resolveBudgetLine(ref, opts.manager);
     await this.updateLine(line, body, userId, opts);
     return this.get(line.id, opts);
