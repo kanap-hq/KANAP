@@ -61,7 +61,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie sehen.** Der Export beschriftet seine Spalten in Ihrer Sprache, und der Import liest dieselben Spalten: Nutzen Sie ihn als Vorlage für Ihre eigenen Projekte. Die Beispielmappe enthält einige Projekte, die übrigen Spalten auf einem Blatt **Erweitert** und auf einem Blatt **Hinweise**, was jede Spalte aufnimmt. Anfragen und Aufgaben haben ihr eigenes **Exportieren** und **Importieren**. Diese Schaltflächen sehen die Administratoren der Liste.
 
-Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Kad mit **Datei anhängen** an eine Nachricht an. Kad liest die Spaltenüberschriften, den Typ jeder Spalte und die ersten zehn Zeilen und kann sagen, was jede Spalte enthält.
+Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Kad mit **Datei anhängen** an eine Nachricht an. Kad liest die Spaltenüberschriften, den Typ jeder Spalte, die ersten zehn Zeilen und die Werte, die sich in den Textspalten wiederholen, und kann sagen, was jede Spalte enthält.
 
 ## Wie es weitergeht
 
