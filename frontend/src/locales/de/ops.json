@@ -367,6 +367,7 @@
     "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff",
     "outsideYourAccess": "Vertrag außerhalb Ihres Zugriffs",
     "columns": {
+      "reference": "Referenz",
       "contract": "Vertrag",
       "supplier": "Lieferant",
       "company": "Unternehmen",

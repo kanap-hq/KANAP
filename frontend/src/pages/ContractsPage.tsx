@@ -44,6 +44,7 @@ import ContractSettingsDialog from './contracts/ContractSettingsDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { contractDeleteCheck } from './contracts/contractDelete';
 import { ImportLabel } from '../components/csv/importFiles';
+import { formatItemRef } from '../utils/item-ref';
 
 /** The states of a contract's terms, computed by the API (`backend/src/contracts/contract-terms.ts`). */
 const TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
@@ -51,6 +52,8 @@ type TermState = (typeof TERM_STATES)[number];
 
 type ContractRow = {
   id: string;
+  /** The contract's number: the list shows its reference, `CTR-12`. */
+  item_number?: number | null;
   name: string;
   status: string;
   disabled_at?: string | null;
@@ -430,6 +433,16 @@ export default function ContractsPage() {
   ), [getContractHref, navigate]);
 
   const columns: EnhancedColDef<ContractRow>[] = useMemo(() => [
+    {
+      field: 'item_number',
+      headerName: t('contracts.columns.reference'),
+      width: 100,
+      filter: 'agTextColumnFilter',
+      valueFormatter: (p) => (isPinned(p) || !p.value ? '' : formatItemRef('contract', Number(p.value))),
+      comparator: (a: number, b: number) => (a || 0) - (b || 0),
+      cellStyle: { fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace", fontSize: '12px', color: 'var(--kanap-text-secondary)', fontVariantNumeric: 'tabular-nums' },
+      cellRenderer: linkCell,
+    },
     {
       field: 'name',
       headerName: t('contracts.columns.contract'),

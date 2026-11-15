@@ -125,8 +125,8 @@ async function fetchRelatedObjectName(kind: RelatedKind, id: string): Promise<st
       return budgetLineLabel(res.data);
     }
     case 'contract': {
-      const res = await api.get<{ name?: string | null }>(`/contracts/${id}`);
-      return res.data?.name?.trim() || null;
+      const res = await api.get<{ item_number?: number | null; name?: string | null }>(`/contracts/${id}`);
+      return formatContractName(res.data?.item_number, res.data?.name);
     }
     case 'incident': {
       const res = await api.get<{ item_number?: number | null; title?: string | null }>(`/incidents/${id}`);
@@ -141,6 +141,14 @@ function formatIncidentName(itemNumber: number | null | undefined, title: string
   if (!itemNumber) return name || null;
   const ref = formatItemRef('incident', itemNumber);
   return name ? `${ref} · ${name}` : ref;
+}
+
+// Same shape as the backend's related_object_name for contract tasks ("CTR-12 · name").
+function formatContractName(itemNumber: number | null | undefined, name: string | null | undefined): string | null {
+  const text = (name || '').trim();
+  if (!itemNumber) return text || null;
+  const ref = formatItemRef('contract', itemNumber);
+  return text ? `${ref} · ${text}` : ref;
 }
 
 function relatedKindFromType(type: TaskData['related_object_type']): RelatedKind | null {

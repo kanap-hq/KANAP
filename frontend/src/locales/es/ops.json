@@ -367,6 +367,7 @@
     "readOnlyInYourAccess": "Solo lectura en su acceso",
     "outsideYourAccess": "Contrato fuera de su acceso",
     "columns": {
+      "reference": "Referencia",
       "contract": "Contrato",
       "supplier": "Proveedor",
       "company": "Empresa",
