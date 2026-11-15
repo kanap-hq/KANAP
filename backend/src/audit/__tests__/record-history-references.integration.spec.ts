@@ -223,6 +223,24 @@ async function testEveryFamily(seeded: Seeded) {
   console.log(`  one visibility case per family (${reported.length}): ${reported.join(', ')}: OK`);
 }
 
+/** The five families numbered in lot R1 of 26.11.9 are named by their reference (SUP-n, COMP-n, ...). */
+async function testBusinessReferences(seeded: Seeded) {
+  const prefixes: Partial<Record<FamilyKey, [string, string]>> = {
+    supplier: ['SUP', 'suppliers'], company: ['COMP', 'companies'], contact: ['CTCT', 'contacts'],
+    department: ['DEPT', 'departments'], contract: ['CTR', 'contracts'],
+  };
+  const cases = familyCases(seeded).filter((entry) => entry.family in prefixes);
+  const references = await referencesFor(seeded.reader, idMap(cases.map((entry) => [entry.family, [entry.home]])));
+  for (const entry of cases) {
+    const [prefix, table] = prefixes[entry.family]!;
+    const number = await withRunner(seeded.reader.tenant_id, async (runner) =>
+      (await runner.query(`SELECT item_number AS n FROM ${table} WHERE id = $1`, [entry.home]))[0]?.n);
+    assert.ok(Number.isInteger(number), `${entry.label}: numbered`);
+    assert.equal(references.get(entry.family)?.get(entry.home.toLowerCase())?.reference, `${prefix}-${number}`, `${entry.label}: named by its reference`);
+  }
+  console.log(`  named by their reference: ${cases.map((entry) => entry.label).join(', ')}: OK`);
+}
+
 /** A family names its record only for a reader of its module, never without it. */
 async function testFamilyModules(seeded: Seeded) {
   const cases = familyCases(seeded).filter((entry) => NEW_FAMILIES.includes(entry.family));
@@ -446,6 +464,7 @@ async function run() {
 
     const participation = await seed(tenantId, (runner) => createParticipationFixtures(full.seed, full.bc, runner));
     await testEveryFamily(full);
+    await testBusinessReferences(full);
     await testFamilyModules(full);
     await testParticipation(full.bc, participation, full.seed.interfaceRecord);
     await testIncidentVisibility(full.reader, full.bc, participation);

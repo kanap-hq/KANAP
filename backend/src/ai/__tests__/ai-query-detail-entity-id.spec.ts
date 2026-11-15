@@ -135,6 +135,12 @@ async function testFamilyReferencesResolveWithoutSearch() {
     ['projects', 'PRJ-1', /FROM portfolio_projects WHERE tenant_id = \$1 AND item_number = \$2/, 1],
     ['requests', 'REQ-7', /FROM portfolio_requests WHERE tenant_id = \$1 AND item_number = \$2/, 7],
     ['tasks', 'T-42', /FROM tasks WHERE tenant_id = \$1 AND item_number = \$2/, 42],
+    // Numbered in lot R1 of 26.11.9; CTR-n is a contract (a contributor is MEM-n).
+    ['suppliers', 'SUP-3', /FROM suppliers WHERE tenant_id = \$1 AND item_number = \$2/, 3],
+    ['companies', 'comp-1', /FROM companies WHERE tenant_id = \$1 AND item_number = \$2/, 1],
+    ['contacts', 'CTCT-2', /FROM contacts WHERE tenant_id = \$1 AND item_number = \$2/, 2],
+    ['departments', 'DEPT-4', /FROM departments WHERE tenant_id = \$1 AND item_number = \$2/, 4],
+    ['contracts', 'CTR-2', /FROM contracts WHERE tenant_id = \$1 AND item_number = \$2/, 2],
   ];
   for (const [entityType, ref, sqlPattern, param] of cases) {
     const id = randomUUID();
@@ -164,7 +170,11 @@ async function testApplicationAndAssetRefsAreTopLevel() {
   const map = executor as any;
   assert.equal(map.mapApplication({ id: 'a', name: 'Microsoft 365', sequential_id: 'APP-1' }).ref, 'APP-1');
   assert.equal(map.mapAsset({ id: 'b', name: 'WEB-SRV-01', asset_reference: 'AST-7' }).ref, 'AST-7');
-  assert.equal(map.mapContract({ id: 'c', name: 'Support' }).ref, null, 'contracts have no reference');
+  assert.equal(map.mapContract({ id: 'c', name: 'Support', item_number: 2 }).ref, 'CTR-2', 'a contract carries its reference');
+  assert.equal(map.mapSupplier({ id: 's', name: 'Caseificio', item_number: 3, erp_supplier_id: 'F10003' }).ref, 'SUP-3', 'a supplier: its reference, never its ERP id');
+  assert.equal(map.mapCompany({ id: 'o', name: 'Formaggio', item_number: 1 }).ref, 'COMP-1');
+  assert.equal(map.mapContact({ id: 'p', email: 'anna@example.test', item_number: 2 }).ref, 'CTCT-2');
+  assert.equal(map.mapDepartment({ id: 'd', name: 'Finance', item_number: 4 }).ref, 'DEPT-4');
 }
 
 async function testEntityContextAcceptsReferences() {

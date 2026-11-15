@@ -80,6 +80,15 @@ async function run() {
     const projectId = await seedProject(runner, tenantId, 3, 'Move to the new ERP');
     const companyId = await seedCompany(runner, tenantId, 'Formaggio Supremo SRL');
     const opexId = await seedBudgetLine(runner, tenantId, 'opex', 7);
+    // Numbered by the database at insertion (lot R1 of 26.11.9): the first of each family is n° 1.
+    const insertOne = async (sql: string, params: unknown[]) => (await runner.query(`${sql} RETURNING id::text AS id`, params))[0].id as string;
+    const supplierId = await insertOne(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Caseificio')`, [tenantId]);
+    const contactId = await insertOne(`INSERT INTO contacts (tenant_id, email) VALUES ($1, 'anna@caseificio.test')`, [tenantId]);
+    const departmentId = await insertOne(`INSERT INTO departments (tenant_id, name, company_id) VALUES ($1, 'Finance', $2)`, [tenantId, companyId]);
+    const contractId = await insertOne(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, 'Maintenance', $2, $3, '2026-01-01')`,
+      [tenantId, companyId, supplierId],
+    );
     const goneTaskId = randomUUID();
 
     const queries: string[] = [];
@@ -95,6 +104,10 @@ async function run() {
       { targetType: 'tasks', targetRef: taskId },
       { targetType: 'projects', targetRef: projectId },
       { targetType: 'companies', targetRef: companyId },
+      { targetType: 'suppliers', targetRef: supplierId },
+      { targetType: 'contacts', targetRef: contactId },
+      { targetType: 'departments', targetRef: departmentId },
+      { targetType: 'contracts', targetRef: contractId },
       { targetType: 'budget_lines', targetRef: opexId },
       // An approved change records a budget line under its table.
       { targetType: 'spend_items', targetRef: opexId },
@@ -108,14 +121,18 @@ async function run() {
 
     assert.equal(displays.get(activityTargetKey('tasks', taskId)), 'T-15', 'a task shows its reference');
     assert.equal(displays.get(activityTargetKey('projects', projectId)), 'PRJ-3', 'a project shows its reference');
-    assert.equal(displays.get(activityTargetKey('companies', companyId)), undefined, 'a family without a reference has no display: its type alone is shown');
+    assert.equal(displays.get(activityTargetKey('companies', companyId)), 'COMP-1', 'a company shows its reference');
+    assert.equal(displays.get(activityTargetKey('suppliers', supplierId)), 'SUP-1', 'a supplier shows its reference');
+    assert.equal(displays.get(activityTargetKey('contacts', contactId)), 'CTCT-1', 'a contact shows its reference');
+    assert.equal(displays.get(activityTargetKey('departments', departmentId)), 'DEPT-1', 'a department shows its reference');
+    assert.equal(displays.get(activityTargetKey('contracts', contractId)), 'CTR-1', 'a contract shows its reference');
     const line = displays.get(activityTargetKey('budget_lines', opexId));
     assert.ok(line && /\b7$/.test(line), `a budget line shows its reference (${line})`);
     assert.equal(displays.get(activityTargetKey('spend_items', opexId)), line, 'a budget line recorded under its table shows the same reference');
     assert.equal(displays.has(activityTargetKey('tasks', goneTaskId)), false, 'a deleted object shows no uuid');
     assert.equal(displays.has(activityTargetKey('tasks', foreignTaskId)), false, 'another tenant is never read');
     assert.equal(displays.has(activityTargetKey('ticket', '4711')), false, 'a ticket number stays as it is');
-    assert.equal(displays.size, 4);
+    assert.equal(displays.size, 9);
 
     // One query for the whole page, scoped by tenant, by batch of ids.
     assert.equal(queries.length, 1);

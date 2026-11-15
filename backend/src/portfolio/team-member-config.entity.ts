@@ -61,7 +61,7 @@ export class TeamMemberConfig {
   @Column('uuid', { nullable: true })
   default_company_id?: string | null;
 
-  // Per-tenant sequential business reference (rendered as CTR-N). Assigned on create.
+  // Per-tenant sequential business reference (rendered as MEM-N). Assigned on create.
   @Column('int')
   item_number!: number;
 

@@ -132,7 +132,7 @@ function compactDomainVocabulary(mode: AiContextProfile['promptMode']): string {
   if (mode === 'entity') {
     return [
       ...base,
-      '- Entity references look like PRJ-12, REQ-7, T-42, APP-4, AST-9, TEC-3, DOC-3, INC-2. Prefer detail/context tools when a reference is present.',
+      '- Entity references look like PRJ-12, REQ-7, T-42, APP-4, AST-9, TEC-3, DOC-3, INC-2, SUP-3 (supplier), COMP-1 (company), CTCT-2 (contact), DEPT-4 (department), CTR-2 (contract), MEM-5 (contributor). Prefer detail/context tools when a reference is present.',
     ].join('\n');
   }
 

@@ -207,7 +207,7 @@ describe('ContributorsPage view switch', () => {
   });
 
   it('drops the org chart parameters when another view is chosen', async () => {
-    renderAt('/portfolio/contributors?view=org&root=CTR-1&hide=External&depth=2&disabled=1');
+    renderAt('/portfolio/contributors?view=org&root=MEM-1&hide=External&depth=2&disabled=1');
     await screen.findByRole('tab', { name: 'Org chart' });
 
     fireEvent.click(screen.getByRole('tab', { name: 'Skills matrix' }));

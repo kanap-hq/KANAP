@@ -121,7 +121,8 @@ Escribir `@` abre el **selector de menciones** encima del cuadro de redacción. 
   - `@DOC`: documentos de la base de conocimiento recientes
   - `@APP backup`: aplicaciones que coinciden con "backup"
   - `@BL-12`: la línea presupuestaria con la referencia BL-12. `@BL` solo lista líneas presupuestarias de ambos tipos. Los antiguos números siguen funcionando: `@OPX-12` o `@CPX-3` encuentra su línea
-  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+  - `@SUP-3`, `@COMP-1`, `@CTCT-2`, `@DEPT-4`, `@CTR-2`: el proveedor, la empresa, el contacto, el departamento o el contrato con esa referencia
+  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CTCT`, `@DEPT`, `@SUP`, `@BP`
 - **Texto simple**: cualquier otra cosa (`@payroll`, `@server-2`) ejecuta una búsqueda entre tipos ordenada por relevancia. También encuentra las líneas presupuestarias por el nombre de sus valores analíticos.
 
 Use las teclas de flecha para desplazarse por las sugerencias, **Intro** o **Tab** para confirmar y **Escape** para cerrar el selector. Los resultados se agrupan por tipo de entidad (Conocimiento, Tareas, Proyectos, Aplicaciones, Activos, Contratos, etc.) para que pueda distinguir de un vistazo qué tipo de registro va a insertar.
@@ -169,7 +170,7 @@ Kad lista, cuenta y lee los incidentes. Los filtra por activo, aplicación o tec
 
 Kad lee los contratos como los muestra la lista de [Contratos](contracts.md): el estado del periodo en curso (por decidir, en curso, renovado, termina sin renovación, vencido), el próximo vencimiento y la fecha límite de rescisión, con el plazo de decisión de su espacio de trabajo y las decisiones de renovación ya registradas. También lee lo que cubre un contrato: sus aplicaciones, activos, tecnologías y líneas presupuestarias. Pregunte, por ejemplo: «¿Qué contratos están por decidir y qué aplicaciones cubren?» o «¿Qué contratos cubren APP-8?» Los asistentes conectados por MCP obtienen las mismas respuestas.
 
-Kad nombra un registro por su referencia, como `APP-8` o `BL-14`, o por su nombre cuando no tiene, como un contrato, un proveedor o una ubicación. La referencia o el nombre lleva a la página del registro cuando usted puede abrirla.
+Kad nombra un registro por su referencia, como `APP-8` o `BL-14`, o por su nombre cuando no tiene, como un proceso de negocio. La referencia o el nombre lleva a la página del registro cuando usted puede abrirla.
 
 Kad nombra un registro vinculado al que usted consulta solo si puede leer su módulo, como la página del registro: las aplicaciones de un proyecto requieren las aplicaciones, sus activos la infraestructura, sus solicitudes de origen las solicitudes. Un Business Contributor solo obtiene los proyectos, solicitudes y aplicaciones en los que participa. Los servidores en los que se ejecuta una aplicación son la excepción: vienen con la aplicación, como en su pestaña **Despliegues**. Si se le pregunta por una persona, Kad da lo que le muestra la lista de usuarios: un administrador de usuarios obtiene el perfil completo, los demás el nombre, el correo electrónico y el estado. Los asistentes conectados por MCP obtienen las mismas respuestas.
 

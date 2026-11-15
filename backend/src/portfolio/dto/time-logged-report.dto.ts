@@ -17,7 +17,7 @@ export type TimeLoggedMember = {
   /** Null for the entries logged without a person ("Unknown user"). */
   userId: string | null;
   name: string;
-  /** `CTR-12` when the person has a contributor profile, null otherwise. */
+  /** `MEM-12` when the person has a contributor profile, null otherwise. */
   contributorRef: string | null;
   cells: TimeLoggedCell[];
 };

@@ -60,6 +60,7 @@ import {
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
+import { familyReference, familyReferenceNumber } from '../ai-entity-reference.util';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_STATUS_RANK } from '../../incidents/incident.entity';
 import {
@@ -1280,6 +1281,8 @@ export class AiBusinessRecordMutationSupportService {
     const rawDigits = ref.match(/(?:^|[-\s])(\d+)$/)?.[1];
     const itemNumber = rawDigits == null ? 0 : (parseItemNumber(rawDigits) ?? -1);
     const { manager, tenantId } = context;
+    // A contract, company, department or supplier named by its own reference (CTR-2, COMP-1, ...).
+    const familyNumber = familyReferenceNumber(entityType, ref);
     switch (entityType) {
       case 'applications': {
         const accessScope = await resolveBusinessContributorScopeForUser({
@@ -1317,8 +1320,8 @@ export class AiBusinessRecordMutationSupportService {
         );
       case 'contracts':
         return manager.query(
-          `SELECT * FROM contracts WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`,
-          [tenantId, ref],
+          `SELECT * FROM contracts WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR item_number = $3) ORDER BY name LIMIT 6`,
+          [tenantId, ref, familyNumber],
         );
       case 'projects':
       case 'requests': {
@@ -1380,7 +1383,7 @@ export class AiBusinessRecordMutationSupportService {
         return this.withDefaultAnalyticsValue(context, rows);
       }
       case 'companies':
-        return manager.query(`SELECT * FROM companies WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
+        return manager.query(`SELECT * FROM companies WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR item_number = $3) ORDER BY name LIMIT 6`, [tenantId, ref, familyNumber]);
       case 'cost_centers': {
         // By id, code or name; a code (unique in the tenant) wins over names that match too.
         const rows: Record<string, unknown>[] = await manager.query(
@@ -1391,9 +1394,9 @@ export class AiBusinessRecordMutationSupportService {
         return exact.length > 0 ? exact : rows;
       }
       case 'departments':
-        return manager.query(`SELECT * FROM departments WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
+        return manager.query(`SELECT * FROM departments WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR item_number = $3) ORDER BY name LIMIT 6`, [tenantId, ref, familyNumber]);
       case 'suppliers':
-        return manager.query(`SELECT * FROM suppliers WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR LOWER(COALESCE(erp_supplier_id, '')) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
+        return manager.query(`SELECT * FROM suppliers WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR LOWER(COALESCE(erp_supplier_id, '')) = LOWER($2::text) OR item_number = $3) ORDER BY name LIMIT 6`, [tenantId, ref, familyNumber]);
       case 'accounts':
         return manager.query(`SELECT * FROM accounts WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}account_number::text = $2::text OR LOWER(account_name) = LOWER($2::text) OR LOWER(CONCAT(account_number, ' - ', account_name)) = LOWER($2::text)) ORDER BY account_number LIMIT 6`, [tenantId, ref]);
       case 'business_processes':
@@ -1518,7 +1521,8 @@ export class AiBusinessRecordMutationSupportService {
       case 'technologies': return row.item_number == null ? null : `TEC-${row.item_number}`;
       case 'accounts': return textOrNull(row.account_number);
       case 'cost_centers': return textOrNull(row.code);
-      default: return null;
+      // Contracts, companies, departments and suppliers: their business reference (CTR-2...).
+      default: return familyReference(entityType, row.item_number);
     }
   }
 
@@ -1562,8 +1566,12 @@ export class AiBusinessRecordMutationSupportService {
         return [row.account_number, row.account_name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled account';
       case 'cost_centers':
         return [row.code, row.name].map(textOrNull).filter(Boolean).join(' · ') || 'Untitled cost center';
-      default:
-        return textOrNull(row.name) || String(row.id || `Untitled ${this.referenceLabelSingular(entityType)}`);
+      default: {
+        const title = textOrNull(row.name) || String(row.id || `Untitled ${this.referenceLabelSingular(entityType)}`);
+        const reference = familyReference(entityType, row.item_number);
+        const rest = reference ? nameWithoutLeadingReference(reference, title) : title;
+        return reference ? (rest ? `${reference} - ${rest}` : reference) : title;
+      }
     }
   }
 

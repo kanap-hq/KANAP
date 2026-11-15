@@ -19,6 +19,7 @@ import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { resolveToUuid } from '../common/resolve-item-id';
 
 @UseGuards(JwtAuthGuard)
 @Controller('departments')
@@ -74,7 +75,9 @@ export class DepartmentsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'reader')
   @Get(':id')
-  get(@Param('id') id: string, @Tenant() ctx: TenantRequest) { return this.svc.get(id, { manager: ctx.manager }); }
+  async get(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
+    return this.svc.get(await resolveToUuid(idOrRef, 'department', ctx.manager as EntityManager), { manager: ctx.manager });
+  }
 
   @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
@@ -106,7 +109,9 @@ export class DepartmentsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'member')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: DepartmentUpsertDto, @Tenant() ctx: TenantRequest) { return this.svc.update(id, body, ctx.userId || undefined, { manager: ctx.manager }); }
+  async update(@Param('id') idOrRef: string, @Body() body: DepartmentUpsertDto, @Tenant() ctx: TenantRequest) {
+    return this.svc.update(await resolveToUuid(idOrRef, 'department', ctx.manager as EntityManager), body, ctx.userId || undefined, { manager: ctx.manager });
+  }
 
   @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
@@ -158,7 +163,7 @@ export class DepartmentsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'admin')
   @Delete(':id')
-  delete(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
-    return this.deleteSvc.delete(id, { manager: ctx.manager, userId: ctx.userId || null });
+  async delete(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
+    return this.deleteSvc.delete(await resolveToUuid(idOrRef, 'department', ctx.manager as EntityManager), { manager: ctx.manager, userId: ctx.userId || null });
   }
 }

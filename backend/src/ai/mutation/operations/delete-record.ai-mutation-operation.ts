@@ -82,7 +82,7 @@ export class DeleteRecordAiMutationOperation implements AiMutationOperation<Dele
     entity_type: z.enum(AI_DELETE_ENTITY_TYPES)
       .describe('The family of the record to delete: tasks, contacts, locations, documents, budget_lines (an OPEX or CAPEX budget line), connections or interfaces.'),
     ref: z.string().trim().min(1)
-      .describe('The record reference or exact name: T-42, a contact name or email, a location reference or name, a document DOC-n reference or exact title, a budget line BL-n/OPX-n/CPX-n or UUID, a connection reference or name, or an interface reference or name.'),
+      .describe('The record reference or exact name: T-42, a contact CTCT-n reference, name or email, a location reference or name, a document DOC-n reference or exact title, a budget line BL-n/OPX-n/CPX-n or UUID, a connection reference or name, or an interface reference or name.'),
     delete_related_bindings: z.boolean().optional()
       .describe('Interfaces only. True deletes the interface with its bindings and their links to connections; false (default) refuses an interface that still has bindings, as the screen does.'),
   });

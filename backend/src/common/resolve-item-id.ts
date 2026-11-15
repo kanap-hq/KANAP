@@ -1,8 +1,11 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { parseItemNumber } from './parse-item-number';
+import { isPaddedReferenceNumber, parseItemNumber } from './parse-item-number';
 
-export type EntityType = 'task' | 'request' | 'project' | 'document' | 'spend' | 'capex' | 'incident' | 'contributor' | 'technology';
+export type EntityType =
+  | 'task' | 'request' | 'project' | 'document' | 'spend' | 'capex' | 'incident' | 'contributor' | 'technology'
+  // Numbered by the database at insertion (migration 1856240000000).
+  | 'supplier' | 'company' | 'contact' | 'department' | 'contract';
 
 /** The prefix a reference of each type carries, the one the "expected" message names. */
 const EXPECTED_PREFIX: Record<EntityType, string> = {
@@ -13,8 +16,13 @@ const EXPECTED_PREFIX: Record<EntityType, string> = {
   spend: 'OPX',
   capex: 'CPX',
   incident: 'INC',
-  contributor: 'CTR',
+  contributor: 'MEM',
   technology: 'TEC',
+  supplier: 'SUP',
+  company: 'COMP',
+  contact: 'CTCT',
+  department: 'DEPT',
+  contract: 'CTR',
 };
 
 /**
@@ -27,7 +35,8 @@ const ALSO_ACCEPTED_PREFIXES: Partial<Record<EntityType, readonly string[]>> = {
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ITEM_REF_RE = /^(T|PRJ|REQ|DOC|OPX|CPX|INC|CTR|TEC)-(\d+)$/i;
+/** `CTR` is the reference of a contract, and was the one of a contributor: a type reads it as another family's. */
+const ITEM_REF_RE = /^(T|PRJ|REQ|DOC|OPX|CPX|INC|MEM|CTR|TEC|SUP|COMP|CTCT|DEPT)-(\d+)$/i;
 /** A reference with a prefix only some types accept (`BL-n`): another type reads it as malformed. */
 const OTHER_REF_RE = /^([A-Z]+)-(\d+)$/i;
 
@@ -48,13 +57,28 @@ function itemNumberOf(digits: string, expectedType: EntityType): number {
   return number;
 }
 
-export function parseItemRef(raw: string, expectedType: EntityType): ParsedItemRef {
+/** What one caller adds to the prefixes its type accepts everywhere. */
+export type ItemRefOptions = {
+  /**
+   * Prefixes this caller alone also accepts for the type, in capitals. The contributors routes name
+   * `CTR`, the reference of a contributor before `MEM`: `CTR-n` is a contract everywhere else.
+   */
+  alsoAccept?: readonly string[];
+};
+
+export function parseItemRef(raw: string, expectedType: EntityType, options: ItemRefOptions = {}): ParsedItemRef {
   if (UUID_RE.test(raw)) return { type: 'uuid', value: raw };
 
+  const accepted = [...(ALSO_ACCEPTED_PREFIXES[expectedType] ?? []), ...(options.alsoAccept ?? [])];
+  // `SUP-013` and `013` are no supplier reference: an ERP ID of the sample data is written so.
+  const digitsOf = raw.match(/(\d+)$/)?.[1];
+  if (digitsOf && isPaddedReferenceNumber(EXPECTED_PREFIX[expectedType], digitsOf)) {
+    throw new BadRequestException(`Invalid item reference: ${raw}`);
+  }
   const m = raw.match(ITEM_REF_RE);
   if (m) {
     const prefix = m[1].toUpperCase();
-    if (prefix !== EXPECTED_PREFIX[expectedType] && !ALSO_ACCEPTED_PREFIXES[expectedType]?.includes(prefix)) {
+    if (prefix !== EXPECTED_PREFIX[expectedType] && !accepted.includes(prefix)) {
       throw new BadRequestException(
         `Invalid reference for ${expectedType}: expected ${EXPECTED_PREFIX[expectedType]}-N, got ${raw}`,
       );
@@ -62,7 +86,7 @@ export function parseItemRef(raw: string, expectedType: EntityType): ParsedItemR
     return { type: 'item_number', value: itemNumberOf(m[2], expectedType), prefix };
   }
   const other = raw.match(OTHER_REF_RE);
-  if (other && ALSO_ACCEPTED_PREFIXES[expectedType]?.includes(other[1].toUpperCase())) {
+  if (other && accepted.includes(other[1].toUpperCase())) {
     return { type: 'item_number', value: itemNumberOf(other[2], expectedType), prefix: other[1].toUpperCase() };
   }
 
@@ -125,8 +149,9 @@ export async function resolveToUuid(
   raw: string,
   entityType: EntityType,
   manager: EntityManager,
+  options: ItemRefOptions = {},
 ): Promise<string> {
-  const parsed = parseItemRef(raw, entityType);
+  const parsed = parseItemRef(raw, entityType, options);
   if (parsed.type === 'uuid') {
     const nature = LINE_NATURE[entityType];
     if (nature) {
@@ -150,6 +175,12 @@ export async function resolveToUuid(
     incident: 'SELECT id FROM incidents WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
     contributor: 'SELECT id FROM portfolio_team_member_configs WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
     technology: 'SELECT id FROM technologies WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    supplier: 'SELECT id FROM suppliers WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    company: 'SELECT id FROM companies WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    contact: 'SELECT id FROM contacts WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    department: 'SELECT id FROM departments WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    // Under the request's data access too: a contract outside a limited person's reach is not found.
+    contract: 'SELECT id FROM contracts WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
   };
 
   // `spend`: the legacy number is tried for an OPX reference only (BL-n and plain numbers are item numbers).

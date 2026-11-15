@@ -114,7 +114,7 @@ L'organigramme dessine la ligne hiérarchique de vos contributeurs, à partir du
 
 ## L'espace de travail du contributeur
 
-Cliquez sur une ligne de contributeur pour ouvrir son espace de travail. L'en-tête affiche la référence du contributeur (`CTR-1`, `CTR-2`…, cliquez dessus pour la copier), son nom, son équipe, sa disponibilité et le nombre de compétences. C'est aussi cette référence qu'utilise l'adresse de la page. Utilisez les flèches à côté du lien de retour (ou les touches fléchées gauche et droite) pour passer au contributeur précédent ou suivant dans l'ordre de la liste. Appuyez sur **Échap** pour revenir à la liste.
+Cliquez sur une ligne de contributeur pour ouvrir son espace de travail. L'en-tête affiche la référence du contributeur (`MEM-1`, `MEM-2`…, cliquez dessus pour la copier), son nom, son équipe, sa disponibilité et le nombre de compétences. C'est aussi cette référence qu'utilise l'adresse de la page. Un lien enregistré sous l'ancienne forme `CTR-1` ouvre toujours le contributeur. Utilisez les flèches à côté du lien de retour (ou les touches fléchées gauche et droite) pour passer au contributeur précédent ou suivant dans l'ordre de la liste. Appuyez sur **Échap** pour revenir à la liste.
 
 L'espace de travail comporte trois onglets, **Général**, **Compétences** et **Temps saisi**, ainsi qu'un panneau **Propriétés** à droite qui regroupe l'intitulé de poste, l'équipe, la disponibilité et les valeurs de classification par défaut. Ouvrez ou fermez le panneau avec l'onglet situé sur son bord, ou appuyez sur **P**.
 

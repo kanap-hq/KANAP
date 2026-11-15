@@ -883,8 +883,10 @@ async function testLoadedIsWrittenAgain() {
 
 // An incident created and then deleted leaves its counter. The workspace is still empty,
 // so a load drops every counter except the document one: template documents already hold
-// their numbers, and the incident journal addresses incidents by number. A workspace that
-// still has data of its own keeps its counters, and another tenant's counters stay.
+// their numbers, and the incident journal addresses incidents by number. The starting company
+// keeps COMP-1 and its counter starts again after it, so the loaded companies follow it and the
+// suppliers start at SUP-1. A workspace that still has data of its own keeps its counters, and
+// another tenant's counters stay.
 async function testLoadResetsItemSequences() {
   const svc = buildServices();
   const h = harness(svc);
@@ -897,7 +899,7 @@ async function testLoadResetsItemSequences() {
 
     await inTenant(t.tenantId, (m) => m.query(
       `INSERT INTO item_sequences (tenant_id, entity_type, next_val)
-       VALUES ($1, 'incident', 8), ($1, 'task', 4)
+       VALUES ($1, 'incident', 8), ($1, 'task', 4), ($1, 'company', 9)
        ON CONFLICT (tenant_id, entity_type) DO UPDATE SET next_val = EXCLUDED.next_val`,
       [t!.tenantId],
     ));
@@ -936,11 +938,23 @@ async function testLoadResetsItemSequences() {
     ));
     assert.deepEqual(
       rows.map((row: { entity_type: string; next_val: number }) => [row.entity_type, Number(row.next_val)]),
-      [['document', 40], ['technology', 3]],
-      'the incident and task counters are gone; the document and technology counters stay',
+      [['company', 2], ['document', 40], ['technology', 3]],
+      'the incident and task counters are gone; the document and technology counters stay; the company one follows the starting company',
     );
     const first = await inTenant(t.tenantId, (m) => allocateItemNumbers('incident', t!.tenantId, 1, m));
     assert.equal(first, 1, 'the next incident is INC-1');
+    const [starting] = await inTenant(t.tenantId, (m) => m.query(`SELECT item_number FROM companies WHERE tenant_id = $1`, [t!.tenantId]));
+    assert.equal(starting.item_number, 1, 'the starting company is COMP-1');
+    const [company] = await inTenant(t.tenantId, (m) => m.query(
+      `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Loaded company', 'FR', 'Lyon') RETURNING item_number`,
+      [t!.tenantId],
+    ));
+    assert.equal(company.item_number, 2, 'the next company is COMP-2');
+    const [supplier] = await inTenant(t.tenantId, (m) => m.query(
+      `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Loaded supplier') RETURNING item_number`,
+      [t!.tenantId],
+    ));
+    assert.equal(supplier.item_number, 1, 'the next supplier is SUP-1');
 
     const [untouched] = await inTenant(other.tenantId, (m) => m.query(
       `SELECT next_val FROM item_sequences WHERE tenant_id = $1 AND entity_type = 'incident'`,

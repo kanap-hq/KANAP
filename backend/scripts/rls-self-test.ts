@@ -216,6 +216,32 @@ async function expectCrossTenantInsertBlocked(
   results.push({ name, ok: blocked });
 }
 
+/**
+ * A write refused by the tenant policy of `table` itself: an error from another table (the counter
+ * a BEFORE INSERT trigger writes, `item_sequences`) proves nothing about this one.
+ */
+async function expectTenantPolicyRefusal(
+  r: QueryRunner,
+  results: TestResult[],
+  name: string,
+  table: string,
+  sql: string,
+  params: unknown[],
+) {
+  let error: any = null;
+  await r.query('SAVEPOINT rls_policy_refusal');
+  try {
+    await r.query(sql, params);
+  } catch (err) {
+    error = err;
+  } finally {
+    await r.query('ROLLBACK TO SAVEPOINT rls_policy_refusal');
+  }
+  const message = String(error?.message ?? '');
+  const ok = error?.code === '42501' && message.includes(`row-level security policy for table "${table}"`);
+  results.push({ name, ok, info: ok ? undefined : (error ? message : 'not refused') });
+}
+
 async function insertMinimalAgentDefinition(
   r: QueryRunner,
   id: string,
@@ -1732,12 +1758,17 @@ async function main() {
 
     await setTenant(r, tenantTwoId);
     await expectCrossTenantReadBlocked(r, results, 'companies: cross-tenant read blocked', `SELECT 1 FROM companies WHERE id = $1`, [companyId]);
-    await expectCrossTenantInsertBlocked(
+    // An insert into another tenant is refused by item_sequences first (the BEFORE INSERT trigger
+    // that numbers the row runs before the WITH CHECK): an update, which fires no numbering, moving
+    // the company to the other tenant proves the companies policy itself.
+    await setTenant(r, tenantOneId);
+    await expectTenantPolicyRefusal(
       r,
       results,
-      'companies: cross-tenant insert blocked',
-      `INSERT INTO companies(tenant_id, name, country_iso, city, status) VALUES ($1, $2, $3, $4, 'enabled')`,
-      [tenantOneId, `X ${tag}`, 'US', 'Boston'],
+      'companies: move to another tenant blocked',
+      'companies',
+      `UPDATE companies SET tenant_id = $1 WHERE id = $2`,
+      [tenantTwoId, companyId],
     );
 
     // portfolio_criterion_values: tenant_id re-added by migration 1853560000000.

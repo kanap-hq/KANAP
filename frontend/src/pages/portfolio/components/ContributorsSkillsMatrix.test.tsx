@@ -237,21 +237,21 @@ describe('ContributorsSkillsMatrix', () => {
   it('opens a contributor from the column header when they are in the columns', () => {
     renderMatrix();
     fireEvent.click(screen.getByRole('button', { name: 'Ada Lovelace' }));
-    expect(screen.getByTestId('location').textContent).toBe('/portfolio/contributors/CTR-1/skills');
+    expect(screen.getByTestId('location').textContent).toBe('/portfolio/contributors/MEM-1/skills');
   });
 
   it('opens a contributor from the row when they are in the rows', () => {
     renderMatrix();
     putSkillsInColumns();
     fireEvent.click(screen.getByRole('row', { name: 'Grace Hopper' }));
-    expect(screen.getByTestId('location').textContent).toBe('/portfolio/contributors/CTR-2/skills');
+    expect(screen.getByTestId('location').textContent).toBe('/portfolio/contributors/MEM-2/skills');
   });
 
   it('opens a contributor row from the keyboard', () => {
     renderMatrix();
     putSkillsInColumns();
     fireEvent.keyDown(screen.getByRole('row', { name: 'Ada Lovelace' }), { key: 'Enter' });
-    expect(screen.getByTestId('location').textContent).toBe('/portfolio/contributors/CTR-1/skills');
+    expect(screen.getByTestId('location').textContent).toBe('/portfolio/contributors/MEM-1/skills');
   });
 
   it('brings the rest of the catalogue back when unused skills are asked for', () => {

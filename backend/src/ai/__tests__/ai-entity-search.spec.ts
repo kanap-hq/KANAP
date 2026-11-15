@@ -383,6 +383,52 @@ async function testIndexedBudgetLineReferences() {
   ]);
 }
 
+/**
+ * The five families numbered in lot R1 of 26.11.9: a query that is one of their references asks the
+ * index for that number with that prefix (ranked first), and each row comes back with its reference.
+ * `CTR-2` is a contract.
+ */
+async function testIndexedBusinessReferences() {
+  const cases: Array<[string, string, string]> = [
+    ['SUP-3', 'suppliers', 'SUP'],
+    ['comp-1', 'companies', 'COMP'],
+    ['CTCT-2', 'contacts', 'CTCT'],
+    ['DEPT-4', 'departments', 'DEPT'],
+    ['CTR-2', 'contracts', 'CTR'],
+  ];
+  for (const [query, entityType, prefix] of cases) {
+    const number = Number(query.split('-')[1]);
+    let asked: unknown[] = [];
+    const service = createService();
+    const context = createContext(async (sql, params) => {
+      if (!isIndexSearch(sql)) return [];
+      asked = params ?? [];
+      return [{
+        entity_type: entityType, entity_id: `${entityType}-1`, ref_prefix: prefix, ref_number: number,
+        label: 'Record', summary: null, status: 'enabled', extra_json: null, source_updated_at: null, total_count: 1, score: 4,
+      }];
+    });
+    const result = await withFlag(undefined, () => service.searchAll(context as any, { query, limit: 10 }));
+    assert.ok(asked.includes(number), `${query}: the index is asked for number ${number}`);
+    assert.ok(asked.includes(prefix), `${query}: ranked on the prefix ${prefix}`);
+    assert.deepEqual((result.items as any[]).map((item) => [item.type, item.ref]), [[entityType, `${prefix}-${number}`]], query);
+  }
+  // A number written with a leading zero is no reference (SUP-013, an ERP ID): a text search.
+  for (const query of ['SUP-013', 'CTR-07']) {
+    let asked: unknown[] = [];
+    const service = createService();
+    const context = createContext(async (sql, params) => {
+      if (isIndexSearch(sql)) asked = params ?? [];
+      return [];
+    });
+    await withFlag(undefined, () => service.searchAll(context as any, { query, limit: 10 }));
+    const number = Number(query.split('-')[1]);
+    assert.ok(asked.includes(query), `${query}: searched as text`);
+    assert.ok(!asked.includes(number), `${query}: no reference number asked`);
+    assert.ok(!asked.includes(query.split('-')[0]), `${query}: no reference prefix asked`);
+  }
+}
+
 /** Application, asset, request, project and task context each read several rows on one connection. */
 async function testEntityContextsDoNotOverlapQueries() {
   const service = createService();
@@ -563,6 +609,7 @@ async function run() {
     rpo_minutes: 0,
   });
   await testIndexedBudgetLineReferences();
+  await testIndexedBusinessReferences();
   await testOverflowNumberBindsNullInt();
   await testLegacyOverflowNumberBindsNullInt();
   await testEntityContextsDoNotOverlapQueries();

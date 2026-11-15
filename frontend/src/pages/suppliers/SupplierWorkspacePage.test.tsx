@@ -69,7 +69,7 @@ const mocked = api as unknown as {
 const SUPPLIER = {
   id: 's-1',
   name: 'Acme Software',
-  erp_supplier_id: 'SUP-001',
+  erp_supplier_id: 'F10001',
   notes: 'Net 30',
   status: 'enabled',
   disabled_at: null,
@@ -147,7 +147,7 @@ describe('SupplierWorkspacePage', () => {
   it('shows the name as title, the ERP ID as reference, the status and no save button', async () => {
     renderAt('/master-data/suppliers/s-1/overview');
     expect(await screen.findByText('Acme Software')).toBeInTheDocument();
-    expect(screen.getByText('SUP-001')).toBeInTheDocument();
+    expect(screen.getByText('F10001')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'suppliers.status.enabled' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /2/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
@@ -158,7 +158,7 @@ describe('SupplierWorkspacePage', () => {
     stored = { ...SUPPLIER, erp_supplier_id: null };
     renderAt('/master-data/suppliers/s-1/overview');
     await screen.findByText('Acme Software');
-    expect(screen.queryByText('SUP-001')).toBeNull();
+    expect(screen.queryByText('F10001')).toBeNull();
     expect(screen.queryByText('s-1')).toBeNull();
   });
 
@@ -203,7 +203,7 @@ describe('SupplierWorkspacePage', () => {
   it('saves the ERP ID on blur, and sends nothing when it is unchanged', async () => {
     renderAt('/master-data/suppliers/s-1/overview');
     const erp = await screen.findByLabelText('suppliers.fields.erpSupplierId');
-    await waitFor(() => expect(erp).toHaveValue('SUP-001'));
+    await waitFor(() => expect(erp).toHaveValue('F10001'));
     fireEvent.focus(erp);
     fireEvent.blur(erp);
     expect(mocked.patch).not.toHaveBeenCalled();
@@ -221,7 +221,7 @@ describe('SupplierWorkspacePage', () => {
     mocked.patch.mockRejectedValueOnce({ response: { status: 400, data: { message: 'erp_supplier_id must be a string' } } });
     renderAt('/master-data/suppliers/s-1/overview');
     const erp = await screen.findByLabelText('suppliers.fields.erpSupplierId');
-    await waitFor(() => expect(erp).toHaveValue('SUP-001'));
+    await waitFor(() => expect(erp).toHaveValue('F10001'));
     fireEvent.focus(erp);
     fireEvent.change(erp, { target: { value: 'SUP-2' } });
     fireEvent.blur(erp);
@@ -257,7 +257,7 @@ describe('SupplierWorkspacePage', () => {
   it('confirms a field saved at once with Saved', async () => {
     renderAt('/master-data/suppliers/s-1/overview');
     const erp = await screen.findByLabelText('suppliers.fields.erpSupplierId');
-    await waitFor(() => expect(erp).toHaveValue('SUP-001'));
+    await waitFor(() => expect(erp).toHaveValue('F10001'));
     fireEvent.focus(erp);
     fireEvent.change(erp, { target: { value: 'SUP-100' } });
     fireEvent.blur(erp);
@@ -432,7 +432,7 @@ describe('SupplierWorkspacePage', () => {
     mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new', creation_token: 'token-1' } });
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
     const erp = screen.getByLabelText('suppliers.fields.erpSupplierId');
-    fireEvent.change(erp, { target: { value: 'SUP-077' } });
+    fireEvent.change(erp, { target: { value: 'F10077' } });
     fireEvent.blur(erp);
     expect(mocked.post).not.toHaveBeenCalled();
     const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
@@ -441,7 +441,7 @@ describe('SupplierWorkspacePage', () => {
     fireEvent.blur(title);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/suppliers', {
       name: 'Initech',
-      erp_supplier_id: 'SUP-077',
+      erp_supplier_id: 'F10077',
       notes: null,
       status: 'enabled',
       disabled_at: null,
@@ -500,7 +500,7 @@ describe('SupplierWorkspacePage', () => {
   it('shows a missing or taken name under the header title and gives it the focus', async () => {
     renderAt('/master-data/suppliers/new/overview');
     const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
-    fireEvent.change(screen.getByLabelText('suppliers.fields.erpSupplierId'), { target: { value: 'SUP-077' } });
+    fireEvent.change(screen.getByLabelText('suppliers.fields.erpSupplierId'), { target: { value: 'F10077' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('suppliers.messages.nameRequired')).toBeInTheDocument();
     expect(title).toHaveFocus();

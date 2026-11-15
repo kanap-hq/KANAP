@@ -124,7 +124,8 @@ export default function ContributorsOrgChart({ contributors, employmentTypes, on
     [hiddenTypeNames, pillTypes],
   );
 
-  const rootReference = searchParams.get('root');
+  // An address saved before MEM-N still names its root by CTR-N.
+  const rootReference = searchParams.get('root')?.replace(/^CTR-/i, 'MEM-') ?? null;
   const includeDisabled = searchParams.get('disabled') === '1';
   const depthParam = Number(searchParams.get('depth'));
   const maxDepth = DEPTH_OPTIONS.includes(depthParam) ? depthParam : null;

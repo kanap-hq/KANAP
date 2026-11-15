@@ -28,6 +28,7 @@ function createHarness() {
   let company = {
     id: COMPANY_ID,
     tenant_id: TENANT_ID,
+    item_number: 7,
     name: 'Acme',
     country_iso: 'FR',
     city: 'Paris',
@@ -366,6 +367,8 @@ async function testPrepareAndExecuteUpdatePreview() {
   });
 
   assert.equal(prepared.targetEntityId, COMPANY_ID);
+  assert.equal(prepared.currentValues?.target_ref, 'COMP-7', 'the preview names the company by its reference');
+  assert.equal(prepared.currentValues?.target_title, 'COMP-7 - Acme');
   assert.deepEqual(prepared.currentValues?.values, { city: 'Paris' });
   assert.deepEqual(prepared.mutationInput.fields, { city: 'Lyon' });
 
@@ -479,7 +482,7 @@ async function testDepartmentCreateResolvesCompanyName() {
   });
 
   assert.equal((prepared.mutationInput.fields as any).company_id, COMPANY_ID);
-  assert.equal((prepared.mutationInput.display_values as any).company_id, 'Acme');
+  assert.equal((prepared.mutationInput.display_values as any).company_id, 'COMP-7 - Acme', 'the company is named by its reference');
 }
 
 async function testExecuteCreateCanSeedDepartmentMetricsWithPreviewAudit() {
@@ -635,8 +638,44 @@ async function testLocationLabelNamesTheReferenceOnce() {
   console.log('  location reference label: OK');
 }
 
+/** Lot R1 of 26.11.9: a supplier, company, contact or department named by its reference (SUP-3...). */
+async function testBusinessReferencesNameTheRecord() {
+  const { service, context } = createHarness();
+  const rows: Record<string, Record<string, unknown>> = {
+    suppliers: { id: 's-1', item_number: 3, name: 'Caseificio', erp_supplier_id: 'F10003' },
+    companies: { id: 'c-1', item_number: 1, name: 'Formaggio' },
+    contacts: { id: 'p-1', item_number: 2, first_name: 'Anna', last_name: 'Rossi', email: 'anna@example.test' },
+    departments: { id: 'd-1', item_number: 4, name: 'Finance', company_name: 'Formaggio' },
+  };
+  const asked: Array<[string, unknown]> = [];
+  (context as any).manager = {
+    query: async (sql: string, params: unknown[]) => {
+      const table = Object.keys(rows).find((name) => sql.includes(`FROM ${name}`));
+      if (!table) return [];
+      asked.push([table, params[2]]);
+      return params[2] === rows[table].item_number ? [{ ...rows[table] }] : [];
+    },
+  };
+  const cases: Array<[string, string, string, string]> = [
+    ['suppliers', 'SUP-3', 'SUP-3', 'SUP-3 - Caseificio'],
+    ['companies', 'comp-1', 'COMP-1', 'COMP-1 - Formaggio'],
+    ['contacts', 'CTCT-2', 'CTCT-2', 'CTCT-2 - Anna Rossi'],
+    ['departments', 'DEPT-4', 'DEPT-4', 'DEPT-4 - Finance (Formaggio)'],
+  ];
+  for (const [entityType, input, ref, label] of cases) {
+    const found = await service.resolveRecordReference(context, entityType as any, input);
+    assert.equal(found.ref, ref, `${entityType}: the reference`);
+    assert.equal(found.label, label, `${entityType}: the title leads with the reference`);
+  }
+  // Another family's prefix names no number: SUP-1 is no company.
+  await assert.rejects(service.resolveRecordReference(context, 'companies', 'SUP-1'));
+  assert.deepEqual(asked.at(-1), ['companies', null]);
+  console.log('  business references name suppliers, companies, contacts and departments: OK');
+}
+
 async function main() {
   await testLocationLabelNamesTheReferenceOnce();
+  await testBusinessReferencesNameTheRecord();
   await testPrepareCreatePreviewNormalizesCompanyFields();
   await testExecuteCreateRoutesThroughDomainServiceWithPreviewAudit();
   await testExecuteCreateCanSeedCompanyMetricsWithPreviewAudit();

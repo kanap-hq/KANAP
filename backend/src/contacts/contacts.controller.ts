@@ -17,6 +17,7 @@ import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { resolveToUuid } from '../common/resolve-item-id';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contacts')
@@ -49,15 +50,15 @@ export class ContactsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'reader')
   @Get(':id')
-  get(@Param('id') id: string, @Req() req: any) { return this.svc.get(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id }); }
+  async get(@Param('id') idOrRef: string, @Req() req: any) { return this.svc.get(await resolveToUuid(idOrRef, 'contact', req?.queryRunner?.manager), { manager: req?.queryRunner?.manager, tenantId: req.tenant.id }); }
 
   // Where the contact is used: the groups the caller may read (common/record-usages.ts).
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'reader')
   @Get(':id/usages')
-  usages(@Param('id', new ParseUUIDPipe()) id: string, @Tenant() ctx: TenantRequest) {
+  async usages(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
     if (!ctx.manager) throw new InternalServerErrorException('No request transaction');
-    return readContactUsages(ctx.manager, ctx.tenantId, id, ctx);
+    return readContactUsages(ctx.manager, ctx.tenantId, await resolveToUuid(idOrRef, 'contact', ctx.manager), ctx);
   }
 
   @UseGuards(PermissionGuard)
@@ -86,8 +87,8 @@ export class ContactsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'member')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: ContactUpsertDto, @Req() req: any) {
-    return this.svc.update(id, body, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null });
+  async update(@Param('id') idOrRef: string, @Body() body: ContactUpsertDto, @Req() req: any) {
+    return this.svc.update(await resolveToUuid(idOrRef, 'contact', req?.queryRunner?.manager), body, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null });
   }
 
   @ReservedToUnscopedDataAccess()
@@ -103,7 +104,7 @@ export class ContactsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'admin')
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: any) { return this.svc.delete(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null }); }
+  async remove(@Param('id') idOrRef: string, @Req() req: any) { return this.svc.delete(await resolveToUuid(idOrRef, 'contact', req?.queryRunner?.manager), { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null }); }
 
   @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)

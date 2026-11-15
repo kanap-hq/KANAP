@@ -176,6 +176,66 @@ async function testCreateAndSuppliers(runner: { query: Function; manager: Entity
   assert.equal(link.n, 1);
 }
 
+/**
+ * A supplier the file creates takes the next SUP number; a name stored by someone else after the
+ * load read the suppliers (here, just before its insert) is linked and burns no number, so the
+ * numbers stay without a hole.
+ */
+async function testSupplierNumbersWithoutHoles(runner: { query: Function; manager: EntityManager }, service: BudgetFileService) {
+  const tenantId = await seedTenant(runner as any, 'csv-sup-num');
+  const [chart] = await runner.query(
+    `INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, 'CSV', 'Chart', 'FR') RETURNING id`,
+    [tenantId],
+  );
+  await runner.query(`INSERT INTO companies (tenant_id, name, country_iso, city, coa_id) VALUES ($1, 'Acme', 'FR', 'Lyon', $2)`, [tenantId, chart.id]);
+  await runner.query(`INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) VALUES ($1, $2, 6000, 'Account')`, [tenantId, chart.id]);
+  const caller = { manager: runner.manager, tenantId, userId: null };
+  const file = 'item_number,name,company_name,account_number,currency,supplier_name,budget_2026\n'
+    + ',Widget,Acme,6000,EUR,Newco,120.00\n,Gadget,Acme,6000,EUR,Othercorp,120.00\n';
+  const options = { language: 'en', dateOrder: '', createSuppliers: true, canCreateSuppliers: true };
+  const preflight = await service.preflight('opex', Buffer.from(file), caller, options);
+  assert.equal(preflight.ok, true, JSON.stringify(preflight.errors));
+  const audit = dbAudit(runner.manager);
+  const query = runner.manager.query.bind(runner.manager);
+  let meanwhile: { id: string; item_number: number } | undefined;
+  (runner.manager as any).query = async (sql: string, params?: unknown[]) => {
+    if (!meanwhile && /^\s*INSERT INTO suppliers/.test(sql)) {
+      [meanwhile] = await query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'NEWCO') RETURNING id::text AS id, item_number`, [tenantId]);
+    }
+    return query(sql, params);
+  };
+  let result: Awaited<ReturnType<BudgetFileService['importFile']>>;
+  try {
+    result = await service.importFile('opex', Buffer.from(file), preflight.snapshot, caller, options, {
+      items: opexItems(audit), audit, freeze: noFreeze,
+    });
+  } finally {
+    delete (runner.manager as any).query;
+  }
+  assert.equal(meanwhile?.item_number, 1);
+  assert.equal('inserted' in result && result.inserted, 2);
+  const suppliers = await runner.query(
+    `SELECT name, item_number FROM suppliers WHERE tenant_id = $1 ORDER BY item_number`,
+    [tenantId],
+  );
+  assert.deepEqual(suppliers.map((row: { name: string; item_number: number }) => [row.name, row.item_number]), [['NEWCO', 1], ['Othercorp', 2]]);
+  const [sequence] = await runner.query(
+    `SELECT next_val::int AS next_val FROM item_sequences WHERE tenant_id = $1 AND entity_type = 'supplier'`,
+    [tenantId],
+  );
+  assert.equal(sequence.next_val, 3, 'no number burned by the name already stored');
+  const linked = await runner.query(
+    `SELECT count(*)::int AS n FROM spend_items WHERE tenant_id = $1 AND supplier_id = $2`,
+    [tenantId, meanwhile!.id],
+  );
+  assert.equal(linked[0].n, 1, 'the line is linked to the supplier already stored');
+  const [created] = await runner.query(
+    `SELECT after_json FROM audit_log WHERE tenant_id = $1 AND table_name = 'suppliers' AND action = 'create'`,
+    [tenantId],
+  );
+  assert.equal(created.after_json.item_number, 2, 'the creation entry carries the number');
+}
+
 async function testCapexSpread(runner: { query: Function; manager: EntityManager }, service: BudgetFileService, audit: ReturnType<typeof dbAudit>) {
   const tenantId = await seedTenant(runner as any, 'csv-c2b-capex');
   const itemId = await seedItem(runner as any, 'capex', tenantId, 1, 'Server');
@@ -1504,6 +1564,7 @@ async function main() {
     assert.equal(await amountSum(runner, 'spend_amounts', versionId), '200');
 
     await testCreateAndSuppliers(runner, service);
+    await testSupplierNumbersWithoutHoles(runner, service);
     await testCapexSpread(runner, service, audit);
     await testGroupedMatchesPayload(runner, service, audit);
     await testMonthCells(runner);

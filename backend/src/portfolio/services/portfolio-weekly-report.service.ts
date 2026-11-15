@@ -1580,7 +1580,7 @@ export class PortfolioWeeklyReportService {
     for (const row of rows) {
       people.set(row.user_id, {
         name: row.name ?? '',
-        contributorRef: row.item_number != null ? `CTR-${row.item_number}` : null,
+        contributorRef: row.item_number != null ? `MEM-${row.item_number}` : null,
         teamId: row.team_id ?? null,
         teamName: row.team_name ?? null,
       });

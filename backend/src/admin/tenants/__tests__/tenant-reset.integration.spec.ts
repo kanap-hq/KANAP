@@ -149,8 +149,9 @@ async function testResetMatchesActivatedTenant() {
 
     // The starting state, without ids or timestamps.
     assert.deepEqual(await baselineSnapshot(b.tenantId), await baselineSnapshot(a.tenantId));
-    const [company] = await rowsOf(b.tenantId, `SELECT name, country_iso FROM companies WHERE tenant_id = $1`);
-    assert.deepEqual({ ...company }, { name: 'Fromage Reset Org', country_iso: 'DE' });
+    // The starting company made again is COMP-1.
+    const [company] = await rowsOf(b.tenantId, `SELECT name, country_iso, item_number FROM companies WHERE tenant_id = $1`);
+    assert.deepEqual({ ...company }, { name: 'Fromage Reset Org', country_iso: 'DE', item_number: 1 });
 
     // Kept: AI settings, the real user (detached from the sample company), its settings.
     assert.deepEqual({
@@ -217,8 +218,8 @@ async function testRoundTrip() {
 
     assert.deepEqual(countDifferences(initialCounts, await countTenantRows(b.tenantId), ['audit_log']), []);
     assert.deepEqual(await baselineSnapshot(b.tenantId), initialSnapshot);
-    const [company] = await rowsOf(b.tenantId, `SELECT name, country_iso FROM companies WHERE tenant_id = $1`);
-    assert.deepEqual({ ...company }, { name: 'Round Trip Org', country_iso: 'FR' });
+    const [company] = await rowsOf(b.tenantId, `SELECT name, country_iso, item_number FROM companies WHERE tenant_id = $1`);
+    assert.deepEqual({ ...company }, { name: 'Round Trip Org', country_iso: 'FR', item_number: 1 });
   } finally {
     await cleanupTenants([b?.tenantId]);
   }

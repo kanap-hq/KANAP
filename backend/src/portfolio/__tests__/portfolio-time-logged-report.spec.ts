@@ -172,7 +172,7 @@ async function run() {
 
   // A contributor without entries is listed all the same, with empty cells.
   assert.deepEqual(infra.members.map((member) => member.name), ['Dan Petit']);
-  assert.equal(infra.members[0].contributorRef, 'CTR-7');
+  assert.equal(infra.members[0].contributorRef, 'MEM-7');
   assert.equal(infra.members[0].cells.length, 6);
   assert.ok(infra.members[0].cells.every((cell) => cell.projectDays === 0 && cell.otherDays === 0));
   assert.ok(infra.cells.every((cell) => cell.projectDays === 0 && cell.otherDays === 0));
