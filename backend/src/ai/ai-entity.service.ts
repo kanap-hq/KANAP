@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException, Optional } 
 import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { bilingualDocumentTsQuerySql } from '../common/document-search-tsquery';
 import { isPaddedReferenceNumber, parseItemNumber } from '../common/parse-item-number';
+import { contractLabelSql } from '../contracts/contract-reference';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -1341,7 +1342,7 @@ export class AiEntityService {
     if (await this.canReadType(context, 'budget_lines')) {
       relatedNameSql.push(`(COALESCE(rel_si.product_name, '') ILIKE $3 OR COALESCE(rel_cx.product_name, '') ILIKE $3)`);
     }
-    if (await this.canReadType(context, 'contracts')) relatedNameSql.push(`COALESCE(rel_ct.name, '') ILIKE $3`);
+    if (await this.canReadType(context, 'contracts')) relatedNameSql.push(`COALESCE(${contractLabelSql('rel_ct')}, '') ILIKE $3`);
     if (await this.canReadType(context, 'incidents')) relatedNameSql.push(`COALESCE(${incidentRelatedTitleSql('rel_inc')}, '') ILIKE $3`);
     params.push(limit);
     const limitRef = `$${params.length}`;
@@ -2081,7 +2082,7 @@ export class AiEntityService {
               tt.name AS task_type_name,
               t.related_object_type,
               t.related_object_id,
-              COALESCE(rel_proj.name, rel_si.product_name, rel_ct.name, rel_cx.product_name, ${incidentRelatedLabelSql('rel_inc')}) AS related_object_name,
+              COALESCE(rel_proj.name, rel_si.product_name, ${contractLabelSql('rel_ct')}, rel_cx.product_name, ${incidentRelatedLabelSql('rel_inc')}) AS related_object_name,
               CONCAT_WS(' ', u_assign.first_name, u_assign.last_name) AS assignee_name,
               t.priority_level
        FROM tasks t
@@ -3887,7 +3888,7 @@ export class AiEntityService {
               phase.planned_end AS phase_planned_end,
               phase.sequence AS phase_sequence,
               tt.name AS task_type_name,
-              COALESCE(rel_proj.name, rel_si.product_name, rel_ct.name, rel_cx.product_name, ${incidentRelatedLabelSql('rel_inc')}) AS related_object_name,
+              COALESCE(rel_proj.name, rel_si.product_name, ${contractLabelSql('rel_ct')}, rel_cx.product_name, ${incidentRelatedLabelSql('rel_inc')}) AS related_object_name,
               pr.id AS converted_request_id,
               pr.item_number AS converted_request_item_number,
               pr.name AS converted_request_name,

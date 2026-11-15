@@ -72,6 +72,8 @@ let hiddenTaskId: string;
 let contractVisible: string;
 let contractHidden: string;
 let contractTaskId: string;
+/** The references of the two contracts (`CTR-n`, lot R4 of 26.11.9). */
+const contractReferences: Record<'visible' | 'hidden', string> = { visible: '', hidden: '' };
 let technologyId: string;
 /** A CAPEX budget line of the same family, visible to Rita (her company and centre). */
 let capexLineId: string;
@@ -165,6 +167,9 @@ async function seedPlaid(): Promise<void> {
     ))[0].id as string;
     contractVisible = await contract('visible', s.infFr);
     contractHidden = await contract('hidden', null);
+    for (const row of await q(`SELECT id, item_number FROM contracts WHERE tenant_id = $1 AND id = ANY($2)`, [s.tenantId, [contractVisible, contractHidden]])) {
+      contractReferences[row.id === contractVisible ? 'visible' : 'hidden'] = `CTR-${row.item_number}`;
+    }
     await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, contractVisible, s.lines.L1]);
     // L3 is read by Rita but read-only: a link that stays is not checked again by a replacement.
     await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, contractVisible, s.lines.L3]);
@@ -260,6 +265,7 @@ function contractTraces(label: 'visible' | 'hidden'): string[] {
 function assertNoContractTrace(value: unknown, what: string): void {
   const text = typeof value === 'string' ? value : JSON.stringify(value);
   for (const trace of contractTraces('hidden')) assert.ok(!text.includes(trace), `${what}: shows the hidden contract (${trace})`);
+  assert.ok(!new RegExp(`${contractReferences.hidden}(?!\\d)`).test(text), `${what}: shows the hidden contract's reference`);
 }
 
 /** The contract labels named in an answer. */
@@ -468,6 +474,27 @@ async function testPlaidReads(): Promise<void> {
   assertNoContractTrace(byContractName, 'search_all by the hidden contract name (Rita)');
   assert.ok(!(byContractName.items ?? []).some((item: any) => item.id === contractTaskId), 'search_all: not the task of CH');
   assert.ok((await tool(ulla, 'search_all', { query: `DA 4D contract hidden ${tag}` })).items?.some((item: any) => item.id === contractTaskId), 'Ulla finds the task by the contract name');
+  // Kad names a contract by its reference and name (lot R4 of 26.11.9), as the task list does.
+  const ullaContractTask = (await tool(ulla, 'query_entities', contractTasks)).items?.find((item: any) => item.id === contractTaskId);
+  assert.equal(ullaContractTask?.metadata?.related_label, `${contractReferences.hidden} · DA 4D contract hidden ${tag}`, 'Ulla: CTR-n · name');
+  assert.ok(JSON.stringify(await tool(ulla, 'get_entity_detail', { entity_type: 'tasks', entity_id: contractTaskId })).includes(`${contractReferences.hidden} · DA 4D contract hidden ${tag}`), 'Ulla: the task detail too');
+
+  // The contracts by reference (lot R4): Kad's `reference` filter and the detail by `CTR-n` reach
+  // the contract of Rita's access, never the other; the hidden one answers as a missing reference.
+  const byReference = async (person: string, reference: string) => tool(person, 'query_entities', { entity_type: 'contracts', filters: { reference } });
+  const ritaVisibleByRef = await byReference(rita, contractReferences.visible);
+  assert.deepEqual(contractsIn(ritaVisibleByRef), ['visible'], `reference filter: Rita reaches CF (${JSON.stringify(ritaVisibleByRef)})`);
+  const ritaHiddenByRef = await byReference(rita, contractReferences.hidden);
+  assert.equal(ritaHiddenByRef.total, 0, 'reference filter: nothing out of Rita\'s reach');
+  assertNoContractTrace(ritaHiddenByRef, 'reference filter of CH (Rita)');
+  assert.deepEqual(contractsIn(await byReference(ulla, contractReferences.hidden)), ['hidden'], 'reference filter: Ulla reaches CH');
+  assert.ok(JSON.stringify(await tool(rita, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractReferences.visible })).includes(`DA 4D contract visible ${tag}`), 'detail by reference: CF (Rita)');
+  const missingReference = 'CTR-987654';
+  sameRefusal(
+    await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractReferences.hidden })),
+    await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'contracts', entity_id: missingReference })),
+    contractReferences.hidden, missingReference, 'get_entity_detail of CH by reference (Rita)',
+  );
 
   // The line detail names its visible contract only.
   const lineDetail = await tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: s.lines.L1 });

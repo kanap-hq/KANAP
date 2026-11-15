@@ -25,6 +25,7 @@ import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
+import { contractLabel } from '../contracts/contract-reference';
 import {
   IncidentViewer,
   taskIncidentVisibilityQueryBuilderClause,
@@ -687,11 +688,11 @@ export class TasksUnifiedService {
 
     if (type === 'contract') {
       const [row] = await manager.query(
-        'SELECT name FROM contracts WHERE id = $1 LIMIT 1',
+        'SELECT item_number, name FROM contracts WHERE id = $1 LIMIT 1',
         [id],
       );
       if (!row) return id;
-      return `Contract: ${row.name}`;
+      return contractLabel(row.item_number, row.name);
     }
 
     if (type === 'capex_item') {

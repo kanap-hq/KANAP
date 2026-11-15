@@ -10,6 +10,7 @@ import { allocateItemNumbers } from '../common/item-number.service';
 import { richTextCell } from '../common/csv/rich-text-cell';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { taskIncidentVisibilitySql } from '../incidents/incident-visibility';
+import { contractReferenceNumber } from '../contracts/contract-reference';
 
 const TASK_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -747,10 +748,25 @@ export const taskCsvConfig: CsvEntityConfig = {
       for (const row of rows) {
         idByName.set(String(row.name).toLowerCase(), row.id);
       }
+      // A contract is also named by its reference (`CTR-12`), as the task list shows it; the
+      // reference wins over a contract that would carry it as its name.
+      if (type === 'contract') {
+        const numbers = items
+          .map((i) => contractReferenceNumber(i.name))
+          .filter((n): n is number => n !== null);
+        if (numbers.length > 0) {
+          const byNumber: Array<{ id: string; item_number: number }> = await context.manager.query(
+            `SELECT id, item_number FROM contracts WHERE tenant_id = $1 AND item_number = ANY($2::int[])`,
+            [context.tenantId, numbers],
+          );
+          for (const row of byNumber) idByName.set(`ctr-${row.item_number}`, row.id);
+        }
+      }
 
       // Resolve each entity
       for (const { entity, name } of items) {
-        const id = idByName.get(name.toLowerCase());
+        const reference = type === 'contract' ? contractReferenceNumber(name) : null;
+        const id = (reference !== null ? idByName.get(`ctr-${reference}`) : undefined) ?? idByName.get(name.toLowerCase());
         if (id) {
           entity.related_object_id = id;
         } else {

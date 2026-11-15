@@ -7,6 +7,7 @@ import {
 } from '../auth/business-contributor-scope';
 import { TASK_HIDDEN_CONTRACT_SQL, TASK_HIDDEN_LINE_REFERENCE_SQL } from '../spend/tasks.service';
 import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
+import { contractLabelSql } from '../contracts/contract-reference';
 
 interface ServiceOptions {
   manager?: EntityManager;
@@ -517,7 +518,7 @@ export class DashboardDataService {
         CASE
           WHEN t.related_object_type IS NULL THEN NULL
           WHEN t.related_object_type = 'spend_item' THEN si.product_name
-          WHEN t.related_object_type = 'contract' THEN c.name
+          WHEN t.related_object_type = 'contract' THEN ${contractLabelSql('c')}
           WHEN t.related_object_type = 'capex_item' THEN ci.product_name
           WHEN t.related_object_type = 'project' THEN pp.name
           WHEN t.related_object_type = 'incident' THEN CASE WHEN inc.confidential THEN 'INC-' || inc.item_number::text ELSE 'INC-' || inc.item_number::text || ' · ' || inc.title END
