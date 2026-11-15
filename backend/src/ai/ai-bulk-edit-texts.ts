@@ -252,9 +252,26 @@ const FAMILY_WORDS: Readonly<Record<'budget_lines' | 'applications', Readonly<Re
 
 export type BulkEditFamily = keyof typeof FAMILY_WORDS;
 
-/** The title of the card: the rows that will change. */
+/** The rows that will change, counted: the title of a card by filter, and the summaries. */
 export function bulkEditTitleText(family: BulkEditFamily, language: AiWriteLanguage, rows: number): string {
   return FAMILY_WORDS[family][language].title(rows);
+}
+
+/** The label of the card's change, "Change in bulk" (`ai:previewCard.fields.*_bulk_edit`). */
+export const BULK_EDIT_CARD_LABEL: Words = { en: 'Change in bulk', fr: 'Modification en masse', de: 'Massenänderung', es: 'Modificación masiva' };
+/** References a card's title names; the rest is counted. */
+const TITLE_REFS_SHOWN = 3;
+
+/**
+ * The title of the card: a card by references names them, up to three ("Change in bulk: APP-5,
+ * APP-40 and 2 more"), so that two such cards differ in the panel; a card by filter counts the rows
+ * that will change.
+ */
+export function bulkEditCardTitleText(family: BulkEditFamily, language: AiWriteLanguage, rows: number, refs: string[] | null): string {
+  if (!refs || refs.length === 0) return bulkEditTitleText(family, language, rows);
+  const shown = refs.slice(0, TITLE_REFS_SHOWN);
+  const more = refs.length - shown.length;
+  return `${BULK_EDIT_CARD_LABEL[language]}${COLON[language]}${shown.join(', ')}${more > 0 ? ` ${andMore(language, more)}` : ''}`;
 }
 
 const COLON: Words = { en: ': ', fr: ' : ', de: ': ', es: ': ' };

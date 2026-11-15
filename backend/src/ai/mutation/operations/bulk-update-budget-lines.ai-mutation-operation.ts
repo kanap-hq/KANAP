@@ -11,8 +11,10 @@ import {
   BUDGET_LINE_BULK_FIELD_LABELS,
   BUDGET_LINE_FILTER_LABELS,
   BUDGET_LINE_VALUE_WORDS,
+  BULK_EDIT_CARD_LABEL,
   bulkEditActionText,
   bulkEditCardText,
+  bulkEditCardTitleText,
   bulkEditTitleText,
   type BulkFilterPart,
 } from '../../ai-bulk-edit-texts';
@@ -46,12 +48,6 @@ import { AiTaskMutationSupportService } from '../ai-task-mutation-support.servic
 const TOOL = 'bulk_update_budget_lines';
 /** The change's key on the card; the frontend labels it (`ai:previewCard.fields.budget_line_bulk_edit`). */
 const CARD_FIELD = 'budget_line_bulk_edit';
-const CARD_FIELD_LABEL: Record<AiWriteLanguage, string> = {
-  en: 'Change in bulk',
-  fr: 'Modification en masse',
-  de: 'Massenänderung',
-  es: 'Modificación masiva',
-};
 const CARD_EXAMPLES = 5;
 
 const FIELDS = ['cost_center', 'account', 'paying_company', 'supplier', 'owner_it', 'owner_business', 'run_build', 'dimension'] as const;
@@ -239,11 +235,12 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     const changes = Number(values.changes) || 0;
     const done = applied ? Number(applied.changed) || 0 : changes;
     const filterParts = Array.isArray(mutation.filter_parts) ? (mutation.filter_parts as StoredFilterPart[]) : null;
+    const refs = filterParts ? null : Array.isArray(mutation.refs) ? (mutation.refs as unknown[]).map(text) : [];
     const card = bulkEditCardText({
       family: 'budget_lines',
       selection: filterParts
         ? { kind: 'filter', parts: filterParts.map((part) => this.filterPartWords(part, language)), defaultScope: mutation.default_scope === true }
-        : { kind: 'rows', refs: Array.isArray(mutation.refs) ? (mutation.refs as unknown[]).map(text) : [] },
+        : { kind: 'rows', refs: refs ?? [] },
       field: fieldLabel,
       value,
       rows: Number(values.rows) || 0,
@@ -271,8 +268,8 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       );
     }
     return {
-      target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: bulkEditTitleText('budget_lines', language, changes) },
-      changes: { [CARD_FIELD]: { label: CARD_FIELD_LABEL[language], from: null, to: card, format: 'markdown' } },
+      target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: bulkEditCardTitleText('budget_lines', language, changes, refs) },
+      changes: { [CARD_FIELD]: { label: BULK_EDIT_CARD_LABEL[language], from: null, to: card, format: 'markdown' } },
       summary,
     };
   }

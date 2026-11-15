@@ -12,8 +12,10 @@ import {
   APPLICATION_BULK_FIELD_LABELS,
   APPLICATION_FILTER_LABELS,
   APPLICATION_YES_NO_WORDS,
+  BULK_EDIT_CARD_LABEL,
   bulkEditActionText,
   bulkEditCardText,
+  bulkEditCardTitleText,
   bulkEditTitleText,
   type BulkFilterPart,
 } from '../../ai-bulk-edit-texts';
@@ -49,12 +51,6 @@ import { AiTaskMutationSupportService } from '../ai-task-mutation-support.servic
 const TOOL = 'bulk_update_applications';
 /** The change's key on the card; the frontend labels it (`ai:previewCard.fields.application_bulk_edit`). */
 const CARD_FIELD = 'application_bulk_edit';
-const CARD_FIELD_LABEL: Record<AiWriteLanguage, string> = {
-  en: 'Change in bulk',
-  fr: 'Modification en masse',
-  de: 'Massenänderung',
-  es: 'Modificación masiva',
-};
 const CARD_EXAMPLES = 5;
 /** The most people one role receives from a card. */
 const MAX_OWNERS = 20;
@@ -248,11 +244,12 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     const changes = Number(values.changes) || 0;
     const done = applied ? Number(applied.changed) || 0 : changes;
     const filterParts = Array.isArray(mutation.filter_parts) ? (mutation.filter_parts as StoredFilterPart[]) : null;
+    const refs = filterParts ? null : Array.isArray(mutation.refs) ? (mutation.refs as unknown[]).map(text) : [];
     const card = bulkEditCardText({
       family: 'applications',
       selection: filterParts
         ? { kind: 'filter', parts: filterParts.map((part) => this.filterPartWords(part, language)), defaultScope: mutation.default_scope === true }
-        : { kind: 'rows', refs: Array.isArray(mutation.refs) ? (mutation.refs as unknown[]).map(text) : [] },
+        : { kind: 'rows', refs: refs ?? [] },
       field: fieldLabel,
       value,
       rows: Number(values.rows) || 0,
@@ -280,8 +277,8 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       );
     }
     return {
-      target: { entity_type: 'applications', entity_id: null, ref: null, title: bulkEditTitleText('applications', language, changes) },
-      changes: { [CARD_FIELD]: { label: CARD_FIELD_LABEL[language], from: null, to: card, format: 'markdown' } },
+      target: { entity_type: 'applications', entity_id: null, ref: null, title: bulkEditCardTitleText('applications', language, changes, refs) },
+      changes: { [CARD_FIELD]: { label: BULK_EDIT_CARD_LABEL[language], from: null, to: card, format: 'markdown' } },
       summary,
     };
   }

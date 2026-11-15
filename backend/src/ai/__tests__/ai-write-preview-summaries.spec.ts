@@ -559,6 +559,16 @@ function testBudgetLineBulkEditCards() {
     current_values: { values: { rows: 2, changes: 2, unchanged: 0, refused: {}, examples: [{ ref: 'BL-3', title: 'Office licences' }, { ref: 'BL-7', title: 'Support' }] } },
   });
   assert.equal(card(byRows, 'fr'), 'Lignes choisies : BL-3, BL-7\n\nRun ou build → Build\n\n2 lignes à modifier\n\n- BL-3 Office licences\n- BL-7 Support');
+  // A card by references is titled by them, up to three, so two such cards differ in the panel.
+  assert.equal(operation.presentPreview(byRows, 'fr').target.title, 'Modification en masse : BL-3, BL-7');
+  const fiveRows = preview({ ...byRows, mutation_input: { field: 'run_build', value_label: 'build', refs: ['BL-1', 'BL-2', 'BL-3', 'BL-4', 'BL-5'] } });
+  const titles = (value: AiMutationPreview) => (['en', 'fr', 'de', 'es'] as const).map((language) => operation.presentPreview(value, language).target.title);
+  assert.deepEqual(titles(fiveRows), [
+    'Change in bulk: BL-1, BL-2, BL-3 and 2 more',
+    'Modification en masse : BL-1, BL-2, BL-3 et 2 autres',
+    'Massenänderung: BL-1, BL-2, BL-3 und 2 weitere',
+    'Modificación masiva: BL-1, BL-2, BL-3 y 2 más',
+  ]);
   // A closed value of the filter is quoted as any other value (run or build, in the four languages).
   const runFilter = preview({
     tool_name: 'bulk_update_budget_lines',
@@ -661,6 +671,8 @@ function testApplicationBulkEditCards() {
     current_values: { values: { rows: 2, changes: 2, unchanged: 0, refused: {}, examples: [] }, applied: { changed: 2, unchanged: 0, refused: {} } },
   });
   assert.equal(card(executed, 'en'), 'Chosen applications: APP-3, APP-7\n\nLifecycle → Retired\n\n2 applications to change');
+  assert.equal(operation.presentPreview(executed, 'en').target.title, 'Change in bulk: APP-3, APP-7');
+  assert.equal(operation.presentPreview(executed, 'fr').target.title, 'Modification en masse : APP-3, APP-7');
   assert.equal(summary(operation, executed, 'en'), 'Lifecycle changed on 2 applications.');
   assert.equal(summary(operation, executed, 'es'), 'Aplicada: modificación del campo «Ciclo de vida» en 2 aplicaciones.');
 }
