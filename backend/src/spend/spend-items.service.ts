@@ -548,7 +548,12 @@ export class SpendItemsService {
     const newSupplierId = saved.supplier_id ?? null;
     if (oldSupplierId !== newSupplierId) {
       await syncSupplierContactsWithinUpdate(mg, `${this.contract.label} ${saved.id}`, () =>
-        this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId }));
+        this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, {
+          manager: mg,
+          tenantId,
+          // The contacts' history row carries the line's own source (Kad's card, the budget file).
+          audit: { source: opts?.audit?.source ?? opts?.source, sourceRef: opts?.audit?.sourceRef ?? null },
+        }));
     }
 
     // Notify owners on status change
