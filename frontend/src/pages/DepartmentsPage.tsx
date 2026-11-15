@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { recordsInUseCheck } from '../utils/deleteCheck';
 import { LinkCellRenderer } from '../components/grid/renderers';
+import { MONO_FONT_FAMILY } from '../config/ThemeContext';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
@@ -70,6 +71,24 @@ export default function DepartmentsPage() {
   }, [buildWorkspaceSearch]);
 
   const columns: EnhancedColDef<any>[] = useMemo(() => [
+    {
+      // The reference (`DEPT-12`): filtered and sorted on the number by the server.
+      field: 'item_number',
+      headerName: t('departments.columns.reference'),
+      width: 100,
+      filter: 'agTextColumnFilter',
+      valueFormatter: (p: any) => (p.value ? `DEPT-${p.value}` : ''),
+      comparator: (a: number, b: number) => (a || 0) - (b || 0),
+      cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px', color: 'var(--kanap-text-secondary)', fontVariantNumeric: 'tabular-nums' },
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getWorkspaceHref(row, 'overview')}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
     {
       field: 'name',
       headerName: t('shared.columns.name'),

@@ -10,6 +10,7 @@ import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { recordsInUseCheck } from '../utils/deleteCheck';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
+import { MONO_FONT_FAMILY } from '../config/ThemeContext';
 import { getWithListContext } from '../lib/listContext';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
@@ -39,6 +40,7 @@ function TurnoverTotalCell({ value, missing }: { value: React.ReactNode; missing
 
 type CompanyRow = {
   id: string;
+  item_number?: number | null;
   name: string;
   country_iso: string;
   city?: string | null;
@@ -137,6 +139,24 @@ export default function CompaniesPage() {
   }, [buildWorkspaceSearch]);
 
   const columns: EnhancedColDef<CompanyRow>[] = useMemo(() => [
+    {
+      // The reference (`COMP-12`): filtered and sorted on the number by the server.
+      field: 'item_number',
+      headerName: t('companies.columns.reference'),
+      width: 100,
+      filter: 'agTextColumnFilter',
+      valueFormatter: (p: any) => (p.value ? `COMP-${p.value}` : ''),
+      comparator: (a: number, b: number) => (a || 0) - (b || 0),
+      cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px', color: 'var(--kanap-text-secondary)', fontVariantNumeric: 'tabular-nums' },
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getWorkspaceHref(row, 'overview')}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
     {
       field: 'name',
       headerName: t('shared.columns.name'),
