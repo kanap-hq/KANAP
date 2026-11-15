@@ -63,7 +63,7 @@ Während der Testphase ist Kad zunächst ausgeschaltet. Eine Administratorin ode
 
 **Was Sie sehen.** Der Export ist die Budgetdatei: dieselben Spalten, die der Import liest. Nutzen Sie sie als Vorlage, um Zeilen in großer Zahl zu ändern oder neue zu laden. Die Beispielmappe enthält einige Zeilen, die übrigen Spalten auf einem Blatt **Erweitert** und auf einem Blatt **Hinweise**, was jede Spalte aufnimmt. Ein Import prüft die ganze Datei, bevor er etwas lädt. **Exportieren** und **Importieren** sehen die Administratoren des Budgets.
 
-Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Kad mit **Datei anhängen** an eine Nachricht an. Kad liest die Spaltenüberschriften, den Typ jeder Spalte und die ersten zehn Zeilen und kann sagen, was jede Spalte enthält.
+Um von einer Datei auszugehen, die Sie schon führen, hängen Sie sie in Kad mit **Datei anhängen** an eine Nachricht an. Kad liest die Spaltenüberschriften, den Typ jeder Spalte, die ersten zehn Zeilen und die Werte, die sich in den Textspalten wiederholen, und kann sagen, was jede Spalte enthält.
 
 ## Wie es weitergeht
 

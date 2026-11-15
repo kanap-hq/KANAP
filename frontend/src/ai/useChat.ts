@@ -13,6 +13,7 @@ import {
   TokenUsage,
 } from './aiTypes';
 import i18n from '../i18n';
+import { latestOfChains } from './previewChains';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 
 let msgCounter = 0;
@@ -1063,9 +1064,16 @@ export function useChat() {
     }
   }, [abortActiveStream, refreshConversationUsage]);
 
+  // A card replaced by a choice of the person (an import card) gives way to the newest of its chain.
+  const shownPreviews = useMemo(() => latestOfChains(previews), [previews]);
+  const replacePreview = useCallback((next: AiMutationPreview) => {
+    setPreviews((prev) => upsertPreview(prev, next));
+  }, []);
+
   return useMemo(() => ({
     messages,
-    previews,
+    previews: shownPreviews,
+    replacePreview,
     conversationUsage,
     lastRequestUsage,
     builtinUsage,
@@ -1086,7 +1094,8 @@ export function useChat() {
     regenerate,
   }), [
     messages,
-    previews,
+    shownPreviews,
+    replacePreview,
     conversationUsage,
     lastRequestUsage,
     builtinUsage,

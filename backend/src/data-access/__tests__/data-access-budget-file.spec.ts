@@ -53,6 +53,11 @@ function clientOf(runner: QueryRunner): PgClient {
 }
 
 /** Runs `fn` as `person` in a savepoint, rolled back after. */
+/** Values by dimension code, the dimension's display name aside. */
+function byCode(entries: Array<{ dimension: string; names: string[] }> | undefined): Array<{ dimension: string; names: string[] }> {
+  return (entries ?? []).map(({ dimension, names }) => ({ dimension, names }));
+}
+
 async function as<T>(runner: QueryRunner, person: string, fn: (m: EntityManager) => Promise<T>): Promise<T> {
   await runner.query('SAVEPOINT person');
   try {
@@ -313,7 +318,7 @@ async function testDimensionValues(runner: QueryRunner, f: Fixture) {
     const file = csv(['item_number', open], [{ item_number: f.ref.L4, [open]: 'Open from file' }]);
     const report = await preflight(m, f, f.persons.marta, file);
     assert.equal(report.ok, true, JSON.stringify(report.errors));
-    assert.deepEqual(report.creates.dimensionValues, [{ dimension: f.a2, names: ['Open from file'] }], 'will be created');
+    assert.deepEqual(byCode(report.creates.dimensionValues), [{ dimension: f.a2, names: ['Open from file'] }], 'will be created');
     assert.deepEqual(report.creates.refusedDimensionValues, []);
     const written = await load(m, f, f.persons.marta, file, report.snapshot);
     assert.equal(written.ok, true);
@@ -326,12 +331,12 @@ async function testDimensionValues(runner: QueryRunner, f: Fixture) {
     const refused = await preflight(m, f, f.persons.marta, csv(['item_number', closed], [{ item_number: f.ref.L4, [closed]: 'Closed new' }]));
     assert.deepEqual(errorsOf(refused), [`${closed}: ${closedDimensionValueMessage('Closed new', f.a1)}`]);
     assert.deepEqual(refused.creates.dimensionValues, []);
-    assert.deepEqual(refused.creates.refusedDimensionValues, [{ dimension: f.a1, names: ['Closed new'] }], 'refused');
+    assert.deepEqual(byCode(refused.creates.refusedDimensionValues), [{ dimension: f.a1, names: ['Closed new'] }], 'refused');
   });
   await as(runner, f.persons.ulla, async (m) => {
     const report = await preflight(m, f, f.persons.ulla, csv(['item_number', closed], [{ item_number: f.ref.L4, [closed]: 'Closed new' }]));
     assert.equal(report.ok, true, 'created for an unscoped person, as before');
-    assert.deepEqual(report.creates.dimensionValues, [{ dimension: f.a1, names: ['Closed new'] }]);
+    assert.deepEqual(byCode(report.creates.dimensionValues), [{ dimension: f.a1, names: ['Closed new'] }]);
     assert.equal('refusedDimensionValues' in report.creates, false);
   });
   console.log('  dimension values from the file: open created, closed refused to a limited person and created for an unscoped one: OK');

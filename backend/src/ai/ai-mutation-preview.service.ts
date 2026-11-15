@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { codedForbidden } from '../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Repository } from 'typeorm';
+import { EntityManager, In, Raw, Repository } from 'typeorm';
 import {
   AiBulkMutationExclusionDto,
   AiExecutionContextWithManager,
@@ -249,6 +249,9 @@ export class AiMutationPreviewService {
         && !isFixedPreviewError(preview.error_message)
         && !isRightRefusalMessage(preview.error_message),
       conversation_id: preview.conversation_id ?? null,
+      ...(typeof preview.current_values?.replaces_preview_id === 'string'
+        ? { replaces_preview_id: preview.current_values.replaces_preview_id as string }
+        : {}),
       created_at: preview.created_at.toISOString(),
       expires_at: toIso(preview.expires_at),
       approved_at: toIso(preview.approved_at),
@@ -546,6 +549,8 @@ export class AiMutationPreviewService {
     if (!context.conversationId) {
       return null;
     }
+    // Found by its change (`mutation_input`, compared as JSON by the database), however many
+    // previews the conversation holds; the signature then compares the rest.
     const candidates = await this.getRepo(context.manager).find({
       where: {
         tenant_id: context.tenantId,
@@ -553,9 +558,11 @@ export class AiMutationPreviewService {
         user_id: context.userId,
         tool_name: toolName,
         status: In(['pending', 'approved', 'executed']),
+        mutation_input: Raw((column) => `${column} = CAST(:mutationInput AS jsonb)`, {
+          mutationInput: JSON.stringify(prepared.mutationInput ?? {}),
+        }),
       },
       order: { created_at: 'ASC' },
-      take: MAX_CONVERSATION_PREVIEWS,
     });
     const signature = this.previewSignature(toolName, prepared);
     return candidates.find((candidate) =>
@@ -675,6 +682,7 @@ export class AiMutationPreviewService {
     input: TInput,
   ): Promise<AiMutationPreviewDto> {
     const operation = this.operations.getOperation<TInput>(toolName);
+    await this.lockReplacementScope(context, operation, input as Record<string, unknown>);
     await this.assertWriteRights(context, operation, { input });
     await this.assertNotReservedForPerson(context, operation.toolName, (input as { entity_type?: unknown } | null)?.entity_type);
     await this.assertPendingCapacityAvailable(context, context.conversationId ?? null);
@@ -716,6 +724,25 @@ export class AiMutationPreviewService {
     await this.expireReplacedPreviews(context, operation, preview);
 
     return this.toPreviewDto(preview, await this.languageOf(context));
+  }
+
+  /**
+   * The previews of one scope in a conversation (an import's attached file) take turns until the
+   * transaction ends: a new card from the model and a choice of the person on the pending card
+   * (another tab) never both leave a card pending. Taken first, before any row lock of a preview.
+   */
+  private async lockReplacementScope<TInput>(
+    context: AiExecutionContextWithManager,
+    operation: AiMutationOperation<TInput>,
+    input: Record<string, unknown> | null | undefined,
+  ): Promise<void> {
+    if (!context.conversationId || !operation.replacesPendingPreview || !operation.replacementScope) return;
+    const scope = operation.replacementScope(input ?? {});
+    if (!scope) return;
+    await context.manager.query(
+      `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+      [`ai-preview-replacement:${context.tenantId}:${context.conversationId}:${operation.toolName}:${scope}`],
+    );
   }
 
   /** Expires the person's pending previews in the conversation that `preview` replaces (a new mapping of the same file). */
@@ -1309,6 +1336,59 @@ export class AiMutationPreviewService {
     }
   }
 
+  /**
+   * The person's choices on an import card (lot I1 of 26.11.9: a match undone, the "Create missing
+   * suppliers" box): a new card of the same file and mapping with the choices, its check run again.
+   * The card is locked as an approval locks it: a card approved, rejected or expired first, or
+   * another person's, is refused; once replaced, the card no longer approves. The new card names the
+   * card shown in the conversation (`replaces_preview_id`), which the conversation draws in its place.
+   * `mutation_input` is never changed in place: the action's fingerprint is taken on it at creation.
+   */
+  async replaceImportChoices(
+    context: AiExecutionContextWithManager,
+    previewId: string,
+    choices: unknown[],
+  ): Promise<AiMutationPreviewDto> {
+    // The file's turn first, as a new card from the model takes it, then the card's row lock.
+    const shown = await this.getPreviewForUser(context, previewId);
+    if (shown.tool_name === 'prepare_import_mapping' && shown.conversation_id === (context.conversationId ?? null)) {
+      await this.lockReplacementScope(context, this.operations.getOperation('prepare_import_mapping'), shown.mutation_input);
+    }
+    const preview = await this.lockPreviewForUser(context, previewId);
+    if (preview.tool_name !== 'prepare_import_mapping' || preview.conversation_id !== (context.conversationId ?? null)) {
+      throw new NotFoundException('AI preview not found.');
+    }
+    const input = (preview.mutation_input ?? {}) as Record<string, unknown>;
+    if (input.entity_type !== 'budget_lines') {
+      throw new BadRequestException('Only the card of a budget file takes choices.');
+    }
+    if (preview.status !== 'pending' || preview.expires_at.getTime() < Date.now()) {
+      throw new ConflictException('This card can no longer be changed: ask for a new one.');
+    }
+    const root = typeof preview.current_values?.replaces_preview_id === 'string'
+      ? preview.current_values.replaces_preview_id as string
+      : preview.id;
+    // Expired first: the pending cards of the conversation stay within their number.
+    await this.getRepo(context.manager).update({ tenant_id: context.tenantId, id: preview.id, status: 'pending' }, { status: 'expired' });
+    const created = await this.createPreview(context, 'prepare_import_mapping', {
+      entity_type: input.entity_type,
+      attachment_id: input.attachment_id,
+      columns: input.columns,
+      assumptions: input.assumptions ?? [],
+      choices,
+    });
+    if (created.status !== 'pending' || created.preview_id === preview.id) {
+      throw new ConflictException('This file was already imported with these choices.');
+    }
+    await context.manager.query(
+      `UPDATE ai_mutation_previews
+          SET current_values = coalesce(current_values, '{}'::jsonb) || jsonb_build_object('replaces_preview_id', $3::text)
+        WHERE tenant_id = $1 AND id = $2`,
+      [context.tenantId, created.preview_id, root],
+    );
+    return { ...created, replaces_preview_id: root };
+  }
+
   async executePreview(
     context: AiExecutionContextWithManager,
     previewId: string,
@@ -1529,11 +1609,25 @@ export class AiMutationPreviewService {
       },
       take: MAX_CONVERSATION_PREVIEWS,
     });
+    // The newest card of every chain of choices (`replaces_preview_id`) the window misses: the
+    // conversation's messages name the chain's first card, and show its newest in its place.
+    const shown = new Set(previews.map((preview) => preview.id));
+    const newest: Array<{ id: string }> = await context.manager.query(
+      `SELECT DISTINCT ON (current_values->>'replaces_preview_id') id
+         FROM ai_mutation_previews
+        WHERE tenant_id = $1 AND conversation_id = $2 AND user_id = $3
+          AND current_values->>'replaces_preview_id' IS NOT NULL
+        ORDER BY current_values->>'replaces_preview_id', created_at DESC, id DESC`,
+      [context.tenantId, conversationId, context.userId],
+    );
+    const missing = (Array.isArray(newest) ? newest : []).map((row) => row.id).filter((id) => !shown.has(id));
+    const chains = missing.length > 0
+      ? await this.getRepo(context.manager).find({ where: { tenant_id: context.tenantId, id: In(missing) } })
+      : [];
 
     const language = await this.languageOf(context);
-    return previews
-      .slice()
-      .reverse()
+    return [...chains, ...previews.slice().reverse()]
+      .sort((left, right) => left.created_at.getTime() - right.created_at.getTime())
       .map((preview) => this.toPreviewDto(preview, language));
   }
 

@@ -696,6 +696,10 @@ async function testNatureColumn() {
     [2, 'opex', true], [3, 'capex', true], [4, 'capex', false], [5, 'opex', false],
   ], 'each line written with its own nature; a blank cell keeps the line\'s');
   assert.equal(mixed.plans[2].body.product_name, 'Racks v2', 'the title of a CAPEX line is its product_name');
+  // The lines created and updated, counted by nature: what the model announces (lot I1, fourth fixes).
+  assert.deepEqual(mixed.report.changes.byNature, {
+    created: { opex: 1, capex: 1 }, updated: { opex: 1, capex: 1 },
+  }, 'the check counts its lines by nature');
 
   const refused = await preflight('opex', [
     header.trim(),

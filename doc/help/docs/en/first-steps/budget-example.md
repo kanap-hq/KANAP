@@ -63,7 +63,7 @@ During the trial, Kad starts turned off. An administrator turns it on by ticking
 
 **What you see.** The export is the budget file: the same columns the import reads. Use it as a template to update lines in bulk or to load new ones. The example workbook holds a few lines, the other columns on an **Advanced** sheet and what each column takes on a **Notes** sheet. An import checks the whole file before it loads anything. **Export** and **Import** are shown to the administrators of the budget.
 
-To start from a file you already keep, attach it to a message in Kad with **Attach a file**. Kad reads its column headers, the type of each column and the first ten rows, and can say what each column holds.
+To start from a file you already keep, attach it to a message in Kad with **Attach a file**. Kad reads its column headers, the type of each column, the first ten rows and the values that repeat in its text columns, and can say what each column holds.
 
 ## Next
 

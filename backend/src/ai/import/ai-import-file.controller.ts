@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, NotFoundException, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { completeExport } from '../../audit/export-events.interceptor';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -9,7 +9,9 @@ import { AiMutationPreviewService } from '../ai-mutation-preview.service';
 import { AiPolicyService } from '../ai-policy.service';
 import { personWriteLanguage, screenLanguageOf } from '../ai-write-texts';
 import type { AiExecutionContextWithManager } from '../ai.types';
-import { AiImportMappingService, PrepareImportMappingInput } from './ai-import-mapping.service';
+import { parseBudgetFileChoices } from '../../spend/budget-file/matching';
+import type { AiMutationPreviewDto } from '../ai.types';
+import { AiImportMappingService, aiImportTarget, PrepareImportMappingInput } from './ai-import-mapping.service';
 
 /** `inventaire.csv` → `inventaire-import.xlsx`. */
 export function preparedFileName(filename: unknown): string {
@@ -40,19 +42,7 @@ export class AiImportFileController {
     @Tenant() tenant: TenantRequest,
     @Res() res: Response,
   ): Promise<void> {
-    if (!tenant.manager) throw new BadRequestException('The prepared file needs a tenant.');
-    const context: AiExecutionContextWithManager = {
-      tenantId: tenant.tenantId,
-      userId: String(req?.user?.sub || ''),
-      isPlatformHost: req?.isPlatformHost === true,
-      surface: 'chat',
-      authMethod: 'jwt',
-      conversationId: id,
-      requestId: req?.id ?? null,
-      aiApiKeyId: null,
-      screenLanguage: screenLanguageOf(req?.headers?.['accept-language']),
-      manager: tenant.manager,
-    };
+    const context = this.context(id, req, tenant);
     await this.policy.assertSurfaceAccess(context, context.manager);
     const preview = await this.previews.getPreviewForUser(context, previewId);
     if (preview.tool_name !== 'prepare_import_mapping' || preview.conversation_id !== id) {
@@ -65,5 +55,52 @@ export class AiImportFileController {
     res.setHeader('Content-Length', String(file.content.length));
     await completeExport(res, { rows: file.rows });
     res.end(file.content);
+  }
+
+  /**
+   * The person's choices on the card of a budget file (lot I1 of 26.11.9): `{ choices: [...] }`, the
+   * whole list (matches undone, `create_suppliers`). Answers the new card, which replaces this one;
+   * the same checks as the download, the frozen workspace included (`assertSurfaceAccess`), and the
+   * rights of the import.
+   */
+  @Post(':id/previews/:previewId/import-choices')
+  @HttpCode(200)
+  async choose(
+    @Param('id') id: string,
+    @Param('previewId') previewId: string,
+    @Body() body: unknown,
+    @Req() req: any,
+    @Tenant() tenant: TenantRequest,
+  ): Promise<AiMutationPreviewDto> {
+    const context = this.context(id, req, tenant);
+    await this.policy.assertSurfaceAccess(context, context.manager);
+    let choices: unknown[];
+    try {
+      choices = parseBudgetFileChoices((body as { choices?: unknown } | null)?.choices ?? []);
+    } catch {
+      throw new BadRequestException('The choices are not valid.');
+    }
+    const preview = await this.previews.getPreviewForUser(context, previewId);
+    if (preview.tool_name !== 'prepare_import_mapping' || preview.conversation_id !== id) {
+      throw new NotFoundException('AI preview not found.');
+    }
+    await this.mapping.assertImportRights(context, aiImportTarget(preview.mutation_input?.entity_type));
+    return this.previews.replaceImportChoices(context, previewId, choices);
+  }
+
+  private context(id: string, req: any, tenant: TenantRequest): AiExecutionContextWithManager {
+    if (!tenant.manager) throw new BadRequestException('The prepared file needs a tenant.');
+    return {
+      tenantId: tenant.tenantId,
+      userId: String(req?.user?.sub || ''),
+      isPlatformHost: req?.isPlatformHost === true,
+      surface: 'chat',
+      authMethod: 'jwt',
+      conversationId: id,
+      requestId: req?.id ?? null,
+      aiApiKeyId: null,
+      screenLanguage: screenLanguageOf(req?.headers?.['accept-language']),
+      manager: tenant.manager,
+    };
   }
 }
