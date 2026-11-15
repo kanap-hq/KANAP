@@ -481,6 +481,8 @@
           "phaseComplete": "{{phase}} terminée"
         },
         "dialogs": {
+          "confirmDeletePhase": "Supprimer cette phase ?",
+          "confirmDeleteMilestone": "Supprimer ce jalon ?",
           "replaceAll": {
             "description": "Cela supprimera toutes les phases et jalons existants, puis appliquera le modèle sélectionné.",
             "title": "Remplacer toutes les phases ?"
