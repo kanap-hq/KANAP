@@ -481,6 +481,11 @@ export type AiPreviewClassificationCatalog = 'businessCriticalityLevels' | 'cybe
 
 /** How the columns of an attached spreadsheet map to an import's template, shown on the preview card. */
 export type AiImportMappingPreviewDto = {
+  /**
+   * The budget file's check, in one sentence the model reads first: what the approval creates (by
+   * name) and what the check matched to existing values. Built from the counts and the matching.
+   */
+  on_approval?: string;
   /** The import, by its key (`applications`, `budget_lines`, ...). */
   import_key: string;
   filename: string;
@@ -544,6 +549,8 @@ export type AiImportReportMessage = {
  * `issues` reach the model, with the budget file's `matching`; `report` holds the messages, written for the person, for the card.
  */
 export type AiImportRunDto = {
+  /** The budget file's check: what the approval creates and what it matched, in one sentence (`approvalFacts`). */
+  on_approval?: string;
   ok: boolean;
   dry_run: boolean;
   total: number;
@@ -560,6 +567,8 @@ export type AiImportRunDto = {
   issues: Array<{ level: 'error' | 'warning'; code: string | null; column: string | null; count: number; file_lines?: number[] }>;
   /** The budget file: the suppliers its load creates, which the card lists (the person may create suppliers). */
   new_suppliers?: number;
+  /** The budget file's check: the dimension values its load creates, over all dimensions, which the card lists. */
+  new_dimension_values?: number;
   /**
    * The budget file's check: the new rows that look like a line the person reads (`looks_like`, its
    * reference) or an earlier row of the file (`looks_like_file_line`), on the lines of the person's
@@ -585,6 +594,8 @@ export type AiImportRunDto = {
     }>;
     choices: BudgetFileChoice[];
     create_suppliers: { allowed: boolean; value: boolean };
+    /** A list cut to its first entries: how many entries it has. Absent when no list is cut. */
+    totals?: { matches: number; refused_proposals: number; candidates: number };
     note: string;
   };
   report:

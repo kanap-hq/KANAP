@@ -205,7 +205,9 @@ export class AiImportMappingService {
     const validation = await this.runner.run(target.key, buildImportFile(converted.file, language), {
       dryRun: true, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
     }, context);
-    return { target, mapping: { ...converted.preview, validation: refuseClearedColumns(validation, left) } };
+    // The budget file's facts of the approval lead the card the model reads.
+    const { on_approval: onApproval, ...checked } = refuseClearedColumns(validation, left);
+    return { target, mapping: { ...(onApproval ? { on_approval: onApproval } : {}), ...converted.preview, validation: checked } };
   }
 
   /**

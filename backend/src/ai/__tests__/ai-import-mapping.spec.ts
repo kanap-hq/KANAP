@@ -877,6 +877,51 @@ function testLookalikesReachTheModel() {
   console.log('  lookalikes of a budget file reach the model, by line and reference: OK');
 }
 
+// Review of lot I1: the model counts what the approval creates from the check itself, and is told the
+// length of a matching list cut to its first entries.
+function testMatchingCountsReachTheModel() {
+  const lines = [2, 3];
+  const candidate = (index: number) => ({
+    column: 'analytics:business_domain', name: 'Domaine', value: `Valeur ${index}`, outcome: 'create' as const, lines: [2], count: 1, candidates: [],
+  });
+  const matching = {
+    matches: [], refusedProposals: [], candidates: Array.from({ length: 70 }, (_, index) => candidate(index)),
+    totals: { matches: 0, refusedProposals: 0, candidates: 250 },
+    choices: [], createSuppliers: { allowed: true, value: true },
+  };
+  const budget = budgetBilan({
+    ok: true, changes: { created: 2, updated: 0, unchanged: 0 }, creates: { supplierCount: 0, dimensionValueCount: 250 }, matching,
+  }, true, lines);
+  assert.equal(budget.new_dimension_values, 250);
+  assert.equal(budget.matching?.candidates.length, 60);
+  assert.deepEqual(budget.matching?.totals, { matches: 0, refused_proposals: 0, candidates: 250 });
+  const short = budgetBilan({
+    ok: true, changes: { created: 2, updated: 0, unchanged: 0 }, creates: { supplierCount: 0, dimensionValueCount: 1 },
+    matching: { ...matching, candidates: [candidate(1)], totals: { matches: 0, refusedProposals: 0, candidates: 1 } },
+  }, true, lines);
+  assert.equal(short.matching?.totals, undefined, 'no totals when nothing is cut');
+  // The facts of the approval, first: what it creates, by name, and what the check matched.
+  assert.equal(Object.keys(short)[0], 'on_approval');
+  assert.equal(short.on_approval,
+    'On approval: 2 lines created, 0 updated; 0 suppliers created; 1 dimension values created: Valeur 1 (Domaine); '
+    + '0 values of the file matched to existing ones.');
+  const nothing = budgetBilan({
+    ok: true, changes: { created: 8, updated: 0, unchanged: 0 }, creates: { supplierCount: 0, dimensionValueCount: 0 },
+    matching: {
+      ...matching, candidates: [],
+      matches: [{ column: 'analytics:business_domain', name: 'Domaine', value: 'Delivery', target: 'Support et exploitation', origin: 'server', reason: 'translation', lines: [2], count: 1, undoable: true }],
+      totals: { matches: 1, refusedProposals: 0, candidates: 0 },
+    },
+  }, true, lines);
+  assert.equal(nothing.on_approval,
+    'On approval: 8 lines created, 0 updated; 0 suppliers created; 0 dimension values created; '
+    + '1 values of the file matched to existing ones: Delivery → Support et exploitation.');
+  const refused = budgetBilan({ ok: false, changes: { created: 0, updated: 0, unchanged: 0 }, errors: [], matching }, true, lines);
+  assert.match(refused.on_approval!, /^This card cannot be approved/);
+  assert.equal(budgetBilan({ ok: true, inserted: 2 }, false, lines).on_approval, undefined, 'the import\'s result has none');
+  console.log('  the model reads the values created and the length of a cut list: OK');
+}
+
 function testAFileImportIsAWrite() {
   for (const message of ['Importe ce fichier dans les applications', 'Import these servers', 'Importiere die Datei', 'Importa este archivo']) {
     const profile = selectAiContextProfile(message);
@@ -925,6 +970,7 @@ async function run() {
     await testARefusedFileIsNotImported();
     testBilanOnThePersonsLines();
     testLookalikesReachTheModel();
+    testMatchingCountsReachTheModel();
     testAFileImportIsAWrite();
     testApprovalEndsTheTurn();
   } finally {

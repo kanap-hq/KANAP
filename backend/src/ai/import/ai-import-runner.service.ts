@@ -19,7 +19,7 @@ import { IncidentsCsvService } from '../../incidents/incidents-csv.service';
 import { incidentViewerFromContext } from '../../incidents/incident-visibility';
 import { PortfolioProjectsCsvService } from '../../portfolio/portfolio-projects-csv.service';
 import { PortfolioRequestsCsvService } from '../../portfolio/portfolio-requests-csv.service';
-import { BudgetFileService, canCreateSuppliers } from '../../spend/budget-file/budget-file.service';
+import { BudgetFileService, canCreateSuppliers, readableLists } from '../../spend/budget-file/budget-file.service';
 import { createSuppliersChoice } from '../../spend/budget-file/matching';
 import type { BudgetFileMatching, BudgetFileMatchOptions } from '../../spend/budget-file/types';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
@@ -61,7 +61,7 @@ type BudgetFileAnswer = {
   errorCount?: number;
   missing?: Array<{ type: string; count: number }>;
   deletedCount?: number;
-  creates?: { supplierCount?: number };
+  creates?: { supplierCount?: number; dimensionValueCount?: number };
   supplierMessage?: string | null;
   matching?: BudgetFileMatching;
   changes?: { created: number; updated: number; unchanged: number };
@@ -211,6 +211,7 @@ export class AiImportRunnerService {
       decimalMark: 'dot',
       createSuppliers: createSuppliersChoice(matching?.choices ?? []) ?? true,
       canCreateSuppliers: canCreateSuppliers(access),
+      ...readableLists(access),
       matching,
     };
     const preflight = await this.budgetFile.preflight('opex', file.buffer, caller, options);
@@ -354,13 +355,16 @@ const MODEL_MATCHING_ENTRIES = 60;
 const MATCHING_NOTE = 'matches: values of the file the check matched to an existing value beyond case (origin server: accents '
   + 'or another language; origin model: your `values`); the card lists them and the person may undo one. refused_proposals: '
   + 'your `values` whose target is not an enabled value of the workspace: they were not applied. candidates: values nothing '
-  + 'matched, created on approval (outcome create) or refused, with the closest names of the workspace\'s list; when one is the '
-  + 'same thing (a translation, a synonym, a spelling), call again with that column\'s `values` naming it, never a name that is not '
-  + 'listed. choices: the person\'s choices on the card, kept by a new card of the same file.';
+  + 'matched, created on approval (outcome create, one entry per value created) or refused, with the closest names of the '
+  + 'workspace\'s list; when one is the same thing (a translation, a synonym, a spelling), call again with that column\'s `values` '
+  + `naming it, never a name that is not listed. Each list holds its first ${MODEL_MATCHING_ENTRIES} entries: \`totals\`, when present, `
+  + 'gives the length of every list. choices: the person\'s choices on the card, kept by a new card of the same file.';
 
 /** The check's matching, for the model: on the person's lines, the first entries of each list. */
 function modelMatching(matching: BudgetFileMatching, lines: readonly number[]): NonNullable<AiImportRunDto['matching']> {
   const fileLines = (entry: { lines: number[] }) => entry.lines.map((line) => personLine(line, lines));
+  const totals = matching.totals;
+  const cut = Math.max(totals.matches, totals.refusedProposals, totals.candidates) > MODEL_MATCHING_ENTRIES;
   return {
     matches: matching.matches.slice(0, MODEL_MATCHING_ENTRIES).map((entry) => ({
       column: entry.column, ...(entry.name ? { dimension: entry.name } : {}), value: entry.value, target: entry.target,
@@ -376,8 +380,42 @@ function modelMatching(matching: BudgetFileMatching, lines: readonly number[]): 
     })),
     choices: matching.choices,
     create_suppliers: matching.createSuppliers,
+    ...(cut ? { totals: { matches: totals.matches, refused_proposals: totals.refusedProposals, candidates: totals.candidates } } : {}),
     note: MATCHING_NOTE,
   };
+}
+
+/** Names listed in the facts of the approval, per kind; the others are counted. */
+const APPROVAL_FACT_NAMES = 20;
+
+function listed(names: string[], total: number): string {
+  if (total === 0) return '';
+  const shown = names.slice(0, APPROVAL_FACT_NAMES);
+  const more = total - shown.length;
+  return `: ${shown.join(', ')}${more > 0 ? `, and ${more} more` : ''}`;
+}
+
+/**
+ * What the approval of a budget file's check does, in one sentence, from the check itself: the lines,
+ * the suppliers and dimension values it creates (named), and the values of the file it matched to
+ * existing ones. The model announces this and nothing else (a small model does not count from the lists).
+ */
+export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatching): string {
+  if (answer.ok !== true) {
+    return 'This card cannot be approved: the check found errors (issues). Nothing is created or imported until they are corrected.';
+  }
+  const created = matching.candidates.filter((entry) => entry.outcome === 'create');
+  const suppliers = answer.creates?.supplierCount ?? 0;
+  const values = answer.creates?.dimensionValueCount ?? 0;
+  const supplierNames = created.filter((entry) => entry.column === 'supplier_name').map((entry) => entry.value);
+  const valueNames = created.filter((entry) => entry.column.startsWith('analytics:'))
+    .map((entry) => (entry.name ? `${entry.value} (${entry.name})` : entry.value));
+  const matchNames = matching.matches.map((entry) => `${entry.value} → ${entry.target}`);
+  const changes = answer.changes ?? { created: 0, updated: 0, unchanged: 0 };
+  return `On approval: ${changes.created} lines created, ${changes.updated} updated; `
+    + `${suppliers} suppliers created${listed(supplierNames, suppliers)}; `
+    + `${values} dimension values created${listed(valueNames, values)}; `
+    + `${matching.totals.matches} values of the file matched to existing ones${listed(matchNames, matching.totals.matches)}.`;
 }
 
 /** The bilan of the budget file: its check as its dialog shows it, or the counts of its load. */
@@ -402,6 +440,7 @@ export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: re
   const isCheck = answer.changes !== undefined;
   const similar = isCheck ? similarLines(answer.warnings, lines) : undefined;
   return {
+    ...(isCheck && answer.matching ? { on_approval: approvalFacts(answer, answer.matching) } : {}),
     ok: answer.ok === true,
     dry_run: dryRun,
     total: lines.length,
@@ -413,6 +452,7 @@ export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: re
     warning_count: warningCount,
     issues,
     new_suppliers: answer.creates?.supplierCount ?? 0,
+    ...(isCheck && answer.creates?.dimensionValueCount !== undefined ? { new_dimension_values: answer.creates.dimensionValueCount } : {}),
     ...(similar ? { similar_lines: similar } : {}),
     ...(isCheck && answer.matching ? { matching: modelMatching(answer.matching, lines) } : {}),
     report: { kind: 'budget_file', file: isCheck ? relined(shown, lines) as Record<string, unknown> : null },
