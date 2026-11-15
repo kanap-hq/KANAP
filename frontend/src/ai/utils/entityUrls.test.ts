@@ -26,3 +26,15 @@ describe('vulnerability mentions', () => {
     expect(buildEntityUrl('vulnerabilities', 'CVE-2024-3094')).toBe('/it/vulnerabilities?q=CVE-2024-3094&state=all&alerts=all');
   });
 });
+
+describe('mention words', () => {
+  it('uses CTCT for contacts and CTR for contracts, and no longer CONT', () => {
+    expect(parseAtMentionQuery('CTCT')).toEqual({ entityType: 'contacts', entityTypes: ['contacts'], searchTerm: '' });
+    expect(parseAtMentionQuery('ctr')).toEqual({ entityType: 'contracts', entityTypes: ['contracts'], searchTerm: '' });
+    expect(parseAtMentionQuery('CONT')).toEqual({ entityType: null, searchTerm: 'CONT' });
+  });
+
+  it('keeps CTCT and CTR apart while the word is typed', () => {
+    expect(parseAtMentionQuery('CT').entityTypes?.slice().sort()).toEqual(['contacts', 'contracts']);
+  });
+});

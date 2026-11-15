@@ -55,7 +55,7 @@ describe('buildOrgForest', () => {
     expect(childrenOf(forest, 'Ada Lovelace')).toEqual(['Ben Carter', 'Cleo Marsh', 'Finn Adler']);
     expect(childrenOf(forest, 'Cleo Marsh')).toEqual(['Dan Reed']);
     expect(find(forest, 'Eve Nunes')).toBeUndefined();
-    expect(find(forest, 'Ada Lovelace')?.reference).toBe('CTR-1');
+    expect(find(forest, 'Ada Lovelace')?.reference).toBe('MEM-1');
   });
 
   it('lays every managerless contributor out as its own root', () => {
@@ -81,7 +81,7 @@ describe('buildOrgForest', () => {
   });
 
   it('roots the chart on one contributor when a reference is given', () => {
-    const forest = buildOrgForest({ contributors: TEAM, rootReference: 'CTR-3' });
+    const forest = buildOrgForest({ contributors: TEAM, rootReference: 'MEM-3' });
 
     expect(names(forest.roots)).toEqual(['Cleo Marsh']);
     expect(names(forest.nodes)).toEqual(['Cleo Marsh', 'Dan Reed']);
@@ -89,7 +89,7 @@ describe('buildOrgForest', () => {
   });
 
   it('falls back to the forest and says so when the reference is unknown', () => {
-    const forest = buildOrgForest({ contributors: TEAM, rootReference: 'CTR-99' });
+    const forest = buildOrgForest({ contributors: TEAM, rootReference: 'MEM-99' });
 
     expect(forest.rootMissing).toBe(true);
     expect(names(forest.roots)).toEqual(['Ada Lovelace']);
@@ -137,7 +137,7 @@ describe('buildOrgForest', () => {
     const forest = buildOrgForest({
       contributors: TEAM,
       hiddenEmploymentTypeIds: [EXTERNAL],
-      rootReference: 'CTR-4',
+      rootReference: 'MEM-4',
     });
 
     expect(names(forest.roots)).toEqual(['Dan Reed']);

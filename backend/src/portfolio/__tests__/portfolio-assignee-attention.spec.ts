@@ -134,7 +134,7 @@ async function run() {
     { open: 13, overdue: 8, stale: 10 },
     'a team counts what its members count',
   );
-  assert.equal(applications.members[0].contributorRef, 'CTR-12');
+  assert.equal(applications.members[0].contributorRef, 'MEM-12');
   assert.equal(report.teams[2].members[0].contributorRef, null, 'no profile, no contributor reference');
 
   assert.deepEqual(report.unassigned, { open: 3, overdue: 0, stale: 3 });

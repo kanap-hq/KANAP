@@ -29,7 +29,7 @@ export type OrgNode = {
   /** Contributor config id: unique, and what the collapse state is keyed on. */
   key: string;
   contributor: OrgContributor;
-  /** CTR-N, the only reference shown to a reader or written to the address. */
+  /** MEM-N, the only reference shown to a reader or written to the address. */
   reference: string;
   name: string;
   /** 0 for a root of the chart. */
@@ -54,7 +54,7 @@ export type BuildOrgForestOptions = {
   /** Contract types switched off in the control bar, by id. */
   hiddenEmploymentTypeIds?: string[];
   includeDisabled?: boolean;
-  /** CTR-N the chart is rooted on; a forest when absent or unknown. */
+  /** MEM-N the chart is rooted on; a forest when absent or unknown. */
   rootReference?: string | null;
   /** Levels kept below the root; all of them when null. */
   maxDepth?: number | null;

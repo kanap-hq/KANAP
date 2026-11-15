@@ -171,8 +171,9 @@ export default function ContributorWorkspacePage() {
 
   // Both `/contributors/me` and `/contributors/:id` render this page; on the
   // self route there is no `:id` param.
-  // `:id` is the CTR-N business reference (or a legacy row UUID; the API
-  // accepts both and the page rewrites the URL to the reference once loaded).
+  // `:id` is the MEM-N business reference (or a legacy row UUID or CTR-N reference, the one of a
+  // contributor before MEM-N; the API accepts all and the page rewrites the URL to the reference
+  // once loaded).
   const isSelfRoute = !idParam;
   const contributorId = idParam;
   const contributorRouteId = contributorId || 'me';
@@ -247,7 +248,7 @@ export default function ContributorWorkspacePage() {
 
   const reference = member?.item_number ? formatItemRef('contributor', member.item_number) : null;
   const referencePath = reference ? buildItemPath('contributor', reference) : null;
-  // Legacy UUID links: swap the URL for the readable reference, keeping the
+  // Legacy UUID and CTR-N links: swap the URL for the current reference, keeping the
   // loaded record under the new cache key so nothing refetches or flickers.
   useEffect(() => {
     if (isSelfRoute || !member || !reference || !referencePath || contributorId === reference) return;

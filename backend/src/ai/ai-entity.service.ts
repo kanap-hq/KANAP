@@ -468,7 +468,7 @@ function aiSearchIndexEnabled(): boolean {
 }
 
 // BL numbers are native; OPX/CPX (and the former SI alias) name persisted legacy references.
-const INDEXED_REF_QUERY_RE = /^(PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|BL|CPX|SI|OPX|COMP|CONT|DEPT|SUP|BP|INC|TEC)-?(\d+)$/i;
+const INDEXED_REF_QUERY_RE = /^(PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|MEM|BL|CPX|SI|OPX|COMP|CTCT|DEPT|SUP|BP|INC|TEC)-?(\d+)$/i;
 
 const QUERY_PREFIX_TO_INDEX_REF_PREFIX: Record<string, string> = {
   SI: 'OPX',
@@ -606,7 +606,7 @@ export class AiEntityService {
   private parseNumericPrefix(query: string): string | null {
     const trimmed = String(query || '').trim();
     if (!trimmed) return null;
-    const match = trimmed.match(/^(?:PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|CPX|SI|COMP|CONT|DEPT|SUP|BP|INC)-?(\d+)$/i)
+    const match = trimmed.match(/^(?:PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|MEM|CPX|SI|COMP|CTCT|DEPT|SUP|BP|INC)-?(\d+)$/i)
       ?? trimmed.match(/^(\d+)$/);
     if (!match) return null;
     const digits = match[1];

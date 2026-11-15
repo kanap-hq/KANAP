@@ -76,7 +76,7 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
   LOC: 'locations',
   CTR: 'contracts',
   COMP: 'companies',
-  CONT: 'contacts',
+  CTCT: 'contacts',
   DEPT: 'departments',
   SUP: 'suppliers',
   BP: 'business_processes',

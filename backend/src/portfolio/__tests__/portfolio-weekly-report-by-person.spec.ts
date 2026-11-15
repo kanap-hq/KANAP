@@ -104,7 +104,7 @@ async function run() {
   const people = [
     { user_id: 'u-thomas', name: 'Thomas Berger', item_number: 3, team_id: 'team-ops', team_name: 'Operations' },
     { user_id: 'u-isabelle', name: 'Isabelle Moreau', item_number: 7, team_id: 'team-ops', team_name: 'Operations' },
-    // No contributor profile: no team, no CTR reference.
+    // No contributor profile: no team, no MEM reference.
     { user_id: 'u-marc', name: 'Marc Dupond', item_number: null, team_id: null, team_name: null },
   ];
 
@@ -132,7 +132,7 @@ async function run() {
   assert.deepEqual(thomas.created.map((row) => row.ref), ['T-1'], 'created goes to the creation actor');
   assert.deepEqual(thomas.modified.map((row) => row.ref), ['T-2']);
   assert.deepEqual(thomas.closed, [], 'closing is never the actor');
-  assert.equal(thomas.contributorRef, 'CTR-3');
+  assert.equal(thomas.contributorRef, 'MEM-3');
 
   assert.deepEqual(isabelle.modified.map((row) => row.ref), ['T-2'], 'two actors, two entries');
   assert.deepEqual(isabelle.closed.map((row) => row.ref), ['T-3'], 'closed goes to the assignee of the event');

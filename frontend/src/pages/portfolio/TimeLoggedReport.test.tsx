@@ -63,15 +63,15 @@ const report = (): TimeLoggedReportResponse => ({
       teamId: 'team-infra',
       teamName: 'Infrastructure',
       cells: cells(),
-      members: [{ userId: 'u-dan', name: 'Dan Petit', contributorRef: 'CTR-7', cells: cells() }],
+      members: [{ userId: 'u-dan', name: 'Dan Petit', contributorRef: 'MEM-7', cells: cells() }],
     },
     {
       teamId: 'team-apps',
       teamName: 'Business applications',
       cells: cells({ '2026-04': [0.6, 1], '2026-05': [0, 0.3], '2026-09': [0.2, 0] }),
       members: [
-        { userId: 'u-alice', name: 'Alice Martin', contributorRef: 'CTR-12', cells: cells({ '2026-04': [0.6, 1], '2026-09': [0.2, 0] }) },
-        { userId: 'u-bob', name: 'Bob Durand', contributorRef: 'CTR-3', cells: cells({ '2026-05': [0, 0.3] }) },
+        { userId: 'u-alice', name: 'Alice Martin', contributorRef: 'MEM-12', cells: cells({ '2026-04': [0.6, 1], '2026-09': [0.2, 0] }) },
+        { userId: 'u-bob', name: 'Bob Durand', contributorRef: 'MEM-3', cells: cells({ '2026-05': [0, 0.3] }) },
       ],
     },
     {
@@ -189,10 +189,10 @@ describe('TimeLoggedReport', () => {
     await screen.findByText('Dan Petit');
     expect(rowLabels()).toEqual([
       'Infrastructure',
-      'Dan PetitCTR-7',
+      'Dan PetitMEM-7',
       'Business applications',
-      'Alice MartinCTR-12',
-      'Bob DurandCTR-3',
+      'Alice MartinMEM-12',
+      'Bob DurandMEM-3',
       'No team',
       'Chloé Blanc',
       'Unknown user',
@@ -231,16 +231,16 @@ describe('TimeLoggedReport', () => {
     renderReport();
 
     await screen.findByText('Alice Martin');
-    expect(screen.queryByText('CTR-12')).toBeNull();
-    expect(screen.queryByRole('link', { name: 'CTR-7' })).toBeNull();
+    expect(screen.queryByText('MEM-12')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'MEM-7' })).toBeNull();
   });
 
   it('links the contributor reference to the contributor', async () => {
     mockApi(report());
     renderReport();
 
-    const link = await screen.findByRole('link', { name: 'CTR-12' });
-    expect(link.getAttribute('href')).toBe('/portfolio/contributors/CTR-12');
+    const link = await screen.findByRole('link', { name: 'MEM-12' });
+    expect(link.getAttribute('href')).toBe('/portfolio/contributors/MEM-12');
   });
 
   it('sends the project and team filters it was opened with', async () => {

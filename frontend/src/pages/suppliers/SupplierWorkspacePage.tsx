@@ -406,7 +406,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
             onSave={(name) => saveNow({ name }, 'name', { name })}
           />
         ) : undefined}
-        // The ERP supplier ID is the supplier's business reference (`SUP-001` in the demo data).
+        // The ERP supplier ID is the supplier's business reference (`F10001` in the demo data).
         itemReference={isCreate ? null : data?.erp_supplier_id || null}
         onCopyReference={!isCreate && data?.erp_supplier_id ? () => {
           void navigator.clipboard?.writeText(data.erp_supplier_id as string).catch(() => undefined);
