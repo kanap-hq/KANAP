@@ -321,21 +321,26 @@ function testChoicesParsing() {
     { kind: 'lookalike', line: 4, action: 'update', item: 12, state },
     { kind: 'lookalike', line: 4, action: 'create' },
     { kind: 'lookalike', line: 5, action: 'ignore' },
-    { kind: 'lookalikes', action: 'update', states: { 12: state } },
+    { kind: 'lookalikes', action: 'update', targets: { 4: { item: 12, state } } },
     { kind: 'lookalikes', action: 'create' },
   ]), [
     { kind: 'lookalike', line: 4, action: 'update', item: 12, state },
     { kind: 'lookalike', line: 5, action: 'ignore' },
-    { kind: 'lookalikes', action: 'update', states: { 12: state } },
+    { kind: 'lookalikes', action: 'update', targets: { 4: { item: 12, state } } },
   ], 'one choice per row, one for all rows');
+  // The choice the check gives back when the person chose nothing: every row left out, with its target.
+  assert.deepEqual(parseBudgetFileChoices([{ kind: 'lookalikes', action: 'ignore', targets: { 6: { item: 3, state } } }]),
+    [{ kind: 'lookalikes', action: 'ignore', targets: { 6: { item: 3, state } } }]);
   for (const bad of [
     [{ kind: 'lookalike', line: 0, action: 'create' }],
     [{ kind: 'lookalike', line: 2, action: 'drop' }],
     [{ kind: 'lookalike', line: 2, action: 'update' }],
     [{ kind: 'lookalike', line: 2, action: 'update', item: 3, state: 'nope' }],
-    [{ kind: 'lookalikes', action: 'ignore' }],
-    [{ kind: 'lookalikes', action: 'create', states: {} }],
-    [{ kind: 'lookalikes', action: 'update', states: { x: state } }],
+    [{ kind: 'lookalikes', action: 'drop' }],
+    [{ kind: 'lookalikes', action: 'create', targets: [] }],
+    [{ kind: 'lookalikes', action: 'update', targets: { x: { item: 3, state } } }],
+    [{ kind: 'lookalikes', action: 'update', targets: { 4: { item: 0, state } } }],
+    [{ kind: 'lookalikes', action: 'update', targets: { 4: { item: 3, state: 'nope' } } }],
     Array.from({ length: 201 }, (_, index) => ({ kind: 'lookalike', line: index + 2, action: 'create' })),
   ]) {
     assert.throws(() => parseBudgetFileChoices(bad), /not valid/, JSON.stringify(bad).slice(0, 80));
