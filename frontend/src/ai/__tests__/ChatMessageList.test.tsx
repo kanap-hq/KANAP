@@ -458,6 +458,33 @@ describe('ChatMessageList', () => {
     expect(screen.queryByRole('link', { name: 'APP-01' })).not.toBeInTheDocument();
   });
 
+  it('links a company and a department by their reference, a supplier not yet', () => {
+    readableResources = ['companies'];
+    try {
+      renderWithTheme(
+        <ChatMessageList
+          messages={[{ id: 'assistant-1', role: 'assistant', content: 'COMP-5 holds DEPT-5; SUP-3 and CTCT-2 supply it; XCOMP-1, COMP-05.' }]}
+          previews={[]}
+          onSend={() => undefined}
+        />,
+      );
+      expect(screen.getByRole('link', { name: 'COMP-5' })).toHaveAttribute('href', '/master-data/companies/COMP-5');
+      // No departments right: the reference stays text.
+      expect(screen.queryByRole('link', { name: 'DEPT-5' })).toBeNull();
+      expect(screen.getAllByRole('link')).toHaveLength(1);
+    } finally {
+      readableResources = null;
+    }
+    renderWithTheme(
+      <ChatMessageList
+        messages={[{ id: 'assistant-2', role: 'assistant', content: 'See DEPT-5.' }]}
+        previews={[]}
+        onSend={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('link', { name: 'DEPT-5' })).toHaveAttribute('href', '/master-data/departments/DEPT-5');
+  });
+
   it('leaves as text the references of pages the person cannot open', () => {
     readableResources = ['applications'];
     try {

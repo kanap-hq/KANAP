@@ -4881,6 +4881,11 @@ async function run() {
   assert.ok(reads[0].sql.includes('tenant_id = app_current_tenant()'));
   assert.ok(reads[0].sql.includes("nature IN ('opex', 'capex')"));
   assert.deepEqual(reads[0].refs, ['BL-127', 'OPX-7', 'CPX-2', 'BL-999']);
+  // A company or a department page opens by its reference (lot R2 of 26.11.9): a link to it is a
+  // record of that family, cited by its reference when the link's text is the reference.
+  const pages = await extractMentionContextItems('[Fromage SA](/master-data/companies/COMP-5/overview) [DEPT-4](/master-data/departments/DEPT-4)', manager);
+  assert.deepEqual(pages.map((m) => [m.entity_type, m.label, m.ref]), [['companies', 'Fromage SA', null], ['departments', 'DEPT-4', 'DEPT-4']]);
+  assert.equal(reads.length, 1, 'no budget read for a company or a department link');
   const orchestrator = createOrchestrator().orchestrator;
   const linked = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [{ id: 'capex-id', nature: 'capex', item_number: 127 }] }, [{
     target: { entity_type: 'budget_lines', entity_id: '11111111-2222-3333-4444-555555555555', ref: 'CPX-2' }, status: 'executed', summary: 'Updated CPX-2.',
