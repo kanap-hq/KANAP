@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useRecentlyViewed } from './useRecentlyViewed';
+import { ENTITY_TYPE_CONFIG, useRecentlyViewed } from './useRecentlyViewed';
 import { forgetRecentlyViewed } from '../../../lib/recentViews';
 
 vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'user-1' } }) }));
@@ -40,5 +40,21 @@ describe('a deleted record', () => {
     act(() => forgetRecentlyViewed(['gone']));
     expect(result.current.items.map((item) => item.id)).toEqual(['kept']);
     expect(JSON.parse(localStorage.getItem(KEY)!).map((item: { id: string }) => item.id)).toEqual(['kept']);
+  });
+});
+
+describe('reference data', () => {
+  it('keeps suppliers, contacts and departments with their reference, opened by their uuid', () => {
+    const { result } = renderHook(useRecentlyViewed);
+    act(() => result.current.addToRecent('supplier', 'sup-1', 'Fromagerie Bleue', 'SUP-12'));
+    act(() => result.current.addToRecent('contact', 'ctc-1', 'Ana Lopez', 'CTCT-3'));
+    act(() => result.current.addToRecent('department', 'dep-1', 'Finance', 'DEPT-7'));
+    expect(result.current.items.map((item) => `${item.type}:${item.ref}`)).toEqual(['department:DEPT-7', 'contact:CTCT-3', 'supplier:SUP-12']);
+    expect(ENTITY_TYPE_CONFIG.supplier).toMatchObject({ resource: 'suppliers', labelKey: 'dashboard.tiles.entityTypes.supplier' });
+    expect(ENTITY_TYPE_CONFIG.supplier.route('sup-1')).toBe('/master-data/suppliers/sup-1');
+    expect(ENTITY_TYPE_CONFIG.contact).toMatchObject({ resource: 'contacts', labelKey: 'dashboard.tiles.entityTypes.contact' });
+    expect(ENTITY_TYPE_CONFIG.contact.route('ctc-1')).toBe('/master-data/contacts/ctc-1');
+    expect(ENTITY_TYPE_CONFIG.department).toMatchObject({ resource: 'departments', labelKey: 'dashboard.tiles.entityTypes.department' });
+    expect(ENTITY_TYPE_CONFIG.department.route('dep-1')).toBe('/master-data/departments/dep-1');
   });
 });

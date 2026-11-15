@@ -483,6 +483,9 @@
         "location": "Location",
         "document": "Document",
         "company": "Company",
+        "department": "Department",
+        "supplier": "Supplier",
+        "contact": "Contact",
         "businessProcess": "Business process"
       },
       "myTimeTitle": "My time",

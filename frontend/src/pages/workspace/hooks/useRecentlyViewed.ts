@@ -21,6 +21,9 @@ export type RecentEntityType =
   | 'location'
   | 'document'
   | 'company'
+  | 'department'
+  | 'supplier'
+  | 'contact'
   | 'business_process';
 
 export interface RecentItem {
@@ -194,6 +197,24 @@ export const ENTITY_TYPE_CONFIG: Record<
     resource: 'companies',
     icon: 'Business',
     labelKey: 'dashboard.tiles.entityTypes.company',
+  },
+  department: {
+    route: (id) => `/master-data/departments/${id}`,
+    resource: 'departments',
+    icon: 'AccountTree',
+    labelKey: 'dashboard.tiles.entityTypes.department',
+  },
+  supplier: {
+    route: (id) => `/master-data/suppliers/${id}`,
+    resource: 'suppliers',
+    icon: 'LocalShipping',
+    labelKey: 'dashboard.tiles.entityTypes.supplier',
+  },
+  contact: {
+    route: (id) => `/master-data/contacts/${id}`,
+    resource: 'contacts',
+    icon: 'People',
+    labelKey: 'dashboard.tiles.entityTypes.contact',
   },
   business_process: {
     route: (id) => `/master-data/business-processes/${id}`,
