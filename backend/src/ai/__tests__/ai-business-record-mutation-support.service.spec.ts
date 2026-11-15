@@ -254,6 +254,36 @@ async function testRecordLabelNamesTheReferenceOnce() {
   console.log('  reference label: OK');
 }
 
+/** Lot R1 of 26.11.9: a contract (CTR-2), and a supplier, company or department in a relation, named by reference. */
+async function testBusinessReferencesNameTheRecord() {
+  const { service, context } = createHarness();
+  const rows: Record<string, Record<string, unknown>> = {
+    contracts: { id: '99999999-9999-4999-8999-999999999999', item_number: 2, name: 'Maintenance' },
+    suppliers: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', item_number: 3, name: 'Caseificio', erp_supplier_id: 'F10003' },
+    companies: { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', item_number: 1, name: 'Formaggio' },
+    departments: { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', item_number: 4, name: 'Finance' },
+  };
+  (context as any).manager = {
+    query: async (sql: string, params: unknown[]) => {
+      const table = Object.keys(rows).find((name) => sql.includes(`FROM ${name}`));
+      return table && params[2] === rows[table].item_number ? [{ ...rows[table] }] : [];
+    },
+  };
+  for (const [entityType, input, label] of [
+    ['contracts', 'CTR-2', 'CTR-2 - Maintenance'],
+    ['suppliers', 'sup-3', 'SUP-3 - Caseificio'],
+    ['companies', 'COMP-1', 'COMP-1 - Formaggio'],
+    ['departments', 'DEPT-4', 'DEPT-4 - Finance'],
+  ] as const) {
+    const found = await service.resolveRecordReference(context, entityType as any, input);
+    assert.equal(found.ref, input.toUpperCase(), `${entityType}: its reference`);
+    assert.equal(found.label, label, `${entityType}: the title leads with the reference`);
+  }
+  // CTR-n is a contract: a contributor reference (MEM-n) or another family's names no contract.
+  await assert.rejects(service.resolveRecordReference(context, 'contracts', 'MEM-2'));
+  console.log('  business references name contracts, suppliers, companies and departments: OK');
+}
+
 async function testAssetNeedsItsSite() {
   const { service, context } = createHarness();
   const base = { name: 'srv-new', kind: 'vm', provider: 'other', environment: 'prod' };
@@ -275,6 +305,7 @@ async function testAssetNeedsItsSite() {
 }
 
 async function main() {
+  await testBusinessReferencesNameTheRecord();
   await testCreateAcceptsConfiguredCategoryCode();
   await testCreateResolvesConfiguredCategoryLabel();
   await testUpdateResolvesConfiguredBusinessApplicationsLabel();

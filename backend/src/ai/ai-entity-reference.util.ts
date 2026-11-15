@@ -2,15 +2,16 @@ import { NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { parseItemNumber } from '../common/parse-item-number';
 import { budgetLineReference } from '../spend/budget-nature';
-import type { AiContextEntityType, AiSearchEntityType } from './ai.types';
+import type { AiContextEntityType, AiQueryEntityType, AiSearchEntityType } from './ai.types';
 
 /** Any uuid shape (not only v1-v5). */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * The business reference of each AI entity family that has one, and the tenant-scoped lookup that
- * finds its row. Static SQL only. Families missing here (contracts, companies, ...) have no reference.
- * Budget lines (BL/OPX/CPX) and documents (DOC) are resolved by their own services.
+ * finds its row. Static SQL only. Families missing here (business processes, accounts, ...) have no
+ * reference. Budget lines (BL/OPX/CPX) and documents (DOC) are resolved by their own services.
+ * A contract is read under the caller's data access: one out of reach is not found.
  */
 const REFERENCE_LOOKUPS: Record<string, { pattern: RegExp; sql: string; value: (n: string) => string | number }> = {
   applications: {
@@ -48,6 +49,46 @@ const REFERENCE_LOOKUPS: Record<string, { pattern: RegExp; sql: string; value: (
     sql: 'SELECT id FROM technologies WHERE tenant_id = $1 AND item_number = $2 LIMIT 1',
     value: Number,
   },
+  suppliers: {
+    pattern: /^SUP-?(\d+)$/i,
+    sql: 'SELECT id FROM suppliers WHERE tenant_id = $1 AND item_number = $2 LIMIT 1',
+    value: Number,
+  },
+  companies: {
+    pattern: /^COMP-?(\d+)$/i,
+    sql: 'SELECT id FROM companies WHERE tenant_id = $1 AND item_number = $2 LIMIT 1',
+    value: Number,
+  },
+  contacts: {
+    pattern: /^CTCT-?(\d+)$/i,
+    sql: 'SELECT id FROM contacts WHERE tenant_id = $1 AND item_number = $2 LIMIT 1',
+    value: Number,
+  },
+  departments: {
+    pattern: /^DEPT-?(\d+)$/i,
+    sql: 'SELECT id FROM departments WHERE tenant_id = $1 AND item_number = $2 LIMIT 1',
+    value: Number,
+  },
+  contracts: {
+    pattern: /^CTR-?(\d+)$/i,
+    sql: 'SELECT id FROM contracts WHERE tenant_id = $1 AND item_number = $2 LIMIT 1',
+    value: Number,
+  },
+};
+
+/** The prefix of the families numbered by `item_number`, as `buildRef` writes their reference. */
+const ITEM_NUMBER_PREFIXES: Readonly<Record<string, string>> = {
+  projects: 'PRJ',
+  requests: 'REQ',
+  tasks: 'T',
+  documents: 'DOC',
+  incidents: 'INC',
+  technologies: 'TEC',
+  suppliers: 'SUP',
+  companies: 'COMP',
+  contacts: 'CTCT',
+  departments: 'DEPT',
+  contracts: 'CTR',
 };
 
 export function isUuid(value: string): boolean {
@@ -60,7 +101,8 @@ export function entityNotFound(entityType: string, value: string): NotFoundExcep
 
 /**
  * Resolve an AI tool's `entity_id` to the row's uuid when it is a uuid or the family's business
- * reference (APP-1, AST-3, PRJ-12, REQ-7, T-42, INC-2, TEC-5), in the caller's tenant. Returns null when
+ * reference (APP-1, AST-3, PRJ-12, REQ-7, T-42, INC-2, TEC-5, SUP-3, COMP-1, CTCT-2, DEPT-4, CTR-2), in the
+ * caller's tenant. Returns null when
  * the value is neither, so the caller decides how to search; a well-formed reference that matches
  * no row throws the same "not found" as an unknown name. Access checks stay with the service that
  * loads the row.
@@ -86,14 +128,22 @@ export async function resolveAiEntityReference(
  * families that number their rows. Applications and assets carry theirs as text (`APP-4`, `AST-2`)
  * and are not built here.
  */
-export function buildRef(type: AiSearchEntityType | AiContextEntityType, itemNumber?: number | null): string | null {
+export function buildRef(type: AiSearchEntityType | AiContextEntityType | AiQueryEntityType, itemNumber?: number | null): string | null {
   if (!itemNumber) return null;
-  if (type === 'projects') return `PRJ-${itemNumber}`;
-  if (type === 'requests') return `REQ-${itemNumber}`;
-  if (type === 'tasks') return `T-${itemNumber}`;
-  if (type === 'documents') return `DOC-${itemNumber}`;
-  if (type === 'incidents') return `INC-${itemNumber}`;
-  if (type === 'technologies') return `TEC-${itemNumber}`;
   if (type === 'budget_lines') return budgetLineReference(itemNumber);
-  return null;
+  return familyReference(type, itemNumber);
+}
+
+/** The reference of a record of a family numbered by `item_number` (`SUP-3`), null for another family. */
+export function familyReference(family: string, itemNumber: unknown): string | null {
+  const prefix = ITEM_NUMBER_PREFIXES[family];
+  const number = typeof itemNumber === 'number' ? itemNumber : Number(itemNumber);
+  return prefix && itemNumber != null && Number.isSafeInteger(number) && number > 0 ? `${prefix}-${number}` : null;
+}
+
+/** The number a value names when it is the family's own reference (`SUP-3` for suppliers), else null. */
+export function familyReferenceNumber(family: string, value: string): number | null {
+  const prefix = ITEM_NUMBER_PREFIXES[family];
+  const match = prefix ? String(value ?? '').trim().match(/^([A-Z]+)-(\d+)$/i) : null;
+  return match && match[1].toUpperCase() === prefix ? parseItemNumber(match[2]) : null;
 }

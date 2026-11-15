@@ -4066,7 +4066,7 @@ export class AiEntityService {
   private async buildContractContext(context: AiExecutionContextWithManager, contractId: string, manager: AiExecutionContextWithManager['manager']): Promise<AiEntityContextPayloadDto> {
     const { tenantId } = context;
     const [contract] = await manager.query<any[]>(
-      `SELECT c.id, c.tenant_id, c.name, c.notes, c.status, c.updated_at, c.start_date, c.duration_months, c.notice_period_months,
+      `SELECT c.id, c.tenant_id, c.item_number, c.name, c.notes, c.status, c.updated_at, c.start_date, c.duration_months, c.notice_period_months,
               c.auto_renewal, c.disabled_at, c.yearly_amount_at_signature, c.currency,
               sup.name AS supplier_name, comp.name AS company_name,
               NULLIF(btrim(concat_ws(' ', ou.first_name, ou.last_name)), '') AS owner_name
@@ -4111,6 +4111,7 @@ export class AiEntityService {
       entity: {
         ...toContextEntityBase('contracts', {
           id: contract.id,
+          item_number: contract.item_number,
           label: contract.name,
           summary: contract.notes ?? null,
           status: deriveStatusFromDisabledAt(contract.disabled_at),

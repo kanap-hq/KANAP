@@ -31,6 +31,7 @@ import {
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
 import { ACCOUNT_NUMBER_RULE, parseAccountNumber } from '../../accounts/account-number';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
+import { familyReference, familyReferenceNumber } from '../ai-entity-reference.util';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 
@@ -438,6 +439,13 @@ function requireEntityType(value: unknown): AiMasterDataEntityType {
 
 const COMPANY_METRIC_FIELDS = new Set(['headcount', 'it_users', 'turnover']);
 const DEPARTMENT_METRIC_FIELDS = new Set(['headcount']);
+
+/** A title led by the record's business reference when it has one (`SUP-3 - Acme`), as the numbered families show it. */
+function withReference(reference: string | null, title: string): string {
+  if (!reference) return title;
+  const rest = nameWithoutLeadingReference(reference, title);
+  return rest ? `${reference} - ${rest}` : reference;
+}
 
 @Injectable()
 export class AiMasterDataMutationSupportService {
@@ -920,11 +928,13 @@ export class AiMasterDataMutationSupportService {
     entityType: AiMasterDataEntityType,
     ref: string,
   ): Promise<Record<string, unknown>[]> {
+    // The family's own reference (SUP-3, COMP-1, CTCT-2, DEPT-4) names its record by number.
+    const number = familyReferenceNumber(entityType, ref);
     switch (entityType) {
       case 'companies':
         return manager.query(
-          `SELECT * FROM companies WHERE tenant_id = $1 AND LOWER(name) = LOWER($2::text) ORDER BY name LIMIT 6`,
-          [tenantId, ref],
+          `SELECT * FROM companies WHERE tenant_id = $1 AND (LOWER(name) = LOWER($2::text) OR item_number = $3) ORDER BY name LIMIT 6`,
+          [tenantId, ref, number],
         );
       case 'departments':
         return manager.query(
@@ -932,11 +942,11 @@ export class AiMasterDataMutationSupportService {
           SELECT d.*, c.name AS company_name
           FROM departments d
           LEFT JOIN companies c ON c.id = d.company_id AND c.tenant_id = d.tenant_id
-          WHERE d.tenant_id = $1 AND LOWER(d.name) = LOWER($2::text)
+          WHERE d.tenant_id = $1 AND (LOWER(d.name) = LOWER($2::text) OR d.item_number = $3)
           ORDER BY d.name
           LIMIT 6
           `,
-          [tenantId, ref],
+          [tenantId, ref, number],
         );
       case 'suppliers':
         return manager.query(
@@ -944,11 +954,11 @@ export class AiMasterDataMutationSupportService {
           SELECT *
           FROM suppliers
           WHERE tenant_id = $1
-            AND (LOWER(name) = LOWER($2::text) OR LOWER(COALESCE(erp_supplier_id, '')) = LOWER($2::text))
+            AND (LOWER(name) = LOWER($2::text) OR LOWER(COALESCE(erp_supplier_id, '')) = LOWER($2::text) OR item_number = $3)
           ORDER BY name
           LIMIT 6
           `,
-          [tenantId, ref],
+          [tenantId, ref, number],
         );
       case 'contacts':
         return manager.query(
@@ -960,11 +970,12 @@ export class AiMasterDataMutationSupportService {
             AND (
               LOWER(c.email) = LOWER($2::text)
               OR LOWER(NULLIF(TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))), '')) = LOWER($2::text)
+              OR c.item_number = $3
             )
           ORDER BY c.email
           LIMIT 6
           `,
-          [tenantId, ref],
+          [tenantId, ref, number],
         );
       case 'accounts':
         return manager.query(
@@ -1074,12 +1085,11 @@ export class AiMasterDataMutationSupportService {
         return textOrNull(row.account_number);
       case 'chart_of_accounts':
         return textOrNull(row.code);
-      case 'contacts':
-        return textOrNull(row.email);
       case 'locations':
         return textOrNull(row.location_reference);
       default:
-        return null;
+        // Suppliers, companies, contacts and departments: their business reference (SUP-3...).
+        return familyReference(entityType, row.item_number);
     }
   }
 
@@ -1091,12 +1101,12 @@ export class AiMasterDataMutationSupportService {
         return [row.code, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled chart of accounts';
       case 'contacts': {
         const name = [row.first_name, row.last_name].map(textOrNull).filter(Boolean).join(' ').trim();
-        return name || textOrNull(row.email) || 'Unknown contact';
+        return withReference(familyReference(entityType, row.item_number), name || textOrNull(row.email) || 'Unknown contact');
       }
       case 'departments': {
         const name = textOrNull(row.name) || 'Untitled department';
         const company = textOrNull(row.company_name);
-        return company ? `${name} (${company})` : name;
+        return withReference(familyReference(entityType, row.item_number), company ? `${name} (${company})` : name);
       }
       case 'locations': {
         const reference = textOrNull(row.location_reference);
@@ -1108,7 +1118,7 @@ export class AiMasterDataMutationSupportService {
         return dimension ? `${name} (${dimension})` : name;
       }
       default:
-        return textOrNull(row.name) || `Untitled ${this.getConfig(entityType).labelSingular}`;
+        return withReference(familyReference(entityType, row.item_number), textOrNull(row.name) || `Untitled ${this.getConfig(entityType).labelSingular}`);
     }
   }
 
