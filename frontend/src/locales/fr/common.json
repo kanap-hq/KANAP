@@ -595,6 +595,7 @@
     "insertOnly": "Insertion uniquement",
     "validationPassed_one": "Validation réussie. Prêt à importer {{count}} ligne.",
     "validationPassed_other": "Validation réussie. Prêt à importer {{count}} lignes.",
+    "nothingToImport": "Rien à importer.",
     "importCompleted": "Importation terminée avec succès.",
     "validationFailed": "La validation a échoué. Veuillez corriger les erreurs et réessayer.",
     "totalRows_one": "{{count}} ligne",

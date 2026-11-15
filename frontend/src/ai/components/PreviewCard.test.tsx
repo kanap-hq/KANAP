@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
 import { AiMutationPreview } from '../aiTypes';
+import type { BudgetFileReport } from '../../components/finance/budgetFile';
 import PreviewCard from './PreviewCard';
 import ArtifactPreviewChip from './ArtifactPreviewChip';
 import { getPreviewLabel } from '../utils/previewClassification';
@@ -1164,10 +1165,25 @@ describe('PreviewCard in French', () => {
     expect(screen.getByRole('button', { name: 'Approuver' })).toBeDisabled();
   });
 
-  const budgetCheck = (duplicates: Array<{ line: number; message: string; code: string; params: Record<string, string | number> }>, duplicatesCount: number) => importMapping({
+  type Look = NonNullable<BudgetFileReport['lookalikes']>['lines'][number];
+  const look = (line: number, item: number, over: Partial<Look> = {}): Look => ({
+    line,
+    nature: 'opex',
+    name: `Hébergement ${line}`,
+    target: { item, ref: `BL-${item}`, name: `Hébergement AWS ${item}`, state: `s${item}` },
+    reason: 'amounts',
+    outcome: 'ignored',
+    updatable: true,
+    ...over,
+  });
+  const budgetCheck = (
+    lines: Look[],
+    over: { count?: number; run?: Record<string, unknown>; file?: Record<string, unknown> } = {},
+  ) => importMapping({
     import_key: 'budget_lines',
     validation: {
-      ok: true, dry_run: true, total: 30, inserted: 30, updated: 0, unchanged: 0, skipped: 0, error_count: 0, warning_count: duplicates.length,
+      ok: true, dry_run: true, total: 30, inserted: 0, updated: 0, unchanged: 0, skipped: lines.length, error_count: 0, warning_count: 0,
+      ...over.run,
       report: {
         kind: 'budget_file',
         file: {
@@ -1180,64 +1196,87 @@ describe('PreviewCard in French', () => {
           missing: [],
           deleted: [],
           deletedCount: 0,
-          changes: { created: 30, updated: 0, unchanged: 0, createdLines: [], updatedLines: [] },
+          changes: { created: 0, updated: 0, unchanged: 0, createdLines: [], updatedLines: [] },
           changedSinceExport: [],
           changedSinceExportCount: 0,
-          warnings: { duplicates, duplicatesCount, ignoredColumns: [], supplierNames: [], ignoredCells: [] },
+          warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [] },
+          lookalikes: { lines, count: over.count ?? lines.length, ignored: lines.length, created: 0, updated: 0 },
           creates: { dimensionValues: [], suppliers: [] },
           supplierMessage: null,
+          ...over.file,
         } as any,
       },
     },
   });
-  const looksLikeLine = (line: number, ref: string) => ({ line, message: `row ${line} looks like ${ref}`, code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line, ref } });
+  const budgetPreview = (mapping: NonNullable<AiMutationPreview['import_mapping']>, over: Partial<AiMutationPreview> = {}) => preview({
+    tool_name: 'prepare_import_mapping',
+    summary: 'Importer « budget.xlsx » dans la liste Lignes budgétaires.',
+    target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Lignes budgétaires · budget.xlsx' },
+    import_mapping: mapping,
+    ...over,
+  });
 
-  it('counts the rows of a budget file that look like existing lines on its summary line and lists them before Approve', () => {
+  it('lists the rows of a budget file that look like existing lines once, in the check, before Approve', () => {
     readableResources = ['budget'];
-    renderCard(preview({
-      tool_name: 'prepare_import_mapping',
-      summary: 'Importer « budget.xlsx » dans la liste Lignes budgétaires.',
-      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Lignes budgétaires · budget.xlsx' },
-      import_mapping: budgetCheck([
-        looksLikeLine(12, 'BL-104'),
-        { line: 14, message: 'row 14 looks like row 12', code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: 14, row: 12 } },
-      ], 2),
-    }));
-    // The number, with the warning icon, on the summary line.
-    const count = screen.getByRole('img', { name: 'Avertissements (2)' });
-    expect(count).toHaveTextContent('2');
-    expect(screen.getByText('Importer « budget.xlsx » dans la liste Lignes budgétaires.').parentElement).toContainElement(count);
-    // Each one in the sentence of the import dialog, once (the check below does not repeat them), before Approve.
-    const line = screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === 'La ligne 12 ressemble à BL-104.');
-    expect(screen.getByText('La ligne 14 ressemble à la ligne 12.')).toBeInTheDocument();
-    expect(document.body.textContent!.match(/ressemble à/g)).toHaveLength(2);
-    expect(line.compareDocumentPosition(screen.getByRole('button', { name: 'Approuver' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    renderCard(budgetPreview(budgetCheck([look(12, 104, { reason: 'title_supplier' })], {
+      file: { warnings: { duplicates: [{ line: 14, message: 'row 14 looks like row 12', code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: 14, row: 12 } }], ignoredColumns: [], supplierNames: [], ignoredCells: [] } },
+    })));
+    expect(screen.getByText('Ressemble à une ligne existante')).toBeInTheDocument();
+    const line = screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === 'Ligne 12 : Hébergement 12 → BL-104 Hébergement AWS 104 · Écartée');
     // The existing line opens from its reference.
     expect(screen.getByRole('link', { name: 'BL-104' })).toHaveAttribute('href', '/ops/budget/BL-104');
-    expect(screen.getByRole('button', { name: 'Approuver' })).toBeEnabled();
+    // A row like an earlier row of the file stays among the warnings; no other list of lookalikes.
+    expect(screen.getByText('La ligne 14 ressemble à la ligne 12.')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Avertissements/ })).not.toBeInTheDocument();
+    expect(line.compareDocumentPosition(screen.getByRole('button', { name: 'Approuver' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('shows the first ten lookalikes and the others on a click, a reference without a link to a person who may not read budget lines', () => {
     readableResources = [];
-    const kept = Array.from({ length: 20 }, (_, index) => looksLikeLine(index + 2, `BL-${index + 101}`));
-    renderCard(preview({
-      tool_name: 'prepare_import_mapping',
-      summary: 'Importer « budget.xlsx » dans la liste Lignes budgétaires.',
-      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Lignes budgétaires · budget.xlsx' },
-      import_mapping: budgetCheck(kept, 25),
-    }));
-    expect(screen.getByRole('img', { name: 'Avertissements (25)' })).toHaveTextContent('25');
-    expect(document.body.textContent!.match(/ressemble à/g)).toHaveLength(10);
-    expect(screen.getByText('La ligne 11 ressemble à BL-110.')).toBeInTheDocument();
-    expect(screen.queryByText('La ligne 12 ressemble à BL-111.')).not.toBeInTheDocument();
+    const kept = Array.from({ length: 20 }, (_, index) => look(index + 2, index + 101));
+    renderCard(budgetPreview(budgetCheck(kept, { count: 25 })));
+    expect(document.body.textContent!.match(/→ BL-/g)).toHaveLength(10);
     expect(screen.queryByRole('link', { name: 'BL-101' })).not.toBeInTheDocument();
-
     fireEvent.click(screen.getByRole('button', { name: 'et 15 de plus' }));
-    expect(document.body.textContent!.match(/ressemble à/g)).toHaveLength(20);
-    expect(screen.getByText('La ligne 21 ressemble à BL-120.')).toBeInTheDocument();
-    // The check keeps the first twenty: the others are counted.
+    expect(document.body.textContent!.match(/→ BL-/g)).toHaveLength(20);
+    // The check keeps the first ones: the others are counted.
     expect(screen.getByText('Et 5 de plus.')).toBeInTheDocument();
     readableResources = ['budget'];
+  });
+
+  it('says "Nothing to import" on a check with nothing to import, in the normal colour, and cannot be approved', () => {
+    renderCard(budgetPreview(budgetCheck([look(2, 7)], { run: { nothing_to_import: true, unchanged: 0 } })));
+    const status = screen.getByText('Rien à importer.');
+    expect(status).not.toHaveStyle({ color: createAppTheme('light').palette.error.main });
+    expect(screen.queryByText(/^Validation réussie/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approuver' })).toBeDisabled();
+  });
+
+  it('shows the refusal of a card left pending as its message', () => {
+    const refusal = 'Rien à importer : ce fichier ne crée et ne modifie rien, il n\'y a donc rien à approuver.';
+    renderCard(budgetPreview(budgetCheck([look(2, 7)], { run: { nothing_to_import: true } }), { error_message: refusal }));
+    expect(screen.getByText(refusal)).toBeInTheDocument();
+    expect(screen.queryByText('Importer « budget.xlsx » dans la liste Lignes budgétaires.')).not.toBeInTheDocument();
+  });
+
+  it('says how many rows were left out once a budget file is imported', () => {
+    const run = { ok: true, dry_run: false, total: 3, inserted: 1, updated: 0, unchanged: 0, skipped: 2, error_count: 0, warning_count: 0, report: { kind: 'budget_file' as const, file: null } };
+    renderCard(budgetPreview({ ...budgetCheck([]), result: run }, { status: 'executed', requires_confirmation: false, actions: [] }));
+    expect(screen.getByText('1 créée · 2 lignes écartées')).toBeInTheDocument();
+  });
+
+  it('shows the amounts of the first rows right after the title, ahead of the other text columns', () => {
+    const column = (name: string, kind: string) => ({ column: name, title: name, required: false, kind, source: { position: 1, header: name }, value: null, confidence: 'high' as const, filled: 1, unread: 0, read_as: null, note: null });
+    const names = ['nature', 'name', 'company_name', 'supplier_name', 'account_number', 'cost_center_code', 'currency', 'budget_2026'];
+    renderCard(budgetPreview({
+      ...budgetCheck([]),
+      columns: names.map((name) => column(name, name === 'budget_2026' ? 'number' : 'text')),
+      sample: { columns: names, rows: [['opex', 'Hébergement', 'Fromage SA', 'OVH', '6150', 'IT', 'EUR', '12000']], unread: [names.map(() => false)] },
+    }));
+    const firstRows = screen.getByText('Premières lignes').parentElement!;
+    const headers = Array.from(firstRows.querySelectorAll('th')).map((cell) => cell.textContent);
+    expect(headers).toEqual(['nature', 'name', 'budget_2026', 'company_name', 'supplier_name', 'account_number', 'cost_center_code', 'currency']);
+    expect(Array.from(firstRows.querySelectorAll('td')).map((cell) => cell.textContent).slice(0, 3)).toEqual(['opex', 'Hébergement', '12000']);
   });
 
   it('writes each refusal of the budget file as its sentence in the language of the screen, never its code', () => {

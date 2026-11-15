@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, Checkbox, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Checkbox, Link, Tooltip, Typography } from '@mui/material';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import { useQueryClient } from '@tanstack/react-query';
@@ -31,6 +31,7 @@ import {
 import { checkSentence, failureText, serverSentence } from './budgetFileText';
 import { useImportFiles } from '../csv/importFiles';
 import ImportExampleButton from '../csv/ImportExampleButton';
+import { buildEntityUrl } from '../../ai/utils/entityUrls';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -47,6 +48,18 @@ const VALUES = '\u2063values\u2063';
 
 type Unmatch = Extract<BudgetFileChoice, { kind: 'unmatch' }>;
 type LineAction = { label: string; onClick: () => void; disabled?: boolean };
+type Lookalikes = NonNullable<BudgetFileReport['lookalikes']>;
+type Lookalike = Lookalikes['lines'][number];
+
+/** The rows that look like an existing line, listed at once; the others unfold on a click. */
+const SHOWN_LOOKALIKES = 10;
+/** Where the reference goes in a lookalike's sentence, so it can be a link. */
+const REF_MARK = '\u2063ref\u2063';
+const LOOKALIKE_REASONS: Record<Lookalike['reason'], string> = {
+  title_supplier: 'reasonTitleSupplier',
+  amounts: 'reasonAmounts',
+  close_title: 'reasonCloseTitle',
+};
 
 type Failure = { text: string; action: 'check' | 'load'; kind: 'stale' | 'retry' | 'final' };
 
@@ -339,6 +352,11 @@ export default function BudgetFileImportDialog({
             })}
           </Typography>
         )}
+        {loaded && (loaded.skipped ?? 0) > 0 && (
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {t(`${K}lookalikes.skipped`, { count: loaded.skipped })}
+          </Typography>
+        )}
 
         {report && !loaded && phase !== 'checking' && (
           <ReportView
@@ -391,7 +409,7 @@ export function ReportView({
   canCreateSuppliers,
   nothingToLoad,
   showStatus = true,
-  hideDuplicates = false,
+  canOpenLines = true,
   onChoices,
   choicesDisabled = false,
   matchesOpen: openFromParent,
@@ -402,8 +420,8 @@ export function ReportView({
   canCreateSuppliers: boolean;
   nothingToLoad: boolean;
   showStatus?: boolean;
-  /** The rows that look like existing lines are shown elsewhere (Kad's import card). */
-  hideDuplicates?: boolean;
+  /** The reference of a line the file looks like opens that line: false for a person who may not read budget lines. */
+  canOpenLines?: boolean;
   /**
    * Undo a match, or match a value again: receives the whole new list of choices, which the check
    * runs again with. Without it the matches are read only.
@@ -489,8 +507,11 @@ export function ReportView({
   const costCenterCompanies = report.warnings.costCenterCompanies ?? [];
   const calculationLines = report.warnings.calculationLines ?? [];
   const calculationLinesCount = report.warnings.calculationLinesCount ?? calculationLines.length;
-  const duplicates = hideDuplicates ? [] : report.warnings.duplicates;
-  const hasWarnings = duplicates.length > 0 || report.warnings.ignoredColumns.length > 0
+  const duplicates = report.warnings.duplicates;
+  // Amounts, dates or currency out of line with the stored lines: warnings among the others.
+  const consistency = report.warnings.consistency ?? [];
+  const consistencyCount = report.warnings.consistencyCount ?? consistency.length;
+  const hasWarnings = duplicates.length > 0 || consistency.length > 0 || report.warnings.ignoredColumns.length > 0
     || report.warnings.supplierNames.length > 0 || ignoredCells.length > 0 || costCenterCompanies.length > 0
     || calculationLines.length > 0
     || report.firstSheetOnly !== undefined;
@@ -594,6 +615,10 @@ export function ReportView({
       {hasWarnings && (
         <Section title={t(`${K}warningsTitle`)}>
           {duplicates.map((warning) => <Line key={`w-${warning.line}`} text={checkSentence(warning, t)} />)}
+          {consistency.map((warning, index) => (
+            <Line key={`cs-${warning.line}-${index}`} text={t(`${K}row`, { line: warning.line, message: checkSentence(warning, t) })} />
+          ))}
+          {more(consistencyCount, consistency.length) && <Line text={more(consistencyCount, consistency.length)!} />}
           {report.warnings.supplierNames.map((warning) => <Line key={`s-${warning.line}`} text={checkSentence(warning, t)} />)}
           {costCenterCompanies.map((warning) => (
             <Line
@@ -647,6 +672,18 @@ export function ReportView({
             />
           ))}
         </Box>
+      )}
+
+      {report.lookalikes && report.lookalikes.count > 0 && (
+        <LookalikesView
+          lookalikes={report.lookalikes}
+          choices={choices}
+          errors={report.errors}
+          onChoices={onChoices}
+          choicesDisabled={choicesDisabled}
+          canOpenLines={canOpenLines}
+          columnName={columnName}
+        />
       )}
 
       {hasCreates && (
@@ -756,15 +793,17 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   );
 }
 
-function Line({ text, children, danger, muted, kad, tooltip, action }: {
+function Line({ text, children, danger, muted, kad, tooltip, action, actions }: {
   text?: string;
   children?: React.ReactNode;
   danger?: boolean;
   muted?: boolean;
   /** Proposed by Kad: the accessible name of its mark, also said in the tooltip. */
   kad?: string;
-  tooltip?: string;
+  tooltip?: React.ReactNode;
   action?: LineAction;
+  /** Several actions, after the line. */
+  actions?: LineAction[];
 }) {
   const body = (
     <Typography
@@ -785,12 +824,112 @@ function Line({ text, children, danger, muted, kad, tooltip, action }: {
   );
   const title = kad && tooltip ? <>{kad}<br />{tooltip}</> : (tooltip ?? kad);
   const shown = title ? <Tooltip title={title} placement="bottom-start">{body}</Tooltip> : body;
-  if (!action) return shown;
+  const links = actions ?? (action ? [action] : []);
+  if (links.length === 0) return shown;
   return (
     <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.25 }}>
       {shown}
-      <ActionLink onClick={action.onClick} disabled={action.disabled}>{action.label}</ActionLink>
+      {links.map((link) => <ActionLink key={link.label} onClick={link.onClick} disabled={link.disabled}>{link.label}</ActionLink>)}
     </Box>
+  );
+}
+
+/**
+ * The rows of the file that look like an existing line, left out unless the person chooses: one
+ * line each, its reason in a tooltip, what becomes of it and the other choices; above them the
+ * counts and the choices for all rows. A row's own choice wins over the choice for all rows.
+ */
+function LookalikesView({ lookalikes, choices, errors, onChoices, choicesDisabled, canOpenLines, columnName }: {
+  lookalikes: Lookalikes;
+  choices: BudgetFileChoice[];
+  errors: BudgetFileReport['errors'];
+  onChoices?: (choices: BudgetFileChoice[]) => void;
+  choicesDisabled: boolean;
+  canOpenLines: boolean;
+  columnName: (column: string) => string;
+}) {
+  const { t } = useTranslation('ops');
+  const L = `${K}lookalikes.`;
+  const [unfolded, setUnfolded] = useState(false);
+  const all = choices.find((choice): choice is Extract<BudgetFileChoice, { kind: 'lookalikes' }> => choice.kind === 'lookalikes');
+  const updatable = lookalikes.lines.filter((look) => look.updatable);
+  // A row whose line changed since the check: its error is among the errors, and Update can be chosen again.
+  const changed = new Set(errors.filter((error) => error.code === 'BUDGET_FILE_LOOKALIKE_CHANGED').map((error) => error.line));
+  const act = (label: string, next: () => BudgetFileChoice[]): LineAction | null => (
+    onChoices ? { label, onClick: () => onChoices(next()), disabled: choicesDisabled } : null
+  );
+  const chooseRow = (look: Lookalike, action: 'ignore' | 'create' | 'update'): BudgetFileChoice[] => {
+    const rest = choices.filter((choice) => !(choice.kind === 'lookalike' && choice.line === look.line));
+    // Left out is the default: a row's "Leave out" is sent only to override the choice for all rows.
+    if (action === 'ignore') return all ? [...rest, { kind: 'lookalike', line: look.line, action: 'ignore' }] : rest;
+    if (action === 'create') return [...rest, { kind: 'lookalike', line: look.line, action: 'create' }];
+    return [...rest, { kind: 'lookalike', line: look.line, action: 'update', item: look.target.item, state: look.target.state }];
+  };
+  const chooseAll = (action: 'create' | 'update' | null): BudgetFileChoice[] => {
+    const rest = choices.filter((choice) => choice.kind !== 'lookalikes');
+    if (action === null) return rest;
+    if (action === 'create') return [...rest, { kind: 'lookalikes', action: 'create' }];
+    // Each line as the check shows it: a line changed in between is refused, not updated blind.
+    const states = Object.fromEntries(updatable.map((look) => [String(look.target.item), look.target.state]));
+    return [...rest, { kind: 'lookalikes', action: 'update', states }];
+  };
+  const present = (actions: Array<LineAction | null>): LineAction[] => actions.filter((entry): entry is LineAction => entry !== null);
+  const headActions = present([
+    all?.action !== 'create' ? act(t(`${L}createAll`), () => chooseAll('create')) : null,
+    updatable.length > 0 && all?.action !== 'update' ? act(t(`${L}updateAll`), () => chooseAll('update')) : null,
+    all ? act(t(`${L}ignoreAll`), () => chooseAll(null)) : null,
+  ]);
+  const folded = !unfolded && lookalikes.lines.length > SHOWN_LOOKALIKES;
+  const shown = folded ? lookalikes.lines.slice(0, SHOWN_LOOKALIKES) : lookalikes.lines;
+  const rest = lookalikes.count - shown.length;
+
+  const row = (look: Lookalike) => {
+    const stale = changed.has(look.line);
+    const [before, after] = t(`${L}row`, { line: look.line, name: look.name, ref: REF_MARK, target: look.target.name }).split(REF_MARK);
+    const url = canOpenLines ? buildEntityUrl('budget_lines', look.target.ref) : null;
+    const ref = url
+      ? <Link href={url} target="_blank" rel="noopener noreferrer" underline="hover">{look.target.ref}</Link>
+      : look.target.ref;
+    const outcome = look.outcome === 'ignored'
+      ? t(`${L}outcomeIgnored`)
+      : look.outcome === 'created' ? t(`${L}outcomeCreated`) : t(`${L}outcomeUpdated`, { ref: look.target.ref });
+    const reason = t(`${L}${LOOKALIKE_REASONS[look.reason]}`);
+    const fields = look.outcome !== 'updated'
+      ? null
+      : look.fields && look.fields.length > 0
+        ? t(`${L}fields`, { fields: look.fields.map((field) => columnName(field)).join(', ') })
+        : t(`${L}noChange`, { ref: look.target.ref });
+    return (
+      <Line
+        key={`la-${look.line}`}
+        danger={stale}
+        tooltip={fields ? <>{reason}<br />{fields}</> : reason}
+        actions={present([
+          look.outcome !== 'ignored' ? act(t(`${L}ignore`), () => chooseRow(look, 'ignore')) : null,
+          look.outcome !== 'created' ? act(t(`${L}create`), () => chooseRow(look, 'create')) : null,
+          look.updatable && (look.outcome !== 'updated' || stale)
+            ? act(t(`${L}update`, { ref: look.target.ref }), () => chooseRow(look, 'update'))
+            : null,
+        ])}
+      >
+        {after === undefined ? t(`${L}row`, { line: look.line, name: look.name, ref: look.target.ref, target: look.target.name }) : <>{before}{ref}{after}</>}
+        <Box component="span" sx={{ color: stale ? 'inherit' : 'kanap.text.secondary' }}>{` · ${outcome}`}</Box>
+      </Line>
+    );
+  };
+
+  return (
+    <Section title={t(`${L}title`)}>
+      <Line
+        muted
+        text={t(`${L}counts`, { ignored: lookalikes.ignored, created: lookalikes.created, updated: lookalikes.updated })}
+        actions={headActions}
+      />
+      {shown.map(row)}
+      {folded ? (
+        <Box><ActionLink onClick={() => setUnfolded(true)}>{t(`${K}andMoreInline`, { count: lookalikes.count - shown.length })}</ActionLink></Box>
+      ) : rest > 0 && <Line muted text={t(`${K}andMore`, { count: rest })} />}
+    </Section>
   );
 }
 

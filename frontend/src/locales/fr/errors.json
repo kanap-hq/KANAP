@@ -113,7 +113,6 @@
   "BUDGET_FILE_FROZEN": "La colonne {{label}} {{year}} est gelée.",
   "BUDGET_FILE_AMOUNT_CANNOT_BE_CLEARED": "Un montant ne peut pas être vidé. Indiquez 0 pour le mettre à zéro, ou laissez la cellule vide pour garder le montant enregistré.",
   "BUDGET_FILE_AMOUNT_TOO_LARGE": "Ce montant est trop grand.",
-  "BUDGET_FILE_LOOKS_LIKE_LINE": "La ligne {{line}} ressemble à {{ref}}.",
   "BUDGET_FILE_LOOKS_LIKE_ROW": "La ligne {{line}} ressemble à la ligne {{row}}.",
   "BUDGET_FILE_LOOKALIKE_CHANGED": "{{ref}} a changé depuis la vérification.",
   "BUDGET_FILE_AMOUNT_FAR_FROM_LINE": "{{label}} {{year}} : {{amount}}, contre {{other}} sur {{ref}}.",

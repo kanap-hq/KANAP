@@ -1104,6 +1104,27 @@
         "closeTo": "Close to: {{names}}",
         "lines": "Lines {{lines}}",
         "lines_one": "Line {{lines}}"
+      },
+      "lookalikes": {
+        "title": "Looks like an existing line",
+        "row": "Line {{line}}: {{name}} → {{ref}} {{target}}",
+        "reasonTitleSupplier": "Same title and supplier",
+        "reasonAmounts": "Same amounts",
+        "reasonCloseTitle": "Close title, same supplier and amount",
+        "ignore": "Leave out",
+        "create": "Create anyway",
+        "update": "Update {{ref}}",
+        "createAll": "Create all anyway",
+        "updateAll": "Update all",
+        "ignoreAll": "Leave all out",
+        "counts": "{{ignored}} left out, {{created}} created anyway, {{updated}} updated",
+        "outcomeIgnored": "Left out",
+        "outcomeCreated": "Created anyway",
+        "outcomeUpdated": "Updates {{ref}}",
+        "fields": "Changes: {{fields}}",
+        "noChange": "Nothing changes on {{ref}}",
+        "skipped": "{{count}} rows left out",
+        "skipped_one": "{{count}} row left out"
       }
     },
     "budgetAdminOnly": "You need budget administrator rights to use this page.",

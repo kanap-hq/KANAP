@@ -113,7 +113,6 @@
   "BUDGET_FILE_FROZEN": "Die Spalte {{label}} {{year}} ist eingefroren.",
   "BUDGET_FILE_AMOUNT_CANNOT_BE_CLEARED": "Ein Betrag kann nicht geleert werden. Geben Sie 0 ein, um ihn auf null zu setzen, oder lassen Sie die Zelle leer, um den gespeicherten Betrag zu behalten.",
   "BUDGET_FILE_AMOUNT_TOO_LARGE": "Dieser Betrag ist zu groß.",
-  "BUDGET_FILE_LOOKS_LIKE_LINE": "Zeile {{line}} ähnelt {{ref}}.",
   "BUDGET_FILE_LOOKS_LIKE_ROW": "Zeile {{line}} ähnelt Zeile {{row}}.",
   "BUDGET_FILE_LOOKALIKE_CHANGED": "{{ref}} wurde seit der Prüfung geändert.",
   "BUDGET_FILE_AMOUNT_FAR_FROM_LINE": "{{label}} {{year}}: {{amount}}, gegenüber {{other}} in {{ref}}.",

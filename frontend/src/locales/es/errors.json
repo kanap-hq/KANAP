@@ -113,7 +113,6 @@
   "BUDGET_FILE_FROZEN": "La columna {{label}} {{year}} está congelada.",
   "BUDGET_FILE_AMOUNT_CANNOT_BE_CLEARED": "Un importe no se puede vaciar. Indique 0 para ponerlo a cero, o deje la celda vacía para conservar el importe guardado.",
   "BUDGET_FILE_AMOUNT_TOO_LARGE": "Este importe es demasiado grande.",
-  "BUDGET_FILE_LOOKS_LIKE_LINE": "La línea {{line}} se parece a {{ref}}.",
   "BUDGET_FILE_LOOKS_LIKE_ROW": "La línea {{line}} se parece a la línea {{row}}.",
   "BUDGET_FILE_LOOKALIKE_CHANGED": "{{ref}} ha cambiado desde la comprobación.",
   "BUDGET_FILE_AMOUNT_FAR_FROM_LINE": "{{label}} {{year}}: {{amount}}, frente a {{other}} en {{ref}}.",
