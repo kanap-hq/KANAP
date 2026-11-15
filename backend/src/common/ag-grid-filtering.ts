@@ -1,5 +1,4 @@
 import { BadRequestException } from '@nestjs/common';
-import { referenceNumberOf } from './parse-item-number';
 
 /**
  * The type of the value a filter target reads. `date`: a date or a timestamp, filtered with date
@@ -313,10 +312,9 @@ export function bindPositional(compiled: CompiledCondition, params: unknown[]): 
 /**
  * A filter on a business reference column (`REQ-12`): the database holds the number
  * (`expression`), the grid shows it after its prefix. A text model matches the number's digits,
- * the prefix the user may type taken off first ("REQ-12" and "12" both find REQ-12); a number
- * model compares the number; a set model (the assistant's `reference` field) takes references or
- * their numbers and compares them exactly, a value that is no reference of the family left out
- * (`referenceNumberOf`).
+ * the prefix the user may type taken off first ("REQ-12" and "12" both find REQ-12); a set model
+ * (the assistant's `["SUP-12"]`) compares each value's digits as a whole; a number model compares
+ * the number.
  */
 export function compileReferenceFilter(
   rawModel: any,
@@ -325,42 +323,17 @@ export function compileReferenceFilter(
   nextParam: ParamNameFactory,
 ): CompiledCondition | null {
   const typed = new RegExp(`^\\s*${prefix}\\s*-?\\s*`, 'i');
+  const stripText = (value: unknown) => (typeof value === 'string' ? value.replace(typed, '').trim() : value);
   const strip = (model: any) => {
-    if (isSetModel(model)) {
-      const values = (model.values as unknown[]).flatMap((value) => {
-        if (value === null || value === undefined) return [value];
-        const number = referenceNumberOf(String(value), prefix, { bare: true });
-        return number === null ? [] : [number];
-      });
-      return { ...model, values };
-    }
-    return model && typeof model === 'object' && typeof model.filter === 'string'
-      ? { ...model, filter: model.filter.replace(typed, '').trim() }
-      : model;
+    if (!model || typeof model !== 'object') return model;
+    if (Array.isArray(model.values)) return { ...model, values: model.values.map(stripText) };
+    return typeof model.filter === 'string' ? { ...model, filter: stripText(model.filter) } : model;
   };
   const model = rawModel && typeof rawModel === 'object' && Array.isArray(rawModel.conditions)
     ? { ...rawModel, conditions: rawModel.conditions.map(strip) }
     : strip(rawModel);
-  const normalized = normalizeAgFilterModel(model);
-  const numeric = normalized?.filterType === 'number' || isSetModel(normalized);
+  const numeric = normalizeAgFilterModel(model)?.filterType === 'number';
   return compileAgFilterCondition(model, { expression, textExpression: `(${expression})::text`, dataType: numeric ? 'number' : 'string' }, nextParam);
-}
-
-/**
- * The quick search's condition for a typed reference of the family (`COMP-12`, any case): the
- * record of that number, added to the text search. Digits alone, and a number written with a
- * leading zero where the family refuses it (`COMP-013`), stay a text search: null.
- */
-export function compileReferenceQuickSearch(
-  q: string | null | undefined,
-  expression: string,
-  prefix: string,
-  nextParam: ParamNameFactory,
-): CompiledCondition | null {
-  const number = referenceNumberOf(q, prefix);
-  if (number === null) return null;
-  const param = nextParam();
-  return { sql: `${expression} = :${param}`, params: { [param]: number } };
 }
 
 /**

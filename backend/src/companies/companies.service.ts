@@ -10,7 +10,7 @@ import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/uncha
 import { ChartOfAccounts } from '../accounts/chart-of-accounts.entity';
 import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
 import { orderListQuery } from '../common/list-sort';
-import { referenceNumberOf } from '../common/parse-item-number';
+import { parseReferenceNumber } from '../common/parse-item-number';
 
 const COMPANY_SORT_COLUMNS = new Set(['id', 'item_number', 'name', 'country_iso', 'city', 'postal_code', 'address1', 'address2', 'state', 'notes', 'reg_number', 'vat_number', 'base_currency', 'status', 'created_at', 'updated_at']);
 const COMPANY_TEXT_SORTS = new Set(['name', 'country_iso', 'city', 'postal_code', 'address1', 'address2', 'state', 'notes', 'reg_number', 'vat_number', 'base_currency']);
@@ -26,7 +26,6 @@ import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
   compileReferenceFilter,
-  compileReferenceQuickSearch,
   createParamNameGenerator,
   FilterTargetConfig,
   CompiledCondition,
@@ -63,6 +62,17 @@ const METRIC_COLUMN = /^(headcount|it_users|turnover)_(\d{4})$/i;
 
 type CompanyFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
 type CompanyLookupItem = { id: string; name: string };
+
+/**
+ * The quick search's condition for a typed reference (`COMP-12`, any case): that company, added
+ * to the text search. Digits alone, and `COMP-013` (a leading zero), stay a text search.
+ */
+function referenceQuickSearch(q: string | null | undefined, nextParam: () => string): CompiledCondition | null {
+  const number = parseReferenceNumber(q, 'COMP', { prefixRequired: true });
+  if (number === null) return null;
+  const param = nextParam();
+  return { sql: `c.item_number = :${param}`, params: { [param]: number } };
+}
 
 @Injectable()
 export class CompaniesService {
@@ -200,7 +210,7 @@ export class CompaniesService {
         )
       : [];
     // `COMP-12` also finds that company.
-    const byReference = compileReferenceQuickSearch(q, 'c.item_number', 'COMP', nextParam);
+    const byReference = referenceQuickSearch(q, nextParam);
     if (byReference) quickSearchConditions.push(byReference);
 
     const applyQuickSearch = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
@@ -416,7 +426,7 @@ export class CompaniesService {
         )
       : [];
     // `COMP-12` also finds that company.
-    const byReference = compileReferenceQuickSearch(q, 'c.item_number', 'COMP', nextParam);
+    const byReference = referenceQuickSearch(q, nextParam);
     if (byReference) quickSearchConditions.push(byReference);
 
     const applyQuickSearch = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
@@ -629,7 +639,7 @@ export class CompaniesService {
         )
       : [];
     // `COMP-12` also finds that company.
-    const byReference = compileReferenceQuickSearch(q, 'c.item_number', 'COMP', nextParam);
+    const byReference = referenceQuickSearch(q, nextParam);
     if (byReference) quickSearchConditions.push(byReference);
 
     // One row per base currency: the turnovers are converted per currency below.
@@ -1082,7 +1092,7 @@ export class CompaniesService {
         return;
       }
       const referenceRaw = cellOf(row, 'reference');
-      const reference = referenceRaw ? referenceNumberOf(referenceRaw, 'COMP', { bare: true }) : null;
+      const reference = referenceRaw ? parseReferenceNumber(referenceRaw, 'COMP') : null;
       if (referenceRaw && reference === null) {
         errors.push(rowError(line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Unknown company reference '${referenceRaw}'`, { value: referenceRaw }));
       } else if (reference !== null) {

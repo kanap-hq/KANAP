@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import { FindOperator } from 'typeorm';
-import { assertSetFilterModes, bindPositional, buildQuickSearchConditions, compileAgFilterCondition, compileReferenceFilter, compileReferenceQuickSearch, createParamNameGenerator, escapeLikePattern, isExcludeSetModel, setFilterMode } from '../ag-grid-filtering';
+import { assertSetFilterModes, bindPositional, buildQuickSearchConditions, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, escapeLikePattern, isExcludeSetModel, setFilterMode } from '../ag-grid-filtering';
 import { assertEntityFilterFields, buildWhereFromAgFilters } from '../pagination';
 
 // The shared grid filter compiler of the 24 SQL lists. Include mode must stay
@@ -231,23 +231,11 @@ function testReferenceFilter() {
   assert.deepEqual(compile({ filterType: 'number', type: 'greaterThan', filter: 4 }), { sql: 'r.item_number > :p0', params: { p0: 4 } });
   assert.deepEqual(compile({ filterType: 'text', type: 'blank' }), { sql: "NULLIF((r.item_number)::text, '') IS NULL", params: {} });
   assert.equal(compile({ filterType: 'text', type: 'contains', filter: 'REQ-' }), null, 'the prefix alone filters nothing');
-  // A set model (Kad's `reference` field): each value a reference or its number, compared exactly.
-  assert.deepEqual(compile({ filterType: 'set', values: ['REQ-12', 'req-4', '7'] }), { sql: 'r.item_number IN (:...p0)', params: { p0: [12, 4, 7] } });
-  assert.deepEqual(compile({ filterType: 'set', values: ['APP-12', 'Acme'] }), { sql: '1=0', params: {} }, 'no reference of the family: nothing');
-  const company = (model: any) => compileReferenceFilter(model, 'c.item_number', 'COMP', createParamNameGenerator('p'));
-  assert.deepEqual(company({ filterType: 'set', values: ['COMP-3', 'COMP-013'] }), { sql: 'c.item_number IN (:...p0)', params: { p0: [3] } }, 'COMP-013 is no reference');
-  assert.deepEqual(company({ filterType: 'set', mode: 'exclude', values: ['COMP-3'] }), { sql: 'NOT COALESCE((c.item_number IN (:...p0)), FALSE)', params: { p0: [3] } });
-}
-
-/** The quick search of a list finds the record a typed reference names (`COMP-3`), and only it; digits alone stay a text search. */
-function testReferenceQuickSearch() {
-  const quick = (q: string) => compileReferenceQuickSearch(q, 'c.item_number', 'COMP', createParamNameGenerator('q'));
-  assert.deepEqual(quick('COMP-3'), { sql: 'c.item_number = :q0', params: { q0: 3 } });
-  assert.deepEqual(quick(' comp-30 '), { sql: 'c.item_number = :q0', params: { q0: 30 } });
-  assert.equal(quick('COMP-013'), null);
-  assert.equal(quick('3'), null);
-  assert.equal(quick('DEPT-3'), null);
-  assert.equal(quick('Acme'), null);
+  // The assistant's set of references (`["REQ-12"]`): each value's digits, compared whole.
+  assert.deepEqual(compile({ filterType: 'set', values: ['REQ-12', ' req-3 ', '7'] }), { sql: '(r.item_number)::text IN (:...p0)', params: { p0: ['12', '3', '7'] } });
+  // A leading zero is text: `SUP-013` compares "013", which no number is written as.
+  const supplier = compileReferenceFilter({ filterType: 'set', values: ['SUP-013'] }, 's.item_number', 'SUP', createParamNameGenerator('p'));
+  assert.deepEqual(supplier, { sql: '(s.item_number)::text IN (:...p0)', params: { p0: ['013'] } });
 }
 
 /** The lists that hand their filters to TypeORM: a date model reaches the column by day; an unknown column or a text model on a date is a 400. */
@@ -291,7 +279,6 @@ function testBindPositional() {
 testBindPositional();
 testDateTargets();
 testReferenceFilter();
-testReferenceQuickSearch();
 testTypeOrmListFilters();
 testIncludeModeUnchanged();
 testLikeOperatorsMatchTheValueLiterally();

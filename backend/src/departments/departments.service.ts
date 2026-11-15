@@ -5,7 +5,7 @@ import { Department } from './department.entity';
 import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
 import { orderListQuery } from '../common/list-sort';
-import { referenceNumberOf } from '../common/parse-item-number';
+import { parseReferenceNumber } from '../common/parse-item-number';
 
 const DEPARTMENT_SORT_COLUMNS = new Set(['id', 'item_number', 'company_id', 'name', 'description', 'status', 'created_at', 'updated_at']);
 const DEPARTMENT_TEXT_SORTS = new Set(['name', 'description']);
@@ -16,7 +16,6 @@ import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
   compileReferenceFilter,
-  compileReferenceQuickSearch,
   createParamNameGenerator,
   FilterTargetConfig,
   CompiledCondition,
@@ -44,6 +43,17 @@ import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } fro
 import type { ExportFileFormat } from '../common/xlsx/format';
 
 type DepartmentLookupItem = { id: string; name: string; company_id: string };
+
+/**
+ * The quick search's condition for a typed reference (`DEPT-12`, any case): that department, added
+ * to the text search. Digits alone, and `DEPT-013` (a leading zero), stay a text search.
+ */
+function referenceQuickSearch(q: string | null | undefined, nextParam: () => string): CompiledCondition | null {
+  const number = parseReferenceNumber(q, 'DEPT', { prefixRequired: true });
+  if (number === null) return null;
+  const param = nextParam();
+  return { sql: `d.item_number = :${param}`, params: { [param]: number } };
+}
 
 @Injectable()
 export class DepartmentsService {
@@ -135,7 +145,7 @@ export class DepartmentsService {
         )
       : [];
     // `DEPT-12` also finds that department.
-    const byReference = compileReferenceQuickSearch(q, 'd.item_number', 'DEPT', nextParam);
+    const byReference = referenceQuickSearch(q, nextParam);
     if (byReference) quickSearchConditions.push(byReference);
 
     const applyQuickSearch = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
@@ -420,7 +430,7 @@ export class DepartmentsService {
         )
       : [];
     // `DEPT-12` also finds that department.
-    const byReference = compileReferenceQuickSearch(q, 'd.item_number', 'DEPT', nextParam);
+    const byReference = referenceQuickSearch(q, nextParam);
     if (byReference) quickSearchConditions.push(byReference);
 
     const qb = repo.createQueryBuilder('d').select('d.id', 'id').addSelect('d.item_number', 'item_number');
@@ -620,7 +630,7 @@ export class DepartmentsService {
         continue;
       }
       const referenceRaw = cellOf(row, 'reference');
-      const reference = referenceRaw ? referenceNumberOf(referenceRaw, 'DEPT', { bare: true }) : null;
+      const reference = referenceRaw ? parseReferenceNumber(referenceRaw, 'DEPT') : null;
       if (referenceRaw && reference === null) {
         errors.push(rowError(line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Unknown department reference '${referenceRaw}'`, { value: referenceRaw }));
         continue;
