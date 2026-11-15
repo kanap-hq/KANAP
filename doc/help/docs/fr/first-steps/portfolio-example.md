@@ -61,7 +61,7 @@ Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pou
 
 **Ce que vous lisez.** L'export titre ses colonnes dans votre langue et l'import lit les mêmes colonnes : servez-vous-en comme modèle pour vos propres projets. Le classeur d'exemple contient quelques projets, les autres colonnes sur une feuille **Avancé** et ce que prend chaque colonne sur une feuille **Notes**. Les demandes et les tâches ont leurs propres **Exporter** et **Importer**. Ces boutons s'affichent pour les administrateurs de la liste.
 
-Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Kad avec **Joindre un fichier**. Kad lit les titres de ses colonnes, le type de chaque colonne et les dix premières lignes, et peut dire ce que contient chaque colonne.
+Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Kad avec **Joindre un fichier**. Kad lit les titres de ses colonnes, le type de chaque colonne, les dix premières lignes et les valeurs qui se répètent dans ses colonnes de texte, et peut dire ce que contient chaque colonne.
 
 ## Et ensuite
 

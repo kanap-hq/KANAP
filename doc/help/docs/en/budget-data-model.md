@@ -152,7 +152,7 @@ Allocations drive the chargeback reports, for OPEX and CAPEX lines. No file impo
 
 ## Reference data
 
-The budget file finds reference data by business identifiers. Load the reference data first. The budget file creates missing suppliers when **Create missing suppliers** is ticked, and missing analytics values. It creates nothing else.
+The budget file finds reference data by business identifiers. Load the reference data first. The budget file matches suppliers and analytics values to the existing ones, regardless of case and accents. It creates the missing suppliers when **Create missing suppliers** is ticked, and the missing analytics values. It creates nothing else.
 
 | Object | Identified in files by | Required | On a budget line |
 |---|---|---|---|

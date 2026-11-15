@@ -152,7 +152,7 @@ Zuordnungen speisen die Berichte zur Leistungsverrechnung, für OPEX- und CAPEX-
 
 ## Stammdaten
 
-Die Budgetdatei findet Stammdaten über fachliche Kennungen. Laden Sie die Stammdaten zuerst. Die Budgetdatei legt fehlende Lieferanten an, wenn **Fehlende Lieferanten anlegen** angehakt ist, sowie fehlende Analysewerte. Sonst legt sie nichts an.
+Die Budgetdatei findet Stammdaten über fachliche Kennungen. Laden Sie die Stammdaten zuerst. Die Budgetdatei ordnet Lieferanten und Analysewerte den vorhandenen zu, unabhängig von Groß- und Kleinschreibung und von Akzenten. Sie legt fehlende Lieferanten an, wenn **Fehlende Lieferanten anlegen** angehakt ist, sowie fehlende Analysewerte. Sonst legt sie nichts an.
 
 | Objekt | In Dateien identifiziert über | Erforderlich | Auf einer Budgetzeile |
 |---|---|---|---|

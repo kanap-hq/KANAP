@@ -374,6 +374,9 @@
       "check": "Import check",
       "result": "Import",
       "download": "Download file (.xlsx)"
+    },
+    "importChoices": {
+      "stale": "This card can no longer be changed. Ask {{agent}} for a new one."
     }
   },
   "previewStatuses": {

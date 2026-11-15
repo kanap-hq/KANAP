@@ -9,19 +9,24 @@ import { AiPolicyService } from '../ai-policy.service';
 import type { AiExecutionContextWithManager, AiImportMappingPreviewDto, AiImportRunDto } from '../ai.types';
 import { readTableAttachment, TABLE_ATTACHMENT_KIND } from '../attachments/table-attachment';
 import { AI_IMPORT_KEYS, AI_IMPORT_WHOLE_ROWS, aiImportAccess, type AiImportKey } from './ai-import-access';
+import { DESCRIBED_CATALOG_ENTRIES, enabledDimensionValues } from './ai-import-dimension-values';
 import { buildImportFile } from './ai-import-file';
 import { AiImportColumnMappingInput, AiImportMappingResult, AiImportTemplateColumn, buildImportMapping } from './ai-import-mapping';
 import { AiImportRunnerService } from './ai-import-runner.service';
 import { AI_IMPORT_TARGETS, AiImportColumnSpec, AiImportTarget, importColumnTitle } from './ai-import-targets';
-
-/** Catalog entries the template description lists for a column. */
-const DESCRIBED_CATALOG_ENTRIES = 60;
+import { cellKey } from '../../spend/budget-file/matching';
+import type { BudgetFileChoice, BudgetFileMatch } from '../../spend/budget-file/types';
 
 export type PrepareImportMappingInput = {
   attachment_id: string;
   entity_type: AiImportKey;
   columns: AiImportColumnMappingInput[];
   assumptions?: string[];
+  /**
+   * The person's choices on the card (a budget file: matches undone, "Create missing suppliers"),
+   * set by the server, never by the model: the tool's input schema has no such field.
+   */
+  choices?: BudgetFileChoice[];
 };
 
 /** One column of an import's template, as `describe_import_template` gives it to the model. */
@@ -35,6 +40,8 @@ export type AiImportTemplateColumnDto = {
   codes?: readonly string[];
   /** The workspace's entries of a catalog column, by code and name. */
   entries?: Array<{ code: string; name: string }>;
+  /** A budget file's dimension column: the dimension's enabled values, by name (the first ones). */
+  values?: string[];
 };
 
 /** The code of a file refused because its import would clear columns of the records it updates. */
@@ -90,7 +97,8 @@ function templateColumn(spec: AiImportColumnSpec, settings: ItOpsSettings | null
  * Plaid's side of an import (lots I2 and I3): the template of each import, the mapping of an attached
  * spreadsheet onto it, and the import of the file the mapping builds, checked then loaded by the
  * import of the screen. The file is read here, on the server, by its attachment id: the model works
- * from the file's summary and the template, and receives counts back, never other cells.
+ * from the file's summary (first rows, distinct values) and the template, and receives the check's
+ * counts, issues and matching back; the server checks every row.
  */
 @Injectable()
 export class AiImportMappingService {
@@ -133,6 +141,7 @@ export class AiImportMappingService {
     const target = aiImportTarget(key);
     await this.assertImportRights(context, target);
     const { specs, columns } = await this.templateColumns(context, target, language);
+    const dimensionValues = target.key === 'budget_lines' ? await enabledDimensionValues(context) : new Map<string, string[]>();
     return {
       import: target.key,
       name: target.names[language],
@@ -151,6 +160,7 @@ export class AiImportMappingService {
             .slice(0, DESCRIBED_CATALOG_ENTRIES)
             .map((option) => ({ code: option.code, name: column.displayName?.(option.code) ?? option.label ?? option.code })),
         } : {}),
+        ...(dimensionValues.has(column.column) ? { values: dimensionValues.get(column.column) } : {}),
       })),
     };
   }
@@ -167,14 +177,19 @@ export class AiImportMappingService {
   ): Promise<{ target: AiImportTarget; mapping: AiImportMappingPreviewDto }> {
     const target = aiImportTarget(input.entity_type);
     const { converted, lines, left } = await this.convert(context, target, input, language);
-    const validation = await this.runner.run(target.key, buildImportFile(converted.file, language), { dryRun: true, language, lines }, context);
-    return { target, mapping: { ...converted.preview, validation: refuseClearedColumns(validation, left) } };
+    const validation = await this.runner.run(target.key, buildImportFile(converted.file, language), {
+      dryRun: true, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
+    }, context);
+    // The budget file's facts of the approval lead the card the model reads.
+    const { on_approval: onApproval, ...checked } = refuseClearedColumns(validation, left);
+    return { target, mapping: { ...(onApproval ? { on_approval: onApproval } : {}), ...converted.preview, validation: checked } };
   }
 
   /**
    * The file a mapping builds, as the import reads it, for the person to download from the card: with
    * the same rights as the card, converted again from the attachment, every template column of an
-   * import that reads them all included.
+   * import that reads them all included. A budget file holds the values the card's check matched
+   * (the ones the person did not undo), as the import's dialog will read them.
    */
   async preparedFile(
     context: AiExecutionContextWithManager,
@@ -183,7 +198,14 @@ export class AiImportMappingService {
   ): Promise<{ content: Buffer; rows: number }> {
     const target = aiImportTarget(input.entity_type);
     await this.assertImportRights(context, target);
-    const { converted } = await this.convert(context, target, input, language);
+    const { converted, lines } = await this.convert(context, target, input, language);
+    if (target.key === 'budget_lines') {
+      const check = await this.runner.run(target.key, buildImportFile(converted.file, language), {
+        dryRun: true, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
+      }, context);
+      const file = check.report.kind === 'budget_file' ? check.report.file : null;
+      writeMatches(converted.file, ((file?.matching as { matches?: BudgetFileMatch[] } | undefined)?.matches) ?? []);
+    }
     return { content: buildImportFile(converted.file, language), rows: converted.file.rows.length };
   }
 
@@ -199,7 +221,9 @@ export class AiImportMappingService {
     const target = aiImportTarget(input.entity_type);
     const { converted, lines, left } = await this.convert(context, target, input, language);
     // Refused after the load as well: the approval's savepoint undoes it, and the card says why.
-    const result = await this.runner.run(target.key, buildImportFile(converted.file, language), { dryRun: false, language, lines }, context);
+    const result = await this.runner.run(target.key, buildImportFile(converted.file, language), {
+      dryRun: false, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
+    }, context);
     return refuseClearedColumns(result, left);
   }
 
@@ -244,6 +268,24 @@ export class AiImportMappingService {
     }
     return attachment;
   }
+}
+
+/**
+ * Writes the matched values in the file: each cell of a matched column whose value the check matched
+ * holds the existing value it stands for. The matches' `value` is the file's cell, case aside.
+ */
+function writeMatches(file: AiImportMappingResult['file'], matches: readonly BudgetFileMatch[]): void {
+  if (matches.length === 0) return;
+  const byKey = new Map(matches.map((match) => [cellKey(match.column, match.value), match.target]));
+  file.columns.forEach((column, index) => {
+    for (const row of file.rows) {
+      const cell = row[index];
+      if (typeof cell !== 'string' || cell === '') continue;
+      const target = byKey.get(cellKey(column.column, cell));
+      if (target !== undefined) row[index] = target;
+    }
+  });
+  delete file.proposals;
 }
 
 /**

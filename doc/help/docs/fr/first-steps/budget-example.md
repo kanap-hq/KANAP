@@ -63,7 +63,7 @@ Pendant l'essai, Kad démarre désactivé. Un administrateur l'active en cochant
 
 **Ce que vous lisez.** L'export est le fichier budget : les mêmes colonnes que celles que lit l'import. Servez-vous-en comme modèle pour mettre à jour des lignes en masse ou en charger de nouvelles. Le classeur d'exemple contient quelques lignes, les autres colonnes sur une feuille **Avancé** et ce que prend chaque colonne sur une feuille **Notes**. Un import vérifie tout le fichier avant de charger quoi que ce soit. **Exporter** et **Importer** s'affichent pour les administrateurs du budget.
 
-Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Kad avec **Joindre un fichier**. Kad lit les titres de ses colonnes, le type de chaque colonne et les dix premières lignes, et peut dire ce que contient chaque colonne.
+Pour partir d'un fichier que vous tenez déjà, joignez-le à un message dans Kad avec **Joindre un fichier**. Kad lit les titres de ses colonnes, le type de chaque colonne, les dix premières lignes et les valeurs qui se répètent dans ses colonnes de texte, et peut dire ce que contient chaque colonne.
 
 ## Et ensuite
 

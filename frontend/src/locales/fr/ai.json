@@ -374,6 +374,9 @@
       "check": "Vérification de l'import",
       "result": "Import",
       "download": "Télécharger le fichier (.xlsx)"
+    },
+    "importChoices": {
+      "stale": "Cette carte ne peut plus être modifiée. Demandez-en une nouvelle à {{agent}}."
     }
   },
   "previewStatuses": {

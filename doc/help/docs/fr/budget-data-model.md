@@ -152,7 +152,7 @@ Les ventilations alimentent les rapports de refacturation, pour les lignes OPEX 
 
 ## Données de référence
 
-Le fichier budgétaire retrouve les données de référence par des identifiants métier. Chargez d'abord les données de référence. Le fichier budgétaire crée les fournisseurs manquants quand **Créer les fournisseurs manquants** est cochée, ainsi que les valeurs analytiques manquantes. Il ne crée rien d'autre.
+Le fichier budgétaire retrouve les données de référence par des identifiants métier. Chargez d'abord les données de référence. Le fichier budgétaire rapproche les fournisseurs et les valeurs analytiques de ceux qui existent, sans tenir compte de la casse ni des accents. Il crée les fournisseurs manquants quand **Créer les fournisseurs manquants** est cochée, ainsi que les valeurs analytiques manquantes. Il ne crée rien d'autre.
 
 | Objet | Identifié dans les fichiers par | Obligatoire | Sur une ligne budgétaire |
 |---|---|---|---|

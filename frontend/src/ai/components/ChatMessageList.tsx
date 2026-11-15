@@ -30,6 +30,7 @@ import ArtifactPreviewChip from './ArtifactPreviewChip';
 import AttachmentImage from './AttachmentImage';
 import AttachmentFileChip from './AttachmentFileChip';
 import PreviewCard from './PreviewCard';
+import { previewChainId } from '../previewChains';
 import PlaidActivity from './PlaidActivity';
 import { useReferenceLinkPlugins } from '../utils/referenceLinks';
 
@@ -40,6 +41,8 @@ type ChatMessageListProps = {
   onSend: (text: string) => void;
   /** When provided, previews are routed to the artifact panel via this callback. */
   onOpenArtifact?: (previewId: string) => void;
+  /** A choice on an import card made a new card, which takes the place of the previous one. */
+  onReplacePreview?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
   /** Used to highlight the chip whose artifact is currently visible in the panel. */
   selectedArtifactId?: string | null;
   /** Called when the user clicks the Edit pencil on one of their own messages. */
@@ -500,6 +503,7 @@ function PreviewBatch({
   onApproveMany,
   onOpenArtifact,
   selectedArtifactId,
+  onReplacePreview,
 }: {
   previews: AiMutationPreview[];
   disabled?: boolean;
@@ -508,26 +512,28 @@ function PreviewBatch({
   onApproveMany: (previewIds: string[]) => void;
   onOpenArtifact?: (previewId: string) => void;
   selectedArtifactId?: string | null;
+  onReplacePreview?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
 }) {
   const { t } = useTranslation(['ai']);
   const mode = useTheme().palette.mode;
-  const [selectedId, setSelectedId] = useState<string | null>(() => (
-    previews.find((preview) => preview.status === 'pending')?.preview_id
-    || previews[0]?.preview_id
-    || null
-  ));
+  // The card chosen, by its chain: a card replaced by a choice of the person stays chosen.
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    const first = previews.find((preview) => preview.status === 'pending') || previews[0];
+    return first ? previewChainId(first) : null;
+  });
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
-    const current = previews.find((preview) => preview.preview_id === selectedId);
+    const current = previews.find((preview) => previewChainId(preview) === selectedId);
     // A card that expires (a newer card replaced it) gives way to a pending one.
     const pending = previews.find((preview) => preview.status === 'pending');
     if (!current || (current.status === 'expired' && pending)) {
-      setSelectedId(pending?.preview_id || previews[0]?.preview_id || null);
+      const next = pending || previews[0];
+      setSelectedId(next ? previewChainId(next) : null);
     }
   }, [previews, selectedId]);
 
-  const selected = previews.find((preview) => preview.preview_id === selectedId) || previews[0];
+  const selected = previews.find((preview) => previewChainId(preview) === selectedId) || previews[0];
   const approvablePreviews = previews.filter(isApprovable);
   const showBulkAction = approvablePreviews.length >= PREVIEW_BATCH_BULK_MIN && !onOpenArtifact;
   const visibleConfirmPreviews = approvablePreviews.slice(0, 6);
@@ -590,7 +596,7 @@ function PreviewBatch({
                 key={preview.preview_id}
                 component="button"
                 type="button"
-                onClick={() => setSelectedId(preview.preview_id)}
+                onClick={() => setSelectedId(previewChainId(preview))}
                 sx={(theme) => ({
                   border: 'none',
                   bgcolor: 'transparent',
@@ -648,10 +654,12 @@ function PreviewBatch({
           />
         ) : (
           <PreviewCard
+            key={previewChainId(selected)}
             preview={selected}
             disabled={disabled}
             onApprove={onApprove}
             onReject={onReject}
+            onReplace={onReplacePreview}
           />
         )}
       </Stack>
@@ -722,6 +730,7 @@ function AssistantMessage({
   onOpenArtifact,
   selectedArtifactId,
   onRegenerate,
+  onReplacePreview,
 }: {
   message: ChatMessage;
   previousUserMessage?: ChatMessage | null;
@@ -731,6 +740,7 @@ function AssistantMessage({
   onOpenArtifact?: (previewId: string) => void;
   selectedArtifactId?: string | null;
   onRegenerate?: () => void;
+  onReplacePreview?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
 }) {
   const toolCalls = message.toolCalls || [];
   const toolResults = message.toolResults || [];
@@ -741,9 +751,10 @@ function AssistantMessage({
       ...toolResults
       .filter((toolResult) => toolResult.name !== 'preview_execution_result')
       .flatMap((toolResult) => extractMutationPreviews(toolResult.result))
-      .map((preview) => previews.find((item) => item.preview_id === preview.preview_id) || preview),
+      // A message names the first card of a chain: the newest card of the chain shows in its place.
+      .map((preview) => previews.find((item) => previewChainId(item) === preview.preview_id) || preview),
       ...(message.previewIds || [])
-        .map((previewId) => previews.find((item) => item.preview_id === previewId))
+        .map((previewId) => previews.find((item) => previewChainId(item) === previewId))
         .filter((preview): preview is AiMutationPreview => preview != null),
     ].map((preview) => [preview.preview_id, preview])).values())
   ), [message.previewIds, toolResults, previews]);
@@ -791,6 +802,7 @@ function AssistantMessage({
             onApproveMany={handleApproveMany}
             onOpenArtifact={onOpenArtifact}
             selectedArtifactId={selectedArtifactId}
+            onReplacePreview={onReplacePreview}
           />
         ) : previewResults.map((preview) => {
             if (onOpenArtifact) {
@@ -805,11 +817,12 @@ function AssistantMessage({
             }
             return (
               <PreviewCard
-                key={preview.preview_id}
+                key={previewChainId(preview)}
                 preview={preview}
                 disabled={disabled}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                onReplace={onReplacePreview}
               />
             );
           })}
@@ -825,6 +838,7 @@ export default function ChatMessageList({
   onSend,
   onOpenArtifact,
   selectedArtifactId,
+  onReplacePreview,
   onEdit,
   onSubmitEdit,
   onCancelEdit,
@@ -867,6 +881,7 @@ export default function ChatMessageList({
           onSend={onSend}
           onOpenArtifact={onOpenArtifact}
           selectedArtifactId={selectedArtifactId}
+          onReplacePreview={onReplacePreview}
           onRegenerate={onRegenerate && isPersistedMessage(msg.id) && !disabled && !msg.isStreaming
             ? () => onRegenerate(msg.id)
             : undefined}

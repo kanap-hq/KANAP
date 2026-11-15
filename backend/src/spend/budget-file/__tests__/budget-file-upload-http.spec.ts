@@ -11,28 +11,30 @@ import {
   BUDGET_FILE_SNAPSHOT_MAX_BYTES,
   BUDGET_FILE_TOO_LARGE,
   BudgetFileSizeInterceptor,
+  budgetFileChoices,
   budgetFileMulterOptions,
 } from '../upload';
 
 // The budget file's multipart body, through the interceptors of the preflight and load routes
 // (spend-items and capex-items controllers). The load sends the preflight's snapshot back as a
 // text field: one entry per existing line of the file. Multer's default field size (1 MB) refused
-// a load of a few thousand lines with 400 "Field value too long - snapshot".
+// a load of a few thousand lines with 400 "Field value too long - snapshot". Both routes take the
+// person's choices on the check (lot I1 of 26.11.9) as a `choices` text field, never in the address.
 
 @Controller('probe')
 class BudgetFileProbeController {
   @Post('preflight')
   @HttpCode(200)
   @UseInterceptors(BudgetFileSizeInterceptor, FileInterceptor('file', budgetFileMulterOptions))
-  preflight(@UploadedFile() file: Express.Multer.File) {
-    return { size: file?.size ?? null };
+  preflight(@UploadedFile() file: Express.Multer.File, @Body('choices') choices: unknown) {
+    return { size: file?.size ?? null, choices: budgetFileChoices(choices).length };
   }
 
   @Post('import')
   @HttpCode(200)
   @UseInterceptors(BudgetFileSizeInterceptor, FileInterceptor('file', budgetFileMulterOptions))
-  load(@UploadedFile() file: Express.Multer.File, @Body('snapshot') snapshot: string) {
-    return { size: file?.size ?? null, lines: parseBudgetSnapshot(snapshot).lines.length };
+  load(@UploadedFile() file: Express.Multer.File, @Body('snapshot') snapshot: string, @Body('choices') choices: unknown) {
+    return { size: file?.size ?? null, lines: parseBudgetSnapshot(snapshot).lines.length, choices: budgetFileChoices(choices).length };
   }
 }
 
@@ -135,14 +137,23 @@ async function testHttp(app: INestApplication) {
     assert.equal(overFile.body.message, BUDGET_FILE_TOO_LARGE, path);
   }
 
-  // The large field size applies to the snapshot only: a second text field is refused.
-  const twoFields = await post(app, 'import', form(csv(), [['snapshot', '{"lines":[]}'], ['other', 'x']]));
-  assert.equal(twoFields.status, 400, JSON.stringify(twoFields.body));
-  assert.match(String(twoFields.body?.message), /Too many (fields|parts)/);
+  // The snapshot and the choices: a third text field is refused.
+  const choices = JSON.stringify([{ kind: 'unmatch', column: 'analytics:priority', value: 'Mandatory' }, { kind: 'create_suppliers', value: false }]);
+  const withChoices = await post(app, 'import', form(csv(), [['snapshot', '{"lines":[]}'], ['choices', choices]]));
+  assert.equal(withChoices.status, 200, JSON.stringify(withChoices.body));
+  assert.equal(withChoices.body.choices, 2);
+  const threeFields = await post(app, 'import', form(csv(), [['snapshot', '{"lines":[]}'], ['choices', '[]'], ['other', 'x']]));
+  assert.equal(threeFields.status, 400, JSON.stringify(threeFields.body));
+  assert.match(String(threeFields.body?.message), /Too many (fields|parts)/);
 
-  // The preflight sends the file alone.
+  // The preflight sends the file alone, or with the choices; a list that is not one is a 400.
   const preflight = await post(app, 'preflight', form(csv()));
   assert.equal(preflight.status, 200, JSON.stringify(preflight.body));
+  const chosen = await post(app, 'preflight', form(csv(), [['choices', choices]]));
+  assert.equal(chosen.body.choices, 2, JSON.stringify(chosen.body));
+  const bad = await post(app, 'preflight', form(csv(), [['choices', '{"kind":"unmatch"}']]));
+  assert.equal(bad.status, 400, JSON.stringify(bad.body));
+  assert.equal(bad.body.message, 'The choices are not valid.');
 }
 
 async function run() {
