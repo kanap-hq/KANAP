@@ -1498,29 +1498,29 @@ export const PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE =
   'The incident review is being edited by someone else, so nothing was changed. Try again once that edit is saved or its lock is released.';
 
 /**
- * An import of an attached file whose check found errors, on the card or again at the load: no row
- * was written (lot I3). Said as a check that failed, never as a refusal of the person or their rights.
- */
-export const PREVIEW_IMPORT_CHECK_FAILED_MESSAGE =
-  'The check of this file found errors, so nothing was imported. Correct the mapping or the file, then prepare the import again.';
-
-/**
  * The approval of an import card whose check found nothing to create or update (lot I2 of 26.11.9):
  * refused, and the card stays pending, so a choice on it can still give it something to import.
  */
 export const PREVIEW_IMPORT_NOTHING_MESSAGE =
   'Nothing to import: this file creates and changes nothing, so there is nothing to approve.';
 
+/**
+ * An import of an attached file whose check found errors, on the card or again at the load: no row
+ * was written (lot I3). Said as a check that failed, never as a refusal of the person or their rights.
+ */
+export const PREVIEW_IMPORT_CHECK_FAILED_MESSAGE =
+  'The check of this file found errors, so nothing was imported. Correct the mapping or the file, then prepare the import again.';
+
 const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
-  [PREVIEW_IMPORT_NOTHING_MESSAGE]: {
-    fr: "Rien à importer : ce fichier ne crée et ne modifie rien, il n'y a donc rien à approuver.",
-    de: 'Nichts zu importieren: Diese Datei erstellt und ändert nichts, daher gibt es nichts zu genehmigen.',
-    es: 'Nada que importar: este archivo no crea ni modifica nada, así que no hay nada que aprobar.',
-  },
   [PREVIEW_IMPORT_CHECK_FAILED_MESSAGE]: {
     fr: "La vérification de ce fichier a trouvé des erreurs : rien n'a été importé. Corrigez la correspondance ou le fichier, puis préparez l'import de nouveau.",
     de: 'Die Prüfung dieser Datei hat Fehler gefunden, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.',
     es: 'La comprobación de este archivo encontró errores, así que no se ha importado nada. Corrija la correspondencia o el archivo y vuelva a preparar la importación.',
+  },
+  [PREVIEW_IMPORT_NOTHING_MESSAGE]: {
+    fr: "Rien à importer : ce fichier ne crée et ne modifie rien, il n'y a donc rien à approuver.",
+    de: 'Nichts zu importieren: Diese Datei erstellt und ändert nichts, daher gibt es nichts zu genehmigen.',
+    es: 'Nada que importar: este archivo no crea ni modifica nada, así que no hay nada que aprobar.',
   },
   [PREVIEW_EXPIRED_MESSAGE]: {
     fr: "L'aperçu a expiré avant l'approbation.",
