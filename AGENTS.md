@@ -9,16 +9,26 @@ Tool-specific or private notes live in each tool's local files, never here.
 - **Release sprints.** Work is organised by release (a few days, a week at most). The maintainer
   writes each release plan with Claude: what is in, what is out, and the lots. A lot is one
   branch, one PR and one session (or one issue for the autopilot), with a short brief.
+- **One owner per subject.** The plan names who holds each subject until it runs in production.
+  A lot that depends on work held elsewhere (operations, another ongoing piece of work) enters
+  the release whole, with a written hand-over, or stays out of it. What a lot needs from someone
+  else has an owner and a date, and is asked for when the release starts.
 - **One session, one lot.** Work from the brief, in your own worktree from `origin/main`, end to
   end: analysis, code, tests, user docs if needed, local verification. Do not take on other lots
   and do not coordinate with other sessions by message: the plan is the contract, and a lot that
-  needs another one starts once that one has merged. If the brief contradicts the code or this
+  needs another one starts once that one has merged. Two sessions write to each other only when
+  the plan declares an interface between them or when the maintainer asks them to align, on that
+  subject alone; one of them then holds the subject and reports to the maintainer. If the brief contradicts the code or this
   file, say so before going further. A bounded task the maintainer gives directly is a lot too.
 - If a lot turns out to be large (schema change, several modules, a product decision), stop and
   ask the maintainer instead of improvising a large change.
 - An idea or defect found while testing that lies outside the lot goes to the maintainer's
   tracker, or into the plan as a new lot when the maintainer puts it in the release. It does not
   grow the current lot.
+- **A lot is delivered complete.** What finishes the work the lot started is done in the lot: the
+  other paths of the rule it changes, the findings of its review, the same defect on the pages
+  its change reaches, the checks it owes. If that would make the lot large or needs a product
+  decision, ask the maintainer. The tracker receives only subjects the lot did not start.
 - **To the end of the lot.** A session carries its lot through and ends once its PR is open. Use
   helper agents only for a broad exploration, or for the adversarial review of a migration, RLS or
   concurrency change.
@@ -121,9 +131,13 @@ Tool-specific or private notes live in each tool's local files, never here.
 ## Leftovers
 
 - Never leave a todo, backlog, progress or follow-up list in this repository, in `planning/`
-  or anywhere else. When a piece of work ends, its leftovers (open points, ideas, questions)
-  go to the maintainer's tracker: agents working for the maintainer find its location in
+  or anywhere else. A piece of work ends finished (see "A lot is delivered complete"). The new
+  subjects it found on the way (a defect that lies outside it, an idea, a question) go to the
+  maintainer's tracker, each one once: agents working for the maintainer find its location in
   `CLAUDE.local.md`, external contributors put them in the pull request description.
+- A release leaves the tracker with fewer open entries than it found: it closes more than it
+  writes. The count is taken when the release starts and after its final triage. A real defect
+  is still fixed or written down; the count is not held by leaving it out.
 - A planning document is a specification, a brief or a review. Once its lots are merged,
   say so in its first line (date, PR numbers) and stop editing it.
 
