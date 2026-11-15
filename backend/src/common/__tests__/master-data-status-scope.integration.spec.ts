@@ -9,6 +9,7 @@ import { BusinessProcessesService } from '../../business-processes/business-proc
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ContractsService } from '../../contracts/contracts.service';
+import { CONTRACT_CSV_HEADERS } from '../../contracts/contract-csv-headers';
 import * as budgetList from '../../spend/budget-list/budget-list.service';
 import { SUMMARY_SCOPES } from '../../spend/spend-summary.builder';
 
@@ -186,7 +187,8 @@ async function testContractsReadTheEndOfValidity() {
     const exported = await svc.exportCsv('data', { ...opts, language: 'fr' });
     const lines = exported.content.replace(/^\uFEFF/, '').trim().split('\n');
     const statusIndex = lines[0].split(';').indexOf('Statut');
-    const exportedStatus = (name: string) => lines.find((line) => line.startsWith(`${name};`))!.split(';')[statusIndex];
+    const nameIndex = lines[0].split(';').indexOf(CONTRACT_CSV_HEADERS.name.fr);
+    const exportedStatus = (name: string) => lines.find((line) => line.split(';')[nameIndex] === name)!.split(';')[statusIndex];
     assert.deepEqual(
       ['Active contract', 'Expired contract', 'Closed contract', 'Future contract'].map(exportedStatus),
       ['enabled', 'disabled', 'disabled', 'enabled'],
@@ -196,7 +198,7 @@ async function testContractsReadTheEndOfValidity() {
     assert.equal(reimported.ok, true, `contracts round trip: accepted (${JSON.stringify(reimported.errors)})`);
     assert.deepEqual(await dates(), before, 'contracts round trip: no end of validity changes');
     // A real edit still applies: enabling the closed contract clears its date.
-    const edited = exported.content.replace(/^(\uFEFF?Closed contract;.*?;)disabled;/m, '$1enabled;');
+    const edited = exported.content.replace(/^(\uFEFF?(?:CTR-\d+;)?Closed contract;.*?;)disabled;/m, '$1enabled;');
     assert.notEqual(edited, exported.content, 'the closed contract row is edited');
     const applied = await svc.importCsv({ file: { buffer: Buffer.from(edited, 'utf8') } as any, dryRun: false, userId: null, language: 'fr' }, opts);
     assert.equal(applied.ok, true, `contracts edit: accepted (${JSON.stringify(applied.errors)})`);

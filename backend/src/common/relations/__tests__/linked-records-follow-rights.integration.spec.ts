@@ -366,7 +366,7 @@ async function testTaskContextAndLists(h: Harness, runner: QueryRunner, s: Seed)
   assert.equal(contractTask.entity.metadata.related_object_name, null, 'A: no contract name');
   hasNot(contractTask, [CONTRACT], 'A, contract task context');
   const fullContract = await h.entities.getEntityContext(ctx(runner, s, 'full'), { entity_type: 'tasks', entity_id: 'T-2' });
-  assert.equal(fullContract.entity.metadata.related_object_name, CONTRACT, 'full: the contract name');
+  assert.match(String(fullContract.entity.metadata.related_object_name), new RegExp(`^CTR-\\d+ · ${CONTRACT}$`), 'full: the contract, by its reference and name');
   assert.deepEqual(relations(fullContract), ['linked_applications', 'linked_assets']);
 
   const list = await h.entities.listEntities(ctx(runner, s, 'a'), { entity_type: 'tasks' });
@@ -472,7 +472,7 @@ async function testTaskScreens(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual(Object.keys(values), ['status'], 'A: no application or asset values');
 
   const full = await h.tasks.getOne(s.contractTask, { ...opts, linkedReads: linkedReadsFromContext(tenantRequest(runner, s, 'full')) });
-  assert.equal(full.related_object_name, CONTRACT, 'full: the contract name');
+  assert.match(String(full.related_object_name), new RegExp(`^CTR-\\d+ · ${CONTRACT}$`), 'full: the contract, by its reference and name');
   assert.equal(full.applications.length, 1, 'full: the application');
 }
 
