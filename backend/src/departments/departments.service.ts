@@ -34,6 +34,8 @@ import {
   keepStoredEndOfValidity,
   ImportReportError,
   nameMatchedWarning,
+  referenceMoveWarning,
+  referenceRenameWarning,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
@@ -616,6 +618,12 @@ export class DepartmentsService {
       companyCache.set(key, c ?? null);
       return c ?? null;
     };
+    // The name of a company by id, for the warning of a department that moves.
+    const companyNames = new Map<string, string>();
+    const companyNameOf = async (id: string): Promise<string> => {
+      if (!companyNames.has(id)) companyNames.set(id, (await companyRepo.findOne({ where: { id } }))?.name ?? '');
+      return companyNames.get(id)!;
+    };
     // Validate and normalize rows
     const normalized: Array<DepartmentUpsertDto & { company_id: string; name: string; lifecycle: { status: StatusState | null; disabled_at: string | null } }> = [];
     const lineOf = new Map<object, number>();
@@ -735,6 +743,21 @@ export class DepartmentsService {
         if (sameName && sameName.id !== existing.id) {
           errors.push(rowError(line, 'name', 'CSV_VALUE_TAKEN', `"${fileItem.name}" already belongs to DEPT-${sameName.item_number}.`, { value: fileItem.name, reference: `DEPT-${sameName.item_number}` }));
           continue;
+        }
+        const ref = `DEPT-${existing.item_number}`;
+        const renamed = referenceRenameWarning(line, { family: 'department', reference: ref, stored: existing.name, next: fileItem.name });
+        if (renamed) warnings.push(renamed);
+        if (existing.company_id !== fileItem.company_id) {
+          const moved = referenceMoveWarning(line, {
+            parent: 'company',
+            reference: ref,
+            name: existing.name,
+            storedParentId: existing.company_id,
+            nextParentId: fileItem.company_id,
+            from: await companyNameOf(existing.company_id),
+            to: await companyNameOf(fileItem.company_id),
+          });
+          if (moved) warnings.push(moved);
         }
       } else if (existing) {
         const warning = nameMatchedWarning(line, 'name', fileItem.name, existing.name);

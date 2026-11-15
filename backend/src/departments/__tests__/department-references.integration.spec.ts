@@ -113,6 +113,7 @@ type Report = {
   updated?: number;
   unchanged?: number;
   errors: Array<{ row: number; column?: string; code?: string; params?: Record<string, string | number> }>;
+  warnings?: Array<{ row: number; column?: string; code?: string; params?: Record<string, string | number> }>;
 };
 
 const BASE = ['company_name', 'name', 'description', 'status', 'disabled_at'];
@@ -184,6 +185,39 @@ async function testImportByReference() {
   });
 }
 
+/**
+ * A filled reference that renames its department or moves it to another company is announced,
+ * without blocking the check or the load (D12). A row that keeps the stored name and company,
+ * or a row without a reference, announces nothing.
+ */
+async function testRenameAndMoveWarnings() {
+  await withDepartments('dref-warnings', async (seeded) => {
+    const run = importer(seeded);
+    const headers = ['reference', ...BASE];
+    const rows: Array<Record<string, string>> = [
+      { reference: 'DEPT-3', company_name: 'Alpha', name: 'Purchasing' },
+      { reference: 'DEPT-4', company_name: 'Beta', name: 'Dept 4' },
+      { reference: 'DEPT-5', company_name: 'Alpha', name: 'Dept 5', description: 'same name and company' },
+      { reference: '', company_name: 'Alpha', name: 'Dept 6', description: 'by name' },
+      { reference: '7', company_name: 'Beta', name: 'Seven' },
+      { reference: 'DEPT-8', company_name: 'Alpha', name: 'Dept 8' },
+    ];
+    for (const dryRun of [true, false]) {
+      const report = await run(headers, rows, dryRun);
+      assert.equal(report.ok, true, JSON.stringify(report.errors));
+      assert.deepEqual([report.inserted, report.updated, report.unchanged], [0, 5, 1], `dryRun=${dryRun}`);
+      assert.deepEqual((report.warnings ?? []).map((w) => [w.row, w.column, w.code, w.params]), [
+        [2, undefined, 'CSV_REFERENCE_RENAMES', { reference: 'DEPT-3', stored: 'Dept 3', name: 'Purchasing', context: 'department' }],
+        [3, undefined, 'CSV_REFERENCE_MOVES', { reference: 'DEPT-4', name: 'Dept 4', from: 'Alpha', to: 'Beta', context: 'company' }],
+        [6, undefined, 'CSV_REFERENCE_RENAMES', { reference: 'DEPT-7', stored: 'Dept 7', name: 'Seven', context: 'department' }],
+        [6, undefined, 'CSV_REFERENCE_MOVES', { reference: 'DEPT-7', name: 'Dept 7', from: 'Alpha', to: 'Beta', context: 'company' }],
+      ], `dryRun=${dryRun}`);
+    }
+    assert.deepEqual(await stored(seeded, 4), { name: 'Dept 4', company_id: seeded.beta, description: null }, 'the load moves despite the warning');
+    assert.equal((await stored(seeded, 3)).name, 'Purchasing', 'the load renames despite the warning');
+  });
+}
+
 async function testExportThenImport() {
   await withDepartments('dref-roundtrip', async (seeded) => {
     // The whole register, and what the list shows (the export dialog's default).
@@ -220,5 +254,6 @@ void runSpecs('department references', [
   ['the ids carry the references, and the list sorts by reference', testIdsAndSort],
   ['Kad filters and sorts by reference through the list service', testAssistantField],
   ['the file updates by reference, refuses an unknown one and still reads an older file', testImportByReference],
+  ['a rename or a move by reference is announced, without blocking the check or the load', testRenameAndMoveWarnings],
   ['an export imports back without change', testExportThenImport],
 ]);

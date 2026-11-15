@@ -141,6 +141,7 @@ type Report = {
   updated?: number;
   unchanged?: number;
   errors: Array<{ row: number; column?: string; code?: string; params?: Record<string, string | number> }>;
+  warnings?: Array<{ row: number; column?: string; code?: string; params?: Record<string, string | number> }>;
 };
 
 const BASE = ['name', 'country_iso', 'address1', 'address2', 'postal_code', 'city', 'state', 'reg_number', 'vat_number', 'base_currency', 'status', 'disabled_at', 'notes'];
@@ -214,6 +215,38 @@ async function testImportByReference() {
   });
 }
 
+/**
+ * A filled reference that renames its company is announced, without blocking the check or the
+ * load (D12: a file from another workspace would otherwise rename unrelated companies, since
+ * COMP-3 exists everywhere). A row whose name is stored as is, or a row without a reference,
+ * announces nothing.
+ */
+async function testRenameWarning() {
+  await withCompanies('ref-renames', async (seeded) => {
+    const run = importer(seeded);
+    const headers = ['reference', ...BASE];
+    const rows = [
+      row({ reference: 'COMP-3', name: 'Beta' }),
+      row({ reference: 'COMP-4', name: 'Company 4', notes: 'same name' }),
+      row({ reference: '', name: 'Company 5', notes: 'by name' }),
+      row({ reference: '6', name: 'company 6' }),
+      row({ reference: 'COMP-7', name: 'Company 7' }),
+    ];
+    for (const dryRun of [true, false]) {
+      const report = await run(headers, rows, dryRun);
+      assert.equal(report.ok, true, JSON.stringify(report.errors));
+      assert.deepEqual([report.inserted, report.updated, report.unchanged], [0, 4, 1], `dryRun=${dryRun}`);
+      assert.deepEqual((report.warnings ?? []).map((w) => [w.row, w.column, w.code, w.params]), [
+        [2, undefined, 'CSV_REFERENCE_RENAMES', { reference: 'COMP-3', stored: 'Company 3', name: 'Beta', context: 'company' }],
+        [5, undefined, 'CSV_REFERENCE_RENAMES', { reference: 'COMP-6', stored: 'Company 6', name: 'company 6', context: 'company' }],
+      ], `dryRun=${dryRun}`);
+    }
+    const names = await namesOf(seeded);
+    assert.equal(names.get(3), 'Beta', 'the load renames despite the warning');
+    assert.equal(names.get(6), 'company 6');
+  });
+}
+
 async function testExportThenImport() {
   await withCompanies('ref-roundtrip', async (seeded) => {
     const file = await seeded.svc.exportCsv('data', { manager: seeded.runner.manager, language: 'en', year: YEAR });
@@ -255,5 +288,6 @@ void runSpecs('company references', [
   ['the ids carry the references, and the list sorts by reference', testIdsAndSort],
   ['Kad filters and sorts by reference through the list service', testAssistantField],
   ['the file updates by reference, refuses an unknown one and still reads an older file', testImportByReference],
+  ['a rename by reference is announced, without blocking the check or the load', testRenameWarning],
   ['an export imports back without change', testExportThenImport],
 ]);

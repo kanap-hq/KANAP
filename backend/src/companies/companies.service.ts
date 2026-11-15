@@ -47,6 +47,7 @@ import {
   ImportReportError,
   headerMismatchError,
   nameMatchedWarning,
+  referenceRenameWarning,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
@@ -1265,6 +1266,8 @@ export class CompaniesService {
           errors.push(rowError(item.line, 'name', 'CSV_VALUE_TAKEN', `"${name}" already belongs to COMP-${sameName.item_number}.`, { value: name, reference: `COMP-${sameName.item_number}` }));
           continue;
         }
+        const renamed = referenceRenameWarning(item.line, { family: 'company', reference: `COMP-${existing.item_number}`, stored: existing.name, next: name });
+        if (renamed) warnings.push(renamed);
       } else if (existing) {
         const warning = nameMatchedWarning(item.line, 'name', name, existing.name);
         if (warning) warnings.push(warning);
