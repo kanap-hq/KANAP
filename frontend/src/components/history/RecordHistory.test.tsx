@@ -264,6 +264,9 @@ describe('RecordHistory', () => {
       if (url === '/it-ops/settings') {
         return { data: { applicationCategories: [{ code: 'custom_cat', label: 'Shop floor' }], accessMethods: [], serverRoles: [] } } as never;
       }
+      if (url === '/applications/classification-catalog') {
+        return { data: { businessCriticalityLevels: [], cyberCriticalityLevels: [], dataClasses: [], recoveryWaves: [] } } as never;
+      }
       return { data: page([item({ changes: [
         { field: 'category', before: 'custom_cat', after: 'line_of_business' },
         { field: 'users_mode', before: 'it_users', after: 'manual' },
@@ -285,11 +288,160 @@ describe('RecordHistory', () => {
     expect(bodyText()).not.toContain('it_users');
   });
 
+  it('names an application\'s classification levels as its screen does, from the workspace catalog', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/applications/classification-catalog') {
+        return {
+          data: {
+            businessCriticalityLevels: [
+              { code: 'business_critical', label: 'Critical', description: 'The activity tolerates at most four hours of interruption.', rank: 4, maxMtdMinutes: 240 },
+              { code: 'medium', label: 'Shop floor', description: 'Renamed by the workspace.', rank: 2, maxMtdMinutes: 4320 },
+            ],
+            cyberCriticalityLevels: [
+              { code: 'moderate', label: 'Contained', description: 'Renamed by the workspace.', rank: 2 },
+            ],
+            dataClasses: [],
+            recoveryWaves: [
+              { code: 'foundation', label: 'V0 — Foundation', description: 'Shared prerequisites and foundation services.', order: 0 },
+              { code: 'vital', label: 'First wave', description: 'Renamed by the workspace.', order: 1 },
+            ],
+          },
+        } as never;
+      }
+      return {
+        data: page([item({
+          changes: [
+            { field: 'criticality', before: 'business_critical', after: 'medium' },
+            { field: 'cyber_criticality', before: 'high', after: 'moderate' },
+            { field: 'recovery_wave', before: 'foundation', after: 'vital' },
+            { field: 'recovery_wave', before: 'legacy_wave', after: 'foundation' },
+          ],
+        })]),
+      } as never;
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RecordHistory table="applications" recordId={ID} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('Shop floor')).toBeInTheDocument();
+    expect(screen.getByText('Critical')).toBeInTheDocument();
+    expect(screen.getByText('Contained')).toBeInTheDocument();
+    expect(screen.getByText('High')).toBeInTheDocument();
+    expect(screen.getByText('First wave')).toBeInTheDocument();
+    expect(screen.getAllByText('V0: Foundation')).toHaveLength(2);
+    expect(screen.getByText('legacy_wave')).toBeInTheDocument();
+    expect(bodyText()).not.toContain('V0 Foundation');
+    expect(bodyText()).not.toContain('Medium');
+    expect(bodyText()).not.toContain('Business critical');
+    expect(mocked.get.mock.calls.some(([url]) => url === '/applications/classification-catalog')).toBe(true);
+  });
+
+  it('names a classification level in French as the screen does, and a missing code with the fixed label', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/applications/classification-catalog') {
+        return {
+          data: {
+            businessCriticalityLevels: [
+              { code: 'business_critical', label: 'Critical', description: 'The activity tolerates at most four hours of interruption.', rank: 4, maxMtdMinutes: 240 },
+              { code: 'medium', label: 'Moderate', description: 'The activity tolerates more than one day, up to three days of interruption.', rank: 2, maxMtdMinutes: 4320 },
+            ],
+            cyberCriticalityLevels: [],
+            dataClasses: [],
+            recoveryWaves: [],
+          },
+        } as never;
+      }
+      return {
+        data: page([item({ changes: [{ field: 'criticality', before: 'high', after: 'medium' }] })]),
+      } as never;
+    });
+    await i18n.changeLanguage('fr');
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RecordHistory table="applications" recordId={ID} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('Modérée')).toBeInTheDocument();
+    expect(screen.getByText('Élevée')).toBeInTheDocument();
+    expect(bodyText()).not.toContain('Moyenne');
+    expect(bodyText()).not.toContain('Moderate');
+  });
+
+  it('names a connection\'s business criticality from the same catalog', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/applications/classification-catalog') {
+        return {
+          data: {
+            businessCriticalityLevels: [
+              { code: 'medium', label: 'Shop floor', description: 'Renamed by the workspace.', rank: 2, maxMtdMinutes: 4320 },
+            ],
+            cyberCriticalityLevels: [],
+            dataClasses: [],
+            recoveryWaves: [],
+          },
+        } as never;
+      }
+      return {
+        data: page([item({ changes: [{ field: 'criticality', before: 'not_a_level', after: 'medium' }] })]),
+      } as never;
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RecordHistory table="connections" recordId={ID} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('Shop floor')).toBeInTheDocument();
+    expect(screen.getByText('not_a_level')).toBeInTheDocument();
+    expect(bodyText()).not.toContain('Medium');
+    expect(mocked.get.mock.calls.some(([url]) => url === '/it-ops/settings')).toBe(false);
+  });
+
+  it('names a technology\'s recovery wave from the same catalog', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/applications/classification-catalog') {
+        return {
+          data: {
+            businessCriticalityLevels: [],
+            cyberCriticalityLevels: [],
+            dataClasses: [],
+            recoveryWaves: [
+              { code: 'vital', label: 'First wave', description: 'Renamed by the workspace.', order: 1 },
+            ],
+          },
+        } as never;
+      }
+      return {
+        data: page([item({ changes: [{ field: 'recovery_wave', before: 'foundation', after: 'vital' }] })]),
+      } as never;
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RecordHistory table="technologies" recordId={ID} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('First wave')).toBeInTheDocument();
+    expect(screen.getByText('V0 Foundation')).toBeInTheDocument();
+  });
+
   it('does not read the IT settings for a record without catalog codes', async () => {
     mocked.get.mockResolvedValue({ data: page([item({ changes: [{ field: 'currency', before: 'EUR', after: 'USD' }] })]) } as never);
     renderHistory();
     await screen.findByText('Currency');
     expect(mocked.get.mock.calls.some(([url]) => url === '/it-ops/settings')).toBe(false);
+    expect(mocked.get.mock.calls.some(([url]) => url === '/applications/classification-catalog')).toBe(false);
   });
 
   it('says in one line that there is no write yet', async () => {
