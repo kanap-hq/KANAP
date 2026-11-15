@@ -382,7 +382,7 @@ describe('ChatMessageList', () => {
             id: 'assistant-1',
             role: 'assistant',
             content: [
-              'APP-36 runs on AST-4 (INT-7) at LOC-2 over CONN-9 and costs BL-113; see INC-26, T-8, PRJ-5, REQ-2, DOC-12, TEC-3 and CTR-4.',
+              'APP-36 runs on AST-4 (INT-7) at LOC-2 over CONN-9 and costs BL-113; see INC-26, T-8, PRJ-5, REQ-2, DOC-12, TEC-3, MEM-4 and CTR-5.',
               '',
               'Inline `APP-99`, already linked [T-115](/portfolio/tasks/task-115), CVE-2026-1234, XAPP-1, APP-1x and the server part APP-01.',
               '',
@@ -410,8 +410,10 @@ describe('ChatMessageList', () => {
     expect(hrefOf('REQ-2')).toBe('/portfolio/requests/REQ-2');
     expect(hrefOf('DOC-12')).toBe('/knowledge/DOC-12');
     expect(hrefOf('TEC-3')).toBe('/it/technologies/TEC-3');
-    expect(hrefOf('CTR-4')).toBe('/portfolio/contributors/CTR-4');
+    expect(hrefOf('MEM-4')).toBe('/portfolio/contributors/MEM-4');
     expect(hrefOf('T-115')).toBe('/portfolio/tasks/task-115');
+    // CTR-n is a contract reference: it opens nothing here, and never a contributor.
+    expect(screen.queryByRole('link', { name: 'CTR-5' })).toBeNull();
     expect(screen.getAllByRole('link')).toHaveLength(14);
     expect(container.querySelector('code')?.textContent).toBe('APP-99');
     expect(container.querySelector('pre')?.textContent).toContain('INC-77');
@@ -425,7 +427,7 @@ describe('ChatMessageList', () => {
     try {
       renderWithTheme(
         <ChatMessageList
-          messages={[{ id: 'assistant-1', role: 'assistant', content: 'APP-36 is funded by BL-113 and hosted at LOC-2 (CTR-4).' }]}
+          messages={[{ id: 'assistant-1', role: 'assistant', content: 'APP-36 is funded by BL-113 and hosted at LOC-2 (MEM-4).' }]}
           previews={[]}
           onSend={() => undefined}
         />,
@@ -433,7 +435,7 @@ describe('ChatMessageList', () => {
       expect(screen.getByRole('link', { name: 'APP-36' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'BL-113' })).toBeNull();
       expect(screen.queryByRole('link', { name: 'LOC-2' })).toBeNull();
-      expect(screen.queryByRole('link', { name: 'CTR-4' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'MEM-4' })).toBeNull();
     } finally {
       readableResources = null;
     }

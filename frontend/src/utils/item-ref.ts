@@ -1,4 +1,4 @@
-const PREFIXES = { task: 'T', project: 'PRJ', request: 'REQ', document: 'DOC', asset: 'AST', application: 'APP', location: 'LOC', connection: 'CONN', interface: 'INT', opex: 'OPX', capex: 'CPX', budget: 'BL', incident: 'INC', contributor: 'CTR', technology: 'TEC' } as const;
+const PREFIXES = { task: 'T', project: 'PRJ', request: 'REQ', document: 'DOC', asset: 'AST', application: 'APP', location: 'LOC', connection: 'CONN', interface: 'INT', opex: 'OPX', capex: 'CPX', budget: 'BL', incident: 'INC', contributor: 'MEM', technology: 'TEC' } as const;
 type ItemType = keyof typeof PREFIXES;
 
 export function formatItemRef(type: ItemType, itemNumber: number): string {

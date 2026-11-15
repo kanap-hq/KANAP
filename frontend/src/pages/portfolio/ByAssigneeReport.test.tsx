@@ -47,7 +47,7 @@ const report = (overrides: Partial<AssigneeAttention> = {}): AssigneeAttention =
       overdue: 8,
       stale: 10,
       members: [
-        { userId: 'u1', name: 'Alice Martin', contributorRef: 'CTR-12', open: 9, overdue: 5, stale: 6 },
+        { userId: 'u1', name: 'Alice Martin', contributorRef: 'MEM-12', open: 9, overdue: 5, stale: 6 },
         { userId: 'u2', name: 'Bob Durand', contributorRef: null, open: 4, overdue: 3, stale: 4 },
       ],
     },
@@ -243,7 +243,7 @@ describe('ByAssigneeReport', () => {
   it('opens the contributor page from the reference of a member', async () => {
     mockApi(report());
     renderReport();
-    expect((await screen.findByText('CTR-12')).getAttribute('href')).toBe('/portfolio/contributors/CTR-12');
+    expect((await screen.findByText('MEM-12')).getAttribute('href')).toBe('/portfolio/contributors/MEM-12');
   });
 
   it('drops the contributor reference for a reader of the reports alone', async () => {
@@ -251,7 +251,7 @@ describe('ByAssigneeReport', () => {
     mockApi(report());
     renderReport();
     await screen.findByText('Alice Martin');
-    expect(screen.queryByText('CTR-12')).toBeNull();
+    expect(screen.queryByText('MEM-12')).toBeNull();
   });
   it('reads the projects and teams from the URL and carries them into every link', async () => {
     mockApi(report({ teams: [report().teams[0]], unassigned: { open: 0, overdue: 0, stale: 0 } }));

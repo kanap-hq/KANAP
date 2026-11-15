@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -48,7 +48,9 @@ vi.mock('../../components/fields/CompanySelect', () => ({ default: () => <div da
 
 const theme = createAppTheme('light');
 const CONTRIBUTOR_ID = '8c744aca-52d4-4404-8079-763c1ea9a2a7';
-const CONTRIBUTOR_REF = 'CTR-12';
+const CONTRIBUTOR_REF = 'MEM-12';
+// The reference of a contributor before MEM-n (CTR-n is now a contract's).
+const LEGACY_REF = 'CTR-12';
 
 function contributor(overrides: Record<string, unknown> = {}) {
   return {
@@ -79,7 +81,12 @@ function contributor(overrides: Record<string, unknown> = {}) {
 
 function LocationProbe() {
   const location = useLocation();
-  return <div data-testid="location">{location.pathname}</div>;
+  return (
+    <>
+      <div data-testid="location">{location.pathname}</div>
+      <div data-testid="navigation-type">{useNavigationType()}</div>
+    </>
+  );
 }
 
 function renderAt(path: string) {
@@ -112,7 +119,7 @@ function mockGets(
 ) {
   const subject = contributor(opts.subject);
   vi.mocked(api.get).mockImplementation(async (url: string, config?: { params?: unknown }) => {
-    if (url === `/portfolio/team-members/${CONTRIBUTOR_ID}` || url === `/portfolio/team-members/${CONTRIBUTOR_REF}`) return { data: subject };
+    if (url === `/portfolio/team-members/${CONTRIBUTOR_ID}` || url === `/portfolio/team-members/${CONTRIBUTOR_REF}` || url === `/portfolio/team-members/${LEGACY_REF}`) return { data: subject };
     if (url === '/portfolio/employment-types') {
       return { data: [
         { id: 'type-1', name: 'Internal', is_active: true },
@@ -233,13 +240,22 @@ describe('ContributorWorkspacePage autosave', () => {
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(`/portfolio/contributors/${CONTRIBUTOR_REF}`));
   });
 
-  it('rewrites a legacy UUID URL to the CTR reference, keeping the tab', async () => {
+  it('rewrites a legacy UUID URL to the MEM reference, keeping the tab', async () => {
     renderAt(`/portfolio/contributors/${CONTRIBUTOR_ID}/skills`);
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(`/portfolio/contributors/${CONTRIBUTOR_REF}/skills`));
     // The record loaded by UUID is reused under the reference key: no second fetch.
     const fetches = vi.mocked(api.get).mock.calls.filter(([url]) => url === `/portfolio/team-members/${CONTRIBUTOR_REF}`).length;
     expect(fetches).toBe(0);
     expect(screen.getAllByText(CONTRIBUTOR_REF).length).toBeGreaterThan(0);
+  });
+
+  it('opens the former CTR address and replaces it with the MEM one, keeping the tab and the history', async () => {
+    renderAt(`/portfolio/contributors/${LEGACY_REF}/skills`);
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(`/portfolio/contributors/${CONTRIBUTOR_REF}/skills`));
+    expect(vi.mocked(api.get).mock.calls.some(([url]) => url === `/portfolio/team-members/${LEGACY_REF}`)).toBe(true);
+    expect(screen.getAllByText(CONTRIBUTOR_REF).length).toBeGreaterThan(0);
+    // `replace`: the former address leaves no entry behind it.
+    expect(screen.getByTestId('navigation-type').textContent).toBe('REPLACE');
   });
 
   it('adds a skill with the chosen level from the header dialog', async () => {
@@ -425,7 +441,7 @@ describe('ContributorWorkspacePage manager and employment type', () => {
     renderAt(`/portfolio/contributors/${CONTRIBUTOR_REF}`);
     const link = await screen.findByRole('button', { name: /metadata\.manager\s*Grace HOPPER/ });
     fireEvent.click(link);
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/portfolio/contributors/CTR-7'));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/portfolio/contributors/MEM-7'));
   });
 
   it('leaves a manager who is not a contributor unlinked', async () => {

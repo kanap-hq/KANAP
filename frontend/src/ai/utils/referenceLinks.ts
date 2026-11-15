@@ -8,8 +8,8 @@ import { buildEntityUrl } from './entityUrls';
  * with the right the route asks for (ProtectedRoute).
  *
  * Checked on the detail routes and the reads behind them. Contracts have no numbered reference,
- * and a CVE id is not a record page: both stay text. `CTR-n` is a contributor, not a contract
- * (the mention token CTR filters contracts, which do not open by that reference).
+ * and a CVE id is not a record page: both stay text. `MEM-n` is a contributor; `CTR-n`, the
+ * reference of a contract, stays text here and no longer opens a contributor.
  */
 const LINKED_REFERENCE_FAMILIES: Record<string, { entityType: string; resource: string }> = {
   APP: { entityType: 'applications', resource: 'applications' },
@@ -23,13 +23,13 @@ const LINKED_REFERENCE_FAMILIES: Record<string, { entityType: string; resource: 
   PRJ: { entityType: 'projects', resource: 'portfolio_projects' },
   REQ: { entityType: 'requests', resource: 'portfolio_requests' },
   DOC: { entityType: 'documents', resource: 'knowledge' },
-  CTR: { entityType: 'contributors', resource: 'portfolio_settings' },
+  MEM: { entityType: 'contributors', resource: 'portfolio_settings' },
   BL: { entityType: 'budget_lines', resource: 'budget' },
   OPX: { entityType: 'budget_lines', resource: 'budget' },
   CPX: { entityType: 'budget_lines', resource: 'budget' },
 };
 
-/** Contributors are absent from `buildEntityUrl`: that table's CTR token is the contracts mention filter. */
+/** Contributors are absent from `buildEntityUrl`: they are no mention family. */
 function referenceUrl(entityType: string, reference: string): string | null {
   if (entityType === 'contributors') return `/portfolio/contributors/${reference}`;
   return buildEntityUrl(entityType, reference);
