@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -147,6 +147,18 @@ describe('PreviewCard, the matches of a budget file', () => {
     const next = card({ id: 'preview-2', replaces: 'preview-1', matching: matching({ choices: sent }) });
     answer({ data: next });
     await waitFor(() => expect(onReplace).toHaveBeenCalledWith(expect.objectContaining({ preview_id: 'preview-1' }), next));
+  });
+
+  it('sends one request for a double click on Undo, before the card renders again', async () => {
+    post.mockReturnValue(new Promise(() => undefined));
+    renderCard(card());
+    fireEvent.click(screen.getByRole('button', { name: /^2 values matched/ }));
+    const undo = within(screen.getByText('IT domain: Hardware → Matériel').parentElement!).getByRole('button', { name: 'Undo' });
+    act(() => {
+      fireEvent.click(undo);
+      fireEvent.click(undo);
+    });
+    expect(post).toHaveBeenCalledTimes(1);
   });
 
   it('takes a match back: Match again sends the list without its entry', async () => {

@@ -160,13 +160,18 @@ function PreviewCard({
   const [choiceError, setChoiceError] = React.useState<{ text: string; detail: string | null } | null>(null);
   const canChoose = isPending && !!onReplace && !!preview.conversation_id
     && preview.import_mapping?.validation?.report.kind === 'budget_file' && !preview.import_mapping.result;
+  // One request per card: a second click before the new render would act on the card being replaced.
+  // The card that sent it stays answered; its replacement takes choices again.
+  const sentFor = React.useRef<string | null>(null);
   const choose = React.useCallback((choices: BudgetFileChoice[]) => {
-    if (!onReplace || !preview.conversation_id) return;
+    if (!onReplace || !preview.conversation_id || sentFor.current === preview.preview_id) return;
+    sentFor.current = preview.preview_id;
     setChoosing(true);
     setChoiceError(null);
     setImportChoices(preview.conversation_id, preview.preview_id, choices)
       .then((next) => onReplace(preview, next))
       .catch((error: unknown) => {
+        sentFor.current = null;
         const response = (error as { response?: { status?: number; data?: { message?: unknown } } })?.response;
         const message = typeof response?.data?.message === 'string' ? response.data.message : null;
         setChoiceError(response?.status === 409
