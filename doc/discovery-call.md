@@ -8,7 +8,7 @@ Code: `backend/src/discovery-call/`, `frontend/src/components/BookDiscoveryCallB
 
 | Variable | Use |
 |---|---|
-| `DISCOVERY_CALL_URL` | The booking page (`https://cal.com/kanap/decouverte`). Empty: no button. |
+| `DISCOVERY_CALL_URL` | The booking page (`https://cal.com/kadratis/decouverte`). Empty: no button. |
 | `DISCOVERY_CALL_FALLBACK_EMAIL` | Used by the button when no booking page is set (`mailto:`). |
 | `DISCOVERY_CALL_WEBHOOK_SECRET` | The secret of the Cal.com webhook. Empty: the webhook answers 404. |
 
