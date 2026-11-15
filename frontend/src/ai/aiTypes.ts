@@ -113,6 +113,17 @@ export type AiImportRun = {
   warning_count: number;
   /** The budget file: the suppliers its load creates. */
   new_suppliers?: number;
+  /**
+   * The budget file: the rows that look like a stored line (`looks_like`) or an earlier row
+   * (`looks_like_file_line`); `skipped` counts the rows left out. The card reads `report.file.lookalikes`.
+   */
+  similar_lines?: {
+    count: number;
+    ignored?: number;
+    created_anyway?: number;
+    updated?: number;
+    first: Array<{ file_line: number; looks_like?: string; reason?: string; outcome?: string; looks_like_file_line?: number }>;
+  };
   /** The budget file's matching as the model reads it; the card reads `report.file.matching` (full lists). */
   matching?: {
     choices: BudgetFileChoice[];
