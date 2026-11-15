@@ -196,6 +196,7 @@
       "asset_reference": "Referencia del activo",
       "assets": "Activos vinculados",
       "audit_logging": "Registro de auditoría",
+      "budget_line_bulk_edit": "Modificación masiva",
       "budget_year": "Año presupuestario",
       "business_objects": "Objetos de negocio",
       "business_purpose": "Finalidad de negocio",

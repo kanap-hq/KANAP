@@ -196,6 +196,7 @@
       "asset_reference": "Référence de l'actif",
       "assets": "Actifs liés",
       "audit_logging": "Journalisation d'audit",
+      "budget_line_bulk_edit": "Modification en masse",
       "budget_year": "Année budgétaire",
       "business_objects": "Objets métier",
       "business_purpose": "Finalité métier",

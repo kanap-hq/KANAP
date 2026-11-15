@@ -116,6 +116,7 @@ const BUDGET_LINE_FIELDS: Record<string, string> = {
   cost_center_id: 'ops:opex.fields.costCenter',
   run_build: 'ops:opex.fields.runBuild',
   contract_id: 'ops:opex.columns.contract',
+  budget_line_bulk_edit: 'ai:previewCard.fields.budget_line_bulk_edit',
   notes: 'ops:opex.fields.notes',
 };
 
