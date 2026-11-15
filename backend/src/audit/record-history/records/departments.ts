@@ -30,6 +30,7 @@ const DEPARTMENT_FIELDS: HistoryFields = {
   status: shown(),
   disabled_at: shown(),
   company_id: shown('company'),
+  item_number: hidden('business reference, never a change'),
   id: hidden('identity'),
   tenant_id: hidden('tenancy'),
   created_at: hidden('timestamp'),

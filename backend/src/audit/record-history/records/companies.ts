@@ -39,6 +39,7 @@ const COMPANY_FIELDS: HistoryFields = {
   disabled_at: shown(),
   notes: shown(),
   coa_id: shown('chart_of_accounts'),
+  item_number: hidden('business reference, never a change'),
   id: hidden('identity'),
   tenant_id: hidden('tenancy'),
   created_at: hidden('timestamp'),
