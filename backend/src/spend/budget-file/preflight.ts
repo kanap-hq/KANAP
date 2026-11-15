@@ -14,6 +14,7 @@ import type { BudgetNature } from '../budget-nature';
 import { BudgetFileRead, firstAmountYear, interpretBudgetFile, InterpretedRow, FieldCell, ItemNumberCell } from './interpret';
 import { tokenError } from './token';
 import { columnOfMeasure } from './columns';
+import { FoundLookalike, hintState, LineIndex, lineState, RowKeys, rowSums, unusual } from './lookalikes';
 import { DATA_ACCESS_LEAVES_ACCESS_MESSAGE, DATA_ACCESS_PLACEMENT_MESSAGE } from '../../data-access/line-write-checks';
 import {
   accentFreeKey,
@@ -33,6 +34,9 @@ import {
   BudgetFileCandidates,
   BudgetFileChoice,
   BudgetFileLinePlan,
+  BudgetFileLookalike,
+  BudgetFileLookalikeChoice,
+  BudgetFileLookalikesChoice,
   BudgetFileMatch,
   BudgetFileMatchOptions,
   BudgetFileNatureCounts,
@@ -47,6 +51,7 @@ import {
   CatalogSupplier,
   CatalogUser,
   LineHint,
+  LOOKALIKE_LIST_LIMIT,
   MATCH_LINE_LIMIT,
   MATCH_LIST_LIMIT,
   MISSING_EXAMPLE_LIMIT,
@@ -227,6 +232,15 @@ interface Bag {
   supplierNames: Array<{ line: number } & BudgetFileSentence>;
   costCenterCompanies: CostCenterCompanyWarning[];
   calculationLines: CalculationLinesWarning[];
+  /** The consistency warnings of the lines written (lot I2 of 26.11.9). */
+  consistency: Array<{ line: number } & BudgetFileSentence>;
+  /** The stored lines the person reads, indexed: the lookalikes and the consistency checks read them. */
+  index: LineIndex;
+  /** The rows that look like a stored line, and the line each looks like. */
+  lookalikes: BudgetFileLookalike[];
+  lookTargets: Map<number, LineHint>;
+  /** The lookalike choices the check followed. */
+  lookalikeChoices: BudgetFileChoice[];
   deleted: Array<{ line: number; itemNumber: string }>;
   changed: BudgetFileReport['changedSinceExport'];
   snapshot: BudgetFileSnapshotLine[];
@@ -281,10 +295,35 @@ function refused(input: PreflightInput, rows: InterpretedRow[]): BudgetFileRepor
 
 function compared(input: PreflightInput, rows: InterpretedRow[]): { report: BudgetFileReport; plans: BudgetFileLinePlan[] } {
   const bag = emptyBag(input);
+  // The rows that look like a stored line are decided before the rows are read (lot I2 of 26.11.9):
+  // a row left out leaves nothing behind (no plan, no supplier or value to create, no match listed).
+  const decided = decideLookalikes(input, rows, bag);
+  bag.lookalikeChoices = decided.followed;
   // A line named twice, by the same number or by two of its numbers (`BL-n` and `OPX-n`).
   const seen = new Map<string, { line: number; ref: string }>();
   const newKeys = new Map<string, number>();
-  for (const row of rows) {
+  for (const given of rows) {
+    let row = given;
+    const look = decided.decisions.get(row.line);
+    let entry: BudgetFileLookalike | null = null;
+    if (look) {
+      entry = lookalikeEntry(row, look);
+      bag.lookalikes.push(entry);
+      if (look.action === 'ignore') continue;
+      bag.lookTargets.set(row.line, look.found.hint);
+      if (look.action === 'update' && look.live) {
+        const ref = lineRef(look.live.itemNumber);
+        if (look.stale) {
+          bag.errors.push({
+            line: row.line, column: null, message: `${ref} changed since the check.`,
+            code: 'BUDGET_FILE_LOOKALIKE_CHANGED', params: { ref },
+          });
+          continue;
+        }
+        // The update goes through the read: the row names the line, as an exported file would.
+        row = { ...row, itemNumber: { kind: 'number', prefix: 'BL', n: look.live.itemNumber, raw: ref, ref } };
+      }
+    }
     const matched = findStoredLine(input.stored, row.itemNumber);
     if (row.itemNumber.kind === 'number') {
       const key = matched ? `line:${matched.id}` : `ref:${row.itemNumber.ref}`;
@@ -312,8 +351,188 @@ function compared(input: PreflightInput, rows: InterpretedRow[]): { report: Budg
       seen.set(key, { line: row.line, ref: row.itemNumber.ref });
     }
     resolveRow(input, row, matched, newKeys, bag);
+    if (entry?.outcome === 'updated') entry.fields = bag.updated.find((updated) => updated.line === row.line)?.fields ?? [];
   }
   return { report: finish(input, bag.errors, bag, supplierMessage(bag, input), true), plans: bag.plans };
+}
+
+/** What the check does with a row that looks like a stored line. */
+interface LookalikeDecision {
+  found: FoundLookalike;
+  action: 'ignore' | 'create' | 'update';
+  updatable: boolean;
+  /** For an update: the stored line, and whether it changed since the state the choice carries. */
+  live?: StoredLine;
+  stale?: boolean;
+  /** The line's state now. */
+  state: string;
+}
+
+export function storedState(line: StoredLine): string {
+  return lineState(line.rowVersion, line.versions);
+}
+
+/**
+ * The lines a check must read whole for the choices to update them: the lines the rows to update
+ * look like (lot I2 of 26.11.9), the ones a person's choice names and, for a choice for all rows,
+ * every line a row looks like; and the ids of all the lines the rows look like, for the person's
+ * access. The caller reads them, then plans.
+ */
+export function lookalikeTargets(input: PreflightInput): { ids: string[]; updates: number[] } {
+  const rows = interpretBudgetFile(input.read, input.scope);
+  const decided = decideLookalikes({ ...input, stored: [] }, rows, emptyBag(input));
+  const ids = [...decided.decisions.values()].map((decision) => decision.found.hint.id).filter((id): id is string => !!id);
+  return { ids, updates: decided.wanted };
+}
+
+/**
+ * For each row to create that looks like a stored line, what the check does with it: left out unless
+ * the person chose otherwise (P2), the choice for the row winning over the choice for all rows. A
+ * choice that no longer applies (the row no longer looks like that line, or the person may not update
+ * it) falls back to leaving the row out. `wanted`: lines to update that `stored` lacks.
+ */
+function decideLookalikes(
+  input: PreflightInput,
+  rows: InterpretedRow[],
+  bag: Bag,
+): { decisions: Map<number, LookalikeDecision>; followed: BudgetFileChoice[]; wanted: number[] } {
+  const decisions = new Map<number, LookalikeDecision>();
+  const wanted: number[] = [];
+  const choices = input.matching?.choices ?? [];
+  const perRow = new Map<number, BudgetFileLookalikeChoice>();
+  for (const choice of choices) if (choice.kind === 'lookalike' && !perRow.has(choice.line)) perRow.set(choice.line, choice);
+  const all = choices.find((choice): choice is BudgetFileLookalikesChoice => choice.kind === 'lookalikes');
+  const followed: BudgetFileChoice[] = [];
+  const states: Record<string, string> = {};
+  let allApplied = false;
+  for (const row of rows) {
+    const keys = lookalikeKeys(input, row, bag);
+    const found = keys ? bag.index.find(keys) : null;
+    if (!found) continue;
+    const { hint } = found;
+    const item = hint.itemNumber;
+    const updatable = !input.access || (!!hint.id && input.access.editable.has(hint.id));
+    const live = input.stored.find((line) => line.itemNumber === item && (!hint.id || line.id === hint.id));
+    const state = live ? storedState(live) : hintState(hint);
+    const chosen = perRow.get(row.line);
+    let action: LookalikeDecision['action'] = 'ignore';
+    let expected: string | undefined;
+    if (chosen) {
+      if (chosen.action !== 'update') {
+        action = chosen.action;
+        followed.push(chosen);
+      } else if (chosen.item === item && updatable) {
+        action = 'update';
+        expected = chosen.state;
+        followed.push({ ...chosen, state: chosen.state ?? state });
+      }
+    } else if (all?.action === 'create') {
+      action = 'create';
+      allApplied = true;
+    } else if (all?.action === 'update' && updatable && (!all.states || all.states[String(item)] !== undefined)) {
+      // A line the check did not show when the person chose (not in `states`) is left out.
+      action = 'update';
+      expected = all.states?.[String(item)];
+      states[String(item)] = expected ?? state;
+      allApplied = true;
+    }
+    if (action === 'update' && !live) wanted.push(item);
+    decisions.set(row.line, {
+      found,
+      action,
+      updatable,
+      state,
+      ...(action === 'update' && live ? { live, stale: expected !== undefined && expected !== state } : {}),
+    });
+  }
+  if (all && allApplied) followed.push(all.action === 'create' ? { kind: 'lookalikes', action: 'create' } : { kind: 'lookalikes', action: 'update', states });
+  return { decisions, followed, wanted };
+}
+
+function lookalikeEntry(row: InterpretedRow, look: LookalikeDecision): BudgetFileLookalike {
+  const { hint, reason } = look.found;
+  const outcome = look.action === 'ignore' ? 'ignored' : look.action === 'create' ? 'created' : 'updated';
+  return {
+    line: row.line,
+    nature: hint.nature,
+    name: textOf(row.fields.name),
+    target: { item: hint.itemNumber, ref: lineRef(hint.itemNumber), name: hint.name, state: look.state },
+    reason,
+    outcome,
+    updatable: look.updatable,
+  };
+}
+
+/**
+ * A row to create as the lookalike pass compares it: its nature and title, its supplier, company and
+ * account matched as the check matches them (the person's undone matches and Kad's proposals
+ * included), its currency and amounts. Null for a row that names a line, or has no nature or title.
+ */
+function lookalikeKeys(input: PreflightInput, row: InterpretedRow, bag: Bag): RowKeys | null {
+  if (row.itemNumber.kind !== 'blank') return null;
+  const nature = row.nature.kind === 'value' ? row.nature.nature : row.nature.kind === 'absent' ? input.scope : null;
+  const name = textOf(row.fields.name);
+  if (!nature || !name) return null;
+  const companyId = lookalikeCompany(input, row);
+  const currency = row.fields.currency?.kind === 'value' ? row.fields.currency.text.trim().toUpperCase() : null;
+  return {
+    nature,
+    name,
+    supplier: lookalikeSupplier(input, row, bag),
+    companyId,
+    accountId: lookalikeAccount(input, row, companyId),
+    currency,
+    sums: rowSums(row),
+  };
+}
+
+/** The row's supplier as `resolveSupplier` finds it: an id, null for none, undefined for one it creates or refuses. */
+function lookalikeSupplier(input: PreflightInput, row: InterpretedRow, bag: Bag): string | null | undefined {
+  const name = opinion(row.fields.supplier_name ?? { kind: 'absent' });
+  const erp = opinion(row.fields.supplier_erp_id ?? { kind: 'absent' });
+  if (!name && !erp) return null;
+  const suppliers = input.catalog.suppliers;
+  if (erp) {
+    const byErp = matchErp(suppliers, erp);
+    return byErp.kind === 'one' ? byErp.row.id : undefined;
+  }
+  const key = cellKey('supplier_name', name!);
+  const undone = bag.matching.unmatched.has(key);
+  const proposal = bag.matching.proposals.get(key);
+  if (proposal !== undefined && !undone && foldKey(proposal) !== foldKey(name!)) {
+    const target = matchByName(suppliers, proposal, { beyondCase: false });
+    if (target.kind === 'one' && isActiveAt(target.row.disabledAt)) return target.row.id;
+  }
+  const found = matchByName(suppliers, name!, { beyondCase: !undone });
+  return found.kind === 'one' ? found.row.id : undefined;
+}
+
+/** The row's paying company as `resolveCompany` finds it for a new line; null when none is found. */
+function lookalikeCompany(input: PreflightInput, row: InterpretedRow): string | null {
+  const cell = row.fields.company_name ?? { kind: 'absent' as const };
+  if (cell.kind === 'value') {
+    const found = matchName(input.catalog.companies, cell.text);
+    return found.kind === 'one' ? found.row.id : null;
+  }
+  if (cell.kind === 'clear') return null;
+  const centre = row.fields.cost_center_code;
+  if (centre?.kind === 'value') {
+    const node = findCostCenter(input.catalog.costCenters, centre.text);
+    if (node.kind === 'one' && node.center.companyId) return node.center.companyId;
+  }
+  return onlyCompany(input.catalog);
+}
+
+/** The row's account in its company's chart: undefined when the file gives none, null when it matches none. */
+function lookalikeAccount(input: PreflightInput, row: InterpretedRow, companyId: string | null): string | null | undefined {
+  const cell = row.fields.account_number ?? { kind: 'absent' as const };
+  if (cell.kind !== 'value') return undefined;
+  if (!companyId) return null;
+  const chartId = input.catalog.companies.find((company) => company.id === companyId)?.coaId ?? input.catalog.defaultCoaId;
+  const inChart = input.catalog.accounts.filter((account) => (account.coaId ?? null) === (chartId ?? null));
+  const matched = matchCode(cell.text.replace(/\s+/g, ''), inChart.map((account) => account.number));
+  if (matched.kind !== 'exact' && matched.kind !== 'stripped') return null;
+  return inChart.find((account) => account.number === matched.code)?.id ?? null;
 }
 
 /**
@@ -418,7 +637,7 @@ function resolveRow(
   if (input.access && (creating || live)) checkAccess(input.access, row, live, creating, changes, draft, errors.length > 0, fail);
 
   if (creating && row.fields.name?.kind === 'value') {
-    const hint = duplicateHint(nature, row, supplier, input.names, newKeys);
+    const hint = duplicateHint(nature, row, supplier, newKeys);
     if (hint) bag.duplicates.push({ line: row.line, ...hint });
     const key = duplicateKey(nature, row.fields.name.text, supplier);
     if (key && !newKeys.has(key)) newKeys.set(key, row.line);
@@ -440,7 +659,10 @@ function resolveRow(
   const failed = errors.length > 0;
   if (failed || !creating && !live) return;
   for (const warning of draft.calculationLines.values()) bag.calculationLines.push({ line: row.line, ...warning });
-  if (creating || changes.length > 0) bag.plans.push(toPlan(nature, row, live, creating, draft));
+  if (creating || changes.length > 0) {
+    bag.plans.push(toPlan(nature, row, live, creating, draft));
+    checkConsistency(input, nature, row, live, draft, supplier.id, company.id, bag);
+  }
   if (creating) {
     bag.created.push({ line: row.line, name: textOf(row.fields.name) || '(no name)' });
     bag.byNature.created[nature] += 1;
@@ -1234,6 +1456,85 @@ function calculationLinesMessage(item: string, label: string, year: number, coun
   return `${item} · ${label} ${year}: ${lines} (${shown}) will no longer drive these amounts.`;
 }
 
+/** Cents as the app writes amounts: whole units, a space between thousands. */
+function wholeUnits(cents: bigint): string {
+  return Math.round(Number(formatCentsFixed(cents))).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+/**
+ * The consistency checks of a line the file creates or updates (lot I2 of 26.11.9), warnings only
+ * (P3): an amount ten times above or below the line the row looks like, else the median of its
+ * supplier's lines (same nature, currency, year and measure, three at least); a start after the last
+ * year of the row's amounts, or an end before the first; a currency other than the paying company's.
+ * Zeros and blank amounts are left out. One amount warning per row, the first.
+ */
+function checkConsistency(
+  input: PreflightInput,
+  nature: BudgetNature,
+  row: InterpretedRow,
+  live: StoredLine | null,
+  draft: LineDraft,
+  supplierId: string | null,
+  companyId: string | null,
+  bag: Bag,
+): void {
+  const warn = (sentence: BudgetFileSentence) => bag.consistency.push({ line: row.line, ...sentence });
+  const sums = rowSums(row);
+  const currency = String(draft.body.currency ?? live?.currency ?? '').trim().toUpperCase();
+  const look = bag.lookTargets.get(row.line);
+  for (const [key, cents] of sums) {
+    const [year, measure] = key.split('|');
+    const column = columnOfMeasure(measure as AmountMeasure);
+    const label = input.labels[column] || column;
+    const amount = wholeUnits(cents);
+    if (look) {
+      const other = (look.currency ?? '') === currency ? bag.index.totalOf(look, key) : undefined;
+      if (other === undefined || !unusual(cents, other)) continue;
+      const ref = lineRef(look.itemNumber);
+      warn({
+        message: `${label} ${year}: ${amount}, against ${wholeUnits(other)} on ${ref}.`,
+        code: 'BUDGET_FILE_AMOUNT_FAR_FROM_LINE', params: { label, year: Number(year), amount, other: wholeUnits(other), ref },
+      });
+      break;
+    }
+    if (!supplierId || !currency) break;
+    const median = bag.index.median(nature, supplierId, currency, key, live?.id ?? null);
+    if (!median || !unusual(cents, median.cents)) continue;
+    const supplier = input.catalog.suppliers.find((item) => item.id === supplierId)?.name ?? '';
+    warn({
+      message: `${label} ${year}: ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of ${supplier}.`,
+      code: 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER',
+      params: { label, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count, supplier },
+    });
+    break;
+  }
+  const years = [...sums.keys()].map((key) => Number(key.split('|')[0]));
+  if (years.length > 0) {
+    const first = Math.min(...years);
+    const last = Math.max(...years);
+    const start = typeof draft.body.effective_start === 'string' ? draft.body.effective_start : live?.effectiveStart ?? '';
+    if (start && Number(start.slice(0, 4)) > last) {
+      warn({ message: `The line starts on ${start}, after its last amounts (${last}).`, code: 'BUDGET_FILE_START_AFTER_AMOUNTS', params: { start, year: last } });
+    }
+    const endValue = Object.prototype.hasOwnProperty.call(draft.body, 'disabled_at') ? draft.body.disabled_at : live?.endOfValidity;
+    const end = typeof endValue === 'string' ? endValue.slice(0, 10) : '';
+    if (end && Number(end.slice(0, 4)) < first) {
+      warn({ message: `The line ends on ${end}, before its first amounts (${first}).`, code: 'BUDGET_FILE_END_BEFORE_AMOUNTS', params: { end, year: first } });
+    }
+  }
+  const cell = row.fields.currency;
+  const company = companyId ? input.catalog.companies.find((item) => item.id === companyId) : undefined;
+  if (cell?.kind === 'value' && company?.baseCurrency) {
+    const code = cell.text.trim().toUpperCase();
+    if (code !== company.baseCurrency) {
+      warn({
+        message: `${code} is not the currency of ${company.name} (${company.baseCurrency}).`,
+        code: 'BUDGET_FILE_CURRENCY_NOT_COMPANY', params: { currency: code, company: company.name, base: company.baseCurrency },
+      });
+    }
+  }
+}
+
 function noteFreshness(row: InterpretedRow, live: StoredLine, bag: Bag): void {
   if (row.token.kind !== 'ok') return;
   const rowMismatch = row.token.rowVersion !== live.rowVersion;
@@ -1255,26 +1556,21 @@ function noteFreshness(row: InterpretedRow, live: StoredLine, bag: Bag): void {
   });
 }
 
-/** A new line that looks like a line of its nature, stored or earlier in the file: OPEX by name and supplier, CAPEX by name. */
+/**
+ * A new line that looks like an earlier row of the file, of its nature: OPEX by name and supplier,
+ * CAPEX by name. A warning: the row is created. A row that looks like a stored line is decided before
+ * (`decideLookalikes`).
+ */
 function duplicateHint(
   nature: BudgetNature,
   row: InterpretedRow,
   supplier: { id: string | null; createKey: string | null },
-  names: LineHint[],
   newKeys: Map<string, number>,
 ): BudgetFileSentence | null {
   const name = textOf(row.fields.name);
   if (!name) return null;
   const key = duplicateKey(nature, name, supplier);
   if (!key) return null;
-  const same = names.filter((hint) => hint.nature === nature && hint.name.trim().toLowerCase() === name.toLowerCase());
-  const found = nature === 'opex'
-    ? same.find((hint) => (hint.supplierId ?? null) === (supplier.id ?? null) && supplier.createKey == null)
-    : same[0];
-  if (found) {
-    const ref = lineRef(found.itemNumber);
-    return { message: `row ${row.line} looks like ${ref}`, code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line: row.line, ref } };
-  }
   const earlier = newKeys.get(key);
   if (earlier !== undefined) {
     return { message: `row ${row.line} looks like row ${earlier}`, code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: row.line, row: earlier } };
@@ -1516,6 +1812,11 @@ function emptyBag(input: PreflightInput): Bag {
     supplierNames: [],
     costCenterCompanies: [],
     calculationLines: [],
+    consistency: [],
+    index: new LineIndex(input.names),
+    lookalikes: [],
+    lookTargets: new Map(),
+    lookalikeChoices: [],
     deleted: [],
     changed: [],
     snapshot: [],
@@ -1577,7 +1878,10 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       costCenterCompanies: bag.costCenterCompanies.slice(0, PREFLIGHT_LIST_LIMIT),
       calculationLines: bag.calculationLines.slice(0, PREFLIGHT_LIST_LIMIT),
       calculationLinesCount: bag.calculationLines.length,
+      consistency: bag.consistency.slice(0, PREFLIGHT_LIST_LIMIT),
+      consistencyCount: bag.consistency.length,
     },
+    ...(read ? { lookalikes: lookalikesOf(bag) } : {}),
     creates: {
       dimensionValues: namesByDimension(input, bag.dimensions),
       suppliers: input.createSuppliers && input.canCreateSuppliers
@@ -1592,6 +1896,18 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
     snapshot: { lines: bag.snapshot },
     ...((input.read.sheetCount ?? 0) > 1 ? { firstSheetOnly: input.read.sheetName ?? '' } : {}),
     ...(input.access ? { dataAccessLimited: true as const } : {}),
+  };
+}
+
+/** The rows that look like a stored line: the first ones, and the counts of what the check does with them. */
+function lookalikesOf(bag: Bag): NonNullable<BudgetFileReport['lookalikes']> {
+  const count = (outcome: BudgetFileLookalike['outcome']) => bag.lookalikes.filter((entry) => entry.outcome === outcome).length;
+  return {
+    lines: bag.lookalikes.slice(0, LOOKALIKE_LIST_LIMIT),
+    count: bag.lookalikes.length,
+    ignored: count('ignored'),
+    created: count('created'),
+    updated: count('updated'),
   };
 }
 
@@ -1620,6 +1936,7 @@ function matchingOf(input: PreflightInput, bag: Bag): NonNullable<BudgetFileRepo
     .map(([, choice]) => choice);
   const chosen = createSuppliersChoice(input.matching?.choices ?? []);
   if (chosen !== undefined) choices.push({ kind: 'create_suppliers', value: chosen });
+  choices.push(...bag.lookalikeChoices);
   return {
     matches: [...state.matches.values()].slice(0, MATCH_LIST_LIMIT),
     refusedProposals: [...state.refused.values()].slice(0, MATCH_LIST_LIMIT),

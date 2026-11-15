@@ -89,12 +89,30 @@ export interface StoredLine {
   versions: StoredVersion[];
 }
 
-/** Every line of the tenant the caller may import, for the duplicate hint. Not the full row. */
+/** One year of a line as the lookalike pass reads it: its version, and its totals by measure in cents. */
+export interface LineHintYear {
+  year: number;
+  versionId: string;
+  budgetRev: number;
+  /** The year's totals (`spend_version_totals`); a measure without a total is absent. */
+  totals: Partial<Record<AmountMeasure, bigint>>;
+}
+
+/**
+ * Every line the person reads, for the lookalikes of the rows the file creates (lot I2 of 26.11.9).
+ * Not the full row. The years are read only when the file has rows to create.
+ */
 export interface LineHint {
   nature: BudgetNature;
   itemNumber: number;
   name: string;
   supplierId: string | null;
+  id?: string;
+  companyId?: string | null;
+  accountId?: string | null;
+  currency?: string | null;
+  rowVersion?: number;
+  years?: LineHintYear[];
 }
 
 export interface CatalogCompany {
@@ -102,6 +120,8 @@ export interface CatalogCompany {
   name: string;
   coaId: string | null;
   disabledAt: string | null;
+  /** The company's base currency (`companies.base_currency`); null or absent when it has none. */
+  baseCurrency?: string | null;
 }
 
 export interface CatalogSupplier {
@@ -309,7 +329,10 @@ export interface BudgetFileReport {
   }>;
   changedSinceExportCount: number;
   warnings: {
-    /** New rows that look like a line the person reads, or an earlier row of the file: the first 20. */
+    /**
+     * New rows that look like an earlier row of the file (`BUDGET_FILE_LOOKS_LIKE_ROW`): the first 20.
+     * A row that looks like a stored line is in `lookalikes` (lot I2 of 26.11.9).
+     */
     duplicates: Array<{ line: number } & BudgetFileSentence>;
     /** How many there are in all. */
     duplicatesCount: number;
@@ -321,7 +344,19 @@ export interface BudgetFileReport {
     calculationLines: CalculationLinesWarning[];
     /** How many there are in all. */
     calculationLinesCount: number;
+    /**
+     * The consistency checks of the lines the file creates or updates (lot I2 of 26.11.9): an amount
+     * ten times away from the line it looks like or from its supplier's lines, dates outside the years
+     * of its amounts, a currency other than the paying company's. Warnings only: the first 20.
+     */
+    consistency?: Array<{ line: number } & BudgetFileSentence>;
+    consistencyCount?: number;
   };
+  /**
+   * The rows to create that look like a line the person reads (lot I2 of 26.11.9): left out unless
+   * the person chooses otherwise. Absent from a check that refused the file before reading its rows.
+   */
+  lookalikes?: BudgetFileLookalikes;
   /**
    * What the check matched before creating (lot I1 of 26.11.9), and what it could not. Absent from a
    * check that refused the file before reading its rows.
@@ -356,7 +391,63 @@ export interface BudgetFileReport {
  */
 export type BudgetFileChoice =
   | { kind: 'unmatch'; column: string; value: string }
-  | { kind: 'create_suppliers'; value: boolean };
+  | { kind: 'create_suppliers'; value: boolean }
+  | BudgetFileLookalikeChoice
+  | BudgetFileLookalikesChoice;
+
+/**
+ * What a row that looks like a stored line becomes (lot I2 of 26.11.9): left out (the default, sent
+ * only to override a choice for all rows), created anyway, or the update of the line it looks like.
+ * `line` is the line of the person's file; `item` the number of the line it looks like; `state` that
+ * line's state at the check (`lineState`): the update is refused when the line changed since.
+ */
+export type BudgetFileLookalikeChoice =
+  | { kind: 'lookalike'; line: number; action: 'ignore' | 'create' }
+  | { kind: 'lookalike'; line: number; action: 'update'; item: number; state?: string };
+
+/**
+ * The choice for every row that looks like a stored line; a choice for one row wins over it. The
+ * check gives back, for `update`, the state of every line it updates, by its number (`states`).
+ */
+export type BudgetFileLookalikesChoice = { kind: 'lookalikes'; action: 'create' | 'update'; states?: Record<string, string> };
+
+/** Why a row looks like a stored line, in the order the check tries them. */
+export type BudgetFileLookalikeReason = 'title_supplier' | 'amounts' | 'close_title';
+
+/** A row to create that looks like a stored line the person reads. */
+export interface BudgetFileLookalike {
+  /** The row's line in the file (header counted). */
+  line: number;
+  nature: BudgetNature;
+  /** The row's title. */
+  name: string;
+  /** The stored line it looks like: its number, reference, title and state at this check. */
+  target: { item: number; ref: string; name: string; state: string };
+  /**
+   * `title_supplier`: the same title (case and accents aside) and supplier; `amounts`: every amount
+   * of the row equal, the same currency, supplier or company, and account when the file gives one;
+   * `close_title`: a close title, the same supplier and an equal amount.
+   */
+  reason: BudgetFileLookalikeReason;
+  /** What the check does with it: left out (the default), created anyway, or the line updated. */
+  outcome: 'ignored' | 'created' | 'updated';
+  /** Whether the person may update that line: "Update" is offered only then. */
+  updatable: boolean;
+  /** For an update: the fields it changes (none when the line already holds the row). */
+  fields?: string[];
+}
+
+export interface BudgetFileLookalikes {
+  /** The first LOOKALIKE_LIST_LIMIT, in file order. */
+  lines: BudgetFileLookalike[];
+  count: number;
+  ignored: number;
+  created: number;
+  updated: number;
+}
+
+/** Lookalikes the report lists; beyond, only the choice for all rows reaches them. */
+export const LOOKALIKE_LIST_LIMIT = 200;
 
 /** The person's choices and Kad's proposals the check follows. */
 export interface BudgetFileMatchOptions {

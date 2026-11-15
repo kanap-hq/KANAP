@@ -15,6 +15,7 @@ import {
   BudgetFileExportScope,
   CatalogDimension,
   LineHint,
+  LineHintYear,
   StoredLine,
   StoredRound,
   emptyMonths,
@@ -84,11 +85,11 @@ export async function loadPreflight(
 ): Promise<LoadedPreflight> {
   // One connection: the request transaction cannot run these side by side.
   const catalog = await loadCatalog(manager, tenantId, allowedCurrencies);
-  const names = await loadNames(manager, tenantId);
+  const names = await loadNames(manager, tenantId, { years: false });
   const labels = await loadColumnLabels(manager, tenantId);
   // Read under the person's policies: a line out of their read access is not there at all.
   const stored = await loadLinesByNumber(manager, tenantId, numbers);
-  const access = await loadFileAccess(manager, stored);
+  const access = await loadFileAccess(manager, stored.map((line) => line.id));
   return { catalog, stored, names, labels, dimensionCodes: catalog.dimensions.map((dimension) => dimension.code), access };
 }
 
@@ -110,13 +111,62 @@ export async function loadExportLines(
   };
 }
 
-async function loadNames(manager: EntityManager, tenantId: string): Promise<LineHint[]> {
-  const rows: Array<{ nature: BudgetNature; item_number: number; name: string; supplier_id: string | null }> = await manager.query(
-    `SELECT i.nature, i.item_number::int AS item_number, i.product_name AS name, i.supplier_id::text AS supplier_id
+/**
+ * Every line the person reads (their policies leave the others out), for the lookalikes of the rows
+ * the file creates. `years`: also each version's totals by measure (`spend_version_totals`, one row per
+ * version, in the person's transaction so that their access applies), read only when the file has rows
+ * to create (lot I2 of 26.11.9).
+ */
+export async function loadNames(manager: EntityManager, tenantId: string, options: { years: boolean }): Promise<LineHint[]> {
+  const rows: Array<{
+    id: string; nature: BudgetNature; item_number: number; name: string; supplier_id: string | null;
+    company_id: string | null; account_id: string | null; currency: string | null; row_version: number;
+  }> = await manager.query(
+    `SELECT i.id::text AS id, i.nature, i.item_number::int AS item_number, i.product_name AS name, i.supplier_id::text AS supplier_id,
+            i.paying_company_id::text AS company_id, i.account_id::text AS account_id, btrim(i.currency::text) AS currency,
+            i.row_version::int AS row_version
        FROM ${LINES.items} i WHERE i.tenant_id = $1${naturesAnd('i', BUDGET_NATURES)}`,
     [tenantId],
   );
-  return rows.map((row) => ({ nature: row.nature, itemNumber: Number(row.item_number), name: row.name ?? '', supplierId: row.supplier_id }));
+  const years = options.years ? await loadHintYears(manager, tenantId) : null;
+  return rows.map((row) => ({
+    nature: row.nature,
+    itemNumber: Number(row.item_number),
+    name: row.name ?? '',
+    supplierId: row.supplier_id,
+    id: row.id,
+    companyId: row.company_id,
+    accountId: row.account_id,
+    currency: (row.currency ?? '').trim().toUpperCase() || null,
+    rowVersion: Number(row.row_version),
+    ...(years ? { years: years.get(row.id) ?? [] } : {}),
+  }));
+}
+
+/** Each readable line's versions, with their totals by measure in cents. One statement. */
+async function loadHintYears(manager: EntityManager, tenantId: string): Promise<Map<string, LineHintYear[]>> {
+  const rows: Array<Record<string, string | number | null>> = await manager.query(
+    `SELECT v.${LINES.itemFk}::text AS item_id, v.id::text AS version_id, v.budget_year::int AS budget_year,
+            v.budget_rev::int AS budget_rev,
+            ${AMOUNT_MEASURES.map((measure) => `t.${measure}::text AS ${measure}`).join(', ')}
+       FROM ${LINES.versions} v
+       JOIN ${LINES.items} i ON i.tenant_id = v.tenant_id AND i.id = v.${LINES.itemFk}
+       LEFT JOIN spend_version_totals t ON t.tenant_id = v.tenant_id AND t.version_id = v.id
+      WHERE v.tenant_id = $1${naturesAnd('i', BUDGET_NATURES)}`,
+    [tenantId],
+  );
+  const byItem = new Map<string, LineHintYear[]>();
+  for (const row of rows) {
+    const totals: LineHintYear['totals'] = {};
+    for (const measure of AMOUNT_MEASURES) {
+      const raw = row[measure];
+      if (raw != null && raw !== '') totals[measure] = toCents(String(raw));
+    }
+    const list = byItem.get(String(row.item_id)) ?? [];
+    list.push({ year: Number(row.budget_year), versionId: String(row.version_id), budgetRev: Number(row.budget_rev), totals });
+    byItem.set(String(row.item_id), list);
+  }
+  return byItem;
 }
 
 /**
@@ -125,7 +175,7 @@ async function loadNames(manager: EntityManager, tenantId: string): Promise<Line
  * number always was; a CAPEX line without a CPX number was shown by its own one), among the lines
  * of both natures. `findStoredLine` (preflight) picks the line of each cell.
  */
-async function loadLinesByNumber(
+export async function loadLinesByNumber(
   manager: EntityManager,
   tenantId: string,
   numbers: ItemNumberCell[],
@@ -376,13 +426,13 @@ async function loadRounds(
   return byVersion;
 }
 
-async function loadCatalog(
+export async function loadCatalog(
   manager: EntityManager,
   tenantId: string,
   allowedCurrencies: string[] | null,
 ): Promise<BudgetCatalog> {
-  const companies: Array<{ id: string; name: string; coa_id: string | null; disabled_at: Date | string | null }> = await manager.query(
-    `SELECT id::text AS id, name, coa_id::text AS coa_id, disabled_at FROM companies WHERE tenant_id = $1`, [tenantId],
+  const companies: Array<{ id: string; name: string; coa_id: string | null; disabled_at: Date | string | null; base_currency: string | null }> = await manager.query(
+    `SELECT id::text AS id, name, coa_id::text AS coa_id, disabled_at, btrim(base_currency::text) AS base_currency FROM companies WHERE tenant_id = $1`, [tenantId],
   );
   const suppliers: Array<{ id: string; name: string; erp_supplier_id: string | null; disabled_at: Date | string | null }> = await manager.query(
     `SELECT id::text AS id, name, erp_supplier_id, disabled_at FROM suppliers WHERE tenant_id = $1`, [tenantId],
@@ -411,7 +461,10 @@ async function loadCatalog(
   );
   const iso = (value: Date | string | null) => (value ? new Date(value).toISOString() : null);
   return {
-    companies: companies.map((row) => ({ id: row.id, name: row.name, coaId: row.coa_id, disabledAt: iso(row.disabled_at) })),
+    companies: companies.map((row) => ({
+      id: row.id, name: row.name, coaId: row.coa_id, disabledAt: iso(row.disabled_at),
+      baseCurrency: (row.base_currency ?? '').trim().toUpperCase() || null,
+    })),
     suppliers: suppliers.map((row) => ({ id: row.id, name: row.name, erpId: row.erp_supplier_id, disabledAt: iso(row.disabled_at) })),
     costCenters: centers.map((row) => ({ id: row.id, code: row.code, kind: row.kind, companyId: row.company_id, disabledAt: iso(row.disabled_at) })),
     accounts: accounts.map((row) => ({ id: row.id, number: row.account_number, coaId: row.coa_id, disabledAt: iso(row.disabled_at), nature: row.nature })),

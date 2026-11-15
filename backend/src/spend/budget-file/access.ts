@@ -1,7 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { isLimitedTransaction, lineEditableSql } from '../../data-access/line-write-checks';
 import { BudgetFileAccess, planBudgetFile, PreflightInput } from './preflight';
-import { BudgetFileLinePlan, BudgetFileReport, StoredLine } from './types';
+import { BudgetFileLinePlan, BudgetFileReport } from './types';
 
 /**
  * The budget file within a limited person's access (planning/data-scoped-access spec §4.2). The
@@ -12,10 +12,13 @@ import { BudgetFileLinePlan, BudgetFileReport, StoredLine } from './types';
  * object and costs no query: the file behaves as before.
  */
 
-/** In a limited transaction: the stored lines the person may modify. Undefined otherwise. */
-export async function loadFileAccess(manager: EntityManager, stored: readonly StoredLine[]): Promise<BudgetFileAccess | undefined> {
+/**
+ * In a limited transaction: of the lines `ids` names (the stored lines the file names, and the lines
+ * its rows look like), those the person may modify. Undefined otherwise.
+ */
+export async function loadFileAccess(manager: EntityManager, lineIds: readonly string[]): Promise<BudgetFileAccess | undefined> {
   if (!(await isLimitedTransaction(manager))) return undefined;
-  const ids = stored.map((line) => line.id);
+  const ids = [...new Set(lineIds)];
   const rows: Array<{ id: string }> = ids.length === 0 ? [] : await manager.query(
     `SELECT i.id::text AS id FROM spend_items i WHERE i.id = ANY($1::uuid[]) AND ${lineEditableSql('i.')}`,
     [ids],

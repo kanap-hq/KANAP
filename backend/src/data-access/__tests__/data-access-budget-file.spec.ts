@@ -263,23 +263,54 @@ async function testCreatePlacement(runner: QueryRunner, f: Fixture) {
 async function testLookalikes(runner: QueryRunner, f: Fixture) {
   const nameOf = async (id: string) => (await runner.query(`SELECT product_name FROM spend_items WHERE id = $1`, [id]))[0].product_name as string;
   const columns = ['item_number', 'name', 'company_name', 'account_number', 'currency'];
+  // Lot I2 of 26.11.9: a row that looks like a stored line is left out, and names that line. By the
+  // title, for a limited person, only a line she reads.
   const file = csv(columns, [
     { name: await nameOf(f.lines.L1), company_name: f.esName, account_number: '6000', currency: 'EUR' },
     { name: await nameOf(f.lines.L3), company_name: f.esName, account_number: '6000', currency: 'EUR' },
   ]);
+  const looks = (report: BudgetFileReport) => report.lookalikes?.lines.map((entry) => [entry.line, entry.target.ref, entry.reason, entry.updatable]);
   await as(runner, f.persons.marta, async (m) => {
     const report = await preflight(m, f, f.persons.marta, file);
     assert.equal(report.ok, true, JSON.stringify(report.errors));
-    assert.deepEqual(report.warnings.duplicates.map((warning) => warning.params), [{ line: 3, ref: f.ref.L3 }], 'only the line she reads');
-    assert.equal(report.warnings.duplicatesCount, 1);
+    assert.deepEqual(looks(report), [[3, f.ref.L3, 'title_supplier', true]], 'only the line she reads');
+    assert.equal(report.changes.created, 1, 'the row titled as L1 is a new line for her');
     assert.ok(!JSON.stringify(report).includes(`"${f.ref.L1}"`), 'L1 is not named');
   });
   await as(runner, f.persons.ulla, async (m) => {
     const report = await preflight(m, f, f.persons.ulla, file);
-    assert.deepEqual(report.warnings.duplicates.map((warning) => warning.params), [{ line: 2, ref: f.ref.L1 }, { line: 3, ref: f.ref.L3 }]);
-    assert.equal(report.warnings.duplicatesCount, 2);
+    assert.deepEqual(looks(report), [[2, f.ref.L1, 'title_supplier', true], [3, f.ref.L3, 'title_supplier', true]]);
   });
-  console.log('  lookalikes: a limited person\'s check names only the lines she reads: OK');
+  // By the amounts: every line holds 100 for 2026; the French company's lines are L1, which Marta does
+  // not read, and L2, which she reads and may not modify. The comparison reads no line out of her
+  // access, and does not offer to update a line she only reads (a choice to do so falls back).
+  await runner.query('SAVEPOINT lookalike_accounts');
+  try {
+    await runner.query(
+      `UPDATE spend_items SET account_id = (SELECT id FROM accounts WHERE tenant_id = $1 AND account_number = '6000') WHERE id = ANY($2::uuid[])`,
+      [f.tenantId, Object.values(f.lines)],
+    );
+    const translated = csv([...columns, 'budget_2026'], [{ name: 'Une ligne traduite', company_name: f.frName, account_number: '6000', currency: 'EUR', budget_2026: '100' }]);
+    await as(runner, f.persons.marta, async (m) => {
+      const report = await preflight(m, f, f.persons.marta, translated);
+      assert.deepEqual(looks(report), [[2, f.ref.L2, 'amounts', false]], 'L2, read only: no update offered');
+      assert.ok(!JSON.stringify(report).includes(`"${f.ref.L1}"`), 'L1 is not named');
+      const item = Number(f.ref.L2.slice(3));
+      const service = budgetFileService();
+      const chosen = await service.preflight('opex', translated, { manager: m, tenantId: f.tenantId, userId: f.persons.marta }, {
+        ...OPTIONS, matching: { choices: [{ kind: 'lookalike', line: 2, action: 'update', item }] },
+      });
+      assert.deepEqual(chosen.lookalikes?.lines.map((entry) => entry.outcome), ['ignored'], 'the update falls back');
+      assert.deepEqual([chosen.ok, chosen.changes.updated, chosen.matching?.choices], [true, 0, []]);
+    });
+    await as(runner, f.persons.ulla, async (m) => {
+      const report = await preflight(m, f, f.persons.ulla, translated);
+      assert.deepEqual(looks(report), [[2, f.ref.L1, 'amounts', true]], 'the smaller number of the two');
+    });
+  } finally {
+    await runner.query('ROLLBACK TO SAVEPOINT lookalike_accounts');
+  }
+  console.log('  lookalikes: a limited person\'s check names only the lines she reads, updates only the ones she may modify: OK');
 }
 
 async function testCentreChange(runner: QueryRunner, f: Fixture) {
