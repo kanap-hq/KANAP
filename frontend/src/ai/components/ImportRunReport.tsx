@@ -138,6 +138,7 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
           choicesDisabled={choicesDisabled}
           nothingToLoad={run.nothing_to_import === true}
           showStatus={false}
+          ownScroll={false}
           canOpenLines={hasLevel('budget', 'reader')}
         />
       )}

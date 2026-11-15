@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Box, Stack, Typography } from '@mui/material';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useTranslation } from 'react-i18next';
 import type { AiImportMapping } from '../aiTypes';
 import type { BudgetFileChoice } from '../../components/finance/budgetFile';
 import ImportRunReport from './ImportRunReport';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
+import { formatAmount } from '../../i18n/formatters';
 
 type ImportMappingPreviewProps = {
   mapping: AiImportMapping;
@@ -38,6 +41,55 @@ const sectionLabelSx = {
   fontWeight: 500,
   color: 'kanap.text.secondary',
 } as const;
+
+const edgeSx = {
+  position: 'absolute',
+  top: 0,
+  display: 'flex',
+  alignItems: 'center',
+  height: 24,
+  color: 'kanap.text.tertiary',
+  pointerEvents: 'none',
+  '& svg': { fontSize: 18 },
+} as const;
+
+/**
+ * A table wider than the card scrolls sideways; the columns it hides are marked on their side: the
+ * edge fades and a chevron shows, whether or not the browser draws a scrollbar.
+ */
+function SideScroll({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [hidden, setHidden] = useState({ left: false, right: false });
+  const measure = useCallback(() => {
+    const element = ref.current;
+    if (!element) return;
+    const left = element.scrollLeft > 1;
+    const right = element.scrollLeft + element.clientWidth < element.scrollWidth - 1;
+    setHidden((was) => (was.left === left && was.right === right ? was : { left, right }));
+  }, []);
+  useLayoutEffect(() => {
+    measure();
+    const element = ref.current;
+    if (!element || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [measure]);
+  const fade = [hidden.left ? 'transparent, black 32px' : 'black', hidden.right ? 'black calc(100% - 32px), transparent' : 'black'].join(', ');
+  return (
+    <Box sx={{ position: 'relative' }}>
+      <Box
+        ref={ref}
+        onScroll={measure}
+        sx={{ overflowX: 'auto', ...(hidden.left || hidden.right ? { maskImage: `linear-gradient(to right, ${fade})` } : {}) }}
+      >
+        {children}
+      </Box>
+      {hidden.left && <Box data-testid="columns-hidden-left" aria-hidden sx={{ ...edgeSx, left: -4 }}><ChevronLeftIcon /></Box>}
+      {hidden.right && <Box data-testid="columns-hidden-right" aria-hidden sx={{ ...edgeSx, right: -4 }}><ChevronRightIcon /></Box>}
+    </Box>
+  );
+}
 
 /**
  * The column mapping of an attached spreadsheet onto an import's template, on Plaid's preview card:
@@ -79,6 +131,10 @@ function ImportMappingPreview({ mapping, onChoices, choicesDisabled }: ImportMap
       return /[ T]\d/.test(value)
         ? formatShortDateTime(value.replace(' ', 'T'), locale) || value
         : formatShortDate(value, locale, { year: 'always' }) || value;
+    }
+    // A budget line's amount, as the budget screens write it in the person's language (`52 000`).
+    if (kind === 'number' && mapping.import_key === 'budget_lines' && value.trim() !== '' && Number.isFinite(Number(value))) {
+      return formatAmount(Number(value), locale);
     }
     if (kind === 'boolean') {
       if (value === 'true') return t('ai:previewCard.importMapping.yes');
@@ -201,7 +257,7 @@ function ImportMappingPreview({ mapping, onChoices, choicesDisabled }: ImportMap
       {mapping.sample.rows.length > 0 && (
         <Stack spacing={0.5}>
           <Typography component="div" sx={sectionLabelSx}>{t('ai:previewCard.importMapping.firstRows')}</Typography>
-          <Box sx={{ overflowX: 'auto' }}>
+          <SideScroll>
             <Box component="table" sx={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
@@ -240,7 +296,7 @@ function ImportMappingPreview({ mapping, onChoices, choicesDisabled }: ImportMap
                 ))}
               </tbody>
             </Box>
-          </Box>
+          </SideScroll>
         </Stack>
       )}
 

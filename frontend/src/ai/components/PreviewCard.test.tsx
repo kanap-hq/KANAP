@@ -1276,7 +1276,7 @@ describe('PreviewCard in French', () => {
     const firstRows = screen.getByText('Premières lignes').parentElement!;
     const headers = Array.from(firstRows.querySelectorAll('th')).map((cell) => cell.textContent);
     expect(headers).toEqual(['nature', 'name', 'budget_2026', 'company_name', 'supplier_name', 'account_number', 'cost_center_code', 'currency']);
-    expect(Array.from(firstRows.querySelectorAll('td')).map((cell) => cell.textContent).slice(0, 3)).toEqual(['opex', 'Hébergement', '12000']);
+    expect(Array.from(firstRows.querySelectorAll('td')).map((cell) => cell.textContent).slice(0, 3)).toEqual(['opex', 'Hébergement', '12\u202f000']);
   });
 
   it('writes each refusal of the budget file as its sentence in the language of the screen, never its code', () => {

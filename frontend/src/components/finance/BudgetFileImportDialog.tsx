@@ -410,6 +410,7 @@ export function ReportView({
   canCreateSuppliers,
   nothingToLoad,
   showStatus = true,
+  ownScroll = true,
   canOpenLines = true,
   onChoices,
   choicesDisabled = false,
@@ -421,6 +422,8 @@ export function ReportView({
   canCreateSuppliers: boolean;
   nothingToLoad: boolean;
   showStatus?: boolean;
+  /** The dialog's check scrolls on its own; Plaid's card shows it in the scroll of its panel. */
+  ownScroll?: boolean;
   /** The reference of a line the file looks like opens that line: false for a person who may not read budget lines. */
   canOpenLines?: boolean;
   /**
@@ -539,8 +542,7 @@ export function ReportView({
         display: 'flex',
         flexDirection: 'column',
         gap: 1.75,
-        maxHeight: '48vh',
-        overflowY: 'auto',
+        ...(ownScroll ? { maxHeight: '48vh', overflowY: 'auto' } : {}),
         borderTop: `1px solid ${theme.palette.kanap.border.soft}`,
         pt: 1.5,
       })}
