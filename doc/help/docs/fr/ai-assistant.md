@@ -295,7 +295,7 @@ Les personnes qui peuvent ouvrir **Administration > Kad** voient aussi une fine 
 
 ## Conseils
 
-- **Utilisez les préfixes pour plus de précision** : `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@SUP-`, `@COMP-`, `@CTCT-`, `@DEPT-`, `@CTR-` correspondent directement aux références natives de Kadratis. C'est le moyen le plus rapide de diriger Kad vers un enregistrement précis et ils résistent au copier-coller car ils sont identiques à ce que vous voyez ailleurs dans l'application.
+- **Utilisez les préfixes pour plus de précision** : `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` correspondent directement aux références natives de Kadratis. C'est le moyen le plus rapide de diriger Kad vers un enregistrement précis et ils résistent au copier-coller car ils sont identiques à ce que vous voyez ailleurs dans l'application.
 - **Démarrez une nouvelle conversation par sujet** : garder des questions sans rapport dans des conversations distinctes réduit la fenêtre de contexte, accélère les réponses et allège la facture de tokens. La liste des conversations est regroupée par date, ce qui vous permet de les retrouver facilement.
 - **Approuvez et rejetez en connaissance de cause** : les aperçus sont la seule barrière entre Kad et vos données en production. Prenez la seconde nécessaire pour lire la comparaison avant de cliquer sur **Approuver**.
 - **Arrêtez plutôt que d'attendre** : si Kad s'engage sur une mauvaise voie en cours de diffusion, cliquez sur le bouton **Arrêter** plutôt que d'attendre la fin. Vous économiserez des tokens et votre message suivant pourra corriger le tir.

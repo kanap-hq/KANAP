@@ -295,7 +295,7 @@ Personen, die **Administration > Kad** öffnen können, sehen außerdem einen sc
 
 ## Tipps
 
-- **Präfixe für Präzision nutzen**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@SUP-`, `@COMP-`, `@CTCT-`, `@DEPT-`, `@CTR-` sind direkt nativen Kadratis-Referenzen zugeordnet. Sie sind der schnellste Weg, Kad auf einen bestimmten Datensatz zu lenken, und sie überstehen Kopieren und Einfügen, weil sie identisch mit dem aussehen, was Sie an anderer Stelle in der Anwendung sehen.
+- **Präfixe für Präzision nutzen**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` sind direkt nativen Kadratis-Referenzen zugeordnet. Sie sind der schnellste Weg, Kad auf einen bestimmten Datensatz zu lenken, und sie überstehen Kopieren und Einfügen, weil sie identisch mit dem aussehen, was Sie an anderer Stelle in der Anwendung sehen.
 - **Pro Thema eine neue Konversation beginnen**: Wenn Sie unzusammenhängende Fragen in getrennten Konversationen halten, bleibt das Kontextfenster kleiner, die Antworten kommen schneller und die Token-Kosten sinken. Die Konversationsliste ist nach Datum gruppiert, sodass Sie sie leicht wiederfinden.
 - **Bewusst genehmigen und ablehnen**: Vorschauen sind das Einzige, was zwischen Kad und Ihren Live-Daten steht. Nehmen Sie sich die zusätzliche Sekunde, um die Gegenüberstellung zu lesen, bevor Sie auf **Genehmigen** klicken.
 - **Stoppen statt warten**: Wenn Kad mitten im Stream in die falsche Richtung läuft, drücken Sie die **Stopp**-Schaltfläche, statt auf das Ende zu warten. Sie sparen Tokens, und Ihre Anschlussnachricht kann den Kurs korrigieren.

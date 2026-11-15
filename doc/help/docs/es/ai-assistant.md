@@ -295,7 +295,7 @@ Las personas que pueden abrir **Administración > Kad** ven también una barra f
 
 ## Consejos
 
-- **Use prefijos para mayor precisión**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@SUP-`, `@COMP-`, `@CTCT-`, `@DEPT-`, `@CTR-` corresponden directamente a las referencias nativas de Kadratis. Son la forma más rápida de apuntar Kad a un registro concreto y sobreviven al copiar y pegar porque son idénticos a lo que ve en el resto de la aplicación.
+- **Use prefijos para mayor precisión**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` corresponden directamente a las referencias nativas de Kadratis. Son la forma más rápida de apuntar Kad a un registro concreto y sobreviven al copiar y pegar porque son idénticos a lo que ve en el resto de la aplicación.
 - **Inicie una nueva conversación por tema**: mantener las preguntas no relacionadas en conversaciones separadas reduce la ventana de contexto, acelera las respuestas y disminuye el gasto en tokens. La lista de conversaciones está agrupada por fecha para que pueda encontrarlas de nuevo con facilidad.
 - **Apruebe y rechace con criterio**: las vistas previas son lo único que se interpone entre Kad y sus datos reales. Tómese el segundo extra para leer la comparación antes de hacer clic en **Aprobar**.
 - **Detenga en lugar de esperar**: si Kad toma un camino equivocado a mitad de la generación, pulse el botón **Detener** en lugar de esperar a que termine. Ahorrará tokens y su siguiente mensaje puede corregir el rumbo.
