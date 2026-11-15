@@ -121,7 +121,8 @@ Die Eingabe von `@` öffnet die **Erwähnungsauswahl** über dem Eingabefeld. Da
   - `@DOC`: aktuelle Wissensdokumente
   - `@APP backup`: Anwendungen, die zu „backup“ passen
   - `@BL-12`: die Budgetzeile mit der Referenz BL-12. `@BL` allein listet Budgetzeilen beider Typen auf. Die früheren Nummern funktionieren weiterhin: `@OPX-12` oder `@CPX-3` findet seine Zeile
-  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+  - `@SUP-3`, `@COMP-1`, `@CTCT-2`, `@DEPT-4`, `@CTR-2`: der Lieferant, das Unternehmen, der Kontakt, die Abteilung oder der Vertrag mit dieser Referenz
+  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CTCT`, `@DEPT`, `@SUP`, `@BP`
 - **Klartext**: alles andere (`@payroll`, `@server-2`) startet eine typübergreifende Suche, sortiert nach Relevanz. Sie findet auch Budgetzeilen über die Namen ihrer Analysewerte.
 
 Verwenden Sie die Pfeiltasten, um durch die Vorschläge zu navigieren, **Eingabe** oder **Tab** zum Bestätigen und **Escape**, um die Auswahl zu schließen. Die Ergebnisse sind nach Entitätstyp gruppiert (Wissen, Aufgaben, Projekte, Anwendungen, Assets, Verträge usw.), sodass Sie auf einen Blick erkennen, welche Art von Datensatz Sie einfügen.
@@ -169,7 +170,7 @@ Kad listet, zählt und liest Vorfälle. Es filtert sie nach Asset, Anwendung ode
 
 Kad liest Verträge so, wie die Liste der [Verträge](contracts.md) sie zeigt: den Zustand der laufenden Periode (zu entscheiden, laufend, verlängert, endet ohne Verlängerung, abgelaufen), die nächste Frist und den Kündigungstermin, mit dem Entscheidungszeitraum Ihres Arbeitsbereichs und den bereits erfassten Verlängerungsentscheidungen. Es liest auch, was ein Vertrag abdeckt: seine Anwendungen, Assets, Technologien und Budgetzeilen. Fragen Sie zum Beispiel: „Welche Verträge sind zu entscheiden, und welche Anwendungen decken sie ab?“ oder „Welche Verträge decken APP-8 ab?“ Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
-Kad nennt einen Datensatz bei seiner Referenz, etwa `APP-8` oder `BL-14`, oder bei seinem Namen, wenn er keine hat, etwa einen Vertrag, einen Lieferanten oder einen Standort. Die Referenz oder der Name führt zur Seite des Datensatzes, wenn Sie sie öffnen können.
+Kad nennt einen Datensatz bei seiner Referenz, etwa `APP-8` oder `BL-14`, oder bei seinem Namen, wenn er keine hat, etwa einen Geschäftsprozess. Die Referenz oder der Name führt zur Seite des Datensatzes, wenn Sie sie öffnen können.
 
 Kad nennt einen Datensatz, der mit dem erfragten verknüpft ist, nur dann, wenn Sie sein Modul lesen dürfen, wie die Seite des Datensatzes: Die Anwendungen eines Projekts erfordern die Anwendungen, seine Assets die Infrastruktur, seine Ursprungsanträge die Anträge. Ein Business Contributor erhält nur die Projekte, Anträge und Anwendungen, an denen er beteiligt ist. Die Server, auf denen eine Anwendung läuft, sind die Ausnahme: Sie gehören zur Anwendung, wie auf ihrem Reiter **Bereitstellungen**. Auf eine Person angesprochen, gibt Kad wieder, was Ihnen die Benutzerliste zeigt: Ein Benutzeradministrator erhält das vollständige Profil, alle anderen Name, E-Mail und Status. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
@@ -294,7 +295,7 @@ Personen, die **Administration > Kad** öffnen können, sehen außerdem einen sc
 
 ## Tipps
 
-- **Präfixe für Präzision nutzen**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` sind direkt nativen Kadratis-Referenzen zugeordnet. Sie sind der schnellste Weg, Kad auf einen bestimmten Datensatz zu lenken, und sie überstehen Kopieren und Einfügen, weil sie identisch mit dem aussehen, was Sie an anderer Stelle in der Anwendung sehen.
+- **Präfixe für Präzision nutzen**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@SUP-`, `@COMP-`, `@CTCT-`, `@DEPT-`, `@CTR-` sind direkt nativen Kadratis-Referenzen zugeordnet. Sie sind der schnellste Weg, Kad auf einen bestimmten Datensatz zu lenken, und sie überstehen Kopieren und Einfügen, weil sie identisch mit dem aussehen, was Sie an anderer Stelle in der Anwendung sehen.
 - **Pro Thema eine neue Konversation beginnen**: Wenn Sie unzusammenhängende Fragen in getrennten Konversationen halten, bleibt das Kontextfenster kleiner, die Antworten kommen schneller und die Token-Kosten sinken. Die Konversationsliste ist nach Datum gruppiert, sodass Sie sie leicht wiederfinden.
 - **Bewusst genehmigen und ablehnen**: Vorschauen sind das Einzige, was zwischen Kad und Ihren Live-Daten steht. Nehmen Sie sich die zusätzliche Sekunde, um die Gegenüberstellung zu lesen, bevor Sie auf **Genehmigen** klicken.
 - **Stoppen statt warten**: Wenn Kad mitten im Stream in die falsche Richtung läuft, drücken Sie die **Stopp**-Schaltfläche, statt auf das Ende zu warten. Sie sparen Tokens, und Ihre Anschlussnachricht kann den Kurs korrigieren.

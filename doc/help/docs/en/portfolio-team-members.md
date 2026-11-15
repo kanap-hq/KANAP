@@ -114,7 +114,7 @@ The org chart draws the reporting line of your contributors, built from the **Ma
 
 ## The Contributor workspace
 
-Click a contributor row to open their workspace. The header shows the contributor's reference (`CTR-1`, `CTR-2`…, click it to copy), their name, team, availability, and skill count. The reference is also what the page address uses. Use the arrows next to the back link (or the left and right arrow keys) to move to the previous or next contributor in list order. Press **Escape** to return to the list.
+Click a contributor row to open their workspace. The header shows the contributor's reference (`MEM-1`, `MEM-2`…, click it to copy), their name, team, availability, and skill count. The reference is also what the page address uses. A link saved with the former `CTR-1` form still opens the contributor. Use the arrows next to the back link (or the left and right arrow keys) to move to the previous or next contributor in list order. Press **Escape** to return to the list.
 
 The workspace has three tabs, **General**, **Skills**, and **Time Logged**, plus a **Properties** panel on the right that holds the job title, team, availability, and classification defaults. Open or close the panel with the tab on its edge, or press **P**.
 
