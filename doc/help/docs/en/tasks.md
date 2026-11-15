@@ -536,7 +536,7 @@ Three export modes are available:
 | `related_object_id` | Entity UUID | Conditional | Required if linked task and `related_object_name` not provided |
 | `related_object_name` | Entity name | Conditional | Required if linked task and `related_object_id` not provided |
 | `phase_name` | Project phase | No | Must match existing phase name (project tasks only) |
-| `priority_level` | Task priority | No | Accepts code or label |
+| `priority_level` | Task priority | No | Accepts the code or the name, in any of the four languages |
 | `source_name` | Source | No | Portfolio source (standalone and project tasks) |
 | `category_name` | Category | No | Portfolio category (standalone and project tasks) |
 | `stream_name` | Stream | No | Portfolio stream (standalone and project tasks) |
@@ -550,7 +550,7 @@ Three export modes are available:
 
 | CSV Column | Description | Notes |
 |------------|-------------|-------|
-| `status` | Task status | Accepts code or label |
+| `status` | Task status | Accepts the code or the name, in any of the four languages |
 | `start_date` | Start date | Date format: YYYY-MM-DD |
 | `due_date` | Due date | Date format: YYYY-MM-DD |
 
@@ -603,7 +603,7 @@ For **status**, **priority_level**, and **related_object_type**, you can use eit
 | `contract` | `Contract` |
 | `capex_item` | `CAPEX Item`, `CAPEX` |
 
-The system normalizes values automatically during import.
+The system normalizes values automatically during import. A status or a priority is also read by the name the screen shows, in any of the four languages. An unknown value is refused, and the message lists the accepted names.
 
 ### Matching and updates
 

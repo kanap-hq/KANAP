@@ -265,7 +265,7 @@ Deadlines and thresholds depend on your jurisdiction and sector. Kadratis record
 
 **Importing an existing register**: **Import** on the list takes a CSV file or an Excel workbook (`.xlsx`). Leave the reference column empty to create incidents (Kadratis allocates the next INC numbers), or keep the INC-N reference to update the matching records. Each imported incident gets a journal entry saying it came from a file. Export first, or download the empty template, if you want the exact column layout. The template ignores the filters of the list.
 
-The headers, the severity and the status are written in the language of the export. The import accepts headers and values in any of the four languages, and the technical codes too (`major`, `in_progress`).
+The headers, the severity and the status are written in the language of the export. The import accepts headers and values in any of the four languages, and the technical codes too (`major`, `in_progress`). An unknown value is refused, and the message lists the accepted names.
 
 A status can move forward from a file. Taking it back, or cancelling an incident, needs `incidents:admin`: the journal then records a reopening or a cancellation with the reason "Imported from CSV". For a contributor, such a line is refused with a message.
 

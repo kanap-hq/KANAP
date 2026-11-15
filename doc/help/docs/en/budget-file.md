@@ -110,7 +110,7 @@ An absent column keeps every stored value of that column. A file holding only `i
 - `item_number` holds the line's reference, `BL-12`. In a file with a `nature` column, a bare number is the same reference. The `OPX-12` and `CPX-3` numbers of earlier files still name their line. Naming one line twice in a file is a row error.
 - A line keeps its kind. A row that names an existing line with the other `nature` is refused, for example "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
 - Each row is checked against its own kind: the dimensions and values it may hold, its account, the frozen columns and the duplicate warning. A column frozen for CAPEX refuses a change on a CAPEX line only.
-- There is no other key. A new row that looks like an existing line of its kind, or like another new row of the same kind in the file, is a warning you can ignore.
+- There is no other key. A new row that looks like another new row of the same kind in the file is a warning you can ignore. A new row that looks like an existing line of its kind is left out unless you choose otherwise: see [Rows like an existing line](#lookalike-lines).
 - Suppliers are matched by `supplier_erp_id` when it is filled, otherwise by `supplier_name`, regardless of case and accents. A supplier the file names and Kadratis does not have is created by the load when **Create missing suppliers** is ticked, once for two spellings of the same name. Without it, the check lists them and asks you to create them in **Master data > Suppliers**.
 - A dimension value is matched to an existing value regardless of case and accents. On a recommended dimension, a value written in another of the four languages is matched too, for example `Hardware` for `Matériel`. A value that matches none is created by the load, and listed in the check. For a person with limited data access, only on a dimension with open values: see [Limited data access](#limited-data-access). Accounts, cost centers, companies and users are never created: an unknown one is a row error naming where to add it.
 - A value, or `-`, on a dimension used for the other kind of line only is a row error on its `analytics:<code>` cell, for example "The Recurrence dimension is for CAPEX lines only. Leave it out." The export leaves such a cell empty, so a value hidden on a line is not exported and a load leaves it in place. The setting is in [Analytics dimensions](analytics.md#opex-or-capex-dimensions).
@@ -130,13 +130,44 @@ An absent column keeps every stored value of that column. A file holding only `i
 | **Errors** | The rows the load refuses, by line of the file with the column when it knows it. An unknown company is followed by the closest names in the workspace. A file with one error loads nothing |
 | **Changes** | The lines to create, the lines to update and the lines the file leaves as they are |
 | **Changed since the export** | The lines someone changed after your export, with who and when. Loading the file writes your values over those changes |
-| **Warnings** | A row that looks like another line, a `company_name` other than the company of the row's cost center, an amount that stops a column following its calculation lines, columns and cells the file ignores |
+| **Looks like an existing line** | The new rows that look like a line you already have, and what becomes of each. See [Rows like an existing line](#lookalike-lines) |
+| **Warnings** | A row that looks like another row of the file, a `company_name` other than the company of the row's cost center, an amount that stops a column following its calculation lines, an unusual amount, date or currency (see [Consistency warnings](#consistency-warnings)), columns and cells the file ignores |
 | **N values matched** | The suppliers and dimension values of the file read as an existing one, folded. Unfold the line to see each match, for example `Cost pool: Matériel → Hardware`. **Undo** keeps the value as written: the load creates it, or the check refuses it when it cannot be created. **Match again** restores the match. A value that differs only by case is the same value and is not listed |
 | **Created by the load** | The suppliers and the dimension values the load would add. Point at an underlined value to see the existing names close to it |
 
 3. Click **Load**. The load writes everything or nothing.
 
 If a line changed between the check and the load, the load stops and asks you to check the file again. The check also states how it read the file when a date or an amount could be read in two ways, with a button to switch the reading.
+
+When the file creates and changes nothing, **Load** is unavailable and the check says "Nothing to load: the file matches the current data." This is the case of a file loaded twice. After a load, the dialog says how many rows it left out because they look like an existing line, for example "3 rows left out".
+
+### Rows like an existing line { #lookalike-lines }
+
+A new row that looks like an existing line of the same kind is left out by default. This keeps a file loaded twice, or a line already typed in by hand, from becoming a second line. A row looks like a line in three cases:
+
+- the same title and the same supplier
+- the same amounts, in the same currency, with the same supplier or the same company
+- a close title, the same supplier and one equal amount
+
+The check lists these rows under **Looks like an existing line**, with the line each one looks like. Point at a row to see why it was found. For each row, choose:
+
+- **Leave out**: the row is not loaded. This is the default.
+- **Create anyway**: the row becomes a new line.
+- **Update BL-12**: the row updates the line it looks like. Each value the file fills replaces the stored one. An empty cell keeps the stored value. Point at the row to see which values change.
+
+**Create all anyway** and **Update all**, above the list, apply to every row. A choice made on a row wins over the choice for all rows. Each choice checks the file again.
+
+If BL-12 changes between the check and the load, the row is refused with "BL-12 changed since the check." Choose again what becomes of it.
+
+A row is compared with the lines of its own kind that you can read.
+
+### Consistency warnings { #consistency-warnings }
+
+The check also points out values that look unusual. These are warnings: the load is allowed.
+
+- An amount ten times above or below comparable lines: the line the row updates, or the other lines of the same supplier.
+- A start date after the years of the amounts, or an end date before them.
+- A currency other than the currency of the paying company.
 
 ### Columns built from quantity and price
 
@@ -157,6 +188,7 @@ A person limited to part of the budget uses the file within their access, when t
 - A line they see in Read passes when its row is unchanged. A change is refused with "BL-12 is read only in your access."
 - A new line, or a new company or cost center on a line, must fit one of their Edit nodes. Otherwise the row is refused with "This company or cost center is not part of your access."
 - An unknown value is created only on a dimension with open values. On the other dimensions, it is a row error.
+- A row like an existing line offers **Update BL-12** only when they may edit that line.
 
 These rows appear among the **Errors** of the check, like any other refused row.
 

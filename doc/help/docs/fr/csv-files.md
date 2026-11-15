@@ -51,6 +51,8 @@ Sur les pages de données de référence, une date que le fichier ne peut pas tr
 
 Un import lit oui ou non dans chacune de ces langues, ainsi que les `true`, `false`, `1` et `0` des fichiers plus anciens. Les fichiers des applications, des actifs, des incidents, des projets, des demandes et des tâches suivent le même tableau, de même que les fichiers de liens de la liste des technologies. Voir [Technologies](technologies.md#importer-et-exporter-les-liens).
 
+**Statuts, priorités et gravités.** Les fichiers des projets, des demandes, des tâches et des incidents lisent un statut, une priorité ou une gravité par son nom dans chacune des quatre langues, comme `Suspendu` ou `On hold`, ou par son code (`on_hold`). Une valeur inconnue est refusée, et le message liste les noms acceptés dans la langue de votre écran.
+
 **Taille.** Un fichier contient au plus 20 000 lignes.
 
 Sur une installation sur site, l'administrateur peut désactiver les classeurs Excel dans les imports. Les boutons d'import affichent alors **Importer CSV** et n'acceptent que les fichiers CSV. Voir [Configuration](on-premise/configuration.md#optional-excel-imports).

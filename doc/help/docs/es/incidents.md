@@ -265,7 +265,7 @@ Los plazos y umbrales dependen de su jurisdicción y de su sector. Kadratis regi
 
 **Importar un registro existente**: **Importar** en la lista acepta un archivo CSV o un libro de Excel (`.xlsx`). Deje la columna de referencia vacía para crear incidentes (Kadratis asigna los siguientes números INC), o conserve la referencia INC-N para actualizar los registros correspondientes. Cada incidente importado recibe una entrada de diario que indica que procede de un archivo. Exporte primero, o descargue la plantilla vacía, si quiere la disposición exacta de las columnas. La plantilla no tiene en cuenta los filtros de la lista.
 
-Los encabezados, la gravedad y el estado se escriben en el idioma de la exportación. La importación acepta encabezados y valores en cualquiera de los cuatro idiomas, así como los códigos técnicos (`major`, `in_progress`).
+Los encabezados, la gravedad y el estado se escriben en el idioma de la exportación. La importación acepta encabezados y valores en cualquiera de los cuatro idiomas, así como los códigos técnicos (`major`, `in_progress`). Un valor desconocido se rechaza, y el mensaje lista los nombres aceptados.
 
 Un estado puede avanzar mediante un archivo. Hacerlo retroceder, o cancelar un incidente, requiere `incidents:admin`: el diario recibe entonces una reapertura o una cancelación con el motivo «Imported from CSV». Para un colaborador, esa línea se rechaza con un mensaje.
 

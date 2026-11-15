@@ -265,7 +265,7 @@ Les délais et les seuils dépendent de votre juridiction et de votre secteur. K
 
 **Importer un registre existant** : **Importer** dans la liste accepte un fichier CSV ou un classeur Excel (`.xlsx`). Laissez la colonne référence vide pour créer des incidents (Kadratis attribue les numéros INC suivants), ou conservez la référence INC-N pour mettre à jour les enregistrements correspondants. Chaque incident importé reçoit une entrée de journal indiquant qu'il provient d'un fichier. Exportez d'abord, ou téléchargez le modèle vide, si vous voulez la disposition exacte des colonnes. Le modèle ignore les filtres de la liste.
 
-Les en-têtes, la gravité et le statut sont écrits dans la langue de l'export. L'import accepte les en-têtes et les valeurs dans chacune des quatre langues, ainsi que les codes techniques (`major`, `in_progress`).
+Les en-têtes, la gravité et le statut sont écrits dans la langue de l'export. L'import accepte les en-têtes et les valeurs dans chacune des quatre langues, ainsi que les codes techniques (`major`, `in_progress`). Une valeur inconnue est refusée, et le message liste les noms acceptés.
 
 Un statut peut avancer par fichier. Le faire reculer, ou annuler un incident, demande `incidents:admin` : le journal enregistre alors une réouverture ou une annulation avec le motif « Imported from CSV ». Pour un contributeur, une telle ligne est refusée avec un message.
 

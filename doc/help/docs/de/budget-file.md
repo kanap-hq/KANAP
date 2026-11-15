@@ -110,7 +110,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 - `item_number` enthält die Referenz der Budgetzeile, `BL-12`. In einer Datei mit einer Spalte `nature` ist eine bloße Zahl dieselbe Referenz. Die Nummern `OPX-12` und `CPX-3` früherer Dateien bezeichnen weiterhin ihre Budgetzeile. Dieselbe Budgetzeile zweimal in einer Datei zu nennen ist ein Zeilenfehler.
 - Eine Budgetzeile behält ihre Art. Eine Zeile, die eine bestehende Budgetzeile mit der anderen `nature` nennt, wird abgelehnt, zum Beispiel „BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line.“
 - Jede Zeile wird nach ihrer eigenen Art geprüft: die Dimensionen und Werte, die sie haben darf, ihr Konto, die eingefrorenen Spalten und die Warnung vor Duplikaten. Eine für CAPEX eingefrorene Spalte lehnt eine Änderung nur bei einer CAPEX-Zeile ab.
-- Es gibt keinen weiteren Schlüssel. Eine neue Zeile, die einer bestehenden Budgetzeile ihrer Art ähnelt oder einer anderen neuen Zeile derselben Art in der Datei, ist eine Warnung, die Sie ignorieren können.
+- Es gibt keinen weiteren Schlüssel. Eine neue Zeile, die einer anderen neuen Zeile derselben Art in der Datei ähnelt, ist eine Warnung, die Sie ignorieren können. Eine neue Zeile, die einer bestehenden Budgetzeile ihrer Art ähnelt, wird ausgelassen, sofern Sie nichts anderes wählen: siehe [Zeilen, die einer bestehenden Zeile ähneln](#lookalike-lines).
 - Lieferanten werden über `supplier_erp_id` zugeordnet, wenn er gefüllt ist, sonst über `supplier_name`, unabhängig von Groß- und Kleinschreibung und von Akzenten. Einen Lieferanten, den die Datei nennt und den Kadratis nicht kennt, legt das Laden an, wenn **Fehlende Lieferanten anlegen** angehakt ist, nur einmal für zwei Schreibweisen desselben Namens. Ohne diese Option listet die Prüfung die fehlenden Lieferanten auf und bittet Sie, sie unter **Stammdaten > Lieferanten** anzulegen.
 - Ein Dimensionswert wird einem vorhandenen Wert zugeordnet, unabhängig von Groß- und Kleinschreibung und von Akzenten. Bei einer empfohlenen Dimension wird auch ein Wert in einer anderen der vier Sprachen zugeordnet, zum Beispiel `Matériel` zu `Hardware`. Ein Wert, der keinem vorhandenen zugeordnet wird, wird beim Laden angelegt und in der Prüfung aufgelistet. Konten, Kostenstellen, Unternehmen und Benutzer werden nie angelegt: Ein unbekanntes Element ist ein Zeilenfehler, der nennt, wo es hinzugefügt wird. Für eine Person mit begrenztem Datenzugriff nur bei einer Dimension mit offenen Werten: siehe [Begrenzter Datenzugriff](#limited-data-access).
 - Ein Wert oder `-` in einer Dimension, die nur für die andere Zeilenart gilt, ist ein Zeilenfehler in ihrer Zelle `analytics:<code>`, zum Beispiel „The Recurrence dimension is for CAPEX lines only. Leave it out.“ Der Export lässt eine solche Zelle leer: Ein ausgeblendeter Wert einer Zeile wird nicht exportiert, und ein Laden lässt ihn unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-dimensionen).
@@ -130,13 +130,44 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 | **Fehler** | Die Zeilen, die das Laden ablehnt, nach Zeile der Datei mit der Spalte, wenn sie bekannt ist. Auf ein unbekanntes Unternehmen folgen die ähnlichsten Namen im Arbeitsbereich. Eine Datei mit einem einzigen Fehler lädt nichts |
 | **Änderungen** | Die anzulegenden Budgetzeilen, die zu aktualisierenden Budgetzeilen und die Budgetzeilen, die die Datei unverändert lässt |
 | **Seit dem Export geändert** | Die Budgetzeilen, die jemand nach Ihrem Export geändert hat, mit wer und wann. Das Laden der Datei schreibt Ihre Werte über diese Änderungen |
-| **Warnungen** | Eine Zeile, die einer anderen Budgetzeile ähnelt, ein `company_name`, der vom Unternehmen der Kostenstelle der Zeile abweicht, ein Betrag, durch den eine Spalte ihren Berechnungszeilen nicht mehr folgt, Spalten und Zellen, die die Datei ignoriert |
+| **Ähnelt einer bestehenden Zeile** | Die neuen Zeilen, die einer vorhandenen Budgetzeile ähneln, und was aus jeder wird. Siehe [Zeilen, die einer bestehenden Zeile ähneln](#lookalike-lines) |
+| **Warnungen** | Eine Zeile, die einer anderen Zeile der Datei ähnelt, ein `company_name`, der vom Unternehmen der Kostenstelle der Zeile abweicht, ein Betrag, durch den eine Spalte ihren Berechnungszeilen nicht mehr folgt, ein ungewöhnlicher Betrag, ein ungewöhnliches Datum oder eine ungewöhnliche Währung (siehe [Plausibilitätswarnungen](#consistency-warnings)), Spalten und Zellen, die die Datei ignoriert |
 | **N Werte zugeordnet** | Die Lieferanten und Dimensionswerte der Datei, die als vorhandener Wert gelesen werden, eingeklappt. Klappen Sie die Zeile auf, um jede Zuordnung zu sehen, zum Beispiel `Kostenart: Matériel → Hardware`. **Rückgängig** behält den Wert, wie er geschrieben ist: Das Laden legt ihn an, oder die Prüfung lehnt ihn ab, wenn er nicht angelegt werden kann. **Wieder zuordnen** stellt die Zuordnung wieder her. Ein Wert, der sich nur in Groß- und Kleinschreibung unterscheidet, ist derselbe Wert und wird nicht aufgelistet |
 | **Beim Laden angelegt** | Die Lieferanten und Dimensionswerte, die das Laden hinzufügen würde. Zeigen Sie auf einen unterstrichenen Wert, um die vorhandenen Namen zu sehen, die ihm ähneln |
 
 3. Klicken Sie auf **Laden**. Das Laden schreibt alles oder nichts.
 
 Ändert sich eine Budgetzeile zwischen der Prüfung und dem Laden, stoppt das Laden und bittet Sie, die Datei erneut zu prüfen. Die Prüfung sagt außerdem, wie sie die Datei gelesen hat, wenn ein Datum oder ein Betrag auf zwei Arten gelesen werden konnte, mit einer Schaltfläche zum Wechseln der Lesart.
+
+Wenn die Datei nichts anlegt und nichts ändert, ist **Laden** nicht verfügbar und die Prüfung meldet „Nichts zu laden: Die Datei entspricht dem aktuellen Stand.“ Das ist der Fall bei einer Datei, die zweimal geladen wird. Nach dem Laden nennt der Dialog, wie viele Zeilen er ausgelassen hat, weil sie einer bestehenden Budgetzeile ähneln, zum Beispiel „3 Zeilen ausgelassen“.
+
+### Zeilen, die einer bestehenden Zeile ähneln { #lookalike-lines }
+
+Eine neue Zeile, die einer bestehenden Budgetzeile derselben Art ähnelt, wird standardmäßig ausgelassen. So wird aus einer zweimal geladenen Datei oder einer bereits von Hand erfassten Budgetzeile keine zweite Budgetzeile. Eine Zeile ähnelt einer Budgetzeile in drei Fällen:
+
+- gleicher Titel und gleicher Lieferant
+- gleiche Beträge in derselben Währung, mit demselben Lieferanten oder demselben Unternehmen
+- ein ähnlicher Titel, derselbe Lieferant und ein gleicher Betrag
+
+Die Prüfung listet diese Zeilen unter **Ähnelt einer bestehenden Zeile** auf, jeweils mit der Budgetzeile, der sie ähnelt. Zeigen Sie auf eine Zeile, um zu sehen, warum sie gefunden wurde. Wählen Sie für jede Zeile:
+
+- **Auslassen**: Die Zeile wird nicht geladen. Das ist die Standardwahl.
+- **Trotzdem anlegen**: Die Zeile wird eine neue Budgetzeile.
+- **BL-12 aktualisieren**: Die Zeile aktualisiert die Budgetzeile, der sie ähnelt. Jeder Wert, den die Datei füllt, ersetzt den gespeicherten Wert. Eine leere Zelle behält den gespeicherten Wert. Zeigen Sie auf die Zeile, um zu sehen, welche Werte sich ändern.
+
+**Alle trotzdem anlegen** und **Alle aktualisieren** über der Liste gelten für alle Zeilen. Die Wahl für eine einzelne Zeile hat Vorrang vor der Wahl für alle Zeilen. Jede Wahl prüft die Datei erneut.
+
+Ändert sich BL-12 zwischen der Prüfung und dem Laden, wird die Zeile mit „BL-12 wurde seit der Prüfung geändert.“ abgelehnt. Wählen Sie erneut, was aus ihr wird.
+
+Eine Zeile wird mit den Budgetzeilen ihrer Art verglichen, die Sie lesen können.
+
+### Plausibilitätswarnungen { #consistency-warnings }
+
+Die Prüfung weist auch auf Werte hin, die ungewöhnlich wirken. Es sind Warnungen: Das Laden ist erlaubt.
+
+- Ein Betrag, der zehnmal höher oder niedriger ist als bei vergleichbaren Budgetzeilen: der Budgetzeile, die die Zeile aktualisiert, oder den anderen Budgetzeilen desselben Lieferanten.
+- Ein Startdatum nach den Jahren der Beträge, oder ein Enddatum davor.
+- Eine andere Währung als die des zahlenden Unternehmens.
 
 ### Spalten aus Menge und Preis
 
@@ -157,6 +188,7 @@ Eine Person, die auf einen Teil des Budgets begrenzt ist, verwendet die Datei in
 - Eine Zeile, die sie mit Lesen sieht, wird akzeptiert, wenn ihre Dateizeile unverändert ist. Eine Änderung wird mit „BL-12 ist in Ihrem Zugriff schreibgeschützt.“ abgelehnt.
 - Eine neue Zeile, oder ein neues Unternehmen oder eine neue Kostenstelle auf einer Zeile, muss zu einem ihrer Knoten mit Bearbeiten passen. Sonst wird die Dateizeile mit „Dieses Unternehmen oder diese Kostenstelle gehört nicht zu Ihrem Zugriff.“ abgelehnt.
 - Ein unbekannter Wert wird nur bei einer Dimension mit offenen Werten angelegt. Bei den anderen Dimensionen ist er ein Zeilenfehler.
+- Eine Zeile, die einer bestehenden Budgetzeile ähnelt, bietet **BL-12 aktualisieren** nur an, wenn die Person diese Budgetzeile bearbeiten darf.
 
 Diese Zeilen erscheinen unter den **Fehlern** der Prüfung, wie jede andere abgelehnte Zeile.
 

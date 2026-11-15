@@ -51,6 +51,8 @@ Auf den Stammdatenseiten wird ein Datum, das die Datei nicht selbst entscheiden 
 
 Ein Import liest Ja oder Nein in jeder dieser Sprachen sowie die `true`, `false`, `1` und `0` älterer Dateien. Die Dateien der Anwendungen, Assets, Incidents, Projekte, Anfragen und Aufgaben folgen derselben Tabelle, ebenso die Verknüpfungsdateien der Technologieliste. Siehe [Technologien](technologies.md#verknupfungen-importieren-und-exportieren).
 
+**Status, Prioritäten und Schweregrade.** Die Dateien der Projekte, Anfragen, Aufgaben und Incidents lesen einen Status, eine Priorität oder einen Schweregrad mit seinem Namen in jeder der vier Sprachen, etwa `On hold` oder `Suspendu`, oder mit seinem Code (`on_hold`). Ein unbekannter Wert wird abgelehnt, und die Meldung nennt die zulässigen Namen in der Sprache Ihres Bildschirms.
+
 **Größe.** Eine Datei enthält höchstens 20.000 Zeilen.
 
 Auf einer On-Premise-Installation kann der Administrator Excel-Arbeitsmappen in Importen abschalten. Die Import-Schaltflächen heißen dann **CSV importieren** und nehmen nur CSV-Dateien an. Siehe [Konfiguration](on-premise/configuration.md#optional-excel-imports).
