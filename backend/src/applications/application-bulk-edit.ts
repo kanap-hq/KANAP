@@ -6,6 +6,7 @@ import {
   BULK_REFUSAL_NOT_FOUND,
   BulkEditField,
   BulkEditList,
+  BulkEditOptions,
   BulkEditResult,
   bulkTooMany,
   parseBulkChanges,
@@ -74,6 +75,8 @@ export type ApplicationBulkDeps = {
   update: (id: string, patch: Record<string, unknown>) => Promise<void>;
   /** The owners' replacement of one application (the page's), on the request's manager. */
   replaceOwners: (id: string, owners: Array<{ user_id: string; owner_type: OwnerType }>) => Promise<void>;
+  /** Options of the common contract (Kad's card asks the ids of the applications that would change). */
+  options?: BulkEditOptions;
 };
 
 const sameIds = (a: readonly string[], b: readonly string[]) => a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
@@ -178,5 +181,5 @@ export async function bulkUpdateApplications(body: unknown, deps: ApplicationBul
       return error instanceof NotFoundException ? BULK_REFUSAL_NOT_FOUND : null;
     },
   };
-  return runBulkEdit(manager, list, selection, confirmation, changes);
+  return runBulkEdit(manager, list, selection, confirmation, changes, deps.options);
 }

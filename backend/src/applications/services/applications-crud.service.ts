@@ -331,7 +331,10 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     }
     Object.assign(existing, patch, { updated_at: new Date() });
     const saved = (await repo.save(existing as any)) as Application;
-    await this.audit.log({ table: 'applications', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
+    await this.audit.log({
+      table: 'applications', recordId: saved.id, action: 'update', before, after: saved, userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
+    }, { manager: mg });
     // A renamed application: its description document's title follows (`APP-4 - New name - Overview`).
     if ((before as any).name !== saved.name) {
       await this.integratedDocuments?.syncTitles('applications', {
