@@ -1025,9 +1025,14 @@ route, so a Budget Reader is not offered the tool. One field per card, among
 business owners, run or build, a dimension's value); no amount, so a frozen year or
 column refuses nothing. The value is resolved as `update_business_record` does
 (records by code or name, people, dimension values); an account number found in
-several charts of accounts needs `company`, whose chart holds it. The lines are
-chosen by `rows` (references `BL-12`) or by `filters`, never both and never the
-whole list without a criterion (a status alone is no criterion). The filters are
+several charts of accounts needs `company`, whose chart holds it; a company
+without a chart takes the workspace's default chart, as the screen's account
+picker (`lookupAccounts`). The lines are chosen by `rows` (references `BL-12`, a
+bare number or a legacy number; the card names them by their `BL-` key) or by
+`filters`, never both and never the whole list without a criterion (a status
+alone is no criterion, and neither is a filter part without a value: `[]`,
+`{ not: [] }` or a blank text, which would reach the whole list or open the
+disabled lines). The filters are
 those of `query_entities`, limited to a dozen fields
 (`BUDGET_LINE_BULK_FILTER_FIELDS`: nature, status, title, supplier, paying
 company, account, cost center, contract, owners, run or build, default dimension,
@@ -1044,11 +1049,18 @@ change by reference, read under the person's access (`runBulkEdit`'s
 `changedIds` option, dry runs only). A limited person's lines outside their access
 are neither counted nor named; a line they read without edit right is counted
 refused. Approval replays the dry run's `as_of`, `expected_rows` and fingerprint:
-a list changed since fails the card ("count again"). Each line writes its own
-audit row with `source: 'ai_chat'` and the preview id (history "by Kad"), no
-other. The tool and its approval set `lock_timeout` and `statement_timeout`
-(`AI_BULK_EDIT_DB_TIMEOUTS`, those of the screen's route) for their transaction:
-a line held elsewhere gives a busy error and the card stays to approve. Another
+a list changed since fails the card ("count again"), and so does a list grown
+past 5,000 rows; both are fixed sentences in the person's language
+(`FIXED_PREVIEW_ERRORS`, `FIXED_PREVIEW_ERROR_PATTERNS`). Each line writes its
+own audit row with `source: 'ai_chat'` and the preview id (history "by Kad");
+a new supplier that replaces the line's supplier contacts writes their row
+(`spend_item_contacts`) with the same source and reference, as
+`SpendItemsService.update` passes its audit source to `syncFromSupplier`. The
+tool and its approval set `lock_timeout` and `statement_timeout`
+(`AI_BULK_EDIT_DB_TIMEOUTS`, those of the screen's route) for the count or the
+write, then put back the transaction's own values (`withAiBulkEditWaits`: the
+next cards of "Approve all" share the transaction): a line held elsewhere gives
+a busy error and the card stays to approve. Another
 budget operation running (`operation_running`) is an error the model relays at
 preparation and leaves the card to approve at execution, with a fixed sentence.
 The tool is never a step of `prepare_mutation_plan`, and is not reversible. The
@@ -1064,10 +1076,11 @@ name or its code (`matchCatalogAliases`) and the card shows its name. The filter
 are a dozen fields of `query_entities` (`APPLICATION_BULK_FILTER_FIELDS`:
 lifecycle, business and cyber criticality, data class, recovery wave, category,
 supplier, publisher, IT and business owners, external facing, contains PII); the
-catalog fields take a name or a code too. They go into the list's parameters
+catalog fields (lifecycle, criticalities, data class, recovery wave, category)
+take a name, a translated name or a code too, and the card names them. They go into the list's parameters
 (`{ filters: <grid model> }`), so the applications are those of the screen's list:
 enabled ones, the retired ones left out unless the filter names the lifecycle.
-References are `APP-12`. A Business Contributor whose role was raised to member
+References are `APP-12` or a bare number, named `APP-12` on the card. A Business Contributor whose role was raised to member
 reaches only the applications they own: a card of many rows names no record, so
 `assertRecordInWriteScope` holds nothing, and the operation passes the
 contributor's scope (`resolveBusinessContributorScopeForUser`) to the service at
