@@ -292,6 +292,16 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     ]);
   });
 
+  it('keeps the actions of a row together on one row', async () => {
+    post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes([look(3, 21)]) }) });
+    renderDialog();
+    await screen.findByText(`${L}title`);
+    const create = screen.getByRole('button', { name: `${L}create` });
+    const update = screen.getByRole('button', { name: `${L}update:{"ref":"BL-21"}` });
+    expect(create.parentElement).toBe(update.parentElement);
+    expect(getComputedStyle(create.parentElement!).whiteSpace).toBe('nowrap');
+  });
+
   it('loads with the choices of the check shown, the targets of the rows it left out included', async () => {
     const memory: BudgetFileChoice = { kind: 'lookalikes', action: 'ignore', targets: { 5: { item: 12, state: 's12' } } };
     post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes([look(5, 12)]), matching: matching({ choices: [memory] }) }) });

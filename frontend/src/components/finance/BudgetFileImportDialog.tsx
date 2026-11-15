@@ -850,10 +850,13 @@ function Line({ text, children, danger, muted, kad, tooltip, action, actions }: 
   const shown = title ? <Tooltip title={title} placement="bottom-start">{body}</Tooltip> : body;
   const links = actions ?? (action ? [action] : []);
   if (links.length === 0) return shown;
+  // The actions of a line stay together on one row: after the text when they fit, else under it.
   return (
     <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.25 }}>
       {shown}
-      {links.map((link) => <ActionLink key={link.label} onClick={link.onClick} disabled={link.disabled}>{link.label}</ActionLink>)}
+      <Box sx={{ display: 'inline-flex', alignItems: 'baseline', columnGap: 1.5, whiteSpace: 'nowrap' }}>
+        {links.map((link) => <ActionLink key={link.label} onClick={link.onClick} disabled={link.disabled}>{link.label}</ActionLink>)}
+      </Box>
     </Box>
   );
 }
