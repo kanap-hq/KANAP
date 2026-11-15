@@ -172,7 +172,7 @@ Kad lista, cuenta y lee los incidentes. Los filtra por activo, aplicación o tec
 
 Kad lee los contratos como los muestra la lista de [Contratos](contracts.md): el estado del periodo en curso (por decidir, en curso, renovado, termina sin renovación, vencido), el próximo vencimiento y la fecha límite de rescisión, con el plazo de decisión de su espacio de trabajo y las decisiones de renovación ya registradas. También lee lo que cubre un contrato: sus aplicaciones, activos, tecnologías y líneas presupuestarias. Pregunte, por ejemplo: «¿Qué contratos están por decidir y qué aplicaciones cubren?» o «¿Qué contratos cubren APP-8?» Los asistentes conectados por MCP obtienen las mismas respuestas.
 
-Kad nombra un registro por su referencia, como `APP-8` o `BL-14`, o por su nombre cuando no tiene, como un proceso de negocio. La referencia o el nombre lleva a la página del registro cuando usted puede abrirla.
+Kad nombra un registro por su referencia, como `APP-8`, `BL-14` o `COMP-3`, o por su nombre cuando no tiene, como un proceso de negocio. La referencia o el nombre lleva a la página del registro cuando usted puede abrirla. También puede pedirle un registro por su referencia, por ejemplo «Muéstrame COMP-3.»
 
 Kad nombra un registro vinculado al que usted consulta solo si puede leer su módulo, como la página del registro: las aplicaciones de un proyecto requieren las aplicaciones, sus activos la infraestructura, sus solicitudes de origen las solicitudes. Un Business Contributor solo obtiene los proyectos, solicitudes y aplicaciones en los que participa. Los servidores en los que se ejecuta una aplicación son la excepción: vienen con la aplicación, como en su pestaña **Despliegues**. Si se le pregunta por una persona, Kad da lo que le muestra la lista de usuarios: un administrador de usuarios obtiene el perfil completo, los demás el nombre, el correo electrónico y el estado. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
@@ -297,7 +297,7 @@ Las personas que pueden abrir **Administración > Kad** ven también una barra f
 
 ## Consejos
 
-- **Use prefijos para mayor precisión**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` corresponden directamente a las referencias nativas de Kadratis. Son la forma más rápida de apuntar Kad a un registro concreto y sobreviven al copiar y pegar porque son idénticos a lo que ve en el resto de la aplicación.
+- **Use prefijos para mayor precisión**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@COMP-`, `@DEPT-` corresponden directamente a las referencias nativas de Kadratis. Son la forma más rápida de apuntar Kad a un registro concreto y sobreviven al copiar y pegar porque son idénticos a lo que ve en el resto de la aplicación.
 - **Inicie una nueva conversación por tema**: mantener las preguntas no relacionadas en conversaciones separadas reduce la ventana de contexto, acelera las respuestas y disminuye el gasto en tokens. La lista de conversaciones está agrupada por fecha para que pueda encontrarlas de nuevo con facilidad.
 - **Apruebe y rechace con criterio**: las vistas previas son lo único que se interpone entre Kad y sus datos reales. Tómese el segundo extra para leer la comparación antes de hacer clic en **Aprobar**.
 - **Detenga en lugar de esperar**: si Kad toma un camino equivocado a mitad de la generación, pulse el botón **Detener** en lugar de esperar a que termine. Ahorrará tokens y su siguiente mensaje puede corregir el rumbo.

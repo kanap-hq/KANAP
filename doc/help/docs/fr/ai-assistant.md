@@ -172,7 +172,7 @@ Kad liste, compte et lit les incidents. Il les filtre par actif, application ou 
 
 Kad lit les contrats comme les montre la liste des [Contrats](contracts.md) : l'état du terme en cours (à décider, en cours, reconduit, fin sans reconduction, échu), la prochaine échéance et la date limite de résiliation, avec le délai de décision de votre espace de travail et les décisions de renouvellement déjà enregistrées. Il lit aussi ce que couvre un contrat : ses applications, actifs, technologies et lignes budgétaires. Demandez par exemple : « Quels contrats sont à décider, et quelles applications couvrent-ils ? » ou « Quels contrats couvrent APP-8 ? » Les assistants connectés par MCP obtiennent les mêmes réponses.
 
-Kad désigne une fiche par sa référence, comme `APP-8` ou `BL-14`, ou par son nom quand elle n'en a pas, comme un processus métier. La référence ou le nom mène à la page de la fiche quand vous pouvez l'ouvrir.
+Kad désigne une fiche par sa référence, comme `APP-8`, `BL-14` ou `COMP-3`, ou par son nom quand elle n'en a pas, comme un processus métier. La référence ou le nom mène à la page de la fiche quand vous pouvez l'ouvrir. Vous pouvez aussi demander une fiche par sa référence, par exemple « Montre-moi COMP-3. »
 
 Kad ne nomme une fiche liée à celle que vous interrogez que si vous pouvez lire son module, comme la page de la fiche : les applications d'un projet demandent les applications, ses actifs l'infrastructure, ses demandes d'origine les demandes. Un Business Contributor n'obtient que les projets, demandes et applications auxquels il participe. Les serveurs sur lesquels tourne une application font exception : ils viennent avec l'application, comme dans son onglet **Déploiements**. Interrogé sur une personne, Kad donne ce que la liste des utilisateurs vous montre : un administrateur des utilisateurs obtient le profil complet, les autres le nom, l'e-mail et le statut. Les assistants connectés via MCP obtiennent les mêmes réponses.
 
@@ -297,7 +297,7 @@ Les personnes qui peuvent ouvrir **Administration > Kad** voient aussi une fine 
 
 ## Conseils
 
-- **Utilisez les préfixes pour plus de précision** : `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` correspondent directement aux références natives de Kadratis. C'est le moyen le plus rapide de diriger Kad vers un enregistrement précis et ils résistent au copier-coller car ils sont identiques à ce que vous voyez ailleurs dans l'application.
+- **Utilisez les préfixes pour plus de précision** : `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@COMP-`, `@DEPT-` correspondent directement aux références natives de Kadratis. C'est le moyen le plus rapide de diriger Kad vers un enregistrement précis et ils résistent au copier-coller car ils sont identiques à ce que vous voyez ailleurs dans l'application.
 - **Démarrez une nouvelle conversation par sujet** : garder des questions sans rapport dans des conversations distinctes réduit la fenêtre de contexte, accélère les réponses et allège la facture de tokens. La liste des conversations est regroupée par date, ce qui vous permet de les retrouver facilement.
 - **Approuvez et rejetez en connaissance de cause** : les aperçus sont la seule barrière entre Kad et vos données en production. Prenez la seconde nécessaire pour lire la comparaison avant de cliquer sur **Approuver**.
 - **Arrêtez plutôt que d'attendre** : si Kad s'engage sur une mauvaise voie en cours de diffusion, cliquez sur le bouton **Arrêter** plutôt que d'attendre la fin. Vous économiserez des tokens et votre message suivant pourra corriger le tir.

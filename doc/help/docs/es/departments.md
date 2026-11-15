@@ -25,6 +25,7 @@ Navegue a **Datos maestros > Departamentos** para ver su lista de departamentos.
 La cuadrícula de Departamentos proporciona una visión general de todos los departamentos con su plantilla para un año determinado.
 
 **Columnas predeterminadas**:
+- **Referencia**: La referencia que asigna Kadratis (`DEPT-4`). Haga clic para abrir la pestaña Visión general del espacio de trabajo
 - **Nombre**: Nombre del departamento. Haga clic para abrir la pestaña Visión general del espacio de trabajo
 - **Empresa**: Empresa matriz. Haga clic para abrir la pestaña Visión general del espacio de trabajo
 - **Plantilla (Año)**: Conteo de empleados para el año seleccionado. Haga clic para ir directamente a la pestaña Detalles para editar
@@ -37,9 +38,11 @@ La cuadrícula de Departamentos proporciona una visión general de todos los dep
 
 **Alcance de estado**: Utilice el selector **Mostrar: Todos / Activos / Desactivados** para filtrar por estado del departamento. La lista muestra por defecto solo departamentos habilitados.
 
-**Búsqueda rápida**: La barra de búsqueda filtra por nombres de departamento.
+**Búsqueda rápida**: La barra de búsqueda filtra por nombres de departamento. Escriba una referencia, como `DEPT-4`, para encontrar ese departamento. Las cifras solas buscan en el texto.
 
-**Enlace directo**: Cada celda de la cuadrícula es un enlace clicable. Nombre y Empresa abren la pestaña Visión general; Plantilla abre la pestaña Detalles. Cuando navega a un espacio de trabajo y luego vuelve, su orden de clasificación, consulta de búsqueda y filtros se preservan.
+**Filtros de columna**: El filtro **Referencia** acepta `DEPT-4` o `4`.
+
+**Enlace directo**: Cada celda de la cuadrícula es un enlace clicable. Referencia, Nombre y Empresa abren la pestaña Visión general; Plantilla abre la pestaña Detalles. Cuando navega a un espacio de trabajo y luego vuelve, su orden de clasificación, consulta de búsqueda y filtros se preservan.
 
 **Acciones**:
 - **Nuevo**: Crear un nuevo departamento (requiere `departments:member`)
@@ -53,8 +56,10 @@ La cuadrícula de Departamentos proporciona una visión general de todos los dep
 
 Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene tres pestañas: **Visión general**, **Detalles** e **Historial** (los cambios hechos en el departamento, vea [Historial de los registros](record-history.md)).
 
-- **Encabezado**: el nombre del departamento. Haga clic en él para cambiar el nombre del departamento. **Ant.** / **Sig.** permiten moverse entre departamentos en el orden y con los filtros de la lista sin volver a ella, y el botón de cierre vuelve a la lista
+- **Encabezado**: la referencia del departamento (`DEPT-5`, haga clic en ella para copiarla) y su nombre. Haga clic en el nombre para cambiar el nombre del departamento. **Ant.** / **Sig.** permiten moverse entre departamentos en el orden y con los filtros de la lista sin volver a ella, y el botón de cierre vuelve a la lista
 - **Panel de propiedades** a la derecha: **Empresa** y **Ciclo de vida**
+
+**Dirección de la página**: la dirección de la página usa la referencia, por ejemplo `/master-data/departments/DEPT-5/overview`. La dirección anterior de la página de un departamento lo sigue abriendo y se sustituye por la nueva.
 
 **Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. El nombre y la descripción se guardan al salir del campo; la empresa y el ciclo de vida se guardan en cuanto los cambia. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó.
 
@@ -97,12 +102,13 @@ La pestaña Detalles gestiona las métricas de plantilla año a año.
 
 La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
 
-**Exportar** descarga los departamentos que muestra la lista (o, a petición en el diálogo, todos los departamentos) con su empresa, su nombre, su descripción, su estado y su fin de validez. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
+**Exportar** descarga los departamentos que muestra la lista (o, a petición en el diálogo, todos los departamentos) con su referencia, su empresa, su nombre, su descripción, su estado y su fin de validez. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
 
-Las columnas:
+Las columnas, en este orden:
 
 | Columna | Contenido |
 |---|---|
+| `reference` | Opcional. La referencia del departamento (`DEPT-12`). La exportación la escribe |
 | `company_name` | Obligatoria. La empresa a la que pertenece el departamento, por su nombre |
 | `name` | Obligatoria. El nombre del departamento |
 | `description` | Texto libre |
@@ -112,11 +118,15 @@ Las columnas:
 **Importación**:
 
 - Use la **Verificación previa** para validar el archivo antes de aplicarlo y después **Cargar**
-- Emparejamiento por nombre de departamento y nombre de empresa: una fila actualiza el departamento que nombra, cualquier otra fila crea uno
+- **Emparejamiento por referencia**: una `reference` rellenada (`DEPT-12` o `12`) designa el departamento que la fila actualiza, aunque su nombre haya cambiado. El departamento toma el nombre y la empresa de la fila: otra empresa lo traslada a ella
+- **Emparejamiento por nombre**: cuando `reference` está vacía, o el archivo no tiene esa columna, una fila se empareja por nombre de departamento y nombre de empresa. Actualiza el departamento que nombra, y cualquier otra fila crea uno
+- **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“DEPT-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
+- **Cambio de nombre o traslado**: un nombre que ya tiene otro departamento de la empresa de la fila se rechaza, y el mensaje da la referencia de ese departamento: «“Finance” ya pertenece a DEPT-7.»
+- **Una fila por departamento**: dos filas que actualizan el mismo departamento se rechazan: «Esta fila actualiza DEPT-7, como la fila 3. Deje una sola fila por registro.»
 
 **Celdas obligatorias**: `name` y `company_name`, una empresa existente
 
-**Celdas opcionales**: `description`, `status`, `disabled_at`
+**Celdas opcionales**: `reference`, `description`, `status`, `disabled_at`
 
 **Columnas de ciclo de vida**:
 - `status` es `enabled` o `disabled`, y `disabled_at` es el fin de validez, una fecha (`2026-12-31`) o una fecha y una hora completas. La exportación escribe el estado deducido del fin de validez. Un departamento nuevo se activa salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, finaliza el departamento hoy

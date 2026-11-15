@@ -25,6 +25,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 
 | Column | What it shows |
 |---|---|
+| **Reference** | The reference Kadratis assigns (`COMP-3`). Click it to open the workspace |
 | **Name** | Company name (click to open the workspace) |
 | **Country** | ISO country code |
 | **Currency** | Base currency code |
@@ -47,8 +48,8 @@ The list shows all companies for your workspace. Use it to review key informatio
 
 **Filtering**:
 
-- **Quick search**: free-text search across all visible columns
-- **Column filters**: click any column header to filter by value; numeric columns (Headcount, IT users, Turnover) support number filters
+- **Quick search**: free-text search across all visible columns. Type a reference, such as `COMP-3`, to find that company. Digits alone search the text
+- **Column filters**: click any column header to filter by value. The **Reference** filter takes `COMP-3` or `3`. Numeric columns (Headcount, IT users, Turnover) support number filters
 - **Status scope**: the **Show: All / Enabled / Disabled** toggle above the list controls which companies appear. The list shows enabled companies by default
 
 **Year selector**: use the **Year** field in the toolbar to switch which year's metrics are displayed. The bottom row shows **totals** for Headcount, IT users, and Turnover across all visible (filtered) companies.
@@ -81,11 +82,13 @@ The list shows all companies for your workspace. Use it to review key informatio
 
 Click any row in the list to open the company workspace. It has three tabs: **Overview**, **Details** and **History** (the changes made to the company, see [Record history](record-history.md)). People who manage data access also see an **Access** tab, with the people who see the whole company and those who see part of it. See [Data access](data-access.md#the-access-tab-of-companies-and-cost-centers).
 
-- **Header**: the company name. Click it to rename the company. The arrows with "N of M" move between companies in the list's order and filters without returning to the list. The back link, **Companies**, returns to the list with your search context intact
+- **Header**: the company reference (`COMP-5`, click it to copy it) and the company name. Click the name to rename the company. The arrows with "N of M" move between companies in the list's order and filters without returning to the list. The back link, **Companies**, returns to the list with your search context intact
 - **Status**, under the name: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** disables the company at once: the end of validity becomes the current time
 - **Properties panel** on the right: **Country**, **Base currency**, **Chart of accounts** and **Lifecycle**. Use the panel toggle next to it to collapse the panel or open it again
 
 - **Delete**, a trash icon at the top right: shown to company administrators (`companies:admin`). See [Deleting a company](#deleting-a-company)
+
+**Page address**: the address of the page uses the reference, for example `/master-data/companies/COMP-5/overview`. The former address of a company page still opens it, and changes to the new one.
 
 **Autosave**: Every change saves on its own when you leave the field. There are no Save, Reset or Close buttons. You can keep working while a change saves. The top of the page reads **Saving…** while it saves, then **Saved** for a moment. When a change is refused, the field shows its previous value again and the reason shows under it. The message stays until you type in the field again.
 
@@ -206,13 +209,14 @@ Many parts of the app are year-aware. Companies have metrics per year:
 
 The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
 
-**Export** downloads the companies the list shows (or, on request in the dialog, every company) with their metrics. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers and one example row, a fictional company with metrics for the list year. Replace it with your own rows.
+**Export** downloads the companies the list shows (or, on request in the dialog, every company) with their metrics. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers and one example row, a fictional company with metrics for the list year, and an empty `reference`. Replace it with your own rows.
 
 The columns, in this order. The metric columns follow the year selected in the list toolbar: the year before, that year, and the year after.
 
 | Column | Content |
 |---|---|
-| `name` | Required. The company name. Rows are matched on it |
+| `reference` | Optional. The company reference (`COMP-12`). The export writes it |
+| `name` | Required. The company name |
 | `country_iso` | Required. Two letters |
 | `address1`, `address2` | Address lines |
 | `postal_code`, `state` | Address details |
@@ -229,8 +233,12 @@ The columns, in this order. The metric columns follow the year selected in the l
 **Import**:
 
 - Start with **Preflight check**. It validates the headers, the encoding, the required fields, the duplicates and the metrics. If the check is clean, **Load** applies the inserts and the updates. Then the dialog counts the companies created, updated and unchanged, for example "2 created, 5 updated, 30 unchanged"
-- **Matching**: by company `name`, whatever the case. The stored spelling stays: a row `ACME` updates `Acme`, and the preflight check says "ACME" was matched to "Acme"
-- **One row per company**: a name that appears twice in the file, whatever the case, is refused at the check: "\"Acme\" is already on row 4. Keep one row per company."
+- **Matching by reference**: a filled `reference` (`COMP-12` or `12`) names the company the row updates, even when the name has changed. The company then takes the name of the row
+- **Matching by name**: when `reference` is empty, or the file has no such column, the row is matched by company `name`, whatever the case. The stored spelling stays: a row `ACME` updates `Acme`, and the preflight check says "ACME" was matched to "Acme". Every row of a file without the `reference` column is matched this way
+- **Unknown reference**: a reference your workspace does not know refuses the row: "\"COMP-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
+- **Renaming**: a new name that another company already has is refused, and the message names that company's reference: "\"Acme\" already belongs to COMP-4."
+- **One row per company**: two rows that update the same company are refused: "This row updates COMP-4, as row 3 does. Keep one row per record."
+- A name that appears twice in the file, whatever the case, is refused at the check: "\"Acme\" is already on row 4. Keep one row per company."
 - **Required fields**: `name`, `country_iso`, `city` and `base_currency`. An empty city is refused at the check, for a new company and for an update
 - **Status and end of validity**: the export writes the status read from the end of validity. A new company is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the company today
 - A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."

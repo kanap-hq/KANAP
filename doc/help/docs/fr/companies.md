@@ -25,6 +25,7 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 
 | Colonne | Ce qu'elle affiche |
 |---------|-------------------|
+| **Référence** | La référence attribuée par Kadratis (`COMP-3`). Cliquez dessus pour ouvrir l'espace de travail |
 | **Nom** | Nom de la société (cliquez pour ouvrir l'espace de travail) |
 | **Pays** | Code pays ISO |
 | **Devise** | Code de devise de base |
@@ -47,8 +48,8 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 
 **Filtrage** :
 
-- **Recherche rapide** : recherche en texte libre dans toutes les colonnes visibles
-- **Filtres de colonnes** : cliquez sur n'importe quel en-tête de colonne pour filtrer par valeur ; les colonnes numériques (Effectif, Utilisateurs IT, Chiffre d'affaires) supportent les filtres numériques
+- **Recherche rapide** : recherche en texte libre dans toutes les colonnes visibles. Tapez une référence, comme `COMP-3`, pour trouver cette société. Des chiffres seuls cherchent dans le texte
+- **Filtres de colonnes** : cliquez sur n'importe quel en-tête de colonne pour filtrer par valeur. Le filtre **Référence** accepte `COMP-3` ou `3`. Les colonnes numériques (Effectif, Utilisateurs IT, Chiffre d'affaires) supportent les filtres numériques
 - **Périmètre par statut** : le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la liste contrôle quelles sociétés apparaissent. Par défaut, la liste affiche les sociétés activées
 
 **Sélecteur d'année** : utilisez le champ **Année** dans la barre d'outils pour changer quelle année de métriques est affichée. La ligne du bas affiche les **totaux** pour Effectif, Utilisateurs IT et Chiffre d'affaires pour toutes les sociétés visibles (filtrées).
@@ -81,11 +82,13 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 
 Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail de la société. Il comporte trois onglets : **Vue d'ensemble**, **Détails** et **Historique** (les modifications apportées à la société, voir [Historique des fiches](record-history.md)). Les personnes qui gèrent l'accès aux données voient aussi un onglet **Accès**, avec les personnes qui voient toute la société et celles qui en voient une partie. Voir [Accès aux données](data-access.md#the-access-tab-of-companies-and-cost-centers).
 
-- **En-tête** : le nom de la société. Cliquez dessus pour renommer la société. Les flèches avec « N sur M » permettent de passer d'une société à l'autre dans l'ordre et avec les filtres de la liste, sans revenir à la liste. Le lien de retour, **Sociétés**, ramène à la liste avec votre contexte de recherche intact
+- **En-tête** : la référence de la société (`COMP-5`, cliquez dessus pour la copier) et son nom. Cliquez sur le nom pour renommer la société. Les flèches avec « N sur M » permettent de passer d'une société à l'autre dans l'ordre et avec les filtres de la liste, sans revenir à la liste. Le lien de retour, **Sociétés**, ramène à la liste avec votre contexte de recherche intact
 - **Statut**, sous le nom : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** désactive la société aussitôt : la fin de validité devient l'heure actuelle
 - **Panneau Propriétés** à droite : **Pays**, **Devise de base**, **Plan comptable** et **Cycle de vie**. Utilisez le bouton situé à côté pour replier le panneau ou le rouvrir
 
 - **Supprimer**, une icône corbeille en haut à droite : visible des administrateurs des sociétés (`companies:admin`). Voir [Supprimer une société](#supprimer-une-societe)
+
+**Adresse de la page** : l'adresse de la page utilise la référence, par exemple `/master-data/companies/COMP-5/overview`. L'ancienne adresse de la page d'une société l'ouvre toujours, et laisse place à la nouvelle.
 
 **Enregistrement automatique** : chaque modification s'enregistre d'elle-même quand vous quittez le champ. Il n'y a ni bouton Enregistrer, ni bouton Réinitialiser, ni bouton Fermer. Vous pouvez continuer à travailler pendant l'enregistrement. Le haut de la page affiche **Enregistrement…** pendant l'enregistrement, puis **Enregistré** un court instant. Lorsqu'une modification est refusée, le champ reprend sa valeur précédente et la raison s'affiche dessous. Le message reste jusqu'à ce que vous tapiez de nouveau dans le champ.
 
@@ -206,13 +209,14 @@ De nombreuses parties de l'application sont sensibles à l'année. Les société
 
 L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
 
-**Exporter** télécharge les sociétés que la liste affiche (ou, sur demande dans la fenêtre, toutes les sociétés) avec leurs métriques. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les en-têtes et une ligne d'exemple, une société fictive avec des métriques pour l'année de la liste. Remplacez-la par vos propres lignes.
+**Exporter** télécharge les sociétés que la liste affiche (ou, sur demande dans la fenêtre, toutes les sociétés) avec leurs métriques. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les en-têtes et une ligne d'exemple, une société fictive avec des métriques pour l'année de la liste, et une `reference` vide. Remplacez-la par vos propres lignes.
 
 Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélectionnée dans la barre d'outils de la liste : l'année précédente, celle-ci et la suivante.
 
 | Colonne | Contenu |
 |---|---|
-| `name` | Obligatoire. Le nom de la société. Les lignes sont rapprochées par ce nom |
+| `reference` | Facultative. La référence de la société (`COMP-12`). L'export l'écrit |
+| `name` | Obligatoire. Le nom de la société |
 | `country_iso` | Obligatoire. Deux lettres |
 | `address1`, `address2` | Lignes d'adresse |
 | `postal_code`, `state` | Compléments d'adresse |
@@ -229,8 +233,12 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 **Import** :
 
 - Commencez par la **Vérification préalable**. Elle valide les en-têtes, l'encodage, les champs obligatoires, les doublons et les métriques. Si la vérification est propre, **Charger** applique les insertions et les mises à jour. Le dialogue compte ensuite les sociétés créées, mises à jour et inchangées, par exemple « 2 créées, 5 mises à jour, 30 inchangées »
-- **Correspondance** : par `name` de société, quelle que soit la casse. Le nom enregistré ne change pas : une ligne `ACME` met à jour `Acme`, et la vérification préalable indique « ACME » a été rapproché de « Acme »
-- **Une ligne par société** : un nom présent deux fois dans le fichier, quelle que soit la casse, est refusé dès la vérification : « « Acme » figure déjà à la ligne 4. Gardez une seule ligne par société. »
+- **Correspondance par référence** : une `reference` remplie (`COMP-12` ou `12`) désigne la société que la ligne met à jour, même si son nom a changé. La société prend alors le nom de la ligne
+- **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, la ligne est rapprochée par le `name` de la société, quelle que soit la casse. Le nom enregistré ne change pas : une ligne `ACME` met à jour `Acme`, et la vérification préalable indique « ACME » a été rapproché de « Acme ». Toutes les lignes d'un fichier sans colonne `reference` sont rapprochées ainsi
+- **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « COMP-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
+- **Renommage** : un nouveau nom qu'une autre société porte déjà est refusé, et le message donne la référence de cette société : « « Acme » appartient déjà à COMP-4. »
+- **Une ligne par société** : deux lignes qui mettent à jour la même société sont refusées : « Cette ligne met à jour COMP-4, comme la ligne 3. Gardez une seule ligne par fiche. »
+- Un nom présent deux fois dans le fichier, quelle que soit la casse, est refusé dès la vérification : « « Acme » figure déjà à la ligne 4. Gardez une seule ligne par société. »
 - **Champs obligatoires** : `name`, `country_iso`, `city` et `base_currency`. Une ville vide est refusée dès la vérification, pour une nouvelle société comme pour une mise à jour
 - **Statut et fin de validité** : l'export écrit le statut déduit de la fin de validité. Une nouvelle société est activée sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la société aujourd'hui
 - Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »

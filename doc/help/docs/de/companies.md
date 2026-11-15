@@ -25,6 +25,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 
 | Spalte | Was sie zeigt |
 |--------|---------------|
+| **Referenz** | Die von Kadratis vergebene Referenz (`COMP-3`). Zum Öffnen des Arbeitsbereichs anklicken |
 | **Name** | Unternehmensname (zum Öffnen des Arbeitsbereichs anklicken) |
 | **Land** | ISO-Ländercode |
 | **Währung** | Basiswährungscode |
@@ -47,8 +48,8 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 
 **Filtern**:
 
-- **Schnellsuche**: Freitext-Suche über alle sichtbaren Spalten
-- **Spaltenfilter**: Klicken Sie auf eine Spaltenüberschrift, um nach Wert zu filtern; numerische Spalten (Mitarbeiterzahl, IT-Benutzer, Umsatz) unterstützen Zahlenfilter
+- **Schnellsuche**: Freitext-Suche über alle sichtbaren Spalten. Geben Sie eine Referenz ein, etwa `COMP-3`, um dieses Unternehmen zu finden. Ziffern allein suchen im Text
+- **Spaltenfilter**: Klicken Sie auf eine Spaltenüberschrift, um nach Wert zu filtern. Der Filter **Referenz** nimmt `COMP-3` oder `3` an. Numerische Spalten (Mitarbeiterzahl, IT-Benutzer, Umsatz) unterstützen Zahlenfilter
 - **Statusbereich**: Der Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über der Liste steuert, welche Unternehmen angezeigt werden. Standardmäßig zeigt die Liste aktivierte Unternehmen
 
 **Jahrauswahl**: Verwenden Sie das Feld **Jahr** in der Symbolleiste, um zu wechseln, welche Jahreskennzahlen angezeigt werden. Die untere Zeile zeigt **Summen** für Mitarbeiterzahl, IT-Benutzer und Umsatz über alle sichtbaren (gefilterten) Unternehmen.
@@ -81,11 +82,13 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 
 Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich des Unternehmens zu öffnen. Er hat drei Tabs: **Übersicht**, **Details** und **Verlauf** (die Änderungen am Unternehmen, siehe [Verlauf der Datensätze](record-history.md)). Personen, die den Datenzugriff verwalten, sehen außerdem einen Tab **Zugriff** mit den Personen, die das ganze Unternehmen sehen, und denen, die einen Teil davon sehen. Siehe [Datenzugriff](data-access.md#the-access-tab-of-companies-and-cost-centers).
 
-- **Kopfzeile**: der Name des Unternehmens. Klicken Sie darauf, um das Unternehmen umzubenennen. Die Pfeile mit „N von M" wechseln zwischen Unternehmen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren. Der Zurück-Link **Unternehmen** führt mit erhaltenem Suchkontext zur Liste zurück
+- **Kopfzeile**: die Referenz des Unternehmens (`COMP-5`, zum Kopieren anklicken) und sein Name. Klicken Sie auf den Namen, um das Unternehmen umzubenennen. Die Pfeile mit „N von M" wechseln zwischen Unternehmen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren. Der Zurück-Link **Unternehmen** führt mit erhaltenem Suchkontext zur Liste zurück
 - **Status**, unter dem Namen: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** deaktiviert das Unternehmen sofort: Das Ende der Gültigkeit wird auf den aktuellen Zeitpunkt gesetzt
 - **Bereich Eigenschaften** rechts: **Land**, **Basiswährung**, **Kontenplan** und **Lebenszyklus**. Mit der Schaltfläche daneben klappen Sie den Bereich ein oder wieder aus
 
 - **Löschen**, ein Papierkorbsymbol oben rechts: sichtbar für Unternehmensadministratoren (`companies:admin`). Siehe [Ein Unternehmen löschen](#ein-unternehmen-loschen)
+
+**Seitenadresse**: Die Adresse der Seite verwendet die Referenz, zum Beispiel `/master-data/companies/COMP-5/overview`. Die frühere Adresse der Seite eines Unternehmens öffnet es weiterhin und wird durch die neue ersetzt.
 
 **Automatisches Speichern**: Jede Änderung wird von selbst gespeichert, sobald Sie das Feld verlassen. Es gibt keine Schaltflächen zum Speichern, Zurücksetzen oder Schließen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Oben auf der Seite steht **Wird gespeichert…**, solange gespeichert wird, dann kurz **Gespeichert**. Wird eine Änderung abgelehnt, zeigt das Feld wieder seinen vorherigen Wert und darunter den Grund. Die Meldung bleibt, bis Sie wieder in das Feld tippen.
 
@@ -206,13 +209,14 @@ Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr
 
 Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
 
-**Exportieren** lädt die Unternehmen der Liste (oder, auf Wunsch im Dialog, alle Unternehmen) mit ihren Kennzahlen herunter. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei mit den Kopfzeilen und einer Beispielzeile, einem fiktiven Unternehmen mit Kennzahlen für das Jahr der Liste. Ersetzen Sie sie durch Ihre eigenen Zeilen.
+**Exportieren** lädt die Unternehmen der Liste (oder, auf Wunsch im Dialog, alle Unternehmen) mit ihren Kennzahlen herunter. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei mit den Kopfzeilen und einer Beispielzeile, einem fiktiven Unternehmen mit Kennzahlen für das Jahr der Liste und einer leeren `reference`. Ersetzen Sie sie durch Ihre eigenen Zeilen.
 
 Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbolleiste der Liste gewählten Jahr: das Jahr davor, dieses Jahr und das Jahr danach.
 
 | Spalte | Inhalt |
 |---|---|
-| `name` | Pflicht. Der Name des Unternehmens. Zeilen werden über diesen Namen zugeordnet |
+| `reference` | Optional. Die Referenz des Unternehmens (`COMP-12`). Der Export schreibt sie |
+| `name` | Pflicht. Der Name des Unternehmens |
 | `country_iso` | Pflicht. Zwei Buchstaben |
 | `address1`, `address2` | Adresszeilen |
 | `postal_code`, `state` | Adressangaben |
@@ -229,8 +233,12 @@ Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbo
 **Import**:
 
 - Beginnen Sie mit der **Vorabprüfung**. Sie prüft die Kopfzeilen, die Kodierung, die Pflichtfelder, die Duplikate und die Kennzahlen. Ist die Prüfung sauber, wendet **Laden** die Einfügungen und Aktualisierungen an. Danach zählt der Dialog die erstellten, aktualisierten und unveränderten Unternehmen, zum Beispiel „2 erstellt, 5 aktualisiert, 30 unverändert“
-- **Zuordnung**: über den `name` des Unternehmens, unabhängig von Groß- und Kleinschreibung. Die gespeicherte Schreibweise bleibt: Eine Zeile `ACME` aktualisiert `Acme`, und die Vorabprüfung meldet „ACME“ wurde „Acme“ zugeordnet
-- **Eine Zeile pro Unternehmen**: Ein Name, der zweimal in der Datei steht, unabhängig von Groß- und Kleinschreibung, wird schon bei der Prüfung abgelehnt: „„Acme“ steht bereits in Zeile 4. Verwenden Sie eine Zeile pro Unternehmen.“
+- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`COMP-12` oder `12`) bezeichnet das Unternehmen, das die Zeile aktualisiert, auch wenn sich sein Name geändert hat. Das Unternehmen erhält dann den Namen der Zeile
+- **Zuordnung über den Namen**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird die Zeile über den `name` des Unternehmens zugeordnet, unabhängig von Groß- und Kleinschreibung. Die gespeicherte Schreibweise bleibt: Eine Zeile `ACME` aktualisiert `Acme`, und die Vorabprüfung meldet „ACME“ wurde „Acme“ zugeordnet. Alle Zeilen einer Datei ohne Spalte `reference` werden so zugeordnet
+- **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„COMP-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
+- **Umbenennen**: Ein neuer Name, den bereits ein anderes Unternehmen trägt, wird abgelehnt, und die Meldung nennt dessen Referenz: „„Acme“ gehört bereits zu COMP-4.“
+- **Eine Zeile pro Unternehmen**: Zwei Zeilen, die dasselbe Unternehmen aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert COMP-4, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“
+- Ein Name, der zweimal in der Datei steht, unabhängig von Groß- und Kleinschreibung, wird schon bei der Prüfung abgelehnt: „„Acme“ steht bereits in Zeile 4. Verwenden Sie eine Zeile pro Unternehmen.“
 - **Pflichtfelder**: `name`, `country_iso`, `city` und `base_currency`. Eine leere Stadt wird schon bei der Prüfung abgelehnt, für ein neues Unternehmen wie für eine Aktualisierung
 - **Status und Ende der Gültigkeit**: Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Ein neues Unternehmen ist aktiviert, außer die Zeile sagt `disabled`. Bei einer Aktualisierung behalten ein leeres `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum, andernfalls beendet es das Unternehmen heute
 - Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“

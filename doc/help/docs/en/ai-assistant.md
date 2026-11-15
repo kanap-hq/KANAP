@@ -172,7 +172,7 @@ Kad lists, counts and reads incidents. It filters them by asset, application or 
 
 Kad reads contracts as the [Contracts](contracts.md) list shows them: the state of the current term (to decide, in progress, renewed, ends without renewal, expired), the next due date and the cancellation deadline, with the decision window of your workspace and the renewal decisions already recorded. It also reads what a contract covers: its applications, assets, technologies and budget lines. Ask, for example: "Which contracts are to decide, and which applications do they cover?" or "Which contracts cover APP-8?" Assistants connected over MCP get the same answers.
 
-Kad names a record by its reference, such as `APP-8` or `BL-14`, or by its name when it has none, such as a business process. The reference or the name links to the record's page when you can open it.
+Kad names a record by its reference, such as `APP-8`, `BL-14` or `COMP-3`, or by its name when it has none, such as a business process. The reference or the name links to the record's page when you can open it. You can ask for a record by its reference too, for example "Show me COMP-3."
 
 Kad names a record linked to the one you ask about only when you can read its module, as the record's page does: the applications of a project need the applications, its assets the infrastructure, its source requests the requests. A Business Contributor only gets the projects, requests and applications they take part in. The servers an application runs on are the exception: they come with the application, as on its **Deployments** tab. Asked about a person, Kad gives what the users list shows you: an administrator of users gets the full profile, everyone else the name, email and status. Assistants connected over MCP get the same answers.
 
@@ -297,7 +297,7 @@ People who can open **Admin > Kad** also see a thin bar under the composer, once
 
 ## Tips
 
-- **Use prefixes for precision**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` map directly to native Kadratis references. They are the fastest way to point Kad at a specific record and they survive copy-paste because they look identical to what you see elsewhere in the application.
+- **Use prefixes for precision**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@COMP-`, `@DEPT-` map directly to native Kadratis references. They are the fastest way to point Kad at a specific record and they survive copy-paste because they look identical to what you see elsewhere in the application.
 - **Start a new conversation per topic**: keeping unrelated questions in separate conversations makes the context window smaller, the answers faster, and the token bill lower. The conversation list is grouped by date so you can find them again easily.
 - **Approve and reject deliberately**: previews are the only thing standing between Kad and your live data. Take the extra second to read the diff before clicking **Approve**.
 - **Stop instead of waiting**: if Kad heads down the wrong path mid-stream, hit the **Stop** button rather than waiting for it to finish. You will save tokens, and your follow-up message can correct the course.
