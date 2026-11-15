@@ -16,6 +16,7 @@ import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { ImportLabel } from '../components/csv/importFiles';
+import { formatItemRef } from '../utils/item-ref';
 
 export default function ContactsPage() {
   const { hasLevel, dataAccess } = useAuth();
@@ -51,6 +52,19 @@ export default function ContactsPage() {
   };
 
   const columns: EnhancedColDef<any>[] = useMemo(() => [
+    {
+      // The reference (`CTCT-12`): filtered on its number by the server, sorted by number.
+      field: 'item_number',
+      headerName: t('contacts.columns.reference'),
+      width: 110,
+      filter: 'agTextColumnFilter',
+      valueFormatter: (p: any) => (p.value ? formatItemRef('contact', p.value) : ''),
+      comparator: (a: number, b: number) => (a || 0) - (b || 0),
+      cellStyle: { fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace", fontSize: '12px', color: 'var(--kanap-text-secondary)', fontVariantNumeric: 'tabular-nums' },
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer {...params} linkType="internal" getHref={getContactHref} onNavigate={(href) => navigate(href)} />
+      ),
+    },
     {
       field: 'last_name',
       headerName: t('contacts.columns.lastName'),

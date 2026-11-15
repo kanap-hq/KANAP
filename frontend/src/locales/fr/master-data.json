@@ -406,6 +406,7 @@
     "supplierFallback": "Fournisseur",
     "loadError": "Échec du chargement du fournisseur.",
     "columns": {
+      "reference": "Référence",
       "erpSupplierId": "ID fournisseur ERP"
     },
     "noSuppliersFound": "Aucun fournisseur trouvé",
@@ -473,6 +474,7 @@
     "newContact": "Nouveau contact",
     "contactFallback": "Contact",
     "columns": {
+      "reference": "Référence",
       "lastName": "Nom",
       "firstName": "Prénom",
       "supplier": "Fournisseur",

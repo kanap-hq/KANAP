@@ -478,6 +478,7 @@
   "/suppliers": {
     "params": {},
     "filters": {
+      "item_number": "text",
       "name": "text",
       "erp_supplier_id": "text",
       "notes": "text",
@@ -485,6 +486,7 @@
       "created_at": "date"
     },
     "fields": [
+      "item_number",
       "name",
       "erp_supplier_id",
       "notes",
@@ -832,6 +834,7 @@
   "/contacts": {
     "params": {},
     "filters": {
+      "item_number": "text",
       "last_name": "text",
       "first_name": "text",
       "supplier_name": "text",
@@ -844,6 +847,7 @@
       "created_at": "date"
     },
     "fields": [
+      "item_number",
       "last_name",
       "first_name",
       "supplier_name",
