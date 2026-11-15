@@ -140,8 +140,9 @@ export type EuPartialFormat = { text: string; caret: number };
  *
  * The day, month and year keep their own places. A short day or month gets its leading zero when a
  * later part exists, so typing into the middle of a date does not shift the digits that follow; the
- * zero is dropped again when the second digit arrives. Extra digits stay in the text (and make it
- * invalid) instead of being silently swallowed.
+ * zero is dropped again when the second digit arrives. A full day or month passes the next digit to
+ * the following part. Extra digits stay in the text (and make it invalid) instead of being silently
+ * swallowed.
  */
 export function formatEuPartialAt(raw: string, caret: number | null, sep: DateInputSeparator = '/', padShortParts = true): EuPartialFormat {
   const value = String(raw ?? '');
@@ -172,12 +173,18 @@ export function formatEuPartialAt(raw: string, caret: number | null, sep: DateIn
     const carriedIn = carry.length;
     let combined = carry + rawDigits;
     carry = '';
-    let removed = 0;
-    while (combined.length > widths[i] && combined.startsWith('0')) {
-      combined = combined.slice(1);
-      removed += 1;
-    }
     const hasLater = i < parsed.length - 1;
+    let removed = 0;
+    // A leading zero on a part longer than its width is the padding zero, dropped once the second
+    // digit arrives (015 over a padded day is 15). The drop waits until a later part exists. While
+    // the day or month is still the last part, the digits past its width start the next one, so a
+    // full month 01 followed by 2 stays 01 and the 2 starts the year. The year has no next part.
+    if (hasLater || i >= 2) {
+      while (combined.length > widths[i] && combined.startsWith('0')) {
+        combined = combined.slice(1);
+        removed += 1;
+      }
+    }
     let pad = 0;
     if (padShortParts && i < 2 && combined.length > 0 && combined.length < widths[i] && hasLater) {
       pad = widths[i] - combined.length;
