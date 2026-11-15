@@ -51,6 +51,16 @@ function ImportMappingPreview({ mapping, onChoices, choicesDisabled }: ImportMap
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const kindOf = new Map(mapping.columns.map((column) => [column.column, column.kind]));
   const titleOf = new Map(mapping.columns.map((column) => [column.column, column.title]));
+  // The budget lines' amounts, the values one checks, come right after the title: on a narrow card they stay in view.
+  const sampleOrder = mapping.sample.columns.map((_, index) => index);
+  if (mapping.import_key === 'budget_lines') {
+    const title = mapping.sample.columns.indexOf('name');
+    const rank = (index: number) => {
+      if (index <= title) return 0;
+      return kindOf.get(mapping.sample.columns[index]) === 'number' ? 1 : 2;
+    };
+    sampleOrder.sort((a, b) => rank(a) - rank(b) || a - b);
+  }
 
   const sourceLabel = (column: AiImportMapping['columns'][number]) => {
     if (column.source) {
@@ -195,15 +205,17 @@ function ImportMappingPreview({ mapping, onChoices, choicesDisabled }: ImportMap
             <Box component="table" sx={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  {mapping.sample.columns.map((column) => (
-                    <Box component="th" key={column} sx={headCellSx}>{titleOf.get(column) ?? column}</Box>
-                  ))}
+                  {sampleOrder.map((columnIndex) => {
+                    const column = mapping.sample.columns[columnIndex];
+                    return <Box component="th" key={column} sx={headCellSx}>{titleOf.get(column) ?? column}</Box>;
+                  })}
                 </tr>
               </thead>
               <tbody>
                 {mapping.sample.rows.map((row, rowIndex) => (
                   <tr key={rowIndex}>
-                    {mapping.sample.columns.map((column, columnIndex) => {
+                    {sampleOrder.map((columnIndex) => {
+                      const column = mapping.sample.columns[columnIndex];
                       // A value the import will not read shows as the file writes it.
                       const unread = mapping.sample.unread?.[rowIndex]?.[columnIndex] === true;
                       const value = row[columnIndex] ?? '';
