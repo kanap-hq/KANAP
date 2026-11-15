@@ -11,6 +11,7 @@ import {
   TABLE_SUMMARY_DISTINCT_PER_COLUMN,
   TABLE_SUMMARY_MAX_CELL_LENGTH,
   TABLE_SUMMARY_MAX_COLUMNS,
+  TABLE_SUMMARY_MAX_LENGTH,
   TABLE_SUMMARY_SAMPLE_ROWS,
   tableSummaryText,
 } from '../table-attachment';
@@ -219,7 +220,7 @@ async function distinctValues() {
 }
 
 // The worst case: 60 text columns of 5,000 rows, each with many repeated values (about 4.5 MB). The distinct
-// values stay within their budget, 40 per column, and the summary within about 6,000 characters more.
+// values kept stay within their budget, 40 per column, and the whole text within TABLE_SUMMARY_MAX_LENGTH.
 async function worstCaseDistinctValues() {
   const width = TABLE_SUMMARY_MAX_COLUMNS;
   const header = Array.from({ length: width }, (_, index) => `Column ${index + 1}`).join(',');
@@ -236,18 +237,46 @@ async function worstCaseDistinctValues() {
   assert.ok(characters <= TABLE_SUMMARY_DISTINCT_BUDGET, `${characters} characters of values`);
   assert.ok(summary.distinct!.columns.every((column) => column.values.length <= TABLE_SUMMARY_DISTINCT_PER_COLUMN));
   assert.ok(listed.every((entry) => entry.value.length <= TABLE_SUMMARY_MAX_CELL_LENGTH));
-  assert.ok(summary.distinct!.skipped > 0, 'the columns past the budget are counted');
+  assert.ok(text.length <= TABLE_SUMMARY_MAX_LENGTH, `${text.length} characters`);
+  assert.match(text, /^1\. v0-\d+-v{6} \(\d+\)( \| v0-\d+-v{6} \(\d+\))* \| and \d+ more$/m, 'the first column\'s values, the others counted');
   assert.match(text, /The distinct values of \d+ more text columns were not listed \(size\)\./);
-  assert.match(text, /\| and 80 more$/m);
-  const withoutDistinct = tableSummaryText({ attachmentId: 'att-10', filename: 'wide.csv', summary: { ...summary, distinct: undefined } });
-  assert.ok(text.length - withoutDistinct.length < TABLE_SUMMARY_DISTINCT_BUDGET + 2000, `${text.length - withoutDistinct.length} characters added`);
   assert.ok(elapsed < 20000, `${elapsed} ms`);
-  console.log(`  worst case, 60 columns × 5,000 rows: ${text.length} characters (${text.length - withoutDistinct.length} for the distinct values), ${elapsed} ms`);
+  console.log(`  worst case, 60 columns × 5,000 rows: ${text.length} characters, ${elapsed} ms`);
+}
+
+// Review of lot I1: the whole text is bounded as written, first rows included. Sixty columns of long
+// cells full of separators (escaped, so twice as long) and of characters written on two code units:
+// the headers and cells are cut shorter, the rows fewer, and the text says so. No character is split.
+async function worstCaseWholeSummary() {
+  const width = TABLE_SUMMARY_MAX_COLUMNS;
+  const header = Array.from({ length: width }, (_, index) => `En-tête très long de la colonne numéro ${index + 1} ${'é'.repeat(40)}`).join(',');
+  const lines = [header];
+  // Long cells in the first rows; below them, under the 5 MB cap, repeated values with separators.
+  for (let row = 0; row < 5000; row += 1) {
+    lines.push(Array.from({ length: width }, (_, column) => (row < 10
+      ? `${'|'.repeat(30)}${'🧀'.repeat(20)}${column}-${row}`
+      : `${'|'.repeat(6)}🧀${row % 40}`)).join(','));
+  }
+  const summary = await summarizeTableAttachment(Buffer.from(`${lines.join('\n')}\n`, 'utf8'));
+  const text = tableSummaryText({ attachmentId: 'att-11', filename: 'large.csv', summary });
+  assert.ok(text.length <= TABLE_SUMMARY_MAX_LENGTH, `${text.length} characters for ${TABLE_SUMMARY_MAX_LENGTH}`);
+  assert.match(text, /^… columns or rows cut to keep this summary short: headers cut to \d+ characters, cells cut to \d+ characters, first \d+ rows of 10\.$/m);
+  assert.match(text, /^60\. "En-tête/m, 'every column is still described');
+  assert.match(text, /^line 2: /m, 'a first row is still shown');
+  assert.doesNotMatch(text, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/, 'no character split');
+  assert.equal(text.match(/<\/attached_table>/g)!.length, 1);
+  // Ten rows of sixty long cells, no distinct values (ten rows only): bounded too.
+  const ten = await summarizeTableAttachment(Buffer.from(`${lines.slice(0, 11).join('\n')}\n`, 'utf8'));
+  const tenText = tableSummaryText({ attachmentId: 'att-12', filename: 'ten.csv', summary: ten });
+  assert.equal(ten.distinct, undefined);
+  assert.ok(tenText.length <= TABLE_SUMMARY_MAX_LENGTH, `${tenText.length} characters for ten rows`);
+  console.log(`  worst case of the whole summary: ${text.length} characters, ten rows ${tenText.length}: OK`);
 }
 
 async function run() {
   await distinctValues();
   await worstCaseDistinctValues();
+  await worstCaseWholeSummary();
   await workbook();
   await linesOfThePersonsFile();
   await semicolonCsvInWindows1252();
