@@ -414,7 +414,7 @@ describe('creating a supplier from the picker', () => {
 
   it('creates the supplier, selects its id once, and leaves the record behind untouched', async () => {
     apiPost.mockResolvedValue({
-      data: { id: 'sup-new', name: 'Acme', erp_supplier_id: 'SUP-9', status: 'enabled' },
+      data: { id: 'sup-new', name: 'Acme', erp_supplier_id: 'F10009', status: 'enabled' },
     });
     const { onChange, invalidate } = renderField();
     await openAndType('Acme');
@@ -431,7 +431,7 @@ describe('creating a supplier from the picker', () => {
 
     fireEvent.change(name, { target: { value: 'Acme' } });
     fireEvent.change(screen.getByRole('textbox', { name: 'master-data:suppliers.fields.erpSupplierId' }), {
-      target: { value: ' SUP-9 ' },
+      target: { value: ' F10009 ' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
 
@@ -439,7 +439,7 @@ describe('creating a supplier from the picker', () => {
     expect(onChange).toHaveBeenCalledWith('sup-new');
     expect(apiPost).toHaveBeenCalledWith('/suppliers', {
       name: 'Acme',
-      erp_supplier_id: 'SUP-9',
+      erp_supplier_id: 'F10009',
       notes: null,
       status: 'enabled',
       disabled_at: null,
