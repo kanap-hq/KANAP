@@ -34,3 +34,21 @@ const PADDED_NUMBER_REFUSED_PREFIXES: ReadonlySet<string> = new Set(['SUP', 'COM
 export function isPaddedReferenceNumber(prefix: string | null | undefined, digits: string): boolean {
   return !!prefix && PADDED_NUMBER_REFUSED_PREFIXES.has(prefix.toUpperCase()) && /^0\d/.test(digits);
 }
+
+/**
+ * The number of a typed reference of the family `prefix` (`COMP-12`, any case, spaces around
+ * ignored), or of its bare number when `bare` (`12`, an import cell): null when the text is no
+ * such reference, a number written with a leading zero in a family that refuses it included
+ * (`COMP-013`, `isPaddedReferenceNumber`).
+ */
+export function referenceNumberOf(
+  text: string | null | undefined,
+  prefix: string,
+  options: { bare?: boolean } = {},
+): number | null {
+  const match = String(text ?? '').trim().match(/^(?:([A-Za-z]+)-)?(\d+)$/);
+  if (!match) return null;
+  if (match[1] ? match[1].toUpperCase() !== prefix.toUpperCase() : !options.bare) return null;
+  if (isPaddedReferenceNumber(prefix, match[2])) return null;
+  return parseItemNumber(match[2]);
+}

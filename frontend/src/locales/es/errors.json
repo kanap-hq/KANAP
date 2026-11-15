@@ -141,6 +141,8 @@
   "CSV_CRITERION_UNKNOWN": "Criterio {{criterion}} desconocido.",
   "CSV_CRITERION_VALUE_UNKNOWN": "El criterio {{criterion}} no tiene el valor {{value}}.",
   "CSV_DUPLICATE_KEY": "Mismos valores en {{columns}} que en la fila {{firstRow}}.",
+  "CSV_NAME_TAKEN": "«{{name}}» ya es el nombre de {{reference}}.",
+  "CSV_SAME_RECORD": "La fila {{firstRow}} ya actualiza {{reference}}. Deje una sola fila por registro.",
   "CSV_NAME_MATCHED_CASE": "«{{name}}» se ha asociado a «{{stored}}».",
   "CSV_SUPPLIER_NAME_DUPLICATE": "«{{name}}» ya figura en la fila {{firstRow}}. Deje una sola fila por proveedor.",
   "CSV_COMPANY_NAME_DUPLICATE": "«{{name}}» ya figura en la fila {{firstRow}}. Deje una sola fila por empresa.",

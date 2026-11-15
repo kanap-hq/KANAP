@@ -10,8 +10,9 @@ import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/uncha
 import { ChartOfAccounts } from '../accounts/chart-of-accounts.entity';
 import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
 import { orderListQuery } from '../common/list-sort';
+import { referenceNumberOf } from '../common/parse-item-number';
 
-const COMPANY_SORT_COLUMNS = new Set(['id', 'name', 'country_iso', 'city', 'postal_code', 'address1', 'address2', 'state', 'notes', 'reg_number', 'vat_number', 'base_currency', 'status', 'created_at', 'updated_at']);
+const COMPANY_SORT_COLUMNS = new Set(['id', 'item_number', 'name', 'country_iso', 'city', 'postal_code', 'address1', 'address2', 'state', 'notes', 'reg_number', 'vat_number', 'base_currency', 'status', 'created_at', 'updated_at']);
 const COMPANY_TEXT_SORTS = new Set(['name', 'country_iso', 'city', 'postal_code', 'address1', 'address2', 'state', 'notes', 'reg_number', 'vat_number', 'base_currency']);
 const COMPANY_METRIC_SORTS: Record<string, string> = {
   headcount_year: 'COALESCE(m.headcount, 0)',
@@ -24,6 +25,8 @@ import { CompanyMetricsService } from './company-metrics.service';
 import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
+  compileReferenceFilter,
+  compileReferenceQuickSearch,
   createParamNameGenerator,
   FilterTargetConfig,
   CompiledCondition,
@@ -155,6 +158,12 @@ export class CompaniesService {
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
       for (const [field, model] of Object.entries(filtersToApply)) {
+        if (field === 'item_number') {
+          // The reference column shows `COMP-12`.
+          const reference = compileReferenceFilter(model, 'c.item_number', 'COMP', nextParam);
+          if (reference) compiledFilters.push(reference);
+          continue;
+        }
         const target = filterTargets[field];
         if (!target) continue;
         if (target.requiresMetrics && !year) continue;
@@ -190,6 +199,9 @@ export class CompaniesService {
           nextParam,
         )
       : [];
+    // `COMP-12` also finds that company.
+    const byReference = compileReferenceQuickSearch(q, 'c.item_number', 'COMP', nextParam);
+    if (byReference) quickSearchConditions.push(byReference);
 
     const applyQuickSearch = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
       if (quickSearchConditions.length === 0) return;
@@ -297,7 +309,8 @@ export class CompaniesService {
     }
   }
 
-  async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
+  /** The ids and references of the whole list (up to 10 000), in the grid's order: the record's previous / next band. */
+  async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; refs: string[]; total: number }> {
     const year = parseCompanyYear(query?.year);
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
@@ -361,6 +374,12 @@ export class CompaniesService {
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
       for (const [field, model] of Object.entries(filtersToApply)) {
+        if (field === 'item_number') {
+          // The reference column shows `COMP-12`.
+          const reference = compileReferenceFilter(model, 'c.item_number', 'COMP', nextParam);
+          if (reference) compiledFilters.push(reference);
+          continue;
+        }
         const target = filterTargets[field];
         if (!target) continue;
         if (target.requiresMetrics && !year) continue;
@@ -396,6 +415,9 @@ export class CompaniesService {
           nextParam,
         )
       : [];
+    // `COMP-12` also finds that company.
+    const byReference = compileReferenceQuickSearch(q, 'c.item_number', 'COMP', nextParam);
+    if (byReference) quickSearchConditions.push(byReference);
 
     const applyQuickSearch = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
       if (quickSearchConditions.length === 0) return;
@@ -413,7 +435,7 @@ export class CompaniesService {
       compiledFilters.forEach((cond) => builder.andWhere(cond.sql, cond.params));
     };
 
-    const qb = repo.createQueryBuilder('c').select('c.id', 'id');
+    const qb = repo.createQueryBuilder('c').select('c.id', 'id').addSelect('c.item_number', 'item_number');
     const period = year ? companyYearPeriod(year) : undefined;
     if (effectiveStatus) {
       applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
@@ -438,9 +460,10 @@ export class CompaniesService {
 
     const total = await qb.clone().getCount();
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
-    const rows = await qb.take(limit).getRawMany();
-    const ids = rows.map((r: any) => r.id as string).filter((v) => !!v);
-    return { ids, total };
+    const rows = (await qb.take(limit).getRawMany()).filter((r: any) => !!r.id);
+    const ids = rows.map((r: any) => r.id as string);
+    const refs = rows.map((r: any) => (r.item_number != null ? `COMP-${r.item_number}` : r.id as string));
+    return { ids, refs, total };
   }
 
   async listFilterValues(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
@@ -568,6 +591,12 @@ export class CompaniesService {
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
       for (const [field, model] of Object.entries(filtersToApply)) {
+        if (field === 'item_number') {
+          // The reference column shows `COMP-12`.
+          const reference = compileReferenceFilter(model, 'c.item_number', 'COMP', nextParam);
+          if (reference) compiledFilters.push(reference);
+          continue;
+        }
         const target = filterTargets[field];
         if (!target) continue;
         if (target.requiresMetrics && !year) continue;
@@ -599,6 +628,9 @@ export class CompaniesService {
           nextParam,
         )
       : [];
+    // `COMP-12` also finds that company.
+    const byReference = compileReferenceQuickSearch(q, 'c.item_number', 'COMP', nextParam);
+    if (byReference) quickSearchConditions.push(byReference);
 
     // One row per base currency: the turnovers are converted per currency below.
     const qb = repo
@@ -843,8 +875,10 @@ export class CompaniesService {
     return saved;
   }
 
+  /** `reference` (`COMP-12`) leads: filled, it names the company a row updates; an older file without it still imports. */
   private csvHeaders(baseYear?: number): string[] {
     const headers = [
+      'reference',
       'name',
       'country_iso',
       'address1',
@@ -926,6 +960,7 @@ export class CompaniesService {
       }
       for (const c of items) {
         const row: ListExportCell[] = [
+          c.item_number != null ? `COMP-${c.item_number}` : '',
           c.name ?? '',
           c.country_iso ?? '',
           c.address1 ?? '',
@@ -951,7 +986,7 @@ export class CompaniesService {
       }
     } else {
       // One fictional company so the file shows the shape: enabled, metrics for the list year only.
-      const example = ['Example Company', 'FR', '', '', '', 'Paris', '', '', '', 'EUR', 'enabled', '', ''];
+      const example = ['', 'Example Company', 'FR', '', '', '', 'Paris', '', '', '', 'EUR', 'enabled', '', ''];
       for (const year of years) {
         example.push(...(year === baseYear ? ['120', '40', formatCsvAmount('12.5', language)] : ['', '', '']));
       }
@@ -992,7 +1027,7 @@ export class CompaniesService {
       file: buf as Buffer,
       fields: expectedHeaders,
       // Each year of the window may be absent. A year outside it is reported, not refused.
-      optional: metricYears.flatMap((fy) => this.metricColumns(fy)),
+      optional: ['reference', ...metricYears.flatMap((fy) => this.metricColumns(fy))],
       amounts: [{ measure: 'turnover', names: ['turnover'] }],
       dateFields: ['disabled_at'],
       language: readLanguage,
@@ -1033,15 +1068,27 @@ export class CompaniesService {
     }
     // Validate and normalize
     type CsvLifecycle = { status: StatusState | null; disabled_at: string | null };
-    const normalized: { line: number; company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: string | null }>; lifecycle: CsvLifecycle }[] = [];
+    // `reference`: the number of the company the row names in the reference column (`COMP-12` or
+    // `12`), null when the cell is empty: the row then matches by name.
+    const normalized: { line: number; reference: number | null; company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: string | null }>; lifecycle: CsvLifecycle }[] = [];
     // The first line of each name, whatever its case: a company takes one row.
     const firstLineByName = new Map<string, number>();
+    const firstLineByReference = new Map<number, number>();
     read.rows.forEach((row) => {
       const line = row.line;
       const problems = rowProblemErrors(row, ['disabled_at']);
       if (problems.length > 0) {
         errors.push(...problems);
         return;
+      }
+      const referenceRaw = cellOf(row, 'reference');
+      const reference = referenceRaw ? referenceNumberOf(referenceRaw, 'COMP', { bare: true }) : null;
+      if (referenceRaw && reference === null) {
+        errors.push(rowError(line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Unknown company reference '${referenceRaw}'`, { value: referenceRaw }));
+      } else if (reference !== null) {
+        const firstRow = firstLineByReference.get(reference);
+        if (firstRow === undefined) firstLineByReference.set(reference, line);
+        else errors.push(rowError(line, 'reference', 'CSV_DUPLICATE_KEY', `Same reference as row ${firstRow}.`, { columns: 'reference', firstRow }));
       }
       const name = cellOf(row, 'name');
       const country_iso = cellOf(row, 'country_iso');
@@ -1153,6 +1200,7 @@ export class CompaniesService {
       }
       normalized.push({
         line,
+        reference,
         company: {
           name,
           country_iso: country_iso.toUpperCase(),
@@ -1176,24 +1224,57 @@ export class CompaniesService {
     }
     // Count inserts, updates and the companies whose every value and yearly metric is already stored.
     const repo = this.getRepo(opts?.manager);
-    // A row matches the company of the same name whatever its case ("acme" updates "Acme"). The
-    // stored spelling stays, and the report says which company the row matched.
-    const existingByName = new Map<string, Company>();
+    // A filled reference names the company the row updates: its name is a value of the row (a
+    // rename), refused when another company has it. An unknown reference refuses the row.
+    const references = normalized.map((item) => item.reference).filter((n): n is number => n !== null);
+    const byReference = new Map<number, Company>();
+    if (references.length > 0) {
+      const found = await repo.createQueryBuilder('c')
+        .where('c.tenant_id = app_current_tenant() AND c.item_number IN (:...references)', { references })
+        .getMany();
+      found.forEach((company) => byReference.set(company.item_number, company));
+    }
+    // Otherwise a row matches the company of the same name whatever its case ("acme" updates "Acme").
+    // The stored spelling stays, and the report says which company the row matched.
+    const existingOf = new Map<(typeof normalized)[number], Company>();
+    const firstLineOfCompany = new Map<string, number>();
     const warnings: ImportReportError[] = [];
     for (const item of normalized) {
       const name = item.company.name as string;
-      const existing = await repo.createQueryBuilder('c')
+      const sameName = await repo.createQueryBuilder('c')
         .where('c.tenant_id = app_current_tenant() AND lower(c.name) = lower(:name)', { name })
         .getOne();
+      let existing: Company | null = sameName;
+      if (item.reference !== null) {
+        existing = byReference.get(item.reference) ?? null;
+        if (!existing) {
+          errors.push(rowError(item.line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Unknown company reference 'COMP-${item.reference}'`, { value: `COMP-${item.reference}` }));
+          continue;
+        }
+        if (sameName && sameName.id !== existing.id) {
+          errors.push(rowError(item.line, 'name', 'CSV_NAME_TAKEN', `'${name}' is already the name of COMP-${sameName.item_number}.`, { name, reference: `COMP-${sameName.item_number}` }));
+          continue;
+        }
+      } else if (existing) {
+        const warning = nameMatchedWarning(item.line, 'name', name, existing.name);
+        if (warning) warnings.push(warning);
+        item.company = { ...item.company, name: existing.name };
+      }
       if (!existing) continue;
-      const warning = nameMatchedWarning(item.line, 'name', name, existing.name);
-      if (warning) warnings.push(warning);
-      item.company = { ...item.company, name: existing.name };
+      const firstRow = firstLineOfCompany.get(existing.id);
+      if (firstRow !== undefined) {
+        errors.push(rowError(item.line, item.reference !== null ? 'reference' : 'name', 'CSV_SAME_RECORD', `Row ${firstRow} already updates COMP-${existing.item_number}.`, { firstRow, reference: `COMP-${existing.item_number}` }));
+        continue;
+      }
+      firstLineOfCompany.set(existing.id, item.line);
       // The stored end of validity's day keeps its time of day: the export writes the day only.
       item.lifecycle = { ...item.lifecycle, disabled_at: keepStoredEndOfValidity(existing.disabled_at, item.lifecycle.disabled_at) };
-      existingByName.set(existing.name, existing);
+      existingOf.set(item, existing);
     }
-    const existingIds = Array.from(existingByName.values()).map((company) => company.id);
+    if (errors.length > 0) {
+      return { ok: false, dryRun, total, inserted: 0, updated: 0, errors, ignoredColumns, notices: read.notices };
+    }
+    const existingIds = Array.from(existingOf.values()).map((company) => company.id);
     const storedMetrics = new Map<string, CompanyMetric>();
     if (existingIds.length > 0 && yearsInFile.length > 0) {
       const metricRepo = (opts?.manager ?? repo.manager).getRepository(CompanyMetric);
@@ -1214,7 +1295,7 @@ export class CompaniesService {
     let unchanged = 0;
     const toWrite: Array<{ item: (typeof normalized)[number]; existing: Company | undefined }> = [];
     for (const item of normalized) {
-      const existing = existingByName.get(item.company.name as string);
+      const existing = existingOf.get(item);
       if (!existing) inserted += 1;
       else if (
         sameStoredValues(existing as any, item.company as Record<string, unknown>)

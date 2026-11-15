@@ -141,6 +141,8 @@
   "CSV_CRITERION_UNKNOWN": "Unbekanntes Kriterium {{criterion}}.",
   "CSV_CRITERION_VALUE_UNKNOWN": "Das Kriterium {{criterion}} hat keinen Wert {{value}}.",
   "CSV_DUPLICATE_KEY": "Gleiche Werte in {{columns}} wie in Zeile {{firstRow}}.",
+  "CSV_NAME_TAKEN": "„{{name}}“ ist bereits der Name von {{reference}}.",
+  "CSV_SAME_RECORD": "Zeile {{firstRow}} aktualisiert bereits {{reference}}. Verwenden Sie eine Zeile pro Datensatz.",
   "CSV_NAME_MATCHED_CASE": "„{{name}}“ wurde „{{stored}}“ zugeordnet.",
   "CSV_SUPPLIER_NAME_DUPLICATE": "„{{name}}“ steht bereits in Zeile {{firstRow}}. Verwenden Sie eine Zeile pro Lieferant.",
   "CSV_COMPANY_NAME_DUPLICATE": "„{{name}}“ steht bereits in Zeile {{firstRow}}. Verwenden Sie eine Zeile pro Unternehmen.",
