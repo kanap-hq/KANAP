@@ -404,8 +404,11 @@ describe('AdminAiModelsPage model dialog', () => {
         data: { statusCode: 400, error: 'Bad Request', code: 'address_private_host', message: 'Private or internal hosts are not allowed.' },
       },
     });
+    const dialog = screen.getByRole('dialog');
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(await screen.findByText('This address points at a private or internal network.', { selector: '.MuiAlert-message' })).toBeInTheDocument();
+    const refusal = 'This address points at a private or internal network.';
+    expect(await within(dialog).findByText(refusal, { selector: '.MuiAlert-message' })).toBeInTheDocument();
+    expect(screen.getAllByText(refusal)).toHaveLength(1);
     expect(screen.queryByText('Private or internal hosts are not allowed.')).toBeNull();
   });
 
@@ -478,5 +481,158 @@ describe('AdminAiModelsPage model dialog', () => {
       endpoint_url: 'https://ai.example.com/v1',
       api_key: 'sk-new',
     });
+  });
+
+  const TEST_OK = {
+    ok: true,
+    provider: 'openai',
+    model: 'mistral-medium-latest',
+    latency_ms: 420,
+    message: 'Provider test succeeded.',
+    validation_errors: [],
+    reasoning_effort_sent: null,
+    reasoning_tokens: null,
+  };
+
+  async function showTestResult() {
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
+    expect(await screen.findByText(/Connection successful \(420 ms\)/)).toBeInTheDocument();
+  }
+
+  it('drops the test result when the server address changes and keeps it for other fields', async () => {
+    (api.post as any).mockResolvedValue({ data: TEST_OK });
+    await openEditDialog();
+    await showTestResult();
+
+    fireEvent.change(screen.getByDisplayValue('Mistral medium'), { target: { value: 'Mistral medium 2' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g., 120'), { target: { value: '30' } });
+    expect(screen.getByText(/Connection successful \(420 ms\)/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('e.g., https://ai.example.com'), { target: { value: 'http://127.0.0.1:9' } });
+    expect(screen.queryByText(/Connection successful/)).not.toBeInTheDocument();
+  });
+
+  it('drops the test result when the provider, model, API key or effort changes', async () => {
+    (api.post as any).mockResolvedValue({ data: TEST_OK });
+    await openEditDialog();
+
+    await showTestResult();
+    fireEvent.change(screen.getByDisplayValue('mistral-medium-latest'), { target: { value: 'mistral-large-latest' } });
+    expect(screen.queryByText(/Connection successful/)).not.toBeInTheDocument();
+
+    await showTestResult();
+    fireEvent.change(screen.getByLabelText(/^API key/), { target: { value: 'sk-new' } });
+    expect(screen.queryByText(/Connection successful/)).not.toBeInTheDocument();
+
+    await showTestResult();
+    const effort = screen.getByRole('combobox', { name: 'Reasoning effort' });
+    fireEvent.mouseDown(effort);
+    fireEvent.click(await screen.findByRole('option', { name: 'Low' }));
+    expect(screen.queryByText(/Connection successful/)).not.toBeInTheDocument();
+
+    await showTestResult();
+    await switchToOllama();
+    expect(screen.queryByText(/Connection successful/)).not.toBeInTheDocument();
+  });
+
+  it('drops the test result when the new model rejects the effort that was tested', async () => {
+    let releaseSonnet: (value: unknown) => void = () => {};
+    const original = (api.get as any).getMockImplementation();
+    (api.get as any).mockImplementation((url: string, config?: { params?: { provider: string; model: string } }) => {
+      if (url === '/ai/model-configs/reasoning-efforts' && config?.params?.model === 'claude-sonnet-4-6') {
+        return new Promise((resolve) => { releaseSonnet = resolve; });
+      }
+      if (url === '/ai/model-configs') {
+        return Promise.resolve({
+          data: {
+            model_configs: [{
+              ...MODEL,
+              provider: 'anthropic',
+              model: 'claude-opus-5-5',
+              endpoint_url: null,
+              reasoning_effort: 'xhigh',
+            }],
+            secret_writable: true,
+          },
+        });
+      }
+      return original(url, config);
+    });
+    (api.post as any).mockResolvedValue({
+      data: { ...TEST_OK, provider: 'anthropic', model: 'claude-sonnet-4-6', reasoning_effort_sent: 'xhigh' },
+    });
+
+    await openEditDialog();
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Reasoning effort' })).toHaveTextContent('Very high'));
+    fireEvent.change(screen.getByDisplayValue('claude-opus-5-5'), { target: { value: 'claude-sonnet-4-6' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
+    expect(await screen.findByText(/Connection successful \(420 ms\)/)).toBeInTheDocument();
+
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith(
+      '/ai/model-configs/reasoning-efforts',
+      { params: { provider: 'anthropic', model: 'claude-sonnet-4-6' } },
+    ));
+    releaseSonnet({ data: effortSupport('anthropic', 'claude-sonnet-4-6') });
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Reasoning effort' })).toHaveTextContent('Provider default'));
+    expect(screen.queryByText(/Connection successful/)).not.toBeInTheDocument();
+  });
+
+  it('shows a refused create inside the dialog', async () => {
+    const refusal = 'endpoint_url must be a valid HTTP(S) URL.';
+    (api.post as any).mockImplementation((url: string) => (
+      url === '/ai/model-configs'
+        ? Promise.reject({ response: { status: 400, data: { statusCode: 400, message: refusal, error: 'Bad Request' } } })
+        : Promise.reject(new Error(`Unexpected POST ${url}`))
+    ));
+    renderPage();
+    await screen.findByText('Mistral medium');
+    fireEvent.click(screen.getByRole('button', { name: 'New model' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.mouseDown(within(dialog).getByText('Anthropic'));
+    fireEvent.click(await screen.findByRole('option', { name: 'OpenAI' }));
+    fireEvent.change(screen.getByPlaceholderText('e.g., Claude production'), { target: { value: 'Local' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g., claude-sonnet-5'), { target: { value: 'local-model' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g., https://ai.example.com'), { target: { value: 'abc' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    expect(await screen.findByText(refusal)).toBeInTheDocument();
+    expect(within(dialog).getByText(refusal)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'New AI model' })).toBeInTheDocument();
+    expect(screen.getAllByText(refusal)).toHaveLength(1);
+  });
+
+  it('shows a failed test inside the dialog', async () => {
+    (api.post as any).mockRejectedValue({ response: { status: 502, data: {} } });
+    await openEditDialog();
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Test connection' }));
+
+    expect(await screen.findByText('The connection test failed.')).toBeInTheDocument();
+    expect(within(dialog).getByText('The connection test failed.')).toBeInTheDocument();
+    expect(screen.getAllByText('The connection test failed.')).toHaveLength(1);
+  });
+
+  it('keeps a refused list action on the page', async () => {
+    const refusal = 'The default model could not be changed.';
+    (api.post as any).mockRejectedValue({ response: { status: 400, data: { message: refusal } } });
+    renderPage();
+    await screen.findByText('Mistral medium');
+    fireEvent.click(screen.getByRole('button', { name: 'Stop using as default model' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(refusal);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps a refused archive on the page', async () => {
+    withModel({ used_by: { chat: false, agents: [] } });
+    (api.delete as any).mockRejectedValue({
+      response: { status: 409, data: { message: 'still assigned', used_by: ['Kad'] } },
+    });
+    renderPage();
+    await screen.findByText('Mistral medium');
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('This model is still used by: Kad. Reassign them before archiving it.');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
