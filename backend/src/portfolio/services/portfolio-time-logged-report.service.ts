@@ -135,7 +135,7 @@ export class PortfolioTimeLoggedReportService {
       group.team.members.push({
         userId: person.user_id,
         name: person.name ?? '',
-        contributorRef: person.item_number != null ? `CTR-${person.item_number}` : null,
+        contributorRef: person.item_number != null ? `MEM-${person.item_number}` : null,
         cells: cellsOf(hours),
       });
       mergeInto(group.hours, hours);

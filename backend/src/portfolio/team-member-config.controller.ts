@@ -116,9 +116,12 @@ export class TeamMemberConfigController {
     return this.profileActor(req);
   }
 
-  /** `:id` routes accept the row UUID or the CTR-N business reference. */
+  /**
+   * `:id` routes accept the row UUID or the MEM-N business reference, and `CTR-N` too: the address
+   * of a contributor before `CTR-N` became the reference of a contract. Only these routes read it so.
+   */
   private resolveId(idOrRef: string, req: any): Promise<string> {
-    return resolveToUuid(idOrRef, 'contributor', req?.queryRunner?.manager as EntityManager);
+    return resolveToUuid(idOrRef, 'contributor', req?.queryRunner?.manager as EntityManager, { alsoAccept: ['CTR'] });
   }
 
   @UseGuards(PermissionGuard)

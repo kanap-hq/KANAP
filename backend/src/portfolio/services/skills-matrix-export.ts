@@ -250,7 +250,7 @@ export function skillsMatrixExport(
   const leadCells = (index: number): ReportCell[] => {
     if (rows.kind === 'contributor') {
       const entry = rows.entries[index];
-      return [entry.label, `CTR-${entry.itemNumber}`, entry.teamLabel];
+      return [entry.label, `MEM-${entry.itemNumber}`, entry.teamLabel];
     }
     const entry = rows.entries[index];
     return [entry.category, entry.label];

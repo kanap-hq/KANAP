@@ -13,7 +13,7 @@ const EXPECTED_PREFIX: Record<EntityType, string> = {
   spend: 'OPX',
   capex: 'CPX',
   incident: 'INC',
-  contributor: 'CTR',
+  contributor: 'MEM',
   technology: 'TEC',
 };
 
@@ -27,7 +27,8 @@ const ALSO_ACCEPTED_PREFIXES: Partial<Record<EntityType, readonly string[]>> = {
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ITEM_REF_RE = /^(T|PRJ|REQ|DOC|OPX|CPX|INC|CTR|TEC)-(\d+)$/i;
+/** `CTR` is the reference of a contract, and was the one of a contributor: a type reads it as another family's. */
+const ITEM_REF_RE = /^(T|PRJ|REQ|DOC|OPX|CPX|INC|MEM|CTR|TEC)-(\d+)$/i;
 /** A reference with a prefix only some types accept (`BL-n`): another type reads it as malformed. */
 const OTHER_REF_RE = /^([A-Z]+)-(\d+)$/i;
 
@@ -48,13 +49,23 @@ function itemNumberOf(digits: string, expectedType: EntityType): number {
   return number;
 }
 
-export function parseItemRef(raw: string, expectedType: EntityType): ParsedItemRef {
+/** What one caller adds to the prefixes its type accepts everywhere. */
+export type ItemRefOptions = {
+  /**
+   * Prefixes this caller alone also accepts for the type, in capitals. The contributors routes name
+   * `CTR`, the reference of a contributor before `MEM`: `CTR-n` is a contract everywhere else.
+   */
+  alsoAccept?: readonly string[];
+};
+
+export function parseItemRef(raw: string, expectedType: EntityType, options: ItemRefOptions = {}): ParsedItemRef {
   if (UUID_RE.test(raw)) return { type: 'uuid', value: raw };
 
+  const accepted = [...(ALSO_ACCEPTED_PREFIXES[expectedType] ?? []), ...(options.alsoAccept ?? [])];
   const m = raw.match(ITEM_REF_RE);
   if (m) {
     const prefix = m[1].toUpperCase();
-    if (prefix !== EXPECTED_PREFIX[expectedType] && !ALSO_ACCEPTED_PREFIXES[expectedType]?.includes(prefix)) {
+    if (prefix !== EXPECTED_PREFIX[expectedType] && !accepted.includes(prefix)) {
       throw new BadRequestException(
         `Invalid reference for ${expectedType}: expected ${EXPECTED_PREFIX[expectedType]}-N, got ${raw}`,
       );
@@ -62,7 +73,7 @@ export function parseItemRef(raw: string, expectedType: EntityType): ParsedItemR
     return { type: 'item_number', value: itemNumberOf(m[2], expectedType), prefix };
   }
   const other = raw.match(OTHER_REF_RE);
-  if (other && ALSO_ACCEPTED_PREFIXES[expectedType]?.includes(other[1].toUpperCase())) {
+  if (other && accepted.includes(other[1].toUpperCase())) {
     return { type: 'item_number', value: itemNumberOf(other[2], expectedType), prefix: other[1].toUpperCase() };
   }
 
@@ -125,8 +136,9 @@ export async function resolveToUuid(
   raw: string,
   entityType: EntityType,
   manager: EntityManager,
+  options: ItemRefOptions = {},
 ): Promise<string> {
-  const parsed = parseItemRef(raw, entityType);
+  const parsed = parseItemRef(raw, entityType, options);
   if (parsed.type === 'uuid') {
     const nature = LINE_NATURE[entityType];
     if (nature) {

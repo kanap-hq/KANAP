@@ -259,7 +259,7 @@ export const REFERENCE_FAMILIES: Readonly<Record<FamilyKey, ReferenceFamily>> = 
     label: `(SELECT COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email)
                FROM users u
               WHERE u.tenant_id = r.tenant_id AND u.id = r.user_id)`,
-    reference: `'CTR-' || r.item_number`,
+    reference: `'MEM-' || r.item_number`,
     visibility: {},
   },
   // Knowledge documents and their contexts: the library ACL decides, in code (a restricted
