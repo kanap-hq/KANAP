@@ -295,7 +295,7 @@ People who can open **Admin > Kad** also see a thin bar under the composer, once
 
 ## Tips
 
-- **Use prefixes for precision**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@SUP-`, `@COMP-`, `@CTCT-`, `@DEPT-`, `@CTR-` map directly to native Kadratis references. They are the fastest way to point Kad at a specific record and they survive copy-paste because they look identical to what you see elsewhere in the application.
+- **Use prefixes for precision**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` map directly to native Kadratis references. They are the fastest way to point Kad at a specific record and they survive copy-paste because they look identical to what you see elsewhere in the application.
 - **Start a new conversation per topic**: keeping unrelated questions in separate conversations makes the context window smaller, the answers faster, and the token bill lower. The conversation list is grouped by date so you can find them again easily.
 - **Approve and reject deliberately**: previews are the only thing standing between Kad and your live data. Take the extra second to read the diff before clicking **Approve**.
 - **Stop instead of waiting**: if Kad heads down the wrong path mid-stream, hit the **Stop** button rather than waiting for it to finish. You will save tokens, and your follow-up message can correct the course.
