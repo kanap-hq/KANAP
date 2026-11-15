@@ -1084,6 +1084,31 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('2 créées · 1 mise à jour')).toBeInTheDocument();
   });
 
+  // D12 of 26.11.9: the check says each record a reference renames or moves, and the import stays approvable.
+  it('shows the renames and moves of a check by reference in French, and can still be approved', () => {
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Départements · departements.xlsx' },
+      import_mapping: importMapping({
+        validation: {
+          ok: true, dry_run: true, total: 2, inserted: 0, updated: 2, unchanged: 0, skipped: 0, error_count: 0, warning_count: 2,
+          report: {
+            kind: 'rows',
+            errors: [],
+            warnings: [
+              { row: 2, message: 'COMP-3 renamed', code: 'CSV_REFERENCE_RENAMES', params: { reference: 'COMP-3', stored: 'Acme SA', name: 'Beta', context: 'company' } },
+              { row: 3, message: 'DEPT-4 moves', code: 'CSV_REFERENCE_MOVES', params: { reference: 'DEPT-4', name: 'Achats', from: 'Acme SA', to: 'Beta', context: 'company' } },
+            ],
+          },
+        },
+      }),
+    }));
+    expect(screen.getByText('Avertissements (2)')).toBeInTheDocument();
+    expect(screen.getByText(/^Ligne 2\s:\sCOMP-3\s«\sAcme SA\s»\ssera renommée\s«\sBeta\s»\.$/)).toBeInTheDocument();
+    expect(screen.getByText(/^Ligne 3\s:\sDEPT-4\s«\sAchats\s»\spassera de la société\s«\sAcme SA\s»\sà\s«\sBeta\s»\.$/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approuver' })).toBeEnabled();
+  });
+
   it('downloads the file prepared for the import with a button after Reject, and says when it fails', async () => {
     const download = vi.mocked(downloadServerExport);
     download.mockClear();
