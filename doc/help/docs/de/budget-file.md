@@ -157,7 +157,7 @@ Die Prüfung listet diese Zeilen unter **Ähnelt einer bestehenden Zeile** auf, 
 - **Trotzdem anlegen**: Die Zeile wird eine neue Budgetzeile.
 - **BL-12 aktualisieren**: Die Zeile aktualisiert die Budgetzeile, der sie ähnelt. Jeder Wert, den die Datei füllt, ersetzt den gespeicherten Wert. Eine leere Zelle behält den gespeicherten Wert. Zeigen Sie auf die Zeile, um zu sehen, welche Werte sich ändern.
 
-**Alle trotzdem anlegen** und **Alle aktualisieren** über der Liste gelten für alle Zeilen. Die Wahl für eine einzelne Zeile hat Vorrang vor der Wahl für alle Zeilen. **Alle auslassen** lässt alle Zeilen aus, auch die einzeln gewählten. Jede Wahl prüft die Datei erneut.
+**Alle trotzdem anlegen**, **Alle aktualisieren** und **Alle auslassen** über der Liste gelten für alle Zeilen, auch für die einzeln gewählten. **Alle aktualisieren** lässt eine Zeile unverändert, deren Budgetzeile Sie nicht ändern dürfen. Eine danach für eine Zeile getroffene Wahl ändert nur diese Zeile. Jede Wahl prüft die Datei erneut.
 
 Ändert sich BL-12 zwischen der Prüfung und dem Laden, wird die Zeile mit „BL-12 wurde seit der Prüfung geändert.“ abgelehnt. Wählen Sie erneut, was aus ihr wird.
 

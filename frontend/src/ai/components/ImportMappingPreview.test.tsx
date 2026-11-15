@@ -126,4 +126,34 @@ describe('ImportMappingPreview, a budget file in French', () => {
       expect(getComputedStyle(element).overflowY).not.toBe('auto');
     }
   });
+
+  it('sets every row with a choice for all, its own choice included; a row chosen after changes alone', () => {
+    const rows = [look(3, 21, { outcome: 'created' }), look(4, 22, { updatable: false, outcome: 'created' }), look(5, 23)];
+    const targets = { 3: { item: 21, state: 's21' }, 4: { item: 22, state: 's22' }, 5: { item: 23, state: 's23' } };
+    const onChoices = vi.fn();
+    const { unmount } = renderPreview(mapping(rows, [
+      { kind: 'lookalike', line: 3, action: 'create' },
+      { kind: 'lookalike', line: 4, action: 'create' },
+      { kind: 'lookalikes', action: 'ignore', targets },
+    ]), onChoices);
+    fireEvent.click(screen.getByRole('button', { name: 'Tout mettre à jour' }));
+    // Line 3's own choice gives way; line 4, which cannot be updated, keeps its state.
+    expect(onChoices).toHaveBeenLastCalledWith([
+      { kind: 'lookalike', line: 4, action: 'create' },
+      { kind: 'lookalikes', action: 'update', targets },
+    ]);
+    unmount();
+
+    const updated = [look(3, 21, { outcome: 'updated' }), look(4, 22, { updatable: false, outcome: 'created' }), look(5, 23, { outcome: 'updated' })];
+    renderPreview(mapping(updated, [
+      { kind: 'lookalike', line: 4, action: 'create' },
+      { kind: 'lookalikes', action: 'update', targets },
+    ]), onChoices);
+    fireEvent.click(within(rowOf(5).parentElement!).getByRole('button', { name: 'Créer quand même' }));
+    expect(onChoices).toHaveBeenLastCalledWith([
+      { kind: 'lookalike', line: 4, action: 'create' },
+      { kind: 'lookalikes', action: 'update', targets },
+      { kind: 'lookalike', line: 5, action: 'create' },
+    ]);
+  });
 });

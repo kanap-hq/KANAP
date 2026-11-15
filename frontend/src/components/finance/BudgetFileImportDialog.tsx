@@ -893,15 +893,22 @@ function LookalikesView({ lookalikes, choices, errors, onChoices, choicesDisable
     return [...rest, { kind: 'lookalike', line: look.line, action: 'update', item: look.target.item, state: look.target.state }];
   };
   const chooseAll = (action: 'ignore' | 'create' | 'update'): BudgetFileChoice[] => {
-    // "Leave all out" drops the rows' own choices too; the other two keep them.
-    const rest = choices.filter((choice) => choice.kind !== 'lookalikes' && (action !== 'ignore' || choice.kind !== 'lookalike'));
+    // A choice for all rows sets every row, their own choices included: the last gesture counts. "Update all"
+    // leaves a row it cannot update as it is.
+    const rest = choices.filter((choice) => choice.kind !== 'lookalikes' && choice.kind !== 'lookalike');
+    const kept: BudgetFileChoice[] = action === 'update'
+      ? lookalikes.lines
+        .filter((look) => !look.updatable && look.outcome === 'created')
+        .map((look) => ({ kind: 'lookalike', line: look.line, action: 'create' }))
+      : [];
     // Each row's line as the check shows it, every row included: a line changed in between is refused, not updated blind.
-    return [...rest, { kind: 'lookalikes', action, targets: lookalikes.targets }];
+    return [...rest, ...kept, { kind: 'lookalikes', action, targets: lookalikes.targets }];
   };
   const present = (actions: Array<LineAction | null>): LineAction[] => actions.filter((entry): entry is LineAction => entry !== null);
+  // Each choice for all rows, while a row is not in its state.
   const headActions = present([
-    allAction !== 'create' ? act(t(`${L}createAll`), () => chooseAll('create')) : null,
-    updatable.length > 0 && allAction !== 'update' ? act(t(`${L}updateAll`), () => chooseAll('update')) : null,
+    lookalikes.created < lookalikes.count ? act(t(`${L}createAll`), () => chooseAll('create')) : null,
+    updatable.some((look) => look.outcome !== 'updated') ? act(t(`${L}updateAll`), () => chooseAll('update')) : null,
     lookalikes.created + lookalikes.updated > 0 ? act(t(`${L}ignoreAll`), () => chooseAll('ignore')) : null,
   ]);
   const folded = !unfolded && lookalikes.lines.length > SHOWN_LOOKALIKES;

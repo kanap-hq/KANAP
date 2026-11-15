@@ -157,7 +157,7 @@ La vérification liste ces lignes sous **Ressemble à une ligne existante**, ave
 - **Créer quand même** : la ligne devient une nouvelle ligne budgétaire.
 - **Mettre à jour BL-12** : la ligne met à jour la ligne budgétaire à laquelle elle ressemble. Chaque valeur que le fichier remplit remplace la valeur enregistrée. Une cellule vide garde la valeur enregistrée. Pointez la ligne pour voir les valeurs qui changent.
 
-**Tout créer quand même** et **Tout mettre à jour**, au-dessus de la liste, s'appliquent à toutes les lignes. Le choix fait sur une ligne l'emporte sur le choix pour toutes. **Tout écarter** écarte toutes les lignes, y compris celles que vous avez choisies une à une. Chaque choix vérifie le fichier de nouveau.
+**Tout créer quand même**, **Tout mettre à jour** et **Tout écarter**, au-dessus de la liste, s'appliquent à toutes les lignes, y compris celles que vous avez choisies une à une. **Tout mettre à jour** laisse en l'état une ligne dont vous ne pouvez pas modifier la ligne budgétaire. Un choix fait ensuite sur une ligne ne change que cette ligne. Chaque choix vérifie le fichier de nouveau.
 
 Si BL-12 change entre la vérification et le chargement, la ligne est refusée avec « BL-12 a changé depuis la vérification. » Choisissez de nouveau ce qu'elle devient.
 

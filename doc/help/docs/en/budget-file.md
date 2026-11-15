@@ -157,7 +157,7 @@ The check lists these rows under **Looks like an existing line**, with the line 
 - **Create anyway**: the row becomes a new line.
 - **Update BL-12**: the row updates the line it looks like. Each value the file fills replaces the stored one. An empty cell keeps the stored value. Point at the row to see which values change.
 
-**Create all anyway** and **Update all**, above the list, apply to every row. A choice made on a row wins over the choice for all rows. **Leave all out** leaves every row out, including the rows you chose one by one. Each choice checks the file again.
+**Create all anyway**, **Update all** and **Leave all out**, above the list, apply to every row, including the rows you chose one by one. **Update all** leaves a row whose line you cannot change as it is. A choice made on a row afterwards changes that row only. Each choice checks the file again.
 
 If BL-12 changes between the check and the load, the row is refused with "BL-12 changed since the check." Choose again what becomes of it.
 

@@ -157,7 +157,7 @@ La comprobación lista estas filas en **Se parece a una línea existente**, con 
 - **Crear de todos modos**: la fila se convierte en una línea nueva.
 - **Actualizar BL-12**: la fila actualiza la línea a la que se parece. Cada valor que el archivo rellena sustituye al guardado. Una celda vacía conserva el valor guardado. Señale la fila para ver qué valores cambian.
 
-**Crear todas de todos modos** y **Actualizar todas**, encima de la lista, se aplican a todas las filas. La elección hecha en una fila prevalece sobre la elección para todas. **Descartar todas** descarta todas las filas, incluidas las que eligió una a una. Cada elección vuelve a comprobar el archivo.
+**Crear todas de todos modos**, **Actualizar todas** y **Descartar todas**, encima de la lista, se aplican a todas las filas, incluidas las que eligió una a una. **Actualizar todas** deja como está una fila cuya línea presupuestaria usted no puede modificar. Una elección hecha después en una fila solo cambia esa fila. Cada elección vuelve a comprobar el archivo.
 
 Si BL-12 cambia entre la comprobación y la carga, la fila se rechaza con «BL-12 ha cambiado desde la comprobación.» Vuelva a elegir qué pasa con ella.
 

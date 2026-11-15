@@ -206,9 +206,9 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
     expect(sentChoices(post.mock.calls[2])).toEqual([{ kind: 'lookalikes', action: 'create', targets }]);
 
-    // With a choice for all rows: Leave all out, and a row's Leave out is sent to override it.
+    // With a choice for all rows: Leave all out, Create all again while a row is not created, and a row's Leave out is sent to override it.
     await screen.findByRole('button', { name: `${L}ignoreAll` });
-    expect(button(`${L}createAll`)).toBeNull();
+    expect(button(`${L}createAll`)).not.toBeNull();
     post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes(rows) }) });
     fireEvent.click(within(rowOf(5).parentElement!).getByRole('button', { name: `${L}ignore` }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(4));
@@ -253,6 +253,43 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     expect(sentChoices(post.mock.calls[1])).toEqual([kept, { kind: 'lookalikes', action: 'ignore', targets: lookalikes(rows).targets }]);
     // Nothing chosen any more: no "Leave all out".
     await waitFor(() => expect(button(`${L}ignoreAll`)).toBeNull());
+  });
+
+  it('sets every row with a choice for all, its own choice included; a row chosen after changes alone', async () => {
+    const targets = { 3: { item: 21, state: 's21' }, 4: { item: 22, state: 's22' }, 5: { item: 23, state: 's23' } };
+    const created = [look(3, 21, { outcome: 'created' }), look(4, 22, { updatable: false, outcome: 'created' }), look(5, 23)];
+    post.mockResolvedValueOnce({ data: report({
+      lookalikes: lookalikes(created),
+      matching: matching({ choices: [
+        { kind: 'lookalike', line: 3, action: 'create' },
+        { kind: 'lookalike', line: 4, action: 'create' },
+        { kind: 'lookalikes', action: 'ignore', targets },
+      ] }),
+    }) });
+    renderDialog();
+    await screen.findByText(`${L}title`);
+    // "Update all" updates line 3 too, created anyway by its own choice; line 4, which cannot be updated, keeps its state.
+    const updated = [look(3, 21, { outcome: 'updated' }), look(4, 22, { updatable: false, outcome: 'created' }), look(5, 23, { outcome: 'updated' })];
+    post.mockResolvedValueOnce({ data: report({
+      lookalikes: lookalikes(updated),
+      matching: matching({ choices: [{ kind: 'lookalike', line: 4, action: 'create' }, { kind: 'lookalikes', action: 'update', targets }] }),
+    }) });
+    fireEvent.click(screen.getByRole('button', { name: `${L}updateAll` }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(sentChoices(post.mock.calls[1])).toEqual([
+      { kind: 'lookalike', line: 4, action: 'create' },
+      { kind: 'lookalikes', action: 'update', targets },
+    ]);
+    // Then a row's own choice changes that row alone.
+    await waitFor(() => expect(button(`${L}updateAll`)).toBeNull());
+    post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes(updated) }) });
+    fireEvent.click(within(rowOf(5).parentElement!).getByRole('button', { name: `${L}create` }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
+    expect(sentChoices(post.mock.calls[2])).toEqual([
+      { kind: 'lookalike', line: 4, action: 'create' },
+      { kind: 'lookalikes', action: 'update', targets },
+      { kind: 'lookalike', line: 5, action: 'create' },
+    ]);
   });
 
   it('loads with the choices of the check shown, the targets of the rows it left out included', async () => {
