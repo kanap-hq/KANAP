@@ -20,7 +20,7 @@ L'espace de travail est également accessible aux administrateurs disposant de `
 
 Sur le service hébergé, Kad peut fonctionner avec le modèle inclus de Kadratis. Avant cela, un administrateur accepte le fournisseur et le lieu où il traite les données. Les nouveaux espaces de travail en essai commencent dans cet état, avec Kad désactivé.
 
-D'ici là, la page de Kad s'ouvre normalement avec ses suggestions. Une case prend la place du champ de message : *J'accepte que {fournisseur} ({lieu}) traite mes questions et les données qu'elles concernent pour les réponses de Kad. Elles ne servent pas à entraîner ses modèles.*, suivie de *Autre modèle ou désactivation : Administration › Kad*.
+D'ici là, la page de Kad s'ouvre normalement avec ses suggestions. Une case prend la place du champ de message : *J'accepte que mes questions et les données qu'elles concernent soient traitées par {fournisseur} ({lieu}) pour les réponses de Kad. Elles ne servent pas à entraîner ses modèles.*, suivie de *Autre modèle ou désactivation : Administration › Kad*.
 
 - Un administrateur des paramètres de Kad coche la case. Cela active Kad et enregistre l'acceptation, avec son auteur et sa date. Le champ de message apparaît alors.
 - Les autres personnes lisent *Kad attend qu'un administrateur l'active.*
