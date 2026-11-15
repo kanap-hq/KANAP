@@ -1094,7 +1094,7 @@ export class CompaniesService {
       const referenceRaw = cellOf(row, 'reference');
       const reference = referenceRaw ? parseReferenceNumber(referenceRaw, 'COMP') : null;
       if (referenceRaw && reference === null) {
-        errors.push(rowError(line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Unknown company reference '${referenceRaw}'`, { value: referenceRaw }));
+        errors.push(rowError(line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"${referenceRaw}" is no reference in this workspace.`, { value: referenceRaw }));
       } else if (reference !== null) {
         const firstRow = firstLineByReference.get(reference);
         if (firstRow === undefined) firstLineByReference.set(reference, line);
@@ -1258,11 +1258,11 @@ export class CompaniesService {
       if (item.reference !== null) {
         existing = byReference.get(item.reference) ?? null;
         if (!existing) {
-          errors.push(rowError(item.line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Unknown company reference 'COMP-${item.reference}'`, { value: `COMP-${item.reference}` }));
+          errors.push(rowError(item.line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"COMP-${item.reference}" is no reference in this workspace.`, { value: `COMP-${item.reference}` }));
           continue;
         }
         if (sameName && sameName.id !== existing.id) {
-          errors.push(rowError(item.line, 'name', 'CSV_NAME_TAKEN', `'${name}' is already the name of COMP-${sameName.item_number}.`, { name, reference: `COMP-${sameName.item_number}` }));
+          errors.push(rowError(item.line, 'name', 'CSV_VALUE_TAKEN', `"${name}" already belongs to COMP-${sameName.item_number}.`, { value: name, reference: `COMP-${sameName.item_number}` }));
           continue;
         }
       } else if (existing) {
@@ -1273,7 +1273,7 @@ export class CompaniesService {
       if (!existing) continue;
       const firstRow = firstLineOfCompany.get(existing.id);
       if (firstRow !== undefined) {
-        errors.push(rowError(item.line, item.reference !== null ? 'reference' : 'name', 'CSV_SAME_RECORD', `Row ${firstRow} already updates COMP-${existing.item_number}.`, { firstRow, reference: `COMP-${existing.item_number}` }));
+        errors.push(rowError(item.line, item.reference !== null ? 'reference' : 'name', 'CSV_SAME_RECORD', `This row updates COMP-${existing.item_number}, as row ${firstRow} does.`, { firstRow, reference: `COMP-${existing.item_number}` }));
         continue;
       }
       firstLineOfCompany.set(existing.id, item.line);

@@ -6,6 +6,7 @@ import { Department } from '../department.entity';
 import { Company } from '../../companies/company.entity';
 import { departmentsRegistry } from '../../ai/query/registries/departments.registry';
 import { adaptFilters } from '../../ai/query/ai-filter.adapter';
+import { resolveToUuid } from '../../common/resolve-item-id';
 import { exportListQuery } from '../../common/pagination';
 import {
   assert,
@@ -160,17 +161,20 @@ async function testImportByReference() {
 
     // An unknown reference, or one that is no department reference, refuses its row, by number.
     const unknown = await run(headers, [{ reference: 'DEPT-6', company_name: 'Alpha', name: 'Dept 6' }, { reference: 'DEPT-999', company_name: 'Alpha', name: 'Ghost' }]);
-    assert.deepEqual(unknown.errors.map((e) => [e.row, e.column, e.code, e.params?.value]), [[3, 'reference', 'CSV_REFERENCE_NOT_FOUND', 'DEPT-999']]);
-    const padded = await run(headers, [{ reference: 'DEPT-013', company_name: 'Alpha', name: 'Padded' }]);
-    assert.deepEqual(padded.errors.map((e) => [e.row, e.column, e.code]), [[2, 'reference', 'CSV_REFERENCE_NOT_FOUND']]);
+    assert.deepEqual(unknown.errors.map((e) => [e.row, e.column, e.code, e.params?.value]), [[3, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', 'DEPT-999']]);
+    const padded = await run(headers, [{ reference: 'DEPT-013', company_name: 'Alpha', name: 'Padded' }, { reference: 'COMP-3', company_name: 'Alpha', name: 'Other family' }]);
+    assert.deepEqual(padded.errors.map((e) => [e.row, e.column, e.code, e.params?.value]), [
+      [2, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', 'DEPT-013'],
+      [3, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', 'COMP-3'],
+    ]);
 
     // A name another department of that company holds, a reference twice: refused.
     const taken = await run(headers, [{ reference: 'DEPT-7', company_name: 'Alpha', name: 'Dept 8' }]);
-    assert.deepEqual(taken.errors.map((e) => [e.row, e.column, e.code, e.params?.reference]), [[2, 'name', 'CSV_NAME_TAKEN', 'DEPT-8']]);
+    assert.deepEqual(taken.errors.map((e) => [e.row, e.column, e.code, e.params]), [[2, 'name', 'CSV_VALUE_TAKEN', { value: 'Dept 8', reference: 'DEPT-8' }]]);
     const twice = await run(headers, [{ reference: 'DEPT-7', company_name: 'Alpha', name: 'Seven' }, { reference: 'dept-7', company_name: 'Alpha', name: 'Seven again' }]);
     assert.deepEqual(twice.errors.map((e) => [e.row, e.column, e.code]), [[3, 'reference', 'CSV_DUPLICATE_KEY']]);
     const same = await run(headers, [{ reference: 'DEPT-9', company_name: 'Alpha', name: 'Nine' }, { reference: '', company_name: 'Alpha', name: 'Dept 9' }]);
-    assert.deepEqual(same.errors.map((e) => [e.row, e.column, e.code]), [[3, 'name', 'CSV_SAME_RECORD']]);
+    assert.deepEqual(same.errors.map((e) => [e.row, e.column, e.code, e.params]), [[3, 'name', 'CSV_SAME_RECORD', { firstRow: 2, reference: 'DEPT-9' }]]);
     assert.equal((await stored(seeded, 9)).name, 'Dept 9', 'a refused file writes nothing');
 
     // An older file, without the column, still imports.
@@ -198,7 +202,19 @@ async function testExportThenImport() {
   });
 }
 
+/** The page moves to a new department by its reference: the create answer carries the number the database gave it. */
+async function testCreateReturnsReference() {
+  await withDepartments('ref-create', async (seeded) => {
+    const created = await seeded.svc.create({ name: 'Dept new', company_id: seeded.beta } as any, undefined, { manager: seeded.runner.manager });
+    assert.equal(typeof created.item_number, 'number', JSON.stringify(created));
+    const [stored] = await seeded.runner.query(`SELECT item_number FROM departments WHERE id = $1`, [created.id]);
+    assert.equal(created.item_number, stored.item_number);
+    assert.equal(await resolveToUuid(`DEPT-${created.item_number}`, 'department', seeded.runner.manager), created.id);
+  });
+}
+
 void runSpecs('department references', [
+  ['a created department comes back with its reference', testCreateReturnsReference],
   ['the reference column filters the list and the ids alike', testReferenceColumnFilter],
   ['the quick search finds a typed reference exactly', testQuickSearch],
   ['the ids carry the references, and the list sorts by reference', testIdsAndSort],

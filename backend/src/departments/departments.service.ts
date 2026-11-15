@@ -632,7 +632,7 @@ export class DepartmentsService {
       const referenceRaw = cellOf(row, 'reference');
       const reference = referenceRaw ? parseReferenceNumber(referenceRaw, 'DEPT') : null;
       if (referenceRaw && reference === null) {
-        errors.push(rowError(line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Unknown department reference '${referenceRaw}'`, { value: referenceRaw }));
+        errors.push(rowError(line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"${referenceRaw}" is no reference in this workspace.`, { value: referenceRaw }));
         continue;
       }
       if (reference !== null) {
@@ -729,11 +729,11 @@ export class DepartmentsService {
       if (reference !== undefined) {
         existing = byReference.get(reference) ?? null;
         if (!existing) {
-          errors.push(rowError(line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Unknown department reference 'DEPT-${reference}'`, { value: `DEPT-${reference}` }));
+          errors.push(rowError(line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"DEPT-${reference}" is no reference in this workspace.`, { value: `DEPT-${reference}` }));
           continue;
         }
         if (sameName && sameName.id !== existing.id) {
-          errors.push(rowError(line, 'name', 'CSV_NAME_TAKEN', `'${fileItem.name}' is already the name of DEPT-${sameName.item_number}.`, { name: fileItem.name, reference: `DEPT-${sameName.item_number}` }));
+          errors.push(rowError(line, 'name', 'CSV_VALUE_TAKEN', `"${fileItem.name}" already belongs to DEPT-${sameName.item_number}.`, { value: fileItem.name, reference: `DEPT-${sameName.item_number}` }));
           continue;
         }
       } else if (existing) {
@@ -743,7 +743,7 @@ export class DepartmentsService {
       if (existing) {
         const firstRow = firstLineOfDepartment.get(existing.id);
         if (firstRow !== undefined) {
-          errors.push(rowError(line, reference !== undefined ? 'reference' : 'name', 'CSV_SAME_RECORD', `Row ${firstRow} already updates DEPT-${existing.item_number}.`, { firstRow, reference: `DEPT-${existing.item_number}` }));
+          errors.push(rowError(line, reference !== undefined ? 'reference' : 'name', 'CSV_SAME_RECORD', `This row updates DEPT-${existing.item_number}, as row ${firstRow} does.`, { firstRow, reference: `DEPT-${existing.item_number}` }));
           continue;
         }
         firstLineOfDepartment.set(existing.id, line);
