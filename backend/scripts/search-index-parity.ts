@@ -20,6 +20,11 @@ const DEFAULT_QUERIES = [
   'PRJ-1',
   'T-1',
   'DOC-1',
+  'SUP-1',
+  'COMP-1',
+  'CTCT-1',
+  'DEPT-1',
+  'CTR-1',
   '12',
   'migration',
   'serveur',
@@ -40,6 +45,18 @@ const DEFAULT_QUERIES = [
 ];
 
 type ResultKey = string;
+
+/**
+ * The families numbered by the database (migration 1856240000000): a query that is one of their
+ * references must bring that record first on the indexed path when the tenant holds it.
+ */
+const NUMBERED_FAMILIES: Record<string, { type: string; table: string }> = {
+  SUP: { type: 'suppliers', table: 'suppliers' },
+  COMP: { type: 'companies', table: 'companies' },
+  CTCT: { type: 'contacts', table: 'contacts' },
+  DEPT: { type: 'departments', table: 'departments' },
+  CTR: { type: 'contracts', table: 'contracts' },
+};
 
 function keysOf(result: any): ResultKey[] {
   return (result.items || [])
@@ -82,6 +99,9 @@ async function main() {
         listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
         canReadKnowledge: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
+        canReadEntityType: async () => true,
+        // The script reads as a person who reads every family, the admin ones included.
+        adminFamiliesGap: async () => null,
       } as any,
     );
 
@@ -111,10 +131,26 @@ async function main() {
       const rankedOut = [...legacyKeys].filter((key) => !indexedKeys.has(key) && indexedDeepKeys.has(key));
       const gained = [...indexedKeys].filter((key) => !legacyKeys.has(key));
 
-      const flag = missing.length > 0 ? 'REGRESSION' : 'ok';
-      if (missing.length > 0) regressions += 1;
+      // A reference of a numbered family: the record it names, when the tenant holds it, comes first.
+      const reference = query.match(/^([A-Z]+)-(\d+)$/i);
+      const family = reference ? NUMBERED_FAMILIES[reference[1].toUpperCase()] : undefined;
+      let referenceMiss: string | null = null;
+      if (family) {
+        const [row] = await runner.query(
+          `SELECT id::text AS id FROM ${family.table} WHERE tenant_id = $1 AND item_number = $2`,
+          [tenantId, Number(reference![2])],
+        );
+        const first = (indexed.items || [])[0];
+        if (row && (first?.type !== family.type || first?.id !== row.id || String(first?.ref).toUpperCase() !== query.toUpperCase())) {
+          referenceMiss = `${family.type}:${row.id} not first (first: ${first ? `${first.type}:${first.ref ?? first.id}` : 'none'})`;
+        }
+      }
+
+      const flag = missing.length > 0 || referenceMiss ? 'REGRESSION' : 'ok';
+      if (missing.length > 0 || referenceMiss) regressions += 1;
       console.log(`[${flag}] "${query}" legacy=${legacyKeys.size} indexed=${indexedKeys.size}`
         + (missing.length ? ` | NOT FOUND by new path: ${missing.join(', ')}` : '')
+        + (referenceMiss ? ` | REFERENCE: ${referenceMiss}` : '')
         + (rankedOut.length ? ` | re-ranked out of top-10: ${rankedOut.length}` : '')
         + (gained.length ? ` | new-path gains: ${gained.length}` : ''));
     }
