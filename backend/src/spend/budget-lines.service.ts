@@ -32,8 +32,12 @@ import {
 } from './budget-line-creation';
 import { lockBudgetLine } from './budget-locks';
 import { bulkUpdateBudgetLines } from './budget-line-bulk-edit';
+import type { BulkEditOptions } from '../common/bulk-edit/bulk-edit';
 
 type ReadOptions = { manager: EntityManager; access?: BudgetListAccess };
+
+/** The source of a write's audit rows, when it is not the person on the screen (Kad: `ai_chat` and its card). */
+export type BudgetLineAuditSource = { source: string; sourceRef: string | null };
 
 /** The most values one hidden-count request names. */
 const MAX_HIDDEN_VALUES = 500;
@@ -160,21 +164,33 @@ export class BudgetLinesService {
   }
 
   /** The update of one line: the PATCH's, and each line's of a change in bulk. */
-  private async updateLine(line: { id: string; nature: BudgetNature }, body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
+  private async updateLine(
+    line: { id: string; nature: BudgetNature },
+    body: unknown,
+    userId: string | undefined,
+    opts: { manager: EntityManager; audit?: BudgetLineAuditSource },
+  ) {
     const input = this.nativeBody(body, line.nature, true);
-    await this.items(line.nature).update(line.id, input, userId, { ...opts, fields: 'columns', native: true });
+    await this.items(line.nature).update(line.id, input, userId, { manager: opts.manager, audit: opts.audit, fields: 'columns', native: true });
   }
 
   /**
    * "Change the selection" of the list (`POST /budget-lines/bulk-update`, `budget-line-bulk-edit.ts`):
    * the lines chosen, or those of the list's filters with the person's access, each through the
-   * update of one line, in the request's transaction.
+   * update of one line, in the request's transaction. Kad's card (`bulk_update_budget_lines`)
+   * passes the `audit` source of its rows (each line's one audit row says "by Kad") and asks the
+   * ids of the lines that would change (`options`).
    */
-  bulkUpdate(body: unknown, userId: string | undefined, opts: ReadOptions) {
+  bulkUpdate(
+    body: unknown,
+    userId: string | undefined,
+    opts: ReadOptions & { audit?: BudgetLineAuditSource; options?: BulkEditOptions },
+  ) {
     return bulkUpdateBudgetLines(body, {
       manager: opts.manager,
       listIds: (filters) => this.summaryIds(filters, opts),
-      updateLine: (line, input) => this.updateLine(line, input, userId, { manager: opts.manager }),
+      updateLine: (line, input) => this.updateLine(line, input, userId, { manager: opts.manager, audit: opts.audit }),
+      options: opts.options,
     });
   }
 
