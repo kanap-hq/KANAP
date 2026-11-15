@@ -14,7 +14,7 @@ import type { BudgetNature } from '../budget-nature';
 import { BudgetFileRead, firstAmountYear, interpretBudgetFile, InterpretedRow, FieldCell, ItemNumberCell } from './interpret';
 import { tokenError } from './token';
 import { columnOfMeasure } from './columns';
-import { FoundLookalike, hintState, LineIndex, lineState, RowKeys, rowSums, unusual } from './lookalikes';
+import { hintState, LineIndex, lineState, RowKeys, rowSums, unusual } from './lookalikes';
 import { DATA_ACCESS_LEAVES_ACCESS_MESSAGE, DATA_ACCESS_PLACEMENT_MESSAGE } from '../../data-access/line-write-checks';
 import {
   accentFreeKey,
@@ -36,7 +36,9 @@ import {
   BudgetFileLinePlan,
   BudgetFileLookalike,
   BudgetFileLookalikeChoice,
+  BudgetFileLookalikeReason,
   BudgetFileLookalikesChoice,
+  BudgetFileLookalikeTarget,
   BudgetFileMatch,
   BudgetFileMatchOptions,
   BudgetFileNatureCounts,
@@ -310,7 +312,7 @@ function compared(input: PreflightInput, rows: InterpretedRow[]): { report: Budg
       entry = lookalikeEntry(row, look);
       bag.lookalikes.push(entry);
       if (look.action === 'ignore') continue;
-      bag.lookTargets.set(row.line, look.found.hint);
+      bag.lookTargets.set(row.line, look.hint);
       if (look.action === 'update' && look.live) {
         const ref = lineRef(look.live.itemNumber);
         if (look.stale) {
@@ -358,13 +360,16 @@ function compared(input: PreflightInput, rows: InterpretedRow[]): { report: Budg
 
 /** What the check does with a row that looks like a stored line. */
 interface LookalikeDecision {
-  found: FoundLookalike;
+  /** The line it looks like (a stand-in holding only its number when the person no longer reads it). */
+  hint: LineHint;
+  /** Why it looks like it; absent when the row keeps a target it no longer looks like. */
+  reason?: BudgetFileLookalikeReason;
   action: 'ignore' | 'create' | 'update';
   updatable: boolean;
   /** For an update: the stored line, and whether it changed since the state the choice carries. */
   live?: StoredLine;
   stale?: boolean;
-  /** The line's state now. */
+  /** The line's state now (empty when it is gone). */
   state: string;
 }
 
@@ -381,15 +386,26 @@ export function storedState(line: StoredLine): string {
 export function lookalikeTargets(input: PreflightInput): { ids: string[]; updates: number[] } {
   const rows = interpretBudgetFile(input.read, input.scope);
   const decided = decideLookalikes({ ...input, stored: [] }, rows, emptyBag(input));
-  const ids = [...decided.decisions.values()].map((decision) => decision.found.hint.id).filter((id): id is string => !!id);
+  const ids = [...decided.decisions.values()].map((decision) => decision.hint.id).filter((id): id is string => !!id);
   return { ids, updates: decided.wanted };
+}
+
+/** The first year of the file's amount columns, or null when it has none. */
+function fileFirstYear(rows: readonly InterpretedRow[]): number | null {
+  let year: number | null = null;
+  for (const row of rows) for (const amount of row.amounts) if (year == null || amount.year < year) year = amount.year;
+  return year;
 }
 
 /**
  * For each row to create that looks like a stored line, what the check does with it: left out unless
- * the person chose otherwise (P2), the choice for the row winning over the choice for all rows. A
- * choice that no longer applies (the row no longer looks like that line, or the person may not update
- * it) falls back to leaving the row out. `wanted`: lines to update that `stored` lacks.
+ * the person chose otherwise (P2), the choice for the row winning over the choice for all rows. A row
+ * keeps the target of the check the person chose on (an update's `item` with its `state`, or the
+ * `targets` of the choice for all rows) even when it no longer looks like it: an update is then
+ * refused when the line changed, and a row left out stays left out. A choice that no longer applies
+ * (the person may not update the line, or it is gone) falls back to leaving the row out, and so does a
+ * second row that would update a line the file already updates. `wanted`: lines to update that
+ * `stored` lacks.
  */
 function decideLookalikes(
   input: PreflightInput,
@@ -402,62 +418,95 @@ function decideLookalikes(
   const perRow = new Map<number, BudgetFileLookalikeChoice>();
   for (const choice of choices) if (choice.kind === 'lookalike' && !perRow.has(choice.line)) perRow.set(choice.line, choice);
   const all = choices.find((choice): choice is BudgetFileLookalikesChoice => choice.kind === 'lookalikes');
+  const memory = all?.targets;
   const followed: BudgetFileChoice[] = [];
-  const states: Record<string, string> = {};
-  let allApplied = false;
+  const kept: Record<string, BudgetFileLookalikeTarget> = {};
+  const firstYear = fileFirstYear(rows);
+  // The lines the file updates, and the row that updates each: the lines it names by number first.
+  const claimed = new Map<number, number>();
   for (const row of rows) {
-    const keys = lookalikeKeys(input, row, bag);
-    const found = keys ? bag.index.find(keys) : null;
-    if (!found) continue;
-    const { hint } = found;
-    const item = hint.itemNumber;
-    const updatable = !input.access || (!!hint.id && input.access.editable.has(hint.id));
-    const live = input.stored.find((line) => line.itemNumber === item && (!hint.id || line.id === hint.id));
-    const state = live ? storedState(live) : hintState(hint);
+    const named = findStoredLine(input.stored, row.itemNumber);
+    if (named && !claimed.has(named.itemNumber)) claimed.set(named.itemNumber, row.line);
+  }
+  for (const row of rows) {
+    const keys = lookalikeKeys(input, row, bag, firstYear);
+    if (!keys) continue;
+    const found = bag.index.find(keys);
     const chosen = perRow.get(row.line);
+    const remembered = memory?.[String(row.line)];
+    // The target: an update chosen on a check (its state says so), else the check's the person saw, else the one found now.
+    const pinned = chosen?.action === 'update' && (chosen.state !== undefined || chosen.item === found?.hint.itemNumber)
+      ? chosen.item
+      : remembered?.item;
+    const item = pinned ?? found?.hint.itemNumber;
+    if (item === undefined) continue;
+    const alike = found && found.hint.itemNumber === item ? found : null;
+    const known = alike?.hint ?? bag.index.hintOf(item);
+    const hint: LineHint = known ?? { nature: keys.nature, itemNumber: item, name: '', supplierId: null };
+    const updatable = !!known && (!input.access || (!!known.id && input.access.editable.has(known.id)));
+    const live = known ? input.stored.find((line) => line.itemNumber === item && (!known.id || line.id === known.id)) : undefined;
+    const state = live ? storedState(live) : known ? hintState(known) : '';
     let action: LookalikeDecision['action'] = 'ignore';
     let expected: string | undefined;
+    let follow: BudgetFileChoice | null = null;
     if (chosen) {
       if (chosen.action !== 'update') {
         action = chosen.action;
-        followed.push(chosen);
+        follow = chosen;
       } else if (chosen.item === item && updatable) {
         action = 'update';
         expected = chosen.state;
-        followed.push({ ...chosen, state: chosen.state ?? state });
+        follow = { ...chosen, state: chosen.state ?? state };
       }
     } else if (all?.action === 'create') {
       action = 'create';
-      allApplied = true;
-    } else if (all?.action === 'update' && updatable && (!all.states || all.states[String(item)] !== undefined)) {
-      // A line the check did not show when the person chose (not in `states`) is left out.
+    } else if (all?.action === 'update' && updatable && (!memory || remembered)) {
+      // A row the check shown did not name (not in `targets`) is left out.
       action = 'update';
-      expected = all.states?.[String(item)];
-      states[String(item)] = expected ?? state;
-      allApplied = true;
+      expected = remembered?.state;
     }
+    if (action === 'update') {
+      const other = claimed.get(item);
+      if (other !== undefined) {
+        // Two rows, one line: the first row of the file updates it, the next one is left out.
+        const ref = lineRef(item);
+        bag.consistency.push({
+          line: row.line,
+          message: `Looks like ${ref}, already updated by line ${other}. Left out.`,
+          code: 'BUDGET_FILE_LOOKALIKE_SAME_LINE',
+          params: { line: row.line, other, ref },
+        });
+        action = 'ignore';
+        follow = null;
+      } else claimed.set(item, row.line);
+    }
+    if (follow) followed.push(follow);
+    if (remembered || all?.action !== 'update' || action === 'update') kept[String(row.line)] = remembered ?? { item, state };
     if (action === 'update' && !live) wanted.push(item);
     decisions.set(row.line, {
-      found,
+      hint,
+      ...(alike ? { reason: alike.reason } : {}),
       action,
       updatable,
       state,
       ...(action === 'update' && live ? { live, stale: expected !== undefined && expected !== state } : {}),
     });
   }
-  if (all && allApplied) followed.push(all.action === 'create' ? { kind: 'lookalikes', action: 'create' } : { kind: 'lookalikes', action: 'update', states });
+  // The choice for all rows, with the target of every row it covers: what the person saw. Given back
+  // even when they chose nothing (`ignore`), so that the load and the card's approval keep it.
+  if (Object.keys(kept).length > 0) followed.push({ kind: 'lookalikes', action: all?.action ?? 'ignore', targets: kept });
   return { decisions, followed, wanted };
 }
 
 function lookalikeEntry(row: InterpretedRow, look: LookalikeDecision): BudgetFileLookalike {
-  const { hint, reason } = look.found;
+  const { hint, reason } = look;
   const outcome = look.action === 'ignore' ? 'ignored' : look.action === 'create' ? 'created' : 'updated';
   return {
     line: row.line,
     nature: hint.nature,
     name: textOf(row.fields.name),
     target: { item: hint.itemNumber, ref: lineRef(hint.itemNumber), name: hint.name, state: look.state },
-    reason,
+    ...(reason ? { reason } : {}),
     outcome,
     updatable: look.updatable,
   };
@@ -468,7 +517,7 @@ function lookalikeEntry(row: InterpretedRow, look: LookalikeDecision): BudgetFil
  * account matched as the check matches them (the person's undone matches and Kad's proposals
  * included), its currency and amounts. Null for a row that names a line, or has no nature or title.
  */
-function lookalikeKeys(input: PreflightInput, row: InterpretedRow, bag: Bag): RowKeys | null {
+function lookalikeKeys(input: PreflightInput, row: InterpretedRow, bag: Bag, firstYear: number | null): RowKeys | null {
   if (row.itemNumber.kind !== 'blank') return null;
   const nature = row.nature.kind === 'value' ? row.nature.nature : row.nature.kind === 'absent' ? input.scope : null;
   const name = textOf(row.fields.name);
@@ -483,6 +532,7 @@ function lookalikeKeys(input: PreflightInput, row: InterpretedRow, bag: Bag): Ro
     accountId: lookalikeAccount(input, row, companyId),
     currency,
     sums: rowSums(row),
+    firstYear,
   };
 }
 
@@ -1904,6 +1954,7 @@ function lookalikesOf(bag: Bag): NonNullable<BudgetFileReport['lookalikes']> {
   const count = (outcome: BudgetFileLookalike['outcome']) => bag.lookalikes.filter((entry) => entry.outcome === outcome).length;
   return {
     lines: bag.lookalikes.slice(0, LOOKALIKE_LIST_LIMIT),
+    targets: Object.fromEntries(bag.lookalikes.map((entry) => [String(entry.line), { item: entry.target.item, state: entry.target.state }])),
     count: bag.lookalikes.length,
     ignored: count('ignored'),
     created: count('created'),

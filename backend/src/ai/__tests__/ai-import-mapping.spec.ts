@@ -848,12 +848,16 @@ function testLookalikesReachTheModel() {
       line: index + 2, nature: 'opex' as const, name: `Row ${index}`, target: target(index + 101), reason: 'amounts' as const,
       outcome: index === 0 ? 'updated' as const : 'ignored' as const, updatable: true,
     })),
+    targets: { 2: { item: 101, state: '0123456789abcdef' }, 3: { item: 102, state: '0123456789abcdef' } },
     count: 29, ignored: 28, created: 0, updated: 1,
   };
   const duplicates = [{ line: 14, message: 'row 14 looks like row 2', code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: 14, row: 2 } }];
   const matching = {
     matches: [], refusedProposals: [], candidates: [], totals: { matches: 0, refusedProposals: 0, candidates: 0 },
-    choices: [{ kind: 'lookalike' as const, line: 2, action: 'update' as const, item: 101, state: '0123456789abcdef' }],
+    choices: [
+      { kind: 'lookalike' as const, line: 2, action: 'update' as const, item: 101, state: '0123456789abcdef' },
+      { kind: 'lookalikes' as const, action: 'ignore' as const, targets: { 3: { item: 102, state: '0123456789abcdef' } } },
+    ],
     createSuppliers: { allowed: true, value: true },
   };
   const budget = budgetBilan({
@@ -880,6 +884,10 @@ function testLookalikesReachTheModel() {
   const file = budget.report.kind === 'budget_file' ? budget.report.file as any : null;
   assert.equal(file.lookalikes.lines[0].line, 3);
   assert.equal(file.matching.choices[0].line, 3);
+  // The targets of the rows, by line, on the person's lines too (B1 and B3 of lot I2).
+  assert.deepEqual(Object.keys(file.lookalikes.targets), ['3', '4']);
+  assert.deepEqual(file.matching.choices[1].targets, { 4: { item: 102, state: '0123456789abcdef' } });
+  assert.deepEqual(budget.matching?.choices[1], { kind: 'lookalikes', action: 'ignore', targets: { 4: { item: 102, state: '0123456789abcdef' } } });
   assert.equal(budget.matching?.choices[0].kind === 'lookalike' && budget.matching.choices[0].line, 3);
   assert.deepEqual(file.warnings.duplicates[0].params, { line: 15, row: 3 });
   assert.deepEqual(builtLineChoices(budget.matching!.choices, lines), matching.choices, 'back to the built file\'s line');

@@ -112,6 +112,8 @@ export interface LineHint {
   accountId?: string | null;
   currency?: string | null;
   rowVersion?: number;
+  /** ISO instant, or null: a line that ends before the file's first year is no lookalike target. */
+  endOfValidity?: string | null;
   years?: LineHintYear[];
 }
 
@@ -399,17 +401,33 @@ export type BudgetFileChoice =
  * What a row that looks like a stored line becomes (lot I2 of 26.11.9): left out (the default, sent
  * only to override a choice for all rows), created anyway, or the update of the line it looks like.
  * `line` is the line of the person's file; `item` the number of the line it looks like; `state` that
- * line's state at the check (`lineState`): the update is refused when the line changed since.
+ * line's state at the check (`lineState`): the update is refused when the line changed since. An
+ * update that carries a state applies to its line even when the row no longer looks like it.
  */
 export type BudgetFileLookalikeChoice =
   | { kind: 'lookalike'; line: number; action: 'ignore' | 'create' }
   | { kind: 'lookalike'; line: number; action: 'update'; item: number; state?: string };
 
+/** The line a row looked like at a check, and that line's state then (`lineState`). */
+export interface BudgetFileLookalikeTarget {
+  item: number;
+  state: string;
+}
+
 /**
- * The choice for every row that looks like a stored line; a choice for one row wins over it. The
- * check gives back, for `update`, the state of every line it updates, by its number (`states`).
+ * The choice for every row that looks like a stored line; a choice for one row wins over it.
+ * `targets`, by line of the person's file: the line each row looked like at the check shown, and its
+ * state (the report's `lookalikes.targets`). A row it names keeps that target even when it no longer
+ * looks like it: left out for `ignore` (what the check gives back when the person chose nothing, so a
+ * row left out is never created without a choice), refused for `update` when the line changed since.
+ * A row it does not name is left out by `update`. Without `targets`, `update` updates every line a row
+ * looks like.
  */
-export type BudgetFileLookalikesChoice = { kind: 'lookalikes'; action: 'create' | 'update'; states?: Record<string, string> };
+export type BudgetFileLookalikesChoice = {
+  kind: 'lookalikes';
+  action: 'ignore' | 'create' | 'update';
+  targets?: Record<string, BudgetFileLookalikeTarget>;
+};
 
 /** Why a row looks like a stored line, in the order the check tries them. */
 export type BudgetFileLookalikeReason = 'title_supplier' | 'amounts' | 'close_title';
@@ -421,14 +439,15 @@ export interface BudgetFileLookalike {
   nature: BudgetNature;
   /** The row's title. */
   name: string;
-  /** The stored line it looks like: its number, reference, title and state at this check. */
+  /** The stored line it looks like: its number, reference, title and state at this check (empty when the line is gone). */
   target: { item: number; ref: string; name: string; state: string };
   /**
    * `title_supplier`: the same title (case and accents aside) and supplier; `amounts`: every amount
    * of the row equal, the same currency, supplier or company, and account when the file gives one;
-   * `close_title`: a close title, the same supplier and an equal amount.
+   * `close_title`: a close title, the same supplier and an equal amount. Absent when the row keeps a
+   * target it no longer looks like (the line changed since the check the person chose on).
    */
-  reason: BudgetFileLookalikeReason;
+  reason?: BudgetFileLookalikeReason;
   /** What the check does with it: left out (the default), created anyway, or the line updated. */
   outcome: 'ignored' | 'created' | 'updated';
   /** Whether the person may update that line: "Update" is offered only then. */
@@ -440,6 +459,8 @@ export interface BudgetFileLookalike {
 export interface BudgetFileLookalikes {
   /** The first LOOKALIKE_LIST_LIMIT, in file order. */
   lines: BudgetFileLookalike[];
+  /** Every row's target and its state now, by line of the file: what "Update all" sends back. */
+  targets: Record<string, BudgetFileLookalikeTarget>;
   count: number;
   ignored: number;
   created: number;

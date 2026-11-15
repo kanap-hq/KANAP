@@ -6,14 +6,17 @@ import type { BudgetFileLookalikeReason, LineHint } from './types';
 
 /**
  * The lookalikes of the budget file (lot I2 of 26.11.9): a row the file creates that looks like a
- * stored line of its nature the person reads, after the matching of lot I1 (supplier, company). Three
- * rules, tried in this order, the smallest line number first within a rule:
+ * stored line of its nature the person reads, after the matching of lot I1 (supplier, company). Every
+ * rule asks for the same paying company, once resolved (the workspace's default when the file gives
+ * none), and leaves out a line that ends before the first year of the file's amounts. Three rules,
+ * tried in this order, the smallest line number first within a rule:
  * - `title_supplier`: the same title, case and accents aside, and the same supplier (a row without a
  *   supplier and a line without one have the same);
  * - `amounts`: every non-zero amount the file gives for the row (months summed by year and measure)
- *   equal to the line's, one at least, the same currency, the same supplier or the same company, and
- *   the same account when the file gives one: a translated title is found this way;
- * - `close_title`: a close title (`similarity` of 0.6 at least), the same supplier and one equal amount.
+ *   equal to the line's, the same currency, and the same account when the file gives one; one amount
+ *   is enough with the same supplier, two at least without: a translated title is found this way;
+ * - `close_title`: a close title (`similarity` of 0.6 at least), the same supplier and currency, and
+ *   one equal amount.
  * A close title alone is no lookalike (`Microsoft 365 E3` and `E5`). The index replaces the scan of
  * every line for every row: by title, by amount, by supplier.
  */
@@ -72,6 +75,8 @@ export interface RowKeys {
   accountId: string | null | undefined;
   currency: string | null;
   sums: Map<string, bigint>;
+  /** The first year of the file's amount columns: a line that ends before it is no target. Null without amounts. */
+  firstYear: number | null;
 }
 
 export interface FoundLookalike {
@@ -96,6 +101,7 @@ export class LineIndex {
   private readonly byTitle = new Map<string, Indexed[]>();
   private readonly byAmount = new Map<string, Indexed[]>();
   private readonly entries = new Map<LineHint, Indexed>();
+  private readonly byItem = new Map<number, LineHint>();
   private readonly medians = new Map<string, Array<{ id: string | undefined; cents: bigint }>>();
 
   constructor(hints: readonly LineHint[]) {
@@ -111,6 +117,7 @@ export class LineIndex {
     for (const entry of all) {
       const { hint, totals } = entry;
       this.entries.set(hint, entry);
+      this.byItem.set(hint.itemNumber, hint);
       push(this.byTitle, `${hint.nature}|${accentFreeKey(hint.name)}|${hint.supplierId ?? ''}`, entry);
       for (const [key, cents] of totals) {
         if (cents === 0n) continue;
@@ -124,18 +131,21 @@ export class LineIndex {
 
   /** The line a row looks like, by the first rule that finds one, or null. */
   find(row: RowKeys): FoundLookalike | null {
+    // The same paying company in every rule; a line ended before the file's years is no target.
+    if (!row.companyId) return null;
+    const fits = (entry: Indexed) => (entry.hint.companyId ?? null) === row.companyId && !endedBefore(entry.hint, row.firstYear);
     if (row.supplier !== undefined) {
-      const same = this.byTitle.get(`${row.nature}|${accentFreeKey(row.name)}|${row.supplier ?? ''}`);
-      if (same && same.length > 0) return { hint: same[0].hint, reason: 'title_supplier' };
+      const same = (this.byTitle.get(`${row.nature}|${accentFreeKey(row.name)}|${row.supplier ?? ''}`) ?? []).find(fits);
+      if (same) return { hint: same.hint, reason: 'title_supplier' };
     }
     if (row.sums.size === 0) return null;
-    const amounts = this.byAmounts(row);
+    const amounts = this.byAmounts(row, fits);
     if (amounts) return { hint: amounts.hint, reason: 'amounts' };
-    if (row.supplier === undefined) return null;
+    if (row.supplier === undefined || !row.currency) return null;
     let close: Indexed | null = null;
     for (const [key, cents] of row.sums) {
       for (const entry of this.byAmount.get(`${row.nature}|${key}|${cents}`) ?? []) {
-        if ((entry.hint.supplierId ?? null) !== row.supplier) continue;
+        if ((entry.hint.supplierId ?? null) !== row.supplier || (entry.hint.currency ?? '') !== row.currency || !fits(entry)) continue;
         if (close && close.hint.itemNumber <= entry.hint.itemNumber) continue;
         if (similarity(row.name, entry.hint.name) >= CLOSE_TITLE_THRESHOLD) close = entry;
       }
@@ -143,19 +153,24 @@ export class LineIndex {
     return close ? { hint: close.hint, reason: 'close_title' } : null;
   }
 
-  private byAmounts(row: RowKeys): Indexed | null {
+  /** Every non-zero amount equal: one is enough with the same supplier, two at least without. */
+  private byAmounts(row: RowKeys, fits: (entry: Indexed) => boolean): Indexed | null {
     if (!row.currency || row.accountId === null) return null;
     const [first] = row.sums;
     for (const entry of this.byAmount.get(`${row.nature}|${first[0]}|${first[1]}`) ?? []) {
       const { hint, totals } = entry;
-      if ((hint.currency ?? '') !== row.currency) continue;
+      if ((hint.currency ?? '') !== row.currency || !fits(entry)) continue;
       const sameSupplier = !!row.supplier && hint.supplierId === row.supplier;
-      const sameCompany = !!row.companyId && hint.companyId === row.companyId;
-      if (!sameSupplier && !sameCompany) continue;
+      if (!sameSupplier && row.sums.size < 2) continue;
       if (row.accountId !== undefined && hint.accountId !== row.accountId) continue;
       if ([...row.sums].every(([key, cents]) => totals.get(key) === cents)) return entry;
     }
     return null;
+  }
+
+  /** The line of a number the person reads, or undefined. */
+  hintOf(item: number): LineHint | undefined {
+    return this.byItem.get(item);
   }
 
   /** A line's yearly total of `year|measure`, in cents; undefined when it has none. */
@@ -177,6 +192,13 @@ export class LineIndex {
     const cents = values.length % 2 === 1 ? values[middle] : (values[middle - 1] + values[middle]) / 2n;
     return { cents, count: values.length };
   }
+}
+
+/** Whether a line ends before `year` (the first year of the file's amounts). */
+function endedBefore(hint: LineHint, year: number | null): boolean {
+  if (year == null || !hint.endOfValidity) return false;
+  const end = new Date(hint.endOfValidity);
+  return !Number.isNaN(end.getTime()) && end.getUTCFullYear() < year;
 }
 
 /** Whether `amount` is ten times above or below `reference` (both non-zero, compared by size). */

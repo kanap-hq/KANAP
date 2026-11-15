@@ -262,16 +262,35 @@ export function personLine(row: number, lines: readonly number[]): number {
  * instead (the inverse of `personLine`): a choice for a line the built file does not hold is dropped.
  */
 export function builtLineChoices(choices: readonly BudgetFileChoice[], lines: readonly number[]): BudgetFileChoice[] {
+  const built = (line: number) => {
+    const index = lines.indexOf(line);
+    return index < 0 ? null : index + 2;
+  };
   return choices.flatMap((choice): BudgetFileChoice[] => {
+    if (choice.kind === 'lookalikes' && choice.targets) return [{ ...choice, targets: rekeyed(choice.targets, built) }];
     if (choice.kind !== 'lookalike') return [choice];
-    const index = lines.indexOf(choice.line);
-    return index < 0 ? [] : [{ ...choice, line: index + 2 }];
+    const line = built(choice.line);
+    return line === null ? [] : [{ ...choice, line }];
   });
 }
 
 /** The choices the check followed, on the lines of the person's file. */
 function personLineChoices(choices: readonly BudgetFileChoice[], lines: readonly number[]): BudgetFileChoice[] {
-  return choices.map((choice) => (choice.kind === 'lookalike' ? { ...choice, line: personLine(choice.line, lines) } : choice));
+  return choices.map((choice) => {
+    if (choice.kind === 'lookalike') return { ...choice, line: personLine(choice.line, lines) };
+    if (choice.kind === 'lookalikes' && choice.targets) return { ...choice, targets: rekeyed(choice.targets, (line) => personLine(line, lines)) };
+    return choice;
+  });
+}
+
+/** A record keyed by line of a file (`targets`), keyed by the line `to` gives instead; a line it drops (null) is dropped. */
+function rekeyed<T>(byLine: Readonly<Record<string, T>>, to: (line: number) => number | null): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const [key, value] of Object.entries(byLine)) {
+    const line = to(Number(key));
+    if (line !== null && line > 0) out[String(line)] = value;
+  }
+  return out;
 }
 
 /** The lines an issue names for the model: the first ones, as the card lists its messages. */
@@ -374,6 +393,7 @@ function relined(value: unknown, lines: readonly number[]): unknown {
   if (!value || typeof value !== 'object') return value;
   const record = value as Record<string, unknown>;
   const earlierRow = record.code === LOOKS_LIKE_ROW;
+  const sameLine = record.code === LOOKALIKE_SAME_LINE;
   return Object.fromEntries(Object.entries(record).map(([key, item]) => [
     key,
     key === 'line' && typeof item === 'number'
@@ -382,6 +402,10 @@ function relined(value: unknown, lines: readonly number[]): unknown {
         ? (item as number[]).map((entry) => personLine(entry, lines))
       : earlierRow && key === 'params' && item && typeof item === 'object'
         ? relinedRow(relined(item, lines) as Record<string, unknown>, lines)
+      : sameLine && key === 'params' && item && typeof item === 'object'
+        ? relinedOther(relined(item, lines) as Record<string, unknown>, lines)
+      : key === 'targets' && item && typeof item === 'object' && !Array.isArray(item)
+        ? rekeyed(item as Record<string, unknown>, (line) => personLine(line, lines))
         : relined(item, lines),
   ]));
 }
@@ -390,7 +414,13 @@ function relinedRow(params: Record<string, unknown>, lines: readonly number[]): 
   return typeof params.row === 'number' ? { ...params, row: personLine(params.row, lines) } : params;
 }
 
+/** The row that already updates the line a row looks like (`BUDGET_FILE_LOOKALIKE_SAME_LINE`, its `other`). */
+function relinedOther(params: Record<string, unknown>, lines: readonly number[]): Record<string, unknown> {
+  return typeof params.other === 'number' ? { ...params, other: personLine(params.other, lines) } : params;
+}
+
 const LOOKS_LIKE_ROW = 'BUDGET_FILE_LOOKS_LIKE_ROW';
+const LOOKALIKE_SAME_LINE = 'BUDGET_FILE_LOOKALIKE_SAME_LINE';
 
 /** The lookalikes the model reads: the first ones, as the card lists them at once. */
 const MODEL_LOOKALIKES = 10;

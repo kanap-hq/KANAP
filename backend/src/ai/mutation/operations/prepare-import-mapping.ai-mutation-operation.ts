@@ -197,7 +197,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     );
     if (!last || last.status === 'executed') return [];
     try {
-      return parseBudgetFileChoices(last.choices ?? []);
+      // The targets the last card left out by default are that card's: a new mapping looks again.
+      return parseBudgetFileChoices(last.choices ?? []).filter((choice) => !(choice.kind === 'lookalikes' && choice.action === 'ignore'));
     } catch {
       return [];
     }

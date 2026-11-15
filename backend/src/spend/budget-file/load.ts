@@ -120,11 +120,11 @@ export async function loadExportLines(
 export async function loadNames(manager: EntityManager, tenantId: string, options: { years: boolean }): Promise<LineHint[]> {
   const rows: Array<{
     id: string; nature: BudgetNature; item_number: number; name: string; supplier_id: string | null;
-    company_id: string | null; account_id: string | null; currency: string | null; row_version: number;
+    company_id: string | null; account_id: string | null; currency: string | null; row_version: number; disabled_at: Date | string | null;
   }> = await manager.query(
     `SELECT i.id::text AS id, i.nature, i.item_number::int AS item_number, i.product_name AS name, i.supplier_id::text AS supplier_id,
             i.paying_company_id::text AS company_id, i.account_id::text AS account_id, btrim(i.currency::text) AS currency,
-            i.row_version::int AS row_version
+            i.row_version::int AS row_version, i.disabled_at
        FROM ${LINES.items} i WHERE i.tenant_id = $1${naturesAnd('i', BUDGET_NATURES)}`,
     [tenantId],
   );
@@ -139,6 +139,7 @@ export async function loadNames(manager: EntityManager, tenantId: string, option
     accountId: row.account_id,
     currency: (row.currency ?? '').trim().toUpperCase() || null,
     rowVersion: Number(row.row_version),
+    endOfValidity: row.disabled_at ? new Date(row.disabled_at).toISOString() : null,
     ...(years ? { years: years.get(row.id) ?? [] } : {}),
   }));
 }

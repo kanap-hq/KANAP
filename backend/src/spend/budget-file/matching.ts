@@ -9,7 +9,7 @@ import {
   type RecommendedDimensionKey,
   SEED_LANGUAGES,
 } from '../../analytics/recommended-dimensions.seed';
-import type { BudgetFileChoice, CatalogDimension } from './types';
+import type { BudgetFileChoice, BudgetFileLookalikeTarget, CatalogDimension } from './types';
 
 /**
  * How the budget file finds an existing supplier, company or dimension value for a value of the
@@ -260,10 +260,10 @@ const CHOICE_VALUE_MAX = 200;
 const LOOKALIKE_ACTIONS = new Set(['ignore', 'create', 'update']);
 
 /**
- * The states a choice for all rows keeps, one per line it updates: a file's rows at most (the screen's
- * upload limit holds fewer).
+ * The targets a choice for all rows keeps, one per row that looks like a line: a file's rows at most
+ * (the screen's upload limit holds fewer).
  */
-const CHOICE_STATES_MAX = 20000;
+const CHOICE_TARGETS_MAX = 20000;
 
 /** A line of a file, or a line's number: a whole number from 1. */
 function isLine(value: unknown): value is number {
@@ -275,10 +275,18 @@ function isState(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f]{16}$/.test(value);
 }
 
-function isStates(value: unknown): boolean {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+/** `targets` of a choice for all rows, copied: by line of the file, a line's number and state. */
+function targetsOf(value: unknown): Record<string, BudgetFileLookalikeTarget> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const entries = Object.entries(value as Record<string, unknown>);
-  return entries.length <= CHOICE_STATES_MAX && entries.every(([key, state]) => /^[1-9]\d{0,9}$/.test(key) && isState(state));
+  if (entries.length > CHOICE_TARGETS_MAX) return null;
+  const targets: Record<string, BudgetFileLookalikeTarget> = {};
+  for (const [line, raw] of entries) {
+    const target = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+    if (!/^[1-9]\d{0,9}$/.test(line) || !isLine(target.item) || !isState(target.state)) return null;
+    targets[line] = { item: target.item, state: target.state };
+  }
+  return targets;
 }
 
 /**
@@ -328,13 +336,11 @@ export function parseBudgetFileChoices(raw: unknown): BudgetFileChoice[] {
       seen.add(key);
       continue;
     }
-    if (item.kind === 'lookalikes' && (item.action === 'create' || item.action === 'update')) {
-      const states = item.states;
-      if (states !== undefined && (item.action !== 'update' || !isStates(states))) throw new Error('The choices are not valid.');
+    if (item.kind === 'lookalikes' && LOOKALIKE_ACTIONS.has(item.action as string)) {
+      const targets = item.targets === undefined ? undefined : targetsOf(item.targets);
+      if (targets === null) throw new Error('The choices are not valid.');
       if (!seen.has('lookalikes')) {
-        choices.push(item.action === 'create'
-          ? { kind: 'lookalikes', action: 'create' }
-          : { kind: 'lookalikes', action: 'update', ...(states !== undefined ? { states: { ...(states as Record<string, string>) } } : {}) });
+        choices.push({ kind: 'lookalikes', action: item.action as 'ignore' | 'create' | 'update', ...(targets ? { targets } : {}) });
       }
       seen.add('lookalikes');
       continue;
