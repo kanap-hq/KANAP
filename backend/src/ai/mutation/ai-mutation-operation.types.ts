@@ -54,6 +54,13 @@ export interface AiMutationOperation<TInput = unknown> {
   replacesPendingPreview?(pending: AiMutationPreview, replacement: AiMutationPreview): boolean;
 
   /**
+   * With `replacesPendingPreview`: what the previews that replace one another share, read from an
+   * input or a stored `mutation_input` (an import's attached file). The creations and the choices of
+   * one scope in a conversation take turns (an advisory lock), so that one preview stays pending.
+   */
+  replacementScope?(input: Record<string, unknown>): string | null;
+
+  /**
    * Whether a pending preview can be approved as it stands (an import whose check refused the file
    * cannot). "Approve all" leaves out the ones that cannot; approved on its own, one fails.
    */

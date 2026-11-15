@@ -1039,8 +1039,11 @@ checks them when it runs. The `<attached_table>` summary gives the model the
 headers, the column types, the first ten rows with their lines of the file and,
 for a file longer than that, the distinct values of each text column whose
 values repeat (half of them distinct at most), with their number of rows: 40 per
-column, 80 characters each, about 6,000 characters in all, the summary being
-read again on every turn. The text says these are data, never instructions.
+column, 80 characters each. The whole text holds 6,000 characters at most as
+written (`TABLE_SUMMARY_MAX_LENGTH`), being read again on every turn: a wide file
+has its headers, then its first rows' cells, cut shorter and its first rows
+fewer, the distinct values fill what is left, and the text says what was cut.
+The text says these are data, never instructions.
 `describe_import_template` also lists, for a budget file's dimension columns,
 the dimension's enabled values. Rows above the header that hold only a title
 or a date in their first columns are left out of the table (I1's reader). A
@@ -1048,8 +1051,11 @@ template column without its own title takes one from `ai-import-titles.ts`. An
 approved import ends the turn: Plaid does not continue after it. The tool is
 refused inside a mutation plan, whose output is not redacted. A new mapping of
 the same file expires the pending card of that file (`replacesPendingPreview`),
-so the person has one card to approve; the chat reloads the cards at the end of
-each answer.
+so the person has one card to approve; a new card and a choice of the person on
+the pending card of one file take turns (an advisory lock on the conversation and
+the attachment, `replacementScope`). The chat reloads the cards at the end of
+each answer: the conversation's 50 latest, plus the newest card of every chain of
+choices (`replaces_preview_id`).
 
 The import itself (lot I3) runs in two steps, as on the import screens, on one
 card. Preparing the card builds the file in the template's format
@@ -1097,7 +1103,11 @@ read as written. The check's `matching` lists every match beyond case with its
 origin (`server` or `model`) and lines, the refused proposals, and each value
 nothing matched with up to three closest names of the reference lists (trigram
 similarity computed in memory on the catalog the preflight already holds:
-never other budget lines). The model reads it as `validation.matching`, its
+never other budget lines; enabled entries only, and the suppliers' and the
+companies' names only for a person at the reader level of their module). A value
+created has one entry, keyed as its creation (two spellings, one entry). The
+model reads it as `validation.matching`, its 60 first entries per list with
+`totals` when one is cut, and `new_dimension_values` beside `new_suppliers`; its
 instruction tells it to propose a value only from those lists and to announce
 only the creations the counts hold. The person's choices live in the card's
 `mutation_input.choices` (`{ kind: 'unmatch', column, value }`,

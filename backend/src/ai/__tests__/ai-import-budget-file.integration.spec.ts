@@ -455,6 +455,11 @@ async function testEnglishSampleLinesCreateNothing(h: Harness, runner: QueryRunn
   assert.equal(check.inserted, 8);
   assert.equal(check.new_suppliers, 0, 'no supplier created');
   assert.deepEqual(check.report.file.creates.dimensionValues, [], 'no dimension value created');
+  // The model reads first, in one sentence, that the approval creates nothing and what was matched.
+  assert.equal(Object.keys(card.import_mapping)[0], 'on_approval');
+  assert.match(card.import_mapping.on_approval, /^On approval: 8 lines created, 0 updated; 0 suppliers created; 0 dimension values created; 13 values of the file matched to existing ones: /);
+  assert.match(card.import_mapping.on_approval, /Retail → Magasins/);
+  assert.equal(check.on_approval, undefined, 'said once, at the head of the card');
   assert.deepEqual(matchesOf(check), [
     'analytics:business_domain|Retail→Magasins|model',
     'analytics:business_domain|Shared IT→IT partagée|model',
@@ -633,23 +638,42 @@ async function testScreenRoutes(h: Harness, runner: QueryRunner, s: Seed) {
 }
 
 // The choice route: the AI surface's checks first (the frozen workspace is refused there), then the
-// card of the person and of the conversation.
+// card of the person and of the conversation. The freeze runs its real path: the cloud's billing
+// configured (the spec's environment has none, as on premises), a subscription past due beyond its
+// grace, and the policy's own check, which the harness otherwise stubs.
 async function testChoiceRoute(h: Harness, runner: QueryRunner, s: Seed) {
   const { AiImportFileController } = require('../import/ai-import-file.controller');
   const { AiPolicyService } = require('../ai-policy.service');
+  const { Features } = require('../../config/features');
   const controller = h.app.get(AiImportFileController);
   const policy = h.app.get(AiPolicyService);
   const admin = ctx(runner, s, 'admin');
   const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachEnglish(h), entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
   const req = { user: { sub: s.users.admin }, headers: {} };
   const tenant = { manager: runner.manager, tenantId: s.tenantId };
+  await runner.query(
+    `INSERT INTO subscriptions (tenant_id, status, stripe_subscription_id, stripe_customer_id, plan_name, seat_limit, active_seats,
+                                collection_method, latest_invoice_status, latest_invoice_created)
+     VALUES ($1, 'past_due', $2, $3, 'Kadratis Cloud', NULL, 1, 'charge_automatically', 'open', now() - interval '60 days')`,
+    [s.tenantId, `sub_${s.tenantId.slice(0, 8)}`, `cus_${s.tenantId.slice(0, 8)}`],
+  );
+  // The policy's own billing configuration (each module may hold its instance).
+  const stripe = policy.stripeConfig;
   const surface = policy.assertSurfaceAccess;
-  policy.assertSurfaceAccess = async () => { throw new Error('AI features are turned off: the subscription is frozen.'); };
+  const configured = stripe.isConfigured;
+  const chat = Features.AI_CHAT_ENABLED;
+  delete policy.assertSurfaceAccess;
+  stripe.isConfigured = () => true;
+  Features.AI_CHAT_ENABLED = true;
   try {
-    await assert.rejects(controller.choose(s.conversations.admin, card.preview_id, { choices: [] }, req, tenant), /frozen/);
+    await assert.rejects(controller.choose(s.conversations.admin, card.preview_id, { choices: [] }, req, tenant),
+      (error: any) => error?.getResponse?.()?.error === 'SUBSCRIPTION_FROZEN' && /frozen/i.test(error.message));
   } finally {
     policy.assertSurfaceAccess = surface;
+    stripe.isConfigured = configured;
+    Features.AI_CHAT_ENABLED = chat;
   }
+  assert.equal((await h.previews.getPreviewForUser(admin, card.preview_id)).status, 'pending', 'the frozen route changed nothing');
   await assert.rejects(controller.choose(s.conversations.budget, card.preview_id, { choices: [] }, req, tenant), /not found/);
   await assert.rejects(controller.choose(s.conversations.admin, card.preview_id, { choices: [{ kind: 'unmatch', column: 'name', value: 'x' }] }, req, tenant), /not valid/);
   const next = await controller.choose(s.conversations.admin, card.preview_id, { choices: [{ kind: 'create_suppliers', value: false }] }, req, tenant);
@@ -657,6 +681,175 @@ async function testChoiceRoute(h: Harness, runner: QueryRunner, s: Seed) {
   const listed = await h.previews.listConversationPreviews(admin, s.conversations.admin);
   assert.equal(listed.find((preview: any) => preview.preview_id === next.preview_id).replaces_preview_id, card.preview_id, 'kept on the list');
   console.log('  the choice route: frozen workspace, another conversation, bad choices refused: OK');
+}
+
+// Review of lot I1. A new card of the model for a file starts from the last card of the file in the
+// conversation, whatever its state: its choices, or none once it was imported (an older card's choices
+// never come back).
+async function testChoicesFollowTheLastCard(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const attachment = attachEnglish(h);
+  const input = { attachment_id: attachment, entity_type: 'budget_lines', columns: ENGLISH_MAPPING };
+  const first = await h.previews.createPreview(admin, 'prepare_import_mapping', input);
+  // The box unticked, then ticked again (no choice left): the third card is imported.
+  const second = await h.previews.replaceImportChoices(admin, first.preview_id, [{ kind: 'create_suppliers', value: false }]);
+  const third = await h.previews.replaceImportChoices(admin, second.preview_id, []);
+  const done = await h.previews.executePreview(admin, third.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const again = await h.previews.createPreview(admin, 'prepare_import_mapping', { ...input, assumptions: ['Une nouvelle carte.'] });
+  assert.deepEqual(again.import_mapping.validation.matching.choices, [], 'the imported card\'s chain is over: no choice comes back');
+  assert.deepEqual((await previewInput(runner, s, again.preview_id)).choices, []);
+  console.log('  a new card after an import starts afresh: OK');
+}
+
+// A check that refuses the file before reading its rows (no matching) keeps the choices it received.
+// The files Kad builds always carry the template's header: such a check is simulated on the mapping's
+// result.
+async function testRefusedCheckKeepsTheChoices(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachEnglish(h), entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
+  const prepare = h.mapping.prepareMapping;
+  h.mapping.prepareMapping = async (...args: unknown[]) => {
+    const prepared = await prepare.apply(h.mapping, args);
+    delete prepared.mapping.validation.matching;
+    return prepared;
+  };
+  try {
+    const chosen = [{ kind: 'create_suppliers', value: false }];
+    const next = await h.previews.replaceImportChoices(admin, card.preview_id, chosen);
+    assert.equal(next.import_mapping.validation.matching, undefined);
+    assert.deepEqual((await previewInput(runner, s, next.preview_id)).choices, chosen);
+  } finally {
+    delete h.mapping.prepareMapping;
+  }
+  console.log('  a check refused before its rows keeps the choices received: OK');
+}
+
+/** Previews of other files, written straight into the conversation, `minutes` from now. */
+async function otherPreviews(runner: QueryRunner, s: Seed, count: number, status: string, minutes: number): Promise<void> {
+  await runner.query(
+    `INSERT INTO ai_mutation_previews (tenant_id, conversation_id, user_id, tool_name, target_entity_type, mutation_input, current_values, status, expires_at, created_at)
+     SELECT $1, $2, $3, 'prepare_import_mapping', 'budget_lines',
+            jsonb_build_object('attachment_id', gen_random_uuid()::text, 'entity_type', 'budget_lines', 'n', n),
+            '{}'::jsonb, $4, now() + interval '1 day', now() + make_interval(mins => $5 + n)
+       FROM generate_series(1, $6) AS n`,
+    [s.tenantId, s.conversations.admin, s.users.admin, status, minutes, count],
+  );
+}
+
+// A conversation of many cards: the newest card of a chain of choices is listed however many cards
+// came after it, and a card asked again is found however many cards came before it.
+async function testManyCardsInTheConversation(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const attachment = attachEnglish(h);
+  const input = { attachment_id: attachment, entity_type: 'budget_lines', columns: ENGLISH_MAPPING };
+  // Fifty cards of other files before: the same card asked again is the same card.
+  await otherPreviews(runner, s, 50, 'executed', -600);
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', input);
+  const same = await h.previews.createPreview(admin, 'prepare_import_mapping', input);
+  assert.equal(same.preview_id, card.preview_id, 'found past the fifty older cards');
+  // A choice, then fifty cards of other files after it: the chain's newest card is still listed.
+  const next = await h.previews.replaceImportChoices(admin, card.preview_id, [{ kind: 'create_suppliers', value: false }]);
+  await otherPreviews(runner, s, 50, 'rejected', 60);
+  const listed = await h.previews.listConversationPreviews(admin, s.conversations.admin);
+  const shown = listed.find((preview: any) => preview.preview_id === next.preview_id);
+  assert.ok(shown, 'the newest card of the chain is listed');
+  assert.equal(shown.replaces_preview_id, card.preview_id);
+  assert.equal(listed.length, 51);
+  assert.equal(listed[0].preview_id, next.preview_id, 'in its place in time');
+  console.log('  many cards: the chain\'s newest card listed, the same card found: OK');
+}
+
+/**
+ * Seeds a tenant that other connections can see, for the race, then purges it. The usual transaction
+ * rolls the seed back, which hides every seeded row from a second connection.
+ */
+async function withCommittedTenant(h: Harness, test: (s: Seed) => Promise<void>) {
+  const { purgeTenantTables } = require('../../admin/tenants/tenant-data-purge');
+  const { TENANT_PURGE_TABLES } = require('../../admin/tenants/tenant-purge.inventory');
+  const { withTenantExecution } = require('../../common/tenant-runner');
+  const setup = h.dataSource.createQueryRunner();
+  await setup.connect();
+  await setup.startTransaction();
+  let s: Seed;
+  try {
+    s = await seed(setup);
+    await setup.commitTransaction();
+  } catch (error) {
+    if (setup.isTransactionActive) await setup.rollbackTransaction();
+    throw error;
+  } finally {
+    await setup.release();
+  }
+  try {
+    await test(s);
+  } finally {
+    await withTenantExecution(h.dataSource, s.tenantId, (manager: any) => purgeTenantTables(manager, TENANT_PURGE_TABLES))
+      .catch((error: unknown) => console.error(`could not purge ${s.tenantId}:`, error));
+    await h.dataSource.query(`DELETE FROM tenants WHERE id = $1`, [s.tenantId])
+      .catch((error: unknown) => console.error(`could not delete ${s.tenantId}:`, error));
+  }
+}
+
+async function tenantTransaction(h: Harness, s: Seed): Promise<QueryRunner> {
+  const runner = h.dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [s.tenantId]);
+  return runner;
+}
+
+/** Waits until the connection of `pid` waits on a lock. */
+async function waitForLockWait(runner: QueryRunner, pid: number): Promise<void> {
+  const deadline = Date.now() + 60000;
+  while (Date.now() < deadline) {
+    const [row] = await runner.query(`SELECT wait_event_type FROM pg_stat_activity WHERE pid = $1`, [pid]);
+    if (row?.wait_event_type === 'Lock') return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error('The second transaction never waited on a lock.');
+}
+
+// The race of two tabs: a choice on the pending card (transaction 1) and a new card of the model for
+// the same file (transaction 2) at once. They take turns: one card stays pending, the model's, which
+// keeps the person's choice; the two never both approve the file.
+async function testChoiceAndNewCardRace(h: Harness) {
+  await withCommittedTenant(h, async (s) => {
+    const attachment = attachWorkbook(h);
+    const input = { attachment_id: attachment, entity_type: 'budget_lines', columns: MAPPING };
+    const setup = await tenantTransaction(h, s);
+    const card = await h.previews.createPreview(ctx(setup, s, 'admin'), 'prepare_import_mapping', input);
+    await setup.commitTransaction();
+    await setup.release();
+
+    const first = await tenantTransaction(h, s);
+    const second = await tenantTransaction(h, s);
+    const watcher = await tenantTransaction(h, s);
+    try {
+      const chosen = [{ kind: 'create_suppliers', value: false }];
+      const replaced = await h.previews.replaceImportChoices(ctx(first, s, 'admin'), card.preview_id, chosen);
+      const [{ pid }] = await second.query('SELECT pg_backend_pid() AS pid');
+      const model = h.previews.createPreview(ctx(second, s, 'admin'), 'prepare_import_mapping', { ...input, assumptions: ['Les montants sont en euros.'] });
+      model.catch(() => undefined);
+      await waitForLockWait(watcher, pid);
+      await first.commitTransaction();
+      const created = await model;
+      await second.commitTransaction();
+      const pending = await watcher.query(
+        `SELECT id, mutation_input->'choices' AS choices FROM ai_mutation_previews
+          WHERE tenant_id = $1 AND conversation_id = $2 AND status = 'pending' AND mutation_input->>'attachment_id' = $3`,
+        [s.tenantId, s.conversations.admin, attachment],
+      );
+      assert.deepEqual(pending.map((row: any) => row.id), [created.preview_id], `one card pending, the model's (the choice made ${replaced.preview_id})`);
+      assert.deepEqual(pending[0].choices, chosen, 'the model\'s card keeps the person\'s choice');
+    } finally {
+      for (const runner of [first, second, watcher]) {
+        if (runner.isTransactionActive) await runner.rollbackTransaction().catch(() => undefined);
+        await runner.release();
+      }
+    }
+  });
+  console.log('  a choice and a new card at once: one card pending, with the choice: OK');
 }
 
 async function inFrenchTenant(harness: Harness, test: (h: Harness, runner: QueryRunner, s: Seed) => Promise<void>) {
@@ -692,6 +885,10 @@ async function run() {
     await inFrenchTenant(harness, testSuppliersBox);
     await inFrenchTenant(harness, testScreenRoutes);
     await inFrenchTenant(harness, testChoiceRoute);
+    await inFrenchTenant(harness, testChoicesFollowTheLastCard);
+    await inFrenchTenant(harness, testRefusedCheckKeepsTheChoices);
+    await inFrenchTenant(harness, testManyCardsInTheConversation);
+    await testChoiceAndNewCardRace(harness);
     await inTenant(harness, testOneCardOneApproval);
     await inTenant(harness, testSuppliersNeedTheirRight);
     await inTenant(harness, testApproveAllLeavesOutARefusedCard);

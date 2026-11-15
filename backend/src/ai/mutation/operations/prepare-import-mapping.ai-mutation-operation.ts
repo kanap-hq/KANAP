@@ -107,7 +107,10 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'The card lists every match and the person may undo one. '
       + 'The card has a "Create missing suppliers" box, ticked unless the person unticked it, for a person who may create suppliers '
       + '(`matching.create_suppliers`): `new_suppliers` counts the suppliers the approval creates and the card lists them; '
-      + 'the dimension values it creates are the `matching.candidates` of outcome create. Announce only what these hold: none when they are empty. '
+      + '`new_dimension_values` counts the dimension values the approval creates, and the `matching.candidates` of outcome create name them '
+      + '(one entry per value created; `matching.totals` gives the length of a list cut to its first entries). '
+      + '`import_mapping.on_approval` says in one sentence what the approval creates, by name, and what the check matched: '
+      + 'announce exactly that, never a creation it does not name (none when it says 0), and call a matched value matched. '
       + 'The person\'s choices on the card (`matching.choices`) are kept when you call again for the same file. '
       + 'A new card for the same file closes the pending one at once: it can no longer be approved, so do not warn the person about it. '
       + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say which columns and lines they are on, '
@@ -154,30 +157,41 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         filename: mapping.filename,
         columns: input.columns,
         assumptions: input.assumptions ?? [],
-        // The choices the check followed: an undone match the file no longer makes is dropped.
-        ...(budget ? { choices: mapping.validation?.matching?.choices ?? [] } : {}),
+        // The choices the check followed: an undone match the file no longer makes is dropped. A check
+        // that refused the file before reading its rows followed none: the choices are kept as received.
+        ...(budget ? { choices: mapping.validation?.matching ? mapping.validation.matching.choices : choices ?? [] } : {}),
       },
       currentValues: { import_mapping: mapping },
     };
   }
 
-  /** The choices of the person's last card of this file in the conversation, not imported yet. */
+  /**
+   * The choices of the person's last card of this file in the conversation, whatever its state (a
+   * card replaced by a choice is expired, and the card that replaced it holds the choices): none once
+   * that card was imported, the next import of the file starts afresh.
+   */
   private async lastChoices(context: AiExecutionContextWithManager, attachmentId: string): Promise<BudgetFileChoice[]> {
     if (!context.conversationId) return [];
-    const [last]: Array<{ choices: unknown }> = await context.manager.query(
-      `SELECT mutation_input->'choices' AS choices
+    const [last]: Array<{ status: string; choices: unknown }> = await context.manager.query(
+      `SELECT status, mutation_input->'choices' AS choices
          FROM ai_mutation_previews
         WHERE tenant_id = $1 AND conversation_id = $2 AND user_id = $3 AND tool_name = $4
-          AND mutation_input->>'attachment_id' = $5 AND status <> 'executed'
+          AND mutation_input->>'attachment_id' = $5
         ORDER BY created_at DESC, id DESC
         LIMIT 1`,
       [context.tenantId, context.conversationId, context.userId, this.toolName, attachmentId],
     );
+    if (!last || last.status === 'executed') return [];
     try {
-      return parseBudgetFileChoices(last?.choices ?? []);
+      return parseBudgetFileChoices(last.choices ?? []);
     } catch {
       return [];
     }
+  }
+
+  /** The cards that replace one another: those of one attached file. */
+  replacementScope(input: Record<string, unknown>): string | null {
+    return typeof input?.attachment_id === 'string' ? input.attachment_id : null;
   }
 
   /** A new mapping of the same file replaces the pending one: the person has one card to approve. */
