@@ -30,6 +30,7 @@ import { csvExportFormat } from '../common/csv/csv-export.service';
 import { parseExportFormat } from '../common/xlsx/format';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { creationContextOf, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { resolveToUuid } from '../common/resolve-item-id';
 
 /**
  * The list's `covered_application` filter, for a reader of the applications only (a Business
@@ -172,7 +173,11 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id')
-  get(@Param('id') id: string, @Req() req: any) { return this.svc.get(id, { manager: req?.queryRunner?.manager }); }
+  async get(@Param('id') idOrRef: string, @Req() req: any) {
+    // The record read alone takes the reference (CTR-2); the other routes keep the uuid (plan R4).
+    // Resolved under the request's data access: a contract out of a limited person's reach is not found.
+    return this.svc.get(await resolveToUuid(idOrRef, 'contract', req?.queryRunner?.manager), { manager: req?.queryRunner?.manager });
+  }
 
   @ShareRateLimit()
   @UseGuards(PermissionGuard)

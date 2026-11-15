@@ -437,6 +437,35 @@ async function testEditable(app: INestApplication): Promise<void> {
   console.log('  editable: false through a line, true in an edit node, absent unscoped, on the detail, the list and the writes: OK');
 }
 
+/**
+ * The record read by its reference (lot R1 of 26.11.9): `CTR-n` and the bare number open the
+ * contract a limited person reaches, and name nothing for one out of reach, as its uuid does.
+ */
+async function testReference(app: INestApplication): Promise<void> {
+  const { persons: p, contracts: c } = s;
+  const numberOf = async (id: string) => (await scalar<{ n: number }>(`SELECT item_number AS n FROM contracts WHERE id = $1`, [id])).n;
+  const reached = await numberOf(c.CF);
+  const hidden = await numberOf(c.CH);
+  for (const ref of [`CTR-${reached}`, `ctr-${reached}`, String(reached)]) {
+    const res = await call(app, 'GET', `contracts/${ref}`, p.rita);
+    assert.equal(res.status, 200, `${ref}: ${res.text}`);
+    assert.equal(res.body.id, c.CF, `${ref} opens the contract it names`);
+    assert.equal(res.body.item_number, reached, `${ref}: the record carries its number`);
+  }
+  const byUuid = await call(app, 'GET', `contracts/${c.CH}`, p.rita);
+  assert.equal(byUuid.status, 404, `out of reach by its uuid: ${byUuid.text}`);
+  for (const ref of [`CTR-${hidden}`, String(hidden)]) {
+    const res = await call(app, 'GET', `contracts/${ref}`, p.rita);
+    assert.equal(res.status, 404, `out of reach by ${ref}, as by its uuid: ${res.text}`);
+  }
+  const unscoped = await call(app, 'GET', `contracts/CTR-${hidden}`, p.ulla);
+  assert.equal(unscoped.status, 200, unscoped.text);
+  assert.equal(unscoped.body.id, c.CH, 'an unscoped person opens it by its reference');
+  const otherFamily = await call(app, 'GET', `contracts/SUP-${reached}`, p.ulla);
+  assert.equal(otherFamily.status, 400, `another family's reference is refused: ${otherFamily.text}`);
+  console.log('  reference: CTR-n and the number open a reached contract, an out-of-reach one is not found as by its uuid: OK');
+}
+
 async function testCostCentre(app: INestApplication): Promise<void> {
   const { persons: p, contracts: c } = s;
   const initial = await call(app, 'GET', `contracts/${c.CE}`, p.marta);
@@ -695,6 +724,7 @@ async function run(): Promise<void> {
     app = await createApp();
     await testCreateAndUpdate(app);
     await testEditable(app);
+    await testReference(app);
     await testChildWrites(app);
     await testCostCentre(app);
     await testLineOpenedContract(app);

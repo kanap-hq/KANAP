@@ -2,7 +2,10 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { parseItemNumber } from './parse-item-number';
 
-export type EntityType = 'task' | 'request' | 'project' | 'document' | 'spend' | 'capex' | 'incident' | 'contributor' | 'technology';
+export type EntityType =
+  | 'task' | 'request' | 'project' | 'document' | 'spend' | 'capex' | 'incident' | 'contributor' | 'technology'
+  // Numbered by the database at insertion (migration 1856240000000).
+  | 'supplier' | 'company' | 'contact' | 'department' | 'contract';
 
 /** The prefix a reference of each type carries, the one the "expected" message names. */
 const EXPECTED_PREFIX: Record<EntityType, string> = {
@@ -15,6 +18,11 @@ const EXPECTED_PREFIX: Record<EntityType, string> = {
   incident: 'INC',
   contributor: 'MEM',
   technology: 'TEC',
+  supplier: 'SUP',
+  company: 'COMP',
+  contact: 'CTCT',
+  department: 'DEPT',
+  contract: 'CTR',
 };
 
 /**
@@ -28,7 +36,7 @@ const ALSO_ACCEPTED_PREFIXES: Partial<Record<EntityType, readonly string[]>> = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** `CTR` is the reference of a contract, and was the one of a contributor: a type reads it as another family's. */
-const ITEM_REF_RE = /^(T|PRJ|REQ|DOC|OPX|CPX|INC|MEM|CTR|TEC)-(\d+)$/i;
+const ITEM_REF_RE = /^(T|PRJ|REQ|DOC|OPX|CPX|INC|MEM|CTR|TEC|SUP|COMP|CTCT|DEPT)-(\d+)$/i;
 /** A reference with a prefix only some types accept (`BL-n`): another type reads it as malformed. */
 const OTHER_REF_RE = /^([A-Z]+)-(\d+)$/i;
 
@@ -162,6 +170,12 @@ export async function resolveToUuid(
     incident: 'SELECT id FROM incidents WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
     contributor: 'SELECT id FROM portfolio_team_member_configs WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
     technology: 'SELECT id FROM technologies WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    supplier: 'SELECT id FROM suppliers WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    company: 'SELECT id FROM companies WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    contact: 'SELECT id FROM contacts WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    department: 'SELECT id FROM departments WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
+    // Under the request's data access too: a contract outside a limited person's reach is not found.
+    contract: 'SELECT id FROM contracts WHERE tenant_id = app_current_tenant() AND item_number = $1 LIMIT 1',
   };
 
   // `spend`: the legacy number is tried for an OPX reference only (BL-n and plain numbers are item numbers).
