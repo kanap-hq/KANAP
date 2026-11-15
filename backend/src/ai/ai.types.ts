@@ -571,12 +571,23 @@ export type AiImportRunDto = {
   new_dimension_values?: number;
   /**
    * The budget file's check: the new rows that look like a line the person reads (`looks_like`, its
-   * reference) or an earlier row of the file (`looks_like_file_line`), on the lines of the person's
-   * file. Present when there are some; `first` holds the first ones, as the card lists them.
+   * reference, the `reason` and what the check does with the row, `outcome`) or an earlier row of the
+   * file (`looks_like_file_line`), on the lines of the person's file. Present when there are some;
+   * `first` holds the first ones. A row that looks like a stored line is left out unless the person
+   * chose otherwise (lot I2 of 26.11.9): `ignored`, `created_anyway`, `updated` count them.
    */
   similar_lines?: {
     count: number;
-    first: Array<{ file_line: number; looks_like?: string; looks_like_file_line?: number }>;
+    ignored?: number;
+    created_anyway?: number;
+    updated?: number;
+    first: Array<{
+      file_line: number;
+      looks_like?: string;
+      reason?: 'title_supplier' | 'amounts' | 'close_title';
+      outcome?: 'ignored' | 'created' | 'updated';
+      looks_like_file_line?: number;
+    }>;
     note: string;
   };
   /**

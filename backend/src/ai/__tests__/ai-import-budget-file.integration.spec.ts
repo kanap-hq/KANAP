@@ -64,7 +64,7 @@ async function createHarness(): Promise<Harness> {
  * writes it (fixture-dimensions.mjs: "Retail" is "Magasins"), and the eight lines themselves,
  * translated, loaded through the budget file of the screen.
  */
-async function seedFrench(h: Harness, runner: QueryRunner): Promise<Seed> {
+async function seedFrench(h: Harness, runner: QueryRunner, seeding: { lines?: boolean } = {}): Promise<Seed> {
   const { ensureRecommendedDimensions, RECOMMENDED_DIMENSION_KEYS } = require('../../analytics/recommended-dimensions.seed');
   const tenantId = randomUUID();
   const slug = `ai-i1-${tenantId.slice(0, 8)}`;
@@ -118,6 +118,8 @@ async function seedFrench(h: Harness, runner: QueryRunner): Promise<Seed> {
     );
   }
   const s = { tenantId, users, conversations };
+  // Without the lines: the English rows are no lookalikes of them (lot I2), for the tests of the matching.
+  if (seeding.lines === false) return s;
   // The eight lines, as the French sample data holds them.
   const french = [
     'nature,name,company_name,account_number,supplier_name,currency,analytics:default,analytics:it_tower,analytics:business_domain,analytics:priority,analytics:recurrence,budget_' + YEAR,
@@ -172,20 +174,24 @@ function screenCaller(h: Harness, runner: QueryRunner, s: Seed, user: UserKey, i
  * OPEX lines with their suppliers, three CAPEX lines. Its business domains are Fried's: Retail,
  * Shared IT, Supply chain.
  */
-function englishWorkbook(): Buffer {
+function englishWorkbook(options: { microsoft?: number; title?: boolean } = {}): Buffer {
   const { writeXlsx } = require('../../common/xlsx');
   const money = (value: number) => ({ kind: 'number' as const, value });
+  const headers = ['Type', 'Product', 'Supplier', 'Company', 'Account', 'Currency', 'Cost pool', 'IT tower', 'Business domain', 'Priority', 'Recurrence', `Budget ${YEAR}`];
+  // `title`: a title and a blank row above the header, the rows on lines 4 to 11 of the person's file.
+  const above = options.title ? [headers.map(() => null), headers] : [];
   return writeXlsx({
     language: 'en',
     sheets: [{
       name: 'Budget',
       header: 'plain',
-      headers: ['Type', 'Product', 'Supplier', 'Company', 'Account', 'Currency', 'Cost pool', 'IT tower', 'Business domain', 'Priority', 'Recurrence', `Budget ${YEAR}`],
+      headers: options.title ? ['Budget IT', ...headers.slice(1).map(() => '')] : headers,
       rows: [
+        ...above,
         ['OPEX', 'Cegid Retail POS', 'Cegid', 'Fromage & Co SA', '612200', 'EUR', 'Software', 'Application', 'Retail', null, 'Recurring', money(88000)],
         ['OPEX', 'Shops — 4G backup', 'Orange Business', 'Fromage & Co SA', '616100', 'EUR', 'Telecom', 'Network', 'Retail', null, 'Recurring', money(19000)],
         ['OPEX', 'Contractor · EDI project manager · DIS-100', 'Fromatech Consulting', 'Fromage & Co SA', '621100', 'EUR', 'External labor', 'Application', 'Supply chain', null, 'One-off', money(163500)],
-        ['OPEX', 'Microsoft Enterprise (M365 + Azure + GitHub)', 'Microsoft', 'Fromage & Co SA', '612100', 'EUR', 'Software', 'End user', 'Shared IT', null, 'Recurring', money(650000)],
+        ['OPEX', 'Microsoft Enterprise (M365 + Azure + GitHub)', 'Microsoft', 'Fromage & Co SA', '612100', 'EUR', 'Software', 'End user', 'Shared IT', null, 'Recurring', money(options.microsoft ?? 650000)],
         ['OPEX', 'SAP S/4HANA Maintenance', 'SAP', 'Fromage & Co SA', '612200', 'EUR', 'Software', 'Application', 'ERP', null, 'Recurring', money(280000)],
         ['CAPEX', 'Data Center Refresh — Paris DC', null, 'Fromage & Co SA', '218300', 'EUR', 'Hardware', 'Compute', 'Shared IT', 'Mandatory', 'One-off', money(250000)],
         ['CAPEX', 'D2C E-commerce Platform — La Boutique', null, 'Fromage & Co SA', '205000', 'EUR', 'External labor', 'Application', 'E-commerce', 'High', 'One-off', money(120000)],
@@ -442,34 +448,55 @@ function matchesOf(check: any): string[] {
   return check.report.file.matching.matches.map((match: any) => `${match.column}|${match.value}→${match.target}|${match.origin}`).sort();
 }
 
-// Fried's case of 12/11 and 15/11 (P8): zero creation, by the server alone (the model gives no
-// `values`). The server matches the recommended dimensions and the sample data's own business domain
-// across languages; the suppliers and the company are the same names. Every match is on the card.
-// Each row follows its own nature (a CAPEX row of the same file is a CAPEX line).
-async function testEnglishSampleLinesCreateNothing(h: Harness, runner: QueryRunner, s: Seed) {
+// Fried's case of 12/11 (lot I2 of 26.11.9): the eight English lines look like the eight French ones
+// the workspace holds. The check leaves them out (P2): eight lookalikes with their reason, eight left
+// out, nothing created, nothing matched. Then "Create all anyway" (the matches of lot I1 come back,
+// nothing created by the server alone), "Create anyway" on one line (one line created), "Update BL-n"
+// on a file whose amount changed (that line updated, no other), and "Update all".
+async function testEnglishSampleLinesLookLikeExisting(h: Harness, runner: QueryRunner, s: Seed) {
   const admin = ctx(runner, s, 'admin');
   const before = await referenceCounts(runner, s);
   assert.equal(before.lines, 8, 'the workspace holds the eight lines, in French');
   assert.ok(ENGLISH_MAPPING.every((column) => !('values' in column)), 'no value given by the model');
-  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachEnglish(h), entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
+  const attachment = attachEnglish(h);
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
   const check = card.import_mapping.validation;
-  const created = { suppliers: check.new_suppliers, values: check.report.file.creates.dimensionValues };
-  console.log(`  the original case, what the check creates: ${JSON.stringify(created)}`);
-  const template = await h.mapping.describeTemplate(admin, 'budget_lines', 'fr');
-  const domain = template.columns.find((column: any) => column.column === 'analytics:business_domain');
-  assert.deepEqual(domain.values, frenchDomainNames(), 'the model reads the dimension\'s enabled values');
-  assert.equal(domain.title, 'Domaine métier');
+  console.log(`  the original case, the check: ${JSON.stringify({ inserted: check.inserted, updated: check.updated, skipped: check.skipped, new_suppliers: check.new_suppliers, lookalikes: check.report.file.lookalikes?.count ?? check.report.file.warnings.duplicatesCount })}`);
   assert.equal(check.ok, true, JSON.stringify({ issues: check.issues, errors: check.report.file.errors }));
-  assert.equal(check.inserted, 8);
-  assert.equal(check.new_suppliers, 0, 'no supplier created');
-  assert.deepEqual(check.report.file.creates.dimensionValues, [], 'no dimension value created');
-  // The model reads first, in one sentence, that the approval creates nothing and what was matched,
-  // and the lines it creates by nature (five OPEX and three CAPEX), so that it never counts them itself.
-  assert.equal(Object.keys(card.import_mapping)[0], 'on_approval');
-  assert.match(card.import_mapping.on_approval, /^On approval: 8 lines created \(5 OPEX, 3 CAPEX\), 0 updated; 0 suppliers created; 0 dimension values created; 14 values of the file matched to existing ones: /);
-  assert.match(card.import_mapping.on_approval, /Retail → Magasins/);
-  assert.equal(check.on_approval, undefined, 'said once, at the head of the card');
-  assert.deepEqual(matchesOf(check), [
+  assert.equal(check.inserted, 0, 'nothing created');
+  assert.equal(check.updated, 0);
+  assert.equal(check.skipped, 8, 'eight rows left out');
+  assert.equal(check.new_suppliers, 0);
+  assert.deepEqual(check.report.file.creates.dimensionValues, []);
+  assert.deepEqual(check.matching.matches, [], 'a row left out matches nothing');
+  const lookalikes = check.report.file.lookalikes;
+  const french = await runner.query(`SELECT item_number::int AS n, product_name FROM spend_items WHERE tenant_id = $1 ORDER BY item_number`, [s.tenantId]);
+  const refOf = (name: string) => `BL-${french.find((row: any) => row.product_name === name).n}`;
+  assert.deepEqual(lookalikes.lines.map((entry: any) => [entry.line, entry.target.ref, entry.reason, entry.outcome]), [
+    [2, refOf('Caisses Cegid des magasins'), 'amounts', 'ignored'],
+    [3, refOf('Magasins — secours 4G'), 'amounts', 'ignored'],
+    [4, refOf('Prestataire · chef de projet EDI · DIS-100'), 'amounts', 'ignored'],
+    [5, refOf('Microsoft Enterprise (M365 + Azure + GitHub)'), 'title_supplier', 'ignored'],
+    [6, refOf('Maintenance SAP S/4HANA'), 'amounts', 'ignored'],
+    [7, refOf('Rénovation du data center de Paris'), 'amounts', 'ignored'],
+    [8, refOf('Plateforme e-commerce La Boutique'), 'amounts', 'ignored'],
+    [9, refOf('Magasins — remplacement des caisses'), 'amounts', 'ignored'],
+  ]);
+  assert.deepEqual([lookalikes.count, lookalikes.ignored, lookalikes.created, lookalikes.updated], [8, 8, 0, 0]);
+  assert.ok(lookalikes.lines.every((entry: any) => entry.updatable === true && /^[0-9a-f]{16}$/.test(entry.target.state)));
+  assert.equal(check.similar_lines.count, 8);
+  assert.deepEqual(check.similar_lines.first[0], { file_line: 2, looks_like: refOf('Caisses Cegid des magasins'), reason: 'amounts', outcome: 'ignored' });
+  assert.match(card.import_mapping.on_approval, /^On approval: 0 lines created, 0 updated; 0 suppliers created; 0 dimension values created; 0 values of the file matched to existing ones; 8 rows of the file look like existing lines: 8 left out, 0 created anyway, 0 updating the line they look like\.$/);
+
+  // "Create all anyway": the eight rows are new lines again, and lot I1's matches are back.
+  const all = await h.previews.replaceImportChoices(admin, card.preview_id, [{ kind: 'lookalikes', action: 'create' }]);
+  const created = all.import_mapping.validation;
+  assert.equal(created.ok, true);
+  assert.equal(created.inserted, 8);
+  assert.equal(created.skipped, 0);
+  assert.equal(created.new_suppliers, 0, 'no supplier created');
+  assert.deepEqual(created.report.file.creates.dimensionValues, [], 'no dimension value created');
+  assert.deepEqual(matchesOf(created), [
     'analytics:business_domain|Retail→Magasins|server',
     'analytics:business_domain|Shared IT→IT partagée|server',
     'analytics:business_domain|Supply chain→Chaîne logistique|server',
@@ -485,31 +512,67 @@ async function testEnglishSampleLinesCreateNothing(h: Harness, runner: QueryRunn
     'analytics:recurrence|One-off→Ponctuel|server',
     'analytics:recurrence|Recurring→Récurrent|server',
   ]);
-  // On the lines of the person's file (header on line 1), for the card and for the model.
-  const retail = check.report.file.matching.matches.find((match: any) => match.value === 'Retail');
+  const retail = created.report.file.matching.matches.find((match: any) => match.value === 'Retail');
   assert.deepEqual(retail.lines, [2, 3, 9]);
-  assert.equal(retail.name, 'Domaine métier');
   assert.equal(retail.reason, 'translation', 'the server, another language');
-  assert.deepEqual(check.matching.matches.find((match: any) => match.value === 'Retail').file_lines, [2, 3, 9]);
-  assert.deepEqual(check.matching.candidates, [], 'nothing left to match');
-  assert.deepEqual(check.matching.create_suppliers, { allowed: true, value: true }, 'the box, ticked');
-  assert.deepEqual(card.import_mapping.validation.matching.choices, []);
+  assert.match(all.import_mapping.on_approval, /^On approval: 8 lines created \(5 OPEX, 3 CAPEX\), 0 updated; .*8 rows of the file look like existing lines: 0 left out, 8 created anyway, 0 updating/);
+  assert.deepEqual(created.matching.choices, [{ kind: 'lookalikes', action: 'create' }]);
 
-  const done = await h.previews.executePreview(admin, card.preview_id);
+  // "Create anyway" on the CAPEX data center row only: one line created, a CAPEX line.
+  const one = await h.previews.replaceImportChoices(admin, all.preview_id, [{ kind: 'lookalike', line: 7, action: 'create' }]);
+  assert.equal(one.import_mapping.validation.inserted, 1);
+  assert.equal(one.import_mapping.validation.skipped, 7);
+  const done = await h.previews.executePreview(admin, one.preview_id);
   assert.equal(done.status, 'executed', done.error_message ?? '');
-  const after = await referenceCounts(runner, s);
-  assert.deepEqual(after, { suppliers: before.suppliers, values: before.values, lines: 16 });
-  const lines = await runner.query(
-    `SELECT i.nature, i.product_name, c.name AS priority
-       FROM spend_items i
-       LEFT JOIN spend_item_analytics_values v ON v.tenant_id = i.tenant_id AND v.item_id = i.id
-       LEFT JOIN analytics_axes ax ON ax.tenant_id = v.tenant_id AND ax.id = v.axis_id AND ax.code = 'priority'
-       LEFT JOIN analytics_categories c ON c.tenant_id = v.tenant_id AND c.id = v.category_id AND ax.id IS NOT NULL
-      WHERE i.tenant_id = $1 AND i.product_name = 'Data Center Refresh — Paris DC' AND c.id IS NOT NULL`,
-    [s.tenantId],
-  );
-  assert.deepEqual(lines.map((line: any) => [line.nature, line.priority]), [['capex', 'Obligatoire']], 'a CAPEX row is a CAPEX line, with the existing value');
-  console.log('  the original case: eight English lines, nothing created, every match listed: OK');
+  assert.deepEqual(await referenceCounts(runner, s), { suppliers: before.suppliers, values: before.values, lines: 9 });
+  const [capex] = await runner.query(`SELECT nature FROM spend_items WHERE tenant_id = $1 AND product_name = 'Data Center Refresh — Paris DC'`, [s.tenantId]);
+  assert.equal(capex.nature, 'capex');
+
+  // "Update BL-n" on a file whose Microsoft amount changed: the line it looks like by its title and
+  // supplier is updated, its amount and nothing else; no other line moves.
+  const microsoft = refOf('Microsoft Enterprise (M365 + Azure + GitHub)');
+  const revised = randomUUID();
+  h.files.set(revised, { name: 'fromage budget EN v2.xlsx', buffer: englishWorkbook({ microsoft: 700000 }) });
+  const second = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: revised, entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
+  const target = second.import_mapping.validation.report.file.lookalikes.lines.find((entry: any) => entry.line === 5);
+  assert.deepEqual([target.target.ref, target.reason, target.outcome], [microsoft, 'title_supplier', 'ignored']);
+  const versionsBefore = await runner.query(
+    `SELECT i.item_number::int AS n, i.row_version::int AS rv FROM spend_items i WHERE i.tenant_id = $1 ORDER BY i.item_number`, [s.tenantId]);
+  const update = await h.previews.replaceImportChoices(admin, second.preview_id, [
+    { kind: 'lookalike', line: 5, action: 'update', item: target.target.item, state: target.target.state },
+  ]);
+  const updating = update.import_mapping.validation;
+  assert.equal(updating.ok, true, JSON.stringify(updating.issues));
+  assert.deepEqual([updating.inserted, updating.updated], [0, 1]);
+  assert.deepEqual(updating.report.file.changes.updatedLines, [{ line: 5, itemNumber: microsoft, fields: [`budget ${YEAR}`] }]);
+  const updated = await h.previews.executePreview(admin, update.preview_id);
+  assert.equal(updated.status, 'executed', updated.error_message ?? '');
+  const [total] = await runner.query(
+    `SELECT t.planned::numeric AS planned FROM spend_version_totals t JOIN spend_versions v ON v.tenant_id = t.tenant_id AND v.id = t.version_id
+       JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.spend_item_id
+      WHERE i.tenant_id = $1 AND i.item_number = $2 AND v.budget_year = $3`, [s.tenantId, Number(microsoft.slice(3)), YEAR]);
+  assert.equal(Number(total.planned), 700000);
+  const versionsAfter = await runner.query(
+    `SELECT i.item_number::int AS n, i.row_version::int AS rv FROM spend_items i WHERE i.tenant_id = $1 ORDER BY i.item_number`, [s.tenantId]);
+  assert.deepEqual(versionsAfter.filter((row: any) => `BL-${row.n}` !== microsoft), versionsBefore.filter((row: any) => `BL-${row.n}` !== microsoft), 'no other line moved');
+
+  // "Update all" with the first file: every row updates the line it looks like.
+  const third = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
+  const everything = await h.previews.replaceImportChoices(admin, third.preview_id, [{ kind: 'lookalikes', action: 'update' }]);
+  const replayed = everything.import_mapping.validation;
+  assert.equal(replayed.ok, true, JSON.stringify(replayed.issues));
+  assert.deepEqual([replayed.inserted, replayed.skipped, replayed.report.file.lookalikes.updated], [0, 0, 8]);
+  // The data center row looks like the line created from it a moment ago (title and supplier): unchanged.
+  assert.equal(replayed.updated + replayed.unchanged, 8);
+  const followed = replayed.matching.choices[0];
+  assert.equal(followed.kind, 'lookalikes');
+  assert.equal(Object.keys(followed.states).length, 8, 'the check keeps the state of every line it updates');
+  const all8 = await h.previews.executePreview(admin, everything.preview_id);
+  assert.equal(all8.status, 'executed', all8.error_message ?? '');
+  const names = (await runner.query(`SELECT product_name FROM spend_items WHERE tenant_id = $1`, [s.tenantId])).map((row: any) => row.product_name);
+  assert.ok(names.includes('SAP S/4HANA Maintenance') && !names.includes('Maintenance SAP S/4HANA'), 'the title replaced');
+  assert.equal((await referenceCounts(runner, s)).lines, 9, 'nothing created');
+  console.log('  the original case: eight lookalikes left out, create anyway, update one, update all: OK');
 }
 
 // Dimensions of the workspace's own, outside the sample data: the server has no other language for
@@ -518,6 +581,57 @@ async function testEnglishSampleLinesCreateNothing(h: Harness, runner: QueryRunn
 // that list ("Retail" → "Distribution") and of a supplier it recognises ("AWS" → "Amazon Web
 // Services"), no near names of the cells, are accepted and listed with the origin model; a supplier
 // that does not exist is refused and listed.
+// Lot I2: a choice for one row names the line of the person's file. The card's check runs on the
+// built file (header on line 1), and the choice goes back and forth between the two: three cards in a
+// row of the model keep it on the same line.
+async function testChoiceKeepsItsLine(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const id = randomUUID();
+  h.files.set(id, { name: 'budget titré.xlsx', buffer: englishWorkbook({ title: true }) });
+  const input = { attachment_id: id, entity_type: 'budget_lines', columns: ENGLISH_MAPPING };
+  const first = await h.previews.createPreview(admin, 'prepare_import_mapping', input);
+  const lookalikes = first.import_mapping.validation.report.file.lookalikes.lines;
+  assert.deepEqual(lookalikes.map((entry: any) => entry.line), [4, 5, 6, 7, 8, 9, 10, 11], 'the lines of the person\'s file');
+  const microsoft = lookalikes.find((entry: any) => entry.reason === 'title_supplier');
+  assert.equal(microsoft.line, 7);
+  let card = await h.previews.replaceImportChoices(admin, first.preview_id, [
+    { kind: 'lookalike', line: 7, action: 'update', item: microsoft.target.item, state: microsoft.target.state },
+  ]);
+  for (const round of [1, 2, 3]) {
+    const check = card.import_mapping.validation;
+    assert.deepEqual(check.matching.choices.map((choice: any) => choice.line), [7], `card ${round}: the model's choices`);
+    assert.deepEqual((await previewInput(runner, s, card.preview_id)).choices.map((choice: any) => choice.line), [7], `card ${round}: the card's`);
+    assert.deepEqual(check.report.file.lookalikes.lines.filter((entry: any) => entry.outcome === 'updated').map((entry: any) => entry.line), [7]);
+    assert.equal(check.skipped, 7);
+    card = await h.previews.createPreview(admin, 'prepare_import_mapping', { ...input, assumptions: [`Card ${round + 1}.`] });
+  }
+  console.log('  a choice for one row keeps its line over three cards: OK');
+}
+
+// Lot I2: the line to update changed between the card and its approval. Nothing is written; the next
+// card names the change on the row, and the person chooses again.
+async function testUpdatedLineChangedBeforeApproval(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const attachment = attachEnglish(h);
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
+  const target = card.import_mapping.validation.report.file.lookalikes.lines.find((entry: any) => entry.line === 5);
+  const chosen = await h.previews.replaceImportChoices(admin, card.preview_id, [
+    { kind: 'lookalike', line: 5, action: 'update', item: target.target.item, state: target.target.state },
+  ]);
+  assert.equal(chosen.import_mapping.validation.ok, true);
+  await runner.query(`UPDATE spend_items SET notes = 'changed meanwhile' WHERE tenant_id = $1 AND item_number = $2`, [s.tenantId, target.target.item]);
+  const failed = await h.previews.executePreview(admin, chosen.preview_id);
+  assert.equal(failed.status, 'failed');
+  const [line] = await runner.query(`SELECT product_name FROM spend_items WHERE tenant_id = $1 AND item_number = $2`, [s.tenantId, target.target.item]);
+  assert.equal(line.product_name, 'Microsoft Enterprise (M365 + Azure + GitHub)');
+  const next = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
+  const issue = next.import_mapping.validation.issues.find((entry: any) => entry.code === 'BUDGET_FILE_LOOKALIKE_CHANGED');
+  assert.deepEqual(issue?.file_lines, [5], 'the change named on its row');
+  const errors = next.import_mapping.validation.report.file.errors;
+  assert.deepEqual(errors.map((error: any) => [error.line, error.code, error.params]), [[5, 'BUDGET_FILE_LOOKALIKE_CHANGED', { ref: target.target.ref }]]);
+  console.log('  a line changed before the approval: nothing written, the change named on its row: OK');
+}
+
 async function testOwnDimensionValueComesWithItsList(h: Harness, runner: QueryRunner, s: Seed) {
   const admin = ctx(runner, s, 'admin');
   const dimensionOf = async (code: string, name: string, sortOrder: number, names: string[]) => {
@@ -715,6 +829,35 @@ async function testSuppliersBox(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual(noRight.import_mapping.validation.matching.create_suppliers, { allowed: false, value: false }, 'no box');
   assert.equal(noRight.import_mapping.validation.ok, false);
   console.log('  the suppliers box: ticked, unticked by a choice, absent without the right: OK');
+}
+
+// Lot I2: the screen's dialog has the same lookalikes and choices. "Update BL-n" through its routes:
+// the load replays the choice and updates that line; a line changed between the check and the load is
+// refused on its row (the choice's state), or by the snapshot of the check: nothing written.
+async function testScreenLookalikes(h: Harness, runner: QueryRunner, s: Seed) {
+  const file = Buffer.from([
+    `item_number,nature,name,company_name,account_number,supplier_name,currency,budget_${YEAR}`,
+    ',opex,Microsoft Enterprise (M365 + Azure + GitHub),Fromage & Co SA,612100,Microsoft,EUR,700000',
+  ].join('\n'));
+  const screen = screenCaller(h, runner, s, 'admin');
+  const checked = await screen.preflight(file);
+  assert.deepEqual([checked.ok, checked.changes.created, checked.lookalikes.ignored], [true, 0, 1]);
+  const target = checked.lookalikes.lines[0].target;
+  const choices = JSON.stringify([{ kind: 'lookalike', line: 2, action: 'update', item: target.item, state: target.state }]);
+  const chosen = await screen.preflight(file, choices);
+  assert.deepEqual([chosen.ok, chosen.changes.updated, chosen.snapshot.lines.length], [true, 1, 1]);
+  await runner.query('SAVEPOINT screen_stale');
+  await runner.query(`UPDATE spend_items SET notes = 'changed meanwhile' WHERE tenant_id = $1 AND item_number = $2`, [s.tenantId, target.item]);
+  const stale = await screen.load(file, chosen.snapshot, choices);
+  assert.deepEqual([stale.ok, stale.errors.map((error: any) => [error.line, error.code])], [false, [[2, 'BUDGET_FILE_LOOKALIKE_CHANGED']]]);
+  // Without the state in the choice, the snapshot of the check refuses the load all the same.
+  const bare = JSON.stringify([{ kind: 'lookalike', line: 2, action: 'update', item: target.item }]);
+  await assert.rejects(screen.load(file, chosen.snapshot, bare), /Run the preflight again/);
+  await runner.query('ROLLBACK TO SAVEPOINT screen_stale');
+  const loaded = await screen.load(file, chosen.snapshot, choices);
+  assert.deepEqual([loaded.ok, loaded.inserted, loaded.updated, loaded.skipped], [true, 0, 1, 0]);
+  assert.equal((await referenceCounts(runner, s)).lines, 8, 'nothing created');
+  console.log('  the screen: the same lookalikes, "Update BL-n" loaded, a line changed meanwhile refused: OK');
 }
 
 // The screen's dialog shares the check: the same matches for the same file, and its routes take the
@@ -968,12 +1111,12 @@ async function testChoiceAndNewCardRace(h: Harness) {
   console.log('  a choice and a new card at once: one card pending, with the choice: OK');
 }
 
-async function inFrenchTenant(harness: Harness, test: (h: Harness, runner: QueryRunner, s: Seed) => Promise<void>) {
+async function inFrenchTenant(harness: Harness, test: (h: Harness, runner: QueryRunner, s: Seed) => Promise<void>, options: { lines?: boolean } = {}) {
   const runner = harness.dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
   try {
-    await test(harness, runner, await seedFrench(harness, runner));
+    await test(harness, runner, await seedFrench(harness, runner, options));
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
@@ -995,16 +1138,20 @@ async function inTenant(harness: Harness, test: (h: Harness, runner: QueryRunner
 async function run() {
   const harness = await createHarness();
   try {
-    await inFrenchTenant(harness, testEnglishSampleLinesCreateNothing);
+    await inFrenchTenant(harness, testEnglishSampleLinesLookLikeExisting);
     if (process.env.I1_ORIGINAL_CASE_ONLY) return;
+    await inFrenchTenant(harness, testChoiceKeepsItsLine);
+    await inFrenchTenant(harness, testUpdatedLineChangedBeforeApproval);
+    await inFrenchTenant(harness, testScreenLookalikes);
     await inFrenchTenant(harness, testOwnDimensionValueComesWithItsList);
-    await inFrenchTenant(harness, testUndoAMatch);
-    await inFrenchTenant(harness, testSuppliersBox);
-    await inFrenchTenant(harness, testScreenRoutes);
-    await inFrenchTenant(harness, testChoiceRoute);
-    await inFrenchTenant(harness, testChoicesFollowTheLastCard);
-    await inFrenchTenant(harness, testRefusedCheckKeepsTheChoices);
-    await inFrenchTenant(harness, testManyCardsInTheConversation);
+    // The matching of lot I1: the English rows are new lines there.
+    await inFrenchTenant(harness, testUndoAMatch, { lines: false });
+    await inFrenchTenant(harness, testSuppliersBox, { lines: false });
+    await inFrenchTenant(harness, testScreenRoutes, { lines: false });
+    await inFrenchTenant(harness, testChoiceRoute, { lines: false });
+    await inFrenchTenant(harness, testChoicesFollowTheLastCard, { lines: false });
+    await inFrenchTenant(harness, testRefusedCheckKeepsTheChoices, { lines: false });
+    await inFrenchTenant(harness, testManyCardsInTheConversation, { lines: false });
     await testChoiceAndNewCardRace(harness);
     await inTenant(harness, testOneCardOneApproval);
     await inTenant(harness, testSuppliersNeedTheirRight);

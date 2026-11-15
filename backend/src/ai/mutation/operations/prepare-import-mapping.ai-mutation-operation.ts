@@ -118,6 +118,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'announce exactly that, never a creation it does not name (none when it says 0), and call a matched value matched. '
       + 'Give no count of what the approval creates or updates (by nature included) other than the counts of that sentence, '
       + 'and never count the lines of the file yourself; lines in error, line numbers and amounts stay yours to cite. '
+      + 'Rows that look like a budget line the person reads (`similar_lines`) are left out unless the person chooses on the card '
+      + 'to create them anyway or to update that line; the card holds those choices: never announce such a row as created. '
       + 'The person\'s choices on the card (`matching.choices`) are kept when you call again for the same file. '
       + 'A new card for the same file closes the pending one at once: it can no longer be approved, so do not warn the person about it. '
       + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say which columns and lines they are on, '

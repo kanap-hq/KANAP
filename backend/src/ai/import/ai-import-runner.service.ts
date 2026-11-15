@@ -21,7 +21,13 @@ import { PortfolioProjectsCsvService } from '../../portfolio/portfolio-projects-
 import { PortfolioRequestsCsvService } from '../../portfolio/portfolio-requests-csv.service';
 import { BudgetFileService, canCreateSuppliers, readableLists } from '../../spend/budget-file/budget-file.service';
 import { createSuppliersChoice } from '../../spend/budget-file/matching';
-import type { BudgetFileMatching, BudgetFileMatchOptions, BudgetFileNatureCounts } from '../../spend/budget-file/types';
+import type {
+  BudgetFileChoice,
+  BudgetFileLookalikes,
+  BudgetFileMatching,
+  BudgetFileMatchOptions,
+  BudgetFileNatureCounts,
+} from '../../spend/budget-file/types';
 import type { BudgetNature } from '../../spend/budget-nature';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
@@ -56,6 +62,7 @@ type BudgetFileAnswer = {
   ok: boolean;
   inserted?: number;
   updated?: number;
+  skipped?: number;
   snapshot?: unknown;
   fileErrors?: string[];
   headerErrors?: string[];
@@ -68,6 +75,7 @@ type BudgetFileAnswer = {
   matching?: BudgetFileMatching;
   changes?: { created: number; updated: number; unchanged: number; byNature?: BudgetFileNatureCounts };
   warnings?: Record<string, unknown>;
+  lookalikes?: BudgetFileLookalikes;
 };
 
 /** How an import is called: the file built in its template's format, the check or the load, the person's language. */
@@ -133,7 +141,11 @@ export class AiImportRunnerService {
       size: content.length,
       buffer: content,
     } as Express.Multer.File;
-    const call: ImportCall = { file, dryRun: options.dryRun, language: options.language, context, matching: options.matching };
+    // A choice for one row names the line of the person's file: the built file's line goes to the check.
+    const matching = options.matching
+      ? { ...options.matching, choices: builtLineChoices(options.matching.choices ?? [], options.lines) }
+      : undefined;
+    const call: ImportCall = { file, dryRun: options.dryRun, language: options.language, context, matching };
     if (key === 'budget_lines') {
       const answer = await this.runBudgetFile(call);
       // A dimension value the check would create comes with its dimension's values, for the model to read.
@@ -245,6 +257,23 @@ export function personLine(row: number, lines: readonly number[]): number {
   return lines[row - 2] ?? row;
 }
 
+/**
+ * The choices of the card, whose rows are lines of the person's file, with the line of the built file
+ * instead (the inverse of `personLine`): a choice for a line the built file does not hold is dropped.
+ */
+export function builtLineChoices(choices: readonly BudgetFileChoice[], lines: readonly number[]): BudgetFileChoice[] {
+  return choices.flatMap((choice): BudgetFileChoice[] => {
+    if (choice.kind !== 'lookalike') return [choice];
+    const index = lines.indexOf(choice.line);
+    return index < 0 ? [] : [{ ...choice, line: index + 2 }];
+  });
+}
+
+/** The choices the check followed, on the lines of the person's file. */
+function personLineChoices(choices: readonly BudgetFileChoice[], lines: readonly number[]): BudgetFileChoice[] {
+  return choices.map((choice) => (choice.kind === 'lookalike' ? { ...choice, line: personLine(choice.line, lines) } : choice));
+}
+
 /** The lines an issue names for the model: the first ones, as the card lists its messages. */
 const KEPT_ISSUE_LINES = 20;
 
@@ -325,34 +354,46 @@ function relinedRow(params: Record<string, unknown>, lines: readonly number[]): 
   return typeof params.row === 'number' ? { ...params, row: personLine(params.row, lines) } : params;
 }
 
-const LOOKS_LIKE_LINE = 'BUDGET_FILE_LOOKS_LIKE_LINE';
 const LOOKS_LIKE_ROW = 'BUDGET_FILE_LOOKS_LIKE_ROW';
 
 /** The lookalikes the model reads: the first ones, as the card lists them at once. */
 const MODEL_LOOKALIKES = 10;
 
-const SIMILAR_LINES_NOTE = 'New rows of the file that look like a budget line the person can read, or an earlier row of '
-  + 'the file: the import would create them as new lines. Tell the person in one sentence before they approve '
-  + '(file line and reference); the card lists them.';
+const SIMILAR_LINES_NOTE = 'Rows of the file that look like a budget line the person can read (`looks_like`, with the reason): '
+  + 'the import leaves them out unless the person chooses on the card to create them anyway or to update that line '
+  + '(`outcome`: ignored, created, updated). Rows that look like an earlier row of the file (`looks_like_file_line`) '
+  + 'are created. Tell the person in one sentence before they approve (file line and reference); the card lists them '
+  + 'and holds the choices: never call a row left out created.';
 
 type Lookalike = { line?: number; code?: string; params?: Record<string, unknown> };
 
-/** The budget file's lookalikes for the model: their number and the first ones, on the person's lines. */
-function similarLines(warnings: Record<string, unknown> | undefined, lines: readonly number[]): AiImportRunDto['similar_lines'] {
-  const found = Array.isArray(warnings?.duplicates) ? warnings!.duplicates as Lookalike[] : [];
-  if (found.length === 0) return undefined;
-  const total = typeof warnings?.duplicatesCount === 'number' ? Math.max(warnings.duplicatesCount, found.length) : found.length;
+/**
+ * The budget file's lookalikes for the model, on the person's lines: the rows that look like a stored
+ * line (`lookalikes`, left out unless the person chose otherwise) and those that look like an earlier
+ * row of the file (`warnings.duplicates`), their number and the first ones.
+ */
+function similarLines(answer: BudgetFileAnswer, lines: readonly number[]): AiImportRunDto['similar_lines'] {
+  const stored = answer.lookalikes;
+  const warnings = answer.warnings;
+  const rows = Array.isArray(warnings?.duplicates) ? warnings!.duplicates as Lookalike[] : [];
+  const rowCount = typeof warnings?.duplicatesCount === 'number' ? Math.max(warnings.duplicatesCount, rows.length) : rows.length;
+  if ((stored?.count ?? 0) === 0 && rowCount === 0) return undefined;
   type Similar = NonNullable<AiImportRunDto['similar_lines']>['first'][number];
-  const first = found.slice(0, MODEL_LOOKALIKES).flatMap((item): Similar[] => {
+  const first: Similar[] = (stored?.lines ?? []).slice(0, MODEL_LOOKALIKES).map((entry) => ({
+    file_line: personLine(entry.line, lines), looks_like: entry.target.ref, reason: entry.reason, outcome: entry.outcome,
+  }));
+  for (const item of rows.slice(0, Math.max(0, MODEL_LOOKALIKES - first.length))) {
     const line = typeof item.line === 'number' ? personLine(item.line, lines) : 0;
-    if (line <= 0) return [];
-    if (item.code === LOOKS_LIKE_LINE && typeof item.params?.ref === 'string') return [{ file_line: line, looks_like: item.params.ref }];
-    if (item.code === LOOKS_LIKE_ROW && typeof item.params?.row === 'number') {
-      return [{ file_line: line, looks_like_file_line: personLine(item.params.row, lines) }];
+    if (line > 0 && item.code === LOOKS_LIKE_ROW && typeof item.params?.row === 'number') {
+      first.push({ file_line: line, looks_like_file_line: personLine(item.params.row, lines) });
     }
-    return [];
-  });
-  return { count: total, first, note: SIMILAR_LINES_NOTE };
+  }
+  return {
+    count: (stored?.count ?? 0) + rowCount,
+    ...(stored ? { ignored: stored.ignored, created_anyway: stored.created, updated: stored.updated } : {}),
+    first,
+    note: SIMILAR_LINES_NOTE,
+  };
 }
 
 /** Entries of each matching list the model reads: the card lists them all. */
@@ -400,7 +441,8 @@ function modelMatching(
         ? { dimension_values: [...dimensionValues.get(entry.column)!] }
         : {}),
     })),
-    choices: matching.choices,
+    // On the person's lines, as the card sends them: the next card keeps them without drift.
+    choices: personLineChoices(matching.choices, lines),
     create_suppliers: matching.createSuppliers,
     ...(cut ? { totals: { matches: totals.matches, refused_proposals: totals.refusedProposals, candidates: totals.candidates } } : {}),
     note: MATCHING_NOTE,
@@ -444,11 +486,18 @@ export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatc
   const changes = answer.changes ?? { created: 0, updated: 0, unchanged: 0 };
   // The lines by nature, from the check: the model never counts them in the file.
   const split = changes.byNature;
+  // The rows that look like a stored line: left out unless the person chose otherwise (lot I2 of 26.11.9).
+  const look = answer.lookalikes;
+  const lookalikes = look && look.count > 0
+    ? `; ${look.count} rows of the file look like existing lines: ${look.ignored} left out, ${look.created} created anyway, `
+      + `${look.updated} updating the line they look like`
+    : '';
   return `On approval: ${changes.created} lines created${byNature(changes.created, split?.created)}, `
     + `${changes.updated} updated${byNature(changes.updated, split?.updated)}; `
     + `${suppliers} suppliers created${listed(supplierNames, suppliers)}; `
     + `${values} dimension values created${listed(valueNames, values)}; `
-    + `${matching.totals.matches} values of the file matched to existing ones${listed(matchNames, matching.totals.matches)}.`;
+    + `${matching.totals.matches} values of the file matched to existing ones${listed(matchNames, matching.totals.matches)}`
+    + `${lookalikes}.`;
 }
 
 /**
@@ -479,7 +528,7 @@ export function budgetBilan(
   const shown: Record<string, unknown> = { ...answer };
   delete shown.snapshot;
   const isCheck = answer.changes !== undefined;
-  const similar = isCheck ? similarLines(answer.warnings, lines) : undefined;
+  const similar = isCheck ? similarLines(answer, lines) : undefined;
   return {
     ...(isCheck && answer.matching ? { on_approval: approvalFacts(answer, answer.matching) } : {}),
     ok: answer.ok === true,
@@ -488,7 +537,8 @@ export function budgetBilan(
     inserted: isCheck ? answer.changes!.created : answer.inserted ?? 0,
     updated: isCheck ? answer.changes!.updated : answer.updated ?? 0,
     unchanged: isCheck ? answer.changes!.unchanged : 0,
-    skipped: 0,
+    // The rows left out because they look like a stored line.
+    skipped: isCheck ? answer.lookalikes?.ignored ?? 0 : answer.skipped ?? 0,
     error_count: errorCount,
     warning_count: warningCount,
     issues,
