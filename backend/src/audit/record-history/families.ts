@@ -120,8 +120,8 @@ export const REFERENCE_FAMILIES: Readonly<Record<FamilyKey, ReferenceFamily>> = 
     label: `COALESCE(NULLIF(trim(concat_ws(' ', r.first_name, r.last_name)), ''), r.email)`,
     visibility: {},
   },
-  company: { module: 'companies', table: 'companies', label: 'r.name', visibility: {} },
-  supplier: { module: 'suppliers', table: 'suppliers', label: 'r.name', visibility: {} },
+  company: { module: 'companies', table: 'companies', label: 'r.name', reference: `'COMP-' || r.item_number`, visibility: {} },
+  supplier: { module: 'suppliers', table: 'suppliers', label: 'r.name', reference: `'SUP-' || r.item_number`, visibility: {} },
   chart_of_accounts: {
     module: 'accounts',
     table: 'chart_of_accounts',
@@ -148,12 +148,13 @@ export const REFERENCE_FAMILIES: Readonly<Record<FamilyKey, ReferenceFamily>> = 
     reference: `'REQ-' || r.item_number`,
     visibility: { scope: 'portfolio_requests' },
   },
-  contract: { module: 'contracts', table: 'contracts', label: 'r.name', visibility: {} },
+  contract: { module: 'contracts', table: 'contracts', label: 'r.name', reference: `'CTR-' || r.item_number`, visibility: {} },
   cost_center: { module: 'cost_centers', table: 'cost_centers', label: `r.code || ' · ' || r.name`, visibility: {} },
   contact: {
     module: 'contacts',
     table: 'contacts',
     label: `COALESCE(NULLIF(trim(concat_ws(' ', r.first_name, r.last_name)), ''), r.email)`,
+    reference: `'CTCT-' || r.item_number`,
     visibility: {},
   },
   application: {
@@ -230,7 +231,7 @@ export const REFERENCE_FAMILIES: Readonly<Record<FamilyKey, ReferenceFamily>> = 
     // A confidential incident is read only by a registry admin, its reporter or its owner.
     visibility: { confidentialIncident: true },
   },
-  department: { module: 'departments', table: 'departments', label: 'r.name', visibility: {} },
+  department: { module: 'departments', table: 'departments', label: 'r.name', reference: `'DEPT-' || r.item_number`, visibility: {} },
   business_process: { module: 'business_processes', table: 'business_processes', label: 'r.name', visibility: {} },
   calendar: {
     module: 'working_day_profiles',
