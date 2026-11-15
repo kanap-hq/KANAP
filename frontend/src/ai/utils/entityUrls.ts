@@ -47,7 +47,7 @@ export function isLinkableEntityType(entityType: string): boolean {
  * Map between KANAP type prefixes (case-insensitive) and the canonical entity_type.
  *
  * Two flavours of prefixes coexist here:
- *   1. "Native ref prefixes" (T, DOC, PRJ, REQ, INC, BL) that the backend's buildRef() turns
+ *   1. "Native ref prefixes" (T, DOC, PRJ, REQ, INC, BL, SUP, COMP, CTCT, DEPT, CTR) that the backend's buildRef() turns
  *      into a real entity ref like "T-5" or "DOC-152". These let us also surface
  *      a tier-1 boost on item_number when the user types `@T-5`.
  *   2. "Type tokens" for entities the data model doesn't number (APP, AST, CONN, …).
@@ -68,17 +68,17 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
   TEC: 'technologies',
   OPX: 'budget_lines',
   CPX: 'budget_lines',
+  SUP: 'suppliers',
+  COMP: 'companies',
+  CTCT: 'contacts',
+  DEPT: 'departments',
+  CTR: 'contracts',
   // Type tokens for entities without a built-in ref
   APP: 'applications',
   AST: 'assets',
   CONN: 'connections',
   INT: 'interfaces',
   LOC: 'locations',
-  CTR: 'contracts',
-  COMP: 'companies',
-  CTCT: 'contacts',
-  DEPT: 'departments',
-  SUP: 'suppliers',
   BP: 'business_processes',
 };
 

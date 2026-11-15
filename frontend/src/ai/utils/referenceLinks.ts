@@ -7,9 +7,10 @@ import { buildEntityUrl } from './entityUrls';
  * The reference families whose workspace page opens by the reference itself (`/it/incidents/INC-26`),
  * with the right the route asks for (ProtectedRoute).
  *
- * Checked on the detail routes and the reads behind them. Contracts have no numbered reference,
- * and a CVE id is not a record page: both stay text. `MEM-n` is a contributor; `CTR-n`, the
- * reference of a contract, stays text here and no longer opens a contributor.
+ * Checked on the detail routes and the reads behind them. A CVE id is not a record page: it stays
+ * text. `MEM-n` is a contributor. Suppliers (SUP), companies (COMP), contacts (CTCT), departments
+ * (DEPT) and contracts (CTR) have a reference whose address their page does not open yet: it stays
+ * text, and the assistant links those records by their `page_url` (the uuid address).
  */
 const LINKED_REFERENCE_FAMILIES: Record<string, { entityType: string; resource: string }> = {
   APP: { entityType: 'applications', resource: 'applications' },
