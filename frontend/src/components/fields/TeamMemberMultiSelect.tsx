@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo, useState } from 'react';
+import { Fragment, useCallback, useMemo, useState, type SyntheticEvent } from 'react';
 import {
   Autocomplete, CircularProgress, Divider, Stack, TextField, Typography,
 } from '@mui/material';
@@ -41,11 +41,22 @@ export default function TeamMemberMultiSelect({
 }: TeamMemberMultiSelectProps) {
   const { t } = useTranslation('common');
   const [loading, setLoading] = useState(false);
+  // The chosen people are listed above this field and its value stays null, so the box keeps its
+  // own text. A choice empties it and leaves the focus here, ready for the next name. Same as the
+  // share dialog. `reset` is not applied: MUI uses it to write the chosen name back, and it also
+  // runs while Autocomplete is rendering.
+  const [draft, setDraft] = useState('');
   const me = useMeOption();
   const myId = me?.id ?? null;
 
   // People searched as the user types; the ones already in the team are not offered.
   const picker = useLookupPicker<User>({ endpoint: USERS_LOOKUP_ENDPOINT, value: [] });
+  const pickerOnInputChange = picker.autocomplete.onInputChange;
+  const handleInputChange = useCallback((event: SyntheticEvent, next: string, reason: string) => {
+    pickerOnInputChange?.(event, next, reason);
+    if (reason === 'reset') return;
+    setDraft(reason === 'input' ? next : '');
+  }, [pickerOnInputChange]);
   const selectedUserIds = useMemo(() => new Set(value.map((m) => m.user_id)), [value]);
   const availableUsers = useMemo(
     () => withMeFirst(picker.options, me, picker.searching, (u) => selectedUserIds.has(u.id))
@@ -66,6 +77,7 @@ export default function TeamMemberMultiSelect({
     if (!user || loading) {
       return;
     }
+    setDraft('');
     setLoading(true);
     try {
       const existingIds = (value || []).map((m) => m.user_id).filter(Boolean);
@@ -121,9 +133,12 @@ export default function TeamMemberMultiSelect({
         options={availableUsers}
         getOptionLabel={(option) => formatUserOption(option)}
         value={null}
+        inputValue={draft}
+        onInputChange={handleInputChange}
         onChange={(_, v) => {
           void handleAdd(v);
         }}
+        onBlur={() => setDraft('')}
         renderOption={(props, option) => {
           const { key, ...other } = props as any;
           return (
