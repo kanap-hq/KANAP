@@ -363,7 +363,8 @@ const MATCHING_NOTE = 'matches: values of the file the check matched to an exist
   + 'matched, created on approval (outcome create, one entry per value created) or refused, with the closest names of the '
   + 'workspace\'s list (`candidates`) and, for a dimension value created, the enabled values of its dimension '
   + '(`dimension_values`, the first ones). Before you present the card, read each dimension value created against its '
-  + '`dimension_values`, and any value against its `candidates`: when one is the same thing (a translation, a synonym, a spelling), '
+  + '`dimension_values`, and any value against its `candidates`: when one is the same thing (a translation, a synonym, a spelling, '
+  + 'a shorter or longer form of the same name (`Dell` for `Dell Technologies`)), '
   + 'call again with that column\'s `values` naming it: for a dimension, a value of its `dimension_values`; for a supplier, '
   + 'a supplier of the workspace you recognise as the same, listed or not. The check refuses a target that does not exist. '
   + `Each list holds its first ${MODEL_MATCHING_ENTRIES} entries: \`totals\`, when present, `

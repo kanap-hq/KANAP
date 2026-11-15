@@ -579,6 +579,7 @@ async function testOwnDimensionValueComesWithItsList(h: Harness, runner: QueryRu
   assert.equal(check.report.file.matching.candidates.find((entry: any) => entry.column === 'analytics:site').dimension_values, undefined, 'the card reads no list');
   assert.match(check.matching.note, /dimension_values/);
   assert.match(check.matching.note, /for a supplier, a supplier of the workspace you recognise as the same, listed or not/);
+  assert.match(check.matching.note, /a shorter or longer form of the same name \(`Dell` for `Dell Technologies`\)/);
 
   // The model reads the lists and calls again: its proposals of existing values are accepted, though
   // no near names of the cells; a supplier that does not exist is refused, and created as written.
