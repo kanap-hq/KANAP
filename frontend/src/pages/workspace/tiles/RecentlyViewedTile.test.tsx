@@ -109,7 +109,8 @@ describe('RecentlyViewedTile', () => {
     fireEvent.click(screen.getByText('Ana Lopez'));
     expect(screen.getByTestId('where')).toHaveTextContent(`/master-data/contacts/${CONTACT}`);
     fireEvent.click(screen.getByText('Finance'));
-    expect(screen.getByTestId('where')).toHaveTextContent(`/master-data/departments/${DEPARTMENT}`);
+    // The department page opens by its reference.
+    expect(screen.getByTestId('where')).toHaveTextContent('/master-data/departments/DEPT-7');
   });
 
   it('keeps the list as it is when the check fails', async () => {

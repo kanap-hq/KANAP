@@ -19,6 +19,7 @@ import { countValueFormatter } from '../components/grid/countValueFormatter';
 import { companyListYear } from './companies/companyYear';
 import ListYearField from '../components/navigation/ListYearField';
 import { ImportLabel } from '../components/csv/importFiles';
+import { itemAddress } from '../utils/item-ref';
 
 export default function DepartmentsPage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -61,13 +62,13 @@ export default function DepartmentsPage() {
   const openWorkspace = useCallback((row: any, tab: 'overview' | 'details') => {
     if (!row?.id) return;
     const sp = buildWorkspaceSearch();
-    navigate(`/master-data/departments/${row.id}/${tab}?${sp.toString()}`);
+    navigate(`/master-data/departments/${itemAddress('department', row)}/${tab}?${sp.toString()}`);
   }, [buildWorkspaceSearch, navigate]);
 
   const getWorkspaceHref = useCallback((row: any, tab: 'overview' | 'details') => {
     if (!row?.id) return null;
     const sp = buildWorkspaceSearch();
-    return `/master-data/departments/${row.id}/${tab}?${sp.toString()}`;
+    return `/master-data/departments/${itemAddress('department', row)}/${tab}?${sp.toString()}`;
   }, [buildWorkspaceSearch]);
 
   const columns: EnhancedColDef<any>[] = useMemo(() => [

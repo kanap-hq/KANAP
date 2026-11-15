@@ -83,10 +83,10 @@ export default function RecentlyViewedTile({ config }: RecentlyViewedTileProps) 
 
   const formatTime = (timestamp: number) => relativeTime(timestamp, () => formatShortDate(new Date(timestamp), locale));
 
-  const handleNavigate = (type: RecentEntityType, id: string) => {
+  const handleNavigate = (type: RecentEntityType, id: string, ref?: string) => {
     const entityConfig = ENTITY_TYPE_CONFIG[type];
     if (entityConfig) {
-      navigate(entityConfig.route(id));
+      navigate(entityConfig.route(id, ref));
     }
   };
 
@@ -116,7 +116,7 @@ export default function RecentlyViewedTile({ config }: RecentlyViewedTileProps) 
               return (
                 <ListItemButton
                   key={`${item.type}-${item.id}-${index}`}
-                  onClick={() => handleNavigate(item.type, item.id)}
+                  onClick={() => handleNavigate(item.type, item.id, item.ref)}
                   sx={{ py: 0.5 }}
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>

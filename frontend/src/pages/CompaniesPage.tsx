@@ -23,6 +23,7 @@ import { companyListYear } from './companies/companyYear';
 import ListYearField from '../components/navigation/ListYearField';
 import { displayedCompanyCity } from './companies/companyCity';
 import { ImportLabel } from '../components/csv/importFiles';
+import { itemAddress } from '../utils/item-ref';
 
 /** The pinned total, with the orange mark when some turnover was left out. */
 function TurnoverTotalCell({ value, missing }: { value: React.ReactNode; missing: CompanyTurnoverFxMissing[] }) {
@@ -124,7 +125,7 @@ export default function CompaniesPage() {
   const openWorkspace = useCallback((row: CompanyRow, tab: 'overview' | 'details') => {
     if (!row?.id) return;
     const sp = buildWorkspaceSearch();
-    navigate(`/master-data/companies/${row.id}/${tab}?${sp.toString()}`);
+    navigate(`/master-data/companies/${itemAddress('company', row)}/${tab}?${sp.toString()}`);
   }, [buildWorkspaceSearch, navigate]);
 
   const handleMetricClick = useCallback((row: CompanyRow) => {
@@ -135,7 +136,7 @@ export default function CompaniesPage() {
     const company = row as CompanyRow | null | undefined;
     if (!company?.id) return null;
     const sp = buildWorkspaceSearch();
-    return `/master-data/companies/${company.id}/${tab}?${sp.toString()}`;
+    return `/master-data/companies/${itemAddress('company', company)}/${tab}?${sp.toString()}`;
   }, [buildWorkspaceSearch]);
 
   const columns: EnhancedColDef<CompanyRow>[] = useMemo(() => [

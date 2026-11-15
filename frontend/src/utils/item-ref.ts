@@ -5,6 +5,11 @@ export function formatItemRef(type: ItemType, itemNumber: number): string {
   return `${PREFIXES[type]}-${itemNumber}`;
 }
 
+/** A record's page address segment: its reference (`COMP-12`) when it has a number, else its uuid. */
+export function itemAddress(type: ItemType, record: { id: string; item_number?: number | null }): string {
+  return record.item_number ? formatItemRef(type, record.item_number) : record.id;
+}
+
 export function buildItemPath(type: ItemType, idOrRef: string): string {
   const paths = {
     task: '/portfolio/tasks',

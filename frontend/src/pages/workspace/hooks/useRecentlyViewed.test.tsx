@@ -55,6 +55,10 @@ describe('reference data', () => {
     expect(ENTITY_TYPE_CONFIG.contact).toMatchObject({ resource: 'contacts', labelKey: 'dashboard.tiles.entityTypes.contact' });
     expect(ENTITY_TYPE_CONFIG.contact.route('ctc-1')).toBe('/master-data/contacts/ctc-1');
     expect(ENTITY_TYPE_CONFIG.department).toMatchObject({ resource: 'departments', labelKey: 'dashboard.tiles.entityTypes.department' });
+    // The company and department pages open by their reference; an item kept without one opens by its uuid.
+    expect(ENTITY_TYPE_CONFIG.department.route('dep-1', 'DEPT-7')).toBe('/master-data/departments/DEPT-7');
     expect(ENTITY_TYPE_CONFIG.department.route('dep-1')).toBe('/master-data/departments/dep-1');
+    expect(ENTITY_TYPE_CONFIG.company.route('co-1', 'COMP-5')).toBe('/master-data/companies/COMP-5');
+    expect(ENTITY_TYPE_CONFIG.company.route('co-1')).toBe('/master-data/companies/co-1');
   });
 });

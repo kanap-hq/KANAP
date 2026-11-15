@@ -109,10 +109,11 @@ export function useRecentlyViewed() {
   return { items, addToRecent, clearRecent };
 }
 
-// Mapping from entity type to route, permission resource, icon and i18n label key (common namespace)
+// Mapping from entity type to route, permission resource, icon and i18n label key (common namespace).
+// `ref`: the item's business reference, for the pages that open by it.
 export const ENTITY_TYPE_CONFIG: Record<
   RecentEntityType,
-  { route: (id: string) => string; resource: string; icon: string; labelKey: string }
+  { route: (id: string, ref?: string) => string; resource: string; icon: string; labelKey: string }
 > = {
   project: {
     route: (id) => `/portfolio/projects/${id}`,
@@ -193,13 +194,13 @@ export const ENTITY_TYPE_CONFIG: Record<
     labelKey: 'dashboard.tiles.entityTypes.document',
   },
   company: {
-    route: (id) => `/master-data/companies/${id}`,
+    route: (id, ref) => `/master-data/companies/${ref || id}`,
     resource: 'companies',
     icon: 'Business',
     labelKey: 'dashboard.tiles.entityTypes.company',
   },
   department: {
-    route: (id) => `/master-data/departments/${id}`,
+    route: (id, ref) => `/master-data/departments/${ref || id}`,
     resource: 'departments',
     icon: 'AccountTree',
     labelKey: 'dashboard.tiles.entityTypes.department',
