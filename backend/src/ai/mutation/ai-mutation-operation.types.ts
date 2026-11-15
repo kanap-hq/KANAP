@@ -10,6 +10,16 @@ import {
   AiWritePreviewCapabilityDto,
 } from '../ai.types';
 
+/**
+ * An approval the operation refuses, with values the card keeps once its execution is undone (lot I2
+ * of 26.11.9: what the load of an import refused, row by row, which the failed card shows).
+ */
+export class AiPreviewExecutionRefusal extends Error {
+  constructor(message: string, readonly kept: Record<string, unknown>) {
+    super(message);
+  }
+}
+
 export type AiPreparedMutationPreview = {
   targetEntityType: string;
   targetEntityId: string | null;

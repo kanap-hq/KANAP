@@ -7,6 +7,7 @@ import { AiChatController } from '../ai-chat.controller';
 import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
 import { AiConversationsController } from '../ai-conversations.controller';
 import { PrepareImportMappingAiMutationOperation } from '../mutation/operations/prepare-import-mapping.ai-mutation-operation';
+import { IMPORT_LOAD_REFUSALS } from '../ai-write-texts';
 
 /**
  * The texts of Kad's import card (lot Q4 of 26.11.8). No cell of the file reaches the model
@@ -105,8 +106,20 @@ async function screenLanguageWhenTheProfileHasNone() {
   console.log('  without a profile language, the screen language settles the card and the prompt: OK');
 }
 
+/** The refusals of a load the backend says itself after an approval (lot I2 of 26.11.9): the card's words. */
+function loadRefusalsAreTheCardsWords() {
+  for (const language of LANGUAGES) {
+    const phrases = JSON.parse(fs.readFileSync(backendPath('..', 'frontend', 'src', 'locales', language, 'errors.json'), 'utf8')) as Record<string, unknown>;
+    for (const [code, texts] of Object.entries(IMPORT_LOAD_REFUSALS)) {
+      assert.equal(texts[language], phrases[code], `${language}: ${code}`);
+    }
+  }
+  console.log(`  ${Object.keys(IMPORT_LOAD_REFUSALS).length} refusals of a load, the card's words in the four languages: OK`);
+}
+
 async function main() {
   phrasesInEveryLanguage();
+  loadRefusalsAreTheCardsWords();
   instructionsNameLinesAndColumnsNeverCodes();
   await screenLanguageWhenTheProfileHasNone();
   console.log('ai-import-card-texts.spec: ok');

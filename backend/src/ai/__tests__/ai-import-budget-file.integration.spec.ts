@@ -675,6 +675,18 @@ async function testTargetChangedBeforeApproval(h: Harness, runner: QueryRunner, 
   await rename('Microsoft Enterprise renewed');
   const failed = await h.previews.executePreview(admin, one.preview_id);
   assert.deepEqual([failed.status, await referenceCounts(runner, s)], ['failed', before], '"Update BL-n": refused, nothing created');
+  // The failed card keeps the load's check: the reason of each refused row, as the screen's dialog gives it.
+  const refused = failed.import_mapping?.result;
+  assert.equal(refused?.ok, false, 'the failed card shows what the load refused');
+  assert.deepEqual(refused.report.file.errors.map((error: any) => [error.line, error.code, error.params]), [[5, 'BUDGET_FILE_LOOKALIKE_CHANGED', { ref: target.ref }]]);
+  assert.deepEqual(refused.issues.filter((issue: any) => issue.level === 'error').map((issue: any) => [issue.code, issue.file_lines]), [['BUDGET_FILE_LOOKALIKE_CHANGED', [5]]]);
+  // The message after the approval, which the person reads and the model reads back: the reason, in French only.
+  const { AiChatOrchestratorService } = require('../ai-chat-orchestrator.service');
+  const said = h.app.get(AiChatOrchestratorService)['buildPreviewResultAssistantText'](failed, undefined, 'fr') as string;
+  assert.ok(said.includes(`Ligne 5\u00a0: ${target.ref} a changé depuis la vérification.`) || said.includes(`Ligne 5 : ${target.ref} a changé depuis la vérification.`), said);
+  for (const text of [said, failed.summary, failed.error_message]) {
+    assert.doesNotMatch(String(text), /\b(the|this|was|found|since|nothing|changed|imported|check)\b/i, `no English sentence: ${text}`);
+  }
   await runner.query('ROLLBACK TO SAVEPOINT target_one');
 
   await runner.query('SAVEPOINT target_all');

@@ -7,6 +7,7 @@ import { AiExecutionContextWithManager, AiImportMappingPreviewDto } from '../../
 import {
   AiWriteLanguage,
   importCountsText,
+  importRefusalText,
   personWriteLanguage,
   PREVIEW_IMPORT_CHECK_FAILED_MESSAGE,
   PREVIEW_IMPORT_NOTHING_MESSAGE,
@@ -19,7 +20,7 @@ import { AI_IMPORT_TARGETS } from '../../import/ai-import-targets';
 import { parseBudgetFileChoices } from '../../../spend/budget-file/matching';
 import type { BudgetFileChoice } from '../../../spend/budget-file/types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
-import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
+import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview, AiPreviewExecutionRefusal } from '../ai-mutation-operation.types';
 
 const ColumnMappingSchema = z.object({
   column: z.string().trim().min(1).max(80)
@@ -240,6 +241,10 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     const filename = stringOf(mutation.filename);
     const mapping = (preview.current_values?.import_mapping ?? null) as AiImportMappingPreviewDto | null;
     const counts = mapping?.result ? importCountsText(language, mapping.result) : '';
+    // A load refused at the approval: each row refused and its reason, which the model reads back.
+    const refused = preview.status === 'failed' && mapping?.result && !mapping.result.ok
+      ? importRefusalText(language, mapping.result, new Map(mapping.columns.map((column) => [column.column, column.title])))
+      : '';
 
     let summary: string;
     if (language === 'en') {
@@ -248,14 +253,17 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         case 'executed': summary = `"${filename}" imported into the ${list} list.${counts ? ` ${counts}` : ''}`; break;
         case 'rejected': summary = `Import of "${filename}" into the ${list} list rejected.`; break;
         case 'expired': summary = `Import of "${filename}" into the ${list} list expired before approval.`; break;
-        case 'failed': summary = preview.error_message || `Import of "${filename}" into the ${list} list failed.`; break;
+        case 'failed': summary = refused
+          ? `Import of "${filename}" into the ${list} list failed. ${refused}`
+          : preview.error_message || `Import of "${filename}" into the ${list} list failed.`; break;
         default: summary = `Preview ${preview.id} ${preview.status}.`;
       }
     } else {
       summary = previewSummaryText(language, preview.status, writeActionText.importFile(language, filename, list), {
         executed: counts ? [counts] : [],
-        errorMessage: preview.error_message,
+        errorMessage: refused ? null : preview.error_message,
       });
+      if (refused) summary = `${summary} ${refused}`;
     }
 
     return {
@@ -290,7 +298,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       input,
       language,
     );
-    if (!result.ok) throw new Error(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE);
+    // Refused by the load: the card keeps its check, which gives the reason of each row refused.
+    if (!result.ok) throw new AiPreviewExecutionRefusal(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE, { import_mapping: { ...mapping, result } });
 
     preview.current_values = { ...preview.current_values, import_mapping: { ...mapping, result } };
     await writeAuditLog(context.manager, {

@@ -23,7 +23,7 @@ import { AiMutationPreview } from './ai-mutation-preview.entity';
 import { AiPolicyService, isRightRefusalMessage } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
-import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
+import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview, AiPreviewExecutionRefusal } from './mutation/ai-mutation-operation.types';
 import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
@@ -1323,6 +1323,8 @@ export class AiMutationPreviewService {
           return this.toPreviewDto(await repo.save(preview), await this.languageOf(context));
         }
       }
+      // What the operation refused, kept on the card once its writes are undone.
+      if (error instanceof AiPreviewExecutionRefusal) preview.current_values = { ...(preview.current_values ?? {}), ...error.kept };
       preview.status = 'failed';
       preview.approved_at = new Date();
       preview.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview execution failed.');
