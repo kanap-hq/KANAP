@@ -12,6 +12,7 @@ import { BusinessReferences1856240000000 } from '../../migrations/1856240000000-
 //   numbers the rest in (created_at, id) order per tenant, sets the counters, indexes SUP-n in the
 //   search index of its own tenant only, puts back RLS, the search triggers and app.current_tenant,
 //   and a rerun changes nothing and says so;
+//   a number is positive (CHECK item_number > 0);
 // - rows created at the same time are numbered by name (a supplier by its ERP ID first), not by uuid;
 // - the trigger numbers any insert, keeps a number given and moves the counter past it.
 // @database-spec
@@ -229,6 +230,24 @@ async function testMigrationRepairsAndNumbers() {
     for (const table of TABLES) assert.match(rerun, new RegExp(`${table}: nothing to number .*0 index refresh`), table);
     assert.deepEqual(await Promise.all(TABLES.map((table) => numbersOf(runner, table, a.tenantId))), before, 'a rerun changes nothing');
 
+    // A number is positive: 0 or -7 written in raw SQL is refused on each table, the dirty base above passed.
+    for (const [table, values] of [
+      ['suppliers', { name: 'Zero' }],
+      ['companies', { name: 'Zero', country_iso: 'FR', city: 'Lyon' }],
+      ['contacts', { email: 'zero@example.test' }],
+      ['departments', { name: 'Zero', company_id: companyA }],
+      ['contracts', { name: 'Zero', company_id: companyA, supplier_id: supplierA, start_date: '2026-01-01' }],
+    ] as const) {
+      for (const number of [0, -7]) {
+        await runner.query('SAVEPOINT positive');
+        await assert.rejects(
+          insert(runner, table, a.tenantId, { ...values, item_number: number }),
+          (err: any) => err?.code === '23514',
+          `${table}: item_number ${number} is refused`,
+        );
+        await runner.query('ROLLBACK TO SAVEPOINT positive');
+      }
+    }
   });
 }
 

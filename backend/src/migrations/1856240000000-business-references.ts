@@ -213,7 +213,8 @@ const LOG = '[Migration] BusinessReferences:';
  *    and its counter. The order is created_at, then, for rows created together (a sample data load,
  *    an import), a supplier's ERP ID and the name, the uuid last. The counter is put past the highest number, never
  *    back. Counts per table: tenants, rows numbered, rows repaired, index refreshed, duration.
- * 5. UNIQUE (tenant_id, item_number), then NOT NULL.
+ * 5. UNIQUE (tenant_id, item_number), NOT NULL, and CHECK (item_number > 0)
+ *    (`chk_<table>_item_number_positive`).
  *
  * A rerun finds nothing to number and says so. The pending migrations share one transaction:
  * app.current_tenant is put back as found. down() removes the column, the triggers, the counters
@@ -266,6 +267,9 @@ export class BusinessReferences1856240000000 implements MigrationInterface {
     for (const f of FAMILIES) {
       await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_${f.table}_tenant_item_number ON ${f.table} (tenant_id, item_number)`);
       await queryRunner.query(`ALTER TABLE ${f.table} ALTER COLUMN item_number SET NOT NULL`);
+      // The repair above cleared the numbers below 1: none is left to refuse.
+      await queryRunner.query(`ALTER TABLE ${f.table} DROP CONSTRAINT IF EXISTS chk_${f.table}_item_number_positive`);
+      await queryRunner.query(`ALTER TABLE ${f.table} ADD CONSTRAINT chk_${f.table}_item_number_positive CHECK (item_number > 0)`);
     }
     console.log(`${LOG} done in ${Date.now() - started} ms`);
   }
@@ -277,6 +281,7 @@ export class BusinessReferences1856240000000 implements MigrationInterface {
     for (const f of FAMILIES) {
       await queryRunner.query(`DROP TRIGGER IF EXISTS trg_${f.table}_item_number ON ${f.table}`);
       await queryRunner.query(refreshFunction(f, false));
+      await queryRunner.query(`ALTER TABLE ${f.table} DROP CONSTRAINT IF EXISTS chk_${f.table}_item_number_positive`);
       await queryRunner.query(`DROP INDEX IF EXISTS uq_${f.table}_tenant_item_number`);
       await queryRunner.query(`ALTER TABLE ${f.table} DROP COLUMN IF EXISTS item_number`);
     }
