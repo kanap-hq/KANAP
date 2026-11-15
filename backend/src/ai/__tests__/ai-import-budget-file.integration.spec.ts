@@ -16,7 +16,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 // Lot I1 of 26.11.9, "match before create": Fried's case of 12/11, eight English lines of the sample
 // data loaded by Kad into a French workspace that holds them, translated. Nothing is created, and the
 // model gives no `values`: the server matches the values of the recommended dimensions and of the
-// sample data's own business domain across languages, and every match is listed on the card. The person's choices (a match undone, the suppliers box) make a new card.
+// sample data's own business domain across languages, and every match is listed on the card. A value
+// of a dimension of the workspace's own is the model's to match: it reads the dimension's values with
+// the value to create. The person's choices (a match undone, the suppliers box) make a new card.
 // The model is not called: the tools of the registry are, as the conversation calls them. The AI
 // surface checks and the attachment storage are not under test: stubbed.
 
@@ -509,6 +511,94 @@ async function testEnglishSampleLinesCreateNothing(h: Harness, runner: QueryRunn
   console.log('  the original case: eight English lines, nothing created, every match listed: OK');
 }
 
+// Dimensions of the workspace's own, outside the sample data: the server has no other language for
+// their values. A value of the file it would create comes to the model with its dimension's enabled
+// values, the whole list; a supplier with its near names only. The model's proposals of a value of
+// that list ("Retail" → "Distribution") and of a supplier it recognises ("AWS" → "Amazon Web
+// Services"), no near names of the cells, are accepted and listed with the origin model; a supplier
+// that does not exist is refused and listed.
+async function testOwnDimensionValueComesWithItsList(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const dimensionOf = async (code: string, name: string, sortOrder: number, names: string[]) => {
+    const axis = await insertId(runner, `INSERT INTO analytics_axes (tenant_id, code, name, sort_order) VALUES ($1, $2, $3, $4)`, [s.tenantId, code, name, sortOrder]);
+    for (const [index, value] of names.entries()) {
+      await runner.query(
+        `INSERT INTO analytics_categories (tenant_id, axis_id, name, sort_order, disabled_at) VALUES ($1, $2, $3, $4, $5)`,
+        [s.tenantId, axis, value, index + 1, value.startsWith('Ancien') ? '2020-01-01T00:00:00Z' : null],
+      );
+    }
+  };
+  await dimensionOf('site', 'Site', 120, ['Siège', 'Usine de Lyon', 'Entrepôt de Rennes', 'Ancien site']);
+  await dimensionOf('channel', 'Canal', 130, ['Grands comptes', 'Export', 'Distribution', 'Ancien canal']);
+  await runner.query(`INSERT INTO suppliers (tenant_id, name, status) VALUES ($1, 'Amazon Web Services', 'enabled')`, [s.tenantId]);
+  const id = randomUUID();
+  const { writeXlsx } = require('../../common/xlsx');
+  h.files.set(id, {
+    name: 'sites.xlsx',
+    buffer: writeXlsx({ language: 'en', sheets: [{ name: 'B', header: 'plain', headers: ['Type', 'Name', 'Supplier', 'Account', 'Currency', 'Site', 'Channel', 'Budget'], rows: [
+      ['OPEX', 'Head office cleaning', 'Propreté Armor', '612200', 'EUR', 'Head office', 'Retail', { kind: 'number', value: 1000 }],
+      ['OPEX', 'Cloud hosting', 'AWS', '612200', 'EUR', 'Head office', null, { kind: 'number', value: 500 }],
+    ] }] }),
+  });
+  const columns = [
+    { column: 'nature', source: 1, confidence: 'high' }, { column: 'name', source: 2, confidence: 'high' },
+    { column: 'supplier_name', source: 3, confidence: 'high' }, { column: 'account_number', source: 4, confidence: 'high' },
+    { column: 'currency', source: 5, confidence: 'high' }, { column: 'analytics:site', source: 6, confidence: 'high' },
+    { column: 'analytics:channel', source: 7, confidence: 'high' }, { column: `budget_${YEAR}`, source: 8, confidence: 'high' },
+  ];
+  const template = await h.mapping.describeTemplate(admin, 'budget_lines', 'fr');
+  assert.match(template.about, /for each distinct value of the file's column that this list lacks, look in the list for the same thing/,
+    'the model is asked for its matches with the template, before the check');
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: id, entity_type: 'budget_lines', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check.issues));
+  assert.equal(check.new_dimension_values, 2);
+  const created = Object.fromEntries(check.matching.candidates.map((entry: any) => [`${entry.column}|${entry.value}`, entry]));
+  const site = created['analytics:site|Head office'];
+  assert.equal(site.outcome, 'create');
+  assert.deepEqual(site.candidates, [], 'a translation is no near name');
+  assert.deepEqual(site.dimension_values, ['Siège', 'Usine de Lyon', 'Entrepôt de Rennes'], 'the dimension\'s enabled values, as the template lists them');
+  const templateValues = (column: string) => template.columns.find((entry: any) => entry.column === column).values;
+  assert.deepEqual(site.dimension_values, templateValues('analytics:site'));
+  const channel = created['analytics:channel|Retail'];
+  assert.equal(channel.outcome, 'create');
+  assert.deepEqual(channel.candidates, [], 'a synonym is no near name');
+  assert.deepEqual(channel.dimension_values, ['Grands comptes', 'Export', 'Distribution'], 'the whole list');
+  assert.deepEqual(channel.dimension_values, templateValues('analytics:channel'));
+  const aws = created['supplier_name|AWS'];
+  assert.equal(aws.outcome, 'create');
+  assert.ok(!aws.candidates.some((entry: any) => entry.name === 'Amazon Web Services'), 'no near name of AWS');
+  assert.equal(aws.dimension_values, undefined, 'a supplier keeps its near names only');
+  assert.equal(created['supplier_name|Propreté Armor'].dimension_values, undefined);
+  assert.equal(check.report.file.matching.candidates.find((entry: any) => entry.column === 'analytics:site').dimension_values, undefined, 'the card reads no list');
+  assert.match(check.matching.note, /dimension_values/);
+  assert.match(check.matching.note, /for a supplier, a supplier of the workspace you recognise as the same, listed or not/);
+
+  // The model reads the lists and calls again: its proposals of existing values are accepted, though
+  // no near names of the cells; a supplier that does not exist is refused, and created as written.
+  const values: Record<string, Record<string, string>> = {
+    'analytics:site': { 'Head office': 'Siège' },
+    'analytics:channel': { Retail: 'Distribution' },
+    supplier_name: { AWS: 'Amazon Web Services', 'Propreté Armor': 'Armor Nettoyage' },
+  };
+  const proposed = columns.map((column) => (values[column.column] ? { ...column, values: values[column.column] } : column));
+  const again = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: id, entity_type: 'budget_lines', columns: proposed });
+  const matched = again.import_mapping.validation;
+  assert.equal(matched.ok, true, JSON.stringify(matched.issues));
+  assert.equal(matched.new_dimension_values, 0);
+  assert.deepEqual(matched.report.file.creates.dimensionValues, []);
+  assert.deepEqual(matchesOf(matched), [
+    'analytics:channel|Retail→Distribution|model',
+    'analytics:site|Head office→Siège|model',
+    'supplier_name|AWS→Amazon Web Services|model',
+  ], 'listed on the card with the origin model');
+  assert.deepEqual(matched.matching.refused_proposals.map((entry: any) => [entry.column, entry.value, entry.target, entry.reason]),
+    [['supplier_name', 'Propreté Armor', 'Armor Nettoyage', 'missing']]);
+  assert.equal(matched.new_suppliers, 1, 'Propreté Armor, as the file writes it');
+  assert.deepEqual(matched.matching.candidates.map((entry: any) => `${entry.column}|${entry.value}`), ['supplier_name|Propreté Armor']);
+  console.log('  values of the workspace\'s own dimensions and a supplier: the lists to the model, its proposals accepted when they exist: OK');
+}
+
 /** The cells of a column of a downloaded prepared file, by its template header. */
 async function columnOf(content: Buffer, header: string): Promise<string[]> {
   const { readTableAttachment } = require('../attachments/table-attachment');
@@ -898,6 +988,7 @@ async function run() {
   try {
     await inFrenchTenant(harness, testEnglishSampleLinesCreateNothing);
     if (process.env.I1_ORIGINAL_CASE_ONLY) return;
+    await inFrenchTenant(harness, testOwnDimensionValueComesWithItsList);
     await inFrenchTenant(harness, testUndoAMatch);
     await inFrenchTenant(harness, testSuppliersBox);
     await inFrenchTenant(harness, testScreenRoutes);

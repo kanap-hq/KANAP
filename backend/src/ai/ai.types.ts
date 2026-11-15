@@ -591,6 +591,8 @@ export type AiImportRunDto = {
     candidates: Array<{
       column: string; dimension?: string; value: string; outcome: 'create' | 'refused'; count: number; file_lines: number[];
       candidates: Array<{ name: string; score: number }>;
+      /** A dimension value to create: the enabled values of its dimension, the first ones (the template's list). */
+      dimension_values?: string[];
     }>;
     choices: BudgetFileChoice[];
     create_suppliers: { allowed: boolean; value: boolean };

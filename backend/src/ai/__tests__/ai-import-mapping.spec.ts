@@ -922,6 +922,32 @@ function testMatchingCountsReachTheModel() {
   console.log('  the model reads the values created and the length of a cut list: OK');
 }
 
+// Lot I1, second fixes: a dimension value to create comes to the model with the enabled values of its
+// dimension (the template's list), since a translation is no near name; a supplier, a refused value
+// and a value matched carry no list.
+function testCreatedDimensionValueCarriesItsList() {
+  const lines = [2, 3];
+  const values = new Map([['analytics:site', ['Siège', 'Usine de Lyon']], ['analytics:priority', ['Haute']]]);
+  const entry = (column: string, value: string, outcome: 'create' | 'refused') => ({ column, name: null, value, outcome, lines: [2], count: 1, candidates: [] });
+  const budget = budgetBilan({
+    ok: true, changes: { created: 2, updated: 0, unchanged: 0 }, creates: { supplierCount: 1, dimensionValueCount: 1 },
+    matching: {
+      matches: [], refusedProposals: [],
+      candidates: [entry('analytics:site', 'Head office', 'create'), entry('supplier_name', 'Propreté Armor', 'create'), entry('analytics:priority', 'Urgent', 'refused')],
+      totals: { matches: 0, refusedProposals: 0, candidates: 3 }, choices: [], createSuppliers: { allowed: true, value: true },
+    },
+  }, true, lines, values);
+  const byColumn = Object.fromEntries(budget.matching!.candidates.map((item) => [item.column, item]));
+  assert.deepEqual(byColumn['analytics:site'].dimension_values, ['Siège', 'Usine de Lyon']);
+  assert.equal(byColumn.supplier_name.dimension_values, undefined, 'a supplier keeps its near names');
+  assert.equal(byColumn['analytics:priority'].dimension_values, undefined, 'a refused value is not created');
+  assert.match(budget.matching!.note, /Before you present the card, read each dimension value created against its `dimension_values`/);
+  assert.doesNotMatch(budget.matching!.note, /never a name that is not listed/);
+  const file = budget.report.kind === 'budget_file' ? budget.report.file as { matching: { candidates: Array<Record<string, unknown>> } } : null;
+  assert.ok(file!.matching.candidates.every((item) => !('dimension_values' in item)), 'the card\'s report is the check\'s');
+  console.log('  a dimension value to create carries its dimension\'s values for the model: OK');
+}
+
 function testAFileImportIsAWrite() {
   for (const message of ['Importe ce fichier dans les applications', 'Import these servers', 'Importiere die Datei', 'Importa este archivo']) {
     const profile = selectAiContextProfile(message);
@@ -971,6 +997,7 @@ async function run() {
     testBilanOnThePersonsLines();
     testLookalikesReachTheModel();
     testMatchingCountsReachTheModel();
+    testCreatedDimensionValueCarriesItsList();
     testAFileImportIsAWrite();
     testApprovalEndsTheTurn();
   } finally {

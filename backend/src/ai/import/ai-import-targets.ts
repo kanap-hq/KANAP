@@ -238,7 +238,10 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     names: { en: 'Budget lines', fr: 'Lignes budgétaires', de: 'Budgetzeilen', es: 'Líneas presupuestarias' },
     ...AI_IMPORT_ACCESS.budget_lines,
     about: 'One row per budget line, OPEX or CAPEX; every row creates a new line. Amount columns are named '
-      + '<measure>_<year> (budget_2026, revision_2026, forecast_2026, actual_2026, landing_2026).',
+      + '<measure>_<year> (budget_2026, revision_2026, forecast_2026, actual_2026, landing_2026). '
+      + 'A dimension column\'s `values` are the dimension\'s enabled values: for each distinct value of the file\'s column '
+      + 'that this list lacks, look in the list for the same thing (a synonym, a translation, a spelling: Retail for Distribution) '
+      + 'and, when you find one, map it in that column\'s `values` from your first call.',
     columns: async (ctx) => {
       const axes = await loadAnalyticsAxes(ctx.manager, ctx.tenantId);
       const dimensions = axes.filter((axis) => axis.status === 'enabled').map((axis) => axis.code);

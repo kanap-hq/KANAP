@@ -30,6 +30,7 @@ import { WorkingDayProfilesCsvService } from '../../working-day-profiles/working
 import { AiPolicyService } from '../ai-policy.service';
 import type { AiExecutionContextWithManager, AiImportReportMessage, AiImportRunDto } from '../ai.types';
 import type { AiImportKey } from './ai-import-access';
+import { enabledDimensionValues } from './ai-import-dimension-values';
 import { AI_IMPORT_FILE_NAME } from './ai-import-file';
 
 /** Messages of a row import the card keeps, of each kind: its dialog shows the first ten errors and five warnings. */
@@ -133,7 +134,11 @@ export class AiImportRunnerService {
     } as Express.Multer.File;
     const call: ImportCall = { file, dryRun: options.dryRun, language: options.language, context, matching: options.matching };
     if (key === 'budget_lines') {
-      return budgetBilan(await this.runBudgetFile(call), options.dryRun, options.lines);
+      const answer = await this.runBudgetFile(call);
+      // A dimension value the check would create comes with its dimension's values, for the model to read.
+      const createsValues = answer.matching?.candidates.some((entry) => entry.outcome === 'create' && entry.column.startsWith('analytics:'));
+      const values = options.dryRun && createsValues ? await enabledDimensionValues(context) : undefined;
+      return budgetBilan(answer, options.dryRun, options.lines, values);
     }
     return rowsBilan(await this.runRows(key, call), options.dryRun, options.lines);
   }
@@ -356,12 +361,24 @@ const MATCHING_NOTE = 'matches: values of the file the check matched to an exist
   + 'or another language; origin model: your `values`); the card lists them and the person may undo one. refused_proposals: '
   + 'your `values` whose target is not an enabled value of the workspace: they were not applied. candidates: values nothing '
   + 'matched, created on approval (outcome create, one entry per value created) or refused, with the closest names of the '
-  + 'workspace\'s list; when one is the same thing (a translation, a synonym, a spelling), call again with that column\'s `values` '
-  + `naming it, never a name that is not listed. Each list holds its first ${MODEL_MATCHING_ENTRIES} entries: \`totals\`, when present, `
+  + 'workspace\'s list (`candidates`) and, for a dimension value created, the enabled values of its dimension '
+  + '(`dimension_values`, the first ones). Before you present the card, read each dimension value created against its '
+  + '`dimension_values`, and any value against its `candidates`: when one is the same thing (a translation, a synonym, a spelling), '
+  + 'call again with that column\'s `values` naming it: for a dimension, a value of its `dimension_values`; for a supplier, '
+  + 'a supplier of the workspace you recognise as the same, listed or not. The check refuses a target that does not exist. '
+  + `Each list holds its first ${MODEL_MATCHING_ENTRIES} entries: \`totals\`, when present, `
   + 'gives the length of every list. choices: the person\'s choices on the card, kept by a new card of the same file.';
 
-/** The check's matching, for the model: on the person's lines, the first entries of each list. */
-function modelMatching(matching: BudgetFileMatching, lines: readonly number[]): NonNullable<AiImportRunDto['matching']> {
+/**
+ * The check's matching, for the model: on the person's lines, the first entries of each list. A
+ * dimension value to create carries its dimension's enabled values (`dimensionValues`, by column), the
+ * ones the template lists: a translation is no near name. A supplier keeps its near names only.
+ */
+function modelMatching(
+  matching: BudgetFileMatching,
+  lines: readonly number[],
+  dimensionValues?: ReadonlyMap<string, readonly string[]>,
+): NonNullable<AiImportRunDto['matching']> {
   const fileLines = (entry: { lines: number[] }) => entry.lines.map((line) => personLine(line, lines));
   const totals = matching.totals;
   const cut = Math.max(totals.matches, totals.refusedProposals, totals.candidates) > MODEL_MATCHING_ENTRIES;
@@ -377,6 +394,9 @@ function modelMatching(matching: BudgetFileMatching, lines: readonly number[]): 
     candidates: matching.candidates.slice(0, MODEL_MATCHING_ENTRIES).map((entry) => ({
       column: entry.column, ...(entry.name ? { dimension: entry.name } : {}), value: entry.value, outcome: entry.outcome,
       count: entry.count, file_lines: fileLines(entry), candidates: entry.candidates,
+      ...(entry.outcome === 'create' && entry.column.startsWith('analytics:') && dimensionValues?.has(entry.column)
+        ? { dimension_values: [...dimensionValues.get(entry.column)!] }
+        : {}),
     })),
     choices: matching.choices,
     create_suppliers: matching.createSuppliers,
@@ -418,8 +438,16 @@ export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatc
     + `${matching.totals.matches} values of the file matched to existing ones${listed(matchNames, matching.totals.matches)}.`;
 }
 
-/** The bilan of the budget file: its check as its dialog shows it, or the counts of its load. */
-export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: readonly number[]): AiImportRunDto {
+/**
+ * The bilan of the budget file: its check as its dialog shows it, or the counts of its load.
+ * `dimensionValues`: the enabled values of each dimension, by column, for the dimension values the check creates.
+ */
+export function budgetBilan(
+  answer: BudgetFileAnswer,
+  dryRun: boolean,
+  lines: readonly number[],
+  dimensionValues?: ReadonlyMap<string, readonly string[]>,
+): AiImportRunDto {
   const issues: AiImportRunDto['issues'] = [];
   const fileErrors = (answer.fileErrors?.length ?? 0) + (answer.headerErrors?.length ?? 0);
   if (fileErrors > 0) issues.push({ level: 'error', code: null, column: null, count: fileErrors });
@@ -454,7 +482,7 @@ export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: re
     new_suppliers: answer.creates?.supplierCount ?? 0,
     ...(isCheck && answer.creates?.dimensionValueCount !== undefined ? { new_dimension_values: answer.creates.dimensionValueCount } : {}),
     ...(similar ? { similar_lines: similar } : {}),
-    ...(isCheck && answer.matching ? { matching: modelMatching(answer.matching, lines) } : {}),
+    ...(isCheck && answer.matching ? { matching: modelMatching(answer.matching, lines, dimensionValues) } : {}),
     report: { kind: 'budget_file', file: isCheck ? relined(shown, lines) as Record<string, unknown> : null },
   };
 }

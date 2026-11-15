@@ -9,15 +9,13 @@ import { AiPolicyService } from '../ai-policy.service';
 import type { AiExecutionContextWithManager, AiImportMappingPreviewDto, AiImportRunDto } from '../ai.types';
 import { readTableAttachment, TABLE_ATTACHMENT_KIND } from '../attachments/table-attachment';
 import { AI_IMPORT_KEYS, AI_IMPORT_WHOLE_ROWS, aiImportAccess, type AiImportKey } from './ai-import-access';
+import { DESCRIBED_CATALOG_ENTRIES, enabledDimensionValues } from './ai-import-dimension-values';
 import { buildImportFile } from './ai-import-file';
 import { AiImportColumnMappingInput, AiImportMappingResult, AiImportTemplateColumn, buildImportMapping } from './ai-import-mapping';
 import { AiImportRunnerService } from './ai-import-runner.service';
 import { AI_IMPORT_TARGETS, AiImportColumnSpec, AiImportTarget, importColumnTitle } from './ai-import-targets';
 import { cellKey } from '../../spend/budget-file/matching';
 import type { BudgetFileChoice, BudgetFileMatch } from '../../spend/budget-file/types';
-
-/** Catalog entries the template description lists for a column. */
-const DESCRIBED_CATALOG_ENTRIES = 60;
 
 export type PrepareImportMappingInput = {
   attachment_id: string;
@@ -143,7 +141,7 @@ export class AiImportMappingService {
     const target = aiImportTarget(key);
     await this.assertImportRights(context, target);
     const { specs, columns } = await this.templateColumns(context, target, language);
-    const dimensionValues = target.key === 'budget_lines' ? await this.dimensionValues(context) : new Map<string, string[]>();
+    const dimensionValues = target.key === 'budget_lines' ? await enabledDimensionValues(context) : new Map<string, string[]>();
     return {
       import: target.key,
       name: target.names[language],
@@ -165,29 +163,6 @@ export class AiImportMappingService {
         ...(dimensionValues.has(column.column) ? { values: dimensionValues.get(column.column) } : {}),
       })),
     };
-  }
-
-  /**
-   * The enabled values of each dimension, by its budget file column (`analytics:<code>`), the first
-   * ones: the model proposes them for the values of the file the workspace names otherwise (a
-   * translation, a synonym). Lists of the workspace, readable by anyone who imports a budget file.
-   */
-  private async dimensionValues(context: AiExecutionContextWithManager): Promise<Map<string, string[]>> {
-    const rows: Array<{ code: string; name: string }> = await context.manager.query(
-      `SELECT ax.code, c.name
-         FROM analytics_categories c
-         JOIN analytics_axes ax ON ax.tenant_id = c.tenant_id AND ax.id = c.axis_id
-        WHERE c.tenant_id = $1 AND (c.disabled_at IS NULL OR c.disabled_at > now())
-        ORDER BY ax.code, c.sort_order, lower(c.name), c.id`,
-      [context.tenantId],
-    );
-    const byColumn = new Map<string, string[]>();
-    for (const row of rows) {
-      const list = byColumn.get(`analytics:${row.code}`) ?? [];
-      if (list.length < DESCRIBED_CATALOG_ENTRIES) list.push(row.name);
-      byColumn.set(`analytics:${row.code}`, list);
-    }
-    return byColumn;
   }
 
   /**
