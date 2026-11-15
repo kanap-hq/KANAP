@@ -258,7 +258,8 @@ async function testCreatePlacement(runner: QueryRunner, f: Fixture) {
 
 /**
  * A new row named like a stored line: the check names the line only when the person reads it. Marta
- * reads L3, not L1: a row named like L1 is a new line for her, and nothing in her report names L1.
+ * reads L3, not L1: a row named like L1, of L1's company, is no lookalike for her and nothing in her
+ * report names L1, while Ulla's check names it.
  */
 async function testLookalikes(runner: QueryRunner, f: Fixture) {
   const nameOf = async (id: string) => (await runner.query(`SELECT product_name FROM spend_items WHERE id = $1`, [id]))[0].product_name as string;
@@ -266,22 +267,30 @@ async function testLookalikes(runner: QueryRunner, f: Fixture) {
   // Lot I2 of 26.11.9: a row that looks like a stored line is left out, and names that line. By the
   // title, for a limited person, only a line she reads.
   const file = csv(columns, [
-    { name: await nameOf(f.lines.L1), company_name: f.esName, account_number: '6000', currency: 'EUR' },
+    { name: await nameOf(f.lines.L1), company_name: f.frName, account_number: '6000', currency: 'EUR' },
     { name: await nameOf(f.lines.L3), company_name: f.esName, account_number: '6000', currency: 'EUR' },
   ]);
   const looks = (report: BudgetFileReport) => report.lookalikes?.lines.map((entry) => [entry.line, entry.target.ref, entry.reason, entry.updatable]);
+  // L1 named nowhere: neither its reference nor its number (the choices keep targets by number).
+  const namesL1 = (report: BudgetFileReport) => {
+    const text = JSON.stringify(report);
+    return text.includes(`"${f.ref.L1}"`) || new RegExp(`"item":${f.ref.L1.slice(3)}\\b`).test(text);
+  };
   await as(runner, f.persons.marta, async (m) => {
     const report = await preflight(m, f, f.persons.marta, file);
-    assert.equal(report.ok, true, JSON.stringify(report.errors));
+    // T-I2f: a lookalike needs L1's company (FR), outside her placement; the check still runs on every row.
+    assert.deepEqual(errorsOf(report), [`company_name: ${DATA_ACCESS_PLACEMENT_MESSAGE}`], 'the row of L1\'s company: her placement only');
+    assert.deepEqual([report.ok, report.changes.created], [false, 0]);
     assert.deepEqual(looks(report), [[3, f.ref.L3, 'title_supplier', true]], 'only the line she reads');
-    assert.equal(report.changes.created, 1, 'the row titled as L1 is a new line for her');
-    assert.ok(!JSON.stringify(report).includes(`"${f.ref.L1}"`), 'L1 is not named');
+    assert.ok(!namesL1(report), 'L1 is not named');
   });
   await as(runner, f.persons.ulla, async (m) => {
     const report = await preflight(m, f, f.persons.ulla, file);
     assert.deepEqual(looks(report), [[2, f.ref.L1, 'title_supplier', true], [3, f.ref.L3, 'title_supplier', true]]);
+    assert.ok(namesL1(report), 'the same check names L1 for a person who reads it');
   });
-  // By the amounts: every line holds 100 for 2026; the French company's lines are L1, which Marta does
+  // By the amounts: every line holds 100 budget and 100 revision for 2026 (T-I2f: two equal amounts
+  // without the same supplier); the French company's lines are L1, which Marta does
   // not read, and L2, which she reads and may not modify. The comparison reads no line out of her
   // access, and does not offer to update a line she only reads (a choice to do so falls back).
   await runner.query('SAVEPOINT lookalike_accounts');
@@ -290,18 +299,27 @@ async function testLookalikes(runner: QueryRunner, f: Fixture) {
       `UPDATE spend_items SET account_id = (SELECT id FROM accounts WHERE tenant_id = $1 AND account_number = '6000') WHERE id = ANY($2::uuid[])`,
       [f.tenantId, Object.values(f.lines)],
     );
-    const translated = csv([...columns, 'budget_2026'], [{ name: 'Une ligne traduite', company_name: f.frName, account_number: '6000', currency: 'EUR', budget_2026: '100' }]);
+    await runner.query(`UPDATE spend_amounts SET committed = 100 WHERE version_id = ANY($1::uuid[])`, [Object.values(f.versions)]);
+    const translated = csv([...columns, 'budget_2026', 'revision_2026'], [
+      { name: 'Une ligne traduite', company_name: f.frName, account_number: '6000', currency: 'EUR', budget_2026: '100', revision_2026: '100' },
+    ]);
     await as(runner, f.persons.marta, async (m) => {
       const report = await preflight(m, f, f.persons.marta, translated);
       assert.deepEqual(looks(report), [[2, f.ref.L2, 'amounts', false]], 'L2, read only: no update offered');
-      assert.ok(!JSON.stringify(report).includes(`"${f.ref.L1}"`), 'L1 is not named');
+      assert.ok(!namesL1(report), 'L1 is not named');
       const item = Number(f.ref.L2.slice(3));
       const service = budgetFileService();
       const chosen = await service.preflight('opex', translated, { manager: m, tenantId: f.tenantId, userId: f.persons.marta }, {
         ...OPTIONS, matching: { choices: [{ kind: 'lookalike', line: 2, action: 'update', item }] },
       });
       assert.deepEqual(chosen.lookalikes?.lines.map((entry) => entry.outcome), ['ignored'], 'the update falls back');
-      assert.deepEqual([chosen.ok, chosen.changes.updated, chosen.matching?.choices], [true, 0, []]);
+      assert.deepEqual([chosen.ok, chosen.changes.updated], [true, 0]);
+      // T-I2f: the check gives back the row's target, L2 (a line she reads), and leaves the row out.
+      const kept = chosen.matching?.choices as Array<{ kind: string; action: string; targets: Record<string, { item: number }> }>;
+      assert.deepEqual(kept.map((choice) => [choice.kind, choice.action, Object.entries(choice.targets).map(([line, target]) => [line, target.item])]), [
+        ['lookalikes', 'ignore', [['2', item]]],
+      ]);
+      assert.ok(!namesL1(chosen), 'L1 is not named');
     });
     await as(runner, f.persons.ulla, async (m) => {
       const report = await preflight(m, f, f.persons.ulla, translated);
