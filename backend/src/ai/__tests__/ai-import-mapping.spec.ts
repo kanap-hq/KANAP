@@ -782,7 +782,9 @@ async function testARefusedFileIsNotImported() {
   const late = await changed.previews.executePreview(changed.context, card.preview_id);
   assert.equal(late.status, 'failed');
   assert.equal(late.error_message, 'Die Prüfung dieser Datei hat Fehler gefunden, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.');
-  assert.equal(late.import_mapping!.result ?? null, null, 'no result on a refused import');
+  // The refused load stays on the card with the reason of each row (lot I2 of 26.11.9); nothing is imported.
+  assert.equal(late.import_mapping!.result?.ok, false, 'the refused load is shown on the card');
+  assert.deepEqual(late.import_mapping!.result?.report, refusal.report);
   assert.equal(changed.manager.audits.length, 0);
   console.log('  a refused file is not imported: OK');
 }
