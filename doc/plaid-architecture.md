@@ -896,7 +896,8 @@ Live write-preview coverage includes:
   `describe_import_template`): the card holds the column mapping and the
   import's check of the file, and approving it runs the import of the screens
 - the change in bulk of one field on many budget lines (`bulk_update_budget_lines`,
-  below), the list's "Change the selection" under one card
+  below) or on many applications (`bulk_update_applications`), the list's "Change
+  the selection" under one card
 - single-record deletes (`delete_record`) of a task, contact, location,
   document, budget line, connection or interface, at the level of that
   family's delete route (`ai-write-levels.ts`); one pending delete per
@@ -1052,6 +1053,27 @@ budget operation running (`operation_running`) is an error the model relays at
 preparation and leaves the card to approve at execution, with a fixed sentence.
 The tool is never a step of `prepare_mutation_plan`, and is not reversible. The
 MCP server only reads and gets nothing.
+
+A change in bulk of applications (`bulk_update_applications`, same lot) follows the
+same pattern on `ApplicationsService.bulkUpdate`, at `applications:member` like its
+route. Its fields are those of `applicationBulkFields`: business owners and IT
+owners (a list of people that replaces the role's, empty allowed), the lifecycle
+(a state of the workspace, never empty) and the business criticality (a level
+still offered, or empty); a state or a level is given by its name, a translated
+name or its code (`matchCatalogAliases`) and the card shows its name. The filters
+are a dozen fields of `query_entities` (`APPLICATION_BULK_FILTER_FIELDS`:
+lifecycle, business and cyber criticality, data class, recovery wave, category,
+supplier, publisher, IT and business owners, external facing, contains PII); the
+catalog fields take a name or a code too. They go into the list's parameters
+(`{ filters: <grid model> }`), so the applications are those of the screen's list:
+enabled ones, the retired ones left out unless the filter names the lifecycle.
+References are `APP-12`. A Business Contributor whose role was raised to member
+reaches only the applications they own: a card of many rows names no record, so
+`assertRecordInWriteScope` holds nothing, and the operation passes the
+contributor's scope (`resolveBusinessContributorScopeForUser`) to the service at
+the card and at the approval; an application outside it is neither counted, named
+nor changed. Each application writes its audit rows (`applications`,
+`application_owners`) with `source: 'ai_chat'` and the preview id.
 
 The import mapping (`backend/src/ai/import/`) covers every import that has a
 route: `AI_IMPORT_ACCESS` gives each one the module, the level and the
