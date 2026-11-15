@@ -336,6 +336,45 @@ async function testCategoryAsACatalog(harness: Harness) {
   });
 }
 
+/**
+ * The card names a catalog value as the screen shows it in the person's language: the shipped name
+ * of a value the workspace keeps as shipped, the workspace's own name for a value it created. The
+ * tool's result, which the model reads, carries those names and no code. A shipped value is also
+ * taken by the name the screen shows for it.
+ */
+async function testCatalogWordsInThePersonsLanguage(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    await runner.query(
+      `UPDATE tenants SET metadata = metadata || jsonb_build_object('it_ops', jsonb_build_object('application_categories', $2::jsonb)) WHERE id = $1`,
+      [seed.tenantId, JSON.stringify([
+        { code: 'line_of_business', label: 'Line-of-business' },
+        { code: 'atelier', label: 'Atelier' },
+      ])],
+    );
+    await runner.query(`UPDATE applications SET category = 'atelier' WHERE tenant_id = $1`, [seed.tenantId]);
+    await runner.query(`UPDATE applications SET category = 'line_of_business' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.apps[1]]);
+    // In French, the values as the French screen names them; in German, their codes; in English, the shown names.
+    const cases = [
+      ['fr', 'Filtre : Catégorie « Métier », « Atelier »\n\nPérimètre : applications activées, hors retirées\n\nCriticité business → Élevée\n\n4 applications à modifier'],
+      ['de', 'Filter: Kategorie „Fachanwendung“, „Atelier“\n\nUmfang: aktivierte Anwendungen, ohne ausgemusterte\n\nGeschäftskritikalität → Hoch\n\n4 Anwendungen zu ändern'],
+      ['en', 'Filter: Category "Line of business", "Atelier"\n\nScope: enabled applications, retired ones left out\n\nBusiness criticality → High\n\n4 applications to change'],
+    ] as const;
+    const inputs = {
+      fr: { value: 'Élevée', category: ['Métier', 'Atelier'] },
+      de: { value: 'high', category: ['line_of_business', 'atelier'] },
+      en: { value: 'High', category: ['Line of business', 'Atelier'] },
+    };
+    for (const [language, expected] of cases) {
+      await runner.query(`UPDATE users SET locale = $3 WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.users.member, language]);
+      const preview = await card(harness, context(seed, runner, `catalog-${language}`), { field: 'criticality', value: inputs[language].value, filters: { category: inputs[language].category } });
+      assert.equal(preview.changes[CARD].to.split('\n\n- ')[0], expected, `the card in ${language}`);
+      const result = JSON.stringify(preview);
+      for (const code of ['line_of_business', 'Line-of-business', '"high"']) assert.equal(result.includes(code), false, `${language}: no ${code} in the tool's result`);
+    }
+    console.log('  catalog values named as the screen does, in the person\'s language: OK');
+  });
+}
+
 async function testEveryField(harness: Harness) {
   await inSeed(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'fields');
@@ -558,6 +597,7 @@ async function run() {
     await testFilterAsTheList(harness);
     await testReferencesAndRefusals(harness);
     await testCategoryAsACatalog(harness);
+    await testCatalogWordsInThePersonsLanguage(harness);
     await testEveryField(harness);
     await testCapAndListChanged(harness);
     await testRightsContributorAndSubscription(harness);

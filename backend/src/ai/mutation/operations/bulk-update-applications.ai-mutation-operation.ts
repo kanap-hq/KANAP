@@ -4,6 +4,7 @@ import { resolveBusinessContributorScopeForUser, applicationParticipantCondition
 import { ApplicationsService } from '../../../applications/services/applications.service';
 import { BULK_MAX_ROWS, type BulkChanges, type BulkEditResult } from '../../../common/bulk-edit/bulk-edit';
 import { CATALOG_LOCALES, matchCatalogAliases, normalizeAlias, type CatalogTranslations } from '../../../it-ops-settings/catalog-codes';
+import { shippedLabelIn, shippedLabelsOf } from '../../../it-ops-settings/catalog-shipped-labels';
 import { ItOpsSettingsService } from '../../../it-ops-settings/it-ops-settings.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiPolicyService } from '../../ai-policy.service';
@@ -77,6 +78,7 @@ const CATALOG_FILTER_FIELDS = {
   recovery_wave: 'recoveryWaves',
 } as const;
 type CatalogFilterField = keyof typeof CATALOG_FILTER_FIELDS;
+type CatalogList = (typeof CATALOG_FILTER_FIELDS)[CatalogFilterField];
 const YES_NO_FILTER_FIELDS = new Set(['external_facing', 'contains_pii']);
 
 const NO_CRITERION = 'Name the applications to change: a filter of the applications (lifecycle, criticality, supplier, owner...) or their references (rows). '
@@ -99,7 +101,7 @@ export const BulkUpdateApplicationsInputSchema = z.object({
 type BulkUpdateApplicationsInput = z.infer<typeof BulkUpdateApplicationsInputSchema>;
 
 type Words = Record<AiWriteLanguage, string>;
-type CatalogOption = { code: string; label: string; deprecated?: boolean; translations?: CatalogTranslations };
+type CatalogOption = { code: string; label: string; deprecated?: boolean; translations?: CatalogTranslations; shippedLabels?: string[] };
 
 /** One part of the filter as stored on the card: its field, its values, and their words per language for a catalog field. */
 type StoredFilterPart = { key: string; op: 'in' | 'not' | 'contains'; values: Array<string | null>; words?: Record<AiWriteLanguage, Array<string | null>> };
@@ -116,9 +118,16 @@ function counts(value: unknown): Record<string, number> {
   return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([code, n]) => [code, Number(n) || 0]));
 }
 
-/** A catalog value's name in each language: the workspace's translation, else its own name. */
-function optionWords(option: CatalogOption): Words {
-  return Object.fromEntries(CATALOG_LOCALES.map((locale) => [locale, option.translations?.[locale]?.label || option.label || option.code])) as Words;
+/**
+ * A catalog value's name in each language, as the screen shows it (`localizeCatalogItem`): the
+ * workspace's translation, else the shipped name in that language while the workspace keeps the
+ * shipped value, else its own name.
+ */
+function optionWords(list: CatalogList, option: CatalogOption): Words {
+  return Object.fromEntries(CATALOG_LOCALES.map((locale) => [
+    locale,
+    option.translations?.[locale]?.label || shippedLabelIn(list, option, locale) || option.label || option.code,
+  ])) as Words;
 }
 
 function sameWords(value: string): Words {
@@ -313,14 +322,16 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     return { label, op: part.op, values: part.values, quote: true };
   }
 
-  private async catalog(context: AiExecutionContextWithManager, list: (typeof CATALOG_FILTER_FIELDS)[CatalogFilterField]): Promise<CatalogOption[]> {
+  /** A catalog's values, each also known by the names the screen shows for a shipped value (as an import takes them). */
+  private async catalog(context: AiExecutionContextWithManager, list: CatalogList): Promise<CatalogOption[]> {
     // The lifecycle states and the categories are the workspace's settings, the levels its classification catalog.
-    if (list === 'lifecycleStates' || list === 'applicationCategories') {
-      const settings = await this.settings.getSettings(context.tenantId, { manager: context.manager });
-      return (settings[list] || []) as CatalogOption[];
-    }
-    const catalog = await this.settings.getClassificationCatalog(context.tenantId, { manager: context.manager });
-    return (catalog[list] || []) as CatalogOption[];
+    const options = list === 'lifecycleStates' || list === 'applicationCategories'
+      ? (await this.settings.getSettings(context.tenantId, { manager: context.manager }))[list]
+      : (await this.settings.getClassificationCatalog(context.tenantId, { manager: context.manager }))[list];
+    return ((options || []) as CatalogOption[]).map((option) => {
+      const shippedLabels = shippedLabelsOf(list, option);
+      return shippedLabels.length ? { ...option, shippedLabels } : option;
+    });
   }
 
   /** The value in the contract's terms: people's ids, a state's or a level's code. */
@@ -350,7 +361,7 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       if (found.length !== 1) {
         throw new NotFoundException(`"${value}" is not a lifecycle state of this workspace. The states: ${states.map((state) => `${state.label} (${state.code})`).join(', ')}.`);
       }
-      return { changes: { lifecycle: found[0].code }, valueWords: optionWords(found[0]) };
+      return { changes: { lifecycle: found[0].code }, valueWords: optionWords('lifecycleStates', found[0]) };
     }
     if (value === null) return { changes: { criticality: null }, valueWords: null };
     const levels = await this.catalog(context, 'businessCriticalityLevels');
@@ -359,7 +370,7 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     if (found.length !== 1 || found[0].deprecated) {
       throw new NotFoundException(`"${value}" is not a business criticality level offered in this workspace. The levels: ${offered.map((level) => `${level.label} (${level.code})`).join(', ')}.`);
     }
-    return { changes: { criticality: found[0].code }, valueWords: optionWords(found[0]) };
+    return { changes: { criticality: found[0].code }, valueWords: optionWords('businessCriticalityLevels', found[0]) };
   }
 
   /**
@@ -424,7 +435,8 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
         ? (value as { not: Array<string | null> }).not
         : Array.isArray(value) ? value : typeof value === 'string' ? [value.trim()] : [];
       if (key in CATALOG_FILTER_FIELDS && raw.length > 0) {
-        const options = await this.catalog(context, CATALOG_FILTER_FIELDS[key as CatalogFilterField]);
+        const list = CATALOG_FILTER_FIELDS[key as CatalogFilterField];
+        const options = await this.catalog(context, list);
         const chosen = raw.map((entry) => {
           if (entry === null && key !== 'lifecycle') return null;
           const found = entry === null ? [] : matchCatalogAliases(options, normalizeAlias(entry));
@@ -435,7 +447,7 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
         });
         const codes = chosen.map((option) => (option === null ? null : option.code));
         coded[key] = negated ? { not: codes } : codes;
-        const words = Object.fromEntries(CATALOG_LOCALES.map((locale) => [locale, chosen.map((option) => (option === null ? null : optionWords(option)[locale]))]));
+        const words = Object.fromEntries(CATALOG_LOCALES.map((locale) => [locale, chosen.map((option) => (option === null ? null : optionWords(list, option)[locale]))]));
         parts.push({ key, op, values: codes, words: words as StoredFilterPart['words'] });
         continue;
       }
