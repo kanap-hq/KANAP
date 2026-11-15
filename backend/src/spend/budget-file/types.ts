@@ -325,6 +325,8 @@ export interface BudgetFileReport {
     suppliers: Array<{ name: string; erpId: string | null }>;
     /** How many suppliers the load creates: `suppliers` lists the first ones. */
     supplierCount: number;
+    /** How many dimension values the load creates, over all dimensions: `dimensionValues` lists the first ones. */
+    dimensionValueCount: number;
     /**
      * For a limited person only: unknown values of a closed-list dimension, refused (each row has
      * its error); `dimensionValues` lists the ones the load will create.
@@ -414,6 +416,8 @@ export interface BudgetFileMatching {
   /** Kad's proposals the check refused. */
   refusedProposals: BudgetFileRefusedProposal[];
   candidates: BudgetFileCandidates[];
+  /** How many entries each list has: the lists hold the first MATCH_LIST_LIMIT. */
+  totals: { matches: number; refusedProposals: number; candidates: number };
   /** The choices the check followed: the undone matches it would otherwise make, and the suppliers option. */
   choices: BudgetFileChoice[];
   /** The "Create missing suppliers" option: `allowed` when the person may create suppliers, `value` the one followed. */

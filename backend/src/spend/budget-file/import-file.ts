@@ -165,6 +165,9 @@ export async function importBudgetFile(input: {
   decimalMark?: DecimalMark;
   createSuppliers: boolean;
   canCreateSuppliers: boolean;
+  /** Whether the person reads the suppliers' and the companies' lists (the check's candidates; absent: not read). */
+  canReadSuppliers?: boolean;
+  canReadCompanies?: boolean;
   /** The person's choices and Kad's proposals of the check: the load replays them. */
   matching?: BudgetFileMatchOptions;
   allowedCurrencies: string[] | null;
@@ -227,6 +230,9 @@ async function prepare(input: {
   decimalMark?: DecimalMark;
   createSuppliers: boolean;
   canCreateSuppliers: boolean;
+  /** Whether the person reads the suppliers' and the companies' lists (the check's candidates; absent: not read). */
+  canReadSuppliers?: boolean;
+  canReadCompanies?: boolean;
   /** The person's choices and Kad's proposals of the check: the load replays them. */
   matching?: BudgetFileMatchOptions;
   allowedCurrencies: string[] | null;
@@ -248,6 +254,8 @@ async function prepare(input: {
     names: loaded.names,
     createSuppliers: input.createSuppliers,
     canCreateSuppliers: input.canCreateSuppliers,
+    canReadSuppliers: input.canReadSuppliers,
+    canReadCompanies: input.canReadCompanies,
     currentYear: new Date().getFullYear(),
     labels: loaded.labels,
     access: loaded.access,

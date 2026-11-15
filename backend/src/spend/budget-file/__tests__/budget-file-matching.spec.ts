@@ -44,12 +44,16 @@ const HEADER = 'item_number,nature,name,company_name,account_number,supplier_nam
 
 async function check(
   rows: string[],
-  options: { cat?: BudgetCatalog; matching?: BudgetFileMatchOptions; createSuppliers?: boolean; canCreateSuppliers?: boolean; access?: BudgetFileAccess } = {},
+  options: {
+    cat?: BudgetCatalog; matching?: BudgetFileMatchOptions; createSuppliers?: boolean; canCreateSuppliers?: boolean; access?: BudgetFileAccess;
+    canReadSuppliers?: boolean; canReadCompanies?: boolean;
+  } = {},
 ) {
   const read = await readBudgetCsv(`${HEADER}${rows.join('\n')}\n`, { language: 'en', dimensionCodes: DIMENSIONS });
   return planBudgetFile({
     scope: 'opex', read, catalog: options.cat ?? frenchCatalog(), stored: [], names: [],
     createSuppliers: options.createSuppliers ?? true, canCreateSuppliers: options.canCreateSuppliers ?? true,
+    canReadSuppliers: options.canReadSuppliers ?? true, canReadCompanies: options.canReadCompanies ?? true,
     currentYear: 2026, labels: {}, ...(options.access ? { access: options.access } : {}),
     ...(options.matching ? { matching: options.matching } : {}),
   });
@@ -231,6 +235,60 @@ function testChoicesParsing() {
   console.log('  choices parsed and bounded: OK');
 }
 
+const OFF = '2020-01-01T00:00:00.000Z';
+
+// Review of lot I1. A supplier matched accents aside to a disabled supplier is refused as before, and
+// its match is listed, so that the person can undo it (the value is then created).
+async function testDisabledSupplierMatchListed() {
+  const cat = frenchCatalog();
+  cat.suppliers = [...cat.suppliers, { id: 's9', name: 'Société Ancienne', erpId: null, disabledAt: OFF }];
+  const { report } = await check([',opex,A,Fromage & Co SA,612200,Societe Ancienne,EUR,,,,'], { cat });
+  assert.deepEqual(report.errors.map((error) => [error.column, error.code]), [['supplier_name', 'BUDGET_FILE_DISABLED']]);
+  assert.deepEqual(matchesOf(report), [['supplier_name', 'Societe Ancienne', 'Société Ancienne', 'server', 'accents', [2]]]);
+  const undone = await check([',opex,A,Fromage & Co SA,612200,Societe Ancienne,EUR,,,,'], {
+    cat, matching: { choices: [{ kind: 'unmatch', column: 'supplier_name', value: 'Societe Ancienne' }] },
+  });
+  assert.equal(undone.report.ok, true, JSON.stringify(undone.report.errors));
+  assert.deepEqual(undone.report.creates.suppliers, [{ name: 'Societe Ancienne', erpId: null }]);
+  console.log('  a supplier matched to a disabled one: refused, the match listed and undoable: OK');
+}
+
+// Two spellings of one new value are one creation and one candidate entry, counted once; the model
+// is told how many values the approval creates.
+async function testOneCandidatePerCreation() {
+  const { report } = await check([
+    ',opex,A,Fromage & Co SA,612200,Société Nouvelle,EUR,,,,Revue privée',
+    ',opex,B,Fromage & Co SA,612200,Societe Nouvelle,EUR,,,,Revue privee',
+  ]);
+  assert.deepEqual(report.creates.dimensionValues.map((entry) => entry.names), [['Revue privée']]);
+  assert.equal(report.creates.dimensionValueCount, 1);
+  const toCreate = report.matching!.candidates.filter((entry) => entry.outcome === 'create');
+  assert.deepEqual(toCreate.map((entry) => [entry.column, entry.value, entry.count, entry.lines]), [
+    ['supplier_name', 'Société Nouvelle', 2, [2, 3]],
+    ['analytics:business_domain', 'Revue privée', 2, [2, 3]],
+  ]);
+  assert.deepEqual(report.matching!.totals, { matches: 0, refusedProposals: 0, candidates: 2 });
+  console.log('  two spellings: one creation, one candidate entry: OK');
+}
+
+// A disabled company is no candidate; the names of the suppliers and the companies are candidates
+// only for a person who may read their list.
+async function testCandidatesOfReadableLists() {
+  const cat = frenchCatalog();
+  cat.companies = [...cat.companies, { id: 'c3', name: 'Fromage & Co SARL', coaId: null, disabledAt: OFF }];
+  const rows = [',opex,A,Fromage & Co SARLL,612200,Orange Busines,EUR,,,,'];
+  const { report } = await check(rows, { cat });
+  const of = (result: typeof report, column: string) => result.matching!.candidates.find((entry) => entry.column === column)!.candidates.map((entry) => entry.name);
+  assert.ok(!of(report, 'company_name').includes('Fromage & Co SARL'), 'a disabled company is no candidate');
+  assert.ok(of(report, 'company_name').includes('Fromage & Co SA'));
+  assert.ok(of(report, 'supplier_name').includes('Orange Business'));
+  const blind = (await check(rows, { cat, canReadSuppliers: false, canReadCompanies: false })).report;
+  assert.deepEqual(of(blind, 'company_name'), [], 'no company names without the companies reader level');
+  assert.deepEqual(of(blind, 'supplier_name'), [], 'no supplier names without the suppliers reader level');
+  assert.equal(blind.matching!.candidates.find((entry) => entry.column === 'supplier_name')!.outcome, 'create', 'the entry itself stays');
+  console.log('  candidates: enabled companies only, and only from the lists the person may read: OK');
+}
+
 async function main() {
   testRecommendedKeys();
   testCandidates();
@@ -240,6 +298,9 @@ async function main() {
   await testCreatesAndCandidates();
   await testUndoneMatches();
   await testClosedListForALimitedPerson();
+  await testDisabledSupplierMatchListed();
+  await testOneCandidatePerCreation();
+  await testCandidatesOfReadableLists();
   console.log('budget-file-matching.spec: ok');
 }
 

@@ -25,6 +25,9 @@ export interface BudgetFileOptions {
   decimalMark?: unknown;
   createSuppliers: boolean;
   canCreateSuppliers: boolean;
+  /** Whether the person reads the suppliers' and the companies' lists: the check names them as candidates only then (absent: not read). */
+  canReadSuppliers?: boolean;
+  canReadCompanies?: boolean;
   matching?: BudgetFileMatchOptions;
 }
 
@@ -36,6 +39,15 @@ type CallerRights = { isAdmin?: boolean; permissions?: Record<string, string> } 
 export function canCreateSuppliers(ctx: CallerRights): boolean {
   if (ctx?.isAdmin) return true;
   return (LEVEL_RANK[ctx?.permissions?.suppliers ?? ''] ?? 0) >= LEVEL_RANK.member;
+}
+
+/**
+ * The lists whose names the check may give as the closest names of a value nothing matched: the
+ * suppliers and the companies, at the reader level of their module, as GET /suppliers and GET /companies.
+ */
+export function readableLists(ctx: CallerRights): { canReadSuppliers: boolean; canReadCompanies: boolean } {
+  const reads = (resource: string) => !!ctx?.isAdmin || (LEVEL_RANK[ctx?.permissions?.[resource] ?? ''] ?? 0) >= LEVEL_RANK.reader;
+  return { canReadSuppliers: reads('suppliers'), canReadCompanies: reads('companies') };
 }
 
 /** An exported budget file: its name, type and content, and how many lines it holds. */
@@ -97,6 +109,8 @@ export class BudgetFileService {
       names: loaded.names,
       createSuppliers: options.createSuppliers,
       canCreateSuppliers: options.canCreateSuppliers,
+      canReadSuppliers: options.canReadSuppliers,
+      canReadCompanies: options.canReadCompanies,
       currentYear,
       labels: loaded.labels,
       access: loaded.access,
@@ -177,6 +191,8 @@ export class BudgetFileService {
       decimalMark,
       createSuppliers: options.createSuppliers,
       canCreateSuppliers: options.canCreateSuppliers,
+      canReadSuppliers: options.canReadSuppliers,
+      canReadCompanies: options.canReadCompanies,
       matching: options.matching,
       allowedCurrencies: settings.allowedCurrencies,
       items: deps.items,

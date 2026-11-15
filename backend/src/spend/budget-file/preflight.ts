@@ -138,6 +138,12 @@ export interface PreflightInput {
   /** A limited person's access (planning/data-scoped-access spec §4.2); absent for an unscoped person. */
   access?: BudgetFileAccess;
   /**
+   * Whether the person reads the suppliers' list, and the companies' (the reader level of their
+   * module): the closest names of a value nothing matched name them only then. Absent: not read.
+   */
+  canReadSuppliers?: boolean;
+  canReadCompanies?: boolean;
+  /**
    * The person's choices (matches undone; a `create_suppliers` choice wins over `createSuppliers`)
    * and Kad's proposals. The load replays the same.
    */
@@ -583,7 +589,8 @@ function resolveCompany(
     if (found.kind === 'none') {
       fail('company_name', `Company '${cell.text}' was not found.`, 'CSV_REFERENCE_NOT_FOUND', { value: cell.text });
       miss(bag, 'companies', cell.text);
-      noteCandidates(bag, 'company_name', null, cell.text, 'refused', row.line, input.catalog.companies);
+      const companies = input.canReadCompanies ? input.catalog.companies.filter((company) => isActiveAt(company.disabledAt)) : [];
+      noteCandidates(bag, 'company_name', null, cell.text, 'refused', row.line, companies);
       return { id: null, known: false };
     }
     if (found.kind === 'many') {
@@ -767,6 +774,8 @@ function resolveSupplier(
   }
   if (!erpText && byName?.kind === 'one') {
     const supplier = byName.row;
+    // Listed before the disabled check, as a dimension value's: the person may undo a match to a disabled supplier.
+    noteMatch(bag, row.line, byName);
     if (!isActiveAt(supplier.disabledAt) && supplier.id !== (live?.supplierId ?? null)) {
       fail('supplier_name', `Supplier '${supplier.name}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: supplier.name });
       return { id: null, createKey: null };
@@ -774,7 +783,6 @@ function resolveSupplier(
     const changed = !!(live && supplier.id !== live.supplierId);
     if (changed) changes.push('supplier');
     writeField(draft, creating, changed, 'supplier_id', supplier.id);
-    noteMatch(bag, row.line, byName);
     return { id: supplier.id, createKey: null };
   }
   if (!nameText) {
@@ -783,13 +791,14 @@ function resolveSupplier(
   }
   // Two spellings of one unknown name (`Societe X`, `Société X`) are one supplier: the first one names it.
   const createKey = `${accentFreeKey(nameText)}|${accentFreeKey(erpText)}`;
-  const enabledSuppliers = input.catalog.suppliers.filter((supplier) => isActiveAt(supplier.disabledAt));
+  const enabledSuppliers = input.canReadSuppliers ? input.catalog.suppliers.filter((supplier) => isActiveAt(supplier.disabledAt)) : [];
   if (input.createSuppliers && input.canCreateSuppliers) {
     const created = bag.suppliers.get(createKey) ?? { name: nameText, erpId: erpText || null };
     bag.suppliers.set(createKey, created);
     changes.push('supplier');
     draft.newSupplier = created;
-    noteCandidates(bag, 'supplier_name', null, nameText, 'create', row.line, enabledSuppliers);
+    // One entry per supplier created, under the name it gets.
+    noteCandidates(bag, 'supplier_name', null, created.name, 'create', row.line, enabledSuppliers, createKey);
     return { id: null, createKey };
   }
   fail('supplier_name', `Supplier '${nameText}' does not exist.`, 'CSV_REFERENCE_NOT_FOUND', { value: nameText });
@@ -1080,7 +1089,8 @@ function resolveAnalytics(
       bag.dimensions.set(code, listed);
       changes.push(column);
       draft.analytics.push({ code, categoryId: null, createName });
-      noteCandidates(bag, column, dimension.axisName, cell.text, 'create', row.line, enabledValues);
+      // One entry per value created, under the name it gets.
+      noteCandidates(bag, column, dimension.axisName, createName, 'create', row.line, enabledValues, accentFreeKey(name));
     } catch (err) {
       const refusal = analyticsMessage(err, dimension.axisName || code, cell.text);
       fail(column, refusal.message, refusal.code, refusal.params);
@@ -1381,7 +1391,10 @@ function noteMatch<T extends Listed>(bag: Bag, line: number, found: ListedMatch<
 
 /**
  * A value of the file nothing matched: the load creates it, or the check refuses it. Its closest
- * names in the workspace's list (`rows`: a reference list, never other budget lines), once per value.
+ * names in the workspace's list (`rows`: a reference list, never other budget lines, and empty for a
+ * list the person may not read), once per value. A value created is keyed as its creation is
+ * (`created`: two spellings, one value created, one entry), so that the entries of outcome create are
+ * the values the load creates.
  */
 function noteCandidates(
   bag: Bag,
@@ -1391,8 +1404,9 @@ function noteCandidates(
   outcome: 'create' | 'refused',
   line: number,
   rows: ReadonlyArray<{ name: string }>,
+  created?: string,
 ): void {
-  const key = cellKey(column, value);
+  const key = created === undefined ? cellKey(column, value) : `${column}\u0000create\u0000${created}`;
   const entry = bag.matching.candidates.get(key) ?? {
     column, name: dimensionName, value: value.trim(), outcome, lines: [], count: 0,
     candidates: closestNames(value, rows.map((row) => row.name)),
@@ -1564,6 +1578,7 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
         ? [...bag.suppliers.values()].slice(0, PREFLIGHT_LIST_LIMIT)
         : [],
       supplierCount: input.createSuppliers && input.canCreateSuppliers ? bag.suppliers.size : 0,
+      dimensionValueCount: [...bag.dimensions.values()].reduce((sum, names) => sum + names.size, 0),
       ...(input.access ? { refusedDimensionValues: namesByDimension(input, bag.refusedDimensions) } : {}),
     },
     supplierMessage: supplierNote,
@@ -1603,6 +1618,7 @@ function matchingOf(input: PreflightInput, bag: Bag): NonNullable<BudgetFileRepo
     matches: [...state.matches.values()].slice(0, MATCH_LIST_LIMIT),
     refusedProposals: [...state.refused.values()].slice(0, MATCH_LIST_LIMIT),
     candidates: [...state.candidates.values()].slice(0, MATCH_LIST_LIMIT),
+    totals: { matches: state.matches.size, refusedProposals: state.refused.size, candidates: state.candidates.size },
     choices,
     createSuppliers: { allowed, value: allowed && input.createSuppliers },
   };

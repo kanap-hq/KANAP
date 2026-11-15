@@ -29,7 +29,7 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 import { analyzeAfterLargeImport } from './budget-import-statistics';
-import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file.service';
+import { BudgetFileService, canCreateSuppliers, readableLists } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
 import { budgetFileBody } from './budget-file/send-export';
 import { budgetFileChoices } from './budget-file/upload';
@@ -195,6 +195,7 @@ export class SpendItemsController {
       decimalMark,
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
+      ...readableLists(ctx),
       matching: { choices: budgetFileChoices(choices) },
     });
   }
@@ -228,6 +229,7 @@ export class SpendItemsController {
       decimalMark,
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
+      ...readableLists(ctx),
       matching: { choices: budgetFileChoices(choices) },
     }, { items: { opex: this.svc, capex: this.capexSvc }, audit: this.audit, freeze: this.freeze });
     await analyzeAfterLargeImport(req, importAnalyzeTables('opex', result), result);
