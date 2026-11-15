@@ -103,6 +103,8 @@ export type AiImportReportMessage = CsvReportMessage;
 /** What an import reported on the file Plaid built: its check (`dry_run`) or the import itself. */
 export type AiImportRun = {
   ok: boolean;
+  /** A check that passed with nothing to create or update: the card says "Nothing to import" and cannot be approved. */
+  nothing_to_import?: true;
   dry_run: boolean;
   total: number;
   inserted: number;
