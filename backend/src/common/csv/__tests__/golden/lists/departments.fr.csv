@@ -1,5 +1,5 @@
-﻿company_name;name;description;status;disabled_at
-"Line; ""quoted""
+﻿reference;company_name;name;description;status;disabled_at
+DEPT-2;"Line; ""quoted""
 second, line";"Line; ""quoted""
 second, line";;disabled;30/06/2025
-Alpha SA;Finance;"'=HYPERLINK(""http://x"")";enabled;
+DEPT-1;Alpha SA;Finance;"'=HYPERLINK(""http://x"")";enabled;
