@@ -314,12 +314,12 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
   /** A part of the filter in the person's language: the column's label, and the words of a catalog or a yes-or-no value. */
   private filterPartWords(part: StoredFilterPart, language: AiWriteLanguage): BulkFilterPart {
     const label = APPLICATION_FILTER_LABELS[language][part.key] ?? part.key;
-    if (part.words) return { label, op: part.op, values: part.words[language] ?? part.values, quote: true };
+    if (part.words) return { label, op: part.op, values: part.words[language] ?? part.values };
     if (YES_NO_FILTER_FIELDS.has(part.key)) {
       const words = APPLICATION_YES_NO_WORDS[language] as Record<string, string>;
-      return { label, op: part.op, values: part.values.map((value) => (value === null ? null : words[value] ?? value)), quote: false };
+      return { label, op: part.op, values: part.values.map((value) => (value === null ? null : words[value] ?? value)) };
     }
-    return { label, op: part.op, values: part.values, quote: true };
+    return { label, op: part.op, values: part.values };
   }
 
   /** A catalog's values, each also known by the names the screen shows for a shipped value (as an import takes them). */

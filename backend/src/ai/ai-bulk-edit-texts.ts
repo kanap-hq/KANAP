@@ -174,8 +174,11 @@ export const APPLICATION_BULK_FIELD_LABELS: WordTable = {
   es: { owners_business: 'Responsables de negocio', owners_it: 'Responsables IT', lifecycle: 'Ciclo de vida', criticality: 'Criticidad de negocio' },
 };
 
-/** One part of the filter in words: a field and its values (`not`: every value but these; `contains`: a text). */
-export type BulkFilterPart = { label: string; op: 'in' | 'not' | 'contains'; values: Array<string | null>; quote: boolean };
+/**
+ * One part of the filter in words: a field and its values (`not`: every value but these; `contains`:
+ * a text). Every value is quoted, a closed one as a typed one; an empty one is worded.
+ */
+export type BulkFilterPart = { label: string; op: 'in' | 'not' | 'contains'; values: Array<string | null> };
 
 /** The words of a family's rows on the card. */
 type BulkFamilyWords = {
@@ -274,7 +277,7 @@ function andMore(language: AiWriteLanguage, more: number): string {
 
 function filterPartText(part: BulkFilterPart, language: AiWriteLanguage): string {
   const values = part.values
-    .map((value) => (value === null ? NO_VALUE[language] : part.quote ? quoted(language, value) : value))
+    .map((value) => (value === null ? NO_VALUE[language] : quoted(language, value)))
     .join(', ');
   if (part.op === 'contains') return `${part.label} ${CONTAINS[language]} ${values}`;
   if (part.op === 'not') return `${part.label} ${EXCEPT[language]} ${values}`;

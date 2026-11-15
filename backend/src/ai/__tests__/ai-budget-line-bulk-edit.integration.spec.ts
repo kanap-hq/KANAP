@@ -257,7 +257,7 @@ async function testFilterAsTheList(harness: Harness) {
 
     // The status named: the disabled line too, and no scope line.
     const all = await card(harness, context(seed, runner, 'status'), { field: 'run_build', value: 'build', filters: { supplier: ['Acme'], status: ['enabled', 'disabled'] } });
-    assert.match(all.changes.budget_line_bulk_edit.to, /^Filter: Supplier "Acme"; Status Enabled, Disabled\n\nRun or build → Build\n\n7 lines to change/);
+    assert.match(all.changes.budget_line_bulk_edit.to, /^Filter: Supplier "Acme"; Status "Enabled", "Disabled"\n\nRun or build → Build\n\n7 lines to change/);
     console.log('  a filter reaches the lines of the screen list, audited by Kad: OK');
   });
 }

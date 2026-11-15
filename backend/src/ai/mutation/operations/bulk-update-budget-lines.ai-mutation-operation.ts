@@ -294,9 +294,9 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     const label = part.label ?? BUDGET_LINE_FILTER_LABELS[language][part.key] ?? part.key;
     if (WORDED_FILTER_FIELDS.has(part.key)) {
       const words = BUDGET_LINE_VALUE_WORDS[language][part.key];
-      return { label, op: part.op, values: part.values.map((value) => (value === null ? null : words[value] ?? value)), quote: false };
+      return { label, op: part.op, values: part.values.map((value) => (value === null ? null : words[value] ?? value)) };
     }
-    return { label, op: part.op, values: part.values, quote: true };
+    return { label, op: part.op, values: part.values };
   }
 
   /** The request as the operation takes it (a plan step never reaches it: `AI_BULK_EDIT_TOOLS`). */

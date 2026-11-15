@@ -529,7 +529,7 @@ function testBudgetLineBulkEditCards() {
   assert.equal(summary(operation, byFilter, 'en'), 'Change Cost center on 6 budget lines.');
   assert.equal(
     card(byFilter, 'en'),
-    'Filter: Supplier "Acme", "Beta"; Type OPEX; Product name contains "licence"; Région except "Nord", (empty)'
+    'Filter: Supplier "Acme", "Beta"; Type "OPEX"; Product name contains "licence"; Région except "Nord", (empty)'
     + '\n\nScope: enabled lines'
     + '\n\nCost center → IT-01 · Informatique'
     + "\n\n6 lines to change, 1 already has this value, 2 refused: Read only for you (1), Account outside the company's chart of accounts (1)"
@@ -538,16 +538,16 @@ function testBudgetLineBulkEditCards() {
   assert.equal(summary(operation, byFilter, 'fr'), 'Modification du champ « Centre de coûts » sur 6 lignes budgétaires.');
   assert.equal(
     card(byFilter, 'fr'),
-    'Filtre : Fournisseur « Acme », « Beta » ; Type OPEX ; Nom du produit contient « licence » ; Région sauf « Nord », (vide)'
+    'Filtre : Fournisseur « Acme », « Beta » ; Type « OPEX » ; Nom du produit contient « licence » ; Région sauf « Nord », (vide)'
     + '\n\nPérimètre : lignes activées'
     + '\n\nCentre de coûts → IT-01 · Informatique'
     + '\n\n6 lignes à modifier, 1 a déjà cette valeur, 2 refusées : En lecture seule pour vous (1), Compte hors du plan comptable de la société (1)'
     + '\n\n- BL-3 Office licences\n- BL-7 Support\n- et 4 autres',
   );
   assert.equal(summary(operation, byFilter, 'de'), 'Feld „Kostenstelle“ in 6 Budgetzeilen ändern.');
-  assert.match(card(byFilter, 'de'), /^Filter: Lieferant „Acme“, „Beta“; Typ OPEX; Produktname enthält „licence“; Région außer „Nord“, \(leer\)\n\nUmfang: aktivierte Zeilen\n\nKostenstelle → IT-01 · Informatique\n\n6 Zeilen zu ändern, 1 hat diesen Wert bereits, 2 abgelehnt: Für Sie nur lesbar \(1\)/);
+  assert.match(card(byFilter, 'de'), /^Filter: Lieferant „Acme“, „Beta“; Typ „OPEX“; Produktname enthält „licence“; Région außer „Nord“, \(leer\)\n\nUmfang: aktivierte Zeilen\n\nKostenstelle → IT-01 · Informatique\n\n6 Zeilen zu ändern, 1 hat diesen Wert bereits, 2 abgelehnt: Für Sie nur lesbar \(1\)/);
   assert.equal(summary(operation, byFilter, 'es'), 'Modificación del campo «Centro de coste» en 6 líneas presupuestarias.');
-  assert.match(card(byFilter, 'es'), /^Filtro: Proveedor «Acme», «Beta»; Tipo OPEX; Nombre del producto contiene «licence»; Région excepto «Nord», \(vacío\)\n\nAlcance: líneas activadas\n\nCentro de coste → IT-01 · Informatique\n\n6 líneas por modificar, 1 ya tiene este valor, 2 rechazadas: Solo lectura para usted \(1\)/);
+  assert.match(card(byFilter, 'es'), /^Filtro: Proveedor «Acme», «Beta»; Tipo «OPEX»; Nombre del producto contiene «licence»; Région excepto «Nord», \(vacío\)\n\nAlcance: líneas activadas\n\nCentro de coste → IT-01 · Informatique\n\n6 líneas por modificar, 1 ya tiene este valor, 2 rechazadas: Solo lectura para usted \(1\)/);
   assert.equal(operation.presentPreview(byFilter, 'fr').changes.budget_line_bulk_edit.label, 'Modification en masse');
   assert.equal(operation.presentPreview(byFilter, 'fr').target.title, '6 lignes budgétaires');
 
@@ -559,6 +559,19 @@ function testBudgetLineBulkEditCards() {
     current_values: { values: { rows: 2, changes: 2, unchanged: 0, refused: {}, examples: [{ ref: 'BL-3', title: 'Office licences' }, { ref: 'BL-7', title: 'Support' }] } },
   });
   assert.equal(card(byRows, 'fr'), 'Lignes choisies : BL-3, BL-7\n\nRun ou build → Build\n\n2 lignes à modifier\n\n- BL-3 Office licences\n- BL-7 Support');
+  // A closed value of the filter is quoted as any other value (run or build, in the four languages).
+  const runFilter = preview({
+    tool_name: 'bulk_update_budget_lines',
+    target_entity_type: 'budget_lines',
+    mutation_input: { field: 'run_build', value_label: 'build', filter_parts: [{ key: 'run_build', op: 'in', values: ['run'] }], default_scope: true },
+    current_values: { values: { rows: 2, changes: 2, unchanged: 0, refused: {}, examples: [] } },
+  });
+  assert.deepEqual((['en', 'fr', 'de', 'es'] as const).map((language) => card(runFilter, language).split('\n\n')[0]), [
+    'Filter: Run or build "Run"',
+    'Filtre : Run ou build « Run »',
+    'Filter: Run oder Build „Run“',
+    'Filtro: Run o build «Run»',
+  ]);
   const emptied = preview({
     tool_name: 'bulk_update_budget_lines',
     target_entity_type: 'budget_lines',
@@ -566,7 +579,7 @@ function testBudgetLineBulkEditCards() {
     mutation_input: { field: 'dimension', dimension: 'Région', value_label: null, filter_parts: [{ key: 'status', op: 'in', values: ['disabled'] }], default_scope: false },
     current_values: { values: { rows: 1, changes: 1, unchanged: 0, refused: {}, examples: [] }, applied: { changed: 1, unchanged: 0, refused: {} } },
   });
-  assert.equal(card(emptied, 'en'), 'Filter: Status Disabled\n\nRégion → Empty\n\n1 line to change');
+  assert.equal(card(emptied, 'en'), 'Filter: Status "Disabled"\n\nRégion → Empty\n\n1 line to change');
   assert.equal(summary(operation, emptied, 'en'), 'Région changed on 1 budget line.');
   assert.equal(summary(operation, emptied, 'fr'), 'Appliqué : modification du champ « Région » sur 1 ligne budgétaire.');
   // A list that changed since the card: the card's words in the person's language.
@@ -606,7 +619,7 @@ function testApplicationBulkEditCards() {
   assert.equal(summary(operation, byFilter, 'en'), 'Change Business criticality on 3 applications.');
   assert.equal(
     card(byFilter, 'en'),
-    'Filter: Supplier "Acme"; External facing Yes; Data class "Internal", (empty)'
+    'Filter: Supplier "Acme"; External facing "Yes"; Data class "Internal", (empty)'
     + '\n\nScope: enabled applications, retired ones left out'
     + '\n\nBusiness criticality → High'
     + '\n\n3 applications to change, 1 already has this value'
@@ -615,16 +628,16 @@ function testApplicationBulkEditCards() {
   assert.equal(summary(operation, byFilter, 'fr'), 'Modification du champ « Criticité business » sur 3 applications.');
   assert.equal(
     card(byFilter, 'fr'),
-    'Filtre : Fournisseur « Acme » ; Exposition externe Oui ; Classification des données « Interne », (vide)'
+    'Filtre : Fournisseur « Acme » ; Exposition externe « Oui » ; Classification des données « Interne », (vide)'
     + '\n\nPérimètre : applications activées, hors retirées'
     + '\n\nCriticité business → Haute'
     + '\n\n3 applications à modifier, 1 a déjà cette valeur'
     + '\n\n- APP-1 Alpha\n- APP-4 Delta\n- et 1 autre',
   );
   assert.equal(summary(operation, byFilter, 'de'), 'Feld „Geschäftskritikalität“ in 3 Anwendungen ändern.');
-  assert.match(card(byFilter, 'de'), /^Filter: Lieferant „Acme“; Extern zugänglich Ja; Datenklasse „Intern“, \(leer\)\n\nUmfang: aktivierte Anwendungen, ohne ausgemusterte\n\nGeschäftskritikalität → Hoch\n\n3 Anwendungen zu ändern/);
+  assert.match(card(byFilter, 'de'), /^Filter: Lieferant „Acme“; Extern zugänglich „Ja“; Datenklasse „Intern“, \(leer\)\n\nUmfang: aktivierte Anwendungen, ohne ausgemusterte\n\nGeschäftskritikalität → Hoch\n\n3 Anwendungen zu ändern/);
   assert.equal(summary(operation, byFilter, 'es'), 'Modificación del campo «Criticidad de negocio» en 3 aplicaciones.');
-  assert.match(card(byFilter, 'es'), /^Filtro: Proveedor «Acme»; Acceso externo Sí; Clasificación de datos «Interna», \(vacío\)\n\nAlcance: aplicaciones activadas, sin las retiradas\n\nCriticidad de negocio → Alta\n\n3 aplicaciones por modificar/);
+  assert.match(card(byFilter, 'es'), /^Filtro: Proveedor «Acme»; Acceso externo «Sí»; Clasificación de datos «Interna», \(vacío\)\n\nAlcance: aplicaciones activadas, sin las retiradas\n\nCriticidad de negocio → Alta\n\n3 aplicaciones por modificar/);
   assert.equal(operation.presentPreview(byFilter, 'fr').changes.application_bulk_edit.label, 'Modification en masse');
   assert.equal(operation.presentPreview(byFilter, 'fr').target.title, '3 applications');
 
