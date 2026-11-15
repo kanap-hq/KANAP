@@ -19,6 +19,11 @@ type Family = {
   vectorA: string[];
   vectorBC: string;
   joins: string;
+  /**
+   * The order of the rows created at the same time (a sample data load, an import: one transaction,
+   * one `created_at`), before the uuid: the supplier's ERP ID, else the name.
+   */
+  tieBreak: string;
 };
 
 /** The five families, with their search index rows as 1854500000000 left them (label, summary, vector). */
@@ -35,6 +40,7 @@ const FAMILIES: Family[] = [
     vectorA: ['s.name'],
     vectorBC: `search_index_tsv('B', s.erp_supplier_id) || search_index_tsv('C', s.notes)`,
     joins: '',
+    tieBreak: 'erp_supplier_id NULLS LAST, name',
   },
   {
     table: 'companies',
@@ -48,6 +54,7 @@ const FAMILIES: Family[] = [
     vectorA: ['c.name'],
     vectorBC: `search_index_tsv('B', CONCAT_WS(' ', c.country_iso, c.base_currency)) || search_index_tsv('C', CONCAT_WS(' ', c.city, c.address1, c.address2, c.postal_code, c.reg_number, c.vat_number, c.notes))`,
     joins: '',
+    tieBreak: 'name',
   },
   {
     table: 'contacts',
@@ -61,6 +68,7 @@ const FAMILIES: Family[] = [
     vectorA: ['c.first_name', 'c.last_name', 'c.email'],
     vectorBC: `search_index_tsv('B', c.country) || search_index_tsv('C', CONCAT_WS(' ', c.job_title, c.phone, c.mobile, c.notes, sup.name))`,
     joins: 'LEFT JOIN suppliers sup ON sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id',
+    tieBreak: 'last_name NULLS LAST, first_name NULLS LAST, email',
   },
   {
     table: 'departments',
@@ -74,6 +82,7 @@ const FAMILIES: Family[] = [
     vectorA: ['d.name'],
     vectorBC: `search_index_tsv('B', d.status::text) || search_index_tsv('C', CONCAT_WS(' ', d.description, comp.name))`,
     joins: 'LEFT JOIN companies comp ON comp.id = d.company_id AND comp.tenant_id = d.tenant_id',
+    tieBreak: 'name',
   },
   {
     table: 'contracts',
@@ -88,6 +97,7 @@ const FAMILIES: Family[] = [
     vectorBC: `search_index_tsv('B', CONCAT_WS(' ', c.currency, c.billing_frequency)) || search_index_tsv('C', CONCAT_WS(' ', c.notes, comp.name, sup.name))`,
     joins: `LEFT JOIN companies comp ON comp.id = c.company_id AND comp.tenant_id = c.tenant_id
       LEFT JOIN suppliers sup ON sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id`,
+    tieBreak: 'name',
   },
 ];
 
@@ -198,9 +208,10 @@ const LOG = '[Migration] BusinessReferences:';
  *    "SUP-3" at weight A), SECURITY DEFINER and search_path repeated.
  * 4. Backfill, tenant by tenant with app.current_tenant set, the search index triggers of the five
  *    tables off meanwhile and each tenant's index refreshed once afterwards. Repair first: a number
- *    held by several rows stays with the earliest (created_at, id), the others lose it, as does a
- *    number below 1. The rows without a number are then numbered in (created_at, id) order after the
- *    tenant's highest number and its counter, and the counter is put past the highest number, never
+ *    held by several rows stays with the earliest, the others lose it, as does a number below 1.
+ *    The rows without a number are then numbered in that order after the tenant's highest number
+ *    and its counter. The order is created_at, then, for rows created together (a sample data load,
+ *    an import), a supplier's ERP ID and the name, the uuid last. The counter is put past the highest number, never
  *    back. Counts per table: tenants, rows numbered, rows repaired, index refreshed, duration.
  * 5. UNIQUE (tenant_id, item_number), then NOT NULL.
  *
@@ -306,7 +317,7 @@ async function backfill(queryRunner: QueryRunner, f: Family): Promise<FamilyResu
       await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
       const [{ n: repaired }]: Array<{ n: number }> = await queryRunner.query(
         `WITH ranked AS (
-           SELECT id, row_number() OVER (PARTITION BY item_number ORDER BY created_at, id) AS rn
+           SELECT id, row_number() OVER (PARTITION BY item_number ORDER BY created_at, ${f.tieBreak}, id) AS rn
              FROM ${f.table}
             WHERE tenant_id = $1 AND item_number IS NOT NULL
          ),
@@ -327,7 +338,7 @@ async function backfill(queryRunner: QueryRunner, f: Family): Promise<FamilyResu
            ) AS last
          ),
          ordered AS (
-           SELECT id, row_number() OVER (ORDER BY created_at, id) AS rn
+           SELECT id, row_number() OVER (ORDER BY created_at, ${f.tieBreak}, id) AS rn
              FROM ${f.table}
             WHERE tenant_id = $1 AND item_number IS NULL
          ),

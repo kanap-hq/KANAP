@@ -12,6 +12,7 @@ import { BusinessReferences1856240000000 } from '../../migrations/1856240000000-
 //   numbers the rest in (created_at, id) order per tenant, sets the counters, indexes SUP-n in the
 //   search index of its own tenant only, puts back RLS, the search triggers and app.current_tenant,
 //   and a rerun changes nothing and says so;
+// - rows created at the same time are numbered by name (a supplier by its ERP ID first), not by uuid;
 // - the trigger numbers any insert, keeps a number given and moves the counter past it.
 // @database-spec
 
@@ -227,6 +228,51 @@ async function testMigrationRepairsAndNumbers() {
     const rerun = await logged(() => migration.up(runner));
     for (const table of TABLES) assert.match(rerun, new RegExp(`${table}: nothing to number .*0 index refresh`), table);
     assert.deepEqual(await Promise.all(TABLES.map((table) => numbersOf(runner, table, a.tenantId))), before, 'a rerun changes nothing');
+
+  });
+}
+
+/** Rows created in one transaction share `created_at`: the name (and a supplier's ERP ID first) orders them, never the uuid. */
+async function testTiesFollowTheName() {
+  await inRollback(async (runner) => {
+    const migration = new BusinessReferences1856240000000();
+    await logged(() => migration.down(runner));
+    const t = await seedTenant(runner, 'bref-ties');
+    const at = '2026-04-01T00:00:00Z';
+    // A uuid that sorts first (0...) or last (f...), so that the uuid order is the reverse of the expected one.
+    const low = () => `0${randomUUID().slice(1)}`;
+    const high = () => `f${randomUUID().slice(1)}`;
+    const zeta = await insert(runner, 'suppliers', t.tenantId, { id: low(), name: 'Zeta', erp_supplier_id: 'SUP-002', created_at: at });
+    const alpha = await insert(runner, 'suppliers', t.tenantId, { id: high(), name: 'Alpha', erp_supplier_id: 'SUP-001', created_at: at });
+    const beta = await insert(runner, 'suppliers', t.tenantId, { id: low(), name: 'Beta', created_at: at });
+    const companyZ = await insert(runner, 'companies', t.tenantId, { id: low(), name: 'Zeta SA', country_iso: 'FR', city: 'Lyon', created_at: at });
+    const companyA = await insert(runner, 'companies', t.tenantId, { id: high(), name: 'Alpha SA', country_iso: 'FR', city: 'Lyon', created_at: at });
+    const contactZ = await insert(runner, 'contacts', t.tenantId, { id: low(), first_name: 'Anna', last_name: 'Zola', email: 'anna@example.test', created_at: at });
+    const contactA = await insert(runner, 'contacts', t.tenantId, { id: high(), first_name: 'Zoe', last_name: 'Adam', email: 'zoe@example.test', created_at: at });
+    const deptZ = await insert(runner, 'departments', t.tenantId, { id: low(), name: 'Zeta', company_id: companyA, created_at: at });
+    const deptA = await insert(runner, 'departments', t.tenantId, { id: high(), name: 'Alpha', company_id: companyA, created_at: at });
+    const contractZ = await insert(runner, 'contracts', t.tenantId, {
+      id: low(), name: 'Zeta', company_id: companyA, supplier_id: alpha, start_date: '2026-01-01', created_at: at,
+    });
+    const contractA = await insert(runner, 'contracts', t.tenantId, {
+      id: high(), name: 'Alpha', company_id: companyA, supplier_id: alpha, start_date: '2026-01-01', created_at: at,
+    });
+    // A number held twice by two rows of the same creation time: the first by name keeps it.
+    await runner.query(`ALTER TABLE departments ADD COLUMN item_number integer`);
+    await asTenant(runner, t.tenantId);
+    await runner.query(`UPDATE departments SET item_number = 7 WHERE id = ANY($1::uuid[])`, [[deptZ, deptA]]);
+    await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
+
+    await logged(() => migration.up(runner));
+
+    // Suppliers: by ERP ID (SUP-001 first), the one without an ERP ID last.
+    assert.deepEqual(await numbersOf(runner, 'suppliers', t.tenantId), { [alpha]: 1, [zeta]: 2, [beta]: 3 });
+    assert.deepEqual(await numbersOf(runner, 'companies', t.tenantId), { [companyA]: 1, [companyZ]: 2 });
+    // Contacts: by last name.
+    assert.deepEqual(await numbersOf(runner, 'contacts', t.tenantId), { [contactA]: 1, [contactZ]: 2 });
+    assert.deepEqual(await numbersOf(runner, 'contracts', t.tenantId), { [contractA]: 1, [contractZ]: 2 });
+    // Departments: Alpha keeps 7, Zeta is numbered after it.
+    assert.deepEqual(await numbersOf(runner, 'departments', t.tenantId), { [deptA]: 7, [deptZ]: 8 });
   });
 }
 
@@ -258,7 +304,7 @@ async function main() {
   await dataSource.initialize();
   const failures: string[] = [];
   try {
-    for (const test of [testMigrationRepairsAndNumbers, testTriggerNumbersInserts]) {
+    for (const test of [testMigrationRepairsAndNumbers, testTiesFollowTheName, testTriggerNumbersInserts]) {
       try {
         await test();
         console.log(`  ok ${test.name}`);
