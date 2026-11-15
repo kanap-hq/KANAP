@@ -895,6 +895,8 @@ Live write-preview coverage includes:
 - the import of an attached spreadsheet (`prepare_import_mapping`, after
   `describe_import_template`): the card holds the column mapping and the
   import's check of the file, and approving it runs the import of the screens
+- the change in bulk of one field on many budget lines (`bulk_update_budget_lines`,
+  below), the list's "Change the selection" under one card
 - single-record deletes (`delete_record`) of a task, contact, location,
   document, budget line, connection or interface, at the level of that
   family's delete route (`ai-write-levels.ts`); one pending delete per
@@ -1013,6 +1015,43 @@ stored as `spend_item` or `capex_item` from the line's nature). A task field or
 detail that showed the stored type shows `budget_line` to the model. The delete
 card keeps the L3 labels ("Deleted tasks", "Links to …", "The linked records
 stay.") for both natures.
+
+A change in bulk of budget lines (`bulk_update_budget_lines`, lot K1 of 26.11.9)
+runs the screen's "Change the selection": `BudgetLinesService.bulkUpdate` on the
+common contract (`common/bulk-edit/bulk-edit.ts`), at `budget:member` like its
+route, so a Budget Reader is not offered the tool. One field per card, among
+`BUDGET_LINE_BULK_FIELDS` (cost center, account, paying company, supplier, IT and
+business owners, run or build, a dimension's value); no amount, so a frozen year or
+column refuses nothing. The value is resolved as `update_business_record` does
+(records by code or name, people, dimension values); an account number found in
+several charts of accounts needs `company`, whose chart holds it. The lines are
+chosen by `rows` (references `BL-12`) or by `filters`, never both and never the
+whole list without a criterion (a status alone is no criterion). The filters are
+those of `query_entities`, limited to a dozen fields
+(`BUDGET_LINE_BULK_FILTER_FIELDS`: nature, status, title, supplier, paying
+company, account, cost center, contract, owners, run or build, default dimension,
+and `analytics:<code>`); they go through `adaptFilters` into the grid model, set in
+the list's parameters (`{ filters: <grid model>, includeDisabled? }`), so the lines
+are those of the screen's list: its enabled lines, all of them only when the
+filter names the status. A filter `adaptFilters` ignores or cannot read is
+refused with the accepted fields. The card is the common markdown change, its
+text built by the server in four languages (`ai-bulk-edit-texts.ts`; a spec
+compares its words with the frontend locales): the filter in words, the scope,
+the field and its new value, the lines to change, those already holding the
+value, the refusals counted with the screen's words, and the first five lines to
+change by reference, read under the person's access (`runBulkEdit`'s
+`changedIds` option, dry runs only). A limited person's lines outside their access
+are neither counted nor named; a line they read without edit right is counted
+refused. Approval replays the dry run's `as_of`, `expected_rows` and fingerprint:
+a list changed since fails the card ("count again"). Each line writes its own
+audit row with `source: 'ai_chat'` and the preview id (history "by Kad"), no
+other. The tool and its approval set `lock_timeout` and `statement_timeout`
+(`AI_BULK_EDIT_DB_TIMEOUTS`, those of the screen's route) for their transaction:
+a line held elsewhere gives a busy error and the card stays to approve. Another
+budget operation running (`operation_running`) is an error the model relays at
+preparation and leaves the card to approve at execution, with a fixed sentence.
+The tool is never a step of `prepare_mutation_plan`, and is not reversible. The
+MCP server only reads and gets nothing.
 
 The import mapping (`backend/src/ai/import/`) covers every import that has a
 route: `AI_IMPORT_ACCESS` gives each one the module, the level and the
