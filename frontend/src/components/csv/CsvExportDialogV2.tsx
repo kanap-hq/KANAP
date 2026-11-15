@@ -172,11 +172,6 @@ export default function CsvExportDialogV2({
           <LinearProgress sx={{ my: 2 }} />
         ) : (
           <>
-            {format === 'csv' && (
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                {t('csv.exportDescriptionFlexible')}
-              </Typography>
-            )}
             {scopeSummary && (
               <Typography variant="body2" sx={{ mb: 2 }}>
                 {scopeSummary}
@@ -251,6 +246,9 @@ export default function CsvExportDialogV2({
                   </Box>
                 ))}
               </Box>
+              <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 }}>
+                {t('csv.csvFileNoteFlexible')}
+              </Typography>
             </Box>
 
             {/* Action button */}
