@@ -321,4 +321,36 @@ describe('AboutOnboardingLine', () => {
     expect(await screen.findByText('Path: Portfolio · example')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
   });
+
+  it('calls the closing callback when a path is chosen, and not when the dialog is closed without a choice', async () => {
+    env.administrator = true;
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    const onNavigate = vi.fn();
+    renderWith(<AboutOnboardingLine onNavigate={onNavigate} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Close dialog' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(onNavigate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    fireEvent.keyDown(await screen.findByRole('dialog'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(onNavigate).not.toHaveBeenCalled();
+
+    // The same answers are not a choice: the path dialog closes and the window stays.
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'The IT budget' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explore with the complete example' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(choiceCalls()).toEqual([]);
+    expect(onNavigate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'The IT landscape map' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explore with the complete example' }));
+    await waitFor(() => expect(screen.getByText(/Path: IT landscape map · example/)).toBeInTheDocument());
+    expect(onNavigate).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
 });

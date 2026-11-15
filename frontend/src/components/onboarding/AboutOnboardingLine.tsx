@@ -9,7 +9,7 @@ import { useOnboarding, useOnboardingActions, useRunningTrial } from './useOnboa
  * (anyone while one is missing, an administrator afterwards). Shown during the trial, and later
  * once a path was chosen.
  */
-export default function AboutOnboardingLine() {
+export default function AboutOnboardingLine({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation('common');
   const runningTrial = useRunningTrial();
   const { state, apply } = useOnboarding();
@@ -50,7 +50,7 @@ export default function AboutOnboardingLine() {
         open={open}
         state={state}
         onClose={() => setOpen(false)}
-        onChosen={(next) => { apply(next); setOpen(false); }}
+        onChosen={(next) => { apply(next); setOpen(false); onNavigate?.(); }}
       />
     </Typography>
   );
