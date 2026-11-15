@@ -44,22 +44,21 @@ export function isLinkableEntityType(entityType: string): boolean {
 }
 
 /**
- * Map between KANAP type prefixes (case-insensitive) and the canonical entity_type.
+ * Map between Kadratis type prefixes (case-insensitive) and the canonical entity_type. Matching a
+ * prefix narrows the picker's search to that family; a number after it (`@T-5`, `@APP-4`) is sent
+ * alone and the search ranks the record with that reference first.
  *
- * Two flavours of prefixes coexist here:
- *   1. "Native ref prefixes" (T, DOC, PRJ, REQ, INC, BL, SUP, COMP, CTCT, DEPT, CTR) that the backend's buildRef() turns
- *      into a real entity ref like "T-5" or "DOC-152". These let us also surface
- *      a tier-1 boost on item_number when the user types `@T-5`.
- *   2. "Type tokens" for entities the data model doesn't number (APP, AST, CONN, …).
- *      These are conventional shorthand — applications are stored as plain "Blouway"
- *      / "Factiva" names but users say "@APP" to mean "filter to applications".
- *
- * Both classes are treated identically at the picker level: matching the prefix
- * narrows the search to that single entity_type. The native-ref class additionally
- * benefits from the backend's parseNumericRef() boost when the suffix is a number.
+ * Three kinds of prefixes coexist here:
+ *   1. References numbered by `item_number`, which the backend's buildRef() writes (`T-5`, `SUP-3`):
+ *      T, DOC, PRJ, REQ, INC, TEC, SUP, COMP, CTCT, DEPT, CTR, and the former budget prefixes OPX and
+ *      CPX alone (`BL`, `OPX-n` and `CPX-n` are handled before this table). A number written with a leading zero (`@SUP-013`) is
+ *      no reference of SUP, COMP, CTCT, DEPT or CTR and is searched as text.
+ *   2. References stored as text on the record: APP, AST, CONN, INT, LOC (`APP-4`, `LOC-2`). The
+ *      search index carries their number too.
+ *   3. BP, a type token only: business processes have no reference.
  */
 const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
-  // Native ref prefixes (item_number → ref via buildRef)
+  // References numbered by item_number (buildRef)
   T: 'tasks',
   DOC: 'documents',
   PRJ: 'projects',
@@ -73,12 +72,13 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
   CTCT: 'contacts',
   DEPT: 'departments',
   CTR: 'contracts',
-  // Type tokens for entities without a built-in ref
+  // References stored as text on the record
   APP: 'applications',
   AST: 'assets',
   CONN: 'connections',
   INT: 'interfaces',
   LOC: 'locations',
+  // No reference: a type token only
   BP: 'business_processes',
 };
 
