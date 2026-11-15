@@ -438,7 +438,7 @@
     },
     "placeholders": {
       "name": "e.g., Acme Software",
-      "erpSupplierId": "e.g., SUP-001",
+      "erpSupplierId": "e.g., F10001",
       "notes": "e.g., Payment terms, account manager changes"
     },
     "status": {

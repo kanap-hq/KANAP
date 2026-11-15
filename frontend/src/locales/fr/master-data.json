@@ -438,7 +438,7 @@
     },
     "placeholders": {
       "name": "ex. : Acme Software",
-      "erpSupplierId": "ex. : SUP-001",
+      "erpSupplierId": "ex. : F10001",
       "notes": "ex. : conditions de paiement, changement d’interlocuteur"
     },
     "status": {

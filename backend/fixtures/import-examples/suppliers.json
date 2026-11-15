@@ -4,7 +4,7 @@
   "rows": [
     {
       "name": "Cavelogic Systems",
-      "erp_supplier_id": "SUP-210",
+      "erp_supplier_id": "F10210",
       "commercial_contact": "",
       "technical_contact": "",
       "support_contact": "",
@@ -19,7 +19,7 @@
     },
     {
       "name": "Normandie Réseaux",
-      "erp_supplier_id": "SUP-214",
+      "erp_supplier_id": "F10214",
       "commercial_contact": "",
       "technical_contact": "",
       "support_contact": "",
@@ -34,7 +34,7 @@
     },
     {
       "name": "PrintFlex",
-      "erp_supplier_id": "SUP-187",
+      "erp_supplier_id": "F10187",
       "commercial_contact": "",
       "technical_contact": "",
       "support_contact": "",
