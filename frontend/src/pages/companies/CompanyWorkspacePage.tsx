@@ -596,7 +596,7 @@ export default function CompanyWorkspacePage() {
               </Typography>
             )}
             {data && canDelete && (
-              <RecordDeleteButton base="/companies" id={data.id} name={data.name} deleteFailed="companies.messages.deleteFailed" onDeleted={() => { setDeletedId(id); handleClose(); }} />
+              <RecordDeleteButton base="/companies" id={data.id} reference={reference} name={data.name} deleteFailed="companies.messages.deleteFailed" onDeleted={() => { setDeletedId(id); handleClose(); }} />
             )}
           </>
         ) : undefined}

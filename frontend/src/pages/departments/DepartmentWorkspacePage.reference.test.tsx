@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -130,5 +130,19 @@ describe('DepartmentWorkspacePage by reference', () => {
     renderAt('/master-data/departments/DEPT-999/overview');
     expect(await screen.findByText('departments.loadError')).toBeInTheDocument();
     expect(where()).toBe('/master-data/departments/DEPT-999/overview');
+  });
+
+  it('does not read the department again once deleted from its reference address', async () => {
+    mocked.post.mockResolvedValue({ data: { refused: [] } });
+    mocked.delete.mockResolvedValue({ data: {} });
+    renderAt('/master-data/departments/DEPT-5/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    const readsBefore = departmentReads().length;
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/departments/d-5'));
+    await waitFor(() => expect(where()).toBe('/master-data/departments'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(departmentReads()).toHaveLength(readsBefore);
   });
 });

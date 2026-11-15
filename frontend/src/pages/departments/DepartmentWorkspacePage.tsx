@@ -373,6 +373,7 @@ export default function DepartmentWorkspacePage() {
           <RecordDeleteButton
             base="/departments"
             id={data.id}
+            reference={reference}
             name={data.name}
             deleteFailed="departments.messages.deleteFailed"
             onDeleted={() => { setDeletedId(id); handleClose(); }}
