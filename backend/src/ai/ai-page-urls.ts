@@ -1,9 +1,11 @@
 import { isUuid } from './ai-entity-reference.util';
 
 /**
- * The record pages of the families that have no business reference to cite (`APP-8`, `PRJ-12` and
- * the like open their page from the chat text): the path of the page and the right its route asks
- * for (`frontend/src/components/ProtectedRoute.tsx`). Keep in line with `frontend/src/App.tsx`.
+ * The record pages of the families whose page does not open by the reference the chat text cites
+ * (`APP-8`, `PRJ-12` and the like open their page from the text): the path of the page and the right
+ * its route asks for (`frontend/src/components/ProtectedRoute.tsx`). Keep in line with
+ * `frontend/src/App.tsx`. Contracts, companies, suppliers, contacts and departments have a reference
+ * (CTR-2, COMP-1, SUP-3, CTCT-2, DEPT-4) whose address their page does not open yet: their link keeps the id.
  */
 export const AI_PAGE_ROUTES: Readonly<Record<string, { path: (id: string) => string; resource: string }>> = {
   contracts: { path: (id) => `/ops/contracts/${id}`, resource: 'contracts' },
@@ -29,7 +31,7 @@ export const AI_PAGE_ROUTES: Readonly<Record<string, { path: (id: string) => str
 };
 
 /** The sentence the read tools give about `page_url` (chat and MCP share the descriptions). */
-export const AI_PAGE_URL_NOTE = 'A record without a business reference (contract, company, supplier, contact, department, business process, account, analytics value, site, connection, role, data access row, chargeback row, which opens its report), and a cost center, working-day calendar or analytics dimension, whose `ref` is its code, carries `page_url`, the address of its page, when the user can open that page: an absolute address over MCP when the workspace address is configured on the server, otherwise a path from the workspace address.';
+export const AI_PAGE_URL_NOTE = 'A record whose page does not open by its `ref` (contract, company, supplier, contact, department, business process, account, analytics value, site, connection, role, data access row, chargeback row, which opens its report), and a cost center, working-day calendar or analytics dimension, whose `ref` is its code, carries `page_url`, the address of its page, when the user can open that page: an absolute address over MCP when the workspace address is configured on the server, otherwise a path from the workspace address.';
 
 export type AiPageUrlOptions = {
   /** The rights, among `resources`, the user holds at reader level. */

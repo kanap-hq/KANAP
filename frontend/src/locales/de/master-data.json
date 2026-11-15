@@ -438,7 +438,7 @@
     },
     "placeholders": {
       "name": "z. B. Acme Software",
-      "erpSupplierId": "z. B. SUP-001",
+      "erpSupplierId": "z. B. F10001",
       "notes": "z. B. Zahlungsbedingungen, Wechsel des Ansprechpartners"
     },
     "status": {

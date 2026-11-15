@@ -145,7 +145,7 @@ const emptyPersonLists = () => ({ created: [], modified: [], closed: [] });
 const person = (over: Record<string, unknown> = {}) => ({
   userId: 'u-thomas',
   name: 'Thomas Berger',
-  contributorRef: 'CTR-3',
+  contributorRef: 'MEM-3',
   loggedDays: { project: 2, other: 1.5, total: 3.5 },
   ...emptyPersonLists(),
   ...over,
@@ -608,7 +608,7 @@ describe('WeeklyReport by person', () => {
     expect(screen.queryByText(/Requests \d+ created/)).toBeNull();
     expect(screen.getByText(/^Tasks \d+ created/)).toBeTruthy();
     expect(screen.getByText('Thomas Berger')).toBeTruthy();
-    expect(screen.getByText('CTR-3')).toBeTruthy();
+    expect(screen.getByText('MEM-3')).toBeTruthy();
     expect(screen.getByText('1 created · 0 modified · 1 closed · 3.5 days logged')).toBeTruthy();
     expect(
       screen.getByText('1 created · 0 modified · 1 closed · Time logged 3.5 d (project 2.0 · other 1.5)'),
@@ -630,7 +630,7 @@ describe('WeeklyReport by person', () => {
                 person({
                   userId: 'u-isabelle',
                   name: 'Isabelle Moreau',
-                  contributorRef: 'CTR-4',
+                  contributorRef: 'MEM-4',
                   loggedDays: { project: 0, other: 0, total: 0 },
                   created: [taskRow({ taskId: 't4', ref: 'T-4', name: 'Label the new cave' })],
                 }),
@@ -695,7 +695,7 @@ describe('WeeklyReport by person', () => {
     renderReport('/portfolio/reports/weekly?groupBy=person');
 
     await waitFor(() => expect(screen.getByText('Thomas Berger')).toBeTruthy());
-    expect(screen.queryByText('CTR-3')).toBeNull();
+    expect(screen.queryByText('MEM-3')).toBeNull();
   });
 
   it('exports the reading shown on screen', async () => {

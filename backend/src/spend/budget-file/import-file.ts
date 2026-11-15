@@ -903,12 +903,17 @@ async function createSuppliers(
   const created = new Map<string, string>();
   const rows = Array.from(byName.values());
   if (rows.length === 0) return created;
-  const inserted: Array<{ id: string; name: string }> = await manager.query(
+  // The insert trigger takes a number (SUP-n) before ON CONFLICT sees a name already there: the
+  // names stored are left out first, so none burns a number. ON CONFLICT stays for a supplier
+  // created meanwhile by another transaction.
+  const inserted: Array<{ id: string; name: string; item_number: number }> = await manager.query(
     `INSERT INTO suppliers (tenant_id, name, erp_supplier_id, status)
      SELECT $1, n.name, NULLIF(n.erp, ''), 'enabled'::status_state
-       FROM unnest($2::text[], $3::text[]) AS n(name, erp)
+       FROM unnest($2::text[], $3::text[]) WITH ORDINALITY AS n(name, erp, position)
+      WHERE NOT EXISTS (SELECT 1 FROM suppliers s WHERE s.tenant_id = $1 AND lower(s.name) = lower(n.name))
+      ORDER BY n.position
      ON CONFLICT (tenant_id, lower(name)) DO NOTHING
-     RETURNING id::text AS id, name`,
+     RETURNING id::text AS id, name, item_number`,
     [tenantId, rows.map((row) => row.name), rows.map((row) => row.erpId ?? '')],
   );
   const found: Array<{ id: string; name: string }> = await manager.query(

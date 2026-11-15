@@ -106,29 +106,29 @@ describe('SupplierWorkspacePage typing while the supplier is created', () => {
     const { drawer, finish } = await startWrite();
     const erp = within(drawer).getByLabelText('suppliers.fields.erpSupplierId');
     act(() => erp.focus());
-    fireEvent.change(erp, { target: { value: 'SUP-0' } });
+    fireEvent.change(erp, { target: { value: 'F100' } });
     await finish();
 
     const shown = within(screen.getByRole('complementary')).getByLabelText('suppliers.fields.erpSupplierId') as HTMLInputElement;
     expect(shown === erp).toBe(true);
     expect(document.activeElement === shown).toBe(true);
-    fireEvent.change(shown, { target: { value: 'SUP-077' } });
-    await until(() => { if (shown.value !== 'SUP-077') throw new Error(`ERP ID shows "${shown.value}"`); });
+    fireEvent.change(shown, { target: { value: 'F10077' } });
+    await until(() => { if (shown.value !== 'F10077') throw new Error(`ERP ID shows "${shown.value}"`); });
     fireEvent.blur(shown);
-    await until(() => { if (patchesWith('erp_supplier_id', 'SUP-077').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
+    await until(() => { if (patchesWith('erp_supplier_id', 'F10077').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
   });
 
   it('saves on the new supplier a field committed while the supplier is written', async () => {
     const { drawer, finish } = await startWrite();
     const erp = within(drawer).getByLabelText('suppliers.fields.erpSupplierId');
     act(() => erp.focus());
-    fireEvent.change(erp, { target: { value: 'SUP-077' } });
+    fireEvent.change(erp, { target: { value: 'F10077' } });
     fireEvent.blur(erp);
     await finish();
 
-    await until(() => { if (patchesWith('erp_supplier_id', 'SUP-077').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
+    await until(() => { if (patchesWith('erp_supplier_id', 'F10077').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
     const shown = within(screen.getByRole('complementary')).getByLabelText('suppliers.fields.erpSupplierId') as HTMLInputElement;
-    await until(() => { if (shown.value !== 'SUP-077') throw new Error(`ERP ID shows "${shown.value}"`); });
+    await until(() => { if (shown.value !== 'F10077') throw new Error(`ERP ID shows "${shown.value}"`); });
   });
 
   it('saves on the new supplier the notes typed while the supplier is written, with the same field and focus', async () => {

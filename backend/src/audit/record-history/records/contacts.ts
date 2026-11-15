@@ -59,6 +59,7 @@ const CONTACT_FIELDS: HistoryFields = {
   phone: hiddenChanged('personal data: the history names the change, never the number', 'phoneChanged'),
   mobile: hiddenChanged('personal data: the history names the change, never the number', 'mobileChanged'),
   notes: hiddenChanged('free text of a person\'s record, which may hold contact details', 'notesChanged'),
+  item_number: hidden('business reference, never a change'),
   id: hidden('identity'),
   tenant_id: hidden('tenancy'),
   created_at: hidden('timestamp'),

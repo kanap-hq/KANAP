@@ -111,7 +111,7 @@ function screenGrid(p: { teamId: string; employmentTypeId: string; orientation: 
   const lead = rows.kind === 'contributor' ? [en.contributor, en.reference, en.team] : [en.category, en.skill];
   const header = [...lead, ...columns.entries.map((entry) => entry.label), rows.kind === 'contributor' ? en.summaryColumn : en.coverageRow];
   const body = rows.entries.map((entry, index) => [
-    ...(entry.kind === 'contributor' ? [entry.label, `CTR-${entry.itemNumber}`, entry.teamLabel] : [entry.category, entry.label]),
+    ...(entry.kind === 'contributor' ? [entry.label, `MEM-${entry.itemNumber}`, entry.teamLabel] : [entry.category, entry.label]),
     ...columns.entries.map((column) => String(levelAt(entry.id, column.id) ?? '')),
     summary(rows, index),
   ]);
@@ -138,8 +138,8 @@ async function testRowsFollowTheScreen() {
   assert.deepEqual(turned, screenGrid({ teamId: 'all', employmentTypeId: EMPLOYEE, orientation: 'skills', showUnused: true, hiddenCategories: ['Data, analytics'] }));
   assert.deepEqual(turned, [
     ['Contributor', 'Reference', 'Team', 'Go', 'Java', 'Skills'],
-    ['Ann Durand', 'CTR-3', 'Applications', '', '2', '0/1'],
-    ['cyd@example.invalid', 'CTR-9', 'Unassigned', '', '3', '1/1'],
+    ['Ann Durand', 'MEM-3', 'Applications', '', '2', '0/1'],
+    ['cyd@example.invalid', 'MEM-9', 'Unassigned', '', '3', '1/1'],
     ['Autonomous or expert', '', '', '0', '1', ''],
   ]);
 

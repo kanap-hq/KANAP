@@ -21,6 +21,7 @@ import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { resolveToUuid } from '../common/resolve-item-id';
 
 @UseGuards(JwtAuthGuard)
 @Controller('suppliers')
@@ -30,6 +31,11 @@ export class SuppliersController {
     private readonly deleteSvc: SuppliersDeleteService,
     private readonly links: SupplierContactsService,
   ) {}
+
+  /** The supplier a route names by its uuid, its reference (`SUP-3`) or its bare number, in the request's tenant. */
+  private resolveId(idOrRef: string, req: any): Promise<string> {
+    return resolveToUuid(idOrRef, 'supplier', req?.queryRunner?.manager);
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'reader')
@@ -70,7 +76,9 @@ export class SuppliersController {
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'reader')
   @Get(':id')
-  get(@Param('id') id: string, @Req() req: any) { return this.svc.get(id, { manager: req?.queryRunner?.manager }); }
+  async get(@Param('id') idOrRef: string, @Req() req: any) {
+    return this.svc.get(await this.resolveId(idOrRef, req), { manager: req?.queryRunner?.manager });
+  }
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Post()
@@ -96,7 +104,9 @@ export class SuppliersController {
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: SupplierUpsertDto, @Req() req: any) { return this.svc.update(id, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
+  async update(@Param('id') idOrRef: string, @Body() body: SupplierUpsertDto, @Req() req: any) {
+    return this.svc.update(await this.resolveId(idOrRef, req), body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
 
   @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
@@ -148,37 +158,37 @@ export class SuppliersController {
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'admin')
   @Delete(':id')
-  delete(@Param('id') id: string, @Req() req: any) {
-    return this.deleteSvc.delete(id, { manager: req?.queryRunner?.manager, userId: req.user?.sub ?? null });
+  async delete(@Param('id') idOrRef: string, @Req() req: any) {
+    return this.deleteSvc.delete(await this.resolveId(idOrRef, req), { manager: req?.queryRunner?.manager, userId: req.user?.sub ?? null });
   }
 
   // Where the supplier is used: the groups the caller may read (common/record-usages.ts).
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'reader')
   @Get(':id/usages')
-  usages(@Param('id', new ParseUUIDPipe()) id: string, @Tenant() ctx: TenantRequest) {
+  async usages(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
     if (!ctx.manager) throw new InternalServerErrorException('No request transaction');
-    return readSupplierUsages(ctx.manager, ctx.tenantId, id, ctx);
+    return readSupplierUsages(ctx.manager, ctx.tenantId, await resolveToUuid(idOrRef, 'supplier', ctx.manager), ctx);
   }
 
   // Supplier ↔ Contact links
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'reader')
   @Get(':id/contacts')
-  listContacts(@Param('id') id: string, @Req() req: any) {
-    return this.links.listForSupplier(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
+  async listContacts(@Param('id') idOrRef: string, @Req() req: any) {
+    return this.links.listForSupplier(await this.resolveId(idOrRef, req), { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Post(':id/contacts')
-  attachContact(
-    @Param('id') id: string,
+  async attachContact(
+    @Param('id') idOrRef: string,
     @Body() body: { contactId: string; role: SupplierContactRole; isPrimary?: boolean },
     @Req() req: any,
   ) {
     return this.links.attach(
-      id,
+      await this.resolveId(idOrRef, req),
       { contactId: body.contactId, role: body.role, isPrimary: !!body.isPrimary },
       { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null },
     );
@@ -187,7 +197,7 @@ export class SuppliersController {
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Delete(':id/contacts/:linkId')
-  detachContact(@Param('id') id: string, @Param('linkId') linkId: string, @Req() req: any) {
-    return this.links.detach(id, linkId, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null });
+  async detachContact(@Param('id') idOrRef: string, @Param('linkId') linkId: string, @Req() req: any) {
+    return this.links.detach(await this.resolveId(idOrRef, req), linkId, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null });
   }
 }

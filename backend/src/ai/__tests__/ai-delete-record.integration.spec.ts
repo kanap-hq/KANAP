@@ -676,8 +676,8 @@ async function testContactDelete(h: Harness, runner: QueryRunner, s: Seed) {
   const preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'contacts', ref: 'Camille Roux' });
   assert.equal(preview.status, 'pending');
   assert.equal(preview.target.entity_type, 'contacts');
-  assert.equal(preview.target.ref, null);
-  assert.equal(preview.target.title, 'Camille Roux');
+  assert.match(String(preview.target.ref), /^CTCT-\d+$/, 'the contact is named by its reference');
+  assert.equal(preview.target.title, `${preview.target.ref} - Camille Roux`);
   const impact = String(preview.changes.deletion.to);
   assert.ok(impact.includes('- Links to suppliers: 1'), impact);
   assert.ok(impact.includes('- Links to projects: 1'), impact);

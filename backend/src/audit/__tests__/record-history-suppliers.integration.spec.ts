@@ -99,7 +99,7 @@ async function seedTenant(tenantId: string): Promise<Omit<Seeded, 'foreignTenant
     const supplier = await one(
       runner,
       `INSERT INTO suppliers (tenant_id, name, erp_supplier_id, notes)
-       VALUES ($1, 'Acme Supplies', 'SUP-001', 'Net 30') RETURNING id`,
+       VALUES ($1, 'Acme Supplies', 'F10001', 'Net 30') RETURNING id`,
       [tenantId],
     );
     const contactA = await one(
@@ -123,7 +123,7 @@ async function seedTenant(tenantId: string): Promise<Omit<Seeded, 'foreignTenant
 
     const [stored] = await runner.query(`SELECT to_jsonb(s) AS row FROM suppliers s WHERE s.id = $1`, [supplier]);
     const before = { ...stored.row, status: 'enabled' };
-    const after = { ...before, name: 'Acme Supplies Europe', erp_supplier_id: 'SUP-002', notes: 'Net 45', status: 'disabled' };
+    const after = { ...before, name: 'Acme Supplies Europe', erp_supplier_id: 'F10002', notes: 'Net 45', status: 'disabled' };
     const create = await audit(runner, {
       table: 'suppliers', recordId: supplier, action: 'create', userId: reader.id, after: before,
     });
@@ -207,14 +207,14 @@ async function testRecordEntries(seeded: Seeded) {
   const create = findItem(page, 'create');
   assert.equal(create.actor.kind, 'user');
   assert.equal(findChange(create, 'name').after, 'Acme Supplies');
-  assert.equal(findChange(create, 'erp_supplier_id').after, 'SUP-001');
+  assert.equal(findChange(create, 'erp_supplier_id').after, 'F10001');
   assert.equal(findChange(create, 'notes').after, 'Net 30');
   assert.equal(findChange(create, 'status').after, 'enabled');
 
   const update = findItem(page, 'update');
   assert.equal(findChange(update, 'name').before, 'Acme Supplies');
   assert.equal(findChange(update, 'name').after, 'Acme Supplies Europe');
-  assert.equal(findChange(update, 'erp_supplier_id').after, 'SUP-002');
+  assert.equal(findChange(update, 'erp_supplier_id').after, 'F10002');
   assert.equal(findChange(update, 'notes').before, 'Net 30');
   assert.equal(findChange(update, 'notes').after, 'Net 45');
   assert.equal(findChange(update, 'status').after, 'disabled');

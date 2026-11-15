@@ -17,7 +17,7 @@ export type AssigneeRow = AttentionCounts & {
   userId: string;
   /** First and last name, or the local part of the address when no name is recorded. */
   name: string;
-  /** `CTR-12` when the person has a contributor profile, null otherwise. */
+  /** `MEM-12` when the person has a contributor profile, null otherwise. */
   contributorRef: string | null;
 };
 

@@ -957,8 +957,16 @@ export class DemoDataService implements OnApplicationShutdown {
       // addresses incidents by those numbers and checks the title, so a load into an
       // empty workspace starts every counter again at 1. Template documents and the
       // starting technologies (TenantBaselineService) already use theirs, which stay.
+      // The starting company keeps its number (COMP-1): its counter starts again after it.
       await manager.query(
         `DELETE FROM item_sequences WHERE tenant_id = $1 AND entity_type NOT IN ('document', 'technology')`,
+        [tenant.id],
+      );
+      await manager.query(
+        `INSERT INTO item_sequences (tenant_id, entity_type, next_val)
+         SELECT $1, 'company', max(item_number) + 1 FROM companies WHERE tenant_id = $1
+         HAVING max(item_number) IS NOT NULL
+         ON CONFLICT (tenant_id, entity_type) DO UPDATE SET next_val = EXCLUDED.next_val`,
         [tenant.id],
       );
       return (await this.baseline.resolveStartingCompany(manager, tenant)).companyName;

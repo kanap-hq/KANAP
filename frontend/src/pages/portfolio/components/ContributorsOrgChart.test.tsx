@@ -159,7 +159,7 @@ describe('ContributorsOrgChart', () => {
   it('opens the contributor by their reference when a card is clicked', () => {
     renderChart();
     fireEvent.click(card('Ben Carter'));
-    expect(search()).toBe('/portfolio/contributors/CTR-2');
+    expect(search()).toBe('/portfolio/contributors/MEM-2');
   });
 
   it('collapses a branch and puts it back', () => {
@@ -198,6 +198,11 @@ describe('ContributorsOrgChart', () => {
   });
 
   it('roots the chart on one contributor', () => {
+    renderChart('/portfolio/contributors?view=org&root=MEM-3');
+    expect(cardNames().sort()).toEqual(['Cleo Marsh', 'Dan Reed']);
+  });
+
+  it('still reads a root saved in the address before MEM-n, as CTR-n', () => {
     renderChart('/portfolio/contributors?view=org&root=CTR-3');
     expect(cardNames().sort()).toEqual(['Cleo Marsh', 'Dan Reed']);
   });
@@ -208,7 +213,7 @@ describe('ContributorsOrgChart', () => {
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Start from' }));
     fireEvent.click(within(screen.getByRole('listbox')).getByText('Cleo Marsh'));
 
-    expect(search()).toBe('/portfolio/contributors?view=org&root=CTR-3');
+    expect(search()).toBe('/portfolio/contributors?view=org&root=MEM-3');
     expect(cardNames().sort()).toEqual(['Cleo Marsh', 'Dan Reed']);
   });
 
@@ -258,9 +263,9 @@ describe('ContributorsOrgChart', () => {
   });
 
   it('falls back to the forest when the requested root is filtered out of it', async () => {
-    // CTR-3 is the external one: hiding that contract type drops the requested
+    // MEM-3 is the external one: hiding that contract type drops the requested
     // root, so the chart shows everyone rather than an empty branch.
-    renderChart('/portfolio/contributors?view=org&root=CTR-3&hide=External');
+    renderChart('/portfolio/contributors?view=org&root=MEM-3&hide=External');
 
     expect(cardNames().sort()).toEqual(['Ada Lovelace', 'Ben Carter', 'Dan Reed']);
     expect(screen.getByRole('combobox', { name: 'Start from' })).toHaveTextContent('Everyone');

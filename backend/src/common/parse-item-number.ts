@@ -18,3 +18,19 @@ export function parseItemNumber(text: string | null | undefined): number | null 
   if (!Number.isSafeInteger(value) || value > ITEM_NUMBER_MAX) return null;
   return value;
 }
+
+/**
+ * The prefixes of the references the database numbers at insertion (suppliers, companies,
+ * contacts, departments, contracts: migration 1856240000000). Their records also carry codes of
+ * their own that look like one (`SUP-013`, the ERP ID of a sample supplier): a number written with
+ * a leading zero is no reference of these families.
+ */
+const PADDED_NUMBER_REFUSED_PREFIXES: ReadonlySet<string> = new Set(['SUP', 'COMP', 'CTCT', 'DEPT', 'CTR']);
+
+/**
+ * True when `digits`, read as a number of a `prefix` reference (or as the bare number of that
+ * family), is written with a leading zero in a family whose references refuse it (`SUP-013`).
+ */
+export function isPaddedReferenceNumber(prefix: string | null | undefined, digits: string): boolean {
+  return !!prefix && PADDED_NUMBER_REFUSED_PREFIXES.has(prefix.toUpperCase()) && /^0\d/.test(digits);
+}

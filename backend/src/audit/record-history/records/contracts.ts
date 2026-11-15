@@ -82,6 +82,7 @@ const CONTRACT_FIELDS: HistoryFields = {
   renewal_stop: hidden('renewal marker, presented as its own sentence'),
   renewal_resume: hidden('renewal marker, presented as its own sentence'),
   renewal_task: hidden('renewal marker, presented as its own sentence'),
+  item_number: hidden('business reference, never a change'),
   id: hidden('identity'),
   tenant_id: hidden('tenancy'),
   created_at: hidden('timestamp'),

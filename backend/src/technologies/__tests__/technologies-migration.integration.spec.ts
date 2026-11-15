@@ -8,7 +8,8 @@ import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from
 // back at the end:
 // - as migrated: every new table has RLS enabled and forced and one policy `<table>_tenant_isolation`
 //   with USING and WITH CHECK; the unique keys (tenant_id, id) it needs exist;
-// - a second up() changes nothing;
+// - a second up() changes nothing (but the item_sequences check: 1856240000000 widened it since, so
+//   the counters of the later types are set aside in the transaction first);
 // - the link keys: one row per (asset, technology, version) with an unknown version counted once
 //   (NULLS NOT DISTINCT), a version of another technology refused, and the delete of a version
 //   makes the link "version unknown" without clearing its tenant.
@@ -81,8 +82,15 @@ async function testMigratedAndRerun() {
     assert.equal(defs.get('asset_technologies_key'), 'UNIQUE NULLS NOT DISTINCT (tenant_id, asset_id, technology_id, technology_version_id)');
     assert.equal(defs.get('application_technologies_key'), 'UNIQUE NULLS NOT DISTINCT (tenant_id, application_id, technology_id, technology_version_id)');
 
+    // The later types (business references, 1856240000000) are outside the list this migration
+    // writes: their counters are set aside in the rolled-back transaction, and the check compared
+    // on its own.
+    await runner.query(`ALTER TABLE item_sequences DISABLE ROW LEVEL SECURITY`);
+    await runner.query(`DELETE FROM item_sequences WHERE entity_type IN ('supplier', 'company', 'contact', 'department', 'contract')`);
     await migration.up(runner);
-    assert.deepEqual(await shape(runner), before, 'a second up() changes nothing');
+    const after = await shape(runner);
+    assert.deepEqual({ ...after, sequenceCheck: [] }, { ...before, sequenceCheck: [] }, 'a second up() changes nothing');
+    assert.match(after.sequenceCheck[0].def, /'technology'/);
   });
 }
 

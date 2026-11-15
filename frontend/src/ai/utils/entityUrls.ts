@@ -44,22 +44,21 @@ export function isLinkableEntityType(entityType: string): boolean {
 }
 
 /**
- * Map between KANAP type prefixes (case-insensitive) and the canonical entity_type.
+ * Map between Kadratis type prefixes (case-insensitive) and the canonical entity_type. Matching a
+ * prefix narrows the picker's search to that family; a number after it (`@T-5`, `@APP-4`) is sent
+ * alone and the search ranks the record with that reference first.
  *
- * Two flavours of prefixes coexist here:
- *   1. "Native ref prefixes" (T, DOC, PRJ, REQ, INC, BL) that the backend's buildRef() turns
- *      into a real entity ref like "T-5" or "DOC-152". These let us also surface
- *      a tier-1 boost on item_number when the user types `@T-5`.
- *   2. "Type tokens" for entities the data model doesn't number (APP, AST, CONN, …).
- *      These are conventional shorthand — applications are stored as plain "Blouway"
- *      / "Factiva" names but users say "@APP" to mean "filter to applications".
- *
- * Both classes are treated identically at the picker level: matching the prefix
- * narrows the search to that single entity_type. The native-ref class additionally
- * benefits from the backend's parseNumericRef() boost when the suffix is a number.
+ * Three kinds of prefixes coexist here:
+ *   1. References numbered by `item_number`, which the backend's buildRef() writes (`T-5`, `SUP-3`):
+ *      T, DOC, PRJ, REQ, INC, TEC, SUP, COMP, CTCT, DEPT, CTR, and the former budget prefixes OPX and
+ *      CPX alone (`BL`, `OPX-n` and `CPX-n` are handled before this table). A number written with a leading zero (`@SUP-013`) is
+ *      no reference of SUP, COMP, CTCT, DEPT or CTR and is searched as text.
+ *   2. References stored as text on the record: APP, AST, CONN, INT, LOC (`APP-4`, `LOC-2`). The
+ *      search index carries their number too.
+ *   3. BP, a type token only: business processes have no reference.
  */
 const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
-  // Native ref prefixes (item_number → ref via buildRef)
+  // References numbered by item_number (buildRef)
   T: 'tasks',
   DOC: 'documents',
   PRJ: 'projects',
@@ -68,19 +67,23 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
   TEC: 'technologies',
   OPX: 'budget_lines',
   CPX: 'budget_lines',
-  // Type tokens for entities without a built-in ref
+  SUP: 'suppliers',
+  COMP: 'companies',
+  CTCT: 'contacts',
+  DEPT: 'departments',
+  CTR: 'contracts',
+  // References stored as text on the record
   APP: 'applications',
   AST: 'assets',
   CONN: 'connections',
   INT: 'interfaces',
   LOC: 'locations',
-  CTR: 'contracts',
-  COMP: 'companies',
-  CONT: 'contacts',
-  DEPT: 'departments',
-  SUP: 'suppliers',
+  // No reference: a type token only
   BP: 'business_processes',
 };
+
+/** The families whose reference is never written with a leading zero (`backend/src/common/parse-item-number.ts`). */
+const PADDED_NUMBER_REFUSED_PREFIXES: ReadonlySet<string> = new Set(['SUP', 'COMP', 'CTCT', 'DEPT', 'CTR']);
 
 /**
  * Parse an @-mention query into an optional narrowed entity_type and the actual
@@ -92,6 +95,7 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
  *   "BL-12"      → both budget families, searchTerm: 'BL-12'
  *   "CPX-3"      → both budget families, searchTerm: 'CPX-3' (legacy number)
  *   "T-5"        → { entityType: 'tasks',        searchTerm: '5' }    // T-5 + tasks containing "5"
+ *   "SUP-013"    → { entityType: 'suppliers',    searchTerm: 'SUP-013' } // a leading zero: no reference, text search
  *   "PRJ"        → { entityType: 'projects',     searchTerm: '' }
  *   "APP"        → { entityType: 'applications', searchTerm: '' }
  *   "DOC-conf"   → { entityType: 'documents',    searchTerm: 'conf' }
@@ -107,7 +111,10 @@ export function parseAtMentionQuery(query: string): { entityType: string | null;
   const prefix = match[1].toUpperCase();
   const suffix = match[2] || '';
   const budgetRef = ['BL', 'OPX', 'CPX'].includes(prefix) && /^\d+$/.test(suffix);
-  const searchTerm = budgetRef ? `${prefix}-${suffix}` : suffix;
+  // `SUP-013` is no reference of the families numbered by the database (an ERP ID is written so):
+  // the whole text is searched, which the backend reads as text too.
+  const paddedNumber = PADDED_NUMBER_REFUSED_PREFIXES.has(prefix) && /^0\d+$/.test(suffix);
+  const searchTerm = budgetRef || paddedNumber ? `${prefix}-${suffix}` : suffix;
   if (prefix === 'BL' || budgetRef) {
     return { entityType: null, entityTypes: ['budget_lines'], searchTerm };
   }

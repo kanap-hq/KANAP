@@ -80,7 +80,7 @@ import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './reg
 import { taskRelatedFamily } from './registries/tasks.registry';
 import { budgetFteFields, budgetLineTotalFieldsOf, budgetPairOfKey, isBudgetMoneyKey } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
-import { entityNotFound, isUuid, resolveAiEntityReference } from '../ai-entity-reference.util';
+import { buildRef, entityNotFound, isUuid, resolveAiEntityReference } from '../ai-entity-reference.util';
 import { AiPolicyService } from '../ai-policy.service';
 import { LinkedReads, loadLinkedReads } from '../../common/relations/linked-reads';
 import { idsInScope, type PortfolioLinkedReads } from '../../portfolio/portfolio-linked-reads';
@@ -166,20 +166,6 @@ function toIso(value: Date | string | null | undefined): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function buildRef(
-  entityType: AiQueryEntityType,
-  itemNumber?: number | null,
-): string | null {
-  if (!itemNumber) return null;
-  if (entityType === 'projects') return `PRJ-${itemNumber}`;
-  if (entityType === 'requests') return `REQ-${itemNumber}`;
-  if (entityType === 'tasks') return `T-${itemNumber}`;
-  if (entityType === 'documents') return `DOC-${itemNumber}`;
-  if (entityType === 'incidents') return `INC-${itemNumber}`;
-  if (entityType === 'technologies') return `TEC-${itemNumber}`;
-  if (entityType === 'budget_lines') return `BL-${itemNumber}`;
-  return null;
-}
 
 function scalar(value: unknown): string | number | null {
   if (value === null || value === undefined || value === '') return null;
@@ -1153,6 +1139,7 @@ export class AiQueryExecutor {
     const summary = row.notes ?? ([companyName, supplierName].filter(Boolean).join(' | ') || null);
     return toEntitySummary('contracts', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label: row.name,
       status: row.status ?? null,
       summary,
@@ -1190,6 +1177,7 @@ export class AiQueryExecutor {
     const turnover = numericScalar(row.turnover_year);
     return toEntitySummary('companies', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label: row.name,
       status: row.status ?? null,
       summary: [row.city, row.country_iso].filter(Boolean).join(', ') || null,
@@ -1214,6 +1202,7 @@ export class AiQueryExecutor {
   private mapSupplier(row: any): AiEntitySummaryDto {
     return toEntitySummary('suppliers', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label: row.name,
       status: row.status ?? null,
       summary: row.notes ?? row.erp_supplier_id ?? null,
@@ -1230,6 +1219,7 @@ export class AiQueryExecutor {
     const headcount = numericScalar(row.headcount_year);
     return toEntitySummary('departments', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label: row.name,
       status: row.status ?? null,
       summary: row.description ?? row.company_name ?? null,
@@ -1250,6 +1240,7 @@ export class AiQueryExecutor {
       || 'Unknown contact';
     return toEntitySummary('contacts', {
       id: row.id,
+      item_number: row.item_number ?? null,
       label,
       status: row.active === false ? 'inactive' : 'active',
       summary: [row.job_title, row.supplier_name, row.country].filter(Boolean).join(' | ') || null,

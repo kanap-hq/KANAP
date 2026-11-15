@@ -379,7 +379,7 @@ function hasEntityReference(text: string): boolean {
  * Business references the inspection branch keeps. A cost center code is not one of these:
  * the segment TRV-600 inside FR-TRV-600 is not a record.
  */
-const RECORD_REFERENCE_RE = /\b(?:APP|AST|BL|BP|COMP|CONN|CON|CONT|CPX|CTR|CVE|DEPT|DOC|INC|INT|LOC|OPEX|OPX|PRJ|REQ|SI|SUP|TEC|T)-\d+\b/i;
+const RECORD_REFERENCE_RE = /\b(?:APP|AST|BL|BP|COMP|CONN|CON|CPX|CTCT|CTR|CVE|DEPT|DOC|INC|INT|LOC|MEM|OPEX|OPX|PRJ|REQ|SI|SUP|TEC|T)-\d+\b/i;
 
 /**
  * Count words, accents already removed: French and English as the list branch below,
@@ -848,8 +848,8 @@ function hasCancellationHead(rawText: string, text: string): boolean {
 /**
  * "Annule le contrat CTR-2": the contract status, a business write. A request has no cancelled
  * status, so "Annule la demande REQ-4" and "Cancel REQ-4" are not this and stay reads. A question
- * stays a read ("Le contrat CTR-2 est-il annulé ?"). CTR-n alone is a contributor reference: the
- * contract word is what names the contract.
+ * stays a read ("Le contrat CTR-2 est-il annulé ?"). CTR-n is a contract reference (a contributor is
+ * MEM-n): the contract word is still what makes the request a contract cancellation.
  */
 function hasContractCancellation(rawText: string, text: string): boolean {
   return hasCancellationHead(rawText, text) && /\b(?:contrats?|contracts?)\b/.test(text);

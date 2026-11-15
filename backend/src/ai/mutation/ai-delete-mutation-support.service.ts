@@ -159,8 +159,8 @@ export class AiDeleteMutationSupportService {
           target: {
             entityType,
             id: found.id,
-            // A contact has no business reference: the list and the card show its name only.
-            ref: null,
+            // Its business reference (CTCT-n), as every numbered record's preview.
+            ref: found.ref,
             title: found.label,
             updatedAt: isoTimestamp(found.row.updated_at),
           },

@@ -26,3 +26,43 @@ describe('vulnerability mentions', () => {
     expect(buildEntityUrl('vulnerabilities', 'CVE-2024-3094')).toBe('/it/vulnerabilities?q=CVE-2024-3094&state=all&alerts=all');
   });
 });
+
+describe('mention words', () => {
+  it('uses CTCT for contacts and CTR for contracts, and no longer CONT', () => {
+    expect(parseAtMentionQuery('CTCT')).toEqual({ entityType: 'contacts', entityTypes: ['contacts'], searchTerm: '' });
+    expect(parseAtMentionQuery('ctr')).toEqual({ entityType: 'contracts', entityTypes: ['contracts'], searchTerm: '' });
+    expect(parseAtMentionQuery('CONT')).toEqual({ entityType: null, searchTerm: 'CONT' });
+  });
+
+  it('searches a number written with a leading zero as text, never as a reference', () => {
+    expect(parseAtMentionQuery('SUP-013')).toEqual({ entityType: 'suppliers', entityTypes: ['suppliers'], searchTerm: 'SUP-013' });
+    expect(parseAtMentionQuery('sup-13')).toEqual({ entityType: 'suppliers', entityTypes: ['suppliers'], searchTerm: '13' });
+  });
+
+  it('keeps CTCT and CTR apart while the word is typed', () => {
+    expect(parseAtMentionQuery('CT').entityTypes?.slice().sort()).toEqual(['contacts', 'contracts']);
+  });
+});
+
+describe('business reference mentions of the five families numbered in 26.11.9', () => {
+  it.each([
+    ['SUP', 'suppliers'],
+    ['COMP', 'companies'],
+    ['CTCT', 'contacts'],
+    ['DEPT', 'departments'],
+    ['CTR', 'contracts'],
+  ])('narrows @%s-n to %s and searches the number', (prefix, entityType) => {
+    expect(parseAtMentionQuery(`${prefix}-3`)).toEqual({ entityType, entityTypes: [entityType], searchTerm: '3' });
+    expect(parseAtMentionQuery(prefix.toLowerCase())).toEqual({ entityType, entityTypes: [entityType], searchTerm: '' });
+  });
+
+  it.each([
+    ['suppliers', '/master-data/suppliers'],
+    ['companies', '/master-data/companies'],
+    ['contacts', '/master-data/contacts'],
+    ['departments', '/master-data/departments'],
+    ['contracts', '/ops/contracts'],
+  ])('links a mentioned record of %s by its id', (entityType, path) => {
+    expect(buildEntityUrl(entityType, 'abc')).toBe(`${path}/abc`);
+  });
+});

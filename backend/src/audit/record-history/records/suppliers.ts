@@ -33,6 +33,7 @@ const SUPPLIER_FIELDS: HistoryFields = {
   notes: shown(),
   status: shown(),
   disabled_at: shown(),
+  item_number: hidden('business reference, never a change'),
   id: hidden('identity'),
   tenant_id: hidden('tenancy'),
   created_at: hidden('timestamp'),

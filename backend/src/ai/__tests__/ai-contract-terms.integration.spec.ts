@@ -382,11 +382,12 @@ async function testPageUrls(h: Harness, runner: QueryRunner, s: Seed) {
   const contractId = s.contracts['Renewing to decide'];
   const contractPage = `/ops/contracts/${contractId}`;
 
-  // A contract has no business reference: its page, as a path in the chat.
+  // A contract has a business reference (CTR-n) whose address its page does not open yet: its
+  // page, by its id, as a path in the chat.
   const list = await h.tools.execute(chat, 'query_entities', { entity_type: 'contracts', limit: 100 });
   assert.equal(list.items.length, Object.keys(s.contracts).length);
   for (const item of list.items) {
-    assert.equal(item.ref, null, `${item.label}: no reference`);
+    assert.match(String(item.ref), /^CTR-\d+$/, `${item.label}: its reference`);
     assert.equal(item.page_url, `/ops/contracts/${item.id}`, `${item.label}: its page`);
   }
   const detail = await h.tools.execute(chat, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractId });

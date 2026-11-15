@@ -163,7 +163,7 @@ export class PortfolioAssigneeAttentionService {
       const member: AssigneeRow = {
         userId: row.user_id,
         name: row.name ?? '',
-        contributorRef: row.item_number != null ? `CTR-${row.item_number}` : null,
+        contributorRef: row.item_number != null ? `MEM-${row.item_number}` : null,
         open: num(row.open),
         overdue: num(row.overdue),
         stale: num(row.stale),

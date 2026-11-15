@@ -3914,8 +3914,8 @@ async function testAiQueryExecutorClosesRemainingMilestone1aGapFields() {
       [randomUUID(), tenantId, departmentId, metricYear],
     );
 
-    const supplierId = await seedSupplier(runner, tenantId, 'ERP Vendor', 'SUP-001');
-    const otherSupplierId = await seedSupplier(runner, tenantId, 'Legacy Vendor', 'SUP-999');
+    const supplierId = await seedSupplier(runner, tenantId, 'ERP Vendor', 'F10001');
+    const otherSupplierId = await seedSupplier(runner, tenantId, 'Legacy Vendor', 'F10999');
 
     // Starts next year, so its end is that of its first term whatever the day the spec runs
     // (a renewing contract's end date is its current term's, contracts/contract-terms.ts).
@@ -4020,7 +4020,7 @@ async function testAiQueryExecutorClosesRemainingMilestone1aGapFields() {
       fields: ['erp_supplier_id'],
     });
     assert.equal(supplierValues.fields_ignored.length, 0);
-    assert.equal(supplierValues.values.erp_supplier_id.includes('SUP-001'), true);
+    assert.equal(supplierValues.values.erp_supplier_id.includes('F10001'), true);
 
     const contractValues = await queryExecutor.executeFilterValues(context, {
       entity_type: 'contracts',

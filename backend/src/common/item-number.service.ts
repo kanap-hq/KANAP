@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 
-export type SequenceEntityType = 'task' | 'request' | 'project' | 'document' | 'application' | 'spend' | 'capex' | 'incident' | 'contributor' | 'technology';
+export type SequenceEntityType =
+  | 'task' | 'request' | 'project' | 'document' | 'application' | 'spend' | 'capex' | 'incident' | 'contributor' | 'technology'
+  // Numbered by the database at insertion (trigger assign_item_number, migration 1856240000000).
+  | 'supplier' | 'company' | 'contact' | 'department' | 'contract';
 
 /**
  * Atomically allocate the next item number for a given entity type and tenant.

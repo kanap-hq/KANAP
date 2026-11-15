@@ -123,7 +123,8 @@ La saisie de `@` ouvre le **sélecteur de mentions** au-dessus du composeur. Il 
   - `@DOC` : les documents récents de la base de connaissances
   - `@APP backup` : les applications correspondant à « backup »
   - `@BL-12` : la ligne budgétaire portant la référence BL-12. `@BL` seul liste les lignes budgétaires des deux types. Les anciens numéros fonctionnent toujours : `@OPX-12` ou `@CPX-3` trouve sa ligne
-  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+  - `@SUP-3`, `@COMP-1`, `@CTCT-2`, `@DEPT-4`, `@CTR-2` : le fournisseur, la société, le contact, le département ou le contrat qui porte cette référence
+  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CTCT`, `@DEPT`, `@SUP`, `@BP`
 - **Texte libre** : tout le reste (`@payroll`, `@server-2`) lance une recherche multi-types classée par pertinence. Elle trouve aussi les lignes budgétaires par le nom de leurs valeurs analytiques.
 
 Utilisez les touches fléchées pour parcourir les suggestions, **Entrée** ou **Tab** pour confirmer, **Échap** pour fermer le sélecteur. Les résultats sont regroupés par type d'entité (Base de connaissances, Tâches, Projets, Applications, Actifs, Contrats, etc.) afin que vous sachiez d'un coup d'œil quel type d'enregistrement vous vous apprêtez à insérer.
@@ -171,7 +172,7 @@ Kad liste, compte et lit les incidents. Il les filtre par actif, application ou 
 
 Kad lit les contrats comme les montre la liste des [Contrats](contracts.md) : l'état du terme en cours (à décider, en cours, reconduit, fin sans reconduction, échu), la prochaine échéance et la date limite de résiliation, avec le délai de décision de votre espace de travail et les décisions de renouvellement déjà enregistrées. Il lit aussi ce que couvre un contrat : ses applications, actifs, technologies et lignes budgétaires. Demandez par exemple : « Quels contrats sont à décider, et quelles applications couvrent-ils ? » ou « Quels contrats couvrent APP-8 ? » Les assistants connectés par MCP obtiennent les mêmes réponses.
 
-Kad désigne une fiche par sa référence, comme `APP-8` ou `BL-14`, ou par son nom quand elle n'en a pas, comme un contrat, un fournisseur ou un site. La référence ou le nom mène à la page de la fiche quand vous pouvez l'ouvrir.
+Kad désigne une fiche par sa référence, comme `APP-8` ou `BL-14`, ou par son nom quand elle n'en a pas, comme un processus métier. La référence ou le nom mène à la page de la fiche quand vous pouvez l'ouvrir.
 
 Kad ne nomme une fiche liée à celle que vous interrogez que si vous pouvez lire son module, comme la page de la fiche : les applications d'un projet demandent les applications, ses actifs l'infrastructure, ses demandes d'origine les demandes. Un Business Contributor n'obtient que les projets, demandes et applications auxquels il participe. Les serveurs sur lesquels tourne une application font exception : ils viennent avec l'application, comme dans son onglet **Déploiements**. Interrogé sur une personne, Kad donne ce que la liste des utilisateurs vous montre : un administrateur des utilisateurs obtient le profil complet, les autres le nom, l'e-mail et le statut. Les assistants connectés via MCP obtiennent les mêmes réponses.
 

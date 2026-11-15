@@ -123,7 +123,8 @@ Typing `@` opens the **mention picker** above the composer. It lets you referenc
   - `@DOC`: recent knowledge documents
   - `@APP backup`: applications matching "backup"
   - `@BL-12`: the budget line with the reference BL-12. `@BL` alone lists budget lines of both types. The former numbers still work: `@OPX-12` or `@CPX-3` finds its line
-  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+  - `@SUP-3`, `@COMP-1`, `@CTCT-2`, `@DEPT-4`, `@CTR-2`: the supplier, company, contact, department or contract with that reference
+  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CTCT`, `@DEPT`, `@SUP`, `@BP`
 - **Plain text**: anything else (`@payroll`, `@server-2`) runs a cross-type search ranked by relevance. It also finds budget lines by the names of their analytics values.
 
 Use the arrow keys to move through the suggestions, **Enter** or **Tab** to confirm, **Escape** to dismiss the picker. Results are grouped by entity type (Knowledge, Tasks, Projects, Applications, Assets, Contracts, and so on) so you can tell at a glance what kind of record you are about to insert.
@@ -171,7 +172,7 @@ Kad lists, counts and reads incidents. It filters them by asset, application or 
 
 Kad reads contracts as the [Contracts](contracts.md) list shows them: the state of the current term (to decide, in progress, renewed, ends without renewal, expired), the next due date and the cancellation deadline, with the decision window of your workspace and the renewal decisions already recorded. It also reads what a contract covers: its applications, assets, technologies and budget lines. Ask, for example: "Which contracts are to decide, and which applications do they cover?" or "Which contracts cover APP-8?" Assistants connected over MCP get the same answers.
 
-Kad names a record by its reference, such as `APP-8` or `BL-14`, or by its name when it has none, such as a contract, a supplier or a site. The reference or the name links to the record's page when you can open it.
+Kad names a record by its reference, such as `APP-8` or `BL-14`, or by its name when it has none, such as a business process. The reference or the name links to the record's page when you can open it.
 
 Kad names a record linked to the one you ask about only when you can read its module, as the record's page does: the applications of a project need the applications, its assets the infrastructure, its source requests the requests. A Business Contributor only gets the projects, requests and applications they take part in. The servers an application runs on are the exception: they come with the application, as on its **Deployments** tab. Asked about a person, Kad gives what the users list shows you: an administrator of users gets the full profile, everyone else the name, email and status. Assistants connected over MCP get the same answers.
 

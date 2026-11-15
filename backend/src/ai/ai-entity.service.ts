@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { bilingualDocumentTsQuerySql } from '../common/document-search-tsquery';
-import { parseItemNumber } from '../common/parse-item-number';
+import { isPaddedReferenceNumber, parseItemNumber } from '../common/parse-item-number';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -468,7 +468,7 @@ function aiSearchIndexEnabled(): boolean {
 }
 
 // BL numbers are native; OPX/CPX (and the former SI alias) name persisted legacy references.
-const INDEXED_REF_QUERY_RE = /^(PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|BL|CPX|SI|OPX|COMP|CONT|DEPT|SUP|BP|INC|TEC)-?(\d+)$/i;
+const INDEXED_REF_QUERY_RE = /^(PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|MEM|BL|CPX|SI|OPX|COMP|CTCT|DEPT|SUP|BP|INC|TEC)-?(\d+)$/i;
 
 const QUERY_PREFIX_TO_INDEX_REF_PREFIX: Record<string, string> = {
   SI: 'OPX',
@@ -606,10 +606,9 @@ export class AiEntityService {
   private parseNumericPrefix(query: string): string | null {
     const trimmed = String(query || '').trim();
     if (!trimmed) return null;
-    const match = trimmed.match(/^(?:PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|CPX|SI|COMP|CONT|DEPT|SUP|BP|INC)-?(\d+)$/i)
-      ?? trimmed.match(/^(\d+)$/);
-    if (!match) return null;
-    const digits = match[1];
+    const match = trimmed.match(/^(?:(PRJ|REQ|T|DOC|APP|AST|CONN|INT|LOC|CTR|MEM|CPX|SI|COMP|CTCT|DEPT|SUP|BP|INC)-?)?(\d+)$/i);
+    if (!match || isPaddedReferenceNumber(match[1], match[2])) return null;
+    const digits = match[2];
     return digits && Number.isSafeInteger(Number(digits)) ? digits : null;
   }
 
@@ -2295,7 +2294,9 @@ export class AiEntityService {
     // nature); every other family reads its own type (`ai.types.ts`).
     const indexEntityTypes = Array.from(new Set(entityTypes.flatMap((type) => searchIndexEntityTypesFor(type))));
     const q = String(query || '').trim();
-    const prefixed = q.match(INDEXED_REF_QUERY_RE);
+    const matched = q.match(INDEXED_REF_QUERY_RE);
+    // SUP-013 is no reference (an ERP ID is written so): it is searched as text.
+    const prefixed = matched && !isPaddedReferenceNumber(matched[1], matched[2]) ? matched : null;
     const bare = q.match(/^(\d+)$/);
     const digits = prefixed?.[2] ?? bare?.[1] ?? null;
     const legacyPrefix = prefixed && ['OPX', 'CPX', 'SI'].includes(prefixed[1].toUpperCase());
@@ -4066,7 +4067,7 @@ export class AiEntityService {
   private async buildContractContext(context: AiExecutionContextWithManager, contractId: string, manager: AiExecutionContextWithManager['manager']): Promise<AiEntityContextPayloadDto> {
     const { tenantId } = context;
     const [contract] = await manager.query<any[]>(
-      `SELECT c.id, c.tenant_id, c.name, c.notes, c.status, c.updated_at, c.start_date, c.duration_months, c.notice_period_months,
+      `SELECT c.id, c.tenant_id, c.item_number, c.name, c.notes, c.status, c.updated_at, c.start_date, c.duration_months, c.notice_period_months,
               c.auto_renewal, c.disabled_at, c.yearly_amount_at_signature, c.currency,
               sup.name AS supplier_name, comp.name AS company_name,
               NULLIF(btrim(concat_ws(' ', ou.first_name, ou.last_name)), '') AS owner_name
@@ -4111,6 +4112,7 @@ export class AiEntityService {
       entity: {
         ...toContextEntityBase('contracts', {
           id: contract.id,
+          item_number: contract.item_number,
           label: contract.name,
           summary: contract.notes ?? null,
           status: deriveStatusFromDisabledAt(contract.disabled_at),
