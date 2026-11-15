@@ -41,7 +41,7 @@ import { PRODUCT_NAME } from '../../../config/product';
 // @database-spec: opens the data-source and boots Nest, so run-ci-tests.js runs it on a database lane.
 
 const DAY = 24 * 60 * 60 * 1000;
-const BOOKING_URL = 'https://cal.com/kanap/decouverte';
+const BOOKING_URL = 'https://cal.com/kadratis/decouverte';
 
 class RecordingEmail {
   transportName = 'resend';

@@ -276,10 +276,10 @@ async function testManual() {
 async function testConfig() {
   assert.deepEqual(discoveryCallConfig({}), { url: '', fallbackEmail: '', webhookSecret: '' });
   assert.deepEqual(discoveryCallConfig({
-    DISCOVERY_CALL_URL: ' https://cal.com/kanap/decouverte ',
+    DISCOVERY_CALL_URL: ' https://cal.com/kadratis/decouverte ',
     DISCOVERY_CALL_FALLBACK_EMAIL: 'fried@kanap.test',
     DISCOVERY_CALL_WEBHOOK_SECRET: ' s3cret ',
-  }), { url: 'https://cal.com/kanap/decouverte', fallbackEmail: 'fried@kanap.test', webhookSecret: 's3cret' });
+  }), { url: 'https://cal.com/kadratis/decouverte', fallbackEmail: 'fried@kanap.test', webhookSecret: 's3cret' });
   assert.deepEqual(discoveryCallConfig({ DISCOVERY_CALL_URL: 'javascript:alert(1)', DISCOVERY_CALL_FALLBACK_EMAIL: 'not an address' }),
     { url: '', fallbackEmail: '', webhookSecret: '' }, 'neither a URL nor an address');
 }

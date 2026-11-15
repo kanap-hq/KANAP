@@ -95,7 +95,7 @@ function testSubscriptionAndUnsubscription() {
 const LOCALES = ['fr', 'en', 'de', 'es'] as const;
 const APP = 'https://acme.kanap.test';
 const UNSUBSCRIBE = `${APP}/api/trial-mails/unsubscribe?t=tok`;
-const CALL = { url: `${APP}/api/trial-mails/call?t=tok`, display: 'cal.com/kanap/decouverte' };
+const CALL = { url: `${APP}/api/trial-mails/call?t=tok`, display: 'cal.com/kadratis/decouverte' };
 
 function allMails(locale: string) {
   const common = { locale, firstName: 'Camille', workspace: 'Acme <IT>', appUrl: APP };
