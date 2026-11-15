@@ -78,6 +78,10 @@ const ACCEPTED_FILTERS = `${BUDGET_LINE_BULK_FILTER_FIELDS.join(', ')}, and anal
 /** The fields whose values are closed lists, worded on the card as the list does. */
 const WORDED_FILTER_FIELDS = new Set(['status', 'run_build', 'nature']);
 
+/** Kad builds the filter from the person's words alone: on dev it had added "run or build = run" to reach "all the lines" (lot K1). */
+const ONLY_NAMED_CRITERIA = 'Use only the criteria the person named: never add a filter they did not name. '
+  + 'A filter on the field being changed is a criterion only when the person named it ("the run lines to build").';
+
 const NO_CRITERION = 'Name the lines to change: a filter of the budget lines (supplier, cost center, account, owner, dimension...) or their references (rows). '
   + 'Kad does not change every line of the list at once: ask the person which lines.';
 
@@ -129,7 +133,8 @@ function counts(value: unknown): Record<string, number> {
 export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOperation<BulkUpdateBudgetLinesInput> {
   readonly toolName = TOOL;
   readonly description = 'Create a card that changes one field on many budget lines at once (cost center, account, paying company, supplier, IT or business owner, run or build, or a dimension value), '
-    + 'as the "Change the selection" of the budget lines list. Requires explicit user approval before execution. No amount.';
+    + 'as the "Change the selection" of the budget lines list. Requires explicit user approval before execution. No amount. '
+    + `${ONLY_NAMED_CRITERIA} A request on all the lines, with no other criterion, gets a question asking for one, and no card.`;
   readonly inputSchema = BulkUpdateBudgetLinesInputSchema;
   readonly inputSummary = {
     field: 'One of cost_center, account, paying_company, supplier, owner_it, owner_business, run_build, dimension.',
@@ -147,7 +152,8 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     prompt_hint: 'Use `bulk_update_budget_lines` to change one field on several budget lines at once, as the "Change the selection" of the budget lines list: '
       + 'cost center, account, paying company, supplier, IT owner, business owner, run or build, or the value of a dimension (`field: dimension` with `dimension`). One field per card; no amount. '
       + `Describe the lines with the query_entities filters of budget_lines (\`filters\`: ${ACCEPTED_FILTERS}; take the exact values from get_filter_values) or name them (\`rows\`: BL-12), not both; at most ${BULK_MAX_ROWS} lines. `
-      + 'A filter covers the enabled lines of the list, unless it names the status. Never change the whole list without a criterion: ask which lines. '
+      + 'A filter covers the enabled lines of the list, unless it names the status. '
+      + `${ONLY_NAMED_CRITERIA} A request on all the lines, with no other criterion, gets a question asking for one, and no card. `
       + 'Give the new value by name, code or number; `null` empties a field, except the account and the paying company. An account number found in several charts of accounts needs `company`. '
       + 'For more than a few lines, use this tool, never update_business_record line by line nor prepare_mutation_plan. The card counts the lines to change and the refused ones; it cannot be undone.',
   };
