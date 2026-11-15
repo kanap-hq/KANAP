@@ -35,6 +35,7 @@ import {
   BudgetFileLinePlan,
   BudgetFileMatch,
   BudgetFileMatchOptions,
+  BudgetFileNatureCounts,
   BudgetFileRefusedProposal,
   BudgetFileReport,
   BudgetFileScope,
@@ -231,6 +232,7 @@ interface Bag {
   snapshot: BudgetFileSnapshotLine[];
   created: Array<{ line: number; name: string }>;
   updated: Array<{ line: number; itemNumber: string; fields: string[] }>;
+  byNature: BudgetFileNatureCounts;
   unchanged: number;
   plans: BudgetFileLinePlan[];
 }
@@ -441,10 +443,12 @@ function resolveRow(
   if (creating || changes.length > 0) bag.plans.push(toPlan(nature, row, live, creating, draft));
   if (creating) {
     bag.created.push({ line: row.line, name: textOf(row.fields.name) || '(no name)' });
+    bag.byNature.created[nature] += 1;
     return;
   }
   if (changes.length > 0 && live) {
     bag.updated.push({ line: row.line, itemNumber: lineRef(live.itemNumber), fields: changes });
+    bag.byNature.updated[nature] += 1;
     return;
   }
   bag.unchanged += 1;
@@ -1517,6 +1521,7 @@ function emptyBag(input: PreflightInput): Bag {
     snapshot: [],
     created: [],
     updated: [],
+    byNature: { created: { opex: 0, capex: 0 }, updated: { opex: 0, capex: 0 } },
     unchanged: 0,
     plans: [],
   };
@@ -1560,6 +1565,7 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       unchanged: bag.unchanged,
       createdLines: bag.created.slice(0, PREFLIGHT_LIST_LIMIT),
       updatedLines: bag.updated.slice(0, PREFLIGHT_LIST_LIMIT),
+      byNature: bag.byNature,
     },
     changedSinceExport: bag.changed.slice(0, PREFLIGHT_LIST_LIMIT),
     changedSinceExportCount: bag.changed.length,

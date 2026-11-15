@@ -463,9 +463,10 @@ async function testEnglishSampleLinesCreateNothing(h: Harness, runner: QueryRunn
   assert.equal(check.inserted, 8);
   assert.equal(check.new_suppliers, 0, 'no supplier created');
   assert.deepEqual(check.report.file.creates.dimensionValues, [], 'no dimension value created');
-  // The model reads first, in one sentence, that the approval creates nothing and what was matched.
+  // The model reads first, in one sentence, that the approval creates nothing and what was matched,
+  // and the lines it creates by nature (five OPEX and three CAPEX), so that it never counts them itself.
   assert.equal(Object.keys(card.import_mapping)[0], 'on_approval');
-  assert.match(card.import_mapping.on_approval, /^On approval: 8 lines created, 0 updated; 0 suppliers created; 0 dimension values created; 14 values of the file matched to existing ones: /);
+  assert.match(card.import_mapping.on_approval, /^On approval: 8 lines created \(5 OPEX, 3 CAPEX\), 0 updated; 0 suppliers created; 0 dimension values created; 14 values of the file matched to existing ones: /);
   assert.match(card.import_mapping.on_approval, /Retail → Magasins/);
   assert.equal(check.on_approval, undefined, 'said once, at the head of the card');
   assert.deepEqual(matchesOf(check), [

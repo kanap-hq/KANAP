@@ -267,6 +267,12 @@ export interface CalculationLinesWarning {
   message: string;
 }
 
+/** Lines counted by nature, for what a check creates and updates. */
+export interface BudgetFileNatureCounts {
+  created: Record<BudgetNature, number>;
+  updated: Record<BudgetNature, number>;
+}
+
 export interface BudgetFileReport {
   ok: boolean;
   scope: BudgetFileScope;
@@ -286,6 +292,8 @@ export interface BudgetFileReport {
     unchanged: number;
     createdLines: Array<{ line: number; name: string }>;
     updatedLines: Array<{ line: number; itemNumber: string; fields: string[] }>;
+    /** The lines created and updated, by nature: what Kad announces on the approval (lot I1 of 26.11.9). */
+    byNature?: BudgetFileNatureCounts;
   };
   changedSinceExport: Array<{
     line: number;

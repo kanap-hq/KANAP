@@ -21,7 +21,8 @@ import { PortfolioProjectsCsvService } from '../../portfolio/portfolio-projects-
 import { PortfolioRequestsCsvService } from '../../portfolio/portfolio-requests-csv.service';
 import { BudgetFileService, canCreateSuppliers, readableLists } from '../../spend/budget-file/budget-file.service';
 import { createSuppliersChoice } from '../../spend/budget-file/matching';
-import type { BudgetFileMatching, BudgetFileMatchOptions } from '../../spend/budget-file/types';
+import type { BudgetFileMatching, BudgetFileMatchOptions, BudgetFileNatureCounts } from '../../spend/budget-file/types';
+import type { BudgetNature } from '../../spend/budget-nature';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TasksCsvService } from '../../tasks/tasks-csv.service';
@@ -65,7 +66,7 @@ type BudgetFileAnswer = {
   creates?: { supplierCount?: number; dimensionValueCount?: number };
   supplierMessage?: string | null;
   matching?: BudgetFileMatching;
-  changes?: { created: number; updated: number; unchanged: number };
+  changes?: { created: number; updated: number; unchanged: number; byNature?: BudgetFileNatureCounts };
   warnings?: Record<string, unknown>;
 };
 
@@ -416,6 +417,14 @@ function listed(names: string[], total: number): string {
   return `: ${shown.join(', ')}${more > 0 ? `, and ${more} more` : ''}`;
 }
 
+/** A count of lines with its split by nature, `5 OPEX, 3 CAPEX`; a nature at zero is not written, a total at zero has none. */
+function byNature(total: number, counts: Record<BudgetNature, number> | undefined): string {
+  if (total === 0 || !counts) return '';
+  const parts = (['opex', 'capex'] as const).filter((nature) => counts[nature] > 0)
+    .map((nature) => `${counts[nature]} ${nature.toUpperCase()}`);
+  return parts.length > 0 ? ` (${parts.join(', ')})` : '';
+}
+
 /**
  * What the approval of a budget file's check does, in one sentence, from the check itself: the lines,
  * the suppliers and dimension values it creates (named), and the values of the file it matched to
@@ -433,7 +442,10 @@ export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatc
     .map((entry) => (entry.name ? `${entry.value} (${entry.name})` : entry.value));
   const matchNames = matching.matches.map((entry) => `${entry.value} → ${entry.target}`);
   const changes = answer.changes ?? { created: 0, updated: 0, unchanged: 0 };
-  return `On approval: ${changes.created} lines created, ${changes.updated} updated; `
+  // The lines by nature, from the check: the model never counts them in the file.
+  const split = changes.byNature;
+  return `On approval: ${changes.created} lines created${byNature(changes.created, split?.created)}, `
+    + `${changes.updated} updated${byNature(changes.updated, split?.updated)}; `
     + `${suppliers} suppliers created${listed(supplierNames, suppliers)}; `
     + `${values} dimension values created${listed(valueNames, values)}; `
     + `${matching.totals.matches} values of the file matched to existing ones${listed(matchNames, matching.totals.matches)}.`;

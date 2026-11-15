@@ -922,6 +922,32 @@ function testMatchingCountsReachTheModel() {
   console.log('  the model reads the values created and the length of a cut list: OK');
 }
 
+// Lot I1, fourth fixes: the facts of the approval count the lines by nature, from the check, so the
+// model never counts them in the file; a nature at zero is not written, a total at zero has no
+// parentheses, and a check without the split keeps its sentence.
+function testApprovalFactsByNature() {
+  const lines = [2, 3];
+  const matching = {
+    matches: [], refusedProposals: [], candidates: [], totals: { matches: 0, refusedProposals: 0, candidates: 0 },
+    choices: [], createSuppliers: { allowed: true, value: true },
+  };
+  const facts = (changes: Parameters<typeof budgetBilan>[0]['changes']) => budgetBilan({
+    ok: true, changes, creates: { supplierCount: 0, dimensionValueCount: 0 }, matching,
+  }, true, lines).on_approval;
+  const tail = '0 suppliers created; 0 dimension values created; 0 values of the file matched to existing ones.';
+  assert.equal(facts({
+    created: 8, updated: 0, unchanged: 0, byNature: { created: { opex: 5, capex: 3 }, updated: { opex: 0, capex: 0 } },
+  }), `On approval: 8 lines created (5 OPEX, 3 CAPEX), 0 updated; ${tail}`);
+  assert.equal(facts({
+    created: 3, updated: 2, unchanged: 1, byNature: { created: { opex: 3, capex: 0 }, updated: { opex: 1, capex: 1 } },
+  }), `On approval: 3 lines created (3 OPEX), 2 updated (1 OPEX, 1 CAPEX); ${tail}`);
+  assert.equal(facts({
+    created: 0, updated: 2, unchanged: 0, byNature: { created: { opex: 0, capex: 0 }, updated: { opex: 0, capex: 2 } },
+  }), `On approval: 0 lines created, 2 updated (2 CAPEX); ${tail}`);
+  assert.equal(facts({ created: 8, updated: 0, unchanged: 0 }), `On approval: 8 lines created, 0 updated; ${tail}`, 'no split: the sentence of before');
+  console.log('  the facts of the approval count the lines by nature: OK');
+}
+
 // Lot I1, second fixes: a dimension value to create comes to the model with the enabled values of its
 // dimension (the template's list), since a translation is no near name; a supplier, a refused value
 // and a value matched carry no list.
@@ -997,6 +1023,7 @@ async function run() {
     testBilanOnThePersonsLines();
     testLookalikesReachTheModel();
     testMatchingCountsReachTheModel();
+    testApprovalFactsByNature();
     testCreatedDimensionValueCarriesItsList();
     testAFileImportIsAWrite();
     testApprovalEndsTheTurn();
