@@ -85,7 +85,8 @@ void runSpecs('suppliers name rules', [
       const svc = service();
       const tenantId = await seedTenant(runner, 'supplier-import');
       await svc.create({ name: 'SAP', erp_supplier_id: 'SUP-1' }, undefined, { manager: runner.manager });
-      const file = await csvFile(svc, runner, ['sap,SUP-1,,,,Updated,enabled']);
+      // The reference column comes first in the template: left empty, the name finds the supplier.
+      const file = await csvFile(svc, runner, [',sap,SUP-1,,,,Updated,enabled']);
       const preview = await svc.importCsv({ file, dryRun: true, language: 'en' }, { manager: runner.manager });
       assert.strictEqual(preview.ok, true, JSON.stringify(preview.errors));
       assert.strictEqual(preview.inserted, 0, 'no new supplier in the preview');

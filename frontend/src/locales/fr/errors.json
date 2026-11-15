@@ -141,6 +141,8 @@
   "CSV_CRITERION_UNKNOWN": "Critère {{criterion}} inconnu.",
   "CSV_CRITERION_VALUE_UNKNOWN": "Le critère {{criterion}} n'a pas de valeur {{value}}.",
   "CSV_DUPLICATE_KEY": "Mêmes valeurs dans {{columns}} qu'à la ligne {{firstRow}}.",
+  "CSV_VALUE_TAKEN": "« {{value}} » appartient déjà à {{reference}}.",
+  "CSV_SAME_RECORD": "Cette ligne met à jour {{reference}}, comme la ligne {{firstRow}}. Gardez une seule ligne par fiche.",
   "CSV_NAME_MATCHED_CASE": "« {{name}} » a été rapproché de « {{stored}} ».",
   "CSV_SUPPLIER_NAME_DUPLICATE": "« {{name}} » figure déjà à la ligne {{firstRow}}. Gardez une seule ligne par fournisseur.",
   "CSV_COMPANY_NAME_DUPLICATE": "« {{name}} » figure déjà à la ligne {{firstRow}}. Gardez une seule ligne par société.",

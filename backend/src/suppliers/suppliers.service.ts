@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, ILike, In, Raw, Repository } from 'typeorm';
+import { EntityManager, FindOperator, ILike, In, Raw, Repository } from 'typeorm';
 import { Supplier } from './supplier.entity';
 import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ExternalContact } from '../contacts/external-contact.entity';
@@ -10,7 +10,8 @@ import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { deriveStatusFromDisabledAt, resolveLifecycleState, StatusState } from '../common/status';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { SupplierUpsertDto } from './dto/supplier.dto';
-import { assertSetFilterModes } from '../common/ag-grid-filtering';
+import { assertSetFilterModes, compileReferenceFilter, createParamNameGenerator } from '../common/ag-grid-filtering';
+import { parseReferenceNumber } from '../common/parse-item-number';
 import { sortedFindQuery } from '../common/list-sort';
 import {
   cellOf,
@@ -22,6 +23,7 @@ import {
   ImportReportError,
   nameMatchedWarning,
   readMasterDataFile,
+  rowError,
   rowProblemErrors,
 } from '../common/csv-sheet';
 import { csvLifecycleConflict } from '../spend/item-write.util';
@@ -29,15 +31,37 @@ import { duplicateNameException } from '../common/duplicate-name';
 import { uploadedBytes } from '../common/upload';
 import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
-import { SUPPLIER_CSV_COLUMNS, SUPPLIER_CSV_HEADERS } from './supplier-csv-headers';
+import { SUPPLIER_FILE_COLUMNS, SUPPLIER_CSV_HEADERS } from './supplier-csv-headers';
 
 /** The contact columns of the file: one e-mail per contact type. */
 const CONTACT_COLUMNS = ['commercial_contact', 'technical_contact', 'support_contact'] as const;
 
-/** Columns a file may leave out: `disabled_at` came after the first exports. */
-const OPTIONAL_CSV_HEADERS = ['disabled_at'];
+/** Columns a file may leave out: `disabled_at` and `reference` came after the first exports. */
+const OPTIONAL_CSV_HEADERS = ['reference', 'disabled_at'];
 
 const SORT_ALIAS = 'supplier';
+
+/** The prefix of a supplier's reference (`SUP-12`), whose number is `item_number`. */
+const SUPPLIER_PREFIX = 'SUP';
+
+const supplierReference = (itemNumber: number) => `${SUPPLIER_PREFIX}-${itemNumber}`;
+
+/**
+ * The condition on `item_number` of the reference column's filter (`SUP-12`, `12`:
+ * `compileReferenceFilter`) and of the quick search's exact reference (`exact`), or undefined when
+ * neither filters anything.
+ */
+function referenceWhere(model: unknown, exact: number | null): FindOperator<number> | undefined {
+  const compile = (alias: string) => (model === undefined
+    ? null
+    : compileReferenceFilter(model, alias, SUPPLIER_PREFIX, createParamNameGenerator('supplier_ref_')));
+  const filter = compile('item_number');
+  if (!filter && exact == null) return undefined;
+  return Raw(
+    (alias) => [...(exact != null ? [`${alias} = :supplier_ref_exact`] : []), ...(filter ? [`(${compile(alias)!.sql})`] : [])].join(' AND '),
+    { ...(filter?.params ?? {}), ...(exact != null ? { supplier_ref_exact: exact } : {}) },
+  );
+}
 
 @Injectable()
 export class SuppliersService {
@@ -55,14 +79,31 @@ export class SuppliersService {
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query)
       : parsePagination(query);
+    const where = this.listWhere(repo, query, { status, q, filters });
+    const qb = await sortedFindQuery(repo, SORT_ALIAS, where, sort);
+    const [items, total] = await qb.offset(skip).limit(limit).getManyAndCount();
+    return { items, total, page, limit };
+  }
+
+  /**
+   * The list's conditions: its column filters, the reference column's on the number, its status
+   * scope, and the quick search (several text columns, or the supplier a `SUP-12` names), one
+   * TypeORM `where` (an array for the search's alternatives). Shared by the list and its id list.
+   */
+  private listWhere(repo: Repository<Supplier>, query: any, parsed: { status?: any; q?: string; filters?: any }) {
+    const { status, q, filters } = parsed;
     assertSetFilterModes(filters, ['status']);
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
-    const filtersToApply = sanitizedFilters ?? filters;
+    // The reference column holds a number the grid shows as `SUP-12`: compiled on its own, since a
+    // text model on a number column is refused (`assertEntityFilterFields`).
+    const { item_number: referenceModel, ...filtersToApply } = (sanitizedFilters ?? filters ?? {}) as Record<string, any>;
     const where: any = {};
-    if (filtersToApply && Object.keys(filtersToApply).length > 0) {
+    if (Object.keys(filtersToApply).length > 0) {
       assertEntityFilterFields(filtersToApply, repo.metadata);
       Object.assign(where, buildWhereFromAgFilters(filtersToApply));
     }
+    const referenceFilter = referenceWhere(referenceModel, null);
+    if (referenceFilter) where.item_number = referenceFilter;
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
@@ -77,21 +118,19 @@ export class SuppliersService {
         where.disabled_at = Raw((alias) => `${alias} IS NULL OR ${alias} > NOW()`);
       }
     }
+    if (!q) return where;
 
-    // Build OR conditions for quick search across several text fields, combined with any base filters
-    let whereArr: any[] | undefined;
-    if (q) {
-      const like = ILike(`%${q}%`);
-      whereArr = [
-        { ...where, name: like },
-        { ...where, erp_supplier_id: like },
-        { ...where, notes: like },
-      ];
-    }
-
-    const qb = await sortedFindQuery(repo, SORT_ALIAS, whereArr ?? where, sort);
-    const [items, total] = await qb.offset(skip).limit(limit).getManyAndCount();
-    return { items, total, page, limit };
+    // OR conditions for the quick search across several text fields, combined with any base filters
+    const like = ILike(`%${q}%`);
+    const whereArr: any[] = [
+      { ...where, name: like },
+      { ...where, erp_supplier_id: like },
+      { ...where, notes: like },
+    ];
+    // `SUP-12` also finds that supplier. Digits alone, or `SUP-013`, stay text (an ERP ID may read so).
+    const exact = parseReferenceNumber(q, SUPPLIER_PREFIX, { prefixRequired: true });
+    if (exact != null) whereArr.push({ ...where, item_number: referenceWhere(referenceModel, exact) });
+    return whereArr;
   }
 
   /**
@@ -116,49 +155,17 @@ export class SuppliersService {
     return found;
   }
 
-  async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
+  /** The ids and references of the whole list (up to 10 000), in the grid's order: the record's previous / next band. */
+  async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; refs: string[]; total: number }> {
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
-    assertSetFilterModes(filters, ['status']);
-    const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
-    const filtersToApply = sanitizedFilters ?? filters;
-    const where: any = {};
-    if (filtersToApply && Object.keys(filtersToApply).length > 0) {
-      assertEntityFilterFields(filtersToApply, repo.metadata);
-      Object.assign(where, buildWhereFromAgFilters(filtersToApply));
-    }
-    const includeDisabled =
-      String(query.includeDisabled ?? '').toLowerCase() === '1' ||
-      String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const lifecycleStatus = status ?? statusFromAg ?? StatusState.ENABLED;
-    // "All" lifts only the default scope: an explicit status (query or status column filter) still applies.
-    if (matchNone) {
-      where.disabled_at = Raw(() => '1 = 0');
-    } else if (!includeDisabled || (status ?? statusFromAg)) {
-      if (lifecycleStatus === StatusState.DISABLED) {
-        where.disabled_at = Raw((alias) => `${alias} IS NOT NULL AND ${alias} <= NOW()`);
-      } else {
-        where.disabled_at = Raw((alias) => `${alias} IS NULL OR ${alias} > NOW()`);
-      }
-    }
-
-    let whereArr: any[] | undefined;
-    if (q) {
-      const like = ILike(`%${q}%`);
-      whereArr = [
-        { ...where, name: like },
-        { ...where, erp_supplier_id: like },
-        { ...where, notes: like },
-      ];
-    }
-
+    const where = this.listWhere(repo, query, { status, q, filters });
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
-    const total = await repo.count({ where: whereArr ?? where });
-    const qb = await sortedFindQuery(repo, SORT_ALIAS, whereArr ?? where, sort);
-    const items = await qb.select(`${SORT_ALIAS}.id`).limit(limit).getMany();
-    const ids = items.map((i) => i.id);
-    return { ids, total };
+    const total = await repo.count({ where });
+    const qb = await sortedFindQuery(repo, SORT_ALIAS, where, sort);
+    const items = await qb.select([`${SORT_ALIAS}.id`, `${SORT_ALIAS}.item_number`]).limit(limit).getMany();
+    return { ids: items.map((i) => i.id), refs: items.map((i) => supplierReference(i.item_number)), total };
   }
 
   async listFilterValues(query?: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
@@ -268,7 +275,7 @@ export class SuppliersService {
   }
 
   private csvHeaders(): string[] {
-    return [...SUPPLIER_CSV_COLUMNS];
+    return [...SUPPLIER_FILE_COLUMNS];
   }
 
   async exportCsv<F extends ExportFileFormat = 'csv'>(
@@ -276,7 +283,7 @@ export class SuppliersService {
     opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
   ): Promise<ListExportFile<F>> {
     const language = opts?.language ?? 'en';
-    const headers = SUPPLIER_CSV_COLUMNS.map((column) => SUPPLIER_CSV_HEADERS[column][language]);
+    const headers = SUPPLIER_FILE_COLUMNS.map((column) => SUPPLIER_CSV_HEADERS[column][language]);
     const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
@@ -300,6 +307,7 @@ export class SuppliersService {
       const roleEmail = (supplierId: string, role: SupplierContactRole) => firstEmail.get(`${supplierId}:${role}`) ?? '';
       for (const s of items) {
         rows.push([
+          supplierReference(s.item_number),
           s.name ?? '',
           s.erp_supplier_id ?? '',
           roleEmail(s.id, SupplierContactRole.COMMERCIAL),
@@ -363,6 +371,10 @@ export class SuppliersService {
     const normalized: Array<{
       line: number;
       body: SupplierUpsertDto;
+      /** The reference cell, when filled: the supplier the row updates. */
+      reference: string | null;
+      /** The stored supplier the row updates (by its reference, else by its name), once matched. */
+      target?: Supplier;
       commercial_email: string | null;
       technical_email: string | null;
       support_email: string | null;
@@ -443,6 +455,7 @@ export class SuppliersService {
       normalized.push({
         line,
         body,
+        reference: cellOf(row, 'reference') || null,
         commercial_email: emails.commercial_contact,
         technical_email: emails.technical_contact,
         support_email: emails.support_contact,
@@ -460,6 +473,33 @@ export class SuppliersService {
         params: { email: cell.email },
       });
     }
+    const repo = this.getRepo(opts?.manager);
+    const mg = opts?.manager ?? repo.manager;
+    const contactRepo = mg.getRepository(ExternalContact);
+    const linkRepo = mg.getRepository(SupplierContactLink);
+    // A filled reference (`SUP-12` or `12`) names the supplier the row updates, its name included;
+    // one that names no supplier refuses the row. `SUP-013` is no reference (an ERP ID may read so).
+    const referenceNumbers = new Map<string, number | null>();
+    for (const item of normalized) {
+      if (item.reference) referenceNumbers.set(item.reference, parseReferenceNumber(item.reference, SUPPLIER_PREFIX));
+    }
+    const wantedNumbers = [...new Set([...referenceNumbers.values()].filter((n): n is number => n != null))];
+    const byNumber = new Map<number, Supplier>();
+    if (wantedNumbers.length > 0) {
+      const found = await repo.createQueryBuilder(SORT_ALIAS)
+        .where(`${SORT_ALIAS}.tenant_id = app_current_tenant() AND ${SORT_ALIAS}.item_number = ANY(:numbers)`, { numbers: wantedNumbers })
+        .getMany();
+      for (const supplier of found) byNumber.set(supplier.item_number, supplier);
+    }
+    for (const item of normalized) {
+      if (!item.reference) continue;
+      const number = referenceNumbers.get(item.reference);
+      const supplier = number == null ? undefined : byNumber.get(number);
+      if (supplier) item.target = supplier;
+      else {
+        errors.push(rowError(item.line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Supplier reference '${item.reference}' was not found.`, { value: item.reference }));
+      }
+    }
     errors.sort((a, b) => a.row - b.row);
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
@@ -467,33 +507,51 @@ export class SuppliersService {
     // One row per supplier name (a second one is refused above).
     const unique = normalized;
 
-    const repo = this.getRepo(opts?.manager);
-    const mg = opts?.manager ?? repo.manager;
-    const contactRepo = mg.getRepository(ExternalContact);
-    const linkRepo = mg.getRepository(SupplierContactLink);
-    // A row matches the supplier of the same name whatever its case ("sap" updates "SAP"). The
-    // stored spelling stays, and the report says which supplier the row matched.
-    const existingByName = new Map<string, Supplier>();
+    // A row without a reference matches the supplier of the same name whatever its case ("sap"
+    // updates "SAP"): the stored spelling stays, and the report says which supplier the row
+    // matched. A row with one renames its supplier, to a name no other supplier has. Each supplier
+    // takes one row.
     const warnings: ImportReportError[] = [];
+    const firstLineById = new Map<string, number>();
     for (const item of unique) {
       const name = item.body.name as string;
-      const existing = await repo.createQueryBuilder(SORT_ALIAS)
+      const sameName = await repo.createQueryBuilder(SORT_ALIAS)
         .where(`${SORT_ALIAS}.tenant_id = app_current_tenant() AND lower(${SORT_ALIAS}.name) = lower(:name)`, { name })
         .getOne();
+      if (item.target && sameName && sameName.id !== item.target.id) {
+        errors.push(rowError(item.line, 'name', 'CSV_VALUE_TAKEN', `'${name}' is already the name of ${supplierReference(sameName.item_number)}.`,
+          { value: name, reference: supplierReference(sameName.item_number) }));
+        continue;
+      }
+      if (!item.target && sameName) {
+        const warning = nameMatchedWarning(item.line, 'name', name, sameName.name);
+        if (warning) warnings.push(warning);
+        item.target = sameName;
+      }
+      const existing = item.target;
       if (!existing) continue;
-      const warning = nameMatchedWarning(item.line, 'name', name, existing.name);
-      if (warning) warnings.push(warning);
+      const firstRow = firstLineById.get(existing.id);
+      if (firstRow !== undefined) {
+        const reference = supplierReference(existing.item_number);
+        errors.push(rowError(item.line, item.reference ? 'reference' : 'name', 'CSV_SAME_RECORD',
+          `This row updates ${reference}, as row ${firstRow} does. Keep one row per supplier.`, { reference, firstRow }));
+        continue;
+      }
+      firstLineById.set(existing.id, item.line);
       // The stored end of validity's day keeps its time of day: the export writes the day only.
       item.body = {
         ...item.body,
-        name: existing.name,
+        name: item.reference ? name : existing.name,
         disabled_at: keepStoredEndOfValidity(existing.disabled_at, item.body.disabled_at),
       };
-      existingByName.set(existing.name, existing);
+    }
+    if (errors.length > 0) {
+      errors.sort((a, b) => a.row - b.row);
+      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // The contact links of the matched suppliers, as `${supplierId}:${role}:${email}`: the import only adds links.
     const storedLinks = new Set<string>();
-    const existingIds = Array.from(existingByName.values()).map((supplier) => supplier.id);
+    const existingIds = unique.flatMap((item) => (item.target ? [item.target.id] : []));
     if (existingIds.length > 0) {
       const links = await linkRepo.find({ where: { supplier_id: In(existingIds) } });
       const contactIds = Array.from(new Set(links.map((link) => link.contact_id)));
@@ -508,7 +566,7 @@ export class SuppliersService {
     let unchanged = 0;
     const toWrite: typeof unique = [];
     for (const item of unique) {
-      const existing = existingByName.get(item.body.name as string);
+      const existing = item.target;
       const { status, ...values } = item.body;
       if (!existing) inserted += 1;
       else if (
@@ -536,7 +594,7 @@ export class SuppliersService {
       if (!dup) await linkRepo.save(linkRepo.create({ supplier_id: supplierId, contact_id: contactId, role, is_primary: false }));
     };
     for (const item of toWrite) {
-      const existing = existingByName.get(item.body.name as string);
+      const existing = item.target;
       if (existing) {
         const saved = await this.update(existing.id, item.body, userId ?? undefined, { manager: opts?.manager });
         await attachByEmail(saved.id, item.commercial_email, SupplierContactRole.COMMERCIAL);

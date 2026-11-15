@@ -135,6 +135,7 @@ export const IMPORT_EXAMPLES: Record<ImportExampleKey, ImportExampleDefinition> 
     fileNames: { en: 'suppliers', fr: 'fournisseurs', de: 'lieferanten', es: 'proveedores' },
     header: fromLabels(SUPPLIER_CSV_HEADERS),
     columns: {
+      reference: text('supplierReference'),
       name: { kind: 'text', required: true },
       erp_supplier_id: text('erpId'),
       commercial_contact: text('contactEmail'),

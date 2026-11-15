@@ -141,6 +141,8 @@
   "CSV_CRITERION_UNKNOWN": "Unknown criterion {{criterion}}.",
   "CSV_CRITERION_VALUE_UNKNOWN": "Criterion {{criterion}} has no value {{value}}.",
   "CSV_DUPLICATE_KEY": "Same values in {{columns}} as row {{firstRow}}.",
+  "CSV_VALUE_TAKEN": "\"{{value}}\" already belongs to {{reference}}.",
+  "CSV_SAME_RECORD": "This row updates {{reference}}, as row {{firstRow}} does. Keep one row per record.",
   "CSV_NAME_MATCHED_CASE": "\"{{name}}\" was matched to \"{{stored}}\".",
   "CSV_SUPPLIER_NAME_DUPLICATE": "\"{{name}}\" is already on row {{firstRow}}. Keep one row per supplier.",
   "CSV_COMPANY_NAME_DUPLICATE": "\"{{name}}\" is already on row {{firstRow}}. Keep one row per company.",

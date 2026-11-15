@@ -8,7 +8,8 @@ export type ReferenceThing =
 /** A column whose notes need more than its kind says. */
 export type ColumnHint =
   | 'countries' | 'minutes' | 'manDays' | 'percent' | 'names' | 'ipAddress' | 'subnet' | 'currency' | 'months'
-  | 'operatingSystem' | 'erpId' | 'endDay' | 'startDay' | 'hostname' | 'userEmail' | 'contactEmail' | 'version';
+  | 'operatingSystem' | 'erpId' | 'endDay' | 'startDay' | 'hostname' | 'userEmail' | 'contactEmail' | 'version'
+  | 'supplierReference';
 
 export interface ExampleTexts {
   /** The word of the file name: `applications-example.xlsx`. */
@@ -73,6 +74,7 @@ export const EXAMPLE_TEXTS: Record<CsvLanguage, ExampleTexts> = {
       months: 'A number of months',
       operatingSystem: 'The operating system and its version, such as Windows Server 2022',
       erpId: "The supplier's ID in your ERP",
+      supplierReference: 'The reference of the supplier to update, such as SUP-12. Empty: the row finds the supplier by its name, or creates it',
       endDay: 'A date. Empty: no end',
       startDay: 'A date. Empty: January 1 of the first year with an amount',
       hostname: 'The host name, without the domain',
@@ -125,6 +127,7 @@ export const EXAMPLE_TEXTS: Record<CsvLanguage, ExampleTexts> = {
       months: 'Un nombre de mois',
       operatingSystem: 'Le système d’exploitation et sa version, par exemple Windows Server 2022',
       erpId: 'L’identifiant du fournisseur dans votre ERP',
+      supplierReference: 'La référence du fournisseur à mettre à jour, par exemple SUP-12. Vide : la ligne retrouve le fournisseur par son nom, ou le crée',
       endDay: 'Une date. Vide : pas de fin',
       startDay: 'Une date. Vide : le 1er janvier de la première année qui a un montant',
       hostname: 'Le nom d’hôte, sans le domaine',
@@ -177,6 +180,7 @@ export const EXAMPLE_TEXTS: Record<CsvLanguage, ExampleTexts> = {
       months: 'Eine Anzahl Monate',
       operatingSystem: 'Das Betriebssystem und seine Version, zum Beispiel Windows Server 2022',
       erpId: 'Die ID des Lieferanten in Ihrem ERP',
+      supplierReference: 'Die Referenz des zu aktualisierenden Lieferanten, etwa SUP-12. Leer: Die Zeile findet den Lieferanten über seinen Namen oder legt ihn an',
       endDay: 'Ein Datum. Leer: kein Ende',
       startDay: 'Ein Datum. Leer: der 1. Januar des ersten Jahres mit einem Betrag',
       hostname: 'Der Hostname, ohne Domäne',
@@ -229,6 +233,7 @@ export const EXAMPLE_TEXTS: Record<CsvLanguage, ExampleTexts> = {
       months: 'Un número de meses',
       operatingSystem: 'El sistema operativo y su versión, por ejemplo Windows Server 2022',
       erpId: 'El identificador del proveedor en su ERP',
+      supplierReference: 'La referencia del proveedor que se actualiza, por ejemplo SUP-12. Vacía: la fila encuentra el proveedor por su nombre o lo crea',
       endDay: 'Una fecha. Vacía: sin fin',
       startDay: 'Una fecha. Vacía: el 1 de enero del primer año con un importe',
       hostname: 'El nombre de host, sin el dominio',

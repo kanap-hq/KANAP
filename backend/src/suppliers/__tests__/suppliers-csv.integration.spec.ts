@@ -180,9 +180,9 @@ async function testDisabledAtRoundTrip() {
 
     const exported = (await suppliers.exportCsv('data', { manager: runner.manager, language: 'en' })).content.replace(/^﻿/, '');
     const lines = exported.trim().split(/\r?\n/);
-    assert.deepEqual(lines[0].split(','), HEADERS.map((column) => SUPPLIER_CSV_HEADERS[column as keyof typeof SUPPLIER_CSV_HEADERS].en), 'disabled_at follows status');
-    assert.ok(lines.includes('Ended,,,,,,disabled,2025-06-30'), exported);
-    assert.ok(lines.includes('Scheduled,,,,,,enabled,2031-12-31'), exported);
+    assert.deepEqual(lines[0].split(','), ['reference', ...HEADERS].map((column) => SUPPLIER_CSV_HEADERS[column as keyof typeof SUPPLIER_CSV_HEADERS].en), 'the reference first, disabled_at after status');
+    assert.ok(lines.includes('SUP-1,Ended,,,,,,disabled,2025-06-30'), exported);
+    assert.ok(lines.includes('SUP-2,Scheduled,,,,,,enabled,2031-12-31'), exported);
 
     const again = await suppliers.importCsv(
       { file: { buffer: Buffer.from(exported, 'utf8') } as Express.Multer.File, dryRun: true, userId: null, language: 'en' },
@@ -190,10 +190,17 @@ async function testDisabledAtRoundTrip() {
     ) as Report;
     assert.deepEqual([again.ok, again.inserted, again.updated, again.unchanged], [true, 0, 0, 3], JSON.stringify(again.errors));
 
-    // Into an empty register: the dates come back as they were.
+    // Into an empty register: the references name suppliers that are gone, so the rows are refused;
+    // without the reference column, the dates come back as they were.
     await runner.query(`DELETE FROM suppliers WHERE tenant_id = $1`, [tenantId]);
+    const gone = await suppliers.importCsv(
+      { file: { buffer: Buffer.from(exported, 'utf8') } as Express.Multer.File, dryRun: true, userId: null, language: 'en' },
+      { manager: runner.manager },
+    ) as Report;
+    assert.deepEqual(gone.errors.map((error) => [error.column, error.code]), Array(3).fill(['reference', 'CSV_REFERENCE_NOT_FOUND']));
+    const withoutReferences = exported.split(/\r?\n/).map((line) => line.slice(line.indexOf(',') + 1)).join('\n');
     const restored = await suppliers.importCsv(
-      { file: { buffer: Buffer.from(exported, 'utf8') } as Express.Multer.File, dryRun: false, userId: null, language: 'en' },
+      { file: { buffer: Buffer.from(withoutReferences, 'utf8') } as Express.Multer.File, dryRun: false, userId: null, language: 'en' },
       { manager: runner.manager },
     ) as Report;
     assert.deepEqual([restored.ok, restored.errors], [true, []]);
@@ -216,7 +223,7 @@ async function testExportSortedByName() {
       await suppliers.create({ name } as any, undefined, { manager: runner.manager });
     }
     const exported = (await suppliers.exportCsv('data', { manager: runner.manager, language: 'en' })).content.replace(/^﻿/, '');
-    const names = exported.trim().split(/\r?\n/).slice(1).map((line) => line.split(',')[0]);
+    const names = exported.trim().split(/\r?\n/).slice(1).map((line) => line.split(',')[1]);
     assert.deepEqual(names, ['Alpha', 'beta', 'Bravo', 'charlie']);
   });
 }
