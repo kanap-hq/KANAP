@@ -22,7 +22,7 @@ import { aiBudgetListAccess } from '../../query/ai-budget-list-access.util';
 import { adaptFilters } from '../../query/ai-filter.adapter';
 import type { AiFilterValue } from '../../query/ai-filter.types';
 import { resolveAiEntityRegistry } from '../../query/registries';
-import { AI_BULK_FILTER_VALUE, boundAiBulkEditWaits } from '../ai-bulk-edit';
+import { AI_BULK_FILTER_VALUE, isEmptyAiBulkFilterValue, withAiBulkEditWaits } from '../ai-bulk-edit';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
 import { AiBusinessRecordMutationSupportService } from '../ai-business-record-mutation-support.service';
@@ -163,15 +163,22 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     return 'budget_lines';
   }
 
-  async prepareCreatePreview(
+  prepareCreatePreview(
     context: AiExecutionContextWithManager,
     input: BulkUpdateBudgetLinesInput,
   ): Promise<AiPreparedMutationPreview> {
-    await boundAiBulkEditWaits(context.manager);
+    return withAiBulkEditWaits(context.manager, () => this.prepareCard(context, input));
+  }
+
+  private async prepareCard(
+    context: AiExecutionContextWithManager,
+    input: BulkUpdateBudgetLinesInput,
+  ): Promise<AiPreparedMutationPreview> {
     const request = this.normalizeRequest(input);
     const change = await this.resolveChange(context, request);
-    const target = request.rows
-      ? { body: { ids: await this.resolveRows(context, request.rows) }, parts: null, defaultScope: false }
+    const chosen = request.rows ? await this.resolveRows(context, request.rows) : null;
+    const target = chosen
+      ? { body: { ids: chosen.ids }, parts: null, defaultScope: false }
       : await this.resolveFilters(context, request.filters ?? {});
     const dry = await this.budgetLines.bulkUpdate(
       { ...target.body, changes: change.changes, dry_run: true },
@@ -202,7 +209,7 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
         ...(change.dimension ? { dimension: change.dimension } : {}),
         value_label: change.valueLabel,
         changes: change.changes,
-        ...(request.rows ? { refs: request.rows.map((ref) => ref.toUpperCase()) } : {}),
+        ...(chosen ? { refs: chosen.refs } : {}),
         ...(target.parts ? { filter_parts: target.parts, default_scope: target.defaultScope } : {}),
         selection: target.body,
         as_of: dry.as_of,
@@ -267,16 +274,15 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
   async executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {
     // Read again at approval: the right may have been withdrawn since the card.
     await this.policy.assertWriteAccess(context, 'budget', context.manager, { level: 'member' });
-    await boundAiBulkEditWaits(context.manager);
     const mutation = (preview.mutation_input ?? {}) as Record<string, unknown>;
     const selection = mutation.selection;
     if (!selection || typeof selection !== 'object' || !mutation.changes) throw new BadRequestException('Preview is missing its lines.');
     // The count's instant, lines and fingerprint: a list that changed since refuses the write whole.
-    const result = await this.budgetLines.bulkUpdate(
+    const result = await withAiBulkEditWaits(context.manager, async () => this.budgetLines.bulkUpdate(
       { ...(selection as Record<string, unknown>), changes: mutation.changes, as_of: mutation.as_of, expected_rows: mutation.expected_rows, fingerprint: mutation.fingerprint },
       context.userId ?? undefined,
       { manager: context.manager, access: await aiBudgetListAccess(this.policy, context), audit: buildAiMutationAudit(preview) },
-    ) as BulkEditResult;
+    )) as BulkEditResult;
     preview.current_values = {
       ...(preview.current_values ?? {}),
       applied: { changed: Number(result.changed) || 0, unchanged: result.unchanged, refused: result.refused },
@@ -350,16 +356,23 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
 
   /**
    * The account by its number, its name or "number - name", in the workspace. One match is enough;
-   * a number found in several charts of accounts needs the company whose chart holds it.
+   * a number found in several charts of accounts needs the company whose chart holds it. A company
+   * without a chart takes the workspace's default chart, else the accounts without a chart: the
+   * accounts the screen's picker offers for that company (`lookupAccounts`).
    */
   private async resolveAccount(context: AiExecutionContextWithManager, value: string, companyRef?: string): Promise<ResolvedChange> {
     let chart: { id: string | null; company: string } | null = null;
     if (companyRef) {
       const company = await this.records.resolveRecordReference(context, 'companies', companyRef);
-      chart = { id: company.row.coa_id == null ? null : String(company.row.coa_id), company: company.label };
+      const own = company.row.coa_id == null ? null : String(company.row.coa_id);
+      const fallback = own ?? (await context.manager.query(
+        `SELECT g.id::text AS id FROM chart_of_accounts g WHERE g.tenant_id = $1 AND g.is_global_default = true ORDER BY g.id LIMIT 1`,
+        [context.tenantId],
+      ))[0]?.id ?? null;
+      chart = { id: fallback, company: company.label };
     }
     const params: unknown[] = [context.tenantId, value];
-    if (chart?.id) params.push(chart.id);
+    if (chart) params.push(chart.id);
     const rows: Array<{ id: string; label: string; chart: string | null; coa_id: string | null }> = await context.manager.query(
       `SELECT a.id::text AS id, concat_ws(' - ', a.account_number::text, a.account_name) AS label, c.name AS chart, a.coa_id::text AS coa_id
          FROM accounts a
@@ -367,7 +380,7 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
         WHERE a.tenant_id = $1
           AND (a.id::text = lower($2::text) OR a.account_number::text = $2::text OR lower(a.account_name) = lower($2::text)
                OR lower(concat(a.account_number, ' - ', a.account_name)) = lower($2::text))
-          ${chart?.id ? 'AND a.coa_id = $3' : ''}
+          ${chart ? 'AND a.coa_id IS NOT DISTINCT FROM $3::uuid' : ''}
         ORDER BY a.account_number, c.name
         LIMIT 20`,
       params,
@@ -401,9 +414,10 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
   /**
    * The lines the references name, in this tenant and under the person's access: `BL-n` or a bare
    * number is the line's own number, `OPX-n` or `CPX-n` its old number. A reference that names no
-   * line the person reads is refused, the same for a line gone and a line outside the access.
+   * line the person reads is refused, the same for a line gone and a line outside the access. The
+   * card names the lines by their key (`BL-12`), whatever was typed.
    */
-  private async resolveRows(context: AiExecutionContextWithManager, refs: string[]): Promise<string[]> {
+  private async resolveRows(context: AiExecutionContextWithManager, refs: string[]): Promise<{ ids: string[]; refs: string[] }> {
     const parsed = refs.map((ref) => ({ ref, ...budgetLineReferenceNumbers(ref) }));
     const bad = parsed.find((entry) => entry.itemNumber === null && entry.legacyNumber === null);
     if (bad) throw new BadRequestException(`"${bad.ref}" is not a budget line reference (BL-12).`);
@@ -418,15 +432,15 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
         parsed.flatMap((entry) => (entry.legacyNumber === null ? [] : [entry.legacyNumber])),
       ],
     );
-    const ids = new Set<string>();
+    const chosen = new Map<string, string>();
     const missing: string[] = [];
     for (const entry of parsed) {
       const row = found.find((line) => (entry.itemNumber !== null ? Number(line.item_number) === entry.itemNumber : line.legacy_number === entry.legacyNumber));
-      if (row) ids.add(row.id);
+      if (row) chosen.set(row.id, `BL-${row.item_number}`);
       else missing.push(entry.ref);
     }
     if (missing.length > 0) throw new NotFoundException(`No budget line ${missing.slice(0, 10).join(', ')}${missing.length > 10 ? ` (and ${missing.length - 10} more)` : ''} in this workspace.`);
-    return Array.from(ids);
+    return { ids: Array.from(chosen.keys()), refs: Array.from(chosen.values()) };
   }
 
   /**
@@ -445,7 +459,10 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     if (outside.length > 0) {
       throw new BadRequestException(`These budget lines filters cannot choose lines to change: ${outside.join(', ')}. Use ${ACCEPTED_FILTERS}; or name the lines (rows).`);
     }
-    if (keys.filter((key) => key !== 'status').length === 0) throw new BadRequestException(NO_CRITERION);
+    // A part without a value is no criterion: an empty exclusion would reach the whole list, or open the disabled lines.
+    if (keys.filter((key) => key !== 'status').length === 0 || keys.some((key) => isEmptyAiBulkFilterValue(filters[key]))) {
+      throw new BadRequestException(NO_CRITERION);
+    }
     const registry = await resolveAiEntityRegistry(
       context,
       'budget_lines',

@@ -265,15 +265,30 @@ async function testFilterAsTheList(harness: Harness) {
 async function testReferencesAndRefusals(harness: Harness) {
   await inSeed(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'rows');
-    const preview = await card(harness, ctx, { field: 'supplier', value: 'Beta', rows: ['BL-2', 'bl-6'] });
+    // Beta has a contact: the line takes it, and its contacts' history row says by Kad too.
+    const contact = await one(runner, `INSERT INTO contacts (tenant_id, first_name, last_name, email, item_number) VALUES ($1, 'Paul', 'Beta', 'paul@beta.test', 1) RETURNING id`, [seed.tenantId]);
+    await runner.query(`INSERT INTO supplier_contacts (tenant_id, supplier_id, contact_id, role) VALUES ($1, $2, $3, 'commercial')`, [seed.tenantId, seed.suppliers.beta, contact]);
+    // A reference as typed (a bare number, lower case) is shown by its key.
+    const preview = await card(harness, ctx, { field: 'supplier', value: 'Beta', rows: ['2', 'bl-6'] });
     assert.equal(preview.changes.budget_line_bulk_edit.to, 'Chosen lines: BL-2, BL-6\n\nSupplier → SUP-2 - Beta\n\n1 line to change, 1 already has this value\n\n- BL-2 Line 2');
     await approve(harness, ctx, preview);
     assert.equal(await column(runner, seed, 2, 'supplier_id'), seed.suppliers.beta);
+    const history = await runner.query(
+      `SELECT table_name, source, source_ref, user_id::text AS user_id FROM audit_log WHERE tenant_id = $1 AND record_id = $2 ORDER BY table_name`,
+      [seed.tenantId, seed.lines[2]],
+    );
+    assert.deepEqual(history.map((row: any) => row.table_name), ['spend_item_contacts', 'spend_items'], 'the line and its contacts');
+    assert.ok(history.every((row: any) => row.source === 'ai_chat' && row.source_ref === preview.preview_id && row.user_id === seed.users.member),
+      `every history row by Kad with the card: ${JSON.stringify(history)}`);
 
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'supplier', value: 'Beta', rows: ['BL-2', 'BL-999'] }), 'No budget line BL-999 in this workspace.');
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'supplier', value: 'Beta', rows: ['APP-2'] }), '"APP-2" is not a budget line reference (BL-12).');
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'supplier', value: 'Beta', filters: {} }), /^Name the lines to change/);
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'supplier', value: 'Beta', filters: { status: ['enabled'] } }), /^Name the lines to change/);
+    // A part of the filter without a value is no criterion: never the whole list, never the disabled lines.
+    for (const filters of [{ supplier: { not: [] } }, { supplier: [] }, { supplier: ' ' }, { supplier: ['Acme'], status: { not: [] } }, { supplier: ['Acme'], status: [] }]) {
+      await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'run_build', value: 'build', filters }), /^Name the lines to change/);
+    }
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'supplier', value: 'Beta', filters: { currency: ['EUR'] } }),
       /^These budget lines filters cannot choose lines to change: currency\. Use nature, status, product_name, supplier/);
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'supplier', value: 'Beta', filters: { run_build: ['maybe'] } }),
@@ -293,6 +308,14 @@ async function testReferencesAndRefusals(harness: Harness) {
 async function testEveryField(harness: Harness) {
   await inSeed(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'fields');
+    // The waits of the change in bulk hold for the card only: the transaction's own come back after it
+    // (the next cards of "Approve all" run in the same transaction).
+    await runner.query(`SELECT set_config('lock_timeout', '7s', true), set_config('statement_timeout', '9s', true)`);
+    const waits = async () => (await runner.query(`SELECT current_setting('lock_timeout') AS lock, current_setting('statement_timeout') AS statement`))[0];
+    const first = await card(harness, ctx, { field: 'cost_center', value: 'IT-01', rows: ['BL-6'] });
+    assert.deepEqual(await waits(), { lock: '7s', statement: '9s' }, 'the card puts the waits back');
+    await approve(harness, ctx, first);
+    assert.deepEqual(await waits(), { lock: '7s', statement: '9s' }, 'the approval puts the waits back');
     const run = async (input: Record<string, unknown>) => approve(harness, ctx, await card(harness, ctx, input));
     await run({ field: 'cost_center', value: 'FIN-02', rows: ['BL-6'] });
     assert.equal(await column(runner, seed, 6, 'cost_center_id'), seed.costCenters.fin);
@@ -332,6 +355,14 @@ async function testEveryField(harness: Harness) {
     await approve(harness, ctx, account);
     assert.equal(await column(runner, seed, 7, 'account_id'), seed.accounts.b6100);
     assert.equal(await column(runner, seed, 1, 'account_id'), seed.accounts.a7100, 'the refused line is left as it is');
+    // A company without a chart of accounts takes the workspace's default chart, as the screen's picker.
+    const globalChart = await one(runner, `INSERT INTO chart_of_accounts (tenant_id, code, name, scope, is_global_default) VALUES ($1, 'GLOBAL', 'Chart Global', 'GLOBAL', true) RETURNING id`, [seed.tenantId]);
+    const g6100 = await one(runner, `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) VALUES ($1, $2, 6100, 'Software G') RETURNING id`, [seed.tenantId, globalChart]);
+    const companyC = await one(runner, `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Company C', 'FR', 'Lyon') RETURNING id`, [seed.tenantId]);
+    await runner.query(`UPDATE spend_items SET paying_company_id = $2 WHERE tenant_id = $1 AND id = $3`, [seed.tenantId, companyC, seed.lines[6]]);
+    const unplanned = await card(harness, ctx, { field: 'account', value: '6100', company: 'Company C', rows: ['BL-6'] });
+    assert.match(unplanned.changes.budget_line_bulk_edit.to, /Account → 6100 - Software G\n/);
+    assert.equal(JSON.parse(JSON.stringify((await runner.query(`SELECT mutation_input FROM ai_mutation_previews WHERE id = $1`, [unplanned.preview_id]))[0].mutation_input)).changes.account_id, g6100);
     console.log('  every field, an account in one chart and in several: OK');
   });
 }

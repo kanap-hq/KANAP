@@ -13,23 +13,64 @@ export const AI_BULK_EDIT_TOOLS: ReadonlySet<string> = new Set(['bulk_update_bud
 
 export const BULK_EDIT_PLAN_REFUSAL = 'A change in bulk (bulk_update_budget_lines, bulk_update_applications) changes its rows in one card and cannot be part of a mutation plan: call it on its own.';
 
+const WAITS_SAVEPOINT = 'ai_bulk_edit_waits';
+
 /**
  * The waits of a change in bulk in Kad's transaction, as the screen's route (`BULK_WRITE_TIMEOUTS`):
  * a row held by another transaction gives up after `lockTimeoutMs` (55P03: the tool answers busy,
- * the card stays to approve), one statement after `statementTimeoutMs`. Each tool call and each
- * approval runs in its own transaction; no idle limit is set. Mutable for the specs only.
+ * the card stays to approve), one statement after `statementTimeoutMs`. They hold for the card's
+ * count or write only (`withAiBulkEditWaits`); no idle limit is set. Mutable for the specs only.
  */
 export const AI_BULK_EDIT_DB_TIMEOUTS: { lockTimeoutMs: number; statementTimeoutMs: number } = {
   lockTimeoutMs: BULK_WRITE_TIMEOUTS.lockTimeoutMs!,
   statementTimeoutMs: BULK_WRITE_TIMEOUTS.statementTimeoutMs!,
 };
 
-/** Sets the waits for the rest of the transaction (`set_config(…, true)`: a rolled-back savepoint takes them back). */
-export async function boundAiBulkEditWaits(manager: EntityManager): Promise<void> {
-  await manager.query(
-    `SELECT set_config('lock_timeout', $1, true), set_config('statement_timeout', $2, true)`,
-    [`${AI_BULK_EDIT_DB_TIMEOUTS.lockTimeoutMs}ms`, `${AI_BULK_EDIT_DB_TIMEOUTS.statementTimeoutMs}ms`],
+/**
+ * Runs a card's count or its write under the waits, then puts back the transaction's own: the next
+ * cards of "Approve all" run in the same transaction. In a savepoint of its own: on an error, the
+ * rollback to it takes the waits back too (`set_config(…, true)`), even in an aborted transaction,
+ * and nothing the card ran stays.
+ */
+export async function withAiBulkEditWaits<T>(manager: EntityManager, run: () => Promise<T>): Promise<T> {
+  const [before]: Array<{ lock: string; statement: string }> = await manager.query(
+    `SELECT current_setting('lock_timeout') AS lock, current_setting('statement_timeout') AS statement`,
   );
+  const set = (lock: string, statement: string) => manager.query(
+    `SELECT set_config('lock_timeout', $1, true), set_config('statement_timeout', $2, true)`,
+    [lock, statement],
+  );
+  await manager.query(`SAVEPOINT ${WAITS_SAVEPOINT}`);
+  await set(`${AI_BULK_EDIT_DB_TIMEOUTS.lockTimeoutMs}ms`, `${AI_BULK_EDIT_DB_TIMEOUTS.statementTimeoutMs}ms`);
+  let result: T;
+  try {
+    result = await run();
+  } catch (error) {
+    try {
+      await manager.query(`ROLLBACK TO SAVEPOINT ${WAITS_SAVEPOINT}`);
+      await manager.query(`RELEASE SAVEPOINT ${WAITS_SAVEPOINT}`);
+    } catch {
+      // The connection is gone: the card's own error says more.
+    }
+    throw error;
+  }
+  await manager.query(`RELEASE SAVEPOINT ${WAITS_SAVEPOINT}`);
+  await set(before.lock, before.statement);
+  return result;
+}
+
+/**
+ * Whether a part of the filter names no value (`[]`, `{ not: [] }`, a blank text): such a part is no
+ * criterion, and an empty exclusion would reach the whole list (or open the disabled rows).
+ */
+export function isEmptyAiBulkFilterValue(value: unknown): boolean {
+  if (typeof value === 'string') return value.trim() === '';
+  if (Array.isArray(value)) return value.length === 0;
+  if (value && typeof value === 'object' && 'not' in value) {
+    const not = (value as { not: unknown }).not;
+    return !Array.isArray(not) || not.length === 0;
+  }
+  return false;
 }
 
 /** The filter values of `query_entities` (same shapes). */

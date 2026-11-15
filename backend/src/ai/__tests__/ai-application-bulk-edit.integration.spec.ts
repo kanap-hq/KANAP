@@ -275,7 +275,8 @@ async function testFilterAsTheList(harness: Harness) {
 async function testReferencesAndRefusals(harness: Harness) {
   await inSeed(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'rows');
-    const preview = await card(harness, ctx, { field: 'lifecycle', value: 'deprecated', rows: ['APP-2', 'app-5'] });
+    // A reference as typed (a bare number, lower case) is shown by its key.
+    const preview = await card(harness, ctx, { field: 'lifecycle', value: 'deprecated', rows: ['2', 'app-5'] });
     assert.equal(preview.changes[CARD].to, 'Chosen applications: APP-2, APP-5\n\nLifecycle → Deprecated\n\n2 applications to change\n\n- APP-2 Bravo\n- APP-5 Echo');
     await approve(harness, ctx, preview);
     assert.deepEqual(await appsWith(runner, seed, 'lifecycle', 'deprecated'), ['APP-2', 'APP-5']);
@@ -283,6 +284,10 @@ async function testReferencesAndRefusals(harness: Harness) {
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', rows: ['APP-2', 'APP-999'] }), 'No application APP-999 in this workspace.');
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', rows: ['BL-2'] }), '"BL-2" is not an application reference (APP-12).');
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', filters: {} }), /^Name the applications to change/);
+    // A part of the filter without a value is no criterion: never the whole list, never the retired applications.
+    for (const filters of [{ lifecycle: { not: [] } }, { supplier: [] }, { supplier: '' }, { supplier: ['Acme'], lifecycle: [] }, { criticality: { not: [] } }]) {
+      await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'criticality', value: 'High', filters }), /^Name the applications to change/);
+    }
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', filters: { environment: ['prod'] } }),
       /^These applications filters cannot choose applications to change: environment\. Use lifecycle, criticality, cyber_criticality/);
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', filters: { criticality: ['Ultra'] } }),
@@ -300,6 +305,34 @@ async function testReferencesAndRefusals(harness: Harness) {
       operations: [{ operation_id: 'bulk', tool_name: TOOL, input: { field: 'lifecycle', value: 'retired', rows: ['APP-1'] } }],
     }), /cannot be part of a mutation plan/);
     console.log('  references, refusals in words, never a plan step: OK');
+  });
+}
+
+/** The category is the workspace's catalog: taken by its name, a translated name or its code; the card names it. */
+async function testCategoryAsACatalog(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    await runner.query(
+      `UPDATE tenants SET metadata = metadata || jsonb_build_object('it_ops', jsonb_build_object('application_categories', $2::jsonb)) WHERE id = $1`,
+      [seed.tenantId, JSON.stringify([
+        { code: 'line_of_business', label: 'Line of business', translations: { fr: { label: 'Métier' } } },
+        { code: 'security', label: 'Security' },
+      ])],
+    );
+    // A new application is line_of_business by default: all Security, then two of line of business.
+    await runner.query(`UPDATE applications SET category = 'security' WHERE tenant_id = $1`, [seed.tenantId]);
+    await runner.query(`UPDATE applications SET category = 'line_of_business' WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [seed.tenantId, [seed.apps[1], seed.apps[2]]]);
+    const ctx = context(seed, runner, 'category');
+    for (const value of ['Line of business', 'Métier', 'line_of_business']) {
+      const preview = await card(harness, ctx, { field: 'criticality', value: 'High', filters: { category: [value] } });
+      assert.equal(
+        preview.changes[CARD].to,
+        'Filter: Category "Line of business"\n\nScope: enabled applications, retired ones left out\n\nBusiness criticality → High\n\n2 applications to change\n\n- APP-1 Alpha\n- APP-2 Bravo',
+        `the category given as ${value}`,
+      );
+    }
+    await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'criticality', value: 'High', filters: { category: ['Nope'] } }),
+      /^"Nope" is not a value of the applications filter category\. It takes: Line of business \(line_of_business\), Security \(security\), or null \(not set\)\.$/);
+    console.log('  the category is a catalog, by name, translated name or code: OK');
   });
 }
 
@@ -524,6 +557,7 @@ async function run() {
   try {
     await testFilterAsTheList(harness);
     await testReferencesAndRefusals(harness);
+    await testCategoryAsACatalog(harness);
     await testEveryField(harness);
     await testCapAndListChanged(harness);
     await testRightsContributorAndSubscription(harness);

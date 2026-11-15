@@ -21,7 +21,7 @@ import { AiExecutionContextWithManager } from '../../ai.types';
 import { adaptFilters } from '../../query/ai-filter.adapter';
 import type { AiFilterValue } from '../../query/ai-filter.types';
 import { resolveAiEntityRegistry } from '../../query/registries';
-import { AI_BULK_FILTER_VALUE, boundAiBulkEditWaits } from '../ai-bulk-edit';
+import { AI_BULK_FILTER_VALUE, isEmptyAiBulkFilterValue, withAiBulkEditWaits } from '../ai-bulk-edit';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
 import { AiTaskMutationSupportService } from '../ai-task-mutation-support.service';
@@ -70,6 +70,7 @@ const ACCEPTED_FILTERS = APPLICATION_BULK_FILTER_FIELDS.join(', ');
 /** The filter fields whose values are the workspace's catalog: named or coded, worded by their name. */
 const CATALOG_FILTER_FIELDS = {
   lifecycle: 'lifecycleStates',
+  category: 'applicationCategories',
   criticality: 'businessCriticalityLevels',
   cyber_criticality: 'cyberCriticalityLevels',
   data_class: 'dataClasses',
@@ -160,18 +161,25 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     return 'applications';
   }
 
-  async prepareCreatePreview(
+  prepareCreatePreview(
     context: AiExecutionContextWithManager,
     input: BulkUpdateApplicationsInput,
   ): Promise<AiPreparedMutationPreview> {
-    await boundAiBulkEditWaits(context.manager);
+    return withAiBulkEditWaits(context.manager, () => this.prepareCard(context, input));
+  }
+
+  private async prepareCard(
+    context: AiExecutionContextWithManager,
+    input: BulkUpdateApplicationsInput,
+  ): Promise<AiPreparedMutationPreview> {
     const parsed = BulkUpdateApplicationsInputSchema.safeParse(input);
     if (!parsed.success) throw new BadRequestException(parsed.error.issues[0]?.message ?? 'Invalid input.');
     const request = parsed.data;
     const scope = await this.scopeOf(context);
     const change = await this.resolveChange(context, request.field, request.value);
-    const target = request.rows
-      ? { body: { ids: await this.resolveRows(context, request.rows, scope) }, parts: null, defaultScope: false }
+    const chosen = request.rows ? await this.resolveRows(context, request.rows, scope) : null;
+    const target = chosen
+      ? { body: { ids: chosen.ids }, parts: null, defaultScope: false }
       : await this.resolveFilters(context, request.filters ?? {});
     const dry = await this.applications.bulkUpdate(
       { ...target.body, changes: change.changes, dry_run: true },
@@ -201,7 +209,7 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
         field: request.field,
         value_words: change.valueWords,
         changes: change.changes,
-        ...(request.rows ? { refs: request.rows.map((ref) => ref.toUpperCase()) } : {}),
+        ...(chosen ? { refs: chosen.refs } : {}),
         ...(target.parts ? { filter_parts: target.parts, default_scope: target.defaultScope } : {}),
         selection: target.body,
         as_of: dry.as_of,
@@ -266,16 +274,15 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
   async executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {
     // Read again at approval: the right may have been withdrawn since the card.
     await this.policy.assertWriteAccess(context, 'applications', context.manager, { level: 'member' });
-    await boundAiBulkEditWaits(context.manager);
     const mutation = (preview.mutation_input ?? {}) as Record<string, unknown>;
     const selection = mutation.selection;
     if (!selection || typeof selection !== 'object' || !mutation.changes) throw new BadRequestException('Preview is missing its applications.');
     // The count's instant, applications and fingerprint: a list that changed since refuses the write whole.
-    const result = await this.applications.bulkUpdate(
+    const result = await withAiBulkEditWaits(context.manager, async () => this.applications.bulkUpdate(
       { ...(selection as Record<string, unknown>), changes: mutation.changes, as_of: mutation.as_of, expected_rows: mutation.expected_rows, fingerprint: mutation.fingerprint },
       context.userId ?? null,
       { manager: context.manager, tenantId: context.tenantId, accessScope: await this.scopeOf(context), audit: buildAiMutationAudit(preview) },
-    ) as BulkEditResult;
+    )) as BulkEditResult;
     preview.current_values = {
       ...(preview.current_values ?? {}),
       applied: { changed: Number(result.changed) || 0, unchanged: result.unchanged, refused: result.refused },
@@ -307,9 +314,10 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
   }
 
   private async catalog(context: AiExecutionContextWithManager, list: (typeof CATALOG_FILTER_FIELDS)[CatalogFilterField]): Promise<CatalogOption[]> {
-    if (list === 'lifecycleStates') {
+    // The lifecycle states and the categories are the workspace's settings, the levels its classification catalog.
+    if (list === 'lifecycleStates' || list === 'applicationCategories') {
       const settings = await this.settings.getSettings(context.tenantId, { manager: context.manager });
-      return (settings.lifecycleStates || []) as CatalogOption[];
+      return (settings[list] || []) as CatalogOption[];
     }
     const catalog = await this.settings.getClassificationCatalog(context.tenantId, { manager: context.manager });
     return (catalog[list] || []) as CatalogOption[];
@@ -357,9 +365,14 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
   /**
    * The applications the references name, in this tenant and in the person's scope: `APP-n`, or a
    * bare number. A reference that names no application the person reaches is refused, the same for
-   * an application gone and one outside a Business Contributor's scope.
+   * an application gone and one outside a Business Contributor's scope. The card names the
+   * applications by their key (`APP-12`), whatever was typed.
    */
-  private async resolveRows(context: AiExecutionContextWithManager, refs: string[], scope: ParticipationAccessScope | undefined): Promise<string[]> {
+  private async resolveRows(
+    context: AiExecutionContextWithManager,
+    refs: string[],
+    scope: ParticipationAccessScope | undefined,
+  ): Promise<{ ids: string[]; refs: string[] }> {
     const wanted = refs.map((ref) => {
       const match = ref.trim().match(/^(?:APP-)?0*(\d{1,9})$/i);
       if (!match) throw new BadRequestException(`"${ref}" is not an application reference (APP-12).`);
@@ -380,7 +393,8 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     const byRef = new Map(found.map((row) => [row.ref, row.id]));
     const missing = wanted.filter((entry) => !byRef.has(entry.key)).map((entry) => entry.ref);
     if (missing.length > 0) throw new NotFoundException(`No application ${missing.slice(0, 10).join(', ')}${missing.length > 10 ? ` (and ${missing.length - 10} more)` : ''} in this workspace.`);
-    return Array.from(new Set(wanted.map((entry) => byRef.get(entry.key)!)));
+    const chosen = new Map(wanted.map((entry) => [byRef.get(entry.key)!, entry.key]));
+    return { ids: Array.from(chosen.keys()), refs: Array.from(chosen.values()) };
   }
 
   /**
@@ -398,7 +412,8 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     if (outside.length > 0) {
       throw new BadRequestException(`These applications filters cannot choose applications to change: ${outside.join(', ')}. Use ${ACCEPTED_FILTERS}; or name the applications (rows).`);
     }
-    if (keys.length === 0) throw new BadRequestException(NO_CRITERION);
+    // A part without a value is no criterion: an empty exclusion would reach the whole list, or open the retired applications.
+    if (keys.length === 0 || keys.some((key) => isEmptyAiBulkFilterValue(filters[key]))) throw new BadRequestException(NO_CRITERION);
     const coded: Record<string, AiFilterValue> = {};
     const parts: StoredFilterPart[] = [];
     for (const key of keys) {
