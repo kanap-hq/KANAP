@@ -20,6 +20,8 @@ import { incidentViewerFromContext } from '../../incidents/incident-visibility';
 import { PortfolioProjectsCsvService } from '../../portfolio/portfolio-projects-csv.service';
 import { PortfolioRequestsCsvService } from '../../portfolio/portfolio-requests-csv.service';
 import { BudgetFileService, canCreateSuppliers } from '../../spend/budget-file/budget-file.service';
+import { createSuppliersChoice } from '../../spend/budget-file/matching';
+import type { BudgetFileMatching, BudgetFileMatchOptions } from '../../spend/budget-file/types';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TasksCsvService } from '../../tasks/tasks-csv.service';
@@ -61,12 +63,20 @@ type BudgetFileAnswer = {
   deletedCount?: number;
   creates?: { supplierCount?: number };
   supplierMessage?: string | null;
+  matching?: BudgetFileMatching;
   changes?: { created: number; updated: number; unchanged: number };
   warnings?: Record<string, unknown>;
 };
 
 /** How an import is called: the file built in its template's format, the check or the load, the person's language. */
-type ImportCall = { file: Express.Multer.File; dryRun: boolean; language: CsvLanguage; context: AiExecutionContextWithManager };
+type ImportCall = {
+  file: Express.Multer.File;
+  dryRun: boolean;
+  language: CsvLanguage;
+  context: AiExecutionContextWithManager;
+  /** The budget file: the person's choices on the card and the model's proposals. */
+  matching?: BudgetFileMatchOptions;
+};
 
 /**
  * The imports of the screens, called as their routes call them (lot I3 of the Plaid import): the same
@@ -110,7 +120,7 @@ export class AiImportRunnerService {
   async run(
     key: AiImportKey,
     content: Buffer,
-    options: { dryRun: boolean; language: CsvLanguage; lines: readonly number[] },
+    options: { dryRun: boolean; language: CsvLanguage; lines: readonly number[]; matching?: BudgetFileMatchOptions },
     context: AiExecutionContextWithManager,
   ): Promise<AiImportRunDto> {
     const file = {
@@ -121,7 +131,7 @@ export class AiImportRunnerService {
       size: content.length,
       buffer: content,
     } as Express.Multer.File;
-    const call: ImportCall = { file, dryRun: options.dryRun, language: options.language, context };
+    const call: ImportCall = { file, dryRun: options.dryRun, language: options.language, context, matching: options.matching };
     if (key === 'budget_lines') {
       return budgetBilan(await this.runBudgetFile(call), options.dryRun, options.lines);
     }
@@ -186,10 +196,11 @@ export class AiImportRunnerService {
   /**
    * The budget file: its preflight is the check. The load takes the snapshot of a preflight run just
    * before it, as the dialog sends the one it showed: the lines the file names are the ones checked.
-   * The suppliers the file names that do not exist are created, as the dialog's "Create missing
-   * suppliers" does, for a person who may create suppliers: the card lists them before the approval.
+   * The card's "Create missing suppliers" box, the dialog's option, is ticked unless the person
+   * unticked it (a `create_suppliers` choice); it creates suppliers only for a person who may. The
+   * person's undone matches and the model's proposals go to the check and to the load alike.
    */
-  private async runBudgetFile({ file, dryRun, language, context }: ImportCall): Promise<BudgetFileAnswer> {
+  private async runBudgetFile({ file, dryRun, language, context, matching }: ImportCall): Promise<BudgetFileAnswer> {
     const manager = context.manager as EntityManager;
     const caller = { manager, tenantId: context.tenantId, userId: context.userId || null };
     const access = await this.policy.effectiveAccess(context, manager);
@@ -198,8 +209,9 @@ export class AiImportRunnerService {
       language,
       dateOrder: undefined,
       decimalMark: 'dot',
-      createSuppliers: true,
+      createSuppliers: createSuppliersChoice(matching?.choices ?? []) ?? true,
       canCreateSuppliers: canCreateSuppliers(access),
+      matching,
     };
     const preflight = await this.budgetFile.preflight('opex', file.buffer, caller, options);
     if (dryRun || !preflight.ok) return preflight;
@@ -294,6 +306,8 @@ function relined(value: unknown, lines: readonly number[]): unknown {
     key,
     key === 'line' && typeof item === 'number'
       ? personLine(item, lines)
+      : key === 'lines' && Array.isArray(item) && item.every((entry) => typeof entry === 'number')
+        ? (item as number[]).map((entry) => personLine(entry, lines))
       : earlierRow && key === 'params' && item && typeof item === 'object'
         ? relinedRow(relined(item, lines) as Record<string, unknown>, lines)
         : relined(item, lines),
@@ -334,6 +348,38 @@ function similarLines(warnings: Record<string, unknown> | undefined, lines: read
   return { count: total, first, note: SIMILAR_LINES_NOTE };
 }
 
+/** Entries of each matching list the model reads: the card lists them all. */
+const MODEL_MATCHING_ENTRIES = 60;
+
+const MATCHING_NOTE = 'matches: values of the file the check matched to an existing value beyond case (origin server: accents '
+  + 'or another language; origin model: your `values`); the card lists them and the person may undo one. refused_proposals: '
+  + 'your `values` whose target is not an enabled value of the workspace: they were not applied. candidates: values nothing '
+  + 'matched, created on approval (outcome create) or refused, with the closest names of the workspace\'s list; when one is the '
+  + 'same thing (a translation, a synonym, a spelling), call again with that column\'s `values` naming it, never a name that is not '
+  + 'listed. choices: the person\'s choices on the card, kept by a new card of the same file.';
+
+/** The check's matching, for the model: on the person's lines, the first entries of each list. */
+function modelMatching(matching: BudgetFileMatching, lines: readonly number[]): NonNullable<AiImportRunDto['matching']> {
+  const fileLines = (entry: { lines: number[] }) => entry.lines.map((line) => personLine(line, lines));
+  return {
+    matches: matching.matches.slice(0, MODEL_MATCHING_ENTRIES).map((entry) => ({
+      column: entry.column, ...(entry.name ? { dimension: entry.name } : {}), value: entry.value, target: entry.target,
+      origin: entry.origin, count: entry.count, file_lines: fileLines(entry),
+    })),
+    refused_proposals: matching.refusedProposals.slice(0, MODEL_MATCHING_ENTRIES).map((entry) => ({
+      column: entry.column, ...(entry.name ? { dimension: entry.name } : {}), value: entry.value, target: entry.target,
+      reason: entry.reason, count: entry.count, file_lines: fileLines(entry),
+    })),
+    candidates: matching.candidates.slice(0, MODEL_MATCHING_ENTRIES).map((entry) => ({
+      column: entry.column, ...(entry.name ? { dimension: entry.name } : {}), value: entry.value, outcome: entry.outcome,
+      count: entry.count, file_lines: fileLines(entry), candidates: entry.candidates,
+    })),
+    choices: matching.choices,
+    create_suppliers: matching.createSuppliers,
+    note: MATCHING_NOTE,
+  };
+}
+
 /** The bilan of the budget file: its check as its dialog shows it, or the counts of its load. */
 export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: readonly number[]): AiImportRunDto {
   const issues: AiImportRunDto['issues'] = [];
@@ -368,6 +414,7 @@ export function budgetBilan(answer: BudgetFileAnswer, dryRun: boolean, lines: re
     issues,
     new_suppliers: answer.creates?.supplierCount ?? 0,
     ...(similar ? { similar_lines: similar } : {}),
+    ...(isCheck && answer.matching ? { matching: modelMatching(answer.matching, lines) } : {}),
     report: { kind: 'budget_file', file: isCheck ? relined(shown, lines) as Record<string, unknown> : null },
   };
 }

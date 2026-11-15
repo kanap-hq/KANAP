@@ -733,23 +733,25 @@ async function testApprovalRunsTheImportAndTheModelSeesNoCell() {
     },
   );
 
-  // The model receives the counts, never the cells beyond the summary, the card's first rows nor the import's messages.
+  // The model reads the values not read and the first rows (lot I1 of 26.11.9: the file's cells
+  // reach it, so that it can map them with `values`); the import's report stays the card's: the model
+  // reads it as the counts and the issues by code and column.
   const hidden = MODEL_HIDDEN_OUTPUT_FIELDS.prepare_import_mapping;
+  assert.deepEqual([...hidden], ['/import_mapping/validation/report', '/import_mapping/result/report']);
   for (const shown of [dto, approved]) {
     const forModel = new AiEvidenceService({} as any).redact(shown, [...hidden]) as any;
-    assert.equal(forModel.import_mapping.unread_values, '[REDACTED]');
-    assert.equal(forModel.import_mapping.sample, '[REDACTED]');
+    assert.deepEqual(forModel.import_mapping.unread_values, { lifecycle: ['En prod'] });
+    assert.deepEqual(forModel.import_mapping.sample, shown.import_mapping!.sample);
     assert.equal(forModel.import_mapping.validation.report, '[REDACTED]');
     assert.equal(forModel.import_mapping.columns.length, dto.import_mapping!.columns.length);
     assert.equal(forModel.import_mapping.columns[1].unread, 1);
     assert.deepEqual(forModel.import_mapping.validation.issues, [{ level: 'warning', code: 'unknown_value', column: 'lifecycle', count: 1 }]);
-    assert.ok(!JSON.stringify(forModel).includes('En prod'), 'no cell of the file');
   }
   const forModel = new AiEvidenceService({} as any).redact(approved, [...hidden]) as any;
   assert.equal(forModel.import_mapping.result.report, '[REDACTED]');
   assert.equal(forModel.import_mapping.result.inserted, 2);
   assert.deepEqual(dto.import_mapping!.unread_values.lifecycle, ['En prod'], 'the card keeps them');
-  console.log('  approval runs the import, the model sees no cell: OK');
+  console.log('  approval runs the import, the model reads the values not read, not the report: OK');
 }
 
 async function testARefusedFileIsNotImported() {

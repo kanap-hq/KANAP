@@ -249,6 +249,9 @@ export class AiMutationPreviewService {
         && !isFixedPreviewError(preview.error_message)
         && !isRightRefusalMessage(preview.error_message),
       conversation_id: preview.conversation_id ?? null,
+      ...(typeof preview.current_values?.replaces_preview_id === 'string'
+        ? { replaces_preview_id: preview.current_values.replaces_preview_id as string }
+        : {}),
       created_at: preview.created_at.toISOString(),
       expires_at: toIso(preview.expires_at),
       approved_at: toIso(preview.approved_at),
@@ -1307,6 +1310,54 @@ export class AiMutationPreviewService {
       }
       return dto;
     }
+  }
+
+  /**
+   * The person's choices on an import card (lot I1 of 26.11.9: a match undone, the "Create missing
+   * suppliers" box): a new card of the same file and mapping with the choices, its check run again.
+   * The card is locked as an approval locks it: a card approved, rejected or expired first, or
+   * another person's, is refused; once replaced, the card no longer approves. The new card names the
+   * card shown in the conversation (`replaces_preview_id`), which the conversation draws in its place.
+   * `mutation_input` is never changed in place: the action's fingerprint is taken on it at creation.
+   */
+  async replaceImportChoices(
+    context: AiExecutionContextWithManager,
+    previewId: string,
+    choices: unknown[],
+  ): Promise<AiMutationPreviewDto> {
+    const preview = await this.lockPreviewForUser(context, previewId);
+    if (preview.tool_name !== 'prepare_import_mapping' || preview.conversation_id !== (context.conversationId ?? null)) {
+      throw new NotFoundException('AI preview not found.');
+    }
+    const input = (preview.mutation_input ?? {}) as Record<string, unknown>;
+    if (input.entity_type !== 'budget_lines') {
+      throw new BadRequestException('Only the card of a budget file takes choices.');
+    }
+    if (preview.status !== 'pending' || preview.expires_at.getTime() < Date.now()) {
+      throw new ConflictException('This card can no longer be changed: ask for a new one.');
+    }
+    const root = typeof preview.current_values?.replaces_preview_id === 'string'
+      ? preview.current_values.replaces_preview_id as string
+      : preview.id;
+    // Expired first: the pending cards of the conversation stay within their number.
+    await this.getRepo(context.manager).update({ tenant_id: context.tenantId, id: preview.id, status: 'pending' }, { status: 'expired' });
+    const created = await this.createPreview(context, 'prepare_import_mapping', {
+      entity_type: input.entity_type,
+      attachment_id: input.attachment_id,
+      columns: input.columns,
+      assumptions: input.assumptions ?? [],
+      choices,
+    });
+    if (created.status !== 'pending' || created.preview_id === preview.id) {
+      throw new ConflictException('This file was already imported with these choices.');
+    }
+    await context.manager.query(
+      `UPDATE ai_mutation_previews
+          SET current_values = coalesce(current_values, '{}'::jsonb) || jsonb_build_object('replaces_preview_id', $3::text)
+        WHERE tenant_id = $1 AND id = $2`,
+      [context.tenantId, created.preview_id, root],
+    );
+    return { ...created, replaces_preview_id: root };
   }
 
   async executePreview(

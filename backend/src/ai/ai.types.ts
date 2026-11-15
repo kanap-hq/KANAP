@@ -1,5 +1,6 @@
 import { EntityManager } from 'typeorm';
 import { z } from 'zod';
+import type { BudgetFileChoice } from '../spend/budget-file/types';
 
 export type AiSurface = 'chat' | 'mcp';
 export type AiAuthMethod = 'jwt' | 'api_key' | 'oauth';
@@ -505,7 +506,7 @@ export type AiImportMappingPreviewDto = {
     read_as: string | null;
     note: string | null;
   }>;
-  /** Some values the import will not read, by column. Shown to the person only: they are not sent to the model. */
+  /** Some values the import will not read, by column (the model reads them too: it may map them with `values`). */
   unread_values: Record<string, string[]>;
   /** Why a column reads no cell at all, by column: its dates use both orders, or its numbers both decimal marks. */
   read_errors: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks'>;
@@ -517,7 +518,7 @@ export type AiImportMappingPreviewDto = {
   assumptions: string[];
   /**
    * The first rows as the template will hold them, by template column; `unread` marks the cells the
-   * import will not read, shown as the file writes them. Shown to the person only.
+   * import will not read, shown as the file writes them. The model reads them too.
    */
   sample: { columns: string[]; rows: string[][]; unread: boolean[][] };
   /** Rows a required column leaves blank or unread: the import will refuse them. */
@@ -540,7 +541,7 @@ export type AiImportReportMessage = {
 
 /**
  * What an import reported on the file Plaid built: its check (dry run) or the import. The counts and
- * `issues` reach the model; `report` holds the messages, which quote cells of the file, for the card only.
+ * `issues` reach the model, with the budget file's `matching`; `report` holds the messages, written for the person, for the card.
  */
 export type AiImportRunDto = {
   ok: boolean;
@@ -567,6 +568,23 @@ export type AiImportRunDto = {
   similar_lines?: {
     count: number;
     first: Array<{ file_line: number; looks_like?: string; looks_like_file_line?: number }>;
+    note: string;
+  };
+  /**
+   * The budget file's check (lot I1 of 26.11.9): the values it matched beyond case, the model's
+   * refused proposals, the values nothing matched with their closest names, the person's choices
+   * and the "Create missing suppliers" box. On the person's lines. The card reads the full lists in
+   * `report.file.matching`.
+   */
+  matching?: {
+    matches: Array<{ column: string; dimension?: string; value: string; target: string; origin: 'server' | 'model'; count: number; file_lines: number[] }>;
+    refused_proposals: Array<{ column: string; dimension?: string; value: string; target: string; reason: 'missing' | 'disabled'; count: number; file_lines: number[] }>;
+    candidates: Array<{
+      column: string; dimension?: string; value: string; outcome: 'create' | 'refused'; count: number; file_lines: number[];
+      candidates: Array<{ name: string; score: number }>;
+    }>;
+    choices: BudgetFileChoice[];
+    create_suppliers: { allowed: boolean; value: boolean };
     note: string;
   };
   report:
@@ -596,6 +614,11 @@ export type AiMutationPreviewDto = {
   /** A failure of the service (not a refused right): the card says the change was not made, with `error_message` as its detail. */
   error_is_technical?: boolean;
   conversation_id: string | null;
+  /**
+   * A card made by a choice of the person on an import card: the id of the card the conversation
+   * shows (the first of the chain), which this one stands in for.
+   */
+  replaces_preview_id?: string;
   created_at: string;
   expires_at: string | null;
   approved_at: string | null;
