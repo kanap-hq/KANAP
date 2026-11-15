@@ -314,8 +314,14 @@ export interface BudgetFileReport {
     /** How many there are in all. */
     calculationLinesCount: number;
   };
+  /**
+   * What the check matched before creating (lot I1 of 26.11.9), and what it could not. Absent from a
+   * check that refused the file before reading its rows.
+   */
+  matching?: BudgetFileMatching;
   creates: {
-    dimensionValues: Array<{ dimension: string; names: string[] }>;
+    /** The values each dimension gets, by its code; `name` is the dimension's name (null for the unnamed default dimension). */
+    dimensionValues: Array<{ dimension: string; name: string | null; names: string[] }>;
     suppliers: Array<{ name: string; erpId: string | null }>;
     /** How many suppliers the load creates: `suppliers` lists the first ones. */
     supplierCount: number;
@@ -323,7 +329,7 @@ export interface BudgetFileReport {
      * For a limited person only: unknown values of a closed-list dimension, refused (each row has
      * its error); `dimensionValues` lists the ones the load will create.
      */
-    refusedDimensionValues?: Array<{ dimension: string; names: string[] }>;
+    refusedDimensionValues?: Array<{ dimension: string; name: string | null; names: string[] }>;
   };
   supplierMessage: string | null;
   snapshot: { lines: BudgetFileSnapshotLine[] };
@@ -331,6 +337,87 @@ export interface BudgetFileReport {
   firstSheetOnly?: string;
   /** For a limited person only: the check ran on the person's access ("Calculated on your access"). */
   dataAccessLimited?: true;
+}
+
+/**
+ * A choice of the person on a check: a match they undo (the value of the file is then created, or
+ * refused, as an unknown one), or whether the missing suppliers are created. The check and the load
+ * replay the same list.
+ */
+export type BudgetFileChoice =
+  | { kind: 'unmatch'; column: string; value: string }
+  | { kind: 'create_suppliers'; value: boolean };
+
+/** The person's choices and Kad's proposals the check follows. */
+export interface BudgetFileMatchOptions {
+  choices?: readonly BudgetFileChoice[];
+  /**
+   * Kad's proposals, by column (`supplier_name`, `analytics:<code>`): a value of the file and the
+   * existing value it stands for. Accepted only when that value exists and is enabled.
+   */
+  proposals?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+}
+
+/** Lines of the file a matching entry names: the first ones. */
+export const MATCH_LINE_LIMIT = 20;
+/** Entries of each matching list. */
+export const MATCH_LIST_LIMIT = 200;
+
+/** A value of the file matched to an existing value beyond case: listed, and the person may undo it. */
+export interface BudgetFileMatch {
+  /** The file column: `supplier_name` or `analytics:<code>`. */
+  column: string;
+  /** The dimension's name for an `analytics:` column (null for the unnamed default dimension, and for the supplier). */
+  name: string | null;
+  /** The value as the file writes it. */
+  value: string;
+  /** The existing value it stands for. */
+  target: string;
+  /** `server`: the check found it (accents, another language); `model`: Kad proposed it and the check found the value. */
+  origin: 'server' | 'model';
+  reason: 'accents' | 'translation' | 'model';
+  /** The lines of the file the value is on (the first ones), and how many there are. */
+  lines: number[];
+  count: number;
+  /** Every listed match can be undone; a match by case is no match (the same value) and is not listed. */
+  undoable: true;
+}
+
+/** A value Kad proposed that the check did not accept. */
+export interface BudgetFileRefusedProposal {
+  column: string;
+  name: string | null;
+  value: string;
+  target: string;
+  /** `missing`: no such value in the workspace's list; `disabled`: the value is disabled. */
+  reason: 'missing' | 'disabled';
+  lines: number[];
+  count: number;
+}
+
+/** A value of the file nothing matched, and the closest values of the workspace's list. */
+export interface BudgetFileCandidates {
+  /** `supplier_name`, `analytics:<code>` or `company_name`. */
+  column: string;
+  name: string | null;
+  value: string;
+  /** `create`: the load creates it; `refused`: the check refuses it (a company, a supplier not created, a closed list). */
+  outcome: 'create' | 'refused';
+  lines: number[];
+  count: number;
+  /** Three at most, the closest first; `score` from 0 to 1 (pg_trgm's similarity). Empty when none is close. */
+  candidates: Array<{ name: string; score: number }>;
+}
+
+export interface BudgetFileMatching {
+  matches: BudgetFileMatch[];
+  /** Kad's proposals the check refused. */
+  refusedProposals: BudgetFileRefusedProposal[];
+  candidates: BudgetFileCandidates[];
+  /** The choices the check followed: the undone matches it would otherwise make, and the suppliers option. */
+  choices: BudgetFileChoice[];
+  /** The "Create missing suppliers" option: `allowed` when the person may create suppliers, `value` the one followed. */
+  createSuppliers: { allowed: boolean; value: boolean };
 }
 
 export const AMOUNT_MEASURE_LIST: readonly AmountMeasure[] = AMOUNT_MEASURES;

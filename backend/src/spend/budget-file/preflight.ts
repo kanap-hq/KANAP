@@ -16,10 +16,26 @@ import { tokenError } from './token';
 import { columnOfMeasure } from './columns';
 import { DATA_ACCESS_LEAVES_ACCESS_MESSAGE, DATA_ACCESS_PLACEMENT_MESSAGE } from '../../data-access/line-write-checks';
 import {
+  accentFreeKey,
+  cellKey,
+  closestNames,
+  createSuppliersChoice,
+  foldKey,
+  matchByName,
+  NameMatch,
+  recommendedKeyOf,
+  translatedValues,
+} from './matching';
+import {
   BudgetCatalog,
   BudgetFileAmountChange,
   BudgetFileAnalyticsChange,
+  BudgetFileCandidates,
+  BudgetFileChoice,
   BudgetFileLinePlan,
+  BudgetFileMatch,
+  BudgetFileMatchOptions,
+  BudgetFileRefusedProposal,
   BudgetFileReport,
   BudgetFileScope,
   BudgetFileSentence,
@@ -30,6 +46,8 @@ import {
   CatalogSupplier,
   CatalogUser,
   LineHint,
+  MATCH_LINE_LIMIT,
+  MATCH_LIST_LIMIT,
   MISSING_EXAMPLE_LIMIT,
   PREFLIGHT_ERROR_LIMIT,
   PREFLIGHT_LIST_LIMIT,
@@ -119,6 +137,11 @@ export interface PreflightInput {
   labels: Record<string, string>;
   /** A limited person's access (planning/data-scoped-access spec §4.2); absent for an unscoped person. */
   access?: BudgetFileAccess;
+  /**
+   * The person's choices (matches undone; a `create_suppliers` choice wins over `createSuppliers`)
+   * and Kad's proposals. The load replays the same.
+   */
+  matching?: BudgetFileMatchOptions;
 }
 
 /** A line's place and owners, as the SQL functions of data-scoped access take them. */
@@ -175,8 +198,20 @@ interface SupplierCreate {
   erpId: string | null;
 }
 
+/** What the matching found over the rows, by column and value of the file (`cellKey`). */
+interface MatchState {
+  unmatched: Map<string, BudgetFileChoice>;
+  proposals: Map<string, string>;
+  matches: Map<string, BudgetFileMatch>;
+  refused: Map<string, BudgetFileRefusedProposal>;
+  candidates: Map<string, BudgetFileCandidates>;
+  /** The undone matches the rows would otherwise make: the choices still followed. */
+  applied: Set<string>;
+}
+
 interface Bag {
   errors: Array<{ line: number; column: string | null } & BudgetFileSentence>;
+  matching: MatchState;
   missing: Map<string, Set<string>>;
   suppliers: Map<string, SupplierCreate>;
   dimensions: Map<string, Map<string, string>>;
@@ -222,7 +257,10 @@ export function buildPreflight(input: PreflightInput): BudgetFileReport {
  * The report and, for every line it would write, the columns and amounts.
  * The same comparison as the report. Does not read or write the database.
  */
-export function planBudgetFile(input: PreflightInput): { report: BudgetFileReport; plans: BudgetFileLinePlan[] } {
+export function planBudgetFile(given: PreflightInput): { report: BudgetFileReport; plans: BudgetFileLinePlan[] } {
+  // The person's "Create missing suppliers" choice, when they made one, is the option followed.
+  const chosen = createSuppliersChoice(given.matching?.choices ?? []);
+  const input = chosen === undefined ? given : { ...given, createSuppliers: chosen };
   const rows = interpretBudgetFile(input.read, input.scope);
   if (input.read.fileErrors.length > 0 || input.read.headerErrors.length > 0) return { report: refused(input, rows), plans: [] };
   return compared(input, rows);
@@ -230,11 +268,11 @@ export function planBudgetFile(input: PreflightInput): { report: BudgetFileRepor
 
 function refused(input: PreflightInput, rows: InterpretedRow[]): BudgetFileReport {
   const errors = rows.flatMap((row) => row.errors.map((error) => ({ line: row.line, column: error.column, message: error.message })));
-  return finish(input, errors, emptyBag(), null);
+  return finish(input, errors, emptyBag(input), null, false);
 }
 
 function compared(input: PreflightInput, rows: InterpretedRow[]): { report: BudgetFileReport; plans: BudgetFileLinePlan[] } {
-  const bag = emptyBag();
+  const bag = emptyBag(input);
   // A line named twice, by the same number or by two of its numbers (`BL-n` and `OPX-n`).
   const seen = new Map<string, { line: number; ref: string }>();
   const newKeys = new Map<string, number>();
@@ -267,7 +305,7 @@ function compared(input: PreflightInput, rows: InterpretedRow[]): { report: Budg
     }
     resolveRow(input, row, matched, newKeys, bag);
   }
-  return { report: finish(input, bag.errors, bag, supplierMessage(bag, input)), plans: bag.plans };
+  return { report: finish(input, bag.errors, bag, supplierMessage(bag, input), true), plans: bag.plans };
 }
 
 /**
@@ -545,6 +583,7 @@ function resolveCompany(
     if (found.kind === 'none') {
       fail('company_name', `Company '${cell.text}' was not found.`, 'CSV_REFERENCE_NOT_FOUND', { value: cell.text });
       miss(bag, 'companies', cell.text);
+      noteCandidates(bag, 'company_name', null, cell.text, 'refused', row.line, input.catalog.companies);
       return { id: null, known: false };
     }
     if (found.kind === 'many') {
@@ -688,7 +727,7 @@ function resolveSupplier(
   const nameText = name ?? '';
   const erpText = erp ?? '';
   const byErp = erpText ? matchErp(input.catalog.suppliers, erpText) : null;
-  const byName = nameText ? matchName(input.catalog.suppliers, nameText) : null;
+  const byName = nameText ? findListed(bag, 'supplier_name', null, nameText, row.line, input.catalog.suppliers) : null;
   if (byErp?.kind === 'many') {
     fail('supplier_erp_id', `Several suppliers share ERP id '${erpText}'.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: erpText });
     return { id: null, createKey: null };
@@ -735,22 +774,27 @@ function resolveSupplier(
     const changed = !!(live && supplier.id !== live.supplierId);
     if (changed) changes.push('supplier');
     writeField(draft, creating, changed, 'supplier_id', supplier.id);
+    noteMatch(bag, row.line, byName);
     return { id: supplier.id, createKey: null };
   }
   if (!nameText) {
     fail('supplier_erp_id', `supplier_erp_id '${erpText}' does not match a supplier.`, 'CSV_REFERENCE_NOT_FOUND', { value: erpText });
     return { id: null, createKey: null };
   }
-  const createKey = `${nameText.toLowerCase()}|${erpText.toLowerCase()}`;
+  // Two spellings of one unknown name (`Societe X`, `Société X`) are one supplier: the first one names it.
+  const createKey = `${accentFreeKey(nameText)}|${accentFreeKey(erpText)}`;
+  const enabledSuppliers = input.catalog.suppliers.filter((supplier) => isActiveAt(supplier.disabledAt));
   if (input.createSuppliers && input.canCreateSuppliers) {
-    const created = { name: nameText, erpId: erpText || null };
+    const created = bag.suppliers.get(createKey) ?? { name: nameText, erpId: erpText || null };
     bag.suppliers.set(createKey, created);
     changes.push('supplier');
     draft.newSupplier = created;
+    noteCandidates(bag, 'supplier_name', null, nameText, 'create', row.line, enabledSuppliers);
     return { id: null, createKey };
   }
   fail('supplier_name', `Supplier '${nameText}' does not exist.`, 'CSV_REFERENCE_NOT_FOUND', { value: nameText });
-  bag.suppliers.set(createKey, { name: nameText, erpId: erpText || null });
+  if (!bag.suppliers.has(createKey)) bag.suppliers.set(createKey, { name: nameText, erpId: erpText || null });
+  noteCandidates(bag, 'supplier_name', null, nameText, 'refused', row.line, enabledSuppliers);
   return { id: null, createKey: null };
 }
 
@@ -993,13 +1037,16 @@ function resolveAnalytics(
       continue;
     }
     if (!dimension) continue;
-    const matches = dimension.values.filter((value) => value.name.trim().toLowerCase() === cell.text.toLowerCase());
-    if (matches.length > 1) {
+    const key = recommendedKeyOf(dimension);
+    const found = findListed(bag, column, dimension.axisName, cell.text, row.line, dimension.values,
+      (text, values) => translatedValues(key, text, values));
+    if (found.kind === 'many') {
       fail(column, `Value '${cell.text}' matches more than one value of ${code}.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: cell.text });
       continue;
     }
-    if (matches.length === 1) {
-      const value = matches[0];
+    if (found.kind === 'one') {
+      const value = found.row;
+      noteMatch(bag, row.line, found);
       const same = (current ?? '').toLowerCase() === value.name.toLowerCase();
       if (!isActiveAt(value.disabledAt) && !same) {
         fail(column, `${value.name} is disabled. Pick an enabled value.`, 'BUDGET_FILE_DISABLED', { value: value.name });
@@ -1016,19 +1063,24 @@ function resolveAnalytics(
     }
     try {
       const name = normalizeAnalyticsName(cell.text);
+      const enabledValues = dimension.values.filter((value) => isActiveAt(value.disabledAt));
       if (input.access && !dimension.openValues) {
         // A closed list gets values from the dimension page only (spec §3.5, §4.2).
         const refused = bag.refusedDimensions.get(code) ?? new Map<string, string>();
-        refused.set(name.toLowerCase(), name);
+        if (!refused.has(accentFreeKey(name))) refused.set(accentFreeKey(name), name);
         bag.refusedDimensions.set(code, refused);
         fail(column, closedDimensionValueMessage(name, code), 'BUDGET_FILE_DIMENSION_CLOSED', { value: name, name: dimension.axisName || code });
+        noteCandidates(bag, column, dimension.axisName, cell.text, 'refused', row.line, enabledValues);
         continue;
       }
+      // Two spellings of one new value (`Revue privée`, `Revue privee`) are one value: the first one names it.
       const listed = bag.dimensions.get(code) ?? new Map<string, string>();
-      listed.set(name.toLowerCase(), name);
+      const createName = listed.get(accentFreeKey(name)) ?? name;
+      listed.set(accentFreeKey(name), createName);
       bag.dimensions.set(code, listed);
       changes.push(column);
-      draft.analytics.push({ code, categoryId: null, createName: name });
+      draft.analytics.push({ code, categoryId: null, createName });
+      noteCandidates(bag, column, dimension.axisName, cell.text, 'create', row.line, enabledValues);
     } catch (err) {
       const refusal = analyticsMessage(err, dimension.axisName || code, cell.text);
       fail(column, refusal.message, refusal.code, refusal.params);
@@ -1255,6 +1307,105 @@ function matchName<T extends { name: string }>(rows: T[], cell: string): { kind:
   return { kind: 'none' };
 }
 
+/** A list entry the matching reads: a supplier or a dimension value. */
+type Listed = { name: string; disabledAt: string | null };
+
+/** A match of `findListed`, with the proposal of Kad it came from. */
+type ListedMatch<T> = NameMatch<T> & { column?: string; dimensionName?: string | null; value?: string; byModel?: boolean };
+
+/**
+ * The supplier or dimension value of `rows` a value of the file stands for. Kad's proposal for the
+ * value comes first, accepted when it names an enabled value of the list (by its name, case aside);
+ * else it is refused, and the value is matched as the file writes it. A match the person undid goes
+ * no further than case. Every match beyond case is listed once the row uses it (`noteMatch`).
+ */
+function findListed<T extends Listed>(
+  bag: Bag,
+  column: string,
+  dimensionName: string | null,
+  cell: string,
+  line: number,
+  rows: readonly T[],
+  translate?: (cell: string, rows: readonly T[]) => T[],
+): ListedMatch<T> {
+  const key = cellKey(column, cell);
+  const state = bag.matching;
+  const undone = state.unmatched.has(key);
+  const proposal = state.proposals.get(key);
+  if (proposal !== undefined && foldKey(proposal) !== foldKey(cell)) {
+    if (undone) {
+      state.applied.add(key);
+    } else {
+      const target = matchByName(rows, proposal, { beyondCase: false });
+      if (target.kind === 'one' && isActiveAt(target.row.disabledAt)) {
+        return { kind: 'one', row: target.row, how: 'exact', column, dimensionName, value: cell, byModel: true };
+      }
+      const refused = state.refused.get(key) ?? {
+        column, name: dimensionName, value: cell.trim(),
+        target: target.kind === 'one' ? target.row.name : proposal,
+        reason: target.kind === 'one' ? 'disabled' as const : 'missing' as const,
+        lines: [], count: 0,
+      };
+      addLine(refused, line);
+      state.refused.set(key, refused);
+    }
+  }
+  const found = matchByName(rows, cell, { beyondCase: !undone, translate });
+  if (undone && found.kind !== 'one') {
+    const would = matchByName(rows, cell, { beyondCase: true, translate });
+    if (would.kind === 'one' && (would.how === 'accents' || would.how === 'translation')) state.applied.add(key);
+  }
+  return { ...found, column, dimensionName, value: cell };
+}
+
+/** Lists a match beyond case the row uses, with its line. */
+function noteMatch<T extends Listed>(bag: Bag, line: number, found: ListedMatch<T>): void {
+  if (found.kind !== 'one' || !found.column || found.value === undefined) return;
+  const origin = found.byModel ? 'model' : 'server';
+  if (origin === 'server' && found.how !== 'accents' && found.how !== 'translation') return;
+  const key = cellKey(found.column, found.value);
+  const entry = bag.matching.matches.get(key) ?? {
+    column: found.column,
+    name: found.dimensionName ?? null,
+    value: found.value.trim(),
+    target: found.row.name,
+    origin,
+    reason: found.byModel ? 'model' as const : found.how as 'accents' | 'translation',
+    lines: [],
+    count: 0,
+    undoable: true as const,
+  };
+  addLine(entry, line);
+  bag.matching.matches.set(key, entry);
+}
+
+/**
+ * A value of the file nothing matched: the load creates it, or the check refuses it. Its closest
+ * names in the workspace's list (`rows`: a reference list, never other budget lines), once per value.
+ */
+function noteCandidates(
+  bag: Bag,
+  column: string,
+  dimensionName: string | null,
+  value: string,
+  outcome: 'create' | 'refused',
+  line: number,
+  rows: ReadonlyArray<{ name: string }>,
+): void {
+  const key = cellKey(column, value);
+  const entry = bag.matching.candidates.get(key) ?? {
+    column, name: dimensionName, value: value.trim(), outcome, lines: [], count: 0,
+    candidates: closestNames(value, rows.map((row) => row.name)),
+  };
+  addLine(entry, line);
+  bag.matching.candidates.set(key, entry);
+}
+
+function addLine(entry: { lines: number[]; count: number }, line: number): void {
+  entry.count += 1;
+  if (entry.lines.length < MATCH_LINE_LIMIT && !entry.lines.includes(line)) entry.lines.push(line);
+}
+
 function matchErp(rows: CatalogSupplier[], cell: string): { kind: 'none' } | { kind: 'many' } | { kind: 'one'; row: CatalogSupplier } {
   const text = cell.trim();
   const exact = rows.filter((row) => (row.erpId ?? '').trim() === text);
@@ -1325,9 +1476,20 @@ function supplierMessage(bag: Bag, input: PreflightInput): string | null {
   return `${noun}. Create them in Master data > Suppliers, or tick Create missing suppliers.`;
 }
 
-function emptyBag(): Bag {
+function emptyBag(input: PreflightInput): Bag {
+  const unmatched = new Map<string, BudgetFileChoice>();
+  for (const choice of input.matching?.choices ?? []) {
+    if (choice.kind === 'unmatch') unmatched.set(cellKey(choice.column, choice.value), choice);
+  }
+  const proposals = new Map<string, string>();
+  for (const [column, values] of Object.entries(input.matching?.proposals ?? {})) {
+    for (const [from, to] of Object.entries(values)) {
+      if (from.trim() !== '' && String(to).trim() !== '') proposals.set(cellKey(column, from), String(to).trim());
+    }
+  }
   return {
     errors: [],
+    matching: { unmatched, proposals, matches: new Map(), refused: new Map(), candidates: new Map(), applied: new Set() },
     missing: new Map(),
     suppliers: new Map(),
     dimensions: new Map(),
@@ -1346,7 +1508,7 @@ function emptyBag(): Bag {
   };
 }
 
-function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplierNote: string | null): BudgetFileReport {
+function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplierNote: string | null, read: boolean): BudgetFileReport {
   const missing = [...bag.missing.entries()].map(([type, examples]) => {
     const label = MISSING_LABELS[type];
     const list = [...examples];
@@ -1397,25 +1559,53 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       calculationLinesCount: bag.calculationLines.length,
     },
     creates: {
-      dimensionValues: namesByDimension(bag.dimensions),
+      dimensionValues: namesByDimension(input, bag.dimensions),
       suppliers: input.createSuppliers && input.canCreateSuppliers
         ? [...bag.suppliers.values()].slice(0, PREFLIGHT_LIST_LIMIT)
         : [],
       supplierCount: input.createSuppliers && input.canCreateSuppliers ? bag.suppliers.size : 0,
-      ...(input.access ? { refusedDimensionValues: namesByDimension(bag.refusedDimensions) } : {}),
+      ...(input.access ? { refusedDimensionValues: namesByDimension(input, bag.refusedDimensions) } : {}),
     },
     supplierMessage: supplierNote,
+    ...(read ? { matching: matchingOf(input, bag) } : {}),
     snapshot: { lines: bag.snapshot },
     ...((input.read.sheetCount ?? 0) > 1 ? { firstSheetOnly: input.read.sheetName ?? '' } : {}),
     ...(input.access ? { dataAccessLimited: true as const } : {}),
   };
 }
 
-function namesByDimension(byCode: Map<string, Map<string, string>>): Array<{ dimension: string; names: string[] }> {
+/** The values of each dimension, by its code and its name (null for the unnamed default dimension). */
+function namesByDimension(
+  input: PreflightInput,
+  byCode: Map<string, Map<string, string>>,
+): Array<{ dimension: string; name: string | null; names: string[] }> {
   return [...byCode.entries()].map(([dimension, names]) => ({
     dimension,
+    name: input.catalog.dimensions.find((item) => item.code === dimension)?.axisName ?? null,
     names: [...names.values()].slice(0, PREFLIGHT_LIST_LIMIT),
   }));
+}
+
+/**
+ * The matching of the check: the matches beyond case, Kad's refused proposals, the values nothing
+ * matched with their closest names, and the choices it followed (an undone match the file no longer
+ * makes is dropped).
+ */
+function matchingOf(input: PreflightInput, bag: Bag): NonNullable<BudgetFileReport['matching']> {
+  const state = bag.matching;
+  const allowed = input.canCreateSuppliers;
+  const choices: BudgetFileChoice[] = [...state.unmatched.entries()]
+    .filter(([key]) => state.applied.has(key))
+    .map(([, choice]) => choice);
+  const chosen = createSuppliersChoice(input.matching?.choices ?? []);
+  if (chosen !== undefined) choices.push({ kind: 'create_suppliers', value: chosen });
+  return {
+    matches: [...state.matches.values()].slice(0, MATCH_LIST_LIMIT),
+    refusedProposals: [...state.refused.values()].slice(0, MATCH_LIST_LIMIT),
+    candidates: [...state.candidates.values()].slice(0, MATCH_LIST_LIMIT),
+    choices,
+    createSuppliers: { allowed, value: allowed && input.createSuppliers },
+  };
 }
 
 export function blankPreflightInput(scope: BudgetFileScope, read: BudgetFileRead, currentYear: number): PreflightInput {

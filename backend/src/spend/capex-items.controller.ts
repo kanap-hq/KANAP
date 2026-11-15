@@ -32,6 +32,7 @@ import { analyzeAfterLargeImport } from './budget-import-statistics';
 import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
 import { budgetFileBody } from './budget-file/send-export';
+import { budgetFileChoices } from './budget-file/upload';
 import { parseExportFormat } from '../common/xlsx';
 import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
@@ -185,6 +186,7 @@ export class CapexItemsController {
     @Query('dateOrder') dateOrder: string,
     @Query('decimalMark') decimalMark: string,
     @Query('createSuppliers') createSuppliers: string,
+    @Body('choices') choices: unknown,
     @Tenant() ctx: TenantRequest,
   ) {
     if (!file?.buffer) throw new BadRequestException('Choose a file.');
@@ -198,6 +200,7 @@ export class CapexItemsController {
       decimalMark,
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
+      matching: { choices: budgetFileChoices(choices) },
     });
   }
 
@@ -215,6 +218,7 @@ export class CapexItemsController {
     @Query('dateOrder') dateOrder: string,
     @Query('decimalMark') decimalMark: string,
     @Query('createSuppliers') createSuppliers: string,
+    @Body('choices') choices: unknown,
     @Tenant() ctx: TenantRequest,
     @Req() req: any,
   ) {
@@ -229,6 +233,7 @@ export class CapexItemsController {
       decimalMark,
       createSuppliers: createSuppliers === 'true' || createSuppliers === '1',
       canCreateSuppliers: canCreateSuppliers(ctx),
+      matching: { choices: budgetFileChoices(choices) },
     }, { items: { opex: this.opexSvc, capex: this.svc }, audit: this.audit, freeze: this.freeze });
     await analyzeAfterLargeImport(req, importAnalyzeTables('capex', result), result);
     return result;

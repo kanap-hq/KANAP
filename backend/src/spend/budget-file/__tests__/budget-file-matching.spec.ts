@@ -1,0 +1,249 @@
+import * as assert from 'node:assert/strict';
+import { readBudgetCsv } from '../interpret';
+import { closestNames, parseBudgetFileChoices, recommendedKeyOf, similarity } from '../matching';
+import { BudgetFileAccess, planBudgetFile } from '../preflight';
+import { BudgetCatalog, BudgetFileChoice, BudgetFileMatchOptions, CatalogDimension, emptyCatalog } from '../types';
+
+// Lot I1 of 26.11.9, "match before create": the budget file's check finds an existing supplier or
+// dimension value before it creates one (accents, the four languages of the recommended dimensions,
+// Kad's proposals checked against the list), lists every match beyond case, and follows the person's
+// choices (a match undone, the "Create missing suppliers" option). Pure: the check reads no database.
+
+const value = (id: string, name: string, disabledAt: string | null = null) => ({ id, name, disabledAt });
+
+function dimension(code: string, axisName: string | null, names: Array<ReturnType<typeof value>>, patch: Partial<CatalogDimension> = {}): CatalogDimension {
+  return { code, name: axisName ?? code, axisName, required: false, openValues: true, values: names, ...patch };
+}
+
+/** A French workspace: its recommended dimensions in French, the sample data's own business domain, its suppliers. */
+function frenchCatalog(patch: Partial<BudgetCatalog> = {}): BudgetCatalog {
+  return emptyCatalog({
+    companies: [
+      { id: 'c1', name: 'Fromage & Co SA', coaId: null, disabledAt: null },
+      { id: 'c2', name: 'Formaggio Supremo SRL', coaId: null, disabledAt: null },
+    ],
+    accounts: [{ id: 'a1', number: '612200', coaId: null, disabledAt: null }, { id: 'a2', number: '218300', coaId: null, disabledAt: null }],
+    suppliers: [
+      { id: 's1', name: 'Société Générale', erpId: null, disabledAt: null },
+      { id: 's2', name: 'Cegid', erpId: null, disabledAt: null },
+      { id: 's3', name: 'Orange Business', erpId: null, disabledAt: null },
+      { id: 's4', name: 'Ancien prestataire', erpId: null, disabledAt: '2020-01-01T00:00:00.000Z' },
+    ],
+    dimensions: [
+      dimension('default', 'Nature de coût', [value('d1', 'Matériel'), value('d2', 'Logiciel')]),
+      dimension('priority', 'Priorité', [value('p1', 'Obligatoire'), value('p2', 'Haute'), value('p3', 'Moyenne')]),
+      dimension('recurrence', 'Récurrence', [value('r1', 'Récurrent'), value('r2', 'Ponctuel')]),
+      dimension('business_domain', 'Domaine métier', [value('b1', 'Magasins'), value('b2', 'IT partagée'), value('b3', 'Revue d\'affaires trimestrielle'), value('b4', 'Ancien domaine', '2020-01-01T00:00:00.000Z')]),
+    ],
+    ...patch,
+  });
+}
+
+const DIMENSIONS = ['default', 'priority', 'recurrence', 'business_domain'];
+const HEADER = 'item_number,nature,name,company_name,account_number,supplier_name,currency,analytics:default,analytics:priority,analytics:recurrence,analytics:business_domain\n';
+
+async function check(
+  rows: string[],
+  options: { cat?: BudgetCatalog; matching?: BudgetFileMatchOptions; createSuppliers?: boolean; canCreateSuppliers?: boolean; access?: BudgetFileAccess } = {},
+) {
+  const read = await readBudgetCsv(`${HEADER}${rows.join('\n')}\n`, { language: 'en', dimensionCodes: DIMENSIONS });
+  return planBudgetFile({
+    scope: 'opex', read, catalog: options.cat ?? frenchCatalog(), stored: [], names: [],
+    createSuppliers: options.createSuppliers ?? true, canCreateSuppliers: options.canCreateSuppliers ?? true,
+    currentYear: 2026, labels: {}, ...(options.access ? { access: options.access } : {}),
+    ...(options.matching ? { matching: options.matching } : {}),
+  });
+}
+
+function matchesOf(report: Awaited<ReturnType<typeof check>>['report']) {
+  return report.matching!.matches.map((match) => [match.column, match.value, match.target, match.origin, match.reason, match.lines]);
+}
+
+// The recommended dimensions are found by their code, an older code, or the default dimension named as the cost pool.
+function testRecommendedKeys() {
+  assert.equal(recommendedKeyOf({ code: 'priority', axisName: 'Priorité' }), 'priority');
+  assert.equal(recommendedKeyOf({ code: 'investment_type', axisName: 'Type' }), 'purpose');
+  assert.equal(recommendedKeyOf({ code: 'default', axisName: 'Nature de coût' }), 'cost_pool');
+  assert.equal(recommendedKeyOf({ code: 'default', axisName: 'Nature de coût (2)' }), 'cost_pool');
+  assert.equal(recommendedKeyOf({ code: 'default', axisName: 'Centres' }), null);
+  assert.equal(recommendedKeyOf({ code: 'business_domain', axisName: 'Domaine métier' }), null);
+  console.log('  recommended dimensions found by code or by the cost pool\'s name: OK');
+}
+
+// The server matches what it can without the model: accents, and the recommended values' names in
+// the four languages. A match by case is the same value, as before: not listed.
+async function testServerMatches() {
+  const { report, plans } = await check([
+    ',opex,Licences,Fromage & Co SA,612200,SOCIETE GENERALE,EUR,Software,High,Recurring,magasins',
+    ',capex,Caisses,Fromage & Co SA,218300,,EUR,Hardware,Mandatory,One-off,Magasins',
+    ',capex,Serveurs,Fromage & Co SA,218300,,EUR,Materiel,Haute,ponctuel,IT partagee',
+  ]);
+  assert.equal(report.ok, true, JSON.stringify(report.errors));
+  assert.deepEqual(report.creates.dimensionValues, [], 'nothing to create');
+  assert.equal(report.creates.supplierCount, 0);
+  assert.deepEqual(matchesOf(report), [
+    ['supplier_name', 'SOCIETE GENERALE', 'Société Générale', 'server', 'accents', [2]],
+    ['analytics:default', 'Software', 'Logiciel', 'server', 'translation', [2]],
+    ['analytics:priority', 'High', 'Haute', 'server', 'translation', [2]],
+    ['analytics:recurrence', 'Recurring', 'Récurrent', 'server', 'translation', [2]],
+    ['analytics:default', 'Hardware', 'Matériel', 'server', 'translation', [3]],
+    ['analytics:priority', 'Mandatory', 'Obligatoire', 'server', 'translation', [3]],
+    ['analytics:recurrence', 'One-off', 'Ponctuel', 'server', 'translation', [3]],
+    ['analytics:default', 'Materiel', 'Matériel', 'server', 'accents', [4]],
+    ['analytics:business_domain', 'IT partagee', 'IT partagée', 'server', 'accents', [4]],
+  ]);
+  assert.ok(report.matching!.matches.every((match) => match.undoable === true));
+  assert.equal(report.matching!.matches.find((match) => match.column === 'analytics:priority')!.name, 'Priorité', 'a dimension by its name');
+  // "magasins", "Haute" and "ponctuel" are the same values, case aside: no match to show.
+  assert.ok(!report.matching!.matches.some((match) => ['magasins', 'Haute', 'ponctuel'].includes(match.value)));
+  // The plans write the existing values.
+  assert.deepEqual(plans[1].analytics.map((change) => [change.code, change.categoryId, change.createName]), [
+    ['default', 'd1', null], ['priority', 'p1', null], ['recurrence', 'r2', null], ['business_domain', 'b1', null],
+  ]);
+  console.log('  accents and the four languages matched by the server, listed: OK');
+}
+
+// "Retail" is the sample data's own value: the server cannot translate it; the model's proposal can
+// name "Magasins", accepted because it exists. A proposal naming a value that does not exist, or a
+// disabled one, is refused and said; the value is then matched as the file writes it.
+async function testModelProposals() {
+  const proposals = {
+    'analytics:business_domain': { Retail: 'Magasins', 'Shared IT': 'Informatique commune', Legacy: 'Ancien domaine' },
+    supplier_name: { 'Cegid SA': 'Cegid' },
+  };
+  const { report } = await check([
+    ',opex,Caisses,Fromage & Co SA,612200,Cegid SA,EUR,,,,Retail',
+    ',opex,Réseau,Fromage & Co SA,612200,,EUR,,,,Shared IT',
+    ',opex,Ancien,Fromage & Co SA,612200,,EUR,,,,Legacy',
+  ], { matching: { proposals } });
+  assert.deepEqual(matchesOf(report), [
+    ['supplier_name', 'Cegid SA', 'Cegid', 'model', 'model', [2]],
+    ['analytics:business_domain', 'Retail', 'Magasins', 'model', 'model', [2]],
+  ]);
+  assert.deepEqual(report.matching!.refusedProposals.map((entry) => [entry.column, entry.value, entry.target, entry.reason, entry.lines]), [
+    ['analytics:business_domain', 'Shared IT', 'Informatique commune', 'missing', [3]],
+    ['analytics:business_domain', 'Legacy', 'Ancien domaine', 'disabled', [4]],
+  ]);
+  // The refused ones are created as the file writes them, as before.
+  assert.deepEqual(report.creates.dimensionValues, [{ dimension: 'business_domain', name: 'Domaine métier', names: ['Shared IT', 'Legacy'] }]);
+  assert.equal(report.creates.supplierCount, 0);
+  console.log('  the model\'s proposals: accepted when the value exists, refused when missing or disabled: OK');
+}
+
+// An unknown value is created once, whatever its spelling, with the closest names of the list; the
+// candidates come from the reference lists only. An unknown company stays an error, with candidates.
+async function testCreatesAndCandidates() {
+  const { report, plans } = await check([
+    ',opex,A,Fromage & Co SA,612200,Société Nouvelle,EUR,,,,Quarterly business review',
+    ',opex,B,Fromage & Co SA,612200,Societe Nouvelle,EUR,,,,Quarterly Business Review',
+    ',opex,C,Fromage & Cie SA,612200,Orange Busines,EUR,,,,',
+  ]);
+  assert.deepEqual(report.creates.suppliers, [{ name: 'Société Nouvelle', erpId: null }, { name: 'Orange Busines', erpId: null }], 'two spellings, one supplier');
+  assert.equal(report.creates.supplierCount, 2);
+  assert.deepEqual(plans.map((plan) => plan.newSupplier?.name ?? null), ['Société Nouvelle', 'Société Nouvelle']);
+  assert.deepEqual(report.creates.dimensionValues, [{ dimension: 'business_domain', name: 'Domaine métier', names: ['Quarterly business review'] }]);
+  const candidates = Object.fromEntries(report.matching!.candidates.map((entry) => [`${entry.column}|${entry.value}`, entry]));
+  assert.equal(candidates['analytics:business_domain|Quarterly business review'].outcome, 'create');
+  assert.deepEqual(candidates['analytics:business_domain|Quarterly business review'].lines, [2, 3]);
+  assert.equal(candidates['analytics:business_domain|Quarterly business review'].count, 2);
+  // A translation is no trigram neighbour: the model reads the dimension's values in the template.
+  assert.deepEqual(candidates['analytics:business_domain|Quarterly business review'].candidates, []);
+  // A near name is no match: it is created, and its candidates say which existing name is close.
+  assert.equal(candidates['supplier_name|Orange Busines'].outcome, 'create');
+  assert.equal(candidates['supplier_name|Orange Busines'].candidates[0].name, 'Orange Business');
+  const company = candidates['company_name|Fromage & Cie SA'];
+  assert.equal(company.outcome, 'refused');
+  assert.equal(company.candidates[0].name, 'Fromage & Co SA');
+  assert.ok(company.candidates[0].score >= 0.3 && company.candidates[0].score <= 1);
+  assert.ok(report.errors.some((error) => error.column === 'company_name' && error.code === 'CSV_REFERENCE_NOT_FOUND'));
+  console.log('  two spellings make one creation; candidates of an unknown company: OK');
+}
+
+// The candidates' measure: pg_trgm's similarity, accents and case aside, three at most, from 0.3.
+function testCandidates() {
+  assert.equal(similarity('Société', 'societe'), 1);
+  assert.equal(similarity('Retail', 'Magasins'), 0);
+  assert.deepEqual(closestNames('Orange Busines', ['Orange Business', 'Orange', 'Cegid', 'Orange Bank', 'Oracle']).map((entry) => entry.name),
+    ['Orange Business', 'Orange', 'Orange Bank']);
+  assert.deepEqual(closestNames('Quarterly review', ['Obligatoire', 'Haute']), []);
+  console.log('  candidates by trigram similarity, three at most: OK');
+}
+
+// A match undone is no match: the value is created as the file writes it, or refused when the person
+// may not create it; the choice is reported as followed. A choice no row uses is dropped.
+async function testUndoneMatches() {
+  const choices: BudgetFileChoice[] = [
+    { kind: 'unmatch', column: 'analytics:priority', value: 'high' },
+    { kind: 'unmatch', column: 'supplier_name', value: 'Societe Generale' },
+    { kind: 'unmatch', column: 'analytics:business_domain', value: 'Retail' },
+    { kind: 'unmatch', column: 'analytics:default', value: 'Nowhere' },
+  ];
+  const proposals = { 'analytics:business_domain': { Retail: 'Magasins' } };
+  const { report } = await check([',opex,Licences,Fromage & Co SA,612200,Societe Generale,EUR,,High,,Retail'], { matching: { choices, proposals } });
+  assert.equal(report.ok, true, JSON.stringify(report.errors));
+  assert.deepEqual(report.matching!.matches, []);
+  assert.deepEqual(report.creates.dimensionValues.map((entry) => [entry.dimension, entry.names]), [['priority', ['High']], ['business_domain', ['Retail']]]);
+  assert.deepEqual(report.creates.suppliers, [{ name: 'Societe Generale', erpId: null }]);
+  assert.deepEqual(report.matching!.choices, choices.slice(0, 3), 'the choices followed; the one no row uses is dropped');
+
+  // Without the right to create suppliers, or with the box unticked: the supplier is refused.
+  const unticked = await check([',opex,Licences,Fromage & Co SA,612200,Societe Generale,EUR,,,,'], {
+    matching: { choices: [{ kind: 'unmatch', column: 'supplier_name', value: 'Societe Generale' }, { kind: 'create_suppliers', value: false }] },
+  });
+  assert.equal(unticked.report.ok, false);
+  assert.deepEqual(unticked.report.errors.map((error) => [error.column, error.code]), [['supplier_name', 'CSV_REFERENCE_NOT_FOUND']]);
+  assert.deepEqual(unticked.report.matching!.createSuppliers, { allowed: true, value: false });
+  assert.equal(unticked.report.matching!.candidates[0].outcome, 'refused');
+  assert.equal(unticked.report.matching!.candidates[0].candidates[0].name, 'Société Générale');
+  const noRight = await check([',opex,Licences,Fromage & Co SA,612200,Nouveau,EUR,,,,'], { canCreateSuppliers: false });
+  assert.deepEqual(noRight.report.matching!.createSuppliers, { allowed: false, value: false }, 'no box for a person who may not create suppliers');
+  assert.deepEqual(noRight.report.errors.map((error) => error.code), ['CSV_REFERENCE_NOT_FOUND']);
+  console.log('  a match undone creates or refuses the value; the suppliers box: OK');
+}
+
+// A limited person, a closed list: an unknown value stays refused (BUDGET_FILE_DIMENSION_CLOSED),
+// undone match included; its candidates come from the list of values, nothing else.
+async function testClosedListForALimitedPerson() {
+  const cat = frenchCatalog();
+  cat.dimensions = cat.dimensions.map((item) => (item.code === 'priority' ? { ...item, openValues: false } : item));
+  const access: BudgetFileAccess = { editable: new Set(), places: new Map(), wanted: new Map() };
+  const matched = await check([',opex,Licences,Fromage & Co SA,612200,,EUR,,High,,'], { cat, access });
+  assert.deepEqual(matched.report.errors, [], 'a value matched by translation is no new value');
+  const undone = await check([',opex,Licences,Fromage & Co SA,612200,,EUR,,High,,'], {
+    cat, access, matching: { choices: [{ kind: 'unmatch', column: 'analytics:priority', value: 'High' }] },
+  });
+  assert.deepEqual(undone.report.errors.map((error) => [error.column, error.code]), [['analytics:priority', 'BUDGET_FILE_DIMENSION_CLOSED']]);
+  assert.deepEqual(undone.report.creates.refusedDimensionValues, [{ dimension: 'priority', name: 'Priorité', names: ['High'] }]);
+  const entry = undone.report.matching!.candidates.find((item) => item.column === 'analytics:priority')!;
+  assert.equal(entry.outcome, 'refused');
+  assert.ok(entry.candidates.every((candidate) => ['Obligatoire', 'Haute', 'Moyenne'].includes(candidate.name)));
+  console.log('  a closed list stays closed to a limited person: OK');
+}
+
+function testChoicesParsing() {
+  assert.deepEqual(parseBudgetFileChoices(undefined), []);
+  assert.deepEqual(parseBudgetFileChoices('[{"kind":"create_suppliers","value":false}]'), [{ kind: 'create_suppliers', value: false }]);
+  assert.deepEqual(parseBudgetFileChoices([{ kind: 'unmatch', column: 'supplier_name', value: ' X ' }, { kind: 'unmatch', column: 'supplier_name', value: 'x' }]),
+    [{ kind: 'unmatch', column: 'supplier_name', value: 'X' }]);
+  for (const bad of ['nope', [{ kind: 'unmatch', column: 'company_name', value: 'X' }], [{ kind: 'drop' }], [{ kind: 'create_suppliers', value: 'yes' }]]) {
+    assert.throws(() => parseBudgetFileChoices(bad), /not valid/);
+  }
+  console.log('  choices parsed and bounded: OK');
+}
+
+async function main() {
+  testRecommendedKeys();
+  testCandidates();
+  testChoicesParsing();
+  await testServerMatches();
+  await testModelProposals();
+  await testCreatesAndCandidates();
+  await testUndoneMatches();
+  await testClosedListForALimitedPerson();
+  console.log('budget-file-matching.spec: ok');
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
