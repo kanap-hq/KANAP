@@ -174,7 +174,7 @@ export class AiImportRunnerService {
       case 'portfolio_requests':
         return this.requests.import(file, merge, { manager, tenantId, userId, language });
       case 'tasks':
-        return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: await this.incidentViewer(context) });
+        return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: await this.incidentViewer(context), language });
       case 'incidents': {
         const viewer = await this.incidentViewer(context);
         return this.incidents.import(file, merge, { manager, tenantId, userId: userId || null, isAdmin: viewer.isAdmin, viewer, language });
