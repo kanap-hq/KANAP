@@ -1,3 +1,6 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { Logger } from '@nestjs/common';
 import { DEFAULT_ANALYTICS_AXIS_CODE } from '../../analytics/analytics-axes.util';
 import {
   costPoolNames,
@@ -14,8 +17,8 @@ import type { BudgetFileChoice, CatalogDimension } from './types';
  * and Kad's card share it:
  * - the same name, case aside: the same value, as before;
  * - the same name once accents are set aside (`Societe X` for `Société X`): a match the server makes;
- * - a value of a recommended dimension named in another of the four languages (`Hardware` for
- *   `Matériel`): a match the server makes;
+ * - a value of a recommended dimension, or of the sample data's own business domain, named in another
+ *   of the four languages (`Hardware` for `Matériel`, `Retail` for `Magasins`): a match the server makes;
  * - a value Kad proposes for the cell (its mapping's `values`), accepted only when that value exists
  *   in the workspace's list and is enabled: a match of the model.
  * Two candidates equally good make no match. Every match beyond case is listed, with its origin, and
@@ -38,7 +41,7 @@ export type NameMatch<T> = { kind: 'none' } | { kind: 'many' } | { kind: 'one'; 
 
 /**
  * The row of `rows` whose name is `cell`: exactly, then case aside, then accents aside (`accents`),
- * then, for a recommended dimension, by the value's name in another language (`translate`). Several
+ * then, for a dimension the server translates, by the value's name in another language (`translate`). Several
  * rows at the first step that finds any: `many`.
  */
 export function matchByName<T extends { name: string }>(
@@ -101,15 +104,80 @@ function valueKeysByName(key: RecommendedDimensionKey): Map<string, string> {
 }
 
 /**
- * For a recommended dimension: the values of `rows` that stand for the same seed value as `cell` in
- * another language (`Hardware` → `Matériel`). None for another dimension, or a name the seed lacks.
+ * The sample data's own dimensions, as its loader creates them in the workspace's language
+ * (`fixtures/fromage-co/fixture-dimensions.mjs`, in the image under `/app/fixtures`). The server reads
+ * that module itself, so the names it translates are the ones the loader wrote.
  */
-export function translatedValues<T extends { name: string }>(key: RecommendedDimensionKey | null, cell: string, rows: readonly T[]): T[] {
-  if (!key) return [];
-  const names = valueKeysByName(key);
-  const wanted = names.get(accentFreeKey(cell));
+export const FIXTURE_DIMENSIONS_RELATIVE_PATH = path.join('fixtures', 'fromage-co', 'fixture-dimensions.mjs');
+
+/**
+ * The one dimension of the sample data the server translates, found by its code. The budget
+ * reference's values are codes, the same in every language: nothing to translate.
+ */
+export const FIXTURE_TRANSLATED_DIMENSION = 'business_domain';
+
+type FixtureDimensionsModule = {
+  FIXTURE_LANGUAGES: readonly string[];
+  fixtureDimensions: (language: string) => Array<{ code: string; values: Array<{ key: string; name: string }> }>;
+};
+
+/** The sample data's dimensions module, looked up from `from` up to the backend directory; null when it is not there. */
+export function findFixtureDimensionsModule(from: string = __dirname): string | null {
+  for (let dir = from; ; dir = path.dirname(dir)) {
+    const candidate = path.join(dir, FIXTURE_DIMENSIONS_RELATIVE_PATH);
+    if (fs.existsSync(candidate)) return candidate;
+    const backendRoot = fs.existsSync(path.join(dir, 'package.json')) && fs.existsSync(path.join(dir, 'tsconfig.json'));
+    if (backendRoot || path.dirname(dir) === dir) return null;
+  }
+}
+
+let fixtureKeys: Map<string, string> | null | undefined;
+
+/**
+ * The value key of each name of the sample data's business domain, over its four languages, accents
+ * aside. Read once; an installation without the module translates nothing more (said once in the log).
+ */
+export function fixtureValueKeysByName(): ReadonlyMap<string, string> | null {
+  if (fixtureKeys !== undefined) return fixtureKeys;
+  fixtureKeys = null;
+  const file = findFixtureDimensionsModule();
+  try {
+    if (!file) throw new Error(`${FIXTURE_DIMENSIONS_RELATIVE_PATH} not found below the backend directory`);
+    // An ES module, loaded synchronously by Node's require (Node 22.12 and later): no top-level await in it.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fixtures = require(file) as FixtureDimensionsModule;
+    const byName = new Map<string, string>();
+    for (const language of fixtures.FIXTURE_LANGUAGES) {
+      const axis = fixtures.fixtureDimensions(language).find((item) => item.code === FIXTURE_TRANSLATED_DIMENSION);
+      for (const value of axis?.values ?? []) byName.set(accentFreeKey(value.name), value.key);
+    }
+    fixtureKeys = byName;
+  } catch (error) {
+    new Logger('BudgetFileMatching').warn(`The sample data's business domain is not translated: ${(error as Error).message}`);
+  }
+  return fixtureKeys;
+}
+
+/**
+ * The names a dimension's values are translated by: a recommended dimension's (the seed), or the
+ * sample data's business domain (its loader's table); null for any other dimension.
+ */
+export function translationTableOf(dimension: Pick<CatalogDimension, 'code' | 'axisName'>): ReadonlyMap<string, string> | null {
+  const key = recommendedKeyOf(dimension);
+  if (key) return valueKeysByName(key);
+  if (dimension.code.trim().toLowerCase() === FIXTURE_TRANSLATED_DIMENSION) return fixtureValueKeysByName();
+  return null;
+}
+
+/**
+ * The values of `rows` that stand for the same value as `cell` in another language, by the names of
+ * `table` (`Hardware` → `Matériel`, `Retail` → `Magasins`). None without a table, or for a name it lacks.
+ */
+export function translatedValues<T extends { name: string }>(table: ReadonlyMap<string, string> | null, cell: string, rows: readonly T[]): T[] {
+  if (!table) return [];
+  const wanted = table.get(accentFreeKey(cell));
   if (!wanted) return [];
-  return rows.filter((row) => names.get(accentFreeKey(row.name)) === wanted);
+  return rows.filter((row) => table.get(accentFreeKey(row.name)) === wanted);
 }
 
 /** The trigrams of a text, as pg_trgm takes them: per word, lower case and accents aside, padded with two spaces before and one after. */

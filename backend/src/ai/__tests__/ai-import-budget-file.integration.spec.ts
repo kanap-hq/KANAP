@@ -14,10 +14,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   budget administrator without that right, the check refuses the file and names them.
 // - "Approve all" leaves out an import card whose check refused the file.
 // Lot I1 of 26.11.9, "match before create": Fried's case of 12/11, eight English lines of the sample
-// data loaded by Kad into a French workspace that holds them, translated. Nothing is created: the
-// server matches the recommended dimensions' values across languages, the model's `values` (simulated
-// here, as the model would give them) the sample data's own business domain, and every match is
-// listed on the card. The person's choices (a match undone, the suppliers box) make a new card.
+// data loaded by Kad into a French workspace that holds them, translated. Nothing is created, and the
+// model gives no `values`: the server matches the values of the recommended dimensions and of the
+// sample data's own business domain across languages, and every match is listed on the card. The person's choices (a match undone, the suppliers box) make a new card.
 // The model is not called: the tools of the registry are, as the conversation calls them. The AI
 // surface checks and the attachment storage are not under test: stubbed.
 
@@ -59,9 +58,9 @@ async function createHarness(): Promise<Harness> {
 /**
  * Fried's French workspace, the part of the French sample data the eight lines name: the company,
  * the accounts, the five suppliers (07-suppliers.csv: the same names in English and French), the
- * recommended dimensions in French, the sample data's business domain in French
- * (fixture-dimensions.mjs: "Retail" is "Magasins"), and the eight lines themselves, translated, loaded
- * through the budget file of the screen.
+ * recommended dimensions in French, the sample data's business domain in French, as its loader
+ * writes it (fixture-dimensions.mjs: "Retail" is "Magasins"), and the eight lines themselves,
+ * translated, loaded through the budget file of the screen.
  */
 async function seedFrench(h: Harness, runner: QueryRunner): Promise<Seed> {
   const { ensureRecommendedDimensions, RECOMMENDED_DIMENSION_KEYS } = require('../../analytics/recommended-dimensions.seed');
@@ -86,7 +85,7 @@ async function seedFrench(h: Harness, runner: QueryRunner): Promise<Seed> {
   await ensureRecommendedDimensions(runner.manager, tenantId, 'fr', RECOMMENDED_DIMENSION_KEYS);
   const domain = await insertId(runner,
     `INSERT INTO analytics_axes (tenant_id, code, name, sort_order) VALUES ($1, 'business_domain', 'Domaine métier', 100)`, [tenantId]);
-  for (const [index, name] of ['ERP', 'E-commerce', 'Magasins', 'IT partagée', 'Ancien domaine'].entries()) {
+  for (const [index, name] of [...frenchDomainNames(), 'Ancien domaine'].entries()) {
     await runner.query(
       `INSERT INTO analytics_categories (tenant_id, axis_id, name, sort_order, disabled_at) VALUES ($1, $2, $3, $4, $5)`,
       [tenantId, domain, name, index + 1, name === 'Ancien domaine' ? '2020-01-01T00:00:00Z' : null],
@@ -122,7 +121,7 @@ async function seedFrench(h: Harness, runner: QueryRunner): Promise<Seed> {
     'nature,name,company_name,account_number,supplier_name,currency,analytics:default,analytics:it_tower,analytics:business_domain,analytics:priority,analytics:recurrence,budget_' + YEAR,
     'opex,Caisses Cegid des magasins,Fromage & Co SA,612200,Cegid,EUR,Logiciel,Application,Magasins,,Récurrent,88000',
     'opex,Magasins — secours 4G,Fromage & Co SA,616100,Orange Business,EUR,Télécoms,Réseau,Magasins,,Récurrent,19000',
-    'opex,Prestataire · support caisses niveau 2,Fromage & Co SA,621100,Fromatech Consulting,EUR,Main-d\'œuvre externe,Poste de travail,Magasins,,Ponctuel,126440',
+    'opex,Prestataire · chef de projet EDI · DIS-100,Fromage & Co SA,621100,Fromatech Consulting,EUR,Main-d\'œuvre externe,Application,Chaîne logistique,,Ponctuel,163500',
     'opex,Microsoft Enterprise (M365 + Azure + GitHub),Fromage & Co SA,612100,Microsoft,EUR,Logiciel,Poste de travail,IT partagée,,Récurrent,650000',
     'opex,Maintenance SAP S/4HANA,Fromage & Co SA,612200,SAP,EUR,Logiciel,Application,ERP,,Récurrent,280000',
     'capex,Rénovation du data center de Paris,Fromage & Co SA,218300,,EUR,Matériel,Calcul,IT partagée,Obligatoire,Ponctuel,250000',
@@ -145,6 +144,13 @@ async function seedFrench(h: Harness, runner: QueryRunner): Promise<Seed> {
   return s;
 }
 
+/** The French names of the sample data's business domain, in its order (fixtures/fromage-co/fixture-dimensions.mjs). */
+function frenchDomainNames(): string[] {
+  const { backendPath } = require('../../common/__tests__/backend-root');
+  const { fixtureDimensions } = require(backendPath('fixtures', 'fromage-co', 'fixture-dimensions.mjs'));
+  return fixtureDimensions('fr').find((axis: { code: string }) => axis.code === 'business_domain').values.map((value: { name: string }) => value.name);
+}
+
 /** The screen's budget file routes, called as the dialog calls them (`choices` in the form, a JSON list). */
 function screenCaller(h: Harness, runner: QueryRunner, s: Seed, user: UserKey, isAdmin = true) {
   const { SpendItemsController } = require('../../spend/spend-items.controller');
@@ -159,8 +165,10 @@ function screenCaller(h: Harness, runner: QueryRunner, s: Seed, user: UserKey, i
 }
 
 /**
- * The eight English lines (14-spend-items.csv lines 40, 44, 97, 2, 3; 15-capex-items.csv lines 3, 4
- * and 8): one sheet, a nature column, five OPEX lines with their suppliers, three CAPEX lines.
+ * The eight English lines (14-spend-items.csv lines 40, 44, 2, 3 and the EDI project manager of the
+ * file Fried imported on 15/11; 15-capex-items.csv lines 3, 4 and 8): one sheet, a nature column, five
+ * OPEX lines with their suppliers, three CAPEX lines. Its business domains are Fried's: Retail,
+ * Shared IT, Supply chain.
  */
 function englishWorkbook(): Buffer {
   const { writeXlsx } = require('../../common/xlsx');
@@ -174,7 +182,7 @@ function englishWorkbook(): Buffer {
       rows: [
         ['OPEX', 'Cegid Retail POS', 'Cegid', 'Fromage & Co SA', '612200', 'EUR', 'Software', 'Application', 'Retail', null, 'Recurring', money(88000)],
         ['OPEX', 'Shops — 4G backup', 'Orange Business', 'Fromage & Co SA', '616100', 'EUR', 'Telecom', 'Network', 'Retail', null, 'Recurring', money(19000)],
-        ['OPEX', 'Contractor · Level 2 till support', 'Fromatech Consulting', 'Fromage & Co SA', '621100', 'EUR', 'External labor', 'End user', 'Retail', null, 'One-off', money(126440)],
+        ['OPEX', 'Contractor · EDI project manager · DIS-100', 'Fromatech Consulting', 'Fromage & Co SA', '621100', 'EUR', 'External labor', 'Application', 'Supply chain', null, 'One-off', money(163500)],
         ['OPEX', 'Microsoft Enterprise (M365 + Azure + GitHub)', 'Microsoft', 'Fromage & Co SA', '612100', 'EUR', 'Software', 'End user', 'Shared IT', null, 'Recurring', money(650000)],
         ['OPEX', 'SAP S/4HANA Maintenance', 'SAP', 'Fromage & Co SA', '612200', 'EUR', 'Software', 'Application', 'ERP', null, 'Recurring', money(280000)],
         ['CAPEX', 'Data Center Refresh — Paris DC', null, 'Fromage & Co SA', '218300', 'EUR', 'Hardware', 'Compute', 'Shared IT', 'Mandatory', 'One-off', money(250000)],
@@ -185,10 +193,7 @@ function englishWorkbook(): Buffer {
   });
 }
 
-/**
- * Kad's mapping of the English file: every column by its header; the sample data's own business
- * domain by `values`, as the model gives them once it reads the dimension's values in the template.
- */
+/** Kad's mapping of the English file: every column by its header, no `values`. */
 const ENGLISH_MAPPING = [
   { column: 'nature', source: 1, confidence: 'high' },
   { column: 'name', source: 2, confidence: 'high' },
@@ -198,7 +203,7 @@ const ENGLISH_MAPPING = [
   { column: 'currency', source: 6, confidence: 'high' },
   { column: 'analytics:default', source: 7, confidence: 'high' },
   { column: 'analytics:it_tower', source: 8, confidence: 'high' },
-  { column: 'analytics:business_domain', source: 9, confidence: 'medium', values: { Retail: 'Magasins', 'Shared IT': 'IT partagée' } },
+  { column: 'analytics:business_domain', source: 9, confidence: 'high' },
   { column: 'analytics:priority', source: 10, confidence: 'high' },
   { column: 'analytics:recurrence', source: 11, confidence: 'high' },
   { column: `budget_${YEAR}`, source: 12, confidence: 'high' },
@@ -435,21 +440,22 @@ function matchesOf(check: any): string[] {
   return check.report.file.matching.matches.map((match: any) => `${match.column}|${match.value}→${match.target}|${match.origin}`).sort();
 }
 
-// Fried's case of 12/11 (P8): zero creation. The server matches the recommended dimensions across
-// languages; the model's `values` match the sample data's own business domain; the suppliers and the
-// company are the same names. Every match is on the card. Each row follows its own nature (a CAPEX
-// row of the same file is a CAPEX line).
+// Fried's case of 12/11 and 15/11 (P8): zero creation, by the server alone (the model gives no
+// `values`). The server matches the recommended dimensions and the sample data's own business domain
+// across languages; the suppliers and the company are the same names. Every match is on the card.
+// Each row follows its own nature (a CAPEX row of the same file is a CAPEX line).
 async function testEnglishSampleLinesCreateNothing(h: Harness, runner: QueryRunner, s: Seed) {
   const admin = ctx(runner, s, 'admin');
   const before = await referenceCounts(runner, s);
   assert.equal(before.lines, 8, 'the workspace holds the eight lines, in French');
+  assert.ok(ENGLISH_MAPPING.every((column) => !('values' in column)), 'no value given by the model');
   const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachEnglish(h), entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
   const check = card.import_mapping.validation;
   const created = { suppliers: check.new_suppliers, values: check.report.file.creates.dimensionValues };
   console.log(`  the original case, what the check creates: ${JSON.stringify(created)}`);
   const template = await h.mapping.describeTemplate(admin, 'budget_lines', 'fr');
   const domain = template.columns.find((column: any) => column.column === 'analytics:business_domain');
-  assert.deepEqual(domain.values, ['ERP', 'E-commerce', 'Magasins', 'IT partagée'], 'the model reads the dimension\'s enabled values');
+  assert.deepEqual(domain.values, frenchDomainNames(), 'the model reads the dimension\'s enabled values');
   assert.equal(domain.title, 'Domaine métier');
   assert.equal(check.ok, true, JSON.stringify({ issues: check.issues, errors: check.report.file.errors }));
   assert.equal(check.inserted, 8);
@@ -457,12 +463,13 @@ async function testEnglishSampleLinesCreateNothing(h: Harness, runner: QueryRunn
   assert.deepEqual(check.report.file.creates.dimensionValues, [], 'no dimension value created');
   // The model reads first, in one sentence, that the approval creates nothing and what was matched.
   assert.equal(Object.keys(card.import_mapping)[0], 'on_approval');
-  assert.match(card.import_mapping.on_approval, /^On approval: 8 lines created, 0 updated; 0 suppliers created; 0 dimension values created; 13 values of the file matched to existing ones: /);
+  assert.match(card.import_mapping.on_approval, /^On approval: 8 lines created, 0 updated; 0 suppliers created; 0 dimension values created; 14 values of the file matched to existing ones: /);
   assert.match(card.import_mapping.on_approval, /Retail → Magasins/);
   assert.equal(check.on_approval, undefined, 'said once, at the head of the card');
   assert.deepEqual(matchesOf(check), [
-    'analytics:business_domain|Retail→Magasins|model',
-    'analytics:business_domain|Shared IT→IT partagée|model',
+    'analytics:business_domain|Retail→Magasins|server',
+    'analytics:business_domain|Shared IT→IT partagée|server',
+    'analytics:business_domain|Supply chain→Chaîne logistique|server',
     'analytics:default|External labor→Main-d\'œuvre externe|server',
     'analytics:default|Hardware→Matériel|server',
     'analytics:default|Software→Logiciel|server',
@@ -477,9 +484,11 @@ async function testEnglishSampleLinesCreateNothing(h: Harness, runner: QueryRunn
   ]);
   // On the lines of the person's file (header on line 1), for the card and for the model.
   const retail = check.report.file.matching.matches.find((match: any) => match.value === 'Retail');
-  assert.deepEqual(retail.lines, [2, 3, 4, 9]);
+  assert.deepEqual(retail.lines, [2, 3, 9]);
   assert.equal(retail.name, 'Domaine métier');
-  assert.deepEqual(check.matching.matches.find((match: any) => match.value === 'Retail').file_lines, [2, 3, 4, 9]);
+  assert.equal(retail.reason, 'translation', 'the server, another language');
+  assert.deepEqual(check.matching.matches.find((match: any) => match.value === 'Retail').file_lines, [2, 3, 9]);
+  assert.deepEqual(check.matching.candidates, [], 'nothing left to match');
   assert.deepEqual(check.matching.create_suppliers, { allowed: true, value: true }, 'the box, ticked');
   assert.deepEqual(card.import_mapping.validation.matching.choices, []);
 
@@ -543,7 +552,7 @@ async function testUndoAMatch(h: Harness, runner: QueryRunner, s: Seed) {
   const file = await h.mapping.preparedFile(admin, (await previewInput(runner, s, next.preview_id)), 'fr');
   assert.deepEqual(await columnOf(file.content, 'analytics:priority'), ['', '', '', '', '', 'Mandatory', 'Haute', 'Haute']);
   assert.deepEqual(await columnOf(file.content, 'analytics:business_domain'),
-    ['Retail', 'Retail', 'Retail', 'IT partagée', 'ERP', 'IT partagée', 'E-commerce', 'Retail']);
+    ['Retail', 'Retail', 'Chaîne logistique', 'IT partagée', 'ERP', 'IT partagée', 'E-commerce', 'Retail']);
 
   // The model calls again for the same file: the choices that still apply are kept, and it is told.
   const again = await h.previews.createPreview(admin, 'prepare_import_mapping', {
@@ -613,9 +622,10 @@ async function testSuppliersBox(h: Harness, runner: QueryRunner, s: Seed) {
 // choices in the form; the load replays the choices of the check (a match undone: the value created).
 async function testScreenRoutes(h: Harness, runner: QueryRunner, s: Seed) {
   const file = Buffer.from([
-    `item_number,nature,name,company_name,account_number,supplier_name,currency,analytics:default,analytics:priority,budget_${YEAR}`,
-    ',capex,Serveurs,Fromage & Co SA,218300,,EUR,Hardware,Mandatory,1000',
-    ',opex,Support,Fromage & Co SA,621100,Fromatech Consultíng,EUR,External labor,,2000',
+    `item_number,nature,name,company_name,account_number,supplier_name,currency,analytics:default,analytics:priority,analytics:business_domain,budget_${YEAR}`,
+    ',capex,Serveurs,Fromage & Co SA,218300,,EUR,Hardware,Mandatory,Shared IT,1000',
+    ',opex,Support,Fromage & Co SA,621100,Fromatech Consultíng,EUR,External labor,,Retail,2000',
+    ',opex,EDI,Fromage & Co SA,621100,Fromatech Consulting,EUR,External labor,,Supply chain,3000',
   ].join('\n'));
   const screen = screenCaller(h, runner, s, 'admin');
   const checked = await screen.preflight(file);
@@ -623,9 +633,16 @@ async function testScreenRoutes(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual(checked.matching.matches.map((match: any) => `${match.column}|${match.value}→${match.target}|${match.origin}|${match.reason}`), [
     'analytics:default|Hardware→Matériel|server|translation',
     'analytics:priority|Mandatory→Obligatoire|server|translation',
+    'analytics:business_domain|Shared IT→IT partagée|server|translation',
     'supplier_name|Fromatech Consultíng→Fromatech Consulting|server|accents',
     'analytics:default|External labor→Main-d\'œuvre externe|server|translation',
+    'analytics:business_domain|Retail→Magasins|server|translation',
+    'analytics:business_domain|Supply chain→Chaîne logistique|server|translation',
   ]);
+  assert.deepEqual(checked.creates.dimensionValues, [], 'the screen creates nothing either');
+  // The screen undoes a match of the business domain as any other: the value is then created.
+  const domainUndone = await screen.preflight(file, JSON.stringify([{ kind: 'unmatch', column: 'analytics:business_domain', value: 'Retail' }]));
+  assert.deepEqual(domainUndone.creates.dimensionValues, [{ dimension: 'business_domain', name: 'Domaine métier', names: ['Retail'] }]);
   const choices = JSON.stringify([{ kind: 'unmatch', column: 'analytics:priority', value: 'Mandatory' }]);
   const undone = await screen.preflight(file, choices);
   assert.deepEqual(undone.creates.dimensionValues, [{ dimension: 'priority', name: 'Priorité', names: ['Mandatory'] }]);

@@ -23,8 +23,8 @@ import {
   foldKey,
   matchByName,
   NameMatch,
-  recommendedKeyOf,
   translatedValues,
+  translationTableOf,
 } from './matching';
 import {
   BudgetCatalog,
@@ -1046,9 +1046,9 @@ function resolveAnalytics(
       continue;
     }
     if (!dimension) continue;
-    const key = recommendedKeyOf(dimension);
+    const table = translationTableOf(dimension);
     const found = findListed(bag, column, dimension.axisName, cell.text, row.line, dimension.values,
-      (text, values) => translatedValues(key, text, values));
+      (text, values) => translatedValues(table, text, values));
     if (found.kind === 'many') {
       fail(column, `Value '${cell.text}' matches more than one value of ${code}.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: cell.text });
       continue;

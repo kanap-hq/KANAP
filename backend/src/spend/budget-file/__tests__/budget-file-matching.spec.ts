@@ -1,12 +1,21 @@
 import * as assert from 'node:assert/strict';
 import { readBudgetCsv } from '../interpret';
-import { closestNames, parseBudgetFileChoices, recommendedKeyOf, similarity } from '../matching';
+import { backendPath } from '../../../common/__tests__/backend-root';
+import {
+  closestNames,
+  findFixtureDimensionsModule,
+  fixtureValueKeysByName,
+  parseBudgetFileChoices,
+  recommendedKeyOf,
+  similarity,
+  translationTableOf,
+} from '../matching';
 import { BudgetFileAccess, planBudgetFile } from '../preflight';
 import { BudgetCatalog, BudgetFileChoice, BudgetFileMatchOptions, CatalogDimension, emptyCatalog } from '../types';
 
 // Lot I1 of 26.11.9, "match before create": the budget file's check finds an existing supplier or
-// dimension value before it creates one (accents, the four languages of the recommended dimensions,
-// Kad's proposals checked against the list), lists every match beyond case, and follows the person's
+// dimension value before it creates one (accents, the four languages of the recommended dimensions
+// and of the sample data's business domain, Kad's proposals checked against the list), lists every match beyond case, and follows the person's
 // choices (a match undone, the "Create missing suppliers" option). Pure: the check reads no database.
 
 const value = (id: string, name: string, disabledAt: string | null = null) => ({ id, name, disabledAt });
@@ -33,7 +42,10 @@ function frenchCatalog(patch: Partial<BudgetCatalog> = {}): BudgetCatalog {
       dimension('default', 'Nature de coût', [value('d1', 'Matériel'), value('d2', 'Logiciel')]),
       dimension('priority', 'Priorité', [value('p1', 'Obligatoire'), value('p2', 'Haute'), value('p3', 'Moyenne')]),
       dimension('recurrence', 'Récurrence', [value('r1', 'Récurrent'), value('r2', 'Ponctuel')]),
-      dimension('business_domain', 'Domaine métier', [value('b1', 'Magasins'), value('b2', 'IT partagée'), value('b3', 'Revue d\'affaires trimestrielle'), value('b4', 'Ancien domaine', '2020-01-01T00:00:00.000Z')]),
+      dimension('business_domain', 'Domaine métier', [
+        value('b1', 'Magasins'), value('b2', 'IT partagée'), value('b3', 'Revue d\'affaires trimestrielle'), value('b4', 'Ancien domaine', '2020-01-01T00:00:00.000Z'),
+        value('b5', 'Chaîne logistique'),
+      ]),
     ],
     ...patch,
   });
@@ -107,29 +119,69 @@ async function testServerMatches() {
   console.log('  accents and the four languages matched by the server, listed: OK');
 }
 
-// "Retail" is the sample data's own value: the server cannot translate it; the model's proposal can
-// name "Magasins", accepted because it exists. A proposal naming a value that does not exist, or a
-// disabled one, is refused and said; the value is then matched as the file writes it.
+// The sample data's own business domain (fixture-dimensions.mjs): the server matches its values in
+// the four languages too, as its loader names them ("Retail" is "Magasins" in French, "Einzelhandel"
+// in German). The screen's check and Kad's card share it. The budget reference keeps its codes.
+async function testSampleDataDomainMatched() {
+  const { report, plans } = await check([
+    ',opex,Caisses,Fromage & Co SA,612200,,EUR,,,,Retail',
+    ',opex,Réseau,Fromage & Co SA,612200,,EUR,,,,Shared IT',
+    ',opex,EDI,Fromage & Co SA,612200,,EUR,,,,Supply chain',
+    ',opex,Kasse,Fromage & Co SA,612200,,EUR,,,,Einzelhandel',
+  ]);
+  assert.equal(report.ok, true, JSON.stringify(report.errors));
+  assert.deepEqual(report.creates.dimensionValues, [], 'nothing to create');
+  assert.deepEqual(matchesOf(report), [
+    ['analytics:business_domain', 'Retail', 'Magasins', 'server', 'translation', [2]],
+    ['analytics:business_domain', 'Shared IT', 'IT partagée', 'server', 'translation', [3]],
+    ['analytics:business_domain', 'Supply chain', 'Chaîne logistique', 'server', 'translation', [4]],
+    ['analytics:business_domain', 'Einzelhandel', 'Magasins', 'server', 'translation', [5]],
+  ]);
+  assert.ok(report.matching!.matches.every((match) => match.undoable === true), 'each match undoable');
+  assert.deepEqual(plans.map((plan) => plan.analytics.map((change) => change.categoryId)), [['b1'], ['b2'], ['b5'], ['b1']]);
+
+  // The table is the loader's own module: every name of each language stands for its value.
+  assert.equal(findFixtureDimensionsModule(), backendPath('fixtures', 'fromage-co', 'fixture-dimensions.mjs'));
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fixtures = require(backendPath('fixtures', 'fromage-co', 'fixture-dimensions.mjs'));
+  const table = fixtureValueKeysByName()!;
+  for (const language of ['en', 'fr', 'de', 'es']) {
+    for (const item of fixtures.fixtureDimensions(language).find((axis: { code: string }) => axis.code === 'business_domain').values) {
+      const key = table.get(item.name.normalize('NFKC').trim().toLowerCase().normalize('NFD').replace(/\p{M}/gu, ''));
+      assert.equal(key, item.key, `${language} ${item.name}`);
+    }
+  }
+  assert.equal(translationTableOf({ code: 'business_domain', axisName: 'Domaine métier' }), table);
+  assert.equal(translationTableOf({ code: 'reference', axisName: 'Référence budgétaire' }), null, 'the budget reference keeps its codes');
+  assert.equal(translationTableOf({ code: 'site', axisName: 'Site' }), null, 'a dimension of the workspace\'s own: the model\'s');
+  console.log('  the sample data\'s business domain matched by the server in the four languages: OK');
+}
+
+// A value no table translates ("Head office" for "Siège", "Legacy") is the model's: its proposal is
+// accepted because the value exists. A proposal naming a value that does not exist, or a disabled
+// one, is refused and said; the value is then matched as the file writes it. A proposal comes before
+// the server's translation.
 async function testModelProposals() {
   const proposals = {
-    'analytics:business_domain': { Retail: 'Magasins', 'Shared IT': 'Informatique commune', Legacy: 'Ancien domaine' },
+    'analytics:business_domain': { Retail: 'Revue d\'affaires trimestrielle', 'Common IT': 'Informatique commune', Legacy: 'Ancien domaine' },
     supplier_name: { 'Cegid SA': 'Cegid' },
   };
   const { report } = await check([
     ',opex,Caisses,Fromage & Co SA,612200,Cegid SA,EUR,,,,Retail',
-    ',opex,Réseau,Fromage & Co SA,612200,,EUR,,,,Shared IT',
+    ',opex,Réseau,Fromage & Co SA,612200,,EUR,,,,Common IT',
     ',opex,Ancien,Fromage & Co SA,612200,,EUR,,,,Legacy',
   ], { matching: { proposals } });
   assert.deepEqual(matchesOf(report), [
     ['supplier_name', 'Cegid SA', 'Cegid', 'model', 'model', [2]],
-    ['analytics:business_domain', 'Retail', 'Magasins', 'model', 'model', [2]],
+    ['analytics:business_domain', 'Retail', 'Revue d\'affaires trimestrielle', 'model', 'model', [2]],
   ]);
+  assert.equal(similarity('Retail', 'Revue d\'affaires trimestrielle') < 0.3, true, 'no near name of the cell');
   assert.deepEqual(report.matching!.refusedProposals.map((entry) => [entry.column, entry.value, entry.target, entry.reason, entry.lines]), [
-    ['analytics:business_domain', 'Shared IT', 'Informatique commune', 'missing', [3]],
+    ['analytics:business_domain', 'Common IT', 'Informatique commune', 'missing', [3]],
     ['analytics:business_domain', 'Legacy', 'Ancien domaine', 'disabled', [4]],
   ]);
   // The refused ones are created as the file writes them, as before.
-  assert.deepEqual(report.creates.dimensionValues, [{ dimension: 'business_domain', name: 'Domaine métier', names: ['Shared IT', 'Legacy'] }]);
+  assert.deepEqual(report.creates.dimensionValues, [{ dimension: 'business_domain', name: 'Domaine métier', names: ['Common IT', 'Legacy'] }]);
   assert.equal(report.creates.supplierCount, 0);
   console.log('  the model\'s proposals: accepted when the value exists, refused when missing or disabled: OK');
 }
@@ -294,6 +346,7 @@ async function main() {
   testCandidates();
   testChoicesParsing();
   await testServerMatches();
+  await testSampleDataDomainMatched();
   await testModelProposals();
   await testCreatesAndCandidates();
   await testUndoneMatches();
