@@ -426,6 +426,12 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Set the business criticality of the Acme applications to high', profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
   { prompt: 'Make Julie Bernard the IT owner of the retired applications', profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
   { prompt: 'Move the applications of supplier Acme to the retired lifecycle', profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
+  // K1 review (26.11.9): a list, a table, a report or a view of the lines or applications is a read; it keeps its read tools.
+  { prompt: 'Make a list of the applications by criticality', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Fais une liste des applications par criticité', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Put the lines of supplier Acme in a table by cost center', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Présente les lignes du fournisseur Acme dans un tableau par centre de coûts', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Show the applications in a report by lifecycle', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
   { prompt: 'Combien de failles sont traitées ?', profile: 'read_query', mode: 'read' },
   { prompt: 'Failles non concernées de TEC-3', profile: 'entity_inspection', mode: 'entity' },
   { prompt: 'Liste les failles traitées sur PostgreSQL', profile: 'read_query', mode: 'read' },

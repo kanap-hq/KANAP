@@ -954,6 +954,12 @@ const BUDGET_LINE_BULK_VERBS = new Set([
   'deplace', 'deplacez', 'deplacer', 'déplace', 'déplacez', 'déplacer', 'vide', 'videz', 'vider',
   'set', 'move', 'assign', 'replace', 'switch', 'put', 'update', 'clear',
 ]);
+/**
+ * A rendering asked of the rows, never a change of them: a list, a table, a report, a view. "Make a
+ * list of the applications by criticality" is a read.
+ */
+const BULK_EDIT_RENDERING_RE = /\b(?:lists?|listes?|tables?|tableaux?|tableau|reports?|rapports?|views?|vues?)\b/;
+
 /** A field the change in bulk of budget lines writes (`bulk_update_budget_lines`). */
 const BUDGET_LINE_BULK_FIELD_RE = /\b(?:centres? de couts?|cost cent(?:er|re)s?|comptes?|accounts?|societes? payeuses?|paying compan(?:y|ies)|fournisseurs?|suppliers?|responsables?|owners?|run|build|dimensions?|axes? analytiques?)\b/;
 
@@ -966,7 +972,7 @@ function hasBudgetLineBulkEditWrite(rawText: string, text: string): boolean {
   if (isTechnologyQuestion(rawText)) return false;
   const first = directiveFirstWord(rawText);
   if (first == null || !BUDGET_LINE_BULK_VERBS.has(first)) return false;
-  if (!/\b(?:lignes|lines)\b/.test(text)) return false;
+  if (!/\b(?:lignes|lines)\b/.test(text) || BULK_EDIT_RENDERING_RE.test(text)) return false;
   if (VULNERABILITY_OTHER_FAMILY_RE.test(text.replace(/\b(?:bl|opx|cpx|opex)-\d+\b/g, ''))) return false;
   return BUDGET_LINE_BULK_FIELD_RE.test(text);
 }
@@ -986,7 +992,7 @@ function hasApplicationBulkEditWrite(rawText: string, text: string): boolean {
   const first = directiveFirstWord(rawText);
   if (first == null || !APPLICATION_BULK_VERBS.has(first)) return false;
   const several = /\b(?:applications|apps)\b/.test(text) || (text.match(/\bapp-\d+\b/g) ?? []).length > 1;
-  if (!several || /\b(?:lignes|lines)\b/.test(text)) return false;
+  if (!several || /\b(?:lignes|lines)\b/.test(text) || BULK_EDIT_RENDERING_RE.test(text)) return false;
   return APPLICATION_BULK_FIELD_RE.test(text);
 }
 
