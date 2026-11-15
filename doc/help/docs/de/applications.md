@@ -157,6 +157,7 @@ Eine Zelle ohne Wert zeigt einen Strich.
 - Schlägt die Zählung fehl, klicken Sie neben der Meldung auf **Erneut versuchen**, um erneut zu zählen
 - Eine neue Geschäftskritikalität setzt eine geprüfte Anwendung auf **Erneut prüfen**, wie auf der Seite der Anwendung
 - Jede geänderte Anwendung erhält einen eigenen Eintrag in ihrem Tab **Verlauf**
+- [Kad](ai-assistant.md#changing-records-in-bulk) nimmt dieselbe Änderung vor, wenn Sie in einer Unterhaltung darum bitten, mit denselben Rechten. Sie genehmigen seine Vorschau
 
 ---
 

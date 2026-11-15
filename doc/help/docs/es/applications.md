@@ -157,6 +157,7 @@ Una celda sin valor muestra un guion.
 - Si el recuento falla, haga clic en **Reintentar** junto al mensaje para volver a contar
 - Una nueva criticidad de negocio pasa una aplicación revisada a **Por revisar**, como en la página de la aplicación
 - Cada aplicación modificada tiene su propia entrada en su pestaña **Historial**
+- [Kad](ai-assistant.md#changing-records-in-bulk) hace el mismo cambio cuando usted se lo pide en una conversación, con los mismos derechos. Usted aprueba su vista previa
 
 ---
 

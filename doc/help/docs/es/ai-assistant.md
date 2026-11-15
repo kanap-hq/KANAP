@@ -219,6 +219,26 @@ Con el mismo nivel, cuando se siguen las vulnerabilidades, Kad cambia el estado 
 
 Cuando Kad crea una línea presupuestaria, pregunta si la línea es OPEX o CAPEX si usted no lo ha dicho. No cambia el tipo de una línea existente: use **Cambiar el tipo...** en el espacio de trabajo de la línea (consulte [Cambiar el tipo](budget-lines.md#cambiar-el-tipo)). Kad solo define el contrato de las líneas OPEX. Una línea CAPEX llega a sus contratos mediante los vínculos de su pestaña **Relaciones**.
 
+### Modificar registros en bloque { #changing-records-in-bulk }
+
+Kad modifica un campo en muchas líneas presupuestarias o aplicaciones a la vez, como **Modificar la selección** en la lista. Necesita el mismo derecho: el nivel Miembro en el presupuesto, o en las aplicaciones. Designe los registros con un filtro de la lista, como un proveedor o un centro de coste, o con sus referencias (`BL-3`, `APP-7`). Use uno u otro en una solicitud. Un filtro toma los registros activados, salvo que nombre un estado. Las aplicaciones retiradas quedan fuera, salvo que nombre un ciclo de vida.
+
+- En las líneas presupuestarias: el centro de coste, la cuenta, la empresa pagadora, el proveedor, el responsable de TI, el responsable de negocio, run o build, o el valor de una dimensión.
+- En las aplicaciones: los responsables de negocio o los responsables IT (las personas que nombre sustituyen a las del rol), el ciclo de vida o la criticidad de negocio.
+
+Pida, por ejemplo: "Pasa las líneas del proveedor Acme al centro de coste IT-01" o "Haz a Claire Martin responsable IT de APP-3 y APP-7".
+
+La vista previa muestra los registros afectados, el campo y su nuevo valor, cuántos registros cambian, cuántos ya tienen este valor y cuántos se rechazan, con el motivo. Lista los primeros registros por su referencia. Apruébela para aplicar el cambio. Un cambio no se puede deshacer. La pestaña **Historial** de cada registro lo muestra como hecho por Kad para usted.
+
+Kad rechaza un cambio:
+
+- Cuando la solicitud no designa ningún registro, o nombra un filtro y referencias a la vez
+- Cuando no encuentra el valor o la persona que nombra
+- Por encima de 5000 registros. Acote el filtro
+- Que vaciaría la cuenta, la empresa pagadora, una dimensión obligatoria o el ciclo de vida
+
+Si la lista cambia entre la vista previa y su aprobación, la vista previa falla. Pida una nueva a Kad. Mientras otra operación de presupuesto está en curso, la vista previa sigue abierta: apruébela de nuevo cuando esa operación haya terminado. Los asistentes conectados por MCP solo leen.
+
 ### Eliminar un registro { #deleting-a-record }
 
 Kad elimina un registro cada vez: una tarea, un contacto, una ubicación, un documento, una línea presupuestaria (OPEX o CAPEX), una conexión o una interfaz. Cada eliminación llega como una vista previa que usted aprueba. Una eliminación no se puede deshacer.

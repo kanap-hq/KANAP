@@ -219,6 +219,26 @@ Avec le même niveau, quand les vulnérabilités sont suivies, Kad change l'éta
 
 Quand Kad crée une ligne budgétaire, il demande si la ligne est OPEX ou CAPEX si vous ne l'avez pas dit. Il ne change pas le type d'une ligne existante : utilisez **Changer le type...** dans l'espace de travail de la ligne (voir [Changer le type](budget-lines.md#changer-le-type)). Kad ne définit le contrat que des lignes OPEX. Une ligne CAPEX rejoint ses contrats par les liens de son onglet **Relations**.
 
+### Modifier des fiches en masse { #changing-records-in-bulk }
+
+Kad modifie un champ sur de nombreuses lignes budgétaires ou applications à la fois, comme **Modifier la sélection** dans la liste. Il lui faut le même droit : le niveau Membre sur le budget, ou sur les applications. Désignez les fiches par un filtre de la liste, comme un fournisseur ou un centre de coûts, ou par leurs références (`BL-3`, `APP-7`). Utilisez l'un ou l'autre dans une demande. Un filtre prend les fiches activées, sauf s'il nomme un statut. Les applications retirées restent à l'écart, sauf s'il nomme un cycle de vie.
+
+- Sur les lignes budgétaires : le centre de coûts, le compte, la société payeuse, le fournisseur, le responsable IT, le responsable métier, run ou build, ou la valeur d'une dimension.
+- Sur les applications : les responsables métier ou les responsables IT (les personnes nommées remplacent celles du rôle), le cycle de vie ou la criticité business.
+
+Demandez par exemple : « Passe les lignes du fournisseur Acme sur le centre de coûts IT-01 » ou « Mets Claire Martin responsable IT de APP-3 et APP-7 ».
+
+L'aperçu montre les fiches visées, le champ et sa nouvelle valeur, combien de fiches changent, combien ont déjà cette valeur et combien sont refusées, avec la raison. Il liste les premières fiches par leur référence. Approuvez-le pour appliquer la modification. Une modification ne s'annule pas. L'onglet **Historique** de chaque fiche l'indique comme faite par Kad pour vous.
+
+Kad refuse une modification :
+
+- Quand la demande ne désigne aucune fiche, ou nomme un filtre et des références ensemble
+- Quand il ne trouve pas la valeur ou la personne nommée
+- Au-delà de 5 000 fiches. Resserrez le filtre
+- Qui viderait le compte, la société payeuse, une dimension obligatoire ou le cycle de vie
+
+Si la liste change entre l'aperçu et votre approbation, l'aperçu échoue. Demandez-en un nouveau à Kad. Pendant qu'une autre opération sur le budget est en cours, l'aperçu reste ouvert : approuvez-le de nouveau une fois cette opération terminée. Les assistants connectés par MCP ne font que lire.
+
 ### Supprimer une fiche { #deleting-a-record }
 
 Kad supprime une fiche à la fois : une tâche, un contact, un site, un document, une ligne budgétaire (OPEX ou CAPEX), une connexion ou une interface. Chaque suppression arrive en aperçu, que vous approuvez. Une suppression ne s'annule pas.

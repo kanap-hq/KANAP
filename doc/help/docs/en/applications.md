@@ -157,6 +157,7 @@ A cell with no value shows a dash.
 - If the count fails, click **Retry** beside the message to count again
 - A new business criticality marks a reviewed application **Review needed**, as on the application page
 - Each changed application gets its own entry in its **History** tab
+- [Kad](ai-assistant.md#changing-records-in-bulk) makes the same change when you ask for it in a conversation, with the same rights. You approve its preview
 
 ---
 

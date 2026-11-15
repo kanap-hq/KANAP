@@ -157,6 +157,7 @@ Une cellule sans valeur affiche un tiret.
 - Si le comptage échoue, cliquez sur **Réessayer** à côté du message pour compter à nouveau
 - Une nouvelle criticité business fait passer une application revue à **À revoir**, comme sur la page de l'application
 - Chaque application modifiée a sa propre entrée dans son onglet **Historique**
+- [Kad](ai-assistant.md#changing-records-in-bulk) fait la même modification quand vous la lui demandez dans une conversation, avec les mêmes droits. Vous approuvez son aperçu
 
 ---
 
