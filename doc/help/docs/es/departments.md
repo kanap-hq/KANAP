@@ -118,7 +118,7 @@ Las columnas, en este orden:
 **Importación**:
 
 - Use la **Verificación previa** para validar el archivo antes de aplicarlo y después **Cargar**
-- **Emparejamiento por referencia**: una `reference` rellenada (`DEPT-12` o `12`) designa el departamento que la fila actualiza, aunque su nombre haya cambiado. El departamento toma el nombre y la empresa de la fila: otra empresa lo traslada a ella
+- **Emparejamiento por referencia**: una `reference` rellenada (`DEPT-12` o `12`) designa el departamento que la fila actualiza, aunque su nombre haya cambiado. El departamento toma el nombre y la empresa de la fila: otra empresa lo traslada a ella. La verificación previa señala cada departamento que cambiará de nombre o de empresa
 - **Emparejamiento por nombre**: cuando `reference` está vacía, o el archivo no tiene esa columna, una fila se empareja por nombre de departamento y nombre de empresa. Actualiza el departamento que nombra, y cualquier otra fila crea uno
 - **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“DEPT-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
 - **Cambio de nombre o traslado**: un nombre que ya tiene otro departamento de la empresa de la fila se rechaza, y el mensaje da la referencia de ese departamento: «“Finance” ya pertenece a DEPT-7.»

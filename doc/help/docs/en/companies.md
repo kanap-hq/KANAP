@@ -233,7 +233,7 @@ The columns, in this order. The metric columns follow the year selected in the l
 **Import**:
 
 - Start with **Preflight check**. It validates the headers, the encoding, the required fields, the duplicates and the metrics. If the check is clean, **Load** applies the inserts and the updates. Then the dialog counts the companies created, updated and unchanged, for example "2 created, 5 updated, 30 unchanged"
-- **Matching by reference**: a filled `reference` (`COMP-12` or `12`) names the company the row updates, even when the name has changed. The company then takes the name of the row
+- **Matching by reference**: a filled `reference` (`COMP-12` or `12`) names the company the row updates, even when the name has changed. The company then takes the name of the row, and the preflight check lists each company that will be renamed
 - **Matching by name**: when `reference` is empty, or the file has no such column, the row is matched by company `name`, whatever the case. The stored spelling stays: a row `ACME` updates `Acme`, and the preflight check says "ACME" was matched to "Acme". Every row of a file without the `reference` column is matched this way
 - **Unknown reference**: a reference your workspace does not know refuses the row: "\"COMP-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
 - **Renaming**: a new name that another company already has is refused, and the message names that company's reference: "\"Acme\" already belongs to COMP-4."

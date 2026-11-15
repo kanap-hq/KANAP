@@ -118,7 +118,7 @@ Die Spalten in dieser Reihenfolge:
 **Import**:
 
 - Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
-- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`DEPT-12` oder `12`) bezeichnet die Abteilung, die die Zeile aktualisiert, auch wenn sich ihr Name geändert hat. Die Abteilung erhält den Namen und das Unternehmen der Zeile: Ein anderes Unternehmen verschiebt sie dorthin
+- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`DEPT-12` oder `12`) bezeichnet die Abteilung, die die Zeile aktualisiert, auch wenn sich ihr Name geändert hat. Die Abteilung erhält den Namen und das Unternehmen der Zeile: Ein anderes Unternehmen verschiebt sie dorthin. Die Vorabprüfung meldet jede Abteilung, die umbenannt wird oder das Unternehmen wechselt
 - **Zuordnung über den Namen**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird eine Zeile über Abteilungsname und Unternehmensname zugeordnet. Sie aktualisiert die Abteilung, die sie nennt, und jede andere Zeile legt eine an
 - **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„DEPT-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
 - **Umbenennen oder Verschieben**: Ein Name, den bereits eine andere Abteilung im Unternehmen der Zeile trägt, wird abgelehnt, und die Meldung nennt deren Referenz: „„Finance“ gehört bereits zu DEPT-7.“

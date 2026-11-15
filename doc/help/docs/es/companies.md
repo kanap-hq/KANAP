@@ -233,7 +233,7 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 **Importación**:
 
 - Empiece por la **Verificación previa**. Valida los encabezados, la codificación, los campos obligatorios, los duplicados y las métricas. Si la comprobación es correcta, **Cargar** aplica las inserciones y las actualizaciones. Después, el diálogo cuenta las empresas creadas, actualizadas y sin cambios, por ejemplo «2 creadas, 5 actualizadas, 30 sin cambios»
-- **Emparejamiento por referencia**: una `reference` rellenada (`COMP-12` o `12`) designa la empresa que la fila actualiza, aunque su nombre haya cambiado. La empresa toma entonces el nombre de la fila
+- **Emparejamiento por referencia**: una `reference` rellenada (`COMP-12` o `12`) designa la empresa que la fila actualiza, aunque su nombre haya cambiado. La empresa toma entonces el nombre de la fila, y la verificación previa señala cada empresa que cambiará de nombre
 - **Emparejamiento por nombre**: cuando `reference` está vacía, o el archivo no tiene esa columna, la fila se empareja por el `name` de la empresa, sin distinguir mayúsculas y minúsculas. La grafía guardada se mantiene: una fila `ACME` actualiza `Acme`, y la verificación previa indica «ACME» se ha asociado a «Acme». Todas las filas de un archivo sin columna `reference` se emparejan así
 - **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“COMP-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
 - **Cambio de nombre**: un nombre nuevo que ya tiene otra empresa se rechaza, y el mensaje da la referencia de esa empresa: «“Acme” ya pertenece a COMP-4.»

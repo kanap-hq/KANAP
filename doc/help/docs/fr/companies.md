@@ -233,7 +233,7 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 **Import** :
 
 - Commencez par la **Vérification préalable**. Elle valide les en-têtes, l'encodage, les champs obligatoires, les doublons et les métriques. Si la vérification est propre, **Charger** applique les insertions et les mises à jour. Le dialogue compte ensuite les sociétés créées, mises à jour et inchangées, par exemple « 2 créées, 5 mises à jour, 30 inchangées »
-- **Correspondance par référence** : une `reference` remplie (`COMP-12` ou `12`) désigne la société que la ligne met à jour, même si son nom a changé. La société prend alors le nom de la ligne
+- **Correspondance par référence** : une `reference` remplie (`COMP-12` ou `12`) désigne la société que la ligne met à jour, même si son nom a changé. La société prend alors le nom de la ligne, et la vérification préalable signale chaque société qui sera renommée
 - **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, la ligne est rapprochée par le `name` de la société, quelle que soit la casse. Le nom enregistré ne change pas : une ligne `ACME` met à jour `Acme`, et la vérification préalable indique « ACME » a été rapproché de « Acme ». Toutes les lignes d'un fichier sans colonne `reference` sont rapprochées ainsi
 - **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « COMP-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
 - **Renommage** : un nouveau nom qu'une autre société porte déjà est refusé, et le message donne la référence de cette société : « « Acme » appartient déjà à COMP-4. »
