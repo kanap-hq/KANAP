@@ -32,7 +32,7 @@ const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', Ret
 
 /** What the server stores for the company the draft created: only what was sent with it. */
 const STORED = {
-  id: 'co-new', name: 'Acme Germany', coa_id: 'coa-de', country_iso: 'DE', base_currency: 'EUR', city: 'Berlin', address1: null,
+  id: 'co-new', item_number: 7, name: 'Acme Germany', coa_id: 'coa-de', country_iso: 'DE', base_currency: 'EUR', city: 'Berlin', address1: null,
   address2: null, postal_code: null, state: null, reg_number: null, vat_number: null, notes: null, status: 'enabled', disabled_at: null,
 };
 const COAS = [
@@ -82,7 +82,8 @@ describe('CompanyWorkspacePage typing while the company is created', () => {
     resetCreationStore();
     server = { ...STORED };
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === '/companies/co-new') return { data: server };
+      // The server reads the company by its uuid or its reference alike.
+      if (url === '/companies/co-new' || url === '/companies/COMP-7') return { data: server };
       if (url === '/chart-of-accounts') return { data: { items: COAS } };
       return { data: { items: [] } };
     });
@@ -109,7 +110,7 @@ describe('CompanyWorkspacePage typing while the company is created', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });
-      await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/master-data/companies/co-new/overview'));
+      await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/master-data/companies/COMP-7/overview'));
       await until(() => { if (!mocked.get.mock.calls.some(([url]) => url === '/companies/co-new')) throw new Error('company not read'); });
     };
     return { finish };

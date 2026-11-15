@@ -367,7 +367,8 @@
       "no": "Non",
       "readErrors": {
         "mixed-date-orders": "Dates écrites jour en premier et mois en premier",
-        "mixed-decimal-marks": "Nombres écrits avec une virgule et avec un point décimal"
+        "mixed-decimal-marks": "Nombres écrits avec une virgule et avec un point décimal",
+        "reference-without-prefix": "Valeurs sans le préfixe de référence : non lues"
       }
     },
     "importRun": {

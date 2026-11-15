@@ -401,18 +401,20 @@ async function testPageUrls(h: Harness, runner: QueryRunner, s: Seed) {
   if (hit) assert.equal(hit.page_url, contractPage, 'search_all: the contract page');
   else console.log('  page_url: search_all found no seeded contract (search index), not checked');
 
-  // A company, for a person who reads companies.
+  // A company opens by its reference (COMP-n, lot R2 of 26.11.9): it carries it, and no page address.
   const companies = await h.tools.execute(ctx(runner, s, 'companiesOnly', 'chat'), 'query_entities', { entity_type: 'companies' });
-  assert.deepEqual(companies.items.map((item: any) => item.page_url), [`/master-data/companies/${s.company}`], 'the company page');
+  assert.equal(companies.items.length, 1);
+  assert.match(String(companies.items[0].ref), /^COMP-\d+$/, 'the company reference');
+  assert.equal(companies.items[0].page_url, undefined, 'the reference opens the company page');
 
-  // No page the screen refuses: the contract page needs the contracts right, the company page the companies right.
+  // No page the screen refuses: the contract page needs the contracts right; a company has none.
   const records = () => ({ items: [{ type: 'contracts', id: contractId }, { type: 'companies', id: s.company }] });
   const forUser = (user: UserKey) => withAiPageUrls(records(), {
     readableResources: (resources: string[]) => h.policy.readableResources(ctx(runner, s, user, 'chat'), resources, runner.manager),
     origin: async () => null,
   });
-  assert.deepEqual((await forUser('companiesOnly')).items.map((item: any) => item.page_url), [undefined, `/master-data/companies/${s.company}`], 'companies only: no contract page');
-  assert.deepEqual((await forUser('full')).items.map((item: any) => item.page_url), [contractPage, undefined], 'no companies right: no company page');
+  assert.deepEqual((await forUser('companiesOnly')).items.map((item: any) => item.page_url), [undefined, undefined], 'companies only: no contract page');
+  assert.deepEqual((await forUser('full')).items.map((item: any) => item.page_url), [contractPage, undefined], 'the contract page, none for a company');
 
   // MCP: an absolute address when the workspace address is configured, the path otherwise.
   const mcp = ctx(runner, s, 'full', 'mcp');

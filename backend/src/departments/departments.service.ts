@@ -5,8 +5,9 @@ import { Department } from './department.entity';
 import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
 import { orderListQuery } from '../common/list-sort';
+import { parseReferenceNumber } from '../common/parse-item-number';
 
-const DEPARTMENT_SORT_COLUMNS = new Set(['id', 'company_id', 'name', 'description', 'status', 'created_at', 'updated_at']);
+const DEPARTMENT_SORT_COLUMNS = new Set(['id', 'item_number', 'company_id', 'name', 'description', 'status', 'created_at', 'updated_at']);
 const DEPARTMENT_TEXT_SORTS = new Set(['name', 'description']);
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Company } from '../companies/company.entity';
@@ -14,6 +15,7 @@ import { companyYearPeriod, parseCompanyYear } from '../companies/company-year';
 import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
+  compileReferenceFilter,
   createParamNameGenerator,
   FilterTargetConfig,
   CompiledCondition,
@@ -32,6 +34,8 @@ import {
   keepStoredEndOfValidity,
   ImportReportError,
   nameMatchedWarning,
+  referenceMoveWarning,
+  referenceRenameWarning,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
@@ -41,6 +45,17 @@ import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } fro
 import type { ExportFileFormat } from '../common/xlsx/format';
 
 type DepartmentLookupItem = { id: string; name: string; company_id: string };
+
+/**
+ * The quick search's condition for a typed reference (`DEPT-12`, any case): that department, added
+ * to the text search. Digits alone, and `DEPT-013` (a leading zero), stay a text search.
+ */
+function referenceQuickSearch(q: string | null | undefined, nextParam: () => string): CompiledCondition | null {
+  const number = parseReferenceNumber(q, 'DEPT', { prefixRequired: true });
+  if (number === null) return null;
+  const param = nextParam();
+  return { sql: `d.item_number = :${param}`, params: { [param]: number } };
+}
 
 @Injectable()
 export class DepartmentsService {
@@ -104,6 +119,12 @@ export class DepartmentsService {
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
       for (const [field, model] of Object.entries(filtersToApply)) {
+        if (field === 'item_number') {
+          // The reference column shows `DEPT-12`.
+          const reference = compileReferenceFilter(model, 'd.item_number', 'DEPT', nextParam);
+          if (reference) compiledFilters.push(reference);
+          continue;
+        }
         const target = filterTargets[field];
         if (!target) continue;
         if (target.requiresMetrics && !year) continue;
@@ -125,6 +146,9 @@ export class DepartmentsService {
           nextParam,
         )
       : [];
+    // `DEPT-12` also finds that department.
+    const byReference = referenceQuickSearch(q, nextParam);
+    if (byReference) quickSearchConditions.push(byReference);
 
     const applyQuickSearch = (builder: ReturnType<typeof repo.createQueryBuilder>) => {
       if (quickSearchConditions.length === 0) return;
@@ -335,7 +359,8 @@ export class DepartmentsService {
     }
   }
 
-  async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
+  /** The ids and references of the whole list (up to 10 000), in the grid's order: the record's previous / next band. */
+  async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; refs: string[]; total: number }> {
     const year = parseCompanyYear(query?.year);
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
@@ -379,6 +404,12 @@ export class DepartmentsService {
     const compiledFilters: CompiledCondition[] = [];
     if (filtersToApply && typeof filtersToApply === 'object') {
       for (const [field, model] of Object.entries(filtersToApply)) {
+        if (field === 'item_number') {
+          // The reference column shows `DEPT-12`.
+          const reference = compileReferenceFilter(model, 'd.item_number', 'DEPT', nextParam);
+          if (reference) compiledFilters.push(reference);
+          continue;
+        }
         const target = filterTargets[field];
         if (!target) continue;
         if (target.requiresMetrics && !year) continue;
@@ -400,8 +431,11 @@ export class DepartmentsService {
           nextParam,
         )
       : [];
+    // `DEPT-12` also finds that department.
+    const byReference = referenceQuickSearch(q, nextParam);
+    if (byReference) quickSearchConditions.push(byReference);
 
-    const qb = repo.createQueryBuilder('d').select('d.id', 'id');
+    const qb = repo.createQueryBuilder('d').select('d.id', 'id').addSelect('d.item_number', 'item_number');
     qb.leftJoin(Company, 'c', 'c.id = d.company_id');
     const period = year ? companyYearPeriod(year) : undefined;
     if (effectiveStatus) {
@@ -435,7 +469,8 @@ export class DepartmentsService {
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
     const rows = await qb.take(limit).getRawMany();
     const ids = rows.map((r: any) => String(r.id ?? r.d_id ?? r["d_id"])) as string[];
-    return { ids, total };
+    const refs = rows.map((r: any, idx) => (r.item_number != null ? `DEPT-${r.item_number}` : ids[idx]));
+    return { ids, refs, total };
   }
 
   async listFilterValues(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
@@ -484,8 +519,9 @@ export class DepartmentsService {
     return results;
   }
 
+  /** `reference` (`DEPT-12`) leads: filled, it names the department a row updates; an older file without it still imports. */
   private csvHeaders(): string[] {
-    return ['company_name', 'name', 'description', 'status', 'disabled_at'];
+    return ['reference', 'company_name', 'name', 'description', 'status', 'disabled_at'];
   }
 
   async exportCsv<F extends ExportFileFormat = 'csv'>(
@@ -500,6 +536,7 @@ export class DepartmentsService {
       const { items } = await this.list(opts.listQuery, { manager: opts.manager, exportAll: true });
       for (const d of items as Array<Department & { company_name?: string | null }>) {
         rows.push([
+          d.item_number != null ? `DEPT-${d.item_number}` : '',
           d.company_name ?? '',
           d.name ?? '',
           d.description ?? '',
@@ -511,11 +548,12 @@ export class DepartmentsService {
       const repo = this.getRepo(opts?.manager);
       const items = await repo.createQueryBuilder('d')
         .leftJoin(Company, 'c', 'c.id = d.company_id')
-        .select(['d.id', 'd.name', 'd.description', 'd.status', 'd.disabled_at', 'c.name AS company_name'])
+        .select(['d.id', 'd.item_number', 'd.name', 'd.description', 'd.status', 'd.disabled_at', 'c.name AS company_name'])
         .orderBy('d.created_at', 'DESC')
         .getRawMany();
       for (const r of items) {
         rows.push([
+          r.d_item_number != null ? `DEPT-${r.d_item_number}` : '',
           r.company_name ?? '',
           r.d_name ?? r.name ?? '',
           r.d_description ?? r.description ?? '',
@@ -555,12 +593,13 @@ export class DepartmentsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
+      optional: ['reference'],
       dateFields: ['disabled_at'],
       language: readLanguage,
       dateOrder,
       decimalMark,
     });
-    const errors: { row: number; message: string }[] = [];
+    const errors: ImportReportError[] = [];
     if (read.headerError) {
       return {
         ok: false, dryRun, total: 0, inserted: 0, updated: 0,
@@ -579,15 +618,38 @@ export class DepartmentsService {
       companyCache.set(key, c ?? null);
       return c ?? null;
     };
+    // The name of a company by id, for the warning of a department that moves.
+    const companyNames = new Map<string, string>();
+    const companyNameOf = async (id: string): Promise<string> => {
+      if (!companyNames.has(id)) companyNames.set(id, (await companyRepo.findOne({ where: { id } }))?.name ?? '');
+      return companyNames.get(id)!;
+    };
     // Validate and normalize rows
     const normalized: Array<DepartmentUpsertDto & { company_id: string; name: string; lifecycle: { status: StatusState | null; disabled_at: string | null } }> = [];
     const lineOf = new Map<object, number>();
+    // The number of the department a row names in the reference column (`DEPT-12` or `12`).
+    const referenceOf = new Map<object, number>();
+    const firstLineByReference = new Map<number, number>();
     for (const row of read.rows) {
       const line = row.line;
       const problems = rowProblemErrors(row, ['disabled_at']);
       if (problems.length > 0) {
         errors.push(...problems);
         continue;
+      }
+      const referenceRaw = cellOf(row, 'reference');
+      const reference = referenceRaw ? parseReferenceNumber(referenceRaw, 'DEPT') : null;
+      if (referenceRaw && reference === null) {
+        errors.push(rowError(line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"${referenceRaw}" is no reference in this workspace.`, { value: referenceRaw }));
+        continue;
+      }
+      if (reference !== null) {
+        const firstRow = firstLineByReference.get(reference);
+        if (firstRow !== undefined) {
+          errors.push(rowError(line, 'reference', 'CSV_DUPLICATE_KEY', `Same reference as row ${firstRow}.`, { columns: 'reference', firstRow }));
+          continue;
+        }
+        firstLineByReference.set(reference, line);
       }
       const company_name = cellOf(row, 'company_name');
       const name = cellOf(row, 'name');
@@ -629,38 +691,91 @@ export class DepartmentsService {
           };
           normalized.push(item);
           lineOf.set(item, line);
+          if (reference !== null) referenceOf.set(item, reference);
         }
       }
     }
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
-    // Deduplicate by combination of company_id + name (case-insensitive on name)
+    // Deduplicate by combination of company_id + name (case-insensitive on name); a row with a
+    // reference is its department's own row.
     const uniqueMap = new Map<string, (typeof normalized)[number]>();
     for (const item of normalized) {
-      const key = `${item.company_id}|${item.name.toLowerCase()}`;
+      const key = referenceOf.has(item) ? `ref:${referenceOf.get(item)}` : `${item.company_id}|${item.name.toLowerCase()}`;
       if (!uniqueMap.has(key)) uniqueMap.set(key, item);
     }
     const unique = Array.from(uniqueMap.values());
+    // A filled reference names the department the row updates, whatever company the row writes:
+    // its company and name are values of the row (a move, a rename), refused when another
+    // department of that company has the name. An unknown reference refuses the row.
+    const references = Array.from(referenceOf.values());
+    const byReference = new Map<number, Department>();
+    if (references.length > 0) {
+      const found = await repo.createQueryBuilder('d')
+        .where('d.tenant_id = app_current_tenant() AND d.item_number IN (:...references)', { references })
+        .getMany();
+      found.forEach((department) => byReference.set(department.item_number, department));
+    }
     // Count inserts, updates and the departments whose every value is already stored (not written).
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
     const toWrite: Array<{ item: (typeof unique)[number]; existing: Department | null }> = [];
-    // A row matches the company's department of the same name whatever its case ("FINANCE" updates
-    // "Finance"): the stored spelling stays, and the report says which department the row matched.
+    // Otherwise a row matches the company's department of the same name whatever its case
+    // ("FINANCE" updates "Finance"): the stored spelling stays, and the report says which
+    // department the row matched.
     const warnings: ImportReportError[] = [];
+    const firstLineOfDepartment = new Map<string, number>();
     for (const fileItem of unique) {
-      const existing = await repo.createQueryBuilder('d')
+      const line = lineOf.get(fileItem) ?? 0;
+      const reference = referenceOf.get(fileItem);
+      const sameName = await repo.createQueryBuilder('d')
         .where('d.company_id = :companyId AND lower(d.name) = lower(:name)', { companyId: fileItem.company_id, name: fileItem.name })
         .getOne();
-      const warning = existing ? nameMatchedWarning(lineOf.get(fileItem) ?? 0, 'name', fileItem.name, existing.name) : null;
-      if (warning) warnings.push(warning);
+      let existing: Department | null = sameName;
+      if (reference !== undefined) {
+        existing = byReference.get(reference) ?? null;
+        if (!existing) {
+          errors.push(rowError(line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"DEPT-${reference}" is no reference in this workspace.`, { value: `DEPT-${reference}` }));
+          continue;
+        }
+        if (sameName && sameName.id !== existing.id) {
+          errors.push(rowError(line, 'name', 'CSV_VALUE_TAKEN', `"${fileItem.name}" already belongs to DEPT-${sameName.item_number}.`, { value: fileItem.name, reference: `DEPT-${sameName.item_number}` }));
+          continue;
+        }
+        const ref = `DEPT-${existing.item_number}`;
+        const renamed = referenceRenameWarning(line, { family: 'department', reference: ref, stored: existing.name, next: fileItem.name });
+        if (renamed) warnings.push(renamed);
+        if (existing.company_id !== fileItem.company_id) {
+          const moved = referenceMoveWarning(line, {
+            parent: 'company',
+            reference: ref,
+            name: existing.name,
+            storedParentId: existing.company_id,
+            nextParentId: fileItem.company_id,
+            from: await companyNameOf(existing.company_id),
+            to: await companyNameOf(fileItem.company_id),
+          });
+          if (moved) warnings.push(moved);
+        }
+      } else if (existing) {
+        const warning = nameMatchedWarning(line, 'name', fileItem.name, existing.name);
+        if (warning) warnings.push(warning);
+      }
+      if (existing) {
+        const firstRow = firstLineOfDepartment.get(existing.id);
+        if (firstRow !== undefined) {
+          errors.push(rowError(line, reference !== undefined ? 'reference' : 'name', 'CSV_SAME_RECORD', `This row updates DEPT-${existing.item_number}, as row ${firstRow} does.`, { firstRow, reference: `DEPT-${existing.item_number}` }));
+          continue;
+        }
+        firstLineOfDepartment.set(existing.id, line);
+      }
       // The stored end of validity's day keeps its time of day: the export writes the day only.
       const item = existing
         ? {
           ...fileItem,
-          name: existing.name,
+          name: reference !== undefined ? fileItem.name : existing.name,
           lifecycle: { ...fileItem.lifecycle, disabled_at: keepStoredEndOfValidity(existing.disabled_at, fileItem.lifecycle.disabled_at) },
         }
         : fileItem;
@@ -674,6 +789,9 @@ export class DepartmentsService {
         continue;
       } else updated += 1;
       toWrite.push({ item, existing });
+    }
+    if (errors.length > 0) {
+      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     if (dryRun) {
       return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };

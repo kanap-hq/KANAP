@@ -25,6 +25,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 | Columna | Qué muestra |
 |---------|-------------|
+| **Referencia** | La referencia que asigna Kadratis (`COMP-3`). Haga clic en ella para abrir el espacio de trabajo |
 | **Nombre** | Nombre de la empresa (haga clic para abrir el espacio de trabajo) |
 | **País** | Código de país ISO |
 | **Moneda** | Código de moneda base |
@@ -47,8 +48,8 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 **Filtrado**:
 
-- **Búsqueda rápida**: búsqueda de texto libre en todas las columnas visibles
-- **Filtros de columna**: haga clic en cualquier encabezado de columna para filtrar por valor; las columnas numéricas (Plantilla, Usuarios IT, Facturación) admiten filtros numéricos
+- **Búsqueda rápida**: búsqueda de texto libre en todas las columnas visibles. Escriba una referencia, como `COMP-3`, para encontrar esa empresa. Las cifras solas buscan en el texto
+- **Filtros de columna**: haga clic en cualquier encabezado de columna para filtrar por valor. El filtro **Referencia** acepta `COMP-3` o `3`. Las columnas numéricas (Plantilla, Usuarios IT, Facturación) admiten filtros numéricos
 - **Alcance de estado**: el selector **Mostrar: Todos / Activos / Desactivados** sobre la lista controla qué empresas aparecen. La lista muestra por defecto las empresas activadas
 
 **Selector de año**: utilice el campo **Año** en la barra de herramientas para cambiar las métricas de qué año se muestran. La fila inferior muestra los **totales** de Plantilla, Usuarios IT y Facturación de todas las empresas visibles (filtradas).
@@ -81,11 +82,13 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la empresa. Tiene tres pestañas: **Visión general**, **Detalles** e **Historial** (los cambios hechos en la empresa, vea [Historial de los registros](record-history.md)). Las personas que gestionan el acceso a los datos ven además una pestaña **Acceso**, con las personas que ven toda la empresa y las que ven una parte. Vea [Acceso a los datos](data-access.md#the-access-tab-of-companies-and-cost-centers).
 
-- **Encabezado**: el nombre de la empresa. Haga clic en él para cambiar el nombre de la empresa. Las flechas con «N de M» permiten moverse entre empresas en el orden y con los filtros de la lista, sin volver a ella. El enlace de retorno, **Empresas**, vuelve a la lista con su contexto de búsqueda intacto
+- **Encabezado**: la referencia de la empresa (`COMP-5`, haga clic en ella para copiarla) y su nombre. Haga clic en el nombre para cambiar el nombre de la empresa. Las flechas con «N de M» permiten moverse entre empresas en el orden y con los filtros de la lista, sin volver a ella. El enlace de retorno, **Empresas**, vuelve a la lista con su contexto de búsqueda intacto
 - **Estado**, bajo el nombre: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva la empresa de inmediato: el fin de validez pasa a ser la hora actual
 - **Panel de propiedades** a la derecha: **País**, **Moneda base**, **Plan de cuentas** y **Ciclo de vida**. Use el botón situado junto al panel para plegarlo o volver a abrirlo
 
 - **Eliminar**, un icono de papelera arriba a la derecha: visible para los administradores de empresas (`companies:admin`). Consulte [Eliminar una empresa](#eliminar-una-empresa)
+
+**Dirección de la página**: la dirección de la página usa la referencia, por ejemplo `/master-data/companies/COMP-5/overview`. La dirección anterior de la página de una empresa la sigue abriendo y se sustituye por la nueva.
 
 **Guardado automático**: Cada cambio se guarda por sí solo al salir del campo. No hay botones Guardar, Restablecer ni Cerrar. Puede seguir trabajando mientras se guarda un cambio. La parte superior de la página muestra **Guardando…** mientras guarda y luego **Guardado** durante un momento. Cuando se rechaza un cambio, el campo vuelve a mostrar su valor anterior y el motivo aparece debajo. El mensaje se mantiene hasta que vuelva a escribir en el campo.
 
@@ -206,13 +209,14 @@ Muchas partes de la aplicación son conscientes del año. Las empresas tienen m�
 
 La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
 
-**Exportar** descarga las empresas que muestra la lista (o, a petición en el diálogo, todas las empresas) con sus métricas. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo con los encabezados y una fila de ejemplo, una empresa ficticia con métricas para el año de la lista. Sustitúyala por sus propias filas.
+**Exportar** descarga las empresas que muestra la lista (o, a petición en el diálogo, todas las empresas) con sus métricas. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo con los encabezados y una fila de ejemplo, una empresa ficticia con métricas para el año de la lista, y una `reference` vacía. Sustitúyala por sus propias filas.
 
 Las columnas, en este orden. Las columnas de métricas siguen el año seleccionado en la barra de herramientas de la lista: el año anterior, ese año y el siguiente.
 
 | Columna | Contenido |
 |---|---|
-| `name` | Obligatoria. El nombre de la empresa. Las filas se emparejan por este nombre |
+| `reference` | Opcional. La referencia de la empresa (`COMP-12`). La exportación la escribe |
+| `name` | Obligatoria. El nombre de la empresa |
 | `country_iso` | Obligatoria. Dos letras |
 | `address1`, `address2` | Líneas de dirección |
 | `postal_code`, `state` | Datos de dirección |
@@ -229,8 +233,12 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 **Importación**:
 
 - Empiece por la **Verificación previa**. Valida los encabezados, la codificación, los campos obligatorios, los duplicados y las métricas. Si la comprobación es correcta, **Cargar** aplica las inserciones y las actualizaciones. Después, el diálogo cuenta las empresas creadas, actualizadas y sin cambios, por ejemplo «2 creadas, 5 actualizadas, 30 sin cambios»
-- **Emparejamiento**: por el `name` de la empresa, sin distinguir mayúsculas y minúsculas. La grafía guardada se mantiene: una fila `ACME` actualiza `Acme`, y la verificación previa indica «ACME» se ha asociado a «Acme»
-- **Una fila por empresa**: un nombre que aparece dos veces en el archivo, sin distinguir mayúsculas y minúsculas, se rechaza ya en la verificación: «“Acme” ya figura en la fila 4. Deje una sola fila por empresa.»
+- **Emparejamiento por referencia**: una `reference` rellenada (`COMP-12` o `12`) designa la empresa que la fila actualiza, aunque su nombre haya cambiado. La empresa toma entonces el nombre de la fila, y la verificación previa señala cada empresa que cambiará de nombre
+- **Emparejamiento por nombre**: cuando `reference` está vacía, o el archivo no tiene esa columna, la fila se empareja por el `name` de la empresa, sin distinguir mayúsculas y minúsculas. La grafía guardada se mantiene: una fila `ACME` actualiza `Acme`, y la verificación previa indica «ACME» se ha asociado a «Acme». Todas las filas de un archivo sin columna `reference` se emparejan así
+- **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“COMP-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
+- **Cambio de nombre**: un nombre nuevo que ya tiene otra empresa se rechaza, y el mensaje da la referencia de esa empresa: «“Acme” ya pertenece a COMP-4.»
+- **Una fila por empresa**: dos filas que actualizan la misma empresa se rechazan: «Esta fila actualiza COMP-4, como la fila 3. Deje una sola fila por registro.»
+- Un nombre que aparece dos veces en el archivo, sin distinguir mayúsculas y minúsculas, se rechaza ya en la verificación: «“Acme” ya figura en la fila 4. Deje una sola fila por empresa.»
 - **Campos obligatorios**: `name`, `country_iso`, `city` y `base_currency`. Una ciudad vacía se rechaza ya en la verificación, tanto para una empresa nueva como para una actualización
 - **Estado y fin de validez**: la exportación escribe el estado deducido del fin de validez. Una empresa nueva se activa salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, finaliza la empresa hoy
 - Una fila cuyo estado contradice su fecha se rechaza con un error de fila: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." o "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."

@@ -367,7 +367,8 @@
       "no": "Nein",
       "readErrors": {
         "mixed-date-orders": "Datumsangaben mit Tag zuerst und mit Monat zuerst",
-        "mixed-decimal-marks": "Zahlen mit Dezimalkomma und mit Dezimalpunkt"
+        "mixed-decimal-marks": "Zahlen mit Dezimalkomma und mit Dezimalpunkt",
+        "reference-without-prefix": "Werte ohne Referenzpräfix: nicht gelesen"
       }
     },
     "importRun": {

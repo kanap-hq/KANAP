@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildItemPath, formatItemRef } from './item-ref';
+import { buildItemPath, formatItemRef, itemAddress } from './item-ref';
 
 describe('business references of the five families numbered in 26.11.9', () => {
   it.each([
@@ -26,5 +26,12 @@ describe('business references of the five families numbered in 26.11.9', () => {
   it('keeps MEM for contributors, CTR being a contract', () => {
     expect(formatItemRef('contributor', 5)).toBe('MEM-5');
     expect(formatItemRef('contract', 5)).toBe('CTR-5');
+  });
+
+  it('addresses a record by its reference, by its uuid while it has no number', () => {
+    expect(itemAddress('company', { id: 'co-1', item_number: 5 })).toBe('COMP-5');
+    expect(itemAddress('department', { id: 'd-1', item_number: 7 })).toBe('DEPT-7');
+    expect(itemAddress('company', { id: 'co-1', item_number: null })).toBe('co-1');
+    expect(itemAddress('department', { id: 'd-1' })).toBe('d-1');
   });
 });

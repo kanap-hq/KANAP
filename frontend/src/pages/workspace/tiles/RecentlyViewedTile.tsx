@@ -22,6 +22,8 @@ import PlaceIcon from '@mui/icons-material/Place';
 import ArticleIcon from '@mui/icons-material/Article';
 import BusinessIcon from '@mui/icons-material/Business';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import PeopleIcon from '@mui/icons-material/People';
 import { useRecentlyViewed, ENTITY_TYPE_CONFIG, RecentEntityType } from '../hooks/useRecentlyViewed';
 import { useAuth } from '../../../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -52,6 +54,8 @@ const ICON_COMPONENTS: Record<string, typeof FolderOpenIcon> = {
   Article: ArticleIcon,
   Business: BusinessIcon,
   AccountTree: AccountTreeIcon,
+  LocalShipping: LocalShippingIcon,
+  People: PeopleIcon,
 };
 
 const MAX_TILE_ITEMS = 10;
@@ -79,10 +83,10 @@ export default function RecentlyViewedTile({ config }: RecentlyViewedTileProps) 
 
   const formatTime = (timestamp: number) => relativeTime(timestamp, () => formatShortDate(new Date(timestamp), locale));
 
-  const handleNavigate = (type: RecentEntityType, id: string) => {
+  const handleNavigate = (type: RecentEntityType, id: string, ref?: string) => {
     const entityConfig = ENTITY_TYPE_CONFIG[type];
     if (entityConfig) {
-      navigate(entityConfig.route(id));
+      navigate(entityConfig.route(id, ref));
     }
   };
 
@@ -112,7 +116,7 @@ export default function RecentlyViewedTile({ config }: RecentlyViewedTileProps) 
               return (
                 <ListItemButton
                   key={`${item.type}-${item.id}-${index}`}
-                  onClick={() => handleNavigate(item.type, item.id)}
+                  onClick={() => handleNavigate(item.type, item.id, item.ref)}
                   sx={{ py: 0.5 }}
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>

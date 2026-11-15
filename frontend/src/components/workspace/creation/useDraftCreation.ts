@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import useCreationReturn from './useCreationReturn';
 import useRecordCreation from './useRecordCreation';
 
-/** The record the draft created: its uuid, the token of its create route, and its page. */
-export type DraftCreated = { id: string; token: string; path: string };
+/**
+ * The record the draft created: its uuid, the token of its create route, and its page. `reference`
+ * (`COMP-5`) when `path` may name the record by it: the page then finds the creation by either.
+ */
+export type DraftCreated = { id: string; token: string; path: string; reference?: string | null };
 
 type Options = {
   /** The page shows a new record's draft (`id === 'new'`). */
@@ -69,7 +72,7 @@ export default function useDraftCreation({ isCreate, ready, post, returnTo: know
         navigate(latest.current.returnTo, { replace: true });
         return;
       }
-      latest.current.startCreation({ recordId: created.id, token: created.token, returnTo: latest.current.returnTo });
+      latest.current.startCreation({ recordId: created.id, token: created.token, returnTo: latest.current.returnTo, reference: created.reference });
       navigate(created.path, { replace: true });
     } finally {
       running.current = false;

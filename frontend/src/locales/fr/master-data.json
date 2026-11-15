@@ -87,6 +87,7 @@
     "companyFallback": "Société",
     "loadError": "Échec du chargement de la société.",
     "columns": {
+      "reference": "Référence",
       "city": "Ville",
       "postalCode": "Code postal",
       "address1": "Adresse 1",
@@ -185,6 +186,7 @@
     "loadError": "Échec du chargement du département.",
     "selectCompanyFirst": "Sélectionnez d'abord une société",
     "columns": {
+      "reference": "Référence",
       "company": "Société",
       "headcountYear": "Effectif ({{year}})"
     },
