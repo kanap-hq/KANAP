@@ -143,11 +143,13 @@ Cuando el archivo no crea ni cambia nada, **Cargar** no está disponible y la co
 
 ### Filas que se parecen a una línea existente { #lookalike-lines }
 
-Una fila nueva que se parece a una línea existente del mismo tipo se descarta por defecto. Así, un archivo cargado dos veces, o una línea ya introducida a mano, no se convierte en una segunda línea. Una fila se parece a una línea en tres casos:
+Una fila nueva que se parece a una línea existente del mismo tipo se descarta por defecto. Así, un archivo cargado dos veces, o una línea ya introducida a mano, no se convierte en una segunda línea. Una fila se parece a una línea de la misma empresa pagadora en tres casos:
 
 - el mismo título y el mismo proveedor
-- los mismos importes, en la misma moneda, con el mismo proveedor o la misma empresa
-- un título parecido, el mismo proveedor y un importe igual
+- los mismos importes en la misma moneda: basta un importe con el mismo proveedor; si no, hacen falta dos
+- un título parecido, el mismo proveedor y la misma moneda, y un importe igual
+
+Una línea que termina antes del primer año de los importes del archivo no se compara.
 
 La comprobación lista estas filas en **Se parece a una línea existente**, con la línea a la que se parece cada una. Señale una fila para ver por qué se ha encontrado. Para cada fila, elija:
 
@@ -155,7 +157,7 @@ La comprobación lista estas filas en **Se parece a una línea existente**, con 
 - **Crear de todos modos**: la fila se convierte en una línea nueva.
 - **Actualizar BL-12**: la fila actualiza la línea a la que se parece. Cada valor que el archivo rellena sustituye al guardado. Una celda vacía conserva el valor guardado. Señale la fila para ver qué valores cambian.
 
-**Crear todas de todos modos** y **Actualizar todas**, encima de la lista, se aplican a todas las filas. La elección hecha en una fila prevalece sobre la elección para todas. Cada elección vuelve a comprobar el archivo.
+**Crear todas de todos modos** y **Actualizar todas**, encima de la lista, se aplican a todas las filas. La elección hecha en una fila prevalece sobre la elección para todas. **Descartar todas** descarta todas las filas, incluidas las que eligió una a una. Cada elección vuelve a comprobar el archivo.
 
 Si BL-12 cambia entre la comprobación y la carga, la fila se rechaza con «BL-12 ha cambiado desde la comprobación.» Vuelva a elegir qué pasa con ella.
 

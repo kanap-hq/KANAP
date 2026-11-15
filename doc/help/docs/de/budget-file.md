@@ -143,11 +143,13 @@ Wenn die Datei nichts anlegt und nichts ändert, ist **Laden** nicht verfügbar 
 
 ### Zeilen, die einer bestehenden Zeile ähneln { #lookalike-lines }
 
-Eine neue Zeile, die einer bestehenden Budgetzeile derselben Art ähnelt, wird standardmäßig ausgelassen. So wird aus einer zweimal geladenen Datei oder einer bereits von Hand erfassten Budgetzeile keine zweite Budgetzeile. Eine Zeile ähnelt einer Budgetzeile in drei Fällen:
+Eine neue Zeile, die einer bestehenden Budgetzeile derselben Art ähnelt, wird standardmäßig ausgelassen. So wird aus einer zweimal geladenen Datei oder einer bereits von Hand erfassten Budgetzeile keine zweite Budgetzeile. Eine Zeile ähnelt einer Budgetzeile desselben zahlenden Unternehmens in drei Fällen:
 
 - gleicher Titel und gleicher Lieferant
-- gleiche Beträge in derselben Währung, mit demselben Lieferanten oder demselben Unternehmen
-- ein ähnlicher Titel, derselbe Lieferant und ein gleicher Betrag
+- gleiche Beträge in derselben Währung: Mit demselben Lieferanten genügt ein Betrag, sonst sind zwei nötig
+- ein ähnlicher Titel, derselbe Lieferant und dieselbe Währung sowie ein gleicher Betrag
+
+Eine Budgetzeile, die vor dem ersten Jahr der Beträge der Datei endet, wird nicht verglichen.
 
 Die Prüfung listet diese Zeilen unter **Ähnelt einer bestehenden Zeile** auf, jeweils mit der Budgetzeile, der sie ähnelt. Zeigen Sie auf eine Zeile, um zu sehen, warum sie gefunden wurde. Wählen Sie für jede Zeile:
 
@@ -155,7 +157,7 @@ Die Prüfung listet diese Zeilen unter **Ähnelt einer bestehenden Zeile** auf, 
 - **Trotzdem anlegen**: Die Zeile wird eine neue Budgetzeile.
 - **BL-12 aktualisieren**: Die Zeile aktualisiert die Budgetzeile, der sie ähnelt. Jeder Wert, den die Datei füllt, ersetzt den gespeicherten Wert. Eine leere Zelle behält den gespeicherten Wert. Zeigen Sie auf die Zeile, um zu sehen, welche Werte sich ändern.
 
-**Alle trotzdem anlegen** und **Alle aktualisieren** über der Liste gelten für alle Zeilen. Die Wahl für eine einzelne Zeile hat Vorrang vor der Wahl für alle Zeilen. Jede Wahl prüft die Datei erneut.
+**Alle trotzdem anlegen** und **Alle aktualisieren** über der Liste gelten für alle Zeilen. Die Wahl für eine einzelne Zeile hat Vorrang vor der Wahl für alle Zeilen. **Alle auslassen** lässt alle Zeilen aus, auch die einzeln gewählten. Jede Wahl prüft die Datei erneut.
 
 Ändert sich BL-12 zwischen der Prüfung und dem Laden, wird die Zeile mit „BL-12 wurde seit der Prüfung geändert.“ abgelehnt. Wählen Sie erneut, was aus ihr wird.
 

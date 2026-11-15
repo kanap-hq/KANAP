@@ -143,11 +143,13 @@ When the file creates and changes nothing, **Load** is unavailable and the check
 
 ### Rows like an existing line { #lookalike-lines }
 
-A new row that looks like an existing line of the same kind is left out by default. This keeps a file loaded twice, or a line already typed in by hand, from becoming a second line. A row looks like a line in three cases:
+A new row that looks like an existing line of the same kind is left out by default. This keeps a file loaded twice, or a line already typed in by hand, from becoming a second line. A row looks like a line of the same paying company in three cases:
 
 - the same title and the same supplier
-- the same amounts, in the same currency, with the same supplier or the same company
-- a close title, the same supplier and one equal amount
+- the same amounts in the same currency: one amount is enough with the same supplier, two are needed otherwise
+- a close title, the same supplier and currency, and one equal amount
+
+A line that ends before the first year of the file's amounts is not compared.
 
 The check lists these rows under **Looks like an existing line**, with the line each one looks like. Point at a row to see why it was found. For each row, choose:
 
@@ -155,7 +157,7 @@ The check lists these rows under **Looks like an existing line**, with the line 
 - **Create anyway**: the row becomes a new line.
 - **Update BL-12**: the row updates the line it looks like. Each value the file fills replaces the stored one. An empty cell keeps the stored value. Point at the row to see which values change.
 
-**Create all anyway** and **Update all**, above the list, apply to every row. A choice made on a row wins over the choice for all rows. Each choice checks the file again.
+**Create all anyway** and **Update all**, above the list, apply to every row. A choice made on a row wins over the choice for all rows. **Leave all out** leaves every row out, including the rows you chose one by one. Each choice checks the file again.
 
 If BL-12 changes between the check and the load, the row is refused with "BL-12 changed since the check." Choose again what becomes of it.
 

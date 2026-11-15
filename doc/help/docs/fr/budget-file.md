@@ -143,11 +143,13 @@ Quand le fichier ne crée et ne modifie rien, **Charger** est inactif et la vér
 
 ### Lignes qui ressemblent à une ligne existante { #lookalike-lines }
 
-Une nouvelle ligne du fichier qui ressemble à une ligne budgétaire existante du même type est écartée par défaut. Ainsi, un fichier chargé deux fois, ou une ligne déjà saisie à la main, ne devient pas une seconde ligne. Une ligne du fichier ressemble à une ligne budgétaire dans trois cas :
+Une nouvelle ligne du fichier qui ressemble à une ligne budgétaire existante du même type est écartée par défaut. Ainsi, un fichier chargé deux fois, ou une ligne déjà saisie à la main, ne devient pas une seconde ligne. Une ligne du fichier ressemble à une ligne budgétaire de la même société payeuse dans trois cas :
 
 - même titre et même fournisseur
-- mêmes montants, dans la même devise, avec le même fournisseur ou la même société
-- un titre proche, le même fournisseur et un montant égal
+- mêmes montants dans la même devise : un montant suffit avec le même fournisseur, il en faut deux sinon
+- un titre proche, le même fournisseur et la même devise, et un montant égal
+
+Une ligne budgétaire qui se termine avant la première année des montants du fichier n'est pas comparée.
 
 La vérification liste ces lignes sous **Ressemble à une ligne existante**, avec la ligne budgétaire à laquelle chacune ressemble. Pointez une ligne pour voir pourquoi elle a été trouvée. Pour chaque ligne, choisissez :
 
@@ -155,7 +157,7 @@ La vérification liste ces lignes sous **Ressemble à une ligne existante**, ave
 - **Créer quand même** : la ligne devient une nouvelle ligne budgétaire.
 - **Mettre à jour BL-12** : la ligne met à jour la ligne budgétaire à laquelle elle ressemble. Chaque valeur que le fichier remplit remplace la valeur enregistrée. Une cellule vide garde la valeur enregistrée. Pointez la ligne pour voir les valeurs qui changent.
 
-**Tout créer quand même** et **Tout mettre à jour**, au-dessus de la liste, s'appliquent à toutes les lignes. Le choix fait sur une ligne l'emporte sur le choix pour toutes. Chaque choix vérifie le fichier de nouveau.
+**Tout créer quand même** et **Tout mettre à jour**, au-dessus de la liste, s'appliquent à toutes les lignes. Le choix fait sur une ligne l'emporte sur le choix pour toutes. **Tout écarter** écarte toutes les lignes, y compris celles que vous avez choisies une à une. Chaque choix vérifie le fichier de nouveau.
 
 Si BL-12 change entre la vérification et le chargement, la ligne est refusée avec « BL-12 a changé depuis la vérification. » Choisissez de nouveau ce qu'elle devient.
 
