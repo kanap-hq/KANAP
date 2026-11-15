@@ -172,7 +172,7 @@ export class AiImportRunnerService {
       case 'portfolio_projects':
         return this.projects.import(file, merge, { manager, tenantId, userId, language });
       case 'portfolio_requests':
-        return this.requests.import(file, merge, { manager, tenantId, userId });
+        return this.requests.import(file, merge, { manager, tenantId, userId, language });
       case 'tasks':
         return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: await this.incidentViewer(context) });
       case 'incidents': {
@@ -310,12 +310,16 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
   const issues: AiImportRunDto['issues'] = [];
   for (const error of errors) tally(issues, 'error', error.code ?? null, error.column ?? null, personLine(error.row, lines));
   for (const warning of warnings) tally(issues, 'warning', warning.code ?? null, warning.column ?? null, personLine(warning.row, lines));
+  const ok = result.ok === true && errors.length === 0;
+  const inserted = result.inserted ?? 0;
+  const updated = result.updated ?? 0;
   return {
-    ok: result.ok === true && errors.length === 0,
+    ok,
+    ...(dryRun && nothingToImport({ ok, inserted, updated }) ? { nothing_to_import: true as const } : {}),
     dry_run: dryRun,
     total: result.total ?? result.processed ?? lines.length,
-    inserted: result.inserted ?? 0,
-    updated: result.updated ?? 0,
+    inserted,
+    updated,
     unchanged: result.unchanged ?? 0,
     skipped: result.skipped ?? 0,
     error_count: errors.length,
@@ -327,6 +331,38 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
       warnings: warnings.slice(0, KEPT_WARNINGS).map((warning) => message(warning, lines)),
     },
   };
+}
+
+/**
+ * Whether a check that passed leaves nothing to write (P5 of 26.11.9): no record created or updated
+ * and, for the budget file, no supplier or dimension value created. Every import counts what it
+ * writes: a row whose owners, data residency, viewers, contacts, metrics, document texts or
+ * operating system change is an update (each import's `sameAsStored` or its equivalent compares
+ * them), so a file that changes only those is never "nothing to import".
+ */
+export function nothingToImport(counts: { ok: boolean; inserted: number; updated: number; newSuppliers?: number; newDimensionValues?: number }): boolean {
+  return counts.ok
+    && counts.inserted + counts.updated + (counts.newSuppliers ?? 0) + (counts.newDimensionValues ?? 0) === 0;
+}
+
+/** The facts of the approval of a refused check, for every import. */
+const CANNOT_BE_APPROVED = 'This card cannot be approved: the check found errors (issues). Nothing is created or imported until they are corrected.';
+
+function unchangedNote(count: number, what: string): string {
+  return count > 0 ? ` (${count} ${what} unchanged)` : '';
+}
+
+/**
+ * What the approval of a row import's check does, in one sentence, from its counts (lot I2 of
+ * 26.11.9): the records it creates, updates and leaves unchanged, or that there is nothing to import.
+ * The imports of these lists report counts only: the sentence names no record.
+ */
+export function rowsApprovalFacts(run: Pick<AiImportRunDto, 'ok' | 'inserted' | 'updated' | 'unchanged'>): string {
+  if (!run.ok) return CANNOT_BE_APPROVED;
+  if (nothingToImport(run)) {
+    return `Nothing to import: the approval would create and update nothing${unchangedNote(run.unchanged, 'records')}. The card cannot be approved.`;
+  }
+  return `On approval: ${run.inserted} records created, ${run.updated} updated, ${run.unchanged} unchanged.`;
 }
 
 /**
@@ -473,9 +509,7 @@ function byNature(total: number, counts: Record<BudgetNature, number> | undefine
  * existing ones. The model announces this and nothing else (a small model does not count from the lists).
  */
 export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatching): string {
-  if (answer.ok !== true) {
-    return 'This card cannot be approved: the check found errors (issues). Nothing is created or imported until they are corrected.';
-  }
+  if (answer.ok !== true) return CANNOT_BE_APPROVED;
   const created = matching.candidates.filter((entry) => entry.outcome === 'create');
   const suppliers = answer.creates?.supplierCount ?? 0;
   const values = answer.creates?.dimensionValueCount ?? 0;
@@ -492,6 +526,12 @@ export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatc
     ? `; ${look.count} rows of the file look like existing lines: ${look.ignored} left out, ${look.created} created anyway, `
       + `${look.updated} updating the line they look like`
     : '';
+  if (nothingToImport({ ok: true, inserted: changes.created, updated: changes.updated, newSuppliers: suppliers, newDimensionValues: values })) {
+    return `Nothing to import: the approval would create and update nothing${unchangedNote(changes.unchanged, 'lines')}${lookalikes}. `
+      + (look && look.ignored > 0
+        ? 'The card cannot be approved unless the person chooses on the card to create such a row anyway or to update the line it looks like.'
+        : 'The card cannot be approved.');
+  }
   return `On approval: ${changes.created} lines created${byNature(changes.created, split?.created)}, `
     + `${changes.updated} updated${byNature(changes.updated, split?.updated)}; `
     + `${suppliers} suppliers created${listed(supplierNames, suppliers)}; `
@@ -529,9 +569,17 @@ export function budgetBilan(
   delete shown.snapshot;
   const isCheck = answer.changes !== undefined;
   const similar = isCheck ? similarLines(answer, lines) : undefined;
+  const nothing = isCheck && nothingToImport({
+    ok: answer.ok === true,
+    inserted: answer.changes!.created,
+    updated: answer.changes!.updated,
+    newSuppliers: answer.creates?.supplierCount,
+    newDimensionValues: answer.creates?.dimensionValueCount,
+  });
   return {
     ...(isCheck && answer.matching ? { on_approval: approvalFacts(answer, answer.matching) } : {}),
     ok: answer.ok === true,
+    ...(nothing ? { nothing_to_import: true as const } : {}),
     dry_run: dryRun,
     total: lines.length,
     inserted: isCheck ? answer.changes!.created : answer.inserted ?? 0,

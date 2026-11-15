@@ -9,6 +9,7 @@ import {
   importCountsText,
   personWriteLanguage,
   PREVIEW_IMPORT_CHECK_FAILED_MESSAGE,
+  PREVIEW_IMPORT_NOTHING_MESSAGE,
   previewSummaryText,
   writeActionText,
 } from '../../ai-write-texts';
@@ -81,7 +82,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     + 'For a budget file, the check matches suppliers and dimension values to existing ones before creating any (accents, the four '
     + 'languages of the recommended dimensions, your `values`) and returns `matching`: the matches, your refused proposals, and the values '
     + 'nothing matched with their closest names. '
-    + 'Requires explicit user approval. Approving runs the import with the user\'s rights; a card whose check found errors cannot be approved.';
+    + 'Requires explicit user approval. Approving runs the import with the user\'s rights; a card whose check found errors cannot be approved, '
+    + 'nor a card with nothing to create or update (`nothing_to_import`).';
   readonly inputSchema = PrepareImportMappingInputSchema;
   readonly inputSummary = {
     attachment_id: 'The id of the attached spreadsheet, from its `<attached_table id="...">` summary.',
@@ -114,10 +116,13 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + '(`matching.create_suppliers`): `new_suppliers` counts the suppliers the approval creates and the card lists them; '
       + '`new_dimension_values` counts the dimension values the approval creates, and the `matching.candidates` of outcome create name them '
       + '(one entry per value created; `matching.totals` gives the length of a list cut to its first entries). '
-      + '`import_mapping.on_approval` says in one sentence what the approval creates, by name, and what the check matched: '
-      + 'announce exactly that, never a creation it does not name (none when it says 0), and call a matched value matched. '
+      + '`import_mapping.on_approval` says in one sentence what the approval creates and updates (for a budget file, by name, '
+      + 'with what the check matched): announce exactly that, never a creation, an update or a record\'s name it does not carry '
+      + '(none when it says 0), and call a matched value matched. Do not say the card will name records: it shows the counts of that sentence. '
+      + 'When it says "Nothing to import", say so: the card cannot be approved (`validation.nothing_to_import`). '
       + 'Give no count of what the approval creates or updates (by nature included) other than the counts of that sentence, '
       + 'and never count the lines of the file yourself; lines in error, line numbers and amounts stay yours to cite. '
+      + 'Name a value of a fixed list (a status, a priority) by its name in the template\'s `entries`, never by its code. '
       + 'Rows that look like a budget line the person reads (`similar_lines`) are left out unless the person chooses on the card '
       + 'to create them anyway or to update that line; the card holds those choices: never announce such a row as created. '
       + 'The person\'s choices on the card (`matching.choices`) are kept when you call again for the same file. '
@@ -208,10 +213,22 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     return pending.mutation_input?.attachment_id === replacement.mutation_input?.attachment_id;
   }
 
-  /** A card whose check refused the file cannot be approved: the card shows its errors, and "Approve all" leaves it out. */
+  /**
+   * A card whose check refused the file cannot be approved: the card shows its errors. Nor can a card
+   * with nothing to import (P5 of 26.11.9). "Approve all" leaves both out.
+   */
   isApprovable(preview: AiMutationPreview): boolean {
     const mapping = (preview.current_values?.import_mapping ?? null) as AiImportMappingPreviewDto | null;
-    return mapping?.validation?.ok !== false;
+    return mapping?.validation?.ok !== false && mapping?.validation?.nothing_to_import !== true;
+  }
+
+  /**
+   * A card with nothing to import: its approval is refused before the import runs, and the card stays
+   * pending (a budget file's choice, "Create anyway", can still give it something to import).
+   */
+  approvalRefusal(preview: AiMutationPreview): string | null {
+    const mapping = (preview.current_values?.import_mapping ?? null) as AiImportMappingPreviewDto | null;
+    return mapping?.validation?.ok === true && mapping.validation.nothing_to_import === true ? PREVIEW_IMPORT_NOTHING_MESSAGE : null;
   }
 
   presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {

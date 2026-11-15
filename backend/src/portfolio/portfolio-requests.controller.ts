@@ -249,9 +249,13 @@ export class PortfolioRequestsController {
     @Query('dryRun') dryRun: string = 'true',
     @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
+    @Query('language') languageRaw: string | undefined,
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
+    const manager = req?.queryRunner?.manager;
+    // The screen's language (the user's own when the screen sends none): a refusal names a status in it.
+    const language = await languageOf(manager, tenantId, req.user?.sub ?? null, languageRaw);
     return this.csvSvc.import(
       file,
       {
@@ -260,9 +264,10 @@ export class PortfolioRequestsController {
         operation,
       },
       {
-        manager: req?.queryRunner?.manager,
+        manager,
         tenantId,
         userId: req.user?.sub,
+        language,
       },
     );
   }

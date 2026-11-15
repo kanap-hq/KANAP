@@ -66,6 +66,13 @@ export interface AiMutationOperation<TInput = unknown> {
    */
   isApprovable?(preview: AiMutationPreview): boolean;
 
+  /**
+   * Why a pending preview's approval is refused while the preview stays pending (an import with
+   * nothing to import, which a choice on the card can change), or null. A fixed preview error
+   * (`ai-write-texts`), checked before anything runs.
+   */
+  approvalRefusal?(preview: AiMutationPreview): string | null;
+
   /** The card of a preview: its summary in the person's language (English when not given). */
   presentPreview(preview: AiMutationPreview, language?: AiWriteLanguage): AiMutationPreviewPresentation;
 

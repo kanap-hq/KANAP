@@ -128,6 +128,19 @@ async function importRows(runner: QueryRunner, s: Seed) {
   );
 }
 
+/** A card with nothing to import: its approval alone is refused, the card stays pending, in the person's language. */
+async function assertNothingRefused(h: Harness, context: any, previewId: string) {
+  const { PREVIEW_IMPORT_NOTHING_MESSAGE, previewErrorText } = require('../ai-write-texts');
+  const refused = await h.previews.executePreview(context, previewId);
+  assert.equal(refused.status, 'pending', JSON.stringify(refused));
+  assert.equal(refused.error_message, PREVIEW_IMPORT_NOTHING_MESSAGE);
+  assert.match(refused.error_message, /^Nothing to import:/);
+  assert.match(previewErrorText('fr', PREVIEW_IMPORT_NOTHING_MESSAGE), /^Rien à importer/);
+  // "Approve all" of this card alone: refused the same way, never run.
+  const { results } = await h.previews.executePreviewsWithFollowUps(context, [previewId]);
+  assert.deepEqual(results.map((preview: any) => [preview.status, preview.error_message]), [['pending', PREVIEW_IMPORT_NOTHING_MESSAGE]]);
+}
+
 async function testApplications(h: Harness, runner: QueryRunner, s: Seed) {
   const admin = ctx(runner, s, 'admin');
   // A title row above the header, a blank row: the person's lines 3, 5 and 6 are the data rows.
@@ -193,13 +206,21 @@ async function testApplications(h: Harness, runner: QueryRunner, s: Seed) {
     },
   );
 
-  // The same file attached again: the import matches the applications by name and creates none.
+  // The facts of the approval, for every import (lot I2 of 26.11.9): counts only.
+  assert.equal(card.import_mapping.on_approval, 'On approval: 3 records created, 0 updated, 0 unchanged.');
+
+  // The same file attached again: every application is stored as the file says. Nothing to import
+  // (P5 of 26.11.9): the card says so, and its approval alone is refused and leaves it pending.
   const same = attach(h, 'Inventaire applicatif.csv', h.files.get(file)!.buffer.toString('utf8'));
   const again = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: same, entity_type: 'applications', columns: corrected });
-  const repeat = await h.previews.executePreview(admin, again.preview_id);
-  assert.equal(repeat.status, 'executed', repeat.error_message ?? '');
-  assert.equal(repeat.import_mapping.result.inserted, 0);
-  assert.equal(repeat.import_mapping.result.inserted + repeat.import_mapping.result.updated + repeat.import_mapping.result.unchanged, 3);
+  const nothing = again.import_mapping.validation;
+  assert.equal(nothing.ok, true, JSON.stringify(nothing));
+  assert.deepEqual([nothing.inserted, nothing.updated, nothing.unchanged], [0, 0, 3]);
+  assert.equal(nothing.nothing_to_import, true);
+  assert.equal(again.import_mapping.on_approval,
+    'Nothing to import: the approval would create and update nothing (3 records unchanged). The card cannot be approved.');
+  await assertNothingRefused(h, admin, again.preview_id);
+  assert.equal((await importRows(runner, s)).length, 1, 'nothing imported');
   console.log('  applications: checked on the person\'s lines, refused, corrected, imported, audited: OK');
 }
 
@@ -358,6 +379,100 @@ async function testSuppliers(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  suppliers: imported; an update that would clear a column refused: OK');
 }
 
+// Imports that write beyond their record's columns (owners, data residency, viewers): their check
+// compares those too, so a file that changes only them updates the record and is approvable.
+async function testOwnersAndResidency(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const [{ email }] = await runner.query(`SELECT email FROM users WHERE id = $1`, [s.users.admin]);
+  const approve = async (name: string, text: string, entity: string, columns: any[]) => {
+    const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attach(h, name, text), entity_type: entity, columns });
+    const check = card.import_mapping.validation;
+    assert.equal(check.ok, true, JSON.stringify(check));
+    assert.equal(check.nothing_to_import, undefined, `${name}: something to import`);
+    const done = await h.previews.executePreview(admin, card.preview_id);
+    assert.equal(done.status, 'executed', done.error_message ?? '');
+    return check;
+  };
+  const owners = await approve('responsables.csv', `Appli;Responsable métier\nCheeseTrack;${email}\n`, 'applications', [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'business_owner_email_1', source: 2, confidence: 'high' },
+  ]);
+  assert.deepEqual([owners.inserted, owners.updated], [0, 1]);
+  const residency = await approve('résidence.csv', 'Appli;Résidence\nCheeseTrack;France\n', 'applications', [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'data_residency', source: 2, confidence: 'high' },
+  ]);
+  assert.deepEqual([residency.inserted, residency.updated], [0, 1]);
+  const [app] = await runner.query(
+    `SELECT (SELECT count(*)::int FROM application_owners o WHERE o.tenant_id = a.tenant_id AND o.application_id = a.id) AS owners,
+            (SELECT string_agg(country_iso, ',') FROM application_data_residency r WHERE r.tenant_id = a.tenant_id AND r.application_id = a.id) AS residency
+       FROM applications a WHERE a.tenant_id = $1 AND a.name = 'CheeseTrack'`,
+    [s.tenantId],
+  );
+  assert.deepEqual(app, { owners: 1, residency: 'FR' });
+
+  const task = [{ column: 'title', source: 1, confidence: 'high' }];
+  await approve('tâches.csv', 'Tâche\nInventaire des caves\n', 'tasks', task);
+  const viewers = await approve('observateurs.csv', `Tâche;Observateur;Responsable\nInventaire des caves;${email};${email}\n`, 'tasks', [
+    ...task,
+    { column: 'viewer_email_1', source: 2, confidence: 'high' },
+    { column: 'owner_email_1', source: 3, confidence: 'high' },
+  ]);
+  assert.deepEqual([viewers.inserted, viewers.updated], [0, 1]);
+  const [stored] = await runner.query(`SELECT viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND title = 'Inventaire des caves'`, [s.tenantId]);
+  assert.deepEqual(stored, { viewer_ids: [s.users.admin], owner_ids: [s.users.admin] });
+  console.log('  owners, data residency, viewers: a file that changes only them is approvable: OK');
+}
+
+// Projects: a status named in French is read; the same file again has nothing to import, and
+// "Approve all" leaves out its cards. A status the screen's import refuses is named in the
+// person's language, and the model reads each code with its name.
+async function testProjects(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const text = "Projet;Statut\nCave connectée;Liste d'attente\nAffinage;Suspendu\n";
+  const columns = [{ column: 'name', source: 1, confidence: 'high' }, { column: 'status', source: 2, confidence: 'high' }];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attach(h, 'projets.csv', text), entity_type: 'portfolio_projects', columns });
+  assert.equal(card.import_mapping.validation.ok, true, JSON.stringify(card.import_mapping.validation));
+  assert.equal(card.import_mapping.on_approval, 'On approval: 2 records created, 0 updated, 0 unchanged.');
+  assert.equal((await h.previews.executePreview(admin, card.preview_id)).status, 'executed');
+  const stored = await runner.query(`SELECT name, status FROM portfolio_projects WHERE tenant_id = $1 ORDER BY name`, [s.tenantId]);
+  assert.deepEqual(stored.map((row: any) => [row.name, row.status]), [['Affinage', 'on_hold'], ['Cave connectée', 'waiting_list']]);
+
+  const first = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attach(h, 'projets.csv', text), entity_type: 'portfolio_projects', columns });
+  const second = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attach(h, 'projets (copie).csv', text), entity_type: 'portfolio_projects', columns });
+  for (const pending of [first, second]) {
+    assert.equal(pending.import_mapping.validation.nothing_to_import, true, JSON.stringify(pending.import_mapping.validation));
+    assert.match(pending.import_mapping.on_approval, /^Nothing to import: the approval would create and update nothing \(2 records unchanged\)/);
+  }
+  const { results } = await h.previews.executePreviewsWithFollowUps(admin, [first.preview_id, second.preview_id]);
+  assert.deepEqual(results, [], 'approve all leaves out a card with nothing to import');
+  const kept = (await h.previews.listConversationPreviews(admin, s.conversations.admin))
+    .filter((preview: any) => preview.preview_id === first.preview_id || preview.preview_id === second.preview_id);
+  assert.deepEqual(kept.map((preview: any) => [preview.status, preview.error_message]), [['pending', null], ['pending', null]]);
+  await assertNothingRefused(h, admin, first.preview_id);
+  await h.previews.rejectPreview(admin, first.preview_id);
+  await h.previews.rejectPreview(admin, second.preview_id);
+
+  // The model reads each status with its name in the person's language.
+  const template = await h.mapping.describeTemplate(admin, 'portfolio_projects', 'fr');
+  const status = template.columns.find((column: any) => column.column === 'status');
+  assert.ok(status.codes.includes('waiting_list'));
+  assert.deepEqual(status.entries.find((entry: any) => entry.code === 'on_hold'), { code: 'on_hold', name: 'Suspendu' });
+
+  // The screen's import: a status it does not know is refused with the names of the person's
+  // language, and a name of the list is read as its status.
+  const { PortfolioProjectsCsvService } = require('../../portfolio/portfolio-projects-csv.service');
+  const screen = h.app.get(PortfolioProjectsCsvService);
+  const csv = { fieldname: 'file', originalname: 'p.csv', encoding: '7bit', mimetype: 'text/csv',
+    buffer: Buffer.from('name;status\nVieillissement;Bidon\nAffinage;Planifié\n', 'utf8') } as any;
+  const checked = await screen.import(csv, { dryRun: true, mode: 'enrich', operation: 'upsert' }, { manager: runner.manager, tenantId: s.tenantId, userId: s.users.admin, language: 'fr' });
+  assert.deepEqual(checked.errors.map((error: any) => [error.row, error.code, error.params]), [
+    [2, 'CSV_ENUM_INVALID', { value: 'Bidon', allowed: "Liste d'attente, Planifié, En cours, En test, Suspendu, Terminé, Annulé" }],
+  ]);
+  assert.equal(checked.updated, 1, 'Planifié read as planned');
+  console.log('  projects: names read, nothing to import, approve all leaves the cards out, statuses named: OK');
+}
+
 async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
   const { AI_IMPORT_KEYS } = require('../import/ai-import-access');
   const admin = ctx(runner, s, 'admin');
@@ -398,6 +513,8 @@ async function run() {
       const s = await seed(runner);
       await testEveryImportChecks(harness, runner, s);
       await testApplications(harness, runner, s);
+      await testOwnersAndResidency(harness, runner, s);
+      await testProjects(harness, runner, s);
       await testPreparedFile(harness, runner, s);
       await testIncidentRights(harness, runner, s);
       await testBudgetFile(harness, runner, s);

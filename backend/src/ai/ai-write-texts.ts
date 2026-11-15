@@ -1504,7 +1504,19 @@ export const PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE =
 export const PREVIEW_IMPORT_CHECK_FAILED_MESSAGE =
   'The check of this file found errors, so nothing was imported. Correct the mapping or the file, then prepare the import again.';
 
+/**
+ * The approval of an import card whose check found nothing to create or update (lot I2 of 26.11.9):
+ * refused, and the card stays pending, so a choice on it can still give it something to import.
+ */
+export const PREVIEW_IMPORT_NOTHING_MESSAGE =
+  'Nothing to import: this file creates and changes nothing, so there is nothing to approve.';
+
 const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
+  [PREVIEW_IMPORT_NOTHING_MESSAGE]: {
+    fr: "Rien à importer : ce fichier ne crée et ne modifie rien, il n'y a donc rien à approuver.",
+    de: 'Nichts zu importieren: Diese Datei erstellt und ändert nichts, daher gibt es nichts zu genehmigen.',
+    es: 'Nada que importar: este archivo no crea ni modifica nada, así que no hay nada que aprobar.',
+  },
   [PREVIEW_IMPORT_CHECK_FAILED_MESSAGE]: {
     fr: "La vérification de ce fichier a trouvé des erreurs : rien n'a été importé. Corrigez la correspondance ou le fichier, puis préparez l'import de nouveau.",
     de: 'Die Prüfung dieser Datei hat Fehler gefunden, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.',

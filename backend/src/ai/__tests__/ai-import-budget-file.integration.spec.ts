@@ -486,12 +486,28 @@ async function testEnglishSampleLinesLookLikeExisting(h: Harness, runner: QueryR
   assert.ok(lookalikes.lines.every((entry: any) => entry.updatable === true && /^[0-9a-f]{16}$/.test(entry.target.state)));
   assert.equal(check.similar_lines.count, 8);
   assert.deepEqual(check.similar_lines.first[0], { file_line: 2, looks_like: refOf('Caisses Cegid des magasins'), reason: 'amounts', outcome: 'ignored' });
-  assert.match(card.import_mapping.on_approval, /^On approval: 0 lines created, 0 updated; 0 suppliers created; 0 dimension values created; 0 values of the file matched to existing ones; 8 rows of the file look like existing lines: 8 left out, 0 created anyway, 0 updating the line they look like\.$/);
+  // Nothing to import (P5 of 26.11.9): the card says so, its approval alone is refused and leaves it
+  // pending, and "Approve all" leaves it out.
+  assert.equal(check.nothing_to_import, true);
+  assert.equal(card.import_mapping.on_approval, 'Nothing to import: the approval would create and update nothing; '
+    + '8 rows of the file look like existing lines: 8 left out, 0 created anyway, 0 updating the line they look like. '
+    + 'The card cannot be approved unless the person chooses on the card to create such a row anyway or to update the line it looks like.');
+  const { PREVIEW_IMPORT_NOTHING_MESSAGE, previewErrorText } = require('../ai-write-texts');
+  const twin = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachEnglish(h), entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
+  assert.equal(twin.import_mapping.validation.nothing_to_import, true);
+  const { results: none } = await h.previews.executePreviewsWithFollowUps(admin, [card.preview_id, twin.preview_id]);
+  assert.deepEqual(none, [], 'approve all leaves out a card with nothing to import');
+  await h.previews.rejectPreview(admin, twin.preview_id);
+  const refused = await h.previews.executePreview(admin, card.preview_id);
+  // In the person's language: French here.
+  assert.deepEqual([refused.status, refused.error_message], ['pending', previewErrorText('fr', PREVIEW_IMPORT_NOTHING_MESSAGE)]);
+  assert.deepEqual(await referenceCounts(runner, s), before, 'nothing written');
 
   // "Create all anyway": the eight rows are new lines again, and lot I1's matches are back.
   const all = await h.previews.replaceImportChoices(admin, card.preview_id, [{ kind: 'lookalikes', action: 'create' }]);
   const created = all.import_mapping.validation;
   assert.equal(created.ok, true);
+  assert.equal(created.nothing_to_import, undefined, 'a choice to create makes the card approvable');
   assert.equal(created.inserted, 8);
   assert.equal(created.skipped, 0);
   assert.equal(created.new_suppliers, 0, 'no supplier created');
@@ -522,6 +538,7 @@ async function testEnglishSampleLinesLookLikeExisting(h: Harness, runner: QueryR
   const one = await h.previews.replaceImportChoices(admin, all.preview_id, [{ kind: 'lookalike', line: 7, action: 'create' }]);
   assert.equal(one.import_mapping.validation.inserted, 1);
   assert.equal(one.import_mapping.validation.skipped, 7);
+  assert.equal(one.import_mapping.validation.nothing_to_import, undefined);
   const done = await h.previews.executePreview(admin, one.preview_id);
   assert.equal(done.status, 'executed', done.error_message ?? '');
   assert.deepEqual(await referenceCounts(runner, s), { suppliers: before.suppliers, values: before.values, lines: 9 });
@@ -612,13 +629,16 @@ async function testChoiceKeepsItsLine(h: Harness, runner: QueryRunner, s: Seed) 
 // card names the change on the row, and the person chooses again.
 async function testUpdatedLineChangedBeforeApproval(h: Harness, runner: QueryRunner, s: Seed) {
   const admin = ctx(runner, s, 'admin');
-  const attachment = attachEnglish(h);
+  // A revised amount: the update changes the line (an update that changes nothing has nothing to import).
+  const attachment = randomUUID();
+  h.files.set(attachment, { name: 'fromage budget EN v2.xlsx', buffer: englishWorkbook({ microsoft: 700000 }) });
   const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
   const target = card.import_mapping.validation.report.file.lookalikes.lines.find((entry: any) => entry.line === 5);
   const chosen = await h.previews.replaceImportChoices(admin, card.preview_id, [
     { kind: 'lookalike', line: 5, action: 'update', item: target.target.item, state: target.target.state },
   ]);
   assert.equal(chosen.import_mapping.validation.ok, true);
+  assert.equal(chosen.import_mapping.validation.updated, 1);
   await runner.query(`UPDATE spend_items SET notes = 'changed meanwhile' WHERE tenant_id = $1 AND item_number = $2`, [s.tenantId, target.target.item]);
   const failed = await h.previews.executePreview(admin, chosen.preview_id);
   assert.equal(failed.status, 'failed');

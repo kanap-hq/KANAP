@@ -482,8 +482,9 @@ export type AiPreviewClassificationCatalog = 'businessCriticalityLevels' | 'cybe
 /** How the columns of an attached spreadsheet map to an import's template, shown on the preview card. */
 export type AiImportMappingPreviewDto = {
   /**
-   * The budget file's check, in one sentence the model reads first: what the approval creates (by
-   * name) and what the check matched to existing values. Built from the counts and the matching.
+   * The check, in one sentence the model reads first: what the approval creates and updates, in
+   * counts, or that there is nothing to import; for the budget file, the lines, suppliers and
+   * dimension values by name and what the check matched to existing values (lot I2 of 26.11.9).
    */
   on_approval?: string;
   /** The import, by its key (`applications`, `budget_lines`, ...). */
@@ -549,9 +550,14 @@ export type AiImportReportMessage = {
  * `issues` reach the model, with the budget file's `matching`; `report` holds the messages, written for the person, for the card.
  */
 export type AiImportRunDto = {
-  /** The budget file's check: what the approval creates and what it matched, in one sentence (`approvalFacts`). */
+  /** The check's facts of the approval, in one sentence (`approvalFacts`, `rowsApprovalFacts`); moved to the mapping. */
   on_approval?: string;
   ok: boolean;
+  /**
+   * A check that passed with nothing to create or update (lot I2 of 26.11.9): the card says "Nothing
+   * to import" and cannot be approved. Absent otherwise.
+   */
+  nothing_to_import?: true;
   dry_run: boolean;
   total: number;
   inserted: number;

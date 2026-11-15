@@ -1162,6 +1162,22 @@ supplier (same nature, currency, year and measure); a start after the last year
 of the row's amounts or an end before the first; a currency other than the paying
 company's (`warnings.consistency`).
 
+Every import's check carries `on_approval` (lot I2 of 26.11.9): the budget
+file's sentence above, or the counts of a row import (created, updated,
+unchanged; no record named). A check that passes with nothing to create or
+update, and for the budget file no supplier or dimension value to create, sets
+`nothing_to_import`: the operation's `isApprovable` is false, so "Approve all"
+leaves the card out, and its `approvalRefusal` refuses a single approval before
+anything runs, the card staying pending with a fixed message
+(`PREVIEW_IMPORT_NOTHING_MESSAGE`), so a choice on a budget card can still give
+it something to import. Imports count every write in their own counts: owners,
+data residency, viewers, supplier contacts, company metrics, document texts and
+operating systems are compared by each import's `sameAsStored` or its
+equivalent, so a file that changes only them is an update. A fixed list's values
+reach the model with their names (`entries` of `describe_import_template`), and
+the screens' row import reads a name in any of the four languages and refuses an
+unknown value with the names of the person's language (`CSV_ENUM_INVALID`).
+
 Writes go through existing domain services where practical, so normal validation,
 workflow rules, side effects, and audit logging still apply. AI-originated domain
 audit rows use `source: ai_chat` and the preview ID as `sourceRef`.
