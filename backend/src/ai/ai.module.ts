@@ -188,6 +188,7 @@ import { UpdateTechnologyWebLinksAiMutationOperation } from './mutation/operatio
 import { SetTechnologyVulnerabilityAlertsAiMutationOperation } from './mutation/operations/set-technology-vulnerability-alerts.ai-mutation-operation';
 import { ChangeVulnerabilityStateAiMutationOperation } from './mutation/operations/change-vulnerability-state.ai-mutation-operation';
 import { BulkUpdateBudgetLinesAiMutationOperation } from './mutation/operations/bulk-update-budget-lines.ai-mutation-operation';
+import { BulkUpdateApplicationsAiMutationOperation } from './mutation/operations/bulk-update-applications.ai-mutation-operation';
 import { UpdateMasterDataRecordAiMutationOperation } from './mutation/operations/update-master-data-record.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from './mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskFieldsAiMutationOperation } from './mutation/operations/update-task-fields.ai-mutation-operation';
@@ -351,6 +352,7 @@ import { AiHelpManualService } from './ai-help-manual.service';
     SetTechnologyVulnerabilityAlertsAiMutationOperation,
     ChangeVulnerabilityStateAiMutationOperation,
     BulkUpdateBudgetLinesAiMutationOperation,
+    BulkUpdateApplicationsAiMutationOperation,
     UpdateMasterDataRecordAiMutationOperation,
     UpdateTaskFieldsAiMutationOperation,
     UpdateTaskStatusAiMutationOperation,

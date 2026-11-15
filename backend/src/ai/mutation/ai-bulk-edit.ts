@@ -9,9 +9,9 @@ import { BULK_WRITE_TIMEOUTS } from '../../common/request-db-timeouts';
  */
 
 /** Kad's tools of a change in bulk: one card for many rows, never a step of `prepare_mutation_plan`. */
-export const AI_BULK_EDIT_TOOLS: ReadonlySet<string> = new Set(['bulk_update_budget_lines']);
+export const AI_BULK_EDIT_TOOLS: ReadonlySet<string> = new Set(['bulk_update_budget_lines', 'bulk_update_applications']);
 
-export const BULK_EDIT_PLAN_REFUSAL = 'A change in bulk (bulk_update_budget_lines) changes its lines in one card and cannot be part of a mutation plan: call it on its own.';
+export const BULK_EDIT_PLAN_REFUSAL = 'A change in bulk (bulk_update_budget_lines, bulk_update_applications) changes its rows in one card and cannot be part of a mutation plan: call it on its own.';
 
 /**
  * The waits of a change in bulk in Kad's transaction, as the screen's route (`BULK_WRITE_TIMEOUTS`):

@@ -23,6 +23,7 @@ import { UpdateTechnologyWebLinksAiMutationOperation } from './operations/update
 import { SetTechnologyVulnerabilityAlertsAiMutationOperation } from './operations/set-technology-vulnerability-alerts.ai-mutation-operation';
 import { ChangeVulnerabilityStateAiMutationOperation } from './operations/change-vulnerability-state.ai-mutation-operation';
 import { BulkUpdateBudgetLinesAiMutationOperation } from './operations/bulk-update-budget-lines.ai-mutation-operation';
+import { BulkUpdateApplicationsAiMutationOperation } from './operations/bulk-update-applications.ai-mutation-operation';
 import { UpdateTechnologyVersionsAiMutationOperation } from './operations/update-technology-versions.ai-mutation-operation';
 import { UpdateMasterDataRecordAiMutationOperation } from './operations/update-master-data-record.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from './operations/update-task-assignee.ai-mutation-operation';
@@ -56,6 +57,7 @@ export class AiMutationOperationRegistry {
     setTechnologyVulnerabilityAlerts: SetTechnologyVulnerabilityAlertsAiMutationOperation,
     changeVulnerabilityState: ChangeVulnerabilityStateAiMutationOperation,
     bulkUpdateBudgetLines: BulkUpdateBudgetLinesAiMutationOperation,
+    bulkUpdateApplications: BulkUpdateApplicationsAiMutationOperation,
     updateTaskFields: UpdateTaskFieldsAiMutationOperation,
     updateTaskStatus: UpdateTaskStatusAiMutationOperation,
     updateTaskAssignee: UpdateTaskAssigneeAiMutationOperation,
@@ -91,6 +93,7 @@ export class AiMutationOperationRegistry {
       setTechnologyVulnerabilityAlerts,
       changeVulnerabilityState,
       bulkUpdateBudgetLines,
+      bulkUpdateApplications,
       updateTaskFields,
       updateTaskStatus,
       updateTaskAssignee,

@@ -417,6 +417,15 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Move the lines of supplier Acme to cost center IT-01', profile: 'write_financial', mode: 'write', tools: ['bulk_update_budget_lines'] },
   { prompt: 'Set the business owner of all CAPEX lines to Julie Bernard', profile: 'write_financial', mode: 'write', tools: ['bulk_update_budget_lines'] },
   { prompt: 'Quelles lignes du fournisseur Microsoft sont sur le centre de coûts IT-01 ?', profile: 'entity_inspection', mode: 'entity' },
+
+  // K1 (26.11.9): one field on many applications is the change in bulk of applications.
+  { prompt: 'Passe les applications de Acme en criticité haute', profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
+  { prompt: 'Mets Julie Bernard responsable IT des applications retirées', profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
+  { prompt: "Passe les applications de l'éditeur SAP au cycle de vie retirée", profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
+  { prompt: 'Passe APP-3, APP-7 et APP-9 en criticité moyenne', profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
+  { prompt: 'Set the business criticality of the Acme applications to high', profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
+  { prompt: 'Make Julie Bernard the IT owner of the retired applications', profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
+  { prompt: 'Move the applications of supplier Acme to the retired lifecycle', profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
   { prompt: 'Combien de failles sont traitées ?', profile: 'read_query', mode: 'read' },
   { prompt: 'Failles non concernées de TEC-3', profile: 'entity_inspection', mode: 'entity' },
   { prompt: 'Liste les failles traitées sur PostgreSQL', profile: 'read_query', mode: 'read' },

@@ -146,6 +146,9 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
   bulk_update_budget_lines: {
     budget_lines: { resource: 'budget', level: 'member', route: [BudgetLinesController, 'bulkUpdate'] },
   },
+  bulk_update_applications: {
+    applications: { resource: 'applications', level: 'member', route: [ApplicationsController, 'bulkUpdate'] },
+  },
   change_incident_state: {
     incidents: { resource: 'incidents', level: 'admin', route: [IncidentsController, 'reopen'] },
   },

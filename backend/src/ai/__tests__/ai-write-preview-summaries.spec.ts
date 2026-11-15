@@ -20,6 +20,7 @@ import { UpdateTechnologyLinksAiMutationOperation } from '../mutation/operations
 import { UpdateTechnologyPeopleAiMutationOperation } from '../mutation/operations/update-technology-people.ai-mutation-operation';
 import { UpdateTechnologyWebLinksAiMutationOperation } from '../mutation/operations/update-technology-web-links.ai-mutation-operation';
 import { BulkUpdateBudgetLinesAiMutationOperation } from '../mutation/operations/bulk-update-budget-lines.ai-mutation-operation';
+import { BulkUpdateApplicationsAiMutationOperation } from '../mutation/operations/bulk-update-applications.ai-mutation-operation';
 import { ChangeVulnerabilityStateAiMutationOperation } from '../mutation/operations/change-vulnerability-state.ai-mutation-operation';
 import { SetTechnologyVulnerabilityAlertsAiMutationOperation } from '../mutation/operations/set-technology-vulnerability-alerts.ai-mutation-operation';
 import { UpdateTechnologyVersionsAiMutationOperation } from '../mutation/operations/update-technology-versions.ai-mutation-operation';
@@ -579,6 +580,76 @@ function testBudgetLineBulkEditCards() {
   });
   assert.equal(previewErrorText('fr', changed.error_message), 'La liste a changé depuis le comptage : demandez une nouvelle carte à Kad.');
   assert.equal(previewErrorText('fr', PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE), "Une autre opération budgétaire était en cours dans cet espace : rien n'a été modifié. Approuvez de nouveau une fois qu'elle est terminée.");
+}
+
+/** K1 (26.11.9): the card of a change in bulk of applications, in four languages, by filter and by references. */
+function testApplicationBulkEditCards() {
+  const operation = make(BulkUpdateApplicationsAiMutationOperation);
+  const byFilter = preview({
+    tool_name: 'bulk_update_applications',
+    target_entity_type: 'applications',
+    mutation_input: {
+      field: 'criticality',
+      value_words: { en: 'High', fr: 'Haute', de: 'Hoch', es: 'Alta' },
+      filter_parts: [
+        { key: 'supplier', op: 'in', values: ['Acme'] },
+        { key: 'external_facing', op: 'in', values: ['true'] },
+        { key: 'data_class', op: 'in', values: ['internal', null], words: { en: ['Internal', null], fr: ['Interne', null], de: ['Intern', null], es: ['Interna', null] } },
+      ],
+      default_scope: true,
+    },
+    current_values: {
+      values: { rows: 4, changes: 3, unchanged: 1, refused: {}, examples: [{ ref: 'APP-1', title: 'Alpha' }, { ref: 'APP-4', title: 'Delta' }] },
+    },
+  });
+  const card = (value: AiMutationPreview, language: AiWriteLanguage) => operation.presentPreview(value, language).changes.application_bulk_edit.to ?? '';
+  assert.equal(summary(operation, byFilter, 'en'), 'Change Business criticality on 3 applications.');
+  assert.equal(
+    card(byFilter, 'en'),
+    'Filter: Supplier "Acme"; External facing Yes; Data class "Internal", (empty)'
+    + '\n\nScope: enabled applications, retired ones left out'
+    + '\n\nBusiness criticality → High'
+    + '\n\n3 applications to change, 1 already has this value'
+    + '\n\n- APP-1 Alpha\n- APP-4 Delta\n- and 1 more',
+  );
+  assert.equal(summary(operation, byFilter, 'fr'), 'Modification du champ « Criticité business » sur 3 applications.');
+  assert.equal(
+    card(byFilter, 'fr'),
+    'Filtre : Fournisseur « Acme » ; Exposition externe Oui ; Classification des données « Interne », (vide)'
+    + '\n\nPérimètre : applications activées, hors retirées'
+    + '\n\nCriticité business → Haute'
+    + '\n\n3 applications à modifier, 1 a déjà cette valeur'
+    + '\n\n- APP-1 Alpha\n- APP-4 Delta\n- et 1 autre',
+  );
+  assert.equal(summary(operation, byFilter, 'de'), 'Feld „Geschäftskritikalität“ in 3 Anwendungen ändern.');
+  assert.match(card(byFilter, 'de'), /^Filter: Lieferant „Acme“; Extern zugänglich Ja; Datenklasse „Intern“, \(leer\)\n\nUmfang: aktivierte Anwendungen, ohne ausgemusterte\n\nGeschäftskritikalität → Hoch\n\n3 Anwendungen zu ändern/);
+  assert.equal(summary(operation, byFilter, 'es'), 'Modificación del campo «Criticidad de negocio» en 3 aplicaciones.');
+  assert.match(card(byFilter, 'es'), /^Filtro: Proveedor «Acme»; Acceso externo Sí; Clasificación de datos «Interna», \(vacío\)\n\nAlcance: aplicaciones activadas, sin las retiradas\n\nCriticidad de negocio → Alta\n\n3 aplicaciones por modificar/);
+  assert.equal(operation.presentPreview(byFilter, 'fr').changes.application_bulk_edit.label, 'Modification en masse');
+  assert.equal(operation.presentPreview(byFilter, 'fr').target.title, '3 applications');
+
+  // The lifecycle named: the scope keeps the disabled ones out. Owners emptied; then executed, by references.
+  const named = preview({
+    tool_name: 'bulk_update_applications',
+    target_entity_type: 'applications',
+    mutation_input: {
+      field: 'owners_it', value_words: null,
+      filter_parts: [{ key: 'lifecycle', op: 'in', values: ['retired'], words: { en: ['Retired'], fr: ['Retirée'], de: ['Ausgemustert'], es: ['Retirada'] } }],
+      default_scope: false,
+    },
+    current_values: { values: { rows: 1, changes: 1, unchanged: 0, refused: {}, examples: [{ ref: 'APP-3', title: 'Charlie' }] } },
+  });
+  assert.equal(card(named, 'fr'), 'Filtre : Cycle de vie « Retirée »\n\nPérimètre : applications activées\n\nResponsables IT → Vide\n\n1 application à modifier\n\n- APP-3 Charlie');
+  const executed = preview({
+    tool_name: 'bulk_update_applications',
+    target_entity_type: 'applications',
+    status: 'executed',
+    mutation_input: { field: 'lifecycle', value_words: { en: 'Retired', fr: 'Retirée', de: 'Ausgemustert', es: 'Retirada' }, refs: ['APP-3', 'APP-7'] },
+    current_values: { values: { rows: 2, changes: 2, unchanged: 0, refused: {}, examples: [] }, applied: { changed: 2, unchanged: 0, refused: {} } },
+  });
+  assert.equal(card(executed, 'en'), 'Chosen applications: APP-3, APP-7\n\nLifecycle → Retired\n\n2 applications to change');
+  assert.equal(summary(operation, executed, 'en'), 'Lifecycle changed on 2 applications.');
+  assert.equal(summary(operation, executed, 'es'), 'Aplicada: modificación del campo «Ciclo de vida» en 2 aplicaciones.');
 }
 
 function testVulnerabilityStateCards() {
@@ -1468,6 +1539,7 @@ async function main() {
   testTechnologyPeopleLinksAndAlertsCards();
   testVulnerabilityStateCards();
   testBudgetLineBulkEditCards();
+  testApplicationBulkEditCards();
   testIncidentStateAndConfidentialityCards();
   testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();

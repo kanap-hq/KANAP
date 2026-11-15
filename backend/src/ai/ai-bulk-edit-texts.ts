@@ -6,7 +6,8 @@ import { escapeMarkdownLabel, quoted, type AiTranslatedWriteLanguage, type AiWri
  * value, the counts, the refusals and the first rows. The words the list screens already show come
  * from their locale files and are checked against them by `ai-bulk-edit-texts.spec.ts` (the column
  * labels of the budget lines list, the field labels of its "Change the selection" dialog, the
- * refusals of that dialog). Shared by the cards of the budget lines and, next, of the applications.
+ * refusals of that dialog), and the same for the applications list. Shared by the cards of the
+ * budget lines and of the applications.
  */
 
 type Words = Readonly<Record<AiWriteLanguage, string>>;
@@ -126,6 +127,53 @@ export const BUDGET_LINE_BULK_FIELD_LABELS: WordTable = {
   },
 };
 
+/**
+ * The fields of the applications Kad's filter accepts, labelled as the columns of the list
+ * (`it:pages.applications.columns.*`, `it:common.lifecycle`, `it:classification.*`,
+ * `it:pages.interfaces.columns.containsPii`).
+ */
+export const APPLICATION_FILTER_LABELS: WordTable = {
+  en: {
+    lifecycle: 'Lifecycle', criticality: 'Business criticality', cyber_criticality: 'Cyber criticality', data_class: 'Data class',
+    recovery_wave: 'Recovery wave', category: 'Category', supplier: 'Supplier', editor: 'Publisher', it_owner: 'IT owners',
+    business_owner: 'Business owners', external_facing: 'External facing', contains_pii: 'Contains PII',
+  },
+  fr: {
+    lifecycle: 'Cycle de vie', criticality: 'Criticité business', cyber_criticality: 'Criticité cyber', data_class: 'Classification des données',
+    recovery_wave: 'Vague de reprise', category: 'Catégorie', supplier: 'Fournisseur', editor: 'Éditeur', it_owner: 'Responsables IT',
+    business_owner: 'Responsables métier', external_facing: 'Exposition externe', contains_pii: 'Contient des PII',
+  },
+  de: {
+    lifecycle: 'Lebenszyklus', criticality: 'Geschäftskritikalität', cyber_criticality: 'Cyberkritikalität', data_class: 'Datenklasse',
+    recovery_wave: 'Wiederanlaufwelle', category: 'Kategorie', supplier: 'Lieferant', editor: 'Herausgeber', it_owner: 'IT-Verantwortliche',
+    business_owner: 'Fachverantwortliche', external_facing: 'Extern zugänglich', contains_pii: 'Enthält PII',
+  },
+  es: {
+    lifecycle: 'Ciclo de vida', criticality: 'Criticidad de negocio', cyber_criticality: 'Criticidad cibernética', data_class: 'Clasificación de datos',
+    recovery_wave: 'Ola de recuperación', category: 'Categoría', supplier: 'Proveedor', editor: 'Editor', it_owner: 'Responsables IT',
+    business_owner: 'Responsables de negocio', external_facing: 'Acceso externo', contains_pii: 'Contiene PII',
+  },
+};
+
+/** The yes and no of the list's yes-or-no columns (`it:enums.yesNo`). */
+export const APPLICATION_YES_NO_WORDS: Readonly<Record<AiWriteLanguage, Readonly<Record<'true' | 'false', string>>>> = {
+  en: { true: 'Yes', false: 'No' },
+  fr: { true: 'Oui', false: 'Non' },
+  de: { true: 'Ja', false: 'Nein' },
+  es: { true: 'Sí', false: 'No' },
+};
+
+/**
+ * The fields Kad changes in bulk on applications, labelled as the "Change the selection" dialog of
+ * the list (`it:pages.applications.columns.*`, `it:common.lifecycle`, `it:classification.business_criticality`).
+ */
+export const APPLICATION_BULK_FIELD_LABELS: WordTable = {
+  en: { owners_business: 'Business owners', owners_it: 'IT owners', lifecycle: 'Lifecycle', criticality: 'Business criticality' },
+  fr: { owners_business: 'Responsables métier', owners_it: 'Responsables IT', lifecycle: 'Cycle de vie', criticality: 'Criticité business' },
+  de: { owners_business: 'Fachverantwortliche', owners_it: 'IT-Verantwortliche', lifecycle: 'Lebenszyklus', criticality: 'Geschäftskritikalität' },
+  es: { owners_business: 'Responsables de negocio', owners_it: 'Responsables IT', lifecycle: 'Ciclo de vida', criticality: 'Criticidad de negocio' },
+};
+
 /** One part of the filter in words: a field and its values (`not`: every value but these; `contains`: a text). */
 export type BulkFilterPart = { label: string; op: 'in' | 'not' | 'contains'; values: Array<string | null>; quote: boolean };
 
@@ -134,10 +182,13 @@ type BulkFamilyWords = {
   rows: (n: number) => string;
   title: (n: number) => string;
   chosen: string;
+  /** The scope of a filter that names none of the list's scope fields. */
   scope: string;
+  /** The scope left when the filter names one (the applications' lifecycle: disabled ones stay out). */
+  namedScope?: string;
 };
 
-const FAMILY_WORDS: Readonly<Record<'budget_lines', Readonly<Record<AiWriteLanguage, BulkFamilyWords>>>> = {
+const FAMILY_WORDS: Readonly<Record<'budget_lines' | 'applications', Readonly<Record<AiWriteLanguage, BulkFamilyWords>>>> = {
   budget_lines: {
     en: {
       rows: (n) => `${n} line${n === 1 ? '' : 's'}`,
@@ -162,6 +213,36 @@ const FAMILY_WORDS: Readonly<Record<'budget_lines', Readonly<Record<AiWriteLangu
       title: (n) => `${n} línea${n === 1 ? '' : 's'} presupuestaria${n === 1 ? '' : 's'}`,
       chosen: 'Líneas elegidas',
       scope: 'Alcance: líneas activadas',
+    },
+  },
+  applications: {
+    en: {
+      rows: (n) => `${n} application${n === 1 ? '' : 's'}`,
+      title: (n) => `${n} application${n === 1 ? '' : 's'}`,
+      chosen: 'Chosen applications',
+      scope: 'Scope: enabled applications, retired ones left out',
+      namedScope: 'Scope: enabled applications',
+    },
+    fr: {
+      rows: (n) => `${n} application${n === 1 ? '' : 's'}`,
+      title: (n) => `${n} application${n === 1 ? '' : 's'}`,
+      chosen: 'Applications choisies',
+      scope: 'Périmètre : applications activées, hors retirées',
+      namedScope: 'Périmètre : applications activées',
+    },
+    de: {
+      rows: (n) => `${n} Anwendung${n === 1 ? '' : 'en'}`,
+      title: (n) => `${n} Anwendung${n === 1 ? '' : 'en'}`,
+      chosen: 'Ausgewählte Anwendungen',
+      scope: 'Umfang: aktivierte Anwendungen, ohne ausgemusterte',
+      namedScope: 'Umfang: aktivierte Anwendungen',
+    },
+    es: {
+      rows: (n) => `${n} aplicaci${n === 1 ? 'ón' : 'ones'}`,
+      title: (n) => `${n} aplicaci${n === 1 ? 'ón' : 'ones'}`,
+      chosen: 'Aplicaciones elegidas',
+      scope: 'Alcance: aplicaciones activadas, sin las retiradas',
+      namedScope: 'Alcance: aplicaciones activadas',
     },
   },
 };
@@ -234,6 +315,7 @@ export function bulkEditCardText(card: BulkEditCard, language: AiWriteLanguage):
     const parts = card.selection.parts.map((part) => filterPartText(part, language));
     blocks.push(escapeMarkdownLabel(`${FILTER[language]}${colon}${parts.join(SEPARATOR[language])}`));
     if (card.selection.defaultScope) blocks.push(words.scope);
+    else if (words.namedScope) blocks.push(words.namedScope);
   } else {
     const shown = card.selection.refs.slice(0, CHOSEN_SHOWN);
     const more = card.selection.refs.length - shown.length;

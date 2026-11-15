@@ -132,6 +132,7 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'set_technology_vulnerability_alerts',
   'change_vulnerability_state',
   'bulk_update_budget_lines',
+  'bulk_update_applications',
   'change_incident_state',
   'set_incident_confidentiality',
   'update_entity_relations',
@@ -970,6 +971,25 @@ function hasBudgetLineBulkEditWrite(rawText: string, text: string): boolean {
   return BUDGET_LINE_BULK_FIELD_RE.test(text);
 }
 
+const APPLICATION_BULK_VERBS = new Set([...BUDGET_LINE_BULK_VERBS, 'make', 'mark', 'marque', 'marquez', 'marquer']);
+/** A field the change in bulk of applications writes (`bulk_update_applications`). */
+const APPLICATION_BULK_FIELD_RE = /\b(?:criticites?|criticality|cycles? de vie|lifecycles?|responsables?|owners?|retirees?|retired|production|decommissioned)\b/;
+
+/**
+ * A change of one field on several applications: an imperative verb at the head, plural
+ * applications (or several APP references) and a field of the list's "Change the selection":
+ * "Passe les applications de X en criticité haute", "Make Y the IT owner of the retired
+ * applications". A question stays a read.
+ */
+function hasApplicationBulkEditWrite(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  if (first == null || !APPLICATION_BULK_VERBS.has(first)) return false;
+  const several = /\b(?:applications|apps)\b/.test(text) || (text.match(/\bapp-\d+\b/g) ?? []).length > 1;
+  if (!several || /\b(?:lignes|lines)\b/.test(text)) return false;
+  return APPLICATION_BULK_FIELD_RE.test(text);
+}
+
 /** Undoing the last mutation is a write, never a read: "Undo that", "Annule l'aperçu". */
 const UNDO_REQUEST_RE = /\bundo\b|\bannule (?:ce que|ceci|cela|la derniere|le dernier|la precedent|la precedente|les dernieres|l['’]apercu)\b|\bcancel (?:my |the )?(?:last|previous) (?:preview|change|modification|action)\b/;
 
@@ -1132,6 +1152,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     && !mentionsDocument && hasAccessAdministrationWrite(raw, text);
   const hasVulnerabilityStateIntent = hasVulnerabilityStateWrite(raw, text);
   const hasBudgetLineBulkEditIntent = hasBudgetLineBulkEditWrite(raw, text);
+  const hasApplicationBulkEditIntent = hasApplicationBulkEditWrite(raw, text);
   // Status changes the general verb list misses: "marque … comme" retired, "annule" on a contract
   // or a budget line. A technology declaration ("indique que … a … installé") and "make … the main
   // contact" are relation writes. Cancelling a request is none of these.
@@ -1142,6 +1163,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const hasMainContactRelation = hasMainContactRelationWrite(raw, text);
   const isWrite = hasTechnologyPeopleIntent || hasTechnologyWebLinkIntent || hasTaskFieldStateWriteIntent
     || hasUserAdministrationIntent || hasAccessAdministrationIntent || hasVulnerabilityStateIntent || hasBudgetLineBulkEditIntent
+    || hasApplicationBulkEditIntent
     || hasApplicationRetirement || hasContractCancellationIntent || hasBudgetLineCancellationIntent
     || hasInstalledDeclaration || hasMainContactRelation || isTicketImport
     || containsAny(writeText, [
@@ -1206,6 +1228,10 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     // One field on many budget lines: "Passe les lignes du fournisseur X sur le centre de coûts Y".
     if (hasBudgetLineBulkEditIntent) {
       return { profile: withWebCapability(PROFILES.write_financial, needsWeb), explicitIntent: true };
+    }
+    // One field on many applications: "Passe les applications de X en criticité haute".
+    if (hasApplicationBulkEditIntent) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
     }
     // A person's access or roles, before the budget word of a role name ("le rôle Budget Member")
     // sends it to the financial write: the general write profile, which refuses it in words.
