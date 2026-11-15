@@ -1111,7 +1111,7 @@
         "row": "Ligne {{line}} : {{name}} → {{ref}} {{target}}",
         "reasonTitleSupplier": "Même titre et même fournisseur",
         "reasonAmounts": "Mêmes montants",
-        "reasonCloseTitle": "Titre proche, même fournisseur et même montant",
+        "reasonCloseTitle": "Titre proche, même fournisseur, un montant égal",
         "ignore": "Écarter",
         "create": "Créer quand même",
         "update": "Mettre à jour {{ref}}",

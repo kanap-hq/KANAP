@@ -1542,7 +1542,7 @@ function checkConsistency(
       if (other === undefined || !unusual(cents, other)) continue;
       const ref = lineRef(look.itemNumber);
       warn({
-        message: `${label} ${year}: ${amount}, against ${wholeUnits(other)} on ${ref}.`,
+        message: `${label} ${year} at ${amount}, against ${wholeUnits(other)} on ${ref}.`,
         code: 'BUDGET_FILE_AMOUNT_FAR_FROM_LINE', params: { label, year: Number(year), amount, other: wholeUnits(other), ref },
       });
       break;
@@ -1552,7 +1552,7 @@ function checkConsistency(
     if (!median || !unusual(cents, median.cents)) continue;
     const supplier = input.catalog.suppliers.find((item) => item.id === supplierId)?.name ?? '';
     warn({
-      message: `${label} ${year}: ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of ${supplier}.`,
+      message: `${label} ${year} at ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of ${supplier}.`,
       code: 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER',
       params: { label, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count, supplier },
     });

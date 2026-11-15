@@ -1110,7 +1110,7 @@
         "row": "Line {{line}}: {{name}} → {{ref}} {{target}}",
         "reasonTitleSupplier": "Same title and supplier",
         "reasonAmounts": "Same amounts",
-        "reasonCloseTitle": "Close title, same supplier and amount",
+        "reasonCloseTitle": "Close title, same supplier, one equal amount",
         "ignore": "Leave out",
         "create": "Create anyway",
         "update": "Update {{ref}}",

@@ -1110,7 +1110,7 @@
         "row": "Fila {{line}}: {{name}} → {{ref}} {{target}}",
         "reasonTitleSupplier": "Mismo título y proveedor",
         "reasonAmounts": "Mismos importes",
-        "reasonCloseTitle": "Título parecido, mismo proveedor e importe",
+        "reasonCloseTitle": "Título parecido, mismo proveedor, un importe igual",
         "ignore": "Descartar",
         "create": "Crear de todos modos",
         "update": "Actualizar {{ref}}",

@@ -1110,7 +1110,7 @@
         "row": "Zeile {{line}}: {{name}} → {{ref}} {{target}}",
         "reasonTitleSupplier": "Gleicher Titel und Lieferant",
         "reasonAmounts": "Gleiche Beträge",
-        "reasonCloseTitle": "Ähnlicher Titel, gleicher Lieferant und Betrag",
+        "reasonCloseTitle": "Ähnlicher Titel, gleicher Lieferant, ein gleicher Betrag",
         "ignore": "Auslassen",
         "create": "Trotzdem anlegen",
         "update": "{{ref}} aktualisieren",
