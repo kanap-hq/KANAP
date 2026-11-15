@@ -132,6 +132,23 @@ async function testCompanyRename(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  companies: COMP-4 renamed by reference, with its warning, nothing inserted: OK');
 }
 
+// A person's own file, without the reference column: a row named as an existing company updates it
+// by name, as on the screen. The reference column the file lacks clears nothing: no refusal.
+async function testOwnFileWithoutReference(h: Harness, runner: QueryRunner, s: Seed) {
+  const before = await companies(runner, s);
+  const header = (await companyHeader(h, runner, s)).filter((column) => column !== 'reference');
+  const file = attach(h, 'mes-societes.csv', [
+    header.join(';'),
+    companyRow(header, { name: 'Alpha', country_iso: 'FR', city: 'Lyon 2', base_currency: 'EUR' }),
+  ]);
+  const card = await h.previews.createPreview(ctx(runner, s), 'prepare_import_mapping', { attachment_id: file, entity_type: 'companies', columns: sameNames(header) });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check.report.errors));
+  assert.deepEqual([check.inserted, check.updated], [0, 1], JSON.stringify(check));
+  assert.deepEqual(await companies(runner, s), before, 'nothing written by the check');
+  console.log('  companies: a file without the reference column updates by name, without refusal: OK');
+}
+
 // The departments' file: a rename and a move to another company, each with its warning.
 async function testDepartmentChanges(h: Harness, runner: QueryRunner, s: Seed) {
   const header = ['reference', 'company_name', 'name', 'description', 'status', 'disabled_at'];
@@ -192,6 +209,7 @@ async function run() {
     try {
       const s = await seed(runner);
       await testRowNumbersAreNoReferences(harness, runner, s);
+      await testOwnFileWithoutReference(harness, runner, s);
       await testCompanyRename(harness, runner, s);
       await testDepartmentChanges(harness, runner, s);
     } finally {
