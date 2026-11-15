@@ -81,6 +81,36 @@ describe('TasksPage delete', () => {
     expect(empty.querySelector('button')?.textContent).toBe('tasks.actions.new');
   });
 
+  function statusCell(value: unknown) {
+    const column = (grid.props?.columns as Array<Record<string, any>>).find((c) => c.field === 'status')!;
+    const view = render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        {column.cellRenderer({ value, data: value == null ? undefined : { id: 'row-1', status: value } })}
+      </ThemeProvider>,
+    );
+    const result = { text: view.container.textContent ?? '', html: view.container.innerHTML };
+    view.unmount();
+    return result;
+  }
+
+  it('leaves the status cell empty when the row has no status', () => {
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter><TasksPage /></MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+    for (const value of [undefined, null, '']) {
+      const cell = statusCell(value);
+      expect(cell.text).toBe('');
+      expect(cell.html).toBe('');
+    }
+    const open = statusCell('open');
+    expect(open.text).toBe('statuses.task.open');
+    expect(open.html).not.toBe('');
+  });
+
   it('leaves the creation out of the empty list for a reader', () => {
     auth.write = false;
     render(
