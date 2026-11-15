@@ -513,8 +513,11 @@ export type AiImportMappingPreviewDto = {
   }>;
   /** Some values the import will not read, by column (the model reads them too: it may map them with `values`). */
   unread_values: Record<string, string[]>;
-  /** Why a column reads no cell at all, by column: its dates use both orders, or its numbers both decimal marks. */
-  read_errors: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks'>;
+  /**
+   * Why a column reads no cell at all, by column: its dates use both orders, its numbers both decimal
+   * marks, or a column of references holds a value without the family's prefix.
+   */
+  read_errors: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks' | 'reference-without-prefix'>;
   /** Required columns of the template no column of the file fills. */
   missing_required: Array<{ column: string; title: string }>;
   /** Columns of the file the mapping does not use. */

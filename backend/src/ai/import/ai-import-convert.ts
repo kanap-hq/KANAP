@@ -3,6 +3,7 @@ import { CsvDateOrder, CsvLanguage, DecimalMark, parseCsvAmount, parseCsvBoolean
 import { sheetCellText, SheetCell } from '../../common/csv-sheet/read';
 import { catalogAliases } from '../../it-ops-settings/catalog-codes';
 import { findCatalogOption, type CatalogOptionLike } from '../../it-ops-settings/catalog-resolve';
+import { parseReferenceNumber } from '../../common/parse-item-number';
 import { isBlank } from '../attachments/table-attachment';
 import { countryCode } from './ai-import-countries';
 import { parseNamedMonthDate } from './ai-import-dates';
@@ -29,6 +30,8 @@ export interface AiImportColumnRule {
   multi?: boolean;
   /** A number column that holds a percentage, 0 to 100: a cell shown as a percentage (0.45 as 45%) reads as 45. */
   percent?: boolean;
+  /** A `reference` column of the family's own references (`COMP`): it reads only values written with this prefix. */
+  prefix?: string;
 }
 
 /** What the mapping says of a column, beyond its source. */
@@ -46,8 +49,11 @@ export type AiImportCellResult =
   | { status: 'converted'; value: string }
   | { status: 'unread'; raw: string };
 
-/** Why a whole column reads no cell: its dates use both orders, or its numbers both decimal marks. */
-export type AiImportColumnReadError = 'mixed-date-orders' | 'mixed-decimal-marks';
+/**
+ * Why a whole column reads no cell: its dates use both orders, its numbers both decimal marks, or a
+ * column of references holds a value without the family's prefix.
+ */
+export type AiImportColumnReadError = 'mixed-date-orders' | 'mixed-decimal-marks' | 'reference-without-prefix';
 
 /** How a column's cells convert, settled once on the whole column (the date order, the decimal mark). */
 export interface AiImportColumnReader {
@@ -222,11 +228,36 @@ function cellReader(
       return readerOf(countryCode, rule.multi === true, map);
     case 'email':
       return readerOf((raw) => (EMAIL.test(raw) ? raw : null), false, map);
-    case 'text':
     case 'reference':
+      if (rule.prefix) return prefixedReferenceReader(rule.prefix, cells);
+      return readerOf((raw) => raw, false, map);
+    case 'text':
     default:
       return readerOf((raw) => raw, false, map);
   }
+}
+
+/**
+ * A column of the family's own references, which names the record a row updates (`COMP-4`, any case).
+ * Kad reads a value as a reference only when it carries the family's prefix: a column of the person's
+ * sheet numbering its rows 1 to N would otherwise rename records unrelated to them. One value without
+ * the prefix and the column is no column of references: none of its cells is read, and every row
+ * keeps the import's key by name.
+ */
+function prefixedReferenceReader(prefix: string, cells: ReadonlyArray<SheetCell | undefined>): AiImportColumnReader {
+  const numberOf = (cell: SheetCell | undefined) => parseReferenceNumber(cellText(cell), prefix, { prefixRequired: true });
+  if (cells.some((cell) => cellText(cell) !== '' && numberOf(cell) === null)) {
+    return { settled: {}, error: 'reference-without-prefix', read: () => ({ status: 'blank' }) };
+  }
+  return {
+    settled: {},
+    error: null,
+    read: (cell) => {
+      if (cellText(cell) === '') return { status: 'blank' };
+      const number = numberOf(cell);
+      return number === null ? { status: 'unread', raw: cellText(cell) } : { status: 'converted', value: `${prefix}-${number}` };
+    },
+  };
 }
 
 function unreadable(error: AiImportColumnReadError): AiImportColumnReader {

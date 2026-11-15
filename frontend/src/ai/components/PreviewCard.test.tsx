@@ -980,6 +980,32 @@ describe('PreviewCard in French', () => {
     expect(screen.getByRole('button', { name: 'Approuver' })).toBeInTheDocument();
   });
 
+  // Lot R2 of 26.11.9: a column of row numbers mapped onto a reference column is not read.
+  it('says that a column of references without their prefix is not read', () => {
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Sociétés · societes.csv' },
+      import_mapping: {
+        import_key: 'companies',
+        filename: 'societes.csv',
+        row_count: 2,
+        columns: [
+          { column: 'reference', title: 'Référence', required: false, kind: 'reference', source: { position: 1, header: 'ID' }, value: null, confidence: 'medium', filled: 0, unread: 0, read_as: null, note: null },
+          { column: 'name', title: 'Nom', required: true, kind: 'text', source: { position: 2, header: 'Nom' }, value: null, confidence: 'high', filled: 2, unread: 0, read_as: null, note: null },
+        ],
+        unread_values: {},
+        read_errors: { reference: 'reference-without-prefix' },
+        missing_required: [],
+        unplaced: [],
+        assumptions: [],
+        sample: { columns: ['reference', 'name'], rows: [['', 'Gamma'], ['', 'Delta']], unread: [[false, false], [false, false]] },
+        rows_missing_required: 0,
+      },
+    }));
+    expect(screen.getByText(/^Valeurs sans le préfixe de référence\s: non lues$/)).toBeInTheDocument();
+    expect(screen.getByText('0 sur 2')).toBeInTheDocument();
+  });
+
   it('shows a date and time of the mapping as the file writes it', () => {
     renderCard(preview({
       tool_name: 'prepare_import_mapping',
