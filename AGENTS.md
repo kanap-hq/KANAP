@@ -135,6 +135,9 @@ Tool-specific or private notes live in each tool's local files, never here.
   subjects it found on the way (a defect that lies outside it, an idea, a question) go to the
   maintainer's tracker, each one once: agents working for the maintainer find its location in
   `CLAUDE.local.md`, external contributors put them in the pull request description.
+- A release leaves the tracker with fewer open entries than it found: it closes more than it
+  writes. The count is taken when the release starts and after its final triage. A real defect
+  is still fixed or written down; the count is not held by leaving it out.
 - A planning document is a specification, a brief or a review. Once its lots are merged,
   say so in its first line (date, PR numbers) and stop editing it.
 
