@@ -105,6 +105,7 @@ const look = (line: number, item: number, over: Partial<Look> = {}): Look => ({
 });
 const lookalikes = (lines: Look[], over: Partial<NonNullable<BudgetFileReport['lookalikes']>> = {}) => ({
   lines,
+  targets: Object.fromEntries(lines.map((entry) => [String(entry.line), { item: entry.target.item, state: entry.target.state }])),
   count: lines.length,
   ignored: lines.filter((entry) => entry.outcome === 'ignored').length,
   created: lines.filter((entry) => entry.outcome === 'created').length,
@@ -164,7 +165,7 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     // An update says what it changes, by the column's name.
     await waitFor(() => expect(rowOf(6)).toHaveTextContent(`${L}outcomeUpdated:{"ref":"BL-13"}`));
     fireEvent.mouseOver(rowOf(6));
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(`${L}fields:{"fields":"opex.columns.payingCompany, budget 2026"}`);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(`${L}fields:{"fields":"opex.columns.payingCompany, ops:operations.budgetColumns.budget 2026"}`);
 
     // Leave out, with no choice for all rows: the row's choice leaves the list.
     post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes([look(5, 12), look(6, 13, { outcome: 'updated' })]), matching: matching({ choices: [both[1]] }) }) });
@@ -192,8 +193,9 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes(rows) }) });
     fireEvent.click(screen.getByRole('button', { name: `${L}updateAll` }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
-    // Line 22 cannot be updated: it stays left out.
-    expect(sentChoices(post.mock.calls[1])).toEqual([{ kind: 'lookalikes', action: 'update', states: { 21: 's21', 23: 's23' } }]);
+    // Every row's target as the check gave it; the server leaves line 22, which cannot be updated, out.
+    const targets = { 3: { item: 21, state: 's21' }, 4: { item: 22, state: 's22' }, 5: { item: 23, state: 's23' } };
+    expect(sentChoices(post.mock.calls[1])).toEqual([{ kind: 'lookalikes', action: 'update', targets }]);
 
     // All created anyway, line 3 left out by its own choice.
     post.mockResolvedValueOnce({ data: report({
@@ -202,7 +204,7 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     }) });
     fireEvent.click(await screen.findByRole('button', { name: `${L}createAll` }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
-    expect(sentChoices(post.mock.calls[2])).toEqual([{ kind: 'lookalikes', action: 'create' }]);
+    expect(sentChoices(post.mock.calls[2])).toEqual([{ kind: 'lookalikes', action: 'create', targets }]);
 
     // With a choice for all rows: Leave all out, and a row's Leave out is sent to override it.
     await screen.findByRole('button', { name: `${L}ignoreAll` });
@@ -215,6 +217,82 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
       { kind: 'lookalikes', action: 'create' },
       { kind: 'lookalike', line: 5, action: 'ignore' },
     ]);
+  });
+
+  it('updates all the rows, beyond the 200 listed, with the targets the check gave', async () => {
+    const listed = Array.from({ length: 200 }, (_, index) => look(index + 2, index + 100));
+    const targets = Object.fromEntries(Array.from({ length: 250 }, (_, index) => [String(index + 2), { item: index + 100, state: `s${index + 100}` }]));
+    post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes(listed, { count: 250, ignored: 250, targets }) }) });
+    renderDialog();
+    await screen.findByText(`${L}title`);
+    post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes(listed, { count: 250, targets }) }) });
+    fireEvent.click(screen.getByRole('button', { name: `${L}updateAll` }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    const sent = sentChoices(post.mock.calls[1])!;
+    expect(sent).toHaveLength(1);
+    expect(sent[0].kind === 'lookalikes' && Object.keys(sent[0].targets ?? {})).toHaveLength(250);
+  });
+
+  it('leaves all out, the rows\' own choices included', async () => {
+    const rows = [look(3, 21, { outcome: 'created' }), look(4, 22, { outcome: 'updated' }), look(5, 23)];
+    const kept = { kind: 'unmatch' as const, column: 'supplier_name', value: 'Acme' };
+    post.mockResolvedValueOnce({ data: report({
+      lookalikes: lookalikes(rows),
+      matching: matching({ choices: [
+        kept,
+        { kind: 'lookalike', line: 3, action: 'create' },
+        { kind: 'lookalike', line: 4, action: 'update', item: 22, state: 's22' },
+        { kind: 'lookalikes', action: 'ignore', targets: { 3: { item: 21, state: 's21' } } },
+      ] }),
+    }) });
+    renderDialog();
+    await screen.findByText(`${L}title`);
+    post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes([look(3, 21), look(4, 22), look(5, 23)]) }) });
+    fireEvent.click(screen.getByRole('button', { name: `${L}ignoreAll` }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(sentChoices(post.mock.calls[1])).toEqual([kept, { kind: 'lookalikes', action: 'ignore', targets: lookalikes(rows).targets }]);
+    // Nothing chosen any more: no "Leave all out".
+    await waitFor(() => expect(button(`${L}ignoreAll`)).toBeNull());
+  });
+
+  it('loads with the choices of the check shown, the targets of the rows it left out included', async () => {
+    const memory: BudgetFileChoice = { kind: 'lookalikes', action: 'ignore', targets: { 5: { item: 12, state: 's12' } } };
+    post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes([look(5, 12)]), matching: matching({ choices: [memory] }) }) });
+    renderDialog();
+    await screen.findByText(`${L}title`);
+    post.mockResolvedValueOnce({ data: { ok: true, dryRun: false, inserted: 2, updated: 0, skipped: 1 } });
+    fireEvent.click(screen.getByRole('button', { name: `${K}load` }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(post.mock.calls[1][0]).toBe('/spend-items/budget-file/import');
+    expect(sentChoices(post.mock.calls[1])).toEqual([memory]);
+  });
+
+  it('names every field an update may change, amounts by their column and year or month', async () => {
+    const fields = [
+      'nature', 'name', 'description', 'company_name', 'supplier', 'account_number', 'cost_center_code', 'run_build',
+      'owner_it_email', 'owner_business_email', 'project', 'currency', 'effective_start', 'end_of_validity', 'notes',
+      'analytics:purpose', 'budget 2026', 'revision 2026', 'forecast 2026', 'actual 2026', 'landing 2026', 'budget 2026-01',
+    ];
+    post.mockResolvedValueOnce({ data: report({
+      changes: { created: 0, updated: 1, unchanged: 0, createdLines: [], updatedLines: [{ line: 6, itemNumber: 'BL-13', fields }] },
+      lookalikes: lookalikes([look(6, 13, { outcome: 'updated', fields })]),
+    }) });
+    renderDialog();
+    await screen.findByText(`${L}title`);
+    const updated = await screen.findByText(new RegExp(`^${K.replace(/\./g, '\\.')}updatedLine`));
+    const named = JSON.parse(updated.textContent!.slice(`${K}updatedLine:`.length)).fields as string;
+    const names = named.split(', ');
+    expect(names).toHaveLength(fields.length);
+    // No server identifier left: every name is a label of the screen.
+    for (const [index, name] of names.entries()) expect(name, fields[index]).not.toBe(fields[index]);
+    expect(names[fields.indexOf('supplier')]).toBe('opex.columns.supplier');
+    expect(names[fields.indexOf('analytics:purpose')]).toBe('Motif');
+    expect(names.slice(-6)).toEqual([
+      expect.stringMatching(/ 2026$/), expect.stringMatching(/ 2026$/), expect.stringMatching(/ 2026$/),
+      expect.stringMatching(/ 2026$/), expect.stringMatching(/ 2026$/), expect.stringMatching(/ janv\. 2026$/),
+    ]);
+    fireEvent.mouseOver(rowOf(6));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(named);
   });
 
   it('offers no Update for a line the person may not change, nor Update all when none can be', async () => {
@@ -267,5 +345,19 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     expect(await screen.findByText(`${K}warningsTitle`)).toBeInTheDocument();
     expect(screen.getByText(/^operations\.budgetFile\.row:\{"line":7,"message":"errors:BUDGET_FILE_AMOUNT_FAR_FROM_LINE/)).toBeInTheDocument();
     expect(screen.getByText(`${K}andMore:{"count":2}`)).toBeInTheDocument();
+  });
+
+  it('writes the days of a consistency warning in the screen\'s language', async () => {
+    post.mockResolvedValueOnce({ data: report({
+      warnings: {
+        duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [],
+        consistency: [{ line: 4, message: 'The line ends on 2025-06-30, before its first amounts (2026).', code: 'BUDGET_FILE_END_BEFORE_AMOUNTS', params: { end: '2025-06-30', year: 2026 } }],
+        consistencyCount: 1,
+      },
+    }) });
+    renderDialog();
+    const warning = await screen.findByText(/BUDGET_FILE_END_BEFORE_AMOUNTS/);
+    expect(warning.textContent).toContain('30 juin 2025');
+    expect(warning.textContent).not.toContain('2025-06-30\\"');
   });
 });

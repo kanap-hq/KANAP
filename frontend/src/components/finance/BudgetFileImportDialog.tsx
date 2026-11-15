@@ -5,7 +5,7 @@ import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import KanapDialog from '../design/KanapDialog';
-import { formatShortDateTime } from '../../lib/dateFormat';
+import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { formatAmount } from '../../i18n/formatters';
 import { useBudgetColumns, type BudgetColumns } from '../../hooks/useBudgetColumns';
 import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
@@ -55,7 +55,7 @@ type Lookalike = Lookalikes['lines'][number];
 const SHOWN_LOOKALIKES = 10;
 /** Where the reference goes in a lookalike's sentence, so it can be a link. */
 const REF_MARK = '\u2063ref\u2063';
-const LOOKALIKE_REASONS: Record<Lookalike['reason'], string> = {
+const LOOKALIKE_REASONS: Record<NonNullable<Lookalike['reason']>, string> = {
   title_supplier: 'reasonTitleSupplier',
   amounts: 'reasonAmounts',
   close_title: 'reasonCloseTitle',
@@ -179,7 +179,8 @@ export default function BudgetFileImportDialog({
     setPhase('loading');
     setFailure(null);
     try {
-      const data = await loadBudgetFile(scope, file, report.snapshot, options);
+      // The choices of the check shown, as it gave them back: the target of each row it showed included.
+      const data = await loadBudgetFile(scope, file, report.snapshot, { ...options, choices: report.matching?.choices ?? choices });
       if (id !== requestId.current) return;
       if (isBudgetFileReport(data)) {
         setReport(data);
@@ -452,6 +453,13 @@ export function ReportView({
     if (column.startsWith(ANALYTICS_COLUMN)) return dimensionNames.get(column.slice(ANALYTICS_COLUMN.length)) ?? axes.label({ name: null });
     return fileColumnLabel(column, columns, t);
   };
+  // A field an update changes: a column by the screen's name, an amount by its column's name and its year or month.
+  const fieldName = (field: string): string => {
+    const amount = /^([a-z_]+) (\d{4})(?:-(\d{2}))?$/.exec(field);
+    if (!amount) return columnName(field);
+    const label = columnName(amount[1]);
+    return amount[3] ? `${label} ${monthName(Number(amount[2]), Number(amount[3]), locale)}` : `${label} ${amount[2]}`;
+  };
   const closeTo = (column: string, value: string): string | null => {
     const entry = matching?.candidates.find((item) => item.column === column && sameValue(item.value, value));
     return entry && entry.candidates.length > 0
@@ -595,7 +603,7 @@ export function ReportView({
             <Line muted text={more(report.changes.created, report.changes.createdLines.length)!} />
           )}
           {report.changes.updatedLines.map((line) => (
-            <Line key={`u-${line.line}`} muted text={t(`${K}updatedLine`, { line: line.line, ref: line.itemNumber, fields: line.fields.join(', ') })} />
+            <Line key={`u-${line.line}`} muted text={t(`${K}updatedLine`, { line: line.line, ref: line.itemNumber, fields: line.fields.map(fieldName).join(', ') })} />
           ))}
           {more(report.changes.updated, report.changes.updatedLines.length) && (
             <Line muted text={more(report.changes.updated, report.changes.updatedLines.length)!} />
@@ -616,7 +624,7 @@ export function ReportView({
         <Section title={t(`${K}warningsTitle`)}>
           {duplicates.map((warning) => <Line key={`w-${warning.line}`} text={checkSentence(warning, t)} />)}
           {consistency.map((warning, index) => (
-            <Line key={`cs-${warning.line}-${index}`} text={t(`${K}row`, { line: warning.line, message: checkSentence(warning, t) })} />
+            <Line key={`cs-${warning.line}-${index}`} text={t(`${K}row`, { line: warning.line, message: checkSentence(withShortDates(warning, locale), t) })} />
           ))}
           {more(consistencyCount, consistency.length) && <Line text={more(consistencyCount, consistency.length)!} />}
           {report.warnings.supplierNames.map((warning) => <Line key={`s-${warning.line}`} text={checkSentence(warning, t)} />)}
@@ -682,7 +690,7 @@ export function ReportView({
           onChoices={onChoices}
           choicesDisabled={choicesDisabled}
           canOpenLines={canOpenLines}
-          columnName={columnName}
+          fieldName={fieldName}
         />
       )}
 
@@ -736,6 +744,7 @@ const FILE_COLUMN_LABELS: Record<string, string> = {
   description: 'opex.columns.description',
   company_name: 'opex.columns.payingCompany',
   supplier_name: 'opex.columns.supplier',
+  supplier: 'opex.columns.supplier',
   account_number: 'opex.columns.account',
   cost_center_code: 'opex.columns.costCenter',
   run_build: 'opex.columns.runBuild',
@@ -773,6 +782,19 @@ function calculationLinesText(
     total,
     defaultValue: warning.message,
   });
+}
+
+/** A month of a year as the screen's language writes it (`janv. 2026`). */
+function monthName(year: number, month: number, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(new Date(year, month - 1, 1));
+}
+
+/** A consistency warning whose days (`start`, `end`) read in the screen's language. */
+function withShortDates<T extends { params?: Record<string, unknown> }>(warning: T, locale: string): T {
+  const params = warning.params;
+  if (!params || (typeof params.start !== 'string' && typeof params.end !== 'string')) return warning;
+  const day = (value: unknown) => (typeof value === 'string' ? formatShortDate(value, locale, { year: 'always', empty: value }) : value);
+  return { ...warning, params: { ...params, ...('start' in params ? { start: day(params.start) } : {}), ...('end' in params ? { end: day(params.end) } : {}) } };
 }
 
 function changedText(line: BudgetFileReport['changedSinceExport'][number], locale: string, t: Translate): string {
@@ -839,19 +861,22 @@ function Line({ text, children, danger, muted, kad, tooltip, action, actions }: 
  * line each, its reason in a tooltip, what becomes of it and the other choices; above them the
  * counts and the choices for all rows. A row's own choice wins over the choice for all rows.
  */
-function LookalikesView({ lookalikes, choices, errors, onChoices, choicesDisabled, canOpenLines, columnName }: {
+function LookalikesView({ lookalikes, choices, errors, onChoices, choicesDisabled, canOpenLines, fieldName }: {
   lookalikes: Lookalikes;
   choices: BudgetFileChoice[];
   errors: BudgetFileReport['errors'];
   onChoices?: (choices: BudgetFileChoice[]) => void;
   choicesDisabled: boolean;
   canOpenLines: boolean;
-  columnName: (column: string) => string;
+  /** A field an update changes, as the screen names it. */
+  fieldName: (field: string) => string;
 }) {
   const { t } = useTranslation('ops');
   const L = `${K}lookalikes.`;
   const [unfolded, setUnfolded] = useState(false);
+  // The choice for all rows; `ignore`, the default, is what the check gives back when none was made.
   const all = choices.find((choice): choice is Extract<BudgetFileChoice, { kind: 'lookalikes' }> => choice.kind === 'lookalikes');
+  const allAction = all?.action ?? 'ignore';
   const updatable = lookalikes.lines.filter((look) => look.updatable);
   // A row whose line changed since the check: its error is among the errors, and Update can be chosen again.
   const changed = new Set(errors.filter((error) => error.code === 'BUDGET_FILE_LOOKALIKE_CHANGED').map((error) => error.line));
@@ -861,23 +886,21 @@ function LookalikesView({ lookalikes, choices, errors, onChoices, choicesDisable
   const chooseRow = (look: Lookalike, action: 'ignore' | 'create' | 'update'): BudgetFileChoice[] => {
     const rest = choices.filter((choice) => !(choice.kind === 'lookalike' && choice.line === look.line));
     // Left out is the default: a row's "Leave out" is sent only to override the choice for all rows.
-    if (action === 'ignore') return all ? [...rest, { kind: 'lookalike', line: look.line, action: 'ignore' }] : rest;
+    if (action === 'ignore') return allAction !== 'ignore' ? [...rest, { kind: 'lookalike', line: look.line, action: 'ignore' }] : rest;
     if (action === 'create') return [...rest, { kind: 'lookalike', line: look.line, action: 'create' }];
     return [...rest, { kind: 'lookalike', line: look.line, action: 'update', item: look.target.item, state: look.target.state }];
   };
-  const chooseAll = (action: 'create' | 'update' | null): BudgetFileChoice[] => {
-    const rest = choices.filter((choice) => choice.kind !== 'lookalikes');
-    if (action === null) return rest;
-    if (action === 'create') return [...rest, { kind: 'lookalikes', action: 'create' }];
-    // Each line as the check shows it: a line changed in between is refused, not updated blind.
-    const states = Object.fromEntries(updatable.map((look) => [String(look.target.item), look.target.state]));
-    return [...rest, { kind: 'lookalikes', action: 'update', states }];
+  const chooseAll = (action: 'ignore' | 'create' | 'update'): BudgetFileChoice[] => {
+    // "Leave all out" drops the rows' own choices too; the other two keep them.
+    const rest = choices.filter((choice) => choice.kind !== 'lookalikes' && (action !== 'ignore' || choice.kind !== 'lookalike'));
+    // Each row's line as the check shows it, every row included: a line changed in between is refused, not updated blind.
+    return [...rest, { kind: 'lookalikes', action, targets: lookalikes.targets }];
   };
   const present = (actions: Array<LineAction | null>): LineAction[] => actions.filter((entry): entry is LineAction => entry !== null);
   const headActions = present([
-    all?.action !== 'create' ? act(t(`${L}createAll`), () => chooseAll('create')) : null,
-    updatable.length > 0 && all?.action !== 'update' ? act(t(`${L}updateAll`), () => chooseAll('update')) : null,
-    all ? act(t(`${L}ignoreAll`), () => chooseAll(null)) : null,
+    allAction !== 'create' ? act(t(`${L}createAll`), () => chooseAll('create')) : null,
+    updatable.length > 0 && allAction !== 'update' ? act(t(`${L}updateAll`), () => chooseAll('update')) : null,
+    lookalikes.created + lookalikes.updated > 0 ? act(t(`${L}ignoreAll`), () => chooseAll('ignore')) : null,
   ]);
   const folded = !unfolded && lookalikes.lines.length > SHOWN_LOOKALIKES;
   const shown = folded ? lookalikes.lines.slice(0, SHOWN_LOOKALIKES) : lookalikes.lines;
@@ -893,17 +916,17 @@ function LookalikesView({ lookalikes, choices, errors, onChoices, choicesDisable
     const outcome = look.outcome === 'ignored'
       ? t(`${L}outcomeIgnored`)
       : look.outcome === 'created' ? t(`${L}outcomeCreated`) : t(`${L}outcomeUpdated`, { ref: look.target.ref });
-    const reason = t(`${L}${LOOKALIKE_REASONS[look.reason]}`);
+    const reason = look.reason ? t(`${L}${LOOKALIKE_REASONS[look.reason]}`) : null;
     const fields = look.outcome !== 'updated'
       ? null
       : look.fields && look.fields.length > 0
-        ? t(`${L}fields`, { fields: look.fields.map((field) => columnName(field)).join(', ') })
+        ? t(`${L}fields`, { fields: look.fields.map((field) => fieldName(field)).join(', ') })
         : t(`${L}noChange`, { ref: look.target.ref });
     return (
       <Line
         key={`la-${look.line}`}
         danger={stale}
-        tooltip={fields ? <>{reason}<br />{fields}</> : reason}
+        tooltip={fields && reason ? <>{reason}<br />{fields}</> : (fields ?? reason ?? undefined)}
         actions={present([
           look.outcome !== 'ignored' ? act(t(`${L}ignore`), () => chooseRow(look, 'ignore')) : null,
           look.outcome !== 'created' ? act(t(`${L}create`), () => chooseRow(look, 'create')) : null,

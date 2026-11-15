@@ -110,8 +110,16 @@ export type BudgetFileChoice =
    */
   | { kind: 'lookalike'; line: number; action: 'ignore' | 'create' }
   | { kind: 'lookalike'; line: number; action: 'update'; item: number; state?: string }
-  /** Every row that looks like a stored line; a choice for one row wins. The check gives back `states`. */
-  | { kind: 'lookalikes'; action: 'create' | 'update'; states?: Record<string, string> };
+  /**
+   * Every row that looks like a stored line; a choice for one row wins. `targets`: the report's
+   * `lookalikes.targets`, the line each row looked like at the check shown. The check gives this
+   * choice back, `ignore` when the person chose nothing: a row keeps its target, so a row left out
+   * stays left out and a line changed since is refused.
+   */
+  | { kind: 'lookalikes'; action: 'ignore' | 'create' | 'update'; targets?: Record<string, BudgetFileLookalikeTarget> };
+
+/** The line a row looks like, and its state at the check. */
+export type BudgetFileLookalikeTarget = { item: number; state: string };
 
 /** A row to create that looks like a stored line the person reads (lot I2 of 26.11.9). */
 export type BudgetFileLookalike = {
@@ -120,7 +128,8 @@ export type BudgetFileLookalike = {
   name: string;
   /** The line it looks like: its number, reference (`BL-n`), title and state at the check. */
   target: { item: number; ref: string; name: string; state: string };
-  reason: 'title_supplier' | 'amounts' | 'close_title';
+  /** Absent when the row keeps a line it no longer looks like (the line changed since the check). */
+  reason?: 'title_supplier' | 'amounts' | 'close_title';
   outcome: 'ignored' | 'created' | 'updated';
   /** "Update" is offered only when true. */
   updatable: boolean;
@@ -216,7 +225,15 @@ export type BudgetFileReport = {
     consistencyCount?: number;
   };
   /** The rows that look like a stored line, the first 200, and what the check does with them (lot I2 of 26.11.9). */
-  lookalikes?: { lines: BudgetFileLookalike[]; count: number; ignored: number; created: number; updated: number };
+  lookalikes?: {
+    lines: BudgetFileLookalike[];
+    /** Every row's target, by its line in the file, beyond the 200 listed: what "Update all" sends. */
+    targets: Record<string, BudgetFileLookalikeTarget>;
+    count: number;
+    ignored: number;
+    created: number;
+    updated: number;
+  };
   creates: {
     /** Unknown values the load will create; `name` is the dimension's name (null for the unnamed default dimension). */
     dimensionValues: Array<{ dimension: string; name?: string | null; names: string[] }>;
