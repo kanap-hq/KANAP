@@ -82,6 +82,9 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
   BP: 'business_processes',
 };
 
+/** The families whose reference is never written with a leading zero (`backend/src/common/parse-item-number.ts`). */
+const PADDED_NUMBER_REFUSED_PREFIXES: ReadonlySet<string> = new Set(['SUP', 'COMP', 'CTCT', 'DEPT', 'CTR']);
+
 /**
  * Parse an @-mention query into an optional narrowed entity_type and the actual
  * search term to send to the backend.
@@ -92,6 +95,7 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
  *   "BL-12"      → both budget families, searchTerm: 'BL-12'
  *   "CPX-3"      → both budget families, searchTerm: 'CPX-3' (legacy number)
  *   "T-5"        → { entityType: 'tasks',        searchTerm: '5' }    // T-5 + tasks containing "5"
+ *   "SUP-013"    → { entityType: 'suppliers',    searchTerm: 'SUP-013' } // a leading zero: no reference, text search
  *   "PRJ"        → { entityType: 'projects',     searchTerm: '' }
  *   "APP"        → { entityType: 'applications', searchTerm: '' }
  *   "DOC-conf"   → { entityType: 'documents',    searchTerm: 'conf' }
@@ -107,7 +111,10 @@ export function parseAtMentionQuery(query: string): { entityType: string | null;
   const prefix = match[1].toUpperCase();
   const suffix = match[2] || '';
   const budgetRef = ['BL', 'OPX', 'CPX'].includes(prefix) && /^\d+$/.test(suffix);
-  const searchTerm = budgetRef ? `${prefix}-${suffix}` : suffix;
+  // `SUP-013` is no reference of the families numbered by the database (an ERP ID is written so):
+  // the whole text is searched, which the backend reads as text too.
+  const paddedNumber = PADDED_NUMBER_REFUSED_PREFIXES.has(prefix) && /^0\d+$/.test(suffix);
+  const searchTerm = budgetRef || paddedNumber ? `${prefix}-${suffix}` : suffix;
   if (prefix === 'BL' || budgetRef) {
     return { entityType: null, entityTypes: ['budget_lines'], searchTerm };
   }

@@ -34,6 +34,11 @@ describe('mention words', () => {
     expect(parseAtMentionQuery('CONT')).toEqual({ entityType: null, searchTerm: 'CONT' });
   });
 
+  it('searches a number written with a leading zero as text, never as a reference', () => {
+    expect(parseAtMentionQuery('SUP-013')).toEqual({ entityType: 'suppliers', entityTypes: ['suppliers'], searchTerm: 'SUP-013' });
+    expect(parseAtMentionQuery('sup-13')).toEqual({ entityType: 'suppliers', entityTypes: ['suppliers'], searchTerm: '13' });
+  });
+
   it('keeps CTCT and CTR apart while the word is typed', () => {
     expect(parseAtMentionQuery('CT').entityTypes?.slice().sort()).toEqual(['contacts', 'contracts']);
   });

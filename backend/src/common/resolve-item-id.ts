@@ -1,6 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { parseItemNumber } from './parse-item-number';
+import { isPaddedReferenceNumber, parseItemNumber } from './parse-item-number';
 
 export type EntityType =
   | 'task' | 'request' | 'project' | 'document' | 'spend' | 'capex' | 'incident' | 'contributor' | 'technology'
@@ -70,6 +70,11 @@ export function parseItemRef(raw: string, expectedType: EntityType, options: Ite
   if (UUID_RE.test(raw)) return { type: 'uuid', value: raw };
 
   const accepted = [...(ALSO_ACCEPTED_PREFIXES[expectedType] ?? []), ...(options.alsoAccept ?? [])];
+  // `SUP-013` and `013` are no supplier reference: an ERP ID of the sample data is written so.
+  const digitsOf = raw.match(/(\d+)$/)?.[1];
+  if (digitsOf && isPaddedReferenceNumber(EXPECTED_PREFIX[expectedType], digitsOf)) {
+    throw new BadRequestException(`Invalid item reference: ${raw}`);
+  }
   const m = raw.match(ITEM_REF_RE);
   if (m) {
     const prefix = m[1].toUpperCase();

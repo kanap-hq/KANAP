@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
-import { parseItemNumber } from '../common/parse-item-number';
+import { isPaddedReferenceNumber, parseItemNumber } from '../common/parse-item-number';
 import { budgetLineReference } from '../spend/budget-nature';
 import type { AiContextEntityType, AiQueryEntityType, AiSearchEntityType } from './ai.types';
 
@@ -118,6 +118,8 @@ export async function resolveAiEntityReference(
   const lookup = REFERENCE_LOOKUPS[entityType];
   const number = lookup ? value.match(lookup.pattern)?.[1] : undefined;
   if (!lookup || number == null || parseItemNumber(number) == null) return null;
+  // SUP-013 is no reference (an ERP ID is written so): the caller searches it as text.
+  if (isPaddedReferenceNumber(ITEM_NUMBER_PREFIXES[entityType], number)) return null;
   const rows: Array<{ id: string }> = await manager.query(lookup.sql, [tenantId, lookup.value(number)]);
   if (rows.length === 0) throw entityNotFound(entityType, value);
   return String(rows[0].id);
@@ -141,9 +143,10 @@ export function familyReference(family: string, itemNumber: unknown): string | n
   return prefix && itemNumber != null && Number.isSafeInteger(number) && number > 0 ? `${prefix}-${number}` : null;
 }
 
-/** The number a value names when it is the family's own reference (`SUP-3` for suppliers), else null. */
+/** The number a value names when it is the family's own reference (`SUP-3` for suppliers), else null (`SUP-013` too). */
 export function familyReferenceNumber(family: string, value: string): number | null {
   const prefix = ITEM_NUMBER_PREFIXES[family];
   const match = prefix ? String(value ?? '').trim().match(/^([A-Z]+)-(\d+)$/i) : null;
-  return match && match[1].toUpperCase() === prefix ? parseItemNumber(match[2]) : null;
+  if (!match || match[1].toUpperCase() !== prefix || isPaddedReferenceNumber(prefix, match[2])) return null;
+  return parseItemNumber(match[2]);
 }

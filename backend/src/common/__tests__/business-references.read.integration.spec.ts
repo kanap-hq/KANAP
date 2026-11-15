@@ -16,6 +16,8 @@ import { DepartmentsService } from '../../departments/departments.service';
 import { SuppliersController } from '../../suppliers/suppliers.controller';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { resolveToUuid } from '../resolve-item-id';
+import { resolveAiEntityReference } from '../../ai/ai-entity-reference.util';
+import { AiMasterDataMutationSupportService } from '../../ai/mutation/ai-master-data-mutation-support.service';
 
 // Lot R1 of 26.11.9: the record routes of suppliers, companies, contacts and departments read a
 // record by its reference (SUP-3, COMP-1, CTCT-2, DEPT-4), its bare number or its uuid, in the
@@ -106,8 +108,26 @@ async function main() {
       await assert.rejects(read[family](awayRows[family][2]), NotFoundException, `${family}: another tenant's uuid is not read`);
       const other = family === 'supplier' ? 'COMP-1' : 'SUP-1';
       await assert.rejects(read[family](other), BadRequestException, `${family}: another family's reference is refused`);
+      // A number written with a leading zero is no reference (an ERP ID such as SUP-013).
+      await assert.rejects(read[family](`${prefix}-02`), BadRequestException, `${family}: ${prefix}-02 is no reference`);
+      await assert.rejects(read[family]('02'), BadRequestException, `${family}: 02 is no reference`);
       console.log(`  ${family}: ${prefix}-n, the bare number and the uuid read the record; another tenant's names nothing: OK`);
     }
+
+    // SUP-013 is the ERP ID of one supplier (the sample data writes them so), SUP-13 the reference
+    // of another: each text names its own supplier, in the API, Kad's writes and Kad's reads.
+    const one = async (sql: string, params: unknown[]) => (await runner.query(`${sql} RETURNING id::text AS id`, params))[0].id as string;
+    const erpSupplier = await one(`INSERT INTO suppliers (tenant_id, name, erp_supplier_id) VALUES ($1, 'ERP coded', 'SUP-013')`, [home]);
+    const thirteen = await one(`INSERT INTO suppliers (tenant_id, name, item_number) VALUES ($1, 'Number thirteen', 13)`, [home]);
+    const kad = new AiMasterDataMutationSupportService(...(Array.from({ length: 12 }, () => ({})) as [any, any, any, any, any, any, any, any, any, any, any, any]));
+    const kadContext = { manager: runner.manager, tenantId: home, userId: null } as any;
+    assert.equal((await kad.resolveRecordReference(kadContext, 'suppliers', 'SUP-013')).id, erpSupplier, 'Kad: SUP-013 is the ERP ID');
+    assert.equal((await kad.resolveRecordReference(kadContext, 'suppliers', 'SUP-13')).id, thirteen, 'Kad: SUP-13 is the reference');
+    assert.equal(await resolveAiEntityReference(runner.manager, home, 'suppliers', 'SUP-013'), null, 'Kad and MCP reads: SUP-013 is no reference');
+    assert.equal(await resolveAiEntityReference(runner.manager, home, 'suppliers', 'SUP-13'), thirteen);
+    assert.equal((await read.supplier('SUP-13')).id, thirteen, 'API: SUP-13 is the reference');
+    await assert.rejects(read.supplier('SUP-013'), BadRequestException, 'API: SUP-013 is no reference');
+    console.log('  SUP-013 (an ERP ID) and SUP-13 (a reference) name two suppliers: OK');
 
     // Contracts: the tenant boundary of the resolution (the data access boundary is an HTTP spec).
     assert.equal(await resolveToUuid('CTR-2', 'contract', runner.manager), homeRows.contract[1]);

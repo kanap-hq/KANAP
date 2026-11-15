@@ -413,6 +413,20 @@ async function testIndexedBusinessReferences() {
     assert.ok(asked.includes(prefix), `${query}: ranked on the prefix ${prefix}`);
     assert.deepEqual((result.items as any[]).map((item) => [item.type, item.ref]), [[entityType, `${prefix}-${number}`]], query);
   }
+  // A number written with a leading zero is no reference (SUP-013, an ERP ID): a text search.
+  for (const query of ['SUP-013', 'CTR-07']) {
+    let asked: unknown[] = [];
+    const service = createService();
+    const context = createContext(async (sql, params) => {
+      if (isIndexSearch(sql)) asked = params ?? [];
+      return [];
+    });
+    await withFlag(undefined, () => service.searchAll(context as any, { query, limit: 10 }));
+    const number = Number(query.split('-')[1]);
+    assert.ok(asked.includes(query), `${query}: searched as text`);
+    assert.ok(!asked.includes(number), `${query}: no reference number asked`);
+    assert.ok(!asked.includes(query.split('-')[0]), `${query}: no reference prefix asked`);
+  }
 }
 
 /** Application, asset, request, project and task context each read several rows on one connection. */
