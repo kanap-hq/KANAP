@@ -531,6 +531,7 @@ async function testOwnDimensionValueComesWithItsList(h: Harness, runner: QueryRu
   await dimensionOf('site', 'Site', 120, ['Siège', 'Usine de Lyon', 'Entrepôt de Rennes', 'Ancien site']);
   await dimensionOf('channel', 'Canal', 130, ['Grands comptes', 'Export', 'Distribution', 'Ancien canal']);
   await runner.query(`INSERT INTO suppliers (tenant_id, name, status) VALUES ($1, 'Amazon Web Services', 'enabled')`, [s.tenantId]);
+  await runner.query(`INSERT INTO suppliers (tenant_id, name, status) VALUES ($1, 'Dell Technologies', 'enabled')`, [s.tenantId]);
   const id = randomUUID();
   const { writeXlsx } = require('../../common/xlsx');
   h.files.set(id, {
@@ -538,6 +539,7 @@ async function testOwnDimensionValueComesWithItsList(h: Harness, runner: QueryRu
     buffer: writeXlsx({ language: 'en', sheets: [{ name: 'B', header: 'plain', headers: ['Type', 'Name', 'Supplier', 'Account', 'Currency', 'Site', 'Channel', 'Budget'], rows: [
       ['OPEX', 'Head office cleaning', 'Propreté Armor', '612200', 'EUR', 'Head office', 'Retail', { kind: 'number', value: 1000 }],
       ['OPEX', 'Cloud hosting', 'AWS', '612200', 'EUR', 'Head office', null, { kind: 'number', value: 500 }],
+      ['OPEX', 'Laptops', 'Dell', '612200', 'EUR', 'Head office', null, { kind: 'number', value: 800 }],
     ] }] }),
   });
   const columns = [
@@ -570,6 +572,10 @@ async function testOwnDimensionValueComesWithItsList(h: Harness, runner: QueryRu
   assert.ok(!aws.candidates.some((entry: any) => entry.name === 'Amazon Web Services'), 'no near name of AWS');
   assert.equal(aws.dimension_values, undefined, 'a supplier keeps its near names only');
   assert.equal(created['supplier_name|Propreté Armor'].dimension_values, undefined);
+  // Correctifs 3 (15/11, "Dell" created beside "Dell Technologies"): a name that holds the other word
+  // for word is a near name, below the trigram threshold; the model reads it and may propose it.
+  assert.equal(created['supplier_name|Dell'].outcome, 'create');
+  assert.deepEqual(created['supplier_name|Dell'].candidates.map((entry: any) => entry.name), ['Dell Technologies'], 'the shorter form of the same name');
   assert.equal(check.report.file.matching.candidates.find((entry: any) => entry.column === 'analytics:site').dimension_values, undefined, 'the card reads no list');
   assert.match(check.matching.note, /dimension_values/);
   assert.match(check.matching.note, /for a supplier, a supplier of the workspace you recognise as the same, listed or not/);
@@ -579,7 +585,7 @@ async function testOwnDimensionValueComesWithItsList(h: Harness, runner: QueryRu
   const values: Record<string, Record<string, string>> = {
     'analytics:site': { 'Head office': 'Siège' },
     'analytics:channel': { Retail: 'Distribution' },
-    supplier_name: { AWS: 'Amazon Web Services', 'Propreté Armor': 'Armor Nettoyage' },
+    supplier_name: { AWS: 'Amazon Web Services', 'Propreté Armor': 'Armor Nettoyage', Dell: 'Dell Technologies' },
   };
   const proposed = columns.map((column) => (values[column.column] ? { ...column, values: values[column.column] } : column));
   const again = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: id, entity_type: 'budget_lines', columns: proposed });
@@ -591,6 +597,7 @@ async function testOwnDimensionValueComesWithItsList(h: Harness, runner: QueryRu
     'analytics:channel|Retail→Distribution|model',
     'analytics:site|Head office→Siège|model',
     'supplier_name|AWS→Amazon Web Services|model',
+    'supplier_name|Dell→Dell Technologies|model',
   ], 'listed on the card with the origin model');
   assert.deepEqual(matched.matching.refused_proposals.map((entry: any) => [entry.column, entry.value, entry.target, entry.reason]),
     [['supplier_name', 'Propreté Armor', 'Armor Nettoyage', 'missing']]);

@@ -180,11 +180,15 @@ export function translatedValues<T extends { name: string }>(table: ReadonlyMap<
   return rows.filter((row) => table.get(accentFreeKey(row.name)) === wanted);
 }
 
+/** The words of a text, as pg_trgm cuts them: runs of letters and digits, lower case and accents aside. */
+function words(value: string): string[] {
+  return accentFreeKey(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+}
+
 /** The trigrams of a text, as pg_trgm takes them: per word, lower case and accents aside, padded with two spaces before and one after. */
 function trigrams(value: string): Set<string> {
   const grams = new Set<string>();
-  for (const word of accentFreeKey(value).split(/[^\p{L}\p{N}]+/u)) {
-    if (!word) continue;
+  for (const word of words(value)) {
     const padded = `  ${word} `;
     for (let index = 0; index + 3 <= padded.length; index += 1) grams.add(padded.slice(index, index + 3));
   }
@@ -205,20 +209,43 @@ export function similarity(a: string, b: string): number {
 export const CANDIDATE_THRESHOLD = 0.3;
 export const CANDIDATE_LIMIT = 3;
 
-/** The names of the list closest to `value`, the closest first: three at most, from the threshold up. */
+/** The fewest letters and digits a name holds for another name holding it to be a candidate: "SA" or "IT" alone make none. */
+const INCLUDED_NAME_MIN_CHARACTERS = 3;
+
+/**
+ * Whether one of the two names holds the other word for word (`Dell` and `Dell Technologies`): each
+ * word of the shorter is a whole word of the longer, case and accents aside, and the shorter counts
+ * three letters or digits at least.
+ */
+function holdsWordForWord(a: string, b: string): boolean {
+  const left = words(a);
+  const right = words(b);
+  const [shorter, longer] = left.length <= right.length ? [left, right] : [right, left];
+  if (shorter.join('').length < INCLUDED_NAME_MIN_CHARACTERS) return false;
+  const whole = new Set(longer);
+  return shorter.every((word) => whole.has(word));
+}
+
+/**
+ * The names of the list closest to `value`, three at most: a name that holds the other word for word
+ * first (`Dell Technologies` for `Dell`, below the threshold), then the others from the threshold up,
+ * the closest first. Each carries its trigram score.
+ */
 export function closestNames(value: string, names: readonly string[]): Array<{ name: string; score: number }> {
   const seen = new Set<string>();
-  const scored: Array<{ name: string; score: number }> = [];
+  const scored: Array<{ name: string; score: number; included: boolean }> = [];
   for (const name of names) {
     const key = foldKey(name);
     if (seen.has(key)) continue;
     seen.add(key);
     const score = similarity(value, name);
-    if (score >= CANDIDATE_THRESHOLD) scored.push({ name, score: Math.round(score * 100) / 100 });
+    const included = holdsWordForWord(value, name);
+    if (included || score >= CANDIDATE_THRESHOLD) scored.push({ name, score: Math.round(score * 100) / 100, included });
   }
   return scored
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
-    .slice(0, CANDIDATE_LIMIT);
+    .sort((a, b) => Number(b.included) - Number(a.included) || b.score - a.score || a.name.localeCompare(b.name))
+    .slice(0, CANDIDATE_LIMIT)
+    .map(({ name, score }) => ({ name, score }));
 }
 
 /** The columns whose values the check matches and Kad may propose a value for: the supplier and the dimensions. */

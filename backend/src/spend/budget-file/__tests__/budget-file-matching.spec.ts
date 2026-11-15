@@ -219,10 +219,41 @@ async function testCreatesAndCandidates() {
 function testCandidates() {
   assert.equal(similarity('Société', 'societe'), 1);
   assert.equal(similarity('Retail', 'Magasins'), 0);
+  // "Orange" is held word for word by the value: first (correctifs 3); the others by score.
   assert.deepEqual(closestNames('Orange Busines', ['Orange Business', 'Orange', 'Cegid', 'Orange Bank', 'Oracle']).map((entry) => entry.name),
-    ['Orange Business', 'Orange', 'Orange Bank']);
+    ['Orange', 'Orange Business', 'Orange Bank']);
+  assert.deepEqual(closestNames('Orange Busines', ['Orange Business', 'Cegid', 'Orange Bank', 'Oracle']).map((entry) => entry.name),
+    ['Orange Business', 'Orange Bank'], 'by score, from the threshold up');
   assert.deepEqual(closestNames('Quarterly review', ['Obligatoire', 'Haute']), []);
   console.log('  candidates by trigram similarity, three at most: OK');
+}
+
+// Correctifs 3 of lot I1: a name that holds the other word for word is a candidate below the
+// threshold ("Dell" for "Dell Technologies", 0.28), either way round, first of the three, with its
+// real score. The shorter name counts three letters or digits at least: "SA" alone makes nothing a
+// candidate. "Dell SA" against "Dell Technologies" stays without one: neither holds the other.
+function testCandidatesByInclusion() {
+  assert.equal(Math.round(similarity('Dell', 'Dell Technologies') * 100) / 100, 0.28, 'below the threshold');
+  assert.deepEqual(closestNames('Dell', ['Dell Technologies', 'Cegid']), [{ name: 'Dell Technologies', score: 0.28 }]);
+  assert.deepEqual(closestNames('Dell Technologies', ['Dell', 'Cegid']), [{ name: 'Dell', score: 0.28 }], 'the other way round');
+  assert.deepEqual(closestNames('Microsoft', ['Microsoft France']).map((entry) => entry.name), ['Microsoft France']);
+  assert.deepEqual(closestNames('dell', ['DELL Technologies']).map((entry) => entry.name), ['DELL Technologies'], 'case aside');
+  assert.deepEqual(closestNames('Societe', ['Société Générale']).map((entry) => entry.name), ['Société Générale'], 'accents aside');
+  assert.deepEqual(closestNames('2025', ['Budget 2025']).map((entry) => entry.name), ['Budget 2025'], 'digits count');
+  // A word of two characters alone is no candidate's reason; "Fromage & Co" still finds both companies.
+  assert.deepEqual(closestNames('SA', ['Fromage & Co SA', 'Formaggio Supremo SRL']), []);
+  assert.deepEqual(closestNames('Fromage & Co SA', ['SA']), [], 'nor the other way round');
+  assert.deepEqual(closestNames('Fromage & Co', ['Fromage & Co SA', 'Fromage & Co Inc.', 'Formaggio Supremo SRL']).map((entry) => entry.name),
+    ['Fromage & Co SA', 'Fromage & Co Inc.']);
+  // No word in common, or a word that is only part of another: no candidate.
+  assert.deepEqual(closestNames('Dell', ['Amazon Web Services', 'Delloitte Conseil']), []);
+  assert.deepEqual(closestNames('Dell SA', ['Dell Technologies']), [], 'neither name holds the other');
+  // Three names closer by trigrams leave the inclusion in the three, first.
+  const near = closestNames('Dell', ['Delle', 'Dells', 'Odell', 'Dell Technologies']);
+  assert.ok(near.slice(1).every((entry) => entry.score > 0.28), 'the three others score higher');
+  assert.deepEqual(near.map((entry) => entry.name), ['Dell Technologies', 'Delle', 'Dells']);
+  assert.equal(near[0].score, 0.28, 'its real score');
+  console.log('  a name that holds the other word for word is a candidate, first of the three: OK');
 }
 
 // A match undone is no match: the value is created as the file writes it, or refused when the person
@@ -344,6 +375,7 @@ async function testCandidatesOfReadableLists() {
 async function main() {
   testRecommendedKeys();
   testCandidates();
+  testCandidatesByInclusion();
   testChoicesParsing();
   await testServerMatches();
   await testSampleDataDomainMatched();
