@@ -224,7 +224,7 @@ Wenn Kad eine Budgetzeile anlegt, fragt es, ob die Zeile OPEX oder CAPEX ist, fa
 Kad ändert ein Feld auf vielen Budgetzeilen oder Anwendungen auf einmal, wie **Auswahl ändern** in der Liste. Dafür braucht es dasselbe Recht: die Stufe Mitglied für das Budget oder für die Anwendungen. Benennen Sie die Datensätze mit einem Filter der Liste, etwa einem Lieferanten oder einer Kostenstelle, oder mit ihren Referenzen (`BL-3`, `APP-7`). Verwenden Sie in einer Anfrage das eine oder das andere. Ein Filter nimmt die aktivierten Datensätze, es sei denn, er nennt einen Status. Anwendungen außer Betrieb bleiben außen vor, es sei denn, er nennt einen Lebenszyklus.
 
 - Bei Budgetzeilen: die Kostenstelle, das Konto, das zahlende Unternehmen, den Lieferanten, den IT-Verantwortlichen, den Fachverantwortlichen, Run oder Build oder den Wert einer Dimension.
-- Bei Anwendungen: die Fachverantwortlichen oder die IT-Verantwortlichen (die genannten Personen ersetzen die der Rolle), den Lebenszyklus oder die Geschäftskritikalität.
+- Bei Anwendungen: die Fachverantwortlichen oder die IT-Verantwortlichen (die genannten Personen ersetzen die der Rolle), die Kategorie, den Lebenszyklus, die Geschäftskritikalität oder die Cyberkritikalität.
 
 Fragen Sie zum Beispiel: „Setze die Zeilen des Lieferanten Acme auf die Kostenstelle IT-01“ oder „Mach Claire Martin zur IT-Verantwortlichen von APP-3 und APP-7“.
 
@@ -235,7 +235,7 @@ Kad lehnt eine Änderung ab:
 - Wenn die Anfrage keine Datensätze benennt oder einen Filter und Referenzen zusammen nennt
 - Wenn es den genannten Wert oder die genannte Person nicht findet
 - Über 5.000 Datensätze. Grenzen Sie den Filter ein
-- Die das Konto, das zahlende Unternehmen, eine Pflichtdimension oder den Lebenszyklus leeren würde
+- Die das Konto, das zahlende Unternehmen, eine Pflichtdimension, die Kategorie oder den Lebenszyklus leeren würde
 
 Ändert sich die Liste zwischen der Vorschau und Ihrer Genehmigung, schlägt die Vorschau fehl. Bitten Sie Kad um eine neue. Solange ein anderer Budgetvorgang läuft, bleibt die Vorschau offen: Genehmigen Sie sie erneut, sobald dieser Vorgang beendet ist. Über MCP verbundene Assistenten lesen nur.
 

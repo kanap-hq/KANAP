@@ -142,20 +142,21 @@ Une cellule sans valeur affiche un tiret.
 **Modifier un champ** :
 
 1. Sélectionnez les applications, puis cliquez sur **Modifier la sélection** (icône de modification). L'icône affiche le nombre d'applications sélectionnées
-2. Choisissez le **Champ** : **Responsables métier**, **Responsables IT**, **Cycle de vie** ou **Criticité business**
+2. Choisissez le **Champ** : **Responsables métier**, **Responsables IT**, **Catégorie**, **Cycle de vie**, **Criticité business** ou **Criticité cyber**
 3. Choisissez la **Nouvelle valeur**. Pour les responsables, choisissez une ou plusieurs personnes. La boîte de dialogue compte les applications : combien changeront, combien ont déjà cette valeur, et combien sont refusées. Le comptage reprend à chaque nouvelle valeur
 4. Cliquez sur **Modifier 12 applications** (avec votre comptage) pour confirmer. La fenêtre affiche ensuite le résultat. Cliquez sur **Fermer** pour la fermer. La liste derrière elle est déjà à jour
 
 **Responsables** : Les personnes choisies remplacent les responsables de ce rôle sur chaque application. L'autre rôle garde ses personnes : modifier les **Responsables métier** laisse les **Responsables IT** tels quels.
 
-**Vider un champ** : Pour **Responsables métier**, **Responsables IT** et **Criticité business**, cliquez sur **Vider le champ** (icône de gomme) à côté de la valeur. La valeur affiche **Vide**. Pour les responsables, le rôle reste sans personne. Le **Cycle de vie** ne peut pas être vidé.
+**Vider un champ** : Pour **Responsables métier**, **Responsables IT**, **Criticité business** et **Criticité cyber**, cliquez sur **Vider le champ** (icône de gomme) à côté de la valeur. La valeur affiche **Vide**. Pour les responsables, le rôle reste sans personne. La **Catégorie** et le **Cycle de vie** ne peuvent pas être vidés.
 
 **Bon à savoir** :
 
 - Une modification porte sur 5 000 applications au plus. Au-delà, resserrez les filtres ou sélectionnez moins d'applications
 - Si la liste change entre le comptage et votre confirmation, la boîte de dialogue affiche le nouveau comptage. Vérifiez-le, puis confirmez à nouveau
 - Si le comptage échoue, cliquez sur **Réessayer** à côté du message pour compter à nouveau
-- Une nouvelle criticité business fait passer une application revue à **À revoir**, comme sur la page de l'application
+- **Catégorie**, **Criticité business** et **Criticité cyber** ne listent que les valeurs encore proposées dans **Cartographie SI > Paramètres**
+- Une nouvelle criticité business ou cyber fait passer une application revue à **À revoir**, comme sur la page de l'application
 - Chaque application modifiée a sa propre entrée dans son onglet **Historique**
 - [Kad](ai-assistant.md#changing-records-in-bulk) fait la même modification quand vous la lui demandez dans une conversation, avec les mêmes droits. Vous approuvez son aperçu
 

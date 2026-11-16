@@ -224,7 +224,7 @@ Quand Kad crée une ligne budgétaire, il demande si la ligne est OPEX ou CAPEX 
 Kad modifie un champ sur de nombreuses lignes budgétaires ou applications à la fois, comme **Modifier la sélection** dans la liste. Il lui faut le même droit : le niveau Membre sur le budget, ou sur les applications. Désignez les fiches par un filtre de la liste, comme un fournisseur ou un centre de coûts, ou par leurs références (`BL-3`, `APP-7`). Utilisez l'un ou l'autre dans une demande. Un filtre prend les fiches activées, sauf s'il nomme un statut. Les applications retirées restent à l'écart, sauf s'il nomme un cycle de vie.
 
 - Sur les lignes budgétaires : le centre de coûts, le compte, la société payeuse, le fournisseur, le responsable IT, le responsable métier, run ou build, ou la valeur d'une dimension.
-- Sur les applications : les responsables métier ou les responsables IT (les personnes nommées remplacent celles du rôle), le cycle de vie ou la criticité business.
+- Sur les applications : les responsables métier ou les responsables IT (les personnes nommées remplacent celles du rôle), la catégorie, le cycle de vie, la criticité business ou la criticité cyber.
 
 Demandez par exemple : « Passe les lignes du fournisseur Acme sur le centre de coûts IT-01 » ou « Mets Claire Martin responsable IT de APP-3 et APP-7 ».
 
@@ -235,7 +235,7 @@ Kad refuse une modification :
 - Quand la demande ne désigne aucune fiche, ou nomme un filtre et des références ensemble
 - Quand il ne trouve pas la valeur ou la personne nommée
 - Au-delà de 5 000 fiches. Resserrez le filtre
-- Qui viderait le compte, la société payeuse, une dimension obligatoire ou le cycle de vie
+- Qui viderait le compte, la société payeuse, une dimension obligatoire, la catégorie ou le cycle de vie
 
 Si la liste change entre l'aperçu et votre approbation, l'aperçu échoue. Demandez-en un nouveau à Kad. Pendant qu'une autre opération sur le budget est en cours, l'aperçu reste ouvert : approuvez-le de nouveau une fois cette opération terminée. Les assistants connectés par MCP ne font que lire.
 

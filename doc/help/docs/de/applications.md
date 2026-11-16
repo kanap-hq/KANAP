@@ -142,20 +142,21 @@ Eine Zelle ohne Wert zeigt einen Strich.
 **Ein Feld ändern**:
 
 1. Wählen Sie die Anwendungen aus und klicken Sie auf **Auswahl ändern** (Bearbeitungssymbol). Das Symbol zeigt die Anzahl der ausgewählten Anwendungen
-2. Wählen Sie das **Feld**: **Fachverantwortliche**, **IT-Verantwortliche**, **Lebenszyklus** oder **Geschäftskritikalität**
+2. Wählen Sie das **Feld**: **Fachverantwortliche**, **IT-Verantwortliche**, **Kategorie**, **Lebenszyklus**, **Geschäftskritikalität** oder **Cyberkritikalität**
 3. Wählen Sie den **Neuen Wert**. Für Verantwortliche wählen Sie eine oder mehrere Personen. Der Dialog zählt die Anwendungen: wie viele geändert werden, wie viele diesen Wert bereits haben und wie viele abgelehnt werden. Bei jedem neuen Wert wird erneut gezählt
 4. Klicken Sie zur Bestätigung auf **12 Anwendungen ändern** (mit Ihrer Zählung). Das Fenster zeigt danach das Ergebnis. Klicken Sie auf **Schließen**, um es zu schließen. Die Liste dahinter ist bereits aktuell
 
 **Verantwortliche**: Die gewählten Personen ersetzen auf jeder Anwendung die Verantwortlichen dieser Rolle. Die andere Rolle behält ihre Personen: Eine Änderung der **Fachverantwortlichen** lässt die **IT-Verantwortlichen** unverändert.
 
-**Ein Feld leeren**: Bei **Fachverantwortliche**, **IT-Verantwortliche** und **Geschäftskritikalität** klicken Sie neben dem Wert auf **Feld leeren** (Radiergummi-Symbol). Der Wert zeigt **Leer**. Bei Verantwortlichen bleibt die Rolle ohne Person. **Lebenszyklus** lässt sich nicht leeren.
+**Ein Feld leeren**: Bei **Fachverantwortliche**, **IT-Verantwortliche**, **Geschäftskritikalität** und **Cyberkritikalität** klicken Sie neben dem Wert auf **Feld leeren** (Radiergummi-Symbol). Der Wert zeigt **Leer**. Bei Verantwortlichen bleibt die Rolle ohne Person. **Kategorie** und **Lebenszyklus** lassen sich nicht leeren.
 
 **Gut zu wissen**:
 
 - Eine Änderung umfasst höchstens 5.000 Anwendungen. Darüber grenzen Sie die Filter ein oder wählen weniger Anwendungen aus
 - Ändert sich die Liste zwischen der Zählung und Ihrer Bestätigung, zeigt der Dialog die neue Zählung. Prüfen Sie sie und bestätigen Sie erneut
 - Schlägt die Zählung fehl, klicken Sie neben der Meldung auf **Erneut versuchen**, um erneut zu zählen
-- Eine neue Geschäftskritikalität setzt eine geprüfte Anwendung auf **Erneut prüfen**, wie auf der Seite der Anwendung
+- **Kategorie**, **Geschäftskritikalität** und **Cyberkritikalität** bieten nur die Werte an, die unter **IT-Landschaft > Einstellungen** noch angeboten werden
+- Eine neue Geschäfts- oder Cyberkritikalität setzt eine geprüfte Anwendung auf **Erneut prüfen**, wie auf der Seite der Anwendung
 - Jede geänderte Anwendung erhält einen eigenen Eintrag in ihrem Tab **Verlauf**
 - [Kad](ai-assistant.md#changing-records-in-bulk) nimmt dieselbe Änderung vor, wenn Sie in einer Unterhaltung darum bitten, mit denselben Rechten. Sie genehmigen seine Vorschau
 

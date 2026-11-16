@@ -224,7 +224,7 @@ When Kad creates a budget line, it asks whether the line is OPEX or CAPEX if you
 Kad changes one field on many budget lines or applications at once, as **Change the selection** does on the list. It needs the same right: the Member level on budget, or on applications. Name the records with a filter of the list, such as a supplier or a cost center, or with their references (`BL-3`, `APP-7`). Use one or the other in a request. A filter takes the enabled records, unless it names a status. Retired applications stay out, unless it names a lifecycle.
 
 - On budget lines: the cost center, the account, the paying company, the supplier, the IT owner, the business owner, run or build, or the value of a dimension.
-- On applications: the business owners or the IT owners (the people you name replace those of the role), the lifecycle or the business criticality.
+- On applications: the business owners or the IT owners (the people you name replace those of the role), the category, the lifecycle, the business criticality or the cyber criticality.
 
 Ask, for example: "Move the lines of supplier Acme to cost center IT-01" or "Make Claire Martin the IT owner of APP-3 and APP-7".
 
@@ -235,7 +235,7 @@ Kad refuses a change:
 - When the request names no records, or names a filter and references together
 - When it does not find the value or the person you name
 - Above 5,000 records. Narrow the filter
-- That would empty the account, the paying company, a required dimension or the lifecycle
+- That would empty the account, the paying company, a required dimension, the category or the lifecycle
 
 If the list changes between the preview and your approval, the preview fails. Ask Kad for a new one. While another budget operation is running, the preview stays open: approve it again once that operation has finished. Assistants connected over MCP read only.
 
