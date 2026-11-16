@@ -95,15 +95,18 @@ export interface ImportLookalike {
   /** The row's line in the person's file. */
   line: number;
   name: string;
-  /** The record it looks like: its id, reference (`APP-4`), name and state at the check. */
+  /** The record it looks like: its id, reference (`APP-4`), name and state at the check; reference, name and state empty when it is gone. */
   target: ImportLookalikeTarget & { ref: string; name: string };
-  /** `name_accents`: the same name, accents aside; `close_name`: a close name and the same supplier or publisher. */
+  /**
+   * `name_accents`: the same name, accents aside; `close_name`: a close name and the same supplier or
+   * publisher. Absent when the row keeps a target it no longer looks like (chosen on an earlier check).
+   */
   reason?: 'name_accents' | 'close_name';
   /** What the check does with it: left out (the default), created anyway, or the record updated. */
   outcome: 'ignored' | 'created' | 'updated';
   /** "Update" is offered only when true. */
   updatable: boolean;
-  /** For an update: the columns it changes (none when the record already holds the row). */
+  /** For an update: the keys of the columns it changes (none when the record already holds the row), shown by their titles. */
   fields?: string[];
 }
 
@@ -116,6 +119,11 @@ export interface ImportLookalikes {
   ignored: number;
   created: number;
   updated: number;
+  /**
+   * The choices the check followed, the targets of the rows it left out by default included: the load
+   * and the next check send them back, a choice of the person replacing its row's.
+   */
+  choices: ImportLookalikeChoice[];
 }
 
 /**
@@ -125,7 +133,7 @@ export interface ImportLookalikes {
  */
 export type ImportLookalikeChoice =
   | { kind: 'lookalike'; line: number; action: 'ignore' | 'create' }
-  | { kind: 'lookalike'; line: number; action: 'update'; id: string; state: string }
+  | { kind: 'lookalike'; line: number; action: 'update'; id: string; state?: string }
   | { kind: 'lookalikes'; action: 'ignore' | 'create' | 'update'; targets?: Record<string, ImportLookalikeTarget> };
 
 /**
@@ -159,8 +167,8 @@ export interface CsvImportMatch {
   ref?: string | null;
   /** `editor`: an application's supplier found by its publisher. */
   origin: 'server' | 'model' | 'editor';
-  /** `version`:a version label found in the catalog by a prefix rule (`22.04` for `22.04 LTS`). */
-  reason: 'accents' | 'translation' | 'model' | 'version';
+  /** `version`: a version label found in the catalog by a prefix rule (`22.04` for `22.04 LTS`); `editor`: found by the publisher. */
+  reason: 'accents' | 'translation' | 'model' | 'version' | 'editor';
   lines: number[];
   count: number;
   undoable: boolean;

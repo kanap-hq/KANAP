@@ -36,6 +36,7 @@ type Action = 'ignore' | 'create' | 'update';
 export type LookalikeRow = {
   line: number;
   name: string;
+  /** Reference, name and state empty when the record is gone since the check the person chose on. */
   target: { ref: string; name: string; state: string };
   outcome: 'ignored' | 'created' | 'updated';
   updatable: boolean;
@@ -71,33 +72,6 @@ export function applicationLookalikeReason(look: ImportLookalike, t: (key: strin
   if (look.reason === 'name_accents') return t(`ops:${L}reasonNameAccents`);
   if (look.reason === 'close_name') return t(`ops:${L}reasonCloseName`);
   return null;
-}
-
-/**
- * The choices a check followed, read back from what it did with each row, for a check that does not
- * give its choices back (an import card of rows): the choice for all rows, which the rows beyond the
- * list follow, then each listed row that differs from it. `updateChoice` names a row's record.
- */
-export function lookalikeChoicesOf<R extends LookalikeRow, C extends { kind: string }>(
-  lookalikes: LookalikeRows<R>,
-  updateChoice: (look: R) => C,
-): C[] {
-  const listed = { ignored: 0, created: 0, updated: 0 };
-  for (const look of lookalikes.lines) listed[look.outcome] += 1;
-  const beyond = lookalikes.count > lookalikes.lines.length;
-  // "Update all" leaves a row it cannot update created: an update beyond the list says the choice was "Update all".
-  const all: Action = !beyond ? 'ignore'
-    : lookalikes.updated > listed.updated ? 'update'
-      : lookalikes.created > listed.created ? 'create' : 'ignore';
-  const choices: C[] = all !== 'ignore' || beyond
-    ? [{ kind: 'lookalikes', action: all, targets: lookalikes.targets } as unknown as C]
-    : [];
-  for (const look of lookalikes.lines) {
-    const action = actionOf(look.outcome);
-    if (action === all) continue;
-    choices.push(action === 'update' ? updateChoice(look) : { kind: 'lookalike', line: look.line, action } as unknown as C);
-  }
-  return choices;
 }
 
 /**
@@ -144,7 +118,9 @@ export default function ImportLookalikesView<R extends LookalikeRow, C extends {
   const [unfolded, setUnfolded] = useState(false);
   // The choice for all rows; `ignore`, the default, when none was made.
   const allAction = (choices as ReadonlyArray<{ kind: string }>).find(isAllChoice)?.action ?? 'ignore';
-  const updatable = lookalikes.lines.filter((look) => look.updatable);
+  // A record gone since the check (no reference) is never offered to update, as the budget file's.
+  const canUpdate = (look: R) => look.updatable && look.target.ref !== '';
+  const updatable = lookalikes.lines.filter(canUpdate);
   const act = (label: string, next: () => C[]): LineAction | null => (
     onChoices ? { label, onClick: () => onChoices(next()), disabled: choicesDisabled } : null
   );
@@ -161,7 +137,7 @@ export default function ImportLookalikesView<R extends LookalikeRow, C extends {
     const rest = choices.filter((choice) => !isAllChoice(choice) && !isRowChoice(choice));
     const kept = action === 'update'
       ? lookalikes.lines
-        .filter((look) => !look.updatable && look.outcome === 'created')
+        .filter((look) => !canUpdate(look) && look.outcome === 'created')
         .map((look) => ({ kind: 'lookalike', line: look.line, action: 'create' }) as unknown as C)
       : [];
     // Each row's record as the check shows it, every row included: a record changed in between is refused, not updated blind.
@@ -180,9 +156,15 @@ export default function ImportLookalikesView<R extends LookalikeRow, C extends {
 
   const row = (look: R) => {
     const stale = !!changedLines?.has(look.line);
-    const label = t(`${L}row`, { line: look.line, name: look.name, ref: look.target.ref, target: look.target.name });
-    const [before, after] = t(`${L}row`, { line: look.line, name: look.name, ref: REF_MARK, target: look.target.name }).split(REF_MARK);
-    const url = targetUrl(look);
+    const gone = look.target.ref === '';
+    // A record gone since the check: the row by its line and name only.
+    const label = gone
+      ? t(`${K}row`, { line: look.line, message: look.name })
+      : t(`${L}row`, { line: look.line, name: look.name, ref: look.target.ref, target: look.target.name });
+    const [before, after] = gone
+      ? [label, undefined]
+      : t(`${L}row`, { line: look.line, name: look.name, ref: REF_MARK, target: look.target.name }).split(REF_MARK);
+    const url = gone ? null : targetUrl(look);
     const ref = url
       ? <Link href={url} target="_blank" rel="noopener noreferrer" underline="hover">{look.target.ref}</Link>
       : look.target.ref;
@@ -207,7 +189,7 @@ export default function ImportLookalikesView<R extends LookalikeRow, C extends {
     const toggles = [
       <ToggleButton key="ignore" value="ignore">{t(`${L}ignore`)}</ToggleButton>,
       <ToggleButton key="create" value="create">{t(`${L}create`)}</ToggleButton>,
-      ...(look.updatable ? [<ToggleButton key="update" value="update">{t(`${L}update`, { ref: look.target.ref })}</ToggleButton>] : []),
+      ...(canUpdate(look) ? [<ToggleButton key="update" value="update">{t(`${L}update`, { ref: look.target.ref })}</ToggleButton>] : []),
     ];
     const outcome = look.outcome === 'ignored'
       ? t(`${L}outcomeIgnored`)

@@ -4,7 +4,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
-import ImportLookalikesView from './ImportLookalikesView';
+import ImportLookalikesView, { applicationLookalikeReason } from './ImportLookalikesView';
 import type { ImportLookalike, ImportLookalikeChoice, ImportLookalikes } from './csv.types';
 
 // Lot I3 of 26.11.9, pass 3b: the rows that look like a stored record, drawn by one view for the
@@ -30,12 +30,18 @@ const lookalikes = (lines: ImportLookalike[], over: Partial<ImportLookalikes> = 
   ignored: lines.filter((entry) => entry.outcome === 'ignored').length,
   created: lines.filter((entry) => entry.outcome === 'created').length,
   updated: lines.filter((entry) => entry.outcome === 'updated').length,
+  choices: [],
   ...over,
 });
 
 const undone: Choice = { kind: 'unmatch', column: 'supplier_name', value: 'Cegid' };
 
-function view(value: ImportLookalikes, choices: Choice[] = [undone], onChoices: ((next: Choice[]) => void) | null = vi.fn()) {
+function view(
+  value: ImportLookalikes,
+  choices: Choice[] = [undone],
+  onChoices: ((next: Choice[]) => void) | null = vi.fn(),
+  reasonText: (entry: ImportLookalike) => string | null = () => null,
+) {
   render(
     <ThemeProvider theme={createAppTheme('light')}>
       <ImportLookalikesView<ImportLookalike, Choice>
@@ -44,7 +50,7 @@ function view(value: ImportLookalikes, choices: Choice[] = [undone], onChoices: 
         choices={choices}
         updateChoice={(entry) => ({ kind: 'lookalike', line: entry.line, action: 'update', id: entry.target.id, state: entry.target.state })}
         onChoices={onChoices ?? undefined}
-        reasonText={() => null}
+        reasonText={reasonText}
         targetUrl={(entry) => `/it/applications/${entry.target.ref}`}
         fieldName={(field) => field}
       />
@@ -119,5 +125,39 @@ describe('ImportLookalikesView', () => {
     view(lookalikes([look(3, 'a3', { outcome: 'created' })]), [], null);
     expect(screen.queryByRole('group')).toBeNull();
     expect(screen.getByText((content) => content.includes('Created anyway'))).toBeInTheDocument();
+  });
+  // The fusion of passes 3a and 3b: the server's shape of a row.
+  it('says a row whose application is gone by its line and name, with no link, no reason and no update', () => {
+    const gone = look(3, 'a3', { target: { id: 'a3', ref: '', name: '', state: '' }, reason: undefined, updatable: false });
+    view(lookalikes([gone, look(4, 'a4', { updatable: false })]), [undone], vi.fn(), (entry) => applicationLookalikeReason(entry, i18n.t.bind(i18n)));
+    const row = choicesOf('Line 3: Comptabilite 3');
+    expect(within(row).queryByRole('button', { name: /^Update/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: '' })).toBeNull();
+    fireEvent.mouseOver(row.parentElement!.previousSibling as HTMLElement);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+  });
+
+  it('offers no update, for a row or for all, when the import only adds new records', () => {
+    view(lookalikes([look(3, 'a3', { updatable: false }), look(4, 'a4', { updatable: false })]));
+    expect(screen.queryByRole('button', { name: /^Update/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Create all anyway' })).toBeInTheDocument();
+  });
+
+  it('shows a row without a reason with no tooltip, and a reason when there is one', async () => {
+    const reason = (entry: ImportLookalike) => applicationLookalikeReason(entry, i18n.t.bind(i18n));
+    view(lookalikes([look(3, 'a3', { reason: undefined }), look(4, 'a4', { reason: 'close_name' })]), [undone], vi.fn(), reason);
+    fireEvent.mouseOver(choicesOf('Line 3: Comptabilite 3 → APP-3 Comptabilité 3').parentElement!.previousSibling as HTMLElement);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    fireEvent.mouseOver(choicesOf('Line 4: Comptabilite 4 → APP-4 Comptabilité 4').parentElement!.previousSibling as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Close name, same supplier or publisher');
+  });
+
+  it('counts the rows left out as « écartées » in French, never « ignorées »', async () => {
+    await i18n.changeLanguage('fr');
+    view(lookalikes([look(3, 'a3'), look(4, 'a4', { outcome: 'created' })]));
+    // The exact text, its non-breaking spaces included.
+    const counts = 'Écartées\u00a0: 1, créées quand même\u00a0: 1, mises à jour\u00a0: 0';
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === counts)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/ignorée/i);
   });
 });

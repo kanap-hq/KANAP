@@ -84,7 +84,8 @@ export default function CsvImportDialogV2({
   const [hover, setHover] = React.useState(false);
   // The matches the person undid on the check (lot I3 of 26.11.9): the next check and the load send them.
   const [unmatched, setUnmatched] = React.useState<Array<{ column: string; value: string }>>([]);
-  // The person's choices on the rows that look like an existing record (the applications): the next check and the load send them.
+  // The person's last choices on the rows that look like an existing record (the applications), for a
+  // check that gave none back; a check that did gives the list the next check and the load send.
   const [lookalikes, setLookalikes] = React.useState<ImportLookalikeChoice[]>([]);
   // The matches stay unfolded while the file is checked again after an undo.
   const [matchesOpen, setMatchesOpen] = React.useState(false);
@@ -130,7 +131,9 @@ export default function CsvImportDialogV2({
     next: { undone?: Array<{ column: string; value: string }>; chosen?: ImportLookalikeChoice[] } = {},
   ) => {
     const undone = next.undone ?? unmatched;
-    const chosen = next.chosen ?? lookalikes;
+    // The choices of the check shown, as it gave them back, the targets of the rows it left out included:
+    // a row left out stays left out even when its application was renamed since (as the budget file's load).
+    const chosen = next.chosen ?? result?.lookalikes?.choices ?? lookalikes;
     if (!file) return;
     setLoading(true);
     setError(null);
@@ -302,13 +305,14 @@ export default function CsvImportDialogV2({
                 <ImportLookalikesView<ImportLookalike, ImportLookalikeChoice>
                   lookalikes={result.lookalikes}
                   title={t('ops:operations.budgetFile.lookalikes.applicationsTitle')}
-                  choices={lookalikes}
+                  choices={result.lookalikes.choices ?? lookalikes}
                   updateChoice={applicationUpdateChoice}
                   onChoices={phase === 'validate' && result.dryRun ? chooseLookalikes : undefined}
                   choicesDisabled={loading}
                   reasonText={(look) => applicationLookalikeReason(look, t)}
                   targetUrl={(look) => buildEntityUrl(entity, look.target.ref)}
                   fieldName={columnName}
+                  changedLines={new Set(result.errors.filter((error) => error.code === 'CSV_LOOKALIKE_CHANGED').map((error) => error.row))}
                   refusedLines={new Set(result.errors.map((error) => error.row))}
                 />
               </Box>

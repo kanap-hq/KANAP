@@ -6,8 +6,8 @@ import { csvMessageColumn, csvMessageText } from '../../components/csv/csvMessag
 import { ReportView as BudgetFileReportView } from '../../components/finance/BudgetFileImportDialog';
 import { useAuth } from '../../auth/AuthContext';
 import ImportMatchesView from '../../components/csv/ImportMatchesView';
-import ImportLookalikesView, { applicationLookalikeReason, applicationUpdateChoice, lookalikeChoicesOf } from '../../components/csv/ImportLookalikesView';
-import type { ImportLookalike, ImportLookalikeChoice } from '../../components/csv/csv.types';
+import ImportLookalikesView, { applicationLookalikeReason, applicationUpdateChoice } from '../../components/csv/ImportLookalikesView';
+import type { ImportLookalike } from '../../components/csv/csv.types';
 import { buildEntityUrl } from '../utils/entityUrls';
 
 /** The messages shown of each kind, as the import dialog shows them. */
@@ -106,12 +106,13 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
   const choose = check ? onChoices : undefined;
   const matching = budgetFile?.matching;
   // A row import's choices on this card, the whole list a choice sends again: its matches undone, then
-  // what the check did with each row that looks like an existing application.
+  // the choices the check followed on the rows that look like an existing application, as it gave them
+  // back (the targets of the rows it left out included).
   const undone = run.report.kind === 'rows' ? run.report.undone ?? [] : [];
   const lookalikes = run.report.kind === 'rows' && run.report.lookalikes && run.report.lookalikes.count > 0 ? run.report.lookalikes : null;
   const rowChoices: AiImportChoice[] = [
     ...undone.map((item) => ({ kind: 'unmatch' as const, ...item })),
-    ...(lookalikes ? lookalikeChoicesOf<ImportLookalike, ImportLookalikeChoice>(lookalikes, applicationUpdateChoice) : []),
+    ...(lookalikes?.choices ?? []),
   ];
   // The server says whether the person may create suppliers, and whether the check created them.
   const suppliersBox = !!choose && !!matching?.createSuppliers.allowed;
@@ -219,6 +220,7 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
               reasonText={(look) => applicationLookalikeReason(look, t)}
               targetUrl={(look) => buildEntityUrl('applications', look.target.ref)}
               fieldName={(field) => titles.get(field) ?? field}
+              changedLines={new Set(run.report.errors.filter((error) => error.code === 'CSV_LOOKALIKE_CHANGED').map((error) => error.row))}
               refusedLines={new Set(run.report.errors.map((error) => error.row))}
             />
           )}

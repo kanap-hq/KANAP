@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
 import type { AiImportRun, AiMutationPreview } from '../aiTypes';
-import type { CsvImportMatch, ImportLookalike, ImportLookalikes } from '../../components/csv/csv.types';
+import type { CsvImportMatch, ImportLookalike, ImportLookalikeChoice, ImportLookalikes } from '../../components/csv/csv.types';
 import PreviewCard from './PreviewCard';
 
 vi.mock('../../components/csv/serverExport', () => ({ downloadServerExport: vi.fn(async () => undefined) }));
@@ -23,28 +23,41 @@ const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
 type RowsReport = Extract<AiImportRun['report'], { kind: 'rows' }>;
 
+// The server's shape (pass 3a): ids, 16-character states, and the choices the check followed.
+const ID_4 = '4b0e6a5c-3f1d-4c2b-9a8e-7d6f5e4c3b2a';
+const ID_7 = '7c1f2e3d-4a5b-4c6d-8e7f-9a0b1c2d3e4f';
 const accents: ImportLookalike = {
-  line: 3, name: 'Comptabilite', target: { id: 'app-4', ref: 'APP-4', name: 'Comptabilité', state: '2026-11-10T08:00:00.000Z' },
+  line: 3, name: 'Comptabilite', target: { id: ID_4, ref: 'APP-4', name: 'Comptabilité', state: '0123456789abcdef' },
   reason: 'name_accents', outcome: 'ignored', updatable: true,
 };
 const close: ImportLookalike = {
-  line: 5, name: 'Cegid XRP Flex', target: { id: 'app-7', ref: 'APP-7', name: 'Cegid XRP', state: '2026-11-11T09:30:00.000Z' },
+  line: 5, name: 'Cegid XRP Flex', target: { id: ID_7, ref: 'APP-7', name: 'Cegid XRP', state: 'fedcba9876543210' },
   reason: 'close_name', outcome: 'ignored', updatable: true,
 };
 
-const lookalikes = (lines: ImportLookalike[], over: Partial<ImportLookalikes> = {}): ImportLookalikes => ({
-  lines,
-  targets: Object.fromEntries(lines.map((entry) => [String(entry.line), { id: entry.target.id, state: entry.target.state }])),
-  count: lines.length,
-  ignored: lines.filter((entry) => entry.outcome === 'ignored').length,
-  created: lines.filter((entry) => entry.outcome === 'created').length,
-  updated: lines.filter((entry) => entry.outcome === 'updated').length,
-  ...over,
-});
+/** As the server gives them: the rows chosen, then the choice for all rows (`all`) with every row's target. */
+const lookalikes = (
+  lines: ImportLookalike[],
+  over: Partial<ImportLookalikes> = {},
+  rowChoices: ImportLookalikeChoice[] = [],
+  all: 'ignore' | 'create' | 'update' = 'ignore',
+): ImportLookalikes => {
+  const targets = Object.fromEntries(lines.map((entry) => [String(entry.line), { id: entry.target.id, state: entry.target.state }]));
+  return {
+    lines,
+    targets,
+    count: lines.length,
+    ignored: lines.filter((entry) => entry.outcome === 'ignored').length,
+    created: lines.filter((entry) => entry.outcome === 'created').length,
+    updated: lines.filter((entry) => entry.outcome === 'updated').length,
+    choices: [{ kind: 'lookalikes', action: all, targets }, ...rowChoices],
+    ...over,
+  };
+};
 
 const editor: CsvImportMatch = {
   column: 'supplier_name', name: null, value: 'Cegid', target: 'Cegid', ref: 'SUP-4',
-  origin: 'editor', reason: 'accents', lines: [5], count: 1, undoable: true,
+  origin: 'editor', reason: 'editor', lines: [5], count: 1, undoable: true,
 };
 
 function card(report: Partial<RowsReport> = {}, over: { status?: AiMutationPreview['status']; id?: string } = {}): AiMutationPreview {
@@ -129,33 +142,66 @@ describe('PreviewCard, the rows of an applications import that look like an exis
   it('sends a row created anyway with the matches undone on the card, and puts the new card in its place', async () => {
     const next = card({}, { id: 'preview-2' });
     post.mockResolvedValueOnce({ data: next });
-    const onReplace = renderCard(card({ undone: [{ column: 'supplier_name', value: 'Cegid' }] }));
+    const shown = lookalikes([accents, close]);
+    const onReplace = renderCard(card({ undone: [{ column: 'supplier_name', value: 'Cegid' }], lookalikes: shown }));
     fireEvent.click(choice(ROW_3, 'Create anyway'));
     expect(post).toHaveBeenCalledWith(ROUTE, {
       choices: [
         { kind: 'unmatch', column: 'supplier_name', value: 'Cegid' },
+        { kind: 'lookalikes', action: 'ignore', targets: shown.targets },
         { kind: 'lookalike', line: 3, action: 'create' },
       ],
     });
     await waitFor(() => expect(onReplace).toHaveBeenCalledWith(expect.objectContaining({ preview_id: 'preview-1' }), next));
   });
 
-  it('sends the whole list of the card: a row the check created anyway, and a row updated by its id and state', () => {
+  it('sends the whole list of the card from the choices of the server: two rows, the right kind, line, id and state', () => {
     post.mockResolvedValueOnce({ data: card({}, { id: 'preview-2' }) });
-    renderCard(card({ lookalikes: lookalikes([{ ...accents, outcome: 'created' }, close]) }));
+    const created: ImportLookalikeChoice = { kind: 'lookalike', line: 3, action: 'create' };
+    const shown = lookalikes([{ ...accents, outcome: 'created' }, close], {}, [created]);
+    renderCard(card({ lookalikes: shown }));
     fireEvent.click(choice(ROW_5, 'Update APP-7'));
     expect(post).toHaveBeenCalledWith(ROUTE, {
       choices: [
-        { kind: 'lookalike', line: 3, action: 'create' },
-        { kind: 'lookalike', line: 5, action: 'update', id: 'app-7', state: '2026-11-11T09:30:00.000Z' },
+        { kind: 'lookalikes', action: 'ignore', targets: shown.targets },
+        created,
+        { kind: 'lookalike', line: 5, action: 'update', id: ID_7, state: 'fedcba9876543210' },
       ],
     });
+  });
+
+  it('sends the server\'s choices even when what the rows show would read otherwise', () => {
+    // A row updated whose application changed since: the server keeps the target the person chose on.
+    post.mockResolvedValueOnce({ data: card({}, { id: 'preview-2' }) });
+    const pinned: ImportLookalikeChoice = { kind: 'lookalike', line: 5, action: 'update', id: ID_7, state: '1111111111111111' };
+    const shown = lookalikes([accents, { ...close, outcome: 'updated', fields: [] }], {}, [pinned]);
+    renderCard(card({ lookalikes: shown }));
+    fireEvent.click(choice(ROW_3, 'Create anyway'));
+    expect(post).toHaveBeenCalledWith(ROUTE, {
+      choices: [{ kind: 'lookalikes', action: 'ignore', targets: shown.targets }, pinned, { kind: 'lookalike', line: 3, action: 'create' }],
+    });
+  });
+
+  it('names the fields of an update by the titles of the card, and reads a row\'s refusal and warning translated', async () => {
+    const preview = card({
+      lookalikes: lookalikes([accents, { ...close, outcome: 'updated', fields: ['supplier_name'] }]),
+      errors: [{ row: 5, message: 'APP-7 changed since the check.', code: 'CSV_LOOKALIKE_CHANGED', params: { ref: 'APP-7' } }],
+      warnings: [{ row: 3, message: 'Looks like APP-4, already updated by line 2. Left out.', code: 'CSV_LOOKALIKE_SAME_RECORD', params: { ref: 'APP-4', other: 2 } }],
+    });
+    Object.assign(preview.import_mapping!.validation!, { ok: false, error_count: 1, warning_count: 1 });
+    renderCard(preview);
+    expect(screen.getByText(/APP-7 changed since the check\./)).toBeInTheDocument();
+    expect(screen.getByText(/Looks like APP-4, already updated by line 2\. Left out\./)).toBeInTheDocument();
+    fireEvent.mouseOver(screen.getByRole('group', { name: ROW_5 }).parentElement!.previousSibling as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Changes: Fournisseur');
   });
 
   it('keeps the rows\' choices when a match is undone, and keeps a choice for all rows beyond the rows listed', () => {
     post.mockResolvedValueOnce({ data: card({}, { id: 'preview-2' }) });
     // 250 rows created anyway: the 2 listed, and 248 beyond the list.
-    const all = lookalikes([{ ...accents, outcome: 'created' }, { ...close, outcome: 'ignored' }], { count: 250, created: 249, ignored: 1 });
+    const all = lookalikes([{ ...accents, outcome: 'created' }, { ...close, outcome: 'ignored' }], { count: 250, created: 249, ignored: 1 }, [
+      { kind: 'lookalike', line: 5, action: 'ignore' },
+    ], 'create');
     renderCard(card({ matches: [editor], matchesTotal: 1, lookalikes: all }));
     fireEvent.click(screen.getByRole('button', { name: /^1 value matched/ }));
     fireEvent.click(within(screen.getByText(/Cegid → SUP-4/).parentElement!).getByRole('button', { name: 'Undo' }));

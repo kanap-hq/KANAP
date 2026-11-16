@@ -69,7 +69,8 @@ describe('ImportMatchesView, a supplier found by the publisher', () => {
     ['fr', 'Fournisseur (éditeur) : Cegid → SUP-4 Cegid'],
   ])('names the column with the publisher (%s), without the mark of Kad', async (language, text) => {
     await i18n.changeLanguage(language);
-    const editor: CsvImportMatch = { ...match, column: 'supplier_name', value: 'Cegid', target: 'Cegid', ref: 'SUP-4', origin: 'editor' };
+    // As the server gives it (pass 3a): origin and reason `editor`.
+    const editor: CsvImportMatch = { ...match, column: 'supplier_name', value: 'Cegid', target: 'Cegid', ref: 'SUP-4', origin: 'editor', reason: 'editor' };
     const model: CsvImportMatch = { ...match, origin: 'model', reason: 'model' };
     render(
       <ImportMatchesView
