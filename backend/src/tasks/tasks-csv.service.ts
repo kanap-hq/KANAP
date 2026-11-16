@@ -20,7 +20,10 @@ import {
   TASK_INHERITED_CLASSIFICATION,
   TASK_UUID_RE,
   isContractOutsideAccessLabel,
+  keepsStoredPeople,
+  relatedObjectBeyondCase,
   relatedObjectIdsByName,
+  RELATED_OBJECT_MODULES,
   taskCsvConfig,
   taskProjectClassifications,
 } from './task-csv.config';
@@ -141,9 +144,9 @@ export class TasksCsvService {
     // First run the base import
     const result = await this.importSvc.import(taskCsvConfig, file, params, opts);
 
-    // If successful and not dry run, handle viewers and owners
+    // If successful and not dry run, handle viewers and owners, as the check said (a list kept whole).
     if (result.ok && !params.dryRun) {
-      await this.handleViewerOwnerImport(file, opts);
+      await this.handleViewerOwnerImport(file, opts, { unmatched: params.unmatched, warnings: result.warnings });
     }
 
     return result;
@@ -235,11 +238,14 @@ export class TasksCsvService {
   }
 
   /**
-   * Handle viewer and owner import from CSV after main import.
+   * Handle viewer and owner import from CSV after main import. A row's task is found as the import
+   * found its related object (accents aside for a person who reads its family, unless undone); a
+   * list the check said kept (`CSV_REFERENCE_NOT_FOUND_KEPT` on one of its cells) is not written.
    */
   private async handleViewerOwnerImport(
     file: Express.Multer.File,
-    opts: { manager: EntityManager; tenantId: string },
+    opts: { manager: EntityManager; tenantId: string; access?: CsvImportOptions['access'] },
+    checked: { unmatched?: CsvImportParams['unmatched']; warnings?: CsvImportResult['warnings'] } = {},
   ): Promise<void> {
     const { manager, tenantId } = opts;
 
@@ -282,14 +288,16 @@ export class TasksCsvService {
       if (!name || (type === 'contract' && isContractOutsideAccessLabel(name))) return null;
       const cacheKey = `${type}||${name.toLowerCase()}`;
       if (!relatedIdCache.has(cacheKey)) {
-        const idOf = await relatedObjectIdsByName(manager, tenantId, type, [name]);
+        const beyondCase = relatedObjectBeyondCase(opts.access, checked.unmatched, 'related_object_name', RELATED_OBJECT_MODULES[type]);
+        const idOf = await relatedObjectIdsByName(manager, tenantId, type, [name], { beyondCase });
         relatedIdCache.set(cacheKey, idOf?.(name) ?? null);
       }
       return relatedIdCache.get(cacheKey) ?? null;
     };
 
-    // Process each row
-    for (const row of rows) {
+    // Process each row: the import's lines (header first, blank lines skipped by both reads).
+    for (const [index, row] of rows.entries()) {
+      const line = index + 2;
       const taskTitle = (row['title'] || '').trim();
       if (!taskTitle) continue;
 
@@ -339,8 +347,10 @@ export class TasksCsvService {
       // NULL jsonb lists: none is `[]`, and the list goes as JSON (a bare array is a PostgreSQL array).
       // A list that names the people the task already has, in any order, is left as it is: a task
       // the file does not change keeps its updated_at.
-      const writeViewers = [1, 2, 3, 4].some((i) => `viewer_email_${i}` in row) && !samePeople(task.viewer_ids, viewerIds);
-      const writeOwners = [1, 2, 3, 4].some((i) => `owner_email_${i}` in row) && !samePeople(task.owner_ids, ownerIds);
+      const writes = (prefix: string, stored: unknown, next: string[]) => [1, 2, 3, 4].some((i) => `${prefix}_${i}` in row)
+        && !keepsStoredPeople(checked.warnings ?? [], line, prefix) && !samePeople(stored, next);
+      const writeViewers = writes('viewer_email', task.viewer_ids, viewerIds);
+      const writeOwners = writes('owner_email', task.owner_ids, ownerIds);
 
       if (writeViewers || writeOwners) {
         const updates: string[] = [];
