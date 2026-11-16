@@ -186,7 +186,8 @@ async function testChangedSinceTheCheck() {
     await ctx.runner.query(`UPDATE applications SET description = 'edited', updated_at = now() + interval '1 second' WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, compta.id]);
     const result = await importCsv(ctx, file, { lookalikes: choices });
     assert.equal(result.ok, false);
-    assert.deepEqual(result.errors.map((error) => [error.row, error.code, error.params?.ref]), [[2, 'CSV_LOOKALIKE_CHANGED', compta.ref]]);
+    // A refusal of the whole row names no column (correctifs I).
+    assert.deepEqual(result.errors.map((error) => [error.row, error.code, error.params?.ref, error.column]), [[2, 'CSV_LOOKALIKE_CHANGED', compta.ref, undefined]]);
     assert.deepEqual(await names(ctx), ['Comptabilité'], 'nothing imported, the new row neither');
     assert.equal((await stored(ctx, compta.id)).editor, null);
 
@@ -281,7 +282,7 @@ async function testGoneTarget() {
     const entry = check.lookalikes!.lines[0];
     assert.deepEqual([entry.target, entry.reason, entry.outcome, entry.updatable], [{ id: compta.id, ref: '', name: '', state: '' }, undefined, 'ignored', false]);
     // The update chosen on the first check is refused; the choices given back leave the row out (review 3, C2).
-    assert.deepEqual(check.errors.map((error) => [error.row, error.code]), [[2, 'CSV_LOOKALIKE_GONE']]);
+    assert.deepEqual(check.errors.map((error) => [error.row, error.code, error.column]), [[2, 'CSV_LOOKALIKE_GONE', undefined]]);
     // What the screen sends at the load, and on "Update all": read without a 400.
     const followed = csvLookalikes(JSON.stringify(check.lookalikes!.choices));
     csvLookalikes(JSON.stringify([{ kind: 'lookalikes', action: 'update', targets: check.lookalikes!.targets }]));
@@ -313,7 +314,7 @@ async function testNameFindsAnApplicationSinceTheCheck() {
     const other = await app(ctx, 'Comptabilite', { description: 'autre application' });
     const load = await importCsv(ctx, file, { lookalikes: followed });
     assert.equal(load.ok, false);
-    assert.deepEqual(load.errors.map((error) => [error.row, error.code, error.params?.ref]), [[2, 'CSV_LOOKALIKE_NAME_FOUND', other.ref]]);
+    assert.deepEqual(load.errors.map((error) => [error.row, error.code, error.params?.ref, error.column]), [[2, 'CSV_LOOKALIKE_NAME_FOUND', other.ref, undefined]]);
     assert.deepEqual(await described(ctx, compta.id), { name: 'Comptabilité', description: 'ancienne' });
     assert.deepEqual(await described(ctx, other.id), { name: 'Comptabilite', description: 'autre application' });
     assert.deepEqual(await names(ctx), ['Comptabilite', 'Comptabilité'], 'nothing imported, the new row neither');

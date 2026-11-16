@@ -387,9 +387,10 @@ export class ApplicationsCsvService {
     );
     const states = new Map((ids.length === 0 ? [] : await storedApplications(context.manager, context.tenantId, ids)).map((app) => [app.id, applicationState(app)]));
     return rows.map((row): CsvSettledRow => {
+      // A refusal of the whole row: no column to name.
       const refuse = (code: string, message: string, ref?: string): CsvSettledRow => ({
         entity: row.found,
-        errors: [{ row: row.rowNumber, column: 'name', message, code, ...(ref !== undefined ? { params: { ref } } : {}) }],
+        errors: [{ row: row.rowNumber, message, code, ...(ref !== undefined ? { params: { ref } } : {}) }],
       });
       const holder = decided.nameFound.get(row.rowNumber);
       if (holder) {
@@ -416,7 +417,7 @@ export class ApplicationsCsvService {
       if (!entity) return refuse('CSV_LOOKALIKE_GONE', 'The application chosen at the check no longer exists.');
       decision.state = states.get(decision.id) ?? decision.state;
       if (decision.expected !== undefined && decision.expected !== decision.state) {
-        return { entity, errors: [{ row: row.rowNumber, column: 'name', message: `${ref} changed since the check.`, code: 'CSV_LOOKALIKE_CHANGED', params: { ref } }] };
+        return { entity, errors: [{ row: row.rowNumber, message: `${ref} changed since the check.`, code: 'CSV_LOOKALIKE_CHANGED', params: { ref } }] };
       }
       return { entity };
     });
