@@ -739,7 +739,7 @@
     "actionClasses": {
       "internal_note": "Nota interna",
       "classification": "Actualización de clasificación",
-      "status": "Actualización de estado",
+      "status": "Actualización de estado (cierre y resolución incluidos)",
       "public_reply": "Respuesta al solicitante",
       "assignment": "Asignación",
       "participant": "Observadores"

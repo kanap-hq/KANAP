@@ -204,6 +204,7 @@ import {
 import { Application } from '../../../applications/application.entity';
 import { KnowledgeQueryDerivation } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
+import { decideAutomaticPreparedAction, orderAutomaticPreparedActions } from './agent-control-automatic-execution.util';
 import { Tenant } from '../../../tenants/tenant.entity';
 import { tenantSeedLanguage } from '../../../analytics/recommended-dimensions.seed';
 import {
@@ -348,7 +349,6 @@ import {
   PLANNER_CLASSIFICATION_ACTION_TYPE,
   PLANNER_PARTICIPANT_ACTION_TYPE,
   PLANNER_OWNED_ACTION_TYPES,
-  PLANNER_TERMINAL_TRANSITIONS,
   STATIC_CAPABILITY_EXECUTION_PHASES,
   TARGETING_CATALOG_BROWSE_TTL_MS,
   TARGETING_CATALOG_OPTIONS_TTL_MS,
@@ -723,20 +723,6 @@ export type MergedKnowledgeCandidate = KnowledgeSearchItem & {
 // semantics); unknown domain keys are dropped.
 
 
-
-// Terminal ticket transitions (solve/close) are destructive cleanup actions. Even
-// though they reuse the status_update capability (action class 'status', which is
-// in the low-risk automation allowlist), they must NEVER auto-execute. New
-// provider payloads stamp the neutral terminal flag; transitionKey remains a
-// legacy persisted-row backstop.
-function isTerminalStatusAction(action: AiActionRequest): boolean {
-  if (!action.capability_name.includes('status_update')) return false;
-  const payload = isRecord(action.action_payload_json) ? action.action_payload_json : null;
-  if (!payload) return false;
-  if (payload.terminal === true) return true;
-  const transitionKey = typeof payload.transitionKey === 'string' ? payload.transitionKey : null;
-  return transitionKey != null && PLANNER_TERMINAL_TRANSITIONS.has(transitionKey);
-}
 
 function actionMetadataString(action: AiActionRequest, field: string): string | null {
   const metadata = isRecord(action.metadata_json) ? action.metadata_json : null;
@@ -4010,18 +3996,23 @@ export class AiAgentControlService {
       error_message: string | null;
     }> = [];
     let stepIndex = input.stepIndex;
-    for (const action of input.actions) {
-      const className = actionClass(action);
-      // Hard safety boundary: terminal solve/close is destructive and stays
-      // human-approved even when 'status' autonomy is automatic.
-      const terminalStatus = isTerminalStatusAction(action);
-      if (terminalStatus || !isAutomatableAutonomyActionClass(className) || !policyEnabledForClass(className)) {
+    // Requester replies run before any close or solve; a close whose reply did
+    // not run in this pass waits in the approvals queue.
+    const executedActionIds = new Set<string>();
+    for (const action of orderAutomaticPreparedActions(input.actions)) {
+      const decision = decideAutomaticPreparedAction(action, {
+        batch: input.actions,
+        policyEnabledForClass,
+        executedActionIds,
+      });
+      const className = decision.actionClass;
+      if (!decision.run) {
         executions.push({
           action_request_id: action.id,
           action_class: className,
           status: 'skipped',
           tool_execution_id: null,
-          error_message: terminalStatus ? 'terminal_status_requires_approval' : null,
+          error_message: decision.reason,
         });
         continue;
       }
@@ -4043,6 +4034,7 @@ export class AiAgentControlService {
             },
           },
         });
+        executedActionIds.add(action.id);
         executions.push({
           action_request_id: action.id,
           action_class: className,

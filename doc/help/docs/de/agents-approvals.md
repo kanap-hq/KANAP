@@ -86,7 +86,9 @@ Zum Verwerfen zu greifen, wenn Sie eigentlich „das war falsch" meinen, verschl
 
 Die Titel **Ticket schließen** und **Ticket lösen** werden rot angezeigt, weil sie das Ticket beenden und der Anfragende die Änderung sofort sieht. Dieser rote Titel ist das einzige Extra-Kennzeichen: es gibt kein gesondertes „terminales“ Abzeichen.
 
-Das Freigeben einer dieser Aktionen (einzeln oder als Teil von **Alle freigeben**, wenn ein Element das Ticket schließt oder löst) öffnet eine Bestätigung, die nach der Aktion benannt ist (**Ticket lösen anwenden?**). Sie nennt das Ticket, warnt, dass der Anfragende die Änderung sofort sieht, listet bei einer Sammelfreigabe jedes schließende Element auf und bietet ein Grund-Feld für die Aufzeichnung. Sie bestätigen mit dem Aktionsnamen selbst (**Ticket lösen** oder **Ticket schließen**). Dies ist eine bewusste Reibung: Routineantworten und -notizen werden mit einem Klick angewendet, aber das Schließen oder Lösen eines Tickets erfordert von Ihnen stets ein kurzes Innehalten und Bestätigen.
+Das Freigeben einer dieser Aktionen (einzeln oder als Teil von **Alle freigeben**, wenn ein Element das Ticket schließt oder löst) öffnet eine Bestätigung, die nach der Aktion benannt ist (**Ticket lösen anwenden?**). Sie nennt das Ticket, warnt, dass der Anfragende die Änderung sofort sieht, listet bei einer Sammelfreigabe jedes schließende Element auf und bietet ein Grund-Feld für die Aufzeichnung. Sie bestätigen mit dem Aktionsnamen selbst (**Ticket lösen** oder **Ticket schließen**). Dies ist eine bewusste Reibung: Routineantworten und -notizen werden mit einem Klick angewendet, während das Schließen oder Lösen eines Tickets von Hand ein kurzes Innehalten und Bestätigen erfordert.
+
+Ein Agent, dessen **Status aktualisieren** auf **Automatisch** steht, schließt und löst Tickets ohne diesen Schritt von selbst, sobald seine Antwort an den Anfragenden versendet ist.
 
 ---
 

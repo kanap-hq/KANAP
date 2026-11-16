@@ -739,7 +739,7 @@
     "actionClasses": {
       "internal_note": "Internal note",
       "classification": "Classification update",
-      "status": "Status update",
+      "status": "Status update (including close and solve)",
       "public_reply": "Requester reply",
       "assignment": "Assignment",
       "participant": "Observers"

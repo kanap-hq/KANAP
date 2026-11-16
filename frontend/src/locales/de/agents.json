@@ -739,7 +739,7 @@
     "actionClasses": {
       "internal_note": "Interne Notiz",
       "classification": "Klassifizierung aktualisieren",
-      "status": "Status aktualisieren",
+      "status": "Status aktualisieren (inklusive Schließen und Lösen)",
       "public_reply": "Antwort an Anfragende",
       "assignment": "Zuweisung",
       "participant": "Beobachter"
