@@ -78,7 +78,8 @@
         "projects": "Proyectos",
         "requests": "Solicitudes"
       }
-    }
+    },
+    "backToList": "Volver a la lista"
   },
   "companies": {
     "title": "Empresas",
@@ -86,6 +87,7 @@
     "newCompany": "Nueva empresa",
     "companyFallback": "Empresa",
     "loadError": "Error al cargar la empresa.",
+    "notFound": "Empresa no encontrada.",
     "columns": {
       "reference": "Referencia",
       "city": "Ciudad",
@@ -184,6 +186,7 @@
     "newDepartment": "Nuevo departamento",
     "departmentFallback": "Departamento",
     "loadError": "Error al cargar el departamento.",
+    "notFound": "Departamento no encontrado.",
     "selectCompanyFirst": "Seleccione primero una empresa",
     "columns": {
       "reference": "Referencia",
@@ -407,6 +410,7 @@
     "empty": "Todavía no hay proveedores.",
     "supplierFallback": "Proveedor",
     "loadError": "Error al cargar el proveedor.",
+    "notFound": "Proveedor no encontrado.",
     "columns": {
       "reference": "Referencia",
       "erpSupplierId": "ID de proveedor ERP"
@@ -535,6 +539,7 @@
       "saveFailed": "No se pudo guardar el contacto.",
       "createFailed": "No se pudo crear el contacto.",
       "loadFailed": "No se pudo cargar el contacto.",
+      "notFound": "Contacto no encontrado.",
       "deleteFailed": "Error al eliminar el contacto."
     },
     "delete": {

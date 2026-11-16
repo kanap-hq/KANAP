@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Link as MuiLink, Stack, TextField, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
@@ -587,6 +587,23 @@ function ContactEditor({ id }: { id: string }) {
       </PropertyGroup>
     </>
   ) : <Box />;
+
+  // A contact that does not exist (the API answers 404): the not found page, as the other records
+  // have. Any other failure keeps the record frame.
+  if (!isCreate && !data && (loadError as { response?: { status?: number } } | null)?.response?.status === 404) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <Alert severity="error">{t('contacts.messages.notFound')}</Alert>
+        <MuiLink
+          component={RouterLink}
+          to={withContext(LIST_PATH)}
+          sx={{ display: 'inline-block', mt: 2, fontSize: 13, fontWeight: 400, color: 'kanap.teal' }}
+        >
+          {t('shared.backToList')}
+        </MuiLink>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>

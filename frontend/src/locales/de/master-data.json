@@ -78,7 +78,8 @@
         "projects": "Projekte",
         "requests": "Anfragen"
       }
-    }
+    },
+    "backToList": "Zurück zur Liste"
   },
   "companies": {
     "title": "Unternehmen",
@@ -86,6 +87,7 @@
     "newCompany": "Neues Unternehmen",
     "companyFallback": "Unternehmen",
     "loadError": "Fehler beim Laden des Unternehmens.",
+    "notFound": "Unternehmen nicht gefunden.",
     "columns": {
       "reference": "Referenz",
       "city": "Stadt",
@@ -184,6 +186,7 @@
     "newDepartment": "Neue Abteilung",
     "departmentFallback": "Abteilung",
     "loadError": "Fehler beim Laden der Abteilung.",
+    "notFound": "Abteilung nicht gefunden.",
     "selectCompanyFirst": "Wählen Sie zuerst ein Unternehmen",
     "columns": {
       "reference": "Referenz",
@@ -407,6 +410,7 @@
     "empty": "Noch keine Lieferanten.",
     "supplierFallback": "Lieferant",
     "loadError": "Fehler beim Laden des Lieferanten.",
+    "notFound": "Lieferant nicht gefunden.",
     "columns": {
       "reference": "Referenz",
       "erpSupplierId": "ERP-Lieferanten-ID"
@@ -535,6 +539,7 @@
       "saveFailed": "Der Kontakt konnte nicht gespeichert werden.",
       "createFailed": "Der Kontakt konnte nicht erstellt werden.",
       "loadFailed": "Der Kontakt konnte nicht geladen werden.",
+      "notFound": "Kontakt nicht gefunden.",
       "deleteFailed": "Der Kontakt konnte nicht gelöscht werden."
     },
     "delete": {

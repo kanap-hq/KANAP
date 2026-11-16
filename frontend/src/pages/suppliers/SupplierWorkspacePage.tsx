@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, IconButton, Stack, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Link as MuiLink, Stack, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
@@ -426,6 +426,23 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
       </Box>
     </PropertyGroup>
   ) : <Box />;
+
+  // A supplier that does not exist (the API answers 404): the not found page, as the other records
+  // have. Any other failure keeps the record frame.
+  if (!isCreate && !data && (loadError as { response?: { status?: number } } | null)?.response?.status === 404) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <Alert severity="error">{t('suppliers.notFound')}</Alert>
+        <MuiLink
+          component={RouterLink}
+          to={withContext(SUPPLIERS_PATH)}
+          sx={{ display: 'inline-block', mt: 2, fontSize: 13, fontWeight: 400, color: 'kanap.teal' }}
+        >
+          {t('shared.backToList')}
+        </MuiLink>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>

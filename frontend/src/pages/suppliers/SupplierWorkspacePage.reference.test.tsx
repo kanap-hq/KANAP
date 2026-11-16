@@ -143,10 +143,33 @@ describe('SupplierWorkspacePage by reference', () => {
     await waitFor(() => expect(where()).toBe('/master-data/suppliers/SUP-13/overview?sort=name%3AASC'));
   });
 
-  it('shows an unknown reference as an unknown uuid', async () => {
-    renderAt('/master-data/suppliers/SUP-999/overview');
+  it('shows an unknown reference, or an unknown uuid, as the not found page', async () => {
+    for (const address of ['SUP-999', '00000000-0000-4000-8000-000000000999']) {
+      const view = renderAt(`/master-data/suppliers/${address}/overview`);
+      expect(await screen.findByText('suppliers.notFound')).toBeInTheDocument();
+      expect(screen.queryByText('suppliers.loadError')).toBeNull();
+      // No empty record frame: no tabs, no header actions; a way back to the list.
+      expect(screen.queryByRole('tab', { name: 'shared.labels.overview' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+      expect(where()).toBe(`/master-data/suppliers/${address}/overview`);
+      expect(screen.queryByText(address, { selector: ':not([data-testid="where"])' })).toBeNull();
+      expect(mocked.get.mock.calls.filter(([url]) => /^\/suppliers\/[^/]+\/./.test(String(url)))).toEqual([]);
+      fireEvent.click(screen.getByRole('link', { name: 'shared.backToList' }));
+      await waitFor(() => expect(where()).toBe('/master-data/suppliers'));
+      view.unmount();
+    }
+  });
+
+  it('keeps the load message, in the record frame, for any other failure', async () => {
+    const answer = mocked.get.getMockImplementation() as (url: string) => Promise<unknown>;
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/suppliers/SUP-7') throw Object.assign(new Error('Server error'), { response: { status: 500 } });
+      return answer(url);
+    });
+    renderAt('/master-data/suppliers/SUP-7/overview');
     expect(await screen.findByText('suppliers.loadError')).toBeInTheDocument();
-    expect(where()).toBe('/master-data/suppliers/SUP-999/overview');
+    expect(screen.queryByText('suppliers.notFound')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'shared.labels.overview' })).toBeInTheDocument();
   });
 
   it('does not read the supplier again once deleted from its reference address', async () => {
