@@ -142,21 +142,23 @@ Una celda sin valor muestra un guion.
 **Modificar un campo**:
 
 1. Seleccione las aplicaciones y haga clic en **Modificar la selección** (icono de edición). El icono muestra el número de aplicaciones seleccionadas
-2. Elija el **Campo**: **Responsables de negocio**, **Responsables IT**, **Ciclo de vida** o **Criticidad de negocio**
+2. Elija el **Campo**: **Responsables de negocio**, **Responsables IT**, **Categoría**, **Ciclo de vida**, **Criticidad de negocio** o **Criticidad cibernética**
 3. Elija el **Nuevo valor**. Para los responsables, elija una o varias personas. El diálogo cuenta las aplicaciones: cuántas cambiarán, cuántas ya tienen este valor y cuántas se rechazan. El recuento se repite con cada nuevo valor
 4. Haga clic en **Modificar 12 aplicaciones** (con su recuento) para confirmar. La ventana muestra entonces el resultado. Haga clic en **Cerrar** para cerrarla. La lista detrás ya está actualizada
 
 **Responsables**: Las personas elegidas sustituyen a los responsables de ese rol en cada aplicación. El otro rol conserva sus personas: modificar los **Responsables de negocio** deja los **Responsables IT** como estaban.
 
-**Vaciar un campo**: En **Responsables de negocio**, **Responsables IT** y **Criticidad de negocio**, haga clic en **Vaciar el campo** (icono de goma) junto al valor. El valor muestra **Vacío**. En los responsables, el rol queda sin nadie. El **Ciclo de vida** no se puede vaciar.
+**Vaciar un campo**: En **Responsables de negocio**, **Responsables IT**, **Criticidad de negocio** y **Criticidad cibernética**, haga clic en **Vaciar el campo** (icono de goma) junto al valor. El valor muestra **Vacío**. En los responsables, el rol queda sin nadie. La **Categoría** y el **Ciclo de vida** no se pueden vaciar.
 
 **Conviene saber**:
 
 - Una modificación abarca como máximo 5000 aplicaciones. Por encima, acote los filtros o seleccione menos aplicaciones
 - Si la lista cambia entre el recuento y su confirmación, el diálogo muestra el nuevo recuento. Revíselo y vuelva a confirmar
 - Si el recuento falla, haga clic en **Reintentar** junto al mensaje para volver a contar
-- Una nueva criticidad de negocio pasa una aplicación revisada a **Por revisar**, como en la página de la aplicación
+- **Categoría**, **Criticidad de negocio** y **Criticidad cibernética** solo ofrecen los valores que siguen disponibles en **Panorama IT > Configuración**
+- Una nueva criticidad de negocio o cibernética pasa una aplicación revisada a **Por revisar**, como en la página de la aplicación
 - Cada aplicación modificada tiene su propia entrada en su pestaña **Historial**
+- [Kad](ai-assistant.md#changing-records-in-bulk) hace el mismo cambio cuando usted se lo pide en una conversación, con los mismos derechos. Usted aprueba su vista previa
 
 ---
 

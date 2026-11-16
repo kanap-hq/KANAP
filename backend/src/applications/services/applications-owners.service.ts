@@ -75,6 +75,7 @@ export class ApplicationsOwnersService extends ApplicationsBaseService {
           before: beforeState,
           after: afterState,
           userId: userId ?? null,
+          ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
         },
         { manager: mg },
       );

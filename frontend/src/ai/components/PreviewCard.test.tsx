@@ -451,6 +451,62 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText("1 ligne reviendra à l'état Non concernée")).toBeInTheDocument();
   });
 
+  it('shows a change in bulk of budget lines with its filter, counts, refusals and first lines, in French', () => {
+    renderCard(preview({
+      tool_name: 'bulk_update_budget_lines',
+      target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: '3 lignes budgétaires' },
+      summary: 'Modification du champ « Centre de coûts » sur 3 lignes budgétaires.',
+      changes: {
+        budget_line_bulk_edit: {
+          label: 'Change in bulk',
+          from: null,
+          to: [
+            'Filtre : Fournisseur « Acme » ; Type OPEX',
+            'Périmètre : lignes activées',
+            'Centre de coûts → IT-01 · Informatique',
+            '3 lignes à modifier, 1 a déjà cette valeur, 1 refusée : En lecture seule pour vous (1)',
+            '- BL-3 Licences Office\n- BL-7 Support\n- et 1 autre',
+          ].join('\n\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+    expect(screen.getAllByText('Modification en masse').length).toBeGreaterThan(0);
+    expect(screen.getByText('Filtre : Fournisseur « Acme » ; Type OPEX')).toBeInTheDocument();
+    expect(screen.getByText('Centre de coûts → IT-01 · Informatique')).toBeInTheDocument();
+    expect(screen.getByText('3 lignes à modifier, 1 a déjà cette valeur, 1 refusée : En lecture seule pour vous (1)')).toBeInTheDocument();
+    expect(screen.getByText('BL-3 Licences Office')).toBeInTheDocument();
+    expect(screen.getByText('et 1 autre')).toBeInTheDocument();
+  });
+
+  it('shows a change in bulk of applications with its filter, scope, counts and first applications, in French', () => {
+    renderCard(preview({
+      tool_name: 'bulk_update_applications',
+      target: { entity_type: 'applications', entity_id: null, ref: null, title: '2 applications' },
+      summary: 'Modification du champ « Criticité business » sur 2 applications.',
+      changes: {
+        application_bulk_edit: {
+          label: 'Change in bulk',
+          from: null,
+          to: [
+            'Filtre : Fournisseur « Acme »',
+            'Périmètre : applications activées, hors retirées',
+            'Criticité business → Haute',
+            '2 applications à modifier, 1 a déjà cette valeur',
+            '- APP-1 Alpha\n- APP-6 Foxtrot',
+          ].join('\n\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+    expect(screen.getAllByText('Modification en masse').length).toBeGreaterThan(0);
+    expect(screen.getByText('Filtre : Fournisseur « Acme »')).toBeInTheDocument();
+    expect(screen.getByText('Périmètre : applications activées, hors retirées')).toBeInTheDocument();
+    expect(screen.getByText('Criticité business → Haute')).toBeInTheDocument();
+    expect(screen.getByText('2 applications à modifier, 1 a déjà cette valeur')).toBeInTheDocument();
+    expect(screen.getByText('APP-6 Foxtrot')).toBeInTheDocument();
+  });
+
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {
     renderCard(preview({
       tool_name: 'delete_record',

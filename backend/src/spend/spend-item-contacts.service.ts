@@ -12,7 +12,12 @@ import { auditTableOf, type BudgetNature } from './budget-nature';
 import { presentChild, presentChildren } from './budget-line-presentation';
 
 /** The request's tenant: every statement filters on it. */
-type ItemContactsOpts = { manager?: EntityManager; tenantId: string };
+type ItemContactsOpts = {
+  manager?: EntityManager;
+  tenantId: string;
+  /** The audit source of the write that changed the line's supplier (Kad's card, the budget file), for the contacts' row too. */
+  audit?: { source?: string; sourceRef?: string | null };
+};
 
 /** The contacts of the lines of one nature (`SpendItemContactsService`, `CapexItemContactsService`). */
 @Injectable()
@@ -164,6 +169,7 @@ export class SpendItemContactsService {
           before: beforeState,
           after: afterState,
           userId: userId ?? null,
+          ...(opts.audit?.source ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
         },
         { manager: opts.manager ?? repo.manager },
       );

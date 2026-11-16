@@ -221,6 +221,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 - Los importes no se modifican así. Modifíquelos en la línea o en el [archivo de presupuesto](budget-file.md)
 - Cada línea modificada tiene su propia entrada en su pestaña **Historial**
 - Con un acceso a los datos limitado, usted modifica las líneas de su acceso. Un cambio que sacaría una línea de su acceso se rechaza para esa línea
+- [Kad](ai-assistant.md#changing-records-in-bulk) hace el mismo cambio cuando usted se lo pide en una conversación, con los mismos derechos. Usted aprueba su vista previa
 
 ---
 

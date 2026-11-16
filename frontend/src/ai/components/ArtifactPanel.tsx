@@ -16,7 +16,7 @@ import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import CloseIcon from '@mui/icons-material/CloseRounded';
 import { useTranslation } from 'react-i18next';
 import { AiMutationPreview } from '../aiTypes';
-import { isApprovable } from '../previewApproval';
+import { isApprovable, isRejectable } from '../previewApproval';
 import { getPreviewLabel } from '../utils/previewClassification';
 import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/previewStatus';
 import { getDotColor } from '../../utils/statusColors';
@@ -57,6 +57,8 @@ type ArtifactPanelProps = {
   onApprove: (previewId: string) => void;
   onReject: (previewId: string) => void;
   onApproveMany: (previewIds: string[]) => void;
+  /** Reject all: every pending card at once, with no confirmation (nothing is written). */
+  onRejectMany: (previewIds: string[]) => void;
   /** A choice on an import card made a new card, which takes the place of the previous one. */
   onReplace?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
 };
@@ -268,6 +270,7 @@ export default function ArtifactPanel({
   onApprove,
   onReject,
   onApproveMany,
+  onRejectMany,
   onReplace,
 }: ArtifactPanelProps) {
   const { t } = useTranslation(['ai']);
@@ -291,6 +294,7 @@ export default function ArtifactPanel({
   }, []);
 
   const approvablePreviews = previews.filter(isApprovable);
+  const rejectablePreviews = previews.filter(isRejectable);
   const showBulkApproval = approvablePreviews.length >= BULK_APPROVAL_MIN;
   const visibleConfirmPreviews = approvablePreviews.slice(0, 6);
   const remainingConfirmCount = Math.max(0, approvablePreviews.length - visibleConfirmPreviews.length);
@@ -380,7 +384,7 @@ export default function ArtifactPanel({
             }}
           >
             {showBulkApproval && (
-              <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+              <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mb: 1 }}>
                 <Button
                   size="small"
                   variant="outlined"
@@ -390,6 +394,16 @@ export default function ArtifactPanel({
                   sx={{ textTransform: 'none', fontSize: 12 }}
                 >
                   {t('previewBatch.approveAll')}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="inherit"
+                  disabled={disabled}
+                  onClick={() => onRejectMany(rejectablePreviews.map((preview) => preview.preview_id))}
+                  sx={{ textTransform: 'none', fontSize: 12 }}
+                >
+                  {t('previewBatch.rejectAll')}
                 </Button>
               </Stack>
             )}
