@@ -56,6 +56,10 @@ type TaskRelationPayload = Partial<Task> & {
   asset_ids?: string[];
 };
 
+/** The objects of a task's activity that the person does not read (`ops:contracts.outsideYourAccess`). */
+const CONTRACT_OUTSIDE_ACCESS = 'Contract outside your access';
+const LINE_OUTSIDE_ACCESS = 'Line outside your access';
+
 @Injectable()
 export class TasksUnifiedService {
   private readonly logger = new Logger(TasksUnifiedService.name);
@@ -659,6 +663,11 @@ export class TasksUnifiedService {
     });
   }
 
+  /**
+   * The name of a task's object in its activity ("related to"). A budget line or a contract the
+   * person does not read is absent from its table (data-scoped access): the activity names it by the
+   * label of the list, never by its id, name or reference.
+   */
   private async resolveRelatedObjectName(
     type: RelatedType,
     id: string | null,
@@ -682,7 +691,7 @@ export class TasksUnifiedService {
         `SELECT product_name FROM spend_items WHERE id = $1 AND nature = 'opex' LIMIT 1`,
         [id],
       );
-      if (!row) return id;
+      if (!row) return LINE_OUTSIDE_ACCESS;
       return `Spend: ${row.product_name}`;
     }
 
@@ -691,7 +700,7 @@ export class TasksUnifiedService {
         'SELECT item_number, name FROM contracts WHERE id = $1 LIMIT 1',
         [id],
       );
-      if (!row) return id;
+      if (!row) return CONTRACT_OUTSIDE_ACCESS;
       return contractLabel(row.item_number, row.name);
     }
 
@@ -701,7 +710,7 @@ export class TasksUnifiedService {
         `SELECT product_name FROM spend_items WHERE id = $1 AND nature = 'capex' LIMIT 1`,
         [id],
       );
-      if (!row) return id;
+      if (!row) return LINE_OUTSIDE_ACCESS;
       return `CAPEX: ${row.product_name}`;
     }
 

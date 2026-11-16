@@ -1007,6 +1007,40 @@ async function testTasksExport(): Promise<void> {
   console.log('  tasks export: a task of a hidden line exports without the line, of a hidden contract with its label: OK');
 }
 
+/**
+ * Rita, responsible for tasks whose contract or line she does not read, takes them off it: the
+ * task's activity names the object she left by the label of the list, never by its uuid, name or
+ * reference (lot R4 of 26.11.9). Runs last: the tasks leave their objects.
+ */
+async function testTaskMoveActivity(): Promise<void> {
+  const { rita } = s.persons;
+  const { TasksUnifiedService } = require('../../tasks/tasks-unified.service');
+  const tasks = app.get(TasksUnifiedService, { strict: false });
+  for (const [taskId, label, traces] of [
+    [contractTaskId, 'Contract outside your access', [...contractTraces('hidden'), new RegExp(`${contractReferences.hidden}(?!\\d)`)]],
+    [hiddenTaskId, 'Line outside your access', tracesOf('L5')],
+  ] as Array<[string, string, Array<string | RegExp>]>) {
+    await asPerson(rita, (ctx) => tasks.updateById(
+      taskId,
+      { related_object_type: null, related_object_id: null },
+      rita,
+      { manager: ctx.manager, tenantId: s.tenantId },
+    ));
+    const [row] = await inTenant(async () => (await client.query(
+      `SELECT changed_fields FROM portfolio_activities WHERE tenant_id = $1 AND task_id = $2 AND type = 'change'
+       ORDER BY created_at DESC LIMIT 1`,
+      [s.tenantId, taskId],
+    )).rows);
+    const related = row?.changed_fields?.related_to;
+    assert.deepEqual(related, [label, null], `task activity: the object left is named by its label (${JSON.stringify(row?.changed_fields)})`);
+    const text = JSON.stringify(row.changed_fields);
+    for (const trace of traces) {
+      assert.ok(typeof trace === 'string' ? !text.includes(trace) : !trace.test(text), `task activity: no trace of ${String(trace)} in ${text}`);
+    }
+  }
+  console.log('  task activity: an object outside the access is named by its label when a task leaves it: OK');
+}
+
 // ---------------------------------------------------------------------------------------------
 // Run.
 
@@ -1048,6 +1082,7 @@ async function run(): Promise<void> {
     await testPlaidRelationWrites();
     await testMcp();
     await testTasksExport();
+    await testTaskMoveActivity();
     console.log('data access Plaid, MCP, search and exports: all scenarios passed');
   } finally {
     try {
