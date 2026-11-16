@@ -30,6 +30,7 @@ type Report = {
   updated?: number;
   unchanged?: number;
   errors: Array<{ row: number; message: string; column?: string; code?: string; params?: Record<string, string | number> }>;
+  warnings?: Array<{ row: number; message: string; column?: string; code?: string; params?: Record<string, string | number> }>;
 };
 
 const HEADERS = ['reference', 'name', 'erp_supplier_id', 'commercial_contact', 'technical_contact', 'support_contact', 'notes', 'status', 'disabled_at'];
@@ -164,6 +165,17 @@ const supplierRow = async ({ runner, tenantId }: Ctx, itemNumber: number) =>
 async function testImportByReference() {
   await withTenant('import', async (ctx) => {
     const run = importer(ctx);
+    // The check says each name a reference changes (D12), and blocks nothing; a row that keeps its
+    // name, or a row without a reference, says nothing.
+    const check = await run([
+      { reference: 'SUP-3', name: 'Renamed three', erp_supplier_id: 'F3' },
+      { reference: '4', name: 'Supplier 04', erp_supplier_id: 'F4-new' },
+      { reference: '', name: 'supplier 05', erp_supplier_id: 'F5-new' },
+    ], true);
+    assert.deepEqual([check.ok, check.updated, check.errors], [true, 3, []]);
+    assert.deepEqual((check.warnings ?? []).filter((warning) => warning.code !== 'CSV_NAME_MATCHED_CASE').map((warning) => [warning.row, warning.code, warning.params]), [
+      [2, 'CSV_REFERENCE_RENAMES', { reference: 'SUP-3', stored: 'Supplier 03', name: 'Renamed three', context: 'supplier' }],
+    ]);
     const renamed = await run([
       { reference: 'SUP-3', name: 'Renamed three', erp_supplier_id: 'F3' },
       { reference: '4', name: 'Supplier 04', erp_supplier_id: 'F4-new' },
@@ -182,9 +194,9 @@ async function testImportByReference() {
     ], true);
     assert.equal(unknown.ok, false);
     assert.deepEqual(unknown.errors.map((error) => [error.row, error.column, error.code, error.params?.value]), [
-      [3, 'reference', 'CSV_REFERENCE_NOT_FOUND', 'SUP-999'],
-      [4, 'reference', 'CSV_REFERENCE_NOT_FOUND', 'SUP-013'],
-      [5, 'reference', 'CSV_REFERENCE_NOT_FOUND', 'COMP-2'],
+      [3, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', 'SUP-999'],
+      [4, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', 'SUP-013'],
+      [5, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', 'COMP-2'],
     ]);
 
     // Another supplier's name, or two rows on one supplier: refused at the check, never at the load.

@@ -26,6 +26,7 @@ export {
   invalidEndOfValidity,
   nameMatchedWarning,
   readMasterDataFile,
+  referenceEmailWarning,
   referenceMoveWarning,
   referenceRenameWarning,
   rowError,

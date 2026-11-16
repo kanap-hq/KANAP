@@ -19,6 +19,8 @@ import {
   DecimalMark,
   ImportReportError,
   readMasterDataFile,
+  referenceEmailWarning,
+  referenceRenameWarning,
   rowError,
   rowProblemErrors,
 } from '../common/csv-sheet';
@@ -48,6 +50,10 @@ const CONTACT_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
 const CONTACT_PREFIX = 'CTCT';
 
 const contactReference = (itemNumber: number) => `${CONTACT_PREFIX}-${itemNumber}`;
+
+/** A contact's name as its page shows it, first then last name; empty when it has none. */
+const contactName = (contact: { first_name?: string | null; last_name?: string | null }) =>
+  [contact.first_name, contact.last_name].map((part) => part?.trim()).filter(Boolean).join(' ');
 
 /**
  * The grid's column filters on a contact query (`c`, its supplier joined as `s`). The reference
@@ -553,7 +559,7 @@ export class ContactsService {
       const number = numberOf(row.reference);
       const contact = number == null ? undefined : byNumber.get(number);
       if (contact) targetOf.set(row.line, contact);
-      else errors.push(rowError(row.line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Contact reference '${row.reference}' was not found.`, { value: row.reference }));
+      else errors.push(rowError(row.line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"${row.reference}" is no reference in this workspace.`, { value: row.reference }));
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
 
@@ -572,6 +578,9 @@ export class ContactsService {
     const firstLineById = new Map<string, number>();
     const firstLineByEmail = new Map<string, number>();
     const toCompare: Array<{ item: Norm; existing: ExternalContact | undefined }> = [];
+    // A file from another workspace names unrelated contacts by the same references: the check says
+    // each name and each e-mail address a reference changes (D12). It blocks nothing.
+    const warnings: ImportReportError[] = [];
     for (const row of kept) {
       const target = targetOf.get(row.line);
       const holder = existingByEmail.get(row.item.email);
@@ -595,6 +604,16 @@ export class ContactsService {
       }
       if (existing) firstLineById.set(existing.id, row.line);
       firstLineByEmail.set(row.item.email, row.line);
+      if (target) {
+        const reference = contactReference(target.item_number);
+        const stored = contactName(target);
+        const next = contactName(row.item);
+        // A contact without a name, or a row that leaves the names empty, renames nothing a person reads.
+        const renamed = stored && next ? referenceRenameWarning(row.line, { family: 'contact', reference, stored, next }) : null;
+        if (renamed) warnings.push(renamed);
+        const readdressed = referenceEmailWarning(row.line, { reference, name: stored || target.email, stored: target.email, next: row.item.email });
+        if (readdressed) warnings.push(readdressed);
+      }
       toCompare.push({ item: row.item, existing });
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
@@ -609,7 +628,7 @@ export class ContactsService {
       else updated += 1;
       toWrite.push({ item, existing });
     }
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], ...report };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
 
     for (const { item, existing } of toWrite) {
       if (existing) {
@@ -620,6 +639,6 @@ export class ContactsService {
         await repo.save(created);
       }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, errors: [], ...report };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
   }
 }

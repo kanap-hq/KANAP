@@ -23,6 +23,7 @@ import {
   ImportReportError,
   nameMatchedWarning,
   readMasterDataFile,
+  referenceRenameWarning,
   rowError,
   rowProblemErrors,
 } from '../common/csv-sheet';
@@ -497,7 +498,7 @@ export class SuppliersService {
       const supplier = number == null ? undefined : byNumber.get(number);
       if (supplier) item.target = supplier;
       else {
-        errors.push(rowError(item.line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `Supplier reference '${item.reference}' was not found.`, { value: item.reference }));
+        errors.push(rowError(item.line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"${item.reference}" is no reference in this workspace.`, { value: item.reference }));
       }
     }
     errors.sort((a, b) => a.row - b.row);
@@ -538,6 +539,12 @@ export class SuppliersService {
         continue;
       }
       firstLineById.set(existing.id, item.line);
+      // A file from another workspace names unrelated suppliers by the same references: the check
+      // says each name a reference changes (D12).
+      if (item.reference) {
+        const renamed = referenceRenameWarning(item.line, { family: 'supplier', reference: supplierReference(existing.item_number), stored: existing.name, next: name });
+        if (renamed) warnings.push(renamed);
+      }
       // The stored end of validity's day keeps its time of day: the export writes the day only.
       item.body = {
         ...item.body,

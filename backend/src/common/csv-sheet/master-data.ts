@@ -298,6 +298,24 @@ export function referenceMoveWarning(
 }
 
 /**
+ * The warning of a row whose filled reference changes its contact's e-mail address (D12 of
+ * 26.11.9), the contact's key when a row has no reference: like a rename, it blocks nothing. Null
+ * when the row keeps the stored address. `name` is the contact's stored name, else its address.
+ */
+export function referenceEmailWarning(
+  row: number,
+  change: { reference: string; name: string; stored: string; next: string },
+): ImportReportError | null {
+  if (sameStoredValue(change.stored, change.next)) return null;
+  return {
+    row,
+    message: `${change.reference} "${change.name}" will change its e-mail address: "${change.stored}" → "${change.next}".`,
+    code: 'CSV_REFERENCE_EMAIL_CHANGES',
+    params: { reference: change.reference, name: change.name, from: change.stored, to: change.next },
+  };
+}
+
+/**
  * A decimal column without a year (a contract's amount at signature), read the way the amount
  * columns are: the file's cells settle the decimal mark, then the switch, then the language. Two
  * conventions in one column are a file error; a mark the cells could not settle comes with the

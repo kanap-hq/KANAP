@@ -197,7 +197,7 @@ async function testDisabledAtRoundTrip() {
       { file: { buffer: Buffer.from(exported, 'utf8') } as Express.Multer.File, dryRun: true, userId: null, language: 'en' },
       { manager: runner.manager },
     ) as Report;
-    assert.deepEqual(gone.errors.map((error) => [error.column, error.code]), Array(3).fill(['reference', 'CSV_REFERENCE_NOT_FOUND']));
+    assert.deepEqual(gone.errors.map((error) => [error.column, error.code]), Array(3).fill(['reference', 'CSV_RECORD_REFERENCE_NOT_FOUND']));
     const withoutReferences = exported.split(/\r?\n/).map((line) => line.slice(line.indexOf(',') + 1)).join('\n');
     const restored = await suppliers.importCsv(
       { file: { buffer: Buffer.from(withoutReferences, 'utf8') } as Express.Multer.File, dryRun: false, userId: null, language: 'en' },

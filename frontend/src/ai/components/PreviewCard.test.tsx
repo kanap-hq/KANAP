@@ -1135,6 +1135,28 @@ describe('PreviewCard in French', () => {
     expect(screen.getByRole('button', { name: 'Approuver' })).toBeEnabled();
   });
 
+  // R3 of 26.11.9: a contact's new e-mail address, by its reference, is said as a rename is.
+  it('shows the e-mail address a contact reference changes in French, and can still be approved', () => {
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Contacts · contacts.xlsx' },
+      import_mapping: importMapping({
+        validation: {
+          ok: true, dry_run: true, total: 1, inserted: 0, updated: 1, unchanged: 0, skipped: 0, error_count: 0, warning_count: 1,
+          report: {
+            kind: 'rows',
+            errors: [],
+            warnings: [
+              { row: 2, message: 'CTCT-4 changes its e-mail', code: 'CSV_REFERENCE_EMAIL_CHANGES', params: { reference: 'CTCT-4', name: 'Jean Dupont', from: 'a@x.fr', to: 'b@x.fr' } },
+            ],
+          },
+        },
+      }),
+    }));
+    expect(screen.getByText(/^Ligne 2\s:\sCTCT-4\s«\sJean Dupont\s»\schangera d'adresse e-mail\s:\s«\sa@x\.fr\s»\s→\s«\sb@x\.fr\s»\.$/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approuver' })).toBeEnabled();
+  });
+
   it('downloads the file prepared for the import with a button after Reject, and says when it fails', async () => {
     const download = vi.mocked(downloadServerExport);
     download.mockClear();

@@ -28,6 +28,7 @@ type Report = {
   updated: number;
   unchanged?: number;
   errors: Array<{ row: number; message: string; column?: string; code?: string; params?: Record<string, string | number> }>;
+  warnings?: Array<{ row: number; message: string; column?: string; code?: string; params?: Record<string, string | number> }>;
 };
 
 const HEADERS = ['reference', 'first_name', 'last_name', 'job_title', 'email', 'phone', 'mobile', 'country', 'notes', 'active'];
@@ -149,6 +150,20 @@ const contactRow = async ({ runner, tenantId }: Ctx, itemNumber: number) =>
 async function testImportByReference() {
   await withTenant('import', async (ctx) => {
     const run = importer(ctx);
+    // The check says each name and e-mail a reference changes (D12), and blocks nothing; a row
+    // that keeps them, or a row without a reference, says nothing.
+    const changes = [
+      { reference: 'CTCT-3', first_name: 'First 03', last_name: 'Last 03', email: 'new03@example.test', active: 'yes' },
+      { reference: '4', first_name: 'Renamed', last_name: 'Last 04', email: 'c04@example.test', active: 'yes' },
+      { reference: 'CTCT-10', first_name: 'First 10', last_name: 'Last 10', email: 'C10@example.test', active: 'no' },
+      { reference: '', first_name: 'Other', last_name: 'Name', email: 'c11@example.test', active: 'yes' },
+    ];
+    const check = await run(changes, true);
+    assert.deepEqual([check.ok, check.inserted, check.updated, check.errors], [true, 0, 4, []]);
+    assert.deepEqual((check.warnings ?? []).map((warning) => [warning.row, warning.code, warning.params]), [
+      [2, 'CSV_REFERENCE_EMAIL_CHANGES', { reference: 'CTCT-3', name: 'First 03 Last 03', from: 'c03@example.test', to: 'new03@example.test' }],
+      [3, 'CSV_REFERENCE_RENAMES', { reference: 'CTCT-4', stored: 'First 04 Last 04', name: 'Renamed Last 04', context: 'contact' }],
+    ]);
     const moved = await run([
       { reference: 'CTCT-3', first_name: 'First 03', last_name: 'Last 03', email: 'new03@example.test', active: 'yes' },
       { reference: '4', first_name: 'Renamed', last_name: 'Last 04', email: 'c04@example.test', active: 'yes' },
@@ -166,8 +181,8 @@ async function testImportByReference() {
     ], true);
     assert.equal(unknown.ok, false);
     assert.deepEqual(unknown.errors.map((error) => [error.row, error.column, error.code, error.params?.value]), [
-      [3, 'reference', 'CSV_REFERENCE_NOT_FOUND', 'CTCT-999'],
-      [4, 'reference', 'CSV_REFERENCE_NOT_FOUND', 'CTCT-013'],
+      [3, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', 'CTCT-999'],
+      [4, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', 'CTCT-013'],
     ]);
 
     // Another contact's e-mail, one contact on two rows, one e-mail for two contacts: refused at the check.

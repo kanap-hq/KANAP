@@ -150,6 +150,7 @@
   "CSV_REFERENCE_MOVES": "{{reference}} „{{name}}“ wechselt von „{{from}}“ zu „{{to}}“.",
   "CSV_REFERENCE_MOVES_company": "{{reference}} „{{name}}“ wechselt vom Unternehmen „{{from}}“ zum Unternehmen „{{to}}“.",
   "CSV_REFERENCE_MOVES_supplier": "{{reference}} „{{name}}“ wechselt vom Lieferanten „{{from}}“ zum Lieferanten „{{to}}“.",
+  "CSV_REFERENCE_EMAIL_CHANGES": "{{reference}} „{{name}}“ erhält eine neue E-Mail-Adresse: „{{from}}“ → „{{to}}“.",
   "CSV_SUPPLIER_NAME_DUPLICATE": "„{{name}}“ steht bereits in Zeile {{firstRow}}. Verwenden Sie eine Zeile pro Lieferant.",
   "CSV_COMPANY_NAME_DUPLICATE": "„{{name}}“ steht bereits in Zeile {{firstRow}}. Verwenden Sie eine Zeile pro Unternehmen.",
   "CSV_COMPANY_METRICS_FROZEN": "Die Kennzahlen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.",
