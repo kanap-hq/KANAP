@@ -38,7 +38,7 @@ import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } fro
 import type { ExportFileFormat } from '../common/xlsx/format';
 import type { CsvCallerAccess } from '../common/csv/csv-field.types';
 import { hasLevel } from '../common/relations/relations-access';
-import { findRecordByName, ImportMatchState, ImportNameMatch, ImportProposals, ImportRefusedProposal, listedMatches, listedRefusedProposals, noteNameMatch, takeProposal, undoneMatch } from '../common/name-matching';
+import { findRecordByName, ImportMatchState, ImportNameMatch, ImportProposals, ImportRefusedProposal, listedMatches, listedRefusedProposals, noteNameMatch, proposedRecord, undoneMatch } from '../common/name-matching';
 
 export const COST_CENTER_CSV_HEADERS = [
   'code', 'kind', 'name', 'parent_code', 'company_name', 'owner_email', 'description', 'status', 'disabled_at',
@@ -226,13 +226,15 @@ export class CostCentersCsvService {
         // Kad's proposal first, for a person who reads the companies. Then exactly, else case aside when
         // one name answers (two refuse the row, as before), else accents aside for a person who reads the
         // companies and has not undone that match.
-        const proposed = takeProposal(state, {
+        const proposed = proposedRecord(state, {
           proposals, unmatched, column: 'company_name', value: companyName, line, rows: companies, reads: readsCompanies, caseBlind: false, ref: companyRef,
         });
         const beyondCase = readsCompanies && !undoneMatch(unmatched, 'company_name', companyName);
-        const found = proposed
-          ? { kind: 'one' as const, row: proposed, how: 'exact' as const }
-          : findRecordByName(companies, companyName, { beyondCase, caseBlind: false, label: companyRef });
+        const found = proposed?.kind === 'one'
+          ? { kind: 'one' as const, row: proposed.row, how: 'exact' as const }
+          : proposed?.kind === 'many'
+            ? { kind: 'many' as const, level: 'accents' as const, names: proposed.names }
+            : findRecordByName(companies, companyName, { beyondCase, caseBlind: false, label: companyRef });
         const company = found.kind === 'one' ? found.row : undefined;
         if (found.kind === 'one' && found.how === 'accents') {
           noteNameMatch(matches, {

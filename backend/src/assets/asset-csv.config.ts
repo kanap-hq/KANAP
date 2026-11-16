@@ -189,9 +189,10 @@ async function checkClusterMemberships(rows: ImportRow[], context: CsvImportCont
   }
 
   // A name of the cell (lot I3 of 26.11.9): Kad's proposal first, for a person who reads the servers
-  // (a cluster of that name exactly or case aside); then the name case aside, as before (several:
-  // `CSV_CLUSTER_AMBIGUOUS`); then accents aside for a person who reads the servers and has not undone
-  // that match (several: `CSV_NAME_AMBIGUOUS_AMONG`, said here). A match beyond case is noted.
+  // (a cluster of that name exactly or case aside; several: `CSV_NAME_AMBIGUOUS_AMONG`); then the
+  // name case aside, as before (several: `CSV_CLUSTER_AMBIGUOUS`); then accents aside for a person who
+  // reads the servers and has not undone that match (several: `CSV_NAME_AMBIGUOUS_AMONG`). A match
+  // beyond case is noted.
   const reads = readsInfrastructure(context);
   const { params } = context;
   const clustersNamed = (name: string) => (byName.get(nameKey(name)) ?? []).filter((c) => c.isCluster);
@@ -207,12 +208,23 @@ async function checkClusterMemberships(rows: ImportRow[], context: CsvImportCont
         }, line);
       }
     };
+    const ambiguous = (among: Candidate[]): 'ambiguous' => {
+      const names = among.slice(0, AMBIGUOUS_NAMES_SHOWN).map((c) => c.ref || c.name.trim()).join(', ');
+      const row = naming.find((r) => r.rowNumber === line)!;
+      row.errors.push({
+        row: line, column: 'cluster', code: 'CSV_NAME_AMBIGUOUS_AMONG',
+        message: `"${name}" may designate several clusters: ${names}`, params: { value: name, names },
+      });
+      return 'ambiguous';
+    };
     if (proposal !== undefined) {
       const proposed = reads ? clustersNamed(proposal) : [];
       if (proposed.length === 1) {
         note(proposed[0], 'model');
         return proposed;
       }
+      // A name of several clusters: the row is refused, naming them, as a name written so would be.
+      if (proposed.length > 1) return ambiguous(proposed);
       if (context.refusedProposals) {
         noteRefusedProposal(context.refusedProposals, { column: 'cluster', name: null, value: name, target: proposal, reason: 'missing' }, line);
       }
@@ -223,13 +235,7 @@ async function checkClusterMemberships(rows: ImportRow[], context: CsvImportCont
     const accents = candidates.filter((c) => c.isCluster && accentFreeKey(c.name) === key);
     if (accents.length === 1) note(accents[0], 'server');
     if (accents.length <= 1) return accents;
-    const among = accents.slice(0, AMBIGUOUS_NAMES_SHOWN).map((c) => c.ref || c.name.trim()).join(', ');
-    const row = naming.find((r) => r.rowNumber === line)!;
-    row.errors.push({
-      row: line, column: 'cluster', code: 'CSV_NAME_AMBIGUOUS_AMONG',
-      message: `"${name}" may designate several clusters: ${among}`, params: { value: name, names: among },
-    });
-    return 'ambiguous';
+    return ambiguous(accents);
   };
 
   for (const row of naming) {

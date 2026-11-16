@@ -132,7 +132,57 @@ async function testApplicationLinks() {
   });
 }
 
+// Fixes after the adversarial review (finding 3): two servers, or two applications, of the very same
+// name (no unique index keeps them apart). Exactly or case aside the row is refused, as before;
+// accents aside and by Kad's proposal too, naming both by their references; nothing is linked.
+const sortedNames = (params: unknown) => {
+  const names = (params as { names?: string } | undefined)?.names;
+  return names ? names.split(', ').sort().join(', ') : null;
+};
+
+async function testSameNameTwice() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'links-csv-same-name');
+    const csv = service();
+    const ctx = { manager: runner.manager, tenantId, userId: null };
+    await asset(runner, tenantId, 'Serveur-É');
+    await asset(runner, tenantId, 'Serveur-É');
+    await application(runner, tenantId, 'Appli É');
+    await application(runner, tenantId, 'Appli É');
+    await technology(runner, tenantId, 1, 'Nginx');
+    const refs = async (table: string, column: string) => (await runner.query(
+      `SELECT ${column} AS ref FROM ${table} WHERE tenant_id = $1 ORDER BY ${column}`, [tenantId],
+    )).map((row: { ref: string }) => row.ref).join(', ');
+    const servers = await refs('assets', 'asset_reference');
+    const run = async (row: string, extra: Record<string, unknown> = {}) => {
+      const result = await csv.importAssetLinks({ file: csvFile([ASSETS, row]), dryRun: false, language: 'en', access: ADMIN, ...extra }, ctx);
+      return codes(result).map(([, column, code, params]) => [column, code, sortedNames(params)]);
+    };
+    assert.deepEqual(await run(',Serveur-É,,Nginx,,,'), [['asset_name', 'CSV_NAME_AMBIGUOUS', null]], 'exactly');
+    assert.deepEqual(await run(',serveur-é,,Nginx,,,'), [['asset_name', 'CSV_NAME_AMBIGUOUS', null]], 'case aside');
+    assert.deepEqual(await run(',Serveur-E,,Nginx,,,'), [['asset_name', 'CSV_NAME_AMBIGUOUS_AMONG', servers]], 'accents aside');
+    assert.deepEqual(
+      await run(',web,,Nginx,,,', { proposals: { asset_name: { web: 'Serveur-É' } } }),
+      [['asset_name', 'CSV_NAME_AMBIGUOUS_AMONG', servers]],
+      'by Kad\'s proposal',
+    );
+    assert.equal((await runner.query(`SELECT 1 FROM asset_technologies WHERE tenant_id = $1`, [tenantId])).length, 0, 'nothing linked');
+
+    const apps = await refs('applications', 'upper(sequential_id)');
+    const appRun = async (row: string, extra: Record<string, unknown> = {}) => {
+      const result = await csv.importApplicationLinks({ file: csvFile([APPS, row]), dryRun: true, language: 'en', access: ADMIN, ...extra }, ctx, {});
+      return codes(result).map(([, column, code, params]) => [column, code, sortedNames(params)]);
+    };
+    assert.deepEqual(await appRun(',Appli E,,Nginx,,'), [['application_name', 'CSV_NAME_AMBIGUOUS_AMONG', apps]]);
+    assert.deepEqual(
+      await appRun(',app,,Nginx,,', { proposals: { application_name: { app: 'Appli É' } } }),
+      [['application_name', 'CSV_NAME_AMBIGUOUS_AMONG', apps]],
+    );
+  });
+}
+
 void runSpecs('technology-links-csv-matching.integration.spec.ts', [
   ['server links', testServerLinks],
   ['application links', testApplicationLinks],
+  ['the same name twice', testSameNameTwice],
 ]);

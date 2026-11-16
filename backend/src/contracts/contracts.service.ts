@@ -38,7 +38,7 @@ import {
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import type { CsvCallerAccess } from '../common/csv/csv-field.types';
 import { hasLevel } from '../common/relations/relations-access';
-import { findRecordByName, ImportMatchState, ImportProposals, listedMatches, listedRefusedProposals, noteNameMatch, takeProposal, undoneMatch } from '../common/name-matching';
+import { findRecordByName, ImportMatchState, ImportProposals, listedMatches, listedRefusedProposals, noteNameMatch, proposedRecord, undoneMatch } from '../common/name-matching';
 import { contractTermFields, contractTermsSql, sqlDateLiteral, turnsOffRenewalOfRenewedContract, type ContractTermFields } from './contract-terms';
 import { readDecisionWindowDays } from './contract-settings.service';
 import { renewalDecisionSql } from './contract-renewal';
@@ -1466,11 +1466,11 @@ export class ContractsService {
     if (rows.length === 0) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors: [{ row: 0, message: 'Empty CSV' }], ...report };
 
     // Preload reference maps by name/email for resolution
-    type Named = { id: string; name: string; item_number?: number | string | null };
+    type Named = { id: string; name: string; item_number?: number | string | null; code?: string | null };
     const allCompanies: Named[] = await mg.query(`SELECT id, name, item_number FROM companies WHERE tenant_id = app_current_tenant()`);
     const allSuppliers: Named[] = await mg.query(`SELECT id, name, item_number FROM suppliers WHERE tenant_id = app_current_tenant()`);
     const allUsers = await mg.query(`SELECT id, email FROM users WHERE tenant_id = app_current_tenant()`);
-    const allNodes: Named[] = await mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND status = 'enabled'`);
+    const allNodes: Named[] = await mg.query(`SELECT id, name, code FROM cost_centers WHERE tenant_id = app_current_tenant() AND status = 'enabled'`);
     const uByEmail = new Map<string, any>(allUsers.map((r: any) => [r.email.toLowerCase(), r]));
     // The record a name names, in each family (lot I3 of 26.11.9); its matches beyond case, for the result.
     const state: ImportMatchState = { matches: new Map(), refused: new Map() };
@@ -1482,17 +1482,19 @@ export class ContractsService {
     } as const;
     const refOf = (prefix: string | null, row: Named): string | null =>
       prefix && row.item_number != null && Number(row.item_number) > 0 ? `${prefix}-${Number(row.item_number)}` : null;
+    // A record a refusal names: by its reference, a cost center (which has none) by its code.
+    const labelOf = (prefix: string | null, row: Named): string | null => refOf(prefix, row) ?? row.code ?? null;
     const recordOf = (column: keyof typeof families, value: string, line: number): Named | null => {
       const family = families[column];
       const reads = !!access && hasLevel(access, family.module, 'reader');
-      const proposed = takeProposal<Named>(state, {
-        proposals, unmatched, column, value, line, rows: family.rows, reads, caseBlind: false, ref: (row) => refOf(family.prefix, row),
+      const proposed = proposedRecord<Named>(state, {
+        proposals, unmatched, column, value, line, rows: family.rows, reads, caseBlind: false,
+        ref: (row) => refOf(family.prefix, row), label: (row) => labelOf(family.prefix, row),
       });
-      if (proposed) return proposed;
       const beyondCase = !undoneMatch(unmatched, column, value) && reads;
-      const found = findRecordByName<Named>(family.rows, value, { beyondCase, caseBlind: false, label: (row) => refOf(family.prefix, row) });
+      const found = proposed ?? findRecordByName<Named>(family.rows, value, { beyondCase, caseBlind: false, label: (row) => labelOf(family.prefix, row) });
       if (found.kind === 'one') {
-        if (found.how === 'accents') {
+        if ('how' in found && found.how === 'accents') {
           noteNameMatch(matches, {
             column, name: null, value: value.trim(), target: found.row.name, ref: refOf(family.prefix, found.row),
             origin: 'server', reason: 'accents', undoable: true,

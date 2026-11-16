@@ -253,8 +253,8 @@ async function testNamesBeyondCaseAndAccents() {
       row('Unknown', 'Fromage & Co SA', 'Ghost', 'Ghost place'),
     ], { access: admin });
     const sorted = (entry: any) => ({ ...entry, params: { ...entry.params, names: String(entry.params.names).split(', ').sort().join(', ') } });
-    assert.deepEqual(sorted(errorsByColumn(several, 2).cost_center), { code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: 'SIÈGE', names: ['Siège', 'siège'].sort().join(', ') } });
-    assert.deepEqual(sorted(errorsByColumn(several, 3).cost_center), { code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: 'Siege', names: ['Siège', 'siège'].sort().join(', ') } });
+    assert.deepEqual(sorted(errorsByColumn(several, 2).cost_center), { code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: 'SIÈGE', names: 'HQ1, HQ2' } });
+    assert.deepEqual(sorted(errorsByColumn(several, 3).cost_center), { code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: 'Siege', names: 'HQ1, HQ2' } });
     assert.deepEqual(Object.keys(errorsByColumn(several, 2)), ['cost_center']);
     assert.deepEqual(Object.keys(errorsByColumn(several, 3)), ['cost_center']);
     assert.deepEqual(errorsByColumn(several, 4), {});

@@ -122,22 +122,26 @@ export type RecordNameLookup<T> =
 
 /**
  * The record of `rows` a name of a file finds, for the imports that read their own lists (contracts,
- * cost centers, business processes, a task's related object), by `matchByName`'s steps. Records of
- * the same name are one name, the first listed. With `caseBlind`, names equal case aside are one name
- * too (the first listed wins, as these imports did); without, they are several. Several names at a
- * step: `many`, named by `label` (a reference, else the name), the first `AMBIGUOUS_NAMES_SHOWN`.
+ * cost centers, business processes, a task's related object), by `matchByName`'s steps. With
+ * `caseBlind` (an import that kept the first record of a name), records whose names are equal case
+ * aside are one name, the first listed, at every step. Without, each record counts: two records of
+ * the very same name are several, at every step. Several names at a step: `many`, named by `label`
+ * (a reference, else the name), the first `AMBIGUOUS_NAMES_SHOWN`.
  */
 export function findRecordByName<T extends { name: string }>(
   rows: readonly T[],
   cell: string,
   options: { beyondCase: boolean; caseBlind: boolean; label?: (row: T) => string | null | undefined },
 ): RecordNameLookup<T> {
-  const named = new Map<string, T>();
-  for (const row of rows) {
-    const key = options.caseBlind ? row.name.trim().toLowerCase() : row.name.trim();
-    if (!named.has(key)) named.set(key, row);
+  let names: readonly T[] = rows;
+  if (options.caseBlind) {
+    const named = new Map<string, T>();
+    for (const row of rows) {
+      const key = row.name.trim().toLowerCase();
+      if (!named.has(key)) named.set(key, row);
+    }
+    names = [...named.values()];
   }
-  const names = [...named.values()];
   const found = matchByName(names, cell, { beyondCase: options.beyondCase });
   if (found.kind !== 'many') return found;
   const text = cell.trim().toLowerCase();
@@ -151,10 +155,19 @@ export function findRecordByName<T extends { name: string }>(
   };
 }
 
-/** The matches an import found, for its result: the first `MATCH_LIST_LIMIT` and their total; nothing when none. */
+/**
+ * The matches of a result: every one of Kad's proposals (as many as the request carries: the file
+ * prepared from Kad's card writes each of them), then the first `MATCH_LIST_LIMIT` the server made.
+ */
+export function listedMatchEntries<T extends { origin: 'server' | 'model' }>(all: readonly T[]): T[] {
+  let made = 0;
+  return all.filter((entry) => entry.origin === 'model' || (made += 1) <= MATCH_LIST_LIMIT);
+}
+
+/** The matches an import found, for its result (`listedMatchEntries`) and their total; nothing when none. */
 export function listedMatches(matches: ReadonlyMap<string, ImportNameMatch> | undefined): { matches?: ImportNameMatch[]; matchesTotal?: number } {
   const all = [...(matches?.values() ?? [])];
-  return all.length > 0 ? { matches: all.slice(0, MATCH_LIST_LIMIT), matchesTotal: all.length } : {};
+  return all.length > 0 ? { matches: listedMatchEntries(all), matchesTotal: all.length } : {};
 }
 
 /**
@@ -209,13 +222,13 @@ export function noteRefusedProposal(
   refused.set(key, found);
 }
 
-/** The proposals an import refused, for its result: the first `MATCH_LIST_LIMIT` and their total; nothing when none. */
+/** The proposals an import refused, for its result: all of them (as many as the request carries) and their total; nothing when none. */
 export function listedRefusedProposals(refused: ReadonlyMap<string, ImportRefusedProposal> | undefined): {
   refusedProposals?: ImportRefusedProposal[];
   refusedProposalsTotal?: number;
 } {
   const all = [...(refused?.values() ?? [])];
-  return all.length > 0 ? { refusedProposals: all.slice(0, MATCH_LIST_LIMIT), refusedProposalsTotal: all.length } : {};
+  return all.length > 0 ? { refusedProposals: all, refusedProposalsTotal: all.length } : {};
 }
 
 /** The matches and refused proposals of an import that reads its own lists. */
@@ -224,37 +237,60 @@ export interface ImportMatchState {
   refused: Map<string, ImportRefusedProposal>;
 }
 
+type ProposalArgs<T> = {
+  proposals: ImportProposals | null | undefined;
+  unmatched: ReadonlyArray<{ column: string; value: string }> | null | undefined;
+  column: string;
+  value: string;
+  line: number;
+  rows: readonly T[];
+  reads: boolean;
+  caseBlind: boolean;
+  ref?: (row: T) => string | null;
+  /** How a refusal names a record of several (`ref` when absent). */
+  label?: (row: T) => string | null;
+};
+
 /**
  * Kad's proposal for a value of the file, for the imports that read their own lists (contracts, cost
- * centers, business processes, a task's related object): the record of `rows` it names, exactly or case
- * aside, when the person reads the family (`reads`) and has not undone the match; then listed as a
- * match of origin `model`. Refused (listed as missing, under Kad's own words) otherwise. Undefined
- * when there is no proposal to take or it was refused: the value then follows its own rule.
+ * centers, business processes, a task's related object, the links of the technologies): the record of
+ * `rows` it names, exactly or case aside (`findRecordByName`), when the person reads the family
+ * (`reads`) and has not undone the match; then listed as a match of origin `model`. A name of several
+ * records (an import that is not `caseBlind`): `many`, named by `label` (else `ref`), for the row's refusal
+ * (`CSV_NAME_AMBIGUOUS_AMONG`), as a name written so. Refused (listed as missing, under Kad's own
+ * words) otherwise. Undefined when there is no proposal to take or it was refused: the value then
+ * follows its own rule.
  */
-export function takeProposal<T extends { name: string }>(
+export function proposedRecord<T extends { name: string }>(
   state: ImportMatchState,
-  args: {
-    proposals: ImportProposals | null | undefined;
-    unmatched: ReadonlyArray<{ column: string; value: string }> | null | undefined;
-    column: string;
-    value: string;
-    line: number;
-    rows: readonly T[];
-    reads: boolean;
-    caseBlind: boolean;
-    ref?: (row: T) => string | null;
-  },
-): T | undefined {
+  args: ProposalArgs<T>,
+): { kind: 'one'; row: T } | { kind: 'many'; names: string[] } | undefined {
   const proposal = proposalFor(args.proposals, args.column, args.value);
   if (proposal === undefined || undoneMatch(args.unmatched, args.column, args.value)) return undefined;
-  const found = args.reads ? findRecordByName(args.rows, proposal, { beyondCase: false, caseBlind: args.caseBlind }) : null;
+  const found = args.reads
+    ? findRecordByName(args.rows, proposal, { beyondCase: false, caseBlind: args.caseBlind, label: args.label ?? args.ref })
+    : null;
   if (found?.kind === 'one') {
     noteNameMatch(state.matches, {
       column: args.column, name: null, value: args.value.trim(), target: found.row.name.trim(), ref: args.ref?.(found.row) ?? null,
       origin: 'model', reason: 'model', undoable: true,
     }, args.line);
-    return found.row;
+    return { kind: 'one', row: found.row };
   }
+  if (found?.kind === 'many') return { kind: 'many', names: found.names };
   noteRefusedProposal(state.refused, { column: args.column, name: null, value: args.value.trim(), target: proposal, reason: 'missing' }, args.line);
+  return undefined;
+}
+
+/**
+ * `proposedRecord` for an import that keeps the first record of a name (`caseBlind`), where a
+ * proposal never names several: the record taken, else undefined (the value follows its own rule).
+ */
+export function takeProposal<T extends { name: string }>(state: ImportMatchState, args: ProposalArgs<T>): T | undefined {
+  const taken = proposedRecord(state, args);
+  if (taken?.kind === 'one') return taken.row;
+  if (taken?.kind === 'many') {
+    noteRefusedProposal(state.refused, { column: args.column, name: null, value: args.value.trim(), target: String(proposalFor(args.proposals, args.column, args.value)), reason: 'missing' }, args.line);
+  }
   return undefined;
 }
