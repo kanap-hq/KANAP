@@ -731,7 +731,7 @@ Une ligne qui créerait une application est écartée par défaut quand elle res
 - le même nom, aux accents près : `Gestion des depenses` et `Gestion des dépenses`
 - un nom proche, avec le même fournisseur ou le même éditeur
 
-Une ligne qui retrouve une application par son nom la met toujours à jour, comme avant. Les lignes d'un même fichier ne sont pas comparées entre elles.
+Une ligne qui retrouve une application par son nom la met toujours à jour, comme avant. Les lignes d'un même fichier ne sont pas comparées entre elles. Deux lignes du même nom sont refusées comme doublons, une ligne écartée comprise.
 
 La vérification liste ces lignes sous **Ressemble à une application existante**, avec l'application à laquelle chacune ressemble. Pointez une ligne pour voir pourquoi elle a été trouvée. Pour chaque ligne, choisissez :
 
@@ -741,7 +741,13 @@ La vérification liste ces lignes sous **Ressemble à une application existante*
 
 **Tout créer quand même**, **Tout mettre à jour** et **Tout écarter**, au-dessus de la liste, valent pour toutes les lignes. Un choix fait ensuite sur une ligne ne change que cette ligne. Chaque choix vérifie à nouveau le fichier. Avec **Ajouter les nouveaux uniquement** (l'opération `Insertion uniquement`), la mise à jour n'est pas proposée.
 
-Si APP-12 change entre la vérification et l'import, la ligne est refusée avec « APP-12 a changé depuis la vérification. » et rien n'est importé. Choisissez à nouveau : la nouvelle vérification lit l'application telle qu'elle est.
+L'import suit le choix fait à la vérification. Quand la situation d'une ligne a changé depuis, la ligne est refusée et rien n'est importé :
+
+- APP-12 a changé (ses valeurs, ses responsables ou la résidence de ses données), pour une ligne qui la met à jour : « APP-12 a changé depuis la vérification. »
+- APP-12 a été supprimée, pour une ligne qui la met à jour : « L'application choisie à la vérification n'existe plus. »
+- une autre application a pris le nom de la ligne : « APP-15 a pris ce nom après la vérification. »
+
+Vérifiez le fichier de nouveau : la nouvelle vérification lit les applications telles qu'elles sont.
 
 ### Limitations
 

@@ -731,7 +731,7 @@ A row that would create an application is left out by default when it looks like
 - the same name, accents aside: `Gestion des depenses` and `Gestion des dépenses`
 - a close name, with the same supplier or the same publisher
 
-A row that finds an application by its name still updates it, as before. Rows of the same file are not compared with each other.
+A row that finds an application by its name still updates it, as before. Rows of the same file are not compared with each other. Two rows with the same name are refused as duplicates, a row left out included.
 
 The check lists these rows under **Looks like an existing application**, with the application each one looks like. Point at a row to see why it was found. For each row, choose:
 
@@ -741,7 +741,13 @@ The check lists these rows under **Looks like an existing application**, with th
 
 **Create all anyway**, **Update all** and **Leave all out**, above the list, apply to every row. A choice made on a row afterwards changes that row only. Each choice checks the file again. With **Add new only** (the `Insert only` operation), the update is not offered.
 
-If APP-12 changes between the check and the import, the row is refused with "APP-12 changed since the check." and nothing is imported. Choose again: the new check reads the application as it is now.
+The import follows the choice made at the check. When the situation of a row changed since then, the row is refused and nothing is imported:
+
+- APP-12 changed (its values, owners or data residency), for a row that updates it: "APP-12 changed since the check."
+- APP-12 was deleted, for a row that updates it: "The application chosen at the check no longer exists."
+- another application took the row's name: "APP-15 took this name after the check."
+
+Check the file again: the new check reads the applications as they are now.
 
 ### Limitations
 

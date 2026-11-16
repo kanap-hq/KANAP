@@ -731,7 +731,7 @@ Eine Zeile, die eine Anwendung anlegen würde, wird standardmäßig ausgelassen,
 - gleicher Name bis auf Akzente: `Gestion des depenses` und `Gestion des dépenses`
 - ein ähnlicher Name mit demselben Lieferanten oder demselben Hersteller
 
-Eine Zeile, die eine Anwendung über ihren Namen findet, aktualisiert sie weiterhin wie bisher. Die Zeilen derselben Datei werden nicht miteinander verglichen.
+Eine Zeile, die eine Anwendung über ihren Namen findet, aktualisiert sie weiterhin wie bisher. Die Zeilen derselben Datei werden nicht miteinander verglichen. Zwei Zeilen mit demselben Namen werden als Duplikate abgelehnt, eine ausgelassene Zeile eingeschlossen.
 
 Die Prüfung listet diese Zeilen unter **Ähnelt einer bestehenden Anwendung** auf, mit der Anwendung, der jede ähnelt. Zeigen Sie auf eine Zeile, um zu sehen, warum sie gefunden wurde. Wählen Sie für jede Zeile:
 
@@ -741,7 +741,13 @@ Die Prüfung listet diese Zeilen unter **Ähnelt einer bestehenden Anwendung** a
 
 **Alle trotzdem anlegen**, **Alle aktualisieren** und **Alle auslassen** über der Liste gelten für alle Zeilen. Eine danach für eine Zeile getroffene Wahl ändert nur diese Zeile. Jede Wahl prüft die Datei erneut. Mit **Nur neue hinzufügen** (der Vorgang `Nur einfügen`) wird die Aktualisierung nicht angeboten.
 
-Ändert sich APP-12 zwischen der Prüfung und dem Import, wird die Zeile mit „APP-12 wurde seit der Prüfung geändert.“ abgelehnt, und nichts wird importiert. Wählen Sie erneut: Die neue Prüfung liest die Anwendung in ihrem aktuellen Stand.
+Der Import folgt der Wahl, die bei der Prüfung getroffen wurde. Hat sich die Lage einer Zeile seitdem geändert, wird die Zeile abgelehnt, und nichts wird importiert:
+
+- APP-12 wurde geändert (ihre Werte, Verantwortlichen oder Datenresidenz), bei einer Zeile, die sie aktualisiert: „APP-12 wurde seit der Prüfung geändert.“
+- APP-12 wurde gelöscht, bei einer Zeile, die sie aktualisiert: „Die bei der Prüfung gewählte Anwendung existiert nicht mehr.“
+- eine andere Anwendung hat den Namen der Zeile erhalten: „APP-15 hat diesen Namen nach der Prüfung erhalten.“
+
+Prüfen Sie die Datei erneut: Die neue Prüfung liest die Anwendungen in ihrem aktuellen Stand.
 
 ### Einschränkungen
 

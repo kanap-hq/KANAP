@@ -731,7 +731,7 @@ Una fila que crearía una aplicación se descarta por defecto cuando se parece a
 - el mismo nombre salvo acentos: `Gestion des depenses` y `Gestion des dépenses`
 - un nombre parecido, con el mismo proveedor o el mismo editor
 
-Una fila que encuentra una aplicación por su nombre la sigue actualizando, como antes. Las filas de un mismo archivo no se comparan entre sí.
+Una fila que encuentra una aplicación por su nombre la sigue actualizando, como antes. Las filas de un mismo archivo no se comparan entre sí. Dos filas con el mismo nombre se rechazan como duplicadas, incluida una fila descartada.
 
 La comprobación lista estas filas en **Se parece a una aplicación existente**, con la aplicación a la que se parece cada una. Señale una fila para ver por qué se encontró. Para cada fila, elija:
 
@@ -741,7 +741,13 @@ La comprobación lista estas filas en **Se parece a una aplicación existente**,
 
 **Crear todas de todos modos**, **Actualizar todas** y **Descartar todas**, encima de la lista, se aplican a todas las filas. Una elección hecha después en una fila solo cambia esa fila. Cada elección vuelve a comprobar el archivo. Con **Solo añadir los nuevos** (la operación `Solo insertar`), la actualización no se ofrece.
 
-Si APP-12 cambia entre la comprobación y la importación, la fila se rechaza con «APP-12 ha cambiado desde la comprobación.» y no se importa nada. Elija de nuevo: la nueva comprobación lee la aplicación tal como está ahora.
+La importación sigue la elección hecha en la comprobación. Cuando la situación de una fila ha cambiado desde entonces, la fila se rechaza y no se importa nada:
+
+- APP-12 ha cambiado (sus valores, sus responsables o la residencia de sus datos), para una fila que la actualiza: «APP-12 ha cambiado desde la comprobación.»
+- APP-12 se ha eliminado, para una fila que la actualiza: «La aplicación elegida en la comprobación ya no existe.»
+- otra aplicación ha tomado el nombre de la fila: «APP-15 tomó este nombre después de la comprobación.»
+
+Compruebe el archivo de nuevo: la nueva comprobación lee las aplicaciones tal como están ahora.
 
 ### Limitaciones
 
