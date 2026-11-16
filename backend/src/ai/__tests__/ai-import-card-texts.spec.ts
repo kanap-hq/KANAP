@@ -86,6 +86,26 @@ function instructionsNameLinesAndColumnsNeverCodes() {
   console.log('  the model names lines and columns as the person sees them, never a code: OK');
 }
 
+/**
+ * Lot I3 of 26.11.9, second pass: for a column that names a record, Kad's `values` propose an existing
+ * record's name only, never a case or accent variant (the check matches those itself), and Kad never
+ * announces a match the card does not show.
+ */
+function instructionsProposeExistingRecordsOnly() {
+  const operation = new PrepareImportMappingAiMutationOperation({} as any);
+  const values = (operation.inputSchema.shape.columns as any).element.shape.values.description as string;
+  const hint = operation.writePreview.prompt_hint;
+  for (const text of [values, hint]) {
+    assert.match(text, /names a record/);
+    assert.match(text, /existing record/);
+    assert.match(text, /search/);
+    assert.match(text, /case or accents?/);
+  }
+  assert.match(hint, /never announce a match the card does not show/i);
+  assert.doesNotMatch(hint, /are copied as written/, 'a name of a record is no longer copied as the model writes it');
+  console.log('  the model proposes existing records only, and announces no match the card does not show: OK');
+}
+
 async function screenLanguageWhenTheProfileHasNone() {
   const req = { tenant: { id: 'tenant-1' }, user: { sub: 'user-1' }, headers: { 'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8' } };
   const chat = new AiChatController({} as any, {} as any, {} as any, {} as any);
@@ -123,6 +143,7 @@ async function main() {
   phrasesInEveryLanguage();
   loadRefusalsAreTheCardsWords();
   instructionsNameLinesAndColumnsNeverCodes();
+  instructionsProposeExistingRecordsOnly();
   await screenLanguageWhenTheProfileHasNone();
   console.log('ai-import-card-texts.spec: ok');
 }

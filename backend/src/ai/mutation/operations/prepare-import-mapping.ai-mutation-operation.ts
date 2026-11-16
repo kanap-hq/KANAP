@@ -37,9 +37,10 @@ const ColumnMappingSchema = z.object({
     .describe('For a number column written as text, when the first rows show the decimal mark. Else the file settles it.'),
   values: z.record(z.string(), z.string().trim().max(200)).optional()
     .describe('A value of the file and the value it stands for, for the values the column does not read by itself: a code or catalog name '
-      + '({"Prod": "Production"}), a number ({"3 months": "3"}), a person\'s e-mail, a name as the workspace writes it; "" leaves the cell blank. '
-      + 'For a budget file\'s supplier or dimension column: an existing value of the workspace only (a dimension\'s `values` in the template, '
-      + 'a name of `matching.candidates`); the check refuses any other and the card shows each one.'),
+      + '({"Prod": "Production"}), a number ({"3 months": "3"}), a person\'s e-mail; "" leaves the cell blank. '
+      + 'For a column that names a record by its name (a supplier, a company, a dimension value): only the name of an existing record, '
+      + 'read in the template (a dimension\'s `values`, a name of `matching.candidates`) or found by a search; never a case or accents '
+      + 'variant, which the check matches itself. The check refuses a record that does not exist or that the person cannot read.'),
   note: z.string().trim().max(200).nullable().optional()
     .describe('What you supposed for this column, in the person\'s language, when it is not obvious.'),
 });
@@ -102,7 +103,10 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'call `describe_import_template` for the import it fits, then `prepare_import_mapping` with the attachment id and the mapping. '
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
       + 'and name the file columns you leave out. When the card shows values not read, ask the user what they stand for and call again with `values`. '
-      + 'References to other records (a company, a supplier, a server, a person) are copied as written: the import checks them when it runs. '
+      + 'The import checks the references to other records (a company, a supplier, a server, a person) when it runs. '
+      + 'For a column that names a record by its name, `values` proposes only the name of an existing record (read in the template, '
+      + 'else found by a search), never a case or accents variant: the check matches those itself, and refuses a proposal whose record '
+      + 'does not exist or that the person cannot read. Never announce a match the card does not show. '
       + 'A budget file matches its suppliers and dimension values to the workspace\'s before it creates any: same name with other accents, '
       + 'or a value of a recommended dimension or of the sample data\'s business domain in another language (`matching.matches`, origin server). '
       + 'For a value the workspace names otherwise (a translation, a synonym, a spelling), map it in that column\'s `values` to an '
