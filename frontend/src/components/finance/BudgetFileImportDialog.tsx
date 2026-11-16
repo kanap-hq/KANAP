@@ -867,7 +867,7 @@ function Line({ text, children, danger, muted, kad, tooltip, action, actions, af
     </Typography>
   );
   const title = kad && tooltip ? <>{kad}<br />{tooltip}</> : (tooltip ?? kad);
-  const shown = title ? <Tooltip title={title} placement="bottom-start">{body}</Tooltip> : body;
+  const shown = title ? <Tooltip title={title} placement={under ? 'top-start' : 'bottom-start'}>{body}</Tooltip> : body;
   const links = actions ?? (action ? [action] : []);
   if (under) {
     return (
