@@ -471,6 +471,7 @@
     },
     "messages": {
       "loadFailed": "The contract could not be loaded.",
+      "notFound": "Contract not found.",
       "saveFailed": "The change could not be saved.",
       "createFailed": "The contract could not be created.",
       "nameRequired": "Enter a name.",

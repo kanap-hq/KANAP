@@ -1,7 +1,7 @@
 import React from 'react';
-import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, IconButton, Stack, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Link as MuiLink, Stack, Typography } from '@mui/material';
 import { CreationActions, changedFields, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
@@ -507,6 +507,23 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const missing = (value: string | null, key: string) => value ?? (
     <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t(key)}</Box>
   );
+
+  // A contract that does not exist, or lies outside the person's access (the API answers 404 for
+  // both): the not found page, as the other records have. Any other failure keeps the record frame.
+  if (!isCreate && !data && (loadError as { response?: { status?: number } } | null)?.response?.status === 404) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <Alert severity="error">{t('contracts.messages.notFound')}</Alert>
+        <MuiLink
+          component={RouterLink}
+          to={withContext(LIST_PATH)}
+          sx={{ display: 'inline-block', mt: 2, fontSize: 13, fontWeight: 400, color: 'kanap.teal' }}
+        >
+          {t('budget.backToList')}
+        </MuiLink>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>

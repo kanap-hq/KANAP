@@ -471,6 +471,7 @@
     },
     "messages": {
       "loadFailed": "Le contrat n'a pas pu être chargé.",
+      "notFound": "Contrat introuvable.",
       "saveFailed": "La modification n'a pas pu être enregistrée.",
       "createFailed": "Le contrat n'a pas pu être créé.",
       "nameRequired": "Saisissez un nom.",

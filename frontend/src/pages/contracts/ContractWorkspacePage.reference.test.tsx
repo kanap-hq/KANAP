@@ -145,14 +145,35 @@ describe('ContractWorkspacePage by reference', () => {
     await waitFor(() => expect(where()).toBe('/ops/contracts/CTR-6/overview?sort=name%3AASC'));
   });
 
-  it('shows an unknown reference, or a contract outside the access, as an unknown uuid', async () => {
+  it('shows an unknown reference, or a contract outside the access, as an unknown uuid: the not found page', async () => {
     // The API answers 404 for a contract outside the person's access, as for one that does not exist.
-    renderAt('/ops/contracts/CTR-999/overview');
+    for (const address of ['CTR-999', '00000000-0000-4000-8000-000000000999']) {
+      const view = renderAt(`/ops/contracts/${address}/overview`);
+      expect(await screen.findByText('contracts.messages.notFound')).toBeInTheDocument();
+      expect(screen.queryByText('contracts.messages.loadFailed')).toBeNull();
+      // No empty record frame: no tabs, no header actions; a way back to the list.
+      expect(screen.queryByRole('tab', { name: 'contracts.tabs.overview' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+      expect(where()).toBe(`/ops/contracts/${address}/overview`);
+      expect(screen.queryByText(address, { selector: ':not([data-testid="where"])' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'share.share' })).toBeNull();
+      expect(childReads()).toEqual([]);
+      fireEvent.click(screen.getByRole('link', { name: 'budget.backToList' }));
+      await waitFor(() => expect(where()).toBe('/ops/contracts'));
+      view.unmount();
+    }
+  });
+
+  it('keeps the load message, in the record frame, for any other failure', async () => {
+    const answer = mocked.get.getMockImplementation() as (url: string) => Promise<unknown>;
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/contracts/CTR-7') throw Object.assign(new Error('Server error'), { response: { status: 500 } });
+      return answer(url);
+    });
+    renderAt('/ops/contracts/CTR-7/overview');
     expect(await screen.findByText('contracts.messages.loadFailed')).toBeInTheDocument();
-    expect(where()).toBe('/ops/contracts/CTR-999/overview');
-    expect(screen.queryByText('CTR-999', { selector: ':not([data-testid="where"])' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'share.share' })).toBeNull();
-    expect(childReads()).toEqual([]);
+    expect(screen.queryByText('contracts.messages.notFound')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'contracts.tabs.overview' })).toBeInTheDocument();
   });
 
   it('does not read the contract again once deleted from its reference address', async () => {
