@@ -26,6 +26,13 @@ import {
 
 /** The task types of a budget line, which a limited person may see tasks of without the line. */
 const LINE_TYPES = new Set(['spend_item', 'capex_item']);
+/** The label of a contract outside the person's access, as the tasks list writes it (`ops:contracts.outsideYourAccess`). */
+const CONTRACT_OUTSIDE_ACCESS: Record<CsvLanguage, string> = {
+  en: 'Contract outside your access',
+  fr: 'Contrat hors de votre accès',
+  de: 'Vertrag außerhalb Ihres Zugriffs',
+  es: 'Contrato fuera de su acceso',
+};
 
 /**
  * Service for importing and exporting Tasks via CSV
@@ -95,7 +102,7 @@ export class TasksCsvService {
 
     // Pre-load related object names for export
     if (tasks.length > 0) {
-      await this.loadRelatedObjectNames(tasks, manager, tenantId);
+      await this.loadRelatedObjectNames(tasks, manager, tenantId, opts.language);
       await this.loadInheritedClassification(tasks, manager, tenantId);
     }
 
@@ -142,6 +149,7 @@ export class TasksCsvService {
     tasks: Task[],
     manager: EntityManager,
     tenantId: string,
+    language: CsvLanguage,
   ): Promise<void> {
     // Group tasks by related object type
     const byType = new Map<string, Task[]>();
@@ -165,7 +173,8 @@ export class TasksCsvService {
     };
 
     // A limited person's export shows no trace of a line out of access (spec §5.4, §5.6): a task
-    // they see (a participation) of a line they cannot read exports neither its name nor its id.
+    // they see (a participation) of a line they cannot read exports neither its name nor its id. A
+    // contract they cannot read gives the list's label instead of its name (lot R4 of 26.11.9).
     const limited = await isLimitedTransaction(manager);
 
     // Load names for each type
@@ -188,10 +197,13 @@ export class TasksCsvService {
       // Attach names to tasks
       for (const task of typeTasks) {
         const relatedObjectId = task.related_object_id;
-        if (limited && LINE_TYPES.has(type) && relatedObjectId && !nameById.has(relatedObjectId)) {
+        const hidden = limited && relatedObjectId && !nameById.has(relatedObjectId);
+        if (hidden && (LINE_TYPES.has(type) || type === 'contract')) {
           task.related_object_id = null;
         }
-        (task as any)._relatedObjectName = relatedObjectId ? (nameById.get(relatedObjectId) ?? '') : '';
+        (task as any)._relatedObjectName = hidden && type === 'contract'
+          ? CONTRACT_OUTSIDE_ACCESS[language] ?? CONTRACT_OUTSIDE_ACCESS.en
+          : relatedObjectId ? (nameById.get(relatedObjectId) ?? '') : '';
       }
     }
   }

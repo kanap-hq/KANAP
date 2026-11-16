@@ -989,7 +989,22 @@ async function testTasksExport(): Promise<void> {
   assertNoTrace(ritaFile, 'tasks export (Rita)');
   const ullaFile = (await file(ulla)).content as string;
   assert.ok(ullaFile.includes(s.lines.L5) && ullaFile.includes(`DA line L5 ${tag}`), 'tasks export: Ulla\'s file names L5');
-  console.log('  tasks export: a task of a hidden line exports without the line: OK');
+  // A task of a contract outside the access: the label of the list, without the contract's id,
+  // name or reference (lot R4 of 26.11.9); in the file's language.
+  const ritaContractRow = ritaFile.split('\n').find((line) => line.includes(`DA 4D contract task ${tag}`)) ?? '';
+  assert.ok(ritaContractRow.includes('Contract outside your access'), `tasks export: the label of the list (${ritaContractRow})`);
+  assertNoContractTrace(ritaFile, 'tasks export (Rita)');
+  const ritaFrench = (await asPerson<any>(rita, (ctx) => csv.export({ manager: ctx.manager, tenantId: s.tenantId, language: 'fr', scope: 'data' }))).content as string;
+  assert.ok(ritaFrench.includes('Contrat hors de votre accès'), 'tasks export: the label in the file\'s language');
+  assert.ok(ullaFile.includes(contractHidden) && ullaFile.includes(`DA 4D contract hidden ${tag}`), 'tasks export: Ulla\'s file names the contract');
+  // Read back, the label is no contract name: Rita's own file checks without a refusal on that row.
+  const back: any = await asPerson<any>(rita, (ctx) => csv.import(
+    { buffer: Buffer.from(ritaFile, 'utf8'), originalname: 'tasks.csv' },
+    { dryRun: true, mode: 'enrich', operation: 'update_only' },
+    { manager: ctx.manager, tenantId: s.tenantId, userId: rita, isAdmin: false },
+  ));
+  assert.deepEqual((back.errors ?? []).filter((error: any) => /contract/i.test(JSON.stringify(error))), [], `tasks import of Rita's file: ${JSON.stringify(back.errors)}`);
+  console.log('  tasks export: a task of a hidden line exports without the line, of a hidden contract with its label: OK');
 }
 
 // ---------------------------------------------------------------------------------------------
