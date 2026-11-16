@@ -31,6 +31,9 @@ vi.mock('../../auth/AuthContext', () => ({
   }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
+  useRecentlyViewed: () => ({ items: [], addToRecent: vi.fn(), clearRecent: vi.fn() }),
+}));
 // The shared history: the tab must hand it the supplier's table and identifier.
 vi.mock('../../components/history/RecordHistory', () => ({
   default: ({ table, recordId }: { table: string; recordId: string }) => (
@@ -144,22 +147,22 @@ describe('SupplierWorkspacePage', () => {
     clearCreationFieldFocus();
   });
 
-  it('shows the name as title, the ERP ID as reference, the status and no save button', async () => {
+  it('shows the name as title, the status and no save button', async () => {
     renderAt('/master-data/suppliers/s-1/overview');
     expect(await screen.findByText('Acme Software')).toBeInTheDocument();
-    expect(screen.getByText('F10001')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'suppliers.status.enabled' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /2/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /reset/i })).toBeNull();
   });
 
-  it('shows no reference for a supplier without an ERP ID', async () => {
-    stored = { ...SUPPLIER, erp_supplier_id: null };
+  // Lot R3 of 26.11.9: the header shows the supplier's reference (SUP-n); the ERP ID is a property.
+  it('shows neither the ERP ID nor the uuid in the header of a supplier without a number', async () => {
     renderAt('/master-data/suppliers/s-1/overview');
     await screen.findByText('Acme Software');
     expect(screen.queryByText('F10001')).toBeNull();
     expect(screen.queryByText('s-1')).toBeNull();
+    expect(await screen.findByLabelText('suppliers.fields.erpSupplierId')).toHaveValue('F10001');
   });
 
   it('saves the name edited in the title when focus leaves it', async () => {

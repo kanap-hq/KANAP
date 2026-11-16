@@ -84,4 +84,15 @@ describe('Suppliers list', () => {
     expect(last.params.sort).toBe('erp_supplier_id:DESC');
     expect(linkSort()).toBe('erp_supplier_id:DESC');
   }, 20_000);
+
+  it('opens a line by its reference', async () => {
+    get.mockImplementation(async () => ({ data: { items: [{ id: 's-1', item_number: 12, name: 'Acme', erp_supplier_id: 'E1' }], total: 1, page: 1, limit: 50 } }));
+    render(
+      <MemoryRouter initialEntries={['/master-data/suppliers']}>
+        <SuppliersPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(document.querySelector('a[href^="/master-data/suppliers/SUP-12/overview"]')).not.toBeNull());
+    expect(document.querySelector('a[href^="/master-data/suppliers/s-1"]')).toBeNull();
+  }, 20_000);
 });

@@ -132,6 +132,21 @@ async function testCreateAnswersTheReference() {
   });
 }
 
+// The contract's page shows its supplier in the picker as the lookup does: reference, ERP ID and status.
+async function testDetailCarriesSupplierOption() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, ids, svc, opts } = await seed(runner);
+    await runner.query(`UPDATE suppliers SET erp_supplier_id = 'SUP-003' WHERE tenant_id = $1`, [tenantId]);
+    const [supplier] = await runner.query(`SELECT id, item_number FROM suppliers WHERE tenant_id = $1`, [tenantId]);
+    const detail: any = await svc.get(ids[3], opts);
+    assert.ok(Number(supplier.item_number) > 0);
+    assert.deepEqual(detail.supplier_option, {
+      id: supplier.id, item_number: Number(supplier.item_number), name: 'Dell', erp_supplier_id: 'SUP-003', status: 'enabled',
+    });
+    assert.equal(detail.supplier_name, 'Dell');
+  });
+}
+
 async function testAssistantReferenceFilterAndSort() {
   await inRolledBackTransaction(async (runner) => {
     const { ids, svc, opts } = await seed(runner);
@@ -315,6 +330,7 @@ void runSpecs('contract references outside the page (R4)', [
   ['quick search: CTR-n exactly, digits stay text', testQuickSearch],
   ['the ids carry the references', testIdsCarryReferences],
   ['the creation answers the reference', testCreateAnswersTheReference],
+  ['the detail gives the supplier as the picker shows it', testDetailCarriesSupplierOption],
   ['Kad: reference filter and sort through the list', testAssistantReferenceFilterAndSort],
   ['import by reference, unknown refused, old file, export round trip', testImportByReference],
   ['import warns of renames and supplier moves by reference', testImportWarnsOfRenamesAndMoves],

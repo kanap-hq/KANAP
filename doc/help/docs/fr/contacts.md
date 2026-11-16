@@ -28,6 +28,7 @@ Naviguez vers **Données de référence > Contacts** pour voir votre répertoire
 La grille Contacts fournit un répertoire consultable de tous les contacts externes. Chaque cellule d'une ligne est un lien cliquable qui ouvre la fiche du contact.
 
 **Colonnes par défaut** :
+- **Référence** : La référence attribuée par Kadratis (`CTCT-3`)
 - **Nom** / **Prénom** : Nom du contact
 - **Fournisseur** : Le vendeur pour lequel il travaille
 - **Email** : Adresse email
@@ -40,6 +41,10 @@ La grille Contacts fournit un répertoire consultable de tous les contacts exter
 - **Créé** : Date de création de l'enregistrement
 
 **Tri par défaut** : Par nom, alphabétique.
+
+**Recherche rapide** : tapez une référence, comme `CTCT-3`, pour trouver ce contact. Des chiffres seuls cherchent dans le texte.
+
+**Filtres de colonnes** : le filtre **Référence** accepte `CTCT-3` ou `3`.
 
 **Actions** :
 - **Nouveau** : Créer un nouveau contact (nécessite `contacts:member`)
@@ -55,6 +60,10 @@ Cliquez sur une ligne pour ouvrir la fiche du contact. Chaque modification s'enr
 
 **Titre** : le nom du contact. Cliquez dessus pour modifier le prénom et le nom côte à côte ; la modification s'enregistre quand vous quittez les deux champs ou appuyez sur Entrée, et Échap l'annule. Un contact sans nom affiche son e-mail à la place.
 
+**Référence** : la référence du contact (`CTCT-4`) s'affiche avant le nom. Cliquez dessus pour la copier.
+
+**Adresse de la page** : l'adresse de la page utilise la référence, par exemple `/master-data/contacts/CTCT-4/overview`. L'ancienne adresse de la page d'un contact l'ouvre toujours, et laisse place à la nouvelle.
+
 **En-tête**, sous le nom :
 - **Fournisseur** : le fournisseur pour lequel travaille ce contact, sous forme de lien vers sa fiche. Un contact sans fournisseur affiche **Aucun fournisseur** : cliquez dessus pour ouvrir les propriétés et en choisir un.
 - **Type de contact** : le rôle du contact chez le fournisseur : Commercial, Technique, Support ou Autre. Cliquez dessus pour en choisir un autre. Il apparaît dès que le contact a un fournisseur.
@@ -62,7 +71,7 @@ Cliquez sur une ligne pour ouvrir la fiche du contact. Chaque modification s'enr
 - **Lié à** : le nombre de fournisseurs, lignes budgétaires, contrats et autres éléments liés au contact. Cliquez dessus pour aller à la section **Lié à**.
 
 **Propriétés** (le panneau de droite, ouvert par son onglet ou la touche `P`) :
-- **Fournisseur** : choisissez le fournisseur dans la liste. Un contact qui a un fournisseur a toujours un type de contact : choisir un fournisseur pour un contact sans type lui donne **Commercial**, que vous pouvez changer aussitôt. Retirer le fournisseur retire aussi le type de contact.
+- **Fournisseur** : choisissez le fournisseur dans la liste, ou tapez son nom ou sa référence (`SUP-12`). Un contact qui a un fournisseur a toujours un type de contact : choisir un fournisseur pour un contact sans type lui donne **Commercial**, que vous pouvez changer aussitôt. Retirer le fournisseur retire aussi le type de contact.
 - **Type de contact** : le même choix que dans l'en-tête.
 - **E-mail** : obligatoire, et unique parmi vos contacts.
 - **Fonction** : son rôle ou son poste.
@@ -124,16 +133,20 @@ L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous 
 
 Gérez les contacts en masse avec des fichiers CSV ou des classeurs Excel.
 
-**Export** : Télécharge les contacts que la liste affiche avec leurs détails. Choisissez **Tout le référentiel** dans la fenêtre pour tous les contacts.
+**Export** : Télécharge les contacts que la liste affiche avec leur référence et leurs détails. Choisissez **Tout le référentiel** dans la fenêtre pour tous les contacts.
 
 **Import** :
-- Utilisez le **Contrôle préalable** pour valider avant d'appliquer
-- Correspondance par adresse email
+- Utilisez la **Vérification préalable** pour valider avant d'appliquer
 - Peut créer de nouveaux contacts ou mettre à jour les existants
+- **Correspondance par référence** : une `reference` remplie (`CTCT-4` ou `4`) désigne le contact que la ligne met à jour, même si son e-mail a changé. Le contact prend le nom et l'e-mail de la ligne. La vérification préalable signale chaque contact qui sera renommé ou changera d'adresse e-mail
+- **Correspondance par e-mail** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, la ligne est rapprochée par l'adresse e-mail
+- **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « CTCT-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
+- **Changement d'e-mail** : un e-mail qu'un autre contact a déjà est refusé, et le message donne la référence de ce contact : « « ana@acme.example » appartient déjà à CTCT-7. »
+- **Une ligne par contact** : deux lignes qui mettent à jour le même contact sont refusées : « Cette ligne met à jour CTCT-7, comme la ligne 3. Gardez une seule ligne par fiche. » Deux lignes qui créent le même contact (même e-mail, quelle que soit la casse) sont refusées aussi : « Mêmes valeurs dans email qu'à la ligne 3. »
 
 **Champs obligatoires** : Email
 
-**Champs optionnels** : `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
+**Champs optionnels** : `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notes** :
 - Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import

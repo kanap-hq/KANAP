@@ -101,6 +101,25 @@ async function testPrefixFirstOrder() {
   console.log('ok - prefix matches first, then word starts, then the rest');
 }
 
+// A typed `SUP-12` finds that supplier exactly, first, as the list's quick search does (lot R3 of
+// 26.11.9); digits alone, or `SUP-013` (an ERP ID), stay text. The rows carry their number.
+async function testSupplierReference() {
+  await withTenant(async (runner, tenantId) => {
+    await insertSuppliers(runner, tenantId, ['Acme', 'Beta Corp', 'Gamma']);
+    await insertSuppliers(runner, tenantId, ['ERP holder'], { erp: 'SUP-002' });
+    const call = { manager: runner.manager, tenantId };
+    const numbers = new Map((await runner.query(`SELECT name, item_number FROM suppliers WHERE tenant_id = $1`, [tenantId]))
+      .map((row: any) => [row.name, row.item_number]));
+    const beta = numbers.get('Beta Corp');
+    const found = await lookupReference(call, SUPPLIER_LOOKUP, { q: `sup-${beta}` });
+    assert.deepEqual(found.items.map((row: any) => [row.name, row.item_number]), [['Beta Corp', beta]], 'SUP-n finds the supplier, with its number');
+    assert.deepEqual(names(await lookupReference(call, SUPPLIER_LOOKUP, { q: 'SUP-002' })), ['ERP holder'], 'SUP-002 stays text: an ERP ID');
+    assert.ok(!names(await lookupReference(call, SUPPLIER_LOOKUP, { q: String(beta) })).includes('Beta Corp'), 'digits alone stay text');
+    assert.deepEqual(names(await lookupReference(call, SUPPLIER_LOOKUP, { q: 'SUP-999' })), []);
+  });
+  console.log('ok - a typed SUP-n finds its supplier exactly');
+}
+
 async function testTenantPredicate() {
   const runner = dataSource.createQueryRunner();
   await runner.connect();
@@ -407,6 +426,7 @@ async function main() {
     testParsing();
     await testAccentAndCaseFolding();
     await testPrefixFirstOrder();
+    await testSupplierReference();
     await testTenantPredicate();
     await testLimitAndCap();
     await testLifecycleAndIds();

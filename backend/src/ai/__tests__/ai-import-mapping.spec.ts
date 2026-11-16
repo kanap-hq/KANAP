@@ -15,7 +15,7 @@ import { portfolioProjectCsvConfig } from '../../portfolio/portfolio-project-csv
 import { portfolioRequestCsvConfig } from '../../portfolio/portfolio-request-csv.config';
 import { taskCsvConfig } from '../../tasks/task-csv.config';
 import { incidentCsvConfig } from '../../incidents/incident-csv.config';
-import { SUPPLIER_CSV_COLUMNS } from '../../suppliers/supplier-csv-headers';
+import { SUPPLIER_FILE_COLUMNS } from '../../suppliers/supplier-csv-headers';
 import { CONTRACT_CSV_COLUMNS } from '../../contracts/contract-csv-headers';
 import { COST_CENTER_CSV_HEADERS } from '../../cost-centers/cost-centers-csv.service';
 import { ANALYTICS_VALUE_CSV_HEADERS } from '../../analytics/analytics-categories-csv.service';
@@ -114,7 +114,7 @@ async function testTemplatesAreTheColumnsTheImportsRead() {
       ...[year - 1, year, year + 1].flatMap((y) => ['budget', 'revision', 'forecast', 'actual', 'landing'].map((m) => `${m}_${y}`)),
     ],
     contracts: CONTRACT_CSV_COLUMNS,
-    suppliers: SUPPLIER_CSV_COLUMNS,
+    suppliers: SUPPLIER_FILE_COLUMNS,
     contacts: privateHeaders(ContactsService),
     companies: privateHeaders(CompaniesService, year),
     departments: privateHeaders(DepartmentsService),

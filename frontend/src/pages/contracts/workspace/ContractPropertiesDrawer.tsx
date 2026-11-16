@@ -1,7 +1,8 @@
 import { Box, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { PropertyGroup, PropertyRow } from '../../../components/design';
-import SupplierSelect from '../../../components/fields/SupplierSelect';
+import SupplierSelect, { type SupplierOption } from '../../../components/fields/SupplierSelect';
+import { matching } from '../../../components/finance/itemReferences';
 import CompanySelect from '../../../components/fields/CompanySelect';
 import CostCenterSelect from '../../../components/fields/CostCenterSelect';
 import DateEUField from '../../../components/fields/DateEUField';
@@ -44,6 +45,8 @@ type Props = {
   isCreate?: boolean;
   errors?: ContractFieldErrors;
   names: { supplier: string | null; company: string | null; owner: string | null };
+  /** The saved supplier as its picker shows it (the detail's `supplier_option`, reference included). */
+  supplierOption?: SupplierOption | null;
   disabled: boolean;
   /** Saved at once: pickers, dates, selects. */
   onPatch: (patch: ContractPatch) => void;
@@ -66,7 +69,7 @@ const errorLine = (message: string | undefined) => (
 );
 
 /** The contract's properties panel: parties, duration, amount, lifecycle. Every field saves itself. */
-export default function ContractPropertiesDrawer({ values, isCreate = false, errors = {}, names, disabled, onPatch, onTyped, onCommit }: Props) {
+export default function ContractPropertiesDrawer({ values, isCreate = false, errors = {}, names, supplierOption, disabled, onPatch, onTyped, onCommit }: Props) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const placement = useContractPlacementFilter(values.company_id || null, values.cost_center_id || null);
@@ -90,7 +93,7 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, err
               required
               error={!!errors.supplier_id}
               helperText={errors.supplier_id}
-              selectedOption={values.supplier_id && names.supplier ? { id: values.supplier_id, name: names.supplier, erp_supplier_id: null, status: 'enabled' } : null}
+              selectedOption={matching(supplierOption, values.supplier_id)}
             />
           </Box>
         </PropertyRow>

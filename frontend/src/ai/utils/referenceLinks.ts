@@ -8,9 +8,8 @@ import { buildEntityUrl } from './entityUrls';
  * with the right the route asks for (ProtectedRoute).
  *
  * Checked on the detail routes and the reads behind them. A CVE id is not a record page: it stays
- * text. `MEM-n` is a contributor. Contracts (CTR) open by their reference. Suppliers (SUP) and
- * contacts (CTCT) have a reference whose address their page does not open yet: it stays text, and
- * the assistant links those records by their `page_url` (the uuid address).
+ * text. `MEM-n` is a contributor. Contracts (CTR), suppliers (SUP) and contacts (CTCT) open by their
+ * reference.
  */
 const LINKED_REFERENCE_FAMILIES: Record<string, { entityType: string; resource: string }> = {
   APP: { entityType: 'applications', resource: 'applications' },
@@ -31,6 +30,8 @@ const LINKED_REFERENCE_FAMILIES: Record<string, { entityType: string; resource: 
   COMP: { entityType: 'companies', resource: 'companies' },
   DEPT: { entityType: 'departments', resource: 'departments' },
   CTR: { entityType: 'contracts', resource: 'contracts' },
+  SUP: { entityType: 'suppliers', resource: 'suppliers' },
+  CTCT: { entityType: 'contacts', resource: 'contacts' },
 };
 
 /** Contributors are absent from `buildEntityUrl`: they are no mention family. */

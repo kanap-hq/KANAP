@@ -16,6 +16,7 @@ import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { ImportLabel } from '../components/csv/importFiles';
+import { formatItemRef, itemAddress } from '../utils/item-ref';
 
 export default function SuppliersPage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -52,10 +53,23 @@ export default function SuppliersPage() {
   }, []);
   const getSupplierHref = useCallback((row: any) => {
     const sp = buildWorkspaceSearch();
-    return `/master-data/suppliers/${row.id}/overview?${sp.toString()}`;
+    return `/master-data/suppliers/${itemAddress('supplier', row)}/overview?${sp.toString()}`;
   }, [buildWorkspaceSearch]);
 
   const columns: EnhancedColDef<any>[] = useMemo(() => [
+    {
+      // The reference (`SUP-12`): filtered on its number by the server, sorted by number.
+      field: 'item_number',
+      headerName: t('suppliers.columns.reference'),
+      width: 110,
+      filter: 'agTextColumnFilter',
+      valueFormatter: (p: any) => (p.value ? formatItemRef('supplier', p.value) : ''),
+      comparator: (a: number, b: number) => (a || 0) - (b || 0),
+      cellStyle: { fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace", fontSize: '12px', color: 'var(--kanap-text-secondary)', fontVariantNumeric: 'tabular-nums' },
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer {...params} linkType="internal" getHref={getSupplierHref} onNavigate={(href) => navigate(href)} />
+      ),
+    },
     {
       field: 'name',
       headerName: t('shared.columns.name'),

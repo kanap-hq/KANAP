@@ -13,11 +13,14 @@ import { FieldLabel, KanapDialog, PropertyRow } from '../design';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import OptionWithHint from './OptionWithHint';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
+import { formatItemRef } from '../../utils/item-ref';
 
 const SUPPLIER_LOOKUP = '/suppliers/lookup';
 
 export type SupplierOption = {
   id: string;
+  /** SUP-n: the lookup and the create answer carry it; a label the caller holds may not. */
+  item_number?: number | null;
   name: string;
   erp_supplier_id: string | null;
   status: string;
@@ -42,6 +45,7 @@ type SupplierSelectProps = {
 function toSupplierOption(row: Partial<SupplierOption> & { id: string }): SupplierOption {
   return {
     id: row.id,
+    item_number: row.item_number ?? null,
     name: row.name ?? '',
     erp_supplier_id: row.erp_supplier_id ?? null,
     status: row.status ?? STATUS_ENABLED,
@@ -290,22 +294,25 @@ const SupplierSelect = React.forwardRef<HTMLInputElement, SupplierSelectProps>(f
           );
         }
         const disabledSupplier = option.status?.toLowerCase() === 'disabled';
+        // The reference (`SUP-12`, which the search finds too), the ERP ID, and the status.
+        const codes = [option.item_number ? formatItemRef('supplier', option.item_number) : null, option.erp_supplier_id || null]
+          .filter((code): code is string => !!code);
+        const hints = [
+          ...codes.map((code) => (
+            <Box key={code} component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontVariantNumeric: 'tabular-nums' }}>
+              {code}
+            </Box>
+          )),
+          ...(disabledSupplier ? [<React.Fragment key="disabled">{t('common:statuses.disabled')}</React.Fragment>] : []),
+        ];
         return (
           <OptionWithHint
             key={option.id}
             optionProps={props}
             label={option.name}
-            trailing={option.erp_supplier_id || disabledSupplier ? (
-              <>
-                {option.erp_supplier_id ? (
-                  <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontVariantNumeric: 'tabular-nums' }}>
-                    {option.erp_supplier_id}
-                  </Box>
-                ) : null}
-                {option.erp_supplier_id && disabledSupplier ? ' · ' : null}
-                {disabledSupplier ? t('common:statuses.disabled') : null}
-              </>
-            ) : null}
+            trailing={hints.length > 0
+              ? hints.flatMap((hint, index) => (index === 0 ? [hint] : [<React.Fragment key={`sep-${index}`}> · </React.Fragment>, hint]))
+              : null}
           />
         );
       }}

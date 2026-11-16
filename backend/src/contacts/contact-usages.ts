@@ -18,7 +18,7 @@ export const CONTACT_USAGE_QUERIES: readonly UsageQuery[] = [
   {
     type: 'suppliers',
     resource: 'suppliers',
-    sql: `SELECT s.id, NULL::text AS reference, s.name, s.status::text AS status, ${activeSql('s')} AS active,
+    sql: `SELECT s.id, 'SUP-' || s.item_number::text AS reference, s.name, s.status::text AS status, ${activeSql('s')} AS active,
                  ${typedRoles('l')} AS roles, count(*) OVER () AS total
             FROM supplier_contacts l
             JOIN suppliers s ON s.tenant_id = l.tenant_id AND s.id = l.supplier_id

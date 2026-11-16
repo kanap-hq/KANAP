@@ -28,8 +28,9 @@ export function requiredUuid(value: unknown, name: string): string {
 
 export const SUPPLIER_LOOKUP: LookupSpec = {
   table: 'suppliers',
-  columns: { id: 't.id', name: 't.name', erp_supplier_id: 't.erp_supplier_id', status: 't.status' },
+  columns: { id: 't.id', item_number: 't.item_number', name: 't.name', erp_supplier_id: 't.erp_supplier_id', status: 't.status' },
   label: 't.name',
+  reference: { prefix: 'SUP', column: 't.item_number' },
   search: ['t.erp_supplier_id'],
   offered: ACTIVE_BY_DISABLED_AT,
 };

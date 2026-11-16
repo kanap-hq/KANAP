@@ -4,6 +4,8 @@ export const SUPPLIERS_PATH = '/master-data/suppliers';
 
 export type Supplier = {
   id: string;
+  /** SUP-n once written; none on the draft. */
+  item_number?: number | null;
   name: string;
   erp_supplier_id: string | null;
   notes: string | null;
@@ -11,7 +13,7 @@ export type Supplier = {
   disabled_at: string | null;
 };
 
-export type SupplierPatch = Partial<Omit<Supplier, 'id'>>;
+export type SupplierPatch = Partial<Omit<Supplier, 'id' | 'item_number'>>;
 
 /** A contact linked to the supplier under a contact type (`GET /suppliers/:id/contacts`). */
 export type SupplierContactLink = {
@@ -22,6 +24,8 @@ export type SupplierContactLink = {
   is_primary: boolean;
   contact: {
     id: string;
+    /** CTCT-n: the contact's page opens by it. */
+    item_number?: number | null;
     first_name: string | null;
     last_name: string | null;
     email: string;
@@ -31,12 +35,15 @@ export type SupplierContactLink = {
 /** A refusal for a name another supplier of the tenant already has (409 `duplicate`). */
 export { isDuplicateError } from '../../utils/apiErrorMessage';
 
-/** The address of the contact create form, opened from a supplier with the contact type set. */
-export function newContactHref(supplierId: string, role: ContactRole): string {
+/**
+ * The address of the contact create form, opened from a supplier with the contact type set; its way
+ * back is the supplier's page, at `supplierAddress` (its reference, `SUP-12`).
+ */
+export function newContactHref(supplierId: string, role: ContactRole, supplierAddress: string = supplierId): string {
   const sp = new URLSearchParams({
     supplier_id: supplierId,
     supplier_role: role,
-    returnTo: `${SUPPLIERS_PATH}/${supplierId}/contacts`,
+    returnTo: `${SUPPLIERS_PATH}/${supplierAddress}/contacts`,
   });
   return `/master-data/contacts/new?${sp.toString()}`;
 }

@@ -614,7 +614,10 @@ export class DepartmentsService {
     const findCompanyByName = async (name: string): Promise<Company | null> => {
       const key = name.toLowerCase();
       if (companyCache.has(key)) return companyCache.get(key) ?? null;
-      const c = await companyRepo.findOne({ where: { name } });
+      // Company names are unique whatever their case (`uq_companies_tenant_name_ci`): one match at most.
+      const c = await companyRepo.createQueryBuilder('c')
+        .where('c.tenant_id = app_current_tenant() AND lower(c.name) = lower(:name)', { name })
+        .getOne();
       companyCache.set(key, c ?? null);
       return c ?? null;
     };
@@ -698,14 +701,9 @@ export class DepartmentsService {
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
-    // Deduplicate by combination of company_id + name (case-insensitive on name); a row with a
-    // reference is its department's own row.
-    const uniqueMap = new Map<string, (typeof normalized)[number]>();
-    for (const item of normalized) {
-      const key = referenceOf.has(item) ? `ref:${referenceOf.get(item)}` : `${item.company_id}|${item.name.toLowerCase()}`;
-      if (!uniqueMap.has(key)) uniqueMap.set(key, item);
-    }
-    const unique = Array.from(uniqueMap.values());
+    // One row per department: a second row naming the same department, by its reference or by its
+    // company and name, is refused on its line below.
+    const unique = normalized;
     // A filled reference names the department the row updates, whatever company the row writes:
     // its company and name are values of the row (a move, a rename), refused when another
     // department of that company has the name. An unknown reference refuses the row.
@@ -727,6 +725,7 @@ export class DepartmentsService {
     // department the row matched.
     const warnings: ImportReportError[] = [];
     const firstLineOfDepartment = new Map<string, number>();
+    const firstLineOfName = new Map<string, number>();
     for (const fileItem of unique) {
       const line = lineOf.get(fileItem) ?? 0;
       const reference = referenceOf.get(fileItem);
@@ -771,6 +770,15 @@ export class DepartmentsService {
         }
         firstLineOfDepartment.set(existing.id, line);
       }
+      // Each company and name the file writes, whatever the case, takes one row: a new department, a
+      // rename or a move by reference onto the company and name of another row are refused.
+      const key = `${fileItem.company_id}|${fileItem.name.toLowerCase()}`;
+      const firstNameRow = firstLineOfName.get(key);
+      if (firstNameRow !== undefined) {
+        errors.push(rowError(line, 'name', 'CSV_DUPLICATE_KEY', `Same company and name as row ${firstNameRow}.`, { columns: 'company_name, name', firstRow: firstNameRow }));
+        continue;
+      }
+      firstLineOfName.set(key, line);
       // The stored end of validity's day keeps its time of day: the export writes the day only.
       const item = existing
         ? {

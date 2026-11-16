@@ -12,6 +12,7 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { contactName, type ContactRole } from '../contacts/contactModel';
 import { useContactRoleOptions } from '../contacts/ContactFields';
 import { type SupplierContactLink, newContactHref } from './supplierModel';
+import { itemAddress } from '../../utils/item-ref';
 
 export const supplierContactsKey = (supplierId: string) => ['supplier-contacts', supplierId] as const;
 
@@ -43,7 +44,8 @@ const nameLinkSx = (theme: Theme) => ({
 });
 
 /** The supplier's contacts by contact type: names that open the contact, add an existing one or create one. */
-export default function SupplierContactsTab({ supplierId, canManage }: { supplierId: string; canManage: boolean }) {
+/** `supplierAddress`: the supplier's page address (its reference), the way back of a contact created here. */
+export default function SupplierContactsTab({ supplierId, supplierAddress, canManage }: { supplierId: string; supplierAddress?: string | null; canManage: boolean }) {
   const { t } = useTranslation(['master-data', 'common']);
   const notify = useNotify();
   const queryClient = useQueryClient();
@@ -126,7 +128,7 @@ export default function SupplierContactsTab({ supplierId, canManage }: { supplie
                   <Box component="button" type="button" onClick={() => setAdding(role.value)} sx={actionLinkSx}>
                     {t('suppliers.contacts.addExisting')}
                   </Box>
-                  <Box component={RouterLink} to={newContactHref(supplierId, role.value)} sx={actionLinkSx}>
+                  <Box component={RouterLink} to={newContactHref(supplierId, role.value, supplierAddress ?? supplierId)} sx={actionLinkSx}>
                     {t('suppliers.contacts.create')}
                   </Box>
                 </>
@@ -154,7 +156,7 @@ export default function SupplierContactsTab({ supplierId, canManage }: { supplie
                   >
                     <Box
                       component={RouterLink}
-                      to={`/master-data/contacts/${link.contact.id}/overview`}
+                      to={`/master-data/contacts/${itemAddress('contact', link.contact)}/overview`}
                       sx={[nameLinkSx, { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }]}
                     >
                       {contactName(link.contact) ?? link.contact.email}

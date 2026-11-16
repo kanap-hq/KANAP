@@ -66,12 +66,19 @@ export type ItemRefOptions = {
   alsoAccept?: readonly string[];
 };
 
+/** The digits that end `raw`, read from the end in one pass (a regex `/(\d+)$/` backtracks on long input). */
+function trailingDigits(raw: string): string | undefined {
+  let start = raw.length;
+  while (start > 0 && raw.charCodeAt(start - 1) >= 48 && raw.charCodeAt(start - 1) <= 57) start--;
+  return start < raw.length ? raw.slice(start) : undefined;
+}
+
 export function parseItemRef(raw: string, expectedType: EntityType, options: ItemRefOptions = {}): ParsedItemRef {
   if (UUID_RE.test(raw)) return { type: 'uuid', value: raw };
 
   const accepted = [...(ALSO_ACCEPTED_PREFIXES[expectedType] ?? []), ...(options.alsoAccept ?? [])];
   // `SUP-013` and `013` are no supplier reference: an ERP ID of the sample data is written so.
-  const digitsOf = raw.match(/(\d+)$/)?.[1];
+  const digitsOf = trailingDigits(raw);
   if (digitsOf && isPaddedReferenceNumber(EXPECTED_PREFIX[expectedType], digitsOf)) {
     throw new BadRequestException(`Invalid item reference: ${raw}`);
   }

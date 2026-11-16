@@ -78,7 +78,8 @@
         "projects": "Projects",
         "requests": "Requests"
       }
-    }
+    },
+    "backToList": "Back to the list"
   },
   "companies": {
     "title": "Companies",
@@ -86,6 +87,7 @@
     "newCompany": "New company",
     "companyFallback": "Company",
     "loadError": "Failed to load company.",
+    "notFound": "Company not found.",
     "columns": {
       "reference": "Reference",
       "city": "City",
@@ -184,6 +186,7 @@
     "newDepartment": "New department",
     "departmentFallback": "Department",
     "loadError": "Failed to load department.",
+    "notFound": "Department not found.",
     "selectCompanyFirst": "Select a company first",
     "columns": {
       "reference": "Reference",
@@ -407,7 +410,9 @@
     "empty": "No suppliers yet.",
     "supplierFallback": "Supplier",
     "loadError": "Failed to load supplier.",
+    "notFound": "Supplier not found.",
     "columns": {
+      "reference": "Reference",
       "erpSupplierId": "ERP supplier ID"
     },
     "noSuppliersFound": "No suppliers found",
@@ -475,6 +480,7 @@
     "newContact": "New contact",
     "contactFallback": "Contact",
     "columns": {
+      "reference": "Reference",
       "lastName": "Last name",
       "firstName": "First name",
       "supplier": "Supplier",
@@ -533,6 +539,7 @@
       "saveFailed": "Failed to save the contact.",
       "createFailed": "Failed to create the contact.",
       "loadFailed": "Failed to load the contact.",
+      "notFound": "Contact not found.",
       "deleteFailed": "Failed to delete the contact."
     },
     "delete": {

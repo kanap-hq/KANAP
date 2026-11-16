@@ -638,6 +638,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             isCreate={isCreate}
             errors={errors}
             names={names}
+            supplierOption={shownData?.supplier_option ?? null}
             disabled={!editable}
             onPatch={onPropertiesPatch}
             onTyped={patchTyped}

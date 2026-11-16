@@ -9,7 +9,7 @@ import { portfolioProjectCsvConfig } from '../../portfolio/portfolio-project-csv
 import { portfolioRequestCsvConfig } from '../../portfolio/portfolio-request-csv.config';
 import { taskCsvConfig } from '../../tasks/task-csv.config';
 import { incidentCsvConfig } from '../../incidents/incident-csv.config';
-import { SUPPLIER_CSV_COLUMNS, SUPPLIER_CSV_HEADERS } from '../../suppliers/supplier-csv-headers';
+import { SUPPLIER_CSV_HEADERS, SUPPLIER_FILE_COLUMNS } from '../../suppliers/supplier-csv-headers';
 import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS } from '../../contracts/contract-csv-headers';
 import { COST_CENTER_CSV_HEADERS } from '../../cost-centers/cost-centers-csv.service';
 import { ANALYTICS_VALUE_CSV_HEADERS } from '../../analytics/analytics-categories-csv.service';
@@ -326,8 +326,10 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     key: 'suppliers',
     names: { en: 'Suppliers', fr: 'Fournisseurs', de: 'Lieferanten', es: 'Proveedores' },
     ...AI_IMPORT_ACCESS.suppliers,
-    about: 'One row per supplier, matched to a stored one by its name.',
-    columns: () => withTitles(SUPPLIER_CSV_COLUMNS.map((column) => ({
+    about: 'One row per supplier, matched to a stored one by its Kadratis reference (SUP-n) when the file has a column of them, '
+      + 'else by its name.',
+    columns: () => withTitles(SUPPLIER_FILE_COLUMNS.map((column) => ({
+      reference: ownReference('SUP', 'supplier'),
       name: text('name', undefined, true),
       erp_supplier_id: text('erp_supplier_id', 'the supplier\'s id in the ERP'),
       commercial_contact: reference('commercial_contact', 'the e-mail of a contact already in the workspace'),
@@ -341,8 +343,10 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     key: 'contacts',
     names: { en: 'Contacts', fr: 'Contacts', de: 'Kontakte', es: 'Contactos' },
     ...AI_IMPORT_ACCESS.contacts,
-    about: 'One row per contact, matched to a stored one by its e-mail.',
+    about: 'One row per contact, matched to a stored one by its Kadratis reference (CTCT-n) when the file has a column of them, '
+      + 'which may change its e-mail, else by its e-mail.',
     columns: () => [
+      ownReference('CTCT', 'contact'),
       text('first_name'), text('last_name'), text('job_title'),
       { column: 'email', kind: 'email', required: true },
       text('phone'), text('mobile'), country('country'), text('notes'),

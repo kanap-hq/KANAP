@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Link as MuiLink, Stack, TextField, Typography } from '@mui/material';
 import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
@@ -327,6 +327,23 @@ export default function DepartmentWorkspacePage() {
       </Box>
     </PropertyGroup>
   ) : <Box />;
+
+  // A department that does not exist (the API answers 404): the not found page, as the other records
+  // have. Any other failure keeps the record frame.
+  if (!isCreate && !data && (loadError as { response?: { status?: number } } | null)?.response?.status === 404) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <Alert severity="error">{t('departments.notFound')}</Alert>
+        <MuiLink
+          component={RouterLink}
+          to={withContext(LIST_PATH)}
+          sx={{ display: 'inline-block', mt: 2, fontSize: 13, fontWeight: 400, color: 'kanap.teal' }}
+        >
+          {t('shared.backToList')}
+        </MuiLink>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>

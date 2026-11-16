@@ -105,9 +105,10 @@ describe('RecentlyViewedTile', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.getByText('Fromagerie Bleue')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Fromagerie Bleue'));
-    expect(screen.getByTestId('where')).toHaveTextContent(`/master-data/suppliers/${SUPPLIER}`);
+    // The supplier and contact pages open by their reference (lot R3).
+    expect(screen.getByTestId('where')).toHaveTextContent('/master-data/suppliers/SUP-12');
     fireEvent.click(screen.getByText('Ana Lopez'));
-    expect(screen.getByTestId('where')).toHaveTextContent(`/master-data/contacts/${CONTACT}`);
+    expect(screen.getByTestId('where')).toHaveTextContent('/master-data/contacts/CTCT-3');
     fireEvent.click(screen.getByText('Finance'));
     // The department page opens by its reference.
     expect(screen.getByTestId('where')).toHaveTextContent('/master-data/departments/DEPT-7');
