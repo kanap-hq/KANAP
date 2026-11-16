@@ -1,21 +1,54 @@
+import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import type { AiRun } from '../entities/ai-run.entity';
 
 /**
- * Who reads the result of a tool call.
+ * Who reads the result of a tool call, and which runs the agent lists show.
  *
  * A run belongs to an agent or to a person. An agent's run (ticket triage, a scheduled or alert
  * diagnosis, a test from the agents screens) is read in full by the roles of those screens. A
- * person's run comes from a conversation with the assistant or from a call through their MCP key
- * or connection: the screens that list runs show its line (who, when, which tool, on what) to the
- * same roles, and what the tool returned only to its author, or to an Administrator, who reads
- * all data.
+ * person's run comes from a conversation with the assistant (`chat`, or `internal` with the
+ * `human_user` trigger when the person approved a change there) or from a call through their MCP
+ * key or connection (`mcp`).
+ *
+ * The runs route and the errors of the activity list the agents' runs only. The detail of a run
+ * keeps its line for the readers of those screens, and what the tool returned for its author, or
+ * for an Administrator, who reads all data.
  *
  * The rule is read from the run's origin, which the dispatcher has written on every run since the
- * first one: results kept earlier follow it too.
+ * first one. A run whose conversation was deleted keeps that origin, so the lists leave it out too.
  */
 
-const AUTOMATION_CHANNELS: ReadonlySet<string> = new Set(['internal', 'scheduler', 'alert']);
-const AUTOMATION_TRIGGERS: ReadonlySet<string> = new Set(['internal', 'scheduled_trigger', 'alert_trigger']);
+const AUTOMATION_CHANNELS = ['internal', 'scheduler', 'alert'] as const;
+const AUTOMATION_TRIGGERS = ['internal', 'scheduled_trigger', 'alert_trigger'] as const;
+const AUTOMATION_CHANNEL_SET: ReadonlySet<string> = new Set(AUTOMATION_CHANNELS);
+const AUTOMATION_TRIGGER_SET: ReadonlySet<string> = new Set(AUTOMATION_TRIGGERS);
+
+export type AgentRunClause = { sql: string; params: Record<string, readonly string[]> };
+
+/**
+ * The SQL form of an agent's run, the complement of `isPersonRun`, built from the same two sets.
+ * One clause per set, so a list drops a person's run before it applies its page size.
+ */
+export function agentRunClauses(alias: string): AgentRunClause[] {
+  return [
+    {
+      sql: `${alias}.invocation_channel IN (:...${alias}AgentChannels)`,
+      params: { [`${alias}AgentChannels`]: AUTOMATION_CHANNELS },
+    },
+    {
+      sql: `${alias}.trigger_kind IN (:...${alias}AgentTriggers)`,
+      params: { [`${alias}AgentTriggers`]: AUTOMATION_TRIGGERS },
+    },
+  ];
+}
+
+/** `agentRunClauses` on a query builder. */
+export function whereAgentRun<T extends ObjectLiteral>(qb: SelectQueryBuilder<T>, alias: string): SelectQueryBuilder<T> {
+  for (const clause of agentRunClauses(alias)) {
+    qb.andWhere(clause.sql, clause.params);
+  }
+  return qb;
+}
 
 export type RunOrigin = Pick<AiRun, 'invocation_channel' | 'trigger_kind' | 'user_id'>;
 
@@ -25,7 +58,7 @@ export type RunOrigin = Pick<AiRun, 'invocation_channel' | 'trigger_kind' | 'use
  * A run that is not plainly an agent's counts as a person's.
  */
 export function isPersonRun(run: Pick<RunOrigin, 'invocation_channel' | 'trigger_kind'>): boolean {
-  return !(AUTOMATION_CHANNELS.has(run.invocation_channel) && AUTOMATION_TRIGGERS.has(run.trigger_kind));
+  return !(AUTOMATION_CHANNEL_SET.has(run.invocation_channel) && AUTOMATION_TRIGGER_SET.has(run.trigger_kind));
 }
 
 /**

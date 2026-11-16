@@ -16,17 +16,17 @@ import { AiActionRequestService } from '../control-plane/action-request/ai-actio
 import { AiApprovalService } from '../control-plane/approval/ai-approval.service';
 import { purgeAiConversations } from '../ai-conversation-purge';
 import { AiEvidenceService } from '../control-plane/evidence/ai-evidence.service';
+import { isPersonRun } from '../control-plane/evidence/run-result-visibility';
 import { AiMcpAuditService } from '../control-plane/mcp/ai-mcp-audit.service';
 import { AiTenantExecutionService } from '../execution/ai-tenant-execution.service';
 
 // Who reads the result of a tool call, against PostgreSQL.
 //
-// The agents screens and the MCP journal list every run of the workspace. A run started by an
-// agent is read in full by the roles of those screens. A run started by a person (a conversation
-// with the assistant, a call through their MCP key or connection) shows its line to the same
-// roles (who, when, which tool) and its result to its author, or to an Administrator, who reads
-// all data. The rows are written here the way the dispatcher writes them, so a result kept before
-// this rule existed is read under the same rule.
+// The runs route and the errors of the activity list the agents' runs only. The detail of a run
+// keeps its line for the readers of the agents screens, and what the tool returned for its author
+// or for an Administrator. The MCP journal lists the calls made through an MCP key or connection.
+// The rows are written here the way the dispatcher writes them, so a result kept before this rule
+// existed is read under the same rule.
 
 const TAG = randomBytes(4).toString('hex');
 const executor = new AiTenantExecutionService(dataSource);
@@ -350,6 +350,7 @@ async function resultsSeen(s: Seed, userId: string) {
 }
 
 const JOURNAL = 'GET ai/admin/mcp-audit';
+const RUNS_LIST = 'GET ai/admin/control-plane/runs';
 const RUN_DETAIL = 'GET ai/admin/control-plane/runs/:id';
 // Every path that returns an action or its approval, by the run that prepared it.
 const ACTION_READS: Array<{ name: string; read: (ctx: Ctx, seed: Seed) => Promise<Record<ActionRun, unknown>> }> = [
@@ -399,6 +400,11 @@ async function testOtherPeoplesRunsShowTheirLineWithoutTheResult(s: Seed) {
       for (const run of PERSON_RUNS) {
         if (!journalReads(path.name, run)) continue;
         const { text, hasResult } = seen[path.name][run];
+        // The runs list leaves a person's run out. The detail keeps the line.
+        if (path.name === RUNS_LIST) {
+          assert.equal(text.includes(s.runs[run]), false, `${path.name} lists the ${run} run: ${text.slice(0, 200)}`);
+          continue;
+        }
         assert.equal(hasResult, false, `${path.name} gave the result of the ${run} run: ${text.slice(0, 400)}`);
         for (const value of Object.values(RESULTS[run][0])) {
           assert.equal(text.includes(JSON.stringify(value)), false, `${path.name} gave ${JSON.stringify(value)} of the ${run} run`);
@@ -435,6 +441,10 @@ async function testTheAgentsScreensNameTheArgumentsOfAnotherPersonsMcpCall(s: Se
     for (const path of AGENT_SCREEN_READS) {
       for (const run of MCP_RUNS) {
         const { text } = seen[path.name][run];
+        if (path.name === RUNS_LIST) {
+          assert.equal(text.includes(s.runs[run]), false, `${path.name} lists the ${run} call`);
+          continue;
+        }
         assert.equal(text.includes(ARGUMENT_VALUES[run]), false, `${path.name} gave an argument value of the ${run} call: ${text.slice(0, 400)}`);
         assert.ok(text.includes(s.runs[run]), `${path.name} lost the line of the ${run} call`);
         assert.ok(text.includes(s.people.author), `${path.name} lost the author of the ${run} call`);
@@ -463,6 +473,10 @@ async function testTheAgentsScreensNameTheArgumentsOfAnotherPersonsMcpCall(s: Se
     const seen = await resultsSeen(s, reader);
     for (const path of AGENT_SCREEN_READS) {
       for (const run of MCP_RUNS) {
+        if (path.name === RUNS_LIST) {
+          assert.equal(seen[path.name][run].text.includes(s.runs[run]), false, `${path.name} lists the ${run} call for its reader`);
+          continue;
+        }
         assert.ok(seen[path.name][run].text.includes(ARGUMENT_VALUES[run]), `${path.name} lost an argument value of the ${run} call for its reader`);
       }
     }
@@ -476,6 +490,10 @@ async function testAFailedRunOfAnotherPersonShowsHowItEndedWithoutTheMessage(s: 
       for (const run of FAILED_RUNS) {
         if (!journalReads(path.name, run)) continue;
         const { text } = seen[path.name][run];
+        if (path.name === RUNS_LIST) {
+          assert.equal(text.includes(s.runs[run]), false, `${path.name} lists the ${run} run`);
+          continue;
+        }
         for (const quoted of ERROR_MARKERS[run]) {
           assert.equal(text.includes(quoted), false, `${path.name} gave the message of the ${run} run: ${text.slice(0, 400)}`);
         }
@@ -509,8 +527,8 @@ async function testAFailedRunOfAnotherPersonShowsHowItEndedWithoutTheMessage(s: 
         assert.ok(seen['GET ai/admin/control-plane/runs/:id'][run].text.includes(quoted), `the detail of the ${run} run lost ${quoted} for its reader`);
       }
     }
-    // The list carries the failure of the run, the journal the one of the call.
-    assert.ok(seen['GET ai/admin/control-plane/runs'].chatFailed.text.includes(ERROR_MARKERS.chatFailed[0]));
+    // The runs list leaves the person's failure out. The journal keeps the one of the call.
+    assert.equal(seen[RUNS_LIST].chatFailed.text.includes(s.runs.chatFailed), false);
     assert.ok(seen[JOURNAL].mcpFailed.text.includes(ERROR_MARKERS.mcpFailed[0]));
     const detail: any = await as(s, reader, (ctx) => control.getRunDetail(ctx as any, s.runs.chatFailed));
     const reported = detail.tool_executions.find((tool: any) => tool.status === 'provider_error');
@@ -621,8 +639,8 @@ async function testAnAgentRunStaysReadableInFull(s: Seed) {
 async function assertReadsEveryResult(s: Seed, userId: string, who: string) {
   const seen = await resultsSeen(s, userId);
   for (const run of PERSON_RUNS) {
-    assert.equal(seen['GET ai/admin/control-plane/runs/:id'][run].hasResult, true, `${who} does not read the result of the ${run} run`);
-    assert.equal(seen['GET ai/admin/control-plane/runs'][run].hasResult, true, `${who} does not read the summary of the ${run} run in the list`);
+    assert.equal(seen[RUN_DETAIL][run].hasResult, true, `${who} does not read the result of the ${run} run`);
+    assert.equal(seen[RUNS_LIST][run].text.includes(s.runs[run]), false, `${who} still sees the ${run} run in the runs list`);
   }
   assert.equal(seen['GET ai/admin/mcp-audit'].mcp.hasResult, true, `${who} does not read the result of the MCP call in the journal`);
   const detail: any = await as(s, userId, (ctx) => control.getRunDetail(ctx as any, s.runs.chat));
@@ -747,7 +765,8 @@ async function testAChangePreparedInAConversationIsDecidedThereByItsAuthorOnly(s
       );
     }
     const runs = await as(s, reader, (ctx) => control.listRuns(ctx as any, { limit: 100 }));
-    assert.equal(runs.items.find((item: any) => item.id === s.runs.chat)?.counts.pending_actions, 0, 'GET runs counts a conversation preview as pending');
+    assert.equal(runs.items.some((item: any) => item.id === s.runs.chat), false, 'GET runs lists a conversation run');
+    assert.ok(runs.items.some((item: any) => item.id === s.runs.agent), 'GET runs lost the agent run');
     const activity = await as(s, reader, (ctx) => control.listActivity(ctx as any, { limit: 100 }));
     assert.deepEqual(activity.items.filter((entry: any) => actionIds.includes(entry.actionRequestId)), [], 'the activity lists a conversation preview');
     assert.ok(activity.items.some((entry: any) => entry.actionRequestId === ACTIONS.agent.id), 'the activity lost the agent action');
@@ -807,6 +826,92 @@ async function testAChangePreparedInAConversationIsDecidedThereByItsAuthorOnly(s
       }
     });
   }
+}
+
+// The runs list and the activity errors keep the agents' runs, including one whose conversation
+// was deleted (the rule reads the origin the dispatcher wrote). A page of newer person runs does
+// not take the place of the agent runs, and the first page's total counts none of them.
+async function testTheRunsListAndTheActivityErrorsKeepTheAgentsRunsOnly(s: Seed) {
+  const agentFailed = randomUUID();
+  const orphanConversation = randomUUID();
+  const orphanRun = randomUUID();
+  const crowded = Array.from({ length: 8 }, () => randomUUID());
+  const readers = [s.people.agentReader, s.people.settingsAdmin, s.people.author, s.people.administrator];
+
+  await as(s, s.people.author, async ({ manager }) => {
+    await manager.query(
+      `INSERT INTO ai_runs (id, tenant_id, user_id, invocation_channel, trigger_kind, status, metadata_json, created_at, updated_at, completed_at)
+       VALUES ($1, $2, NULL, 'internal', 'internal', 'failed', $3::jsonb, now() - interval '1 hour', now(), now())`,
+      [agentFailed, s.tenantId, JSON.stringify({ error_message: `Agent ${TAG} failed` })],
+    );
+    await manager.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title) VALUES ($1, $2, $3, $4)`,
+      [orphanConversation, s.tenantId, s.people.author, `Gone ${TAG}`],
+    );
+    await manager.query(
+      `INSERT INTO ai_runs (id, tenant_id, user_id, conversation_id, invocation_channel, trigger_kind, status, metadata_json, created_at, updated_at, completed_at)
+       VALUES ($1, $2, $3, $4, 'chat', 'human_user', 'failed', $5::jsonb, now(), now(), now())`,
+      [orphanRun, s.tenantId, s.people.author, orphanConversation, JSON.stringify({ error_message: `Gone conversation ${TAG}` })],
+    );
+    await manager.query(`DELETE FROM ai_conversations WHERE tenant_id = $1 AND id = $2`, [s.tenantId, orphanConversation]);
+    const [kept] = await manager.query(
+      `SELECT invocation_channel, trigger_kind, conversation_id::text AS conversation_id
+         FROM ai_runs WHERE tenant_id = $1 AND id = $2`,
+      [s.tenantId, orphanRun],
+    );
+    assert.equal(kept.invocation_channel, 'chat');
+    assert.equal(kept.trigger_kind, 'human_user');
+    assert.equal(kept.conversation_id, null);
+    for (const id of crowded) {
+      await manager.query(
+        `INSERT INTO ai_runs (id, tenant_id, user_id, invocation_channel, trigger_kind, status, created_at, updated_at)
+         VALUES ($1, $2, $3, 'chat', 'human_user', 'completed', now(), now())`,
+        [id, s.tenantId, s.people.author],
+      );
+    }
+  });
+
+  const personRunIds = new Set<string>([
+    s.runs.chat, s.runs.mcp, s.runs.approval, s.runs.chatFailed, s.runs.mcpFailed, orphanRun, ...crowded,
+  ]);
+  for (const reader of readers) {
+    const listed = await as(s, reader, (ctx) => control.listRuns(ctx as any, { limit: 2 }));
+    assert.equal(listed.items.length, 2, 'a page of person runs crowded the agent runs out');
+    for (const item of listed.items as Array<{ id: string; invocation_channel: string; trigger_kind: string }>) {
+      assert.equal(isPersonRun(item), false, `listRuns returned a person's run ${item.invocation_channel}/${item.trigger_kind}`);
+      assert.equal(personRunIds.has(item.id), false, `listRuns returned ${item.id}`);
+    }
+    assert.ok(listed.items.some((item: { id: string }) => item.id === s.runs.agent), 'listRuns lost the agent run');
+    assert.ok(listed.items.some((item: { id: string }) => item.id === agentFailed), 'listRuns lost the failed agent run');
+
+    const full = await as(s, reader, (ctx) => control.listRuns(ctx as any, { limit: 100 }));
+    for (const id of personRunIds) {
+      assert.equal(full.items.some((item: { id: string }) => item.id === id), false, `listRuns still lists ${id}`);
+    }
+
+    const errors = await as(s, reader, (ctx) => control.listActivity(ctx as any, { types: ['error'], limit: 100 }));
+    assert.ok(errors.items.length < 100, 'the error page was truncated, so its total cannot be compared');
+    assert.equal(errors.total, errors.items.length, 'the error total counts a run the page left out');
+    for (const entry of errors.items as Array<{ runId: string | null; titleKey: string }>) {
+      if (entry.runId) {
+        assert.equal(personRunIds.has(entry.runId), false, `activity errors list a person's run under ${entry.titleKey}`);
+      }
+    }
+    assert.ok(
+      errors.items.some((entry: { runId: string | null; titleKey: string }) => entry.runId === agentFailed && entry.titleKey === 'run_failed'),
+      'activity errors lost the failed agent run',
+    );
+    for (const id of [s.runs.chatFailed, s.runs.mcpFailed, orphanRun]) {
+      assert.equal(errors.items.some((entry: { runId: string | null }) => entry.runId === id), false, `activity errors list ${id}`);
+    }
+  }
+
+  const detail: any = await as(s, s.people.agentReader, (ctx) => control.getRunDetail(ctx as any, s.runs.chat));
+  assert.equal(detail.run.id, s.runs.chat);
+  assert.equal(detail.run.invocation_channel, 'chat');
+  assert.equal(detail.run.user_id, s.people.author);
+  assert.equal(detail.run.output_summary, null);
+  assert.equal(detail.tool_executions[0].capability_name, 'query_entities');
 }
 
 // The non-test sources that name what a run, an action or an approval keeps of a call: its
@@ -876,6 +981,7 @@ async function main() {
     ['the author reads their own results', testTheAuthorReadsTheirOwnResults],
     ['an Administrator reads every result', testAnAdministratorReadsEveryResult],
     ['a change prepared in a conversation is decided there, by its author only', testAChangePreparedInAConversationIsDecidedThereByItsAuthorOnly],
+    ['the runs list and the activity errors keep the agents\' runs only', testTheRunsListAndTheActivityErrorsKeepTheAgentsRunsOnly],
     ['every source that names what a run keeps of a call is classified', testEverySourceThatNamesAKeptColumnIsClassified],
   ];
   let failed = 0;

@@ -96,7 +96,7 @@ import { AiTenantExecutionService } from '../../execution/ai-tenant-execution.se
 import { AiActionRequest } from '../entities/ai-action-request.entity';
 import { ACTION_REQUEST_NOT_FOUND, agentActionWhere, isAgentAction, whereAgentAction } from '../action-request/ai-action-request.service';
 import { hashStableJson, redactSensitiveText } from '../evidence/ai-evidence.service';
-import { RunResultAccess, originWithoutRun, runResultAccess } from '../evidence/run-result-visibility';
+import { RunResultAccess, originWithoutRun, runResultAccess, whereAgentRun } from '../evidence/run-result-visibility';
 import { AiAgentAuditEvent } from '../entities/ai-agent-audit-event.entity';
 import { AiModelConfig } from '../../ai-model-config.entity';
 import { AiAgentLlmClient } from './ai-agent-llm-client';
@@ -1683,20 +1683,20 @@ export class AiAgentControlService {
 
   async listRuns(context: AiExecutionContextWithManager, options: AgentControlListRunsOptions = {}) {
     const limit = safeLimit(options.limit, 25, 100);
-    const where: FindOptionsWhere<AiRun> = { tenant_id: context.tenantId };
+    // Agents' runs only, in the query, so a page of person runs cannot fill the limit.
+    const qb = whereAgentRun(
+      context.manager.getRepository(AiRun).createQueryBuilder('run')
+        .where('run.tenant_id = :tenantId', { tenantId: context.tenantId }),
+      'run',
+    );
     if (options.status && options.status !== 'all') {
-      where.status = options.status;
+      qb.andWhere('run.status = :status', { status: options.status });
     }
 
-    const runRepo = context.manager.getRepository(AiRun);
     const toolRepo = context.manager.getRepository(AiToolExecution);
     const evidenceRepo = context.manager.getRepository(AiEvidence);
     const actionRepo = context.manager.getRepository(AiActionRequest);
-    const runs = await runRepo.find({
-      where,
-      order: { created_at: 'DESC' },
-      take: limit,
-    });
+    const runs = await qb.orderBy('run.created_at', 'DESC').take(limit).getMany();
     const resultsReadable = this.runResultAccess(context);
 
     // One after the other, including across runs: the request's single connection runs its queries in turn anyway.
@@ -3326,9 +3326,9 @@ export class AiAgentControlService {
 
     if (wantedTypes.has('error')) {
       const runStream = (withCursor: boolean) => {
-        const qb = context.manager.getRepository(AiRun).createQueryBuilder('run')
+        const qb = whereAgentRun(context.manager.getRepository(AiRun).createQueryBuilder('run')
           .where('run.tenant_id = :tenantId', { tenantId: context.tenantId })
-          .andWhere("run.status IN ('failed', 'provider_error')");
+          .andWhere("run.status IN ('failed', 'provider_error')"), 'run');
         if (agentDefinitionId) {
           qb.andWhere("run.metadata_json ->> 'agent_definition_id' = :agentDefinitionId", { agentDefinitionId });
         }

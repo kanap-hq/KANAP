@@ -36,6 +36,7 @@ function queryBuilder(occupy: <T>(work: () => Promise<T> | T) => Promise<T>, row
     where() { return chain; },
     andWhere() { return chain; },
     orderBy() { return chain; },
+    take() { return chain; },
     addOrderBy() { return chain; },
     distinctOn() { return chain; },
     getMany: () => occupy(() => rows()),
