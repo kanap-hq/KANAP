@@ -1,6 +1,7 @@
 import type { CsvLanguage } from '../csv-sheet/types';
 import type { ExportFileFormat } from '../xlsx/format';
 import type { ImportNameMatch, ImportProposals, ImportRefusedProposal } from '../name-matching';
+import type { ImportLookalikeChoice, ImportLookalikes } from './csv-lookalikes';
 /**
  * CSV Field Type Definitions
  *
@@ -148,6 +149,13 @@ export interface CsvEntityConfig {
   relationHandlers?: CsvRelationHandler[];
   /** Hook called before import validation */
   beforeValidate?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<void>;
+  /**
+   * Before the rows' cells are read, with the record each row was found to update by its id or key
+   * (`found`, null for a row that would create one): the record each row updates instead, or a row
+   * left out (lot I3 of 26.11.9, the applications' lookalikes). One entry per row, in order, with the
+   * errors and warnings the config gives the row.
+   */
+  settleRows?: (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) => Promise<CsvSettledRow[]>;
   /** Validate resolved rows identically in dry-run and execution, after identity resolution. */
   afterValidate?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<void>;
   /**
@@ -163,6 +171,11 @@ export interface CsvEntityConfig {
   /** Hook called after import commit */
   afterCommit?: (entities: any[], context: CsvImportContext) => Promise<void>;
 }
+
+/** What `settleRows` makes of a row: left out, or the record it updates (null to create one). */
+export type CsvSettledRow =
+  | { leaveOut: true; warnings?: CsvImportWarning[] }
+  | { leaveOut?: false; entity: any | null; errors?: CsvImportError[]; warnings?: CsvImportWarning[] };
 
 /**
  * Export preset definition
@@ -211,6 +224,11 @@ export interface CsvImportParams {
    * found by its own name.
    */
   proposals?: ImportProposals;
+  /**
+   * The person's choices for the rows that look like a stored record (lot I3 of 26.11.9, the
+   * applications): an import whose config settles its rows (`settleRows`) follows them.
+   */
+  lookalikes?: ImportLookalikeChoice[];
 }
 
 /**
@@ -279,6 +297,8 @@ export interface CsvImportResult {
   refusedProposals?: ImportRefusedProposal[];
   /** How many entries `refusedProposals` would hold uncut. Present with it. */
   refusedProposalsTotal?: number;
+  /** The rows that would create a record and look like a stored one (lot I3 of 26.11.9, the applications); absent when none. */
+  lookalikes?: ImportLookalikes;
 }
 
 /**
@@ -384,6 +404,11 @@ export interface CsvImportRow {
   isInsert: boolean;
   /** A matched row whose values all equal the stored entity: counted, not written */
   unchanged?: boolean;
+  /**
+   * A row the config left out (`settleRows`, a row that looks like a stored record): not read, not
+   * written, no error; counted as skipped. It carries only the config's own warnings.
+   */
+  leftOut?: boolean;
   /** Row-level errors */
   errors: CsvImportError[];
   /** Row-level warnings */

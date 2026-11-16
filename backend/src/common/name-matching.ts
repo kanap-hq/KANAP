@@ -20,6 +20,31 @@ export function accentFreeKey(value: string): string {
 
 export type MatchHow = 'exact' | 'case' | 'accents' | 'translation';
 
+/** The words of a text, as pg_trgm cuts them: runs of letters and digits, lower case and accents aside. */
+export function nameWords(value: string): string[] {
+  return accentFreeKey(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+}
+
+/** The trigrams of a text, as pg_trgm takes them: per word, lower case and accents aside, padded with two spaces before and one after. */
+function trigrams(value: string): Set<string> {
+  const grams = new Set<string>();
+  for (const word of nameWords(value)) {
+    const padded = `  ${word} `;
+    for (let index = 0; index + 3 <= padded.length; index += 1) grams.add(padded.slice(index, index + 3));
+  }
+  return grams;
+}
+
+/** pg_trgm's similarity of two texts: shared trigrams over all trigrams, 0 to 1 (lot I2 of 26.11.9; common since lot I3). */
+export function similarity(a: string, b: string): number {
+  const left = trigrams(a);
+  const right = trigrams(b);
+  if (left.size === 0 || right.size === 0) return 0;
+  let shared = 0;
+  for (const gram of left) if (right.has(gram)) shared += 1;
+  return shared / (left.size + right.size - shared);
+}
+
 export type NameMatch<T> = { kind: 'none' } | { kind: 'many' } | { kind: 'one'; row: T; how: MatchHow };
 
 /**
@@ -72,10 +97,16 @@ export interface ImportNameMatch {
   target: string;
   /** The record's business reference (`SUP-3`) when its family has one; null otherwise. Absent in the budget file. */
   ref?: string | null;
-  /** `server`: the check found it (accents, another language); `model`: Kad proposed it and the check found the record. */
-  origin: 'server' | 'model';
-  /** `version`: a version label found by a prefix rule (`22.04` for `22.04 LTS`, `technologies/version-label-match.ts`). */
-  reason: 'accents' | 'translation' | 'model' | 'version';
+  /**
+   * `server`: the check found it (accents, another language); `model`: Kad proposed it and the check found the record;
+   * `editor`: an application's publisher names the supplier of a row that gives none (lot I3 of 26.11.9, T-I3k).
+   */
+  origin: 'server' | 'model' | 'editor';
+  /**
+   * `version`: a version label found by a prefix rule (`22.04` for `22.04 LTS`, `technologies/version-label-match.ts`);
+   * `editor`: the publisher's name found the supplier (origin `editor`).
+   */
+  reason: 'accents' | 'translation' | 'model' | 'version' | 'editor';
   /** The lines of the file the value is on (the first ones), and how many there are. */
   lines: number[];
   count: number;
@@ -161,7 +192,7 @@ export function findRecordByName<T extends { name: string }>(
  * The matches of a result: every one of Kad's proposals (as many as the request carries: the file
  * prepared from Kad's card writes each of them), then the first `MATCH_LIST_LIMIT` the server made.
  */
-export function listedMatchEntries<T extends { origin: 'server' | 'model' }>(all: readonly T[]): T[] {
+export function listedMatchEntries<T extends { origin: 'server' | 'model' | 'editor' }>(all: readonly T[]): T[] {
   let made = 0;
   return all.filter((entry) => entry.origin === 'model' || (made += 1) <= MATCH_LIST_LIMIT);
 }

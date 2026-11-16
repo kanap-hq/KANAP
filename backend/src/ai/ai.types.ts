@@ -625,7 +625,7 @@ export type AiImportRunDto = {
    * `report.file.matching`.
    */
   matching?: {
-    matches: Array<{ column: string; dimension?: string; value: string; target: string; origin: 'server' | 'model'; count: number; file_lines: number[] }>;
+    matches: Array<{ column: string; dimension?: string; value: string; target: string; origin: 'server' | 'model' | 'editor'; count: number; file_lines: number[] }>;
     refused_proposals: Array<{ column: string; dimension?: string; value: string; target: string; reason: 'missing' | 'disabled'; count: number; file_lines: number[] }>;
     candidates: Array<{
       column: string; dimension?: string; value: string; outcome: 'create' | 'refused'; count: number; file_lines: number[];
