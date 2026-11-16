@@ -14,7 +14,7 @@ import { contractReference, contractReferenceNumber } from '../contracts/contrac
 import type { CsvLanguage } from '../common/csv-sheet';
 import type { CsvCallerAccess, CsvImportParams } from '../common/csv';
 import { hasLevel } from '../common/relations/relations-access';
-import { findRecordByName, noteNameMatch, noteRefusedProposal, proposalFor, undoneMatch, type MatchHow } from '../common/name-matching';
+import { findRecordByName, noteNameMatch, noteRefusedProposal, proposalFor, takeProposal, undoneMatch, type MatchHow } from '../common/name-matching';
 import { budgetLineReference } from '../spend/budget-nature';
 
 /** The label of a contract outside the person's access, as the tasks list writes it (`ops:contracts.outsideYourAccess`). */
@@ -356,44 +356,75 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
 }
 
 /**
- * The phase of a project task is its project's (lot I3 of 26.11.9): the shared resolver finds the
- * file's phase name anywhere in the workspace; a phase of another project is replaced by the
- * project's own phase of that name, case aside, then accents aside for a person who reads the
- * projects (a match, listed), at the check as at the load. None, or several: the row is refused.
+ * The phase of a project task is its project's (lot I3 of 26.11.9). The shared lookup finds the
+ * file's phase name anywhere in the workspace, case aside only (`nameMatchedByConfig`); here, in the
+ * task's project, at the check as at the load: Kad's proposal first, for a person who reads the
+ * projects (a match of origin model; otherwise refused); then the name as the lookup found it when
+ * that phase is the project's; else the project's phase of that name case aside, then accents aside
+ * for a person who reads the projects and has not undone that match (a match, listed). Several: the
+ * row is refused. None: refused when the workspace has the name elsewhere; otherwise the lookup's
+ * warning stands (the phase is cleared, or kept on an update in merge mode), as before. A phase on a
+ * task outside a project stays the lookup's, and Kad's proposal for it is refused.
  */
 async function anchorPhases(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
-  const candidates = rows
-    .filter((row) => row.errors.length === 0 && !skippedByOperation(row, context.params.operation))
-    .filter((row) => row.parsed.phase_id && String(row.raw.phase_name ?? '').trim())
+  const { params } = context;
+  const state = { matches: context.nameMatches ?? new Map(), refused: context.refusedProposals ?? new Map() };
+  const reads = !!context.access && hasLevel(context.access, 'portfolio_projects', 'reader');
+  const naming = rows
+    .filter((row) => row.errors.length === 0 && !skippedByOperation(row, params.operation))
+    .filter((row) => String(row.raw.phase_name ?? '').trim())
     .map((row) => {
       const type = String(importedValue(row, 'related_object_type') ?? '').trim().toLowerCase();
       const id = importedValue(row, 'related_object_id');
-      return { row, projectId: type === 'project' && id ? String(id).trim().toLowerCase() : null };
-    })
-    .filter((entry): entry is { row: CsvImportRow; projectId: string } => !!entry.projectId && TASK_UUID_RE.test(entry.projectId));
+      const projectId = type === 'project' && id ? String(id).trim().toLowerCase() : null;
+      return { row, projectId: projectId && TASK_UUID_RE.test(projectId) ? projectId : null };
+    });
+  for (const { row, projectId } of naming) {
+    if (projectId) continue;
+    const cell = String(row.raw.phase_name).trim();
+    const proposal = undoneMatch(params.unmatched, 'phase_name', cell) ? undefined : proposalFor(params.proposals, 'phase_name', cell);
+    if (proposal !== undefined) noteRefusedProposal(state.refused, { column: 'phase_name', name: null, value: cell, target: proposal, reason: 'missing' }, row.rowNumber);
+  }
+  const candidates = naming.filter((entry): entry is { row: CsvImportRow; projectId: string } => !!entry.projectId);
   if (candidates.length === 0) return;
+  const parsedIds = candidates.map((entry) => String(entry.row.parsed.phase_id ?? '')).filter((id) => TASK_UUID_RE.test(id));
   const phases: Array<{ id: string; name: string; project_id: string }> = await context.manager.query(
     `SELECT id::text AS id, name, project_id::text AS project_id FROM portfolio_project_phases
       WHERE tenant_id = $1 AND (project_id = ANY($2::uuid[]) OR id = ANY($3::uuid[]))`,
-    [context.tenantId, [...new Set(candidates.map((entry) => entry.projectId))], [...new Set(candidates.map((entry) => String(entry.row.parsed.phase_id)))]],
+    [context.tenantId, [...new Set(candidates.map((entry) => entry.projectId))], [...new Set(parsedIds)]],
   );
   const phaseById = new Map(phases.map((phase) => [phase.id.toLowerCase(), phase]));
+  const MISSING = new Set(['CSV_REFERENCE_NOT_FOUND_CLEARED', 'CSV_REFERENCE_NOT_FOUND_KEPT']);
   for (const { row, projectId } of candidates) {
-    if (phaseById.get(String(row.parsed.phase_id).toLowerCase())?.project_id.toLowerCase() === projectId) continue;
     const cell = String(row.raw.phase_name).trim();
-    const beyondCase = relatedObjectBeyondCase(context.access, context.params.unmatched, 'phase_name', 'portfolio_projects')(cell);
     const own = phases.filter((phase) => phase.project_id.toLowerCase() === projectId);
+    const missing = row.warnings.find((warning) => warning.column === 'phase_name' && MISSING.has(String(warning.code)));
+    const take = (phase: { id: string }) => {
+      row.parsed.phase_id = phase.id;
+      if (missing) row.warnings.splice(row.warnings.indexOf(missing), 1);
+    };
+    const proposed = takeProposal(state, {
+      proposals: params.proposals, unmatched: params.unmatched, column: 'phase_name', value: cell, line: row.rowNumber, rows: own, reads, caseBlind: true,
+    });
+    if (proposed) {
+      take(proposed);
+      continue;
+    }
+    if (!missing && phaseById.get(String(row.parsed.phase_id ?? '').toLowerCase())?.project_id.toLowerCase() === projectId) continue;
+    const beyondCase = relatedObjectBeyondCase(context.access, params.unmatched, 'phase_name', 'portfolio_projects')(cell);
     const found = findRecordByName(own, cell, { beyondCase, caseBlind: true });
     if (found.kind === 'one') {
-      row.parsed.phase_id = found.row.id;
-      if (found.how === 'accents' && context.nameMatches) {
-        noteNameMatch(context.nameMatches, {
+      take(found.row);
+      if (found.how === 'accents') {
+        noteNameMatch(state.matches, {
           column: 'phase_name', name: null, value: cell, target: found.row.name, ref: null,
           origin: 'server', reason: 'accents', undoable: true,
         }, row.rowNumber);
       }
       continue;
     }
+    // Nothing anywhere in the workspace: the lookup's warning stands, as before.
+    if (missing && found.kind === 'none') continue;
     const names = found.kind === 'many' ? found.names.join(', ') : '';
     row.errors.push(found.kind === 'many'
       ? { row: row.rowNumber, column: 'phase_name', message: `"${cell}" may designate several phases of the project: ${names}`, code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: cell, names } }
@@ -558,6 +589,8 @@ export const taskCsvConfig: CsvEntityConfig = {
       type: CsvFieldType.FK_BY_NAME,
       fkEntity: 'portfolio_project_phases',
       fkLookupColumn: 'name',
+      // Found in the task's project, beyond case and with Kad's proposals, by `anchorPhases`.
+      nameMatchedByConfig: true,
       fkRequired: false,
       required: false,
       defaultExport: true,
