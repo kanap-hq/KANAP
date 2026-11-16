@@ -81,6 +81,10 @@ const YES_NO_FILTER_FIELDS = new Set(['external_facing', 'contains_pii']);
 const ONLY_NAMED_CRITERIA = 'Use only the criteria the person named: never add a filter they did not name. '
   + 'A filter on the field being changed is a criterion only when the person named it ("the proposed applications to active").';
 
+/** A field this tool does not take is said, then changed card by card (lot K1): on dev, Kad hid that the category is not changed in bulk. */
+const OTHER_FIELD = 'Any other field is not changed in bulk: say so in the answer, with the fields that are (business owners, IT owners, lifecycle, business criticality), '
+  + 'then prepare one card per application as usual. Never present cards of one application each, nor a prepare_mutation_plan of them, as a change in bulk.';
+
 const NO_CRITERION = 'Name the applications to change: a filter of the applications (lifecycle, criticality, supplier, owner...) or their references (rows). '
   + 'Kad does not change every application of the list at once: ask the person which applications.';
 
@@ -139,7 +143,7 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
   readonly toolName = TOOL;
   readonly description = 'Create a card that changes one field on many applications at once (business owners, IT owners, lifecycle or business criticality), '
     + 'as the "Change the selection" of the applications list. Requires explicit user approval before execution. '
-    + `${ONLY_NAMED_CRITERIA} A request on all the applications, with no other criterion, gets a question asking for one, and no card.`;
+    + `${ONLY_NAMED_CRITERIA} A request on all the applications, with no other criterion, gets a question asking for one, and no card. ${OTHER_FIELD}`;
   readonly inputSchema = BulkUpdateApplicationsInputSchema;
   readonly inputSummary = {
     field: 'One of owners_business, owners_it, lifecycle, criticality.',
@@ -158,7 +162,8 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       + `Describe the applications with the query_entities filters of applications (\`filters\`: ${ACCEPTED_FILTERS}; take the exact values from get_filter_values) or name them (\`rows\`: APP-12), not both; at most ${BULK_MAX_ROWS} applications. `
       + 'A filter covers the enabled applications of the list, the retired ones left out unless it names the lifecycle. '
       + `${ONLY_NAMED_CRITERIA} A request on all the applications, with no other criterion, gets a question asking for one, and no card. `
-      + 'For more than a few applications, use this tool, never update_business_record application by application nor prepare_mutation_plan. The card counts the applications to change; it cannot be undone.',
+      + `${OTHER_FIELD} `
+      + 'For one of these fields on more than a few applications, use this tool, never update_business_record application by application nor prepare_mutation_plan. The card counts the applications to change; it cannot be undone.',
   };
 
   constructor(

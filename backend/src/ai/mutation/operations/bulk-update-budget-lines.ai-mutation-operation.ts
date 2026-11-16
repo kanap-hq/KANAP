@@ -78,6 +78,11 @@ const WORDED_FILTER_FIELDS = new Set(['status', 'run_build', 'nature']);
 const ONLY_NAMED_CRITERIA = 'Use only the criteria the person named: never add a filter they did not name. '
   + 'A filter on the field being changed is a criterion only when the person named it ("the run lines to build").';
 
+/** A field this tool does not take is said, then changed card by card (lot K1), as for the applications. */
+const OTHER_FIELD = 'Any other field is not changed in bulk: say so in the answer, with the fields that are '
+  + '(cost center, account, paying company, supplier, IT owner, business owner, run or build, the value of a dimension), '
+  + 'then prepare one card per line as usual. Never present cards of one line each, nor a prepare_mutation_plan of them, as a change in bulk.';
+
 const NO_CRITERION = 'Name the lines to change: a filter of the budget lines (supplier, cost center, account, owner, dimension...) or their references (rows). '
   + 'Kad does not change every line of the list at once: ask the person which lines.';
 
@@ -130,7 +135,7 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
   readonly toolName = TOOL;
   readonly description = 'Create a card that changes one field on many budget lines at once (cost center, account, paying company, supplier, IT or business owner, run or build, or a dimension value), '
     + 'as the "Change the selection" of the budget lines list. Requires explicit user approval before execution. No amount. '
-    + `${ONLY_NAMED_CRITERIA} A request on all the lines, with no other criterion, gets a question asking for one, and no card.`;
+    + `${ONLY_NAMED_CRITERIA} A request on all the lines, with no other criterion, gets a question asking for one, and no card. ${OTHER_FIELD}`;
   readonly inputSchema = BulkUpdateBudgetLinesInputSchema;
   readonly inputSummary = {
     field: 'One of cost_center, account, paying_company, supplier, owner_it, owner_business, run_build, dimension.',
@@ -151,7 +156,8 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       + 'A filter covers the enabled lines of the list, unless it names the status. '
       + `${ONLY_NAMED_CRITERIA} A request on all the lines, with no other criterion, gets a question asking for one, and no card. `
       + 'Give the new value by name, code or number; `null` empties a field, except the account and the paying company. An account number found in several charts of accounts needs `company`. '
-      + 'For more than a few lines, use this tool, never update_business_record line by line nor prepare_mutation_plan. The card counts the lines to change and the refused ones; it cannot be undone.',
+      + `${OTHER_FIELD} `
+      + 'For one of these fields on more than a few lines, use this tool, never update_business_record line by line nor prepare_mutation_plan. The card counts the lines to change and the refused ones; it cannot be undone.',
   };
 
   constructor(

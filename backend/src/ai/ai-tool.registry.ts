@@ -34,7 +34,7 @@ import { AiHelpManualService, HELP_SECTION_MAX_CHARS } from './ai-help-manual.se
 import { AiImportMappingService } from './import/ai-import-mapping.service';
 import { AI_IMPORT_KEYS } from './import/ai-import-access';
 import { personWriteLanguage } from './ai-write-texts';
-import { AI_BULK_EDIT_TOOLS, BULK_EDIT_PLAN_REFUSAL } from './mutation/ai-bulk-edit';
+import { AI_BULK_EDIT_TOOLS, BULK_EDIT_PLAN_REFUSAL, MUTATION_PLAN_IS_NOT_BULK } from './mutation/ai-bulk-edit';
 import {
   AI_CONTEXT_ENTITY_TYPES,
   AI_DETAIL_ENTITY_TYPES,
@@ -723,7 +723,8 @@ export class AiToolRegistry {
         {
           name: 'prepare_mutation_plan',
           category: 'mutation',
-          description: 'Prepare a durable group of write-preview steps, including dependent steps that can only be previewed after earlier previews execute. Requires explicit user approval for every created preview before execution.',
+          description: 'Prepare a durable group of write-preview steps, including dependent steps that can only be previewed after earlier previews execute. Requires explicit user approval for every created preview before execution. '
+            + MUTATION_PLAN_IS_NOT_BULK,
           inputSchema: PrepareMutationPlanInputSchema,
           inputSummary: {
             summary: 'Short description of the overall mutation plan.',
@@ -739,7 +740,8 @@ export class AiToolRegistry {
             entity_type: 'mutation_plan',
             fields: ['operations'],
             reversible: false,
-            prompt_hint: 'For multiple related changes, mixed object changes, dependencies, or bulk target-set tracking, prefer `prepare_mutation_plan`. Give each step a stable `operation_id`; use `depends_on` and placeholders like `{{create_project.ref}}`, `{{create_project.id}}`, or `{{create_project.title}}` in dependent step inputs. When a bulk target set is known, include expected_target_refs/expected_target_count and explicit_exclusions for any intentionally excluded targets.',
+            prompt_hint: 'For multiple related changes, mixed object changes, dependencies, or bulk target-set tracking, prefer `prepare_mutation_plan`. Give each step a stable `operation_id`; use `depends_on` and placeholders like `{{create_project.ref}}`, `{{create_project.id}}`, or `{{create_project.title}}` in dependent step inputs. When a bulk target set is known, include expected_target_refs/expected_target_count and explicit_exclusions for any intentionally excluded targets. '
+              + MUTATION_PLAN_IS_NOT_BULK,
           },
           execute: (context, input) => this.previews.createMutationPlan(context, input),
         },

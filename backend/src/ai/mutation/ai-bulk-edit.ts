@@ -11,6 +11,15 @@ import { BULK_WRITE_TIMEOUTS } from '../../common/request-db-timeouts';
 /** Kad's tools of a change in bulk: one card for many rows, never a step of `prepare_mutation_plan`. */
 export const AI_BULK_EDIT_TOOLS: ReadonlySet<string> = new Set(['bulk_update_budget_lines', 'bulk_update_applications']);
 
+/**
+ * What `prepare_mutation_plan` says of the changes in bulk (lot K1): on dev, "do it in bulk" on the category of
+ * applications, a field the bulk tools do not take, gave a plan of four cards of one application each, offered
+ * without a word that the category is not changed in bulk.
+ */
+export const MUTATION_PLAN_IS_NOT_BULK = 'A plan of cards that each change one record is not a change in bulk: never present it as one. '
+  + 'When the person asks to change budget lines or applications in bulk on a field that bulk_update_budget_lines or bulk_update_applications does not take, '
+  + 'first say in the answer that this field is not changed in bulk and which fields are, then prepare the cards.';
+
 export const BULK_EDIT_PLAN_REFUSAL = 'A change in bulk (bulk_update_budget_lines, bulk_update_applications) changes its rows in one card and cannot be part of a mutation plan: call it on its own.';
 
 const WAITS_SAVEPOINT = 'ai_bulk_edit_waits';
