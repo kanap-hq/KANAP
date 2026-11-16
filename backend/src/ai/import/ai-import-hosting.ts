@@ -1,9 +1,30 @@
 import type { EntityManager } from 'typeorm';
 import type { CsvLanguage } from '../../common/csv-sheet';
-import { shippedLabelIn } from '../../it-ops-settings/catalog-shipped-labels';
+import { catalogAliases } from '../../it-ops-settings/catalog-codes';
+import { shippedLabelIn, shippedLabelsOf } from '../../it-ops-settings/catalog-shipped-labels';
 import type { ItOpsEnumOption } from '../../it-ops-settings/it-ops-settings.service';
 import type { AiImportHostingSite } from '../ai.types';
 import type { AiImportFileContent } from './ai-import-mapping';
+
+/**
+ * The hosting categories, by code and by the words the card names them with in each language
+ * (`ai.json`, `hosting.onPremises` and `hosting.cloud`).
+ */
+const HOSTING_CATEGORY_WORDS = ['on_prem', 'cloud', 'on-prem', 'sur site', 'On-Premise', 'local'] as const;
+
+/**
+ * The words that name a hosting (lot I3 of 26.11.9, fixes D, T-I3f): each hosting type of the
+ * catalog by its code, its name, its translations and its shipped names in every language, and the
+ * hosting categories. The model's values never turn one into a server's type: the cell stays as
+ * written, and the import refuses it as the screen does.
+ */
+export function hostingWords(hostingTypes: readonly ItOpsEnumOption[]): string[] {
+  const words = new Set<string>(HOSTING_CATEGORY_WORDS);
+  for (const option of hostingTypes) {
+    for (const word of [...catalogAliases(option), ...shippedLabelsOf('hostingTypes', option)]) words.add(word);
+  }
+  return [...words];
+}
 
 /**
  * How the servers of an import are hosted (lot I3 of 26.11.9, T-I3f): a server's hosting is its

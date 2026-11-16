@@ -33,6 +33,12 @@ export interface AiImportColumnRule {
   percent?: boolean;
   /** A `reference` column of the family's own references (`COMP`): it reads only values written with this prefix. */
   prefix?: string;
+  /**
+   * Values the model's value map never converts in this column (the hosting words of the servers'
+   * type column, `hostingWords`), compared accents aside: the cell stays as written, read by the
+   * column's own rule.
+   */
+  asWritten?: readonly string[];
 }
 
 /** What the mapping says of a column, beyond its source. */
@@ -79,9 +85,12 @@ function accentFreeCode(named: string, names: ReadonlyArray<readonly [string, Re
   return codes.size === 1 ? [...codes][0] : null;
 }
 
-/** The model's value map, its keys compared without case or outer spaces. */
-function valueMap(values: Record<string, string> | undefined): Map<string, string> {
-  return new Map(Object.entries(values ?? {}).map(([from, to]) => [foldKey(from), String(to).trim()]));
+/** The model's value map, its keys compared without case or outer spaces, less the values the column keeps as written. */
+function valueMap(values: Record<string, string> | undefined, asWritten: readonly string[] = []): Map<string, string> {
+  const kept = new Set(asWritten.map(accentFreeKey));
+  return new Map(Object.entries(values ?? {})
+    .filter(([from]) => !kept.has(accentFreeKey(from)))
+    .map(([from, to]) => [foldKey(from), String(to).trim()]));
 }
 
 /** The cell the model's value map puts in place of a cell: the value it stands for, a blank for ''. */
@@ -102,7 +111,7 @@ export function columnReader(
   hints: AiImportColumnHints,
   language: CsvLanguage,
 ): AiImportColumnReader {
-  const map = valueMap(hints.values);
+  const map = valueMap(hints.values, rule.asWritten);
   const reader = cellReader(rule, cells.map((cell) => mappedCell(cell, map)), hints, language, map);
   if (map.size === 0) return reader;
   return {
