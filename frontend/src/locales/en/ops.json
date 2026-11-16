@@ -1111,10 +1111,13 @@
       },
       "lookalikes": {
         "title": "Looks like an existing line",
+        "applicationsTitle": "Looks like an existing application",
         "row": "Line {{line}}: {{name}} → {{ref}} {{target}}",
         "reasonTitleSupplier": "Same title and supplier",
         "reasonAmounts": "Same amounts",
         "reasonCloseTitle": "Close title, same supplier, one equal amount",
+        "reasonNameAccents": "Same name, accents aside",
+        "reasonCloseName": "Close name, same supplier or publisher",
         "ignore": "Leave out",
         "create": "Create anyway",
         "update": "Update {{ref}}",

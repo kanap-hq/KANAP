@@ -1111,10 +1111,13 @@
       },
       "lookalikes": {
         "title": "Se parece a una línea existente",
+        "applicationsTitle": "Se parece a una aplicación existente",
         "row": "Fila {{line}}: {{name}} → {{ref}} {{target}}",
         "reasonTitleSupplier": "Mismo título y proveedor",
         "reasonAmounts": "Mismos importes",
         "reasonCloseTitle": "Título parecido, mismo proveedor, un importe igual",
+        "reasonNameAccents": "Mismo nombre salvo acentos",
+        "reasonCloseName": "Nombre parecido, mismo proveedor o editor",
         "ignore": "Descartar",
         "create": "Crear de todos modos",
         "update": "Actualizar {{ref}}",

@@ -1111,10 +1111,13 @@
       },
       "lookalikes": {
         "title": "Ähnelt einer bestehenden Zeile",
+        "applicationsTitle": "Ähnelt einer bestehenden Anwendung",
         "row": "Zeile {{line}}: {{name}} → {{ref}} {{target}}",
         "reasonTitleSupplier": "Gleicher Titel und Lieferant",
         "reasonAmounts": "Gleiche Beträge",
         "reasonCloseTitle": "Ähnlicher Titel, gleicher Lieferant, ein gleicher Betrag",
+        "reasonNameAccents": "Gleicher Name bis auf Akzente",
+        "reasonCloseName": "Ähnlicher Name, gleicher Lieferant oder Herausgeber",
         "ignore": "Auslassen",
         "create": "Trotzdem anlegen",
         "update": "{{ref}} aktualisieren",

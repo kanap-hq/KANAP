@@ -1112,10 +1112,13 @@
       },
       "lookalikes": {
         "title": "Ressemble à une ligne existante",
+        "applicationsTitle": "Ressemble à une application existante",
         "row": "Ligne {{line}} : {{name}} → {{ref}} {{target}}",
         "reasonTitleSupplier": "Même titre et même fournisseur",
         "reasonAmounts": "Mêmes montants",
         "reasonCloseTitle": "Titre proche, même fournisseur, un montant égal",
+        "reasonNameAccents": "Même nom aux accents près",
+        "reasonCloseName": "Nom proche, même fournisseur ou éditeur",
         "ignore": "Écarter",
         "create": "Créer quand même",
         "update": "Mettre à jour {{ref}}",
