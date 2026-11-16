@@ -28,6 +28,7 @@ import {
   decodeActivityCursor,
   mergeActivityPage,
 } from './ai-agent-activity-timeline';
+import { resolveRecordIdsByReference } from '../../ai-entity-reference.util';
 import { activityTargetKey, resolveActivityTargetDisplays } from './ai-agent-activity-targets';
 import { normalizeQueuePolicyRetention } from '../agent/ai-agent-activity-retention';
 import {
@@ -3021,6 +3022,15 @@ export class AiAgentControlService {
     const fromDate = from && Number.isFinite(from.getTime()) ? from : null;
     const toDate = to && Number.isFinite(to.getTime()) ? to : null;
     const targetRef = options.targetRef?.trim() || null;
+    // The column shows a business reference (T-15) while the row stores the record's id.
+    // A ticket number or a pasted id matches the stored text, as before.
+    const activityReferenceIds = targetRef && typeof context.manager.query === 'function'
+      ? (await resolveRecordIdsByReference(context.manager, context.tenantId, targetRef)).map((id) => id.toLowerCase())
+      : [];
+    const targetRefLike = targetRef ? `%${targetRef}%` : null;
+    const targetRefParams = activityReferenceIds.length > 0
+      ? { targetRef: targetRefLike, activityReferenceIds }
+      : { targetRef: targetRefLike };
     const status = options.status?.trim() || null;
     const agentDefinitionId = options.agentDefinitionId?.trim() || null;
     const actorUserId = options.actorUserId?.trim() || null;
@@ -3080,7 +3090,12 @@ export class AiAgentControlService {
         qb.andWhere("action.metadata_json ->> 'agent_definition_id' = :agentDefinitionId", { agentDefinitionId });
       }
       if (targetRef) {
-        qb.andWhere('action.target_ref ILIKE :targetRef', { targetRef: `%${targetRef}%` });
+        qb.andWhere(
+          activityReferenceIds.length > 0
+            ? '(action.target_ref ILIKE :targetRef OR lower(action.target_ref) = ANY(:activityReferenceIds))'
+            : 'action.target_ref ILIKE :targetRef',
+          targetRefParams,
+        );
       }
       if (status) {
         qb.andWhere('action.status = :status', { status });
@@ -3191,12 +3206,15 @@ export class AiAgentControlService {
           );
         }
         if (targetRef) {
+          const linkedMatch = activityReferenceIds.length > 0
+            ? '(linked.target_ref ILIKE :targetRef OR lower(linked.target_ref) = ANY(:activityReferenceIds))'
+            : 'linked.target_ref ILIKE :targetRef';
           qb.andWhere(
             `EXISTS (SELECT 1 FROM ai_action_requests linked
                       WHERE linked.id = approval.action_request_id
                         AND linked.tenant_id = approval.tenant_id
-                        AND linked.target_ref ILIKE :targetRef)`,
-            { targetRef: `%${targetRef}%` },
+                        AND ${linkedMatch})`,
+            targetRefParams,
           );
         }
         return applyWindow(qb, decisionOrder, withCursor);
@@ -3340,8 +3358,10 @@ export class AiAgentControlService {
         }
         if (targetRef) {
           qb.andWhere(
-            `(run.metadata_json ->> 'target_ref' ILIKE :targetRef OR run.metadata_json ->> 'targetRef' ILIKE :targetRef)`,
-            { targetRef: `%${targetRef}%` },
+            activityReferenceIds.length > 0
+              ? `(run.metadata_json ->> 'target_ref' ILIKE :targetRef OR run.metadata_json ->> 'targetRef' ILIKE :targetRef OR lower(run.metadata_json ->> 'target_ref') = ANY(:activityReferenceIds) OR lower(run.metadata_json ->> 'targetRef') = ANY(:activityReferenceIds))`
+              : `(run.metadata_json ->> 'target_ref' ILIKE :targetRef OR run.metadata_json ->> 'targetRef' ILIKE :targetRef)`,
+            targetRefParams,
           );
         }
         return applyWindow(qb, 'run.created_at', withCursor);
