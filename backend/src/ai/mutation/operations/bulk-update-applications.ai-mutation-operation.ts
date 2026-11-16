@@ -33,8 +33,9 @@ import { AiTaskMutationSupportService } from '../ai-task-mutation-support.servic
  * Kad's change in bulk of applications (lot K1 of 26.11.9): the "Change the selection" of the
  * applications list, under a card the person approves. One field per card, among the dialog's:
  * business owners and IT owners (a list of people that replaces the role's, empty allowed), the
- * lifecycle (one of the workspace's states, never empty) and the business criticality (one of the
- * levels still offered, or empty). A state or a level is given by its name or its code. The
+ * category (one of the categories still offered, never empty; decision D15), the lifecycle (one of
+ * the workspace's states, never empty), the business and the cyber criticality (one of the levels
+ * still offered, or empty). A category, a state or a level is given by its name or its code. The
  * applications: a filter of the list (the `query_entities` filters of applications, a dozen
  * fields, turned into the list's own parameters), or their references; never the whole list
  * without a criterion. The scope is the list's: enabled applications, retired ones left out unless
@@ -55,8 +56,15 @@ const CARD_EXAMPLES = 5;
 /** The most people one role receives from a card. */
 const MAX_OWNERS = 20;
 
-const FIELDS = ['owners_business', 'owners_it', 'lifecycle', 'criticality'] as const;
+const FIELDS = ['owners_business', 'owners_it', 'category', 'lifecycle', 'criticality', 'cyber_criticality'] as const;
 type BulkField = (typeof FIELDS)[number];
+/** The fields that take a value still offered by the workspace's catalog, by its name or its code. */
+const OFFERED_FIELDS = {
+  category: { list: 'applicationCategories', what: 'category', all: 'categories', emptied: false },
+  criticality: { list: 'businessCriticalityLevels', what: 'business criticality level', all: 'levels', emptied: true },
+  cyber_criticality: { list: 'cyberCriticalityLevels', what: 'cyber criticality level', all: 'levels', emptied: true },
+} as const;
+type OfferedField = keyof typeof OFFERED_FIELDS;
 
 /** The fields of the filter: those that aim at applications. */
 export const APPLICATION_BULK_FILTER_FIELDS = [
@@ -82,7 +90,7 @@ const ONLY_NAMED_CRITERIA = 'Use only the criteria the person named: never add a
   + 'A filter on the field being changed is a criterion only when the person named it ("the proposed applications to active").';
 
 /** A field this tool does not take is said, then changed card by card (lot K1): on dev, Kad hid that the category is not changed in bulk. */
-const OTHER_FIELD = 'Any other field is not changed in bulk: say so in the answer, with the fields that are (business owners, IT owners, lifecycle, business criticality), '
+const OTHER_FIELD = 'Any other field is not changed in bulk: say so in the answer, with the fields that are (business owners, IT owners, category, lifecycle, business criticality, cyber criticality), '
   + 'then prepare one card per application as usual. Never present cards of one application each, nor a prepare_mutation_plan of them, as a change in bulk.';
 
 const NO_CRITERION = 'Name the applications to change: a filter of the applications (lifecycle, criticality, supplier, owner...) or their references (rows). '
@@ -90,10 +98,11 @@ const NO_CRITERION = 'Name the applications to change: a filter of the applicati
 
 export const BulkUpdateApplicationsInputSchema = z.object({
   field: z.enum(FIELDS)
-    .describe('The one field this card changes: owners_business, owners_it, lifecycle or criticality (business criticality).'),
+    .describe('The one field this card changes: owners_business, owners_it, category, lifecycle, criticality (business criticality) or cyber_criticality.'),
   value: z.union([z.string().trim().min(1).max(500), z.array(z.string().trim().min(1).max(320)).max(MAX_OWNERS), z.null()])
     .describe('The new value. owners_business and owners_it: the people (names or emails) who replace the role\'s, [] or null for nobody. '
-      + 'lifecycle: a state of the workspace by its name or code, never null. criticality: a level by its name or code, null empties it.'),
+      + 'category: a category of the workspace by its name or code, never null. lifecycle: a state of the workspace by its name or code, never null. '
+      + 'criticality and cyber_criticality: a level by its name or code, null empties it.'),
   rows: z.array(z.string().trim().min(1).max(40)).min(1).max(BULK_MAX_ROWS).optional()
     .describe('The applications by reference (APP-12). Give rows or filters, not both.'),
   filters: z.record(z.string(), AI_BULK_FILTER_VALUE).optional()
@@ -141,13 +150,14 @@ function sameWords(value: string): Words {
 @Injectable()
 export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOperation<BulkUpdateApplicationsInput> {
   readonly toolName = TOOL;
-  readonly description = 'Create a card that changes one field on many applications at once (business owners, IT owners, lifecycle or business criticality), '
+  readonly description = 'Create a card that changes one field on many applications at once (business owners, IT owners, category, lifecycle, business criticality or cyber criticality), '
     + 'as the "Change the selection" of the applications list. Requires explicit user approval before execution. '
     + `${ONLY_NAMED_CRITERIA} A request on all the applications, with no other criterion, gets a question asking for one, and no card. ${OTHER_FIELD}`;
   readonly inputSchema = BulkUpdateApplicationsInputSchema;
   readonly inputSummary = {
-    field: 'One of owners_business, owners_it, lifecycle, criticality.',
-    value: 'owners_*: the people who replace the role\'s ([] for nobody); lifecycle: a state by name or code; criticality: a level by name or code, or null.',
+    field: 'One of owners_business, owners_it, category, lifecycle, criticality, cyber_criticality.',
+    value: 'owners_*: the people who replace the role\'s ([] for nobody); category: a category by name or code; lifecycle: a state by name or code; '
+      + 'criticality, cyber_criticality: a level by name or code, or null.',
     rows: `Or: up to ${BULK_MAX_ROWS} application references (APP-12).`,
     filters: `Or: the query_entities filters of applications (${ACCEPTED_FILTERS}).`,
   };
@@ -157,8 +167,9 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     fields: [CARD_FIELD],
     reversible: false,
     prompt_hint: 'Use `bulk_update_applications` to change one field on several applications at once, as the "Change the selection" of the applications list: '
-      + 'business owners or IT owners (the people given replace the role\'s people; [] leaves the role empty), the lifecycle (a state of the workspace, never empty) '
-      + 'or the business criticality (a level still offered, or null). One field per card. Give a state or a level by its name or its code. '
+      + 'business owners or IT owners (the people given replace the role\'s people; [] leaves the role empty), the category (a category still offered, never empty), '
+      + 'the lifecycle (a state of the workspace, never empty), the business criticality or the cyber criticality (a level still offered, or null). '
+      + 'One field per card. Give a category, a state or a level by its name or its code. '
       + `Describe the applications with the query_entities filters of applications (\`filters\`: ${ACCEPTED_FILTERS}; take the exact values from get_filter_values) or name them (\`rows\`: APP-12), not both; at most ${BULK_MAX_ROWS} applications. `
       + 'A filter covers the enabled applications of the list, the retired ones left out unless it names the lifecycle. '
       + `${ONLY_NAMED_CRITERIA} A request on all the applications, with no other criterion, gets a question asking for one, and no card. `
@@ -371,14 +382,26 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       }
       return { changes: { lifecycle: found[0].code }, valueWords: optionWords('lifecycleStates', found[0]) };
     }
-    if (value === null) return { changes: { criticality: null }, valueWords: null };
-    const levels = await this.catalog(context, 'businessCriticalityLevels');
-    const offered = levels.filter((level) => !level.deprecated);
-    const found = matchCatalogAliases(levels, normalizeAlias(value));
-    if (found.length !== 1 || found[0].deprecated) {
-      throw new NotFoundException(`"${value}" is not a business criticality level offered in this workspace. The levels: ${offered.map((level) => `${level.label} (${level.code})`).join(', ')}.`);
+    return this.resolveOffered(context, field, value);
+  }
+
+  /**
+   * A category or a level, among those the workspace still offers: one no longer offered is refused,
+   * by its name or its code, as the screen's dialog leaves it out. The card names it as the screen does.
+   */
+  private async resolveOffered(context: AiExecutionContextWithManager, field: OfferedField, value: string | null): Promise<ResolvedChange> {
+    const { list, what, all, emptied } = OFFERED_FIELDS[field];
+    if (value === null) {
+      if (!emptied) throw new BadRequestException(`The ${what} of an application cannot be emptied.`);
+      return { changes: { [field]: null }, valueWords: null };
     }
-    return { changes: { criticality: found[0].code }, valueWords: optionWords('businessCriticalityLevels', found[0]) };
+    const options = await this.catalog(context, list);
+    const offered = options.filter((option) => !option.deprecated);
+    const found = matchCatalogAliases(options, normalizeAlias(value));
+    if (found.length !== 1 || found[0].deprecated) {
+      throw new NotFoundException(`"${value}" is not a ${what} offered in this workspace. The ${all}: ${offered.map((option) => `${option.label} (${option.code})`).join(', ')}.`);
+    }
+    return { changes: { [field]: found[0].code }, valueWords: optionWords(list, found[0]) };
   }
 
   /**

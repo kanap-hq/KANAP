@@ -165,13 +165,14 @@ export const APPLICATION_YES_NO_WORDS: Readonly<Record<AiWriteLanguage, Readonly
 
 /**
  * The fields Kad changes in bulk on applications, labelled as the "Change the selection" dialog of
- * the list (`it:pages.applications.columns.*`, `it:common.lifecycle`, `it:classification.business_criticality`).
+ * the list (`it:pages.applications.columns.*`, `it:common.lifecycle`, `it:classification.business_criticality`,
+ * `it:classification.cyber_criticality`).
  */
 export const APPLICATION_BULK_FIELD_LABELS: WordTable = {
-  en: { owners_business: 'Business owners', owners_it: 'IT owners', lifecycle: 'Lifecycle', criticality: 'Business criticality' },
-  fr: { owners_business: 'Responsables métier', owners_it: 'Responsables IT', lifecycle: 'Cycle de vie', criticality: 'Criticité business' },
-  de: { owners_business: 'Fachverantwortliche', owners_it: 'IT-Verantwortliche', lifecycle: 'Lebenszyklus', criticality: 'Geschäftskritikalität' },
-  es: { owners_business: 'Responsables de negocio', owners_it: 'Responsables IT', lifecycle: 'Ciclo de vida', criticality: 'Criticidad de negocio' },
+  en: { owners_business: 'Business owners', owners_it: 'IT owners', category: 'Category', lifecycle: 'Lifecycle', criticality: 'Business criticality', cyber_criticality: 'Cyber criticality' },
+  fr: { owners_business: 'Responsables métier', owners_it: 'Responsables IT', category: 'Catégorie', lifecycle: 'Cycle de vie', criticality: 'Criticité business', cyber_criticality: 'Criticité cyber' },
+  de: { owners_business: 'Fachverantwortliche', owners_it: 'IT-Verantwortliche', category: 'Kategorie', lifecycle: 'Lebenszyklus', criticality: 'Geschäftskritikalität', cyber_criticality: 'Cyberkritikalität' },
+  es: { owners_business: 'Responsables de negocio', owners_it: 'Responsables IT', category: 'Categoría', lifecycle: 'Ciclo de vida', criticality: 'Criticidad de negocio', cyber_criticality: 'Criticidad cibernética' },
 };
 
 /**

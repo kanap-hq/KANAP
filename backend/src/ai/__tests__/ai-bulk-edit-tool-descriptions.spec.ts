@@ -40,7 +40,7 @@ function testAnotherFieldIsSaidNotChangedInBulk() {
     {
       operation: new BulkUpdateApplicationsAiMutationOperation(null as any, null as any, null as any, null as any),
       row: 'application',
-      fields: 'business owners, IT owners, lifecycle, business criticality',
+      fields: 'business owners, IT owners, category, lifecycle, business criticality, cyber criticality',
     },
   ];
   for (const { operation, row, fields } of operations) {

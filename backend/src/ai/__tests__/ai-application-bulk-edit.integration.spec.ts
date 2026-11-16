@@ -205,7 +205,7 @@ async function inSeed(harness: Harness, test: (runner: QueryRunner, seed: Seed) 
   }
 }
 
-async function column(runner: QueryRunner, seed: Seed, n: number, name: 'lifecycle' | 'criticality'): Promise<string | null> {
+async function column(runner: QueryRunner, seed: Seed, n: number, name: 'lifecycle' | 'criticality' | 'category' | 'cyber_criticality' | 'classification_revision'): Promise<string | null> {
   const [row] = await runner.query(`SELECT ${name}::text AS v FROM applications WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.apps[n]]);
   return row?.v ?? null;
 }
@@ -216,7 +216,7 @@ async function owners(runner: QueryRunner, seed: Seed, n: number, type: 'busines
   return rows.map((row: { id: string }) => row.id).sort();
 }
 
-async function appsWith(runner: QueryRunner, seed: Seed, name: 'lifecycle' | 'criticality', value: string): Promise<string[]> {
+async function appsWith(runner: QueryRunner, seed: Seed, name: 'lifecycle' | 'criticality' | 'category' | 'cyber_criticality', value: string): Promise<string[]> {
   const rows = await runner.query(`SELECT sequential_id AS ref FROM applications WHERE tenant_id = $1 AND ${name} = $2 ORDER BY sequential_id`, [seed.tenantId, value]);
   return rows.map((row: { ref: string }) => row.ref);
 }
@@ -418,6 +418,76 @@ async function testEveryField(harness: Harness) {
   });
 }
 
+/**
+ * The category and the cyber criticality (decision D15 of 26.11.9): "move these four applications
+ * from Analytics to Infrastructure" gives one card, named as the screen does in the person's
+ * language; the approval changes the four, each audited by Kad. The cyber criticality the same way,
+ * with its classification revision, and emptied. A value no longer offered is refused, by its code too.
+ */
+async function testCategoryAndCyberCriticality(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    // The shipped categories: four enabled applications in Analytics, the retired one too (left out by the scope).
+    await runner.query(`UPDATE applications SET category = 'analytics' WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [seed.tenantId, [seed.apps[1], seed.apps[2], seed.apps[3], seed.apps[5], seed.apps[6]]]);
+    await runner.query(`UPDATE users SET locale = 'fr' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.users.member]);
+    const ctx = context(seed, runner, 'category-cyber');
+    const preview = await card(harness, ctx, { field: 'category', value: 'Infrastructure', filters: { category: ['Analytique'] } });
+    assert.equal(
+      preview.changes[CARD].to.split('\n\n- ')[0],
+      'Filtre : Catégorie « Analytique »\n\nPérimètre : applications activées, hors retirées\n\nCatégorie → Infrastructure\n\n4 applications à modifier',
+    );
+    const executed = await approve(harness, ctx, preview);
+    assert.equal(executed.status, 'executed');
+    assert.deepEqual(await appsWith(runner, seed, 'category', 'infrastructure'), ['APP-1', 'APP-2', 'APP-5', 'APP-6']);
+    assert.equal(await column(runner, seed, 3, 'category'), 'analytics', 'the retired application is out of the scope');
+    const audit = await runner.query(
+      `SELECT before_json->>'category' AS before, after_json->>'category' AS after, source, source_ref FROM audit_log
+        WHERE tenant_id = $1 AND table_name = 'applications' AND action = 'update' AND record_id = ANY($2::uuid[])`,
+      [seed.tenantId, Object.values(seed.apps)],
+    );
+    assert.equal(audit.length, 4, 'one audit row per application');
+    assert.ok(audit.every((row: any) => row.before === 'analytics' && row.after === 'infrastructure' && row.source === 'ai_chat' && row.source_ref === preview.preview_id), 'each history says by Kad');
+
+    // The cyber criticality by its French name, then emptied.
+    const revision = Number(await column(runner, seed, 1, 'classification_revision'));
+    const cyber = await card(harness, ctx, { field: 'cyber_criticality', value: 'Élevée', rows: ['APP-1', 'APP-2', 'APP-5', 'APP-6'] });
+    assert.match(cyber.changes[CARD].to, /\n\nCriticité cyber → Élevée\n\n4 applications à modifier/);
+    await approve(harness, ctx, cyber);
+    assert.deepEqual(await appsWith(runner, seed, 'cyber_criticality', 'high'), ['APP-1', 'APP-2', 'APP-5', 'APP-6']);
+    assert.equal(Number(await column(runner, seed, 1, 'classification_revision')), revision + 1, 'the classification review is due again');
+    const cyberAudit = await runner.query(
+      `SELECT source_ref FROM audit_log WHERE tenant_id = $1 AND table_name = 'applications' AND after_json->>'cyber_criticality' = 'high'`, [seed.tenantId]);
+    assert.equal(cyberAudit.length, 4);
+    assert.ok(cyberAudit.every((row: any) => row.source_ref === cyber.preview_id), 'by Kad');
+    await runner.query(`UPDATE users SET locale = 'en' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.users.member]);
+    const english = context(seed, runner, 'category-cyber-en');
+    const cleared = await card(harness, english, { field: 'cyber_criticality', value: null, rows: ['APP-1'] });
+    assert.match(cleared.changes[CARD].to, /\n\nCyber criticality → Empty\n\n1 application to change/);
+    assert.equal(cleared.summary, 'Change Cyber criticality on 1 application.');
+    await approve(harness, english, cleared);
+    assert.equal(await column(runner, seed, 1, 'cyber_criticality'), null);
+
+    // Never empty; a category or a level no longer offered is refused, by its name or its code.
+    await rejects(() => harness.tools.execute(english, TOOL, { field: 'category', value: null, rows: ['APP-1'] }), 'The category of an application cannot be emptied.');
+    await runner.query(
+      `UPDATE tenants SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('it_ops', jsonb_build_object('application_categories', $2::jsonb, 'cyber_criticality_levels', $3::jsonb)) WHERE id = $1`,
+      [seed.tenantId,
+        JSON.stringify([{ code: 'infrastructure', label: 'Infrastructure' }, { code: 'atelier', label: 'Atelier' }, { code: 'analytics', label: 'Analytics', deprecated: true }]),
+        JSON.stringify([{ code: 'high', label: 'High', rank: 2 }, { code: 'legacy', label: 'Legacy', rank: 1, deprecated: true }])],
+    );
+    for (const value of ['analytics', 'Analytics']) {
+      await rejects(() => harness.tools.execute(english, TOOL, { field: 'category', value, rows: ['APP-1'] }),
+        `"${value}" is not a category offered in this workspace. The categories: Infrastructure (infrastructure), Atelier (atelier).`);
+    }
+    await rejects(() => harness.tools.execute(english, TOOL, { field: 'cyber_criticality', value: 'legacy', rows: ['APP-1'] }),
+      '"legacy" is not a cyber criticality level offered in this workspace. The levels: High (high).');
+    // A category the workspace created keeps its name on the card.
+    const own = await card(harness, english, { field: 'category', value: 'atelier', rows: ['APP-1'] });
+    assert.match(own.changes[CARD].to, /\n\nCategory → Atelier\n\n1 application to change/);
+    console.log('  the category and the cyber criticality: one card, by Kad, values no longer offered refused: OK');
+  });
+}
+
 async function testCapAndListChanged(harness: Harness) {
   await inSeed(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'cap');
@@ -599,6 +669,7 @@ async function run() {
     await testCategoryAsACatalog(harness);
     await testCatalogWordsInThePersonsLanguage(harness);
     await testEveryField(harness);
+    await testCategoryAndCyberCriticality(harness);
     await testCapAndListChanged(harness);
     await testRightsContributorAndSubscription(harness);
     await testHeldApplication(harness);
