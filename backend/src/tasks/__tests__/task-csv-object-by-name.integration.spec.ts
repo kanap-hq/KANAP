@@ -16,6 +16,9 @@ import { inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tes
 // the id, when the row gives it, wins. A task moved to another project without a phase cell keeps its
 // phase only when the new project has a phase of that name; otherwise the phase is cleared, and said, at
 // the check. A restricted incident the person does not see is neither found nor named by its `INC-n`.
+// Fixes E: accents aside, two records of one name refuse the row, named (a related object, a phase);
+// a restricted incident the person does not see is not found by its id either; a task moved out of a
+// project (to an incident here) without a phase cell has its phase cleared and said at the check.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
 const resolver = new CsvResolverService();
@@ -158,6 +161,20 @@ async function testPhaseOfAMovedTask() {
     const load2 = await importCsv(runner.manager, tenantId, leftOut, { dryRun: false });
     assert.equal(load2.ok, true, JSON.stringify(load2.errors));
     assert.deepEqual((await phases())[0], [21, b, null]);
+
+    // Moved out of a project, to an incident, without a phase cell: the phase is cleared and said, as on the screen.
+    const [incident] = await runner.query(`INSERT INTO incidents (tenant_id, item_number, title, severity) VALUES ($1, 7, 'Panne', 'major') RETURNING id`, [tenantId]);
+    const out = [
+      'id;title;related_object_type;related_object_id;related_object_name;phase_name',
+      `${p4};P quatre;incident;${incident.id};;`,
+    ].join('\n');
+    const check3 = await importCsv(runner.manager, tenantId, out, {});
+    assert.deepEqual(codes(check3), []);
+    assert.deepEqual(warned(check3), [[2, 'phase_name', 'CSV_REFERENCE_NOT_FOUND_CLEARED']]);
+    assert.deepEqual(check3.warnings.map((w) => w.params?.value), ['Build']);
+    const load3 = await importCsv(runner.manager, tenantId, out, { dryRun: false });
+    assert.equal(load3.ok, true, JSON.stringify(load3.errors));
+    assert.deepEqual((await phases())[3], [24, incident.id, null]);
   });
 }
 
@@ -169,11 +186,11 @@ async function testRestrictedIncident() {
     const tenantId = await seedTenant(runner, 'task-csv-fix-c-incident');
     const reporter = await seedUser(runner, tenantId, `rep-${tenantId.slice(0, 8)}@example.test`);
     const reader = await seedUser(runner, tenantId, `read-${tenantId.slice(0, 8)}@example.test`);
-    await runner.query(
-      `INSERT INTO incidents (tenant_id, item_number, title, severity, confidential, reporter_user_id) VALUES ($1, 4, 'Fuite', 'major', true, $2)`,
+    const [fuite] = await runner.query(
+      `INSERT INTO incidents (tenant_id, item_number, title, severity, confidential, reporter_user_id) VALUES ($1, 4, 'Fuite', 'major', true, $2) RETURNING id`,
       [tenantId, reporter],
     );
-    await runner.query(`INSERT INTO incidents (tenant_id, item_number, title, severity) VALUES ($1, 5, 'Panne', 'major')`, [tenantId]);
+    const [panne] = await runner.query(`INSERT INTO incidents (tenant_id, item_number, title, severity) VALUES ($1, 5, 'Panne', 'major') RETURNING id`, [tenantId]);
     const itReader: CsvCallerAccess = { isAdmin: false, permissions: { tasks: 'admin', incidents: 'reader' } };
     const csv = ['title;related_object_type;related_object_name', 'Analyse;incident;INC-4', 'Suivi;incident;INC-5'].join('\n');
 
@@ -193,6 +210,57 @@ async function testRestrictedIncident() {
     assert.deepEqual((proposed.matches ?? []).map((m) => [m.value, m.target]), [['la panne', 'INC-5']]);
     const byReporter = await importCsv(runner.manager, tenantId, kad, { proposals }, itReader, { userId: reporter, isAdmin: false });
     assert.deepEqual(codes(byReporter), []);
+
+    // By its id: the hidden incident is not found, as an id that names no incident; the public one is.
+    const byId = [
+      'title;related_object_type;related_object_id',
+      `Analyse;incident;${fuite.id}`,
+      `Suivi;incident;${panne.id}`,
+      'Relance;incident;00000000-0000-4000-8000-000000000000',
+      'Note;incident;INC-5',
+    ].join('\n');
+    const hiddenId = await importCsv(runner.manager, tenantId, byId, {}, itReader, { userId: reader, isAdmin: false });
+    assert.deepEqual(codes(hiddenId), [
+      [2, 'related_object_id', 'CSV_REFERENCE_NOT_FOUND'],
+      [4, 'related_object_id', 'CSV_REFERENCE_NOT_FOUND'],
+      [5, 'related_object_id', 'CSV_REFERENCE_NOT_FOUND'],
+    ]);
+    assert.deepEqual(hiddenId.errors.map((e) => e.params?.value), [fuite.id, '00000000-0000-4000-8000-000000000000', 'INC-5']);
+    for (const viewer of [{ userId: reporter, isAdmin: false }, { userId: reader, isAdmin: true }]) {
+      const seen = await importCsv(runner.manager, tenantId, byId, {}, itReader, viewer);
+      assert.deepEqual(codes(seen).map(([row]) => row), [4, 5], JSON.stringify(viewer));
+    }
+  });
+}
+
+// Point 1 of fixes E: accents aside, two records of the same name are two, for a task's related object
+// (named by their references) and its phase; exactly, the first one read is still taken.
+async function testSameNameAccentsAside() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'task-csv-fix-e-names');
+    const first = await seedProject(runner, tenantId, 'Projet Été', 1);
+    const second = await seedProject(runner, tenantId, 'Projet Été', 2);
+    const solo = await seedProject(runner, tenantId, 'Projet Solo', 3);
+    await runner.query(
+      `INSERT INTO portfolio_project_phases (tenant_id, project_id, name) VALUES ($1, $2, 'Récette'), ($1, $2, 'Récette')`,
+      [tenantId, solo],
+    );
+    const csv = [
+      'title;related_object_type;related_object_name;phase_name',
+      'Ambigu;project;Projet Ete;',
+      'Exact;project;Projet Été;',
+      'Phase;project;Projet Solo;Recette',
+    ].join('\n');
+    const check = await importCsv(runner.manager, tenantId, csv, {});
+    assert.deepEqual(codes(check), [
+      [2, 'related_object_name', 'CSV_NAME_AMBIGUOUS_AMONG'],
+      [4, 'phase_name', 'CSV_NAME_AMBIGUOUS_AMONG'],
+    ]);
+    assert.deepEqual(check.errors.map((e) => e.params?.names), ['PRJ-1, PRJ-2', 'Récette, Récette']);
+    const exact = await importCsv(runner.manager, tenantId, csv.split('\n').filter((_, i) => i === 0 || i === 2).join('\n'), { dryRun: false });
+    assert.equal(exact.ok, true, JSON.stringify(exact.errors));
+    const [task] = await runner.query(`SELECT related_object_id FROM tasks WHERE tenant_id = $1`, [tenantId]);
+    assert.ok([first, second].includes(task.related_object_id), 'exactly: the first project read, as before');
   });
 }
 
@@ -200,4 +268,5 @@ void runSpecs('task-csv-object-by-name.integration.spec', [
   ['testExistingTaskObjectByName', testExistingTaskObjectByName],
   ['testPhaseOfAMovedTask', testPhaseOfAMovedTask],
   ['testRestrictedIncident', testRestrictedIncident],
+  ['testSameNameAccentsAside', testSameNameAccentsAside],
 ]);

@@ -367,6 +367,38 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
   }
 }
 
+/** The related object type a row's task has once imported, as a code (`incident`, `project`...); '' for none. */
+function importedObjectType(row: CsvImportRow): string {
+  const value = String(importedValue(row, 'related_object_type') ?? '').trim().toLowerCase();
+  return objectTypeLookup.get(value) ?? value;
+}
+
+/**
+ * A row that gives an incident by its id (lot I3 of 26.11.9, fixes E): the incident must be one the
+ * person sees, as by its `INC-n` (`relatedObjectsByName`). A restricted incident the `viewer` does not
+ * see (neither incidents:admin, its reporter nor its owner) is refused as not found, like an id that
+ * names no incident.
+ */
+async function checkIncidentIds(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+  const giving = rows.filter((row) => row.errors.length === 0 && !skippedByOperation(row, context.params.operation)
+    && givesRelatedObjectId(row) && importedObjectType(row) === 'incident');
+  if (giving.length === 0) return;
+  const idOf = (row: CsvImportRow) => String(row.raw.related_object_id).trim();
+  const ids = [...new Set(giving.map(idOf).filter((id) => TASK_UUID_RE.test(id)).map((id) => id.toLowerCase()))];
+  const params: unknown[] = [context.tenantId, ids];
+  const visible = incidentVisibilitySql('i', incidentViewerForSql(context.viewer), params);
+  const seen: Array<{ id: string }> = ids.length === 0 ? [] : await context.manager.query(
+    `SELECT i.id::text AS id FROM incidents i WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[])${visible}`,
+    params,
+  );
+  const found = new Set(seen.map((row) => row.id.toLowerCase()));
+  for (const row of giving) {
+    const id = idOf(row);
+    if (found.has(id.toLowerCase())) continue;
+    row.errors.push({ row: row.rowNumber, column: 'related_object_id', message: `"${id}" was not found.`, code: 'CSV_REFERENCE_NOT_FOUND', params: { value: id } });
+  }
+}
+
 /**
  * The phase of a project task is its project's (lot I3 of 26.11.9). The shared lookup finds the
  * file's phase name anywhere in the workspace, case aside only (`nameMatchedByConfig`); here, in the
@@ -445,33 +477,33 @@ async function anchorPhases(rows: CsvImportRow[], context: CsvImportContext): Pr
 }
 
 /**
- * A task a row moves to another project without a phase cell (a blank cell in merge mode, or no
- * column): its stored phase is the old project's. The new project's phase of the same name, case
- * aside, is taken, as the commit always did; otherwise the phase is cleared at the check and said
+ * A task a row moves without a phase cell (a blank cell in merge mode, or no column): its stored phase
+ * is the old project's. Moved to another project, the new project's phase of the same name, case aside,
+ * is taken, as the commit always did; otherwise the phase is cleared at the check and said
  * (`CSV_REFERENCE_NOT_FOUND_CLEARED`, the stored phase's name), the rule of
  * `clearKeptReferencesOfChangedOwners` (lot I3 of 26.11.9, fixes C). The load no longer fails on it.
+ * Moved out of a project (to a contract, a budget line, an incident, or to none), the phase is cleared
+ * and said the same way, as the task screen clears it (fixes E).
  */
 async function followPhasesOfMovedTasks(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
-  const moved = rows
+  const keeping = rows
     .filter((row) => row.errors.length === 0 && !skippedByOperation(row, context.params.operation) && row.existingEntity?.phase_id)
-    .filter((row) => !String(row.raw.phase_name ?? '').trim() && String(importedValue(row, 'phase_id') ?? '') === String(row.existingEntity.phase_id))
+    .filter((row) => !String(row.raw.phase_name ?? '').trim() && String(importedValue(row, 'phase_id') ?? '') === String(row.existingEntity.phase_id));
+  const leaving = keeping.filter((row) => row.existingEntity.related_object_type === 'project' && importedObjectType(row) !== 'project');
+  const moved = keeping
     .map((row) => ({ row, projectId: importedProjectId(row) }))
     .filter((entry): entry is { row: CsvImportRow; projectId: string } => !!entry.projectId && TASK_UUID_RE.test(entry.projectId)
       && entry.projectId !== String(entry.row.existingEntity.related_object_id ?? '').toLowerCase());
-  if (moved.length === 0) return;
+  if (moved.length === 0 && leaving.length === 0) return;
   const phases: Array<{ id: string; name: string; project_id: string }> = await context.manager.query(
     `SELECT id::text AS id, name, project_id::text AS project_id FROM portfolio_project_phases
       WHERE tenant_id = $1 AND (id = ANY($2::uuid[]) OR project_id = ANY($3::uuid[]))`,
-    [context.tenantId, [...new Set(moved.map(({ row }) => String(row.existingEntity.phase_id)))], [...new Set(moved.map((entry) => entry.projectId))]],
+    [context.tenantId, [...new Set([...moved.map(({ row }) => row), ...leaving].map((row) => String(row.existingEntity.phase_id)))], [...new Set(moved.map((entry) => entry.projectId))]],
   );
   const phaseById = new Map(phases.map((phase) => [phase.id.toLowerCase(), phase]));
-  for (const { row, projectId } of moved) {
-    const storedPhase = phaseById.get(String(row.existingEntity.phase_id).toLowerCase());
-    if (!storedPhase || storedPhase.project_id.toLowerCase() === projectId) continue;
-    const name = storedPhase.name.toLowerCase();
-    const same = phases.find((phase) => phase.project_id.toLowerCase() === projectId && phase.name.toLowerCase() === name);
-    row.parsed.phase_id = same?.id ?? null;
-    if (same) continue;
+  const clear = (row: CsvImportRow, storedPhase: { name: string } | undefined) => {
+    row.parsed.phase_id = null;
+    if (!storedPhase) return;
     row.warnings.push({
       row: row.rowNumber,
       column: 'phase_name',
@@ -479,6 +511,15 @@ async function followPhasesOfMovedTasks(rows: CsvImportRow[], context: CsvImport
       code: 'CSV_REFERENCE_NOT_FOUND_CLEARED',
       params: { value: storedPhase.name },
     });
+  };
+  for (const row of leaving) clear(row, phaseById.get(String(row.existingEntity.phase_id).toLowerCase()));
+  for (const { row, projectId } of moved) {
+    const storedPhase = phaseById.get(String(row.existingEntity.phase_id).toLowerCase());
+    if (!storedPhase || storedPhase.project_id.toLowerCase() === projectId) continue;
+    const name = storedPhase.name.toLowerCase();
+    const same = phases.find((phase) => phase.project_id.toLowerCase() === projectId && phase.name.toLowerCase() === name);
+    if (same) row.parsed.phase_id = same.id;
+    else clear(row, storedPhase);
   }
 }
 
@@ -1046,6 +1087,7 @@ export const taskCsvConfig: CsvEntityConfig = {
    */
   afterValidate: async (rows, context) => {
     keepObjectsOutsideAccess(rows, context.params.operation);
+    await checkIncidentIds(rows, context);
     await resolveRelatedObjects(rows, context);
     await anchorPhases(rows, context);
     await followPhasesOfMovedTasks(rows, context);
