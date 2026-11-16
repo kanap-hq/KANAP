@@ -38,7 +38,7 @@ import {
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import type { CsvCallerAccess } from '../common/csv/csv-field.types';
 import { hasLevel } from '../common/relations/relations-access';
-import { findRecordByName, ImportNameMatch, listedMatches, noteNameMatch, undoneMatch } from '../common/name-matching';
+import { findRecordByName, ImportMatchState, ImportProposals, listedMatches, listedRefusedProposals, noteNameMatch, takeProposal, undoneMatch } from '../common/name-matching';
 import { contractTermFields, contractTermsSql, sqlDateLiteral, turnsOffRenewalOfRenewedContract, type ContractTermFields } from './contract-terms';
 import { readDecisionWindowDays } from './contract-settings.service';
 import { renewalDecisionSql } from './contract-renewal';
@@ -1412,7 +1412,8 @@ export class ContractsService {
    * The company, the supplier and the cost center are found by their name exactly, then case aside,
    * then accents aside for a person who reads their module (`access`), unless the person undid that
    * match (`unmatched`). Two names case aside, or accents aside, refuse the row; each match beyond
-   * case is listed (`matches`).
+   * case is listed (`matches`). Kad's proposal for a value (`proposals`) comes first: accepted when it
+   * names a record the person reads, exactly or case aside; refused (`refusedProposals`) otherwise.
    */
   async importCsv(
     {
@@ -1424,6 +1425,7 @@ export class ContractsService {
       decimalMark,
       access,
       unmatched,
+      proposals,
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -1435,6 +1437,8 @@ export class ContractsService {
       access?: CsvCallerAccess;
       /** The matches the person undid, by file column and value: found case aside only. */
       unmatched?: Array<{ column: string; value: string }>;
+      /** Kad's proposals, by file column: a value of the file and the name of the record it stands for. */
+      proposals?: ImportProposals;
     },
     opts?: { manager?: EntityManager },
   ) {
@@ -1469,7 +1473,8 @@ export class ContractsService {
     const allNodes: Named[] = await mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND status = 'enabled'`);
     const uByEmail = new Map<string, any>(allUsers.map((r: any) => [r.email.toLowerCase(), r]));
     // The record a name names, in each family (lot I3 of 26.11.9); its matches beyond case, for the result.
-    const matches = new Map<string, ImportNameMatch>();
+    const state: ImportMatchState = { matches: new Map(), refused: new Map() };
+    const { matches } = state;
     const families = {
       company_name: { rows: allCompanies, module: 'companies', label: 'company', prefix: 'COMP' },
       supplier_name: { rows: allSuppliers, module: 'suppliers', label: 'supplier', prefix: 'SUP' },
@@ -1479,7 +1484,12 @@ export class ContractsService {
       prefix && row.item_number != null && Number(row.item_number) > 0 ? `${prefix}-${Number(row.item_number)}` : null;
     const recordOf = (column: keyof typeof families, value: string, line: number): Named | null => {
       const family = families[column];
-      const beyondCase = !undoneMatch(unmatched, column, value) && !!access && hasLevel(access, family.module, 'reader');
+      const reads = !!access && hasLevel(access, family.module, 'reader');
+      const proposed = takeProposal<Named>(state, {
+        proposals, unmatched, column, value, line, rows: family.rows, reads, caseBlind: false, ref: (row) => refOf(family.prefix, row),
+      });
+      if (proposed) return proposed;
+      const beyondCase = !undoneMatch(unmatched, column, value) && reads;
       const found = findRecordByName<Named>(family.rows, value, { beyondCase, caseBlind: false, label: (row) => refOf(family.prefix, row) });
       if (found.kind === 'one') {
         if (found.how === 'accents') {
@@ -1574,7 +1584,7 @@ export class ContractsService {
       }
       norm.push({ line, target, name, company: company!, supplier: supplier!, cost_center_name, costCenterId: costCenter?.id ?? null, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
     }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...listedMatches(matches) };
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
 
     // One row per contract: a second row naming the same contract, by its reference or by its name
     // and supplier, is refused on its line below.
@@ -1670,8 +1680,8 @@ export class ContractsService {
         errors.push({ row: item.line, message: `auto_renewal: ${RENEWED_CONTRACT_RENEWAL_OFF}` });
       }
     }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...listedMatches(matches) };
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report, ...listedMatches(matches) };
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
 
     // Commit
     let processed = 0;
@@ -1705,7 +1715,7 @@ export class ContractsService {
       if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg }); processed += 1; }
       else { await this.create(payload, userId ?? undefined, { manager: mg }); processed += 1; }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report, ...listedMatches(matches) };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
   }
 
   // Symmetric linking from OPEX side

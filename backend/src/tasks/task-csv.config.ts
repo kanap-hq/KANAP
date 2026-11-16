@@ -14,7 +14,7 @@ import { contractReference, contractReferenceNumber } from '../contracts/contrac
 import type { CsvLanguage } from '../common/csv-sheet';
 import type { CsvCallerAccess, CsvImportParams } from '../common/csv';
 import { hasLevel } from '../common/relations/relations-access';
-import { findRecordByName, noteNameMatch, undoneMatch, type MatchHow } from '../common/name-matching';
+import { findRecordByName, noteNameMatch, noteRefusedProposal, proposalFor, undoneMatch, type MatchHow } from '../common/name-matching';
 import { budgetLineReference } from '../spend/budget-nature';
 
 /** The label of a contract outside the person's access, as the tasks list writes it (`ops:contracts.outsideYourAccess`). */
@@ -289,6 +289,9 @@ function importedValue(row: CsvImportRow, key: string): any {
  * as `relatedObjectsByName` finds it: case aside, then accents aside for a person who reads its
  * family. A match beyond case is listed; a name nothing finds, or several, refuses the row. A row
  * whose task keeps or takes an object by its id is left as it is; the commit resolves nothing more.
+ * Kad's proposal for a name comes first: the record it names, exactly or case aside (a contract also
+ * by its reference), in a family the person reads, is a match of origin model; otherwise the proposal
+ * is listed as refused and the name is found by its own rule.
  */
 async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const byType = new Map<string, CsvImportRow[]>();
@@ -305,8 +308,33 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
     const names = typeRows.map((row) => String(row.parsed._related_object_name).trim());
     const lookup = await relatedObjectsByName(context.manager, context.tenantId, type, names, { beyondCase });
     if (!lookup) continue;
+    const proposalOf = (name: string) => (undoneMatch(context.params.unmatched, 'related_object_name', name)
+      ? undefined
+      : proposalFor(context.params.proposals, 'related_object_name', name));
+    const proposals = [...new Set(names.map(proposalOf).filter((proposal): proposal is string => proposal !== undefined))];
+    const module = RELATED_OBJECT_TABLES[type]?.module;
+    const reads = !!module && !!context.access && hasLevel(context.access, module, 'reader');
+    const proposed = proposals.length > 0 && reads ? await relatedObjectsByName(context.manager, context.tenantId, type, proposals) : null;
     for (const row of typeRows) {
       const name = String(row.parsed._related_object_name).trim();
+      const proposal = proposalOf(name);
+      if (proposal !== undefined) {
+        const target = proposed?.(proposal);
+        if (target?.kind === 'one') {
+          row.parsed.related_object_id = target.id;
+          delete row.parsed._related_object_name;
+          if (context.nameMatches) {
+            noteNameMatch(context.nameMatches, {
+              column: 'related_object_name', name: null, value: name, target: target.target, ref: target.ref,
+              origin: 'model', reason: 'model', undoable: true,
+            }, row.rowNumber);
+          }
+          continue;
+        }
+        if (context.refusedProposals) {
+          noteRefusedProposal(context.refusedProposals, { column: 'related_object_name', name: null, value: name, target: proposal, reason: 'missing' }, row.rowNumber);
+        }
+      }
       const found = lookup(name);
       if (found.kind === 'one') {
         row.parsed.related_object_id = found.id;

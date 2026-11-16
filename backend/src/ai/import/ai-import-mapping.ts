@@ -3,7 +3,7 @@ import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../../common/csv-sh
 import { sheetCellText } from '../../common/csv-sheet/read';
 import type { AiImportMappingPreviewDto } from '../ai.types';
 import { clip, isBlank, TABLE_SUMMARY_MAX_COLUMNS, TableGrid } from '../attachments/table-attachment';
-import { isMatchedColumn } from '../../spend/budget-file/matching';
+import { isImportMatchedColumn } from './ai-import-targets';
 import { AiImportCellResult, AiImportColumnKind, AiImportColumnReadError, AiImportColumnRule, columnReader } from './ai-import-convert';
 
 /** The first rows the card shows: rows the model already read in the file's summary. */
@@ -57,8 +57,10 @@ export interface AiImportFileContent {
   columns: Array<{ column: string; kind: AiImportColumnKind }>;
   rows: AiImportFileCell[][];
   /**
-   * The budget file: the model's `values` for its supplier and dimension columns, which the file keeps
-   * as the person wrote them. The check accepts each one only when its value exists (lot I1 of 26.11.9).
+   * The model's `values` for the columns its import finds by name (`isImportMatchedColumn`: a budget
+   * file's supplier, company and dimensions, an application's supplier...), which the file keeps as
+   * the person wrote them. The import accepts each one only when its record exists and the person
+   * reads it (lots I1 and I3 of 26.11.9).
    */
   proposals?: Record<string, Record<string, string>>;
 }
@@ -155,10 +157,12 @@ export function buildImportMapping(
 
   for (const column of mapped) {
     const entry = entries.get(column.column)!;
-    // A budget file's supplier or dimension value the model names: the check matches it to an existing
-    // value, or refuses the proposal; the cell keeps the person's text. "" still leaves the cell blank.
+    // A name of a record the model proposes (a budget file's supplier or dimension value, an
+    // application's supplier...): the import matches it to an existing record, or refuses the
+    // proposal; the cell keeps the person's text. "" still leaves the cell blank. A fixed list, a
+    // catalog, a code or an e-mail reads the model's values as before.
     let values = entry.values;
-    if (request.importKey === 'budget_lines' && entry.source != null && values && isMatchedColumn(column.column)) {
+    if (entry.source != null && values && isImportMatchedColumn(request.importKey, column.column)) {
       const proposed = Object.entries(values).filter(([, to]) => String(to).trim() !== '');
       if (proposed.length > 0) proposals[column.column] = Object.fromEntries(proposed);
       values = Object.fromEntries(Object.entries(values).filter(([, to]) => String(to).trim() === ''));

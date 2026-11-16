@@ -38,7 +38,7 @@ import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } fro
 import type { ExportFileFormat } from '../common/xlsx/format';
 import type { CsvCallerAccess } from '../common/csv/csv-field.types';
 import { hasLevel } from '../common/relations/relations-access';
-import { findRecordByName, ImportNameMatch, listedMatches, noteNameMatch, undoneMatch } from '../common/name-matching';
+import { findRecordByName, ImportMatchState, ImportNameMatch, ImportProposals, ImportRefusedProposal, listedMatches, listedRefusedProposals, noteNameMatch, takeProposal, undoneMatch } from '../common/name-matching';
 
 export const COST_CENTER_CSV_HEADERS = [
   'code', 'kind', 'name', 'parent_code', 'company_name', 'owner_email', 'description', 'status', 'disabled_at',
@@ -60,6 +60,9 @@ export interface CostCenterImportResult {
   /** The companies found beyond case (lot I3 of 26.11.9), each undoable; absent when none. */
   matches?: ImportNameMatch[];
   matchesTotal?: number;
+  /** Kad's proposals the check refused (lot I3 of 26.11.9); absent when none. */
+  refusedProposals?: ImportRefusedProposal[];
+  refusedProposalsTotal?: number;
 }
 
 interface ParsedRow {
@@ -139,6 +142,7 @@ export class CostCentersCsvService {
       decimalMark,
       access,
       unmatched,
+      proposals,
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -149,14 +153,18 @@ export class CostCentersCsvService {
       access?: CsvCallerAccess;
       /** The matches the person undid, by file column and value: found case aside only. */
       unmatched?: Array<{ column: string; value: string }>;
+      /** Kad's proposals, by file column: accepted for a company the person reads, exactly or case aside. */
+      proposals?: ImportProposals;
     },
     ctx: CostCenterContext,
   ): Promise<CostCenterImportResult> {
     const read = await this.parseFile(file, language ?? 'en', dateOrder, decimalMark);
-    const matches = new Map<string, ImportNameMatch>();
+    const state: ImportMatchState = { matches: new Map(), refused: new Map() };
+    const { matches } = state;
+    const listed = () => ({ ...listedMatches(matches), ...listedRefusedProposals(state.refused) });
     const result = (errors: CostCenterImportResult['errors'], total = 0): CostCenterImportResult => ({
       ok: false, dryRun, total, inserted: 0, updated: 0, unchanged: 0, errors,
-      ignoredColumns: read.ignoredColumns, notices: read.notices, ...listedMatches(matches),
+      ignoredColumns: read.ignoredColumns, notices: read.notices, ...listed(),
     });
     if (read.headerError) return result([read.headerError]);
     const { rows } = read;
@@ -215,10 +223,16 @@ export class CostCentersCsvService {
       let companyId: string | null = null;
       const companyName = cellOf(raw, 'company_name');
       if (companyName) {
-        // Exactly, else case aside when one name answers (two refuse the row, as before), else accents
-        // aside for a person who reads the companies and has not undone that match.
+        // Kad's proposal first, for a person who reads the companies. Then exactly, else case aside when
+        // one name answers (two refuse the row, as before), else accents aside for a person who reads the
+        // companies and has not undone that match.
+        const proposed = takeProposal(state, {
+          proposals, unmatched, column: 'company_name', value: companyName, line, rows: companies, reads: readsCompanies, caseBlind: false, ref: companyRef,
+        });
         const beyondCase = readsCompanies && !undoneMatch(unmatched, 'company_name', companyName);
-        const found = findRecordByName(companies, companyName, { beyondCase, caseBlind: false, label: companyRef });
+        const found = proposed
+          ? { kind: 'one' as const, row: proposed, how: 'exact' as const }
+          : findRecordByName(companies, companyName, { beyondCase, caseBlind: false, label: companyRef });
         const company = found.kind === 'one' ? found.row : undefined;
         if (found.kind === 'one' && found.how === 'accents') {
           noteNameMatch(matches, {
@@ -348,7 +362,7 @@ export class CostCentersCsvService {
     }
     return {
       ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [],
-      ignoredColumns: read.ignoredColumns, notices: read.notices, ...listedMatches(matches),
+      ignoredColumns: read.ignoredColumns, notices: read.notices, ...listed(),
     };
   }
 

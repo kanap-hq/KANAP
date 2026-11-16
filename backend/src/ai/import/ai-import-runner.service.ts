@@ -29,7 +29,7 @@ import type {
   BudgetFileNatureCounts,
 } from '../../spend/budget-file/types';
 import type { BudgetNature } from '../../spend/budget-nature';
-import type { ImportNameMatch } from '../../common/name-matching';
+import type { ImportNameMatch, ImportRefusedProposal } from '../../common/name-matching';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TasksCsvService } from '../../tasks/tasks-csv.service';
@@ -59,6 +59,9 @@ type RowsReport = {
   /** The declarative imports: the names found beyond case, on the lines of the built file (lot I3 of 26.11.9). */
   matches?: ImportNameMatch[];
   matchesTotal?: number;
+  /** Kad's proposals the import refused, on the lines of the built file. */
+  refusedProposals?: ImportRefusedProposal[];
+  refusedProposalsTotal?: number;
 };
 
 /** The budget file's report (`BudgetFileReport`) or its load (`BudgetFileImportOk`), as far as the bilan reads it. */
@@ -88,7 +91,7 @@ type ImportCall = {
   dryRun: boolean;
   language: CsvLanguage;
   context: AiExecutionContextWithManager;
-  /** The budget file: the person's choices on the card and the model's proposals. */
+  /** The person's choices on the card (a budget file's, or the matches undone of any import) and the model's proposals. */
   matching?: BudgetFileMatchOptions;
 };
 
@@ -160,13 +163,19 @@ export class AiImportRunnerService {
     return rowsBilan(await this.runRows(key, call), options.dryRun, options.lines);
   }
 
-  private async runRows(key: Exclude<AiImportKey, 'budget_lines'>, { file, dryRun, language, context }: ImportCall): Promise<RowsReport> {
+  private async runRows(key: Exclude<AiImportKey, 'budget_lines'>, { file, dryRun, language, context, matching }: ImportCall): Promise<RowsReport> {
     const manager = context.manager as EntityManager;
     const { tenantId, userId } = context;
+    // The matches the person undid on the card, by column and value (no line: nothing to carry back),
+    // and the model's proposals, which the import checks (lot I3 of 26.11.9).
+    const names = {
+      unmatched: (matching?.choices ?? []).flatMap((choice) => (choice.kind === 'unmatch' ? [{ column: choice.column, value: choice.value }] : [])),
+      ...(matching?.proposals ? { proposals: matching.proposals } : {}),
+    };
     // The file holds numbers as number cells and days as date cells, written with a decimal point.
     const read = { language, decimalMark: '.' as const };
     // The screen's recommended preset: add the new records, update the matched ones, keep what a blank cell does not say.
-    const merge = { dryRun, mode: 'enrich' as const, operation: 'upsert' as const };
+    const merge = { dryRun, mode: 'enrich' as const, operation: 'upsert' as const, ...names };
     const caller = { manager, tenantId, userId: userId || null };
     // The person's rights, read once: a name is found beyond case in the families they read, as on the screen.
     const rights = () => this.policy.effectiveAccess(context, manager);
@@ -193,20 +202,20 @@ export class AiImportRunnerService {
       case 'contacts':
         return this.contacts.importCsv({ file, dryRun, ...read }, { manager, tenantId });
       case 'contracts':
-        return this.contracts.importCsv({ file, dryRun, userId: userId || null, ...read, access: await rights() }, { manager });
+        return this.contracts.importCsv({ file, dryRun, userId: userId || null, ...read, access: await rights(), ...names }, { manager });
       case 'companies':
         return this.companies.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
       case 'departments':
         return this.departments.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
       case 'cost_centers':
-        return this.costCenters.importCsv({ file, dryRun, ...read, access: await rights() }, caller);
+        return this.costCenters.importCsv({ file, dryRun, ...read, access: await rights(), ...names }, caller);
       case 'accounts':
         // The chart of each row is named by its `coa_code` column, as the import of the accounts page.
         return this.accounts.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager, allowCoaCodeColumn: true });
       case 'analytics_categories':
         return this.analytics.importCsv({ file, dryRun, ...read }, caller);
       case 'business_processes':
-        return this.businessProcesses.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
+        return this.businessProcesses.importCsv({ file, dryRun, userId: userId || null, ...read, ...names }, { manager });
       case 'working_day_calendars':
         return this.calendars.importCsv({ file, dryRun, ...read }, caller);
       case 'technology_asset_links':
@@ -329,8 +338,8 @@ function message(item: AiImportReportMessage, lines: readonly number[]): AiImpor
 
 /**
  * The bilan of a row import: its counts, its messages on the person's lines, and their tally for the
- * model; for a declarative import, the names it found beyond case, on the person's lines (the card
- * shows them from lot I3's second pass).
+ * model; the names it found beyond case and Kad's proposals it refused, on the person's lines (the
+ * card shows them from lot I3's fifth pass).
  */
 export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly number[]): AiImportRunDto {
   const errors = result.errors ?? [];
@@ -361,6 +370,12 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
         ? {
             matches: result.matches.map((match) => ({ ...match, lines: match.lines.map((line) => personLine(line, lines)) })),
             matchesTotal: result.matchesTotal ?? result.matches.length,
+          }
+        : {}),
+      ...(result.refusedProposals?.length
+        ? {
+            refusedProposals: result.refusedProposals.map((entry) => ({ ...entry, lines: entry.lines.map((line) => personLine(line, lines)) })),
+            refusedProposalsTotal: result.refusedProposalsTotal ?? result.refusedProposals.length,
           }
         : {}),
     },

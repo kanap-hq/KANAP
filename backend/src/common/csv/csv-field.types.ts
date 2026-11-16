@@ -1,6 +1,6 @@
 import type { CsvLanguage } from '../csv-sheet/types';
 import type { ExportFileFormat } from '../xlsx/format';
-import type { ImportNameMatch } from '../name-matching';
+import type { ImportNameMatch, ImportProposals, ImportRefusedProposal } from '../name-matching';
 /**
  * CSV Field Type Definitions
  *
@@ -192,6 +192,13 @@ export interface CsvImportParams {
    * set aside, no other language). Otherwise it reads as a name nothing finds.
    */
   unmatched?: Array<{ column: string; value: string }>;
+  /**
+   * Kad's proposals (lot I3 of 26.11.9, second pass), by file column: a value of the file and the name
+   * of the record it stands for. Accepted when that record exists, by its name or case aside, in a
+   * family the person reads (a match, listed); otherwise refused (`refusedProposals`) and the value is
+   * found by its own name.
+   */
+  proposals?: ImportProposals;
 }
 
 /**
@@ -255,6 +262,10 @@ export interface CsvImportResult {
   matches?: ImportNameMatch[];
   /** How many entries `matches` would hold uncut. Present with `matches`. */
   matchesTotal?: number;
+  /** Kad's proposals the import refused (`CsvImportParams.proposals`), the first ones; absent when none. */
+  refusedProposals?: ImportRefusedProposal[];
+  /** How many entries `refusedProposals` would hold uncut. Present with it. */
+  refusedProposalsTotal?: number;
 }
 
 /**
@@ -329,6 +340,8 @@ export interface CsvImportContext {
   access?: CsvCallerAccess;
   /** The names found beyond case so far, noted by `noteNameMatch` (the result's `matches`). */
   nameMatches?: Map<string, ImportNameMatch>;
+  /** Kad's proposals refused so far, noted by `noteRefusedProposal` (the result's `refusedProposals`). */
+  refusedProposals?: Map<string, ImportRefusedProposal>;
 }
 
 /** The rights of the person who imports, as the routes and Kad know them (`PermissionGuard`, `effectiveAccess`). */

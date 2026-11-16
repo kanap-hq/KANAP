@@ -195,8 +195,8 @@ export class AiImportMappingService {
   /**
    * The file a mapping builds, as the import reads it, for the person to download from the card: with
    * the same rights as the card, converted again from the attachment, every template column of an
-   * import that reads them all included. A budget file holds the values the card's check matched
-   * (the ones the person did not undo), as the import's dialog will read them.
+   * import that reads them all included. A budget file, and a file whose names Kad proposed, hold the
+   * values the card's check matched (the ones the person did not undo), as the import's dialog will read them.
    */
   async preparedFile(
     context: AiExecutionContextWithManager,
@@ -206,12 +206,16 @@ export class AiImportMappingService {
     const target = aiImportTarget(input.entity_type);
     await this.assertImportRights(context, target);
     const { converted, lines } = await this.convert(context, target, input, language);
-    if (target.key === 'budget_lines') {
+    // Another import writes the records Kad's proposals name, which its screen would not find (lot I3).
+    if (target.key === 'budget_lines' || converted.file.proposals) {
       const check = await this.runner.run(target.key, buildImportFile(converted.file, language), {
         dryRun: true, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
       }, context);
       const file = check.report.kind === 'budget_file' ? check.report.file : null;
-      writeMatches(converted.file, ((file?.matching as { matches?: BudgetFileMatch[] } | undefined)?.matches) ?? []);
+      const matches = check.report.kind === 'rows'
+        ? check.report.matches
+        : (file?.matching as { matches?: BudgetFileMatch[] } | undefined)?.matches;
+      writeMatches(converted.file, matches ?? []);
     }
     return { content: buildImportFile(converted.file, language), rows: converted.file.rows.length };
   }

@@ -253,9 +253,11 @@ function targetsOf(value: unknown): Record<string, BudgetFileLookalikeTarget> | 
  * The person's choices on a check, as a route or a card receives them (a JSON text or a list): the
  * matches they undo, whether the missing suppliers are created, and what becomes of the rows that look
  * like a stored line (one row, or all of them). Anything else is refused. 200 choices at most, all
- * kinds together.
+ * kinds together. Another import's card (lot I3 of 26.11.9) takes the matches undone only, in the
+ * columns `unmatchOnly` accepts.
  */
-export function parseBudgetFileChoices(raw: unknown): BudgetFileChoice[] {
+export function parseBudgetFileChoices(raw: unknown, options: { unmatchOnly?: (column: string) => boolean } = {}): BudgetFileChoice[] {
+  const undoable = options.unmatchOnly ?? isMatchedColumn;
   let value = raw;
   if (raw === undefined || raw === null || raw === '') return [];
   if (typeof raw === 'string') {
@@ -271,12 +273,13 @@ export function parseBudgetFileChoices(raw: unknown): BudgetFileChoice[] {
   for (const entry of value) {
     const item = entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {};
     if (item.kind === 'unmatch' && typeof item.column === 'string' && typeof item.value === 'string'
-      && isMatchedColumn(item.column) && item.value.trim() !== '' && item.value.length <= CHOICE_VALUE_MAX && item.column.length <= 120) {
+      && undoable(item.column) && item.value.trim() !== '' && item.value.length <= CHOICE_VALUE_MAX && item.column.length <= 120) {
       const key = `unmatch|${item.column}|${foldKey(item.value)}`;
       if (!seen.has(key)) choices.push({ kind: 'unmatch', column: item.column, value: item.value.trim() });
       seen.add(key);
       continue;
     }
+    if (options.unmatchOnly) throw new Error('The choices are not valid.');
     if (item.kind === 'create_suppliers' && typeof item.value === 'boolean') {
       if (!seen.has('create_suppliers')) choices.push({ kind: 'create_suppliers', value: item.value });
       seen.add('create_suppliers');

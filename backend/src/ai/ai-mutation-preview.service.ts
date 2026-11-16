@@ -1352,7 +1352,8 @@ export class AiMutationPreviewService {
 
   /**
    * The person's choices on an import card (lot I1 of 26.11.9: a match undone, the "Create missing
-   * suppliers" box): a new card of the same file and mapping with the choices, its check run again.
+   * suppliers" box; lot I3: a match undone on the card of any import): a new card of the same file
+   * and mapping with the choices, its check run again.
    * The card is locked as an approval locks it: a card approved, rejected or expired first, or
    * another person's, is refused; once replaced, the card no longer approves. The new card names the
    * card shown in the conversation (`replaces_preview_id`), which the conversation draws in its place.
@@ -1373,8 +1374,10 @@ export class AiMutationPreviewService {
       throw new NotFoundException('AI preview not found.');
     }
     const input = (preview.mutation_input ?? {}) as Record<string, unknown>;
-    if (input.entity_type !== 'budget_lines') {
-      throw new BadRequestException('Only the card of a budget file takes choices.');
+    // Another import's card takes the matches the person undoes (lot I3 of 26.11.9); the other choices are the budget file's.
+    const undoesOnly = choices.every((choice) => (choice as { kind?: unknown } | null)?.kind === 'unmatch');
+    if (input.entity_type !== 'budget_lines' && !undoesOnly) {
+      throw new BadRequestException('Only the card of a budget file takes these choices.');
     }
     if (preview.status !== 'pending' || preview.expires_at.getTime() < Date.now()) {
       throw new ConflictException('This card can no longer be changed: ask for a new one.');

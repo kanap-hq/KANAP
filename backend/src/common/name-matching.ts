@@ -155,3 +155,105 @@ export function listedMatches(matches: ReadonlyMap<string, ImportNameMatch> | un
   const all = [...(matches?.values() ?? [])];
   return all.length > 0 ? { matches: all.slice(0, MATCH_LIST_LIMIT), matchesTotal: all.length } : {};
 }
+
+/**
+ * Kad's proposals for an import (lot I3 of 26.11.9, second pass), by file column: a value of the file
+ * and the name of the existing record it stands for. The file keeps the person's value; the import
+ * accepts a proposal only when that record exists (its name exactly, or case aside) in a family the
+ * person reads, and lists it (`origin: 'model'`); otherwise it lists the refusal and the value follows
+ * its own rule.
+ */
+export type ImportProposals = Readonly<Record<string, Readonly<Record<string, string>>>>;
+
+/** A proposal of Kad the import did not accept. */
+export interface ImportRefusedProposal {
+  column: string;
+  /** The dimension's name for an `analytics:` column of the budget file; null otherwise. */
+  name: string | null;
+  /** The value as the file writes it. */
+  value: string;
+  /**
+   * The name Kad proposed (`missing`), or the record's own name (`disabled`, the budget file only).
+   * A family the person does not read is refused as missing: nothing of its list is named.
+   */
+  target: string;
+  /** `missing`: no such record the person reads; `disabled`: the record is disabled (the budget file). */
+  reason: 'missing' | 'disabled';
+  lines: number[];
+  count: number;
+}
+
+/** Kad's proposal for `value` in `column`: none when it names the value itself, case aside (no proposal to check). */
+export function proposalFor(proposals: ImportProposals | null | undefined, column: string, value: string): string | undefined {
+  const byValue = proposals?.[column];
+  if (!byValue) return undefined;
+  const key = foldKey(value);
+  for (const [from, to] of Object.entries(byValue)) {
+    const target = String(to ?? '').trim();
+    if (foldKey(from) === key && target !== '' && foldKey(target) !== key) return target;
+  }
+  return undefined;
+}
+
+/** Notes a refused proposal on `line`: one entry per column and value, with its lines (the first ones) and their count. */
+export function noteRefusedProposal(
+  refused: Map<string, ImportRefusedProposal>,
+  entry: Omit<ImportRefusedProposal, 'lines' | 'count'>,
+  line: number,
+): void {
+  const key = JSON.stringify([entry.column, entry.name, foldKey(entry.value)]);
+  const found = refused.get(key) ?? { ...entry, lines: [], count: 0 };
+  found.count += 1;
+  if (found.lines.length < MATCH_LINE_LIMIT && !found.lines.includes(line)) found.lines.push(line);
+  refused.set(key, found);
+}
+
+/** The proposals an import refused, for its result: the first `MATCH_LIST_LIMIT` and their total; nothing when none. */
+export function listedRefusedProposals(refused: ReadonlyMap<string, ImportRefusedProposal> | undefined): {
+  refusedProposals?: ImportRefusedProposal[];
+  refusedProposalsTotal?: number;
+} {
+  const all = [...(refused?.values() ?? [])];
+  return all.length > 0 ? { refusedProposals: all.slice(0, MATCH_LIST_LIMIT), refusedProposalsTotal: all.length } : {};
+}
+
+/** The matches and refused proposals of an import that reads its own lists. */
+export interface ImportMatchState {
+  matches: Map<string, ImportNameMatch>;
+  refused: Map<string, ImportRefusedProposal>;
+}
+
+/**
+ * Kad's proposal for a value of the file, for the imports that read their own lists (contracts, cost
+ * centers, business processes, a task's related object): the record of `rows` it names, exactly or case
+ * aside, when the person reads the family (`reads`) and has not undone the match; then listed as a
+ * match of origin `model`. Refused (listed as missing, under Kad's own words) otherwise. Undefined
+ * when there is no proposal to take or it was refused: the value then follows its own rule.
+ */
+export function takeProposal<T extends { name: string }>(
+  state: ImportMatchState,
+  args: {
+    proposals: ImportProposals | null | undefined;
+    unmatched: ReadonlyArray<{ column: string; value: string }> | null | undefined;
+    column: string;
+    value: string;
+    line: number;
+    rows: readonly T[];
+    reads: boolean;
+    caseBlind: boolean;
+    ref?: (row: T) => string | null;
+  },
+): T | undefined {
+  const proposal = proposalFor(args.proposals, args.column, args.value);
+  if (proposal === undefined || undoneMatch(args.unmatched, args.column, args.value)) return undefined;
+  const found = args.reads ? findRecordByName(args.rows, proposal, { beyondCase: false, caseBlind: args.caseBlind }) : null;
+  if (found?.kind === 'one') {
+    noteNameMatch(state.matches, {
+      column: args.column, name: null, value: args.value.trim(), target: found.row.name.trim(), ref: args.ref?.(found.row) ?? null,
+      origin: 'model', reason: 'model', undoable: true,
+    }, args.line);
+    return found.row;
+  }
+  noteRefusedProposal(state.refused, { column: args.column, name: null, value: args.value.trim(), target: proposal, reason: 'missing' }, args.line);
+  return undefined;
+}

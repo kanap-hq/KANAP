@@ -17,6 +17,8 @@ import { CALENDAR_MONTH_HEADERS, WORKING_DAY_PROFILE_CSV_HEADERS } from '../../w
 import { APPLICATION_LINK_CSV_HEADERS, ASSET_LINK_CSV_HEADERS } from '../../technologies/technology-links-csv.service';
 import { BUSINESS_PROCESS_TYPES } from '../../business-processes/business-process-tree';
 import { detailColumns, EXPORT_ONLY_COLUMNS } from '../../spend/budget-file/columns';
+import { isMatchedColumn, parseBudgetFileChoices } from '../../spend/budget-file/matching';
+import type { BudgetFileChoice } from '../../spend/budget-file/types';
 import { DEFAULT_ANALYTICS_AXIS_LABELS, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import type { AiImportColumnKind } from './ai-import-convert';
 import { defaultColumnTitle } from './ai-import-titles';
@@ -239,6 +241,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       ...owners('owner_email'),
       labels: { hint: 'labels separated by commas' },
       related_object_id: { hint: 'the id of the record the task belongs to' },
+      related_object_name: { kind: 'reference', hint: 'the record the task belongs to, of the type related_object_type names, by name (a contract also by CTR-n)' },
     }),
   },
   incidents: {
@@ -476,6 +479,40 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     } as Record<string, AiImportColumnSpec>)[column] ?? text(column)),
   },
 };
+
+const PORTFOLIO_MATCHED_COLUMNS = ['source_name', 'category_name', 'stream_name', 'company_name', 'department_name'] as const;
+
+/**
+ * The reference columns each import finds by name beyond case (lot I3 of 26.11.9): Kad's `values` for
+ * them are proposals the import checks (the file keeps the person's text), and a match there may be
+ * undone from the card (a choice `unmatch`). The budget file's are `isMatchedColumn`. The other
+ * reference columns (codes, references, e-mails, and the names the imports do not match yet) read
+ * Kad's `values` as before.
+ */
+export const AI_IMPORT_MATCHED_COLUMNS: Readonly<Partial<Record<AiImportKey, readonly string[]>>> = {
+  applications: ['supplier_name'],
+  portfolio_projects: PORTFOLIO_MATCHED_COLUMNS,
+  portfolio_requests: PORTFOLIO_MATCHED_COLUMNS,
+  tasks: ['phase_name', 'task_type_name', 'source_name', 'category_name', 'stream_name', 'company_name', 'related_object_name'],
+  contracts: ['company_name', 'supplier_name', 'cost_center'],
+  cost_centers: ['company_name'],
+  business_processes: ['parent_name'],
+};
+
+/** Whether the import `key` finds the column's names beyond case, takes Kad's proposals for it and lets a match be undone. */
+export function isImportMatchedColumn(key: string, column: string): boolean {
+  if (key === 'budget_lines') return isMatchedColumn(column);
+  return (AI_IMPORT_MATCHED_COLUMNS[key as AiImportKey] ?? []).includes(column);
+}
+
+/**
+ * The person's choices on the card of the import `key`: the budget file's choices, or for another
+ * import the matches undone in its matched columns only. Throws on anything else.
+ */
+export function parseImportChoices(key: string, raw: unknown): BudgetFileChoice[] {
+  if (key === 'budget_lines') return parseBudgetFileChoices(raw);
+  return parseBudgetFileChoices(raw, { unmatchOnly: (column) => isImportMatchedColumn(key, column) });
+}
 
 /** The column's title in the language, else the template's own header. */
 export function importColumnTitle(spec: AiImportColumnSpec, language: CsvLanguage): string {

@@ -577,6 +577,144 @@ async function testContractNamesBeyondCase(h: Harness, runner: QueryRunner, s: S
   console.log('  contracts: a company case aside and a supplier beyond accents, listed on the person\'s lines: OK');
 }
 
+// Lot I3 of 26.11.9, second pass: Kad's `values` for an application's supplier are proposals the
+// import checks. "Cegid P2" exists: accepted, listed as Kad's on the person's line; "Cegid SA P2" does
+// not: refused as missing, and the file's "CGD2" follows its own rule (nothing finds it). A person who
+// does not read the suppliers has every proposal refused as missing, naming nothing of the list.
+async function testSupplierProposals(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const [cegid] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Cegid P2') RETURNING id, item_number`, [s.tenantId]);
+  const file = attach(h, 'Editeurs.csv', ['Appli;Editeur', 'Zephyr P2;CGD', 'Boreas P2;CGD2'].join('\n'));
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'supplier_name', source: 2, confidence: 'high', values: { CGD: 'Cegid P2', CGD2: 'Cegid SA P2' } },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'applications', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual(check.report.matches, [{
+    column: 'supplier_name', name: null, value: 'CGD', target: 'Cegid P2', ref: `SUP-${cegid.item_number}`,
+    origin: 'model', reason: 'model', lines: [2], count: 1, undoable: true,
+  }]);
+  assert.deepEqual(check.report.refusedProposals, [
+    { column: 'supplier_name', name: null, value: 'CGD2', target: 'Cegid SA P2', reason: 'missing', lines: [3], count: 1 },
+  ]);
+  assert.equal(check.report.refusedProposalsTotal, 1);
+  assert.deepEqual(check.report.warnings.map((warning: any) => [warning.row, warning.column, warning.params?.value]), [[3, 'supplier_name', 'CGD2']]);
+  assert.match(check.report.warnings[0].code, /^CSV_REFERENCE_NOT_FOUND/);
+  const done = await h.previews.executePreview(admin, card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const apps = await runner.query(`SELECT name, supplier_id FROM applications WHERE tenant_id = $1 AND name LIKE '% P2' ORDER BY name`, [s.tenantId]);
+  assert.deepEqual(apps.map((app: any) => [app.name, app.supplier_id]), [['Boreas P2', null], ['Zephyr P2', cegid.id]]);
+
+  // Without the suppliers' module: refused as missing, under Kad's own words.
+  const role = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Apps P2', 'Apps P2')`, [s.tenantId]);
+  for (const [resource, level] of [['ai_chat', 'member'], ['applications', 'admin']]) {
+    await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, $4)`, [s.tenantId, role, resource, level]);
+  }
+  const user = await insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status, locale) VALUES ($1, $2, 'Apps', 'Tester', $3, 'enabled', 'en')`,
+    [s.tenantId, `apps-p2-${s.tenantId.slice(0, 8)}@example.test`, role]);
+  const conversation = randomUUID();
+  await runner.query(
+    `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+     VALUES ($1, $2, $3, 'AI import run integration', 'custom', 'import-model', 'custom', now(), now())`,
+    [conversation, s.tenantId, user],
+  );
+  const apps2 = { ...admin, userId: user, conversationId: conversation };
+  const blind = await h.previews.createPreview(apps2, 'prepare_import_mapping', {
+    attachment_id: attach(h, 'Editeurs.csv', ['Appli;Editeur', 'Notus P2;CGD'].join('\n')), entity_type: 'applications', columns,
+  });
+  const unread = blind.import_mapping.validation;
+  assert.equal(unread.report.matches, undefined);
+  assert.deepEqual(unread.report.refusedProposals, [
+    { column: 'supplier_name', name: null, value: 'CGD', target: 'Cegid P2', reason: 'missing', lines: [2], count: 1 },
+  ]);
+  console.log('  applications: Kad\'s supplier accepted when it exists, refused when missing or unread: OK');
+}
+
+// Lot I3 of 26.11.9, second pass: on a contracts card, the person undoes the match of a supplier
+// found without its accents, through the card's choice route. The next card no longer makes it, and
+// the supplier is unknown; a new card of the model for the same file keeps the choice. The route
+// refuses a choice of the budget file's, and a column the import does not match.
+async function testContractMatchUndoneByTheRoute(h: Harness, runner: QueryRunner, s: Seed) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const controller = h.app.get(AiImportFileController);
+  const admin = ctx(runner, s, 'admin');
+  await runner.query(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Fromage P2 SA', 'FR', 'Lyon')`, [s.tenantId]);
+  await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Société Générale P2')`, [s.tenantId]);
+  const file = attach(h, 'Contrats.csv', ['Contrat;Société;Fournisseur;Début', 'Hébergement P2;Fromage P2 SA;Societe Generale P2;2026-03-01'].join('\n'));
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'company_name', source: 2, confidence: 'high' },
+    { column: 'supplier_name', source: 3, confidence: 'high' },
+    { column: 'start_date', source: 4, confidence: 'high' },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns });
+  assert.deepEqual(card.import_mapping.validation.report.matches.map((match: any) => [match.value, match.target, match.origin, match.undoable]), [
+    ['Societe Generale P2', 'Société Générale P2', 'server', true],
+  ]);
+  const req = { user: { sub: s.users.admin }, headers: {} };
+  const tenant = { manager: runner.manager, tenantId: s.tenantId };
+  for (const choices of [[{ kind: 'create_suppliers', value: false }], [{ kind: 'unmatch', column: 'name', value: 'Hébergement P2' }]]) {
+    await assert.rejects(controller.choose(s.conversations.admin, card.preview_id, { choices }, req, tenant), /not valid/);
+  }
+  const undo = [{ kind: 'unmatch', column: 'supplier_name', value: 'Societe Generale P2' }];
+  const next = await controller.choose(s.conversations.admin, card.preview_id, { choices: undo }, req, tenant);
+  assert.equal(next.replaces_preview_id, card.preview_id);
+  const check = next.import_mapping.validation;
+  assert.equal(check.ok, false);
+  assert.equal(check.report.matches, undefined, 'the next card no longer makes the match');
+  assert.deepEqual(check.report.errors.map((error: any) => [error.row, error.column, error.code]), [[2, 'supplier_name', 'CSV_REFERENCE_NOT_FOUND']]);
+  // The model maps the same file again: the choice stays.
+  const again = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns });
+  assert.equal(again.import_mapping.validation.report.matches, undefined);
+  assert.deepEqual(again.import_mapping.validation.report.errors.map((error: any) => error.code), ['CSV_REFERENCE_NOT_FOUND']);
+  console.log('  contracts: a match undone through the card\'s route is gone from the next cards, the supplier unknown: OK');
+}
+
+// Lot I3 of 26.11.9, second pass: the imports that read their own lists check Kad's proposals too: a
+// business process's parent, a cost center's company, a task's related object (a contract of the
+// earlier tests) and a request's company (the shared resolver).
+async function testProposalsOfTheOtherImports(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const card = async (entity_type: string, csv: string[], columns: unknown[]) => (await h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: attach(h, `${entity_type}.csv`, csv.join('\n')), entity_type, columns,
+  })).import_mapping.validation;
+  const summary = (check: any) => ({
+    matches: (check.report.matches ?? []).map((match: any) => [match.column, match.value, match.target, match.origin]),
+    refused: (check.report.refusedProposals ?? []).map((entry: any) => [entry.column, entry.value, entry.target, entry.reason]),
+  });
+  const processes = await card('business_processes', ['Processus;Parent', 'Finance P2;', 'Clôture P2;FIN', 'Paie P2;RH'], [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'parent_name', source: 2, confidence: 'high', values: { FIN: 'finance p2', RH: 'Ressources humaines P2' } },
+  ]);
+  assert.deepEqual(summary(processes), {
+    matches: [['parent_name', 'FIN', 'Finance P2', 'model']],
+    refused: [['parent_name', 'RH', 'Ressources humaines P2', 'missing']],
+  });
+  const centers = await card('cost_centers', ['Code;Type;Nom;Société', 'CC-P2;cost_center;Centre P2;FPS'], [
+    { column: 'code', source: 1, confidence: 'high' },
+    { column: 'kind', source: 2, confidence: 'high' },
+    { column: 'name', source: 3, confidence: 'high' },
+    { column: 'company_name', source: 4, confidence: 'high', values: { FPS: 'Fromage P2 SA' } },
+  ]);
+  assert.equal(centers.ok, true, JSON.stringify(centers));
+  assert.deepEqual(summary(centers), { matches: [['company_name', 'FPS', 'Fromage P2 SA', 'model']], refused: [] });
+  const tasks = await card('tasks', ['Tâche;Type;Objet', 'Relancer P2;contract;MAINT'], [
+    { column: 'title', source: 1, confidence: 'high' },
+    { column: 'related_object_type', source: 2, confidence: 'high' },
+    { column: 'related_object_name', source: 3, confidence: 'high', values: { MAINT: 'maintenance i3' } },
+  ]);
+  assert.deepEqual(summary(tasks), { matches: [['related_object_name', 'MAINT', 'Maintenance I3', 'model']], refused: [] });
+  const requests = await card('portfolio_requests', ['Demande;Société', 'Portail P2;FPS'], [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'company_name', source: 2, confidence: 'high', values: { FPS: 'Fromage P2 SA' } },
+  ]);
+  assert.deepEqual(summary(requests), { matches: [['company_name', 'FPS', 'Fromage P2 SA', 'model']], refused: [] });
+  console.log('  processes, cost centers, tasks, requests: Kad\'s proposals checked against their lists: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -595,6 +733,9 @@ async function run() {
       await testSuppliers(harness, runner, s);
       await testSupplierNamesBeyondCase(harness, runner, s);
       await testContractNamesBeyondCase(harness, runner, s);
+      await testSupplierProposals(harness, runner, s);
+      await testContractMatchUndoneByTheRoute(harness, runner, s);
+      await testProposalsOfTheOtherImports(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

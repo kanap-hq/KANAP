@@ -26,7 +26,7 @@ import {
   CsvImportWarning,
 } from './csv-field.types';
 import { CsvResolverService } from './csv-resolver.service';
-import { listedMatches, noteNameMatch, undoneMatch } from '../name-matching';
+import { listedMatches, listedRefusedProposals, noteNameMatch, noteRefusedProposal, proposalFor, undoneMatch } from '../name-matching';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
 import { isRichTextContentRefusal } from '../markdown-limits';
@@ -192,6 +192,7 @@ export class CsvImportService {
       language: opts.language,
       access: opts.access,
       nameMatches: new Map(),
+      refusedProposals: new Map(),
     };
 
     // Full replace empties the cells of the columns the file holds, by the stored column's rules.
@@ -308,9 +309,12 @@ export class CsvImportService {
     };
   }
 
-  /** The names the import found beyond case, for the result: the first ones and their total; nothing when none. */
-  private matchesOf(context: CsvImportContext): Pick<CsvImportResult, 'matches' | 'matchesTotal'> {
-    return listedMatches(context.nameMatches);
+  /**
+   * The names the import found beyond case and Kad's proposals it refused, for the result: the first
+   * ones and their totals; nothing when none.
+   */
+  private matchesOf(context: CsvImportContext): Pick<CsvImportResult, 'matches' | 'matchesTotal' | 'refusedProposals' | 'refusedProposalsTotal'> {
+    return { ...listedMatches(context.nameMatches), ...listedRefusedProposals(context.refusedProposals) };
   }
 
   /**
@@ -1311,7 +1315,10 @@ export class CsvImportService {
   /**
    * The record a reference cell names (lot I3 of 26.11.9): by its name case aside, as before; beyond
    * (accents set aside, a shipped name in another language) when the person reads the family and has
-   * not undone that value (`params.unmatched`). A match beyond case is noted for the result.
+   * not undone that value (`params.unmatched`). A match beyond case is noted for the result. Kad's
+   * proposal for the value comes first (`params.proposals`): the record it names, exactly or case
+   * aside, in a family the person reads, is a match of origin model; otherwise the proposal is noted
+   * as refused, naming nothing of the family, and the cell is found by its own name.
    */
   private findReference(
     fkEntity: string,
@@ -1321,7 +1328,23 @@ export class CsvImportService {
     context: CsvImportContext,
   ): ReferenceLookup {
     const undone = undoneMatch(context.params.unmatched, column, value);
-    const beyondCase = !undone && this.resolver.matchesBeyondCase(fkEntity, context.access);
+    const reads = this.resolver.matchesBeyondCase(fkEntity, context.access);
+    const proposal = undone ? undefined : proposalFor(context.params.proposals, column, value);
+    if (proposal !== undefined) {
+      const target = reads ? this.resolver.resolveName(fkEntity, proposal, context.resolverCache, { beyondCase: false }) : null;
+      if (target?.kind === 'one') {
+        if (context.nameMatches) {
+          noteNameMatch(context.nameMatches, {
+            column, name: null, value: value.trim(), target: target.target, ref: target.ref, origin: 'model', reason: 'model', undoable: true,
+          }, row.rowNumber);
+        }
+        return { id: target.entry.id };
+      }
+      if (context.refusedProposals) {
+        noteRefusedProposal(context.refusedProposals, { column, name: null, value: value.trim(), target: proposal, reason: 'missing' }, row.rowNumber);
+      }
+    }
+    const beyondCase = !undone && reads;
     const found = this.resolver.resolveName(fkEntity, value, context.resolverCache, { beyondCase });
     if (found.kind === 'none') return null;
     if (found.kind === 'many') return { many: found.names };

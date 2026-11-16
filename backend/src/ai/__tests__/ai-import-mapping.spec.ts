@@ -39,7 +39,8 @@ import { aiRelationTargetRequirement, aiWriteLevel, aiWriteRequirements } from '
 import { PrepareImportMappingAiMutationOperation } from '../mutation/operations/prepare-import-mapping.ai-mutation-operation';
 import { AI_IMPORT_ACCESS, AI_IMPORT_KEYS, AI_IMPORT_RESOURCES, AiImportKey } from '../import/ai-import-access';
 import { AI_IMPORT_CODE_LISTS, BUDGET_NATURE_LABELS, LINE_USAGE_LABELS, RUN_BUILD_LABELS } from '../import/ai-import-code-labels';
-import { AI_IMPORT_TARGETS, STATUS_LABELS, importColumnTitle } from '../import/ai-import-targets';
+import { AI_IMPORT_MATCHED_COLUMNS, AI_IMPORT_TARGETS, STATUS_LABELS, importColumnTitle, parseImportChoices } from '../import/ai-import-targets';
+import { buildImportMapping } from '../import/ai-import-mapping';
 import { columnReader } from '../import/ai-import-convert';
 import { AiImportMappingService } from '../import/ai-import-mapping.service';
 import { AiImportRunnerService, budgetBilan, builtLineChoices, personLine, rowsBilan } from '../import/ai-import-runner.service';
@@ -856,7 +857,81 @@ function testBilanOnThePersonsLines() {
   assert.equal(file.errors[0].line, 3);
   assert.equal(file.errors[1].line, budget.issues[1].file_lines![0]);
   assert.equal(file.warnings.duplicates[0].line, 9);
+  // Lot I3 of 26.11.9: the matches and Kad's refused proposals of a row import, on the person's lines.
+  const named = rowsBilan({
+    ok: true, total: 3, inserted: 3,
+    matches: [{ column: 'supplier_name', name: null, value: 'CGD', target: 'Cegid', ref: 'SUP-2', origin: 'model', reason: 'model', lines: [2, 4], count: 2, undoable: true }],
+    refusedProposals: [{ column: 'supplier_name', name: null, value: 'CGD2', target: 'Cegid SA', reason: 'missing', lines: [3], count: 1 }],
+    refusedProposalsTotal: 1,
+  }, true, lines);
+  assert.deepEqual(named.report.kind === 'rows' && named.report.matches!.map((match) => match.lines), [[3, 9]]);
+  assert.deepEqual(named.report.kind === 'rows' && named.report.refusedProposals, [
+    { column: 'supplier_name', name: null, value: 'CGD2', target: 'Cegid SA', reason: 'missing', lines: [5], count: 1 },
+  ]);
+  assert.equal(named.report.kind === 'rows' && named.report.refusedProposalsTotal, 1);
   console.log('  bilan on the person\'s lines, tallied for the model: OK');
+}
+
+// Lot I3 of 26.11.9, second pass: Kad's `values` for a column its import finds by name are proposals
+// the import checks, and the file keeps the person's text; a fixed list, a catalog, a code reference
+// and the budget file read them as before.
+async function testNamesOfRecordsBecomeProposals() {
+  const grid = await readTableAttachment(Buffer.from(['Appli;Fournisseur;Etat', 'Atlas;CGD;En prod', 'Hermes;Inconnu;Retiré', 'Zephyr;Cegid;Actif'].join('\n'), 'utf8'));
+  const template = [
+    { column: 'name', title: 'Name', required: true, kind: 'text' as const },
+    { column: 'supplier_name', title: 'Supplier', required: false, kind: 'reference' as const },
+    { column: 'lifecycle', title: 'Lifecycle', required: false, kind: 'codes' as const, codes: ['active', 'retired'] },
+  ];
+  const { file } = buildImportMapping(grid, template, {
+    importKey: 'applications', filename: 'apps.csv', assumptions: [], columns: [
+      { column: 'name', source: 1, confidence: 'high' },
+      { column: 'supplier_name', source: 2, confidence: 'high', values: { CGD: 'Cegid', Inconnu: '' } },
+      { column: 'lifecycle', source: 3, confidence: 'high', values: { 'En prod': 'active', 'Retiré': 'retired', Actif: 'active' } },
+    ],
+  }, 'fr');
+  assert.deepEqual(file.rows, [['Atlas', 'CGD', 'active'], ['Hermes', '', 'retired'], ['Zephyr', 'Cegid', 'active']], 'the cell keeps the person\'s name; a list reads its values');
+  assert.deepEqual(file.proposals, { supplier_name: { CGD: 'Cegid' } });
+
+  // A reference by code (a server's site, LOC-n) reads the model's values as before.
+  const sites = await readTableAttachment(Buffer.from(['Serveur;Site', 'srv1;Paris DC'].join('\n'), 'utf8'));
+  const asset = buildImportMapping(sites, [
+    { column: 'name', title: 'Name', required: true, kind: 'text' },
+    { column: 'location_reference', title: 'Site', required: true, kind: 'reference' },
+  ], {
+    importKey: 'assets', filename: 'srv.csv', assumptions: [], columns: [
+      { column: 'name', source: 1, confidence: 'high' },
+      { column: 'location_reference', source: 2, confidence: 'high', values: { 'Paris DC': 'LOC-1' } },
+    ],
+  }, 'fr');
+  assert.deepEqual(asset.file.rows, [['srv1', 'LOC-1']]);
+  assert.equal(asset.file.proposals, undefined);
+
+  // Every column an import matches is a reference column of its template, and no family's own reference.
+  for (const [key, columns] of Object.entries(AI_IMPORT_MATCHED_COLUMNS)) {
+    const specs = await AI_IMPORT_TARGETS[key as AiImportKey].columns({} as any);
+    for (const column of columns!) {
+      const spec = specs.find((entry) => entry.column === column);
+      assert.equal(spec?.kind, 'reference', `${key}.${column}`);
+      assert.equal(spec?.prefix, undefined, `${key}.${column}`);
+    }
+  }
+
+  // The card of another import takes matches undone in those columns, and nothing else.
+  const undo = [{ kind: 'unmatch', column: 'supplier_name', value: 'Societe Generale' }];
+  assert.deepEqual(parseImportChoices('contracts', undo), undo);
+  assert.deepEqual(parseImportChoices('contracts', JSON.stringify(undo)), undo);
+  for (const refused of [
+    [{ kind: 'unmatch', column: 'name', value: 'x' }],
+    [{ kind: 'unmatch', column: 'owner_email', value: 'x' }],
+    [{ kind: 'create_suppliers', value: false }],
+    [{ kind: 'lookalikes', action: 'create' }],
+    Array.from({ length: 201 }, (_, index) => ({ kind: 'unmatch', column: 'supplier_name', value: `S${index}` })),
+  ]) {
+    assert.throws(() => parseImportChoices('contracts', refused), /not valid/, JSON.stringify(refused).slice(0, 80));
+  }
+  assert.throws(() => parseImportChoices('companies', undo), /not valid/, 'an import without names to match takes no choice');
+  assert.deepEqual(parseImportChoices('budget_lines', [{ kind: 'create_suppliers', value: false }]), [{ kind: 'create_suppliers', value: false }]);
+  console.log('  names of records become proposals, the other columns read the values; the cards take matches undone: OK');
 }
 
 function testLookalikesReachTheModel() {
@@ -1080,6 +1155,7 @@ async function run() {
     await testApprovalRunsTheImportAndTheModelSeesNoCell();
     await testARefusedFileIsNotImported();
     testBilanOnThePersonsLines();
+    await testNamesOfRecordsBecomeProposals();
     testLookalikesReachTheModel();
     testMatchingCountsReachTheModel();
     testApprovalFactsByNature();

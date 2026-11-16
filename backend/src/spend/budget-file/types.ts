@@ -1,6 +1,6 @@
 import { AmountMeasure, AMOUNT_MEASURES } from '../amounts-write.util';
 import { budgetLineReference, type BudgetNature } from '../budget-nature';
-import type { ImportNameMatch } from '../../common/name-matching';
+import type { ImportNameMatch, ImportRefusedProposal } from '../../common/name-matching';
 
 /**
  * The list a file is exported from or loaded on (`/spend-items/budget-file/*` or the CAPEX alias):
@@ -492,17 +492,8 @@ export { MATCH_LINE_LIMIT, MATCH_LIST_LIMIT } from '../../common/name-matching';
  */
 export type BudgetFileMatch = ImportNameMatch;
 
-/** A value Kad proposed that the check did not accept. */
-export interface BudgetFileRefusedProposal {
-  column: string;
-  name: string | null;
-  value: string;
-  target: string;
-  /** `missing`: no such value in the workspace's list; `disabled`: the value is disabled. */
-  reason: 'missing' | 'disabled';
-  lines: number[];
-  count: number;
-}
+/** A value Kad proposed that the check did not accept: the shape every import shares (lot I3 of 26.11.9). */
+export type BudgetFileRefusedProposal = ImportRefusedProposal;
 
 /** A value of the file nothing matched, and the closest values of the workspace's list. */
 export interface BudgetFileCandidates {

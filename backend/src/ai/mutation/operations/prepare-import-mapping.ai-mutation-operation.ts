@@ -16,9 +16,8 @@ import {
 } from '../../ai-write-texts';
 import { AI_IMPORT_KEYS, AI_IMPORT_RESOURCES, aiImportAccess } from '../../import/ai-import-access';
 import { AiImportMappingService, aiImportTarget, PrepareImportMappingInput } from '../../import/ai-import-mapping.service';
-import { AI_IMPORT_TARGETS } from '../../import/ai-import-targets';
+import { AI_IMPORT_TARGETS, parseImportChoices } from '../../import/ai-import-targets';
 import { LOOKALIKE_CHOICE_WORDS_RULE } from '../../import/ai-import-runner.service';
-import { parseBudgetFileChoices } from '../../../spend/budget-file/matching';
 import type { BudgetFileChoice } from '../../../spend/budget-file/types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview, AiPreviewExecutionRefusal } from '../ai-mutation-operation.types';
@@ -152,9 +151,10 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
   }
 
   /**
-   * The card of a mapping. A budget file's card carries the person's choices (`choices`, set by the
-   * choice route): a new mapping of the same file from the model keeps the choices of the file's last
-   * card that still apply, and its check tells the model which.
+   * The card of a mapping. A card carries the person's choices (`choices`, set by the choice route: a
+   * budget file's, or the matches undone of another import, lot I3 of 26.11.9): a new mapping of the
+   * same file from the model keeps the choices of the file's last card; a budget file's check tells
+   * the model which still apply.
    */
   async prepareCreatePreview(
     context: AiExecutionContextWithManager,
@@ -162,7 +162,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
   ): Promise<AiPreparedMutationPreview> {
     const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
     const budget = input.entity_type === 'budget_lines';
-    const choices = budget ? input.choices ?? await this.lastChoices(context, input.attachment_id) : undefined;
+    const choices = input.choices ?? await this.lastChoices(context, input.attachment_id, input.entity_type);
     const { target, mapping } = await this.mapping.prepareMapping(context, { ...input, choices }, language);
     return {
       // The import as the target type: the reservation of the import route is checked on it again at approval.
@@ -177,6 +177,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         // The choices the check followed: an undone match the file no longer makes is dropped. A check
         // that refused the file before reading its rows followed none: the choices are kept as received.
         ...(budget ? { choices: mapping.validation?.matching ? mapping.validation.matching.choices : choices ?? [] } : {}),
+        // Another import's matches undone, as received.
+        ...(!budget && choices.length > 0 ? { choices } : {}),
       },
       currentValues: { import_mapping: mapping },
     };
@@ -185,12 +187,12 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
   /**
    * The choices of the person's last card of this file in the conversation, whatever its state (a
    * card replaced by a choice is expired, and the card that replaced it holds the choices): none once
-   * that card was imported, the next import of the file starts afresh.
+   * that card was imported, or when it maps the file onto another import.
    */
-  private async lastChoices(context: AiExecutionContextWithManager, attachmentId: string): Promise<BudgetFileChoice[]> {
+  private async lastChoices(context: AiExecutionContextWithManager, attachmentId: string, key: string): Promise<BudgetFileChoice[]> {
     if (!context.conversationId) return [];
-    const [last]: Array<{ status: string; choices: unknown }> = await context.manager.query(
-      `SELECT status, mutation_input->'choices' AS choices
+    const [last]: Array<{ status: string; choices: unknown; entity_type: string | null }> = await context.manager.query(
+      `SELECT status, mutation_input->'choices' AS choices, mutation_input->>'entity_type' AS entity_type
          FROM ai_mutation_previews
         WHERE tenant_id = $1 AND conversation_id = $2 AND user_id = $3 AND tool_name = $4
           AND mutation_input->>'attachment_id' = $5
@@ -198,10 +200,11 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         LIMIT 1`,
       [context.tenantId, context.conversationId, context.userId, this.toolName, attachmentId],
     );
-    if (!last || last.status === 'executed') return [];
+    // A card of the file for another import: its choices are that import's.
+    if (!last || last.status === 'executed' || last.entity_type !== key) return [];
     try {
       // The targets the last card left out by default are that card's: a new mapping looks again.
-      return parseBudgetFileChoices(last.choices ?? []).filter((choice) => !(choice.kind === 'lookalikes' && choice.action === 'ignore'));
+      return parseImportChoices(key, last.choices ?? []).filter((choice) => !(choice.kind === 'lookalikes' && choice.action === 'ignore'));
     } catch {
       return [];
     }
