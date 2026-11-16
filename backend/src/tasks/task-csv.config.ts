@@ -444,6 +444,44 @@ async function anchorPhases(rows: CsvImportRow[], context: CsvImportContext): Pr
   }
 }
 
+/**
+ * A task a row moves to another project without a phase cell (a blank cell in merge mode, or no
+ * column): its stored phase is the old project's. The new project's phase of the same name, case
+ * aside, is taken, as the commit always did; otherwise the phase is cleared at the check and said
+ * (`CSV_REFERENCE_NOT_FOUND_CLEARED`, the stored phase's name), the rule of
+ * `clearKeptReferencesOfChangedOwners` (lot I3 of 26.11.9, fixes C). The load no longer fails on it.
+ */
+async function followPhasesOfMovedTasks(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+  const moved = rows
+    .filter((row) => row.errors.length === 0 && !skippedByOperation(row, context.params.operation) && row.existingEntity?.phase_id)
+    .filter((row) => !String(row.raw.phase_name ?? '').trim() && String(importedValue(row, 'phase_id') ?? '') === String(row.existingEntity.phase_id))
+    .map((row) => ({ row, projectId: importedProjectId(row) }))
+    .filter((entry): entry is { row: CsvImportRow; projectId: string } => !!entry.projectId && TASK_UUID_RE.test(entry.projectId)
+      && entry.projectId !== String(entry.row.existingEntity.related_object_id ?? '').toLowerCase());
+  if (moved.length === 0) return;
+  const phases: Array<{ id: string; name: string; project_id: string }> = await context.manager.query(
+    `SELECT id::text AS id, name, project_id::text AS project_id FROM portfolio_project_phases
+      WHERE tenant_id = $1 AND (id = ANY($2::uuid[]) OR project_id = ANY($3::uuid[]))`,
+    [context.tenantId, [...new Set(moved.map(({ row }) => String(row.existingEntity.phase_id)))], [...new Set(moved.map((entry) => entry.projectId))]],
+  );
+  const phaseById = new Map(phases.map((phase) => [phase.id.toLowerCase(), phase]));
+  for (const { row, projectId } of moved) {
+    const storedPhase = phaseById.get(String(row.existingEntity.phase_id).toLowerCase());
+    if (!storedPhase || storedPhase.project_id.toLowerCase() === projectId) continue;
+    const name = storedPhase.name.toLowerCase();
+    const same = phases.find((phase) => phase.project_id.toLowerCase() === projectId && phase.name.toLowerCase() === name);
+    row.parsed.phase_id = same?.id ?? null;
+    if (same) continue;
+    row.warnings.push({
+      row: row.rowNumber,
+      column: 'phase_name',
+      message: `portfolio_project_phases not found: "${storedPhase.name}" (set to null)`,
+      code: 'CSV_REFERENCE_NOT_FOUND_CLEARED',
+      params: { value: storedPhase.name },
+    });
+  }
+}
+
 /** The numbered e-mail columns of a task's people lists, and the stored list each one writes. */
 const PEOPLE_LISTS = [{ prefix: 'viewer_email', key: 'viewer_ids' }, { prefix: 'owner_email', key: 'owner_ids' }] as const;
 
@@ -1010,6 +1048,7 @@ export const taskCsvConfig: CsvEntityConfig = {
     keepObjectsOutsideAccess(rows, context.params.operation);
     await resolveRelatedObjects(rows, context);
     await anchorPhases(rows, context);
+    await followPhasesOfMovedTasks(rows, context);
     await importPeople(rows, context);
     const matched = rows
       .filter((row) => row.errors.length === 0 && row.existingEntity)
@@ -1044,6 +1083,9 @@ export const taskCsvConfig: CsvEntityConfig = {
       const stored = row.existingEntity;
       const next: Record<string, any> = { ...row.parsed };
       normalizeTaskCodes(next);
+      // A name is read at the check (`resolveRelatedObjects`): a name still there on a row that gives
+      // no id was not resolved, and is not proven equal. A row that gives the id keeps it, whatever its name.
+      if (next._related_object_name && !givesRelatedObjectId(row)) return false;
       const relatedId = next.related_object_id ?? stored.related_object_id;
       delete next._related_object_name;
 
@@ -1081,9 +1123,6 @@ export const taskCsvConfig: CsvEntityConfig = {
       // Skip if already has an ID or no name provided
       if (entity.related_object_id) {
         // Clean up temporary field
-      // A name is read at the check (`resolveRelatedObjects`): a name still there on a row that gives
-      // no id was not resolved, and is not proven equal. A row that gives the id keeps it, whatever its name.
-      if (next._related_object_name && !givesRelatedObjectId(row)) return false;
         delete entity._related_object_name;
         continue;
       }
