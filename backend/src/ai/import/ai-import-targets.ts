@@ -21,7 +21,7 @@ import { isMatchedColumn, parseBudgetFileChoices } from '../../spend/budget-file
 import type { BudgetFileChoice } from '../../spend/budget-file/types';
 import { DEFAULT_ANALYTICS_AXIS_LABELS, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import type { AiImportColumnKind } from './ai-import-convert';
-import { defaultColumnTitle } from './ai-import-titles';
+import { defaultColumnTitle, TASK_COLUMN_TITLES } from './ai-import-titles';
 import { AI_IMPORT_ACCESS, type AiImportAccess, type AiImportKey } from './ai-import-access';
 import {
   BILLING_FREQUENCY_LABELS,
@@ -241,13 +241,14 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     names: { en: 'Tasks', fr: 'Tâches', de: 'Aufgaben', es: 'Tareas' },
     ...AI_IMPORT_ACCESS.tasks,
     about: 'One row per task, matched to a stored one by its title.',
-    columns: () => fromCsvConfig(taskCsvConfig, {
+    // Its columns named as the import screen names them (`TASK_COLUMN_TITLES`).
+    columns: () => withTitles(fromCsvConfig(taskCsvConfig, {
       ...owners('viewer_email'),
       ...owners('owner_email'),
       labels: { hint: 'labels separated by commas' },
       related_object_id: { hint: 'the id of the record the task belongs to' },
       related_object_name: { kind: 'reference', hint: 'the record the task belongs to, of the type related_object_type names, by name (a contract also by CTR-n)' },
-    }),
+    }), TASK_COLUMN_TITLES),
   },
   incidents: {
     key: 'incidents',

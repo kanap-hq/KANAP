@@ -8,6 +8,7 @@ import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
 import { AiConversationsController } from '../ai-conversations.controller';
 import { PrepareImportMappingAiMutationOperation } from '../mutation/operations/prepare-import-mapping.ai-mutation-operation';
 import { IMPORT_LOAD_REFUSALS } from '../ai-write-texts';
+import { AI_IMPORT_TARGETS, importColumnTitle } from '../import/ai-import-targets';
 
 /**
  * The texts of Kad's import card (lot Q4 of 26.11.8). No cell of the file reaches the model
@@ -139,9 +140,35 @@ function loadRefusalsAreTheCardsWords() {
   console.log(`  ${Object.keys(IMPORT_LOAD_REFUSALS).length} refusals of a load, the card's words in the four languages: OK`);
 }
 
+/**
+ * The card names the columns of a task or an incident as the import screen does (lot I3 of 26.11.9,
+ * correctifs G): its title is the screen's label (`csv.fields.<import>.<column>` in `common.json`),
+ * in the four languages.
+ */
+async function taskAndIncidentColumnsAsTheImportScreenNamesThem() {
+  const gaps: string[] = [];
+  let compared = 0;
+  for (const language of LANGUAGES) {
+    const common = JSON.parse(fs.readFileSync(backendPath('..', 'frontend', 'src', 'locales', language, 'common.json'), 'utf8'));
+    for (const key of ['tasks', 'incidents'] as const) {
+      const screen = (common.csv?.fields?.[key] ?? {}) as Record<string, string>;
+      // Their columns come from the import's settings alone: no database read.
+      for (const spec of await AI_IMPORT_TARGETS[key].columns({} as any)) {
+        compared += 1;
+        const card = importColumnTitle(spec, language);
+        if (card !== screen[spec.column]) gaps.push(`${language} ${key}.${spec.column}: card "${card}", screen "${screen[spec.column]}"`);
+      }
+    }
+  }
+  assert.ok(compared > 100, `columns compared: ${compared}`);
+  assert.deepEqual(gaps, [], 'the card names the columns of tasks and incidents as the import screen does');
+  console.log(`  ${compared} column titles of tasks and incidents, as the import screen names them: OK`);
+}
+
 async function main() {
   phrasesInEveryLanguage();
   loadRefusalsAreTheCardsWords();
+  await taskAndIncidentColumnsAsTheImportScreenNamesThem();
   instructionsNameLinesAndColumnsNeverCodes();
   instructionsProposeExistingRecordsOnly();
   await screenLanguageWhenTheProfileHasNone();

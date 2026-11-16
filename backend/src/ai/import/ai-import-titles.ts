@@ -124,6 +124,30 @@ const NUMBERED_TITLES: Record<string, Titles> = {
   owner_email: { en: 'Owner e-mail', fr: 'E-mail responsable', de: 'E-Mail Verantwortlicher', es: 'Correo del responsable' },
 };
 
+const fourTitles = (column: string, title: (n: number) => Titles): Record<string, Titles> =>
+  Object.fromEntries([1, 2, 3, 4].map((n) => [`${column}_${n}`, title(n)]));
+
+/**
+ * The titles of the task import's columns that its import screen names otherwise than the titles
+ * above (`csv.fields.tasks` in the interface's `common.json`): Kad's card names a task's columns as
+ * the screen does (lot I3 of 26.11.9, correctifs G; checked by `ai-import-card-texts.spec.ts`).
+ */
+export const TASK_COLUMN_TITLES: Record<string, Titles> = {
+  related_object_type: { en: 'Related object type', fr: 'Type d’objet lié', de: 'Typ des verknüpften Objekts', es: 'Tipo de objeto relacionado' },
+  related_object_id: { en: 'Related object ID', fr: 'ID de l’objet lié', de: 'ID des verknüpften Objekts', es: 'ID del objeto relacionado' },
+  related_object_name: {
+    en: 'Related object name', fr: 'Nom de l’objet lié', de: 'Name des verknüpften Objekts', es: 'Nombre del objeto relacionado',
+  },
+  assignee_email: { en: 'Assignee email', fr: 'E-mail de l’assigné', de: 'E-Mail Zuständige/r', es: 'Correo del asignado' },
+  due_date: { en: 'Due date', fr: 'Échéance', de: 'Fälligkeitsdatum', es: 'Fecha de vencimiento' },
+  ...fourTitles('viewer_email', (n) => ({
+    en: `Viewer ${n} email`, fr: `E-mail de l’observateur ${n}`, de: `E-Mail Beobachter/in ${n}`, es: `Correo del observador ${n}`,
+  })),
+  ...fourTitles('owner_email', (n) => ({
+    en: `Owner ${n} email`, fr: `E-mail du responsable ${n}`, de: `E-Mail Verantwortliche/r ${n}`, es: `Correo del responsable ${n}`,
+  })),
+};
+
 /** Columns of one year (`headcount_2026`): the title, then the year. */
 const YEARLY_TITLES: Record<string, Titles> = {
   headcount: { en: 'Headcount', fr: 'Effectif', de: 'Mitarbeiter', es: 'Plantilla' },

@@ -150,7 +150,9 @@ async function testTemplatesAreTheColumnsTheImportsRead() {
   assert.equal(importColumnTitle(budget.find((column) => column.column === 'analytics:it_tower')!, 'fr'), 'IT tower');
   assert.equal(importColumnTitle(budget.find((column) => column.column === `landing_${year}`)!, 'fr'), `Atterrissage prévu ${year}`);
   const tasks = await AI_IMPORT_TARGETS.tasks.columns(ctx);
-  assert.equal(importColumnTitle(tasks.find((column) => column.column === 'viewer_email_2')!, 'de'), 'E-Mail Beobachter 2');
+  // A task's columns are named as its import screen names them (lot I3 of 26.11.9, correctifs G).
+  assert.equal(importColumnTitle(tasks.find((column) => column.column === 'viewer_email_2')!, 'de'), 'E-Mail Beobachter/in 2');
+  assert.equal(importColumnTitle(tasks.find((column) => column.column === 'related_object_name')!, 'fr'), 'Nom de l’objet lié');
   const calendars = await AI_IMPORT_TARGETS.working_day_calendars.columns(ctx);
   assert.equal(importColumnTitle(calendars.find((column) => column.column === 'aug')!, 'fr'), 'Août');
   // The identity columns stay out: an application's reference is export-only. The companies and the
