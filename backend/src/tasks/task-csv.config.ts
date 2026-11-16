@@ -288,8 +288,8 @@ function importedValue(row: CsvImportRow, key: string): any {
  * family. A match beyond case is listed; a name nothing finds, or several, refuses the row. A row
  * whose task keeps or takes an object by its id is left as it is; the commit resolves nothing more.
  * Kad's proposal for a name comes first: the record it names, exactly or case aside (a contract also
- * by its reference), in a family the person reads, is a match of origin model; otherwise the proposal
- * is listed as refused and the name is found by its own rule.
+ * by its reference, an incident by its `INC-n`), in a family the person reads, is a match of origin
+ * model; otherwise the proposal is listed as refused and the name is found by its own rule.
  */
 async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const byType = new Map<string, CsvImportRow[]>();
@@ -310,7 +310,7 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
       ? undefined
       : proposalFor(context.params.proposals, 'related_object_name', name));
     const proposals = [...new Set(names.map(proposalOf).filter((proposal): proposal is string => proposal !== undefined))];
-    const module = RELATED_OBJECT_TABLES[type]?.module;
+    const module = RELATED_OBJECT_TABLES[type]?.module ?? RELATED_OBJECT_TABLES[type]?.reader;
     const reads = !!module && !!context.access && hasLevel(context.access, module, 'reader');
     const proposed = proposals.length > 0 && reads ? await relatedObjectsByName(context.manager, context.tenantId, type, proposals) : null;
     for (const row of typeRows) {
