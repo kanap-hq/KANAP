@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { EntityManager } from 'typeorm';
-import { accentFreeKey, similarity } from '../common/name-matching';
+import { accentFreeKey, trigramSimilarity, trigrams } from '../common/name-matching';
 import {
   IMPORT_LOOKALIKE_LIST_LIMIT,
   type ImportLookalike,
@@ -80,6 +80,8 @@ export class ApplicationIndex {
   private readonly bySupplier = new Map<string, StoredApplication[]>();
   private readonly byEditor = new Map<string, StoredApplication[]>();
   private readonly byId = new Map<string, StoredApplication>();
+  /** Each name's trigrams, taken once (`similarity` would take them again for every row). */
+  private readonly grams = new Map<StoredApplication, Set<string>>();
 
   constructor(apps: readonly StoredApplication[]) {
     const sorted = [...apps].sort((a, b) => numberOf(a) - numberOf(b) || a.id.localeCompare(b.id));
@@ -103,8 +105,14 @@ export class ApplicationIndex {
       ...(this.byEditor.get(accentFreeKey(row.editor ?? '')) ?? []),
     ]);
     let best: { app: StoredApplication; score: number } | null = null;
+    const grams = trigrams(row.name);
     for (const app of candidates) {
-      const score = similarity(row.name, app.name);
+      let stored = this.grams.get(app);
+      if (!stored) this.grams.set(app, (stored = trigrams(app.name)));
+      // Shared trigrams over all of them: below the threshold whenever one name has too few for the other.
+      const [few, many] = grams.size < stored.size ? [grams.size, stored.size] : [stored.size, grams.size];
+      if (few < CLOSE_NAME_THRESHOLD * many) continue;
+      const score = trigramSimilarity(grams, stored);
       if (score < CLOSE_NAME_THRESHOLD) continue;
       if (!best || score > best.score || (score === best.score && numberOf(app) < numberOf(best.app))) best = { app, score };
     }

@@ -26,7 +26,7 @@ export function nameWords(value: string): string[] {
 }
 
 /** The trigrams of a text, as pg_trgm takes them: per word, lower case and accents aside, padded with two spaces before and one after. */
-function trigrams(value: string): Set<string> {
+export function trigrams(value: string): Set<string> {
   const grams = new Set<string>();
   for (const word of nameWords(value)) {
     const padded = `  ${word} `;
@@ -37,8 +37,11 @@ function trigrams(value: string): Set<string> {
 
 /** pg_trgm's similarity of two texts: shared trigrams over all trigrams, 0 to 1 (lot I2 of 26.11.9; common since lot I3). */
 export function similarity(a: string, b: string): number {
-  const left = trigrams(a);
-  const right = trigrams(b);
+  return trigramSimilarity(trigrams(a), trigrams(b));
+}
+
+/** `similarity` of two texts' trigrams (`trigrams`), for a caller that compares one text with many: each text's trigrams taken once. */
+export function trigramSimilarity(left: ReadonlySet<string>, right: ReadonlySet<string>): number {
   if (left.size === 0 || right.size === 0) return 0;
   let shared = 0;
   for (const gram of left) if (right.has(gram)) shared += 1;
