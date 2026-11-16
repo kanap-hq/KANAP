@@ -1632,6 +1632,9 @@ export class CsvImportService {
   ): Promise<void> {
     const repo = context.manager.getRepository(config.tableName);
     const entitiesToSave: any[] = [];
+    // The record each written row saves, for its relation handlers: rows the import does not write
+    // (unchanged, or left out by the operation) have none.
+    const written: Array<{ row: CsvImportRow; entity: any }> = [];
     const persistedRows: Array<{
       action: 'create' | 'update';
       before: any | null;
@@ -1671,6 +1674,7 @@ export class CsvImportService {
       }
 
       entitiesToSave.push(entity);
+      written.push({ row, entity });
       persistedRows.push({
         action: row.isInsert ? 'create' : 'update',
         before: row.isInsert ? null : row.existingEntity ?? null,
@@ -1691,19 +1695,8 @@ export class CsvImportService {
     // Handle relation handlers
     if (config.relationHandlers) {
       for (const handler of config.relationHandlers) {
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          if (row.errors.length > 0) continue;
-
-          const entity = entitiesToSave.find(
-            (e) =>
-              (row.existingEntity && e.id === row.existingEntity.id) ||
-              (!row.existingEntity && e === entitiesToSave[i]),
-          );
-
-          if (entity) {
-            await handler.importHandler(entity, row.raw, context);
-          }
+        for (const { row, entity } of written) {
+          await handler.importHandler(entity, row.raw, context);
         }
       }
     }
