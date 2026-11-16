@@ -177,6 +177,8 @@
   "CSV_NAME_AMBIGUOUS": "Plusieurs enregistrements portent le nom « {{value}} ».",
   "CSV_LOOKALIKE_CHANGED": "{{ref}} a changé depuis la vérification.",
   "CSV_LOOKALIKE_SAME_RECORD": "Ressemble à {{ref}}, déjà mise à jour par la ligne {{other}}. Écartée.",
+  "CSV_LOOKALIKE_GONE": "L'application choisie à la vérification n'existe plus.",
+  "CSV_LOOKALIKE_NAME_FOUND": "{{ref}} a pris ce nom après la vérification.",
   "CSV_NAME_AMBIGUOUS_AMONG": "« {{value}} » peut désigner plusieurs enregistrements : {{names}}.",
   "CSV_LINK_DUPLICATE": "Ce lien figure déjà à la ligne {{firstRow}}.",
   "CSV_TECHNOLOGY_REQUIRED": "Indiquez la technologie par sa référence (TEC-n) ou par son nom.",

@@ -203,14 +203,16 @@ export class CsvImportService {
     // Phase 1: Validate and parse all rows
     const parsedRows = await this.validateAndParseRows(config, rows, importFields, context, replace);
 
+    // Duplicate upsert keys within the file, as the file gives them: the rows the config left out
+    // count too, and a config's hooks may not change a row's key after (the applications' "Update
+    // APP-n" keeps the stored name).
+    const duplicateErrors = this.checkDuplicateKeys(config, parsedRows);
+
     // The rows the config left out (`settleRows`) are neither read nor written.
     const readRows = parsedRows.filter((row) => !row.leftOut);
     if (config.afterValidate) await config.afterValidate(readRows, context);
     if (replace) this.checkEmptiedColumns(readRows, replace, params.operation);
     else this.clearKeptReferencesOfChangedOwners(readRows, importFields);
-
-    // Check for duplicate upsert keys within the file
-    const duplicateErrors = this.checkDuplicateKeys(config, readRows);
 
     // Collect all errors
     const allErrors: CsvImportError[] = [];
@@ -569,7 +571,10 @@ export class CsvImportService {
       const rowNumber = i + 2; // 1-based, accounting for header
       const settle = settled?.[i];
       if (settle?.leaveOut) {
-        parsedRows.push({ rowNumber, raw, parsed: {}, isInsert: true, leftOut: true, errors: [], warnings: settle.warnings ?? [] });
+        // Only its key is read, for the file's duplicates.
+        const keyed: CsvImportRow = { rowNumber, raw, parsed: {}, isInsert: true, errors: [], warnings: [] };
+        for (const field of importFields) if (config.upsertKey.includes(field.entityProperty)) await this.parseField(field, raw, keyed, context, replace);
+        parsedRows.push({ rowNumber, raw, parsed: keyed.parsed, isInsert: true, leftOut: true, errors: [], warnings: settle.warnings ?? [] });
         continue;
       }
 
@@ -1720,7 +1725,7 @@ export class CsvImportService {
 
     // Call afterCommit hook
     if (config.afterCommit) {
-      await config.afterCommit(entitiesToSave, context);
+      await config.afterCommit(entitiesToSave, context, written);
     }
   }
 

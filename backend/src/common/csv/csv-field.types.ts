@@ -168,8 +168,8 @@ export interface CsvEntityConfig {
   sameAsStored?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<boolean[]>;
   /** Hook called before import commit */
   beforeCommit?: (entities: any[], context: CsvImportContext) => Promise<void>;
-  /** Hook called after import commit */
-  afterCommit?: (entities: any[], context: CsvImportContext) => Promise<void>;
+  /** Hook called after import commit, with each written row and the entity it saved (`id` set). */
+  afterCommit?: (entities: any[], context: CsvImportContext, written?: Array<{ row: CsvImportRow; entity: any }>) => Promise<void>;
 }
 
 /** What `settleRows` makes of a row: left out, or the record it updates (null to create one). */
@@ -406,7 +406,8 @@ export interface CsvImportRow {
   unchanged?: boolean;
   /**
    * A row the config left out (`settleRows`, a row that looks like a stored record): not read, not
-   * written, no error; counted as skipped. It carries only the config's own warnings.
+   * written, no error of its own; counted as skipped. It carries only the config's own warnings, and
+   * its key (`parsed`), which counts in the file's duplicates.
    */
   leftOut?: boolean;
   /** Row-level errors */

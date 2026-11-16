@@ -34,20 +34,34 @@ export interface StoredApplication {
   editor: string | null;
   /** `updated_at` as PostgreSQL writes it, to the microsecond. */
   updated_at: string;
+  /** Its owners (`owner_type:user_id`) and data residency (country codes), in order: written apart from its row. */
+  owners: string | null;
+  residency: string | null;
 }
 
-/** The applications of the workspace, in one query. */
-export async function storedApplications(manager: EntityManager, tenantId: string): Promise<StoredApplication[]> {
+/**
+ * The applications of the workspace (or those of `ids`), in one query, with what an update may write
+ * apart from their row: their owners and data residency.
+ */
+export async function storedApplications(manager: EntityManager, tenantId: string, ids?: readonly string[]): Promise<StoredApplication[]> {
   return manager.query(
-    `SELECT id::text AS id, sequential_id, name, supplier_id::text AS supplier_id, editor, updated_at::text AS updated_at
-       FROM applications WHERE tenant_id = $1`,
-    [tenantId],
+    `SELECT a.id::text AS id, a.sequential_id, a.name, a.supplier_id::text AS supplier_id, a.editor, a.updated_at::text AS updated_at,
+            (SELECT string_agg(o.owner_type || ':' || o.user_id::text, ',' ORDER BY o.owner_type, o.user_id)
+               FROM application_owners o WHERE o.tenant_id = a.tenant_id AND o.application_id = a.id) AS owners,
+            (SELECT string_agg(upper(btrim(r.country_iso)), ',' ORDER BY upper(btrim(r.country_iso)))
+               FROM application_data_residency r WHERE r.tenant_id = a.tenant_id AND r.application_id = a.id) AS residency
+       FROM applications a
+      WHERE a.tenant_id = $1${ids ? ' AND a.id = ANY($2::uuid[])' : ''}`,
+    ids ? [tenantId, ids] : [tenantId],
   );
 }
 
-/** An application's state: any write to it changes `updated_at`, so the state. 16 hexadecimal characters, as a budget line's. */
-export function applicationState(app: Pick<StoredApplication, 'id' | 'updated_at'>): string {
-  return createHash('sha256').update(`${app.id}|${app.updated_at}`).digest('hex').slice(0, 16);
+/**
+ * An application's state: its row (any write to it changes `updated_at`), its owners and its data
+ * residency, which an update writes too. 16 hexadecimal characters, as a budget line's.
+ */
+export function applicationState(app: Pick<StoredApplication, 'id' | 'updated_at' | 'owners' | 'residency'>): string {
+  return createHash('sha256').update(`${app.id}|${app.updated_at}|${app.owners ?? ''}|${app.residency ?? ''}`).digest('hex').slice(0, 16);
 }
 
 /** The number of `APP-n`, for the order of the references; an application without one comes last. */
@@ -127,6 +141,7 @@ export class ApplicationIndex {
 /** A row of the file as the decision reads it: its line, its keys, and the application its name or id already finds. */
 export interface LookalikeRow {
   line: number;
+  /** Its name, supplier and publisher; null for a row without a name. For a row its name or id finds, its name alone counts. */
   keys: ApplicationRowKeys | null;
   /** The application the row updates by its id or name (the uniqueness rule), or null when it would create one. */
   foundId: string | null;
@@ -145,8 +160,10 @@ export interface LookalikeDecision {
   updatable: boolean;
   /** The application's state now (empty when it is gone). */
   state: string;
-  /** For an update: whether the application changed since the state the choice carries. */
-  stale?: boolean;
+  /** For an update: the state of the check the choice was made on, when it carries one. */
+  expected?: string;
+  /** "Update APP-n" chosen on a check while APP-n was there, and APP-n gone since: the row is refused. */
+  gone?: boolean;
   /** An update left out because another row of the file already updates that application: that row's line. */
   claimedBy?: number;
 }
@@ -156,32 +173,54 @@ export interface LookalikeDecision {
  * out unless the person chose otherwise (P2), the choice for the row winning over the choice for all
  * rows. As the budget file (`decideLookalikes`, lot I2): a row keeps the target of the check the person
  * chose on (an update's `id` with its `state`, or the `targets` of the choice for all rows) even when it
- * no longer looks like it; an update is then refused when the application changed, and a row left out
- * stays left out. A choice that no longer applies (`updatable` false, or the application gone) falls back
- * to leaving the row out, and so does a second row that would update an application the file already
- * updates. `followed`: the choices the import followed, for the load to send back.
+ * no longer looks like it, and follows the choice made on it (T-I3j, review 3):
+ * - an update is refused when the application changed since (`expected`, compared by the caller once
+ *   the application is locked) or is gone (`gone`);
+ * - a row the check listed whose name (or id) now finds an application is refused (`nameFound`), unless
+ *   it is the update of that very application: it never updates another one;
+ * - a row left out stays left out, a row created anyway is created.
+ * A choice that no longer applies (`updatable` false, a target gone after a check that showed it there)
+ * falls back to leaving the row out, and so does a second row that would update an application the file
+ * already updates. `followed`: the choices the import followed, for the load to send back; a refused
+ * row's are dropped, so that checking again shows its new situation.
  */
 export function decideLookalikes(
   rows: readonly LookalikeRow[],
   index: ApplicationIndex,
   choices: readonly ImportLookalikeChoice[],
   options: { updatable: boolean },
-): { decisions: Map<number, LookalikeDecision>; followed: ImportLookalikeChoice[] } {
+): { decisions: Map<number, LookalikeDecision>; followed: ImportLookalikeChoice[]; nameFound: Map<number, StoredApplication> } {
   const decisions = new Map<number, LookalikeDecision>();
+  const nameFound = new Map<number, StoredApplication>();
   const perRow = new Map<number, Extract<ImportLookalikeChoice, { kind: 'lookalike' }>>();
   for (const choice of choices) if (choice.kind === 'lookalike' && !perRow.has(choice.line)) perRow.set(choice.line, choice);
   const all = choices.find((choice): choice is Extract<ImportLookalikeChoice, { kind: 'lookalikes' }> => choice.kind === 'lookalikes');
   const memory = all?.targets;
   const followed: ImportLookalikeChoice[] = [];
   const kept: Record<string, ImportLookalikeTarget> = {};
+  // A choice made on a check: an update with the state it showed, or a row whose target the check kept.
+  const checked = (row: LookalikeRow) => {
+    const chosen = perRow.get(row.line);
+    return (chosen?.action === 'update' && chosen.state !== undefined) || memory?.[String(row.line)] !== undefined;
+  };
   // The applications the file updates by their id or name, and the row that updates each.
   const claimed = new Map<string, number>();
-  for (const row of rows) if (row.foundId && !claimed.has(row.foundId)) claimed.set(row.foundId, row.line);
+  for (const row of rows) if (row.foundId && !checked(row) && !claimed.has(row.foundId)) claimed.set(row.foundId, row.line);
   for (const row of rows) {
-    if (row.foundId || !row.keys) continue;
-    const found = index.find(row.keys);
+    if (!row.keys) continue;
     const chosen = perRow.get(row.line);
     const remembered = memory?.[String(row.line)];
+    if (row.foundId) {
+      if (!checked(row)) continue;
+      // Listed at the check, the row's name now finds an application: refused, unless the person chose
+      // to update that very application, whose state then decides.
+      if (!(chosen?.action === 'update' && chosen.state !== undefined && chosen.id === row.foundId)) {
+        const app = index.get(row.foundId);
+        if (app) nameFound.set(row.line, app);
+        continue;
+      }
+    }
+    const found = row.foundId ? null : index.find(row.keys);
     const pinned = chosen?.action === 'update' && (chosen.state !== undefined || chosen.id === found?.app.id)
       ? chosen.id
       : remembered?.id;
@@ -195,6 +234,7 @@ export function decideLookalikes(
     let expected: string | undefined;
     let follow: ImportLookalikeChoice | null = null;
     let claimedBy: number | undefined;
+    let gone = false;
     if (chosen) {
       if (chosen.action !== 'update') {
         action = chosen.action;
@@ -203,13 +243,13 @@ export function decideLookalikes(
         action = 'update';
         expected = chosen.state;
         follow = { ...chosen, state: chosen.state ?? state };
-      }
+      } else gone = !app && options.updatable && chosen.id === id && chosen.state !== undefined;
     } else if (all?.action === 'create') {
       action = 'create';
     } else if (all?.action === 'update' && updatable && (!memory || remembered)) {
       action = 'update';
       expected = remembered?.state;
-    }
+    } else gone = all?.action === 'update' && !app && options.updatable && !!remembered?.state;
     if (action === 'update') {
       const other = claimed.get(id);
       if (other !== undefined) {
@@ -220,7 +260,9 @@ export function decideLookalikes(
       } else claimed.set(id, row.line);
     }
     if (follow) followed.push(follow);
-    if (remembered || all?.action !== 'update' || action === 'update') kept[String(row.line)] = remembered ?? { id, state };
+    // A target gone is kept with an empty state: checking again leaves the row out, as the check shows it.
+    if (gone) kept[String(row.line)] = { id, state: '' };
+    else if (remembered || all?.action !== 'update' || action === 'update') kept[String(row.line)] = remembered ?? { id, state };
     decisions.set(row.line, {
       line: row.line,
       name: row.keys.name,
@@ -230,14 +272,15 @@ export function decideLookalikes(
       action,
       updatable,
       state,
-      ...(action === 'update' ? { stale: expected !== undefined && expected !== state } : {}),
+      ...(expected !== undefined ? { expected } : {}),
+      ...(gone ? { gone } : {}),
       ...(claimedBy !== undefined ? { claimedBy } : {}),
     });
   }
   // The choice for all rows, with the target of every row it covers: what the person saw. Given back
   // even when they chose nothing (`ignore`), so that the load and the card's approval keep it.
   if (Object.keys(kept).length > 0) followed.push({ kind: 'lookalikes', action: all?.action ?? 'ignore', targets: kept });
-  return { decisions, followed };
+  return { decisions, followed, nameFound };
 }
 
 /** A decision as the result lists it. */

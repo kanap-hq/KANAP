@@ -177,6 +177,8 @@
   "CSV_NAME_AMBIGUOUS": "Several records are named \"{{value}}\".",
   "CSV_LOOKALIKE_CHANGED": "{{ref}} changed since the check.",
   "CSV_LOOKALIKE_SAME_RECORD": "Looks like {{ref}}, already updated by line {{other}}. Left out.",
+  "CSV_LOOKALIKE_GONE": "The application chosen at the check no longer exists.",
+  "CSV_LOOKALIKE_NAME_FOUND": "{{ref}} took this name after the check.",
   "CSV_NAME_AMBIGUOUS_AMONG": "\"{{value}}\" may designate several records: {{names}}.",
   "CSV_LINK_DUPLICATE": "This link is already on row {{firstRow}}.",
   "CSV_TECHNOLOGY_REQUIRED": "Name the technology by its reference (TEC-n) or its name.",

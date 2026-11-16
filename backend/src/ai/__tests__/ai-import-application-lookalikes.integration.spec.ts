@@ -185,6 +185,31 @@ async function testNothingToImportStaysPendingThenUpdate(h: Harness, runner: Que
 }
 
 /**
+ * Review 3, C2: "Update APP-n" chosen on the card, APP-n deleted before the approval: the approval fails
+ * with the refusal of the row, the card is not executed, and nothing is imported.
+ */
+async function testTargetGoneBeforeTheApproval(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s);
+  const attachment = randomUUID();
+  const { writeXlsx } = require('../../common/xlsx');
+  h.files.set(attachment, {
+    name: 'Applications.xlsx',
+    buffer: writeXlsx({ language: 'fr', sheets: [{ name: 'Applications', header: 'plain', headers: ['Nom', 'Éditeur', 'Description'], rows: [['Comptabilite', 'Cegid', null], ['Atlas', null, null]] }] }),
+  });
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'applications', columns: COLUMNS });
+  const target = card.import_mapping.validation.report.lookalikes.lines[0].target;
+  const update = await h.previews.replaceImportChoices(admin, card.preview_id, [{ kind: 'lookalike', line: 2, action: 'update', id: target.id, state: target.state }]);
+  assert.equal(update.import_mapping.validation.report.lookalikes.lines[0].outcome, 'updated');
+  await runner.query(`DELETE FROM applications WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.compta.id]);
+  const failed = await h.previews.executePreview(admin, update.preview_id);
+  assert.equal(failed.status, 'failed', 'the approval fails, the card is not executed');
+  // The card keeps what the load refused: the row, and why.
+  const [kept] = await runner.query(`SELECT current_values->'import_mapping'->'result' AS result FROM ai_mutation_previews WHERE id = $1`, [update.preview_id]);
+  assert.deepEqual((kept.result?.issues ?? []).map((issue: any) => [issue.level, issue.code, issue.file_lines]), [['error', 'CSV_LOOKALIKE_GONE', [2]]], JSON.stringify(kept.result));
+  assert.deepEqual(await names(runner, s), [], 'nothing imported, Atlas neither');
+}
+
+/**
  * The card as the screen sends it (fusion of passes 3a and 3b): every row left out, "Approve" refused
  * and the card pending; "Create anyway" sends the card's own `choices` with that row's replaced, read
  * by the choice route; the new card replaces the old one and its approval creates the row.
@@ -252,6 +277,7 @@ async function run() {
     await inTenant(harness, testLeftOutThenCreatedAnyway);
     await inTenant(harness, testNothingToImportStaysPendingThenUpdate);
     await inTenant(harness, testAllLeftOutThenCreateAnywayFromTheCardChoices);
+    await inTenant(harness, testTargetGoneBeforeTheApproval);
   } finally {
     await harness.app.close();
   }
