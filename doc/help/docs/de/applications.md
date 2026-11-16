@@ -722,6 +722,27 @@ Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der A
 
 Eine über ihre `id` gefundene Zeile mit einem anderen Namen benennt die Anwendung um. Der neue Name muss frei sein. Der Titel des Beschreibungsdokuments der Anwendung folgt dem neuen Namen.
 
+**Hersteller und Lieferant**: Eine Zeile mit einem Hersteller (`editor`) und ohne Lieferant wird mit dem Lieferanten dieses Namens verknüpft, sofern es ihn gibt. Die Prüfung listet diese Zuordnung mit den anderen zugeordneten Werten auf, und **Rückgängig** entfernt sie. Im Modus `Anreichern` behält eine Anwendung, die bereits einen Lieferanten hat, diesen. Der Hersteller bleibt so, wie er geschrieben ist. Ohne das Recht, Lieferanten zu lesen, verknüpft der Hersteller keinen Lieferanten.
+
+### Zeilen, die einer bestehenden Anwendung ähneln { #lookalike-applications }
+
+Eine Zeile, die eine Anwendung anlegen würde, wird standardmäßig ausgelassen, wenn sie einer bestehenden Anwendung ähnelt. So wird eine Anwendung nicht zweimal unter einem leicht abweichenden Namen angelegt. Eine Zeile ähnelt einer Anwendung in zwei Fällen:
+
+- gleicher Name bis auf Akzente: `Gestion des depenses` und `Gestion des dépenses`
+- ein ähnlicher Name mit demselben Lieferanten oder demselben Hersteller
+
+Eine Zeile, die eine Anwendung über ihren Namen findet, aktualisiert sie weiterhin wie bisher. Die Zeilen derselben Datei werden nicht miteinander verglichen.
+
+Die Prüfung listet diese Zeilen unter **Ähnelt einer bestehenden Anwendung** auf, mit der Anwendung, der jede ähnelt. Zeigen Sie auf eine Zeile, um zu sehen, warum sie gefunden wurde. Wählen Sie für jede Zeile:
+
+- **Auslassen**: Die Zeile wird nicht importiert. Das ist die Voreinstellung.
+- **Trotzdem anlegen**: Die Zeile wird zu einer neuen Anwendung.
+- **APP-12 aktualisieren**: Die Zeile aktualisiert die Anwendung, der sie ähnelt, im Modus des Imports, einschließlich Verantwortlichen und Datenresidenz. Die Anwendung behält ihren Namen. Zeigen Sie auf die Zeile, um die Spalten zu sehen, die sich ändern. „An APP-12 ändert sich nichts“ bedeutet, dass die Datei keinen ihrer Werte ändert.
+
+**Alle trotzdem anlegen**, **Alle aktualisieren** und **Alle auslassen** über der Liste gelten für alle Zeilen. Eine danach für eine Zeile getroffene Wahl ändert nur diese Zeile. Jede Wahl prüft die Datei erneut. Mit **Nur neue hinzufügen** (der Vorgang `Nur einfügen`) wird die Aktualisierung nicht angeboten.
+
+Ändert sich APP-12 zwischen der Prüfung und dem Import, wird die Zeile mit „APP-12 wurde seit der Prüfung geändert.“ abgelehnt, und nichts wird importiert. Wählen Sie erneut: Die neue Prüfung liest die Anwendung in ihrem aktuellen Stand.
+
 ### Einschränkungen
 
 - **Bereitstellungen nicht enthalten**: Umgebungsbereitstellungen (Prod, QA, Dev) erfordern Arbeitsbereich-Konfiguration

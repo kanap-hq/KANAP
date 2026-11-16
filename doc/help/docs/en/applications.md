@@ -722,6 +722,27 @@ If you include the `id` column with a valid UUID, matching uses ID first, then f
 
 A row matched by `id` with a different name renames the application. The new name must be free. The title of the application's description document follows the new name.
 
+**Publisher and supplier**: a row with a publisher (`editor`) and no supplier is linked to the supplier of that name, when there is one. The check lists this match with the other matched values, and **Undo** removes it. In `Enrich` mode, an application that already has a supplier keeps it. The publisher stays as written. Without the right to read suppliers, the publisher links no supplier.
+
+### Rows like an existing application { #lookalike-applications }
+
+A row that would create an application is left out by default when it looks like an existing application. This keeps an application from being created twice under a slightly different name. A row looks like an application in two cases:
+
+- the same name, accents aside: `Gestion des depenses` and `Gestion des dépenses`
+- a close name, with the same supplier or the same publisher
+
+A row that finds an application by its name still updates it, as before. Rows of the same file are not compared with each other.
+
+The check lists these rows under **Looks like an existing application**, with the application each one looks like. Point at a row to see why it was found. For each row, choose:
+
+- **Leave out**: the row is not imported. This is the default.
+- **Create anyway**: the row becomes a new application.
+- **Update APP-12**: the row updates the application it looks like, in the mode of the import, owners and data residency included. The application keeps its name. Point at the row to see which columns change. "Nothing changes on APP-12" means the file changes none of its values.
+
+**Create all anyway**, **Update all** and **Leave all out**, above the list, apply to every row. A choice made on a row afterwards changes that row only. Each choice checks the file again. With **Add new only** (the `Insert only` operation), the update is not offered.
+
+If APP-12 changes between the check and the import, the row is refused with "APP-12 changed since the check." and nothing is imported. Choose again: the new check reads the application as it is now.
+
 ### Limitations
 
 - **Deployments not included**: Environment deployments (Prod, QA, Dev) require workspace configuration

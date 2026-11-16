@@ -722,6 +722,27 @@ Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el I
 
 Una fila encontrada por su `id` con otro nombre renombra la aplicación. El nuevo nombre debe estar libre. El título del documento de descripción de la aplicación sigue el nuevo nombre.
 
+**Editor y proveedor**: una fila con un editor (`editor`) y sin proveedor se vincula al proveedor de ese nombre, si existe. La comprobación lista esta asociación con los demás valores asociados, y **Deshacer** la quita. En modo `Enriquecer`, una aplicación que ya tiene un proveedor lo conserva. El editor se queda tal como está escrito. Sin el derecho de leer los proveedores, el editor no vincula ningún proveedor.
+
+### Filas que se parecen a una aplicación existente { #lookalike-applications }
+
+Una fila que crearía una aplicación se descarta por defecto cuando se parece a una aplicación existente. Así una aplicación no se crea dos veces con un nombre apenas distinto. Una fila se parece a una aplicación en dos casos:
+
+- el mismo nombre salvo acentos: `Gestion des depenses` y `Gestion des dépenses`
+- un nombre parecido, con el mismo proveedor o el mismo editor
+
+Una fila que encuentra una aplicación por su nombre la sigue actualizando, como antes. Las filas de un mismo archivo no se comparan entre sí.
+
+La comprobación lista estas filas en **Se parece a una aplicación existente**, con la aplicación a la que se parece cada una. Señale una fila para ver por qué se encontró. Para cada fila, elija:
+
+- **Descartar**: la fila no se importa. Es la opción por defecto.
+- **Crear de todos modos**: la fila se convierte en una nueva aplicación.
+- **Actualizar APP-12**: la fila actualiza la aplicación a la que se parece, en el modo de la importación, responsables y residencia de datos incluidos. La aplicación conserva su nombre. Señale la fila para ver las columnas que cambian. «Nada cambia en APP-12» significa que el archivo no cambia ninguno de sus valores.
+
+**Crear todas de todos modos**, **Actualizar todas** y **Descartar todas**, encima de la lista, se aplican a todas las filas. Una elección hecha después en una fila solo cambia esa fila. Cada elección vuelve a comprobar el archivo. Con **Solo añadir los nuevos** (la operación `Solo insertar`), la actualización no se ofrece.
+
+Si APP-12 cambia entre la comprobación y la importación, la fila se rechaza con «APP-12 ha cambiado desde la comprobación.» y no se importa nada. Elija de nuevo: la nueva comprobación lee la aplicación tal como está ahora.
+
 ### Limitaciones
 
 - **Despliegues no incluidos**: Los despliegues por entorno (Prod, QA, Dev) requieren configuración en el espacio de trabajo
