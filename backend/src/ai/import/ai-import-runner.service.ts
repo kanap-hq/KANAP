@@ -151,7 +151,7 @@ export class AiImportRunnerService {
       // A dimension value the check would create comes with its dimension's values, for the model to read.
       const createsValues = answer.matching?.candidates.some((entry) => entry.outcome === 'create' && entry.column.startsWith('analytics:'));
       const values = options.dryRun && createsValues ? await enabledDimensionValues(context) : undefined;
-      return budgetBilan(answer, options.dryRun, options.lines, values);
+      return budgetBilan(answer, options.dryRun, options.lines, values, options.language);
     }
     return rowsBilan(await this.runRows(key, call), options.dryRun, options.lines);
   }
@@ -425,11 +425,28 @@ const LOOKALIKE_SAME_LINE = 'BUDGET_FILE_LOOKALIKE_SAME_LINE';
 /** The lookalikes the model reads: the first ones, as the card lists them at once. */
 const MODEL_LOOKALIKES = 10;
 
+/**
+ * The card's words for the choices of a row that looks like a stored line, keyed by the row's `outcome`,
+ * as the screen writes them (`operations.budgetFile.lookalikes.ignore`, `create`, `update` of the
+ * frontend's `ops` locales); BL-n stands for the row's `looks_like`.
+ */
+const CARD_CHOICES: Record<CsvLanguage, { ignored: string; created: string; updated: string }> = {
+  en: { ignored: 'Leave out', created: 'Create anyway', updated: 'Update BL-n' },
+  fr: { ignored: 'Écarter', created: 'Créer quand même', updated: 'Mettre à jour BL-n' },
+  de: { ignored: 'Auslassen', created: 'Trotzdem anlegen', updated: 'BL-n aktualisieren' },
+  es: { ignored: 'Descartar', created: 'Crear de todos modos', updated: 'Actualizar BL-n' },
+};
+
+/** How the model names the choices of these rows: the prepare tool's hint says it too. */
+export const LOOKALIKE_CHOICE_WORDS_RULE = 'Name these choices only by the card\'s words (`similar_lines.card_choices`, BL-n being the row\'s '
+  + '`looks_like`), never by a code (ignore, create, update, ignored, created, updated). Never say the person must choose for each row: '
+  + 'a row left out is simply not imported, and the card can be approved as soon as it has something to import.';
+
 const SIMILAR_LINES_NOTE = 'Rows of the file that look like a budget line the person can read (`looks_like`, with the reason): '
   + 'the import leaves them out unless the person chooses on the card to create them anyway or to update that line '
   + '(`outcome`: ignored, created, updated). Rows that look like an earlier row of the file (`looks_like_file_line`) '
   + 'are created. Tell the person in one sentence before they approve (file line and reference); the card lists them '
-  + 'and holds the choices: never call a row left out created.';
+  + `and holds the choices: never call a row left out created. ${LOOKALIKE_CHOICE_WORDS_RULE}`;
 
 type Lookalike = { line?: number; code?: string; params?: Record<string, unknown> };
 
@@ -438,7 +455,7 @@ type Lookalike = { line?: number; code?: string; params?: Record<string, unknown
  * line (`lookalikes`, left out unless the person chose otherwise) and those that look like an earlier
  * row of the file (`warnings.duplicates`), their number and the first ones.
  */
-function similarLines(answer: BudgetFileAnswer, lines: readonly number[]): AiImportRunDto['similar_lines'] {
+function similarLines(answer: BudgetFileAnswer, lines: readonly number[], language: CsvLanguage): AiImportRunDto['similar_lines'] {
   const stored = answer.lookalikes;
   const warnings = answer.warnings;
   const rows = Array.isArray(warnings?.duplicates) ? warnings!.duplicates as Lookalike[] : [];
@@ -456,7 +473,7 @@ function similarLines(answer: BudgetFileAnswer, lines: readonly number[]): AiImp
   }
   return {
     count: (stored?.count ?? 0) + rowCount,
-    ...(stored ? { ignored: stored.ignored, created_anyway: stored.created, updated: stored.updated } : {}),
+    ...(stored ? { ignored: stored.ignored, created_anyway: stored.created, updated: stored.updated, card_choices: CARD_CHOICES[language] } : {}),
     first,
     note: SIMILAR_LINES_NOTE,
   };
@@ -559,7 +576,8 @@ export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatc
   if (nothingToImport({ ok: true, inserted: changes.created, updated: changes.updated, newSuppliers: suppliers, newDimensionValues: values })) {
     return `Nothing to import: the approval would create and update nothing${unchangedNote(changes.unchanged, 'lines')}${lookalikes}. `
       + (look && look.ignored > 0
-        ? 'The card cannot be approved unless the person chooses on the card to create such a row anyway or to update the line it looks like.'
+        ? 'Say in one sentence that nothing is imported until a row left out is created anyway or updates the line it looks like, '
+          + 'with the card\'s words (`similar_lines.card_choices`).'
         : 'The card cannot be approved.');
   }
   return `On approval: ${changes.created} lines created${byNature(changes.created, split?.created)}, `
@@ -573,12 +591,14 @@ export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatc
 /**
  * The bilan of the budget file: its check as its dialog shows it, or the counts of its load.
  * `dimensionValues`: the enabled values of each dimension, by column, for the dimension values the check creates.
+ * `language`: the person's, for the card's words the model reads.
  */
 export function budgetBilan(
   answer: BudgetFileAnswer,
   dryRun: boolean,
   lines: readonly number[],
   dimensionValues?: ReadonlyMap<string, readonly string[]>,
+  language: CsvLanguage = 'en',
 ): AiImportRunDto {
   const issues: AiImportRunDto['issues'] = [];
   const fileErrors = (answer.fileErrors?.length ?? 0) + (answer.headerErrors?.length ?? 0);
@@ -598,7 +618,7 @@ export function budgetBilan(
   const shown: Record<string, unknown> = { ...answer };
   delete shown.snapshot;
   const isCheck = answer.changes !== undefined;
-  const similar = isCheck ? similarLines(answer, lines) : undefined;
+  const similar = isCheck ? similarLines(answer, lines, language) : undefined;
   const nothing = isCheck && nothingToImport({
     ok: answer.ok === true,
     inserted: answer.changes!.created,

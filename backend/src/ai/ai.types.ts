@@ -580,13 +580,15 @@ export type AiImportRunDto = {
    * reference, the `reason` and what the check does with the row, `outcome`) or an earlier row of the
    * file (`looks_like_file_line`), on the lines of the person's file. Present when there are some;
    * `first` holds the first ones. A row that looks like a stored line is left out unless the person
-   * chose otherwise (lot I2 of 26.11.9): `ignored`, `created_anyway`, `updated` count them.
+   * chose otherwise (lot I2 of 26.11.9): `ignored`, `created_anyway`, `updated` count them, and
+   * `card_choices` gives the card's words for each choice, by outcome, in the person's language.
    */
   similar_lines?: {
     count: number;
     ignored?: number;
     created_anyway?: number;
     updated?: number;
+    card_choices?: { ignored: string; created: string; updated: string };
     first: Array<{
       file_line: number;
       looks_like?: string;

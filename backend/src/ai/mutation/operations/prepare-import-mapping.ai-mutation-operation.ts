@@ -17,6 +17,7 @@ import {
 import { AI_IMPORT_KEYS, AI_IMPORT_RESOURCES, aiImportAccess } from '../../import/ai-import-access';
 import { AiImportMappingService, aiImportTarget, PrepareImportMappingInput } from '../../import/ai-import-mapping.service';
 import { AI_IMPORT_TARGETS } from '../../import/ai-import-targets';
+import { LOOKALIKE_CHOICE_WORDS_RULE } from '../../import/ai-import-runner.service';
 import { parseBudgetFileChoices } from '../../../spend/budget-file/matching';
 import type { BudgetFileChoice } from '../../../spend/budget-file/types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
@@ -126,6 +127,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'Name a value of a fixed list (a status, a priority) by its name in the template\'s `entries`, never by its code. '
       + 'Rows that look like a budget line the person reads (`similar_lines`) are left out unless the person chooses on the card '
       + 'to create them anyway or to update that line; the card holds those choices: never announce such a row as created. '
+      + `${LOOKALIKE_CHOICE_WORDS_RULE} `
       + 'The person\'s choices on the card (`matching.choices`) are kept when you call again for the same file. '
       + 'A new card for the same file closes the pending one at once: it can no longer be approved, so do not warn the person about it. '
       + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say which columns and lines they are on, '

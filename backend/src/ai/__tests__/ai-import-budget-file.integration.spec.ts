@@ -487,12 +487,15 @@ async function testEnglishSampleLinesLookLikeExisting(h: Harness, runner: QueryR
   assert.ok(lookalikes.lines.every((entry: any) => entry.updatable === true && /^[0-9a-f]{16}$/.test(entry.target.state)));
   assert.equal(check.similar_lines.count, 8);
   assert.deepEqual(check.similar_lines.first[0], { file_line: 2, looks_like: refOf('Caisses Cegid des magasins'), reason: 'amounts', outcome: 'ignored' });
+  // The card's words for the choices, in the person's language (French here): Kad names no code (fixes of lot I2).
+  assert.deepEqual(check.similar_lines.card_choices, { ignored: 'Écarter', created: 'Créer quand même', updated: 'Mettre à jour BL-n' });
   // Nothing to import (P5 of 26.11.9): the card says so, its approval alone is refused and leaves it
   // pending, and "Approve all" leaves it out.
   assert.equal(check.nothing_to_import, true);
   assert.equal(card.import_mapping.on_approval, 'Nothing to import: the approval would create and update nothing; '
     + '8 rows of the file look like existing lines: 8 left out, 0 created anyway, 0 updating the line they look like. '
-    + 'The card cannot be approved unless the person chooses on the card to create such a row anyway or to update the line it looks like.');
+    + 'Say in one sentence that nothing is imported until a row left out is created anyway or updates the line it looks like, '
+    + 'with the card\'s words (`similar_lines.card_choices`).');
   const { PREVIEW_IMPORT_NOTHING_MESSAGE, previewErrorText } = require('../ai-write-texts');
   const twin = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachEnglish(h), entity_type: 'budget_lines', columns: ENGLISH_MAPPING });
   assert.equal(twin.import_mapping.validation.nothing_to_import, true);
