@@ -372,6 +372,8 @@ interface LookalikeDecision {
   stale?: boolean;
   /** The line's state now (empty when it is gone). */
   state: string;
+  /** The line is gone, or the person no longer reads it: the row reads by its line and title only. */
+  gone?: boolean;
 }
 
 export function storedState(line: StoredLine): string {
@@ -491,6 +493,7 @@ function decideLookalikes(
       updatable,
       state,
       ...(action === 'update' && live ? { live, stale: expected !== undefined && expected !== state } : {}),
+      ...(known ? {} : { gone: true }),
     });
   }
   // The choice for all rows, with the target of every row it covers: what the person saw. Given back
@@ -506,7 +509,8 @@ function lookalikeEntry(row: InterpretedRow, look: LookalikeDecision): BudgetFil
     line: row.line,
     nature: hint.nature,
     name: textOf(row.fields.name),
-    target: { item: hint.itemNumber, ref: lineRef(hint.itemNumber), name: hint.name, state: look.state },
+    // A line gone since the check has no reference to show, as an application gone (lot I3 of 26.11.9).
+    target: { item: hint.itemNumber, ref: look.gone ? '' : lineRef(hint.itemNumber), name: hint.name, state: look.state },
     ...(reason ? { reason } : {}),
     outcome,
     updatable: look.updatable,

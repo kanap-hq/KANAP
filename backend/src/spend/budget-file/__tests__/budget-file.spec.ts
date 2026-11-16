@@ -1010,7 +1010,8 @@ async function testChoicesForAllWithALineGone() {
     assert.deepEqual(card, screen, action);
     const plan = await lookPlan([row], { stored: [], choices: screen as BudgetFileChoice[] });
     assert.equal(plan.report.ok, true, JSON.stringify(plan.report.errors));
-    assert.deepEqual(plan.report.lookalikes!.lines.map((entry) => [entry.line, entry.target.ref, entry.outcome]), [[2, 'BL-10', outcome]], action);
+    // Gone, BL-10 has no reference to show (correctifs J).
+    assert.deepEqual(plan.report.lookalikes!.lines.map((entry) => [entry.line, entry.target.ref, entry.outcome]), [[2, '', outcome]], action);
   }
 }
 
@@ -1116,6 +1117,15 @@ async function testLookalikeTargetKept() {
     header: TWO_YEARS, stored: edited, choices: [...dcShown.report.matching!.choices, { kind: 'lookalike', line: 2, action: 'update', item: 12, state: dcLeft.report.lookalikes!.lines[0].target.state }],
   });
   assert.deepEqual(refused(again.report), [true, [], 0, 1]);
+  // Correctifs J: BL-10 deleted since the check. The row reads by its line and title only (no reference),
+  // offers no update, and stays left out, by default as with "Update all" (as the applications, T-I3l).
+  const deleted = stored.filter((item) => item.itemNumber !== 10);
+  for (const choices of [shown.report.matching!.choices, [{ kind: 'lookalikes' as const, action: 'update' as const, targets: shown.report.lookalikes!.targets }]]) {
+    const gone = await lookPlan([row], { stored: deleted, choices });
+    assert.deepEqual(refused(gone.report), [true, [], 0, 0]);
+    assert.deepEqual(gone.report.lookalikes?.lines.map((entry) => [entry.line, entry.name, entry.target.ref, entry.target.name, entry.updatable, entry.outcome]),
+      [[2, 'Microsoft 365 E3', '', '', false, 'ignored']]);
+  }
 }
 
 /** T-I2f: the same paying company in every rule, two amounts without the same supplier, a close title in the same currency, no ended line. */
