@@ -473,6 +473,41 @@ async function testProjects(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  projects: names read, nothing to import, approve all leaves the cards out, statuses named: OK');
 }
 
+// Lot I3 of 26.11.9: a supplier named without its accents is found and listed on the person's lines;
+// one nothing finds keeps the stored supplier of the application the row updates (Kad merges).
+async function testSupplierNamesBeyondCase(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const [sg] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Société Générale') RETURNING id, item_number`, [s.tenantId]);
+  const [cegid] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Cegid I3') RETURNING id`, [s.tenantId]);
+  await runner.query(`INSERT INTO applications (tenant_id, name, supplier_id) VALUES ($1, 'Atlas I3', $2)`, [s.tenantId, cegid.id]);
+  // A blank row: the data rows are the person's lines 2 and 4 (lines 2 and 3 of the file Kad builds).
+  const file = attach(h, 'Fournisseurs.csv', ['Appli;Fournisseur', 'Atlas I3;Banque Inconnue', ';', 'Hermes I3;Societe Generale'].join('\n'));
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'supplier_name', source: 2, confidence: 'high' },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'applications', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual(check.report.matches, [{
+    column: 'supplier_name', name: null, value: 'Societe Generale', target: 'Société Générale', ref: `SUP-${sg.item_number}`,
+    origin: 'server', reason: 'accents', lines: [4], count: 1, undoable: true,
+  }]);
+  assert.equal(check.report.matchesTotal, 1);
+  assert.deepEqual(check.report.warnings.map((warning: any) => [warning.row, warning.code, warning.params]), [
+    [2, 'CSV_REFERENCE_NOT_FOUND_KEPT', { value: 'Banque Inconnue' }],
+  ]);
+  assert.deepEqual([check.inserted, check.updated, check.unchanged], [1, 0, 1]);
+  const done = await h.previews.executePreview(admin, card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const apps = await runner.query(
+    `SELECT name, supplier_id FROM applications WHERE tenant_id = $1 AND name LIKE '% I3' ORDER BY name`,
+    [s.tenantId],
+  );
+  assert.deepEqual(apps.map((app: any) => [app.name, app.supplier_id]), [['Atlas I3', cegid.id], ['Hermes I3', sg.id]]);
+  console.log('  applications: a supplier found beyond accents is listed on the person\'s lines, an unknown one keeps the stored supplier: OK');
+}
+
 async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
   const { AI_IMPORT_KEYS } = require('../import/ai-import-access');
   const admin = ctx(runner, s, 'admin');
@@ -494,6 +529,8 @@ async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
     assert.equal(check.report.kind, key === 'budget_lines' ? 'budget_file' : 'rows', key);
     // Every import reads the file Plaid builds: an import that needs every column of its template gets them.
     assert.ok(!check.issues.some((issue: any) => /HEADER/.test(String(issue.code))), `${key}: ${JSON.stringify(check.issues)}`);
+    // A value nothing names beyond case: no match listed.
+    if (check.report.kind === 'rows') assert.equal(check.report.matches, undefined, key);
     for (const error of check.report.kind === 'rows' ? check.report.errors : []) {
       assert.ok(error.row === 0 || error.row === 2, `${key}: an error on the person's line 2 or on the file: ${JSON.stringify(error)}`);
     }
@@ -519,6 +556,7 @@ async function run() {
       await testIncidentRights(harness, runner, s);
       await testBudgetFile(harness, runner, s);
       await testSuppliers(harness, runner, s);
+      await testSupplierNamesBeyondCase(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

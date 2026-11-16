@@ -29,6 +29,7 @@ import type {
   BudgetFileNatureCounts,
 } from '../../spend/budget-file/types';
 import type { BudgetNature } from '../../spend/budget-nature';
+import type { ImportNameMatch } from '../../common/name-matching';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TasksCsvService } from '../../tasks/tasks-csv.service';
@@ -55,6 +56,9 @@ type RowsReport = {
   skipped?: number;
   errors?: AiImportReportMessage[];
   warnings?: AiImportReportMessage[];
+  /** The declarative imports: the names found beyond case, on the lines of the built file (lot I3 of 26.11.9). */
+  matches?: ImportNameMatch[];
+  matchesTotal?: number;
 };
 
 /** The budget file's report (`BudgetFileReport`) or its load (`BudgetFileImportOk`), as far as the bilan reads it. */
@@ -164,20 +168,25 @@ export class AiImportRunnerService {
     // The screen's recommended preset: add the new records, update the matched ones, keep what a blank cell does not say.
     const merge = { dryRun, mode: 'enrich' as const, operation: 'upsert' as const };
     const caller = { manager, tenantId, userId: userId || null };
+    // The person's rights, read once: a name is found beyond case in the families they read, as on the screen.
+    const rights = () => this.policy.effectiveAccess(context, manager);
     switch (key) {
       case 'applications':
-        return this.applications.import(file, merge, { manager, tenantId, userId, language });
+        return this.applications.import(file, merge, { manager, tenantId, userId, language, access: await rights() });
       case 'assets':
-        return this.assets.import(file, merge, { manager, tenantId, userId, language });
+        return this.assets.import(file, merge, { manager, tenantId, userId, language, access: await rights() });
       case 'portfolio_projects':
-        return this.projects.import(file, merge, { manager, tenantId, userId, language });
+        return this.projects.import(file, merge, { manager, tenantId, userId, language, access: await rights() });
       case 'portfolio_requests':
-        return this.requests.import(file, merge, { manager, tenantId, userId, language });
-      case 'tasks':
-        return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: await this.incidentViewer(context), language });
+        return this.requests.import(file, merge, { manager, tenantId, userId, language, access: await rights() });
+      case 'tasks': {
+        const access = await rights();
+        return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: incidentViewerFromContext({ userId, ...access }), language, access });
+      }
       case 'incidents': {
-        const viewer = await this.incidentViewer(context);
-        return this.incidents.import(file, merge, { manager, tenantId, userId: userId || null, isAdmin: viewer.isAdmin, viewer, language });
+        const access = await rights();
+        const viewer = incidentViewerFromContext({ userId, ...access });
+        return this.incidents.import(file, merge, { manager, tenantId, userId: userId || null, isAdmin: viewer.isAdmin, viewer, language, access });
       }
       case 'suppliers':
         return this.suppliers.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
@@ -241,10 +250,6 @@ export class AiImportRunnerService {
     });
   }
 
-  private async incidentViewer(context: AiExecutionContextWithManager) {
-    const access = await this.policy.effectiveAccess(context, context.manager as EntityManager);
-    return incidentViewerFromContext({ userId: context.userId, ...access });
-  }
 }
 
 /**
@@ -322,7 +327,11 @@ function message(item: AiImportReportMessage, lines: readonly number[]): AiImpor
   };
 }
 
-/** The bilan of a row import: its counts, its messages on the person's lines, and their tally for the model. */
+/**
+ * The bilan of a row import: its counts, its messages on the person's lines, and their tally for the
+ * model; for a declarative import, the names it found beyond case, on the person's lines (the card
+ * shows them from lot I3's second pass).
+ */
 export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly number[]): AiImportRunDto {
   const errors = result.errors ?? [];
   const warnings = result.warnings ?? [];
@@ -348,6 +357,12 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
       kind: 'rows',
       errors: errors.slice(0, KEPT_ERRORS).map((error) => message(error, lines)),
       warnings: warnings.slice(0, KEPT_WARNINGS).map((warning) => message(warning, lines)),
+      ...(result.matches?.length
+        ? {
+            matches: result.matches.map((match) => ({ ...match, lines: match.lines.map((line) => personLine(line, lines)) })),
+            matchesTotal: result.matchesTotal ?? result.matches.length,
+          }
+        : {}),
     },
   };
 }

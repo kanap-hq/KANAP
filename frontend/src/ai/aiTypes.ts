@@ -1,5 +1,6 @@
 import type { CsvReportMessage } from '../components/csv/csvMessage';
 import type { BudgetFileChoice, BudgetFileReport } from '../components/finance/budgetFile';
+import type { CsvImportMatch } from '../components/csv/csv.types';
 
 export type AiMutationWriteToolName =
   | 'import_ticket'
@@ -134,7 +135,8 @@ export type AiImportRun = {
     create_suppliers: { allowed: boolean; value: boolean };
   };
   report:
-    | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[] }
+    /** A row import: its first messages and, for a declarative import, the names found beyond case (lines of the person's file). */
+    | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[]; matches?: CsvImportMatch[]; matchesTotal?: number }
     | { kind: 'budget_file'; file: BudgetFileReport | null };
 };
 

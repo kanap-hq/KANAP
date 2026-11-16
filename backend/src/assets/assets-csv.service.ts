@@ -11,6 +11,7 @@ import { Asset } from './asset.entity';
 import {
   CsvExportService,
   CsvImportService,
+  CsvCallerAccess,
   CsvImportParams,
   CsvExportResult,
   CsvImportResult,
@@ -166,6 +167,8 @@ export class AssetsCsvService {
       userId?: string | null;
       /** The screen language: a missing column is named by its title in this language. */
       language?: CsvLanguage;
+      /** The person's rights: a name is found beyond case in the families they read. */
+      access?: CsvCallerAccess;
     },
   ): Promise<CsvImportResult> {
     return opts.manager.transaction(async (manager) => {

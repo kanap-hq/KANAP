@@ -1,6 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { z } from 'zod';
 import type { BudgetFileChoice } from '../spend/budget-file/types';
+import type { ImportNameMatch } from '../common/name-matching';
 
 export type AiSurface = 'chat' | 'mcp';
 export type AiAuthMethod = 'jwt' | 'api_key' | 'oauth';
@@ -625,8 +626,12 @@ export type AiImportRunDto = {
     note: string;
   };
   report:
-    /** The messages of a row import, the first ones, as its dialog lists them. */
-    | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[] }
+    /**
+     * The messages of a row import, the first ones, as its dialog lists them; for a declarative
+     * import, the names it found beyond case (`matches`, on the person's lines, the first ones, and
+     * `matchesTotal`), absent when none (lot I3 of 26.11.9).
+     */
+    | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[]; matches?: ImportNameMatch[]; matchesTotal?: number }
     /** The budget file's check, as its dialog shows it (`BudgetFileReport` without its snapshot). */
     | { kind: 'budget_file'; file: Record<string, unknown> | null };
 };

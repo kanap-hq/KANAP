@@ -15,6 +15,7 @@ import { IntegratedDocumentsService } from '../knowledge/integrated-documents.se
 import {
   CsvExportService,
   CsvImportService,
+  CsvCallerAccess,
   CsvImportParams,
   CsvExportResult,
   CsvImportResult,
@@ -262,6 +263,8 @@ export class ApplicationsCsvService {
       userId?: string | null;
       /** The screen language: a missing column is named by its title in this language. */
       language?: CsvLanguage;
+      /** The person's rights: a name is found beyond case in the families they read. */
+      access?: CsvCallerAccess;
     },
   ): Promise<CsvImportResult> {
     return opts.manager.transaction(async (manager) => {
@@ -275,7 +278,7 @@ export class ApplicationsCsvService {
     });
   }
 
-  private async importLocked(file: Express.Multer.File, params: CsvImportParams, opts: { manager: EntityManager; tenantId: string; userId?: string | null; language?: CsvLanguage }): Promise<CsvImportResult> {
+  private async importLocked(file: Express.Multer.File, params: CsvImportParams, opts: { manager: EntityManager; tenantId: string; userId?: string | null; language?: CsvLanguage; access?: CsvCallerAccess }): Promise<CsvImportResult> {
     // The tenant row is locked FOR NO KEY UPDATE by import(): the catalogs read here cannot change underneath.
     const itOpsSettings = await this.itOpsSettings.getSettings(opts.tenantId, { manager: opts.manager });
     // The applications the load wrote: a row the operation skipped (an existing application in

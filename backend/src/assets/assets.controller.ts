@@ -10,7 +10,7 @@ import { AssetsDeleteService } from './assets-delete.service';
 import { AssetsCsvService } from './assets-csv.service';
 import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
-import { csvExportFormat } from '../common/csv';
+import { csvCallerAccess, csvExportFormat } from '../common/csv';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { StorageService } from '../common/storage/storage.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -144,6 +144,7 @@ export class AssetsController {
         tenantId,
         userId: req.user?.sub,
         language,
+        access: csvCallerAccess(req),
       },
     );
   }

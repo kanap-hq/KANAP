@@ -19,7 +19,7 @@ import {
   inlineImageMulterOptions,
 } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
-import { csvExportFormat } from '../common/csv';
+import { csvCallerAccess, csvExportFormat } from '../common/csv';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { createRequestReleaseConnection } from '../common/import-connection';
 import { RATE_LIMITS } from '../common/rate-limit';
@@ -231,6 +231,7 @@ export class IncidentsController {
         isAdmin: viewer.isAdmin,
         viewer,
         language,
+        access: csvCallerAccess(ctx),
       },
     );
   }

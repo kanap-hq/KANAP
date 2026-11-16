@@ -7,6 +7,7 @@ import {
   CsvEntityConfig,
   CsvExportService,
   CsvImportService,
+  CsvCallerAccess,
   CsvImportParams,
   CsvExportResult,
   CsvImportResult,
@@ -216,6 +217,8 @@ export class PortfolioRequestsCsvService {
       userId?: string | null;
       /** The screen language: a status the file names wrongly is refused with the names of this language. */
       language?: CsvLanguage;
+      /** The person's rights: a name is found beyond case in the families they read. */
+      access?: CsvCallerAccess;
     },
   ): Promise<CsvImportResult> {
     return this.importSvc.import(this.buildCsvConfig(), file, params, opts);

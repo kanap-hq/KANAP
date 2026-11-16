@@ -18,7 +18,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions, inlineImageMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
-import { csvExportFormat } from '../common/csv';
+import { csvCallerAccess, csvExportFormat } from '../common/csv';
 import { exportListQuery } from '../common/pagination';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { createRequestReleaseConnection } from '../common/import-connection';
@@ -258,6 +258,7 @@ export class PortfolioProjectsController {
         tenantId: ctx.tenantId,
         userId: ctx.userId,
         language,
+        access: csvCallerAccess(ctx),
       },
     );
   }

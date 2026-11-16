@@ -337,6 +337,11 @@ export interface CsvCallerAccess {
   permissions?: Record<string, string>;
 }
 
+/** The person's rights as `PermissionGuard` leaves them on the request (`TenantRequest` or the raw request). */
+export function csvCallerAccess(request: { isAdmin?: boolean; permissions?: Record<string, string> | null } | null | undefined): CsvCallerAccess {
+  return { isAdmin: request?.isAdmin === true, permissions: request?.permissions ?? {} };
+}
+
 /**
  * Parsed import row with metadata
  */

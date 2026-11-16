@@ -16,7 +16,7 @@ import { Throttle } from '@nestjs/throttler';
 import { DataSource, EntityManager } from 'typeorm';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions, inlineImageMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
-import { csvExportFormat } from '../common/csv';
+import { csvCallerAccess, csvExportFormat } from '../common/csv';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { StorageService } from '../common/storage/storage.service';
 import { createRequestReleaseConnection } from '../common/import-connection';
@@ -727,6 +727,7 @@ export class ApplicationsController {
         tenantId: ctx.tenantId,
         userId: ctx.userId,
         language,
+        access: csvCallerAccess(ctx),
       },
     );
   }

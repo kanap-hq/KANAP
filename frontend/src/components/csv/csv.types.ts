@@ -67,6 +67,33 @@ export interface CsvImportResult {
   unchanged?: number;
   errors: CsvReportMessage[];
   warnings: CsvReportMessage[];
+  /**
+   * The values of the file found beyond case (accents set aside, a name in another language), one
+   * entry per column, value and record: the first ones, `matchesTotal` in all. Absent when none.
+   */
+  matches?: CsvImportMatch[];
+  matchesTotal?: number;
+}
+
+/**
+ * A value of the file matched to an existing record beyond case (the budget file's matches have the
+ * same shape). `lines` are the file's lines (the first ones), `count` all of them. The import takes
+ * an undone match back with its `column` and `value` (`unmatched`).
+ */
+export interface CsvImportMatch {
+  column: string;
+  /** The dimension's name for a budget file's `analytics:` column; null otherwise. */
+  name: string | null;
+  value: string;
+  /** The record's name. */
+  target: string;
+  /** The record's business reference (`SUP-3`), null when its family has none. */
+  ref?: string | null;
+  origin: 'server' | 'model';
+  reason: 'accents' | 'translation' | 'model';
+  lines: number[];
+  count: number;
+  undoable: boolean;
 }
 
 /** Field info from backend */
