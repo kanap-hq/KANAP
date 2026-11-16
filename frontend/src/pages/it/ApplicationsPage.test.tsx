@@ -291,7 +291,7 @@ describe('ApplicationsPage', () => {
     expect(screen.getByTestId('applications-empty').textContent).toBe('pages.applications.empty');
     expect(screen.queryByRole('button', { name: 'pages.applications.newAppService' })).toBeNull();
   });
-  it('offers the change of the selection to a member: the four fields, off until an application is chosen', () => {
+  it('offers the change of the selection to a member: the six fields, off until an application is chosen', () => {
     renderPage();
     expect(selectColumn()).toBeDefined();
     expect(editButton()).toBeDisabled();
@@ -300,13 +300,15 @@ describe('ApplicationsPage', () => {
     expect(dialogs.delete.selectedRows).toEqual([{ id: 'a-1', name: 'Payroll' }]);
     fireEvent.click(editButton()!);
     expect(dialogs.edit).toMatchObject({ open: true, endpoint: '/applications/bulk-update', selection: { ids: ['a-1'] } });
-    expect(dialogs.edit.fields.map((field: { key: string }) => field.key)).toEqual(['owners_business', 'owners_it', 'lifecycle', 'criticality']);
+    expect(dialogs.edit.fields.map((field: { key: string }) => field.key)).toEqual(['owners_business', 'owners_it', 'category', 'lifecycle', 'criticality', 'cyber_criticality']);
     const owners = dialogs.edit.fields[0];
     expect(owners.optional).toBe(true);
     expect(owners.changes('u-1,u-2')).toEqual({ owners_business: ['u-1', 'u-2'] });
     expect(owners.changes(null)).toEqual({ owners_business: [] });
     expect(dialogs.edit.fields[2].optional).toBe(false);
-    expect(dialogs.edit.fields[3].changes(null)).toEqual({ criticality: null });
+    expect(dialogs.edit.fields[3].optional).toBe(false);
+    expect(dialogs.edit.fields[4].changes(null)).toEqual({ criticality: null });
+    expect(dialogs.edit.fields[5].changes(null)).toEqual({ cyber_criticality: null });
   });
 
   it('takes every application of the filter, quick search and scope, less the unticked ones', () => {

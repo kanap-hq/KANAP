@@ -895,6 +895,9 @@ Live write-preview coverage includes:
 - the import of an attached spreadsheet (`prepare_import_mapping`, after
   `describe_import_template`): the card holds the column mapping and the
   import's check of the file, and approving it runs the import of the screens
+- the change in bulk of one field on many budget lines (`bulk_update_budget_lines`,
+  below) or on many applications (`bulk_update_applications`), the list's "Change
+  the selection" under one card
 - single-record deletes (`delete_record`) of a task, contact, location,
   document, budget line, connection or interface, at the level of that
   family's delete route (`ai-write-levels.ts`); one pending delete per
@@ -1013,6 +1016,85 @@ stored as `spend_item` or `capex_item` from the line's nature). A task field or
 detail that showed the stored type shows `budget_line` to the model. The delete
 card keeps the L3 labels ("Deleted tasks", "Links to …", "The linked records
 stay.") for both natures.
+
+A change in bulk of budget lines (`bulk_update_budget_lines`, lot K1 of 26.11.9)
+runs the screen's "Change the selection": `BudgetLinesService.bulkUpdate` on the
+common contract (`common/bulk-edit/bulk-edit.ts`), at `budget:member` like its
+route, so a Budget Reader is not offered the tool. One field per card, among
+`BUDGET_LINE_BULK_FIELDS` (cost center, account, paying company, supplier, IT and
+business owners, run or build, a dimension's value); no amount, so a frozen year or
+column refuses nothing. The value is resolved as `update_business_record` does
+(records by code or name, people, dimension values); an account number found in
+several charts of accounts needs `company`, whose chart holds it; a company
+without a chart takes the workspace's default chart, as the screen's account
+picker (`lookupAccounts`). The lines are chosen by `rows` (references `BL-12`, a
+bare number or a legacy number; the card names them by their `BL-` key) or by
+`filters`, never both and never the whole list without a criterion (a status
+alone is no criterion, and neither is a filter part without a value: `[]`,
+`{ not: [] }` or a blank text, which would reach the whole list or open the
+disabled lines). The tool's description and hint tell the model to use only the
+criteria the person named and to ask for one, with no card, when a request covers
+every line. The filters are
+those of `query_entities`, limited to a dozen fields
+(`BUDGET_LINE_BULK_FILTER_FIELDS`: nature, status, title, supplier, paying
+company, account, cost center, contract, owners, run or build, default dimension,
+and `analytics:<code>`); they go through `adaptFilters` into the grid model, set in
+the list's parameters (`{ filters: <grid model>, includeDisabled? }`), so the lines
+are those of the screen's list: its enabled lines, all of them only when the
+filter names the status. A filter `adaptFilters` ignores or cannot read is
+refused with the accepted fields. The card is the common markdown change, its
+text built by the server in four languages (`ai-bulk-edit-texts.ts`; a spec
+compares its words with the frontend locales): the filter in words (every value
+quoted, a closed one worded as the list shows it), the scope,
+the field and its new value, the lines to change, those already holding the
+value, the refusals counted with the screen's words, and the first five lines to
+change by reference, read under the person's access (`runBulkEdit`'s
+`changedIds` option, dry runs only). A card by references is titled by them, up
+to three ("Change in bulk: BL-3, BL-7"); a card by filter counts its lines. A limited person's lines outside their access
+are neither counted nor named; a line they read without edit right is counted
+refused. Approval replays the dry run's `as_of`, `expected_rows` and fingerprint:
+a list changed since fails the card ("count again"), and so does a list grown
+past 5,000 rows; both are fixed sentences in the person's language
+(`FIXED_PREVIEW_ERRORS`, `FIXED_PREVIEW_ERROR_PATTERNS`). Each line writes its
+own audit row with `source: 'ai_chat'` and the preview id (history "by Kad");
+a new supplier that replaces the line's supplier contacts writes their row
+(`spend_item_contacts`) with the same source and reference, as
+`SpendItemsService.update` passes its audit source to `syncFromSupplier`. The
+tool and its approval set `lock_timeout` and `statement_timeout`
+(`AI_BULK_EDIT_DB_TIMEOUTS`, those of the screen's route) for the count or the
+write, then put back the transaction's own values (`withAiBulkEditWaits`: the
+next cards of "Approve all" share the transaction): a line held elsewhere gives
+a busy error and the card stays to approve. Another
+budget operation running (`operation_running`) is an error the model relays at
+preparation and leaves the card to approve at execution, with a fixed sentence.
+The tool is never a step of `prepare_mutation_plan`, and is not reversible. The
+MCP server only reads and gets nothing.
+
+A change in bulk of applications (`bulk_update_applications`, same lot) follows the
+same pattern on `ApplicationsService.bulkUpdate`, at `applications:member` like its
+route. Its fields are those of `applicationBulkFields`: business owners and IT
+owners (a list of people that replaces the role's, empty allowed), the lifecycle
+(a state of the workspace, never empty) and the business criticality (a level
+still offered, or empty); a state or a level is given by its name, a translated
+name, the name the screen shows for a shipped value, or its code
+(`matchCatalogAliases` with `shippedLabels`), and the card names it as the screen
+does in the person's language (`localizeCatalogItem`: the workspace's
+translation, else the shipped name while the value keeps its shipped label
+(`shippedLabelIn`), else its own name). The filters
+are a dozen fields of `query_entities` (`APPLICATION_BULK_FILTER_FIELDS`:
+lifecycle, business and cyber criticality, data class, recovery wave, category,
+supplier, publisher, IT and business owners, external facing, contains PII); the
+catalog fields (lifecycle, criticalities, data class, recovery wave, category)
+take the same names or a code, and the card names them the same way. They go into the list's parameters
+(`{ filters: <grid model> }`), so the applications are those of the screen's list:
+enabled ones, the retired ones left out unless the filter names the lifecycle.
+References are `APP-12` or a bare number, named `APP-12` on the card. A Business Contributor whose role was raised to member
+reaches only the applications they own: a card of many rows names no record, so
+`assertRecordInWriteScope` holds nothing, and the operation passes the
+contributor's scope (`resolveBusinessContributorScopeForUser`) to the service at
+the card and at the approval; an application outside it is neither counted, named
+nor changed. Each application writes its audit rows (`applications`,
+`application_owners`) with `source: 'ai_chat'` and the preview id.
 
 The import mapping (`backend/src/ai/import/`) covers every import that has a
 route: `AI_IMPORT_ACCESS` gives each one the module, the level and the

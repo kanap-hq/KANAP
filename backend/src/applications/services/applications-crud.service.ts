@@ -23,6 +23,7 @@ import { unreferencedPaths } from '../../common/storage-path-refs';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
+import type { ApplicationBulkValues } from '../application-bulk-edit';
 import { validateUploadedFile } from '../../common/upload-validation';
 import { fixMulterFilename } from '../../common/upload';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
@@ -331,7 +332,10 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     }
     Object.assign(existing, patch, { updated_at: new Date() });
     const saved = (await repo.save(existing as any)) as Application;
-    await this.audit.log({ table: 'applications', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
+    await this.audit.log({
+      table: 'applications', recordId: saved.id, action: 'update', before, after: saved, userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
+    }, { manager: mg });
     // A renamed application: its description document's title follows (`APP-4 - New name - Overview`).
     if ((before as any).name !== saved.name) {
       await this.integratedDocuments?.syncTitles('applications', {
@@ -564,17 +568,22 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
   }
 
   /**
-   * The values a change in bulk accepts (`application-bulk-edit.ts`): the tenant's lifecycle states,
-   * and its business criticality levels still offered (a level no longer offered is never newly
-   * assigned, as on the page).
+   * The values a change in bulk accepts (`application-bulk-edit.ts`): the tenant's categories still
+   * offered, its lifecycle states, and its business and cyber criticality levels still offered. A
+   * category or a level no longer offered is never newly assigned in bulk, even by its code (the
+   * update of one application still takes a category no longer offered by its code).
    */
-  async bulkEditValues(manager: EntityManager): Promise<{ lifecycle: string[]; criticality: string[] }> {
+  async bulkEditValues(manager: EntityManager): Promise<ApplicationBulkValues> {
     const tenantId = await this.getCurrentTenantId(manager);
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
+    const categories = await this.itOpsSettings.getApplicationCategoryOptions(tenantId, { manager });
     const catalog = await this.itOpsSettings.getClassificationCatalog(tenantId, { manager });
+    const offered = (options: ReadonlyArray<{ code: string; deprecated?: boolean }>) => options.filter((option) => !option.deprecated).map((option) => option.code);
     return {
+      category: offered(categories),
       lifecycle: (settings.lifecycleStates || []).map((state) => state.code),
-      criticality: catalog.businessCriticalityLevels.filter((level) => !level.deprecated).map((level) => level.code),
+      criticality: offered(catalog.businessCriticalityLevels),
+      cyber_criticality: offered(catalog.cyberCriticalityLevels),
     };
   }
 

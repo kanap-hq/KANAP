@@ -5,6 +5,7 @@ import {
   BULK_REFUSAL_NOT_FOUND,
   BulkEditField,
   BulkEditList,
+  BulkEditOptions,
   BulkEditResult,
   bulkTooMany,
   parseBulkChanges,
@@ -91,6 +92,8 @@ export type BudgetLineBulkDeps = {
   listIds: (filters: Record<string, unknown>) => Promise<{ ids: string[] }>;
   /** The update of one line (the PATCH's), on the request's manager. */
   updateLine: (line: { id: string; nature: BudgetNature }, body: Record<string, unknown>) => Promise<void>;
+  /** Options of the common contract (Kad's card asks the ids of the lines that would change). */
+  options?: BulkEditOptions;
 };
 
 /**
@@ -188,7 +191,7 @@ export async function bulkUpdateBudgetLines(body: unknown, deps: BudgetLineBulkD
       return null;
     },
   };
-  return runBulkEdit(manager, list, selection, confirmation, changes);
+  return runBulkEdit(manager, list, selection, confirmation, changes, deps.options);
 }
 
 /**

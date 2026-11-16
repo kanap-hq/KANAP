@@ -70,7 +70,7 @@ while IFS= read -r f; do
       frontend/src/pages/portfolio/roadmapOccupation.* | frontend/src/lib/richTextHtmlElements.* | frontend/src/lib/richTextLinkAddress.* | \
       frontend/src/locales/*/portfolio.json | frontend/src/locales/*/it.json | frontend/src/locales/*/ops.json | \
       frontend/src/locales/*/admin.json | frontend/src/locales/*/master-data.json | frontend/src/locales/*/nav.json | \
-      frontend/src/locales/*/errors.json)
+      frontend/src/locales/*/errors.json | frontend/src/locales/*/common.json)
       need_backend full; frontend=true ;;
     frontend/*)
       frontend=true ;;
