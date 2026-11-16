@@ -1009,16 +1009,17 @@ async function testTasksExport(): Promise<void> {
 
 /**
  * Rita, responsible for tasks whose contract or line she does not read, takes them off it: the
- * task's activity names the object she left by the label of the list, never by its uuid, name or
- * reference (lot R4 of 26.11.9). Runs last: the tasks leave their objects.
+ * task's activity, read as stored by every reader of the task, names the object she left by its kind
+ * alone, never by its uuid, name or reference (lot R4 of 26.11.9). Runs last: the tasks leave their
+ * objects.
  */
 async function testTaskMoveActivity(): Promise<void> {
   const { rita } = s.persons;
   const { TasksUnifiedService } = require('../../tasks/tasks-unified.service');
   const tasks = app.get(TasksUnifiedService, { strict: false });
   for (const [taskId, label, traces] of [
-    [contractTaskId, 'Contract outside your access', [...contractTraces('hidden'), new RegExp(`${contractReferences.hidden}(?!\\d)`)]],
-    [hiddenTaskId, 'Line outside your access', tracesOf('L5')],
+    [contractTaskId, 'A contract', [...contractTraces('hidden'), new RegExp(`${contractReferences.hidden}(?!\\d)`)]],
+    [hiddenTaskId, 'A budget line', tracesOf('L5')],
   ] as Array<[string, string, Array<string | RegExp>]>) {
     await asPerson(rita, (ctx) => tasks.updateById(
       taskId,
@@ -1032,13 +1033,13 @@ async function testTaskMoveActivity(): Promise<void> {
       [s.tenantId, taskId],
     )).rows);
     const related = row?.changed_fields?.related_to;
-    assert.deepEqual(related, [label, null], `task activity: the object left is named by its label (${JSON.stringify(row?.changed_fields)})`);
+    assert.deepEqual(related, [label, null], `task activity: the object left is named by its kind (${JSON.stringify(row?.changed_fields)})`);
     const text = JSON.stringify(row.changed_fields);
     for (const trace of traces) {
       assert.ok(typeof trace === 'string' ? !text.includes(trace) : !trace.test(text), `task activity: no trace of ${String(trace)} in ${text}`);
     }
   }
-  console.log('  task activity: an object outside the access is named by its label when a task leaves it: OK');
+  console.log('  task activity: an object outside the access is named by its kind when a task leaves it: OK');
 }
 
 // ---------------------------------------------------------------------------------------------

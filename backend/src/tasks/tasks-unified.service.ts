@@ -25,7 +25,6 @@ import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
-import { contractLabel } from '../contracts/contract-reference';
 import {
   IncidentViewer,
   taskIncidentVisibilityQueryBuilderClause,
@@ -56,9 +55,12 @@ type TaskRelationPayload = Partial<Task> & {
   asset_ids?: string[];
 };
 
-/** The objects of a task's activity that the person does not read (`ops:contracts.outsideYourAccess`). */
-const CONTRACT_OUTSIDE_ACCESS = 'Contract outside your access';
-const LINE_OUTSIDE_ACCESS = 'Line outside your access';
+/**
+ * A task's object its author does not read, as the activity names it: true for every reader of the
+ * task, in English as the activity's stored prefixes.
+ */
+const UNREAD_CONTRACT = 'A contract';
+const UNREAD_LINE = 'A budget line';
 
 @Injectable()
 export class TasksUnifiedService {
@@ -664,9 +666,10 @@ export class TasksUnifiedService {
   }
 
   /**
-   * The name of a task's object in its activity ("related to"). A budget line or a contract the
-   * person does not read is absent from its table (data-scoped access): the activity names it by the
-   * label of the list, never by its id, name or reference.
+   * The name of a task's object in its activity ("related to"), which every reader of the task reads
+   * as stored. A budget line or a contract the author does not read is absent from its table
+   * (data-scoped access): the activity names its kind alone, never its id, name or reference. A
+   * contract is named without its reference, which a reader in limited access may not read.
    */
   private async resolveRelatedObjectName(
     type: RelatedType,
@@ -691,17 +694,17 @@ export class TasksUnifiedService {
         `SELECT product_name FROM spend_items WHERE id = $1 AND nature = 'opex' LIMIT 1`,
         [id],
       );
-      if (!row) return LINE_OUTSIDE_ACCESS;
+      if (!row) return UNREAD_LINE;
       return `Spend: ${row.product_name}`;
     }
 
     if (type === 'contract') {
       const [row] = await manager.query(
-        'SELECT item_number, name FROM contracts WHERE id = $1 LIMIT 1',
+        'SELECT name FROM contracts WHERE id = $1 LIMIT 1',
         [id],
       );
-      if (!row) return CONTRACT_OUTSIDE_ACCESS;
-      return contractLabel(row.item_number, row.name);
+      if (!row) return UNREAD_CONTRACT;
+      return `Contract: ${row.name}`;
     }
 
     if (type === 'capex_item') {
@@ -710,7 +713,7 @@ export class TasksUnifiedService {
         `SELECT product_name FROM spend_items WHERE id = $1 AND nature = 'capex' LIMIT 1`,
         [id],
       );
-      if (!row) return LINE_OUTSIDE_ACCESS;
+      if (!row) return UNREAD_LINE;
       return `CAPEX: ${row.product_name}`;
     }
 
