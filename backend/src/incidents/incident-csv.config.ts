@@ -248,10 +248,49 @@ function parseCode(
 }
 
 /**
- * Users are preloaded by email; fall back to "First Last" (the names the app
- * shows everywhere) using the same cache, so both spellings import.
+ * Users are preloaded by e-mail. A name matches in either order ("First Last" or
+ * "Last First") when exactly one cached person answers to that text. Case and
+ * repeated spaces are ignored. A spelling several people share is refused, and
+ * the message names them by e-mail. The cache includes disabled accounts, so a
+ * disabled account with the same name as an enabled one makes the name ambiguous.
+ * One person counts once per spelling, even when both orders produce it
+ * ("Anna Anna", or a person with only one name filled).
  */
-const userNameIndexes = new WeakMap<Map<string, any>, Map<string, string>>();
+type NamedPerson = { id: string; email: string };
+
+const userNameIndexes = new WeakMap<Map<string, any>, Map<string, Map<string, NamedPerson>>>();
+
+/** The spelling the import compares: trimmed, lower case, inner spaces collapsed. */
+function personNameKey(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function peopleByName(users: Map<string, any>): Map<string, Map<string, NamedPerson>> {
+  const cached = userNameIndexes.get(users);
+  if (cached) return cached;
+
+  const byName = new Map<string, Map<string, NamedPerson>>();
+  for (const [email, user] of users) {
+    const id = user?.id;
+    if (typeof id !== 'string' || id === '') continue;
+    const spellings = new Set<string>();
+    const firstLast = personNameKey(`${user.first_name ?? ''} ${user.last_name ?? ''}`);
+    const lastFirst = personNameKey(`${user.last_name ?? ''} ${user.first_name ?? ''}`);
+    if (firstLast) spellings.add(firstLast);
+    if (lastFirst) spellings.add(lastFirst);
+    for (const spelling of spellings) {
+      let people = byName.get(spelling);
+      if (!people) {
+        people = new Map();
+        byName.set(spelling, people);
+      }
+      // The id is the key, so both orders of one person stay a single candidate.
+      if (!people.has(id)) people.set(id, { id, email: String(email) });
+    }
+  }
+  userNameIndexes.set(users, byName);
+  return byName;
+}
 
 function resolveUser(value: string, column: string, context: CsvImportContext): string | null {
   const text = value.trim();
@@ -263,21 +302,18 @@ function resolveUser(value: string, column: string, context: CsvImportContext): 
   const byEmail = users.get(text.toLowerCase());
   if (byEmail) return byEmail.id;
 
-  let byName = userNameIndexes.get(users);
-  if (!byName) {
-    byName = new Map<string, string>();
-    for (const user of users.values()) {
-      const name = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim().toLowerCase();
-      if (name && !byName.has(name)) byName.set(name, user.id);
-    }
-    userNameIndexes.set(users, byName);
+  const people = peopleByName(users).get(personNameKey(text));
+  if (!people || people.size === 0) {
+    throw new Error(
+      `User not found for ${column}: "${value}". Use the account e-mail or the name in either order ("First Last" or "Last First").`,
+    );
   }
+  if (people.size === 1) return [...people.values()][0].id;
 
-  const resolved = byName.get(text.toLowerCase().replace(/\s+/g, ' '));
-  if (!resolved) {
-    throw new Error(`User not found for ${column}: "${value}". Use the account email or the exact "First Last" name.`);
-  }
-  return resolved;
+  const emails = [...people.values()]
+    .map((person) => person.email)
+    .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+  throw new Error(`Several people match ${column} "${value}": ${emails.join(', ')}. Use the account e-mail.`);
 }
 
 const DATE_TIME_COLUMNS = ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at'] as const;
