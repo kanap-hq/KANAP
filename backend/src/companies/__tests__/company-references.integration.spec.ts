@@ -8,6 +8,8 @@ import { CompanyMetricsService } from '../company-metrics.service';
 import { companiesRegistry } from '../../ai/query/registries/companies.registry';
 import { adaptFilters } from '../../ai/query/ai-filter.adapter';
 import { resolveToUuid } from '../../common/resolve-item-id';
+import { readUsages } from '../../common/record-usages';
+import { COMPANY_USAGE_QUERIES, companyUsageQueries } from '../company-usages';
 import {
   assert,
   captureAudit,
@@ -342,6 +344,22 @@ async function testImportRefusesARenameOntoAnotherRowsName() {
   });
 }
 
+// A company's departments come with their reference (`DEPT-n`), in the delete check's list and in
+// the reader's variant alike, as the other groups that have one.
+async function testUsagesNameDepartmentsByReference() {
+  await withCompanies('ref-usages-departments', async (seeded) => {
+    const [dept] = await seeded.runner.query(
+      `INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Finance') RETURNING id, item_number`,
+      [seeded.tenantId, seeded.idOf(1)],
+    );
+    for (const queries of [COMPANY_USAGE_QUERIES, companyUsageQueries({ userId: null, isAdmin: false })]) {
+      const usages = await readUsages(seeded.runner.manager, seeded.tenantId, seeded.idOf(1), { isAdmin: true }, queries);
+      const group = usages.groups.find((g) => g.type === 'departments');
+      assert.deepEqual(group?.items.map((item) => [item.id, item.reference, item.name]), [[dept.id, `DEPT-${dept.item_number}`, 'Finance']]);
+    }
+  });
+}
+
 void runSpecs('company references', [
   ['a created company comes back with its reference', testCreateReturnsReference],
   ['the reference column filters the list, the ids and the totals alike', testReferenceColumnFilter],
@@ -353,4 +371,5 @@ void runSpecs('company references', [
   ['the file refuses a rename onto the name of another row', testImportRefusesARenameOntoAnotherRowsName],
   ['a rename by reference is announced, without blocking the check or the load', testRenameWarning],
   ['an export imports back without change', testExportThenImport],
+  ['the usages name the departments by their reference', testUsagesNameDepartmentsByReference],
 ]);
