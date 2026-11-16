@@ -65,4 +65,29 @@ describe('CsvImportDialog, the matches of the check', () => {
     expect(post.mock.calls[2][2]).toEqual({ params: expect.objectContaining({ dryRun: false }) });
     expect(unmatchedOf(post.mock.calls[2])).toEqual([{ column: 'company_name', value: 'Fromage Co' }]);
   });
+
+  it('keeps an undone match listed with Rétablir, which checks the file with it again', async () => {
+    post
+      .mockResolvedValueOnce({ data: result() })
+      .mockResolvedValueOnce({ data: result({ matches: undefined, matchesTotal: undefined }) })
+      .mockResolvedValueOnce({ data: result() });
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <CsvImportDialog open onClose={() => undefined} endpoint="/contracts" flexibleFormat />
+      </ThemeProvider>,
+    );
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['name'], 'contrats.csv', { type: 'text/csv' })] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Vérification préalable' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^1 valeur rapprochée/ }));
+    const line = screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === 'Société\u00a0: Fromage Co → COMP-2 Fromage & Co');
+    fireEvent.click(within(line.parentElement!).getByRole('button', { name: 'Défaire' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    const undone = await screen.findByText((_, element) => element?.tagName === 'P' && element.textContent === 'Société\u00a0: Fromage Co');
+    fireEvent.click(within(undone.parentElement!).getByRole('button', { name: 'Rétablir' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
+    expect(post.mock.calls[2][2]).toEqual({ params: expect.objectContaining({ dryRun: true }) });
+    expect(unmatchedOf(post.mock.calls[2])).toBeNull();
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Rétablir' })).toBeNull());
+  });
 });

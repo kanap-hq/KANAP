@@ -207,6 +207,8 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
             open={matchesOpen}
             onToggle={() => setMatchesOpen((open) => !open)}
             onUndo={choose ? (entry) => choose([...rowChoices, { kind: 'unmatch', column: entry.column, value: entry.value }]) : undefined}
+            undone={undone}
+            onRedo={choose ? (entry) => choose(rowChoices.filter((choice) => !(choice.kind === 'unmatch' && choice.column === entry.column && choice.value === entry.value))) : undefined}
             disabled={choicesDisabled}
           />
           {lookalikes && (

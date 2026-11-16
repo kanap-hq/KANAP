@@ -85,4 +85,26 @@ describe('CsvImportDialogV2, the matches of the check', () => {
     expect(post.mock.calls[2][2]).toEqual({ params: expect.objectContaining({ dryRun: false }) });
     expect(unmatchedOf(post.mock.calls[2])).toEqual([{ column: 'supplier_name', value: 'Societe Generale' }]);
   });
+
+  it('keeps an undone match listed with Match again, even with no match left, and Match again checks with it again', async () => {
+    const editor: CsvImportMatch = { ...match, value: 'Akeneo', target: 'Akeneo', ref: 'SUP-34', origin: 'editor', reason: 'editor' };
+    post
+      .mockResolvedValueOnce({ data: result({ matches: [editor] }) })
+      .mockResolvedValueOnce({ data: result({ matches: undefined, matchesTotal: undefined }) })
+      .mockResolvedValueOnce({ data: result({ matches: [editor] }) });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^1 value matched/ }));
+    fireEvent.click(within(screen.getByText(/Akeneo → SUP-34/).parentElement!).getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    // The undone match stays listed, said as the check made it, with its way back.
+    const undone = await screen.findByText('Supplier (publisher): Akeneo');
+    fireEvent.click(within(undone.parentElement!).getByRole('button', { name: 'Match again' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
+    expect(post.mock.calls[2][2]).toEqual({ params: expect.objectContaining({ dryRun: true }) });
+    expect(unmatchedOf(post.mock.calls[2])).toBeNull();
+    // The matches stay unfolded through the checks.
+    expect(await screen.findByText('Supplier (publisher): Akeneo → SUP-34 Akeneo')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Match again' })).toBeNull();
+  });
 });

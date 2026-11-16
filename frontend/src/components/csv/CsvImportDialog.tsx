@@ -11,7 +11,7 @@ import { CsvReportMessage, csvMessageText } from './csvMessage';
 import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
 import { useImportFiles } from './importFiles';
 import ImportExampleButton, { type ImportExampleKey } from './ImportExampleButton';
-import ImportMatchesView from './ImportMatchesView';
+import ImportMatchesView, { type UndoneMatch } from './ImportMatchesView';
 import type { CsvImportResult } from './csv.types';
 
 type ImportReport = {
@@ -120,7 +120,7 @@ export default function CsvImportDialog({
   const [requestError, setRequestError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // The matches the person undid on the check (lot I3 of 26.11.9): the next check and the load send them.
-  const [unmatched, setUnmatched] = useState<Array<{ column: string; value: string }>>([]);
+  const [unmatched, setUnmatched] = useState<UndoneMatch[]>([]);
   // The matches stay unfolded while the file is checked again after an undo.
   const [matchesOpen, setMatchesOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -179,7 +179,7 @@ export default function CsvImportDialog({
   /** `chosen` carries the reading a switch, or the matches an Undo, just picked, before the state has caught up. */
   const upload = async (
     dryRun: boolean,
-    chosen: { dateOrder?: DateReading | null; decimalMark?: AmountReading | null; unmatched?: Array<{ column: string; value: string }> } = {},
+    chosen: { dateOrder?: DateReading | null; decimalMark?: AmountReading | null; unmatched?: UndoneMatch[] } = {},
   ) => {
     if (!file) return;
     setLoading(true);
@@ -190,7 +190,7 @@ export default function CsvImportDialog({
       fd.append('file', file);
       // In the form, never in the address: they hold values of the file.
       const undone = chosen.unmatched ?? unmatched;
-      if (undone.length > 0) fd.append('unmatched', JSON.stringify(undone));
+      if (undone.length > 0) fd.append('unmatched', JSON.stringify(undone.map(({ column, value }) => ({ column, value }))));
       const queryParams: Record<string, string | number | boolean | null | undefined> = {
         ...(params ?? {}),
         language,
@@ -233,8 +233,14 @@ export default function CsvImportDialog({
   };
 
   // An Undo checks the file again without that match, with the reading the shown check applied.
-  const undo = (entry: { column: string; value: string }) => {
-    const next = [...unmatched, { column: entry.column, value: entry.value }];
+  const undo = (entry: UndoneMatch) => {
+    const next = [...unmatched, { column: entry.column, value: entry.value, name: entry.name, origin: entry.origin }];
+    setUnmatched(next);
+    void upload(true, { unmatched: next });
+  };
+  // Match again: the file checked again with that value matched as before.
+  const redo = (entry: UndoneMatch) => {
+    const next = unmatched.filter((item) => !(item.column === entry.column && item.value === entry.value));
     setUnmatched(next);
     void upload(true, { unmatched: next });
   };
@@ -398,7 +404,7 @@ export default function CsvImportDialog({
               </Alert>
             )}
             {/* Under the warnings: the names found beyond case, undone on the check only. */}
-            {(matches.length > 0 || refusedProposals.length > 0) && (
+            {(matches.length > 0 || refusedProposals.length > 0 || (report.dryRun && unmatched.length > 0)) && (
               <Box sx={{ mt: 1.5 }}>
                 <ImportMatchesView
                   matches={matches}
@@ -409,6 +415,8 @@ export default function CsvImportDialog({
                   open={matchesOpen}
                   onToggle={() => setMatchesOpen((open) => !open)}
                   onUndo={report.dryRun ? undo : undefined}
+                  undone={unmatched}
+                  onRedo={report.dryRun ? redo : undefined}
                   disabled={loading}
                 />
               </Box>

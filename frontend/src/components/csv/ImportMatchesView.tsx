@@ -132,14 +132,17 @@ export function FoldToggle({ open, onToggle, label }: { open: boolean; onToggle:
 
 type Match = Pick<CsvImportMatch, 'column' | 'name' | 'value' | 'target' | 'ref' | 'origin' | 'reason' | 'lines' | 'count' | 'undoable'>;
 type Refused = Pick<CsvImportRefusedProposal, 'column' | 'name' | 'value' | 'target' | 'reason' | 'lines' | 'count'>;
+/** A match the person undid: its column and value, and how it was found when the screen kept it. */
+export type UndoneMatch = { column: string; value: string; name?: string | null; origin?: CsvImportMatch['origin'] };
 
 /**
  * The matches of an import's check (lot I3 of 26.11.9): the values of the file found beyond case, as
  * one folded count that unfolds into one line per match ("Supplier: Societe Generale → SUP-3 Société
  * Générale"), the file's lines in a tooltip (with "Catalog version" for a version found by a prefix
  * rule), Kad's proposals marked, each with its Undo when it can be
- * undone; then the proposals of Kad the import refused. The budget file's check, the card of any import
- * and the import dialogs show it alike. Nothing when there is no match and no refusal.
+ * undone; then the matches undone, each with its way back (correctifs I), as the budget file's check
+ * lists them; then the proposals of Kad the import refused. The budget file's check, the card of any
+ * import and the import dialogs show it alike. Nothing when there is no match, no undone match and no refusal.
  */
 export default function ImportMatchesView({
   matches,
@@ -150,6 +153,8 @@ export default function ImportMatchesView({
   open,
   onToggle,
   onUndo,
+  undone = [],
+  onRedo,
   disabled = false,
 }: {
   /** The first matches; `matchesTotal` all of them, when the list was cut. */
@@ -162,12 +167,17 @@ export default function ImportMatchesView({
   open: boolean;
   onToggle: () => void;
   /** Undo a match: absent, the matches are read only. */
-  onUndo?: (entry: { column: string; value: string }) => void;
+  onUndo?: (entry: Match) => void;
+  /** The matches undone on this check, listed with their way back while `onRedo` is given. */
+  undone?: readonly UndoneMatch[];
+  /** Match an undone value again: absent, the matches undone are not listed. */
+  onRedo?: (entry: UndoneMatch) => void;
   /** A check is running: Undo waits for it. */
   disabled?: boolean;
 }) {
   const { t } = useTranslation('ops');
-  if (matches.length === 0 && refusedProposals.length === 0) return null;
+  const undoneShown = onRedo ? undone : [];
+  if (matches.length === 0 && undoneShown.length === 0 && refusedProposals.length === 0) return null;
   const linesOf = (entry: { lines: number[]; count: number }): string => {
     const extra = entry.count - entry.lines.length;
     const lines = extra > 0 ? `${entry.lines.join(', ')} ${t(`${K}andMoreInline`, { count: extra })}` : entry.lines.join(', ');
@@ -175,6 +185,10 @@ export default function ImportMatchesView({
   };
   // The record with its reference before its name, as a line that looks like a stored one names it.
   const record = (entry: { target: string; ref?: string | null }) => (entry.ref ? `${entry.ref} ${entry.target}` : entry.target);
+  // A supplier found by the application's publisher says so after its column.
+  const columnOf = (entry: { column: string; name?: string | null; origin?: CsvImportMatch['origin'] }) => (entry.origin === 'editor'
+    ? t(`${K}matching.byEditor`, { column: columnName(entry.column, entry.name) })
+    : columnName(entry.column, entry.name));
   const allMatches = Math.max(matchesTotal ?? 0, matches.length);
   const allRefused = Math.max(refusedTotal ?? 0, refusedProposals.length);
   return (
@@ -186,10 +200,7 @@ export default function ImportMatchesView({
         <Line
           key={`mt-${entry.column}-${entry.value}`}
           text={t(`${K}matching.match`, {
-            // A supplier found by the application's publisher says so after its column.
-            dimension: entry.origin === 'editor'
-              ? t(`${K}matching.byEditor`, { column: columnName(entry.column, entry.name) })
-              : columnName(entry.column, entry.name),
+            dimension: columnOf(entry),
             value: entry.value,
             target: record(entry),
           })}
@@ -199,6 +210,14 @@ export default function ImportMatchesView({
         />
       ))}
       {open && allMatches > matches.length && <Line text={t(`${K}andMore`, { count: allMatches - matches.length })} />}
+      {/* A match undone stays listed, folded or not, even when no match is left: the way back to it. */}
+      {undoneShown.map((entry) => (
+        <Line
+          key={`un-${entry.column}-${entry.value}`}
+          text={t(`${K}dimensionValues`, { dimension: columnOf(entry), names: entry.value })}
+          action={{ label: t(`${K}matching.redo`), onClick: () => onRedo?.(entry), disabled }}
+        />
+      ))}
       {refusedProposals.map((entry) => (
         <Line
           key={`rp-${entry.column}-${entry.value}`}

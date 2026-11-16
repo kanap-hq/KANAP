@@ -140,4 +140,24 @@ describe('PreviewCard, the matches of a contracts import', () => {
     fireEvent.click(screen.getByRole('button', { name: /^2 values matched/ }));
     expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
   });
+
+  it('keeps a match undone on the card listed with Match again, even with no match left, and sends the list without it', async () => {
+    post.mockResolvedValueOnce({ data: card({}, { id: 'preview-2' }) });
+    const onReplace = renderCard(card({
+      matches: undefined,
+      matchesTotal: undefined,
+      refusedProposals: undefined,
+      refusedProposalsTotal: undefined,
+      undone: [{ column: 'cost_center', value: 'Informatique' }, { column: 'supplier_name', value: 'Societe Generale' }],
+    }));
+    const undone = screen.getByText('Fournisseur du contrat: Societe Generale');
+    fireEvent.click(within(undone.parentElement!).getByRole('button', { name: 'Match again' }));
+    expect(post).toHaveBeenCalledWith(ROUTE, { choices: [{ kind: 'unmatch', column: 'cost_center', value: 'Informatique' }] });
+    await waitFor(() => expect(onReplace).toHaveBeenCalled());
+  });
+
+  it('lists no Match again on an approved card', () => {
+    renderCard(card({ undone: [{ column: 'supplier_name', value: 'Societe Generale' }] }, { status: 'approved' }));
+    expect(screen.queryByRole('button', { name: 'Match again' })).toBeNull();
+  });
 });

@@ -158,7 +158,7 @@ function PreviewCard({
   const checked = preview.import_mapping?.validation?.report;
   const canChoose = isPending && !!onReplace && !!preview.conversation_id && !preview.import_mapping?.result
     && (checked?.kind === 'budget_file' || (checked?.kind === 'rows'
-      && (!!checked.matches?.some((match) => match.undoable) || (checked.lookalikes?.count ?? 0) > 0)));
+      && (!!checked.matches?.some((match) => match.undoable) || (checked.undone?.length ?? 0) > 0 || (checked.lookalikes?.count ?? 0) > 0)));
   // One request per card: a second click before the new render would act on the card being replaced.
   // The card that sent it stays answered; its replacement takes choices again.
   const sentFor = React.useRef<string | null>(null);
