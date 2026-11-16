@@ -237,6 +237,10 @@ export function buildImportMapping(
     unplaced.push({ position, header });
   }
 
+  // A column the import matches without the file mapping it (an application's supplier found by its publisher).
+  const matchedTitles = Object.fromEntries(template
+    .filter((column) => !entries.has(column.column) && isImportMatchedColumn(request.importKey, column.column))
+    .map((column) => [column.column, column.title]));
   return {
     preview: {
       import_key: request.importKey,
@@ -245,6 +249,7 @@ export function buildImportMapping(
       columns,
       unread_values: unreadValues,
       read_errors: readErrors,
+      ...(Object.keys(matchedTitles).length > 0 ? { matched_titles: matchedTitles } : {}),
       missing_required: template
         .filter((column) => column.required && !entries.has(column.column))
         .map((column) => ({ column: column.column, title: column.title })),

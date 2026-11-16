@@ -101,7 +101,11 @@ function ImportMappingPreview({ mapping, onChoices, choicesDisabled }: ImportMap
   const { t, i18n } = useTranslation(['ai']);
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const kindOf = new Map(mapping.columns.map((column) => [column.column, column.kind]));
-  const titleOf = new Map(mapping.columns.map((column) => [column.column, column.title]));
+  // The columns the mapping fills, then those the import matches without the file (a supplier found by its publisher).
+  const titleOf = new Map([
+    ...Object.entries(mapping.matched_titles ?? {}),
+    ...mapping.columns.map((column): [string, string] => [column.column, column.title]),
+  ]);
   // The budget lines' amounts, the values one checks, come right after the title: on a narrow card they stay in view.
   const sampleOrder = mapping.sample.columns.map((_, index) => index);
   if (mapping.import_key === 'budget_lines') {

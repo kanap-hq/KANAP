@@ -95,6 +95,8 @@ export type AiImportMapping = {
   /** Some values the import will not read, by column; shown here only. */
   unread_values?: Record<string, string[]>;
   read_errors?: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks' | 'reference-without-prefix'>;
+  /** The titles of the columns the import matches that the mapping does not fill (an application's supplier found by its publisher). */
+  matched_titles?: Record<string, string>;
   missing_required: Array<{ column: string; title: string }>;
   unplaced: Array<{ position: number; header: string | null }>;
   assumptions: string[];

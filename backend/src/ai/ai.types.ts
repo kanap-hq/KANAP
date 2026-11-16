@@ -523,6 +523,11 @@ export type AiImportMappingPreviewDto = {
    * marks, or a column of references holds a value without the family's prefix.
    */
   read_errors: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks' | 'reference-without-prefix'>;
+  /**
+   * The titles of the columns the import matches that the mapping does not fill (an application's
+   * supplier found by its publisher), by column: the card names every column by its title. Absent when none.
+   */
+  matched_titles?: Record<string, string>;
   /** Required columns of the template no column of the file fills. */
   missing_required: Array<{ column: string; title: string }>;
   /** Columns of the file the mapping does not use. */

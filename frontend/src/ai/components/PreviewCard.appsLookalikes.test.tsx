@@ -214,6 +214,23 @@ describe('PreviewCard, the rows of an applications import that look like an exis
     });
   });
 
+  // Correctifs J: the supplier found by the publisher, a column the file does not map, by its title.
+  it('names the supplier found by the publisher by its title, matched or undone, when the file does not map the column', () => {
+    const preview = card({ matches: [editor], matchesTotal: 1, lookalikes: undefined });
+    preview.import_mapping!.columns = preview.import_mapping!.columns.filter((column) => column.column !== 'supplier_name');
+    preview.import_mapping!.matched_titles = { supplier_name: 'Fournisseur' };
+    renderCard(preview);
+    fireEvent.click(screen.getByRole('button', { name: /^1 value matched/ }));
+    expect(screen.getByText('Fournisseur (publisher): Cegid → SUP-4 Cegid')).toBeInTheDocument();
+    cleanup();
+    const undone = card({ undone: [{ column: 'supplier_name', value: 'Cegid' }], lookalikes: undefined });
+    undone.import_mapping!.columns = undone.import_mapping!.columns.filter((column) => column.column !== 'supplier_name');
+    undone.import_mapping!.matched_titles = { supplier_name: 'Fournisseur' };
+    renderCard(undone);
+    expect(screen.getByText('Fournisseur: Cegid')).toBeInTheDocument();
+    expect(screen.queryByText(/supplier_name/)).toBeNull();
+  });
+
   it('shows what became of each row, with no choice, on an approved card', () => {
     renderCard(card({ lookalikes: lookalikes([{ ...accents, outcome: 'created' }]) }, { status: 'approved' }));
     expect(screen.queryByRole('group')).toBeNull();

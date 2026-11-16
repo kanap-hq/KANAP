@@ -1138,6 +1138,35 @@ function testApprovalEndsTheTurn() {
   console.log('  an approved import ends the turn: OK');
 }
 
+// Lot I3 of 26.11.9, correctifs J: a column the import matches that the file does not map (an
+// application's supplier found by its publisher) keeps its title, so the card never names it by its key.
+async function testMatchedColumnsTheFileDoesNotMapKeepTheirTitle() {
+  const grid = await readTableAttachment(Buffer.from(['Nom;Fournisseur;Editeur', 'R9 Nouvelle;;Akeneo'].join('\n'), 'utf8'));
+  const specs = await AI_IMPORT_TARGETS.applications.columns({} as any);
+  const supplier = specs.find((spec) => spec.column === 'supplier_name')!;
+  const template = [
+    { column: 'name', title: 'Nom', required: true, kind: 'text' as const },
+    { column: 'supplier_name', title: importColumnTitle(supplier, 'fr'), required: false, kind: 'reference' as const },
+    { column: 'editor', title: 'Éditeur', required: false, kind: 'text' as const },
+  ];
+  const { preview } = buildImportMapping(grid, template, {
+    importKey: 'applications', filename: 'apps.csv', assumptions: [], columns: [
+      { column: 'name', source: 1, confidence: 'high' },
+      { column: 'editor', source: 3, confidence: 'high' },
+    ],
+  }, 'fr');
+  assert.deepEqual(preview.matched_titles, { supplier_name: 'Fournisseur' });
+  // Mapped, the column has its title among the columns: nothing more.
+  const mapped = buildImportMapping(grid, template, {
+    importKey: 'applications', filename: 'apps.csv', assumptions: [], columns: [
+      { column: 'name', source: 1, confidence: 'high' },
+      { column: 'supplier_name', source: 2, confidence: 'high' },
+    ],
+  }, 'fr');
+  assert.equal(mapped.preview.matched_titles, undefined);
+  console.log('  titles of the matched columns the file does not map: OK');
+}
+
 async function run() {
   const originalFeature = Features.AI_CHAT_ENABLED;
   Features.AI_CHAT_ENABLED = true;
@@ -1158,6 +1187,7 @@ async function run() {
     await testARefusedFileIsNotImported();
     testBilanOnThePersonsLines();
     await testNamesOfRecordsBecomeProposals();
+    await testMatchedColumnsTheFileDoesNotMapKeepTheirTitle();
     testLookalikesReachTheModel();
     testMatchingCountsReachTheModel();
     testApprovalFactsByNature();
