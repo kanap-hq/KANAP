@@ -16,9 +16,8 @@ import {
 } from '../../ai-write-texts';
 import { AI_IMPORT_KEYS, AI_IMPORT_RESOURCES, aiImportAccess } from '../../import/ai-import-access';
 import { AiImportMappingService, aiImportTarget, PrepareImportMappingInput } from '../../import/ai-import-mapping.service';
-import { AI_IMPORT_TARGETS, parseImportChoices } from '../../import/ai-import-targets';
+import { AI_IMPORT_TARGETS, parseImportChoices, type ImportCardChoice } from '../../import/ai-import-targets';
 import { LOOKALIKE_CHOICE_WORDS_RULE } from '../../import/ai-import-runner.service';
-import type { BudgetFileChoice } from '../../../spend/budget-file/types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview, AiPreviewExecutionRefusal } from '../ai-mutation-operation.types';
 
@@ -128,8 +127,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'Give no count of what the approval creates or updates (by nature included) other than the counts of that sentence, '
       + 'and never count the lines of the file yourself; lines in error, line numbers and amounts stay yours to cite. '
       + 'Name a value of a fixed list (a status, a priority) by its name in the template\'s `entries`, never by its code. '
-      + 'Rows that look like a budget line the person reads (`similar_lines`) are left out unless the person chooses on the card '
-      + 'to create them anyway or to update that line; the card holds those choices: never announce such a row as created. '
+      + 'Rows that look like a budget line or an application the person reads (`similar_lines`) are left out unless the person chooses '
+      + 'on the card to create them anyway or to update that line or application; the card holds those choices: never announce such a row as created. '
       + `${LOOKALIKE_CHOICE_WORDS_RULE} `
       + 'The person\'s choices on the card (`matching.choices`) are kept when you call again for the same file. '
       + 'A new card for the same file closes the pending one at once: it can no longer be approved, so do not warn the person about it. '
@@ -168,6 +167,13 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     const budget = input.entity_type === 'budget_lines';
     const choices = input.choices ?? await this.lastChoices(context, input.attachment_id, input.entity_type);
     const { target, mapping } = await this.mapping.prepareMapping(context, { ...input, choices }, language);
+    // The applications (lot I3 of 26.11.9): the lookalike choices the check followed, the targets of the
+    // rows it left out by default included, so that the approval leaves out what the card left out.
+    const report = mapping.validation?.report;
+    const followed = !budget && report?.kind === 'rows' && report.lookalikes ? report.lookalikes.choices : undefined;
+    const kept = followed
+      ? [...choices.filter((choice) => choice.kind !== 'lookalike' && choice.kind !== 'lookalikes'), ...followed]
+      : choices;
     return {
       // The import as the target type: the reservation of the import route is checked on it again at approval.
       targetEntityType: target.key,
@@ -181,8 +187,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         // The choices the check followed: an undone match the file no longer makes is dropped. A check
         // that refused the file before reading its rows followed none: the choices are kept as received.
         ...(budget ? { choices: mapping.validation?.matching ? mapping.validation.matching.choices : choices ?? [] } : {}),
-        // Another import's matches undone, as received.
-        ...(!budget && choices.length > 0 ? { choices } : {}),
+        // Another import's matches undone, as received, and an application's lookalike choices as followed.
+        ...(!budget && kept.length > 0 ? { choices: kept } : {}),
       },
       currentValues: { import_mapping: mapping },
     };
@@ -193,7 +199,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
    * card replaced by a choice is expired, and the card that replaced it holds the choices): none once
    * that card was imported, or when it maps the file onto another import.
    */
-  private async lastChoices(context: AiExecutionContextWithManager, attachmentId: string, key: string): Promise<BudgetFileChoice[]> {
+  private async lastChoices(context: AiExecutionContextWithManager, attachmentId: string, key: string): Promise<ImportCardChoice[]> {
     if (!context.conversationId) return [];
     const [last]: Array<{ status: string; choices: unknown; entity_type: string | null }> = await context.manager.query(
       `SELECT status, mutation_input->'choices' AS choices, mutation_input->>'entity_type' AS entity_type

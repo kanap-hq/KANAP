@@ -19,6 +19,7 @@ import { BUSINESS_PROCESS_TYPES } from '../../business-processes/business-proces
 import { detailColumns, EXPORT_ONLY_COLUMNS } from '../../spend/budget-file/columns';
 import { isMatchedColumn, parseBudgetFileChoices } from '../../spend/budget-file/matching';
 import type { BudgetFileChoice } from '../../spend/budget-file/types';
+import { isLookalikeChoiceEntry, parseLookalikeChoices, type ImportLookalikeChoice } from '../../common/csv/csv-lookalikes';
 import { DEFAULT_ANALYTICS_AXIS_LABELS, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import type { AiImportColumnKind } from './ai-import-convert';
 import { defaultColumnTitle, TASK_COLUMN_TITLES } from './ai-import-titles';
@@ -515,13 +516,35 @@ export function isImportMatchedColumn(key: string, column: string): boolean {
   return (AI_IMPORT_MATCHED_COLUMNS[key as AiImportKey] ?? []).includes(column);
 }
 
+/** A choice of the person on an import card: the budget file's, or another import's (a match undone, an application's lookalike). */
+export type ImportCardChoice = BudgetFileChoice | ImportLookalikeChoice;
+
+/** Choices of a card, all kinds together, as the budget file's. */
+const CARD_CHOICE_LIMIT = 200;
+
 /**
- * The person's choices on the card of the import `key`: the budget file's choices, or for another
- * import the matches undone in its matched columns only. Throws on anything else.
+ * The person's choices on the card of the import `key`: the budget file's choices; for another import
+ * the matches undone in its matched columns; for the applications, the choices for the rows that look
+ * like an application too (lot I3 of 26.11.9, an application named by its id). Throws on anything else.
  */
-export function parseImportChoices(key: string, raw: unknown): BudgetFileChoice[] {
+export function parseImportChoices(key: string, raw: unknown): ImportCardChoice[] {
   if (key === 'budget_lines') return parseBudgetFileChoices(raw);
-  return parseBudgetFileChoices(raw, { unmatchOnly: (column) => isImportMatchedColumn(key, column) });
+  const unmatchOnly = (column: string) => isImportMatchedColumn(key, column);
+  if (key !== 'applications') return parseBudgetFileChoices(raw, { unmatchOnly });
+  let list = raw;
+  if (typeof raw === 'string' && raw !== '') {
+    try {
+      list = JSON.parse(raw);
+    } catch {
+      throw new Error('The choices are not valid.');
+    }
+  }
+  if (list === undefined || list === null || list === '') return [];
+  if (!Array.isArray(list) || list.length > CARD_CHOICE_LIMIT) throw new Error('The choices are not valid.');
+  return [
+    ...parseBudgetFileChoices(list.filter((entry) => !isLookalikeChoiceEntry(entry)), { unmatchOnly }),
+    ...parseLookalikeChoices(list.filter(isLookalikeChoiceEntry)),
+  ];
 }
 
 /** The column's title in the language, else the template's own header. */

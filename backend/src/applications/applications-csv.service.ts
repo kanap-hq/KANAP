@@ -446,8 +446,9 @@ export class ApplicationsCsvService {
 
   /**
    * A row that gives a publisher and no supplier is linked to the supplier its publisher names (T-I3k),
-   * a match listed (`origin: 'editor'`) that the person may undo. A file without the supplier column
-   * says nothing of the supplier of an application it updates, and "complete" keeps a stored one.
+   * a match listed (`origin: 'editor'`) that the person may undo. A supplier stored on the application
+   * the row updates is kept, except by full replace with a blank supplier cell (a file without the
+   * supplier column says nothing of it).
    */
   private supplierFromEditor(rows: CsvImportRow[], context: CsvImportContext): void {
     for (const row of rows) {
@@ -455,7 +456,7 @@ export class ApplicationsCsvService {
       const editor = String(row.raw.editor ?? '').trim();
       const existing = row.existingEntity;
       if (!editor) continue;
-      if (existing && (!('supplier_name' in row.raw) || (context.params.mode === 'enrich' && existing.supplier_id))) continue;
+      if (existing?.supplier_id && (context.params.mode === 'enrich' || !('supplier_name' in row.raw))) continue;
       const supplier = this.editorSupplier(editor, context);
       if (!supplier) continue;
       row.parsed.supplier_id = supplier.id;
