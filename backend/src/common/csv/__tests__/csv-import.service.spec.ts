@@ -755,6 +755,31 @@ async function testUnknownReferenceKeepsTheStoredValueOnMerge() {
   console.log('  merge mode keeps a stored reference nothing replaces; replace and creation empty it: OK');
 }
 
+/**
+ * Merge mode, an update: a reference that belongs to another property of the record (`keptWith`) is
+ * kept for a name nothing finds only while the row leaves that property as stored; a row that changes
+ * it clears the reference, said as in full replace (a task's phase and its project, lot I3 review).
+ */
+async function testKeptReferenceFollowsWhatItBelongsTo() {
+  const { config, data, service } = referencesFixture();
+  const dependent: CsvEntityConfig = {
+    ...config,
+    fields: config.fields.map((field) => (field.csvColumn === 'supplier_name' ? { ...field, keptWith: ['owner_id'] } : field)),
+  };
+  const stored = { ...data, apps: [{ ...data.apps[0], owner_id: 'u1' }] };
+  const kept = createMockManager(stored);
+  const same = await service.import(dependent, createMockFile('name;supplier_name;owner_email\nAtlas;Banque Inconnue;ana@example.com'), { dryRun: false, mode: 'enrich', operation: 'upsert' }, { manager: kept, tenantId: 't1', access: ADMIN });
+  assert.deepEqual(brief(same.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_KEPT', params: { value: 'Banque Inconnue' } }]);
+  assert.equal(same.unchanged, 1);
+
+  const cleared = createMockManager(stored);
+  const moved = await service.import(dependent, createMockFile('name;supplier_name;owner_email\nAtlas;Banque Inconnue;ben@example.com'), { dryRun: false, mode: 'enrich', operation: 'upsert' }, { manager: cleared, tenantId: 't1', access: ADMIN });
+  assert.deepEqual(brief(moved.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Banque Inconnue' } }]);
+  assert.equal(moved.warnings[0].message, 'suppliers not found: "Banque Inconnue" (set to null)');
+  assert.deepEqual([cleared.getSaved()[0].supplier_id, cleared.getSaved()[0].owner_id], [null, 'u2']);
+  console.log('  a kept reference is cleared when the row changes what it belongs to: OK');
+}
+
 /** Merge mode, an update: a numbered list with a cell nothing finds keeps the stored list whole. */
 async function testUnknownCellKeepsTheStoredList() {
   const { config, data, service } = referencesFixture();
@@ -1209,6 +1234,7 @@ async function testTimeZoneColumnsAreNamedInTheScreenLanguage() {
   await testUndoneMatchReadsAsNotFound();
   await testUnknownReferenceKeepsTheStoredValueOnMerge();
   await testUnknownCellKeepsTheStoredList();
+  await testKeptReferenceFollowsWhatItBelongsTo();
   await testCaseInsensitiveEnumMatching();
   await testFormulaApostropheIsStrippedOnImport();
   await testBeforeValidateErrorsSurviveDryRun();

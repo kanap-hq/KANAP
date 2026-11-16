@@ -205,6 +205,7 @@ export class CsvImportService {
 
     if (config.afterValidate) await config.afterValidate(parsedRows, context);
     if (replace) this.checkEmptiedColumns(parsedRows, replace, params.operation);
+    else this.clearKeptReferencesOfChangedOwners(parsedRows, importFields);
 
     // Check for duplicate upsert keys within the file
     const duplicateErrors = this.checkDuplicateKeys(config, parsedRows);
@@ -635,6 +636,32 @@ export class CsvImportService {
       for (const warning of missing) {
         warning.code = 'CSV_REFERENCE_NOT_FOUND_KEPT';
         warning.message = `${field.fkEntity} not found: "${warning.params?.value ?? ''}" (kept)`;
+      }
+    }
+  }
+
+  /**
+   * Merge mode, once the hooks ran: a stored reference kept for a name nothing finds
+   * (`keepStoredReferences`) must still hold for the record as the row leaves it. A reference that
+   * belongs to other properties of the record (`keptWith`) is not kept when the row changes one of
+   * them: it is cleared, and said, as in full replace (`CSV_REFERENCE_NOT_FOUND_CLEARED`).
+   */
+  private clearKeptReferencesOfChangedOwners(rows: CsvImportRow[], fields: CsvFieldDefinition[]): void {
+    const dependent = fields.filter((field) => field.fkEntity && field.keptWith?.length);
+    if (dependent.length === 0) return;
+    const same = (left: unknown, right: unknown) => String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
+    for (const row of rows) {
+      const stored = row.existingEntity;
+      if (!stored) continue;
+      for (const field of dependent) {
+        const changed = field.keptWith!.some((property) => Object.prototype.hasOwnProperty.call(row.parsed, property) && !same(row.parsed[property], stored[property]));
+        if (!changed) continue;
+        for (const warning of row.warnings) {
+          if (warning.column !== field.csvColumn || warning.code !== 'CSV_REFERENCE_NOT_FOUND_KEPT') continue;
+          row.parsed[field.entityProperty] = null;
+          warning.code = 'CSV_REFERENCE_NOT_FOUND_CLEARED';
+          warning.message = `${field.fkEntity} not found: "${warning.params?.value ?? ''}" (set to null)`;
+        }
       }
     }
   }

@@ -77,6 +77,13 @@ export interface CsvFieldDefinition {
   fkLookupColumn?: string;
   /** Whether the FK relationship is required (default: false) */
   fkRequired?: boolean;
+  /**
+   * The properties of the record a reference belongs to (a task's phase to its project, a stream to
+   * its category, a department to its company). In merge mode, the stored reference is kept for a name
+   * nothing finds only while the row leaves them as stored; a row that changes one clears it, as full
+   * replace does (lot I3 of 26.11.9, review fixes).
+   */
+  keptWith?: readonly string[];
   /** Name of JSON validator function for JSON fields */
   jsonValidator?: string;
   /** Strategy for array handling (default: COMMA_SEPARATED) */

@@ -591,6 +591,7 @@ export const taskCsvConfig: CsvEntityConfig = {
       fkLookupColumn: 'name',
       // Found in the task's project, beyond case and with Kad's proposals, by `anchorPhases`.
       nameMatchedByConfig: true,
+      keptWith: ['related_object_type', 'related_object_id'],
       fkRequired: false,
       required: false,
       defaultExport: true,
@@ -663,6 +664,7 @@ export const taskCsvConfig: CsvEntityConfig = {
       type: CsvFieldType.FK_BY_NAME,
       fkEntity: 'portfolio_streams',
       fkLookupColumn: 'name',
+      keptWith: ['category_id'],
       fkRequired: false,
       required: false,
       defaultExport: true,
