@@ -28,6 +28,7 @@ Navegue a **Datos maestros > Contactos** para ver su directorio de contactos. Ha
 La cuadrícula de Contactos proporciona un directorio buscable de todos los contactos externos. Cada celda de una fila es un enlace clicable que abre la página del contacto.
 
 **Columnas predeterminadas**:
+- **Referencia**: La referencia que asigna Kadratis (`CTCT-3`)
 - **Apellido** / **Nombre**: Nombre del contacto
 - **Proveedor**: El proveedor para el que trabaja
 - **Correo electrónico**: Dirección de correo
@@ -40,6 +41,10 @@ La cuadrícula de Contactos proporciona un directorio buscable de todos los cont
 - **Creado**: Cuándo se creó el registro
 
 **Ordenación predeterminada**: Por apellido, alfabético.
+
+**Búsqueda rápida**: escriba una referencia, como `CTCT-3`, para encontrar ese contacto. Las cifras solas buscan en el texto.
+
+**Filtros de columna**: el filtro **Referencia** acepta `CTCT-3` o `3`.
 
 **Acciones**:
 - **Nuevo**: Crear un nuevo contacto (requiere `contacts:member`)
@@ -55,6 +60,10 @@ Haga clic en una fila para abrir la página del contacto. Cada cambio se guarda 
 
 **Título**: el nombre del contacto. Haga clic en él para editar el nombre y el apellido uno al lado del otro; el cambio se guarda al salir de los dos campos o al pulsar Intro, y Escape lo cancela. Un contacto sin nombre muestra su correo electrónico en su lugar.
 
+**Referencia**: la referencia del contacto (`CTCT-4`) aparece antes del nombre. Haga clic en ella para copiarla.
+
+**Dirección de la página**: la dirección de la página usa la referencia, por ejemplo `/master-data/contacts/CTCT-4/overview`. La dirección anterior de la página de un contacto la sigue abriendo y se sustituye por la nueva.
+
 **Encabezado**, bajo el nombre:
 - **Proveedor**: el proveedor para el que trabaja este contacto, como enlace a su página. Un contacto sin proveedor muestra **Sin proveedor**: haga clic para abrir las propiedades y elegir uno.
 - **Tipo de contacto**: el rol del contacto en el proveedor: Comercial, Técnico, Soporte u Otro. Haga clic para elegir otro. Aparece en cuanto el contacto tiene un proveedor.
@@ -62,7 +71,7 @@ Haga clic en una fila para abrir la página del contacto. Cada cambio se guarda 
 - **Usado en**: cuántos proveedores, líneas presupuestarias, contratos y otros elementos están vinculados al contacto. Haga clic para ir a la sección **Usado en**.
 
 **Propiedades** (el panel de la derecha, que se abre con su pestaña o la tecla `P`):
-- **Proveedor**: elija el proveedor en la lista. Un contacto con proveedor siempre tiene un tipo de contacto: elegir un proveedor para un contacto sin tipo le da **Comercial**, que puede cambiar enseguida. Quitar el proveedor quita también el tipo de contacto.
+- **Proveedor**: elija el proveedor en la lista, o escriba su nombre o su referencia (`SUP-12`). Un contacto con proveedor siempre tiene un tipo de contacto: elegir un proveedor para un contacto sin tipo le da **Comercial**, que puede cambiar enseguida. Quitar el proveedor quita también el tipo de contacto.
 - **Tipo de contacto**: la misma elección que en el encabezado.
 - **Correo electrónico**: obligatorio y único entre sus contactos.
 - **Cargo**: su rol o puesto.
@@ -124,16 +133,20 @@ La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en *
 
 Gestione contactos de forma masiva usando archivos CSV o libros de Excel.
 
-**Exportar**: Descarga los contactos que muestra la lista con sus detalles. Elija **Todo el registro** en el diálogo para todos los contactos.
+**Exportar**: Descarga los contactos que muestra la lista con su referencia y sus detalles. Elija **Todo el registro** en el diálogo para todos los contactos.
 
 **Importar**:
 - Utilice **Verificación previa** para validar antes de aplicar
-- Coincidencia por dirección de correo electrónico
 - Puede crear nuevos contactos o actualizar los existentes
+- **Emparejamiento por referencia**: una `reference` rellenada (`CTCT-4` o `4`) designa el contacto que la fila actualiza, aunque su correo electrónico haya cambiado. El contacto toma el nombre y el correo electrónico de la fila. La verificación previa señala cada contacto que cambiará de nombre o de dirección de correo electrónico
+- **Emparejamiento por correo electrónico**: cuando `reference` está vacía, o el archivo no tiene esa columna, la fila se empareja por la dirección de correo electrónico
+- **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“CTCT-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
+- **Cambio de correo electrónico**: un correo electrónico que ya tiene otro contacto se rechaza, y el mensaje da la referencia de ese contacto: «“ana@acme.example” ya pertenece a CTCT-7.»
+- **Una fila por contacto**: dos filas que actualizan el mismo contacto se rechazan: «Esta fila actualiza CTCT-7, como la fila 3. Deje una sola fila por registro.»
 
 **Campos obligatorios**: Correo electrónico
 
-**Campos opcionales**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
+**Campos opcionales**: `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notas**:
 - Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador y los dos pasos de importación

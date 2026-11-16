@@ -28,6 +28,7 @@ Navigieren Sie zu **Stammdaten > Kontakte**, um Ihr Kontaktverzeichnis zu sehen.
 Das Kontakte-Grid bietet ein durchsuchbares Verzeichnis aller externen Kontakte. Jede Zelle in einer Zeile ist ein anklickbarer Link, der die Kontaktseite öffnet.
 
 **Standardspalten**:
+- **Referenz**: Die von Kadratis vergebene Referenz (`CTCT-3`)
 - **Nachname** / **Vorname**: Kontaktname
 - **Lieferant**: Der Anbieter, für den sie arbeiten
 - **E-Mail**: E-Mail-Adresse
@@ -40,6 +41,10 @@ Das Kontakte-Grid bietet ein durchsuchbares Verzeichnis aller externen Kontakte.
 - **Erstellt**: Wann der Datensatz erstellt wurde
 
 **Standardsortierung**: Nach Nachname, alphabetisch.
+
+**Schnellsuche**: Geben Sie eine Referenz ein, etwa `CTCT-3`, um diesen Kontakt zu finden. Ziffern allein suchen im Text.
+
+**Spaltenfilter**: Der Filter **Referenz** nimmt `CTCT-3` oder `3` an.
 
 **Aktionen**:
 - **Neu**: Neuen Kontakt erstellen (erfordert `contacts:member`)
@@ -55,6 +60,10 @@ Klicken Sie auf eine Zeile, um die Seite des Kontakts zu öffnen. Jede Änderung
 
 **Titel**: Der Name des Kontakts. Klicken Sie darauf, um Vorname und Nachname nebeneinander zu bearbeiten; die Änderung wird gespeichert, wenn Sie die beiden Felder verlassen oder Enter drücken, Escape verwirft sie. Ein Kontakt ohne Namen zeigt stattdessen seine E-Mail.
 
+**Referenz**: Die Referenz des Kontakts (`CTCT-4`) steht vor dem Namen. Klicken Sie darauf, um sie zu kopieren.
+
+**Seitenadresse**: Die Adresse der Seite verwendet die Referenz, zum Beispiel `/master-data/contacts/CTCT-4/overview`. Die frühere Adresse der Seite eines Kontakts öffnet sie weiterhin und wird durch die neue ersetzt.
+
 **Kopfzeile**, unter dem Namen:
 - **Lieferant**: Der Lieferant, für den dieser Kontakt arbeitet, als Link zu seiner Seite. Ein Kontakt ohne Lieferant zeigt **Kein Lieferant**: Klicken Sie darauf, um die Eigenschaften zu öffnen und einen auszuwählen.
 - **Kontakttyp**: Die Rolle des Kontakts beim Lieferanten: Vertrieb, Technik, Support oder Sonstige. Klicken Sie darauf, um einen anderen zu wählen. Er erscheint, sobald der Kontakt einen Lieferanten hat.
@@ -62,7 +71,7 @@ Klicken Sie auf eine Zeile, um die Seite des Kontakts zu öffnen. Jede Änderung
 - **Verwendet in**: Die Anzahl der Lieferanten, Budgetzeilen, Verträge und anderen Einträge, mit denen der Kontakt verknüpft ist. Klicken Sie darauf, um zum Abschnitt **Verwendet in** zu springen.
 
 **Eigenschaften** (das Feld rechts, geöffnet über seinen Reiter oder die Taste `P`):
-- **Lieferant**: Wählen Sie den Lieferanten aus der Liste. Ein Kontakt mit Lieferant hat immer einen Kontakttyp: Die Wahl eines Lieferanten für einen Kontakt ohne Typ gibt ihm **Vertrieb**, den Sie sofort ändern können. Wird der Lieferant entfernt, wird auch der Kontakttyp entfernt.
+- **Lieferant**: Wählen Sie den Lieferanten aus der Liste, oder geben Sie seinen Namen oder seine Referenz (`SUP-12`) ein. Ein Kontakt mit Lieferant hat immer einen Kontakttyp: Die Wahl eines Lieferanten für einen Kontakt ohne Typ gibt ihm **Vertrieb**, den Sie sofort ändern können. Wird der Lieferant entfernt, wird auch der Kontakttyp entfernt.
 - **Kontakttyp**: Dieselbe Auswahl wie in der Kopfzeile.
 - **E-Mail**: Pflichtfeld, eindeutig unter Ihren Kontakten.
 - **Funktion**: Die Rolle oder Position des Kontakts.
@@ -124,16 +133,20 @@ Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wähl
 
 Verwalten Sie Kontakte in großen Mengen mit CSV-Dateien oder Excel-Arbeitsmappen.
 
-**Export**: Lädt die Kontakte der Liste mit ihren Details herunter. Wählen Sie im Dialog **Das ganze Verzeichnis** für alle Kontakte.
+**Export**: Lädt die Kontakte der Liste mit ihrer Referenz und ihren Details herunter. Wählen Sie im Dialog **Das ganze Verzeichnis** für alle Kontakte.
 
 **Import**:
 - Verwenden Sie die **Vorprüfung** zum Validieren vor dem Anwenden
-- Zuordnung über E-Mail-Adresse
 - Kann neue Kontakte erstellen oder bestehende aktualisieren
+- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`CTCT-4` oder `4`) bezeichnet den Kontakt, den die Zeile aktualisiert, auch wenn sich seine E-Mail geändert hat. Der Kontakt erhält den Namen und die E-Mail der Zeile. Die Vorabprüfung meldet jeden Kontakt, der umbenannt wird oder seine E-Mail-Adresse ändert
+- **Zuordnung über die E-Mail**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird die Zeile über die E-Mail-Adresse zugeordnet
+- **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„CTCT-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
+- **E-Mail ändern**: Eine E-Mail, die bereits ein anderer Kontakt hat, wird abgelehnt, und die Meldung nennt dessen Referenz: „„ana@acme.example“ gehört bereits zu CTCT-7.“
+- **Eine Zeile pro Kontakt**: Zwei Zeilen, die denselben Kontakt aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert CTCT-7, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“
 
 **Pflichtfelder**: E-Mail
 
-**Optionale Felder**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
+**Optionale Felder**: `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Hinweise**:
 - Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte

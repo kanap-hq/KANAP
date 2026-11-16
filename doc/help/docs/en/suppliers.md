@@ -13,7 +13,7 @@ Navigate to **Master Data > Suppliers** to open the supplier directory. Click **
 - **ERP supplier ID**: Reference ID from your ERP or procurement system
 - **Notes**: Free-form notes about the vendor relationship
 
-**Tip**: On a contract, an application or a budget line, type the supplier's name and choose **+ Create supplier** when it does not exist yet. **New** on this page creates a supplier on its own.
+**Tip**: On a contract, an application or a budget line, type the supplier's name and choose **+ Create supplier** when it does not exist yet. Typing its reference, such as `SUP-12`, finds it too, and each choice shows the reference next to the name. **New** on this page creates a supplier on its own.
 
 ---
 
@@ -22,6 +22,7 @@ Navigate to **Master Data > Suppliers** to open the supplier directory. Click **
 The Suppliers list gives you a searchable, sortable directory of all your vendors.
 
 **Default columns**:
+- **Reference**: The reference Kadratis assigns (`SUP-3`). Click it to open the supplier page
 - **Name**: Supplier name (click to open the supplier page)
 - **ERP supplier ID**: Reference ID from external systems
 
@@ -35,7 +36,8 @@ Every cell in a row is clickable and opens that supplier's page.
 **Default sort**: By name, alphabetical. Sorting a text column ignores case and accents.
 
 **Filtering**:
-- Quick search: Searches across supplier fields
+- Quick search: Searches across supplier fields. Type a reference, such as `SUP-3`, to find that supplier. Digits alone search the text
+- Column filters: The **Reference** filter takes `SUP-3` or `3`
 - Status scope: Use the **Show: All / Enabled / Disabled** toggle above the grid to filter by status. The list shows enabled suppliers by default
 
 **Actions**:
@@ -54,7 +56,9 @@ The page has three tabs: **Overview**, **Contacts** and **History** (the changes
 
 **Title**: The supplier's name. Click it to edit it; the change saves when you leave the field or press Enter, and Escape cancels it. A name is required and must differ from the name of every other supplier, whatever the case (`SAP` and `sap` are the same name): Kadratis shows the message under the name and keeps the stored one.
 
-**Reference**: The ERP supplier ID, when the supplier has one, shows before the name. Click it to copy it.
+**Reference**: The supplier reference (`SUP-5`) shows before the name. Click it to copy it. The ERP supplier ID is in the properties.
+
+**Page address**: the address of the page uses the reference, for example `/master-data/suppliers/SUP-5/overview`. The former address of a supplier page still opens it, and changes to the new one.
 
 **Header**, under the name:
 - **Status**: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** disables the supplier at once: the end of validity becomes the current time.
@@ -84,7 +88,7 @@ The **Contacts** tab lists the contacts linked to this supplier by contact type:
 
 **How it works**:
 - Each section lists its contacts by name. Click a name to open the contact page.
-- **Add existing**: Search for a contact by name and pick it. The link saves at once.
+- **Add existing**: Search for a contact by name or by reference (`CTCT-4`) and pick it. The link saves at once.
 - **New contact**: Opens the contact form with the supplier and the contact type already filled in. Kadratis brings you back to this tab once the contact is created.
 - The bin button removes the link. The contact itself stays in your contacts. A message confirms it, with an **Undo** action that links the contact again.
 
@@ -121,8 +125,9 @@ The file titles the columns in the language of your screen. The table gives thei
 
 | Column | Content |
 |---|---|
-| `name` | Required. The supplier name. Rows are matched on it |
-| `erp_supplier_id` | The supplier's ID in your ERP |
+| `reference` | Optional. The supplier reference (`SUP-12`). The export writes it |
+| `name` | Required. The supplier name |
+| `erp_supplier_id` | The supplier's ID in your ERP. The import reads it as an ERP ID, even when it looks like a reference (`SUP-12`) |
 | `commercial_contact` | The email of an existing contact. The load links the supplier to it |
 | `technical_contact` | The email of a contact, as above |
 | `support_contact` | The email of a contact, as above |
@@ -133,9 +138,12 @@ The file titles the columns in the language of your screen. The table gives thei
 **Import**:
 
 - Use **Preflight check** to validate the file before applying it, then **Load**
-- Rows are matched by `name`, whatever the case: a row updates the supplier it names, any other row creates one. The stored spelling stays: a row `sap` updates `SAP`, and the preflight check says "sap" was matched to "SAP"
+- **Matching by reference**: a filled `reference` (`SUP-12` or `12`) names the supplier the row updates, even when the name has changed. The supplier then takes the name of the row, and the preflight check lists each supplier that will be renamed
+- **Matching by name**: when `reference` is empty, or the file has no such column, rows are matched by `name`, whatever the case: a row updates the supplier it names, any other row creates one. The stored spelling stays: a row `sap` updates `SAP`, and the preflight check says "sap" was matched to "SAP"
+- **Unknown reference**: a reference your workspace does not know refuses the row: "\"SUP-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
+- **Renaming**: a new name that another supplier already has is refused, and the message names that supplier's reference: "\"SAP\" already belongs to SUP-4."
 - `name` is required. Every other cell is optional
-- Each supplier takes one row. Two rows with the same name, even in a different case, are refused at the preflight check, with both row numbers
+- Each supplier takes one row. Two rows with the same name, even in a different case, are refused at the preflight check, with both row numbers. Two rows that update the same supplier are refused too: "This row updates SUP-4, as row 3 does. Keep one row per record."
 - A contact email must belong to a contact that already exists in **Contacts**. Otherwise the row is refused at the preflight check: create the contact first
 - `disabled_at` sets the end of validity, and the status follows from it. A status that contradicts the date is refused. A file without the `disabled_at` column still imports: the status alone then sets the lifecycle
 

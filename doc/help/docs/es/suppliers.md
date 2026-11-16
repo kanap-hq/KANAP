@@ -13,7 +13,7 @@ Navegue a **Datos maestros > Proveedores** para abrir el directorio de proveedor
 - **ID de proveedor ERP**: ID de referencia de su sistema ERP o de compras
 - **Notas**: Notas de texto libre sobre la relación con el proveedor
 
-**Consejo**: En un contrato, una aplicación o una línea presupuestaria, escriba el nombre del proveedor y elija **+ Crear el proveedor** cuando todavía no exista. **Nuevo** en esta página crea un proveedor por separado.
+**Consejo**: En un contrato, una aplicación o una línea presupuestaria, escriba el nombre del proveedor y elija **+ Crear el proveedor** cuando todavía no exista. Escribir su referencia, como `SUP-12`, también lo encuentra, y cada opción muestra la referencia junto al nombre. **Nuevo** en esta página crea un proveedor por separado.
 
 ---
 
@@ -22,6 +22,7 @@ Navegue a **Datos maestros > Proveedores** para abrir el directorio de proveedor
 La lista de Proveedores ofrece un directorio buscable y ordenable de todos sus vendedores.
 
 **Columnas predeterminadas**:
+- **Referencia**: La referencia que asigna Kadratis (`SUP-3`). Haga clic en ella para abrir la página del proveedor
 - **Nombre**: Nombre del proveedor (haga clic para abrir la página del proveedor)
 - **ID de proveedor ERP**: ID de referencia de sistemas externos
 
@@ -35,7 +36,8 @@ Cada celda de una fila es clicable y abre la página de ese proveedor.
 **Ordenación predeterminada**: Por nombre, alfabético. La ordenación de una columna de texto ignora mayúsculas, minúsculas y acentos.
 
 **Filtrado**:
-- Búsqueda rápida: Busca en los campos del proveedor
+- Búsqueda rápida: Busca en los campos del proveedor. Escriba una referencia, como `SUP-3`, para encontrar ese proveedor. Las cifras solas buscan en el texto
+- Filtros de columna: El filtro **Referencia** acepta `SUP-3` o `3`
 - Alcance de estado: Utilice el selector **Mostrar: Todos / Activos / Desactivados** encima de la cuadrícula para filtrar por estado. La lista muestra por defecto los proveedores activados
 
 **Acciones**:
@@ -54,7 +56,9 @@ La página tiene tres pestañas: **Vista general**, **Contactos** e **Historial*
 
 **Título**: el nombre del proveedor. Haga clic en él para editarlo; el cambio se guarda al salir del campo o al pulsar Intro, y Escape lo cancela. El nombre es obligatorio y debe ser distinto del de todos los demás proveedores, sin distinguir mayúsculas y minúsculas (`SAP` y `sap` son el mismo nombre): Kadratis muestra el mensaje bajo el nombre y conserva el nombre guardado.
 
-**Referencia**: el ID de proveedor ERP, cuando el proveedor tiene uno, aparece antes del nombre. Haga clic en él para copiarlo.
+**Referencia**: la referencia del proveedor (`SUP-5`) aparece antes del nombre. Haga clic en ella para copiarla. El ID de proveedor ERP está en las propiedades.
+
+**Dirección de la página**: la dirección de la página usa la referencia, por ejemplo `/master-data/suppliers/SUP-5/overview`. La dirección anterior de la página de un proveedor la sigue abriendo y se sustituye por la nueva.
 
 **Encabezado**, bajo el nombre:
 - **Estado**: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva el proveedor de inmediato: el fin de validez pasa a ser la hora actual.
@@ -84,7 +88,7 @@ La pestaña **Contactos** lista los contactos vinculados a este proveedor por ti
 
 **Cómo funciona**:
 - Cada sección lista sus contactos por nombre. Haga clic en un nombre para abrir la página del contacto.
-- **Añadir existente**: busque un contacto por su nombre y elíjalo. El vínculo se guarda al instante.
+- **Añadir existente**: busque un contacto por su nombre o por su referencia (`CTCT-4`) y elíjalo. El vínculo se guarda al instante.
 - **Nuevo contacto**: abre el formulario de contacto con el proveedor y el tipo de contacto ya rellenados. Kadratis le devuelve a esta pestaña una vez creado el contacto.
 - El botón de papelera elimina el vínculo. El contacto sigue en sus contactos. Un mensaje lo confirma, con una acción **Deshacer** que vuelve a vincular el contacto.
 
@@ -121,8 +125,9 @@ El archivo titula las columnas en el idioma de su pantalla. La tabla da sus nomb
 
 | Columna | Contenido |
 |---|---|
-| `name` | Obligatoria. El nombre del proveedor. Las filas se emparejan por este nombre |
-| `erp_supplier_id` | El ID del proveedor en su ERP |
+| `reference` | Opcional. La referencia del proveedor (`SUP-12`). La exportación la escribe |
+| `name` | Obligatoria. El nombre del proveedor |
+| `erp_supplier_id` | El ID del proveedor en su ERP. La importación lo lee como un ID ERP, aunque parezca una referencia (`SUP-12`) |
 | `commercial_contact` | El correo de un contacto existente. La carga vincula el proveedor con él |
 | `technical_contact` | El correo de un contacto, como arriba |
 | `support_contact` | El correo de un contacto, como arriba |
@@ -133,9 +138,12 @@ El archivo titula las columnas en el idioma de su pantalla. La tabla da sus nomb
 **Importación**:
 
 - Use la **Verificación previa** para validar el archivo antes de aplicarlo y después **Cargar**
-- Las filas se emparejan por `name`, sin distinguir mayúsculas y minúsculas: una fila actualiza el proveedor que nombra, cualquier otra fila crea uno. La grafía guardada se mantiene: una fila `sap` actualiza `SAP`, y la verificación previa indica «sap» se ha asociado a «SAP»
+- **Emparejamiento por referencia**: una `reference` rellenada (`SUP-12` o `12`) designa el proveedor que la fila actualiza, aunque su nombre haya cambiado. El proveedor toma entonces el nombre de la fila, y la verificación previa señala cada proveedor que cambiará de nombre
+- **Emparejamiento por nombre**: cuando `reference` está vacía, o el archivo no tiene esa columna, las filas se emparejan por `name`, sin distinguir mayúsculas y minúsculas: una fila actualiza el proveedor que nombra, cualquier otra fila crea uno. La grafía guardada se mantiene: una fila `sap` actualiza `SAP`, y la verificación previa indica «sap» se ha asociado a «SAP»
+- **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“SUP-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
+- **Cambio de nombre**: un nombre nuevo que ya tiene otro proveedor se rechaza, y el mensaje da la referencia de ese proveedor: «“SAP” ya pertenece a SUP-4.»
 - `name` es obligatorio. Cualquier otra celda es opcional
-- Cada proveedor ocupa una fila. Dos filas con el mismo nombre, aunque cambien mayúsculas y minúsculas, se rechazan en la verificación previa, con los dos números de fila
+- Cada proveedor ocupa una fila. Dos filas con el mismo nombre, aunque cambien mayúsculas y minúsculas, se rechazan en la verificación previa, con los dos números de fila. Dos filas que actualizan el mismo proveedor también se rechazan: «Esta fila actualiza SUP-4, como la fila 3. Deje una sola fila por registro.»
 - El correo de un contacto debe pertenecer a un contacto que ya existe en **Contactos**. Si no, la fila se rechaza en la verificación previa: cree primero el contacto
 - `disabled_at` fija el fin de validez, y el estado se deduce de él. Un estado que contradice la fecha se rechaza. Un archivo sin la columna `disabled_at` se sigue importando: el estado solo fija entonces el ciclo de vida
 

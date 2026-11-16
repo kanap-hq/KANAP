@@ -28,6 +28,7 @@ Navigate to **Master Data > Contacts** to see your contact directory. Click **Ne
 The Contacts grid provides a searchable directory of all external contacts. Every cell in a row is a clickable link that opens the contact page.
 
 **Default columns**:
+- **Reference**: The reference Kadratis assigns (`CTCT-3`)
 - **Last Name** / **First Name**: Contact name
 - **Supplier**: The vendor they work for
 - **Email**: Email address
@@ -40,6 +41,10 @@ The Contacts grid provides a searchable directory of all external contacts. Ever
 - **Created**: When the record was created
 
 **Default sort**: By last name, alphabetical.
+
+**Quick search**: Type a reference, such as `CTCT-3`, to find that contact. Digits alone search the text.
+
+**Column filters**: The **Reference** filter takes `CTCT-3` or `3`.
 
 **Actions**:
 - **New**: Create a new contact (requires `contacts:member`)
@@ -55,6 +60,10 @@ Click any row to open the contact page. Every change saves on its own: there is 
 
 **Title**: The contact's name. Click it to edit the first and last name side by side; the change saves when you leave the two fields or press Enter, and Escape cancels it. A contact without a name shows its email instead.
 
+**Reference**: The contact reference (`CTCT-4`) shows before the name. Click it to copy it.
+
+**Page address**: the address of the page uses the reference, for example `/master-data/contacts/CTCT-4/overview`. The former address of a contact page still opens it, and changes to the new one.
+
 **Header**, under the name:
 - **Supplier**: The vendor this contact works for, as a link to its page. A contact without a supplier shows **No supplier**: click it to open the properties and choose one.
 - **Contact type**: The contact's role at the supplier: Commercial, Technical, Support, or Other. Click it to choose another. It appears once the contact has a supplier.
@@ -62,7 +71,7 @@ Click any row to open the contact page. Every change saves on its own: there is 
 - **Used by**: How many suppliers, budget lines, contracts and other items the contact is linked to. Click it to scroll to the **Used by** section.
 
 **Properties** (the panel on the right, opened with its tab or the `P` key):
-- **Supplier**: Choose the vendor from the list. A contact always has a contact type once it has a supplier: choosing a supplier for a contact without a type gives it **Commercial**, which you can change at once. Clearing the supplier clears the contact type too.
+- **Supplier**: Choose the vendor from the list, or type its name or its reference (`SUP-12`). A contact always has a contact type once it has a supplier: choosing a supplier for a contact without a type gives it **Commercial**, which you can change at once. Clearing the supplier clears the contact type too.
 - **Contact type**: The same choice as in the header.
 - **Email**: Required, and unique across your contacts.
 - **Job title**: Their role or position.
@@ -124,16 +133,20 @@ The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Form
 
 Manage contacts in bulk using CSV files or Excel workbooks.
 
-**Export**: Downloads the contacts the list shows with their details. Choose **The whole register** in the dialog for every contact.
+**Export**: Downloads the contacts the list shows with their reference and details. Choose **The whole register** in the dialog for every contact.
 
 **Import**:
 - Use **Preflight** to validate before applying
-- Matched by email address
 - Can create new contacts or update existing ones
+- **Matching by reference**: a filled `reference` (`CTCT-4` or `4`) names the contact the row updates, even when its email has changed. The contact takes the name and the email of the row. The preflight check lists each contact that will be renamed or change its email address
+- **Matching by email**: when `reference` is empty, or the file has no such column, the row is matched by email address
+- **Unknown reference**: a reference your workspace does not know refuses the row: "\"CTCT-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
+- **Changing the email**: an email that another contact already has is refused, and the message names that contact's reference: "\"ana@acme.example\" already belongs to CTCT-7."
+- **One row per contact**: two rows that update the same contact are refused: "This row updates CTCT-7, as row 3 does. Keep one row per record."
 
 **Required fields**: Email
 
-**Optional fields**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
+**Optional fields**: `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notes**:
 - See [CSV and Excel files](csv-files.md) for the encoding, the separator and the two import steps

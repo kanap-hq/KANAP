@@ -13,7 +13,7 @@ Navigieren Sie zu **Stammdaten > Lieferanten**, um das Lieferantenverzeichnis zu
 - **ERP-Lieferanten-ID**: Referenz-ID aus Ihrem ERP- oder Beschaffungssystem
 - **Notizen**: Freitext-Notizen zur Anbieterbeziehung
 
-**Tipp**: Geben Sie in einem Vertrag, einer Anwendung oder einer Budgetzeile den Namen des Lieferanten ein und wählen Sie **+ Lieferant erstellen**, wenn es ihn noch nicht gibt. **Neu** auf dieser Seite legt einen Lieferanten für sich an.
+**Tipp**: Geben Sie in einem Vertrag, einer Anwendung oder einer Budgetzeile den Namen des Lieferanten ein und wählen Sie **+ Lieferant erstellen**, wenn es ihn noch nicht gibt. Auch seine Referenz, etwa `SUP-12`, findet ihn, und jede Auswahl zeigt die Referenz neben dem Namen. **Neu** auf dieser Seite legt einen Lieferanten für sich an.
 
 ---
 
@@ -22,6 +22,7 @@ Navigieren Sie zu **Stammdaten > Lieferanten**, um das Lieferantenverzeichnis zu
 Die Lieferantenliste bietet Ihnen ein durchsuchbares, sortierbares Verzeichnis aller Ihrer Anbieter.
 
 **Standardspalten**:
+- **Referenz**: Die von Kadratis vergebene Referenz (`SUP-3`). Zum Öffnen der Lieferantenseite anklicken
 - **Name**: Lieferantenname (zum Öffnen der Lieferantenseite anklicken)
 - **ERP-Lieferanten-ID**: Referenz-ID aus externen Systemen
 
@@ -35,7 +36,8 @@ Jede Zelle in einer Zeile ist anklickbar und öffnet die Seite dieses Lieferante
 **Standardsortierung**: Nach Name, alphabetisch. Die Sortierung einer Textspalte ignoriert Groß- und Kleinschreibung sowie Akzente.
 
 **Filtern**:
-- Schnellsuche: Durchsucht Lieferantenfelder
+- Schnellsuche: Durchsucht Lieferantenfelder. Geben Sie eine Referenz ein, etwa `SUP-3`, um diesen Lieferanten zu finden. Ziffern allein suchen im Text
+- Spaltenfilter: Der Filter **Referenz** nimmt `SUP-3` oder `3` an
 - Statusbereich: Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid, um nach Status zu filtern. Standardmäßig zeigt die Liste aktivierte Lieferanten
 
 **Aktionen**:
@@ -54,7 +56,9 @@ Die Seite hat drei Reiter: **Übersicht**, **Kontakte** und **Verlauf** (die Än
 
 **Titel**: Der Name des Lieferanten. Klicken Sie darauf, um ihn zu bearbeiten; die Änderung wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken, Escape verwirft sie. Der Name ist Pflicht und muss sich von den Namen aller anderen Lieferanten unterscheiden, unabhängig von Groß- und Kleinschreibung (`SAP` und `sap` sind derselbe Name): Kadratis zeigt die Meldung unter dem Namen und behält den gespeicherten Namen.
 
-**Referenz**: Die ERP-Lieferanten-ID steht, wenn der Lieferant eine hat, vor dem Namen. Klicken Sie darauf, um sie zu kopieren.
+**Referenz**: Die Referenz des Lieferanten (`SUP-5`) steht vor dem Namen. Klicken Sie darauf, um sie zu kopieren. Die ERP-Lieferanten-ID steht in den Eigenschaften.
+
+**Seitenadresse**: Die Adresse der Seite verwendet die Referenz, zum Beispiel `/master-data/suppliers/SUP-5/overview`. Die frühere Adresse der Seite eines Lieferanten öffnet sie weiterhin und wird durch die neue ersetzt.
 
 **Kopfzeile**, unter dem Namen:
 - **Status**: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** deaktiviert den Lieferanten sofort: Das Ende der Gültigkeit wird auf den aktuellen Zeitpunkt gesetzt.
@@ -84,7 +88,7 @@ Der Reiter **Kontakte** listet die mit diesem Lieferanten verknüpften Kontakte 
 
 **So funktioniert es**:
 - Jeder Abschnitt listet seine Kontakte mit Namen. Klicken Sie auf einen Namen, um die Kontaktseite zu öffnen.
-- **Vorhandenen hinzufügen**: Suchen Sie einen Kontakt nach Namen und wählen Sie ihn aus. Die Verknüpfung wird sofort gespeichert.
+- **Vorhandenen hinzufügen**: Suchen Sie einen Kontakt nach Namen oder nach Referenz (`CTCT-4`) und wählen Sie ihn aus. Die Verknüpfung wird sofort gespeichert.
 - **Neuer Kontakt**: Öffnet das Kontaktformular mit bereits ausgefülltem Lieferanten und Kontakttyp. Kadratis bringt Sie nach dem Erstellen des Kontakts zu diesem Reiter zurück.
 - Die Papierkorb-Schaltfläche entfernt die Verknüpfung. Der Kontakt selbst bleibt in Ihren Kontakten. Eine Meldung bestätigt das, mit der Aktion **Rückgängig**, die den Kontakt wieder verknüpft.
 
@@ -121,8 +125,9 @@ Die Datei benennt die Spalten in der Sprache Ihrer Oberfläche. Die Tabelle nenn
 
 | Spalte | Inhalt |
 |---|---|
-| `name` | Pflicht. Der Name des Lieferanten. Zeilen werden über diesen Namen zugeordnet |
-| `erp_supplier_id` | Die ID des Lieferanten in Ihrem ERP |
+| `reference` | Optional. Die Referenz des Lieferanten (`SUP-12`). Der Export schreibt sie |
+| `name` | Pflicht. Der Name des Lieferanten |
+| `erp_supplier_id` | Die ID des Lieferanten in Ihrem ERP. Der Import liest sie als ERP-ID, auch wenn sie wie eine Referenz aussieht (`SUP-12`) |
 | `commercial_contact` | Die E-Mail-Adresse eines bestehenden Kontakts. Das Laden verknüpft den Lieferanten mit ihm |
 | `technical_contact` | Die E-Mail-Adresse eines Kontakts, wie oben |
 | `support_contact` | Die E-Mail-Adresse eines Kontakts, wie oben |
@@ -133,9 +138,12 @@ Die Datei benennt die Spalten in der Sprache Ihrer Oberfläche. Die Tabelle nenn
 **Import**:
 
 - Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
-- Zeilen werden über `name` zugeordnet, unabhängig von Groß- und Kleinschreibung: Eine Zeile aktualisiert den Lieferanten, den sie nennt, jede andere Zeile legt einen an. Die gespeicherte Schreibweise bleibt: Eine Zeile `sap` aktualisiert `SAP`, und die Vorabprüfung meldet „sap“ wurde „SAP“ zugeordnet
+- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`SUP-12` oder `12`) bezeichnet den Lieferanten, den die Zeile aktualisiert, auch wenn sich sein Name geändert hat. Der Lieferant erhält dann den Namen der Zeile, und die Vorabprüfung meldet jeden Lieferanten, der umbenannt wird
+- **Zuordnung über den Namen**: Ist `reference` leer oder fehlt die Spalte in der Datei, werden Zeilen über `name` zugeordnet, unabhängig von Groß- und Kleinschreibung: Eine Zeile aktualisiert den Lieferanten, den sie nennt, jede andere Zeile legt einen an. Die gespeicherte Schreibweise bleibt: Eine Zeile `sap` aktualisiert `SAP`, und die Vorabprüfung meldet „sap“ wurde „SAP“ zugeordnet
+- **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„SUP-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
+- **Umbenennen**: Ein neuer Name, den bereits ein anderer Lieferant trägt, wird abgelehnt, und die Meldung nennt dessen Referenz: „„SAP“ gehört bereits zu SUP-4.“
 - `name` ist Pflicht. Jede andere Zelle ist optional
-- Jeder Lieferant belegt eine Zeile. Zwei Zeilen mit demselben Namen, auch in anderer Groß- und Kleinschreibung, werden bei der Vorabprüfung abgelehnt, mit beiden Zeilennummern
+- Jeder Lieferant belegt eine Zeile. Zwei Zeilen mit demselben Namen, auch in anderer Groß- und Kleinschreibung, werden bei der Vorabprüfung abgelehnt, mit beiden Zeilennummern. Zwei Zeilen, die denselben Lieferanten aktualisieren, werden ebenfalls abgelehnt: „Diese Zeile aktualisiert SUP-4, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“
 - Die E-Mail-Adresse eines Kontakts muss zu einem Kontakt gehören, der unter **Kontakte** bereits existiert. Sonst wird die Zeile bei der Vorabprüfung abgelehnt: Legen Sie den Kontakt zuerst an
 - `disabled_at` setzt das Gültigkeitsende, der Status ergibt sich daraus. Ein Status, der dem Datum widerspricht, wird abgelehnt. Eine Datei ohne die Spalte `disabled_at` lässt sich weiterhin importieren: Dann bestimmt der Status allein den Lebenszyklus
 

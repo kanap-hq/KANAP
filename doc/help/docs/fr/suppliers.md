@@ -13,7 +13,7 @@ Naviguez vers **Données de référence > Fournisseurs** pour ouvrir le réperto
 - **ID fournisseur ERP** : Identifiant de référence de votre ERP ou système d'approvisionnement
 - **Notes** : Notes libres sur la relation fournisseur
 
-**Conseil** : Sur un contrat, une application ou une ligne budgétaire, saisissez le nom du fournisseur et choisissez **+ Créer le fournisseur** lorsqu'il n'existe pas encore. **Nouveau** sur cette page crée un fournisseur directement.
+**Conseil** : Sur un contrat, une application ou une ligne budgétaire, saisissez le nom du fournisseur et choisissez **+ Créer le fournisseur** lorsqu'il n'existe pas encore. Taper sa référence, comme `SUP-12`, le trouve aussi, et chaque choix affiche la référence à côté du nom. **Nouveau** sur cette page crée un fournisseur directement.
 
 ---
 
@@ -22,6 +22,7 @@ Naviguez vers **Données de référence > Fournisseurs** pour ouvrir le réperto
 La liste des fournisseurs vous offre un répertoire consultable et triable de tous vos vendeurs.
 
 **Colonnes par défaut** :
+- **Référence** : La référence attribuée par Kadratis (`SUP-3`). Cliquez dessus pour ouvrir la fiche du fournisseur
 - **Nom** : Nom du fournisseur (cliquez pour ouvrir la fiche du fournisseur)
 - **ID fournisseur ERP** : Identifiant de référence des systèmes externes
 
@@ -35,7 +36,8 @@ Chaque cellule d'une ligne est cliquable et ouvre la fiche du fournisseur.
 **Tri par défaut** : Par nom, alphabétique. Le tri d'une colonne de texte ignore la casse et les accents.
 
 **Filtrage** :
-- Recherche rapide : Recherche dans les champs du fournisseur
+- Recherche rapide : Recherche dans les champs du fournisseur. Tapez une référence, comme `SUP-3`, pour trouver ce fournisseur. Des chiffres seuls cherchent dans le texte
+- Filtres de colonnes : Le filtre **Référence** accepte `SUP-3` ou `3`
 - Filtre de statut : Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille pour filtrer par statut. Par défaut, la liste affiche les fournisseurs activés
 
 **Actions** :
@@ -54,7 +56,9 @@ La fiche comporte trois onglets : **Vue d'ensemble**, **Contacts** et **Historiq
 
 **Titre** : le nom du fournisseur. Cliquez dessus pour le modifier ; la modification s'enregistre quand vous quittez le champ ou appuyez sur Entrée, et Échap l'annule. Le nom est obligatoire et doit différer de celui de tous les autres fournisseurs, quelle que soit la casse (`SAP` et `sap` sont le même nom) : Kadratis affiche le message sous le nom et garde le nom enregistré.
 
-**Référence** : l'ID fournisseur ERP, quand le fournisseur en a un, s'affiche avant le nom. Cliquez dessus pour le copier.
+**Référence** : la référence du fournisseur (`SUP-5`) s'affiche avant le nom. Cliquez dessus pour la copier. L'ID fournisseur ERP se trouve dans les propriétés.
+
+**Adresse de la page** : l'adresse de la page utilise la référence, par exemple `/master-data/suppliers/SUP-5/overview`. L'ancienne adresse de la page d'un fournisseur l'ouvre toujours, et laisse place à la nouvelle.
 
 **En-tête**, sous le nom :
 - **Statut** : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** désactive le fournisseur aussitôt : la fin de validité devient l'heure actuelle.
@@ -84,7 +88,7 @@ L'onglet **Contacts** liste les contacts liés à ce fournisseur par type de con
 
 **Fonctionnement** :
 - Chaque section liste ses contacts par nom. Cliquez sur un nom pour ouvrir la fiche du contact.
-- **Ajouter un existant** : recherchez un contact par son nom et choisissez-le. Le lien s'enregistre aussitôt.
+- **Ajouter un existant** : recherchez un contact par son nom ou par sa référence (`CTCT-4`) et choisissez-le. Le lien s'enregistre aussitôt.
 - **Nouveau contact** : ouvre le formulaire de contact avec le fournisseur et le type de contact déjà remplis. Kadratis vous ramène à cet onglet une fois le contact créé.
 - Le bouton corbeille retire le lien. Le contact lui-même reste dans vos contacts. Un message le confirme, avec une action **Annuler** qui rattache de nouveau le contact.
 
@@ -121,8 +125,9 @@ Le fichier titre les colonnes dans la langue de votre écran. Le tableau donne l
 
 | Colonne | Contenu |
 |---|---|
-| `name` | Obligatoire. Le nom du fournisseur. Les lignes sont rapprochées par ce nom |
-| `erp_supplier_id` | L'ID du fournisseur dans votre ERP |
+| `reference` | Facultative. La référence du fournisseur (`SUP-12`). L'export l'écrit |
+| `name` | Obligatoire. Le nom du fournisseur |
+| `erp_supplier_id` | L'ID du fournisseur dans votre ERP. L'import le lit comme un ID ERP, même quand il ressemble à une référence (`SUP-12`) |
 | `commercial_contact` | L'e-mail d'un contact existant. Le chargement y rattache le fournisseur |
 | `technical_contact` | L'e-mail d'un contact, comme ci-dessus |
 | `support_contact` | L'e-mail d'un contact, comme ci-dessus |
@@ -133,9 +138,12 @@ Le fichier titre les colonnes dans la langue de votre écran. Le tableau donne l
 **Import** :
 
 - Utilisez la **Vérification préalable** pour valider le fichier avant de l'appliquer, puis **Charger**
-- Les lignes sont rapprochées par `name`, quelle que soit la casse : une ligne met à jour le fournisseur qu'elle nomme, toute autre ligne en crée un. Le nom enregistré ne change pas : une ligne `sap` met à jour `SAP`, et la vérification préalable indique « sap » a été rapproché de « SAP »
+- **Correspondance par référence** : une `reference` remplie (`SUP-12` ou `12`) désigne le fournisseur que la ligne met à jour, même si son nom a changé. Le fournisseur prend alors le nom de la ligne, et la vérification préalable signale chaque fournisseur qui sera renommé
+- **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, les lignes sont rapprochées par `name`, quelle que soit la casse : une ligne met à jour le fournisseur qu'elle nomme, toute autre ligne en crée un. Le nom enregistré ne change pas : une ligne `sap` met à jour `SAP`, et la vérification préalable indique « sap » a été rapproché de « SAP »
+- **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « SUP-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
+- **Renommage** : un nouveau nom qu'un autre fournisseur porte déjà est refusé, et le message donne la référence de ce fournisseur : « « SAP » appartient déjà à SUP-4. »
 - `name` est obligatoire. Toute autre cellule est facultative
-- Chaque fournisseur occupe une ligne. Deux lignes portant le même nom, même avec une casse différente, sont refusées à la vérification préalable, avec les deux numéros de ligne
+- Chaque fournisseur occupe une ligne. Deux lignes portant le même nom, même avec une casse différente, sont refusées à la vérification préalable, avec les deux numéros de ligne. Deux lignes qui mettent à jour le même fournisseur sont refusées aussi : « Cette ligne met à jour SUP-4, comme la ligne 3. Gardez une seule ligne par fiche. »
 - L'e-mail d'un contact doit appartenir à un contact qui existe déjà dans **Contacts**. Sinon, la ligne est refusée à la vérification préalable : créez d'abord le contact
 - `disabled_at` fixe la fin de validité, et le statut en découle. Un statut qui contredit la date est refusé. Un fichier sans la colonne `disabled_at` s'importe toujours : le statut seul fixe alors le cycle de vie
 
