@@ -265,24 +265,38 @@ async function testNamesBeyondAccents() {
   console.log('  names beyond accents, case first, ambiguity named: OK');
 }
 
-// The same name held by several records (two departments of two companies): the accent level gives
-// the record the case-blind lookup gives for that name, as before; no ambiguity among equal names.
-async function testEqualNamesStayOneName() {
+// The same name held by several records (two departments "Finance" of two companies). Exactly and
+// case aside, the first record read wins, as on main. Accents aside, a name answering several records
+// is refused, naming them, even when their names are the same (T-I3a, lot I3 of 26.11.9, fixes D).
+async function testSameNameOfSeveralRecordsBeyondAccents() {
   const service = new CsvResolverService();
   const mockData = {
     departments: [
-      { id: 'd1', name: 'Études', company_id: 'c1', item_number: 1, tenant_id: 't1' },
-      { id: 'd2', name: 'études', company_id: 'c2', item_number: 2, tenant_id: 't1' },
+      { id: 'd1', name: 'Finance', company_id: 'c1', item_number: 1, tenant_id: 't1' },
+      { id: 'd2', name: 'Finance', company_id: 'c2', item_number: 2, tenant_id: 't1' },
+      { id: 'd3', name: 'Études', company_id: 'c1', item_number: 3, tenant_id: 't1' },
+      { id: 'd4', name: 'études', company_id: 'c2', item_number: 4, tenant_id: 't1' },
+      { id: 'd5', name: 'Ventes', company_id: 'c1', item_number: 5, tenant_id: 't1' },
     ],
   };
   const fields: CsvFieldDefinition[] = [
     { csvColumn: 'department_name', entityProperty: 'department_id', type: CsvFieldType.FK_BY_NAME, fkEntity: 'departments' },
   ];
   const cache = await service.preloadResolvers('t1', fields, createMockManager(mockData));
-  assert.equal(service.resolveId('departments', 'ÉTUDES', cache), 'd1');
-  const found = service.resolveName('departments', 'Etudes', cache, { beyondCase: true });
-  assert.deepEqual(found.kind === 'one' && [found.entry.id, found.how, found.ref], ['d1', 'accents', 'DEPT-1']);
-  console.log('  equal names beyond accents stay the case-blind record: OK');
+  const beyond = { beyondCase: true };
+  // Exactly and case aside: the first record read, as before.
+  assert.equal(service.resolveId('departments', 'FINANCE', cache), 'd1');
+  const exact = service.resolveName('departments', 'Finance', cache, beyond);
+  assert.deepEqual(exact.kind === 'one' && [exact.entry.id, exact.how], ['d1', 'exact']);
+  const folded = service.resolveName('departments', 'ÉTUDES', cache, beyond);
+  assert.deepEqual(folded.kind === 'one' && [folded.entry.id, folded.how], ['d3', 'case']);
+  // Accents aside: several records, refused and named, equal names included.
+  assert.deepEqual(service.resolveName('departments', 'Fînance', cache, beyond), { kind: 'many', names: ['DEPT-1', 'DEPT-2'] });
+  assert.deepEqual(service.resolveName('departments', 'Etudes', cache, beyond), { kind: 'many', names: ['DEPT-3', 'DEPT-4'] });
+  // One record accents aside: found, as before.
+  const one = service.resolveName('departments', 'Véntes', cache, beyond);
+  assert.deepEqual(one.kind === 'one' && [one.entry.id, one.how, one.ref], ['d5', 'accents', 'DEPT-5']);
+  console.log('  a name of several records accents aside is refused, equal names included: OK');
 }
 
 // A shipped task type found by its name in another language is a translation; e-mails and site
@@ -352,7 +366,7 @@ async function testListOfReferencesPreloadsItsFamily() {
   await testGetLookupColumn();
   await testTaskTypesAcceptTheirShownNames();
   await testNamesBeyondAccents();
-  await testEqualNamesStayOneName();
+  await testSameNameOfSeveralRecordsBeyondAccents();
   await testTranslationsAndCodesBeyondCase();
   await testBeyondCaseFollowsReadRights();
   await testListOfReferencesPreloadsItsFamily();

@@ -146,8 +146,9 @@ export class CsvResolverService {
 
   /**
    * Beside each family's cache (whose shape the exports and the incidents read), its names once
-   * accents are set aside: by accent-free key, the records the case-blind lookup gives for each
-   * distinct name (the first one read of each, as that lookup), for the families looked up by name.
+   * accents are set aside: by accent-free key, every record answering it, for the families looked up
+   * by name. The cache keeps one record per name; this index keeps each record read, so that two
+   * records of the same name are two (T-I3a, lot I3 of 26.11.9, fixes D).
    */
   private readonly accentIndexes = new WeakMap<Map<string, FkCacheEntry>, Map<string, FkCacheEntry[]>>();
 
@@ -245,9 +246,9 @@ export class CsvResolverService {
   /**
    * The record a name of the file finds (lot I3 of 26.11.9): exactly or case aside, as `resolve`
    * (the first record read wins, as before); then, when `beyondCase` and the family is looked up by
-   * name, once accents are set aside. There, one name answering is that record (the same one the
-   * case-blind lookup gives for that name); several different names answering are an ambiguity, named
-   * by the records' references, else their names (the first five). A record found by a name other
+   * name, once accents are set aside. There, one record answering is that record; several records
+   * answering, even of the same name (two departments "Finance" of two companies), are an ambiguity,
+   * named by the records' references, else their names (the first five). A record found by a name other
    * than its own beyond case (a shipped task type's name in another language) is a `translation`.
    */
   resolveName(
@@ -428,6 +429,8 @@ export class CsvResolverService {
 
     // Execute query
     const rows = await manager.query(query, params);
+    // Every record read, by its own name, for the accent-free index (the cache keeps one per name).
+    const read: Array<[string, FkCacheEntry]> = [];
 
     // Build cache with lowercase normalization
     for (const row of rows) {
@@ -450,18 +453,22 @@ export class CsvResolverService {
         if (!cache.has(normalizedValue)) {
           cache.set(normalizedValue, entry);
         }
+        read.push([normalizedValue, entry]);
       }
     }
 
     if (entityType === 'portfolio_task_types') this.addShippedTaskTypeNames(cache);
-    if (config.byName) this.accentIndexes.set(cache, this.accentIndex(cache));
+    if (config.byName) this.accentIndexes.set(cache, this.accentIndex([...read, ...cache]));
     return cache;
   }
 
-  /** The records of a cache by the accent-free key of each name they answer to; one record once per key. */
-  private accentIndex(cache: Map<string, FkCacheEntry>): Map<string, FkCacheEntry[]> {
+  /**
+   * Records by the accent-free key of each name they answer to (their own name, a shipped name added
+   * to the cache); one record once per key.
+   */
+  private accentIndex(names: Iterable<[string, FkCacheEntry]>): Map<string, FkCacheEntry[]> {
     const index = new Map<string, FkCacheEntry[]>();
-    for (const [name, entry] of cache) {
+    for (const [name, entry] of names) {
       const key = accentFreeKey(name);
       const entries = index.get(key);
       if (!entries) index.set(key, [entry]);
