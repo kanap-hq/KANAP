@@ -23,6 +23,9 @@ import {
 } from '../../constants/status';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
+import { formatItemRef } from '../../utils/item-ref';
+import useRecordEditorKey from '../../components/workspace/useRecordEditorKey';
+import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { SupplierNameTitle, SupplierNotes, SupplierTextRow } from './SupplierFields';
 import SupplierContactsTab, { useSupplierContacts } from './SupplierContactsTab';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
@@ -47,12 +50,23 @@ type FieldKey = 'name' | 'erp_supplier_id' | 'notes' | 'status' | 'disabled_at';
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 /** What a new supplier starts from. */
-const NEW_SUPPLIER: Supplier = { id: '', name: '', erp_supplier_id: null, notes: null, status: STATUS_ENABLED, disabled_at: null };
+const NEW_SUPPLIER: Supplier = { id: '', item_number: null, name: '', erp_supplier_id: null, notes: null, status: STATUS_ENABLED, disabled_at: null };
 
 /** The draft's fields that Create sends and a patch can change. */
 const DRAFT_FIELDS = ['name', 'erp_supplier_id', 'notes', 'status', 'disabled_at'] as const;
 
 const fetchSupplier = async (supplierId: string) => (await api.get<Supplier>(`/suppliers/${supplierId}`)).data;
+
+/** The supplier's reference (`SUP-12`), the one its address and its cache entry name. */
+const supplierReference = (supplier: Pick<Supplier, 'item_number'> | null | undefined) => (
+  supplier?.item_number ? formatItemRef('supplier', supplier.item_number) : null
+);
+/**
+ * The supplier's cache entry: `['suppliers', 'SUP-12']`, read by its page and written by every save.
+ * A page opened by a legacy address (a uuid, `sup-12`) reads under that address, then puts the
+ * supplier under its reference and moves there.
+ */
+const supplierKey = (address: string) => ['suppliers', address] as const;
 
 /** The list's sort, search, filters and scope, kept in every address of the page. */
 function useListContext() {
@@ -71,10 +85,13 @@ function useListContext() {
 export default function SupplierWorkspacePage() {
   const params = useParams();
   const location = useLocation();
+  // The address names the supplier by its reference (`SUP-12`); a uuid or `sup-12` moves to it once read.
   const id = String(params.id || '');
   // The supplier the draft has just created: the page stays the draft's, so that what is typed
   // while it is written, and the field being typed in, are kept.
   const fromDraft = useCreatedFromDraft('suppliers', id);
+  // The same through the move from a legacy address to the reference.
+  const editorKey = useRecordEditorKey('suppliers', id);
   // The new page is the supplier's own page on a draft, sent by Create.
   if (id === 'new') return <SupplierEditor key="draft" id="new" tab="overview" />;
   // An address without a tab, or with a tab the page no longer has, opens the overview.
@@ -82,7 +99,7 @@ export default function SupplierWorkspacePage() {
     return <Navigate replace to={`${SUPPLIERS_PATH}/${id}/overview${location.search}`} />;
   }
   // Keyed by supplier: drafts and pending saves belong to the supplier they were typed on.
-  return <SupplierEditor key={fromDraft ? 'draft' : id} id={id} tab={params.tab as TabKey} />;
+  return <SupplierEditor key={fromDraft ? 'draft' : editorKey} id={id} tab={params.tab as TabKey} />;
 }
 
 function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
@@ -98,30 +115,49 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   const canEdit = hasLevel('suppliers', 'manager');
   const canDelete = hasLevel('suppliers', 'admin') && !dataAccessLimited;
   const withContext = useListContext();
+  const { addToRecent } = useRecentlyViewed();
   const isCreate = id === 'new';
 
+  const detailKey = React.useMemo(() => supplierKey(id), [id]);
+  // Set once the supplier is deleted: the page leaves without loading it again.
+  const [deleted, setDeleted] = React.useState(false);
+  const { data: stored, error: loadError } = useQuery({
+    queryKey: detailKey,
+    queryFn: () => fetchSupplier(id),
+    enabled: !deleted && !isCreate,
+  });
+  const reference = isCreate ? null : supplierReference(stored);
+  // The supplier's uuid, for its child routes, its saves and its place in the list.
+  const recordId = isCreate ? '' : stored?.id ?? '';
+
   const nav = useSupplierNav({
-    id,
+    // The ids list carries uuids: the supplier read gives its own.
+    id: recordId,
     sort: searchParams.get('sort'),
     q: searchParams.get('q'),
     filters: searchParams.get('filters'),
     statusScope: searchParams.get('scope'),
   });
 
-  const detailKey = React.useMemo(() => ['suppliers', id] as const, [id]);
-  // Set once the supplier is deleted: the page leaves without loading it again.
-  const [deleted, setDeleted] = React.useState(false);
-  const { data: stored, error: loadError } = useQuery({
-    queryKey: detailKey,
-    queryFn: async () => (await api.get<Supplier>(`/suppliers/${id}`)).data,
-    enabled: !deleted && !isCreate,
-  });
   // A new supplier: the fields write here, Create sends it.
   const [draft, setDraft] = React.useState<Supplier>(NEW_SUPPLIER);
   const draftRef = React.useRef(draft);
   const data = isCreate ? draft : stored;
-  const { data: contactLinks } = useSupplierContacts(id, !isCreate);
-  const { data: usages } = useRecordUsages('suppliers', id, !isCreate);
+  const { data: contactLinks } = useSupplierContacts(recordId, !!recordId);
+  const { data: usages } = useRecordUsages('suppliers', recordId, !!recordId);
+
+  React.useEffect(() => {
+    if (!isCreate && data?.id && data.name) addToRecent('supplier', data.id, data.name, reference ?? undefined);
+  }, [addToRecent, data?.id, data?.name, isCreate, reference]);
+
+  // A legacy address (uuid, `sup-12`) becomes the reference's, tab and list context kept: the
+  // supplier read is put under the reference's entry first, so nothing is read again or mounted again.
+  React.useEffect(() => {
+    if (isCreate || !stored || !reference || id === reference) return;
+    queryClient.setQueryData(supplierKey(reference), stored);
+    const search = searchParams.toString();
+    navigate(`${SUPPLIERS_PATH}/${reference}/${tab}${search ? `?${search}` : ''}`, { replace: true });
+  }, [id, isCreate, navigate, queryClient, reference, searchParams, stored, tab]);
   // The header's count asked for the "Used by" section from another tab: scroll once the overview shows it.
   const [usagesScrollPending, setUsagesScrollPending] = React.useState(false);
 
@@ -143,21 +179,28 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
       setDraft(draftRef.current);
       return Promise.resolve();
     }
-    if (!canEdit || !queryClient.getQueryData(detailKey)) return Promise.resolve();
+    const supplierId = queryClient.getQueryData<Supplier>(detailKey)?.id;
+    if (!canEdit || !supplierId) return Promise.resolve();
+    // The page's entry: the reference's, or the address's while a legacy address is replaced.
+    const recordRef = supplierReference(queryClient.getQueryData<Supplier>(detailKey)) ?? id;
+    const recordKey = supplierKey(recordRef);
     setErrors((prev) => ({ ...prev, [field]: undefined }));
-    if (optimistic) queryClient.setQueryData<Supplier>(detailKey, (prev) => (prev ? { ...prev, ...optimistic } : prev));
+    if (optimistic) queryClient.setQueryData<Supplier>(recordKey, (prev) => (prev ? { ...prev, ...optimistic } : prev));
     const run = async () => {
       try {
-        const res = await api.patch<Supplier>(`/suppliers/${id}`, patch);
-        queryClient.setQueryData<Supplier>(detailKey, (prev) => ({ ...(prev as Supplier), ...res.data }));
+        const res = await api.patch<Supplier>(`/suppliers/${supplierId}`, patch);
+        queryClient.setQueryData<Supplier>(recordKey, (prev) => ({ ...(prev as Supplier), ...res.data }));
         // The list and the pickers show names and statuses.
-        void queryClient.invalidateQueries({ queryKey: ['suppliers'], predicate: (query) => query.queryKey[1] !== id });
+        void queryClient.invalidateQueries({
+          queryKey: ['suppliers'],
+          predicate: (query) => query.queryKey[1] !== recordRef && query.queryKey[1] !== supplierId,
+        });
       } catch (e) {
         const message = field === 'name' && isDuplicateError(e)
           ? t('suppliers.messages.nameTaken')
           : getApiErrorMessage(e, t, t('suppliers.messages.saveFailed'));
         setErrors((prev) => ({ ...prev, [field]: message }));
-        if (optimistic) void queryClient.invalidateQueries({ queryKey: detailKey, exact: true });
+        if (optimistic) void queryClient.invalidateQueries({ queryKey: recordKey, exact: true });
         throw e;
       }
     };
@@ -243,7 +286,8 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         void queryClient.invalidateQueries({ queryKey: ['suppliers'] });
         // The page moves to the supplier with its data in hand, and keeps what was typed since the
         // draft was sent (the next field, while the supplier was written): saved on the supplier.
-        const createdKey = ['suppliers', created.id] as const;
+        const createdRef = supplierReference(created) ?? created.id;
+        const createdKey = supplierKey(createdRef);
         await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => fetchSupplier(created.id) }).catch(() => undefined);
         try {
           await saveEditsSince({
@@ -258,7 +302,12 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         } catch (e) {
           setCreateError(getApiErrorMessage(e, t, t('suppliers.messages.saveFailed')));
         }
-        return { id: created.id, token: created.creation_token, path: withContext(`${SUPPLIERS_PATH}/${created.id}/overview`) };
+        return {
+          id: created.id,
+          token: created.creation_token,
+          path: withContext(`${SUPPLIERS_PATH}/${createdRef}/overview`),
+          reference: supplierReference(created),
+        };
       } catch (e) {
         if (isDuplicateError(e)) title.refuse(t('suppliers.messages.nameTaken'));
         else setCreateError(getApiErrorMessage(e, t, t('suppliers.messages.createFailed')));
@@ -312,7 +361,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         <>
       <PortfolioMetadataItem
         label={t('suppliers.fields.contacts')}
-        onClick={tab === 'contacts' ? undefined : () => goTo(id, 'contacts')}
+        onClick={tab === 'contacts' ? undefined : () => goTo(reference ?? id, 'contacts')}
         title={tab === 'contacts' ? undefined : t('suppliers.metadata.openContacts')}
       >
         {contactLinks ? contactLinks.length : '…'}
@@ -323,7 +372,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
           if (tab === 'overview') scrollToUsages();
           else {
             setUsagesScrollPending(true);
-            goTo(id, 'overview');
+            goTo(reference ?? id, 'overview');
           }
         }}
         title={t('shared.usages.open')}
@@ -388,7 +437,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
           { key: 'contacts', label: t('shared.labels.contacts'), disabled: isCreate },
           { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history'), disabled: isCreate },
         ]}
-        onTabChange={(next) => goTo(id, next as TabKey)}
+        onTabChange={(next) => goTo(reference ?? id, next as TabKey)}
         drawerStorageKey={DRAWER_KEY}
         backLabel={t('suppliers.title')}
         onBack={isCreate ? leave : close}
@@ -406,11 +455,9 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
             onSave={(name) => saveNow({ name }, 'name', { name })}
           />
         ) : undefined}
-        // The ERP supplier ID is the supplier's business reference (`F10001` in the demo data).
-        itemReference={isCreate ? null : data?.erp_supplier_id || null}
-        onCopyReference={!isCreate && data?.erp_supplier_id ? () => {
-          void navigator.clipboard?.writeText(data.erp_supplier_id as string).catch(() => undefined);
-        } : undefined}
+        // The reference (`SUP-12`); the ERP supplier ID is a property.
+        itemReference={reference}
+        onCopyReference={reference ? () => { void navigator.clipboard?.writeText(reference)?.catch(() => undefined); } : undefined}
         nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
@@ -439,6 +486,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
               <RecordDeleteButton
                 base="/suppliers"
                 id={data.id}
+                reference={reference}
                 name={data.name}
                 deleteFailed="suppliers.messages.deleteFailed"
                 onDeleted={() => { setDeleted(true); navigate(withContext(SUPPLIERS_PATH)); }}
@@ -462,11 +510,11 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
               }}
               onCommit={() => { void autosave.flush(); }}
             />
-            {!isCreate && <RecordUsagesSection owner="suppliers" id={id} ownerName={data.name} />}
+            {!isCreate && <RecordUsagesSection owner="suppliers" id={data.id} ownerName={data.name} />}
             {createError && <Alert severity="error">{createError}</Alert>}
           </Stack>
         )}
-        {tab === 'contacts' && <SupplierContactsTab supplierId={id} canManage={canEdit} />}
+        {tab === 'contacts' && recordId && <SupplierContactsTab supplierId={recordId} canManage={canEdit} />}
         {tab === RECORD_HISTORY_TAB_KEY && data && (
           <WorkspaceTabBoundary resetKey={tab} onRetry={() => historyTab.retry()}>
             <React.Suspense fallback={null}>

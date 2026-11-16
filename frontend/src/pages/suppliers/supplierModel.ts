@@ -4,6 +4,8 @@ export const SUPPLIERS_PATH = '/master-data/suppliers';
 
 export type Supplier = {
   id: string;
+  /** SUP-n once written; none on the draft. */
+  item_number?: number | null;
   name: string;
   erp_supplier_id: string | null;
   notes: string | null;
@@ -11,7 +13,7 @@ export type Supplier = {
   disabled_at: string | null;
 };
 
-export type SupplierPatch = Partial<Omit<Supplier, 'id'>>;
+export type SupplierPatch = Partial<Omit<Supplier, 'id' | 'item_number'>>;
 
 /** A contact linked to the supplier under a contact type (`GET /suppliers/:id/contacts`). */
 export type SupplierContactLink = {

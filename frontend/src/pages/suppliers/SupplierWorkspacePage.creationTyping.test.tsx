@@ -17,6 +17,9 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: () => true, profile: { id: 'user-1' }, dataAccess: null }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
+  useRecentlyViewed: () => ({ items: [], addToRecent: vi.fn(), clearRecent: vi.fn() }),
+}));
 vi.mock('../../hooks/useSupplierNav', () => ({
   useSupplierNav: () => ({ total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
@@ -27,7 +30,7 @@ import SupplierWorkspacePage from './SupplierWorkspacePage';
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
 /** What the server stores for the supplier the draft created: only what was sent with it. */
-const STORED = { id: 's-new', name: 'Initech', erp_supplier_id: null, notes: null, status: 'enabled', disabled_at: null };
+const STORED = { id: 's-new', item_number: 7, name: 'Initech', erp_supplier_id: null, notes: null, status: 'enabled', disabled_at: null };
 
 /** Polls like waitFor, with a short failure message (a failed DOM matcher prints the whole page). */
 async function until(check: () => void, ms = 1500) {
@@ -72,7 +75,8 @@ describe('SupplierWorkspacePage typing while the supplier is created', () => {
     resetCreationStore();
     server = { ...STORED };
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === '/suppliers/s-new') return { data: server };
+      // The server reads the supplier by its uuid or its reference alike.
+      if (url === '/suppliers/s-new' || url === '/suppliers/SUP-7') return { data: server };
       if (url.endsWith('/usages')) return { data: { total: 0, groups: [] } };
       return { data: { items: [] } };
     });
@@ -93,7 +97,7 @@ describe('SupplierWorkspacePage typing while the supplier is created', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });
-      await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/master-data/suppliers/s-new/overview'));
+      await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/master-data/suppliers/SUP-7/overview'));
       await until(() => { if (!mocked.get.mock.calls.some(([url]) => url === '/suppliers/s-new')) throw new Error('supplier not read'); });
     };
     return { drawer: screen.getByRole('complementary'), finish };

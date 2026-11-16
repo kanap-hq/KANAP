@@ -8,6 +8,8 @@ export const DEFAULT_CONTACT_ROLE: ContactRole = 'commercial';
 
 export type Contact = {
   id: string;
+  /** CTCT-n once written; none on the draft. */
+  item_number?: number | null;
   first_name: string | null;
   last_name: string | null;
   job_title: string | null;
@@ -22,7 +24,7 @@ export type Contact = {
   supplier_name?: string | null;
 };
 
-export type ContactPatch = Partial<Omit<Contact, 'id' | 'supplier_name'>>;
+export type ContactPatch = Partial<Omit<Contact, 'id' | 'item_number' | 'supplier_name'>>;
 
 export const NOTES_MAX_LENGTH = 2000;
 

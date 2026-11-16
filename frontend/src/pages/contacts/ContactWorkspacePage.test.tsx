@@ -31,6 +31,9 @@ vi.mock('../../auth/AuthContext', () => ({
   }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
+  useRecentlyViewed: () => ({ items: [], addToRecent: vi.fn(), clearRecent: vi.fn() }),
+}));
 // The shared history: the header button must hand it the contact's table and identifier.
 vi.mock('../../components/history/RecordHistory', () => ({
   default: ({ table, recordId }: { table: string; recordId: string }) => (
