@@ -22,9 +22,9 @@ import { addDaysYmd, addMonthsYmd, CONTRACT_TERM_STATES } from '../../contracts/
 //   only gets none of them (null in the detail, no section in the context) and no name of them;
 //   the `application` filter is not offered to them. A Business Contributor gets the applications
 //   of their participation only, in the items, the filter, the aggregates, the detail and the context.
-// - The tools give each contract and company its page (`page_url`, `ai-page-urls.ts`): a path in the
-//   chat, an absolute address over MCP when the workspace address is configured, and none to a
-//   person without the right of that page.
+// - A contract and a company open by their reference (CTR-n, COMP-n; lots R2 and R4 of 26.11.9):
+//   the tools give their `ref` and no page address (`page_url`, `ai-page-urls.ts`), in the chat and
+//   over MCP. Absolute addresses of the families that keep one: `ai-page-urls.spec.ts`.
 // The AI surface checks are not under test: stubbed open.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -380,25 +380,25 @@ async function testPageUrls(h: Harness, runner: QueryRunner, s: Seed) {
   const { withAiPageUrls } = require('../ai-page-urls');
   const chat = ctx(runner, s, 'full', 'chat');
   const contractId = s.contracts['Renewing to decide'];
-  const contractPage = `/ops/contracts/${contractId}`;
 
-  // A contract has a business reference (CTR-n) whose address its page does not open yet: its
-  // page, by its id, as a path in the chat.
+  // A contract opens by its business reference (CTR-n, lot R4 of 26.11.9): it carries it, and no
+  // page address; the chat links the reference.
   const list = await h.tools.execute(chat, 'query_entities', { entity_type: 'contracts', limit: 100 });
   assert.equal(list.items.length, Object.keys(s.contracts).length);
   for (const item of list.items) {
     assert.match(String(item.ref), /^CTR-\d+$/, `${item.label}: its reference`);
-    assert.equal(item.page_url, `/ops/contracts/${item.id}`, `${item.label}: its page`);
+    assert.equal(item.page_url, undefined, `${item.label}: no page address`);
   }
   const detail = await h.tools.execute(chat, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractId });
-  assert.equal(detail.entity.page_url, contractPage, 'detail: the contract page');
+  assert.match(String(detail.entity.ref), /^CTR-\d+$/, 'detail: the contract reference');
+  assert.equal(detail.entity.page_url, undefined, 'detail: no page address');
   const context = await h.tools.execute(chat, 'get_entity_context', { entity_type: 'contracts', entity_id: contractId });
-  assert.equal(context.entity.page_url, contractPage, 'context: the contract page');
+  assert.equal(context.entity.page_url, undefined, 'context: no page address');
   const linked = context.related.flatMap((group: any) => group.items);
   assert.ok(linked.length > 0 && linked.every((item: any) => item.page_url === undefined), 'context: the referenced records keep their reference only');
   const found = await h.tools.execute(chat, 'search_all', { query: 'Renewing to decide', entity_types: ['contracts'] });
   const hit = found.items.find((item: any) => item.id === contractId);
-  if (hit) assert.equal(hit.page_url, contractPage, 'search_all: the contract page');
+  if (hit) assert.equal(hit.page_url, undefined, 'search_all: no page address');
   else console.log('  page_url: search_all found no seeded contract (search index), not checked');
 
   // A company opens by its reference (COMP-n, lot R2 of 26.11.9): it carries it, and no page address.
@@ -407,26 +407,24 @@ async function testPageUrls(h: Harness, runner: QueryRunner, s: Seed) {
   assert.match(String(companies.items[0].ref), /^COMP-\d+$/, 'the company reference');
   assert.equal(companies.items[0].page_url, undefined, 'the reference opens the company page');
 
-  // No page the screen refuses: the contract page needs the contracts right; a company has none.
+  // Neither family gets a page address, whatever the rights.
   const records = () => ({ items: [{ type: 'contracts', id: contractId }, { type: 'companies', id: s.company }] });
   const forUser = (user: UserKey) => withAiPageUrls(records(), {
     readableResources: (resources: string[]) => h.policy.readableResources(ctx(runner, s, user, 'chat'), resources, runner.manager),
     origin: async () => null,
   });
-  assert.deepEqual((await forUser('companiesOnly')).items.map((item: any) => item.page_url), [undefined, undefined], 'companies only: no contract page');
-  assert.deepEqual((await forUser('full')).items.map((item: any) => item.page_url), [contractPage, undefined], 'the contract page, none for a company');
+  assert.deepEqual((await forUser('companiesOnly')).items.map((item: any) => item.page_url), [undefined, undefined], 'companies only: no page address');
+  assert.deepEqual((await forUser('full')).items.map((item: any) => item.page_url), [undefined, undefined], 'all rights: no page address');
 
-  // MCP: an absolute address when the workspace address is configured, the path otherwise.
+  // MCP: the reference, and no address even when the workspace address is configured.
   const mcp = ctx(runner, s, 'full', 'mcp');
   const origin = await withAppAddress('https://app.example.test', async () => resolveConfiguredAppBaseUrl(s.slug));
   assert.match(String(origin), /^https:\/\//, 'a configured workspace address');
   const absolute: any = await withAppAddress('https://app.example.test', () =>
     h.tools.execute(mcp, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractId }));
-  assert.equal(absolute.entity.page_url, `${origin}${contractPage}`, 'MCP: the absolute address');
-  const relative: any = await withAppAddress(null, () =>
-    h.tools.execute(mcp, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractId }));
-  assert.equal(relative.entity.page_url, contractPage, 'MCP without a configured address: the path');
-  console.log('  page_url: contracts and companies, chat and MCP, by right: OK');
+  assert.match(String(absolute.entity.ref), /^CTR-\d+$/, 'MCP: the contract reference');
+  assert.equal(absolute.entity.page_url, undefined, 'MCP: no page address');
+  console.log('  page_url: contracts and companies by their reference, chat and MCP: OK');
 }
 
 async function run() {
