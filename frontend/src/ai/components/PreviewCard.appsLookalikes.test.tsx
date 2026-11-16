@@ -243,6 +243,21 @@ describe('PreviewCard, the rows of an applications import that look like an exis
     expect(screen.queryByText(/ name /)).toBeNull();
   });
 
+  // Correctifs J: a check refused because a row's name now finds an application gives back no choice for
+  // that row; the next choice on the card sends none for it either.
+  it('sends no choice for a row the check refused because its name now finds an application', () => {
+    post.mockResolvedValueOnce({ data: card({}, { id: 'preview-2' }) });
+    const preview = card({
+      lookalikes: undefined,
+      undone: [{ column: 'supplier_name', value: 'Cegid' }],
+      errors: [{ row: 3, message: 'APP-9 took this name after the check.', code: 'CSV_LOOKALIKE_NAME_FOUND', params: { ref: 'APP-9' } }],
+    });
+    Object.assign(preview.import_mapping!.validation!, { ok: false, error_count: 1 });
+    renderCard(preview);
+    fireEvent.click(screen.getByRole('button', { name: 'Match again' }));
+    expect(post).toHaveBeenCalledWith(ROUTE, { choices: [] });
+  });
+
   it('shows what became of each row, with no choice, on an approved card', () => {
     renderCard(card({ lookalikes: lookalikes([{ ...accents, outcome: 'created' }]) }, { status: 'approved' }));
     expect(screen.queryByRole('group')).toBeNull();

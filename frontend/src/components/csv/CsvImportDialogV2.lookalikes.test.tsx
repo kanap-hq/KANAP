@@ -229,6 +229,40 @@ describe('CsvImportDialogV2, the rows that look like an existing application', (
     await waitFor(() => expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled());
   });
 
+  // Correctifs J (T-I3l): a load refused because a row's name now finds an application, or its
+  // application is gone, gives back the choices the server followed, without the refused row's. Back,
+  // then Validate, checks the file with those: the row shows its new situation, never the same refusal.
+  it.each([
+    ['its name now finds an application', 'CSV_LOOKALIKE_NAME_FOUND', 'APP-9 took this name after the check.', undefined],
+    ['its application is gone', 'CSV_LOOKALIKE_GONE', 'The application chosen at the check no longer exists.',
+      lookalikes([{ ...accents, target: { id: ID_4, ref: '', name: '', state: '' } }])],
+  ])('checks again without the choice of a row refused at the load because %s', async (_case, code, message, after) => {
+    const update: ImportLookalikeChoice = { kind: 'lookalike', line: 3, action: 'update', id: ID_4, state: '0123456789abcdef' };
+    const checked = lookalikes([{ ...accents, outcome: 'updated', fields: [] }], [update]);
+    post
+      .mockResolvedValueOnce({ data: result({ lookalikes: lookalikes([accents]) }) })
+      .mockResolvedValueOnce({ data: result({ lookalikes: checked }) })
+      .mockResolvedValueOnce({
+        data: result({ ok: false, dryRun: false, inserted: 0, errors: [{ row: 3, message, code }], lookalikes: after }),
+      })
+      .mockResolvedValueOnce({ data: result({ lookalikes: undefined }) });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
+    fireEvent.click(await waitFor(() => choice(ROW_3, 'Update APP-4')));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    fireEvent.click(await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'Import' });
+      expect(button).toBeEnabled();
+      return button;
+    }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
+    expect(fieldOf(post.mock.calls[2], 'lookalikes')).toContainEqual(update);
+    fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(4));
+    expect(fieldOf(post.mock.calls[3], 'lookalikes')).toEqual(after?.choices ?? null);
+  });
+
   it('names the columns of a duplicate by their labels, once', async () => {
     post.mockResolvedValueOnce({
       data: result({

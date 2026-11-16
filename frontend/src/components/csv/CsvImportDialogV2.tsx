@@ -155,7 +155,11 @@ export default function CsvImportDialogV2({
       setResult(data);
       // A load refused because a row's situation changed since the check (T-I3l) wrote nothing: back to
       // the check, the row in error and its choices open, as the budget file's dialog does.
-      const stale = !dryRun && !data.ok && data.errors.some((entry) => !!entry.code && LOAD_REFUSALS.has(entry.code));
+      const refused = !data.ok && data.errors.some((entry) => !!entry.code && LOAD_REFUSALS.has(entry.code));
+      const stale = !dryRun && refused;
+      // The choices the server followed dropped the refused row's: the next check shows its new situation
+      // (an update of the application that took its name, a row left out), never the same refusal (T-I3l).
+      if (refused) setLookalikes(data.lookalikes?.choices ?? []);
       setPhase(dryRun || stale ? 'validate' : 'result');
 
       if (!dryRun && data.ok) {
