@@ -142,7 +142,7 @@ Verwalten Sie Kontakte in großen Mengen mit CSV-Dateien oder Excel-Arbeitsmappe
 - **Zuordnung über die E-Mail**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird die Zeile über die E-Mail-Adresse zugeordnet
 - **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„CTCT-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
 - **E-Mail ändern**: Eine E-Mail, die bereits ein anderer Kontakt hat, wird abgelehnt, und die Meldung nennt dessen Referenz: „„ana@acme.example“ gehört bereits zu CTCT-7.“
-- **Eine Zeile pro Kontakt**: Zwei Zeilen, die denselben Kontakt aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert CTCT-7, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“
+- **Eine Zeile pro Kontakt**: Zwei Zeilen, die denselben Kontakt aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert CTCT-7, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“ Zwei Zeilen, die denselben Kontakt anlegen (gleiche E-Mail, unabhängig von der Groß- und Kleinschreibung), werden ebenfalls abgelehnt: „Gleiche Werte in email wie in Zeile 3.“
 
 **Pflichtfelder**: E-Mail
 

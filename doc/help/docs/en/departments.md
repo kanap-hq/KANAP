@@ -122,7 +122,7 @@ The columns, in this order:
 - **Matching by name**: when `reference` is empty, or the file has no such column, a row is matched by department name and company name. It updates the department it names, and any other row creates one
 - **Unknown reference**: a reference your workspace does not know refuses the row: "\"DEPT-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
 - **Renaming or moving**: a name that another department of the row's company already has is refused, and the message names that department's reference: "\"Finance\" already belongs to DEPT-7."
-- **One row per department**: two rows that update the same department are refused: "This row updates DEPT-7, as row 3 does. Keep one row per record."
+- **One row per department**: two rows that update the same department are refused: "This row updates DEPT-7, as row 3 does. Keep one row per record." Two rows that create the same department (same company and name, whatever the case) are refused too: "Same values in company_name, name as row 3."
 
 **Required cells**: `name` and `company_name`, an existing company
 

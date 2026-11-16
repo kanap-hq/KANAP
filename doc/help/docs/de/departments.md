@@ -122,7 +122,7 @@ Die Spalten in dieser Reihenfolge:
 - **Zuordnung über den Namen**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird eine Zeile über Abteilungsname und Unternehmensname zugeordnet. Sie aktualisiert die Abteilung, die sie nennt, und jede andere Zeile legt eine an
 - **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„DEPT-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
 - **Umbenennen oder Verschieben**: Ein Name, den bereits eine andere Abteilung im Unternehmen der Zeile trägt, wird abgelehnt, und die Meldung nennt deren Referenz: „„Finance“ gehört bereits zu DEPT-7.“
-- **Eine Zeile pro Abteilung**: Zwei Zeilen, die dieselbe Abteilung aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert DEPT-7, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“
+- **Eine Zeile pro Abteilung**: Zwei Zeilen, die dieselbe Abteilung aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert DEPT-7, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“ Zwei Zeilen, die dieselbe Abteilung anlegen (gleiches Unternehmen und gleicher Name, unabhängig von der Groß- und Kleinschreibung), werden ebenfalls abgelehnt: „Gleiche Werte in company_name, name wie in Zeile 3.“
 
 **Pflichtzellen**: `name` und `company_name`, ein bestehendes Unternehmen
 

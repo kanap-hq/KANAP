@@ -142,7 +142,7 @@ Gestione contactos de forma masiva usando archivos CSV o libros de Excel.
 - **Emparejamiento por correo electrónico**: cuando `reference` está vacía, o el archivo no tiene esa columna, la fila se empareja por la dirección de correo electrónico
 - **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“CTCT-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
 - **Cambio de correo electrónico**: un correo electrónico que ya tiene otro contacto se rechaza, y el mensaje da la referencia de ese contacto: «“ana@acme.example” ya pertenece a CTCT-7.»
-- **Una fila por contacto**: dos filas que actualizan el mismo contacto se rechazan: «Esta fila actualiza CTCT-7, como la fila 3. Deje una sola fila por registro.»
+- **Una fila por contacto**: dos filas que actualizan el mismo contacto se rechazan: «Esta fila actualiza CTCT-7, como la fila 3. Deje una sola fila por registro.» Dos filas que crean el mismo contacto (mismo correo electrónico, sin distinguir mayúsculas y minúsculas) también se rechazan: «Mismos valores en email que en la fila 3.»
 
 **Campos obligatorios**: Correo electrónico
 

@@ -142,7 +142,7 @@ Manage contacts in bulk using CSV files or Excel workbooks.
 - **Matching by email**: when `reference` is empty, or the file has no such column, the row is matched by email address
 - **Unknown reference**: a reference your workspace does not know refuses the row: "\"CTCT-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
 - **Changing the email**: an email that another contact already has is refused, and the message names that contact's reference: "\"ana@acme.example\" already belongs to CTCT-7."
-- **One row per contact**: two rows that update the same contact are refused: "This row updates CTCT-7, as row 3 does. Keep one row per record."
+- **One row per contact**: two rows that update the same contact are refused: "This row updates CTCT-7, as row 3 does. Keep one row per record." Two rows that create the same contact (same email, whatever the case) are refused too: "Same values in email as row 3."
 
 **Required fields**: Email
 

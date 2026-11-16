@@ -142,7 +142,7 @@ Gérez les contacts en masse avec des fichiers CSV ou des classeurs Excel.
 - **Correspondance par e-mail** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, la ligne est rapprochée par l'adresse e-mail
 - **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « CTCT-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
 - **Changement d'e-mail** : un e-mail qu'un autre contact a déjà est refusé, et le message donne la référence de ce contact : « « ana@acme.example » appartient déjà à CTCT-7. »
-- **Une ligne par contact** : deux lignes qui mettent à jour le même contact sont refusées : « Cette ligne met à jour CTCT-7, comme la ligne 3. Gardez une seule ligne par fiche. »
+- **Une ligne par contact** : deux lignes qui mettent à jour le même contact sont refusées : « Cette ligne met à jour CTCT-7, comme la ligne 3. Gardez une seule ligne par fiche. » Deux lignes qui créent le même contact (même e-mail, quelle que soit la casse) sont refusées aussi : « Mêmes valeurs dans email qu'à la ligne 3. »
 
 **Champs obligatoires** : Email
 
