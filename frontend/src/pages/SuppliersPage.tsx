@@ -16,7 +16,7 @@ import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { ImportLabel } from '../components/csv/importFiles';
-import { formatItemRef } from '../utils/item-ref';
+import { formatItemRef, itemAddress } from '../utils/item-ref';
 
 export default function SuppliersPage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -53,7 +53,7 @@ export default function SuppliersPage() {
   }, []);
   const getSupplierHref = useCallback((row: any) => {
     const sp = buildWorkspaceSearch();
-    return `/master-data/suppliers/${row.id}/overview?${sp.toString()}`;
+    return `/master-data/suppliers/${itemAddress('supplier', row)}/overview?${sp.toString()}`;
   }, [buildWorkspaceSearch]);
 
   const columns: EnhancedColDef<any>[] = useMemo(() => [

@@ -514,7 +514,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
             {createError && <Alert severity="error">{createError}</Alert>}
           </Stack>
         )}
-        {tab === 'contacts' && recordId && <SupplierContactsTab supplierId={recordId} canManage={canEdit} />}
+        {tab === 'contacts' && recordId && <SupplierContactsTab supplierId={recordId} supplierAddress={reference} canManage={canEdit} />}
         {tab === RECORD_HISTORY_TAB_KEY && data && (
           <WorkspaceTabBoundary resetKey={tab} onRetry={() => historyTab.retry()}>
             <React.Suspense fallback={null}>

@@ -44,7 +44,7 @@ describe('a deleted record', () => {
 });
 
 describe('reference data', () => {
-  it('keeps suppliers, contacts and departments with their reference, opened by their uuid', () => {
+  it('keeps suppliers, contacts and departments with their reference, opened by it', () => {
     const { result } = renderHook(useRecentlyViewed);
     act(() => result.current.addToRecent('supplier', 'sup-1', 'Fromagerie Bleue', 'SUP-12'));
     act(() => result.current.addToRecent('contact', 'ctc-1', 'Ana Lopez', 'CTCT-3'));
@@ -52,10 +52,12 @@ describe('reference data', () => {
     expect(result.current.items.map((item) => `${item.type}:${item.ref}`)).toEqual(['department:DEPT-7', 'contact:CTCT-3', 'supplier:SUP-12']);
     expect(ENTITY_TYPE_CONFIG.supplier).toMatchObject({ resource: 'suppliers', labelKey: 'dashboard.tiles.entityTypes.supplier' });
     expect(ENTITY_TYPE_CONFIG.supplier.route('sup-1')).toBe('/master-data/suppliers/sup-1');
+    expect(ENTITY_TYPE_CONFIG.supplier.route('sup-1', 'SUP-12')).toBe('/master-data/suppliers/SUP-12');
     expect(ENTITY_TYPE_CONFIG.contact).toMatchObject({ resource: 'contacts', labelKey: 'dashboard.tiles.entityTypes.contact' });
     expect(ENTITY_TYPE_CONFIG.contact.route('ctc-1')).toBe('/master-data/contacts/ctc-1');
+    expect(ENTITY_TYPE_CONFIG.contact.route('ctc-1', 'CTCT-3')).toBe('/master-data/contacts/CTCT-3');
     expect(ENTITY_TYPE_CONFIG.department).toMatchObject({ resource: 'departments', labelKey: 'dashboard.tiles.entityTypes.department' });
-    // The company and department pages open by their reference; an item kept without one opens by its uuid.
+    // The company, department, supplier and contact pages open by their reference; an item kept without one opens by its uuid.
     expect(ENTITY_TYPE_CONFIG.department.route('dep-1', 'DEPT-7')).toBe('/master-data/departments/DEPT-7');
     expect(ENTITY_TYPE_CONFIG.department.route('dep-1')).toBe('/master-data/departments/dep-1');
     expect(ENTITY_TYPE_CONFIG.company.route('co-1', 'COMP-5')).toBe('/master-data/companies/COMP-5');

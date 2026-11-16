@@ -46,7 +46,7 @@ describe('ItemContactsSection', () => {
     mocked.get.mockResolvedValue({
       data: [{
         id: 'link-1', contact_id: 'contact-1', role: 'commercial', origin: 'manual',
-        contact: { id: 'contact-1', first_name: 'Ana', last_name: 'Lopez', job_title: null, email: 'ana@example.invalid', mobile: null },
+        contact: { id: 'contact-1', item_number: 3, first_name: 'Ana', last_name: 'Lopez', job_title: null, email: 'ana@example.invalid', mobile: null },
       }],
     } as never);
   });
@@ -55,7 +55,8 @@ describe('ItemContactsSection', () => {
     mocked.delete.mockRejectedValue(refusal);
     renderSection();
     const link = await screen.findByRole('link', { name: 'Ana' });
-    expect(link).toHaveAttribute('href', '/master-data/contacts/contact-1/overview');
+    // The contact page opens by its reference (lot R3).
+    expect(link).toHaveAttribute('href', '/master-data/contacts/CTCT-3/overview');
     fireEvent.click(screen.getByRole('button', { name: 'Remove contact' }));
     expect(await screen.findByText('This line is read only in your access.')).toBeInTheDocument();
     expect(screen.getByText('Ana')).toBeInTheDocument();

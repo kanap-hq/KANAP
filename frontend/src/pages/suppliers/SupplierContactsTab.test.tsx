@@ -34,14 +34,14 @@ const LINK = {
   contact: { id: 'c-1', first_name: 'Alex', last_name: 'Martin', email: 'alex@acme.test' },
 };
 
-function renderTab() {
+function renderTab(supplierAddress?: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <NotifyProvider>
         <QueryClientProvider client={client}>
           <MemoryRouter>
-            <SupplierContactsTab supplierId="s-1" canManage />
+            <SupplierContactsTab supplierId="s-1" supplierAddress={supplierAddress} canManage />
           </MemoryRouter>
         </QueryClientProvider>
       </NotifyProvider>
@@ -75,6 +75,17 @@ describe('SupplierContactsTab', () => {
     ));
     expect(await within(commercial).findByText('Alex Martin')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText('suppliers.contacts.linkRemoved')).not.toBeInTheDocument());
+  });
+
+  it('opens a contact by its reference and comes back to the supplier by its own', async () => {
+    links = [{ ...LINK, contact: { ...LINK.contact, item_number: 3 } as typeof LINK.contact }];
+    renderTab('SUP-1');
+    const commercial = await screen.findByRole('region', { name: 'contacts.roles.commercial' });
+    expect(await within(commercial).findByRole('link', { name: /Alex Martin/ })).toHaveAttribute('href', '/master-data/contacts/CTCT-3/overview');
+    const create = within(commercial).getAllByRole('link').find((a) => a.getAttribute('href')!.startsWith('/master-data/contacts/new'))!;
+    const sp = new URLSearchParams(create.getAttribute('href')!.split('?')[1]);
+    expect(sp.get('supplier_id')).toBe('s-1');
+    expect(sp.get('returnTo')).toBe('/master-data/suppliers/SUP-1/contacts');
   });
 
   it('says nothing was removed when the removal fails', async () => {

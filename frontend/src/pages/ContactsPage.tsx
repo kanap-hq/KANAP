@@ -16,7 +16,7 @@ import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { ImportLabel } from '../components/csv/importFiles';
-import { formatItemRef } from '../utils/item-ref';
+import { formatItemRef, itemAddress } from '../utils/item-ref';
 
 export default function ContactsPage() {
   const { hasLevel, dataAccess } = useAuth();
@@ -48,7 +48,7 @@ export default function ContactsPage() {
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const getContactHref = (row: any) => {
     const sp = buildWorkspaceSearch();
-    return `/master-data/contacts/${row.id}/overview?${sp.toString()}`;
+    return `/master-data/contacts/${itemAddress('contact', row)}/overview?${sp.toString()}`;
   };
 
   const columns: EnhancedColDef<any>[] = useMemo(() => [

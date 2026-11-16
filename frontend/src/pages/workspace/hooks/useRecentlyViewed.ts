@@ -206,13 +206,13 @@ export const ENTITY_TYPE_CONFIG: Record<
     labelKey: 'dashboard.tiles.entityTypes.department',
   },
   supplier: {
-    route: (id) => `/master-data/suppliers/${id}`,
+    route: (id, ref) => `/master-data/suppliers/${ref || id}`,
     resource: 'suppliers',
     icon: 'LocalShipping',
     labelKey: 'dashboard.tiles.entityTypes.supplier',
   },
   contact: {
-    route: (id) => `/master-data/contacts/${id}`,
+    route: (id, ref) => `/master-data/contacts/${ref || id}`,
     resource: 'contacts',
     icon: 'People',
     labelKey: 'dashboard.tiles.entityTypes.contact',
