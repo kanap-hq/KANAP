@@ -1127,7 +1127,7 @@
         "counts": "Ausgelassen: {{ignored}}, trotzdem angelegt: {{created}}, aktualisiert: {{updated}}",
         "outcomeIgnored": "Ausgelassen",
         "outcomeCreated": "Trotzdem angelegt",
-        "outcomeUpdated": "Aktualisiert {{ref}}",
+        "outcomeUpdated": "Aktualisiert: {{ref}}",
         "fields": "Änderungen: {{fields}}",
         "noChange": "An {{ref}} ändert sich nichts",
         "skipped": "{{count}} Zeilen ausgelassen",

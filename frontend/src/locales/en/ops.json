@@ -1127,7 +1127,7 @@
         "counts": "{{ignored}} left out, {{created}} created anyway, {{updated}} updated",
         "outcomeIgnored": "Left out",
         "outcomeCreated": "Created anyway",
-        "outcomeUpdated": "Updates {{ref}}",
+        "outcomeUpdated": "Updated: {{ref}}",
         "fields": "Changes: {{fields}}",
         "noChange": "Nothing changes on {{ref}}",
         "skipped": "{{count}} rows left out",

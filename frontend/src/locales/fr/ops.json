@@ -1128,7 +1128,7 @@
         "counts": "Écartées : {{ignored}}, créées quand même : {{created}}, mises à jour : {{updated}}",
         "outcomeIgnored": "Écartée",
         "outcomeCreated": "Créée quand même",
-        "outcomeUpdated": "Met à jour {{ref}}",
+        "outcomeUpdated": "Mise à jour : {{ref}}",
         "fields": "Modifie : {{fields}}",
         "noChange": "Rien ne change sur {{ref}}",
         "skipped": "{{count}} lignes écartées",

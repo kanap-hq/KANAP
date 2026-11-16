@@ -228,4 +228,20 @@ describe('CsvImportDialogV2, the rows that look like an existing application', (
     expect(fieldOf(post.mock.calls[2], 'lookalikes')).toContainEqual({ ...update, state: '00000000000000ff' });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled());
   });
+
+  it('says what became of each row once the import is done, all three in the same tense', async () => {
+    const done = lookalikes([accents, { ...close, outcome: 'updated' }, { ...close, line: 5, outcome: 'created' }]);
+    post
+      .mockResolvedValueOnce({ data: result({ lookalikes: done }) })
+      .mockResolvedValueOnce({ data: result({ dryRun: false, lookalikes: done }) });
+    await i18n.changeLanguage('fr');
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Importer' }));
+    await screen.findByRole('button', { name: 'Fermer' });
+    expect(screen.getByText(/· Écartée$/)).toBeInTheDocument();
+    expect(screen.getByText(/· Créée quand même$/)).toBeInTheDocument();
+    // The French colon follows a non-breaking space, which the default text matcher folds away.
+    expect(screen.getByText(/· Mise à jour : APP-7$/)).toBeInTheDocument();
+  });
 });

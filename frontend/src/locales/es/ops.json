@@ -1127,7 +1127,7 @@
         "counts": "Descartadas: {{ignored}}, creadas de todos modos: {{created}}, actualizadas: {{updated}}",
         "outcomeIgnored": "Descartada",
         "outcomeCreated": "Creada de todos modos",
-        "outcomeUpdated": "Actualiza {{ref}}",
+        "outcomeUpdated": "Actualizada: {{ref}}",
         "fields": "Cambios: {{fields}}",
         "noChange": "Nada cambia en {{ref}}",
         "skipped": "{{count}} filas descartadas",
