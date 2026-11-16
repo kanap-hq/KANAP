@@ -312,7 +312,8 @@ function testChoicesParsing() {
   assert.deepEqual(parseBudgetFileChoices('[{"kind":"create_suppliers","value":false}]'), [{ kind: 'create_suppliers', value: false }]);
   assert.deepEqual(parseBudgetFileChoices([{ kind: 'unmatch', column: 'supplier_name', value: ' X ' }, { kind: 'unmatch', column: 'supplier_name', value: 'x' }]),
     [{ kind: 'unmatch', column: 'supplier_name', value: 'X' }]);
-  for (const bad of ['nope', [{ kind: 'unmatch', column: 'company_name', value: 'X' }], [{ kind: 'drop' }], [{ kind: 'create_suppliers', value: 'yes' }]]) {
+  // The company is a matched column since lot I3 of 26.11.9; an account is none.
+  for (const bad of ['nope', [{ kind: 'unmatch', column: 'account_number', value: 'X' }], [{ kind: 'drop' }], [{ kind: 'create_suppliers', value: 'yes' }]]) {
     assert.throws(() => parseBudgetFileChoices(bad), /not valid/);
   }
   // Lot I2 of 26.11.9: the rows that look like a stored line, one by one or all of them.
@@ -402,6 +403,52 @@ async function testCandidatesOfReadableLists() {
   console.log('  candidates: enabled companies only, and only from the lists the person may read: OK');
 }
 
+// Lot I3 of 26.11.9: the paying company is matched as the supplier is: accents aside (no other
+// language), listed, undoable (then refused with its closest names), and Kad's proposal checked
+// against the list. A person who does not read the companies gets neither the match nor a proposal.
+async function testCompanyMatches() {
+  const cat = frenchCatalog();
+  cat.companies = [...cat.companies, { id: 'c3', name: 'Société Générale', coaId: null, disabledAt: null }];
+  const row = ',opex,Licences,Societe Generale,612200,Cegid,EUR,,,,';
+  const matched = await check([row, ',opex,Support,SOCIETE GENERALE,612200,Cegid,EUR,,,,'], { cat });
+  assert.equal(matched.report.ok, true, JSON.stringify(matched.report.errors));
+  assert.deepEqual(matchesOf(matched.report), [['company_name', 'Societe Generale', 'Société Générale', 'server', 'accents', [2, 3]]]);
+  assert.equal(matched.report.matching!.matches[0].undoable, true);
+  assert.deepEqual(matched.plans.map((plan) => plan.body.paying_company_id), ['c3', 'c3']);
+
+  // Undone: unknown again, refused with its closest names; the choice is followed.
+  const choices: BudgetFileChoice[] = [{ kind: 'unmatch', column: 'company_name', value: 'Societe Generale' }];
+  const undone = await check([row], { cat, matching: { choices } });
+  assert.deepEqual(undone.report.errors.map((error) => [error.column, error.code]), [['company_name', 'CSV_REFERENCE_NOT_FOUND']]);
+  assert.deepEqual(undone.report.matching!.matches, []);
+  const refused = undone.report.matching!.candidates.find((entry) => entry.column === 'company_name')!;
+  assert.deepEqual([refused.outcome, refused.candidates[0].name], ['refused', 'Société Générale']);
+  assert.deepEqual(undone.report.matching!.choices, choices);
+  assert.deepEqual(parseBudgetFileChoices(choices), choices, 'the request takes a company undone');
+
+  // Kad's proposal: accepted when the company exists, refused (and the name then unknown) when not.
+  const proposed = await check([',opex,Licences,SG,612200,Cegid,EUR,,,,'], { cat, matching: { proposals: { company_name: { SG: 'Société Générale' } } } });
+  assert.equal(proposed.report.ok, true, JSON.stringify(proposed.report.errors));
+  assert.deepEqual(matchesOf(proposed.report), [['company_name', 'SG', 'Société Générale', 'model', 'model', [2]]]);
+  const missing = await check([',opex,Licences,SG,612200,Cegid,EUR,,,,'], { cat, matching: { proposals: { company_name: { SG: 'Banque Inconnue' } } } });
+  assert.deepEqual(missing.report.matching!.refusedProposals.map((entry) => [entry.column, entry.value, entry.target, entry.reason]), [
+    ['company_name', 'SG', 'Banque Inconnue', 'missing'],
+  ]);
+  assert.deepEqual(missing.report.errors.map((error) => [error.column, error.code]), [['company_name', 'CSV_REFERENCE_NOT_FOUND']]);
+
+  // Without the companies' module: no match beyond case, no proposal, no name of the list.
+  const unread = await check([row, ',opex,Support,SG,612200,Cegid,EUR,,,,'], {
+    cat, canReadCompanies: false, matching: { proposals: { company_name: { SG: 'Société Générale' } } },
+  });
+  assert.deepEqual(unread.report.matching!.matches, []);
+  assert.deepEqual(unread.report.errors.map((error) => [error.column, error.code]), [
+    ['company_name', 'CSV_REFERENCE_NOT_FOUND'], ['company_name', 'CSV_REFERENCE_NOT_FOUND'],
+  ]);
+  assert.deepEqual(unread.report.matching!.refusedProposals.map((entry) => [entry.value, entry.target, entry.reason]), [['SG', 'Société Générale', 'missing']]);
+  assert.ok(unread.report.matching!.candidates.every((entry) => entry.candidates.length === 0), 'no closest name of an unread list');
+  console.log('  the company: matched beyond accents, undone, proposed by Kad, within the person\'s rights: OK');
+}
+
 async function main() {
   testRecommendedKeys();
   testCandidates();
@@ -416,6 +463,7 @@ async function main() {
   await testDisabledSupplierMatchListed();
   await testOneCandidatePerCreation();
   await testCandidatesOfReadableLists();
+  await testCompanyMatches();
   console.log('budget-file-matching.spec: ok');
 }
 

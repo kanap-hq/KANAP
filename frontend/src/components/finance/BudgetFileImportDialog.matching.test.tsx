@@ -236,4 +236,39 @@ describe('BudgetFileImportDialog, matching before creating', () => {
     fireEvent.mouseOver(screen.getByText('Hardwar'));
     expect(await screen.findByRole('tooltip')).toHaveTextContent(`${K}matching.closeTo:${JSON.stringify({ names: 'Hardware, Software' })}`);
   });
+
+  // Lot I3 of 26.11.9: the paying company is matched like the supplier. Its match is named by the
+  // column's label and undone with the whole list of choices; undone, it is refused, among the errors, with Match again.
+  it('names a company match by its column and undoes it; the company undone is among the errors', async () => {
+    post.mockResolvedValueOnce({
+      data: report({
+        matching: matching({
+          matches: [match({ column: 'company_name', name: null, value: 'Societe Generale', target: 'Société Générale', reason: 'accents', lines: [2], count: 1 })],
+        }),
+      }),
+    });
+    renderDialog();
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(`^${K}matching\\.count`) }));
+    expect(screen.getByText(`${K}matching.match:${JSON.stringify({ dimension: 'opex.columns.payingCompany', value: 'Societe Generale', target: 'Société Générale' })}`)).toBeInTheDocument();
+    expect(screen.queryByText(/company_name/)).toBeNull();
+
+    const undone: BudgetFileChoice[] = [{ kind: 'unmatch', column: 'company_name', value: 'Societe Generale' }];
+    post.mockResolvedValueOnce({
+      data: report({
+        ok: false,
+        errors: [{ line: 2, column: 'company_name', message: "Company 'Societe Generale' was not found.", code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Societe Generale' } }],
+        errorCount: 1,
+        matching: matching({
+          choices: undone,
+          candidates: [{ column: 'company_name', name: null, value: 'Societe Generale', outcome: 'refused', lines: [2], count: 1, candidates: [{ name: 'Société Générale', score: 1 }] }],
+        }),
+      }),
+    });
+    fireEvent.click(screen.getByRole('button', { name: `${K}matching.undo` }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(sentChoices(post.mock.calls[1])).toEqual(undone);
+    expect(await screen.findByRole('button', { name: `${K}matching.redo` })).toBeInTheDocument();
+    expect(screen.getByText(`${K}dimensionValues:${JSON.stringify({ dimension: 'opex.columns.payingCompany', names: 'Societe Generale' })}`)).toBeInTheDocument();
+    expect(screen.getByText(`${K}matching.closeTo:${JSON.stringify({ names: 'Société Générale' })}`)).toBeInTheDocument();
+  });
 });

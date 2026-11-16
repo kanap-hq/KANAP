@@ -208,9 +208,9 @@ export function closestNames(value: string, names: readonly string[]): Array<{ n
     .map(({ name, score }) => ({ name, score }));
 }
 
-/** The columns whose values the check matches and Kad may propose a value for: the supplier and the dimensions. */
+/** The columns whose values the check matches and Kad may propose a value for: the supplier, the company and the dimensions. */
 export function isMatchedColumn(column: string): boolean {
-  return column === 'supplier_name' || column.startsWith('analytics:');
+  return column === 'supplier_name' || column === 'company_name' || column.startsWith('analytics:');
 }
 
 /** Choices bounded: a card or a request holds a few, each value as long as a cell. */

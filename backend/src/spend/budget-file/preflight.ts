@@ -522,7 +522,7 @@ function lookalikeKeys(input: PreflightInput, row: InterpretedRow, bag: Bag, fir
   const nature = row.nature.kind === 'value' ? row.nature.nature : row.nature.kind === 'absent' ? input.scope : null;
   const name = textOf(row.fields.name);
   if (!nature || !name) return null;
-  const companyId = lookalikeCompany(input, row);
+  const companyId = lookalikeCompany(input, row, bag);
   const currency = row.fields.currency?.kind === 'value' ? row.fields.currency.text.trim().toUpperCase() : null;
   return {
     nature,
@@ -558,10 +558,19 @@ function lookalikeSupplier(input: PreflightInput, row: InterpretedRow, bag: Bag)
 }
 
 /** The row's paying company as `resolveCompany` finds it for a new line; null when none is found. */
-function lookalikeCompany(input: PreflightInput, row: InterpretedRow): string | null {
+function lookalikeCompany(input: PreflightInput, row: InterpretedRow, bag: Bag): string | null {
   const cell = row.fields.company_name ?? { kind: 'absent' as const };
   if (cell.kind === 'value') {
-    const found = matchName(input.catalog.companies, cell.text);
+    const companies = input.catalog.companies;
+    const reads = !!input.canReadCompanies;
+    const key = cellKey('company_name', cell.text);
+    const undone = bag.matching.unmatched.has(key);
+    const proposal = bag.matching.proposals.get(key);
+    if (reads && proposal !== undefined && !undone && foldKey(proposal) !== foldKey(cell.text)) {
+      const target = matchByName(companies, proposal, { beyondCase: false });
+      if (target.kind === 'one' && isActiveAt(target.row.disabledAt)) return target.row.id;
+    }
+    const found = matchByName(companies, cell.text, { beyondCase: reads && !undone });
     return found.kind === 'one' ? found.row.id : null;
   }
   if (cell.kind === 'clear') return null;
@@ -861,7 +870,9 @@ function resolveCompany(
     return { id: null, known: false };
   }
   if (cell.kind === 'value') {
-    const found = matchName(input.catalog.companies, cell.text);
+    // As the supplier: Kad's proposal first, then the file's name exactly, case aside, and accents aside
+    // for a person who reads the companies (a match listed, undoable); no other language.
+    const found = findListed(bag, 'company_name', null, cell.text, row.line, input.catalog.companies, undefined, !!input.canReadCompanies);
     if (found.kind === 'none') {
       fail('company_name', `Company '${cell.text}' was not found.`, 'CSV_REFERENCE_NOT_FOUND', { value: cell.text });
       miss(bag, 'companies', cell.text);
@@ -873,6 +884,8 @@ function resolveCompany(
       fail('company_name', `Company '${cell.text}' matches more than one company.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: cell.text });
       return { id: null, known: false };
     }
+    // Listed before the disabled check, as the supplier's: the person may undo a match to a disabled company.
+    noteMatch(bag, row.line, found);
     if (!isActiveAt(found.row.disabledAt) && found.row.id !== (live?.companyId ?? null)) {
       fail('company_name', `Company '${found.row.name}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: found.row.name });
       return { id: null, known: false };
@@ -1656,17 +1669,6 @@ function findCostCenter(
   return { kind: 'none' };
 }
 
-function matchName<T extends { name: string }>(rows: T[], cell: string): { kind: 'none' } | { kind: 'many' } | { kind: 'one'; row: T } {
-  const text = cell.trim();
-  const exact = rows.filter((row) => row.name.trim() === text);
-  if (exact.length === 1) return { kind: 'one', row: exact[0] };
-  if (exact.length > 1) return { kind: 'many' };
-  const folded = rows.filter((row) => row.name.trim().toLowerCase() === text.toLowerCase());
-  if (folded.length === 1) return { kind: 'one', row: folded[0] };
-  if (folded.length > 1) return { kind: 'many' };
-  return { kind: 'none' };
-}
-
 /** A list entry the matching reads: a supplier or a dimension value. */
 type Listed = { name: string; disabledAt: string | null };
 
@@ -1674,10 +1676,12 @@ type Listed = { name: string; disabledAt: string | null };
 type ListedMatch<T> = NameMatch<T> & { column?: string; dimensionName?: string | null; value?: string; byModel?: boolean };
 
 /**
- * The supplier or dimension value of `rows` a value of the file stands for. Kad's proposal for the
- * value comes first, accepted when it names an enabled value of the list (by its name, case aside);
- * else it is refused, and the value is matched as the file writes it. A match the person undid goes
- * no further than case. Every match beyond case is listed once the row uses it (`noteMatch`).
+ * The supplier, company or dimension value of `rows` a value of the file stands for. Kad's proposal
+ * for the value comes first, accepted when it names an enabled value of the list (by its name, case
+ * aside); else it is refused, and the value is matched as the file writes it. A match the person undid
+ * goes no further than case. Every match beyond case is listed once the row uses it (`noteMatch`).
+ * A list the person does not read (`reads` false, the companies without their module) goes no further
+ * than case and takes no proposal.
  */
 function findListed<T extends Listed>(
   bag: Bag,
@@ -1687,6 +1691,7 @@ function findListed<T extends Listed>(
   line: number,
   rows: readonly T[],
   translate?: (cell: string, rows: readonly T[]) => T[],
+  reads = true,
 ): ListedMatch<T> {
   const key = cellKey(column, cell);
   const state = bag.matching;
@@ -1696,7 +1701,8 @@ function findListed<T extends Listed>(
     if (undone) {
       state.applied.add(key);
     } else {
-      const target = matchByName(rows, proposal, { beyondCase: false });
+      // A list the person does not read: Kad's proposal is refused as missing, naming nothing of it.
+      const target = reads ? matchByName(rows, proposal, { beyondCase: false }) : { kind: 'none' as const };
       if (target.kind === 'one' && isActiveAt(target.row.disabledAt)) {
         return { kind: 'one', row: target.row, how: 'exact', column, dimensionName, value: cell, byModel: true };
       }
@@ -1710,8 +1716,8 @@ function findListed<T extends Listed>(
       state.refused.set(key, refused);
     }
   }
-  const found = matchByName(rows, cell, { beyondCase: !undone, translate });
-  if (undone && found.kind !== 'one') {
+  const found = matchByName(rows, cell, { beyondCase: reads && !undone, translate });
+  if (reads && undone && found.kind !== 'one') {
     const would = matchByName(rows, cell, { beyondCase: true, translate });
     if (would.kind === 'one' && (would.how === 'accents' || would.how === 'translation')) state.applied.add(key);
   }
