@@ -14,7 +14,8 @@ import { writeXlsx } from '../../../common/xlsx';
 import { natureChangeMessage } from '../preflight';
 import type { BudgetNature } from '../../budget-nature';
 import { formatToken, parseToken, tokenError } from '../token';
-import { BUDGET_FILE_MAX_BYTES } from '../upload';
+import { BUDGET_FILE_MAX_BYTES, budgetFileChoices } from '../upload';
+import { parseImportChoices } from '../../../ai/import/ai-import-targets';
 import {
   BudgetCatalog,
   BudgetFileScope,
@@ -990,6 +991,29 @@ async function testLeftOutLeavesNothing() {
   assert.deepEqual(rowChoices(anyway.report), [{ kind: 'lookalike', line: 2, action: 'create' }]);
 }
 
+/**
+ * Review 3 of lot I3, C4: BL-10 deleted after a check, then a new check: its targets carry the line gone
+ * (an empty state). "Create all anyway", "Update all" and "Leave all out" send them back, through the
+ * screen's route and Kad's choice route alike: read, and followed (BL-10 cannot be updated: left out).
+ */
+async function testChoicesForAllWithALineGone() {
+  const row = 'opex,,Microsoft 365 E3,Acme,6100,EUR,Microsoft,130000';
+  const shown = await lookPlan([row]);
+  const chosen: BudgetFileChoice[] = [{ kind: 'lookalike', line: 2, action: 'update', item: 10, state: shown.report.lookalikes!.lines[0].target.state }];
+  const after = await lookPlan([row], { stored: [], choices: chosen });
+  const targets = after.report.lookalikes!.targets;
+  assert.deepEqual(targets, { 2: { item: 10, state: '' } });
+  for (const [action, outcome] of [['create', 'created'], ['update', 'ignored'], ['ignore', 'ignored']] as const) {
+    const all = [{ kind: 'lookalikes', action, targets }];
+    const screen = budgetFileChoices(JSON.stringify(all));
+    const card = parseImportChoices('budget_lines', all);
+    assert.deepEqual(card, screen, action);
+    const plan = await lookPlan([row], { stored: [], choices: screen as BudgetFileChoice[] });
+    assert.equal(plan.report.ok, true, JSON.stringify(plan.report.errors));
+    assert.deepEqual(plan.report.lookalikes!.lines.map((entry) => [entry.line, entry.target.ref, entry.outcome]), [[2, 'BL-10', outcome]], action);
+  }
+}
+
 /** "Update BL-n": through the read, as if the file named the line; refused when it cannot be. */
 async function testLookalikeUpdate() {
   const { stored } = lookFixture();
@@ -1344,6 +1368,7 @@ async function main() {
   await testLookalikeRules();
   await testLeftOutLeavesNothing();
   await testLookalikeUpdate();
+  await testChoicesForAllWithALineGone();
   await testManyLookalikes();
   await testLookalikeTargetKept();
   await testLookalikeCompanyAndEnd();

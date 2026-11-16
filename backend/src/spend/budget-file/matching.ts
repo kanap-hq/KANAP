@@ -210,7 +210,10 @@ function isState(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f]{16}$/.test(value);
 }
 
-/** `targets` of a choice for all rows, copied: by line of the file, a line's number and state. */
+/**
+ * `targets` of a choice for all rows, copied: by line of the file, a line's number and state; an empty
+ * state for a line gone since the check (the row keeps it and stays left out, as the applications').
+ */
 function targetsOf(value: unknown): Record<string, BudgetFileLookalikeTarget> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const entries = Object.entries(value as Record<string, unknown>);
@@ -218,7 +221,7 @@ function targetsOf(value: unknown): Record<string, BudgetFileLookalikeTarget> | 
   const targets: Record<string, BudgetFileLookalikeTarget> = {};
   for (const [line, raw] of entries) {
     const target = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-    if (!/^[1-9]\d{0,9}$/.test(line) || !isLine(target.item) || !isState(target.state)) return null;
+    if (!/^[1-9]\d{0,9}$/.test(line) || !isLine(target.item) || !(isState(target.state) || target.state === '')) return null;
     targets[line] = { item: target.item, state: target.state };
   }
   return targets;
