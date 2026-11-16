@@ -231,6 +231,18 @@ describe('PreviewCard, the rows of an applications import that look like an exis
     expect(screen.queryByText(/supplier_name/)).toBeNull();
   });
 
+  it('names the columns of a duplicate by their titles, once', () => {
+    const preview = card({
+      lookalikes: undefined,
+      errors: [{ row: 3, column: 'name', message: 'Same values in name as row 2.', code: 'CSV_DUPLICATE_KEY', params: { columns: 'name', firstRow: 2 } }],
+    });
+    Object.assign(preview.import_mapping!.validation!, { ok: false, error_count: 1 });
+    renderCard(preview);
+    expect(screen.getByText('Same values in Nom as row 2.', { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText(/\(Nom\)/)).toBeNull();
+    expect(screen.queryByText(/ name /)).toBeNull();
+  });
+
   it('shows what became of each row, with no choice, on an approved card', () => {
     renderCard(card({ lookalikes: lookalikes([{ ...accents, outcome: 'created' }]) }, { status: 'approved' }));
     expect(screen.queryByRole('group')).toBeNull();

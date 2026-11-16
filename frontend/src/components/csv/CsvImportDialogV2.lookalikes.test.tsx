@@ -229,6 +229,19 @@ describe('CsvImportDialogV2, the rows that look like an existing application', (
     await waitFor(() => expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled());
   });
 
+  it('names the columns of a duplicate by their labels, once', async () => {
+    post.mockResolvedValueOnce({
+      data: result({
+        ok: false, lookalikes: undefined,
+        errors: [{ row: 3, column: 'name', message: 'Same values in name as row 2.', code: 'CSV_DUPLICATE_KEY', params: { columns: 'name', firstRow: 2 } }],
+      }),
+    });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
+    const line = await screen.findByText((_, element) => element?.tagName === 'P' && /Same values in/.test(element.textContent ?? ''));
+    expect(line.textContent).toBe('Row 3: Same values in Name as row 2.');
+  });
+
   it('says what became of each row once the import is done, all three in the same tense', async () => {
     const done = lookalikes([accents, { ...close, outcome: 'updated' }, { ...close, line: 5, outcome: 'created' }]);
     post

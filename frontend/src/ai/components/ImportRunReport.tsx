@@ -36,7 +36,7 @@ type ImportRunReportProps = {
 /** One message: its line of the person's file, the sentence of the import screen, then its column. */
 function MessageLine({ item, titles, tone }: { item: AiImportReportMessage; titles: ReadonlyMap<string, string>; tone: 'error' | 'warning' }) {
   const { t } = useTranslation(['common']);
-  const text = csvMessageText(item, t);
+  const text = csvMessageText(item, t, (key) => titles.get(key) ?? key);
   const column = csvMessageColumn(item, text);
   return (
     <Box component="li" sx={{ color: tone === 'error' ? 'error.main' : 'kanap.text.primary' }}>

@@ -14,9 +14,21 @@ export type CsvReportMessage = {
   params?: Record<string, string | number>;
 };
 
-/** The message in the interface language when it has a code. */
-export function csvMessageText(item: CsvReportMessage, t: TFunction): string {
-  return item.code ? t(`errors:${item.code}`, { ...item.params, defaultValue: item.message }) : item.message;
+/** The columns a message names by their keys (`CSV_DUPLICATE_KEY`: `company_name, name`), none when it names none. */
+function namedColumns(item: CsvReportMessage): string[] {
+  const columns = item.params?.columns;
+  return typeof columns === 'string' ? columns.split(',').map((column) => column.trim()).filter(Boolean) : [];
+}
+
+/**
+ * The message in the interface language when it has a code. `columnName` names the columns the
+ * sentence lists (`CSV_DUPLICATE_KEY`) as the view names its columns; absent, by their keys.
+ */
+export function csvMessageText(item: CsvReportMessage, t: TFunction, columnName?: (column: string) => string): string {
+  if (!item.code) return item.message;
+  const columns = namedColumns(item);
+  const params = columnName && columns.length > 0 ? { ...item.params, columns: columns.map(columnName).join(', ') } : item.params;
+  return t(`errors:${item.code}`, { ...params, defaultValue: item.message });
 }
 
 /**
@@ -25,7 +37,7 @@ export function csvMessageText(item: CsvReportMessage, t: TFunction): string {
  * names the column (« … dans la colonne detected_at … »).
  */
 export function csvMessageColumn(item: CsvReportMessage, text: string): string | null {
-  if (!item.column) return null;
+  if (!item.column || namedColumns(item).includes(item.column)) return null;
   const column = item.column.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`(^|\\W)${column}(\\W|$)`).test(text) ? null : item.column;
 }
