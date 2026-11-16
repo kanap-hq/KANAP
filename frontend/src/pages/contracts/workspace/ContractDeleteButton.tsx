@@ -12,6 +12,8 @@ import DeleteIconButton from '../../../components/workspace/DeleteIconButton';
 type Props = {
   contractId: string;
   contractName: string;
+  /** The reference the page keeps the contract under in the cache (`CTR-5`): forgotten with the id. */
+  reference?: string | null;
   /** Saves the edits still pending, before the contract goes. */
   beforeDelete: () => Promise<unknown>;
   onDeleted: () => void;
@@ -23,7 +25,7 @@ type Props = {
  * goes too ("Delete anyway" when something does). A contract with recorded compliance
  * requirements is refused up front: the dialog says how many and to disable it instead.
  */
-export default function ContractDeleteButton({ contractId, contractName, beforeDelete, onDeleted, onError }: Props) {
+export default function ContractDeleteButton({ contractId, contractName, reference, beforeDelete, onDeleted, onError }: Props) {
   const { t } = useTranslation(['ops', 'common', 'errors']);
   const locale = useLocale();
   const dialogs = useKanapDialogs();
@@ -56,10 +58,11 @@ export default function ContractDeleteButton({ contractId, contractName, beforeD
       await api.delete(`/contracts/${contractId}`);
       // The page leaves first: its own contract is gone, the lists read again.
       onDeleted();
-      queryClient.removeQueries({ queryKey: ['contracts', contractId], exact: true });
+      const keys: unknown[] = reference ? [contractId, reference] : [contractId];
+      for (const key of keys) queryClient.removeQueries({ queryKey: ['contracts', key], exact: true });
       void queryClient.invalidateQueries({
         predicate: (query) => ['contracts', 'contracts-ids', 'contracts-totals'].includes(String(query.queryKey[0]))
-          && query.queryKey[1] !== contractId,
+          && !keys.includes(query.queryKey[1]),
       });
     } catch (err) {
       setBusy(false);

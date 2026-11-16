@@ -61,4 +61,9 @@ describe('reference data', () => {
     expect(ENTITY_TYPE_CONFIG.company.route('co-1', 'COMP-5')).toBe('/master-data/companies/COMP-5');
     expect(ENTITY_TYPE_CONFIG.company.route('co-1')).toBe('/master-data/companies/co-1');
   });
+
+  it('opens a contract by its reference, by its uuid when kept without one', () => {
+    expect(ENTITY_TYPE_CONFIG.contract.route('ct-1', 'CTR-4')).toBe('/ops/contracts/CTR-4');
+    expect(ENTITY_TYPE_CONFIG.contract.route('ct-1')).toBe('/ops/contracts/ct-1');
+  });
 });

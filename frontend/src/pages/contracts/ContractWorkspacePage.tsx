@@ -21,6 +21,7 @@ import RelationsSectionTitle from '../portfolio/components/RelationsSectionTitle
 import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, statusChoicePatch, type StatusValue } from '../../constants/status';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
+import { formatItemRef } from '../../utils/item-ref';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { utcTodayYmd } from './contractTerms';
 import { contractSchedule } from './contractSchedule';
@@ -105,6 +106,21 @@ const mergePatch = (form: ContractForm, patch: ContractPatch): ContractForm => (
 
 const fetchContract = async (contractId: string) => (await api.get<ContractDetail>(`/contracts/${contractId}`)).data;
 
+/** The contract's reference (`CTR-5`), the one its address and its cache entry name. */
+const contractReference = (contract: Pick<ContractDetail, 'item_number'> | null | undefined) => (
+  contract?.item_number ? formatItemRef('contract', contract.item_number) : null
+);
+/**
+ * The contract's cache entry: `['contracts', 'CTR-5']`, read by its page. A page opened by a legacy
+ * address (a uuid, `ctr-5`) reads under that address, then puts the contract under its reference and
+ * moves there. A save refreshes every entry that holds the contract (`holdsContract`).
+ */
+const contractKey = (address: string) => ['contracts', address] as const;
+const holdsContract = (contractId: string) => (query: { queryKey: readonly unknown[]; state: { data?: unknown } }) => (
+  query.queryKey[0] === 'contracts'
+  && (query.queryKey[1] === contractId || (query.state.data as { id?: string } | undefined)?.id === contractId)
+);
+
 /** The draft's fields that Create sends and a patch can change. */
 const DRAFT_FIELDS = [
   'supplier_id', 'company_id', 'cost_center_id', 'owner_user_id', 'start_date', 'duration_months', 'notice_period_months',
@@ -129,6 +145,7 @@ function useListContext() {
 export default function ContractWorkspacePage() {
   const params = useParams();
   const location = useLocation();
+  // The address names the contract by its reference (`CTR-5`); a uuid or `ctr-5` moves to it once read.
   const id = String(params.id || '');
   const rawTab = params.tab;
   // The contract the draft has just created: the page stays the draft's, so that what is typed
@@ -159,7 +176,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const { addToRecent } = useRecentlyViewed();
   const { searchParams, withContext } = useListContext();
 
-  const detailKey = React.useMemo(() => ['contracts', id] as const, [id]);
+  const detailKey = React.useMemo(() => contractKey(id), [id]);
   // Set once the contract is deleted: the page leaves without loading it again.
   const [deletedId, setDeletedId] = React.useState<string | null>(null);
   const { data, error: loadError, isPlaceholderData } = useQuery({
@@ -171,16 +188,19 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   });
   // While the shown contract is the previous one, nothing is written: an edit could land on the wrong one.
   const stale = isPlaceholderData;
+  // The contract shown, by its uuid: the API's other routes, the tabs and the list's ids take it.
+  const contractId = isCreate ? '' : data?.id ?? '';
+  const reference = isCreate ? null : contractReference(data);
   const countsQuery = useQuery({
-    queryKey: ['contract-relation-counts', id],
-    queryFn: async () => (await api.get<{ budget_lines: number; relations: number }>(`/contracts/${id}/relation-counts`)).data,
-    enabled: !isCreate,
+    queryKey: ['contract-relation-counts', contractId],
+    queryFn: async () => (await api.get<{ budget_lines: number; relations: number }>(`/contracts/${contractId}/relation-counts`)).data,
+    enabled: !!contractId,
   });
   // The Compliance tab's badge: the expected requirements recorded as absent.
-  const complianceQuery = useContractCompliance(id, !isCreate);
+  const complianceQuery = useContractCompliance(contractId, !!contractId);
 
   const nav = useContractNav({
-    id,
+    id: contractId,
     sort: searchParams.get('sort'),
     q: searchParams.get('q'),
     filters: searchParams.get('filters'),
@@ -193,8 +213,17 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   });
 
   React.useEffect(() => {
-    if (!stale && data?.id && data.name) addToRecent('contract', data.id, data.name);
-  }, [addToRecent, data?.id, data?.name, stale]);
+    if (!stale && data?.id && data.name) addToRecent('contract', data.id, data.name, reference ?? undefined);
+  }, [addToRecent, data?.id, data?.name, reference, stale]);
+
+  // A legacy address (uuid, `ctr-5`) becomes the reference's, tab and list context kept: the
+  // contract read is put under the reference's entry first, so nothing is read again or mounted again.
+  React.useEffect(() => {
+    if (isCreate || stale || !data || !reference || id === reference) return;
+    queryClient.setQueryData(contractKey(reference), data);
+    const search = searchParams.toString();
+    navigate(`${LIST_PATH}/${reference}/${tab}${search ? `?${search}` : ''}`, { replace: true });
+  }, [data, id, isCreate, navigate, queryClient, reference, searchParams, stale, tab]);
 
   // ----- Autosave: every field saves itself; typed values after a pause, the rest at once -----
   const [saveError, setSaveError] = React.useState<string | null>(null);
@@ -228,17 +257,17 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     patchBuffer,
     async (contractId, patch) => { await api.patch(`/contracts/${contractId}`, patch); },
     {
-      onSaved: async (contractId) => {
-        await queryClient.invalidateQueries({ queryKey: ['contracts', contractId], exact: true });
+      onSaved: async (savedId) => {
+        await queryClient.invalidateQueries({ predicate: holdsContract(savedId) });
         void queryClient.invalidateQueries({ queryKey: ['contracts-ids'] });
         // The dates and the renewal decide what the decision box shows.
-        void queryClient.invalidateQueries({ queryKey: renewalQueryKey(contractId) });
+        void queryClient.invalidateQueries({ queryKey: renewalQueryKey(savedId) });
       },
       // Refused: the screen shows the stored values again.
-      onRefused: (contractId) => {
+      onRefused: (refusedId) => {
         const stored = dataRef.current;
-        if (stored && stored.id === contractId) setForm(toForm(stored));
-        void queryClient.invalidateQueries({ queryKey: ['contracts', contractId], exact: true });
+        if (stored && stored.id === refusedId) setForm(toForm(stored));
+        void queryClient.invalidateQueries({ predicate: holdsContract(refusedId) });
       },
     },
   ), [patchBuffer, queryClient]);
@@ -304,7 +333,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const openDrawer = () => setDrawerOpenRequest((n) => n + 1);
 
   // A renewal decided for the term of the next deadline: the timeline no longer asks for a decision.
-  const renewalQuery = useContractRenewal(id, !isCreate);
+  const renewalQuery = useContractRenewal(contractId, !!contractId);
   const confirmedRenewal = React.useMemo(() => confirmedRenewalOf(renewalQuery.data), [renewalQuery.data]);
   // A decision awaited on the end of a contract without renewal: the sentence says so.
   const endDecisionDue = renewalQuery.data?.state === 'pending' && renewalQuery.data.mode === 'end';
@@ -340,25 +369,26 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
 
   // A renewal decision may change the contract (a termination sets its end of validity) and its task.
   const refreshAfterDecision = React.useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['contracts', id], exact: true });
-    void queryClient.invalidateQueries({ queryKey: ['contract-tasks', id] });
+    void queryClient.invalidateQueries({ predicate: holdsContract(contractId) });
+    void queryClient.invalidateQueries({ queryKey: ['contract-tasks', contractId] });
     void queryClient.invalidateQueries({ queryKey: ['contracts-ids'] });
-  }, [id, queryClient]);
+  }, [contractId, queryClient]);
 
   const refreshRelations = React.useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['contract-relation-counts', id] });
-    void queryClient.invalidateQueries({ queryKey: ['contracts', id], exact: true });
+    void queryClient.invalidateQueries({ queryKey: ['contract-relation-counts', contractId] });
+    void queryClient.invalidateQueries({ predicate: holdsContract(contractId) });
     // Linked applications and assets decide what the contract is expected to hold.
-    void queryClient.invalidateQueries({ queryKey: contractComplianceKey(id) });
-  }, [id, queryClient]);
+    void queryClient.invalidateQueries({ queryKey: contractComplianceKey(contractId) });
+  }, [contractId, queryClient]);
 
   const notesTouchedRef = React.useRef(false);
-  // Another contract starts untouched; the contract the draft creates is the same page, its notes in hand.
-  const notesOfId = React.useRef(id);
+  // Another contract starts untouched; the contract the draft creates is the same page, its notes in
+  // hand, and so is a legacy address moved to the reference (the same contract).
+  const notesOfId = React.useRef(contractId);
   React.useEffect(() => {
-    if (notesOfId.current !== 'new') notesTouchedRef.current = false;
-    notesOfId.current = id;
-  }, [id]);
+    if (notesOfId.current) notesTouchedRef.current = false;
+    notesOfId.current = contractId;
+  }, [contractId]);
 
   const counts = countsQuery.data;
   const tabs = [
@@ -405,7 +435,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
       if (!draft) return null;
       setSaveError(null);
       try {
-        const { data: created } = await api.post<{ id: string; creation_token: string }>('/contracts', {
+        const { data: created } = await api.post<{ id: string; item_number?: number | null; creation_token: string }>('/contracts', {
           name: creationTitle.current().trim(),
           supplier_id: draft.supplier_id,
           company_id: draft.company_id,
@@ -425,12 +455,18 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
         void queryClient.invalidateQueries({ queryKey: ['contracts-ids'] });
         // The page moves to the contract with its data in hand, and keeps what was typed since the
         // draft was sent (the next field, while the contract was written): saved on the contract.
-        await queryClient.fetchQuery({ queryKey: ['contracts', created.id], queryFn: () => fetchContract(created.id) }).catch(() => undefined);
+        const createdRef = contractReference(created);
+        await queryClient.fetchQuery({ queryKey: contractKey(createdRef ?? created.id), queryFn: () => fetchContract(created.id) }).catch(() => undefined);
         const now = formRef.current;
         const late = now ? changedFields(draft, now, DRAFT_FIELDS) as ContractPatch | null : null;
         if (late && patchBuffer.add(created.id, late)) autosave.schedule(flushPending);
         setForm((prev) => (prev ? { ...prev, id: created.id, name: creationTitle.current().trim() } : prev));
-        return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
+        return {
+          id: created.id,
+          token: created.creation_token,
+          path: withContext(`${LIST_PATH}/${createdRef ?? created.id}/overview`),
+          reference: createdRef,
+        };
       } catch (e) {
         setSaveError(getApiErrorMessage(e, t, t('contracts.messages.createFailed')));
         return null;
@@ -483,7 +519,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
         ) : undefined}
         activeTab={tab}
         tabs={tabs}
-        onTabChange={(next) => { if (!isCreate) void go(`${LIST_PATH}/${id}/${next}`); }}
+        onTabChange={(next) => { if (!isCreate) void go(`${LIST_PATH}/${reference ?? id}/${next}`); }}
         drawerStorageKey={DRAWER_KEY}
         drawerOpenRequest={drawerOpenRequest}
         backLabel={t('contracts.title')}
@@ -493,6 +529,8 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           canEditTitle: editable,
           onTitleSave: (next: string) => { if (form && next !== form.name) void patchNow({ name: next }); },
         })}
+        itemReference={reference}
+        onCopyReference={reference ? () => { void navigator.clipboard?.writeText(reference); } : undefined}
         titleFallback={isCreate ? t('contracts.workspace.newContract') : t('contracts.workspace.contract')}
         isCreate={isCreate}
         // A new record's required fields sit in the drawer: it stays open.
@@ -565,6 +603,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             {shownData && canDelete && !stale && (
               <ContractDeleteButton
                 contractId={shownData.id}
+                reference={reference}
                 contractName={shownData.name || t('contracts.workspace.contract')}
                 beforeDelete={() => registry.flushAll()}
                 onDeleted={() => { setDeletedId(id); navigate(withContext(LIST_PATH)); }}

@@ -116,6 +116,22 @@ async function testIdsCarryReferences() {
   });
 }
 
+// The page of a new contract opens by its reference: the creation's answer carries the number.
+async function testCreateAnswersTheReference() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, svc, opts } = await seed(runner);
+    const [company] = await runner.query(`SELECT id FROM companies WHERE tenant_id = $1 LIMIT 1`, [tenantId]);
+    const [supplier] = await runner.query(`SELECT id FROM suppliers WHERE tenant_id = $1 LIMIT 1`, [tenantId]);
+    const created: any = await svc.create({
+      name: 'Created by the page', company_id: company.id, supplier_id: supplier.id, start_date: '2026-01-01' as any,
+      duration_months: 12 as any, currency: 'EUR' as any,
+    } as any, undefined, opts);
+    const [stored] = await runner.query(`SELECT item_number FROM contracts WHERE id = $1`, [created.id]);
+    assert.ok(Number(stored.item_number) > 1013);
+    assert.equal(Number(created.item_number), Number(stored.item_number), 'the answer carries the stored number');
+  });
+}
+
 async function testAssistantReferenceFilterAndSort() {
   await inRolledBackTransaction(async (runner) => {
     const { ids, svc, opts } = await seed(runner);
@@ -259,6 +275,7 @@ void runSpecs('contract references outside the page (R4)', [
   ['reference column filter on the list, the ids and the totals; numeric sort', testReferenceColumnFilter],
   ['quick search: CTR-n exactly, digits stay text', testQuickSearch],
   ['the ids carry the references', testIdsCarryReferences],
+  ['the creation answers the reference', testCreateAnswersTheReference],
   ['Kad: reference filter and sort through the list', testAssistantReferenceFilterAndSort],
   ['import by reference, unknown refused, old file, export round trip', testImportByReference],
   ['import warns of renames and supplier moves by reference', testImportWarnsOfRenamesAndMoves],
