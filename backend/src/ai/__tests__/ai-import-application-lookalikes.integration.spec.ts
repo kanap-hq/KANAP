@@ -184,6 +184,36 @@ async function testNothingToImportStaysPendingThenUpdate(h: Harness, runner: Que
   assert.deepEqual(after, { name: 'Comptabilité', editor: 'Cegid', supplier_id: s.cegid.id, description: 'Edited' });
 }
 
+/**
+ * The card as the screen sends it (fusion of passes 3a and 3b): every row left out, "Approve" refused
+ * and the card pending; "Create anyway" sends the card's own `choices` with that row's replaced, read
+ * by the choice route; the new card replaces the old one and its approval creates the row.
+ */
+async function testAllLeftOutThenCreateAnywayFromTheCardChoices(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s);
+  const attachment = randomUUID();
+  const { writeXlsx } = require('../../common/xlsx');
+  const { parseImportChoices } = require('../import/ai-import-targets');
+  h.files.set(attachment, {
+    name: 'Applications.xlsx',
+    buffer: writeXlsx({ language: 'fr', sheets: [{ name: 'Applications', header: 'plain', headers: ['Nom', 'Éditeur', 'Description'], rows: [['Comptabilite', null, null]] }] }),
+  });
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'applications', columns: COLUMNS });
+  const look = card.import_mapping.validation.report.lookalikes;
+  assert.equal(card.import_mapping.validation.nothing_to_import, true);
+  const refused = await h.previews.executePreview(admin, card.preview_id);
+  assert.equal(refused.status, 'pending', 'every row left out: refused, the card stays pending');
+
+  const line = look.lines[0].line;
+  const sent = [...look.choices.filter((choice: any) => !(choice.kind === 'lookalike' && choice.line === line)), { kind: 'lookalike', line, action: 'create' }];
+  const next = await h.previews.replaceImportChoices(admin, card.preview_id, parseImportChoices('applications', JSON.parse(JSON.stringify(sent))));
+  assert.equal(next.replaces_preview_id, card.preview_id, 'the new card stands in for the one the conversation shows');
+  assert.deepEqual(next.import_mapping.validation.report.lookalikes.lines.map((entry: any) => [entry.line, entry.outcome]), [[line, 'created']]);
+  const done = await h.previews.executePreview(admin, next.preview_id);
+  assert.equal(done.status, 'executed', done.error_message);
+  assert.deepEqual(await names(runner, s), ['Comptabilite', 'Comptabilité']);
+}
+
 async function testChoiceRouteParsing() {
   const { parseImportChoices } = require('../import/ai-import-targets');
   const id = randomUUID();
@@ -221,6 +251,7 @@ async function run() {
   try {
     await inTenant(harness, testLeftOutThenCreatedAnyway);
     await inTenant(harness, testNothingToImportStaysPendingThenUpdate);
+    await inTenant(harness, testAllLeftOutThenCreateAnywayFromTheCardChoices);
   } finally {
     await harness.app.close();
   }
