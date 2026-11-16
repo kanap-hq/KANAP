@@ -997,14 +997,40 @@ async function testTasksExport(): Promise<void> {
   const ritaFrench = (await asPerson<any>(rita, (ctx) => csv.export({ manager: ctx.manager, tenantId: s.tenantId, language: 'fr', scope: 'data' }))).content as string;
   assert.ok(ritaFrench.includes('Contrat hors de votre accès'), 'tasks export: the label in the file\'s language');
   assert.ok(ullaFile.includes(contractHidden) && ullaFile.includes(`DA 4D contract hidden ${tag}`), 'tasks export: Ulla\'s file names the contract');
-  // Read back, the label is no contract name: Rita's own file checks without a refusal on that row.
-  const back: any = await asPerson<any>(rita, (ctx) => csv.import(
-    { buffer: Buffer.from(ritaFile, 'utf8'), originalname: 'tasks.csv' },
-    { dryRun: true, mode: 'enrich', operation: 'update_only' },
-    { manager: ctx.manager, tenantId: s.tenantId, userId: rita, isAdmin: false },
-  ));
-  assert.deepEqual((back.errors ?? []).filter((error: any) => /contract/i.test(JSON.stringify(error))), [], `tasks import of Rita's file: ${JSON.stringify(back.errors)}`);
+  // Read back by Ulla (access to all data: the import is closed to Rita), Rita's file keeps each
+  // task on its object, in full replace as in enrich mode (the default), at the preflight as at the
+  // load. The label names no contract, not even one that carries it as its name.
+  const decoy = await inTenant(async () => (await client.query(
+    `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date)
+     SELECT tenant_id, 'Contract outside your access', company_id, supplier_id, start_date FROM contracts WHERE tenant_id = $1 AND id = $2
+     RETURNING id`,
+    [s.tenantId, contractVisible],
+  )).rows[0].id as string);
+  try {
+    for (const mode of ['replace', 'enrich'] as const) {
+      for (const dryRun of [true, false]) {
+        const back: any = await asPerson<any>(ulla, (ctx) => csv.import(
+          { buffer: Buffer.from(ritaFile, 'utf8'), originalname: 'tasks.csv' },
+          { dryRun, mode, operation: 'upsert' },
+          { manager: ctx.manager, tenantId: s.tenantId, userId: ulla, isAdmin: false },
+        ));
+        assert.equal(back.ok, true, `tasks import of Rita's file by Ulla (${mode}, ${dryRun ? 'preflight' : 'load'}): ${JSON.stringify(back.errors)}`);
+      }
+      const links = await inTenant(async () => (await client.query(
+        `SELECT id, related_object_type, related_object_id FROM tasks WHERE tenant_id = $1 AND (id = ANY($2) OR related_object_id = $3)`,
+        [s.tenantId, [contractTaskId, hiddenTaskId], decoy],
+      )).rows);
+      assert.deepEqual(
+        Object.fromEntries(links.map((row: any) => [row.id, [row.related_object_type, row.related_object_id]])),
+        { [contractTaskId]: ['contract', contractHidden], [hiddenTaskId]: ['spend_item', s.lines.L5] },
+        `tasks import of Rita's file by Ulla (${mode}): each task keeps its object, none reaches the decoy`,
+      );
+    }
+  } finally {
+    await inTenant(() => client.query(`DELETE FROM contracts WHERE tenant_id = $1 AND id = $2`, [s.tenantId, decoy]));
+  }
   console.log('  tasks export: a task of a hidden line exports without the line, of a hidden contract with its label: OK');
+  console.log('  tasks import: Rita\'s file read back by Ulla keeps the hidden objects, in replace and enrich mode: OK');
 }
 
 /**
