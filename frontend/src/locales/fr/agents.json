@@ -740,7 +740,7 @@
     "actionClasses": {
       "internal_note": "Note interne",
       "classification": "Mise à jour classification",
-      "status": "Mise à jour statut",
+      "status": "Mise à jour statut (clôture et résolution comprises)",
       "public_reply": "Réponse demandeur",
       "assignment": "Affectation",
       "participant": "Observateurs"

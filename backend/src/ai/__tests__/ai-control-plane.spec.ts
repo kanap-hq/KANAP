@@ -2338,7 +2338,7 @@ async function testGlpiTicketingHelpdeskContextReadsNormalizeSafeFieldsOnly() {
     ['processing_planned', 'pending', 'solved', 'closed'],
   );
   assert.equal(lifecycle.ok ? lifecycle.data.allowedTransitions.every((transition) => transition.requiresApproval) : false, true);
-  // Terminal solve/close are destructive (gated, never auto-executed); non-terminal moves are not.
+  // Terminal solve/close are destructive (confirmed when approved by hand); non-terminal moves are not.
   assert.deepEqual(
     lifecycle.ok ? lifecycle.data.allowedTransitions.filter((transition) => transition.destructive).map((transition) => transition.key) : [],
     ['solved', 'closed'],
