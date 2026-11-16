@@ -15,6 +15,7 @@ import {
   realFreeze,
   runSpecs,
   seedTenant,
+  underSavepoint,
 } from '../../spend/__tests__/round-inputs.fixtures';
 
 // The company reference (`COMP-n`, lot R2 of 26.11.9) in the list and its file: the reference
@@ -311,6 +312,36 @@ async function testImportRefusesSecondRowOfACompany() {
   });
 }
 
+// A rename by reference and another row of the file that lead to the same name, whatever its case:
+// the second row is refused on its line (CSV_COMPANY_NAME_DUPLICATE), at the check as at the load,
+// and nothing is written. The load runs under a savepoint, so a refusal by the database shows.
+async function testImportRefusesARenameOntoAnotherRowsName() {
+  await withCompanies('ref-rename-collision', async (seeded) => {
+    const run = importer(seeded);
+    const attempt = (rows: Array<Record<string, string>>, dryRun: boolean) => underSavepoint(seeded.runner, () => run(headers, rows, dryRun))
+      .catch((err: Error) => ({ ok: false, errors: [], thrown: err.message }) as Report & { thrown: string });
+    const headers = ['reference', ...BASE];
+    const stored = async () => seeded.runner.query(
+      `SELECT name, notes FROM companies WHERE tenant_id = $1 ORDER BY item_number`, [seeded.tenantId],
+    );
+    const before = await stored();
+    const cases: Array<[string, Array<Record<string, string>>, string]> = [
+      ['a rename, then a new company', [row({ reference: 'COMP-8', name: 'Fresh name' }), row({ reference: '', name: 'fresh NAME' })], 'fresh NAME'],
+      ['a new company, then a rename', [row({ reference: '', name: 'Fresh name' }), row({ reference: 'COMP-8', name: 'fresh NAME' })], 'fresh NAME'],
+      ['two renames', [row({ reference: 'COMP-8', name: 'Same name' }), row({ reference: 'COMP-9', name: 'same NAME' })], 'same NAME'],
+    ];
+    for (const [label, rows, name] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await attempt(rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((e) => [e.row, e.column, e.code, e.params]),
+          [[3, 'name', 'CSV_COMPANY_NAME_DUPLICATE', { name, firstRow: 2 }]], `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+      }
+    }
+    assert.deepEqual(await stored(), before, 'a refused file writes nothing');
+  });
+}
+
 void runSpecs('company references', [
   ['a created company comes back with its reference', testCreateReturnsReference],
   ['the reference column filters the list, the ids and the totals alike', testReferenceColumnFilter],
@@ -319,6 +350,7 @@ void runSpecs('company references', [
   ['Kad filters and sorts by reference through the list service', testAssistantField],
   ['the file updates by reference, refuses an unknown one and still reads an older file', testImportByReference],
   ['the file refuses a second row of the same company', testImportRefusesSecondRowOfACompany],
+  ['the file refuses a rename onto the name of another row', testImportRefusesARenameOntoAnotherRowsName],
   ['a rename by reference is announced, without blocking the check or the load', testRenameWarning],
   ['an export imports back without change', testExportThenImport],
 ]);

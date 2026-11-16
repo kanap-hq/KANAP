@@ -14,6 +14,7 @@ import {
   inRolledBackTransaction,
   runSpecs,
   seedTenant,
+  underSavepoint,
 } from '../../spend/__tests__/round-inputs.fixtures';
 
 // The department reference (`DEPT-n`, lot R2 of 26.11.9) in the list and its file: the reference
@@ -289,6 +290,50 @@ async function testImportRefusesSecondRowOfADepartment() {
   });
 }
 
+// A rename or a move by reference and another row of the file that lead to the same company and
+// name, whatever its case: the second row is refused on its line (CSV_DUPLICATE_KEY on company and
+// name), at the check as at the load, and nothing is written. The load runs under a savepoint, so a
+// refusal by the database shows.
+async function testImportRefusesARenameOntoAnotherRowsName() {
+  await withDepartments('dref-rename-collision', async (seeded) => {
+    const run = importer(seeded);
+    const headers = ['reference', ...BASE];
+    const attempt = (rows: Array<Record<string, string>>, dryRun: boolean) => underSavepoint(seeded.runner, () => run(headers, rows, dryRun))
+      .catch((err: Error) => ({ ok: false, errors: [], thrown: err.message }) as Report & { thrown: string });
+    const all = async () => seeded.runner.query(
+      `SELECT name, company_id, description FROM departments WHERE tenant_id = $1 ORDER BY item_number`, [seeded.tenantId],
+    );
+    const before = await all();
+    const cases: Array<[string, Array<Record<string, string>>]> = [
+      ['a rename, then a new department', [
+        { reference: 'DEPT-8', company_name: 'Alpha', name: 'Fresh name' },
+        { reference: '', company_name: 'Alpha', name: 'fresh NAME' },
+      ]],
+      ['a new department, then a rename', [
+        { reference: '', company_name: 'Alpha', name: 'Fresh name' },
+        { reference: 'DEPT-8', company_name: 'Alpha', name: 'fresh NAME' },
+      ]],
+      ['two renames', [
+        { reference: 'DEPT-8', company_name: 'Alpha', name: 'Same name' },
+        { reference: 'DEPT-9', company_name: 'Alpha', name: 'same NAME' },
+      ]],
+      ['a move, then a new department of the same name', [
+        { reference: 'DEPT-8', company_name: 'Beta', name: 'Dept 8' },
+        { reference: '', company_name: 'Beta', name: 'DEPT 8' },
+      ]],
+    ];
+    for (const [label, rows] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await attempt(rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((e) => [e.row, e.column, e.code, e.params]),
+          [[3, 'name', 'CSV_DUPLICATE_KEY', { columns: 'company_name, name', firstRow: 2 }]], `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+      }
+    }
+    assert.deepEqual(await all(), before, 'a refused file writes nothing');
+  });
+}
+
 void runSpecs('department references', [
   ['a created department comes back with its reference', testCreateReturnsReference],
   ['the reference column filters the list and the ids alike', testReferenceColumnFilter],
@@ -297,6 +342,7 @@ void runSpecs('department references', [
   ['Kad filters and sorts by reference through the list service', testAssistantField],
   ['the file updates by reference, refuses an unknown one and still reads an older file', testImportByReference],
   ['the file refuses a second row of the same department', testImportRefusesSecondRowOfADepartment],
+  ['the file refuses a rename or a move onto the name of another row', testImportRefusesARenameOntoAnotherRowsName],
   ['a rename or a move by reference is announced, without blocking the check or the load', testRenameAndMoveWarnings],
   ['an export imports back without change', testExportThenImport],
 ]);

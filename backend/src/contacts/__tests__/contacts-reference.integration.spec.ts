@@ -255,6 +255,45 @@ async function testImportRefusesSecondRowOfAContact() {
   });
 }
 
+// A change of e-mail by reference and another row of the file that lead to the same address,
+// whatever its case: the second row is refused on its line (CSV_DUPLICATE_KEY on the e-mail), at the
+// check as at the load, and nothing is written. The load runs under a savepoint, so a refusal by the
+// database shows.
+async function testImportRefusesANewAddressOfAnotherRow() {
+  await withTenant('address-collision', async (ctx) => {
+    const run = importer(ctx);
+    const attempt = async (rows: Array<Record<string, string>>, dryRun: boolean) => {
+      await ctx.runner.query('SAVEPOINT address_collision');
+      try {
+        const report = await run(rows, dryRun);
+        await ctx.runner.query('RELEASE SAVEPOINT address_collision');
+        return report;
+      } catch (err) {
+        await ctx.runner.query('ROLLBACK TO SAVEPOINT address_collision');
+        return { ok: false, inserted: 0, updated: 0, errors: [], thrown: (err as Error).message } as Report & { thrown: string };
+      }
+    };
+    const stored = async () => (await ctx.runner.query(
+      `SELECT email, first_name, last_name FROM contacts WHERE tenant_id = $1 ORDER BY item_number`, [ctx.tenantId],
+    ));
+    const before = await stored();
+    const cases: Array<[string, Array<Record<string, string>>]> = [
+      ['a new address by reference, then a new contact', [{ reference: 'CTCT-8', email: 'fresh@example.test' }, { reference: '', email: 'Fresh@example.test' }]],
+      ['a new contact, then a new address by reference', [{ reference: '', email: 'fresh@example.test' }, { reference: 'CTCT-8', email: 'FRESH@example.test' }]],
+      ['two new addresses by reference', [{ reference: 'CTCT-8', email: 'same@example.test' }, { reference: 'CTCT-9', email: 'Same@example.test' }]],
+    ];
+    for (const [label, rows] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await attempt(rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((error) => [error.row, error.column, error.code, error.params]),
+          [[3, 'email', 'CSV_DUPLICATE_KEY', { columns: 'email', firstRow: 2 }]], `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+      }
+    }
+    assert.deepEqual(await stored(), before, 'a refused file writes nothing');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   let failed = 0;
@@ -264,6 +303,7 @@ async function main() {
     ['testAssistantReference', testAssistantReference],
     ['testImportByReference', testImportByReference],
     ['testImportRefusesSecondRowOfAContact', testImportRefusesSecondRowOfAContact],
+    ['testImportRefusesANewAddressOfAnotherRow', testImportRefusesANewAddressOfAnotherRow],
     ['testExportRoundTrip', testExportRoundTrip],
   ];
   try {

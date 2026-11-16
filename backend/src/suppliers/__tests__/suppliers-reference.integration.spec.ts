@@ -284,6 +284,44 @@ async function testImportRefusesSecondRowOfASupplier() {
   });
 }
 
+// A rename by reference and another row of the file that lead to the same name, whatever its case:
+// the second row is refused on its line (CSV_SUPPLIER_NAME_DUPLICATE), at the check as at the load,
+// and nothing is written. The load runs under a savepoint, so a refusal by the database shows.
+async function testImportRefusesARenameOntoAnotherRowsName() {
+  await withTenant('rename-collision', async (ctx) => {
+    const run = importer(ctx);
+    const attempt = async (rows: Array<Record<string, string>>, dryRun: boolean) => {
+      await ctx.runner.query('SAVEPOINT rename_collision');
+      try {
+        const report = await run(rows, dryRun);
+        await ctx.runner.query('RELEASE SAVEPOINT rename_collision');
+        return report;
+      } catch (err) {
+        await ctx.runner.query('ROLLBACK TO SAVEPOINT rename_collision');
+        return { ok: false, inserted: 0, updated: 0, errors: [], thrown: (err as Error).message } as Report & { thrown: string };
+      }
+    };
+    const names = async () => (await ctx.runner.query(
+      `SELECT name, erp_supplier_id FROM suppliers WHERE tenant_id = $1 ORDER BY item_number`, [ctx.tenantId],
+    ));
+    const before = await names();
+    const cases: Array<[string, Array<Record<string, string>>, string]> = [
+      ['a rename, then a new supplier', [{ reference: 'SUP-8', name: 'Fresh name' }, { reference: '', name: 'fresh NAME' }], 'fresh NAME'],
+      ['a new supplier, then a rename', [{ reference: '', name: 'Fresh name' }, { reference: 'SUP-8', name: 'fresh NAME' }], 'fresh NAME'],
+      ['two renames', [{ reference: 'SUP-8', name: 'Same name' }, { reference: 'SUP-9', name: 'same NAME' }], 'same NAME'],
+    ];
+    for (const [label, rows, name] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await attempt(rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((error) => [error.row, error.column, error.code, error.params]),
+          [[3, 'name', 'CSV_SUPPLIER_NAME_DUPLICATE', { name, firstRow: 2 }]], `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+      }
+    }
+    assert.deepEqual(await names(), before, 'a refused file writes nothing');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   let failed = 0;
@@ -294,6 +332,7 @@ async function main() {
     ['testAssistantReference', testAssistantReference],
     ['testImportByReference', testImportByReference],
     ['testImportRefusesSecondRowOfASupplier', testImportRefusesSecondRowOfASupplier],
+    ['testImportRefusesARenameOntoAnotherRowsName', testImportRefusesARenameOntoAnotherRowsName],
     ['testErpIdIsNoReference', testErpIdIsNoReference],
     ['testExportRoundTrip', testExportRoundTrip],
   ];

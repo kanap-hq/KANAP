@@ -722,7 +722,7 @@ export class DepartmentsService {
     // department the row matched.
     const warnings: ImportReportError[] = [];
     const firstLineOfDepartment = new Map<string, number>();
-    const firstLineOfNewDepartment = new Map<string, number>();
+    const firstLineOfName = new Map<string, number>();
     for (const fileItem of unique) {
       const line = lineOf.get(fileItem) ?? 0;
       const reference = referenceOf.get(fileItem);
@@ -766,16 +766,16 @@ export class DepartmentsService {
           continue;
         }
         firstLineOfDepartment.set(existing.id, line);
-      } else {
-        // A new department takes one row: its company and name again, whatever the case, are refused.
-        const key = `${fileItem.company_id}|${fileItem.name.toLowerCase()}`;
-        const firstRow = firstLineOfNewDepartment.get(key);
-        if (firstRow !== undefined) {
-          errors.push(rowError(line, 'name', 'CSV_DUPLICATE_KEY', `Same company and name as row ${firstRow}.`, { columns: 'company_name, name', firstRow }));
-          continue;
-        }
-        firstLineOfNewDepartment.set(key, line);
       }
+      // Each company and name the file writes, whatever the case, takes one row: a new department, a
+      // rename or a move by reference onto the company and name of another row are refused.
+      const key = `${fileItem.company_id}|${fileItem.name.toLowerCase()}`;
+      const firstNameRow = firstLineOfName.get(key);
+      if (firstNameRow !== undefined) {
+        errors.push(rowError(line, 'name', 'CSV_DUPLICATE_KEY', `Same company and name as row ${firstNameRow}.`, { columns: 'company_name, name', firstRow: firstNameRow }));
+        continue;
+      }
+      firstLineOfName.set(key, line);
       // The stored end of validity's day keeps its time of day: the export writes the day only.
       const item = existing
         ? {
