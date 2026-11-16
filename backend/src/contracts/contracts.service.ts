@@ -90,6 +90,8 @@ import {
   cellOf,
   fieldAmounts,
   readMasterDataFile,
+  referenceMoveWarning,
+  referenceRenameWarning,
   rowError,
   rowProblemErrors,
   type CsvDateOrder,
@@ -1476,7 +1478,7 @@ export class ContractsService {
       const referencedNumber = referenceRaw ? contractReferenceNumber(referenceRaw, { bare: true }) : null;
       const target = referencedNumber !== null ? byNumber.get(referencedNumber) : undefined;
       if (referenceRaw && !target) {
-        errors.push(rowError(line, 'reference', 'CSV_REFERENCE_NOT_FOUND', `contract '${referenceRaw}' not found`, { value: referenceRaw }));
+        errors.push(rowError(line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"${referenceRaw}" is no reference in this workspace.`, { value: referenceRaw }));
       }
       const name = cellOf(r, 'name');
       const company_name = cellOf(r, 'company_name');
@@ -1548,6 +1550,11 @@ export class ContractsService {
     let inserted = 0; let updated = 0; let unchanged = 0;
     const toWrite: typeof unique = [];
     const existingOf = new Map<typeof unique[number], Contract | null>();
+    // A filled reference that renames its contract or moves it to another supplier is said, without
+    // blocking (D12): a file of another workspace names unrelated contracts by the same references.
+    const warnings: ImportReportError[] = [];
+    const supplierNameOf = new Map<string, string>(allSuppliers.map((r: any) => [r.id, r.name]));
+    const firstLineOfContract = new Map<string, number>();
     const markdownBudget = markdownWorkBudget();
     const now = new Date();
     const today = utcDateYmd(now);
@@ -1556,6 +1563,31 @@ export class ContractsService {
       if (!s) { updated += 0; continue; }
       const exists = item.target
         ?? await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: s.id as any } });
+      if (exists && item.target) {
+        const reference = contractReference(exists.item_number) ?? '';
+        const renamed = referenceRenameWarning(item.line, { family: 'contract', reference, stored: exists.name, next: String(item.name ?? '') });
+        if (renamed) warnings.push(renamed);
+        const moved = referenceMoveWarning(item.line, {
+          parent: 'supplier',
+          reference,
+          name: exists.name,
+          storedParentId: exists.supplier_id ?? null,
+          nextParentId: s.id,
+          from: supplierNameOf.get(exists.supplier_id as string) ?? '',
+          to: s.name,
+        });
+        if (moved) warnings.push(moved);
+      }
+      if (exists) {
+        // One row per contract: a reference and a name may name the same one.
+        const firstRow = firstLineOfContract.get(exists.id);
+        if (firstRow !== undefined) {
+          const reference = contractReference(exists.item_number);
+          errors.push(rowError(item.line, item.target ? 'reference' : 'name', 'CSV_SAME_RECORD', `This row updates ${reference}, as row ${firstRow} does.`, { firstRow, reference: reference ?? '' }));
+          continue;
+        }
+        firstLineOfContract.set(exists.id, item.line);
+      }
       existingOf.set(item, exists);
       if (!exists) inserted += 1;
       else if (importRowUnchanged(exists, {
@@ -1595,7 +1627,7 @@ export class ContractsService {
       }
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], ...report };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
 
     // Commit
     let processed = 0;
@@ -1631,7 +1663,7 @@ export class ContractsService {
       if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg }); processed += 1; }
       else { await this.create(payload, userId ?? undefined, { manager: mg }); processed += 1; }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], ...report };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report };
   }
 
   // Symmetric linking from OPEX side

@@ -184,7 +184,7 @@ async function testImportByReference() {
       assert.equal(refused.ok, false);
       assert.deepEqual(
         refused.errors.filter((e: any) => e.column === 'reference').map((e: any) => [e.row, e.code, e.params?.value]),
-        [[3, 'CSV_REFERENCE_NOT_FOUND', 'CTR-999'], [4, 'CSV_REFERENCE_NOT_FOUND', 'CTR-013']],
+        [[3, 'CSV_RECORD_REFERENCE_NOT_FOUND', 'CTR-999'], [4, 'CSV_RECORD_REFERENCE_NOT_FOUND', 'CTR-013']],
         JSON.stringify(refused.errors),
       );
     }
@@ -203,10 +203,63 @@ async function testImportByReference() {
   });
 }
 
+// D12: a filled reference that renames its contract or moves it to another supplier is said by the
+// check, without blocking (a file of another workspace names unrelated contracts by the same
+// references). Nothing is said when the stored value stays, nor for a row without a reference.
+async function testImportWarnsOfRenamesAndMoves() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, ids, svc, opts } = await seed(runner);
+    await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'HP')`, [tenantId]);
+    const onSupplier = (reference: string, name: string, supplier: string) =>
+      `${reference};${name};Fromage Co;${supplier};2026-01-01;12;yes;1;100;EUR;annual;;;`;
+    const content = [
+      HEADER,
+      row('CTR-3', 'Renamed three'),
+      onSupplier('CTR-13', 'Contract number thirteen', 'HP'),
+      onSupplier('ctr-30', 'Thirty on HP', 'HP'),
+      row('CTR-1013', 'contract number one thousand thirteen'),
+    ].join('\n');
+    for (const dryRun of [true, false]) {
+      await runner.query('SAVEPOINT warn_run');
+      const report: any = await svc.importCsv({ file: file(content), dryRun }, opts);
+      assert.equal(report.ok, true, JSON.stringify(report.errors));
+      assert.deepEqual(
+        (report.warnings ?? []).map((w: any) => [w.row, w.code, w.params]),
+        [
+          [2, 'CSV_REFERENCE_RENAMES', { reference: 'CTR-3', stored: 'Contract number three', name: 'Renamed three', context: 'contract' }],
+          [3, 'CSV_REFERENCE_MOVES', { reference: 'CTR-13', name: 'Contract number thirteen', from: 'Dell', to: 'HP', context: 'supplier' }],
+          [4, 'CSV_REFERENCE_RENAMES', { reference: 'CTR-30', stored: 'Contract number thirty', name: 'Thirty on HP', context: 'contract' }],
+          [4, 'CSV_REFERENCE_MOVES', { reference: 'CTR-30', name: 'Contract number thirty', from: 'Dell', to: 'HP', context: 'supplier' }],
+          [5, 'CSV_REFERENCE_RENAMES', { reference: 'CTR-1013', stored: 'Contract number one thousand thirteen', name: 'contract number one thousand thirteen', context: 'contract' }],
+        ],
+        `dryRun=${dryRun}: ${JSON.stringify(report.warnings)}`,
+      );
+      await runner.query('ROLLBACK TO SAVEPOINT warn_run');
+    }
+    // Rows that keep the stored name and supplier: no warning.
+    const same: any = await svc.importCsv({ file: file([HEADER, row('CTR-3', 'Contract number three', '120')].join('\n')), dryRun: true }, opts);
+    assert.equal(same.ok, true, JSON.stringify(same.errors));
+    assert.deepEqual(same.warnings ?? [], []);
+    const [three] = await runner.query(`SELECT name FROM contracts WHERE id = $1`, [ids[3]]);
+    assert.equal(three.name, 'Contract number three');
+
+    // A reference and a name that name the same contract: one row per contract, the second refused.
+    const twice: any = await svc.importCsv({
+      file: file([HEADER, row('', 'Contract number thirty', '150'), row('CTR-30', 'Thirty renamed', '160')].join('\n')),
+      dryRun: true,
+    }, opts);
+    assert.equal(twice.ok, false);
+    assert.deepEqual(twice.errors.map((e: any) => [e.row, e.column, e.code, e.params]), [
+      [3, 'reference', 'CSV_SAME_RECORD', { firstRow: 2, reference: 'CTR-30' }],
+    ]);
+  });
+}
+
 void runSpecs('contract references outside the page (R4)', [
   ['reference column filter on the list, the ids and the totals; numeric sort', testReferenceColumnFilter],
   ['quick search: CTR-n exactly, digits stay text', testQuickSearch],
   ['the ids carry the references', testIdsCarryReferences],
   ['Kad: reference filter and sort through the list', testAssistantReferenceFilterAndSort],
   ['import by reference, unknown refused, old file, export round trip', testImportByReference],
+  ['import warns of renames and supplier moves by reference', testImportWarnsOfRenamesAndMoves],
 ]);

@@ -301,9 +301,10 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     key: 'contracts',
     names: { en: 'Contracts', fr: 'Contrats', de: 'Verträge', es: 'Contratos' },
     ...AI_IMPORT_ACCESS.contracts,
-    about: 'One row per contract, matched to a stored one by its reference (CTR-12) when the row has one, else by its name and supplier.',
+    about: 'One row per contract, matched to a stored one by its Kadratis reference (CTR-n) when the file has a column of them, '
+      + 'else by its name and supplier.',
     columns: () => withTitles(CONTRACT_CSV_COLUMNS.map((column) => ({
-      reference: text('reference', 'the reference of a stored contract, such as CTR-12: the row updates that contract (empty: matched by name and supplier)'),
+      reference: ownReference('CTR', 'contract'),
       name: text('name', undefined, true),
       company_name: reference('company_name', 'a company by name', true),
       supplier_name: reference('supplier_name', 'a supplier by name', true),

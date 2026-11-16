@@ -153,10 +153,10 @@ async function testTemplatesAreTheColumnsTheImportsRead() {
   const calendars = await AI_IMPORT_TARGETS.working_day_calendars.columns(ctx);
   assert.equal(importColumnTitle(calendars.find((column) => column.column === 'aug')!, 'fr'), 'Août');
   // The identity columns stay out: an application's reference is export-only. The companies and the
-  // departments read theirs as their key, with its prefix (lot R2 of 26.11.9).
+  // departments read theirs as their key, with its prefix (lot R2 of 26.11.9), and the contracts (R4).
   const applications = (await AI_IMPORT_TARGETS.applications.columns(ctx)).map((column) => column.column);
   assert.ok(!applications.includes('id') && !applications.includes('reference'));
-  for (const [key, prefix] of [['companies', 'COMP'], ['departments', 'DEPT']] as const) {
+  for (const [key, prefix] of [['companies', 'COMP'], ['departments', 'DEPT'], ['contracts', 'CTR']] as const) {
     const [first] = await AI_IMPORT_TARGETS[key].columns(ctx);
     assert.deepEqual([first.column, first.kind, first.prefix], ['reference', 'reference', prefix], key);
   }
