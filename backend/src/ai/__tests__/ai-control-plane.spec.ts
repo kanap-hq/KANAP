@@ -237,6 +237,12 @@ function createMemoryManager() {
       const [, param] = severityOrEvent;
       return row.severity === params[param] || row.event_type === params[param];
     }
+    const inParam = condition.match(/^[a-z]+\.(\w+) IN \(:\.\.\.(\w+)\)$/i);
+    if (inParam) {
+      const [, field, param] = inParam;
+      const allowed = params[param];
+      return Array.isArray(allowed) && allowed.includes(row[field]);
+    }
     const inLiteral = condition.match(/^[a-z]+\.(\w+) IN \(([^)]+)\)$/i);
     if (inLiteral) {
       const [, field, values] = inLiteral;
@@ -10314,7 +10320,8 @@ async function testAgentControlActivityTimelineAndDailyMetrics() {
     request_id: null,
     ai_api_key_id: null,
     invocation_channel: 'internal',
-    trigger_kind: 'agent_work_item',
+    // An agent's run, the origin the dispatcher writes. The activity errors list those only.
+    trigger_kind: 'internal',
     status: 'failed',
     input_summary: null,
     output_summary: null,

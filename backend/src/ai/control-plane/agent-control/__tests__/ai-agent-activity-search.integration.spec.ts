@@ -94,7 +94,7 @@ async function seedFailedRun(
     `INSERT INTO ai_runs (
        id, tenant_id, invocation_channel, trigger_kind, status, metadata_json, created_at, updated_at
      ) VALUES (
-       $1, $2, 'internal', 'agent_work_item', 'failed', $3::jsonb, now(), now()
+       $1, $2, 'internal', 'internal', 'failed', $3::jsonb, now(), now()
      )`,
     [randomUUID(), tenantId, JSON.stringify({ target_type: targetType, target_ref: targetRef })],
   );
