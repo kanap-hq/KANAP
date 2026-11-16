@@ -833,7 +833,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   );
 }
 
-function Line({ text, children, danger, muted, kad, tooltip, action, actions, after }: {
+function Line({ text, children, danger, muted, kad, tooltip, action, actions, after, under }: {
   text?: string;
   children?: React.ReactNode;
   danger?: boolean;
@@ -846,6 +846,8 @@ function Line({ text, children, danger, muted, kad, tooltip, action, actions, af
   actions?: LineAction[];
   /** Controls or a short state after the line, kept together on one row with it when they fit. */
   after?: React.ReactNode;
+  /** Controls on their own row under the line, indented, so that a line and its controls read as one group. */
+  under?: React.ReactNode;
 }) {
   const body = (
     <Typography
@@ -867,6 +869,14 @@ function Line({ text, children, danger, muted, kad, tooltip, action, actions, af
   const title = kad && tooltip ? <>{kad}<br />{tooltip}</> : (tooltip ?? kad);
   const shown = title ? <Tooltip title={title} placement="bottom-start">{body}</Tooltip> : body;
   const links = actions ?? (action ? [action] : []);
+  if (under) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', rowGap: 0.25, mt: 0.75 }}>
+        {shown}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.25, pl: 4 }}>{under}</Box>
+      </Box>
+    );
+  }
   if (links.length === 0 && !after) return shown;
   // The actions of a line stay together on one row: after the text when they fit, else under it.
   return (
@@ -981,25 +991,24 @@ function LookalikesView({ lookalikes, choices, errors, onChoices, choicesDisable
         key={`la-${look.line}`}
         danger={stale}
         tooltip={fields && reason ? <>{reason}<br />{fields}</> : (fields ?? reason ?? undefined)}
-        after={onChoices || noChange ? (
+        under={onChoices ? (
           <>
-            {onChoices && (
-              <ToggleButtonGroup
-                size="small"
-                exclusive
-                color="primary"
-                value={current}
-                disabled={choicesDisabled}
-                aria-label={label}
-                onChange={(_event, value: 'ignore' | 'create' | 'update' | null) => choose(value)}
-                sx={LOOKALIKE_CHOICES_SX}
-              >
-                {toggles}
-              </ToggleButtonGroup>
-            )}
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              color="primary"
+              value={current}
+              disabled={choicesDisabled}
+              aria-label={label}
+              onChange={(_event, value: 'ignore' | 'create' | 'update' | null) => choose(value)}
+              sx={LOOKALIKE_CHOICES_SX}
+            >
+              {toggles}
+            </ToggleButtonGroup>
             {noChange}
           </>
         ) : undefined}
+        after={!onChoices && noChange ? noChange : undefined}
       >
         {after === undefined ? label : <>{before}{ref}{after}</>}
         {/* Read only (the card approved or refused, the load done): what becomes of the row, in words. */}
