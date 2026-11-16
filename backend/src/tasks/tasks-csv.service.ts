@@ -289,20 +289,21 @@ export class TasksCsvService {
       // The row's task: by its id when the row gives one; else by the upsert key (title + related
       // object; standalone tasks have none). A row whose object names nothing touches no task.
       const taskId = (row['id'] || '').trim();
-      let taskRows: Array<{ id: string }>;
+      // The people lists come along: a row that names the people the task has leaves it as it is.
+      let taskRows: Array<{ id: string; viewer_ids: unknown; owner_ids: unknown }>;
       if (taskId) {
         if (!TASK_UUID_RE.test(taskId)) continue;
-        taskRows = await manager.query(`SELECT id FROM tasks WHERE tenant_id = $1 AND id = $2`, [tenantId, taskId]);
+        taskRows = await manager.query(`SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND id = $2`, [tenantId, taskId]);
       } else {
         const relatedObjectId = await resolveRelatedId(row);
         if (!relatedObjectId && normalizeType(row['related_object_type'] || '')) continue;
         taskRows = relatedObjectId
           ? await manager.query(
-              `SELECT id FROM tasks WHERE tenant_id = $1 AND LOWER(title) = LOWER($2) AND related_object_id = $3 LIMIT 1`,
+              `SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND LOWER(title) = LOWER($2) AND related_object_id = $3 LIMIT 1`,
               [tenantId, taskTitle, relatedObjectId],
             )
           : await manager.query(
-              `SELECT id FROM tasks WHERE tenant_id = $1 AND LOWER(title) = LOWER($2) AND related_object_id IS NULL LIMIT 1`,
+              `SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND LOWER(title) = LOWER($2) AND related_object_id IS NULL LIMIT 1`,
               [tenantId, taskTitle],
             );
       }
