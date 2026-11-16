@@ -6,9 +6,14 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
+import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
+import { formatItemRef } from '../../utils/item-ref';
+import OptionWithHint from './OptionWithHint';
 
 type Contact = {
   id: string;
+  /** CTCT-n, which the search finds too. */
+  item_number?: number | null;
   first_name: string | null;
   last_name: string | null;
   job_title: string | null;
@@ -44,7 +49,6 @@ function formatLabel(c: Contact): string {
   return c.supplier_name ? `${contactName(c)} (${c.supplier_name})` : contactName(c);
 }
 
-const optionLineSx = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 } as const;
 
 const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(function ContactSelect(
   {
@@ -121,14 +125,16 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
       renderOption={(props, option) => {
         // Grouped by supplier, the group header already names it.
         const text = groupByCompany ? contactName(option as Contact) : formatLabel(option as Contact);
-        // React wants the key passed on its own, not spread with the other props.
-        const { key, ...optionProps } = props as typeof props & { key: React.Key };
+        const reference = (option as Contact).item_number ? formatItemRef('contact', (option as Contact).item_number as number) : null;
         return (
-          <li key={key} {...optionProps}>
-            <Box component="span" className="kanap-autocomplete-option-primary" sx={optionLineSx} title={text}>
-              {text}
-            </Box>
-          </li>
+          <OptionWithHint
+            key={(option as Contact).id}
+            optionProps={props}
+            label={<Box component="span" className="kanap-autocomplete-option-primary" title={text}>{text}</Box>}
+            trailing={reference ? (
+              <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontVariantNumeric: 'tabular-nums' }}>{reference}</Box>
+            ) : null}
+          />
         );
       }}
       renderInput={(params) => (

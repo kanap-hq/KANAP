@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { fold, ICU_COLLATION } from '../list-engine/sql-fragments';
+import { parseReferenceNumber } from '../parse-item-number';
 
 /**
  * Reference lookups: the search behind every picker that offers rows of a
@@ -29,6 +30,11 @@ export interface LookupSpec {
   columns: Record<string, string>;
   /** The label: sort key, and the field whose start ranks first. */
   label: string;
+  /**
+   * The table's business reference (`SUP-12` on `t.item_number`): a typed reference finds that row
+   * exactly, first, as the list's quick search does. Digits alone stay text.
+   */
+  reference?: { prefix: string; column: string };
   /** Further expressions whose start ranks first (e.g. a last name besides "first last"). */
   prefixes?: string[];
   /** Every expression the text is searched in (the label is searched too). */
@@ -128,12 +134,16 @@ export async function runLookup<T = Record<string, unknown>>(
     // One folded needle per statement (an InitPlan), as the list engine does.
     const needle = `(SELECT ${fold(bind(text, 'text'))})`;
     const searched = [spec.label, ...(spec.search ?? [])];
-    where.push(`(${searched.map((expr) => `strpos(${fold(`coalesce(${expr}, '')`)}, ${needle}) > 0`).join(' OR ')})`);
+    const matches = searched.map((expr) => `strpos(${fold(`coalesce(${expr}, '')`)}, ${needle}) > 0`);
+    const referenced = spec.reference ? parseReferenceNumber(text, spec.reference.prefix, { prefixRequired: true }) : null;
+    const exact = referenced != null && spec.reference ? `${spec.reference.column} = ${bind(referenced, 'int')}` : null;
+    if (exact) matches.push(exact);
+    where.push(`(${matches.join(' OR ')})`);
     const starts = [spec.label, ...(spec.prefixes ?? [])]
       .map((expr) => `starts_with(${fold(`coalesce(${expr}, '')`)}, ${needle})`)
       .join(' OR ');
     const wordStart = `strpos(${fold(`coalesce(${spec.label}, '')`)}, ' ' || ${needle}) > 0`;
-    order.push(`CASE WHEN ${starts} THEN 0 WHEN ${wordStart} THEN 1 ELSE 2 END`);
+    order.push(`CASE ${exact ? `WHEN ${exact} THEN -1 ` : ''}WHEN ${starts} THEN 0 WHEN ${wordStart} THEN 1 ELSE 2 END`);
   }
   order.push(...sortKeys(spec));
 
