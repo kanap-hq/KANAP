@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, CircularProgress, MenuItem, MenuList, Popover, TextField } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { fieldResetSx } from '../../../theme/formSx';
+import { matchVersionLabel } from './versionLabelMatch';
 
 export type VersionOption = { id: string; label: string };
 
@@ -31,8 +32,10 @@ const itemSx = { minHeight: 32, py: 0.75, fontSize: 13, color: 'kanap.text.prima
 /**
  * The version of a technology link, chosen in one step under the control that opens it: "version
  * unknown", one of the existing versions (filtered as the user types), or the label typed, which
- * the server creates. Enter takes the version whose label is the text typed (without case), else
- * the first one that contains it; it creates the label typed only when no version matches.
+ * the server creates. The label typed finds a version by the server's rule (`versionLabelMatch`:
+ * the same label without case, `22.04` for `22.04 LTS`, `2022 Datacenter` for `2022`): that version
+ * is offered, never the creation the server would not make. Enter takes it, else the first version
+ * that contains the text; it creates the label typed only when no version matches.
  */
 export default function TechnologyVersionPicker({ anchorEl, align = 'left', versions, current, onPick, onClose }: Props) {
   const { t } = useTranslation('it');
@@ -40,13 +43,15 @@ export default function TechnologyVersionPicker({ anchorEl, align = 'left', vers
   const listRef = React.useRef<HTMLUListElement | null>(null);
   const typed = text.trim();
   const needle = typed.toLowerCase();
-  const matches = (versions ?? []).filter((version) => !needle || version.label.toLowerCase().includes(needle));
-  const exact = (versions ?? []).find((version) => version.label.toLowerCase() === needle);
+  const contained = (versions ?? []).filter((version) => !needle || version.label.toLowerCase().includes(needle));
+  const found = matchVersionLabel(versions ?? [], typed);
+  const taken = found.kind === 'none' ? undefined : found.row;
+  const matches = taken && !contained.includes(taken) ? [taken, ...contained] : contained;
   const label = t('workspace.technology.versionPicker.search');
 
   // Enter never creates a version while one matches: a partial label picks its first match.
   const submit = () => {
-    const match = exact ?? (needle ? matches[0] : undefined);
+    const match = taken ?? (needle ? matches[0] : undefined);
     if (match) onPick({ technology_version_id: match.id });
     else if (typed) onPick({ version_label: typed });
   };
@@ -106,7 +111,7 @@ export default function TechnologyVersionPicker({ anchorEl, align = 'left', vers
               {version.label}
             </MenuItem>
           ))}
-          {typed && !exact && (
+          {typed && !taken && (
             <MenuItem role="option" aria-selected={false} onClick={() => onPick({ version_label: typed })} sx={itemSx}>
               {t('workspace.technology.versionPicker.create', { label: typed })}
             </MenuItem>

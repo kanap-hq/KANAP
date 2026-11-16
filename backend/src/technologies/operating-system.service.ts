@@ -258,7 +258,11 @@ export class OperatingSystemService {
     return previewVersion({ name: split.name, technology: 'created', versions: [] }, split.version, prefix);
   }
 
-  /** The technology a shipped product's adoption lands on, and the version labels it would then have. */
+  /**
+   * The technology a shipped product's adoption lands on, and the version labels it would then have:
+   * a product not adopted yet gets the catalog's versions; one adopted already keeps the workspace's,
+   * as its adoption adds none back (`TechnologyCatalogService.adopt`), so the check says what the load does.
+   */
   private async adoptedProduct(mg: EntityManager, tenantId: string, product: CatalogProduct): Promise<PreviewTechnology> {
     const existing: Array<{ id: string; name: string }> = await mg.query(
       `SELECT id, name FROM technologies
@@ -266,9 +270,8 @@ export class OperatingSystemService {
         ORDER BY (catalog_key = $2) DESC NULLS LAST LIMIT 1`,
       [tenantId, product.key, product.name],
     );
-    const shippedLabels = product.versions.map((item) => ({ label: item.label }));
-    if (!existing[0]) return { name: product.name, technology: 'catalog', versions: shippedLabels };
-    return { name: existing[0].name, technology: 'tenant', versions: [...(await this.versionLabels(mg, tenantId, existing[0].id)), ...shippedLabels] };
+    if (!existing[0]) return { name: product.name, technology: 'catalog', versions: product.versions.map((item) => ({ label: item.label })) };
+    return { name: existing[0].name, technology: 'tenant', versions: await this.versionLabels(mg, tenantId, existing[0].id) };
   }
 
   private async versionLabels(mg: EntityManager, tenantId: string, technologyId: string): Promise<Array<{ label: string }>> {

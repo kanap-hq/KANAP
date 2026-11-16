@@ -268,13 +268,14 @@ export interface CsvImportResult {
   warnings: CsvImportWarning[];
   /**
    * The values of the file found beyond case (accents set aside, a name in another language), one
-   * entry per column, value and record, with the file's lines (lot I3 of 26.11.9): the first
-   * `MATCH_LIST_LIMIT`. Each may be undone (`CsvImportParams.unmatched`). Absent when none.
+   * entry per column, value and record, with the file's lines (lot I3 of 26.11.9): each one Kad
+   * proposed, then the first `MATCH_LIST_LIMIT` (`listedMatchEntries`). Each may be undone
+   * (`CsvImportParams.unmatched`). Absent when none.
    */
   matches?: ImportNameMatch[];
   /** How many entries `matches` would hold uncut. Present with `matches`. */
   matchesTotal?: number;
-  /** Kad's proposals the import refused (`CsvImportParams.proposals`), the first ones; absent when none. */
+  /** Kad's proposals the import refused (`CsvImportParams.proposals`), all of them; absent when none. */
   refusedProposals?: ImportRefusedProposal[];
   /** How many entries `refusedProposals` would hold uncut. Present with it. */
   refusedProposalsTotal?: number;

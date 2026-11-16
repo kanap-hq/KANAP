@@ -29,7 +29,7 @@ import {
   noteNameMatch,
   noteRefusedProposal,
   proposalFor,
-  takeProposal,
+  proposedRecord,
   undoneMatch,
   type ImportMatchState,
   type ImportNameMatch,
@@ -649,9 +649,14 @@ function notFound(line: number, column: string, value: string): ImportReportErro
   return rowError(line, column, 'CSV_REFERENCE_NOT_FOUND', `"${value}" was not found.`, { value });
 }
 
+function ambiguousAmong(line: number, column: string, name: string, among: string[]): ImportReportError {
+  const names = among.join(', ');
+  return rowError(line, column, 'CSV_NAME_AMBIGUOUS_AMONG', `"${name}" may designate several records: ${names}`, { value: name, names });
+}
+
 /**
  * The record of `rows` a name of the file finds (lot I3 of 26.11.9): Kad's proposal first, for a
- * person who `reads` the family; then the name exactly or case aside (several: refused, as before);
+ * person who `reads` the family (a name of several records refuses the row, naming them); then the name exactly or case aside (several: refused, as before);
  * then accents aside for a person who reads the family and has not undone that match (several:
  * `CSV_NAME_AMBIGUOUS_AMONG`, named by reference). A match beyond case is noted. `missing` is the
  * error of a name nothing finds.
@@ -666,20 +671,18 @@ function recordByName<T extends { name: string }>(
   ref: (row: T) => string | null,
   missing: () => ImportReportError,
 ): T | ImportReportError {
-  const proposed = takeProposal(state, {
+  const proposed = proposedRecord(state, {
     proposals: request.proposals, unmatched: request.unmatched, column, value: name, line, rows, reads, caseBlind: false, ref,
   });
-  if (proposed) return proposed;
+  if (proposed?.kind === 'one') return proposed.row;
+  if (proposed?.kind === 'many') return ambiguousAmong(line, column, name, proposed.names);
   const key = name.trim().toLowerCase();
   const hits = rows.filter((row) => row.name.trim().toLowerCase() === key);
   if (hits.length > 1) return rowError(line, column, 'CSV_NAME_AMBIGUOUS', `Several records are named "${name}".`, { value: name });
   if (hits.length === 1) return hits[0];
   if (!reads || undoneMatch(request.unmatched, column, name)) return missing();
   const found = findRecordByName(rows, name, { beyondCase: true, caseBlind: false, label: ref });
-  if (found.kind === 'many') {
-    const names = found.names.join(', ');
-    return rowError(line, column, 'CSV_NAME_AMBIGUOUS_AMONG', `"${name}" may designate several records: ${names}`, { value: name, names });
-  }
+  if (found.kind === 'many') return ambiguousAmong(line, column, name, found.names);
   if (found.kind === 'none') return missing();
   noteNameMatch(state.matches, {
     column, name: null, value: name.trim(), target: found.row.name.trim(), ref: ref(found.row), origin: 'server', reason: 'accents', undoable: true,

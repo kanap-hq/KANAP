@@ -27,7 +27,7 @@ import type { BudgetFileChoice, BudgetFileLookalikeTarget, CatalogDimension } fr
  */
 
 // The name rule is common to every import (lot I3 of 26.11.9): the budget file reads it from here as before.
-export { accentFreeKey, foldKey, matchByName, type MatchHow, type NameMatch } from '../../common/name-matching';
+export { accentFreeKey, foldKey, listedMatchEntries, matchByName, type MatchHow, type NameMatch } from '../../common/name-matching';
 
 /** A dimension's own name without the ` (2)` the seed adds when another dimension holds it. */
 function baseName(name: string | null): string {

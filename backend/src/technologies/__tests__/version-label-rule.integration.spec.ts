@@ -6,6 +6,7 @@ import { TechnologyCatalogService } from '../catalog/technology-catalog.service'
 import { OperatingSystemService } from '../operating-system.service';
 import { resolveVersionLabel, versionOfInput } from '../technology-rows';
 import { matchVersionLabel } from '../version-label-match';
+import { matchVersionLabel as pickerMatchVersionLabel } from '../../../../frontend/src/pages/it/components/versionLabelMatch';
 import { technology, version } from './technologies.fixtures';
 
 // Lot I3 of 26.11.9 (T-I3e): a version label finds the catalog's version of the technology when one
@@ -13,6 +14,9 @@ import { technology, version } from './technologies.fixtures';
 // longest of several prefixes wins). The same rule for an operating system's label (servers, Netbox,
 // the assistant) and for a label a screen, Kad or an agent writes. A match the person undid, and a
 // label no rule answers (`22.04.3 LTS`), create the version as written.
+// Fixes after the adversarial review (finding 5): the words between the two labels hold no digit, so
+// a rule never joins two versions (`11` is not `11 SP1`, `2012` is not `2012 R2`). The screens'
+// version picker holds a copy of the rule (`versionLabelMatch.ts`): the same cases run on both.
 
 function service() {
   const audit = { log: async () => undefined };
@@ -24,21 +28,35 @@ function service() {
 
 const labels = (...values: string[]) => values.map((label) => ({ label }));
 
+type Found = (rows: Array<{ label: string }>, written: string, prefix?: boolean) => string;
+
+const RULE_CASES: Array<[string[], string, string, string, boolean?]> = [
+  [['26.04 LTS', '24.04 LTS', '22.04 LTS', '20.04 LTS'], '22.04', 'prefix:22.04 LTS', 'a word without digit after'],
+  [['26.04 LTS', '24.04 LTS', '22.04 LTS', '20.04 LTS'], '22.04 lts', 'exact:22.04 LTS', 'the same label, case aside'],
+  [['2022', '2019', '2012 R2', '2012'], '2022 Datacenter', 'prefix:2022', 'a word without digit after the stored label'],
+  [['2022', '2019', '2012 R2', '2012'], '2012 R2 Datacenter', 'prefix:2012 R2', 'the longest prefix wins'],
+  [['2012 R2'], '2012 R2 Datacenter', 'prefix:2012 R2', 'the stored label is the longest'],
+  [['2012 R2'], '2012', 'none', 'R2 holds a digit: another version'],
+  [['2012'], '2012 R2', 'none', 'R2 holds a digit: another version'],
+  [['11 SP1'], '11', 'none', 'SP1 holds a digit: another version'],
+  [['11'], '11 SP1', 'none', 'SP1 holds a digit: another version'],
+  [['2022'], '2022 Datacenter Edition', 'prefix:2022', 'several words without digit'],
+  [['26.04 LTS', '24.04 LTS', '22.04 LTS', '20.04 LTS'], '22.04.3 LTS', 'none', 'no rule answers: created'],
+  [['26.04 LTS', '24.04 LTS', '22.04 LTS', '20.04 LTS'], '2', 'none', 'a bare digit names no version'],
+  [['2022 Standard', '2022 Datacenter'], '2022', 'none', 'two candidates: no match'],
+  [['26.04 LTS', '24.04 LTS', '22.04 LTS', '20.04 LTS'], '22.04', 'none', 'an undone match keeps the equality alone', false],
+];
+
+function checkRule(found: Found, who: string) {
+  for (const [stored, written, expected, why, prefix] of RULE_CASES) {
+    assert.equal(found(stored.map((label) => ({ label })), written, prefix), expected, `${who}: ${written} in [${stored.join(' | ')}]: ${why}`);
+  }
+}
+
 async function testTheRule() {
-  const ubuntu = labels('26.04 LTS', '24.04 LTS', '22.04 LTS', '20.04 LTS');
-  const windows = labels('2022', '2019', '2012 R2', '2012');
-  const found = (rows: Array<{ label: string }>, written: string, prefix = true) => {
-    const match = matchVersionLabel(rows, written, { prefix });
-    return match.kind === 'none' ? 'none' : `${match.kind}:${match.row.label}`;
-  };
-  assert.equal(found(ubuntu, '22.04'), 'prefix:22.04 LTS');
-  assert.equal(found(ubuntu, '22.04 lts'), 'exact:22.04 LTS', 'the same label, case aside');
-  assert.equal(found(windows, '2022 Datacenter'), 'prefix:2022');
-  assert.equal(found(windows, '2012 R2 Datacenter'), 'prefix:2012 R2', 'the longest prefix wins');
-  assert.equal(found(ubuntu, '22.04.3 LTS'), 'none', 'no rule answers: created');
-  assert.equal(found(ubuntu, '2'), 'none', 'a bare digit names no version');
-  assert.equal(found(labels('2022 Standard', '2022 Datacenter'), '2022'), 'none', 'two candidates: no match');
-  assert.equal(found(ubuntu, '22.04', false), 'none', 'an undone match keeps the equality alone');
+  const describe = (match: { kind: string; row?: { label: string } }) => (match.kind === 'none' ? 'none' : `${match.kind}:${match.row!.label}`);
+  checkRule((rows, written, prefix = true) => describe(matchVersionLabel(rows, written, { prefix })), 'server');
+  checkRule((rows, written, prefix = true) => describe(pickerMatchVersionLabel(rows, written, { prefix })), 'version picker');
 }
 
 async function osVersion(runner: any, tenantId: string, versionId: string | null) {
@@ -94,13 +112,17 @@ async function testScreensAndKad() {
     const tech = await technology(runner, tenantId, 1, 'Contoso DB');
     const sp1 = await version(runner, tenantId, tech, '15 SP1');
     const sixteen = await version(runner, tenantId, tech, '16');
-    const found = await resolveVersionLabel(runner.manager, tenantId, tech, '15', { create: false });
-    assert.equal(found?.id, sp1, 'a screen or Kad finds 15 SP1 by 15');
+    const lts = await version(runner, tenantId, tech, '14 LTS');
+    assert.equal((await resolveVersionLabel(runner.manager, tenantId, tech, '14', { create: false }))?.id, lts, 'a screen or Kad finds 14 LTS by 14');
+    assert.equal(await resolveVersionLabel(runner.manager, tenantId, tech, '15', { create: false }), null, '15 is not 15 SP1');
+    const fifteen = await resolveVersionLabel(runner.manager, tenantId, tech, '15', { create: true });
+    assert.deepEqual(fifteen?.created, true, 'a screen creates 15 beside 15 SP1');
+    assert.notEqual(fifteen?.id, sp1);
     assert.equal(await versionOfInput(runner.manager, tenantId, tech, { version_label: '16 Enterprise' }), sixteen);
-    const asWritten = await versionOfInput(runner.manager, tenantId, tech, { version_label: '15', version_label_as_written: true });
-    assert.notEqual(asWritten, sp1, 'a label kept as written is its own version');
+    const asWritten = await versionOfInput(runner.manager, tenantId, tech, { version_label: '14', version_label_as_written: true });
+    assert.notEqual(asWritten, lts, 'a label kept as written is its own version');
     const [row] = await runner.query(`SELECT label FROM technology_versions WHERE tenant_id = $1 AND id = $2`, [tenantId, asWritten]);
-    assert.equal(row.label, '15');
+    assert.equal(row.label, '14');
   });
 }
 

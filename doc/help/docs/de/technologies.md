@@ -318,6 +318,8 @@ Eine Versionsbezeichnung, die in einer Versionsauswahl eingegeben, in eine Impor
 - sonst die einzige Version, deren Bezeichnung mit der eingegebenen beginnt, gefolgt von einem Leerzeichen: `22.04` findet `22.04 LTS`;
 - sonst die einzige Version, mit deren Bezeichnung die eingegebene beginnt, gefolgt von einem Leerzeichen: `2022 Datacenter` findet `2022`. Wenn mehrere Versionen passen, gewinnt die längste Bezeichnung: `2012 R2 Datacenter` findet `2012 R2`.
 
+In den beiden letzten Regeln enthalten die Wörter nach der kürzeren Bezeichnung keine Ziffer, denn sie benennen eine Edition: `11` findet `11 SP1` nicht, und `2012` findet `2012 R2` nicht.
+
 Wenn keine Version passt, oder mehrere, wird die Bezeichnung als neue Version angelegt. `22.04.3 LTS` wird so angelegt, wie sie geschrieben ist. Ein Import listet jede Zuordnung der beiden letzten Regeln mit seinen anderen Zuordnungen auf, und **Rückgängig** legt die Version so an, wie sie geschrieben ist. Siehe [Namen von Datensätzen](csv-files.md#names-of-records).
 
 ---

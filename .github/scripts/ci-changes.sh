@@ -67,6 +67,7 @@ while IFS= read -r f; do
       frontend/src/pages/reports/reportAggregates.* | frontend/src/pages/reports/reportTables.* | frontend/Dockerfile* | \
       frontend/src/pages/operations/copyBudgetRows.* | frontend/src/pages/admin/master-data/masterDataCopyRows.* | frontend/src/pages/admin/rolePermissionGroups.* | \
       frontend/src/pages/portfolio/contributorsOrdering.* | frontend/src/pages/portfolio/skillsMatrix.* | \
+      frontend/src/pages/it/components/versionLabelMatch.* | \
       frontend/src/pages/portfolio/roadmapOccupation.* | frontend/src/lib/richTextHtmlElements.* | frontend/src/lib/richTextLinkAddress.* | \
       frontend/src/locales/*/portfolio.json | frontend/src/locales/*/it.json | frontend/src/locales/*/ops.json | \
       frontend/src/locales/*/admin.json | frontend/src/locales/*/master-data.json | frontend/src/locales/*/nav.json | \

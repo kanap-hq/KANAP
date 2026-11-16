@@ -318,6 +318,8 @@ Un libellé de version tapé dans un choix de version, écrit dans un fichier d'
 - sinon, la seule version dont le libellé commence par le libellé tapé suivi d'une espace : `22.04` retrouve `22.04 LTS` ;
 - sinon, la seule version dont le libellé commence le libellé tapé, suivi d'une espace : `2022 Datacenter` retrouve `2022`. Quand plusieurs versions répondent, le libellé le plus long l'emporte : `2012 R2 Datacenter` retrouve `2012 R2`.
 
+Dans les deux dernières règles, les mots qui suivent le libellé le plus court ne contiennent aucun chiffre, car ils nomment une édition : `11` ne retrouve pas `11 SP1`, et `2012` ne retrouve pas `2012 R2`.
+
 Quand aucune version ne répond, ou plusieurs, le libellé est créé comme une nouvelle version. `22.04.3 LTS` est créée telle qu'elle est écrite. Un import liste chaque rapprochement des deux dernières règles avec ses autres rapprochements, et **Défaire** crée la version telle qu'elle est écrite. Voir [Noms des fiches](csv-files.md#names-of-records).
 
 ---

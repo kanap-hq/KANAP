@@ -318,6 +318,8 @@ Una etiqueta de versión escrita en un selector de versión, en un archivo de im
 - si no, la única versión cuya etiqueta empieza por la escrita seguida de un espacio: `22.04` encuentra `22.04 LTS`;
 - si no, la única versión con cuya etiqueta empieza la escrita, seguida de un espacio: `2022 Datacenter` encuentra `2022`. Cuando responden varias versiones, gana la etiqueta más larga: `2012 R2 Datacenter` encuentra `2012 R2`.
 
+En las dos últimas reglas, las palabras que siguen a la etiqueta más corta no contienen ninguna cifra, porque nombran una edición: `11` no encuentra `11 SP1`, y `2012` no encuentra `2012 R2`.
+
 Cuando no responde ninguna versión, o responden varias, la etiqueta se crea como una versión nueva. `22.04.3 LTS` se crea tal como está escrita. Una importación lista cada asociación de las dos últimas reglas con sus demás asociaciones, y **Deshacer** crea la versión tal como está escrita. Vea [Nombres de registros](csv-files.md#names-of-records).
 
 ---

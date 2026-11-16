@@ -69,11 +69,12 @@ export interface CsvImportResult {
   warnings: CsvReportMessage[];
   /**
    * The values of the file found beyond case (accents set aside, a name in another language), one
-   * entry per column, value and record: the first ones, `matchesTotal` in all. Absent when none.
+   * entry per column, value and record: each one Kad proposed, then the first others, `matchesTotal`
+   * in all. Absent when none.
    */
   matches?: CsvImportMatch[];
   matchesTotal?: number;
-  /** Kad's proposals the import refused (its card), the first ones, `refusedProposalsTotal` in all. Absent when none. */
+  /** Kad's proposals the import refused (its card), all of them, `refusedProposalsTotal` in all. Absent when none. */
   refusedProposals?: CsvImportRefusedProposal[];
   refusedProposalsTotal?: number;
 }
