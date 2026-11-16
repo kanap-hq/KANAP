@@ -105,8 +105,8 @@ const ownReference = (prefix: string, family: string): AiImportColumnSpec => ({
   hint: `the Kadratis reference of a ${family}, ${prefix}-n, as an export of the ${family} list writes it: `
     + `it names the ${family} the row updates, even renamed. Only values written ${prefix}-n are read: map no column of row numbers here`,
 });
-/** A person the incident import finds by e-mail or by name. */
-const PERSON = 'a person of the workspace, by e-mail or by "First Last" name';
+/** A person the incident import finds by e-mail or by name in either order. */
+const PERSON = 'a person of the workspace, by e-mail or by name in either order ("First Last" or "Last First")';
 
 /**
  * Identity columns of the declarative imports and the budget file that Kad leaves to the template
