@@ -119,7 +119,8 @@ async function testExistingTaskObjectByName() {
 
 // Point 2: in merge mode, a task moved to another project without a phase cell (blank or left out),
 // by its id or by its name. The new project's phase of the same name is taken; a phase the new project
-// does not have is cleared at the check (`CSV_REFERENCE_NOT_FOUND_CLEARED`), and the load passes.
+// does not have is cleared at the check (`CSV_REFERENCE_NOT_FOUND_CLEARED`), and the load passes; moved out of a
+// project, the phase is said removed (`CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT`).
 async function testPhaseOfAMovedTask() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'task-csv-fix-c-phase');
@@ -170,7 +171,7 @@ async function testPhaseOfAMovedTask() {
     ].join('\n');
     const check3 = await importCsv(runner.manager, tenantId, out, {});
     assert.deepEqual(codes(check3), []);
-    assert.deepEqual(warned(check3), [[2, 'phase_name', 'CSV_REFERENCE_NOT_FOUND_CLEARED']]);
+    assert.deepEqual(warned(check3), [[2, 'phase_name', 'CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT']]);
     assert.deepEqual(check3.warnings.map((w) => w.params?.value), ['Build']);
     const load3 = await importCsv(runner.manager, tenantId, out, { dryRun: false });
     assert.equal(load3.ok, true, JSON.stringify(load3.errors));
@@ -300,7 +301,11 @@ async function testTaskOutsideAProject() {
     ].join('\n');
     const check = await importCsv(runner.manager, tenantId, toIncident, {});
     assert.deepEqual(codes(check), []);
-    assert.deepEqual(warned(check), ['phase_name', ...CLASSIFICATION].map((column) => [2, column, 'CSV_REFERENCE_NOT_FOUND_CLEARED']));
+    // Said as removed by the move (correctifs G): the name is found, the new object does not allow it.
+    assert.deepEqual(warned(check), [
+      [2, 'phase_name', 'CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT'],
+      ...CLASSIFICATION.map((column) => [2, column, 'CSV_TASK_CLASSIFICATION_CLEARED']),
+    ]);
     assert.deepEqual(check.warnings.map((w) => w.params?.value), ['Build', 'Audit', 'Infra', 'Réseau', 'Fromage SA']);
     const load = await importCsv(runner.manager, tenantId, toIncident, { dryRun: false });
     assert.equal(load.ok, true, JSON.stringify(load.errors));
@@ -311,7 +316,7 @@ async function testTaskOutsideAProject() {
     const toNone = ['id;title;related_object_type;related_object_id;related_object_name', `${q2};Q deux;;;`].join('\n');
     const check2 = await importCsv(runner.manager, tenantId, toNone, { mode: 'replace' });
     assert.deepEqual(codes(check2), []);
-    assert.deepEqual(warned(check2), [[2, 'phase_name', 'CSV_REFERENCE_NOT_FOUND_CLEARED']]);
+    assert.deepEqual(warned(check2), [[2, 'phase_name', 'CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT']]);
     const load2 = await importCsv(runner.manager, tenantId, toNone, { mode: 'replace', dryRun: false });
     assert.equal(load2.ok, true, JSON.stringify(load2.errors));
     assert.deepEqual(await fields(q2), [null, source.id, category.id, stream.id, company.id]);

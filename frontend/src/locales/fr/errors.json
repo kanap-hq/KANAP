@@ -144,6 +144,8 @@
   "CSV_REFERENCE_NOT_FOUND_KEPT": "« {{value}} » est introuvable : la valeur actuelle est gardée.",
   "CSV_TASK_PHASE_OUTSIDE_PROJECT": "« {{value}} » n'est pas importé : seule une tâche de projet a une phase.",
   "CSV_TASK_CLASSIFICATION_NOT_ALLOWED": "« {{value}} » n'est pas importé : seule une tâche autonome ou de projet a une classification.",
+  "CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT": "« {{value}} » est retiré : seule une tâche de projet a une phase.",
+  "CSV_TASK_CLASSIFICATION_CLEARED": "« {{value}} » est retiré : seule une tâche autonome ou de projet a une classification.",
   "CSV_JSON_INVALID": "Cette cellule ne contient pas de JSON valide.",
   "CSV_JSON_OBJECT_REQUIRED": "Cette cellule doit contenir un objet JSON.",
   "CSV_JSON_ARRAY_REQUIRED": "Cette cellule doit contenir une liste JSON.",

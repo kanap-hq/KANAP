@@ -495,10 +495,12 @@ const LOOKUP_MISSES = new Set(['CSV_REFERENCE_NOT_FOUND_CLEARED', 'CSV_REFERENCE
  * has that cell left out, and said on it (`CSV_TASK_PHASE_OUTSIDE_PROJECT`,
  * `CSV_TASK_CLASSIFICATION_NOT_ALLOWED`); the row is not refused. A task the row moves to another
  * object without that cell (a blank cell in merge mode, or no column) loses what its new object does
- * not allow, cleared and said by the stored name (`CSV_REFERENCE_NOT_FOUND_CLEARED`, the rule of
- * `clearKeptReferencesOfChangedOwners`); a task that keeps its object keeps what it has, as on the
- * screen. Moved to another project, the phase of the same name there, case aside, is taken, as the
- * commit always did; otherwise it is cleared and said the same way. The load no longer fails on it.
+ * not allow, cleared and said removed by the stored name (`CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT`,
+ * `CSV_TASK_CLASSIFICATION_CLEARED`; correctifs G); a task that keeps its object keeps what it has, as
+ * on the screen. Moved to another project, the phase of the same name there, case aside, is taken, as
+ * the commit always did; otherwise it is cleared and said not found in that project
+ * (`CSV_REFERENCE_NOT_FOUND_CLEARED`, the rule of `clearKeptReferencesOfChangedOwners`). The load no
+ * longer fails on it.
  */
 async function followTaskObjects(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const clears: Array<{ row: CsvImportRow; key: string; column: string; projectId: string | null }> = [];
@@ -553,13 +555,12 @@ async function followTaskObjects(rows: CsvImportRow[], context: CsvImportContext
     }
     row.parsed[key] = null;
     if (!storedRecord) continue;
-    row.warnings.push({
-      row: row.rowNumber,
-      column,
-      message: `${TASK_OBJECT_FIELDS.find((field) => field.key === key)!.table} not found: "${storedRecord.name}" (set to null)`,
-      code: 'CSV_REFERENCE_NOT_FOUND_CLEARED',
-      params: { value: storedRecord.name },
-    });
+    const value = storedRecord.name;
+    row.warnings.push(projectId
+      ? { row: row.rowNumber, column, message: `${TASK_OBJECT_FIELDS.find((field) => field.key === key)!.table} not found: "${value}" (set to null)`, code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value } }
+      : key === 'phase_id'
+        ? { row: row.rowNumber, column, message: `"${value}" is removed: only a project task has a phase.`, code: 'CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT', params: { value } }
+        : { row: row.rowNumber, column, message: `"${value}" is removed: only a standalone or project task has a classification.`, code: 'CSV_TASK_CLASSIFICATION_CLEARED', params: { value } });
   }
 }
 
