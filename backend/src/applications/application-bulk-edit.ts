@@ -18,17 +18,18 @@ import {
 /**
  * "Change the selection" of the applications list (lot F2 of 26.11.8): one change on many
  * applications, each through the update of one application, in the request's transaction: the
- * PATCH's (`ApplicationsCrudService.update`) for the lifecycle and the business criticality, the
- * owners' replacement of the application page (`ApplicationsOwnersService.bulkReplaceOwners`) for
+ * PATCH's (`ApplicationsCrudService.update`) for the category, the lifecycle and the business and
+ * cyber criticality, the owners' replacement of the application page (`ApplicationsOwnersService.bulkReplaceOwners`) for
  * the business and IT owners. Every rule of those updates holds for each application: the
- * lifecycle states and the classification catalog of the tenant, the classification revision a
- * new criticality raises, the audit row (the application's history) and the search index their
+ * categories, the lifecycle states and the classification catalog of the tenant, the classification
+ * revision a new criticality raises, the audit row (the application's history) and the search index their
  * triggers maintain. The contract is the common one (`common/bulk-edit/bulk-edit.ts`).
  *
  * The fields: business owners, IT owners (a list of people that replaces the application's, as
- * the page saves it; empty, the role has nobody), lifecycle (one of the tenant's states, never
- * empty, as on the page) and business criticality (one of the tenant's levels still offered, or
- * empty).
+ * the page saves it; empty, the role has nobody), category (one of the tenant's categories still
+ * offered, never empty, as on the page; decision D15 of 26.11.9), lifecycle (one of the tenant's
+ * states, never empty, as on the page), business criticality and cyber criticality (one of the
+ * tenant's levels still offered, or empty).
  *
  * The rows: the chosen applications, or every application of the list's filters, quick search and
  * scope (`ApplicationsListService.listIds`, the list's own query), less those unticked. A Business
@@ -43,22 +44,33 @@ export const APPLICATION_BULK_REFUSALS = [BULK_REFUSAL_NOT_FOUND] as const;
 const OWNER_FIELDS = { owners_business: 'business', owners_it: 'it' } as const;
 type OwnerField = keyof typeof OWNER_FIELDS;
 type OwnerType = (typeof OWNER_FIELDS)[OwnerField];
-const COLUMN_FIELDS = ['lifecycle', 'criticality'] as const;
+const COLUMN_FIELDS = ['category', 'lifecycle', 'criticality', 'cyber_criticality'] as const;
+type ColumnField = (typeof COLUMN_FIELDS)[number];
 
-/** The fields, with the tenant's values: its lifecycle states, its business criticality levels still offered. */
-export function applicationBulkFields(values: { lifecycle: readonly string[]; criticality: readonly string[] }): BulkEditField[] {
+/** The values of the enum fields, the tenant's (`ApplicationsCrudService.bulkEditValues`). */
+export type ApplicationBulkValues = Record<ColumnField, string[]>;
+
+/**
+ * The fields, with the tenant's values: its categories still offered, its lifecycle states, its
+ * business and cyber criticality levels still offered.
+ */
+export function applicationBulkFields(values: ApplicationBulkValues): BulkEditField[] {
   return [
     { name: 'owners_business', value: 'id_list', optional: true },
     { name: 'owners_it', value: 'id_list', optional: true },
+    { name: 'category', value: 'enum', values: values.category, optional: false },
     { name: 'lifecycle', value: 'enum', values: values.lifecycle, optional: false },
     { name: 'criticality', value: 'enum', values: values.criticality, optional: true },
+    { name: 'cyber_criticality', value: 'enum', values: values.cyber_criticality, optional: true },
   ];
 }
 
 type AppRow = {
   id: string;
+  category: string;
   lifecycle: string;
   criticality: string | null;
+  cyber_criticality: string | null;
   owners: Array<{ user_id: string; owner_type: OwnerType }>;
 };
 
@@ -68,7 +80,7 @@ export type ApplicationBulkDeps = {
   /** A Business Contributor's: the applications they own only. */
   accessScope?: ParticipationAccessScope;
   /** The values the enum fields accept, the tenant's (`ApplicationsCrudService.bulkEditValues`). */
-  values: () => Promise<{ lifecycle: string[]; criticality: string[] }>;
+  values: () => Promise<ApplicationBulkValues>;
   /** The ids of the list's filters, with the person's scope (`ApplicationsListService.listIds`). */
   listIds: (query: Record<string, unknown>) => Promise<{ ids: string[]; total: number }>;
   /** The update of one application (the PATCH's), on the request's manager. */
@@ -128,8 +140,8 @@ export async function bulkUpdateApplications(body: unknown, deps: ApplicationBul
         where += ` AND a.created_at <= $${params.length}::timestamptz`;
       }
       // In id order, held until the end of the request: the update of one application locks it the same way.
-      const rows: Array<{ id: string; lifecycle: string; criticality: string | null }> = await manager.query(
-        `SELECT a.id::text AS id, a.lifecycle, a.criticality
+      const rows: Array<Omit<AppRow, 'owners'>> = await manager.query(
+        `SELECT a.id::text AS id, a.category, a.lifecycle, a.criticality, a.cyber_criticality
            FROM applications a
           WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[])${where}
           ORDER BY a.id
