@@ -1,9 +1,6 @@
 import type { CsvLanguage } from '../common/csv-sheet';
 
-/**
- * The columns of the suppliers file after its reference, in the order the export writes them: those
- * a file from elsewhere carries, and the assistant's import maps (it leaves the reference out).
- */
+/** The columns of the suppliers file after its reference, in the order the export writes them. */
 export const SUPPLIER_CSV_COLUMNS = [
   'name', 'erp_supplier_id', 'commercial_contact', 'technical_contact', 'support_contact', 'notes', 'status', 'disabled_at',
 ] as const;
