@@ -2042,7 +2042,7 @@ export class ContractsService {
         recipients,
         rawEmails,
         tenantId,
-        // No request manager: the send outlives the request (a contract link needs no lookup).
+        // No request manager: the send outlives the request, and reads the CTR-n of its link on its own connection.
       });
     }
     // The chosen persons who cannot open the contract: the screen warns the sender (spec §5.6). No

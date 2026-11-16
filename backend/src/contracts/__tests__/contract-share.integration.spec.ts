@@ -4,6 +4,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { ContractsService } from '../contracts.service';
 import { buildShareEmail } from '../../notifications/notification-templates';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { seedUser } from '../../spend/__tests__/cost-center.fixtures';
 import { assert, captureAudit, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 
@@ -75,6 +76,47 @@ async function testShareContract() {
   });
 }
 
+// The e-mail of the share links the contract by its reference (`/ops/contracts/CTR-n/overview`),
+// read on its own connection (the send outlives the request): here the spec's transaction, through
+// a data source that hands it out. The e-mail service is a fake: nothing leaves.
+async function testShareEmailLinksTheReference() {
+  if (!process.env.APP_BASE_URL) process.env.APP_BASE_URL = 'https://app.example.test';
+  await inRolledBackTransaction(async (runner) => {
+    const b = await seedContract(runner, 'ctshare-link');
+    await setTenant(runner, b.tenantId);
+    const [{ item_number: number }] = await runner.query(`SELECT item_number FROM contracts WHERE id = $1`, [b.contractId]);
+    const sent: Array<{ to: string; html: string }> = [];
+    const query = (sql: string, params?: unknown[]) => runner.query(sql, params);
+    const shared = {
+      query,
+      createQueryRunner: () => ({
+        manager: runner.manager,
+        isTransactionActive: false,
+        connect: async () => undefined,
+        startTransaction: async () => undefined,
+        commitTransaction: async () => undefined,
+        rollbackTransaction: async () => undefined,
+        release: async () => undefined,
+        query,
+      }),
+    };
+    const notifications = new NotificationsService(shared as any, { send: async (mail: any) => { sent.push(mail); } } as any, {} as any, {} as any);
+    await notifications.notifyShare({
+      itemType: 'contract',
+      itemId: b.contractId,
+      itemName: 'Share contract ctshare-link',
+      senderName: 'Ada',
+      recipients: [],
+      rawEmails: ['buyer@example.com'],
+      tenantId: b.tenantId,
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(sent.length, 1, 'one e-mail to the plain address');
+    assert.ok(sent[0].html.includes(`/ops/contracts/CTR-${number}/overview`), 'the e-mail links the contract by its reference');
+    assert.ok(!sent[0].html.includes(b.contractId), 'no uuid in the e-mail');
+  });
+}
+
 async function testShareEmail() {
   const expected: Record<string, string> = { en: 'Contract', fr: 'Contrat', de: 'Vertrag', es: 'Contrato' };
   for (const [locale, label] of Object.entries(expected)) {
@@ -94,6 +136,7 @@ async function testShareEmail() {
 void runSpecs('contract-share.integration.spec', [
   ['testShareContract', testShareContract],
   ['testShareEmail', testShareEmail],
+  ['testShareEmailLinksTheReference', testShareEmailLinksTheReference],
 ]);
 
 // `dataSource` is imported so the CI runner schedules this spec on the database lane.

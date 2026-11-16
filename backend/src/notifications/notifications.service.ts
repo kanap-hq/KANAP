@@ -199,10 +199,11 @@ export class NotificationsService {
     const slug = await this.getTenantSlug(tenantId);
     const base = this.buildTenantBaseUrl(slug);
 
-    // For supported types, try to resolve item ref for friendlier URLs
+    // For supported types, try to resolve item ref for friendlier URLs. Without a manager, the
+    // budget lines and the contracts read theirs on a connection of their own.
     const ref = manager
       ? await this.resolveItemRef(itemType, itemId, tenantId, manager)
-      : (itemType === 'opex' || itemType === 'capex')
+      : (itemType === 'opex' || itemType === 'capex' || itemType === 'contract')
         ? await withTenant(this.dataSource, tenantId, (lookupManager) =>
           this.resolveItemRef(itemType, itemId, tenantId, lookupManager))
         : null;
@@ -253,6 +254,7 @@ export class NotificationsService {
       connection: { table: 'connections', expression: 'connection_reference' },
       interface: { table: 'interfaces', expression: 'interface_reference' },
       document: { table: 'documents', expression: `'DOC-' || item_number::text` },
+      contract: { table: 'contracts', expression: `'CTR-' || item_number::text` },
     };
     const config = tableMap[itemType];
     if (!config) return null;
