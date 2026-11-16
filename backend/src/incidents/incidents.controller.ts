@@ -19,7 +19,7 @@ import {
   inlineImageMulterOptions,
 } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
-import { csvCallerAccess, csvExportFormat } from '../common/csv';
+import { csvCallerAccess, csvExportFormat, csvUnmatched } from '../common/csv';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { createRequestReleaseConnection } from '../common/import-connection';
 import { RATE_LIMITS } from '../common/rate-limit';
@@ -216,6 +216,7 @@ export class IncidentsController {
     @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
     @Query('language') languageRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Tenant() ctx: TenantRequest,
   ) {
     const viewer = incidentViewerFromContext(ctx);
@@ -223,7 +224,7 @@ export class IncidentsController {
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
     return this.csvSvc.import(
       file,
-      { dryRun: dryRun !== 'false', mode, operation },
+      { dryRun: dryRun !== 'false', mode, operation, unmatched: csvUnmatched(unmatchedRaw) },
       {
         manager: ctx.manager as EntityManager,
         tenantId: ctx.tenantId,

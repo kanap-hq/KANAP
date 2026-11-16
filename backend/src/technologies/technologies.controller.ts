@@ -21,10 +21,12 @@ import { TechnologiesDeleteService } from './technologies-delete.service';
 import { TechnologiesRelationsService, technologyRelationKindOrThrow, type TechnologyRelationsContext } from './technologies-relations.service';
 import { attachCatalogScreen, type CatalogScreen } from './catalog/catalog-screen';
 import { TechnologyCatalogService } from './catalog/technology-catalog.service';
-import { TechnologyLinksCsvService } from './technology-links-csv.service';
+import { TechnologyLinksCsvService, type LinkFileImportRequest } from './technology-links-csv.service';
 import { TechnologyLinksService, type ApplicationsReach, type LinkInput } from './technology-links.service';
 import { requireManager } from './technology-rows';
 import { csvExportFormat } from '../common/csv/csv-export.service';
+import { csvCallerAccess } from '../common/csv/csv-field.types';
+import { csvUnmatched } from '../common/csv/csv-unmatched';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import type { ListExportFile } from '../common/csv/list-export';
 import { parseExportFormat, type ExportFileFormat } from '../common/xlsx/format';
@@ -101,17 +103,22 @@ export class TechnologiesController {
     res.send(await csvExportBody(res, await produce(scope, language, format)));
   }
 
-  /** A link file import: `dryRun` unless the query says `false`. */
+  /**
+   * A link file import: `dryRun` unless the query says `false`. The person's rights find a name beyond
+   * case, and the matches they undid (the form's `unmatched`) are not made again (lot I3 of 26.11.9).
+   */
   private async importLinkFile(
     file: Express.Multer.File,
     dryRunRaw: string | undefined,
     languageRaw: string | undefined,
+    unmatchedRaw: unknown,
     ctx: TenantRequest,
-    run: (file: Express.Multer.File, dryRun: boolean, language: CsvLanguage) => Promise<unknown>,
+    run: (request: LinkFileImportRequest) => Promise<unknown>,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
+    const unmatched = csvUnmatched(unmatchedRaw);
     const language = await languageOf(requireManager(ctx.manager), ctx.tenantId, ctx.userId || null, languageRaw);
-    return run(file, dryRun, language);
+    return run({ file, dryRun, language, access: csvCallerAccess(ctx), unmatched });
   }
 
   /** As `applicationsReach`, for a route that cannot answer without it: 403. */
@@ -261,9 +268,10 @@ export class TechnologiesController {
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string | undefined,
     @Query('language') languageRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.importLinkFile(file, dryRunRaw, languageRaw, ctx, (uploaded, dryRun, language) => this.linkFiles.importAssetLinks({ file: uploaded, dryRun, language }, this.opts(ctx)));
+    return this.importLinkFile(file, dryRunRaw, languageRaw, unmatchedRaw, ctx, (request) => this.linkFiles.importAssetLinks(request, this.opts(ctx)));
   }
 
   /**
@@ -294,10 +302,11 @@ export class TechnologiesController {
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRunRaw: string | undefined,
     @Query('language') languageRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Tenant() ctx: TenantRequest,
   ) {
     const applications = await this.requireApplications(ctx);
-    return this.importLinkFile(file, dryRunRaw, languageRaw, ctx, (uploaded, dryRun, language) => this.linkFiles.importApplicationLinks({ file: uploaded, dryRun, language }, this.opts(ctx), applications));
+    return this.importLinkFile(file, dryRunRaw, languageRaw, unmatchedRaw, ctx, (request) => this.linkFiles.importApplicationLinks(request, this.opts(ctx), applications));
   }
 
   // ==================== RECORD ====================

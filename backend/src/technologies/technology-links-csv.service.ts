@@ -95,7 +95,8 @@ export type TechnologyLinksCsvContext = { manager: EntityManager; tenantId: stri
 /** The applications the caller reads: all of them, or a Business Contributor's own (`scope`). */
 export type ApplicationsScope = { scope?: ParticipationAccessScope };
 
-type ImportRequest = {
+/** A file of links to check or load, as the route and Kad's import hand it. */
+export type LinkFileImportRequest = {
   file: Express.Multer.File;
   dryRun: boolean;
   language: CsvLanguage;
@@ -109,6 +110,7 @@ type ImportRequest = {
   /** Kad's proposals, by file column: taken for a record the person reads, exactly or case aside. */
   proposals?: ImportProposals;
 };
+type ImportRequest = LinkFileImportRequest;
 
 /** How a row's name finds its record: the request's say, and the matches noted so far. */
 type NameLookup = { request: ImportRequest; state: ImportMatchState };

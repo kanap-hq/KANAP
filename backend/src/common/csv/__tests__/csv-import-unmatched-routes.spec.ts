@@ -8,6 +8,8 @@ import { TasksController } from '../../../spend/tasks.controller';
 import { ContractsController } from '../../../contracts/contracts.controller';
 import { CostCentersController } from '../../../cost-centers/cost-centers.controller';
 import { BusinessProcessesController } from '../../../business-processes/business-processes.controller';
+import { IncidentsController } from '../../../incidents/incidents.controller';
+import { TechnologiesController } from '../../../technologies/technologies.controller';
 import { csvUnmatched } from '../csv-unmatched';
 
 // Lot I3 of 26.11.9, fifth pass: the import routes of the screens take the matches the person undid
@@ -59,6 +61,24 @@ function ownLists(name: string, type: any, field: string, viaReq: boolean): Rout
   };
 }
 
+/**
+ * A file of links of the technology layer (lot I3 of 26.11.9, merge of the fourth and fifth passes):
+ * the route hands the undone matches and the person's rights to the link import.
+ */
+function links(name: string, handler: string, method: string): Route {
+  return {
+    name,
+    call: async (unmatched) => {
+      const seen: unknown[][] = [];
+      const controller = probe(TechnologiesController, 'linkFiles', method, seen);
+      await controller[handler](FILE, 'true', 'en', unmatched, ctx);
+      const request = seen[0][0] as { unmatched?: unknown; access?: unknown };
+      assert.deepEqual(request.access, { isAdmin: true, permissions: {} }, `${name}: the person's rights reach the link import`);
+      return request.unmatched;
+    },
+  };
+}
+
 const ROUTES: Route[] = [
   declarative('applications', ApplicationsController, false),
   declarative('assets', AssetsController, true),
@@ -68,6 +88,9 @@ const ROUTES: Route[] = [
   ownLists('contracts', ContractsController, 'svc', true),
   ownLists('cost centers', CostCentersController, 'csv', false),
   ownLists('business processes', BusinessProcessesController, 'svc', true),
+  declarative('incidents', IncidentsController, false),
+  links('server links', 'importAssetLinks', 'importAssetLinks'),
+  links('application links', 'importApplicationLinks', 'importApplicationLinks'),
 ];
 
 async function testEachRouteHandsTheUndoneMatchesToItsService() {
