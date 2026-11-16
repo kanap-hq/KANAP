@@ -26,7 +26,7 @@ import {
   CsvImportWarning,
 } from './csv-field.types';
 import { CsvResolverService } from './csv-resolver.service';
-import { foldKey, MATCH_LIST_LIMIT, noteNameMatch } from '../name-matching';
+import { listedMatches, noteNameMatch, undoneMatch } from '../name-matching';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
 import { isRichTextContentRefusal } from '../markdown-limits';
@@ -310,8 +310,7 @@ export class CsvImportService {
 
   /** The names the import found beyond case, for the result: the first ones and their total; nothing when none. */
   private matchesOf(context: CsvImportContext): Pick<CsvImportResult, 'matches' | 'matchesTotal'> {
-    const all = [...(context.nameMatches?.values() ?? [])];
-    return all.length > 0 ? { matches: all.slice(0, MATCH_LIST_LIMIT), matchesTotal: all.length } : {};
+    return listedMatches(context.nameMatches);
   }
 
   /**
@@ -1321,7 +1320,7 @@ export class CsvImportService {
     row: CsvImportRow,
     context: CsvImportContext,
   ): ReferenceLookup {
-    const undone = (context.params.unmatched ?? []).some((item) => item.column === column && foldKey(item.value) === foldKey(value));
+    const undone = undoneMatch(context.params.unmatched, column, value);
     const beyondCase = !undone && this.resolver.matchesBeyondCase(fkEntity, context.access);
     const found = this.resolver.resolveName(fkEntity, value, context.resolverCache, { beyondCase });
     if (found.kind === 'none') return null;

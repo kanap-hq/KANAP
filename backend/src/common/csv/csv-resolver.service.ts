@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { CsvCallerAccess, CsvFieldDefinition, CsvFieldType } from './csv-field.types';
 import { SHIPPED_TASK_TYPE_LABELS } from '../../it-ops-settings/catalog-shipped-labels.data';
-import { accentFreeKey, type MatchHow } from '../name-matching';
+import { accentFreeKey, AMBIGUOUS_NAMES_SHOWN, type MatchHow } from '../name-matching';
 
 /**
  * Supported FK entity types for resolution
@@ -45,8 +45,6 @@ export type FkNameLookup =
   | { kind: 'many'; names: string[] }
   | { kind: 'one'; entry: FkCacheEntry; how: MatchHow; target: string; ref: string | null };
 
-/** The records an ambiguity names: the first ones. */
-const AMBIGUOUS_NAMES_SHOWN = 5;
 
 const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 
@@ -374,10 +372,13 @@ export class CsvResolverService {
     const types = new Set<FkEntityType>();
 
     for (const field of fieldDefs) {
+      // A list of references (`ARRAY` with `fkEntity`, numbered columns of owners) resolves its cells
+      // in the same cache as a single reference.
       if (
         (field.type === CsvFieldType.FK_BY_EMAIL ||
           field.type === CsvFieldType.FK_BY_NAME ||
-          field.type === CsvFieldType.FK_BY_CODE) &&
+          field.type === CsvFieldType.FK_BY_CODE ||
+          field.type === CsvFieldType.ARRAY) &&
         field.fkEntity
       ) {
         const entityType = field.fkEntity as FkEntityType;

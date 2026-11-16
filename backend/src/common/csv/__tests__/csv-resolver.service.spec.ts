@@ -327,6 +327,20 @@ async function testBeyondCaseFollowsReadRights() {
   console.log('  beyond case for the families the person reads: OK');
 }
 
+// A list of references (numbered owner columns: `ARRAY` with `fkEntity`) loads its family like a
+// single reference does: without it, every name of the list read as unknown (lot I3 of 26.11.9).
+async function testListOfReferencesPreloadsItsFamily() {
+  const service = new CsvResolverService();
+  const mockData = { users: [{ id: 'u1', email: 'alice@example.com', tenant_id: 't1' }] };
+  const fields: CsvFieldDefinition[] = [
+    { csvColumn: 'owner_email_1', entityProperty: 'owner_ids', type: CsvFieldType.ARRAY, fkEntity: 'users' },
+  ];
+  const cache = await service.preloadResolvers('t1', fields, createMockManager(mockData));
+  assert.ok(cache.has('users'), 'the list preloads its family');
+  assert.equal(service.resolveId('users', 'Alice@example.com', cache), 'u1');
+  console.log('  a list of references preloads its family: OK');
+}
+
 (async () => {
   await testPreloadResolversLoadsUsers();
   await testResolveWithCaseInsensitiveMatch();
@@ -341,6 +355,7 @@ async function testBeyondCaseFollowsReadRights() {
   await testEqualNamesStayOneName();
   await testTranslationsAndCodesBeyondCase();
   await testBeyondCaseFollowsReadRights();
+  await testListOfReferencesPreloadsItsFamily();
 
   console.log('CSV resolver service tests passed.');
 })().catch((err) => {

@@ -100,3 +100,58 @@ export function noteNameMatch(
   }
   matches.set(key, { ...entry, lines: [line], count: 1 });
 }
+
+/** The records a refusal for a name of several records names: the first ones. */
+export const AMBIGUOUS_NAMES_SHOWN = 5;
+
+/** Whether the person undid the match of `value` in `column` (an import's `unmatched`): then it is found case aside only. */
+export function undoneMatch(
+  unmatched: ReadonlyArray<{ column: string; value: string }> | null | undefined,
+  column: string,
+  value: string,
+): boolean {
+  return (unmatched ?? []).some((item) => item.column === column && foldKey(item.value) === foldKey(value));
+}
+
+/** What a name of a file finds in a list an import reads itself: nothing, several records (named), or one. */
+export type RecordNameLookup<T> =
+  | { kind: 'none' }
+  | { kind: 'many'; level: 'case' | 'accents'; names: string[] }
+  | { kind: 'one'; row: T; how: MatchHow };
+
+/**
+ * The record of `rows` a name of a file finds, for the imports that read their own lists (contracts,
+ * cost centers, business processes, a task's related object), by `matchByName`'s steps. Records of
+ * the same name are one name, the first listed. With `caseBlind`, names equal case aside are one name
+ * too (the first listed wins, as these imports did); without, they are several. Several names at a
+ * step: `many`, named by `label` (a reference, else the name), the first `AMBIGUOUS_NAMES_SHOWN`.
+ */
+export function findRecordByName<T extends { name: string }>(
+  rows: readonly T[],
+  cell: string,
+  options: { beyondCase: boolean; caseBlind: boolean; label?: (row: T) => string | null | undefined },
+): RecordNameLookup<T> {
+  const named = new Map<string, T>();
+  for (const row of rows) {
+    const key = options.caseBlind ? row.name.trim().toLowerCase() : row.name.trim();
+    if (!named.has(key)) named.set(key, row);
+  }
+  const names = [...named.values()];
+  const found = matchByName(names, cell, { beyondCase: options.beyondCase });
+  if (found.kind !== 'many') return found;
+  const text = cell.trim().toLowerCase();
+  const sameCase = names.filter((row) => row.name.trim().toLowerCase() === text);
+  const level = sameCase.length > 1 ? 'case' : 'accents';
+  const among = level === 'case' ? sameCase : names.filter((row) => accentFreeKey(row.name) === accentFreeKey(cell));
+  return {
+    kind: 'many',
+    level,
+    names: among.slice(0, AMBIGUOUS_NAMES_SHOWN).map((row) => options.label?.(row) || row.name.trim()),
+  };
+}
+
+/** The matches an import found, for its result: the first `MATCH_LIST_LIMIT` and their total; nothing when none. */
+export function listedMatches(matches: ReadonlyMap<string, ImportNameMatch> | undefined): { matches?: ImportNameMatch[]; matchesTotal?: number } {
+  const all = [...(matches?.values() ?? [])];
+  return all.length > 0 ? { matches: all.slice(0, MATCH_LIST_LIMIT), matchesTotal: all.length } : {};
+}
