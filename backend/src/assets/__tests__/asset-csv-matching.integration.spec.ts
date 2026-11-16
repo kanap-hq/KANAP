@@ -168,8 +168,26 @@ async function testClusterNames() {
   });
 }
 
+// Merge of the fourth and fifth passes of I3: the match is listed with the cell's spaces collapsed,
+// and the screen and the card send that value back to undo it; the load undoes it as the check did.
+async function testUndoneWithSpacesInTheCell() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'asset-csv-os-spaces');
+    await seedLocation(runner, tenantId);
+    const file = [OS_HEADER, 'srv-s;LOC-1;vm;prod;Ubuntu  22.04'];
+    const check = await importCsv(runner, tenantId, file, {}, ADMIN);
+    assert.deepEqual(listed(check), ['operating_system:Ubuntu 22.04>Ubuntu 22.04 LTS:version:server:2:true']);
+    const unmatched = [{ column: 'operating_system', value: check.matches![0].value }];
+    const load = await importCsv(runner, tenantId, file, { dryRun: false, unmatched }, ADMIN);
+    assert.equal(load.ok, true, JSON.stringify(load.errors));
+    assert.equal(load.matches, undefined, 'the load does not make the match the person undid');
+    assert.notEqual((await systems(runner, tenantId))['srv-s'], 'Ubuntu 22.04 LTS', 'undone: the catalog version is not taken');
+  });
+}
+
 void runSpecs('asset-csv-matching.integration.spec.ts', [
   ['operating system at the check', testOperatingSystemAtTheCheck],
   ['Cloud is no type', testCloudIsNoType],
   ['cluster names', testClusterNames],
+  ['a match undone with spaces in the cell', testUndoneWithSpacesInTheCell],
 ]);

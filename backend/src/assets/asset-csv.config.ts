@@ -1190,8 +1190,8 @@ export const assetCsvConfig: CsvEntityConfig = {
       const label = pendingOperatingSystems.get(entity) ?? null;
       pendingOperatingSystems.delete(entity);
       if (!entity.id || !operatingSystems) continue;
-      // A version match the person undid: the version is created as written.
-      const exactVersion = !!label && undoneMatch(context.params.unmatched, 'operating_system', label);
+      // A version match the person undid (named as the check lists it, spaces collapsed): the version is created as written.
+      const exactVersion = !!label && undoneMatch(context.params.unmatched, 'operating_system', label.replace(/\s+/g, ' '));
       const resolved = await operatingSystems.resolve(context.manager, context.tenantId, label, { create: true, exactVersion });
       await operatingSystems.setOperatingSystem(context.manager, context.tenantId, entity.id, resolved, 'import', context.userId);
     }
