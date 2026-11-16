@@ -260,7 +260,15 @@ export class ContactsService {
     if (!item) throw new NotFoundException('Contact not found');
     const supplierRole = await this.findSupplierRole(id, item.supplier_id, opts);
     const { supplier, ...rest } = item as any;
-    return { ...rest, supplier_role: supplierRole ?? null, supplier_name: supplier?.name ?? null };
+    return {
+      ...rest,
+      supplier_role: supplierRole ?? null,
+      supplier_name: supplier?.name ?? null,
+      // The supplier picker's option, reference included, as the supplier lookup gives it.
+      supplier_option: supplier
+        ? { id: supplier.id, item_number: supplier.item_number, name: supplier.name, erp_supplier_id: supplier.erp_supplier_id ?? null, status: supplier.status }
+        : null,
+    };
   }
 
   async create(body: Partial<ExternalContact>, opts: WriteOpts) {

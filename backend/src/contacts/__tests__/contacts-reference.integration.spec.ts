@@ -294,6 +294,27 @@ async function testImportRefusesANewAddressOfAnotherRow() {
   });
 }
 
+/** The contact's page shows its supplier in the picker as the lookup does: reference, ERP ID and status. */
+async function testDetailCarriesSupplierOption() {
+  await withTenant('detail', async (ctx) => {
+    const [supplier] = await ctx.runner.query(
+      `INSERT INTO suppliers (tenant_id, name, erp_supplier_id) VALUES ($1, 'Salesforce', 'SUP-003') RETURNING id, item_number`,
+      [ctx.tenantId],
+    );
+    await ctx.runner.query(`UPDATE contacts SET supplier_id = $2 WHERE tenant_id = $1 AND email = 'c01@example.test'`, [ctx.tenantId, supplier.id]);
+    const [contact] = await ctx.runner.query(`SELECT id FROM contacts WHERE tenant_id = $1 AND email = 'c01@example.test'`, [ctx.tenantId]);
+    const opts = { manager: ctx.runner.manager, tenantId: ctx.tenantId };
+    const detail: any = await ctx.contacts.get(contact.id, opts);
+    assert.ok(Number(supplier.item_number) > 0);
+    assert.deepEqual(detail.supplier_option, {
+      id: supplier.id, item_number: Number(supplier.item_number), name: 'Salesforce', erp_supplier_id: 'SUP-003', status: 'enabled',
+    });
+    assert.equal(detail.supplier_name, 'Salesforce');
+    const [bare] = await ctx.runner.query(`SELECT id FROM contacts WHERE tenant_id = $1 AND email = 'c02@example.test'`, [ctx.tenantId]);
+    assert.equal(((await ctx.contacts.get(bare.id, opts)) as any).supplier_option, null, 'no supplier, no option');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   let failed = 0;
@@ -305,6 +326,7 @@ async function main() {
     ['testImportRefusesSecondRowOfAContact', testImportRefusesSecondRowOfAContact],
     ['testImportRefusesANewAddressOfAnotherRow', testImportRefusesANewAddressOfAnotherRow],
     ['testExportRoundTrip', testExportRoundTrip],
+    ['testDetailCarriesSupplierOption', testDetailCarriesSupplierOption],
   ];
   try {
     for (const [name, test] of tests) {

@@ -61,7 +61,8 @@ export type CostCenterReference = {
 
 /** The picker options of the line's references (the shapes of the lookups in common/lookup). */
 export type ItemReferences = {
-  supplier: { id: string; name: string; erp_supplier_id: string | null; status: string } | null;
+  /** With its reference (`SUP-n`), as the supplier lookup gives every option. */
+  supplier: { id: string; item_number: number; name: string; erp_supplier_id: string | null; status: string } | null;
   paying_company: { id: string; name: string } | null;
   account: { id: string; account_number: number; account_name: string; description: string | null; coa_id: string | null } | null;
   owner_it: UserLabel | null;
@@ -77,7 +78,7 @@ const userJson = (alias: string) => `json_build_object(
 export async function loadItemReferences(manager: EntityManager, item: ItemReferenceIds): Promise<ItemReferences> {
   const [row] = await manager.query(
     `SELECT
-       (SELECT json_build_object('id', s.id, 'name', s.name, 'erp_supplier_id', s.erp_supplier_id, 'status', s.status)
+       (SELECT json_build_object('id', s.id, 'item_number', s.item_number, 'name', s.name, 'erp_supplier_id', s.erp_supplier_id, 'status', s.status)
           FROM suppliers s WHERE s.tenant_id = $1 AND s.id = $2) AS supplier,
        (SELECT json_build_object('id', c.id, 'name', c.name)
           FROM companies c WHERE c.tenant_id = $1 AND c.id = $3) AS paying_company,
