@@ -98,8 +98,13 @@ export interface CsvFieldDefinition {
   /** Custom export function (for COMPUTED fields) */
   exportFn?: (entity: any, context: CsvExportContext) => string | null;
   /** Custom import transform function */
-  /** May return a promise: the import awaits it. */
-  importTransformFn?: (value: string, row: Record<string, string>, context: CsvImportContext) => any;
+  /**
+   * A name the config finds itself beyond case, with Kad's proposals (a task's phase, in its project:
+   * lot I3 of 26.11.9): the shared lookup finds it case aside only and leaves Kad's proposal to the config.
+   */
+  nameMatchedByConfig?: boolean;
+  /** May return a promise: the import awaits it. `line` is the row's line in the file (a match noted there). */
+  importTransformFn?: (value: string, row: Record<string, string>, context: CsvImportContext, line?: number) => any;
 }
 
 /**

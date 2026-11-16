@@ -1125,7 +1125,7 @@ export class CsvImportService {
   ): any {
     // Custom transform function
     if (field.importTransformFn) {
-      return field.importTransformFn(rawValue, row.raw, context);
+      return field.importTransformFn(rawValue, row.raw, context, row.rowNumber);
     }
 
     switch (field.type) {
@@ -1287,7 +1287,7 @@ export class CsvImportService {
       return value;
     }
 
-    const found = this.findReference(field.fkEntity, field.csvColumn, value, row, context);
+    const found = this.findReference(field.fkEntity, field.csvColumn, value, row, context, field.nameMatchedByConfig === true);
     if (found && 'many' in found) {
       const { code, message, params } = this.ambiguity(field.fkEntity, value, found.many);
       throw new CsvCellError(code, message, params);
@@ -1318,7 +1318,8 @@ export class CsvImportService {
    * not undone that value (`params.unmatched`). A match beyond case is noted for the result. Kad's
    * proposal for the value comes first (`params.proposals`): the record it names, exactly or case
    * aside, in a family the person reads, is a match of origin model; otherwise the proposal is noted
-   * as refused, naming nothing of the family, and the cell is found by its own name.
+   * as refused, naming nothing of the family, and the cell is found by its own name. `byConfig` (a
+   * field the config matches itself, `nameMatchedByConfig`): case aside only, no proposal.
    */
   private findReference(
     fkEntity: string,
@@ -1326,8 +1327,9 @@ export class CsvImportService {
     value: string,
     row: CsvImportRow,
     context: CsvImportContext,
+    byConfig = false,
   ): ReferenceLookup {
-    const undone = undoneMatch(context.params.unmatched, column, value);
+    const undone = byConfig || undoneMatch(context.params.unmatched, column, value);
     const reads = this.resolver.matchesBeyondCase(fkEntity, context.access);
     const proposal = undone ? undefined : proposalFor(context.params.proposals, column, value);
     if (proposal !== undefined) {

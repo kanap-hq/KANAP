@@ -13,6 +13,7 @@ import {
   CsvImportResult,
   CsvFieldInfo,
   CsvFieldType,
+  csvColumnOfHeader,
 } from '../common/csv';
 import type { ExportFileFormat } from '../common/xlsx';
 import {
@@ -258,7 +259,9 @@ export class TasksCsvService {
     const rows: Record<string, string>[] = [];
 
     await new Promise<void>((resolve, reject) => {
-      parseString(text, { headers: true, delimiter: csvSeparatorOf(text) ?? ';', ignoreEmpty: true })
+      // The columns as the import read them: a header in another case, or with spaces, is the column.
+      const headers = (names: Array<string | null | undefined>) => names.map((name) => (name == null ? name : csvColumnOfHeader(taskCsvConfig, name)));
+      parseString(text, { headers, delimiter: csvSeparatorOf(text) ?? ';', ignoreEmpty: true })
         .on('data', (row) => rows.push(row))
         .on('end', () => resolve())
         .on('error', (err) => reject(err));

@@ -200,7 +200,64 @@ async function testViewersOfAnUnknownEmail() {
   });
 }
 
+// The viewers and owners are written from the file's columns as the import reads them: a header in
+// another case, with spaces for underscores, is the column (lot I3 of 26.11.9, fourth pass).
+async function testViewersOfLooseHeaders() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'task-csv-loose-headers');
+    const ada = await seedUser(runner, tenantId, `ada-${tenantId.slice(0, 8)}@example.test`);
+    const bob = await seedUser(runner, tenantId, `bob-${tenantId.slice(0, 8)}@example.test`);
+    const [{ email: adaEmail }] = await runner.query(`SELECT email FROM users WHERE id = $1`, [ada]);
+    const [{ email: bobEmail }] = await runner.query(`SELECT email FROM users WHERE id = $1`, [bob]);
+    const csv = ['Title;Viewer Email 1;OWNER_EMAIL_1', `Loose task;${adaEmail};${bobEmail}`].join('\n');
+    const load = await importCsv(runner, tenantId, csv, { dryRun: false });
+    assert.equal(load.ok, true, JSON.stringify(load.errors));
+    const [task] = await runner.query(`SELECT viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND title = 'Loose task'`, [tenantId]);
+    assert.deepEqual([task.viewer_ids, task.owner_ids], [[ada], [bob]], 'the viewers and owners are written');
+  });
+}
+
+// A phase is found in the task's project, accents aside too: a phase of the same name in another
+// project neither refuses the row nor wins it; Kad's proposal is read in that project as well.
+async function testPhaseInItsProject() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'task-csv-phase-project');
+    const first = await seedProject(runner, tenantId, 'Projet un', 51);
+    const second = await seedProject(runner, tenantId, 'Projet deux', 52);
+    const [own] = await runner.query(
+      `INSERT INTO portfolio_project_phases (tenant_id, project_id, name) VALUES ($1, $2, 'Démarrage') RETURNING id`, [tenantId, first],
+    );
+    // Another project's phase, equal accents aside: the workspace has two names for « Demarrage ».
+    await runner.query(`INSERT INTO portfolio_project_phases (tenant_id, project_id, name) VALUES ($1, $2, 'Demarráge')`, [tenantId, second]);
+    const csv = [
+      'title;related_object_type;related_object_name;phase_name',
+      'Cadrage;project;Projet un;Demarrage',
+      'Lancement;project;Projet un;Start',
+      'Hors projet;project;Projet un;Inconnue',
+    ].join('\n');
+    const params = { proposals: { phase_name: { Start: 'Démarrage', Inconnue: 'Clôture' } } };
+    const check = await importCsv(runner, tenantId, csv, params);
+    assert.deepEqual(codes(check), []);
+    assert.deepEqual(
+      check.warnings.map((w) => [w.row, w.column, w.code]),
+      [[4, 'phase_name', 'CSV_REFERENCE_NOT_FOUND_CLEARED']],
+      'a phase nothing finds is cleared, as before',
+    );
+    assert.deepEqual((check.matches ?? []).map((m) => [m.column, m.value, m.target, m.reason, m.lines]), [
+      ['phase_name', 'Demarrage', 'Démarrage', 'accents', [2]],
+      ['phase_name', 'Start', 'Démarrage', 'model', [3]],
+    ]);
+    assert.deepEqual(check.refusedProposals?.map((r) => [r.column, r.value, r.target]), [['phase_name', 'Inconnue', 'Clôture']]);
+    const load = await importCsv(runner, tenantId, csv.split('\n').slice(0, 3).join('\n'), { ...params, dryRun: false });
+    assert.equal(load.ok, true, JSON.stringify(load.errors));
+    const phases = await runner.query(`SELECT title, phase_id FROM tasks WHERE tenant_id = $1 ORDER BY title`, [tenantId]);
+    assert.deepEqual(phases.map((row: any) => [row.title, row.phase_id]), [['Cadrage', own.id], ['Lancement', own.id]]);
+  });
+}
+
 void runSpecs('task-csv-names-beyond-case.integration.spec', [
+  ['testViewersOfLooseHeaders', testViewersOfLooseHeaders],
+  ['testPhaseInItsProject', testPhaseInItsProject],
   ['testProjectBeyondAccents', testProjectBeyondAccents],
   ['testLimitedPersonFindsNoContractOutsideAccess', testLimitedPersonFindsNoContractOutsideAccess],
   ['testViewersOfAnUnknownEmail', testViewersOfAnUnknownEmail],

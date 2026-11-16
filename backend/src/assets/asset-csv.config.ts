@@ -14,7 +14,9 @@ import { AuditLog } from '../audit/audit.entity';
 import { AuditService } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { TechnologyCatalogService } from '../technologies/catalog/technology-catalog.service';
-import { OperatingSystemService } from '../technologies/operating-system.service';
+import { OperatingSystemService, type OperatingSystemPreview } from '../technologies/operating-system.service';
+import { hasLevel } from '../common/relations/relations-access';
+import { accentFreeKey, noteNameMatch, noteRefusedProposal, proposalFor, undoneMatch, AMBIGUOUS_NAMES_SHOWN } from '../common/name-matching';
 import { VULNERABILITY_CSV_HEADERS, vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { isValidHostname } from './hostname.util';
 import { isValidIpAddress } from './ip-address.util';
@@ -67,12 +69,25 @@ const pendingClusters = new WeakMap<object, string[]>();
 
 type ImportRow = Parameters<NonNullable<CsvEntityConfig['afterValidate']>>[0][number];
 
-/** Per import: the names of each matched asset's cell, and each checked row's resolved clusters (`null`: one the file creates). */
+/**
+ * Per import: the names of each matched asset's cell, each checked row's resolved clusters (`null`:
+ * one the file creates), and the cluster's own name for a cell name found beyond case or by Kad's
+ * proposal (by `nameKey` of the cell name), which the write looks up.
+ */
 const clusterCells = new WeakMap<CsvImportContext, {
   matched: Set<string>;
   namesByAsset: Map<string, string[]>;
   resolved: WeakMap<ImportRow, Array<string | null>>;
+  renamed: Map<string, string>;
 }>();
+
+/** Per import: what the operating system cell of each checked row resolves to (`previewOperatingSystems`). */
+const operatingSystemChecks = new WeakMap<CsvImportContext, WeakMap<ImportRow, OperatingSystemPreview | null>>();
+
+/** Whether the person who imports reads the servers and the technologies (the infrastructure). */
+function readsInfrastructure(context: CsvImportContext): boolean {
+  return !!context.access && hasLevel(context.access, 'infrastructure', 'reader');
+}
 
 /** The names of a Cluster Membership cell: comma separated, trimmed, without repeats (case ignored). */
 function clusterNames(raw: unknown): string[] {
@@ -130,7 +145,9 @@ function hasCell(row: ImportRow, key: string): boolean {
 async function checkClusterMemberships(rows: ImportRow[], context: CsvImportContext): Promise<void> {
   const written = rows.filter((row) => isWritten(row, context));
   const naming = written.filter((row) => hasCell(row, 'cluster') && clusterNames(row.parsed.cluster).length > 0);
-  const state = { matched: new Set<string>(), namesByAsset: new Map<string, string[]>(), resolved: new WeakMap<ImportRow, Array<string | null>>() };
+  const state = {
+    matched: new Set<string>(), namesByAsset: new Map<string, string[]>(), resolved: new WeakMap<ImportRow, Array<string | null>>(), renamed: new Map<string, string>(),
+  };
   clusterCells.set(context, state);
   for (const row of written) {
     if (row.isInsert || !row.existingEntity?.id) continue;
@@ -139,16 +156,18 @@ async function checkClusterMemberships(rows: ImportRow[], context: CsvImportCont
   }
   if (naming.length === 0) return;
 
-  type Candidate = { id: string | null; row: ImportRow | null; name: string; isCluster: boolean; os: string | null };
+  type Candidate = { id: string | null; ref: string | null; row: ImportRow | null; name: string; isCluster: boolean; os: string | null };
   const named = Array.from(new Set(naming.flatMap((row) => clusterNames(row.parsed.cluster).map(nameKey))));
   const matched = written.filter((row) => !row.isInsert && row.existingEntity?.id);
-  const stored: Array<{ id: string; name: string; is_cluster: boolean; os: string | null }> = await context.manager.query(
-    `SELECT a.id, a.name, COALESCE(a.is_cluster, false) AS is_cluster, ${operatingSystemLabelSql('a')} AS os
+  // Every cluster too: a name is found accents aside, or proposed by Kad, in JavaScript (lot I3 of 26.11.9).
+  const stored: Array<{ id: string; ref: string | null; name: string; is_cluster: boolean; os: string | null }> = await context.manager.query(
+    `SELECT a.id, a.asset_reference AS ref, a.name, COALESCE(a.is_cluster, false) AS is_cluster, ${operatingSystemLabelSql('a')} AS os
        FROM assets a
-      WHERE a.tenant_id = $1 AND (lower(btrim(a.name)) = ANY($2::text[]) OR a.id = ANY($3::uuid[]))`,
+      WHERE a.tenant_id = $1 AND (lower(btrim(a.name)) = ANY($2::text[]) OR a.id = ANY($3::uuid[]) OR COALESCE(a.is_cluster, false))
+      ORDER BY lower(btrim(a.name)), a.id`,
     [context.tenantId, named, matched.map((row) => String(row.existingEntity.id))],
   );
-  const byId = new Map<string, Candidate>(stored.map((a) => [a.id, { id: a.id, row: null, name: a.name, isCluster: a.is_cluster, os: a.os ?? null }]));
+  const byId = new Map<string, Candidate>(stored.map((a) => [a.id, { id: a.id, ref: a.ref, row: null, name: a.name, isCluster: a.is_cluster, os: a.os ?? null }]));
   const fileOs = (row: ImportRow, current: string | null) => (hasCell(row, 'operating_system') ? (String(row.parsed.operating_system ?? '').trim() || null) : current);
   const candidates: Candidate[] = [];
   for (const row of matched) {
@@ -161,13 +180,57 @@ async function checkClusterMemberships(rows: ImportRow[], context: CsvImportCont
   }
   candidates.push(...byId.values());
   for (const row of written.filter((r) => r.isInsert)) {
-    candidates.push({ id: null, row, name: String(row.parsed.name ?? ''), isCluster: row.parsed.is_cluster === true, os: fileOs(row, null) });
+    candidates.push({ id: null, ref: null, row, name: String(row.parsed.name ?? ''), isCluster: row.parsed.is_cluster === true, os: fileOs(row, null) });
   }
   const byName = new Map<string, Candidate[]>();
   for (const candidate of candidates) {
     const key = nameKey(candidate.name);
     byName.set(key, [...(byName.get(key) ?? []), candidate]);
   }
+
+  // A name of the cell (lot I3 of 26.11.9): Kad's proposal first, for a person who reads the servers
+  // (a cluster of that name exactly or case aside); then the name case aside, as before (several:
+  // `CSV_CLUSTER_AMBIGUOUS`); then accents aside for a person who reads the servers and has not undone
+  // that match (several: `CSV_NAME_AMBIGUOUS_AMONG`, said here). A match beyond case is noted.
+  const reads = readsInfrastructure(context);
+  const { params } = context;
+  const clustersNamed = (name: string) => (byName.get(nameKey(name)) ?? []).filter((c) => c.isCluster);
+  const clusterOfName = (name: string, line: number): Candidate[] | 'ambiguous' => {
+    const undone = undoneMatch(params.unmatched, 'cluster', name);
+    const proposal = undone ? undefined : proposalFor(params.proposals, 'cluster', name);
+    const note = (target: Candidate, origin: 'server' | 'model') => {
+      state.renamed.set(nameKey(name), target.name);
+      if (context.nameMatches) {
+        noteNameMatch(context.nameMatches, {
+          column: 'cluster', name: null, value: name, target: target.name.trim(), ref: target.ref,
+          origin, reason: origin === 'model' ? 'model' : 'accents', undoable: true,
+        }, line);
+      }
+    };
+    if (proposal !== undefined) {
+      const proposed = reads ? clustersNamed(proposal) : [];
+      if (proposed.length === 1) {
+        note(proposed[0], 'model');
+        return proposed;
+      }
+      if (context.refusedProposals) {
+        noteRefusedProposal(context.refusedProposals, { column: 'cluster', name: null, value: name, target: proposal, reason: 'missing' }, line);
+      }
+    }
+    const clusters = clustersNamed(name);
+    if (clusters.length > 0 || (byName.get(nameKey(name)) ?? []).length > 0 || !reads || undone) return clusters;
+    const key = accentFreeKey(name);
+    const accents = candidates.filter((c) => c.isCluster && accentFreeKey(c.name) === key);
+    if (accents.length === 1) note(accents[0], 'server');
+    if (accents.length <= 1) return accents;
+    const among = accents.slice(0, AMBIGUOUS_NAMES_SHOWN).map((c) => c.ref || c.name.trim()).join(', ');
+    const row = naming.find((r) => r.rowNumber === line)!;
+    row.errors.push({
+      row: line, column: 'cluster', code: 'CSV_NAME_AMBIGUOUS_AMONG',
+      message: `"${name}" may designate several clusters: ${among}`, params: { value: name, names: among },
+    });
+    return 'ambiguous';
+  };
 
   for (const row of naming) {
     const self = candidates.find((c) => c.row === row);
@@ -176,7 +239,6 @@ async function checkClusterMemberships(rows: ImportRow[], context: CsvImportCont
     const names = clusterNames(row.parsed.cluster);
     const error = (refusal: { message: string; code?: string; params?: Record<string, string | number> }) =>
       row.errors.push({ row: row.rowNumber, column: 'cluster', ...refusal });
-    const clustersNamed = (name: string) => (byName.get(nameKey(name)) ?? []).filter((c) => c.isCluster);
     if (names.some((name) => nameKey(name) === nameKey(ownName) && clustersNamed(name).every((c) => c.row === row))) {
       error(codedRowError(assetBadRequest('cluster_member_self', 'An asset cannot be a member of itself.')));
       continue;
@@ -187,7 +249,8 @@ async function checkClusterMemberships(rows: ImportRow[], context: CsvImportCont
     }
     const resolved: Array<string | null> = [];
     for (const name of names) {
-      const clusters = clustersNamed(name);
+      const clusters = clusterOfName(name, row.rowNumber);
+      if (clusters === 'ambiguous') continue;
       if (clusters.length > 1) {
         error({ code: 'CSV_CLUSTER_AMBIGUOUS', message: `Several clusters are named ${name}.`, params: { name } });
       } else if (clusters.length === 0) {
@@ -281,6 +344,63 @@ async function writeClusterMemberships(entities: any[], context: CsvImportContex
 
 function sameOperatingSystem(current: string, wanted: string): boolean {
   return current.localeCompare(wanted, 'en', { sensitivity: 'accent' }) === 0;
+}
+
+/**
+ * The operating system cell of each row the import writes, resolved at the check as at the load,
+ * writing nothing (lot I3 of 26.11.9, T-I3e): Kad's proposal first, taken when it names a technology
+ * of the tenant or of the shipped catalog, and its version as written, for a person who reads the
+ * infrastructure (a match of origin model; the row then carries the proposal); otherwise refused.
+ * Then the cell's own label: a version found by a prefix rule (`Ubuntu 22.04` for `22.04 LTS`) is a
+ * match, undoable (`unmatched`: the version is then created as written); a version to create is
+ * said (`CSV_TECHNOLOGY_VERSION_CREATED`). `sameAsStored` compares what the label resolves to.
+ */
+async function previewOperatingSystems(rows: ImportRow[], context: CsvImportContext): Promise<void> {
+  const previews = new WeakMap<ImportRow, OperatingSystemPreview | null>();
+  operatingSystemChecks.set(context, previews);
+  const naming = rows.filter((row) => isWritten(row, context) && hasCell(row, 'operating_system') && String(row.parsed.operating_system ?? '').trim());
+  if (naming.length === 0) return;
+  const os = operatingSystemWriter(context);
+  const { params } = context;
+  const cache = new Map<string, OperatingSystemPreview | null>();
+  const preview = async (label: string, exactVersion: boolean) => {
+    const key = `${exactVersion}|${label.toLowerCase()}`;
+    if (!cache.has(key)) cache.set(key, await os.preview(context.manager, context.tenantId, label, { exactVersion }));
+    return cache.get(key) ?? null;
+  };
+  for (const row of naming) {
+    const cell = String(row.parsed.operating_system).trim().replace(/\s+/g, ' ');
+    const undone = undoneMatch(params.unmatched, 'operating_system', cell);
+    const proposal = undone ? undefined : proposalFor(params.proposals, 'operating_system', cell);
+    if (proposal !== undefined) {
+      const proposed = readsInfrastructure(context) ? await preview(proposal, true) : null;
+      if (proposed && proposed.technology !== 'created' && proposed.version?.how !== 'created') {
+        row.parsed.operating_system = proposal;
+        previews.set(row, proposed);
+        if (context.nameMatches) {
+          noteNameMatch(context.nameMatches, {
+            column: 'operating_system', name: null, value: cell, target: proposed.label, ref: null, origin: 'model', reason: 'model', undoable: true,
+          }, row.rowNumber);
+        }
+        continue;
+      }
+      if (context.refusedProposals) {
+        noteRefusedProposal(context.refusedProposals, { column: 'operating_system', name: null, value: cell, target: proposal, reason: 'missing' }, row.rowNumber);
+      }
+    }
+    const resolved = await preview(cell, undone);
+    previews.set(row, resolved);
+    if (resolved?.version?.how === 'prefix' && context.nameMatches) {
+      noteNameMatch(context.nameMatches, {
+        column: 'operating_system', name: null, value: cell, target: resolved.label, ref: null, origin: 'server', reason: 'version', undoable: true,
+      }, row.rowNumber);
+    } else if (resolved?.version?.how === 'created') {
+      row.warnings.push({
+        row: row.rowNumber, column: 'operating_system', code: 'CSV_TECHNOLOGY_VERSION_CREATED',
+        message: `Version "${resolved.version.label}" is created.`, params: { value: resolved.version.label },
+      });
+    }
+  }
 }
 
 /**
@@ -951,6 +1071,7 @@ export const assetCsvConfig: CsvEntityConfig = {
     await assertAssetIdentityRows(rows, context);
     await checkClusterSwitchAndOs(rows, context);
     await checkClusterMemberships(rows, context);
+    await previewOperatingSystems(rows, context);
   },
 
   /**
@@ -985,7 +1106,9 @@ export const assetCsvConfig: CsvEntityConfig = {
       if (!sameStoredValues(stored, next)) return false;
       if (!sameClusters(row, memberships.get(String(stored.id ?? '')) ?? [], context)) return false;
       if (!hasOs) return true;
-      const wanted = osRaw == null || String(osRaw).trim() === '' ? '' : String(osRaw).trim();
+      // What the label resolves to (`22.04` stored as `22.04 LTS` is the same), else the label.
+      const resolved = operatingSystemChecks.get(context)?.get(row);
+      const wanted = osRaw == null || String(osRaw).trim() === '' ? '' : resolved?.label ?? String(osRaw).trim();
       const id = String(stored.id ?? '');
       const current = labels.has(id)
         ? (labels.get(id) ?? '')
@@ -1043,12 +1166,14 @@ export const assetCsvConfig: CsvEntityConfig = {
         delete entity.operating_system;
       }
       // A matched row carries the stored legacy text: the cell is the one the check kept.
+      // A name the check found beyond case, or by Kad's proposal, is written as the cluster's own name.
       const cells = clusterCells.get(context);
+      const own = (names: string[]) => names.map((name) => cells?.renamed.get(nameKey(name)) ?? name);
       if (entity.id && cells?.matched.has(String(entity.id))) {
         const names = cells.namesByAsset.get(String(entity.id));
-        if (names) pendingClusters.set(entity, names);
+        if (names) pendingClusters.set(entity, own(names));
       } else if (Object.prototype.hasOwnProperty.call(entity, 'cluster')) {
-        pendingClusters.set(entity, clusterNames(entity.cluster));
+        pendingClusters.set(entity, own(clusterNames(entity.cluster)));
       }
       delete entity.cluster;
     }
@@ -1065,7 +1190,9 @@ export const assetCsvConfig: CsvEntityConfig = {
       const label = pendingOperatingSystems.get(entity) ?? null;
       pendingOperatingSystems.delete(entity);
       if (!entity.id || !operatingSystems) continue;
-      const resolved = await operatingSystems.resolve(context.manager, context.tenantId, label, { create: true });
+      // A version match the person undid: the version is created as written.
+      const exactVersion = !!label && undoneMatch(context.params.unmatched, 'operating_system', label);
+      const resolved = await operatingSystems.resolve(context.manager, context.tenantId, label, { create: true, exactVersion });
       await operatingSystems.setOperatingSystem(context.manager, context.tenantId, entity.id, resolved, 'import', context.userId);
     }
     await writeClusterMemberships(entities, context);

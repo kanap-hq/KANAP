@@ -42,6 +42,8 @@ export type ApplicationsReach = { scope?: ParticipationAccessScope } | null;
 export type LinkInput = {
   technology_version_id?: unknown;
   version_label?: unknown;
+  /** The label is found case aside only, never by a prefix (`versionOfInput`): an import's own say. */
+  version_label_as_written?: unknown;
   notes?: unknown;
 };
 
