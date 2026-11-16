@@ -13,6 +13,7 @@ import { AuditLog } from '../../audit/audit.entity';
 import { omitAuditSecrets } from '../../audit/audit.service';
 import {
   ArrayStrategy,
+  CsvCallerAccess,
   CsvEntityConfig,
   CsvFieldDefinition,
   CsvFieldType,
@@ -25,6 +26,7 @@ import {
   CsvImportWarning,
 } from './csv-field.types';
 import { CsvResolverService } from './csv-resolver.service';
+import { foldKey, MATCH_LIST_LIMIT, noteNameMatch } from '../name-matching';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
 import { isRichTextContentRefusal } from '../markdown-limits';
@@ -63,7 +65,12 @@ export interface CsvImportOptions {
   itOpsSettings?: import('../../it-ops-settings/it-ops-settings.service').ItOpsSettings;
   /** The file's language (the screen's, else the user's). See CsvImportContext. */
   language?: CsvLanguage;
+  /** The person's rights: names found beyond case in the families they read. See CsvImportContext. */
+  access?: CsvCallerAccess;
 }
+
+/** A reference cell nothing finds, or that may name several records: what parseFk and the lists do with it. */
+type ReferenceLookup = { id: string } | { many: string[] } | null;
 
 /** What a full replace needs to know of a stored column to empty it. */
 interface StoredColumn {
@@ -183,6 +190,8 @@ export class CsvImportService {
       markdownBudget: markdownWorkBudget(),
       timeZones,
       language: opts.language,
+      access: opts.access,
+      nameMatches: new Map(),
     };
 
     // Full replace empties the cells of the columns the file holds, by the stored column's rules.
@@ -259,6 +268,7 @@ export class CsvImportService {
         unchanged: unchangedCount,
         errors: allErrors,
         warnings: allWarnings,
+        ...this.matchesOf(context),
       };
     }
 
@@ -294,7 +304,14 @@ export class CsvImportService {
       unchanged: unchangedCount,
       errors: [],
       warnings: allWarnings,
+      ...this.matchesOf(context),
     };
+  }
+
+  /** The names the import found beyond case, for the result: the first ones and their total; nothing when none. */
+  private matchesOf(context: CsvImportContext): Pick<CsvImportResult, 'matches' | 'matchesTotal'> {
+    const all = [...(context.nameMatches?.values() ?? [])];
+    return all.length > 0 ? { matches: all.slice(0, MATCH_LIST_LIMIT), matchesTotal: all.length } : {};
   }
 
   /**
@@ -580,6 +597,9 @@ export class CsvImportService {
 
         // Handle nested fields: merge CSV values with existing array entries
         this.mergeNestedFieldsForEnrich(importFields, raw, parsedRow, existingEntity);
+
+        // A name nothing finds keeps the stored reference of the record it updates.
+        this.keepStoredReferences(importFields, parsedRow, existingEntity);
       }
 
       // Run async JSON validators
@@ -589,6 +609,31 @@ export class CsvImportService {
     }
 
     return parsedRows;
+  }
+
+  /**
+   * Merge mode (`enrich`, the screen's "complete" and Kad's), on a row that updates a record (lot I3
+   * of 26.11.9): a reference cell whose name nothing finds keeps the stored value instead of emptying
+   * it, and a numbered list with such a cell keeps the stored list whole. Each such cell is said
+   * (`CSV_REFERENCE_NOT_FOUND_KEPT`). A new record, and full replace, are not concerned.
+   */
+  private keepStoredReferences(fields: CsvFieldDefinition[], row: CsvImportRow, existingEntity: any): void {
+    for (const field of fields) {
+      if (!field.fkEntity || !(field.entityProperty in existingEntity)) continue;
+      const numbered = field.type === CsvFieldType.ARRAY && field.arrayStrategy === ArrayStrategy.NUMBERED_COLUMNS;
+      const baseName = field.csvColumn.replace(/_\d+$/, '');
+      const columns = numbered
+        ? new Set(Array.from({ length: field.maxItems ?? this.DEFAULT_MAX_ITEMS }, (_, i) => `${baseName}_${i + 1}`))
+        : new Set([field.csvColumn]);
+      const code = numbered ? 'CSV_REFERENCE_NOT_FOUND_SKIPPED' : 'CSV_REFERENCE_NOT_FOUND_CLEARED';
+      const missing = row.warnings.filter((warning) => warning.code === code && warning.column !== undefined && columns.has(warning.column));
+      if (missing.length === 0) continue;
+      row.parsed[field.entityProperty] = existingEntity[field.entityProperty];
+      for (const warning of missing) {
+        warning.code = 'CSV_REFERENCE_NOT_FOUND_KEPT';
+        warning.message = `${field.fkEntity} not found: "${warning.params?.value ?? ''}" (kept)`;
+      }
+    }
   }
 
   /**
@@ -885,13 +930,15 @@ export class CsvImportService {
 
       // Resolve FK if needed
       if (field.fkEntity) {
-        const resolved = this.resolver.resolveId(
-          field.fkEntity,
-          rawValue,
-          context.resolverCache,
-        );
-        if (resolved) {
-          values.push(resolved);
+        const found = this.findReference(field.fkEntity, colName, rawValue, row, context);
+        if (found && 'id' in found) {
+          values.push(found.id);
+        } else if (found) {
+          row.errors.push({
+            row: row.rowNumber,
+            column: colName,
+            ...this.ambiguity(field.fkEntity, rawValue, found.many),
+          });
         } else if (field.fkRequired) {
           row.errors.push({
             row: row.rowNumber,
@@ -1237,7 +1284,12 @@ export class CsvImportService {
       return value;
     }
 
-    const resolved = this.resolver.resolveId(field.fkEntity, value, context.resolverCache);
+    const found = this.findReference(field.fkEntity, field.csvColumn, value, row, context);
+    if (found && 'many' in found) {
+      const { code, message, params } = this.ambiguity(field.fkEntity, value, found.many);
+      throw new CsvCellError(code, message, params);
+    }
+    const resolved = found?.id ?? null;
 
     if (!resolved) {
       if (field.fkRequired) {
@@ -1255,6 +1307,51 @@ export class CsvImportService {
     }
 
     return resolved;
+  }
+
+  /**
+   * The record a reference cell names (lot I3 of 26.11.9): by its name case aside, as before; beyond
+   * (accents set aside, a shipped name in another language) when the person reads the family and has
+   * not undone that value (`params.unmatched`). A match beyond case is noted for the result.
+   */
+  private findReference(
+    fkEntity: string,
+    column: string,
+    value: string,
+    row: CsvImportRow,
+    context: CsvImportContext,
+  ): ReferenceLookup {
+    const undone = (context.params.unmatched ?? []).some((item) => item.column === column && foldKey(item.value) === foldKey(value));
+    const beyondCase = !undone && this.resolver.matchesBeyondCase(fkEntity, context.access);
+    const found = this.resolver.resolveName(fkEntity, value, context.resolverCache, { beyondCase });
+    if (found.kind === 'none') return null;
+    if (found.kind === 'many') return { many: found.names };
+    if (found.how === 'accents' || found.how === 'translation') {
+      if (undone) return null;
+      if (context.nameMatches) {
+        noteNameMatch(context.nameMatches, {
+          column,
+          name: null,
+          value: value.trim(),
+          target: found.target,
+          ref: found.ref,
+          origin: 'server',
+          reason: found.how,
+          undoable: true,
+        }, row.rowNumber);
+      }
+    }
+    return { id: found.entry.id };
+  }
+
+  /** A name that may designate several records, named by their references, else their names. */
+  private ambiguity(fkEntity: string, value: string, names: string[]): { code: string; message: string; params: Record<string, string> } {
+    const listed = names.join(', ');
+    return {
+      code: 'CSV_NAME_AMBIGUOUS_AMONG',
+      message: `${fkEntity} "${value}" may designate several records: ${listed}`,
+      params: { value, names: listed },
+    };
   }
 
   /**

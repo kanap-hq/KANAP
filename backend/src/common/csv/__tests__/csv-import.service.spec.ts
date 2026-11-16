@@ -611,6 +611,167 @@ async function testReferenceNotFoundCarriesCodes() {
   );
 }
 
+/**
+ * Lot I3 of 26.11.9: an application-like list whose supplier is named, and whose contributors are
+ * a numbered list of e-mails. "Atlas" is stored with the supplier Cegid and two contributors.
+ */
+function referencesFixture() {
+  const config: CsvEntityConfig = {
+    entityName: 'application',
+    tableName: 'apps',
+    displayName: 'Apps',
+    upsertKey: ['name'],
+    fields: [
+      { csvColumn: 'name', entityProperty: 'name', type: CsvFieldType.STRING, required: true },
+      { csvColumn: 'supplier_name', entityProperty: 'supplier_id', type: CsvFieldType.FK_BY_NAME, fkEntity: 'suppliers' },
+      // The users are preloaded for an e-mail column (a numbered list alone does not ask for them).
+      { csvColumn: 'owner_email', entityProperty: 'owner_id', type: CsvFieldType.FK_BY_EMAIL, fkEntity: 'users' },
+      {
+        csvColumn: 'contributor_1',
+        entityProperty: 'contributor_ids',
+        type: CsvFieldType.ARRAY,
+        arrayStrategy: ArrayStrategy.NUMBERED_COLUMNS,
+        fkEntity: 'users',
+        maxItems: 2,
+      },
+    ],
+  };
+  const data = {
+    apps: [{ id: 'a1', name: 'Atlas', supplier_id: 's-cegid', contributor_ids: ['u1', 'u2'], tenant_id: 't1' }],
+    suppliers: [
+      { id: 's-cegid', name: 'Cegid', item_number: 1, tenant_id: 't1' },
+      { id: 's-sg', name: 'Société Générale', item_number: 4, tenant_id: 't1' },
+      { id: 's-cafe1', name: 'Café', item_number: 7, tenant_id: 't1' },
+      { id: 's-cafe2', name: 'Cafè', item_number: 8, tenant_id: 't1' },
+    ],
+    users: [
+      { id: 'u1', email: 'ana@example.com', tenant_id: 't1' },
+      { id: 'u2', email: 'ben@example.com', tenant_id: 't1' },
+    ],
+  };
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  return { config, data, service };
+}
+
+const ADMIN = { isAdmin: true };
+const brief = (items: Array<{ column?: string; code?: string; params?: unknown }>) =>
+  items.map((item) => ({ column: item.column, code: item.code, params: item.params }));
+
+/** A supplier named without its accents is found and listed, once per value, at the check as at the load. */
+async function testNamesFoundBeyondCaseAreListed() {
+  const { config, data, service } = referencesFixture();
+  const csv = `name;supplier_name
+Hermes;Societe Generale
+Iris;SOCIETE GENERALE
+Juno;Cegid
+Kairos;societe generale`;
+  for (const dryRun of [true, false]) {
+    const manager = createMockManager(data);
+    const result = await service.import(config, createMockFile(csv), { dryRun, mode: 'enrich', operation: 'upsert' }, { manager, tenantId: 't1', access: ADMIN });
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual(result.warnings, []);
+    assert.deepEqual(result.matches, [{
+      column: 'supplier_name', name: null, value: 'Societe Generale', target: 'Société Générale', ref: 'SUP-4',
+      origin: 'server', reason: 'accents', lines: [2, 3, 5], count: 3, undoable: true,
+    }], `dryRun ${dryRun}`);
+    assert.equal(result.matchesTotal, 1);
+    if (!dryRun) assert.deepEqual(manager.getSaved().map((app: any) => app.supplier_id), ['s-sg', 's-sg', 's-cegid', 's-sg']);
+  }
+  console.log('  names found beyond case are listed, at the check and at the load: OK');
+}
+
+/** A person who does not read the suppliers: not found, as before, and no record named. */
+async function testNoMatchBeyondCaseWithoutReading() {
+  const { config, data, service } = referencesFixture();
+  const csv = `name;supplier_name
+Hermes;Societe Generale`;
+  for (const access of [{ permissions: { applications: 'admin' } }, undefined]) {
+    const result = await service.import(config, createMockFile(csv), { dryRun: true, mode: 'enrich', operation: 'upsert' }, { manager: createMockManager(data), tenantId: 't1', access });
+    assert.equal(result.matches, undefined);
+    assert.equal(result.matchesTotal, undefined);
+    assert.deepEqual(brief(result.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Societe Generale' } }]);
+  }
+  console.log('  without reading the family, a name is found case aside only: OK');
+}
+
+/** Two names once accents are set aside: the row is refused and names both, though the column is optional. */
+async function testAmbiguousNameRefusesTheRow() {
+  const { config, data, service } = referencesFixture();
+  const csv = `name;supplier_name;contributor_1
+Hermes;cafe;
+Iris;Café;`;
+  const result = await service.import(config, createMockFile(csv), { dryRun: true, mode: 'enrich', operation: 'upsert' }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.errors.map((error) => ({ row: error.row, ...brief([error])[0] })), [
+    { row: 2, column: 'supplier_name', code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: 'cafe', names: 'SUP-7, SUP-8' } },
+  ]);
+  assert.equal(result.matches, undefined, 'case aside, Café is Café');
+  console.log('  a name that may designate several records refuses its row: OK');
+}
+
+/** An undone value is found case aside only: not found, then kept on an update in merge mode. */
+async function testUndoneMatchReadsAsNotFound() {
+  const { config, data, service } = referencesFixture();
+  const unmatched = [{ column: 'supplier_name', value: 'societe generale' }];
+  const created = await service.import(config, createMockFile('name;supplier_name\nHermes;Societe Generale'), { dryRun: true, mode: 'enrich', operation: 'upsert', unmatched }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
+  assert.equal(created.matches, undefined);
+  assert.deepEqual(brief(created.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Societe Generale' } }]);
+  // Another column, or another value, is not undone.
+  const other = await service.import(config, createMockFile('name;supplier_name\nHermes;Societe Generale'), { dryRun: true, mode: 'enrich', operation: 'upsert', unmatched: [{ column: 'company_name', value: 'Societe Generale' }] }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
+  assert.equal(other.matchesTotal, 1);
+
+  const manager = createMockManager(data);
+  const updated = await service.import(config, createMockFile('name;supplier_name\nAtlas;Societe Generale'), { dryRun: false, mode: 'enrich', operation: 'upsert', unmatched }, { manager, tenantId: 't1', access: ADMIN });
+  assert.deepEqual(brief(updated.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_KEPT', params: { value: 'Societe Generale' } }]);
+  assert.equal(updated.updated + updated.unchanged, 1);
+  assert.ok(manager.getSaved().every((app: any) => app.supplier_id === 's-cegid'), 'the stored supplier stays');
+  console.log('  an undone value reads as a name nothing finds: OK');
+}
+
+/**
+ * Merge mode, an update: a supplier nothing finds keeps the stored one ("Atlas" keeps Cegid). Full
+ * replace and a new record empty it, as before.
+ */
+async function testUnknownReferenceKeepsTheStoredValueOnMerge() {
+  const { config, data, service } = referencesFixture();
+  const csv = 'name;supplier_name\nAtlas;Banque Inconnue';
+  const kept = createMockManager(data);
+  const merge = await service.import(config, createMockFile(csv), { dryRun: false, mode: 'enrich', operation: 'upsert' }, { manager: kept, tenantId: 't1', access: ADMIN });
+  assert.deepEqual(brief(merge.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_KEPT', params: { value: 'Banque Inconnue' } }]);
+  assert.equal(merge.warnings[0].message, 'suppliers not found: "Banque Inconnue" (kept)');
+  assert.equal(merge.unchanged, 1, 'nothing else changes: the row is unchanged');
+  assert.deepEqual(kept.getSaved(), []);
+
+  const emptied = createMockManager(data);
+  const replace = await service.import(config, createMockFile(csv), { dryRun: false, mode: 'replace', operation: 'upsert' }, { manager: emptied, tenantId: 't1', access: ADMIN });
+  assert.deepEqual(brief(replace.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Banque Inconnue' } }]);
+  assert.equal(emptied.getSaved()[0].supplier_id, null);
+
+  const fresh = createMockManager(data);
+  const created = await service.import(config, createMockFile('name;supplier_name\nZephyr;Banque Inconnue'), { dryRun: false, mode: 'enrich', operation: 'upsert' }, { manager: fresh, tenantId: 't1', access: ADMIN });
+  assert.deepEqual(brief(created.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Banque Inconnue' } }]);
+  assert.equal(created.inserted, 1);
+  assert.equal(fresh.getSaved()[0].supplier_id, null);
+  console.log('  merge mode keeps a stored reference nothing replaces; replace and creation empty it: OK');
+}
+
+/** Merge mode, an update: a numbered list with a cell nothing finds keeps the stored list whole. */
+async function testUnknownCellKeepsTheStoredList() {
+  const { config, data, service } = referencesFixture();
+  const csv = 'name;contributor_1;contributor_2\nAtlas;ben@example.com;ghost@example.com';
+  const manager = createMockManager(data);
+  const merge = await service.import(config, createMockFile(csv), { dryRun: false, mode: 'enrich', operation: 'upsert' }, { manager, tenantId: 't1', access: ADMIN });
+  assert.deepEqual(brief(merge.warnings), [{ column: 'contributor_2', code: 'CSV_REFERENCE_NOT_FOUND_KEPT', params: { value: 'ghost@example.com' } }]);
+  assert.equal(merge.unchanged, 1, 'the stored list ["u1", "u2"] stays whole');
+  assert.deepEqual(manager.getSaved(), []);
+
+  const replaced = createMockManager(data);
+  const replace = await service.import(config, createMockFile(csv), { dryRun: false, mode: 'replace', operation: 'upsert' }, { manager: replaced, tenantId: 't1', access: ADMIN });
+  assert.deepEqual(brief(replace.warnings), [{ column: 'contributor_2', code: 'CSV_REFERENCE_NOT_FOUND_SKIPPED', params: { value: 'ghost@example.com' } }]);
+  assert.deepEqual(replaced.getSaved()[0].contributor_ids, ['u2']);
+  console.log('  merge mode keeps a stored list with a cell nothing finds: OK');
+}
+
 async function testCaseInsensitiveEnumMatching() {
   const resolver = new CsvResolverService();
   const validators = new CsvJsonValidators();
@@ -1042,6 +1203,12 @@ async function testTimeZoneColumnsAreNamedInTheScreenLanguage() {
   await testZonelessDateTimesAreAWarning();
   await testRowMessagesCarryCodes();
   await testReferenceNotFoundCarriesCodes();
+  await testNamesFoundBeyondCaseAreListed();
+  await testNoMatchBeyondCaseWithoutReading();
+  await testAmbiguousNameRefusesTheRow();
+  await testUndoneMatchReadsAsNotFound();
+  await testUnknownReferenceKeepsTheStoredValueOnMerge();
+  await testUnknownCellKeepsTheStoredList();
   await testCaseInsensitiveEnumMatching();
   await testFormulaApostropheIsStrippedOnImport();
   await testBeforeValidateErrorsSurviveDryRun();

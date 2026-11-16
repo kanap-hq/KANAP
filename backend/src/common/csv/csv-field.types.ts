@@ -1,5 +1,6 @@
 import type { CsvLanguage } from '../csv-sheet/types';
 import type { ExportFileFormat } from '../xlsx/format';
+import type { ImportNameMatch } from '../name-matching';
 /**
  * CSV Field Type Definitions
  *
@@ -185,6 +186,12 @@ export interface CsvImportParams {
   mode: 'replace' | 'enrich';
   /** Operation type */
   operation: 'upsert' | 'update_only' | 'insert_only';
+  /**
+   * The matches the person undid (lot I3 of 26.11.9), by file column and value as the result lists
+   * them (`matches`): such a value is found by its name, case aside, and nothing beyond (no accents
+   * set aside, no other language). Otherwise it reads as a name nothing finds.
+   */
+  unmatched?: Array<{ column: string; value: string }>;
 }
 
 /**
@@ -240,6 +247,14 @@ export interface CsvImportResult {
   errors: CsvImportError[];
   /** Non-fatal warnings */
   warnings: CsvImportWarning[];
+  /**
+   * The values of the file found beyond case (accents set aside, a name in another language), one
+   * entry per column, value and record, with the file's lines (lot I3 of 26.11.9): the first
+   * `MATCH_LIST_LIMIT`. Each may be undone (`CsvImportParams.unmatched`). Absent when none.
+   */
+  matches?: ImportNameMatch[];
+  /** How many entries `matches` would hold uncut. Present with `matches`. */
+  matchesTotal?: number;
 }
 
 /**
@@ -307,6 +322,19 @@ export interface CsvImportContext {
    * value uses it. Absent, that value stays the stored code.
    */
   language?: CsvLanguage;
+  /**
+   * The rights of the person who imports: a name finds a record beyond case only in a family whose
+   * module they read (lot I3 of 26.11.9). Absent: names are found case aside only, as before.
+   */
+  access?: CsvCallerAccess;
+  /** The names found beyond case so far, noted by `noteNameMatch` (the result's `matches`). */
+  nameMatches?: Map<string, ImportNameMatch>;
+}
+
+/** The rights of the person who imports, as the routes and Kad know them (`PermissionGuard`, `effectiveAccess`). */
+export interface CsvCallerAccess {
+  isAdmin?: boolean;
+  permissions?: Record<string, string>;
 }
 
 /**
