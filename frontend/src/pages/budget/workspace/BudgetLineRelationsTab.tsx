@@ -274,10 +274,10 @@ function BudgetLineRelationsTabView({
       <RelationSuggestions
         suggestions={data?.suggestions ?? []}
         canEdit={canEdit}
-        referenceOf={(row) => (row.type === 'application' ? row.reference : null)}
+        referenceOf={(row) => row.reference}
         href={(row) => (row.type === 'application'
           ? `${buildItemPath('application', row.reference || row.id)}/overview`
-          : `/ops/contracts/${row.id}/overview`)}
+          : `/ops/contracts/${row.reference || row.id}/overview`)}
         onLink={(row) => { void link(SUGGESTION_KIND[row.type], row.id); }}
       />
 

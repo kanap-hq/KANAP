@@ -206,11 +206,12 @@ describe('ContractsPage', () => {
     });
     const { container } = render(
       <MemoryRouter>
-        {column('name').cellRenderer!({ value: 'Expired contract', data: { id: 'c-1', name: 'Expired contract' } })}
+        {column('name').cellRenderer!({ value: 'Expired contract', data: { id: 'c-1', item_number: 4, name: 'Expired contract' } })}
       </MemoryRouter>,
     );
     const href = container.querySelector('a')?.getAttribute('href') ?? '';
-    expect(href.startsWith('/ops/contracts/c-1/overview?')).toBe(true);
+    // The page opens by the contract's reference (lot R4).
+    expect(href.startsWith('/ops/contracts/CTR-4/overview?')).toBe(true);
     const params = new URLSearchParams(href.split('?')[1]);
     expect(params.get('scope')).toBe('all');
     expect(params.get('sort')).toBe('name:ASC');

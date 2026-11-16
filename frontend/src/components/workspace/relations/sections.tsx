@@ -10,7 +10,7 @@ import { fxMissingOfLines } from '../../finance/fxMissing';
 import { formatAmount } from '../../../i18n/formatters';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { isIncidentLocked } from '../../../pages/it/workspace/incidentWorkspace';
-import { buildItemPath, formatItemRef } from '../../../utils/item-ref';
+import { buildItemPath, formatItemRef, itemAddress } from '../../../utils/item-ref';
 import { getDotColor, INCIDENT_SEVERITY_COLORS } from '../../../utils/statusColors';
 import { businessProcessOptionLabel, businessProcessPathTitle } from '../../fields/businessProcessOption';
 import type { RelationOption } from '../RelationAddPicker';
@@ -54,15 +54,15 @@ export function searchRelationItems(
 }
 
 /** The reference column of a linked row (`BL-12`, `PRJ-7`). */
-export function relationRefColumn<T extends { item_number: number | null }>(
-  type: 'budget' | 'project' | 'request' | 'task',
+export function relationRefColumn<T extends { item_number?: number | null }>(
+  type: 'budget' | 'project' | 'request' | 'task' | 'contract',
   header: string,
 ): RelationsColumn<T> {
   return {
     key: 'ref',
     header,
     width: 72,
-    render: (row) => <RelationRef>{refOf(type, row.item_number) ?? DASH}</RelationRef>,
+    render: (row) => <RelationRef>{refOf(type, row.item_number ?? null) ?? DASH}</RelationRef>,
   };
 }
 
@@ -185,10 +185,11 @@ export function contractsSection({
     empty: t('workspace.application.relations.empty.contracts'),
     searchPlaceholder: t('workspace.application.relations.search.contracts'),
     rows,
-    href: (row) => `/ops/contracts/${row.id}/overview`,
+    href: (row) => `/ops/contracts/${itemAddress('contract', row)}/overview`,
     label: (row) => row.name,
     muted: (row) => row.status === 'disabled',
     columns: [
+      relationRefColumn<ContractRow>('contract', columnsT(t, 'ref')),
       {
         key: 'name',
         header: columnsT(t, 'name'),
@@ -226,11 +227,11 @@ export function contractsSection({
       },
     ],
     search: async (q, signal) => {
-      const res = await api.get<{ items: Array<{ id: string; name: string }> }>('/contracts/lookup', {
+      const res = await api.get<{ items: Array<{ id: string; item_number?: number | null; name: string }> }>('/contracts/lookup', {
         params: { limit: PAGE, ...(q ? { q } : {}) },
         signal,
       });
-      const options: RelationOption[] = (res.data?.items || []).map((row) => ({ id: row.id, label: row.name }));
+      const options: RelationOption[] = (res.data?.items || []).map((row) => ({ id: row.id, label: row.name, ref: refOf('contract', row.item_number ?? null) }));
       if (!lineId || options.length === 0) return options;
       const consistency = await api.get<{ items: Array<{ id: string; mismatches: ContractLineMismatch[] }> }>(
         `/budget-lines/${encodeURIComponent(lineId)}/contract-consistency`,

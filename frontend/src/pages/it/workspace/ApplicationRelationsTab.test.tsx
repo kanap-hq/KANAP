@@ -33,7 +33,7 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
       { id: 'bl-12', item_number: 12, nature: 'opex', product_name: 'Licences Talend', supplier_name: 'Talend SAS', amount: 48000, currency: 'EUR', status: 'enabled' },
     ],
     contracts: [
-      { id: 'ct-1', name: 'Maintenance Talend', supplier_name: 'Talend SAS', end_date: '2027-05-31', yearly_amount: 36000, currency: 'EUR', auto_renewal: true, in_renewal_window: false, status: 'enabled' },
+      { id: 'ct-1', item_number: 3, name: 'Maintenance Talend', supplier_name: 'Talend SAS', end_date: '2027-05-31', yearly_amount: 36000, currency: 'EUR', auto_renewal: true, in_renewal_window: false, status: 'enabled' },
     ],
     projects: [{ id: 'prj-7', item_number: 7, name: 'Migration Talend Cloud', status: 'in_progress', planned_end: '2026-11-30' }],
     requests: [{ id: 'req-23', item_number: 23, name: 'Connecteur Salesforce', status: 'approved', target_delivery_date: '2027-03-31' }],
@@ -144,7 +144,16 @@ describe('ApplicationRelationsTab', () => {
     fireEvent.click(await screen.findByText('Migration Talend Cloud'));
     expect(screen.getByTestId('location').textContent).toBe('/portfolio/projects/PRJ-7');
     fireEvent.click(screen.getByText('Maintenance Talend'));
-    expect(screen.getByTestId('location').textContent).toBe('/ops/contracts/ct-1/overview');
+    expect(screen.getByTestId('location').textContent).toBe('/ops/contracts/CTR-3/overview');
+  });
+
+  it('names and opens a suggested contract by its reference', async () => {
+    renderTab(relations({
+      suggestions: [{ type: 'contract', id: 'ct-9', item_number: 9, name: 'Support Talend', via: { kind: 'same_supplier', label: null } }],
+    }));
+    expect(await screen.findByText('CTR-9')).toBeTruthy();
+    fireEvent.click(screen.getByText('Support Talend'));
+    expect(screen.getByTestId('location').textContent).toBe('/ops/contracts/CTR-9/overview');
   });
 
   it('hides the sections the user cannot read and the suggestions when there are none', async () => {

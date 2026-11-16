@@ -350,7 +350,7 @@ function mockBudgetEndpoints() {
       return { data: { items, total: 7, page: 1, limit: 5 } };
     }
     if (url === '/contracts') {
-      const items = [{ id: 'contract-1', name: 'Office suite', next_due_date: `${new Date().getFullYear() + 1}-03-01` }];
+      const items = [{ id: 'contract-1', item_number: 8, name: 'Office suite', next_due_date: `${new Date().getFullYear() + 1}-03-01` }];
       return { data: { items, total: items.length, page: 1, limit: 5 } };
     }
     const scope = url === '/budget-lines/summary' ? (params.filters ? JSON.parse(params.filters).nature.values[0] : 'all') : null;
@@ -640,7 +640,7 @@ describe('BudgetSection budget tiles', () => {
   it('opens each renewal on its contract', async () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: 'dashboard.nextRenewals' });
-    expect(await within(tile).findByRole('link', { name: /Office suite/ })).toHaveAttribute('href', '/ops/contracts/contract-1/overview');
+    expect(await within(tile).findByRole('link', { name: /Office suite/ })).toHaveAttribute('href', '/ops/contracts/CTR-8/overview');
   });
 
   it('hides the tasks and renewals tiles from a user who cannot read them, and asks nothing', async () => {

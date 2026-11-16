@@ -44,7 +44,7 @@ import ContractSettingsDialog from './contracts/ContractSettingsDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { contractDeleteCheck } from './contracts/contractDelete';
 import { ImportLabel } from '../components/csv/importFiles';
-import { formatItemRef } from '../utils/item-ref';
+import { formatItemRef, itemAddress } from '../utils/item-ref';
 
 /** The states of a contract's terms, computed by the API (`backend/src/contracts/contract-terms.ts`). */
 const TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
@@ -420,7 +420,7 @@ export default function ContractsPage() {
     if (state?.statusScope) sp.set('scope', state.statusScope);
     // The budget figures the list sorts and filters on, so prev/next follows the same order.
     for (const [key, value] of Object.entries(budgetParams)) sp.set(key, value);
-    return `/ops/contracts/${row.id}/overview?${sp.toString()}`;
+    return `/ops/contracts/${itemAddress('contract', row)}/overview?${sp.toString()}`;
   }, [searchParams, budgetParams]);
 
   const linkCell = useCallback((params: any) => (
