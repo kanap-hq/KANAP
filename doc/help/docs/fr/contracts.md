@@ -340,7 +340,7 @@ Gardez votre liste de contrats synchronisée avec d'autres outils grâce aux fic
 - Création et mises à jour sont prises en charge
 - Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du contrat, conserve sa fin de validité. Un statut différent l'applique : `enabled` efface la fin de validité, et `disabled` termine le contrat aujourd'hui, sauf si sa fin de validité est déjà passée
 - Un nouveau contrat est activé sauf si la ligne indique `disabled`
-- Une ligne qui passe `auto_renewal` à false sur un contrat déjà reconduit et sans fin de validité est refusée, contrôle préalable compris : elle effacerait les termes que le contrat a courus. Désactivez la reconduction depuis la fiche du contrat, qui fixe la fin
+- Une ligne qui passe `auto_renewal` à false sur un contrat déjà reconduit et sans fin de validité est refusée, vérification préalable comprise : elle effacerait les termes que le contrat a courus. Désactivez la reconduction depuis la fiche du contrat, qui fixe la fin
 
 **Remarques** :
 

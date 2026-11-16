@@ -340,7 +340,7 @@ Halten Sie Ihre Vertragsliste mit CSV-Dateien oder Excel-Arbeitsmappen mit ander
 - Unterstützt Neuanlage und Aktualisierungen
 - Die Datei hat keine Spalte für das Ende der Gültigkeit. Bei einer Aktualisierung behält ein leeres `status`, oder eines, das dem aktuellen Status des Vertrags entspricht, sein Ende der Gültigkeit. Ein abweichender Status wird angewendet: `enabled` löscht das Ende der Gültigkeit, und `disabled` beendet den Vertrag heute, sofern sein Ende der Gültigkeit nicht bereits vergangen ist
 - Ein neuer Vertrag ist aktiviert, sofern die Zeile nicht `disabled` angibt
-- Eine Zeile, die `auto_renewal` bei einem bereits verlängerten Vertrag ohne Ende der Gültigkeit auf false setzt, wird abgelehnt, auch in der Vorprüfung: Sie würde die Perioden löschen, die der Vertrag durchlaufen hat. Beenden Sie die Verlängerung auf der Vertragsseite, die das Ende setzt
+- Eine Zeile, die `auto_renewal` bei einem bereits verlängerten Vertrag ohne Ende der Gültigkeit auf false setzt, wird abgelehnt, auch in der Vorabprüfung: Sie würde die Perioden löschen, die der Vertrag durchlaufen hat. Beenden Sie die Verlängerung auf der Vertragsseite, die das Ende setzt
 
 **Hinweise**:
 
