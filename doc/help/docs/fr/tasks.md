@@ -604,6 +604,7 @@ Pour **status**, **priority_level** et **related_object_type**, vous pouvez util
 | `spend_item` | `Spend Item`, `Spend` |
 | `contract` | `Contract` |
 | `capex_item` | `CAPEX Item`, `CAPEX` |
+| `incident` | `Incident` |
 
 Le système normalise les valeurs automatiquement lors de l'import. Un statut ou une priorité se lit aussi par le nom que l'écran affiche, dans chacune des quatre langues. Une valeur inconnue est refusée, et le message liste les noms acceptés.
 
@@ -615,7 +616,7 @@ Les tâches sont identifiées par **titre + related_object_id** (insensible à l
 
 Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur titre + objet lié.
 
-**Note** : Si vous fournissez `related_object_name` au lieu de `related_object_id`, le système résout le nom vers l'ID avant la correspondance. Cela signifie que vous pouvez utiliser des noms lisibles tout au long de votre fichier d'import. Pour un contrat, `related_object_name` accepte aussi sa référence, comme `CTR-12`. Le nom et la phase sont retrouvés quelle que soit la casse, et quels que soient les accents pour un projet, un contrat ou une ligne budgétaire que vous pouvez lire. Voir [Noms des fiches](csv-files.md#names-of-records). La **Vérification préalable** refuse une ligne dont l'objet lié est introuvable ou nomme plusieurs fiches. Elle refuse aussi une phase à laquelle répondent plusieurs phases du projet, ou que seul un autre projet possède. Quand une ligne donne les deux, l'ID l'emporte. Une tâche déplacée vers un autre projet sans phase dans le fichier garde sa phase si ce projet en a une du même nom ; sinon, la **Vérification préalable** la vide et le signale.
+**Note** : Si vous fournissez `related_object_name` au lieu de `related_object_id`, le système résout le nom vers l'ID avant la correspondance. Cela signifie que vous pouvez utiliser des noms lisibles tout au long de votre fichier d'import. Pour un contrat, `related_object_name` accepte aussi sa référence, comme `CTR-12`. Le nom et la phase sont retrouvés quelle que soit la casse, et quels que soient les accents pour un projet, un contrat ou une ligne budgétaire que vous pouvez lire. Voir [Noms des fiches](csv-files.md#names-of-records). La **Vérification préalable** refuse une ligne dont l'objet lié est introuvable ou nomme plusieurs fiches. Elle refuse aussi une phase à laquelle répondent plusieurs phases du projet, ou que seul un autre projet possède. Quand une ligne donne les deux, l'ID l'emporte. Une tâche déplacée vers un autre projet sans phase dans le fichier garde sa phase si ce projet en a une du même nom ; sinon, la **Vérification préalable** la vide et le signale. Une tâche qui quitte un projet perd sa phase de la même façon, et un incident que vous ne voyez pas est introuvable, que la ligne donne sa référence (`INC-4`) ou son id.
 
 ### Champs en export uniquement
 

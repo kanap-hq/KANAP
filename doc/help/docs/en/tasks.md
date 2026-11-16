@@ -604,6 +604,7 @@ For **status**, **priority_level**, and **related_object_type**, you can use eit
 | `spend_item` | `Spend Item`, `Spend` |
 | `contract` | `Contract` |
 | `capex_item` | `CAPEX Item`, `CAPEX` |
+| `incident` | `Incident` |
 
 The system normalizes values automatically during import. A status or a priority is also read by the name the screen shows, in any of the four languages. An unknown value is refused, and the message lists the accepted names.
 
@@ -615,7 +616,7 @@ Tasks are matched by **title + related_object_id** (case-insensitive). When a ma
 
 If you include the `id` column with a valid UUID, matching uses ID first, then falls back to title + related object.
 
-**Note**: If you provide `related_object_name` instead of `related_object_id`, the system resolves the name to the ID before matching. This means you can use human-readable names throughout your import file. For a contract, `related_object_name` also takes its reference, such as `CTR-12`. The name and the phase are found whatever the case, and the accents too for a project, a contract or a budget line you can read. See [Names of records](csv-files.md#names-of-records). **Preflight** refuses a row whose related object is not found or names several records. It also refuses a phase that several phases of the project answer, or that only another project has. When a row gives both, the id wins. A task moved to another project without a phase in the file keeps its phase when that project has one of the same name; otherwise **Preflight** clears it and says so.
+**Note**: If you provide `related_object_name` instead of `related_object_id`, the system resolves the name to the ID before matching. This means you can use human-readable names throughout your import file. For a contract, `related_object_name` also takes its reference, such as `CTR-12`. The name and the phase are found whatever the case, and the accents too for a project, a contract or a budget line you can read. See [Names of records](csv-files.md#names-of-records). **Preflight** refuses a row whose related object is not found or names several records. It also refuses a phase that several phases of the project answer, or that only another project has. When a row gives both, the id wins. A task moved to another project without a phase in the file keeps its phase when that project has one of the same name; otherwise **Preflight** clears it and says so. A task moved out of a project loses its phase the same way, and an incident you cannot see is not found, whether the row gives its reference (`INC-4`) or its id.
 
 ### Export-only fields
 
