@@ -328,7 +328,8 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     }) });
     renderDialog();
     await screen.findByText(`${L}title`);
-    const updated = await screen.findByText(new RegExp(`^${K.replace(/\./g, '\\.')}updatedLine`));
+    // Found by the start of its text, with no expression built from a key.
+    const updated = await screen.findByText((content) => content.startsWith(`${K}updatedLine:`));
     const named = JSON.parse(updated.textContent!.slice(`${K}updatedLine:`.length)).fields as string;
     const names = named.split(', ');
     expect(names).toHaveLength(fields.length);
