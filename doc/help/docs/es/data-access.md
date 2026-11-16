@@ -193,7 +193,7 @@ Para una persona limitada, el presupuesto y los contratos solo contienen lo que 
 - Abierto por su dirección o su referencia, un contrato oculto no se encuentra, como un contrato que no existe.
 - Las listas de enlaces (las líneas de un contrato, una aplicación, un servidor, una tecnología, un proyecto o una solicitud) muestran los enlaces visibles y después un número como «y 3 líneas fuera de su acceso». Ni nombre, ni importe.
 - El contrato de una línea visible se abre en solo lectura. Sus adjuntos y enlaces documentales siguen cerrados, con un número como «2 adjuntos, reservados a las personas que ven este contrato».
-- La búsqueda, Kad, MCP y las exportaciones no muestran ningún rastro de un elemento oculto.
+- La búsqueda, Kad y MCP no muestran ningún rastro de un elemento oculto. Las exportaciones omiten los elementos ocultos.
 
 Estos números aparecen para las personas que leen el presupuesto pero no esas líneas. Una persona sin el derecho de presupuesto no ve ninguna línea presupuestaria en los paneles de aplicaciones, servidores y proyectos, ni ningún número.
 

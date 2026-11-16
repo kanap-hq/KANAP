@@ -193,7 +193,7 @@ Pour une personne limitée, le budget et les contrats ne contiennent que ce que 
 - Ouvert par son adresse ou sa référence, un contrat caché est introuvable, comme un contrat qui n'existe pas.
 - Les listes de liens (les lignes d'un contrat, d'une application, d'un serveur, d'une technologie, d'un projet ou d'une demande) montrent les liens visibles, puis un nombre comme « et 3 lignes hors de votre accès ». Ni nom, ni montant.
 - Le contrat d'une ligne visible s'ouvre en lecture seule. Ses pièces jointes et liens documentaires restent fermés, avec un nombre comme « 2 pièces jointes, réservées aux personnes qui voient ce contrat ».
-- La recherche, Kad, MCP et les exports ne montrent aucune trace d'un élément caché.
+- La recherche, Kad et MCP ne montrent aucune trace d'un élément caché. Les exports laissent les éléments cachés de côté.
 
 Ces nombres apparaissent pour les personnes qui lisent le budget mais pas ces lignes. Une personne sans le droit sur le budget ne voit aucune ligne budgétaire dans les panneaux des applications, des serveurs et des projets, ni aucun nombre.
 
