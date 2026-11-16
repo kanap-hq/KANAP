@@ -3,11 +3,13 @@ import { resolveLifecycleState, StatusState } from '../common/status';
 import {
   cellOf,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   endOfValidityOf,
   keepStoredEndOfValidity,
   ImportReportError,
+  keepsStoredValue,
   MasterDataFileRead,
   nameMatchedWarning,
   readMasterDataFile,
@@ -38,7 +40,8 @@ import type { ExportFileFormat } from '../common/xlsx/format';
 
 export const ANALYTICS_VALUE_CSV_HEADERS = ['axis_code', 'name', 'description', 'status', 'disabled_at', 'applies_to'] as const;
 /** Only the name is required; an absent column keeps what is stored (a new value gets the default). */
-const OPTIONAL_HEADERS = ['axis_code', 'description', 'status', 'disabled_at', 'applies_to'] as const;
+/** A row finds its value by its name, in the dimension of `axis_code` (blank or absent: the default one). */
+const KEY_HEADERS = [['name']] as const;
 
 /** An `applies_to` cell: '' is null (OPEX and CAPEX lines), undefined an invalid value. */
 function csvAppliesTo(raw: string): AxisAppliesTo | null | undefined {
@@ -138,12 +141,18 @@ export class AnalyticsCategoriesCsvService {
       language,
       dateOrder,
       decimalMark,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /**
+       * What a row does to a value it updates (`CsvImportMode`); without it, `replace`. The
+       * dimension code is part of the key: blank, it names the default dimension in both modes.
+       */
+      mode?: CsvImportMode;
     },
     ctx: AnalyticsContext,
   ): Promise<AnalyticsValueImportResult> {
@@ -234,9 +243,11 @@ export class AnalyticsCategoriesCsvService {
       }
       const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
       if (lifecycleConflict) rowErrors.push(rowError(line, 'status', status === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
-      // An absent column keeps what is stored (null for a new value); a blank cell clears it.
+      // An absent column keeps what is stored (null for a new value); a blank cell clears it, or
+      // keeps it when the row completes the stored value.
+      const keeps = (column: string) => !has(column) || (!!existing && keepsStoredValue(raw, read.present, column, mode));
       const appliesToRaw = has('applies_to') ? cellOf(raw, 'applies_to') : '';
-      const appliesTo = has('applies_to') ? csvAppliesTo(appliesToRaw) : existing?.applies_to ?? null;
+      const appliesTo = keeps('applies_to') ? existing?.applies_to ?? null : csvAppliesTo(appliesToRaw);
       if (appliesTo === undefined) {
         rowErrors.push(rowError(line, 'applies_to', 'CSV_ENUM_INVALID', `Invalid applies_to '${appliesToRaw}'. Use 'opex', 'capex' or leave it empty.`, { value: appliesToRaw, allowed: 'opex, capex' }));
       } else {
@@ -259,9 +270,9 @@ export class AnalyticsCategoriesCsvService {
         axis_id: axisId ?? '',
         // The name is the match key: a different case in the file refers to the stored value, it does not rename it.
         name: existing?.name ?? name,
-        description: has('description')
-          ? normalizeAnalyticsDescription(cellOf(raw, 'description'))
-          : existing?.description ?? null,
+        description: keeps('description')
+          ? existing?.description ?? null
+          : normalizeAnalyticsDescription(cellOf(raw, 'description')),
         applies_to: appliesTo ?? null,
         status: lifecycle.status,
         disabled_at: lifecycle.disabled_at,
@@ -320,7 +331,7 @@ export class AnalyticsCategoriesCsvService {
       file: buf as Buffer,
       fields: ANALYTICS_VALUE_CSV_HEADERS,
       dateFields: ['disabled_at'],
-      optional: OPTIONAL_HEADERS,
+      keys: KEY_HEADERS,
       language,
       dateOrder,
       decimalMark,

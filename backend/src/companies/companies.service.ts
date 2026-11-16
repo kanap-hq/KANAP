@@ -38,19 +38,22 @@ import { createCompanyStandardCalendar } from '../working-day-profiles/company-s
 import { duplicateNameException } from '../common/duplicate-name';
 import {
   cellOf,
+  CsvDataRow,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   endOfValidityOf,
   keepStoredEndOfValidity,
   formatCsvAmount,
   ImportReportError,
-  headerMismatchError,
+  keepsStoredValue,
   nameMatchedWarning,
   referenceRenameWarning,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
+  storedRecordValues,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
 import { FxRateService } from '../currency/fx-rate.service';
@@ -74,6 +77,14 @@ function referenceQuickSearch(q: string | null | undefined, nextParam: () => str
   const param = nextParam();
   return { sql: `c.item_number = :${param}`, params: { [param]: number } };
 }
+
+/** The NOT NULL values of a company besides its name, with the refusal of a blank one. */
+const REQUIRED_COMPANY_CELLS: ReadonlyArray<readonly [string, string]> = [
+  ['name', 'name is required'],
+  ['city', 'city is required'],
+  ['country_iso', 'country_iso is required and must be 2 letters'],
+  ['base_currency', 'base_currency is required and must be 3 letters'],
+];
 
 @Injectable()
 export class CompaniesService {
@@ -913,21 +924,9 @@ export class CompaniesService {
     return [`headcount_${year}`, `it_users_${year}`, `turnover_${year}`];
   }
 
-  /** Years of the window whose three columns are all in the file. An absent year is left untouched. */
+  /** Years of the window with one of their three columns in the file. An absent year, or column, is left untouched. */
   private yearsInFile(present: readonly string[], metricYears: readonly number[]): number[] {
-    return metricYears.filter((year) => this.metricColumns(year).every((column) => present.includes(column)));
-  }
-
-  /** A year that has some of its three columns and not the others: the file would otherwise clear the missing ones. */
-  private incompleteYearColumns(present: readonly string[], metricYears: readonly number[]): string[] {
-    const have = new Set(present);
-    const missing: string[] = [];
-    for (const year of metricYears) {
-      const columns = this.metricColumns(year);
-      if (!columns.some((column) => have.has(column))) continue;
-      for (const column of columns) if (!have.has(column)) missing.push(column);
-    }
-    return missing;
+    return metricYears.filter((year) => this.metricColumns(year).some((column) => present.includes(column)));
   }
 
   /** Ignored headers, plus metric columns of a year outside the window (`turnover_2031` is read as an amount). */
@@ -1017,6 +1016,7 @@ export class CompaniesService {
       language,
       dateOrder,
       decimalMark,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -1025,6 +1025,8 @@ export class CompaniesService {
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /** What a row does to a company it updates (`CsvImportMode`); without it, `replace`. */
+      mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager },
   ) {
@@ -1037,8 +1039,9 @@ export class CompaniesService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
-      // Each year of the window may be absent. A year outside it is reported, not refused.
-      optional: ['reference', ...metricYears.flatMap((fy) => this.metricColumns(fy))],
+      // A row finds its company by its reference, else its name: any other column may be absent,
+      // each year of the window included. A year outside it is reported, not refused.
+      keys: [['reference'], ['name']],
       amounts: [{ measure: 'turnover', names: ['turnover'] }],
       dateFields: ['disabled_at'],
       language: readLanguage,
@@ -1052,15 +1055,6 @@ export class CompaniesService {
       return {
         ok: false, dryRun, total: 0, inserted: 0, updated: 0,
         errors: [read.headerError],
-        ignoredColumns, notices: read.notices,
-      };
-    }
-    // One column of a year without the other two would store nulls for the ones the file omits.
-    const incomplete = headerMismatchError(this.incompleteYearColumns(read.present, metricYears), []);
-    if (incomplete) {
-      return {
-        ok: false, dryRun, total: 0, inserted: 0, updated: 0,
-        errors: [incomplete],
         ignoredColumns, notices: read.notices,
       };
     }
@@ -1079,9 +1073,15 @@ export class CompaniesService {
     }
     // Validate and normalize
     type CsvLifecycle = { status: StatusState | null; disabled_at: string | null };
+    /**
+     * A year's metrics as the row sets them. Undefined keeps the stored value: an absent column, or
+     * a blank cell when completing. A blank cell otherwise clears it (the headcount cannot be empty).
+     */
+    type RowMetric = { headcount: number | null | undefined; it_users: number | null | undefined; turnover: string | null | undefined };
+    type Metric = { headcount: number; it_users: number | null; turnover: string | null };
     // `reference`: the number of the company the row names in the reference column (`COMP-12` or
     // `12`), null when the cell is empty: the row then matches by name.
-    const normalized: { line: number; reference: number | null; company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: string | null }>; lifecycle: CsvLifecycle }[] = [];
+    const normalized: { line: number; row: CsvDataRow; reference: number | null; company: CompanyUpsertDto; rowMetrics: Map<number, RowMetric>; metrics: Map<number, Metric>; lifecycle: CsvLifecycle }[] = [];
     // The first line of each name, whatever its case: a company takes one row.
     const firstLineByName = new Map<string, number>();
     const firstLineByReference = new Map<number, number>();
@@ -1115,8 +1115,12 @@ export class CompaniesService {
         : null;
       const disabledAtRaw = cellOf(row, 'disabled_at');
       let disabled_at_iso: string | null = null;
-      if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
-      else {
+      // A row with a reference may leave the name to the stored one (`enrich`): decided once matched.
+      if (!name) {
+        if ((reference === null && !referenceRaw) || !keepsStoredValue(row, read.present, 'name', mode)) {
+          errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
+        }
+      } else {
         const firstRow = firstLineByName.get(name.toLowerCase());
         if (firstRow === undefined) firstLineByName.set(name.toLowerCase(), line);
         else {
@@ -1129,13 +1133,16 @@ export class CompaniesService {
           ));
         }
       }
-      // `city` is NOT NULL, like name: a blank cell is refused for a new company and for an update.
-      if (!city) errors.push(rowError(line, 'city', 'CSV_VALUE_REQUIRED', 'city is required'));
-      if (!country_iso) errors.push(rowError(line, 'country_iso', 'CSV_VALUE_REQUIRED', 'country_iso is required and must be 2 letters'));
-      else if (country_iso.length !== 2) errors.push(rowError(line, 'country_iso', 'CSV_COUNTRY_INVALID', 'country_iso is required and must be 2 letters', { value: country_iso }));
+      // City, country and currency are NOT NULL: a blank one the row writes is refused here; one a
+      // stored company may keep (`enrich`, or the column absent) once the row is matched.
+      for (const [column, message] of REQUIRED_COMPANY_CELLS) {
+        if (column !== 'name' && cellOf(row, column) === '' && !keepsStoredValue(row, read.present, column, mode)) {
+          errors.push(rowError(line, column, 'CSV_VALUE_REQUIRED', message));
+        }
+      }
+      if (country_iso && country_iso.length !== 2) errors.push(rowError(line, 'country_iso', 'CSV_COUNTRY_INVALID', 'country_iso is required and must be 2 letters', { value: country_iso }));
       const base_currency = cellOf(row, 'base_currency');
-      if (!base_currency) errors.push(rowError(line, 'base_currency', 'CSV_VALUE_REQUIRED', 'base_currency is required and must be 3 letters'));
-      else if (base_currency.length !== 3) errors.push(rowError(line, 'base_currency', 'CSV_CURRENCY_INVALID', 'base_currency is required and must be 3 letters', { value: base_currency }));
+      if (base_currency && base_currency.length !== 3) errors.push(rowError(line, 'base_currency', 'CSV_CURRENCY_INVALID', 'base_currency is required and must be 3 letters', { value: base_currency }));
       if (statusRaw && !statusValue) {
         errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.`, { value: statusRaw, allowed: 'enabled, disabled' }));
         return;
@@ -1153,7 +1160,9 @@ export class CompaniesService {
         errors.push(rowError(line, 'status', statusValue === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
         return;
       }
-      const metrics = new Map<number, { headcount: number; it_users: number | null; turnover: string | null }>();
+      const rowMetrics = new Map<number, RowMetric>();
+      // A blank cell of a present column: null when replacing, undefined (the stored value) when completing.
+      const blank = (column: string) => (read.present.includes(column) && mode === 'replace' ? null : undefined);
       for (const fy of yearsInFile) {
         const headcountKey = `headcount_${fy}`;
         const itUsersKey = `it_users_${fy}`;
@@ -1172,16 +1181,13 @@ export class CompaniesService {
           });
           continue;
         }
-        if (headcountRaw === '') {
-          errors.push(rowError(line, headcountKey, 'CSV_VALUE_REQUIRED', `${headcountKey} is required when providing metrics`));
-          continue;
-        }
-        const headcountVal = Number(headcountRaw);
-        if (!Number.isInteger(headcountVal) || headcountVal < 0) {
+        // A blank headcount is refused once the row is matched, unless the row keeps a stored one.
+        const headcountVal = headcountRaw === '' ? blank(headcountKey) : Number(headcountRaw);
+        if (headcountVal != null && (!Number.isInteger(headcountVal) || headcountVal < 0)) {
           errors.push(rowError(line, headcountKey, 'CSV_WHOLE_NUMBER_INVALID', `${headcountKey} must be a non-negative integer`, { value: headcountRaw }));
           continue;
         }
-        let itUsersVal: number | null = null;
+        let itUsersVal: number | null | undefined = blank(itUsersKey);
         if (itUsersRaw !== '') {
           const parsed = Number(itUsersRaw);
           if (!Number.isInteger(parsed) || parsed < 0) {
@@ -1190,7 +1196,7 @@ export class CompaniesService {
             itUsersVal = parsed;
           }
         }
-        let turnoverVal: string | null = null;
+        let turnoverVal: string | null | undefined = blank(turnoverKey);
         if (turnoverRaw !== '') {
           // Read by the shared layer under the file's decimal mark (`read.amounts`).
           const parsed = row.amounts[turnoverKey];
@@ -1207,10 +1213,11 @@ export class CompaniesService {
             }
           }
         }
-        metrics.set(fy, { headcount: headcountVal, it_users: itUsersVal, turnover: turnoverVal });
+        rowMetrics.set(fy, { headcount: headcountVal, it_users: itUsersVal, turnover: turnoverVal });
       }
       normalized.push({
         line,
+        row,
         reference,
         company: {
           name,
@@ -1225,7 +1232,8 @@ export class CompaniesService {
           base_currency: base_currency.toUpperCase(),
           notes: cellOf(row, 'notes') || null,
         },
-        metrics,
+        rowMetrics,
+        metrics: new Map(),
         lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
       });
     });
@@ -1252,9 +1260,11 @@ export class CompaniesService {
     const warnings: ImportReportError[] = [];
     for (const item of normalized) {
       const name = item.company.name as string;
-      const sameName = await repo.createQueryBuilder('c')
-        .where('c.tenant_id = app_current_tenant() AND lower(c.name) = lower(:name)', { name })
-        .getOne();
+      const sameName = name
+        ? await repo.createQueryBuilder('c')
+          .where('c.tenant_id = app_current_tenant() AND lower(c.name) = lower(:name)', { name })
+          .getOne()
+        : null;
       let existing: Company | null = sameName;
       if (item.reference !== null) {
         existing = byReference.get(item.reference) ?? null;
@@ -1266,12 +1276,20 @@ export class CompaniesService {
           errors.push(rowError(item.line, 'name', 'CSV_VALUE_TAKEN', `"${name}" already belongs to COMP-${sameName.item_number}.`, { value: name, reference: `COMP-${sameName.item_number}` }));
           continue;
         }
-        const renamed = referenceRenameWarning(item.line, { family: 'company', reference: `COMP-${existing.item_number}`, stored: existing.name, next: name });
+        const renamed = name ? referenceRenameWarning(item.line, { family: 'company', reference: `COMP-${existing.item_number}`, stored: existing.name, next: name }) : null;
         if (renamed) warnings.push(renamed);
       } else if (existing) {
         const warning = nameMatchedWarning(item.line, 'name', name, existing.name);
         if (warning) warnings.push(warning);
         item.company = { ...item.company, name: existing.name };
+      }
+      // A required value the row leaves blank: refused for a new company, and for a stored one
+      // unless the row completes it (the column absent, or `enrich`).
+      const required = REQUIRED_COMPANY_CELLS.filter(([column]) => cellOf(item.row, column) === ''
+        && (!existing || !keepsStoredValue(item.row, read.present, column, mode)));
+      if (required.length > 0) {
+        for (const [column, message] of required) errors.push(rowError(item.line, column, 'CSV_VALUE_REQUIRED', message));
+        continue;
       }
       if (!existing) continue;
       const firstRow = firstLineOfCompany.get(existing.id);
@@ -1280,7 +1298,10 @@ export class CompaniesService {
         continue;
       }
       firstLineOfCompany.set(existing.id, item.line);
-      // The stored end of validity's day keeps its time of day: the export writes the day only.
+      // A stored company takes only the values the row writes: an absent column, or a blank cell
+      // when completing, keeps the stored value. The stored end of validity's day keeps its time
+      // of day: the export writes the day only.
+      item.company = storedRecordValues(item.company, item.row, read.present, mode);
       item.lifecycle = { ...item.lifecycle, disabled_at: keepStoredEndOfValidity(existing.disabled_at, item.lifecycle.disabled_at) };
       existingOf.set(item, existing);
     }
@@ -1295,8 +1316,28 @@ export class CompaniesService {
         storedMetrics.set(`${metric.company_id}:${metric.fiscal_year}`, metric);
       }
     }
+    // Each year's metrics, completed by the stored ones: a new metric needs its headcount.
+    for (const item of normalized) {
+      const existing = existingOf.get(item);
+      for (const [fy, metric] of item.rowMetrics) {
+        const stored = existing ? storedMetrics.get(`${existing.id}:${fy}`) : undefined;
+        const headcount = metric.headcount === undefined ? stored?.headcount : metric.headcount;
+        if (headcount == null) {
+          errors.push(rowError(item.line, `headcount_${fy}`, 'CSV_VALUE_REQUIRED', `headcount_${fy} is required when providing metrics`));
+          continue;
+        }
+        item.metrics.set(fy, {
+          headcount,
+          it_users: metric.it_users !== undefined ? metric.it_users : stored?.it_users ?? null,
+          turnover: metric.turnover !== undefined ? metric.turnover : stored?.turnover != null ? String(stored.turnover) : null,
+        });
+      }
+    }
+    if (errors.length > 0) {
+      return { ok: false, dryRun, total, inserted: 0, updated: 0, errors, ignoredColumns, notices: read.notices };
+    }
     /** A yearly metric of the file equal to the stored one: not written again. */
-    const sameMetric = (companyId: string, fy: number, metric: { headcount: number; it_users: number | null; turnover: string | null }) => {
+    const sameMetric = (companyId: string, fy: number, metric: Metric) => {
       const stored = storedMetrics.get(`${companyId}:${fy}`);
       if (!stored || !sameStoredValues(stored as any, { headcount: metric.headcount, it_users: metric.it_users })) return false;
       // numeric(18,3) reads back as '172.000' while the file gives '172': compared as decimals.

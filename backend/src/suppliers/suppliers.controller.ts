@@ -15,7 +15,7 @@ import { SupplierUpsertDto } from './dto/supplier.dto';
 import { SupplierContactsService } from './supplier-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { languageOf, parseDateOrder, parseDecimalMark, parseImportMode } from '../common/csv-sheet';
 import { readSupplierUsages } from './supplier-usages';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
@@ -120,8 +120,11 @@ export class SuppliersController {
     @Query('language') languageRaw: string | undefined,
     @Query('dateOrder') dateOrderRaw: string | undefined,
     @Query('decimalMark') decimalMarkRaw: string | undefined,
+    @Query('mode') modeRaw: string | undefined,
     @Req() req: any,
   ) {
+    // Refused before any work: an unknown mode is a 400.
+    const mode = parseImportMode(modeRaw);
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
     const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
     return this.svc.importCsv(
@@ -132,6 +135,7 @@ export class SuppliersController {
         language,
         dateOrder: parseDateOrder(dateOrderRaw),
         decimalMark: parseDecimalMark(decimalMarkRaw),
+        mode,
       },
       { manager: req?.queryRunner?.manager },
     );

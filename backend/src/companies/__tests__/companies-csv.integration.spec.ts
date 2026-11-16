@@ -235,10 +235,16 @@ async function testOptionalYearColumns() {
       true,
       [...BASE_HEADERS, `headcount_${YEAR}`],
     );
-    assert.equal(partial.ok, false, 'a partial year block is refused');
-    assert.equal(partial.errors[0]?.code, 'CSV_HEADER_MISSING_COLUMNS');
-    assert.match(partial.errors[0]?.message ?? '', new RegExp(`it_users_${YEAR}`));
-    assert.match(partial.errors[0]?.message ?? '', new RegExp(`turnover_${YEAR}`));
+    // A year's columns may come one at a time (lot I4 of 26.11.9): the absent ones are never written.
+    assert.equal(partial.ok, true, `a partial year block loads: ${JSON.stringify(partial.errors)}`);
+    const headcountOnly = await run([company({ name: 'One year', [`headcount_${YEAR}`]: '10' })], false, [...BASE_HEADERS, `headcount_${YEAR}`]);
+    assert.equal(headcountOnly.ok, true, JSON.stringify(headcountOnly.errors));
+    const kept = await runner.query(
+      `SELECT m.headcount, m.it_users, m.turnover::float AS turnover FROM companies c JOIN company_metrics m ON m.company_id = c.id
+        WHERE c.tenant_id = $1 AND c.name = 'One year'`,
+      [tenantId],
+    );
+    assert.deepEqual(kept, [{ headcount: 10, it_users: 2, turnover: 1.5 }], 'the absent columns of a year keep the stored values');
 
     const missingName = await run([company({ name: 'X' })], true, BASE_HEADERS.filter((header) => header !== 'name'));
     assert.equal(missingName.ok, false);

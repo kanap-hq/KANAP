@@ -12,12 +12,16 @@ import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AccountUpsertDto } from './dto/account.dto';
 import {
   cellOf,
+  CsvDataRow,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   ImportReportError,
+  keepsStoredValue,
   readMasterDataFile,
   rowProblemErrors,
+  storedRecordValues,
 } from '../common/csv-sheet';
 import {
   AccountAuditRow,
@@ -43,18 +47,6 @@ import type { ExportFileFormat } from '../common/xlsx/format';
 const ACCOUNTS_SHEET = { en: 'Accounts', fr: 'Comptes', de: 'Konten', es: 'Cuentas' };
 
 const ACCOUNT_NUMBER_TOKEN = '__account_number__';
-
-/** The columns an account file may leave out: an absent column keeps what is stored (a new account takes the defaults). */
-const OPTIONAL_CSV_HEADERS = [
-  'native_name',
-  'description',
-  'consolidation_account_number',
-  'consolidation_account_name',
-  'consolidation_account_description',
-  'status',
-  // Older files have no `nature` column either.
-  'nature',
-];
 
 /**
  * `where.account_number` for a grid filter on it: the column is an integer, so
@@ -817,6 +809,7 @@ export class AccountsService {
       language,
       dateOrder,
       decimalMark,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -824,6 +817,11 @@ export class AccountsService {
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /**
+       * What a row does to an account it updates (`CsvImportMode`); without it, `replace`, as the
+       * chart templates load.
+       */
+      mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager; targetCoaId?: string | undefined; allowCoaCodeColumn?: boolean; updateExisting?: boolean },
   ) {
@@ -834,7 +832,9 @@ export class AccountsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
-      optional: OPTIONAL_CSV_HEADERS,
+      // A row finds its account by its number (and its chart's code, in a file of several charts):
+      // any other column may be absent, and is then never written.
+      keys: [opts?.allowCoaCodeColumn ? ['coa_code', 'account_number'] : ['account_number']],
       language: readLanguage,
       dateOrder,
       decimalMark,
@@ -853,6 +853,8 @@ export class AccountsService {
     // Validate and normalize
     const repo = this.getRepo(opts?.manager);
     const normalized: (AccountUpsertDto & { account_number: string })[] = [];
+    // Each row, with its line, for the values a stored account keeps (`storedRecordValues`).
+    const rowOf = new Map<object, CsvDataRow>();
     const coaCodes: Set<string> = new Set();
     read.rows.forEach((row) => {
       const line = row.line;
@@ -877,7 +879,11 @@ export class AccountsService {
         errors.push({ row: line, message: 'account_number is required and must be an integer', code: 'CSV_ACCOUNT_NUMBER_REQUIRED' });
       }
       if (numberCell.leadingZeros) warnings.push(numberCell.leadingZeros);
-      if (!name) errors.push({ row: line, message: 'account_name is required', code: 'CSV_ACCOUNT_NAME_REQUIRED' });
+      // A blank name the row would write is refused here; one a stored account may keep (`enrich`,
+      // or the column absent) once the row is matched.
+      if (!name && !keepsStoredValue(row, read.present, 'account_name', mode)) {
+        errors.push({ row: line, message: 'account_name is required', code: 'CSV_ACCOUNT_NAME_REQUIRED' });
+      }
       if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
         errors.push({
           row: line,
@@ -909,7 +915,7 @@ export class AccountsService {
       }
       // An absent column stays undefined: an update keeps the stored value, a new account takes the default.
       const text = (column: string) => (has(column) ? cellOf(row, column) || null : undefined);
-      normalized.push({
+      const item = {
         account_number: String(account_number ?? ''),
         account_name: name,
         native_name: text('native_name'),
@@ -919,7 +925,9 @@ export class AccountsService {
         consolidation_account_description: text('consolidation_account_description'),
         ...(has('status') ? { status: statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED } : {}),
         ...(has('nature') ? { nature: nature ?? null } : {}),
-      });
+      };
+      normalized.push(item);
+      rowOf.set(item, row);
     });
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
@@ -956,13 +964,24 @@ export class AccountsService {
     const existingByNumber = new Map(
       (await repo.find({ where: { coa_id: targetCoaId } as any })).map((account) => [String(account.account_number), account]),
     );
+    // The name cannot be empty: a new account needs one, a stored account keeps its own.
+    for (const item of normalized) {
+      if (item.account_name || existingByNumber.has(item.account_number)) continue;
+      errors.push({ row: rowOf.get(item)!.line, message: 'account_name is required', code: 'CSV_ACCOUNT_NAME_REQUIRED' });
+    }
+    if (errors.length > 0) {
+      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    }
     // Count inserts, updates and the rows identical to the stored account, which are not written.
+    // A stored account takes only the values the row writes: an absent column, or a blank cell when
+    // completing, keeps the stored value, the status included.
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
     const toWrite: AccountUpsertDto[] = [];
-    for (const item of unique) {
-      const existing = existingByNumber.get(item.account_number as string);
+    for (const fileItem of unique) {
+      const existing = existingByNumber.get(fileItem.account_number as string);
+      const item = existing ? storedRecordValues(fileItem, rowOf.get(fileItem)!, read.present, mode) : fileItem;
       if (!existing) inserted += 1;
       else if (importRowUnchanged(existing, item)) {
         unchanged += 1;

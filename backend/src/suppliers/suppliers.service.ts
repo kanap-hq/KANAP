@@ -15,17 +15,21 @@ import { parseReferenceNumber } from '../common/parse-item-number';
 import { sortedFindQuery } from '../common/list-sort';
 import {
   cellOf,
+  CsvDataRow,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   endOfValidityOf,
   keepStoredEndOfValidity,
   ImportReportError,
+  keepsStoredValue,
   nameMatchedWarning,
   readMasterDataFile,
   referenceRenameWarning,
   rowError,
   rowProblemErrors,
+  storedRecordValues,
 } from '../common/csv-sheet';
 import { csvLifecycleConflict } from '../spend/item-write.util';
 import { duplicateNameException } from '../common/duplicate-name';
@@ -37,8 +41,8 @@ import { SUPPLIER_FILE_COLUMNS, SUPPLIER_CSV_HEADERS } from './supplier-csv-head
 /** The contact columns of the file: one e-mail per contact type. */
 const CONTACT_COLUMNS = ['commercial_contact', 'technical_contact', 'support_contact'] as const;
 
-/** Columns a file may leave out: `disabled_at` and `reference` came after the first exports. */
-const OPTIONAL_CSV_HEADERS = ['reference', 'disabled_at'];
+/** The columns a row finds its supplier by: its reference, else its name. A file may leave out any other. */
+const KEY_CSV_HEADERS = [['reference'], ['name']] as const;
 
 const SORT_ALIAS = 'supplier';
 
@@ -334,6 +338,7 @@ export class SuppliersService {
       language,
       dateOrder,
       decimalMark,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -341,6 +346,8 @@ export class SuppliersService {
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /** What a row does to a supplier it updates (`CsvImportMode`); without it, `replace`. */
+      mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager },
   ) {
@@ -353,7 +360,7 @@ export class SuppliersService {
       fields: expectedHeaders,
       fieldLabels: SUPPLIER_CSV_HEADERS,
       dateFields: ['disabled_at'],
-      optional: OPTIONAL_CSV_HEADERS,
+      keys: KEY_CSV_HEADERS,
       language: readLanguage,
       dateOrder,
       decimalMark,
@@ -371,6 +378,8 @@ export class SuppliersService {
     let updated = 0;
     const normalized: Array<{
       line: number;
+      row: CsvDataRow;
+      /** The row's values for a new supplier; a stored one takes those `storedRecordValues` keeps. */
       body: SupplierUpsertDto;
       /** The reference cell, when filled: the supplier the row updates. */
       reference: string | null;
@@ -395,8 +404,12 @@ export class SuppliersService {
       }
       const name = cellOf(row, 'name');
       const statusRaw = cellOf(row, 'status').toLowerCase();
-      if (!name) errors.push({ row: line, column: 'name', message: 'Name is required', code: 'CSV_VALUE_REQUIRED' });
-      else {
+      // A row with a reference may leave the name to the stored one (`enrich`): decided once matched.
+      if (!name) {
+        if (!cellOf(row, 'reference') || !keepsStoredValue(row, read.present, 'name', mode)) {
+          errors.push({ row: line, column: 'name', message: 'Name is required', code: 'CSV_VALUE_REQUIRED' });
+        }
+      } else {
         const firstRow = firstLineByName.get(name.toLowerCase());
         if (firstRow === undefined) firstLineByName.set(name.toLowerCase(), line);
         else {
@@ -455,6 +468,7 @@ export class SuppliersService {
       }
       normalized.push({
         line,
+        row,
         body,
         reference: cellOf(row, 'reference') || null,
         commercial_email: emails.commercial_contact,
@@ -516,9 +530,11 @@ export class SuppliersService {
     const firstLineById = new Map<string, number>();
     for (const item of unique) {
       const name = item.body.name as string;
-      const sameName = await repo.createQueryBuilder(SORT_ALIAS)
-        .where(`${SORT_ALIAS}.tenant_id = app_current_tenant() AND lower(${SORT_ALIAS}.name) = lower(:name)`, { name })
-        .getOne();
+      const sameName = name
+        ? await repo.createQueryBuilder(SORT_ALIAS)
+          .where(`${SORT_ALIAS}.tenant_id = app_current_tenant() AND lower(${SORT_ALIAS}.name) = lower(:name)`, { name })
+          .getOne()
+        : null;
       if (item.target && sameName && sameName.id !== item.target.id) {
         errors.push(rowError(item.line, 'name', 'CSV_VALUE_TAKEN', `'${name}' is already the name of ${supplierReference(sameName.item_number)}.`,
           { value: name, reference: supplierReference(sameName.item_number) }));
@@ -539,17 +555,25 @@ export class SuppliersService {
         continue;
       }
       firstLineById.set(existing.id, item.line);
+      // The name cannot be emptied: a blank name keeps the stored one only when the row completes.
+      if (!name && !keepsStoredValue(item.row, read.present, 'name', mode)) {
+        errors.push({ row: item.line, column: 'name', message: 'Name is required', code: 'CSV_VALUE_REQUIRED' });
+        continue;
+      }
       // A file from another workspace names unrelated suppliers by the same references: the check
       // says each name a reference changes (D12).
-      if (item.reference) {
+      if (item.reference && name) {
         const renamed = referenceRenameWarning(item.line, { family: 'supplier', reference: supplierReference(existing.item_number), stored: existing.name, next: name });
         if (renamed) warnings.push(renamed);
       }
-      // The stored end of validity's day keeps its time of day: the export writes the day only.
+      // A stored supplier takes only the values the row writes: an absent column, or a blank cell
+      // when completing, keeps the stored value, the status included. The stored end of
+      // validity's day keeps its time of day: the export writes the day only.
+      const written = storedRecordValues(item.body, item.row, read.present, mode);
       item.body = {
-        ...item.body,
-        name: item.reference ? name : existing.name,
-        disabled_at: keepStoredEndOfValidity(existing.disabled_at, item.body.disabled_at),
+        ...written,
+        ...(written.name !== undefined ? { name: item.reference ? name : existing.name } : {}),
+        ...(written.disabled_at !== undefined ? { disabled_at: keepStoredEndOfValidity(existing.disabled_at, written.disabled_at) } : {}),
       };
     }
     if (errors.length > 0) {

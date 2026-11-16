@@ -36,7 +36,9 @@ export {
 } from './master-data';
 export { csvSeparatorOf, readCsv, readImportText, readSheet, sheetCellText } from './read';
 export type { ImportFileText, SheetCell, SheetReadResult } from './read';
-export { languageOf, parseDateOrder, parseDecimalMark, timeZoneOf } from './request-options';
+export { keepsStoredValue, storedRecordValues } from './import-mode';
+export type { CsvImportMode } from './import-mode';
+export { languageOf, parseDateOrder, parseDecimalMark, parseImportMode, ROUTE_IMPORT_MODE, timeZoneOf } from './request-options';
 export { writeCsv, writeCsvHeader, writeCsvLine, writeCsvRows } from './write';
 export {
   BUDGET_AMOUNT_COLUMNS,

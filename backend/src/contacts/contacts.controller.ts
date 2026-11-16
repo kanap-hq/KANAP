@@ -7,7 +7,7 @@ import { ContactsService } from './contacts.service';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
-import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { languageOf, parseDateOrder, parseDecimalMark, parseImportMode } from '../common/csv-sheet';
 import { ContactUpsertDto } from './dto/contact.dto';
 import { ContactsDeleteService } from './contacts-delete.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
@@ -118,12 +118,15 @@ export class ContactsController {
     @Query('language') languageRaw: string | undefined,
     @Query('dateOrder') dateOrderRaw: string | undefined,
     @Query('decimalMark') decimalMarkRaw: string | undefined,
+    @Query('mode') modeRaw: string | undefined,
     @Req() req: any,
   ) {
+    // Refused before any work: an unknown mode is a 400.
+    const mode = parseImportMode(modeRaw);
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
     const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
     return this.svc.importCsv(
-      { file, dryRun, language, dateOrder: parseDateOrder(dateOrderRaw), decimalMark: parseDecimalMark(decimalMarkRaw) },
+      { file, dryRun, language, dateOrder: parseDateOrder(dateOrderRaw), decimalMark: parseDecimalMark(decimalMarkRaw), mode },
       { manager: req?.queryRunner?.manager, tenantId: req.tenant.id },
     );
   }

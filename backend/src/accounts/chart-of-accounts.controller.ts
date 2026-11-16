@@ -10,7 +10,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
 import { Response } from 'express';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { languageOf, parseDateOrder, parseDecimalMark, parseImportMode } from '../common/csv-sheet';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
@@ -158,8 +158,11 @@ export class ChartOfAccountsController {
     @Query('language') languageRaw: string | undefined,
     @Query('dateOrder') dateOrderRaw: string | undefined,
     @Query('decimalMark') decimalMarkRaw: string | undefined,
+    @Query('mode') modeRaw: string | undefined,
     @Req() req: any,
   ) {
+    // Refused before any work: an unknown mode is a 400.
+    const mode = parseImportMode(modeRaw);
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
     const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
     return this.svc.importAccountsCsv(id, file, dryRun, req.user?.sub ?? null, {
@@ -167,6 +170,7 @@ export class ChartOfAccountsController {
       language,
       dateOrder: parseDateOrder(dateOrderRaw),
       decimalMark: parseDecimalMark(decimalMarkRaw),
+      mode,
     });
   }
 

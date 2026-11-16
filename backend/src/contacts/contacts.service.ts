@@ -14,15 +14,19 @@ import {
   formatCsvBoolean,
   parseCsvBoolean,
   cellOf,
+  CsvDataRow,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   ImportReportError,
+  keepsStoredValue,
   readMasterDataFile,
   referenceEmailWarning,
   referenceRenameWarning,
   rowError,
   rowProblemErrors,
+  storedRecordValues,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { assertSetFilterModes, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type FilterTargetConfig } from '../common/ag-grid-filtering';
@@ -486,12 +490,15 @@ export class ContactsService {
       language,
       dateOrder,
       decimalMark,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /** What a row does to a contact it updates (`CsvImportMode`); without it, `replace`. */
+      mode?: CsvImportMode;
     },
     opts: TenantOpts,
   ) {
@@ -499,8 +506,8 @@ export class ContactsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: this.csvHeaders(),
-      // A file from before the reference column still imports.
-      optional: ['reference'],
+      // A row finds its contact by its reference, else its e-mail: a file may leave out any other column.
+      keys: [['reference'], ['email']],
       language: language ?? 'en',
       dateOrder,
       decimalMark,
@@ -514,8 +521,11 @@ export class ContactsService {
 
     // Validate + normalize
     type Norm = Partial<ExternalContact> & { email: string };
-    /** A row: its values, its line, and its reference cell when filled. */
-    const normalized: Array<{ item: Norm; line: number; reference: string | null }> = [];
+    /**
+     * A row: its values for a new contact (a stored one takes those `storedRecordValues` keeps),
+     * its line, and its reference cell when filled.
+     */
+    const normalized: Array<{ item: Norm; line: number; reference: string | null; row: CsvDataRow }> = [];
     for (const row of read.rows) {
       const line = row.line;
       const problems = rowProblemErrors(row);
@@ -524,7 +534,8 @@ export class ContactsService {
         continue;
       }
       const email = cellOf(row, 'email').toLowerCase();
-      if (!email) { errors.push(rowError(line, 'email', 'CSV_VALUE_REQUIRED', 'email is required')); continue; }
+      // A row with a reference may leave the e-mail to the stored one (`enrich`): decided once matched.
+      if (!email && (!cellOf(row, 'reference') || !keepsStoredValue(row, read.present, 'email', mode))) { errors.push(rowError(line, 'email', 'CSV_VALUE_REQUIRED', 'email is required')); continue; }
       // Yes or no in any language, or the true/false of older files; blank keeps the default.
       const activeCell = parseCsvBoolean(cellOf(row, 'active'));
       if (activeCell === undefined) { errors.push(rowError(line, 'active', 'CSV_BOOLEAN_INVALID', 'invalid active value', { value: cellOf(row, 'active') })); continue; }
@@ -533,6 +544,7 @@ export class ContactsService {
       if (country && country.length !== 2) { errors.push(rowError(line, 'country', 'CSV_COUNTRY_INVALID', 'country must be 2-letter ISO code', { value: country })); continue; }
       normalized.push({
         line,
+        row,
         reference: cellOf(row, 'reference') || null,
         item: {
           email,
@@ -576,7 +588,7 @@ export class ContactsService {
     const kept = normalized;
 
     // Emails are stored lower-cased (create, update and this import), so one read finds every existing contact.
-    const emails = [...new Set(kept.map((row) => row.item.email))];
+    const emails = [...new Set(kept.map((row) => row.item.email).filter(Boolean))];
     const existingRows = emails.length > 0
       ? await repo.find({ where: { tenant_id: opts.tenantId, email: In(emails) as any } })
       : [];
@@ -590,7 +602,12 @@ export class ContactsService {
     const warnings: ImportReportError[] = [];
     for (const row of kept) {
       const target = targetOf.get(row.line);
-      const holder = existingByEmail.get(row.item.email);
+      // The e-mail cannot be emptied: a blank one keeps the stored address only when the row completes.
+      if (target && !row.item.email && !keepsStoredValue(row.row, read.present, 'email', mode)) {
+        errors.push(rowError(row.line, 'email', 'CSV_VALUE_REQUIRED', 'email is required'));
+        continue;
+      }
+      const holder = row.item.email ? existingByEmail.get(row.item.email) : undefined;
       if (target && holder && holder.id !== target.id) {
         const reference = contactReference(holder.item_number);
         errors.push(rowError(row.line, 'email', 'CSV_VALUE_TAKEN', `'${row.item.email}' is already the email of ${reference}.`, { value: row.item.email, reference }));
@@ -604,24 +621,27 @@ export class ContactsService {
           `This row updates ${reference}, as row ${firstRow} does. Keep one row per contact.`, { reference, firstRow }));
         continue;
       }
-      const firstEmailRow = firstLineByEmail.get(row.item.email);
+      const firstEmailRow = row.item.email ? firstLineByEmail.get(row.item.email) : undefined;
       if (firstEmailRow !== undefined) {
         errors.push(rowError(row.line, 'email', 'CSV_DUPLICATE_KEY', `Same email as row ${firstEmailRow}.`, { columns: 'email', firstRow: firstEmailRow }));
         continue;
       }
       if (existing) firstLineById.set(existing.id, row.line);
-      firstLineByEmail.set(row.item.email, row.line);
+      if (row.item.email) firstLineByEmail.set(row.item.email, row.line);
+      // A stored contact takes only the values the row writes: an absent column, or a blank cell
+      // when completing, keeps the stored value, `active` included.
+      const item = (existing ? storedRecordValues(row.item, row.row, read.present, mode) : row.item) as Norm;
       if (target) {
         const reference = contactReference(target.item_number);
         const stored = contactName(target);
-        const next = contactName(row.item);
+        const next = contactName({ ...target, ...item });
         // A contact without a name, or a row that leaves the names empty, renames nothing a person reads.
         const renamed = stored && next ? referenceRenameWarning(row.line, { family: 'contact', reference, stored, next }) : null;
         if (renamed) warnings.push(renamed);
-        const readdressed = referenceEmailWarning(row.line, { reference, name: stored || target.email, stored: target.email, next: row.item.email });
+        const readdressed = item.email ? referenceEmailWarning(row.line, { reference, name: stored || target.email, stored: target.email, next: item.email }) : null;
         if (readdressed) warnings.push(readdressed);
       }
-      toCompare.push({ item: row.item, existing });
+      toCompare.push({ item, existing });
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
 

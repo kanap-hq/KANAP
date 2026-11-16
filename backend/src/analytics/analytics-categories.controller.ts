@@ -21,7 +21,7 @@ import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
-import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { languageOf, parseDateOrder, parseDecimalMark, parseImportMode } from '../common/csv-sheet';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { csvImportMulterOptions } from '../common/upload';
 import { AnalyticsCategoriesCsvService } from './analytics-categories-csv.service';
@@ -162,8 +162,11 @@ export class AnalyticsCategoriesController {
     @Query('language') languageRaw: string | undefined,
     @Query('dateOrder') dateOrderRaw: string | undefined,
     @Query('decimalMark') decimalMarkRaw: string | undefined,
+    @Query('mode') modeRaw: string | undefined,
     @Tenant() ctx: TenantRequest,
   ) {
+    // Refused before any work: an unknown mode is a 400.
+    const mode = parseImportMode(modeRaw);
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
     const caller = analyticsContext(ctx);
     const language = await languageOf(caller.manager, caller.tenantId, caller.userId ?? null, languageRaw);
@@ -174,6 +177,7 @@ export class AnalyticsCategoriesController {
         language,
         dateOrder: parseDateOrder(dateOrderRaw),
         decimalMark: parseDecimalMark(decimalMarkRaw),
+        mode,
       },
       caller,
     );

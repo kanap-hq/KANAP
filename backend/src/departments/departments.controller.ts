@@ -14,7 +14,7 @@ import { DepartmentUpsertDto } from './dto/department.dto';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { EntityManager } from 'typeorm';
-import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { languageOf, parseDateOrder, parseDecimalMark, parseImportMode } from '../common/csv-sheet';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
@@ -125,8 +125,11 @@ export class DepartmentsController {
     @Query('language') languageRaw: string | undefined,
     @Query('dateOrder') dateOrderRaw: string | undefined,
     @Query('decimalMark') decimalMarkRaw: string | undefined,
+    @Query('mode') modeRaw: string | undefined,
     @Tenant() ctx: TenantRequest,
   ) {
+    // Refused before any work: an unknown mode is a 400.
+    const mode = parseImportMode(modeRaw);
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
     return this.svc.importCsv(
@@ -137,6 +140,7 @@ export class DepartmentsController {
         language,
         dateOrder: parseDateOrder(dateOrderRaw),
         decimalMark: parseDecimalMark(decimalMarkRaw),
+        mode,
       },
       { manager: ctx.manager },
     );

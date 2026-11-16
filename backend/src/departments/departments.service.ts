@@ -27,18 +27,22 @@ import { DepartmentUpsertDto } from './dto/department.dto';
 import { duplicateNameException } from '../common/duplicate-name';
 import {
   cellOf,
+  CsvDataRow,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   endOfValidityOf,
   keepStoredEndOfValidity,
   ImportReportError,
+  keepsStoredValue,
   nameMatchedWarning,
   referenceMoveWarning,
   referenceRenameWarning,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
+  storedRecordValues,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
 import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
@@ -576,6 +580,7 @@ export class DepartmentsService {
       language,
       dateOrder,
       decimalMark,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -583,6 +588,8 @@ export class DepartmentsService {
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /** What a row does to a department it updates (`CsvImportMode`); without it, `replace`. */
+      mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager },
   ) {
@@ -593,7 +600,8 @@ export class DepartmentsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
-      optional: ['reference'],
+      // A row finds its department by its reference, else its company and name: any other column may be absent.
+      keys: [['reference'], ['company_name', 'name']],
       dateFields: ['disabled_at'],
       language: readLanguage,
       dateOrder,
@@ -632,6 +640,7 @@ export class DepartmentsService {
     const lineOf = new Map<object, number>();
     // The number of the department a row names in the reference column (`DEPT-12` or `12`).
     const referenceOf = new Map<object, number>();
+    const rowOf = new Map<object, CsvDataRow>();
     const firstLineByReference = new Map<number, number>();
     for (const row of read.rows) {
       const line = row.line;
@@ -663,8 +672,10 @@ export class DepartmentsService {
         : null;
       const disabledAtRaw = cellOf(row, 'disabled_at');
       let disabled_at_iso: string | null = null;
-      if (!company_name) errors.push(rowError(line, 'company_name', 'CSV_VALUE_REQUIRED', 'company_name is required'));
-      if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
+      // A row with a reference may leave its company and name to the stored ones (`enrich`): decided once matched.
+      const writes = (column: string) => reference === null || !keepsStoredValue(row, read.present, column, mode);
+      if (!company_name && writes('company_name')) errors.push(rowError(line, 'company_name', 'CSV_VALUE_REQUIRED', 'company_name is required'));
+      if (!name && writes('name')) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
       if (statusRaw && !statusValue) {
         errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.`, { value: statusRaw, allowed: 'enabled, disabled' }));
         continue;
@@ -682,21 +693,26 @@ export class DepartmentsService {
         errors.push(rowError(line, 'status', statusValue === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
         continue;
       }
+      // '': the company of the department the reference names.
+      let companyId = '';
       if (company_name) {
         const comp = await findCompanyByName(company_name);
-        if (!comp) errors.push(rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown company '${company_name}'`, { value: company_name }));
-        else {
-          const item = {
-            company_id: comp.id,
-            name,
-            description: cellOf(row, 'description') || null,
-            lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
-          };
-          normalized.push(item);
-          lineOf.set(item, line);
-          if (reference !== null) referenceOf.set(item, reference);
+        if (!comp) {
+          errors.push(rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown company '${company_name}'`, { value: company_name }));
+          continue;
         }
-      }
+        companyId = comp.id;
+      } else if (reference === null) continue;
+      const item = {
+        company_id: companyId,
+        name,
+        description: cellOf(row, 'description') || null,
+        lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
+      };
+      normalized.push(item);
+      lineOf.set(item, line);
+      rowOf.set(item, row);
+      if (reference !== null) referenceOf.set(item, reference);
     }
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
@@ -719,7 +735,7 @@ export class DepartmentsService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
-    const toWrite: Array<{ item: (typeof unique)[number]; existing: Department | null }> = [];
+    const toWrite: Array<{ item: Partial<(typeof unique)[number]> & Pick<(typeof unique)[number], 'lifecycle'>; existing: Department | null }> = [];
     // Otherwise a row matches the company's department of the same name whatever its case
     // ("FINANCE" updates "Finance"): the stored spelling stays, and the report says which
     // department the row matched.
@@ -729,37 +745,48 @@ export class DepartmentsService {
     for (const fileItem of unique) {
       const line = lineOf.get(fileItem) ?? 0;
       const reference = referenceOf.get(fileItem);
+      const row = rowOf.get(fileItem)!;
+      const byRef = reference !== undefined ? byReference.get(reference) ?? null : null;
+      if (reference !== undefined && !byRef) {
+        errors.push(rowError(line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"DEPT-${reference}" is no reference in this workspace.`, { value: `DEPT-${reference}` }));
+        continue;
+      }
+      // A blank company or name of a row with a reference keeps the stored one only when the row completes.
+      const blanks = ([['company_name', fileItem.company_id], ['name', fileItem.name]] as const)
+        .filter(([column, value]) => !value && !keepsStoredValue(row, read.present, column, mode));
+      if (blanks.length > 0) {
+        for (const [column] of blanks) errors.push(rowError(line, column, 'CSV_VALUE_REQUIRED', `${column} is required`));
+        continue;
+      }
+      const companyId = fileItem.company_id || byRef!.company_id;
+      const fileName = fileItem.name || byRef!.name;
       const sameName = await repo.createQueryBuilder('d')
-        .where('d.company_id = :companyId AND lower(d.name) = lower(:name)', { companyId: fileItem.company_id, name: fileItem.name })
+        .where('d.company_id = :companyId AND lower(d.name) = lower(:name)', { companyId, name: fileName })
         .getOne();
       let existing: Department | null = sameName;
-      if (reference !== undefined) {
-        existing = byReference.get(reference) ?? null;
-        if (!existing) {
-          errors.push(rowError(line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"DEPT-${reference}" is no reference in this workspace.`, { value: `DEPT-${reference}` }));
-          continue;
-        }
+      if (byRef) {
+        existing = byRef;
         if (sameName && sameName.id !== existing.id) {
-          errors.push(rowError(line, 'name', 'CSV_VALUE_TAKEN', `"${fileItem.name}" already belongs to DEPT-${sameName.item_number}.`, { value: fileItem.name, reference: `DEPT-${sameName.item_number}` }));
+          errors.push(rowError(line, 'name', 'CSV_VALUE_TAKEN', `"${fileName}" already belongs to DEPT-${sameName.item_number}.`, { value: fileName, reference: `DEPT-${sameName.item_number}` }));
           continue;
         }
         const ref = `DEPT-${existing.item_number}`;
-        const renamed = referenceRenameWarning(line, { family: 'department', reference: ref, stored: existing.name, next: fileItem.name });
+        const renamed = referenceRenameWarning(line, { family: 'department', reference: ref, stored: existing.name, next: fileName });
         if (renamed) warnings.push(renamed);
-        if (existing.company_id !== fileItem.company_id) {
+        if (existing.company_id !== companyId) {
           const moved = referenceMoveWarning(line, {
             parent: 'company',
             reference: ref,
             name: existing.name,
             storedParentId: existing.company_id,
-            nextParentId: fileItem.company_id,
+            nextParentId: companyId,
             from: await companyNameOf(existing.company_id),
-            to: await companyNameOf(fileItem.company_id),
+            to: await companyNameOf(companyId),
           });
           if (moved) warnings.push(moved);
         }
       } else if (existing) {
-        const warning = nameMatchedWarning(line, 'name', fileItem.name, existing.name);
+        const warning = nameMatchedWarning(line, 'name', fileName, existing.name);
         if (warning) warnings.push(warning);
       }
       if (existing) {
@@ -772,18 +799,25 @@ export class DepartmentsService {
       }
       // Each company and name the file writes, whatever the case, takes one row: a new department, a
       // rename or a move by reference onto the company and name of another row are refused.
-      const key = `${fileItem.company_id}|${fileItem.name.toLowerCase()}`;
+      const key = `${companyId}|${fileName.toLowerCase()}`;
       const firstNameRow = firstLineOfName.get(key);
       if (firstNameRow !== undefined) {
         errors.push(rowError(line, 'name', 'CSV_DUPLICATE_KEY', `Same company and name as row ${firstNameRow}.`, { columns: 'company_name, name', firstRow: firstNameRow }));
         continue;
       }
       firstLineOfName.set(key, line);
-      // The stored end of validity's day keeps its time of day: the export writes the day only.
+      // A stored department takes only the values the row writes: an absent column, or a blank cell
+      // when completing, keeps the stored value. The stored end of validity's day keeps its time
+      // of day: the export writes the day only.
       const item = existing
         ? {
-          ...fileItem,
-          name: reference !== undefined ? fileItem.name : existing.name,
+          ...storedRecordValues(
+            { company_id: fileItem.company_id, name: reference !== undefined ? fileItem.name : existing.name, description: fileItem.description },
+            row,
+            read.present,
+            mode,
+            { company_id: 'company_name' },
+          ),
           lifecycle: { ...fileItem.lifecycle, disabled_at: keepStoredEndOfValidity(existing.disabled_at, fileItem.lifecycle.disabled_at) },
         }
         : fileItem;

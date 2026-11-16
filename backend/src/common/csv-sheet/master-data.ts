@@ -30,6 +30,13 @@ export interface MasterDataFileRequest {
   /** Columns accepted when absent. Every other column, and every unknown one, is refused. */
   optional?: readonly string[];
   /**
+   * The columns a row finds its record by, or creates one by: each entry is one way (`[['reference'],
+   * ['name']]`). When set, the file must carry every column of one entry at least, and may leave out
+   * any other column of `fields`, which the import then never writes; `optional` is not read. An
+   * unknown column is refused as before. A file that carries none names the columns of the last entry.
+   */
+  keys?: readonly (readonly string[])[];
+  /**
    * An unknown header that stays in `ignoredColumns` and does not refuse the file.
    * Any other unknown header still does.
    */
@@ -114,8 +121,12 @@ function headerProblem(
   if (read.headerErrors.length > 0) return { row: 0, message: read.headerErrors.join(' ') };
   const optional = new Set(request.optional ?? []);
   const present = new Set(read.columns.map((column) => column.id));
-  const missing = request.fields
-    .filter((field) => !optional.has(field) && !present.has(field))
+  const keys = request.keys;
+  const wanted = keys
+    ? (keys.some((entry) => entry.every((field) => present.has(field))) ? [] : keys[keys.length - 1] ?? [])
+    : request.fields.filter((field) => !optional.has(field));
+  const missing = wanted
+    .filter((field) => !present.has(field))
     .map((field) => request.fieldLabels?.[field]?.[request.language] ?? field);
   const notice = request.noticeUnknown;
   const extras = notice ? read.ignoredColumns.filter((header) => !notice(header)) : read.ignoredColumns;
