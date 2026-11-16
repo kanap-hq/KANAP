@@ -61,8 +61,13 @@ export function Line({ text, children, danger, muted, kad, tooltip, action, acti
     </Typography>
   );
   const title = kad && tooltip ? <>{kad}<br />{tooltip}</> : (tooltip ?? kad);
-  const shown = title ? <Tooltip title={title} placement={under ? 'top-start' : 'bottom-start'}>{body}</Tooltip> : body;
   const links = actions ?? (action ? [action] : []);
+  // A line's controls may wrap under its text: its tooltip opens above it, and lets the pointer
+  // through, so that it never covers an action (lot I3 of 26.11.9, correctifs G).
+  const controls = !!under || links.length > 0 || !!after;
+  const shown = title
+    ? <Tooltip title={title} placement={controls ? 'top-start' : 'bottom-start'} disableInteractive>{body}</Tooltip>
+    : body;
   if (under) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', rowGap: 0.25, mt: 0.75 }}>
