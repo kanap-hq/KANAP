@@ -32,8 +32,9 @@ function ownersField(field: 'owners_business' | 'owners_it', label: string): Bul
 /**
  * The fields "Change the selection" changes on applications (`POST /applications/bulk-update`, lot F2
  * of 26.11.8): business owners and IT owners (the people picked replace that role's, as on the
- * application page; emptied, the role has nobody), lifecycle (never empty) and business criticality
- * (the levels still offered, as on the application page; may be emptied).
+ * application page; emptied, the role has nobody), category (the categories still offered, never
+ * empty; decision D15 of 26.11.9), lifecycle (never empty), business and cyber criticality (the
+ * levels still offered, as on the application page; may be emptied).
  */
 export function useApplicationBulkFields(): BulkEditField[] {
   const { t } = useTranslation(['it', 'common']);
@@ -44,12 +45,22 @@ export function useApplicationBulkFields(): BulkEditField[] {
     const lifecycleOptions = (byField.lifecycleStatus || [])
       .filter((option) => typeof option.code === 'string' && option.code.trim() !== '')
       .map((option) => ({ value: option.code, label: option.label || option.code }));
-    const criticalityOptions = (catalog?.businessCriticalityLevels || [])
-      .filter((level) => !level.deprecated)
-      .map((level) => ({ value: level.code, label: level.label }));
+    const offered = (options: ReadonlyArray<{ code: string; label?: string | null; deprecated?: boolean }> | undefined) => (options || [])
+      .filter((option) => !option.deprecated)
+      .map((option) => ({ value: option.code, label: option.label || option.code }));
+    const categoryOptions = offered(byField.applicationCategory);
+    const criticalityOptions = offered(catalog?.businessCriticalityLevels);
+    const cyberOptions = offered(catalog?.cyberCriticalityLevels);
     return [
       ownersField('owners_business', t('pages.applications.columns.businessOwners')),
       ownersField('owners_it', t('pages.applications.columns.itOwners')),
+      {
+        key: 'category',
+        label: t('pages.applications.columns.category'),
+        optional: false,
+        render: ({ value, onChange, label, disabled }) => <FlatSelect value={value} onChange={onChange} label={label} disabled={disabled} options={categoryOptions} />,
+        changes: (value) => ({ category: value }),
+      },
       {
         key: 'lifecycle',
         label: t('common.lifecycle'),
@@ -64,6 +75,13 @@ export function useApplicationBulkFields(): BulkEditField[] {
         render: ({ value, onChange, label, disabled }) => <FlatSelect value={value} onChange={onChange} label={label} disabled={disabled} options={criticalityOptions} />,
         changes: (value) => ({ criticality: value }),
       },
+      {
+        key: 'cyber_criticality',
+        label: classificationText('Cyber criticality'),
+        optional: true,
+        render: ({ value, onChange, label, disabled }) => <FlatSelect value={value} onChange={onChange} label={label} disabled={disabled} options={cyberOptions} />,
+        changes: (value) => ({ cyber_criticality: value }),
+      },
     ];
-  }, [byField.lifecycleStatus, catalog?.businessCriticalityLevels, t]);
+  }, [byField.applicationCategory, byField.lifecycleStatus, catalog?.businessCriticalityLevels, catalog?.cyberCriticalityLevels, t]);
 }

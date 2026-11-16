@@ -75,7 +75,7 @@ async function inTenant(fn: (ctx: Ctx) => Promise<void>, count = 5) {
 
 const opts = (ctx: Ctx, accessScope?: { userId: string }) => ({ manager: ctx.runner.manager, tenantId: ctx.tenantId, accessScope });
 
-async function column(ctx: Ctx, id: string, name: 'lifecycle' | 'criticality' | 'classification_revision'): Promise<string | null> {
+async function column(ctx: Ctx, id: string, name: 'lifecycle' | 'criticality' | 'category' | 'cyber_criticality' | 'classification_revision'): Promise<string | null> {
   const [row] = await ctx.runner.query(`SELECT ${name}::text AS value FROM applications WHERE id = $1`, [id]);
   return row?.value ?? null;
 }
@@ -167,6 +167,66 @@ const tests: Array<[string, () => Promise<void>]> = [
     assert.equal(Number(await column(ctx, first, 'classification_revision')), revision + 1, 'the classification changed: its review is due again');
   })],
 
+  ['the category and the cyber criticality on several applications, each with its history; the cyber criticality with its classification revision, emptied', () => inTenant(async (ctx) => {
+    const chosen = ctx.apps.slice(0, 3);
+    assert.equal(await column(ctx, chosen[0], 'category'), 'line_of_business', 'harness: the default category');
+    const dry = await ctx.svc.bulkUpdate({ ids: chosen, changes: { category: 'infrastructure' }, dry_run: true }, null, opts(ctx));
+    assert.equal(dry.changes, 3);
+    const category = await ctx.svc.bulkUpdate({ ids: chosen, changes: { category: 'infrastructure' }, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, null, opts(ctx));
+    assert.equal(category.changed, 3);
+    for (const id of chosen) assert.equal(await column(ctx, id, 'category'), 'infrastructure');
+    assert.equal(await column(ctx, ctx.apps[3], 'category'), 'line_of_business', 'an application not chosen is untouched');
+    for (const id of chosen) {
+      const rows = await ctx.runner.query(
+        `SELECT before_json->>'category' AS before, after_json->>'category' AS after FROM audit_log WHERE tenant_id = $1 AND table_name = 'applications' AND action = 'update' AND record_id = $2`,
+        [ctx.tenantId, id],
+      );
+      assert.deepEqual(rows, [{ before: 'line_of_business', after: 'infrastructure' }], 'the history of each application reads the change');
+    }
+    await assert.rejects(ctx.svc.bulkUpdate({ ids: chosen, changes: { category: null } }, null, opts(ctx)), /category cannot be emptied/);
+
+    const revision = Number(await column(ctx, chosen[0], 'classification_revision'));
+    const cyber = await ctx.svc.bulkUpdate({ ids: chosen, changes: { cyber_criticality: 'high' } }, null, opts(ctx));
+    assert.equal(cyber.changed, 3);
+    for (const id of chosen) assert.equal(await column(ctx, id, 'cyber_criticality'), 'high');
+    assert.equal(Number(await column(ctx, chosen[0], 'classification_revision')), revision + 1, 'the classification changed: its review is due again');
+    const [row] = await ctx.runner.query(
+      `SELECT after_json->>'cyber_criticality' AS after FROM audit_log WHERE tenant_id = $1 AND table_name = 'applications' AND record_id = $2 ORDER BY created_at DESC, id DESC LIMIT 1`,
+      [ctx.tenantId, chosen[1]],
+    );
+    assert.deepEqual(row, { after: 'high' }, 'the history reads the cyber criticality');
+    const cleared = await ctx.svc.bulkUpdate({ ids: chosen, changes: { cyber_criticality: null } }, null, opts(ctx));
+    assert.equal(cleared.changed, 3);
+    assert.equal(await column(ctx, chosen[2], 'cyber_criticality'), null);
+  })],
+
+  ['a category or a cyber criticality level no longer offered is refused, even by its code; nothing written', () => inTenant(async (ctx) => {
+    const ids = ctx.apps.slice(0, 2);
+    await ctx.runner.query(
+      `UPDATE tenants SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{it_ops}', COALESCE(metadata->'it_ops', '{}'::jsonb) || $2::jsonb) WHERE id = $1`,
+      [ctx.tenantId, JSON.stringify({
+        application_categories: [
+          { code: 'line_of_business', label: 'Line-of-business' },
+          { code: 'infrastructure', label: 'Infrastructure' },
+          { code: 'analytics', label: 'Analytics', deprecated: true },
+        ],
+        cyber_criticality_levels: [
+          { code: 'high', label: 'High', rank: 2 },
+          { code: 'legacy', label: 'Legacy', rank: 1, deprecated: true },
+        ],
+      })],
+    );
+    await assert.rejects(ctx.svc.bulkUpdate({ ids, changes: { category: 'analytics' }, dry_run: true }, null, opts(ctx)), (err: any) => err.status === 400 && /category must be one of line_of_business, infrastructure\.$/.test(err.message));
+    await assert.rejects(ctx.svc.bulkUpdate({ ids, changes: { category: 'Infrastructure' } }, null, opts(ctx)), /category must be one of/, 'the code, as the dialog sends it');
+    await assert.rejects(ctx.svc.bulkUpdate({ ids, changes: { cyber_criticality: 'legacy' } }, null, opts(ctx)), /cyber_criticality must be one of high or null/);
+    for (const id of ids) {
+      assert.equal(await column(ctx, id, 'category'), 'line_of_business', 'nothing written');
+      assert.equal(await column(ctx, id, 'cyber_criticality'), null, 'nothing written');
+    }
+    const offered = await ctx.svc.bulkUpdate({ ids, changes: { category: 'infrastructure' } }, null, opts(ctx));
+    assert.equal(offered.changed, 2, 'a category still offered is taken');
+  })],
+
   ['an optional field emptied: the criticality, the business owners', () => inTenant(async (ctx) => {
     const [first, second] = ctx.apps;
     await ctx.svc.bulkUpdate({ ids: [first, second], changes: { criticality: 'low' } }, null, opts(ctx));
@@ -212,6 +272,14 @@ const tests: Array<[string, () => Promise<void>]> = [
     assert.equal(await column(ctx, ctx.apps[1], 'lifecycle'), 'active', 'nothing written outside the scope');
     const all = await ctx.svc.bulkUpdate({ all: true, filters: {}, changes: { lifecycle: 'proposed' }, dry_run: true }, null, opts(ctx, scope));
     assert.deepEqual({ rows: all.rows, changes: all.changes, unchanged: all.unchanged, refused: all.refused }, { rows: 1, changes: 1, unchanged: 0, refused: {} }, 'the filter reaches their applications only');
+    // The category and the cyber criticality: the same scope.
+    for (const changes of [{ category: 'infrastructure' }, { cyber_criticality: 'high' }]) {
+      const field = Object.keys(changes)[0] as 'category' | 'cyber_criticality';
+      const written = await ctx.svc.bulkUpdate({ ids, changes }, null, opts(ctx, scope));
+      assert.deepEqual({ changed: written.changed, refused: written.refused }, { changed: 1, refused: { not_found: 2 } }, `${field}: their applications only`);
+      assert.equal(await column(ctx, ctx.apps[0], field), Object.values(changes)[0]);
+      assert.notEqual(await column(ctx, ctx.apps[1], field), Object.values(changes)[0], `${field}: nothing written outside the scope`);
+    }
   })],
 
   ['the list changes between the count and the write: 409, a swap included, nothing written', () => inTenant(async (ctx) => {
@@ -260,7 +328,7 @@ const tests: Array<[string, () => Promise<void>]> = [
     const deps = {
       manager: ctx.runner.manager,
       tenantId: ctx.tenantId,
-      values: async () => ({ lifecycle: ['active'], criticality: [] }),
+      values: async () => ({ category: [], lifecycle: ['active'], criticality: [], cyber_criticality: [] }),
       listIds: async (query: Record<string, unknown>) => ({ ids: many.slice(0, Number(query.limit)), total: many.length }),
       update: async () => undefined,
       replaceOwners: async () => undefined,

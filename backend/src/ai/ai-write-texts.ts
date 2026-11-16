@@ -1,3 +1,4 @@
+import { BULK_LIST_CHANGED_MESSAGE } from '../common/bulk-edit/bulk-edit';
 import type { EntityManager } from 'typeorm';
 import { PRODUCT_NAME } from '../config/product';
 
@@ -1504,7 +1505,26 @@ export const PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE =
 export const PREVIEW_IMPORT_CHECK_FAILED_MESSAGE =
   'The check of this file found errors, so nothing was imported. Correct the mapping or the file, then prepare the import again.';
 
+/**
+ * A card that met another budget operation of the workspace at its approval (a column copy, an
+ * import, a change in bulk on the screen: the 409 `operation_running` of `budget-locks.ts`): nothing
+ * was written and the card stays to approve.
+ */
+export const PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE =
+  'Another budget operation was running for this workspace, so nothing was changed. Approve it again once it has finished.';
+
 const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
+  // The list of a change in bulk changed between the card and its approval (`bulkListChanged`).
+  [BULK_LIST_CHANGED_MESSAGE]: {
+    fr: 'La liste a changé depuis le comptage : demandez une nouvelle carte à Kad.',
+    de: 'Die Liste hat sich seit der Zählung geändert: Bitten Sie Kad um eine neue Karte.',
+    es: 'La lista ha cambiado desde el recuento: pida a Kad una nueva tarjeta.',
+  },
+  [PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE]: {
+    fr: "Une autre opération budgétaire était en cours dans cet espace : rien n'a été modifié. Approuvez de nouveau une fois qu'elle est terminée.",
+    de: 'In diesem Arbeitsbereich lief ein anderer Budgetvorgang, daher wurde nichts geändert. Genehmigen Sie erneut, sobald er beendet ist.',
+    es: 'Había otra operación presupuestaria en curso en este espacio, así que no se ha modificado nada. Vuelva a aprobar cuando haya terminado.',
+  },
   [PREVIEW_IMPORT_CHECK_FAILED_MESSAGE]: {
     fr: "La vérification de ce fichier a trouvé des erreurs : rien n'a été importé. Corrigez la correspondance ou le fichier, puis préparez l'import de nouveau.",
     de: 'Die Prüfung dieser Datei hat Fehler gefunden, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.',
@@ -1527,9 +1547,49 @@ const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
   },
 };
 
+/** A number as the person's language writes it (`5 002`, `5.002`, `5002`). */
+function countText(language: AiTranslatedWriteLanguage, digits: string): string {
+  return new Intl.NumberFormat(language).format(Number(digits));
+}
+
+const BULK_NARROWER_CARD: TranslatedTexts = {
+  fr: 'demandez à Kad une nouvelle carte avec des filtres plus étroits.',
+  de: 'Bitten Sie Kad um eine neue Karte mit engeren Filtern.',
+  es: 'pida a Kad una nueva tarjeta con filtros más acotados.',
+};
+
+/**
+ * The sentences the backend writes itself with a number in them: a change in bulk over the cap
+ * at its approval (`bulkTooMany`). Fixed, as `FIXED_PREVIEW_ERRORS`, and in every language.
+ */
+const FIXED_PREVIEW_ERROR_PATTERNS: Array<{
+  pattern: RegExp;
+  render: (language: AiTranslatedWriteLanguage, match: RegExpMatchArray) => string;
+}> = [
+  {
+    pattern: /^These filters reach (\d+) rows, more than (\d+) at once: narrow them\.$/,
+    render: (language, match) => {
+      const [rows, cap] = [countText(language, match[1]), countText(language, match[2])];
+      if (language === 'fr') return `Ces filtres atteignent ${rows} lignes, plus de ${cap} à la fois : ${BULK_NARROWER_CARD.fr}`;
+      if (language === 'de') return `Diese Filter erfassen ${rows} Zeilen, mehr als ${cap} auf einmal: ${BULK_NARROWER_CARD.de}`;
+      return `Estos filtros alcanzan ${rows} filas, más de ${cap} a la vez: ${BULK_NARROWER_CARD.es}`;
+    },
+  },
+  {
+    pattern: /^At most (\d+) rows at once: narrow the filters\.$/,
+    render: (language, match) => {
+      const cap = countText(language, match[1]);
+      if (language === 'fr') return `Au plus ${cap} lignes à la fois : ${BULK_NARROWER_CARD.fr}`;
+      if (language === 'de') return `Höchstens ${cap} Zeilen auf einmal: ${BULK_NARROWER_CARD.de}`;
+      return `Como máximo ${cap} filas a la vez: ${BULK_NARROWER_CARD.es}`;
+    },
+  },
+];
+
 /** Whether a preview error is one the backend writes itself (expired, data busy), in every language. */
 export function isFixedPreviewError(message: string | null | undefined): boolean {
-  return message != null && Object.prototype.hasOwnProperty.call(FIXED_PREVIEW_ERRORS, message);
+  return message != null && (Object.prototype.hasOwnProperty.call(FIXED_PREVIEW_ERRORS, message)
+    || FIXED_PREVIEW_ERROR_PATTERNS.some((row) => row.pattern.test(message)));
 }
 
 /**
@@ -1852,7 +1912,7 @@ export function previewErrorText(language: AiWriteLanguage, message: string | nu
   if (language === 'en') return message;
   const fixed = FIXED_PREVIEW_ERRORS[message]?.[language];
   if (fixed) return fixed;
-  for (const row of PREVIEW_ERROR_PATTERNS) {
+  for (const row of [...FIXED_PREVIEW_ERROR_PATTERNS, ...PREVIEW_ERROR_PATTERNS]) {
     const match = row.pattern.exec(message);
     if (match) return row.render(language, match);
   }

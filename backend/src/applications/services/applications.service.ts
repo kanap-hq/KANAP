@@ -17,6 +17,7 @@ import { ApplicationsStructureService } from './applications-structure.service';
 import { ApplicationsLifecycleService } from './applications-lifecycle.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { bulkUpdateApplications } from '../application-bulk-edit';
+import type { BulkEditOptions } from '../../common/bulk-edit/bulk-edit';
 
 /**
  * Options for service methods.
@@ -119,18 +120,25 @@ export class ApplicationsService {
   /**
    * "Change the selection" of the list (`POST /applications/bulk-update`, `application-bulk-edit.ts`):
    * the applications chosen, or those of the list's filters with the person's scope, each through the
-   * update of one application, in the request's transaction.
+   * update of one application, in the request's transaction. Kad's card (`bulk_update_applications`)
+   * passes the `audit` source of its rows (each application's audit rows say "by Kad") and asks the
+   * ids of the applications that would change (`options`).
    */
-  bulkUpdate(body: unknown, userId: string | null, opts: ServiceOpts & { manager: EntityManager; tenantId: string }) {
-    const { manager } = opts;
+  bulkUpdate(
+    body: unknown,
+    userId: string | null,
+    opts: ServiceOpts & { manager: EntityManager; tenantId: string; audit?: { source: string; sourceRef: string | null }; options?: BulkEditOptions },
+  ) {
+    const { manager, audit } = opts;
     return bulkUpdateApplications(body, {
       manager,
       tenantId: opts.tenantId,
       accessScope: opts.accessScope,
       values: () => this.crudService.bulkEditValues(manager),
       listIds: (query) => this.listService.listIds(query, opts),
-      update: async (id, patch) => { await this.crudService.update(id, patch as Partial<Application>, userId, { manager }); },
-      replaceOwners: async (id, owners) => { await this.ownersService.bulkReplaceOwners(id, owners, userId, { manager }); },
+      update: async (id, patch) => { await this.crudService.update(id, patch as Partial<Application>, userId, { manager, audit }); },
+      replaceOwners: async (id, owners) => { await this.ownersService.bulkReplaceOwners(id, owners, userId, { manager, audit }); },
+      options: opts.options,
     });
   }
 

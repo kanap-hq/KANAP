@@ -1755,6 +1755,37 @@ async function testLineCreatedWithItsAmountInOneApproval(harness: Harness) {
  * task on either nature stores its own `related_object_type`, relations accept both natures, and
  * the financial plan writes the OPEX and the CAPEX line through the one family.
  */
+/**
+ * A budget line changed by Kad (`update_business_record`) has one history row "by Kad", with the
+ * card's reference, and its contacts' row too when the new supplier brings its contacts.
+ */
+async function testBudgetLineUpdateHistoryByKad(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'budget-history');
+    const supplier = (await runner.query(
+      `INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2) RETURNING id`, [seed.tenantId, `History supplier ${seed.tag}`],
+    ))[0].id;
+    const contact = (await runner.query(
+      `INSERT INTO contacts (tenant_id, first_name, last_name, email) VALUES ($1, 'Paul', 'History', $2) RETURNING id`,
+      [seed.tenantId, `paul-${seed.tag}@history.test`],
+    ))[0].id;
+    await runner.query(`INSERT INTO supplier_contacts (tenant_id, supplier_id, contact_id, role) VALUES ($1, $2, $3, 'commercial')`, [seed.tenantId, supplier, contact]);
+    const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
+      entity_type: 'budget_lines', ref: seed.spendItemId, fields: { supplier_id: supplier, notes: `History ${seed.tag}` },
+    });
+    await approvePreview(harness, ctx, preview);
+    const history = await runner.query(
+      `SELECT table_name, source, source_ref FROM audit_log WHERE tenant_id = $1 AND record_id = $2 AND action = 'update' ORDER BY table_name`,
+      [seed.tenantId, seed.spendItemId],
+    );
+    assert.deepEqual(
+      history.map((row: any) => [row.table_name, row.source, row.source_ref === preview.preview_id ? 'card' : row.source_ref]),
+      [['spend_item_contacts', 'ai_chat', 'card'], ['spend_items', 'ai_chat', 'card']],
+      'one row for the line and one for its contacts, both by Kad with the card',
+    );
+  });
+}
+
 async function testBudgetLineSingleFamilyWrites(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'budget-family');
@@ -1951,6 +1982,7 @@ async function run() {
     await testAnalyticsValueInANamedDimension(harness);
     await testBudgetLinesByBusinessReference(harness);
     await testLineCreatedWithItsAmountInOneApproval(harness);
+    await testBudgetLineUpdateHistoryByKad(harness);
     await testBudgetLineSingleFamilyWrites(harness);
     await testLegacyBudgetLinePreviewUndoRefused(harness);
   } finally {
