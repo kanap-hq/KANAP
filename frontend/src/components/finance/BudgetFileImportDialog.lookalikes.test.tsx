@@ -36,7 +36,7 @@ vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: {
 import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
 import type { BudgetFileChoice, BudgetFileMatching, BudgetFileReport } from './budgetFile';
-import BudgetFileImportDialog from './BudgetFileImportDialog';
+import BudgetFileImportDialog, { ReportView } from './BudgetFileImportDialog';
 
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 const K = 'operations.budgetFile.';
@@ -116,6 +116,9 @@ const lookalikes = (lines: Look[], over: Partial<NonNullable<BudgetFileReport['l
 const rowOf = (line: number) => screen.getByText((_, element) => element?.tagName === 'P'
   && (element.textContent ?? '').startsWith(`${L}row:{"line":${line},`));
 const button = (name: string) => screen.queryByRole('button', { name });
+/** The choices of a row: a group named by the row's label, one toggle per choice. */
+const choicesOf = (line: number) => screen.getByRole('group', { name: rowOf(line).textContent! });
+const choice = (line: number, name: string) => within(choicesOf(line)).getByRole('button', { name });
 
 describe('BudgetFileImportDialog, rows that look like an existing line', () => {
   beforeEach(() => post.mockReset());
@@ -126,14 +129,13 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     expect(await screen.findByText(`${L}title`)).toBeInTheDocument();
     expect(screen.getByText(`${L}counts:${JSON.stringify({ ignored: 1, created: 0, updated: 0 })}`)).toBeInTheDocument();
     const row = rowOf(5);
-    expect(row).toHaveTextContent(`· ${L}outcomeIgnored`);
     expect(within(row).getByRole('link', { name: 'BL-12' })).toHaveAttribute('href', '/ops/budget/BL-12');
     fireEvent.mouseOver(row);
     expect(await screen.findByRole('tooltip')).toHaveTextContent(`${L}reasonTitleSupplier`);
-    // Left out by default: the other two choices, and nothing to load.
-    expect(button(`${L}ignore`)).toBeNull();
-    expect(button(`${L}create`)).toBeInTheDocument();
-    expect(button(`${L}update:{"ref":"BL-12"}`)).toBeInTheDocument();
+    // Left out by default, the other two choices beside it, and nothing to load.
+    expect(choice(5, `${L}ignore`)).toHaveAttribute('aria-pressed', 'true');
+    expect(choice(5, `${L}create`)).toHaveAttribute('aria-pressed', 'false');
+    expect(choice(5, `${L}update:{"ref":"BL-12"}`)).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByText(`${K}nothingToChange`)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `${K}load` })).toBeDisabled();
   });
@@ -150,7 +152,7 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
     expect(sentChoices(post.mock.calls[1])).toEqual([{ kind: 'lookalike', line: 5, action: 'create' }]);
 
-    await waitFor(() => expect(rowOf(5)).toHaveTextContent(`· ${L}outcomeCreated`));
+    await waitFor(() => expect(choice(5, `${L}create`)).toHaveAttribute('aria-pressed', 'true'));
     post.mockResolvedValueOnce({ data: report({
       lookalikes: lookalikes([look(5, 12, { outcome: 'created' }), look(6, 13, { outcome: 'updated', fields: ['company_name', 'budget 2026'] })]),
       matching: matching({ choices: [{ kind: 'lookalike', line: 5, action: 'create' }, { kind: 'lookalike', line: 6, action: 'update', item: 13, state: 's13' }] }),
@@ -163,7 +165,7 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     ];
     expect(sentChoices(post.mock.calls[2])).toEqual(both);
     // An update says what it changes, by the column's name.
-    await waitFor(() => expect(rowOf(6)).toHaveTextContent(`${L}outcomeUpdated:{"ref":"BL-13"}`));
+    await waitFor(() => expect(choice(6, `${L}update:{"ref":"BL-13"}`)).toHaveAttribute('aria-pressed', 'true'));
     fireEvent.mouseOver(rowOf(6));
     expect(await screen.findByRole('tooltip')).toHaveTextContent(`${L}fields:{"fields":"opex.columns.payingCompany, ops:operations.budgetColumns.budget 2026"}`);
 
@@ -173,7 +175,7 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     await waitFor(() => expect(post).toHaveBeenCalledTimes(4));
     expect(sentChoices(post.mock.calls[3])).toEqual([both[1]]);
 
-    await waitFor(() => expect(rowOf(5)).toHaveTextContent(`· ${L}outcomeIgnored`));
+    await waitFor(() => expect(choice(5, `${L}ignore`)).toHaveAttribute('aria-pressed', 'true'));
     post.mockResolvedValueOnce({ data: { ok: true, dryRun: false, inserted: 0, updated: 1, skipped: 1 } });
     fireEvent.click(screen.getByRole('button', { name: `${K}load` }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(5));
@@ -292,7 +294,7 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     ]);
   });
 
-  it('keeps the actions of a row together on one row', async () => {
+  it('keeps the choices of a row together on one row', async () => {
     post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes([look(3, 21)]) }) });
     renderDialog();
     await screen.findByText(`${L}title`);
@@ -367,6 +369,92 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     fireEvent.click(within(rowOf(6).parentElement!).getByRole('button', { name: `${L}update:{"ref":"BL-13"}` }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
     expect(sentChoices(post.mock.calls[1])).toEqual([{ kind: 'lookalike', line: 6, action: 'update', item: 13, state: 's13b' }]);
+  });
+
+  it('shows the three choices of a row as a selection, the current one pressed, and no state written after the row', async () => {
+    post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes([look(5, 12), look(6, 13, { outcome: 'created' }), look(7, 14, { outcome: 'updated', fields: ['name'] })]) }) });
+    renderDialog();
+    await screen.findByText(`${L}title`);
+    const pressed = (line: number) => within(choicesOf(line)).getAllByRole('button')
+      .map((entry) => `${entry.textContent}=${entry.getAttribute('aria-pressed')}`);
+    expect(pressed(5)).toEqual([`${L}ignore=true`, `${L}create=false`, `${L}update:{"ref":"BL-12"}=false`]);
+    expect(pressed(6)).toEqual([`${L}ignore=false`, `${L}create=true`, `${L}update:{"ref":"BL-13"}=false`]);
+    expect(pressed(7)).toEqual([`${L}ignore=false`, `${L}create=false`, `${L}update:{"ref":"BL-14"}=true`]);
+    for (const line of [5, 6, 7]) expect(rowOf(line).textContent).not.toMatch(/·|outcome/);
+  });
+
+  it('does nothing on a click on the choice already selected', async () => {
+    post.mockResolvedValueOnce({ data: report({ lookalikes: lookalikes([look(5, 12), look(6, 13, { outcome: 'created' })]) }) });
+    renderDialog();
+    await screen.findByText(`${L}title`);
+    fireEvent.click(choice(5, `${L}ignore`));
+    fireEvent.click(choice(6, `${L}create`));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds the choices while the check that follows a choice runs', async () => {
+    // Kad's card keeps its check on screen while a choice makes the next card (the dialog shows "Checking" instead).
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <QueryClientProvider client={client}>
+          <ReportView
+            report={report({ lookalikes: lookalikes([look(5, 12)]) }) as unknown as BudgetFileReport}
+            locale="fr"
+            canCreateSuppliers={false}
+            nothingToLoad={false}
+            onChoices={() => undefined}
+            choicesDisabled
+          />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+    await screen.findByText(`${L}title`);
+    const toggles = within(choicesOf(5)).getAllByRole('button');
+    expect(toggles).toHaveLength(3);
+    for (const entry of toggles) expect(entry).toBeDisabled();
+  });
+
+  it('says on its row an update that changes nothing, out of the tooltip', async () => {
+    post.mockResolvedValueOnce({ data: report({
+      ok: false,
+      errors: [{ line: 8, column: 'budget_2026', message: 'Invalid amount.', code: 'BUDGET_FILE_INVALID_AMOUNT' }],
+      errorCount: 1,
+      lookalikes: lookalikes([look(6, 13, { outcome: 'updated', fields: [] }), look(7, 14, { outcome: 'updated', fields: ['name'] }), look(8, 15, { outcome: 'updated', fields: [] })]),
+    }) });
+    renderDialog();
+    await screen.findByText(`${L}title`);
+    expect(within(rowOf(6).parentElement!).getByText(`${L}noChange:{"ref":"BL-13"}`)).toBeVisible();
+    expect(within(rowOf(7).parentElement!).queryByText(/noChange/)).toBeNull();
+    // A row in error was not compared with its line: nothing said.
+    expect(within(rowOf(8).parentElement!).queryByText(/noChange/)).toBeNull();
+    fireEvent.mouseOver(rowOf(6));
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent(`${L}reasonAmounts`);
+    expect(tooltip).not.toHaveTextContent('noChange');
+  });
+
+  it('shows the state of each row as text, with no choice, when the check is read only', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <QueryClientProvider client={client}>
+          <ReportView
+            report={report({ lookalikes: lookalikes([look(5, 12), look(6, 13, { outcome: 'updated', fields: [] })]) }) as unknown as BudgetFileReport}
+            locale="fr"
+            canCreateSuppliers={false}
+            nothingToLoad={false}
+          />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+    await screen.findByText(`${L}title`);
+    expect(screen.queryByRole('group')).toBeNull();
+    expect(screen.queryByRole('button', { name: /lookalikes\.(ignore|create|update)/ })).toBeNull();
+    expect(rowOf(5)).toHaveTextContent(`· ${L}outcomeIgnored`);
+    expect(rowOf(6)).toHaveTextContent(`· ${L}outcomeUpdated:{"ref":"BL-13"}`);
+    expect(within(rowOf(6).parentElement!).getByText(`${L}noChange:{"ref":"BL-13"}`)).toBeVisible();
   });
 
   it('shows the first ten rows, the others on a click', async () => {
