@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, Checkbox, Link, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
-import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
-import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import { Box, Checkbox, Link, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import KanapDialog from '../design/KanapDialog';
@@ -31,6 +29,7 @@ import {
 import { checkSentence, failureText, serverSentence } from './budgetFileText';
 import { useImportFiles } from '../csv/importFiles';
 import ImportExampleButton from '../csv/ImportExampleButton';
+import ImportMatchesView, { ActionLink, Line, type LineAction } from '../csv/ImportMatchesView';
 import { buildEntityUrl } from '../../ai/utils/entityUrls';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -47,7 +46,6 @@ const COMPANY_COLUMN = 'company_name';
 const VALUES = '\u2063values\u2063';
 
 type Unmatch = Extract<BudgetFileChoice, { kind: 'unmatch' }>;
-type LineAction = { label: string; onClick: () => void; disabled?: boolean };
 type Lookalikes = NonNullable<BudgetFileReport['lookalikes']>;
 type Lookalike = Lookalikes['lines'][number];
 
@@ -392,21 +390,6 @@ export default function BudgetFileImportDialog({
   );
 }
 
-function ActionLink({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
-  return (
-    <Button
-      type="button"
-      variant="text"
-      size="small"
-      onClick={onClick}
-      disabled={disabled}
-      sx={{ p: 0, minWidth: 0, fontSize: 12, fontWeight: 400, textTransform: 'none', lineHeight: 1.4, whiteSpace: 'nowrap', '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' } }}
-    >
-      {children}
-    </Button>
-  );
-}
-
 function NoticeLine({ text, action, onAction, disabled }: { text: string; action: string | null; onAction: () => void; disabled: boolean }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.25 }}>
@@ -490,11 +473,6 @@ export function ReportView({
     const entry = matching?.candidates.find((item) => item.column === COMPANY_COLUMN
       && (value != null ? sameValue(item.value, String(value)) : item.lines.includes(error.line)));
     return entry && entry.candidates.length > 0 ? closeTo(COMPANY_COLUMN, entry.value) : null;
-  };
-  const linesOf = (entry: { lines: number[]; count: number }): string => {
-    const extra = entry.count - entry.lines.length;
-    const lines = extra > 0 ? `${entry.lines.join(', ')} ${t(`${K}andMoreInline`, { count: extra })}` : entry.lines.join(', ');
-    return t(`${K}matching.lines`, { count: entry.count, lines });
   };
   const undo = (entry: { column: string; value: string }) => onChoices?.([...choices, { kind: 'unmatch', column: entry.column, value: entry.value }]);
   const redo = (entry: Unmatch) => onChoices?.(choices.filter((choice) => !(choice.kind === 'unmatch' && choice.column === entry.column && choice.value === entry.value)));
@@ -670,35 +648,15 @@ export function ReportView({
         </Section>
       )}
 
-      {(matches.length > 0 || refusedProposals.length > 0) && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-          {matches.length > 0 && (
-            <FoldToggle open={matchesOpen} onToggle={toggleMatches} label={t(`${K}matching.count`, { count: matches.length })} />
-          )}
-          {matchesOpen && matches.map((entry) => (
-            <Line
-              key={`mt-${entry.column}-${entry.value}`}
-              text={t(`${K}matching.match`, { dimension: columnName(entry.column, entry.name), value: entry.value, target: entry.target })}
-              kad={entry.origin === 'model' ? t(`${K}matching.byKad`) : undefined}
-              tooltip={linesOf(entry)}
-              action={choiceAction(t(`${K}matching.undo`), () => undo(entry))}
-            />
-          ))}
-          {refusedProposals.map((entry) => (
-            <Line
-              key={`rp-${entry.column}-${entry.value}`}
-              muted
-              text={t(entry.reason === 'disabled' ? `${K}matching.refusedDisabled` : `${K}matching.refusedMissing`, {
-                dimension: columnName(entry.column, entry.name),
-                value: entry.value,
-                target: entry.target,
-              })}
-              kad={t(`${K}matching.byKad`)}
-              tooltip={linesOf(entry)}
-            />
-          ))}
-        </Box>
-      )}
+      <ImportMatchesView
+        matches={matches}
+        refusedProposals={refusedProposals}
+        columnName={columnName}
+        open={matchesOpen}
+        onToggle={toggleMatches}
+        onUndo={onChoices ? undo : undefined}
+        disabled={choicesDisabled}
+      />
 
       {report.lookalikes && report.lookalikes.count > 0 && (
         <LookalikesView
@@ -829,65 +787,6 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
       <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>{title}</Typography>
       {hint && <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.25 }}>{hint}</Typography>}
       {children}
-    </Box>
-  );
-}
-
-function Line({ text, children, danger, muted, kad, tooltip, action, actions, after, under }: {
-  text?: string;
-  children?: React.ReactNode;
-  danger?: boolean;
-  muted?: boolean;
-  /** Proposed by Kad: the accessible name of its mark, also said in the tooltip. */
-  kad?: string;
-  tooltip?: React.ReactNode;
-  action?: LineAction;
-  /** Several actions, after the line. */
-  actions?: LineAction[];
-  /** Controls or a short state after the line, kept together on one row with it when they fit. */
-  after?: React.ReactNode;
-  /** Controls on their own row under the line, indented, so that a line and its controls read as one group. */
-  under?: React.ReactNode;
-}) {
-  const body = (
-    <Typography
-      sx={{
-        fontSize: 13,
-        lineHeight: 1.45,
-        color: danger ? 'kanap.danger' : muted ? 'kanap.text.secondary' : 'kanap.text.primary',
-        overflowWrap: 'anywhere',
-      }}
-    >
-      {children ?? text}
-      {kad && (
-        <Box component="span" role="img" aria-label={kad} sx={{ display: 'inline-flex', verticalAlign: '-2px', ml: 0.5, color: 'kanap.text.tertiary' }}>
-          <AutoAwesomeOutlinedIcon sx={{ fontSize: 13 }} />
-        </Box>
-      )}
-    </Typography>
-  );
-  const title = kad && tooltip ? <>{kad}<br />{tooltip}</> : (tooltip ?? kad);
-  const shown = title ? <Tooltip title={title} placement={under ? 'top-start' : 'bottom-start'}>{body}</Tooltip> : body;
-  const links = actions ?? (action ? [action] : []);
-  if (under) {
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', rowGap: 0.25, mt: 0.75 }}>
-        {shown}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.25, pl: 4 }}>{under}</Box>
-      </Box>
-    );
-  }
-  if (links.length === 0 && !after) return shown;
-  // The actions of a line stay together on one row: after the text when they fit, else under it.
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.25 }}>
-      {shown}
-      {links.length > 0 && (
-        <Box sx={{ display: 'inline-flex', alignItems: 'baseline', columnGap: 1.5, whiteSpace: 'nowrap' }}>
-          {links.map((link) => <ActionLink key={link.label} onClick={link.onClick} disabled={link.disabled}>{link.label}</ActionLink>)}
-        </Box>
-      )}
-      {after && <Box sx={{ display: 'inline-flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1, rowGap: 0.25 }}>{after}</Box>}
     </Box>
   );
 }
@@ -1051,34 +950,6 @@ function ValueName({ text, hint }: { text: string; hint: string | null }) {
 function withValues(sentence: string, values: React.ReactNode): React.ReactNode {
   const [before, after = ''] = sentence.split(VALUES);
   return <>{before}{values}{after}</>;
-}
-
-/** The fold of the matches: a count, which unfolds into one line per match. */
-function FoldToggle({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
-  return (
-    <Button
-      type="button"
-      variant="text"
-      size="small"
-      aria-expanded={open}
-      onClick={onToggle}
-      startIcon={<KeyboardArrowRightIcon sx={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 120ms' }} />}
-      sx={{
-        alignSelf: 'flex-start',
-        p: 0,
-        minWidth: 0,
-        fontSize: 12,
-        fontWeight: 500,
-        lineHeight: 1.4,
-        textTransform: 'none',
-        color: 'kanap.text.tertiary',
-        '& .MuiButton-startIcon': { ml: 0, mr: 0.25, '& svg': { fontSize: 16 } },
-        '&:hover': { bgcolor: 'transparent', color: 'kanap.text.secondary' },
-      }}
-    >
-      {label}
-    </Button>
-  );
 }
 
 function sameValue(a: string, b: string): boolean {
