@@ -449,6 +449,26 @@ async function testCompanyMatches() {
   console.log('  the company: matched beyond accents, undone, proposed by Kad, within the person\'s rights: OK');
 }
 
+// Lot I3 of 26.11.9, second pass: the supplier follows the company. A person who does not read the
+// suppliers gets no match beyond case, and Kad's proposal is refused as missing, naming nothing of the list.
+async function testSupplierWithinThePersonsRights() {
+  const rows = [',opex,Licences,Fromage & Co SA,612200,Societe Generale,EUR,,,,', ',opex,Support,Fromage & Co SA,612200,SG,EUR,,,,'];
+  const proposals = { supplier_name: { SG: 'Société Générale' } };
+  const read = await check(rows, { matching: { proposals } });
+  assert.deepEqual(matchesOf(read.report), [
+    ['supplier_name', 'Societe Generale', 'Société Générale', 'server', 'accents', [2]],
+    ['supplier_name', 'SG', 'Société Générale', 'model', 'model', [3]],
+  ]);
+  const unread = await check(rows, { canReadSuppliers: false, canCreateSuppliers: false, matching: { proposals } });
+  assert.deepEqual(unread.report.matching!.matches, []);
+  assert.deepEqual(unread.report.errors.map((error) => [error.line, error.column, error.code]), [
+    [2, 'supplier_name', 'CSV_REFERENCE_NOT_FOUND'], [3, 'supplier_name', 'CSV_REFERENCE_NOT_FOUND'],
+  ]);
+  assert.deepEqual(unread.report.matching!.refusedProposals.map((entry) => [entry.value, entry.target, entry.reason]), [['SG', 'Société Générale', 'missing']]);
+  assert.ok(unread.report.matching!.candidates.every((entry) => entry.candidates.length === 0), 'no closest name of an unread list');
+  console.log('  the supplier: no match beyond case and no proposal without the suppliers\' list: OK');
+}
+
 async function main() {
   testRecommendedKeys();
   testCandidates();
@@ -464,6 +484,7 @@ async function main() {
   await testOneCandidatePerCreation();
   await testCandidatesOfReadableLists();
   await testCompanyMatches();
+  await testSupplierWithinThePersonsRights();
   console.log('budget-file-matching.spec: ok');
 }
 

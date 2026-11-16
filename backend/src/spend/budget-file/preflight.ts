@@ -546,14 +546,15 @@ function lookalikeSupplier(input: PreflightInput, row: InterpretedRow, bag: Bag)
     const byErp = matchErp(suppliers, erp);
     return byErp.kind === 'one' ? byErp.row.id : undefined;
   }
+  const reads = !!input.canReadSuppliers;
   const key = cellKey('supplier_name', name!);
   const undone = bag.matching.unmatched.has(key);
   const proposal = bag.matching.proposals.get(key);
-  if (proposal !== undefined && !undone && foldKey(proposal) !== foldKey(name!)) {
+  if (reads && proposal !== undefined && !undone && foldKey(proposal) !== foldKey(name!)) {
     const target = matchByName(suppliers, proposal, { beyondCase: false });
     if (target.kind === 'one' && isActiveAt(target.row.disabledAt)) return target.row.id;
   }
-  const found = matchByName(suppliers, name!, { beyondCase: !undone });
+  const found = matchByName(suppliers, name!, { beyondCase: reads && !undone });
   return found.kind === 'one' ? found.row.id : undefined;
 }
 
@@ -1023,7 +1024,8 @@ function resolveSupplier(
   const nameText = name ?? '';
   const erpText = erp ?? '';
   const byErp = erpText ? matchErp(input.catalog.suppliers, erpText) : null;
-  const byName = nameText ? findListed(bag, 'supplier_name', null, nameText, row.line, input.catalog.suppliers) : null;
+  // Accents aside and Kad's proposal only for a person who reads the suppliers, as the company.
+  const byName = nameText ? findListed(bag, 'supplier_name', null, nameText, row.line, input.catalog.suppliers, undefined, !!input.canReadSuppliers) : null;
   if (byErp?.kind === 'many') {
     fail('supplier_erp_id', `Several suppliers share ERP id '${erpText}'.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: erpText });
     return { id: null, createKey: null };
@@ -1680,8 +1682,8 @@ type ListedMatch<T> = NameMatch<T> & { column?: string; dimensionName?: string |
  * for the value comes first, accepted when it names an enabled value of the list (by its name, case
  * aside); else it is refused, and the value is matched as the file writes it. A match the person undid
  * goes no further than case. Every match beyond case is listed once the row uses it (`noteMatch`).
- * A list the person does not read (`reads` false, the companies without their module) goes no further
- * than case and takes no proposal.
+ * A list the person does not read (`reads` false, the suppliers or the companies without their module)
+ * goes no further than case and takes no proposal.
  */
 function findListed<T extends Listed>(
   bag: Bag,
