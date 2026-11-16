@@ -1374,9 +1374,14 @@ export class AiMutationPreviewService {
       throw new NotFoundException('AI preview not found.');
     }
     const input = (preview.mutation_input ?? {}) as Record<string, unknown>;
-    // Another import's card takes the matches the person undoes (lot I3 of 26.11.9); the other choices are the budget file's.
-    const undoesOnly = choices.every((choice) => (choice as { kind?: unknown } | null)?.kind === 'unmatch');
-    if (input.entity_type !== 'budget_lines' && !undoesOnly) {
+    // Another import's card takes the matches the person undoes (lot I3 of 26.11.9), and the applications'
+    // card the choices for the rows that look like an application; the other choices are the budget file's.
+    const lookalikes = input.entity_type === 'applications';
+    const taken = choices.every((choice) => {
+      const kind = (choice as { kind?: unknown } | null)?.kind;
+      return kind === 'unmatch' || (lookalikes && (kind === 'lookalike' || kind === 'lookalikes'));
+    });
+    if (input.entity_type !== 'budget_lines' && !taken) {
       throw new BadRequestException('Only the card of a budget file takes these choices.');
     }
     if (preview.status !== 'pending' || preview.expires_at.getTime() < Date.now()) {

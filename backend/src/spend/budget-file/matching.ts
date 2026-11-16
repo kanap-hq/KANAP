@@ -9,7 +9,7 @@ import {
   type RecommendedDimensionKey,
   SEED_LANGUAGES,
 } from '../../analytics/recommended-dimensions.seed';
-import { accentFreeKey, foldKey } from '../../common/name-matching';
+import { accentFreeKey, foldKey, nameWords as words, similarity as similarityOf } from '../../common/name-matching';
 import type { BudgetFileChoice, BudgetFileLookalikeTarget, CatalogDimension } from './types';
 
 /**
@@ -27,7 +27,7 @@ import type { BudgetFileChoice, BudgetFileLookalikeTarget, CatalogDimension } fr
  */
 
 // The name rule is common to every import (lot I3 of 26.11.9): the budget file reads it from here as before.
-export { accentFreeKey, foldKey, listedMatchEntries, matchByName, type MatchHow, type NameMatch } from '../../common/name-matching';
+export { accentFreeKey, foldKey, listedMatchEntries, matchByName, similarity, type MatchHow, type NameMatch } from '../../common/name-matching';
 
 /** A dimension's own name without the ` (2)` the seed adds when another dimension holds it. */
 function baseName(name: string | null): string {
@@ -140,31 +140,6 @@ export function translatedValues<T extends { name: string }>(table: ReadonlyMap<
   return rows.filter((row) => table.get(accentFreeKey(row.name)) === wanted);
 }
 
-/** The words of a text, as pg_trgm cuts them: runs of letters and digits, lower case and accents aside. */
-function words(value: string): string[] {
-  return accentFreeKey(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
-}
-
-/** The trigrams of a text, as pg_trgm takes them: per word, lower case and accents aside, padded with two spaces before and one after. */
-function trigrams(value: string): Set<string> {
-  const grams = new Set<string>();
-  for (const word of words(value)) {
-    const padded = `  ${word} `;
-    for (let index = 0; index + 3 <= padded.length; index += 1) grams.add(padded.slice(index, index + 3));
-  }
-  return grams;
-}
-
-/** pg_trgm's similarity of two texts: shared trigrams over all trigrams, 0 to 1. */
-export function similarity(a: string, b: string): number {
-  const left = trigrams(a);
-  const right = trigrams(b);
-  if (left.size === 0 || right.size === 0) return 0;
-  let shared = 0;
-  for (const gram of left) if (right.has(gram)) shared += 1;
-  return shared / (left.size + right.size - shared);
-}
-
 /** pg_trgm's default threshold: below it, two names are not alike. */
 export const CANDIDATE_THRESHOLD = 0.3;
 export const CANDIDATE_LIMIT = 3;
@@ -198,7 +173,7 @@ export function closestNames(value: string, names: readonly string[]): Array<{ n
     const key = foldKey(name);
     if (seen.has(key)) continue;
     seen.add(key);
-    const score = similarity(value, name);
+    const score = similarityOf(value, name);
     const included = holdsWordForWord(value, name);
     if (included || score >= CANDIDATE_THRESHOLD) scored.push({ name, score: Math.round(score * 100) / 100, included });
   }

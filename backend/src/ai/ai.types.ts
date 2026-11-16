@@ -1,6 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { z } from 'zod';
 import type { BudgetFileChoice } from '../spend/budget-file/types';
+import type { ImportLookalikes } from '../common/csv/csv-lookalikes';
 import type { ImportNameMatch, ImportRefusedProposal } from '../common/name-matching';
 
 export type AiSurface = 'chat' | 'mcp';
@@ -612,7 +613,7 @@ export type AiImportRunDto = {
     first: Array<{
       file_line: number;
       looks_like?: string;
-      reason?: 'title_supplier' | 'amounts' | 'close_title';
+      reason?: 'title_supplier' | 'amounts' | 'close_title' | 'name_accents' | 'close_name';
       outcome?: 'ignored' | 'created' | 'updated';
       looks_like_file_line?: number;
     }>;
@@ -625,7 +626,7 @@ export type AiImportRunDto = {
    * `report.file.matching`.
    */
   matching?: {
-    matches: Array<{ column: string; dimension?: string; value: string; target: string; origin: 'server' | 'model'; count: number; file_lines: number[] }>;
+    matches: Array<{ column: string; dimension?: string; value: string; target: string; origin: 'server' | 'model' | 'editor'; count: number; file_lines: number[] }>;
     refused_proposals: Array<{ column: string; dimension?: string; value: string; target: string; reason: 'missing' | 'disabled'; count: number; file_lines: number[] }>;
     candidates: Array<{
       column: string; dimension?: string; value: string; outcome: 'create' | 'refused'; count: number; file_lines: number[];
@@ -653,6 +654,11 @@ export type AiImportRunDto = {
       undone?: Array<{ column: string; value: string }>;
       /** A servers import: how each site the file names hosts its servers (lot I3 of 26.11.9, T-I3f); absent when none. */
       hosting?: AiImportHostingSite[];
+      /**
+       * The applications import: the rows that would create an application and look like one the person reads, on the
+       * person's lines, with the choices the check followed (lot I3 of 26.11.9, T-I3d); absent when none.
+       */
+      lookalikes?: ImportLookalikes;
     }
     /** The budget file's check, as its dialog shows it (`BudgetFileReport` without its snapshot). */
     | { kind: 'budget_file'; file: Record<string, unknown> | null };

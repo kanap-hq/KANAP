@@ -14,9 +14,9 @@ import { buildImportFile } from './ai-import-file';
 import { hostingWords, serverHosting } from './ai-import-hosting';
 import { AiImportColumnMappingInput, AiImportMappingResult, AiImportTemplateColumn, buildImportMapping } from './ai-import-mapping';
 import { AiImportRunnerService, rowsApprovalFacts } from './ai-import-runner.service';
-import { AI_IMPORT_TARGETS, AiImportColumnSpec, AiImportTarget, importColumnTitle } from './ai-import-targets';
+import { AI_IMPORT_TARGETS, AiImportColumnSpec, AiImportTarget, importColumnTitle, type ImportCardChoice } from './ai-import-targets';
 import { cellKey } from '../../spend/budget-file/matching';
-import type { BudgetFileChoice, BudgetFileMatch } from '../../spend/budget-file/types';
+import type { BudgetFileMatch } from '../../spend/budget-file/types';
 
 export type PrepareImportMappingInput = {
   attachment_id: string;
@@ -27,7 +27,7 @@ export type PrepareImportMappingInput = {
    * The person's choices on the card (a budget file: matches undone, "Create missing suppliers"),
    * set by the server, never by the model: the tool's input schema has no such field.
    */
-  choices?: BudgetFileChoice[];
+  choices?: ImportCardChoice[];
 };
 
 /** One column of an import's template, as `describe_import_template` gives it to the model. */

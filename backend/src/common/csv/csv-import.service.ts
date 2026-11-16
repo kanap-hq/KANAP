@@ -203,12 +203,14 @@ export class CsvImportService {
     // Phase 1: Validate and parse all rows
     const parsedRows = await this.validateAndParseRows(config, rows, importFields, context, replace);
 
-    if (config.afterValidate) await config.afterValidate(parsedRows, context);
-    if (replace) this.checkEmptiedColumns(parsedRows, replace, params.operation);
-    else this.clearKeptReferencesOfChangedOwners(parsedRows, importFields);
+    // The rows the config left out (`settleRows`) are neither read nor written.
+    const readRows = parsedRows.filter((row) => !row.leftOut);
+    if (config.afterValidate) await config.afterValidate(readRows, context);
+    if (replace) this.checkEmptiedColumns(readRows, replace, params.operation);
+    else this.clearKeptReferencesOfChangedOwners(readRows, importFields);
 
     // Check for duplicate upsert keys within the file
-    const duplicateErrors = this.checkDuplicateKeys(config, parsedRows);
+    const duplicateErrors = this.checkDuplicateKeys(config, readRows);
 
     // Collect all errors
     const allErrors: CsvImportError[] = [];
@@ -222,7 +224,7 @@ export class CsvImportService {
 
     // Matched rows identical to what is stored: counted, never written.
     if (params.operation !== 'insert_only') {
-      const matched = parsedRows.filter((row) => row.errors.length === 0 && !row.isInsert);
+      const matched = readRows.filter((row) => row.errors.length === 0 && !row.isInsert);
       const same = config.sameAsStored
         ? await config.sameAsStored(matched, context)
         : matched.map((row) => sameStoredValues(row.existingEntity, row.parsed));
@@ -236,7 +238,7 @@ export class CsvImportService {
     let unchangedCount = 0;
 
     for (const row of parsedRows) {
-      if (row.errors.length > 0) {
+      if (row.errors.length > 0 || row.leftOut) {
         skipCount++;
         continue;
       }
@@ -555,10 +557,21 @@ export class CsvImportService {
 
     // Load existing entities for identity resolution
     const existingEntities = await this.loadExistingEntities(config, rows, context);
+    // The record each row updates, by its id or key, before any cell is read; then as the config
+    // settles it (another record, or the row left out: lot I3 of 26.11.9).
+    const found = rows.map((raw) => this.resolveIdentity(config, raw, existingEntities));
+    const settled = config.settleRows
+      ? await config.settleRows(rows.map((raw, i) => ({ raw, rowNumber: i + 2, found: found[i] })), context)
+      : null;
 
     for (let i = 0; i < rows.length; i++) {
       const raw = rows[i];
       const rowNumber = i + 2; // 1-based, accounting for header
+      const settle = settled?.[i];
+      if (settle?.leaveOut) {
+        parsedRows.push({ rowNumber, raw, parsed: {}, isInsert: true, leftOut: true, errors: [], warnings: settle.warnings ?? [] });
+        continue;
+      }
 
       const parsedRow: CsvImportRow = {
         rowNumber,
@@ -569,13 +582,18 @@ export class CsvImportService {
         warnings: [...(preliminaryRows[i]?.warnings ?? [])],
       };
 
+      if (settle) {
+        parsedRow.errors.push(...(settle.errors ?? []));
+        parsedRow.warnings.push(...(settle.warnings ?? []));
+      }
+
       // Parse and validate each field
       for (const field of importFields) {
         await this.parseField(field, raw, parsedRow, context, replace);
       }
 
       // Resolve identity
-      const existingEntity = this.resolveIdentity(config, raw, parsedRow, existingEntities);
+      const existingEntity = settle ? settle.entity : found[i];
       if (existingEntity) {
         parsedRow.existingEntity = existingEntity;
         parsedRow.isInsert = false;
@@ -1543,7 +1561,6 @@ export class CsvImportService {
   private resolveIdentity(
     config: CsvEntityConfig,
     raw: Record<string, string>,
-    row: CsvImportRow,
     existingEntities: Map<string, any>,
   ): any | null {
     // Check ID first
@@ -1641,7 +1658,7 @@ export class CsvImportService {
     }> = [];
 
     for (const row of rows) {
-      if (row.errors.length > 0) {
+      if (row.errors.length > 0 || row.leftOut) {
         continue;
       }
 
