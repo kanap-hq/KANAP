@@ -70,8 +70,19 @@ function testParseReferenceNumber() {
   assert.equal(parseReferenceNumber('REQ-012', 'REQ', typed), 12, 'a family without the rule keeps its zeros');
 }
 
+/** A long typed value reads its trailing digits in linear time (CodeQL js/polynomial-redos on `/(\d+)$/`). */
+function testLongValueReadsQuickly() {
+  const raw = `${'1'.repeat(60_000)}x`;
+  const started = Date.now();
+  assert.throws(() => parseItemRef(raw, 'supplier'));
+  const elapsed = Date.now() - started;
+  assert.ok(elapsed < 200, `60 000 digits then a letter read in ${elapsed} ms`);
+  assert.throws(() => parseItemRef('SUP-013', 'supplier'), BadRequestException, 'a leading zero stays refused');
+}
+
 function main() {
   testBounds();
+  testLongValueReadsQuickly();
   testParseReferenceNumber();
   testReferences();
   testBudgetLineReferences();
