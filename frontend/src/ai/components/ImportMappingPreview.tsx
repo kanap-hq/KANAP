@@ -3,16 +3,15 @@ import { Box, Stack, Typography } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useTranslation } from 'react-i18next';
-import type { AiImportMapping } from '../aiTypes';
-import type { BudgetFileChoice } from '../../components/finance/budgetFile';
+import type { AiImportChoice, AiImportMapping } from '../aiTypes';
 import ImportRunReport from './ImportRunReport';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { formatAmount } from '../../i18n/formatters';
 
 type ImportMappingPreviewProps = {
   mapping: AiImportMapping;
-  /** The person's choices on a pending budget file check, the whole list; absent: read only. */
-  onChoices?: (choices: BudgetFileChoice[]) => void;
+  /** The person's choices on a pending check, the whole list; absent: read only. */
+  onChoices?: (choices: AiImportChoice[]) => void;
   choicesDisabled?: boolean;
 };
 

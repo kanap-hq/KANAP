@@ -1,12 +1,14 @@
 import React from 'react';
 import { Box, Checkbox, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import type { AiImportHostingSite, AiImportReportMessage, AiImportRun } from '../aiTypes';
+import type { AiImportChoice, AiImportHostingSite, AiImportReportMessage, AiImportRun } from '../aiTypes';
 import { csvMessageColumn, csvMessageText } from '../../components/csv/csvMessage';
 import { ReportView as BudgetFileReportView } from '../../components/finance/BudgetFileImportDialog';
-import type { BudgetFileChoice } from '../../components/finance/budgetFile';
 import { useAuth } from '../../auth/AuthContext';
 import ImportMatchesView from '../../components/csv/ImportMatchesView';
+import ImportLookalikesView, { applicationLookalikeReason, applicationUpdateChoice, lookalikeChoicesOf } from '../../components/csv/ImportLookalikesView';
+import type { ImportLookalike, ImportLookalikeChoice } from '../../components/csv/csv.types';
+import { buildEntityUrl } from '../utils/entityUrls';
 
 /** The messages shown of each kind, as the import dialog shows them. */
 const SHOWN_ERRORS = 10;
@@ -24,9 +26,9 @@ type ImportRunReportProps = {
   titles: ReadonlyMap<string, string>;
   /**
    * The person's choices on a pending check, the whole list: a budget file's (matches undone, missing
-   * suppliers), or the matches undone of another import.
+   * suppliers), or another import's (matches undone, rows that look like an existing application).
    */
-  onChoices?: (choices: BudgetFileChoice[]) => void;
+  onChoices?: (choices: AiImportChoice[]) => void;
   /** A choice is being applied: the controls wait for the new card. */
   choicesDisabled?: boolean;
 };
@@ -103,8 +105,14 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
   // Choices are made on the check only, never on what the import did.
   const choose = check ? onChoices : undefined;
   const matching = budgetFile?.matching;
-  // A row import's matches undone on this card: Undo sends them again with the new one.
+  // A row import's choices on this card, the whole list a choice sends again: its matches undone, then
+  // what the check did with each row that looks like an existing application.
   const undone = run.report.kind === 'rows' ? run.report.undone ?? [] : [];
+  const lookalikes = run.report.kind === 'rows' && run.report.lookalikes && run.report.lookalikes.count > 0 ? run.report.lookalikes : null;
+  const rowChoices: AiImportChoice[] = [
+    ...undone.map((item) => ({ kind: 'unmatch' as const, ...item })),
+    ...(lookalikes ? lookalikeChoicesOf<ImportLookalike, ImportLookalikeChoice>(lookalikes, applicationUpdateChoice) : []),
+  ];
   // The server says whether the person may create suppliers, and whether the check created them.
   const suppliersBox = !!choose && !!matching?.createSuppliers.allowed;
   const counts = budgetFile ? '' : (check
@@ -197,12 +205,23 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
             columnName={(column) => titles.get(column) ?? column}
             open={matchesOpen}
             onToggle={() => setMatchesOpen((open) => !open)}
-            onUndo={choose ? (entry) => choose([
-              ...undone.map((item) => ({ kind: 'unmatch' as const, ...item })),
-              { kind: 'unmatch', column: entry.column, value: entry.value },
-            ]) : undefined}
+            onUndo={choose ? (entry) => choose([...rowChoices, { kind: 'unmatch', column: entry.column, value: entry.value }]) : undefined}
             disabled={choicesDisabled}
           />
+          {lookalikes && (
+            <ImportLookalikesView<ImportLookalike, AiImportChoice>
+              lookalikes={lookalikes}
+              title={t('ops:operations.budgetFile.lookalikes.applicationsTitle')}
+              choices={rowChoices}
+              updateChoice={applicationUpdateChoice}
+              onChoices={choose}
+              choicesDisabled={choicesDisabled}
+              reasonText={(look) => applicationLookalikeReason(look, t)}
+              targetUrl={(look) => buildEntityUrl('applications', look.target.ref)}
+              fieldName={(field) => titles.get(field) ?? field}
+              refusedLines={new Set(run.report.errors.map((error) => error.row))}
+            />
+          )}
         </>
       )}
     </Stack>

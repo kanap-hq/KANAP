@@ -58,3 +58,31 @@ describe('ImportMatchesView, the tooltip of a line', () => {
     expect(popper.querySelector('.MuiTooltip-tooltip')!.className).toContain('MuiTooltip-tooltipPlacementBottom');
   });
 });
+
+// Lot I3 of 26.11.9, pass 3b: a supplier found by the application's publisher says so after its column;
+// a proposal of Kad keeps its mark.
+describe('ImportMatchesView, a supplier found by the publisher', () => {
+  afterEach(() => cleanup());
+
+  it.each([
+    ['en', 'Supplier (publisher): Cegid → SUP-4 Cegid'],
+    ['fr', 'Fournisseur (éditeur) : Cegid → SUP-4 Cegid'],
+  ])('names the column with the publisher (%s), without the mark of Kad', async (language, text) => {
+    await i18n.changeLanguage(language);
+    const editor: CsvImportMatch = { ...match, column: 'supplier_name', value: 'Cegid', target: 'Cegid', ref: 'SUP-4', origin: 'editor' };
+    const model: CsvImportMatch = { ...match, origin: 'model', reason: 'model' };
+    render(
+      <ImportMatchesView
+        matches={[editor, model]}
+        refusedProposals={[]}
+        columnName={(column) => (column === 'supplier_name' ? (language === 'fr' ? 'Fournisseur' : 'Supplier') : column)}
+        open
+        onToggle={() => undefined}
+      />,
+    );
+    // The exact text, its non-breaking space included.
+    const line = screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === text);
+    expect(line.querySelector('[role="img"]')).toBeNull();
+    expect(screen.getByText((content) => content.includes('Deploiement mondial de Workday')).querySelector('[role="img"]')).not.toBeNull();
+  });
+});

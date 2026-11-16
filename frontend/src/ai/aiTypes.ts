@@ -1,6 +1,12 @@
 import type { CsvReportMessage } from '../components/csv/csvMessage';
 import type { BudgetFileChoice, BudgetFileReport } from '../components/finance/budgetFile';
-import type { CsvImportMatch, CsvImportRefusedProposal } from '../components/csv/csv.types';
+import type { CsvImportMatch, CsvImportRefusedProposal, ImportLookalikeChoice, ImportLookalikes } from '../components/csv/csv.types';
+
+/**
+ * A choice of the person on an import card: a budget file's, a match undone on any import, or a row
+ * of an applications import that looks like an existing application. Sent whole to the choice route.
+ */
+export type AiImportChoice = BudgetFileChoice | ImportLookalikeChoice;
 
 export type AiMutationWriteToolName =
   | 'import_ticket'
@@ -160,6 +166,8 @@ export type AiImportRun = {
       undone?: Array<{ column: string; value: string }>;
       /** A servers import: how each site the file names hosts its servers, absent when none. */
       hosting?: AiImportHostingSite[];
+      /** An applications import: the rows that look like an existing application, absent when none. */
+      lookalikes?: ImportLookalikes;
     }
     | { kind: 'budget_file'; file: BudgetFileReport | null };
 };

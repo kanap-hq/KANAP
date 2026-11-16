@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Checkbox, Link, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
+import { Box, Checkbox, Tooltip, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import KanapDialog from '../design/KanapDialog';
@@ -29,7 +29,8 @@ import {
 import { checkSentence, failureText, serverSentence } from './budgetFileText';
 import { useImportFiles } from '../csv/importFiles';
 import ImportExampleButton from '../csv/ImportExampleButton';
-import ImportMatchesView, { ActionLink, Line, type LineAction } from '../csv/ImportMatchesView';
+import ImportMatchesView, { ActionLink, Line, Section, type LineAction } from '../csv/ImportMatchesView';
+import ImportLookalikesView from '../csv/ImportLookalikesView';
 import { buildEntityUrl } from '../../ai/utils/entityUrls';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -49,10 +50,6 @@ type Unmatch = Extract<BudgetFileChoice, { kind: 'unmatch' }>;
 type Lookalikes = NonNullable<BudgetFileReport['lookalikes']>;
 type Lookalike = Lookalikes['lines'][number];
 
-/** The rows that look like an existing line, listed at once; the others unfold on a click. */
-const SHOWN_LOOKALIKES = 10;
-/** Where the reference goes in a lookalike's sentence, so it can be a link. */
-const REF_MARK = '\u2063ref\u2063';
 const LOOKALIKE_REASONS: Record<NonNullable<Lookalike['reason']>, string> = {
   title_supplier: 'reasonTitleSupplier',
   amounts: 'reasonAmounts',
@@ -60,22 +57,6 @@ const LOOKALIKE_REASONS: Record<NonNullable<Lookalike['reason']>, string> = {
 };
 
 type Failure = { text: string; action: 'check' | 'load'; kind: 'stale' | 'retry' | 'final' };
-
-/** The choices of a lookalike row: small toggles at the density of the line's links, kept together. */
-const LOOKALIKE_CHOICES_SX = {
-  flexShrink: 0,
-  whiteSpace: 'nowrap',
-  '& .MuiToggleButton-root': {
-    py: '1px',
-    px: 1,
-    fontSize: 12,
-    fontWeight: 400,
-    lineHeight: 1.4,
-    textTransform: 'none',
-    color: 'kanap.text.secondary',
-    borderColor: 'kanap.border.default',
-  },
-} as const;
 
 /**
  * Import of a list's budget file. Choosing a file checks it at once (the
@@ -528,6 +509,10 @@ export function ReportView({
   const valuesCreated = report.creates.dimensionValues
     .map((entry) => ({ ...entry, names: entry.names.filter((name) => !isUndone(`${ANALYTICS_COLUMN}${entry.dimension}`, name)) }))
     .filter((entry) => entry.names.length > 0);
+  // A row whose line changed since the check: its error is among the errors, and Update can be chosen again.
+  const lookalikeChanged = new Set(report.errors.filter((error) => error.code === 'BUDGET_FILE_LOOKALIKE_CHANGED').map((error) => error.line));
+  // A row in error was not compared with its line: no "nothing changes" for it.
+  const lookalikeRefused = new Set(report.errors.map((error) => error.line));
   const hasCreates = suppliersCreated.length > 0 || valuesCreated.length > 0 || refusedValues.length > 0 || undoneInCreates.length > 0;
 
   return (
@@ -659,14 +644,18 @@ export function ReportView({
       />
 
       {report.lookalikes && report.lookalikes.count > 0 && (
-        <LookalikesView
+        <ImportLookalikesView<Lookalike, BudgetFileChoice>
           lookalikes={report.lookalikes}
+          title={t(`${K}lookalikes.title`)}
           choices={choices}
-          errors={report.errors}
+          updateChoice={(look) => ({ kind: 'lookalike', line: look.line, action: 'update', item: look.target.item, state: look.target.state })}
           onChoices={onChoices}
           choicesDisabled={choicesDisabled}
-          canOpenLines={canOpenLines}
+          reasonText={(look) => (look.reason ? t(`${K}lookalikes.${LOOKALIKE_REASONS[look.reason]}`) : null)}
+          targetUrl={(look) => (canOpenLines ? buildEntityUrl('budget_lines', look.target.ref) : null)}
           fieldName={fieldName}
+          changedLines={lookalikeChanged}
+          refusedLines={lookalikeRefused}
         />
       )}
 
@@ -779,156 +768,6 @@ function changedText(line: BudgetFileReport['changedSinceExport'][number], local
   if (line.by) return t(`${K}changedBy`, { ref: line.itemNumber, by: line.by });
   if (when) return t(`${K}changedAt`, { ref: line.itemNumber, when });
   return t(`${K}changed`, { ref: line.itemNumber });
-}
-
-function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-      <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>{title}</Typography>
-      {hint && <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.25 }}>{hint}</Typography>}
-      {children}
-    </Box>
-  );
-}
-
-/**
- * The rows of the file that look like an existing line, left out unless the person chooses: one
- * line each, its reason in a tooltip, its three choices as a selection (read only: what becomes of
- * it, in words); above them the counts and the choices for all rows. A row's own choice wins over
- * the choice for all rows.
- */
-function LookalikesView({ lookalikes, choices, errors, onChoices, choicesDisabled, canOpenLines, fieldName }: {
-  lookalikes: Lookalikes;
-  choices: BudgetFileChoice[];
-  errors: BudgetFileReport['errors'];
-  onChoices?: (choices: BudgetFileChoice[]) => void;
-  choicesDisabled: boolean;
-  canOpenLines: boolean;
-  /** A field an update changes, as the screen names it. */
-  fieldName: (field: string) => string;
-}) {
-  const { t } = useTranslation('ops');
-  const L = `${K}lookalikes.`;
-  const [unfolded, setUnfolded] = useState(false);
-  // The choice for all rows; `ignore`, the default, is what the check gives back when none was made.
-  const all = choices.find((choice): choice is Extract<BudgetFileChoice, { kind: 'lookalikes' }> => choice.kind === 'lookalikes');
-  const allAction = all?.action ?? 'ignore';
-  const updatable = lookalikes.lines.filter((look) => look.updatable);
-  // A row whose line changed since the check: its error is among the errors, and Update can be chosen again.
-  const changed = new Set(errors.filter((error) => error.code === 'BUDGET_FILE_LOOKALIKE_CHANGED').map((error) => error.line));
-  // A row in error was not compared with its line: no "nothing changes" for it.
-  const refused = new Set(errors.map((error) => error.line));
-  const act = (label: string, next: () => BudgetFileChoice[]): LineAction | null => (
-    onChoices ? { label, onClick: () => onChoices(next()), disabled: choicesDisabled } : null
-  );
-  const chooseRow = (look: Lookalike, action: 'ignore' | 'create' | 'update'): BudgetFileChoice[] => {
-    const rest = choices.filter((choice) => !(choice.kind === 'lookalike' && choice.line === look.line));
-    // Left out is the default: a row's "Leave out" is sent only to override the choice for all rows.
-    if (action === 'ignore') return allAction !== 'ignore' ? [...rest, { kind: 'lookalike', line: look.line, action: 'ignore' }] : rest;
-    if (action === 'create') return [...rest, { kind: 'lookalike', line: look.line, action: 'create' }];
-    return [...rest, { kind: 'lookalike', line: look.line, action: 'update', item: look.target.item, state: look.target.state }];
-  };
-  const chooseAll = (action: 'ignore' | 'create' | 'update'): BudgetFileChoice[] => {
-    // A choice for all rows sets every row, their own choices included: the last gesture counts. "Update all"
-    // leaves a row it cannot update as it is.
-    const rest = choices.filter((choice) => choice.kind !== 'lookalikes' && choice.kind !== 'lookalike');
-    const kept: BudgetFileChoice[] = action === 'update'
-      ? lookalikes.lines
-        .filter((look) => !look.updatable && look.outcome === 'created')
-        .map((look) => ({ kind: 'lookalike', line: look.line, action: 'create' }))
-      : [];
-    // Each row's line as the check shows it, every row included: a line changed in between is refused, not updated blind.
-    return [...rest, ...kept, { kind: 'lookalikes', action, targets: lookalikes.targets }];
-  };
-  const present = (actions: Array<LineAction | null>): LineAction[] => actions.filter((entry): entry is LineAction => entry !== null);
-  // Each choice for all rows, while a row is not in its state.
-  const headActions = present([
-    lookalikes.created < lookalikes.count ? act(t(`${L}createAll`), () => chooseAll('create')) : null,
-    updatable.some((look) => look.outcome !== 'updated') ? act(t(`${L}updateAll`), () => chooseAll('update')) : null,
-    lookalikes.created + lookalikes.updated > 0 ? act(t(`${L}ignoreAll`), () => chooseAll('ignore')) : null,
-  ]);
-  const folded = !unfolded && lookalikes.lines.length > SHOWN_LOOKALIKES;
-  const shown = folded ? lookalikes.lines.slice(0, SHOWN_LOOKALIKES) : lookalikes.lines;
-  const rest = lookalikes.count - shown.length;
-
-  const row = (look: Lookalike) => {
-    const stale = changed.has(look.line);
-    const label = t(`${L}row`, { line: look.line, name: look.name, ref: look.target.ref, target: look.target.name });
-    const [before, after] = t(`${L}row`, { line: look.line, name: look.name, ref: REF_MARK, target: look.target.name }).split(REF_MARK);
-    const url = canOpenLines ? buildEntityUrl('budget_lines', look.target.ref) : null;
-    const ref = url
-      ? <Link href={url} target="_blank" rel="noopener noreferrer" underline="hover">{look.target.ref}</Link>
-      : look.target.ref;
-    const current = look.outcome === 'ignored' ? 'ignore' : look.outcome === 'created' ? 'create' : 'update';
-    const reason = look.reason ? t(`${L}${LOOKALIKE_REASONS[look.reason]}`) : null;
-    const fields = look.outcome === 'updated' && look.fields && look.fields.length > 0
-      ? t(`${L}fields`, { fields: look.fields.map((field) => fieldName(field)).join(', ') })
-      : null;
-    // An update the check read as changing nothing says so on its row.
-    const noChange = look.outcome === 'updated' && !refused.has(look.line) && look.fields?.length === 0
-      ? <Typography component="span" sx={{ fontSize: 12, lineHeight: 1.4, color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>{t(`${L}noChange`, { ref: look.target.ref })}</Typography>
-      : null;
-    const choose = (value: 'ignore' | 'create' | 'update' | null) => {
-      if (!onChoices) return;
-      // A click on the choice shown changes nothing, except Update on a line changed since the check: it reads the line again.
-      if (value === null) {
-        if (stale && current === 'update') onChoices(chooseRow(look, 'update'));
-        return;
-      }
-      onChoices(chooseRow(look, value));
-    };
-    const toggles = [
-      <ToggleButton key="ignore" value="ignore">{t(`${L}ignore`)}</ToggleButton>,
-      <ToggleButton key="create" value="create">{t(`${L}create`)}</ToggleButton>,
-      ...(look.updatable ? [<ToggleButton key="update" value="update">{t(`${L}update`, { ref: look.target.ref })}</ToggleButton>] : []),
-    ];
-    const outcome = look.outcome === 'ignored'
-      ? t(`${L}outcomeIgnored`)
-      : look.outcome === 'created' ? t(`${L}outcomeCreated`) : t(`${L}outcomeUpdated`, { ref: look.target.ref });
-    return (
-      <Line
-        key={`la-${look.line}`}
-        danger={stale}
-        tooltip={fields && reason ? <>{reason}<br />{fields}</> : (fields ?? reason ?? undefined)}
-        under={onChoices ? (
-          <>
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              color="primary"
-              value={current}
-              disabled={choicesDisabled}
-              aria-label={label}
-              onChange={(_event, value: 'ignore' | 'create' | 'update' | null) => choose(value)}
-              sx={LOOKALIKE_CHOICES_SX}
-            >
-              {toggles}
-            </ToggleButtonGroup>
-            {noChange}
-          </>
-        ) : undefined}
-        after={!onChoices && noChange ? noChange : undefined}
-      >
-        {after === undefined ? label : <>{before}{ref}{after}</>}
-        {/* Read only (the card approved or refused, the load done): what becomes of the row, in words. */}
-        {!onChoices && <Box component="span" sx={{ color: stale ? 'inherit' : 'kanap.text.secondary' }}>{` · ${outcome}`}</Box>}
-      </Line>
-    );
-  };
-
-  return (
-    <Section title={t(`${L}title`)}>
-      <Line
-        muted
-        text={t(`${L}counts`, { ignored: lookalikes.ignored, created: lookalikes.created, updated: lookalikes.updated })}
-        actions={headActions}
-      />
-      {shown.map(row)}
-      {folded ? (
-        <Box><ActionLink onClick={() => setUnfolded(true)}>{t(`${K}andMoreInline`, { count: lookalikes.count - shown.length })}</ActionLink></Box>
-      ) : rest > 0 && <Line muted text={t(`${K}andMore`, { count: rest })} />}
-    </Section>
-  );
 }
 
 /** One value of a line; its closest names, when it has some, in a tooltip. */

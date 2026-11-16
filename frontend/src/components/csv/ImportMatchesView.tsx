@@ -91,6 +91,17 @@ export function Line({ text, children, danger, muted, kad, tooltip, action, acti
   );
 }
 
+/** A section of an import's report: its title, then its lines. */
+export function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+      <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>{title}</Typography>
+      {hint && <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.25 }}>{hint}</Typography>}
+      {children}
+    </Box>
+  );
+}
+
 /** The fold of the matches: a count, which unfolds into one line per match. */
 export function FoldToggle({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
   return (
@@ -174,7 +185,14 @@ export default function ImportMatchesView({
       {open && matches.map((entry) => (
         <Line
           key={`mt-${entry.column}-${entry.value}`}
-          text={t(`${K}matching.match`, { dimension: columnName(entry.column, entry.name), value: entry.value, target: record(entry) })}
+          text={t(`${K}matching.match`, {
+            // A supplier found by the application's publisher says so after its column.
+            dimension: entry.origin === 'editor'
+              ? t(`${K}matching.byEditor`, { column: columnName(entry.column, entry.name) })
+              : columnName(entry.column, entry.name),
+            value: entry.value,
+            target: record(entry),
+          })}
           kad={entry.origin === 'model' ? t(`${K}matching.byKad`) : undefined}
           tooltip={entry.reason === 'version' ? <>{t(`${K}matching.catalogVersion`)}<br />{linesOf(entry)}</> : linesOf(entry)}
           action={onUndo && entry.undoable ? { label: t(`${K}matching.undo`), onClick: () => onUndo(entry), disabled } : undefined}
