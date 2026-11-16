@@ -274,9 +274,10 @@ function glpiStatusCodeForTransition(value: string): number | null {
   }
 }
 
-// Terminal transitions (solve/close) are destructive cleanup actions: always
-// human-approved (never auto-executed — see executeAutomaticPreparedActions
-// terminal backstop) and surfaced distinctly in approvals/audit.
+// Terminal transitions (solve/close) are destructive cleanup actions, surfaced
+// distinctly in approvals/audit. They run on their own only when the agent's
+// Status update autonomy is automatic, after the requester reply of the same
+// batch went out (see agent-control-automatic-execution.util.ts).
 function glpiTransitionIsTerminal(value: string): boolean {
   const key = value.trim();
   return key === 'solved' || key === 'closed';
@@ -319,7 +320,7 @@ function glpiSafeStatusTransitions(currentStatus: string | null): Array<{
     terminal: glpiTransitionIsTerminal(key),
   });
   // Non-terminal moves are safe; solve/close are destructive terminal cleanup
-  // actions, offered for proposal but always human-approved.
+  // actions, offered for proposal and confirmed when approved by hand.
   return [
     ...['processing_assigned', 'processing_planned', 'pending']
       .filter((key) => key !== current)
@@ -1508,8 +1509,9 @@ export class GlpiTicketingProvider implements TicketingProvider {
     }
     const transition = current.data.allowedTransitions.find((candidate) => candidate.key === input.transitionKey);
     // Destructive (terminal solve/close) transitions CAN be prepared/proposed —
-    // they are gated by human approval and the auto-exec terminal backstop — but a
-    // ticket that is already terminal cannot transition further.
+    // they follow the agent's Status update autonomy and never run before the
+    // requester reply of the same batch — but a ticket that is already terminal
+    // cannot transition further.
     if (!transition || current.data.terminal) {
       return providerError<TicketProviderActionPrepared<TicketStatusUpdateActionPayload>>('unsafe_operation', 'GLPI status transition is not allowed for this ticket.', false);
     }

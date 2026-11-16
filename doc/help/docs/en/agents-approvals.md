@@ -86,7 +86,9 @@ Reaching for Dismiss when you really mean "this was wrong" hides a genuine quali
 
 **Close ticket** and **Solve ticket** titles are shown in red, because they end the ticket and the requester sees the change straight away. That red title is the only extra flag. There is no separate "terminal" badge.
 
-Approving one of these (on its own or as part of an **Approve all** where any item closes or solves the ticket) opens a confirmation named after the action (**Apply Solve ticket?**). It names the ticket, warns that the requester will see the change immediately, lists every closing item in a bulk approval, and gives you a reason field for the record. You confirm with the action name itself (**Solve ticket** or **Close ticket**). This is deliberate friction: routine replies and notes apply in one click, but closing or solving a ticket always asks you to pause and confirm.
+Approving one of these (on its own or as part of an **Approve all** where any item closes or solves the ticket) opens a confirmation named after the action (**Apply Solve ticket?**). It names the ticket, warns that the requester will see the change immediately, lists every closing item in a bulk approval, and gives you a reason field for the record. You confirm with the action name itself (**Solve ticket** or **Close ticket**). This is deliberate friction: routine replies and notes apply in one click, while closing or solving a ticket by hand asks you to pause and confirm.
+
+An agent whose **Status update** is **Automatic** closes and solves tickets on its own, without this step, once its reply to the requester has gone out.
 
 ---
 

@@ -86,7 +86,9 @@ Recurrir a Descartar cuando en realidad quiere decir «esto estaba mal» oculta 
 
 Los títulos **Cerrar ticket** y **Resolver ticket** se muestran en rojo, porque ponen fin al ticket y el solicitante ve el cambio de inmediato. Ese título rojo es la única marca extra: no hay una insignia «terminal» aparte.
 
-Aprobar una de estas acciones (por sí sola o como parte de un **Aprobar todo** en el que algún elemento cierre o resuelva el ticket) abre una confirmación con el nombre de la acción (**¿Aplicar Resolver ticket?**). Nombra el ticket, advierte de que el solicitante verá el cambio de inmediato, enumera todos los elementos de cierre en una aprobación masiva y le ofrece un campo de motivo para el registro. Usted confirma con el propio nombre de la acción (**Resolver ticket** o **Cerrar ticket**). Se trata de una fricción deliberada: las respuestas y notas rutinarias se aplican con un solo clic, pero cerrar o resolver un ticket siempre le pide detenerse y confirmar.
+Aprobar una de estas acciones (por sí sola o como parte de un **Aprobar todo** en el que algún elemento cierre o resuelva el ticket) abre una confirmación con el nombre de la acción (**¿Aplicar Resolver ticket?**). Nombra el ticket, advierte de que el solicitante verá el cambio de inmediato, enumera todos los elementos de cierre en una aprobación masiva y le ofrece un campo de motivo para el registro. Usted confirma con el propio nombre de la acción (**Resolver ticket** o **Cerrar ticket**). Se trata de una fricción deliberada: las respuestas y notas rutinarias se aplican con un solo clic, mientras que cerrar o resolver un ticket a mano le pide detenerse y confirmar.
+
+Un agente cuya **Actualización de estado** está en **Automático** cierra y resuelve tickets por sí solo, sin este paso, una vez enviada su respuesta al solicitante.
 
 ---
 

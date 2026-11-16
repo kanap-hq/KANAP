@@ -28,6 +28,7 @@ import {
   decodeActivityCursor,
   mergeActivityPage,
 } from './ai-agent-activity-timeline';
+import { resolveRecordIdsByReference } from '../../ai-entity-reference.util';
 import { activityTargetKey, resolveActivityTargetDisplays } from './ai-agent-activity-targets';
 import { normalizeQueuePolicyRetention } from '../agent/ai-agent-activity-retention';
 import {
@@ -204,6 +205,7 @@ import {
 import { Application } from '../../../applications/application.entity';
 import { KnowledgeQueryDerivation } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
+import { decideAutomaticPreparedAction, orderAutomaticPreparedActions } from './agent-control-automatic-execution.util';
 import { Tenant } from '../../../tenants/tenant.entity';
 import { tenantSeedLanguage } from '../../../analytics/recommended-dimensions.seed';
 import {
@@ -348,7 +350,6 @@ import {
   PLANNER_CLASSIFICATION_ACTION_TYPE,
   PLANNER_PARTICIPANT_ACTION_TYPE,
   PLANNER_OWNED_ACTION_TYPES,
-  PLANNER_TERMINAL_TRANSITIONS,
   STATIC_CAPABILITY_EXECUTION_PHASES,
   TARGETING_CATALOG_BROWSE_TTL_MS,
   TARGETING_CATALOG_OPTIONS_TTL_MS,
@@ -723,20 +724,6 @@ export type MergedKnowledgeCandidate = KnowledgeSearchItem & {
 // semantics); unknown domain keys are dropped.
 
 
-
-// Terminal ticket transitions (solve/close) are destructive cleanup actions. Even
-// though they reuse the status_update capability (action class 'status', which is
-// in the low-risk automation allowlist), they must NEVER auto-execute. New
-// provider payloads stamp the neutral terminal flag; transitionKey remains a
-// legacy persisted-row backstop.
-function isTerminalStatusAction(action: AiActionRequest): boolean {
-  if (!action.capability_name.includes('status_update')) return false;
-  const payload = isRecord(action.action_payload_json) ? action.action_payload_json : null;
-  if (!payload) return false;
-  if (payload.terminal === true) return true;
-  const transitionKey = typeof payload.transitionKey === 'string' ? payload.transitionKey : null;
-  return transitionKey != null && PLANNER_TERMINAL_TRANSITIONS.has(transitionKey);
-}
 
 function actionMetadataString(action: AiActionRequest, field: string): string | null {
   const metadata = isRecord(action.metadata_json) ? action.metadata_json : null;
@@ -3021,6 +3008,15 @@ export class AiAgentControlService {
     const fromDate = from && Number.isFinite(from.getTime()) ? from : null;
     const toDate = to && Number.isFinite(to.getTime()) ? to : null;
     const targetRef = options.targetRef?.trim() || null;
+    // The column shows a business reference (T-15) while the row stores the record's id.
+    // A ticket number or a pasted id matches the stored text, as before.
+    const activityReferenceIds = targetRef && typeof context.manager.query === 'function'
+      ? (await resolveRecordIdsByReference(context.manager, context.tenantId, targetRef)).map((id) => id.toLowerCase())
+      : [];
+    const targetRefLike = targetRef ? `%${targetRef}%` : null;
+    const targetRefParams = activityReferenceIds.length > 0
+      ? { targetRef: targetRefLike, activityReferenceIds }
+      : { targetRef: targetRefLike };
     const status = options.status?.trim() || null;
     const agentDefinitionId = options.agentDefinitionId?.trim() || null;
     const actorUserId = options.actorUserId?.trim() || null;
@@ -3080,7 +3076,12 @@ export class AiAgentControlService {
         qb.andWhere("action.metadata_json ->> 'agent_definition_id' = :agentDefinitionId", { agentDefinitionId });
       }
       if (targetRef) {
-        qb.andWhere('action.target_ref ILIKE :targetRef', { targetRef: `%${targetRef}%` });
+        qb.andWhere(
+          activityReferenceIds.length > 0
+            ? '(action.target_ref ILIKE :targetRef OR lower(action.target_ref) = ANY(:activityReferenceIds))'
+            : 'action.target_ref ILIKE :targetRef',
+          targetRefParams,
+        );
       }
       if (status) {
         qb.andWhere('action.status = :status', { status });
@@ -3191,12 +3192,15 @@ export class AiAgentControlService {
           );
         }
         if (targetRef) {
+          const linkedMatch = activityReferenceIds.length > 0
+            ? '(linked.target_ref ILIKE :targetRef OR lower(linked.target_ref) = ANY(:activityReferenceIds))'
+            : 'linked.target_ref ILIKE :targetRef';
           qb.andWhere(
             `EXISTS (SELECT 1 FROM ai_action_requests linked
                       WHERE linked.id = approval.action_request_id
                         AND linked.tenant_id = approval.tenant_id
-                        AND linked.target_ref ILIKE :targetRef)`,
-            { targetRef: `%${targetRef}%` },
+                        AND ${linkedMatch})`,
+            targetRefParams,
           );
         }
         return applyWindow(qb, decisionOrder, withCursor);
@@ -3340,8 +3344,10 @@ export class AiAgentControlService {
         }
         if (targetRef) {
           qb.andWhere(
-            `(run.metadata_json ->> 'target_ref' ILIKE :targetRef OR run.metadata_json ->> 'targetRef' ILIKE :targetRef)`,
-            { targetRef: `%${targetRef}%` },
+            activityReferenceIds.length > 0
+              ? `(run.metadata_json ->> 'target_ref' ILIKE :targetRef OR run.metadata_json ->> 'targetRef' ILIKE :targetRef OR lower(run.metadata_json ->> 'target_ref') = ANY(:activityReferenceIds) OR lower(run.metadata_json ->> 'targetRef') = ANY(:activityReferenceIds))`
+              : `(run.metadata_json ->> 'target_ref' ILIKE :targetRef OR run.metadata_json ->> 'targetRef' ILIKE :targetRef)`,
+            targetRefParams,
           );
         }
         return applyWindow(qb, 'run.created_at', withCursor);
@@ -4010,18 +4016,23 @@ export class AiAgentControlService {
       error_message: string | null;
     }> = [];
     let stepIndex = input.stepIndex;
-    for (const action of input.actions) {
-      const className = actionClass(action);
-      // Hard safety boundary: terminal solve/close is destructive and stays
-      // human-approved even when 'status' autonomy is automatic.
-      const terminalStatus = isTerminalStatusAction(action);
-      if (terminalStatus || !isAutomatableAutonomyActionClass(className) || !policyEnabledForClass(className)) {
+    // Requester replies run before any close or solve; a close whose reply did
+    // not run in this pass waits in the approvals queue.
+    const executedActionIds = new Set<string>();
+    for (const action of orderAutomaticPreparedActions(input.actions)) {
+      const decision = decideAutomaticPreparedAction(action, {
+        batch: input.actions,
+        policyEnabledForClass,
+        executedActionIds,
+      });
+      const className = decision.actionClass;
+      if (!decision.run) {
         executions.push({
           action_request_id: action.id,
           action_class: className,
           status: 'skipped',
           tool_execution_id: null,
-          error_message: terminalStatus ? 'terminal_status_requires_approval' : null,
+          error_message: decision.reason,
         });
         continue;
       }
@@ -4043,6 +4054,7 @@ export class AiAgentControlService {
             },
           },
         });
+        executedActionIds.add(action.id);
         executions.push({
           action_request_id: action.id,
           action_class: className,
