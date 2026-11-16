@@ -129,7 +129,7 @@ describe('ContactWorkspacePage', () => {
   it('shows the name as title, the supplier as a link and no save button', async () => {
     renderAt('/master-data/contacts/c-1/overview');
     expect(await screen.findByText('Alex Martin')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Supplier A' })).toHaveAttribute('href', '/master-data/suppliers/s-1/overview');
+    expect(screen.getByRole('link', { name: 'Supplier A' })).toHaveAttribute('href', '/master-data/suppliers/SUP-3/overview');
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /reset/i })).toBeNull();
   });

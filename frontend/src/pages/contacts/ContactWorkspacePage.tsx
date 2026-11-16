@@ -38,7 +38,7 @@ import { SUPPLIERS_PATH } from '../suppliers/supplierModel';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useDraftCreation } from '../../components/workspace/creation';
 import useRecordEditorKey from '../../components/workspace/useRecordEditorKey';
-import { formatItemRef } from '../../utils/item-ref';
+import { formatItemRef, itemAddress } from '../../utils/item-ref';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 
 const LIST_PATH = '/master-data/contacts';
@@ -436,7 +436,7 @@ function ContactEditor({ id }: { id: string }) {
         <PortfolioMetadataItem label={t('contacts.fields.supplier')}>
           <Box
             component={RouterLink}
-            to={`/master-data/suppliers/${data.supplier_id}/overview`}
+            to={`${SUPPLIERS_PATH}/${itemAddress('supplier', matching(data.supplier_option, data.supplier_id) ?? { id: data.supplier_id })}/overview`}
             title={t('contacts.metadata.openSupplier')}
             sx={(th) => ({
               color: 'inherit',
