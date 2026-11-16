@@ -220,12 +220,12 @@ export class AiImportRunnerService {
       case 'working_day_calendars':
         return this.calendars.importCsv({ file, dryRun, ...read }, caller);
       case 'technology_asset_links':
-        return this.technologyLinks.importAssetLinks({ file, dryRun, language }, caller);
+        return this.technologyLinks.importAssetLinks({ file, dryRun, language, access: await rights(), ...names }, caller);
       case 'technology_application_links': {
         // The applications the person reads: all of them, or a Business Contributor's own, as the route.
-        const access = await this.policy.effectiveAccess(context, manager);
+        const access = await rights();
         const scope = await resolveBusinessContributorScopeForUser({ manager, userId, tenantId, isAdmin: access.isAdmin }, 'applications', 'reader');
-        return this.technologyLinks.importApplicationLinks({ file, dryRun, language }, caller, { scope });
+        return this.technologyLinks.importApplicationLinks({ file, dryRun, language, access, ...names }, caller, { scope });
       }
     }
   }

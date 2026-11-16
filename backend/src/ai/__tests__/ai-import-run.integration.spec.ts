@@ -715,6 +715,95 @@ async function testProposalsOfTheOtherImports(h: Harness, runner: QueryRunner, s
   console.log('  processes, cost centers, tasks, requests: Kad\'s proposals checked against their lists: OK');
 }
 
+// Lot I3 of 26.11.9, merge of the fourth and fifth passes: Kad's import of server links finds a
+// server written without its accents, for a person who reads the infrastructure, lists the match on
+// the card, and the card's choice route undoes it: the next card no longer makes it.
+async function testLinkServerNameUndoneByTheRoute(h: Harness, runner: QueryRunner, s: Seed) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const controller = h.app.get(AiImportFileController);
+  const admin = ctx(runner, s, 'admin');
+  const [server] = await runner.query(
+    `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, 'Serveur Énergie F45', 'virtual_machine', 'prod') RETURNING asset_reference`,
+    [s.tenantId],
+  );
+  await runner.query(`INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 4501, 'Moteur F45', 'other')`, [s.tenantId]);
+  const file = attach(h, 'Liens.csv', ['Serveur;Technologie', 'Serveur Energie F45;Moteur F45'].join('\n'));
+  const columns = [
+    { column: 'asset_name', source: 1, confidence: 'high' },
+    { column: 'technology_name', source: 2, confidence: 'high' },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'technology_asset_links', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual(check.report.matches, [{
+    column: 'asset_name', name: null, value: 'Serveur Energie F45', target: 'Serveur Énergie F45', ref: server.asset_reference,
+    origin: 'server', reason: 'accents', lines: [2], count: 1, undoable: true,
+  }]);
+  const req = { user: { sub: s.users.admin }, headers: {} };
+  const tenant = { manager: runner.manager, tenantId: s.tenantId };
+  const undo = [{ kind: 'unmatch', column: 'asset_name', value: 'Serveur Energie F45' }];
+  const next = await controller.choose(s.conversations.admin, card.preview_id, { choices: undo }, req, tenant);
+  assert.equal(next.replaces_preview_id, card.preview_id);
+  const undone = next.import_mapping.validation;
+  assert.equal(undone.report.matches, undefined, 'the next card no longer makes the match');
+  assert.deepEqual(undone.report.undone, [{ column: 'asset_name', value: 'Serveur Energie F45' }]);
+  assert.deepEqual(undone.report.errors.map((error: any) => [error.row, error.column, error.code]), [[2, 'asset_name', 'CSV_REFERENCE_NOT_FOUND']]);
+  console.log('  server links: a server beyond accents matched on the card, undone through its route: OK');
+}
+
+// Lot I3 of 26.11.9, merge of the fourth and fifth passes: Kad's import of servers finds "Ubuntu
+// 22.04" as the catalog's "22.04 LTS" (a match of reason version, undoable from the card), and the
+// card says how each site the file names hosts its servers (T-I3f).
+async function testServerVersionAndHosting(h: Harness, runner: QueryRunner, s: Seed) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const controller = h.app.get(AiImportFileController);
+  const admin = ctx(runner, s, 'admin');
+  await runner.query(
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type, provider)
+     VALUES ($1, 'LOC-4501', 'Datacenter Rennes F45', 'on_prem', NULL), ($1, 'LOC-4502', 'AWS Paris F45', 'public_cloud', 'AWS')`,
+    [s.tenantId],
+  );
+  const file = attach(h, 'Serveurs.csv', [
+    'Nom;Site;Type;Environnement;Système',
+    'srv-f45-a;LOC-4502;virtual_machine;prod;Ubuntu 22.04',
+    'srv-f45-b;loc-4501;virtual_machine;prod;Ubuntu 22.04',
+    'srv-f45-c;LOC-4502;virtual_machine;prod;',
+  ].join('\n'));
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'location_reference', source: 2, confidence: 'high' },
+    { column: 'kind', source: 3, confidence: 'high' },
+    { column: 'environment', source: 4, confidence: 'high' },
+    { column: 'operating_system', source: 5, confidence: 'high' },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'assets', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual(check.report.matches, [{
+    column: 'operating_system', name: null, value: 'Ubuntu 22.04', target: 'Ubuntu 22.04 LTS', ref: null,
+    origin: 'server', reason: 'version', lines: [2, 3], count: 2, undoable: true,
+  }]);
+  // Each site once, in the order of the file, with its hosting as the location screen shows it.
+  const hosting = [
+    { ref: 'LOC-4502', name: 'AWS Paris F45', hostingType: 'public_cloud', label: 'Public cloud', category: 'cloud', provider: 'AWS' },
+    { ref: 'LOC-4501', name: 'Datacenter Rennes F45', hostingType: 'on_prem', label: 'On-prem', category: 'on_prem', provider: null },
+  ];
+  assert.deepEqual(check.report.hosting, hosting);
+  const req = { user: { sub: s.users.admin }, headers: {} };
+  const tenant = { manager: runner.manager, tenantId: s.tenantId };
+  const undo = [{ kind: 'unmatch', column: 'operating_system', value: 'Ubuntu 22.04' }];
+  const next = await controller.choose(s.conversations.admin, card.preview_id, { choices: undo }, req, tenant);
+  const undone = next.import_mapping.validation;
+  assert.equal(undone.report.matches, undefined, 'the next card no longer makes the match');
+  assert.deepEqual(
+    undone.report.warnings.map((warning: any) => [warning.row, warning.code, warning.params?.value]),
+    [[2, 'CSV_TECHNOLOGY_VERSION_CREATED', '22.04'], [3, 'CSV_TECHNOLOGY_VERSION_CREATED', '22.04']],
+    'the version is created as written',
+  );
+  assert.deepEqual(undone.report.hosting, hosting);
+  console.log('  servers: Ubuntu 22.04 found as 22.04 LTS and undone from the card; the sites\' hosting said: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -736,6 +825,8 @@ async function run() {
       await testSupplierProposals(harness, runner, s);
       await testContractMatchUndoneByTheRoute(harness, runner, s);
       await testProposalsOfTheOtherImports(harness, runner, s);
+      await testLinkServerNameUndoneByTheRoute(harness, runner, s);
+      await testServerVersionAndHosting(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

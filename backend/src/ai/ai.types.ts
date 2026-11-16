@@ -555,6 +555,20 @@ export type AiImportReportMessage = {
  * What an import reported on the file Plaid built: its check (dry run) or the import. The counts and
  * `issues` reach the model, with the budget file's `matching`; `report` holds the messages, written for the person, for the card.
  */
+/**
+ * A site a servers import names (`LOC-n`), with its hosting: the label of its hosting type in the
+ * person's language, its category in the catalog (`on_prem`, `cloud`, null when the type has none)
+ * and its provider (null when none).
+ */
+export type AiImportHostingSite = {
+  ref: string;
+  name: string;
+  hostingType: string;
+  label: string;
+  category: 'on_prem' | 'cloud' | null;
+  provider: string | null;
+};
+
 export type AiImportRunDto = {
   /** The check's facts of the approval, in one sentence (`approvalFacts`, `rowsApprovalFacts`); moved to the mapping. */
   on_approval?: string;
@@ -637,6 +651,8 @@ export type AiImportRunDto = {
       refusedProposals?: ImportRefusedProposal[]; refusedProposalsTotal?: number;
       /** The matches the person undid on the card (its choices `unmatch`), absent when none: the card sends them all with the next one. */
       undone?: Array<{ column: string; value: string }>;
+      /** A servers import: how each site the file names hosts its servers (lot I3 of 26.11.9, T-I3f); absent when none. */
+      hosting?: AiImportHostingSite[];
     }
     /** The budget file's check, as its dialog shows it (`BudgetFileReport` without its snapshot). */
     | { kind: 'budget_file'; file: Record<string, unknown> | null };

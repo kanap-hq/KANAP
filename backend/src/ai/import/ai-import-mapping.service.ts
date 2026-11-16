@@ -11,6 +11,7 @@ import { readTableAttachment, TABLE_ATTACHMENT_KIND } from '../attachments/table
 import { AI_IMPORT_KEYS, AI_IMPORT_WHOLE_ROWS, aiImportAccess, type AiImportKey } from './ai-import-access';
 import { DESCRIBED_CATALOG_ENTRIES, enabledDimensionValues } from './ai-import-dimension-values';
 import { buildImportFile } from './ai-import-file';
+import { serverHosting } from './ai-import-hosting';
 import { AiImportColumnMappingInput, AiImportMappingResult, AiImportTemplateColumn, buildImportMapping } from './ai-import-mapping';
 import { AiImportRunnerService, rowsApprovalFacts } from './ai-import-runner.service';
 import { AI_IMPORT_TARGETS, AiImportColumnSpec, AiImportTarget, importColumnTitle } from './ai-import-targets';
@@ -182,9 +183,9 @@ export class AiImportMappingService {
   ): Promise<{ target: AiImportTarget; mapping: AiImportMappingPreviewDto }> {
     const target = aiImportTarget(input.entity_type);
     const { converted, lines, left } = await this.convert(context, target, input, language);
-    const validation = await this.runner.run(target.key, buildImportFile(converted.file, language), {
+    const validation = await this.withHosting(context, target, converted, language, await this.runner.run(target.key, buildImportFile(converted.file, language), {
       dryRun: true, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
-    }, context);
+    }, context));
     // The facts of the approval lead the card the model reads: the budget file's, or the counts of a
     // row import, once a file that would clear columns is refused.
     const { on_approval: budgetFacts, ...checked } = refuseClearedColumns(validation, left);
@@ -235,7 +236,24 @@ export class AiImportMappingService {
     const result = await this.runner.run(target.key, buildImportFile(converted.file, language), {
       dryRun: false, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
     }, context);
-    return refuseClearedColumns(result, left);
+    return refuseClearedColumns(await this.withHosting(context, target, converted, language, result), left);
+  }
+
+  /**
+   * A servers import's report with the hosting of the sites its file names (T-I3f of lot I3): a
+   * server is hosted as its site is, which the card says under the messages.
+   */
+  private async withHosting(
+    context: AiExecutionContextWithManager,
+    target: AiImportTarget,
+    converted: AiImportMappingResult,
+    language: CsvLanguage,
+    run: AiImportRunDto,
+  ): Promise<AiImportRunDto> {
+    if (target.key !== 'assets' || run.report.kind !== 'rows') return run;
+    const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
+    const hosting = await serverHosting(context.manager, context.tenantId, converted.file, settings.hostingTypes ?? [], language);
+    return hosting.length > 0 ? { ...run, report: { ...run.report, hosting } } : run;
   }
 
   private async convert(
