@@ -253,36 +253,36 @@ function parseCode(
 
 /**
  * Users are preloaded by e-mail. A name matches in either order ("First Last" or "Last First"),
- * repeated spaces aside, by the steps of every import (lot I3 of 26.11.9, `common/name-matching.ts`):
- * exactly, then case aside, then accents aside for a person whose rights the import knows and who has
- * not undone that match (a match, listed). The first step that finds anyone decides: several people
- * there refuse the cell (`CSV_NAME_AMBIGUOUS_AMONG`, named by e-mail). The cache includes disabled
+ * repeated spaces aside: case aside (one step, as before lot I3: two people whose names differ only by
+ * case are both named), then accents aside for a person whose rights the import knows and who has not
+ * undone that match (a match, listed; `common/name-matching.ts`). The first step that finds anyone
+ * decides: several people there refuse the cell (`CSV_NAME_AMBIGUOUS_AMONG`, named by e-mail). The cache includes disabled
  * accounts, so a disabled account with the same name as an enabled one makes the name ambiguous.
  * One person counts once per spelling, even when both orders produce it ("Anna Anna", or a person
  * with only one name filled). Kad's proposal comes first: an e-mail or a name, exactly or case aside.
  */
 type NamedPerson = { id: string; email: string; name: string };
-type PeopleIndex = Record<'exact' | 'case' | 'accents', Map<string, Map<string, NamedPerson>>>;
+type PeopleIndex = Record<'case' | 'accents', Map<string, Map<string, NamedPerson>>>;
 
 const userNameIndexes = new WeakMap<Map<string, any>, PeopleIndex>();
 
-/** The spelling the import compares at each step: trimmed, inner spaces collapsed, then case, then accents aside. */
+/** The spelling the import compares at each step: trimmed, inner spaces collapsed, case aside, then accents aside. */
 function personNameKeys(value: string): Record<keyof PeopleIndex, string> {
-  const exact = value.normalize('NFKC').trim().replace(/\s+/g, ' ');
-  return { exact, case: foldKey(exact), accents: accentFreeKey(exact) };
+  const spaced = value.normalize('NFKC').trim().replace(/\s+/g, ' ');
+  return { case: foldKey(spaced), accents: accentFreeKey(spaced) };
 }
 
 function peopleByName(users: Map<string, any>): PeopleIndex {
   const cached = userNameIndexes.get(users);
   if (cached) return cached;
 
-  const index: PeopleIndex = { exact: new Map(), case: new Map(), accents: new Map() };
+  const index: PeopleIndex = { case: new Map(), accents: new Map() };
   for (const [email, user] of users) {
     const id = user?.id;
     if (typeof id !== 'string' || id === '') continue;
     const name = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim();
     const orders = [name, `${user.last_name ?? ''} ${user.first_name ?? ''}`];
-    for (const level of ['exact', 'case', 'accents'] as const) {
+    for (const level of ['case', 'accents'] as const) {
       for (const order of orders) {
         const spelling = personNameKeys(order)[level];
         if (!spelling) continue;
@@ -304,11 +304,11 @@ function peopleByName(users: Map<string, any>): PeopleIndex {
 function findPeople(users: Map<string, any>, text: string, beyondCase: boolean): { people: NamedPerson[]; how: MatchHow } {
   const index = peopleByName(users);
   const keys = personNameKeys(text);
-  for (const level of beyondCase ? (['exact', 'case', 'accents'] as const) : (['exact', 'case'] as const)) {
+  for (const level of beyondCase ? (['case', 'accents'] as const) : (['case'] as const)) {
     const people = index[level].get(keys[level]);
     if (people && people.size > 0) return { people: [...people.values()], how: level };
   }
-  return { people: [], how: 'exact' };
+  return { people: [], how: 'case' };
 }
 
 function resolveUser(value: string, column: string, context: CsvImportContext, line: number): string | null {

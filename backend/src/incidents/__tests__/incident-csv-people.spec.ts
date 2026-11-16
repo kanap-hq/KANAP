@@ -152,8 +152,35 @@ async function testCodesAndAccents(): Promise<void> {
   }
 }
 
+/**
+ * Two people whose names differ only by case: the name is refused as naming both, as before lot I3
+ * (one case-blind step), with or without the person's rights; the e-mail still finds each one.
+ */
+async function testCaseOnlyNamesakeIsAmbiguous(): Promise<void> {
+  const people = new Map<string, CachedUser>([
+    ['anne.martin@example.test', user('10000000-0000-4000-8000-000000000011', 'Anne', 'Martin')],
+    ['anne.martin2@example.test', user('10000000-0000-4000-8000-000000000012', 'Anne', 'MARTIN')],
+  ]);
+  const both = 'anne.martin2@example.test, anne.martin@example.test';
+  for (const column of COLUMNS) {
+    for (const rights of [context, accentContext()]) {
+      const ctx = { ...rights, resolverCache: new Map([['users', people]]) } as CsvImportContext;
+      for (const cell of ['Anne Martin', 'anne martin', 'Martin Anne']) {
+        const refused = await cellError(() => transform(column)(cell, {}, ctx, 2));
+        assert.equal(refused.code, 'CSV_NAME_AMBIGUOUS_AMONG', `${column} "${cell}": both people`);
+        assert.deepEqual(refused.params, { value: cell, names: both });
+      }
+      assert.equal(await transform(column)('anne.martin2@example.test', {}, ctx, 2), '10000000-0000-4000-8000-000000000012');
+    }
+    const proposed = accentContext({ proposals: { [column]: { 'A. Martin': 'Anne Martin' } } });
+    const proposedCtx = { ...proposed, resolverCache: new Map([['users', people]]) } as CsvImportContext;
+    assert.equal((await cellError(() => transform(column)('A. Martin', {}, proposedCtx, 2))).code, 'CSV_REFERENCE_NOT_FOUND', `${column}: Kad's name of both is refused`);
+  }
+}
+
 async function run(): Promise<void> {
   await testCodesAndAccents();
+  await testCaseOnlyNamesakeIsAmbiguous();
   for (const column of COLUMNS) {
     assert.equal(await resolve(column, 'Berger Thomas'), THOMAS, `${column}: Last First`);
     assert.equal(await resolve(column, 'thomas  berger'), THOMAS, `${column}: case and repeated spaces`);
