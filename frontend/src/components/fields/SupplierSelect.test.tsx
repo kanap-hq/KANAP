@@ -77,4 +77,25 @@ describe('SupplierSelect', () => {
     const created = await screen.findByRole('option', { name: /Brand new/ });
     expect(within(created).getByText('SUP-13')).toBeTruthy();
   });
+
+  // A record page gives the chosen supplier from its detail (`references.supplier` of a budget
+  // line): that label wins over the lookup's, so it must carry the reference too.
+  it('shows the reference of the chosen supplier the record page gives, as the other options', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <SupplierSelect label="Supplier" value="s-12" onChange={vi.fn()} selectedOption={{ ...ACME }} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const input = screen.getByRole('combobox');
+    expect((input as HTMLInputElement).value).toBe('Acme');
+    fireEvent.mouseDown(input);
+    fireEvent.change(input, { target: { value: 'SUP-12' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/suppliers/lookup', expect.objectContaining({ params: expect.objectContaining({ q: 'SUP-12' }) })));
+    const option = await screen.findByRole('option', { name: /Acme/ });
+    expect(within(option).getByText('SUP-12')).toBeTruthy();
+    expect(within(option).getByText('F10001')).toBeTruthy();
+  });
 });

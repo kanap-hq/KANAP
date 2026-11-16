@@ -14,6 +14,7 @@ import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetai
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
 import { PropertyGroup, PropertyRow } from '../../components/design';
 import SupplierSelect from '../../components/fields/SupplierSelect';
+import { matching } from '../../components/finance/itemReferences';
 import { guessCountryFromDialCode, splitPhone } from '../../lib/phoneUtils';
 import { attentionDotSx, drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -511,9 +512,7 @@ function ContactEditor({ id }: { id: string }) {
             label={t('contacts.fields.supplier')}
             hideLabel
             value={data.supplier_id}
-            selectedOption={data.supplier_id && data.supplier_name
-              ? { id: data.supplier_id, name: data.supplier_name, erp_supplier_id: null, status: 'enabled' }
-              : null}
+            selectedOption={matching(data.supplier_option, data.supplier_id)}
             onChange={(supplierId) => changeSupplier(supplierId, null)}
             disabled={disabled || !!prefillSupplierId}
             error={!!errors.supplier_id}

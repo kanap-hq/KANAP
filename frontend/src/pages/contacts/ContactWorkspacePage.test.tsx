@@ -43,8 +43,8 @@ vi.mock('../../components/history/RecordHistory', () => ({
 // The supplier picker searches the API: a stub picks a supplier or clears it.
 vi.mock('../../components/fields/SupplierSelect', () => ({
   // One field in the tab order, as the real picker; the buttons only drive the tests.
-  default: (props: { label?: string; value: string | null; onChange: (v: string | null) => void; disabled?: boolean }) => (
-    <div data-testid="supplier-select" data-value={props.value ?? ''} data-disabled={String(!!props.disabled)}>
+  default: (props: { label?: string; value: string | null; onChange: (v: string | null) => void; disabled?: boolean; selectedOption?: { item_number?: number | null } | null }) => (
+    <div data-testid="supplier-select" data-value={props.value ?? ''} data-disabled={String(!!props.disabled)} data-selected-number={props.selectedOption?.item_number ?? ''}>
       <input aria-label={props.label} value={props.value ?? ''} disabled={props.disabled} readOnly />
       <button type="button" tabIndex={-1} onClick={() => props.onChange('s-2')}>pick supplier</button>
       <button type="button" tabIndex={-1} onClick={() => props.onChange(null)}>clear supplier</button>
@@ -76,6 +76,7 @@ const CONTACT = {
   supplier_id: 's-1',
   supplier_role: 'commercial',
   supplier_name: 'Supplier A',
+  supplier_option: { id: 's-1', item_number: 3, name: 'Supplier A', erp_supplier_id: 'SUP-003', status: 'enabled' },
 };
 
 let stored: Record<string, unknown>;
@@ -131,6 +132,13 @@ describe('ContactWorkspacePage', () => {
     expect(screen.getByRole('link', { name: 'Supplier A' })).toHaveAttribute('href', '/master-data/suppliers/s-1/overview');
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /reset/i })).toBeNull();
+  });
+
+  // The chosen supplier shows its reference (`SUP-3`) in the picker's list, as the others do.
+  it("gives the supplier picker the detail's option, reference included", async () => {
+    renderAt('/master-data/contacts/c-1/overview');
+    expect(await screen.findByText('Alex Martin')).toBeInTheDocument();
+    expect(screen.getByTestId('supplier-select')).toHaveAttribute('data-selected-number', '3');
   });
 
   it('shows the History button in the header and opens the contact history', async () => {
