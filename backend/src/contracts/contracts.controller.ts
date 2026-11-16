@@ -28,6 +28,7 @@ import { ContractsDeleteService } from './contracts-delete.service';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvCallerAccess } from '../common/csv/csv-field.types';
+import { csvUnmatched } from '../common/csv/csv-unmatched';
 import { parseExportFormat } from '../common/xlsx/format';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { creationContextOf, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
@@ -493,6 +494,7 @@ export class ContractsController {
     @Query('language') languageRaw: string | undefined,
     @Query('dateOrder') dateOrderRaw: string | undefined,
     @Query('decimalMark') decimalMarkRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Req() req: any,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
@@ -505,6 +507,7 @@ export class ContractsController {
         language,
         dateOrder: parseDateOrder(dateOrderRaw),
         decimalMark: parseDecimalMark(decimalMarkRaw),
+        unmatched: csvUnmatched(unmatchedRaw),
         access: csvCallerAccess(req),
       },
       { manager: req?.queryRunner?.manager },

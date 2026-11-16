@@ -16,7 +16,7 @@ import { Throttle } from '@nestjs/throttler';
 import { DataSource, EntityManager } from 'typeorm';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions, inlineImageMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
-import { csvCallerAccess, csvExportFormat } from '../common/csv';
+import { csvCallerAccess, csvExportFormat, csvUnmatched } from '../common/csv';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { StorageService } from '../common/storage/storage.service';
 import { createRequestReleaseConnection } from '../common/import-connection';
@@ -711,6 +711,7 @@ export class ApplicationsController {
     @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
     @Query('language') languageRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Tenant() ctx: TenantRequest,
   ) {
     // The screen's language (the user's own when the screen sends none), as the export.
@@ -721,6 +722,7 @@ export class ApplicationsController {
         dryRun: dryRun !== 'false',
         mode,
         operation,
+        unmatched: csvUnmatched(unmatchedRaw),
       },
       {
         manager: this.requireManager(ctx),

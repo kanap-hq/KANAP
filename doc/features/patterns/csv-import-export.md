@@ -154,11 +154,14 @@ A row identical to the stored contract counts as unchanged and is not written: c
 
 Assets, incidents, portfolio projects, portfolio requests and tasks follow the same engine and document their own headers in their pages.
 
+Matches before creating (26.11.9): the engine, and the imports of contracts, cost centers and business processes, find a record named in a cell beyond case (accents set aside, a shipped name in another language) in a family the person reads. The result lists those matches in `matches` (`{ column, name, value, target, ref, origin, reason, lines, count, undoable }`, the first 200) and `matchesTotal`. The form field `unmatched` (a JSON list of `{ column, value }`, 200 at most) undoes matches: such a value is then found case aside only. The check and the load take the same list. The import routes of applications, assets, portfolio projects and requests, tasks, contracts, cost centers and business processes read it; those of incidents and technology links do not yet.
+
 ## UI usage
 
 - The budget lists (OPEX, CAPEX) have **Import CSV** and **Export CSV** in the toolbar, opening the budget file dialogs. Choosing a file runs the check at once; **Load** sends the checked snapshot.
 - The master-data pages, the contracts page and the CoA page use the shared dialogs: **Export CSV** opens a dialog with **Export data**; **Import CSV** opens a dialog with **Download template**, **Preflight check** and **Load**, and shows the date and amount notices with their switch.
 - The V2 entities keep their own dialogs (presets, field selection, import modes).
+- Both import dialogs list the matches of the check under its warnings, as the budget file dialog does; **Undo** checks the file again without that match, and the load sends the same list.
 
 ## Samples
 

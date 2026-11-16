@@ -20,7 +20,7 @@ import { PortfolioProjectsService } from './services';
 import { StorageService } from '../common/storage/storage.service';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions, inlineImageMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
-import { csvCallerAccess, csvExportFormat } from '../common/csv';
+import { csvCallerAccess, csvExportFormat, csvUnmatched } from '../common/csv';
 import { exportListQuery } from '../common/pagination';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { createRequestReleaseConnection } from '../common/import-connection';
@@ -250,6 +250,7 @@ export class PortfolioRequestsController {
     @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
     @Query('language') languageRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
@@ -262,6 +263,7 @@ export class PortfolioRequestsController {
         dryRun: dryRun !== 'false',
         mode,
         operation,
+        unmatched: csvUnmatched(unmatchedRaw),
       },
       {
         manager,
