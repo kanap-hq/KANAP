@@ -3,6 +3,7 @@ import { CsvDateOrder, CsvLanguage, DecimalMark, parseCsvAmount, parseCsvBoolean
 import { sheetCellText, SheetCell } from '../../common/csv-sheet/read';
 import { catalogAliases } from '../../it-ops-settings/catalog-codes';
 import { findCatalogOption, type CatalogOptionLike } from '../../it-ops-settings/catalog-resolve';
+import { accentFreeKey, foldKey } from '../../common/name-matching';
 import { parseReferenceNumber } from '../../common/parse-item-number';
 import { isBlank } from '../attachments/table-attachment';
 import { countryCode } from './ai-import-countries';
@@ -71,15 +72,6 @@ function cellText(cell: SheetCell | undefined): string {
   return cell ? sheetCellText(cell).trim() : '';
 }
 
-function valueKey(value: string): string {
-  return value.normalize('NFKC').trim().toLowerCase();
-}
-
-/** A name set apart from its accents, the way exports often write capitals (`Elevee` for `Élevée`). */
-function accentFreeKey(value: string): string {
-  return valueKey(value).normalize('NFD').replace(/\p{M}/gu, '');
-}
-
 /** The one code whose names match `named` once accents are set aside: null when none or several do. */
 function accentFreeCode(named: string, names: ReadonlyArray<readonly [string, ReadonlyArray<string>]>): string | null {
   const key = accentFreeKey(named);
@@ -89,13 +81,13 @@ function accentFreeCode(named: string, names: ReadonlyArray<readonly [string, Re
 
 /** The model's value map, its keys compared without case or outer spaces. */
 function valueMap(values: Record<string, string> | undefined): Map<string, string> {
-  return new Map(Object.entries(values ?? {}).map(([from, to]) => [valueKey(from), String(to).trim()]));
+  return new Map(Object.entries(values ?? {}).map(([from, to]) => [foldKey(from), String(to).trim()]));
 }
 
 /** The cell the model's value map puts in place of a cell: the value it stands for, a blank for ''. */
 function mappedCell(cell: SheetCell | undefined, map: Map<string, string>): SheetCell | undefined {
   if (map.size === 0 || isBlank(cell)) return cell;
-  const to = map.get(valueKey(cellText(cell)));
+  const to = map.get(foldKey(cellText(cell)));
   if (to === undefined) return cell;
   return to === '' ? { kind: 'empty' } : { kind: 'text', value: to };
 }
@@ -205,10 +197,10 @@ function cellReader(
       const codes = rule.codes ?? [];
       const byLabel = new Map<string, string>();
       for (const [code, labels] of Object.entries(rule.codeLabels ?? {})) {
-        for (const label of labels) byLabel.set(valueKey(label), code);
+        for (const label of labels) byLabel.set(foldKey(label), code);
       }
-      return readerOf((named) => codes.find((code) => valueKey(code) === valueKey(named))
-        ?? byLabel.get(valueKey(named))
+      return readerOf((named) => codes.find((code) => foldKey(code) === foldKey(named))
+        ?? byLabel.get(foldKey(named))
         ?? accentFreeCode(named, codes.map((code) => [code, [code, ...(rule.codeLabels?.[code] ?? [])]])), rule.multi === true, map);
     }
     case 'catalog': {
@@ -281,7 +273,7 @@ function readerOf(convert: (raw: string) => string | null, multi: boolean, map: 
       const raw = cellText(cell);
       if (raw === '') return { status: 'blank' };
       const items = multi
-        ? raw.split(LIST_SEPARATOR).map((item) => map.get(valueKey(item)) ?? item).filter((item) => item !== '')
+        ? raw.split(LIST_SEPARATOR).map((item) => map.get(foldKey(item)) ?? item).filter((item) => item !== '')
         : [raw];
       if (items.length === 0) return { status: 'blank' };
       const converted: string[] = [];

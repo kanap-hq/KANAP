@@ -9,6 +9,7 @@ import {
   type RecommendedDimensionKey,
   SEED_LANGUAGES,
 } from '../../analytics/recommended-dimensions.seed';
+import { accentFreeKey, foldKey } from '../../common/name-matching';
 import type { BudgetFileChoice, BudgetFileLookalikeTarget, CatalogDimension } from './types';
 
 /**
@@ -25,49 +26,8 @@ import type { BudgetFileChoice, BudgetFileLookalikeTarget, CatalogDimension } fr
  * the person may undo it (a choice): the value is then created, or refused, as an unknown one.
  */
 
-/** A value as the file and the list are compared: compatibility forms folded, outer spaces trimmed, lower case. */
-export function foldKey(value: string): string {
-  return value.normalize('NFKC').trim().toLowerCase();
-}
-
-/** A value set apart from its accents, the way exports often write capitals (`Elevee` for `Élevée`). */
-export function accentFreeKey(value: string): string {
-  return foldKey(value).normalize('NFD').replace(/\p{M}/gu, '');
-}
-
-export type MatchHow = 'exact' | 'case' | 'accents' | 'translation';
-
-export type NameMatch<T> = { kind: 'none' } | { kind: 'many' } | { kind: 'one'; row: T; how: MatchHow };
-
-/**
- * The row of `rows` whose name is `cell`: exactly, then case aside, then accents aside (`accents`),
- * then, for a dimension the server translates, by the value's name in another language (`translate`). Several
- * rows at the first step that finds any: `many`.
- */
-export function matchByName<T extends { name: string }>(
-  rows: readonly T[],
-  cell: string,
-  options: { beyondCase: boolean; translate?: (cell: string, rows: readonly T[]) => T[] } = { beyondCase: true },
-): NameMatch<T> {
-  const text = cell.trim();
-  const pick = (found: T[], how: MatchHow): NameMatch<T> | null => {
-    if (found.length === 1) return { kind: 'one', row: found[0], how };
-    return found.length > 1 ? { kind: 'many' } : null;
-  };
-  const exact = pick(rows.filter((row) => row.name.trim() === text), 'exact');
-  if (exact) return exact;
-  const folded = pick(rows.filter((row) => row.name.trim().toLowerCase() === text.toLowerCase()), 'case');
-  if (folded) return folded;
-  if (!options.beyondCase) return { kind: 'none' };
-  const key = accentFreeKey(text);
-  const accents = pick(rows.filter((row) => accentFreeKey(row.name) === key), 'accents');
-  if (accents) return accents;
-  if (options.translate) {
-    const translated = pick(options.translate(text, rows), 'translation');
-    if (translated) return translated;
-  }
-  return { kind: 'none' };
-}
+// The name rule is common to every import (lot I3 of 26.11.9): the budget file reads it from here as before.
+export { accentFreeKey, foldKey, matchByName, type MatchHow, type NameMatch } from '../../common/name-matching';
 
 /** A dimension's own name without the ` (2)` the seed adds when another dimension holds it. */
 function baseName(name: string | null): string {
