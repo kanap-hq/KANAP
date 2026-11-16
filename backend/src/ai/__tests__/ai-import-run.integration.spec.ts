@@ -540,6 +540,43 @@ async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
   console.log(`  ${AI_IMPORT_KEYS.length} imports: checked, nothing written: OK`);
 }
 
+// Lot I3 of 26.11.9: Kad's contracts import finds a company case aside and a supplier without its
+// accents; the match is listed on the person's lines (a blank row shifts them).
+async function testContractNamesBeyondCase(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  await runner.query(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Fromage I3 SA', 'FR', 'Lyon')`, [s.tenantId]);
+  const [sg] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Société Générale I3') RETURNING id, item_number`, [s.tenantId]);
+  const file = attach(h, 'Contrats.csv', [
+    'Contrat;Société;Fournisseur;Début',
+    'Maintenance I3;fromage i3 sa;SOCIETE GENERALE I3;2026-01-01',
+    ';;;',
+    'Licences I3;Fromage I3 SA;Societe Generale I3;2026-02-01',
+  ].join('\n'));
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'company_name', source: 2, confidence: 'high' },
+    { column: 'supplier_name', source: 3, confidence: 'high' },
+    { column: 'start_date', source: 4, confidence: 'high' },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual(check.report.matches, [{
+    column: 'supplier_name', name: null, value: 'SOCIETE GENERALE I3', target: 'Société Générale I3', ref: `SUP-${sg.item_number}`,
+    origin: 'server', reason: 'accents', lines: [2, 4], count: 2, undoable: true,
+  }]);
+  assert.equal(check.report.matchesTotal, 1);
+  assert.deepEqual([check.inserted, check.updated, check.unchanged], [2, 0, 0]);
+  const done = await h.previews.executePreview(admin, card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const stored = await runner.query(
+    `SELECT name, supplier_id FROM contracts WHERE tenant_id = $1 AND name LIKE '% I3' ORDER BY name`,
+    [s.tenantId],
+  );
+  assert.deepEqual(stored.map((row: any) => [row.name, row.supplier_id]), [['Licences I3', sg.id], ['Maintenance I3', sg.id]]);
+  console.log('  contracts: a company case aside and a supplier beyond accents, listed on the person\'s lines: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -557,6 +594,7 @@ async function run() {
       await testBudgetFile(harness, runner, s);
       await testSuppliers(harness, runner, s);
       await testSupplierNamesBeyondCase(harness, runner, s);
+      await testContractNamesBeyondCase(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

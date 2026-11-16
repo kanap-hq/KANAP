@@ -178,8 +178,96 @@ async function testChangedOwnerIsUpdate() {
   });
 }
 
+// Lot I3 of 26.11.9: the company, the supplier and the cost center are found by their name exactly,
+// case aside, then accents aside (for a person who reads their module), as the other imports. Each
+// match beyond case is listed (`matches`) and may be undone (`unmatched`); several names refuse the
+// row (`CSV_NAME_AMBIGUOUS_AMONG`); a name nothing finds is refused as before.
+async function testNamesBeyondCaseAndAccents() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'contract-csv-names');
+    const { companyId } = await seedCompany(runner, tenantId, 'Fromage & Co SA');
+    const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name, item_number) VALUES ($1, 'Société Générale', 7) RETURNING id`, [tenantId]);
+    const center = async (code: string, name: string): Promise<string> => (await runner.query(
+      `INSERT INTO cost_centers (tenant_id, code, name, kind, company_id) VALUES ($1, $2, $3, 'cost_center', $4) RETURNING id`,
+      [tenantId, code, name, companyId],
+    ))[0].id;
+    const operations = await center('OPS', 'Exploitation réseau');
+    await center('HQ1', 'Siège');
+    await center('HQ2', 'siège');
+    const header = `${HEADER};cost_center`;
+    const row = (name: string, company: string, supplierName: string, place = '') =>
+      `${name};${company};${supplierName};2026-01-01;12;no;1;100;EUR;annual;enabled;;;${place}`;
+    const svc = contracts();
+    const admin = { isAdmin: true };
+    const upload = file([
+      header,
+      row('Exact', 'Fromage & Co SA', 'Société Générale', 'Exploitation réseau'),
+      row('Case', 'fromage & co sa', 'SOCIÉTÉ GÉNÉRALE', 'exploitation RÉSEAU'),
+      row('Accents', 'Fromage & Co SA', 'Societe Generale', 'Exploitation reseau'),
+      row('Accents again', 'Fromage & Co SA', 'societe generale'),
+    ]);
+    for (const dryRun of [true, false]) {
+      const result: any = await svc.importCsv({ file: upload, dryRun, access: admin }, { manager: runner.manager });
+      assert.equal(result.ok, true, JSON.stringify(result.errors));
+      assert.equal(result.inserted, dryRun ? 4 : 4);
+      assert.deepEqual(result.matches, [
+        { column: 'supplier_name', name: null, value: 'Societe Generale', target: 'Société Générale', ref: 'SUP-7', origin: 'server', reason: 'accents', lines: [4, 5], count: 2, undoable: true },
+        { column: 'cost_center', name: null, value: 'Exploitation reseau', target: 'Exploitation réseau', ref: null, origin: 'server', reason: 'accents', lines: [4], count: 1, undoable: true },
+      ], dryRun ? 'the check lists the matches' : 'the load lists the matches');
+      assert.equal(result.matchesTotal, 2);
+      if (!dryRun) {
+        const stored = await runner.query(
+          `SELECT name, company_id, supplier_id, cost_center_id FROM contracts WHERE tenant_id = $1 ORDER BY name`,
+          [tenantId],
+        );
+        assert.deepEqual(stored.map((item: any) => [item.name, item.company_id, item.supplier_id, item.cost_center_id]), [
+          ['Accents', companyId, supplier.id, operations],
+          ['Accents again', companyId, supplier.id, null],
+          ['Case', companyId, supplier.id, operations],
+          ['Exact', companyId, supplier.id, operations],
+        ]);
+      }
+    }
+
+    const refusals = async (lines: string[], params: Record<string, unknown>) => {
+      const result: any = await svc.importCsv({ file: file([header, ...lines]), dryRun: true, ...params }, { manager: runner.manager });
+      assert.equal(result.ok, false);
+      return result;
+    };
+    // Undone, the value is a name nothing finds; a value case aside is still found.
+    const undone = await refusals([row('Undone', 'Fromage & Co SA', 'Societe Generale'), row('Kept', 'FROMAGE & CO SA', 'Société Générale')], {
+      access: admin, unmatched: [{ column: 'supplier_name', value: 'societe generale' }],
+    });
+    assert.deepEqual(errorsByColumn(undone, 2), { supplier_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Societe Generale' } } });
+    assert.deepEqual(errorsByColumn(undone, 3), {});
+    assert.equal(undone.matches, undefined);
+    // A person who does not read the suppliers: no name found beyond case.
+    const unread = await refusals([row('Unread', 'Fromage & Co SA', 'Societe Generale')], { access: { permissions: { contracts: 'admin', companies: 'reader' } } });
+    assert.deepEqual(errorsByColumn(unread, 2), { supplier_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Societe Generale' } } });
+    assert.equal(unread.matches, undefined);
+    // Two cost centers of one name case aside, and a name of both accents aside, refuse the row; a name nothing finds too.
+    const several = await refusals([
+      row('Case twice', 'Fromage & Co SA', 'Société Générale', 'SIÈGE'),
+      row('Accents twice', 'Fromage & Co SA', 'Société Générale', 'Siege'),
+      row('Exact one', 'Fromage & Co SA', 'Société Générale', 'siège'),
+      row('Unknown', 'Fromage & Co SA', 'Ghost', 'Ghost place'),
+    ], { access: admin });
+    const sorted = (entry: any) => ({ ...entry, params: { ...entry.params, names: String(entry.params.names).split(', ').sort().join(', ') } });
+    assert.deepEqual(sorted(errorsByColumn(several, 2).cost_center), { code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: 'SIÈGE', names: ['Siège', 'siège'].sort().join(', ') } });
+    assert.deepEqual(sorted(errorsByColumn(several, 3).cost_center), { code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: 'Siege', names: ['Siège', 'siège'].sort().join(', ') } });
+    assert.deepEqual(Object.keys(errorsByColumn(several, 2)), ['cost_center']);
+    assert.deepEqual(Object.keys(errorsByColumn(several, 3)), ['cost_center']);
+    assert.deepEqual(errorsByColumn(several, 4), {});
+    assert.deepEqual(errorsByColumn(several, 5), {
+      cost_center: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost place' } },
+      supplier_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost' } },
+    });
+  });
+}
+
 void runSpecs('contract-csv-import.integration.spec', [
   ['testIdenticalRowsUnchanged', testIdenticalRowsUnchanged],
   ['testChangedOwnerIsUpdate', testChangedOwnerIsUpdate],
   ['testEveryErrorOfARowIsReportedAndNothingIsWritten', testEveryErrorOfARowIsReportedAndNothingIsWritten],
+  ['testNamesBeyondCaseAndAccents', testNamesBeyondCaseAndAccents],
 ]);

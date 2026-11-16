@@ -193,13 +193,13 @@ export class AiImportRunnerService {
       case 'contacts':
         return this.contacts.importCsv({ file, dryRun, ...read }, { manager, tenantId });
       case 'contracts':
-        return this.contracts.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
+        return this.contracts.importCsv({ file, dryRun, userId: userId || null, ...read, access: await rights() }, { manager });
       case 'companies':
         return this.companies.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
       case 'departments':
         return this.departments.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
       case 'cost_centers':
-        return this.costCenters.importCsv({ file, dryRun, ...read }, caller);
+        return this.costCenters.importCsv({ file, dryRun, ...read, access: await rights() }, caller);
       case 'accounts':
         // The chart of each row is named by its `coa_code` column, as the import of the accounts page.
         return this.accounts.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager, allowCoaCodeColumn: true });
