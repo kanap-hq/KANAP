@@ -169,6 +169,14 @@ describe('ContractWorkspacePage by reference', () => {
     expect(contractReads()).toHaveLength(readsBefore);
   });
 
+  it('sends a link that opens the contract by its reference', async () => {
+    renderAt('/ops/contracts/c-5/overview');
+    await waitFor(() => expect(where()).toBe('/ops/contracts/CTR-5/overview'));
+    fireEvent.click(await screen.findByRole('button', { name: 'share.share' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(`${window.location.origin}/ops/contracts/CTR-5/overview`)).toBeInTheDocument();
+  });
+
   it('copies the reference from the header', async () => {
     const writeText = vi.fn(async () => undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });

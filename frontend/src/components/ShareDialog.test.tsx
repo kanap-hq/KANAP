@@ -129,14 +129,26 @@ describe('ShareDialog contracts', () => {
     apiPost.mockResolvedValue({ data: { ok: true } });
     const client = new QueryClient();
     render(<QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>
-      <ShareDialog open onClose={() => undefined} itemType="contract" itemId="c-1" itemName="SAP Maintenance" />
+      <ShareDialog open onClose={() => undefined} itemType="contract" itemId="c-1" itemName="SAP Maintenance" itemNumber={12} />
     </ThemeProvider></QueryClientProvider>);
-    expect(screen.getByText(`${window.location.origin}/ops/contracts/c-1/overview`)).toBeInTheDocument();
+    // The link opens the contract by its reference (lot R4); the send goes to the uuid's route.
+    expect(screen.getByText(`${window.location.origin}/ops/contracts/CTR-12/overview`)).toBeInTheDocument();
+    expect(screen.getByText('CTR-12')).toBeInTheDocument();
     const input = screen.getByPlaceholderText('share.searchUsersOrEmail') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'buyer@example.com' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     fireEvent.click(await screen.findByRole('button', { name: 'share.sendEmail' }));
     await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/contracts/c-1/share', expect.objectContaining({ recipient_emails: ['buyer@example.com'] })));
+  });
+});
+
+describe('ShareDialog contract without its number', () => {
+  it('links the contract by its uuid', () => {
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>
+      <ShareDialog open onClose={() => undefined} itemType="contract" itemId="c-1" itemName="SAP Maintenance" />
+    </ThemeProvider></QueryClientProvider>);
+    expect(screen.getByText(`${window.location.origin}/ops/contracts/c-1/overview`)).toBeInTheDocument();
   });
 });
 

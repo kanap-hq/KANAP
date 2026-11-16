@@ -598,7 +598,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>{savingHint}</Typography>
             )}
             {shownData && (
-              <SendLinkButton itemType="contract" itemId={shownData.id} itemName={shownData.name || t('contracts.workspace.contract')} />
+              <SendLinkButton itemType="contract" itemId={shownData.id} itemNumber={shownData.item_number} itemName={shownData.name || t('contracts.workspace.contract')} />
             )}
             {shownData && canDelete && !stale && (
               <ContractDeleteButton
