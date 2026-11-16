@@ -334,6 +334,31 @@ async function testImportRefusesARenameOntoAnotherRowsName() {
   });
 }
 
+// The company of a row is found whatever the case of its name, as the company's own file and the
+// other families' files find theirs; a first row that spells it otherwise does not refuse the next.
+async function testImportFindsTheCompanyWhateverItsCase() {
+  await withDepartments('dref-company-case', async (seeded) => {
+    const run = importer(seeded);
+    const rows = [
+      { company_name: 'alpha', name: 'Lower case' },
+      { company_name: 'Alpha', name: 'Exact case' },
+      { company_name: 'BETA', name: 'Upper case' },
+    ];
+    for (const dryRun of [true, false]) {
+      const report = await run(BASE, rows, dryRun);
+      assert.deepEqual([report.ok, report.inserted, report.errors], [true, 3, []], `dryRun=${dryRun}: ${JSON.stringify(report)}`);
+    }
+    const created = await seeded.runner.query(
+      `SELECT name, company_id FROM departments WHERE tenant_id = $1 AND item_number > 31 ORDER BY item_number`, [seeded.tenantId],
+    );
+    assert.deepEqual(created, [
+      { name: 'Lower case', company_id: seeded.alpha },
+      { name: 'Exact case', company_id: seeded.alpha },
+      { name: 'Upper case', company_id: seeded.beta },
+    ]);
+  });
+}
+
 void runSpecs('department references', [
   ['a created department comes back with its reference', testCreateReturnsReference],
   ['the reference column filters the list and the ids alike', testReferenceColumnFilter],
@@ -343,6 +368,7 @@ void runSpecs('department references', [
   ['the file updates by reference, refuses an unknown one and still reads an older file', testImportByReference],
   ['the file refuses a second row of the same department', testImportRefusesSecondRowOfADepartment],
   ['the file refuses a rename or a move onto the name of another row', testImportRefusesARenameOntoAnotherRowsName],
+  ['the file finds the company whatever the case of its name', testImportFindsTheCompanyWhateverItsCase],
   ['a rename or a move by reference is announced, without blocking the check or the load', testRenameAndMoveWarnings],
   ['an export imports back without change', testExportThenImport],
 ]);

@@ -614,7 +614,10 @@ export class DepartmentsService {
     const findCompanyByName = async (name: string): Promise<Company | null> => {
       const key = name.toLowerCase();
       if (companyCache.has(key)) return companyCache.get(key) ?? null;
-      const c = await companyRepo.findOne({ where: { name } });
+      // Company names are unique whatever their case (`uq_companies_tenant_name_ci`): one match at most.
+      const c = await companyRepo.createQueryBuilder('c')
+        .where('c.tenant_id = app_current_tenant() AND lower(c.name) = lower(:name)', { name })
+        .getOne();
       companyCache.set(key, c ?? null);
       return c ?? null;
     };
