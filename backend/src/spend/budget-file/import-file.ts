@@ -9,10 +9,10 @@ import { ensureBudgetVersion } from '../budget-version-ensure';
 import { lockBudgetLine, lockBudgetLinesOfBothNatures, lockBudgetVersions, lockTenantBudgetOperations } from '../budget-locks';
 import { activeMonths, NO_ACTIVE_MONTH_MESSAGE, periodMonths } from '../spread.util';
 import { annualSpreadFields, listRoundInputs, markRoundsManual, recordPayloadRoundInputs } from '../round-inputs.util';
-import { interpretBudgetFile, moneyText, readBudgetCsv } from './interpret';
-import { loadFileDimensions, loadPreflight } from './load';
+import { moneyText, readBudgetCsv } from './interpret';
+import { loadFileDimensions } from './load';
+import { checkBudgetFile } from './check';
 import { periodForYearlyTotal, wholeYearPeriod } from './period';
-import { planWithAccess } from './access';
 import {
   BudgetFileAmountChange,
   BudgetFileLinePlan,
@@ -20,6 +20,7 @@ import {
   BudgetFileReport,
   BudgetFileScope,
   BudgetFileSnapshotLine,
+  StoredLine,
 } from './types';
 import { lineImportTables } from '../budget-import-statistics';
 import { auditTableOf, BUDGET_NATURES, type BudgetNature } from '../budget-nature';
@@ -59,6 +60,8 @@ export interface BudgetFileImportOk {
   dryRun: false;
   inserted: number;
   updated: number;
+  /** The rows left out because they look like a stored line (lot I2 of 26.11.9). */
+  skipped: number;
   createdSuppliers: boolean;
   createdDimensionValues: boolean;
 }
@@ -207,6 +210,7 @@ export async function importBudgetFile(input: {
     dryRun: false,
     inserted: written.inserted,
     updated: written.updated,
+    skipped: second.report.lookalikes?.ignored ?? 0,
     createdSuppliers: written.createdSuppliers,
     createdDimensionValues: written.createdDimensionValues,
   };
@@ -215,7 +219,7 @@ export async function importBudgetFile(input: {
 interface Prepared {
   report: BudgetFileReport;
   plans: BudgetFileLinePlan[];
-  stored: Awaited<ReturnType<typeof loadPreflight>>['stored'];
+  stored: StoredLine[];
   /** The person's access is limited: the plan followed it. */
   limited: boolean;
 }
@@ -244,24 +248,17 @@ async function prepare(input: {
     dateOrder: input.dateOrder,
     decimalMark: input.decimalMark,
   });
-  const numbers = interpretBudgetFile(read, input.scope).map((row) => row.itemNumber);
-  const loaded = await loadPreflight(input.manager, input.tenantId, numbers, input.allowedCurrencies);
-  const planned = await planWithAccess(input.manager, {
+  return checkBudgetFile(input.manager, input.tenantId, {
     scope: input.scope,
     read,
-    catalog: loaded.catalog,
-    stored: loaded.stored,
-    names: loaded.names,
     createSuppliers: input.createSuppliers,
     canCreateSuppliers: input.canCreateSuppliers,
     canReadSuppliers: input.canReadSuppliers,
     canReadCompanies: input.canReadCompanies,
     currentYear: new Date().getFullYear(),
-    labels: loaded.labels,
-    access: loaded.access,
     matching: input.matching,
+    allowedCurrencies: input.allowedCurrencies,
   });
-  return { report: planned.report, plans: planned.plans, stored: loaded.stored, limited: !!loaded.access };
 }
 
 function sameSnapshot(client: BudgetFileSnapshotLine[], fresh: BudgetFileSnapshotLine[]): boolean {

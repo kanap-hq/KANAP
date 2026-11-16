@@ -9,6 +9,7 @@ import appDataSource from '../../data-source';
 import { applyDataAccess } from '../data-access';
 import { DataAccessHiddenLinesException, hiddenContractCount } from '../hidden-links';
 import { TasksService } from '../../spend/tasks.service';
+import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { DashboardDataService } from '../../dashboard/dashboard-data.service';
 import { SpendItemsService } from '../../spend/spend-items.service';
 import { SpendItem } from '../../spend/spend-item.entity';
@@ -124,7 +125,7 @@ async function seedExtra(runner: QueryRunner, s: ContractSeed): Promise<Extra> {
     [s.tenantId, application.id, s.lines.L1],
   );
   // The dashboard reads open tasks older than its threshold.
-  await q(`UPDATE tasks SET updated_at = now() - interval '10 days' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.tasks.hiddenParticipant]);
+  await q(`UPDATE tasks SET updated_at = now() - interval '10 days' WHERE tenant_id = $1 AND id = ANY($2)`, [s.tenantId, [s.tasks.hiddenParticipant, s.tasks.visible]]);
   return {
     application: application.id,
     asset: asset.id,
@@ -139,6 +140,8 @@ function auditOf(): AuditService {
 
 async function testTasks(runner: QueryRunner, s: ContractSeed): Promise<void> {
   const tasks = new TasksService(dataSource);
+  const [ch] = await runner.query(`SELECT item_number FROM contracts WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.contracts.CH]);
+  const chReference = `CTR-${ch.item_number}`;
   await as(runner, s.persons.paul, async (m) => {
     const listed = await tasks.list({}, { manager: m, tenantId: s.tenantId });
     const row = (listed.items as any[]).find((item) => item.id === s.tasks.hiddenParticipant);
@@ -162,8 +165,48 @@ async function testTasks(runner: QueryRunner, s: ContractSeed): Promise<void> {
     assert.equal(staleRow.relatedObjectHiddenKind, 'contract');
     assert.equal(staleRow.relatedObjectId, null);
     assert.equal(staleRow.relatedObjectName, null);
+    for (const [what, answer] of [['list', listed], ['detail', one], ['tile', stale]] as const) {
+      const text = JSON.stringify(answer);
+      assert.equal(new RegExp(`${chReference}(?!\\d)`).test(text), false, `${what}: no reference of the hidden contract`);
+      assert.equal(text.includes('DA contract CH'), false, `${what}: no name of the hidden contract`);
+    }
+
+    // The label of a task's move (its activity, read as stored by every reader of the task): the
+    // kind alone, true whoever reads it; neither the name nor the reference of CH.
+    const moved = await (unified() as any).resolveRelatedObjectName('contract', s.contracts.CH, m);
+    assert.equal(moved, 'A contract', `activity label of CH: ${moved}`);
   });
-  console.log('  tasks of a hidden contract: kind, no id, no name; dashboard tile too: OK');
+  console.log('  tasks of a hidden contract: kind, no id, no name, no reference; dashboard tile too: OK');
+
+  // A contract the person reads is named by its reference and name (lot R4 of 26.11.9), as an
+  // incident is: the list, the detail, the list's filter and the dashboard. A move's activity keeps
+  // its name alone: every reader of the task reads it as stored, a limited one included.
+  const [ce] = await runner.query(`SELECT item_number, name FROM contracts WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.contracts.CE]);
+  const label = `CTR-${ce.item_number} · ${ce.name}`;
+  await as(runner, s.persons.marta, async (m) => {
+    const listed = await tasks.list({}, { manager: m, tenantId: s.tenantId });
+    const row = (listed.items as any[]).find((item) => item.id === s.tasks.visible);
+    assert.ok(row, 'Marta sees the task of CE');
+    assert.equal(row.related_object_name, label, 'the list names CE by its reference');
+    assert.equal(row.related_object_id, s.contracts.CE);
+    const one = await tasks.getOne(s.tasks.visible, { manager: m, tenantId: s.tenantId });
+    assert.equal(one?.related_object_name, label, 'the detail too');
+    const filtered = await tasks.list(
+      { filters: JSON.stringify({ related_object_name: { filterType: 'text', type: 'contains', filter: `CTR-${ce.item_number}` } }) },
+      { manager: m, tenantId: s.tenantId },
+    );
+    assert.ok((filtered.items as any[]).some((item) => item.id === s.tasks.visible), 'the context filter finds it by the reference');
+    const stale = await dashboard.getStaleTasks(s.persons.marta, 'all', 0, 10, { manager: m });
+    const staleRow = (stale as any[]).find((item) => item.id === s.tasks.visible);
+    assert.ok(staleRow, 'the stale tile reads the task of CE');
+    assert.equal(staleRow.relatedObjectName, label, 'the tile names CE by its reference');
+    assert.equal(await (unified() as any).resolveRelatedObjectName('contract', s.contracts.CE, m), `Contract: ${ce.name}`, 'a move is logged without the reference');
+  });
+  console.log('  tasks of a readable contract: CTR-n · name on the list, the detail, the filter and the tile; the name alone in a move\'s activity: OK');
+}
+
+function unified(): TasksUnifiedService {
+  return new (TasksUnifiedService as any)(...Array.from({ length: 9 }, () => undefined));
 }
 
 async function testLineMentions(runner: QueryRunner, s: ContractSeed, extra: Extra): Promise<void> {

@@ -371,7 +371,7 @@ The Relations tab shows what the asset is linked to: budget lines, contracts, pr
 | Section | Columns |
 |---|---|
 | **Budget lines** | Reference (`BL-12`), name, type (OPEX or CAPEX), supplier, and the amount of the current year in your default budget column, in the reporting currency. A dash means the line has no budget for the year |
-| **Contracts** | Name, supplier, end of the current term, yearly amount in the contract currency, renewal (tacit or manual) |
+| **Contracts** | Reference (`CTR-3`), name, supplier, end of the current term, yearly amount in the contract currency, renewal (tacit or manual) |
 | **Projects** | Reference (`PRJ-7`), name, status, planned end |
 | **Tasks** | Reference (`T-118`), title, status, assignee, due date. Open tasks come first |
 | **Incidents** | Reference (`INC-14`), title, severity, status, detection date |

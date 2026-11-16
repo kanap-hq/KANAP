@@ -371,7 +371,7 @@ L'onglet Relations montre ce à quoi cette application est liée : ses lignes bu
 | Section | Colonnes |
 |---|---|
 | **Lignes budgétaires** | Référence (`BL-12`), nom, type (OPEX ou CAPEX), fournisseur, et le montant de l'année en cours dans votre colonne budgétaire par défaut, dans la devise de reporting. Un tiret signifie que la ligne n'a pas de budget pour l'année |
-| **Contrats** | Nom, fournisseur, fin de la période en cours, montant annuel dans la devise du contrat, renouvellement (tacite ou manuel) |
+| **Contrats** | Référence (`CTR-3`), nom, fournisseur, fin de la période en cours, montant annuel dans la devise du contrat, renouvellement (tacite ou manuel) |
 | **Projets** | Référence (`PRJ-7`), nom, statut, fin prévue |
 | **Demandes** | Référence (`REQ-23`), nom, statut, livraison souhaitée |
 | **Tâches** | Référence (`T-118`), titre, statut, assigné, échéance. Seules les tâches liées à cette application elle-même apparaissent, pas les tâches de ses projets |

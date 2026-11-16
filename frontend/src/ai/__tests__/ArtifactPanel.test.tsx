@@ -241,9 +241,10 @@ describe('ArtifactPanel', () => {
               ok: true, notices: {}, fileErrors: [], headerErrors: [], errors: [], errorCount: 0, missing: [], deleted: [], deletedCount: 0,
               changes: { created: 2, updated: 0, unchanged: 0, createdLines: [], updatedLines: [] },
               changedSinceExport: [], changedSinceExportCount: 0,
-              warnings: {
-                duplicates: [{ line: 3, message: 'row 3 looks like BL-7', code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line: 3, ref: 'BL-7' } }],
-                duplicatesCount: 1, ignoredColumns: [], supplierNames: [], ignoredCells: [],
+              warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [] },
+              lookalikes: {
+                lines: [{ line: 3, nature: 'opex', name: 'Hosting', target: { item: 7, ref: 'BL-7', name: 'AWS hosting', state: 's7' }, reason: 'amounts', outcome: 'ignored', updatable: true }],
+                count: 1, ignored: 1, created: 0, updated: 0,
               },
               creates: { dimensionValues: [], suppliers: [] },
               supplierMessage: null,
@@ -279,8 +280,7 @@ describe('ArtifactPanel', () => {
       </QueryClientProvider>,
     );
     const actions = screen.getByRole('button', { name: 'ai:previewCard.approve' }).parentElement!;
-    const lookalike = screen.getByText('errors:BUDGET_FILE_LOOKS_LIKE_LINE');
-    expect(screen.getByRole('img', { name: 'common:csv.warnings:1' })).toBeInTheDocument();
+    const lookalike = screen.getByText((_, element) => element?.tagName === 'P' && /^operations\.budgetFile\.lookalikes\.row/.test(element.textContent ?? ''));
     // Read just before the actions, not hidden under them.
     expect(actions).not.toContainElement(lookalike);
     expect(lookalike.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

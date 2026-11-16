@@ -88,7 +88,7 @@ Appuyez sur **Échap** ou cliquez sur le bouton de fermeture pour revenir à la 
 
 ### Lié à
 
-La section **Lié à**, sous les notes, liste tout ce à quoi le contact est lié, une liste par type, chacune avec son nombre : fournisseurs, lignes budgétaires (OPEX et CAPEX, avec leur référence `BL-`), contrats, applications, actifs, sites, projets (`PRJ-`) et demandes (`REQ-`). Chaque ligne indique le rôle du contact : le type de contact pour les fournisseurs, les lignes budgétaires et les contrats, le rôle saisi sur l'application, l'actif ou le site.
+La section **Lié à**, sous les notes, liste tout ce à quoi le contact est lié, une liste par type, chacune avec son nombre : fournisseurs, lignes budgétaires (OPEX et CAPEX, avec leur référence `BL-`), contrats (`CTR-`), applications, actifs, sites, projets (`PRJ-`) et demandes (`REQ-`). Chaque ligne indique le rôle du contact : le type de contact pour les fournisseurs, les lignes budgétaires et les contrats, le rôle saisi sur l'application, l'actif ou le site.
 
 Cliquez sur une ligne pour ouvrir sa fiche. Une liste montre jusqu'à 50 éléments et indique leur nombre total. Vous ne voyez que les listes que vous avez le droit de lire. Un contact lié à rien affiche une ligne qui le dit.
 

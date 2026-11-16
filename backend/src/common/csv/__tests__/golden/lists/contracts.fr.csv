@@ -1,5 +1,5 @@
-﻿Nom;Société;Fournisseur;Centre de coûts;Date de début;Durée en mois;Reconduction tacite;Préavis en mois;Montant annuel à la signature;Devise;Fréquence de facturation;Statut;E-mail du responsable;Notes
-"Line; ""quoted""
+﻿Référence;Nom;Société;Fournisseur;Centre de coûts;Date de début;Durée en mois;Reconduction tacite;Préavis en mois;Montant annuel à la signature;Devise;Fréquence de facturation;Statut;E-mail du responsable;Notes
+CTR-2;"Line; ""quoted""
 second, line";"Line; ""quoted""
 second, line";"Zeta; ""Z""";;31/12/2024;12;non;1;-0,5;USD;monthly;disabled;;
-Support;Alpha SA;Acme;Group;01/03/2026;36;oui;3;1250,5;EUR;annual;enabled;ada@example.com;"'=HYPERLINK(""http://x"")"
+CTR-1;Support;Alpha SA;Acme;Group;01/03/2026;36;oui;3;1250,5;EUR;annual;enabled;ada@example.com;"'=HYPERLINK(""http://x"")"

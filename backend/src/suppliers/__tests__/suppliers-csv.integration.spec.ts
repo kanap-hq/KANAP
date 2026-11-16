@@ -190,6 +190,16 @@ async function testDisabledAtRoundTrip() {
     ) as Report;
     assert.deepEqual([again.ok, again.inserted, again.updated, again.unchanged], [true, 0, 0, 3], JSON.stringify(again.errors));
 
+    // A supplier whose contact alone changes is an update: the import writes the link, so Kad's card
+    // is never "nothing to import" for it (lot I2 of 26.11.9).
+    await runner.query(`INSERT INTO contacts (tenant_id, email, first_name, last_name) VALUES ($1, 'sales@open.example', 'Sales', 'Open')`, [tenantId]);
+    assert.ok(lines.includes('SUP-3,Open,,,,,,enabled,'), exported);
+    const linked = await suppliers.importCsv(
+      { file: { buffer: Buffer.from(exported.replace('SUP-3,Open,,,,,,enabled,', 'SUP-3,Open,,sales@open.example,,,,enabled,'), 'utf8') } as Express.Multer.File, dryRun: true, userId: null, language: 'en' },
+      { manager: runner.manager },
+    ) as Report;
+    assert.deepEqual([linked.ok, linked.inserted, linked.updated, linked.unchanged], [true, 0, 1, 2], JSON.stringify(linked.errors));
+
     // Into an empty register: the references name suppliers that are gone, so the rows are refused;
     // without the reference column, the dates come back as they were.
     await runner.query(`DELETE FROM suppliers WHERE tenant_id = $1`, [tenantId]);

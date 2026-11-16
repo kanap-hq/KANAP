@@ -12,6 +12,7 @@ import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { IncidentViewer, incidentRelatedLabelSql, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { textSortKey } from '../common/list-sort';
 import { parseItemNumber } from '../common/parse-item-number';
+import { contractLabelSql } from '../contracts/contract-reference';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import type { LinkedModule, LinkedReads } from '../common/relations/linked-reads';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
@@ -395,7 +396,7 @@ function buildWhereConditions(
     const clauses = [
       // Both natures: the line join is `si` for an OPEX line and `ci` for a CAPEX line.
       readsModule('budget') && `(t.related_object_type IN ('spend_item', 'capex_item') AND COALESCE(si.product_name, ci.product_name) ILIKE ${p})`,
-      readsModule('contracts') && `(t.related_object_type = 'contract' AND c.name ILIKE ${p})`,
+      readsModule('contracts') && `(t.related_object_type = 'contract' AND ${contractLabelSql('c')} ILIKE ${p})`,
       readsModule('projects') && `(t.related_object_type = 'project' AND ${projectField('pp.name')} ILIKE ${p})`,
       readsModule('incidents') && `(t.related_object_type = 'incident' AND ${incidentRelatedLabelSql('inc')} ILIKE ${p})`,
       readsModule('budget') && `(${TASK_HIDDEN_LINE_REFERENCE_SQL}) ILIKE ${p}`,
@@ -824,7 +825,7 @@ const TASK_SORT_EXPRESSIONS: Record<string, string> = {
   related_object_name: `COALESCE(${TASK_HIDDEN_LINE_REFERENCE_SQL}, CASE
       WHEN t.related_object_type IS NULL THEN NULL
       WHEN t.related_object_type = 'spend_item' THEN si.product_name
-      WHEN t.related_object_type = 'contract' THEN c.name
+      WHEN t.related_object_type = 'contract' THEN ${contractLabelSql('c')}
       WHEN t.related_object_type = 'capex_item' THEN ci.product_name
       WHEN t.related_object_type = 'incident' THEN ${incidentRelatedLabelSql('inc')}
       WHEN t.related_object_type = 'project' THEN pp.name
@@ -1077,7 +1078,7 @@ export class TasksService {
         CASE
           WHEN t.related_object_type IS NULL THEN NULL
           WHEN t.related_object_type = 'spend_item' THEN si.product_name
-          WHEN t.related_object_type = 'contract' THEN c.name
+          WHEN t.related_object_type = 'contract' THEN ${contractLabelSql('c')}
           WHEN t.related_object_type = 'capex_item' THEN ci.product_name
           WHEN t.related_object_type = 'incident' THEN ${incidentRelatedLabelSql('inc')}
           WHEN t.related_object_type = 'project' THEN pp.name
@@ -1373,7 +1374,7 @@ export class TasksService {
         CASE
           WHEN t.related_object_type IS NULL THEN NULL
           WHEN t.related_object_type = 'spend_item' THEN si.product_name
-          WHEN t.related_object_type = 'contract' THEN c.name
+          WHEN t.related_object_type = 'contract' THEN ${contractLabelSql('c')}
           WHEN t.related_object_type = 'capex_item' THEN ci.product_name
           WHEN t.related_object_type = 'incident' THEN ${incidentRelatedLabelSql('inc')}
           WHEN t.related_object_type = 'project' THEN pp.name

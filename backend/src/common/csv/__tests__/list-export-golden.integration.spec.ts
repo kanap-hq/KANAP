@@ -179,13 +179,14 @@ async function testXlsx(manager: EntityManager, tenantId: string): Promise<void>
   assert.equal(contract.filename, 'contracts.xlsx');
   assert.equal(contract.rows, 2);
   const c = sheetOf(contract.content);
-  assert.equal(c.E2[1], '45657', 'contracts: start date 2024-12-31 as a date serial');
-  assert.deepEqual(c.F2, ['general', '12'], 'contracts: duration as a number');
-  assert.equal(c.I2[1], '-0.5', 'contracts: amount exact');
-  assert.equal(c.I3[1], '1250.5');
-  assert.notEqual(c.I3[0], 'text');
-  assert.deepEqual(c.G2, ['text', 'non'], 'contracts: yes or no as the CSV writes it');
-  assert.deepEqual(c.N3, ['text', '&apos;=HYPERLINK(&quot;http://x&quot;)'], 'contracts: formula guard');
+  assert.match(String(c.A2[1]), /CTR-\d+/, 'contracts: the reference first');
+  assert.equal(c.F2[1], '45657', 'contracts: start date 2024-12-31 as a date serial');
+  assert.deepEqual(c.G2, ['general', '12'], 'contracts: duration as a number');
+  assert.equal(c.J2[1], '-0.5', 'contracts: amount exact');
+  assert.equal(c.J3[1], '1250.5');
+  assert.notEqual(c.J3[0], 'text');
+  assert.deepEqual(c.H2, ['text', 'non'], 'contracts: yes or no as the CSV writes it');
+  assert.deepEqual(c.O3, ['text', '&apos;=HYPERLINK(&quot;http://x&quot;)'], 'contracts: formula guard');
 
   const metrics = new CompanyMetricsService(undefined as any, undefined as any, { assertNotFrozen: async () => undefined } as any);
   const company = await new CompaniesService(undefined as any, undefined as any, metrics).exportCsv('data', { manager, year: 2026, language: 'fr', format: 'xlsx' });

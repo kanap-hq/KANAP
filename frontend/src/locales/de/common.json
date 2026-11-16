@@ -600,6 +600,7 @@
     "insertOnly": "Nur einfügen",
     "validationPassed_one": "Validierung bestanden. Bereit zum Import von {{count}} Zeile.",
     "validationPassed_other": "Validierung bestanden. Bereit zum Import von {{count}} Zeilen.",
+    "nothingToImport": "Nichts zu importieren.",
     "importCompleted": "Import erfolgreich abgeschlossen.",
     "validationFailed": "Validierung fehlgeschlagen. Bitte beheben Sie die Fehler und versuchen Sie es erneut.",
     "totalRows_one": "{{count}} Zeile",

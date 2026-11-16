@@ -5,7 +5,7 @@ import { AI_PAGE_ROUTES, withAiPageUrls } from '../ai-page-urls';
 // reference get the page of the application, for a person who holds its right; absolute addresses
 // over MCP, the vulnerabilities' links included.
 
-const CONTRACT = '11111111-1111-4111-8111-111111111111';
+const PROCESS = '11111111-1111-4111-8111-111111111111';
 const COMPANY = '22222222-2222-4222-8222-222222222222';
 const APPLICATION = '33333333-3333-4333-8333-333333333333';
 
@@ -14,32 +14,34 @@ const reads = (...rights: string[]) => async (resources: string[]) => new Set(re
 async function testListItems() {
   const result = await withAiPageUrls({
     items: [
-      { type: 'contracts', id: CONTRACT, ref: null, label: 'SAP Maintenance' },
+      { type: 'business_processes', id: PROCESS, ref: null, label: 'Order to cash' },
+      { type: 'contracts', id: PROCESS, ref: 'CTR-2', label: 'SAP Maintenance' },
       { type: 'companies', id: COMPANY, ref: 'COMP-5', label: 'Fromage SA' },
       { type: 'departments', id: COMPANY, ref: 'DEPT-5', label: 'Finance' },
       { type: 'accounts', id: COMPANY, ref: '612100', label: 'Software' },
       { type: 'applications', id: APPLICATION, ref: 'APP-8', label: 'SAP S/4HANA' },
-      { type: 'contracts', id: 'not-an-id', ref: null, label: 'Broken' },
+      { type: 'business_processes', id: 'not-an-id', ref: null, label: 'Broken' },
     ],
-  }, { readableResources: reads('contracts', 'companies', 'departments', 'accounts', 'applications'), origin: async () => null });
+  }, { readableResources: reads('business_processes', 'contracts', 'companies', 'departments', 'accounts', 'applications'), origin: async () => null });
   assert.deepEqual(result.items.map((item: any) => item.page_url), [
-    `/ops/contracts/${CONTRACT}`,
+    `/master-data/business-processes/${PROCESS}`,
+    undefined,
     undefined,
     undefined,
     `/master-data/accounts/${COMPANY}`,
     undefined,
     undefined,
-  ], 'pages for the families without reference, none for a referenced record (a company or a department opens by COMP-n, DEPT-n) or a malformed id');
+  ], 'pages for the families without reference, none for a referenced record (a contract, a company or a department opens by CTR-n, COMP-n, DEPT-n) or a malformed id');
 }
 
 async function testRights() {
   const result = await withAiPageUrls({
-    items: [{ type: 'contracts', id: CONTRACT }, { type: 'accounts', id: COMPANY }],
+    items: [{ type: 'business_processes', id: PROCESS }, { type: 'accounts', id: COMPANY }],
   }, { readableResources: reads('accounts'), origin: async () => null });
   assert.deepEqual(result.items.map((item: any) => item.page_url), [undefined, `/master-data/accounts/${COMPANY}`], 'no page without its right');
 
   let asked: string[] = [];
-  await withAiPageUrls({ items: [{ type: 'connections', id: CONTRACT }, { type: 'locations', id: COMPANY }] }, {
+  await withAiPageUrls({ items: [{ type: 'connections', id: PROCESS }, { type: 'locations', id: COMPANY }] }, {
     readableResources: async (resources) => {
       asked = resources;
       return new Set();
@@ -59,21 +61,21 @@ async function testDetailAndContext() {
 
   const context = await withAiPageUrls({
     entity: { type: 'applications', id: APPLICATION, ref: 'APP-8' },
-    related: [{ relation: 'contracts', items: [{ type: 'contracts', id: CONTRACT }] }],
-  }, { readableResources: reads('contracts', 'applications'), origin: async () => null });
+    related: [{ relation: 'business_processes', items: [{ type: 'business_processes', id: PROCESS }] }],
+  }, { readableResources: reads('business_processes', 'applications'), origin: async () => null });
   assert.equal((context.entity as any).page_url, undefined);
-  assert.equal((context.related[0].items[0] as any).page_url, `/ops/contracts/${CONTRACT}`, 'a linked record');
+  assert.equal((context.related[0].items[0] as any).page_url, `/master-data/business-processes/${PROCESS}`, 'a linked record');
 }
 
 async function testMcpOrigin() {
   const vulnerabilityPage = '/it/vulnerabilities?q=CVE-2024-1&state=all&alerts=all';
   const result = await withAiPageUrls({
     items: [
-      { type: 'contracts', id: CONTRACT },
+      { type: 'business_processes', id: PROCESS },
       { type: 'vulnerabilities', id: APPLICATION, metadata: { page_url: vulnerabilityPage } },
     ],
-  }, { readableResources: reads('contracts'), origin: async () => 'https://fromage.kanap.net' });
-  assert.equal((result.items[0] as any).page_url, `https://fromage.kanap.net/ops/contracts/${CONTRACT}`);
+  }, { readableResources: reads('business_processes'), origin: async () => 'https://fromage.kanap.net' });
+  assert.equal((result.items[0] as any).page_url, `https://fromage.kanap.net/master-data/business-processes/${PROCESS}`);
   assert.equal((result.items[1] as any).metadata.page_url, `https://fromage.kanap.net${vulnerabilityPage}`, 'a vulnerability link too');
 
   const detail = await withAiPageUrls({
@@ -90,7 +92,7 @@ async function testMcpOrigin() {
 }
 
 function testRoutesHaveNoReferenceFamilies() {
-  for (const family of ['applications', 'assets', 'technologies', 'projects', 'requests', 'tasks', 'documents', 'incidents', 'budget_lines', 'companies', 'departments', 'suppliers', 'contacts']) {
+  for (const family of ['applications', 'assets', 'technologies', 'projects', 'requests', 'tasks', 'documents', 'incidents', 'budget_lines', 'companies', 'departments', 'contracts', 'suppliers', 'contacts']) {
     assert.equal(AI_PAGE_ROUTES[family], undefined, `${family} opens by its reference`);
   }
 }

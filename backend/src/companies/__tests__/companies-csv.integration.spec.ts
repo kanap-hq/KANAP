@@ -205,6 +205,16 @@ async function testOptionalYearColumns() {
     );
     assert.deepEqual(written, [{ fiscal_year: YEAR, headcount: 8, it_users: 2 }]);
 
+    // A year of metrics alone changes: an update, so Kad's card is never "nothing to import" for it
+    // (lot I2 of 26.11.9); the same year again is unchanged.
+    const year = (headcount: string) => company({
+      name: 'One year', [`headcount_${YEAR}`]: headcount, [`it_users_${YEAR}`]: '2', [`turnover_${YEAR}`]: '1.5',
+    });
+    const metricOnly = await run([year('9')], true, oneYearHeaders);
+    assert.deepEqual([metricOnly.ok, metricOnly.inserted, metricOnly.updated, metricOnly.unchanged], [true, 0, 1, 0], JSON.stringify(metricOnly.errors));
+    const sameYear = await run([year('8')], true, oneYearHeaders);
+    assert.deepEqual([sameYear.ok, sameYear.inserted, sameYear.updated, sameYear.unchanged], [true, 0, 0, 1], JSON.stringify(sameYear.errors));
+
     const again = await run([company({ name: 'One year', notes: 'Later' })], false, BASE_HEADERS);
     assert.equal(again.ok, true, `year absent on update: ${JSON.stringify(again.errors)}`);
     assert.equal(again.updated, 1);

@@ -265,7 +265,7 @@ Fristen und Schwellenwerte hängen von Ihrer Rechtsordnung und Ihrer Branche ab.
 
 **Ein bestehendes Register importieren**: **Importieren** in der Liste nimmt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`) entgegen. Lassen Sie die Referenzspalte leer, um Vorfälle anzulegen (Kadratis vergibt die nächsten INC-Nummern), oder behalten Sie die Referenz INC-N bei, um die passenden Datensätze zu aktualisieren. Jeder importierte Vorfall erhält einen Journaleintrag, der auf die Herkunft aus einer Datei hinweist. Exportieren Sie zuerst oder laden Sie die leere Vorlage herunter, wenn Sie das exakte Spaltenlayout möchten. Die Vorlage berücksichtigt die Filter der Liste nicht.
 
-Kopfzeilen, Schweregrad und Status werden in der Sprache des Exports geschrieben. Der Import akzeptiert Kopfzeilen und Werte in jeder der vier Sprachen, ebenso die technischen Codes (`major`, `in_progress`).
+Kopfzeilen, Schweregrad und Status werden in der Sprache des Exports geschrieben. Der Import akzeptiert Kopfzeilen und Werte in jeder der vier Sprachen, ebenso die technischen Codes (`major`, `in_progress`). Ein unbekannter Wert wird abgelehnt, und die Meldung nennt die zulässigen Namen.
 
 Ein Status kann per Datei vorwärts gehen. Ihn zurückzusetzen oder einen Vorfall abzubrechen erfordert `incidents:admin`: Das Journal erhält dann eine Wiedereröffnung oder einen Abbruch mit dem Grund „Imported from CSV“. Für einen Mitwirkenden wird eine solche Zeile mit einer Meldung abgelehnt.
 

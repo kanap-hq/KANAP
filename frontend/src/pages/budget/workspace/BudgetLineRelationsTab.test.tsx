@@ -96,7 +96,7 @@ function relations(overrides: Partial<Relations> = {}): Relations {
     ],
     contracts: [
       {
-        id: 'c-1', name: 'Oracle support', supplier_name: 'Oracle', end_date: '2030-03-31',
+        id: 'c-1', item_number: 1, name: 'Oracle support', supplier_name: 'Oracle', end_date: '2030-03-31',
         yearly_amount: 12000, currency: 'EUR', auto_renewal: true, in_renewal_window: true, status: 'enabled',
       },
     ],
@@ -106,7 +106,7 @@ function relations(overrides: Partial<Relations> = {}): Relations {
     ],
     suggestions: [
       { type: 'application', id: 'app-7', reference: 'APP-7', name: 'Payroll', via: { kind: 'same_supplier', label: null } },
-      { type: 'contract', id: 'c-7', reference: null, name: 'Payroll contract', via: { kind: 'same_supplier', label: null } },
+      { type: 'contract', id: 'c-7', reference: 'CTR-7', name: 'Payroll contract', via: { kind: 'same_supplier', label: null } },
     ],
     ...overrides,
   };
@@ -269,6 +269,8 @@ describe.each(['opex', 'capex'] as const)('BudgetLineRelationsTab %s', (nature) 
     expect(within(related).getByText('APP-7')).toBeTruthy();
     expect(within(related).getByText('Payroll')).toBeTruthy();
     expect(within(related).getByText('Payroll contract')).toBeTruthy();
+    // A suggested contract shows its reference, as a suggested application does.
+    expect(within(related).getByText('CTR-7')).toBeTruthy();
     expect(within(related).getByText('workspace.application.relations.types.application')).toBeTruthy();
     expect(within(related).getByText('workspace.application.relations.types.contract')).toBeTruthy();
 
@@ -282,11 +284,11 @@ describe.each(['opex', 'capex'] as const)('BudgetLineRelationsTab %s', (nature) 
     fireEvent.click(within(technologies).getByText('Oracle Database'));
     expect(screen.getByTestId('location')).toHaveTextContent('/it/technologies/TEC-9/overview');
     fireEvent.click(within(contracts).getByText('Oracle support'));
-    expect(screen.getByTestId('location')).toHaveTextContent('/ops/contracts/c-1/overview');
+    expect(screen.getByTestId('location')).toHaveTextContent('/ops/contracts/CTR-1/overview');
     fireEvent.click(within(assets).getByText('sap-prd-db01'));
     expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/AST-2/overview');
     fireEvent.click(within(related).getByText('Payroll contract'));
-    expect(screen.getByTestId('location')).toHaveTextContent('/ops/contracts/c-7/overview');
+    expect(screen.getByTestId('location')).toHaveTextContent('/ops/contracts/CTR-7/overview');
   });
 
   it('marks a linked contract that differs, and a picker candidate', async () => {

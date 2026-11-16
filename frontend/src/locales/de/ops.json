@@ -367,6 +367,7 @@
     "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff",
     "outsideYourAccess": "Vertrag außerhalb Ihres Zugriffs",
     "columns": {
+      "reference": "Referenz",
       "contract": "Vertrag",
       "supplier": "Lieferant",
       "company": "Unternehmen",
@@ -470,6 +471,7 @@
     },
     "messages": {
       "loadFailed": "Der Vertrag konnte nicht geladen werden.",
+      "notFound": "Vertrag nicht gefunden.",
       "saveFailed": "Die Änderung konnte nicht gespeichert werden.",
       "createFailed": "Der Vertrag konnte nicht erstellt werden.",
       "nameRequired": "Geben Sie einen Namen ein.",
@@ -1104,6 +1106,27 @@
         "closeTo": "Ähnlich: {{names}}",
         "lines": "Zeilen {{lines}}",
         "lines_one": "Zeile {{lines}}"
+      },
+      "lookalikes": {
+        "title": "Ähnelt einer bestehenden Zeile",
+        "row": "Zeile {{line}}: {{name}} → {{ref}} {{target}}",
+        "reasonTitleSupplier": "Gleicher Titel und Lieferant",
+        "reasonAmounts": "Gleiche Beträge",
+        "reasonCloseTitle": "Ähnlicher Titel, gleicher Lieferant, ein gleicher Betrag",
+        "ignore": "Auslassen",
+        "create": "Trotzdem anlegen",
+        "update": "{{ref}} aktualisieren",
+        "createAll": "Alle trotzdem anlegen",
+        "updateAll": "Alle aktualisieren",
+        "ignoreAll": "Alle auslassen",
+        "counts": "Ausgelassen: {{ignored}}, trotzdem angelegt: {{created}}, aktualisiert: {{updated}}",
+        "outcomeIgnored": "Ausgelassen",
+        "outcomeCreated": "Trotzdem angelegt",
+        "outcomeUpdated": "Aktualisiert {{ref}}",
+        "fields": "Änderungen: {{fields}}",
+        "noChange": "An {{ref}} ändert sich nichts",
+        "skipped": "{{count}} Zeilen ausgelassen",
+        "skipped_one": "{{count}} Zeile ausgelassen"
       }
     },
     "budgetAdminOnly": "Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.",

@@ -15,7 +15,7 @@ import { applicationCsvConfig } from '../../applications/application-csv.config'
 import { assetCsvConfig } from '../../assets/asset-csv.config';
 import { portfolioProjectCsvConfig } from '../../portfolio/portfolio-project-csv.config';
 import { SUPPLIER_CSV_COLUMNS, SUPPLIER_CSV_HEADERS } from '../../suppliers/supplier-csv-headers';
-import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS } from '../../contracts/contract-csv-headers';
+import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS, CONTRACT_CSV_OPTIONAL } from '../../contracts/contract-csv-headers';
 import { detailColumns, FILE_COLUMNS } from '../../spend/budget-file/columns';
 import { BUDGET_AMOUNT_COLUMNS } from '../../common/csv-sheet/types';
 import { DEFAULT_CLASSIFICATION_CATALOG } from '../../it-ops-settings/classification-catalog';
@@ -145,6 +145,8 @@ async function testFirstSheetImports() {
           fields: key === 'suppliers' ? [...SUPPLIER_CSV_COLUMNS] : [...CONTRACT_CSV_COLUMNS],
           fieldLabels: labels,
           dateFields: key === 'suppliers' ? ['disabled_at'] : ['start_date'],
+          // The contracts' reference is on the advanced sheet: the first one reads without it.
+          optional: key === 'contracts' ? CONTRACT_CSV_OPTIONAL : undefined,
           language,
         });
         assert.equal(read.headerError, null, `${key} ${language}: ${JSON.stringify(read.headerError)}`);

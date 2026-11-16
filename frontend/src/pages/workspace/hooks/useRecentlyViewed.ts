@@ -152,7 +152,7 @@ export const ENTITY_TYPE_CONFIG: Record<
     labelKey: 'dashboard.tiles.entityTypes.connection',
   },
   contract: {
-    route: (id) => `/ops/contracts/${id}`,
+    route: (id, ref) => `/ops/contracts/${ref || id}`,
     resource: 'contracts',
     icon: 'Description',
     labelKey: 'dashboard.tiles.entityTypes.contract',

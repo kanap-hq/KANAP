@@ -29,10 +29,9 @@ export function buildItemPath(type: ItemType, idOrRef: string): string {
     technology: '/it/technologies',
     company: '/master-data/companies',
     department: '/master-data/departments',
+    contract: '/ops/contracts',
     supplier: '/master-data/suppliers',
     contact: '/master-data/contacts',
-    // This page opens by the uuid until its reference address ships (lot R4): pass the id.
-    contract: '/ops/contracts',
   };
   return `${paths[type]}/${idOrRef}`;
 }

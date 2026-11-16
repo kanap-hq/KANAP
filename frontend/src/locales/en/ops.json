@@ -367,6 +367,7 @@
     "readOnlyInYourAccess": "Read only in your access",
     "outsideYourAccess": "Contract outside your access",
     "columns": {
+      "reference": "Reference",
       "contract": "Contract",
       "supplier": "Supplier",
       "company": "Company",
@@ -470,6 +471,7 @@
     },
     "messages": {
       "loadFailed": "The contract could not be loaded.",
+      "notFound": "Contract not found.",
       "saveFailed": "The change could not be saved.",
       "createFailed": "The contract could not be created.",
       "nameRequired": "Enter a name.",
@@ -1104,6 +1106,27 @@
         "closeTo": "Close to: {{names}}",
         "lines": "Lines {{lines}}",
         "lines_one": "Line {{lines}}"
+      },
+      "lookalikes": {
+        "title": "Looks like an existing line",
+        "row": "Line {{line}}: {{name}} → {{ref}} {{target}}",
+        "reasonTitleSupplier": "Same title and supplier",
+        "reasonAmounts": "Same amounts",
+        "reasonCloseTitle": "Close title, same supplier, one equal amount",
+        "ignore": "Leave out",
+        "create": "Create anyway",
+        "update": "Update {{ref}}",
+        "createAll": "Create all anyway",
+        "updateAll": "Update all",
+        "ignoreAll": "Leave all out",
+        "counts": "{{ignored}} left out, {{created}} created anyway, {{updated}} updated",
+        "outcomeIgnored": "Left out",
+        "outcomeCreated": "Created anyway",
+        "outcomeUpdated": "Updates {{ref}}",
+        "fields": "Changes: {{fields}}",
+        "noChange": "Nothing changes on {{ref}}",
+        "skipped": "{{count}} rows left out",
+        "skipped_one": "{{count}} row left out"
       }
     },
     "budgetAdminOnly": "You need budget administrator rights to use this page.",

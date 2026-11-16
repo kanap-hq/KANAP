@@ -97,11 +97,14 @@ async function warn(
     recipients,
     tenantId: TENANT,
     manager: { query: async (sql: string, params: unknown[]) => {
-      if (itemType === 'contract') return [];
-      assert.ok(sql.includes("'BL-' || item_number::text"));
-      assert.ok(sql.includes(`nature = '${itemType}'`));
       assert.ok(sql.includes('tenant_id = $2'));
       assert.deepEqual(params, [ITEM, TENANT]);
+      if (itemType === 'contract') {
+        assert.ok(sql.includes("'CTR-' || item_number::text") && sql.includes('FROM contracts'));
+        return [{ item_ref: 'CTR-7' }];
+      }
+      assert.ok(sql.includes("'BL-' || item_number::text"));
+      assert.ok(sql.includes(`nature = '${itemType}'`));
       return [{ item_ref: 'BL-127' }];
     } } as any,
   });
@@ -138,7 +141,8 @@ async function casesFor(itemType: 'contract' | 'opex' | 'capex') {
     await warn(svc, itemType, [ALICE]);
     assert.equal(sent.length, 1, label('opted in → exactly one email'));
     assert.equal(sent[0].to, ALICE.email);
-    if (itemType !== 'contract') assert.ok(sent[0].html.includes('/ops/budget/BL-127'), label('email links the native BL reference'));
+    if (itemType === 'contract') assert.ok(sent[0].html.includes('/ops/contracts/CTR-7/overview'), label('email links the contract by its reference'));
+    else assert.ok(sent[0].html.includes('/ops/budget/BL-127'), label('email links the native BL reference'));
 
     await warn(svc, itemType, [ALICE]);
     assert.equal(sent.length, 1, label('same item and warning again right after → deduped'));

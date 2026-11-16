@@ -132,7 +132,7 @@ Das Trennzeichen folgt der Sprache Ihres Bildschirms. Siehe [CSV- und Excel-Date
 Klicken Sie auf der Listenseite auf **Importieren**, dann:
 
 1. Laden Sie Ihre CSV-Datei oder Excel-Arbeitsmappe mit den Spaltentiteln der Vorlage hoch. In einer CSV-Datei funktionieren Kommas und Semikolons beide.
-2. Führen Sie die **Vorprüfung** durch. Diese validiert Kopfzeilen und Daten und zeigt, wie viele Zeilen erstellt bzw. aktualisiert werden.
+2. Führen Sie die **Vorabprüfung** durch. Diese validiert Kopfzeilen und Daten und zeigt, wie viele Zeilen erstellt bzw. aktualisiert werden.
 3. Wenn die Vorprüfung bestanden wird, klicken Sie auf **Laden** zum Anwenden.
 
 **Zuordnungsregeln**:

@@ -367,6 +367,7 @@
     "readOnlyInYourAccess": "Solo lectura en su acceso",
     "outsideYourAccess": "Contrato fuera de su acceso",
     "columns": {
+      "reference": "Referencia",
       "contract": "Contrato",
       "supplier": "Proveedor",
       "company": "Empresa",
@@ -470,6 +471,7 @@
     },
     "messages": {
       "loadFailed": "No se pudo cargar el contrato.",
+      "notFound": "Contrato no encontrado.",
       "saveFailed": "No se pudo guardar el cambio.",
       "createFailed": "No se pudo crear el contrato.",
       "nameRequired": "Introduzca un nombre.",
@@ -1104,6 +1106,27 @@
         "closeTo": "Parecido a: {{names}}",
         "lines": "Líneas {{lines}}",
         "lines_one": "Línea {{lines}}"
+      },
+      "lookalikes": {
+        "title": "Se parece a una línea existente",
+        "row": "Fila {{line}}: {{name}} → {{ref}} {{target}}",
+        "reasonTitleSupplier": "Mismo título y proveedor",
+        "reasonAmounts": "Mismos importes",
+        "reasonCloseTitle": "Título parecido, mismo proveedor, un importe igual",
+        "ignore": "Descartar",
+        "create": "Crear de todos modos",
+        "update": "Actualizar {{ref}}",
+        "createAll": "Crear todas de todos modos",
+        "updateAll": "Actualizar todas",
+        "ignoreAll": "Descartar todas",
+        "counts": "Descartadas: {{ignored}}, creadas de todos modos: {{created}}, actualizadas: {{updated}}",
+        "outcomeIgnored": "Descartada",
+        "outcomeCreated": "Creada de todos modos",
+        "outcomeUpdated": "Actualiza {{ref}}",
+        "fields": "Cambios: {{fields}}",
+        "noChange": "Nada cambia en {{ref}}",
+        "skipped": "{{count}} filas descartadas",
+        "skipped_one": "{{count}} fila descartada"
       }
     },
     "budgetAdminOnly": "Necesita derechos de administrador de presupuesto para usar esta página.",

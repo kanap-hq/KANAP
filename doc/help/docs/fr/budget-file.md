@@ -110,7 +110,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 - `item_number` contient la référence de la ligne budgétaire, `BL-12`. Dans un fichier avec une colonne `nature`, un nombre seul est la même référence. Les numéros `OPX-12` et `CPX-3` des fichiers antérieurs désignent toujours leur ligne budgétaire. Nommer deux fois la même ligne budgétaire dans un fichier est une erreur de ligne.
 - Une ligne budgétaire garde son type. Une ligne du fichier qui désigne une ligne budgétaire existante avec l'autre `nature` est refusée, par exemple « BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line. »
 - Chaque ligne est vérifiée selon son propre type : les dimensions et les valeurs qu'elle peut porter, son compte, les colonnes gelées et l'avertissement de doublon. Une colonne gelée pour CAPEX refuse une modification sur une ligne CAPEX uniquement.
-- Il n'y a pas d'autre clé. Une nouvelle ligne qui ressemble à une ligne budgétaire existante de son type, ou à une autre nouvelle ligne du même type dans le fichier, est un avertissement que vous pouvez ignorer.
+- Il n'y a pas d'autre clé. Une nouvelle ligne qui ressemble à une autre nouvelle ligne du même type dans le fichier est un avertissement que vous pouvez ignorer. Une nouvelle ligne qui ressemble à une ligne budgétaire existante de son type est écartée, sauf si vous en décidez autrement : voir [Lignes qui ressemblent à une ligne existante](#lookalike-lines).
 - Les fournisseurs sont mis en correspondance par `supplier_erp_id` lorsqu'il est rempli, sinon par `supplier_name`, sans tenir compte de la casse ni des accents. Le fichier n'a pas de colonne pour la référence du fournisseur : une valeur comme `SUP-12` est un ID ERP dans `supplier_erp_id` et un nom dans `supplier_name`. Un fournisseur nommé par le fichier et absent de Kadratis est créé par le chargement lorsque **Créer les fournisseurs manquants** est cochée, une seule fois pour deux graphies du même nom. Sans cette option, la vérification les liste et vous demande de les créer dans **Données de référence > Fournisseurs**.
 - Une valeur de dimension est rapprochée d'une valeur existante sans tenir compte de la casse ni des accents. Sur une dimension recommandée, une valeur écrite dans une autre des quatre langues est rapprochée aussi, par exemple `Hardware` pour `Matériel`. Une valeur qui n'est rapprochée d'aucune autre est créée par le chargement, et listée dans la vérification. Les comptes, les centres de coûts, les sociétés et les utilisateurs ne sont jamais créés : un élément inconnu est une erreur de ligne qui indique où l'ajouter. Pour une personne dont l'accès aux données est limité, seulement sur une dimension à valeurs ouvertes : voir [Accès aux données limité](#limited-data-access).
 - Une valeur, ou `-`, sur une dimension réservée à l'autre type de ligne est une erreur de ligne sur sa cellule `analytics:<code>`, par exemple « The Recurrence dimension is for CAPEX lines only. Leave it out. » L'export laisse une telle cellule vide : une valeur masquée sur une ligne n'est donc pas exportée, et un chargement la laisse en place. Le réglage se trouve dans [Dimensions analytiques](analytics.md#dimensions-opex-ou-capex).
@@ -130,13 +130,46 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 | **Erreurs** | Les lignes que le chargement refuse, par ligne du fichier avec la colonne lorsqu'elle est connue. Une société inconnue est suivie des noms les plus proches dans l'espace de travail. Un fichier avec une seule erreur ne charge rien |
 | **Modifications** | Les lignes budgétaires à créer, les lignes budgétaires à mettre à jour et les lignes budgétaires que le fichier laisse telles quelles |
 | **Modifiés depuis l'export** | Les lignes budgétaires modifiées par quelqu'un après votre export, avec qui et quand. Charger le fichier écrit vos valeurs à la place de ces modifications |
-| **Avertissements** | Une ligne du fichier qui ressemble à une autre ligne budgétaire, un `company_name` différent de la société du centre de coûts de la ligne, un montant qui fait cesser une colonne de suivre ses lignes de calcul, des colonnes et des cellules que le fichier ignore |
+| **Ressemble à une ligne existante** | Les nouvelles lignes du fichier qui ressemblent à une ligne budgétaire existante, et ce que devient chacune. Voir [Lignes qui ressemblent à une ligne existante](#lookalike-lines) |
+| **Avertissements** | Une ligne du fichier qui ressemble à une autre ligne du fichier, un `company_name` différent de la société du centre de coûts de la ligne, un montant qui fait cesser une colonne de suivre ses lignes de calcul, un montant, une date ou une devise inhabituels (voir [Avertissements de cohérence](#consistency-warnings)), des colonnes et des cellules que le fichier ignore |
 | **N valeurs rapprochées** | Les fournisseurs et les valeurs de dimension du fichier lus comme une valeur existante, repliés. Dépliez la ligne pour voir chaque rapprochement, par exemple `Nature de coût : Materiel → Matériel`. **Défaire** garde la valeur telle qu'elle est écrite : le chargement la crée, ou la vérification la refuse quand elle ne peut pas être créée. **Rétablir** remet le rapprochement. Une valeur qui ne diffère que par la casse est la même valeur et n'est pas listée |
 | **Créés par le chargement** | Les fournisseurs et les valeurs de dimension que le chargement ajouterait. Pointez une valeur soulignée pour voir les noms existants qui en sont proches |
 
 3. Cliquez sur **Charger**. Le chargement écrit tout ou rien.
 
 Si une ligne budgétaire change entre la vérification et le chargement, le chargement s'arrête et vous demande de vérifier le fichier de nouveau. La vérification indique aussi comment elle a lu le fichier lorsqu'une date ou un montant pouvait se lire de deux façons, avec un bouton pour changer la lecture.
+
+Quand le fichier ne crée et ne modifie rien, **Charger** est inactif et la vérification indique « Rien à charger : le fichier correspond aux données actuelles. » C'est le cas d'un fichier chargé deux fois. Après un chargement, le dialogue indique combien de lignes du fichier il a écartées parce qu'elles ressemblent à une ligne existante, par exemple « 3 lignes écartées ».
+
+### Lignes qui ressemblent à une ligne existante { #lookalike-lines }
+
+Une nouvelle ligne du fichier qui ressemble à une ligne budgétaire existante du même type est écartée par défaut. Ainsi, un fichier chargé deux fois, ou une ligne déjà saisie à la main, ne devient pas une seconde ligne. Une ligne du fichier ressemble à une ligne budgétaire de la même société payeuse dans trois cas :
+
+- même titre et même fournisseur
+- mêmes montants dans la même devise : un montant suffit avec le même fournisseur, il en faut deux sinon
+- un titre proche, le même fournisseur et la même devise, et un montant égal
+
+Une ligne budgétaire qui se termine avant la première année des montants du fichier n'est pas comparée.
+
+La vérification liste ces lignes sous **Ressemble à une ligne existante**, avec la ligne budgétaire à laquelle chacune ressemble. Pointez une ligne pour voir pourquoi elle a été trouvée. Pour chaque ligne, choisissez :
+
+- **Écarter** : la ligne n'est pas chargée. C'est le choix par défaut.
+- **Créer quand même** : la ligne devient une nouvelle ligne budgétaire.
+- **Mettre à jour BL-12** : la ligne met à jour la ligne budgétaire à laquelle elle ressemble. Chaque valeur que le fichier remplit remplace la valeur enregistrée. Une cellule vide garde la valeur enregistrée. Pointez la ligne pour voir les valeurs qui changent.
+
+**Tout créer quand même**, **Tout mettre à jour** et **Tout écarter**, au-dessus de la liste, s'appliquent à toutes les lignes, y compris celles que vous avez choisies une à une. **Tout mettre à jour** laisse en l'état une ligne dont vous ne pouvez pas modifier la ligne budgétaire. Un choix fait ensuite sur une ligne ne change que cette ligne. Chaque choix vérifie le fichier de nouveau.
+
+Si BL-12 change entre la vérification et le chargement, la ligne est refusée avec « BL-12 a changé depuis la vérification. » Choisissez de nouveau ce qu'elle devient.
+
+Une ligne du fichier est comparée aux lignes budgétaires de son type que vous pouvez lire.
+
+### Avertissements de cohérence { #consistency-warnings }
+
+La vérification signale aussi les valeurs qui semblent inhabituelles. Ce sont des avertissements : le chargement est permis.
+
+- Un montant dix fois supérieur ou inférieur à celui des lignes comparables : la ligne budgétaire que la ligne du fichier met à jour, ou les autres lignes du même fournisseur.
+- Une date de début après les années des montants, ou une date de fin avant elles.
+- Une devise différente de celle de la société payeuse.
 
 ### Colonnes calculées par quantité et prix
 
@@ -157,6 +190,7 @@ Une personne limitée à une partie du budget utilise le fichier dans son accès
 - Une ligne qu'elle voit en Lecture passe quand sa ligne du fichier est inchangée. Une modification est refusée avec « BL-12 est en lecture seule dans votre accès. »
 - Une nouvelle ligne, ou une nouvelle société ou un nouveau centre de coûts sur une ligne, doit correspondre à l'un de ses nœuds en Saisie. Sinon la ligne du fichier est refusée avec « Cette société ou ce centre de coûts ne fait pas partie de votre accès. »
 - Une valeur inconnue n'est créée que sur une dimension à valeurs ouvertes. Sur les autres dimensions, c'est une erreur de ligne.
+- Une ligne du fichier qui ressemble à une ligne existante ne propose **Mettre à jour BL-12** que si la personne peut modifier cette ligne budgétaire.
 
 Ces lignes apparaissent parmi les **Erreurs** de la vérification, comme toute autre ligne refusée.
 

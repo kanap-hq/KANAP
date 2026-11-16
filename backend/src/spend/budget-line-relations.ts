@@ -6,6 +6,7 @@ import {
   type ParticipationAccessScope,
 } from '../auth/business-contributor-scope';
 import { setOwnedLink, type OwnedLinkAudit, type OwnedRelationLink } from '../common/relations/owned-link';
+import { contractReference } from '../contracts/contract-reference';
 import { moduleRightRequired } from '../auth/module-right-required';
 import {
   binder,
@@ -271,8 +272,8 @@ async function suggestContracts(
   line: BudgetLineRow,
   supplierId: string,
 ): Promise<BudgetLineSuggestion[]> {
-  const rows: Array<{ id: string; name: string }> = await manager.query(
-    `SELECT c.id, c.name
+  const rows: Array<{ id: string; item_number: number | null; name: string }> = await manager.query(
+    `SELECT c.id, c.item_number, c.name
        FROM contracts c
       WHERE c.tenant_id = $1 AND c.supplier_id = $3 AND ${inService('c')}
         AND NOT EXISTS (
@@ -284,9 +285,10 @@ async function suggestContracts(
     [line.tenant_id, line.id, supplierId],
   );
   return rows.map((row) => ({
-    ...row,
+    id: row.id,
+    name: row.name,
     type: 'contract' as const,
-    reference: null,
+    reference: contractReference(row.item_number),
     via: { kind: 'same_supplier' as const, label: null },
   }));
 }

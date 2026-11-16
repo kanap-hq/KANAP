@@ -150,6 +150,7 @@ export const IMPORT_EXAMPLES: Record<ImportExampleKey, ImportExampleDefinition> 
     fileNames: { en: 'contracts', fr: 'contrats', de: 'vertraege', es: 'contratos' },
     header: fromLabels(CONTRACT_CSV_HEADERS),
     columns: {
+      reference: text('contractReference'),
       name: { kind: 'text', required: true },
       company_name: reference('company', true),
       supplier_name: reference('supplier', true),

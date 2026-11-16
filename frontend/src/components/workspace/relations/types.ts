@@ -27,6 +27,8 @@ export type ConversionRow = {
 
 export type ContractRow = {
   id: string;
+  /** CTR-n: the row names and opens the contract by its reference. */
+  item_number?: number | null;
   name: string;
   supplier_name: string | null;
   end_date: string | null;

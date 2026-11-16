@@ -8,10 +8,10 @@ import { type BudgetNature } from '../budget-nature';
 import type { ExportFileFormat } from '../../common/xlsx';
 import { buildBudgetExport, parseAmountYears, parseDetail, parseFileColumns, shownFileColumns, writeBudgetFile } from './export-file';
 import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportResult, BudgetFileLineServices, parseBudgetSnapshot } from './import-file';
-import { interpretBudgetFile, readBudgetCsv } from './interpret';
-import { loadExportLines, loadFileDimensions, loadPreflight } from './load';
+import { readBudgetCsv } from './interpret';
+import { loadExportLines, loadFileDimensions } from './load';
+import { checkBudgetFile } from './check';
 import { buildPreflight, changedSinceText } from './preflight';
-import { planWithAccess } from './access';
 import { isLimitedTransaction } from '../../data-access/line-write-checks';
 import { BudgetFileMatchOptions, BudgetFileReport, BudgetFileExportScope, BudgetFileScope, emptyCatalog } from './types';
 
@@ -97,26 +97,20 @@ export class BudgetFileService {
         stored: [], names: [], createSuppliers: false, canCreateSuppliers: false, currentYear, labels: {},
       });
     }
-    const numbers = interpretBudgetFile(read, scope).map((row) => row.itemNumber);
     const settings = await this.currencySettings.getSettings(caller.tenantId, { manager });
-    const loaded = await loadPreflight(manager, caller.tenantId, numbers, settings.allowedCurrencies);
     // A limited person's file follows the line rules, row by row (planning/data-scoped-access §4.2).
-    const { report } = await planWithAccess(manager, {
+    const { report, stored } = await checkBudgetFile(manager, caller.tenantId, {
       scope,
       read,
-      catalog: loaded.catalog,
-      stored: loaded.stored,
-      names: loaded.names,
       createSuppliers: options.createSuppliers,
       canCreateSuppliers: options.canCreateSuppliers,
       canReadSuppliers: options.canReadSuppliers,
       canReadCompanies: options.canReadCompanies,
       currentYear,
-      labels: loaded.labels,
-      access: loaded.access,
       matching: options.matching,
+      allowedCurrencies: settings.allowedCurrencies,
     });
-    const natureOf = new Map(loaded.stored.map((line) => [line.id, line.nature]));
+    const natureOf = new Map(stored.map((line) => [line.id, line.nature]));
     await nameChanges(manager, natureOf, caller.tenantId, report);
     return report;
   }

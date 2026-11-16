@@ -89,7 +89,7 @@ La cuadrícula de Tareas muestra todas las tareas de su organización.
 
 | Columna | Qué muestra |
 |---------|-------------|
-| **Entrada relacionada** | El nombre de la entidad vinculada (vacío para tareas independientes) |
+| **Entrada relacionada** | El nombre de la entidad vinculada (vacío para tareas independientes). Un contrato muestra su referencia y su nombre, como `CTR-3 · Acme support` |
 | **Fase** | Fase del proyecto (para tareas de proyecto) |
 | **Prioridad** | Nivel de prioridad |
 | **Fecha de vencimiento** | Cuándo vence la tarea |
@@ -536,7 +536,7 @@ Hay tres modos de exportación disponibles:
 | `related_object_id` | UUID de la entidad | Condicional | Obligatorio si es tarea vinculada y no se proporciona `related_object_name` |
 | `related_object_name` | Nombre de la entidad | Condicional | Obligatorio si es tarea vinculada y no se proporciona `related_object_id` |
 | `phase_name` | Fase del proyecto | No | Debe coincidir con un nombre de fase existente (solo tareas de proyecto) |
-| `priority_level` | Prioridad de la tarea | No | Acepta código o etiqueta |
+| `priority_level` | Prioridad de la tarea | No | Acepta el código o el nombre, en cualquiera de los cuatro idiomas |
 | `source_name` | Origen | No | Origen del portafolio (tareas independientes y de proyecto) |
 | `category_name` | Categoría | No | Categoría del portafolio (tareas independientes y de proyecto) |
 | `stream_name` | Flujo | No | Flujo del portafolio (tareas independientes y de proyecto) |
@@ -550,7 +550,7 @@ Hay tres modos de exportación disponibles:
 
 | Columna CSV | Descripción | Notas |
 |-------------|-------------|-------|
-| `status` | Estado de la tarea | Acepta código o etiqueta |
+| `status` | Estado de la tarea | Acepta el código o el nombre, en cualquiera de los cuatro idiomas |
 | `start_date` | Fecha de inicio | Formato de fecha: AAAA-MM-DD |
 | `due_date` | Fecha de vencimiento | Formato de fecha: AAAA-MM-DD |
 
@@ -603,7 +603,7 @@ Para los campos **status**, **priority_level** y **related_object_type**, puede 
 | `contract` | `Contract` |
 | `capex_item` | `CAPEX Item`, `CAPEX` |
 
-El sistema normaliza automáticamente los valores durante la importación.
+El sistema normaliza automáticamente los valores durante la importación. Un estado o una prioridad también se lee por el nombre que muestra la pantalla, en cualquiera de los cuatro idiomas. Un valor desconocido se rechaza, y el mensaje lista los nombres aceptados.
 
 ### Coincidencia y actualizaciones
 
@@ -613,7 +613,7 @@ Las tareas se emparejan por **título + related_object_id** (sin distinción de 
 
 Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el ID, luego recurre a título + objeto relacionado.
 
-**Nota**: Si proporciona `related_object_name` en lugar de `related_object_id`, el sistema resuelve el nombre al ID antes de la coincidencia. Esto significa que puede usar nombres legibles en todo su archivo de importación.
+**Nota**: Si proporciona `related_object_name` en lugar de `related_object_id`, el sistema resuelve el nombre al ID antes de la coincidencia. Esto significa que puede usar nombres legibles en todo su archivo de importación. Para un contrato, `related_object_name` también acepta su referencia, como `CTR-12`.
 
 ### Campos de solo exportación
 

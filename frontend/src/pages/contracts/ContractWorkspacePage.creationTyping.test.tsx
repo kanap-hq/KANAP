@@ -52,6 +52,7 @@ const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', Ret
 /** What the server stores for the contract the draft created: the amount is the one sent with it. */
 const STORED = {
   id: 'c-new',
+  item_number: 7,
   name: 'Oracle support',
   status: 'enabled',
   disabled_at: null,
@@ -113,7 +114,8 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
     resetCreationStore();
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/currency/settings') return { data: { reportingCurrency: 'EUR', defaultSpendCurrency: 'EUR', defaultCapexCurrency: 'EUR', allowedCurrencies: ['EUR', 'USD'] } };
-      if (url === '/contracts/c-new') return { data: STORED };
+      // The server reads the contract by its uuid or its reference alike.
+      if (url === '/contracts/c-new' || url === '/contracts/CTR-7') return { data: STORED };
       if (url === '/contracts/c-new/relation-counts') return { data: { budget_lines: 0, relations: 0 } };
       if (url === '/contracts/c-new/tasks') return { data: [] };
       return { data: { items: [] } };
@@ -148,8 +150,10 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
     act(() => notes.focus());
     fireEvent.change(notes, { target: { value: 'S' } });
     await finish();
-    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/contracts/c-new/overview'));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/contracts/CTR-7/overview'));
     await until(() => { if (!mocked.get.mock.calls.some(([url]) => url === '/contracts/c-new')) throw new Error('contract not read'); });
+    // Its tabs read their routes by the uuid.
+    await until(() => { if (!mocked.get.mock.calls.some(([url]) => url === '/contracts/c-new/relation-counts')) throw new Error('counts not read'); });
 
     // The rest of the sentence goes to the same editor, which still has the focus.
     const shown = screen.getByLabelText('markdown-editor') as HTMLTextAreaElement;
@@ -184,7 +188,7 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
     fireEvent.change(amount, { target: { value: '12000' } });
 
     await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });
-    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/contracts/c-new/overview'));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/contracts/CTR-7/overview'));
 
     // The same field still has the focus and what was typed, and the amount is saved on the new contract.
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/contracts/c-new'));

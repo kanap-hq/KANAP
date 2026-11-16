@@ -371,7 +371,7 @@ Der Reiter Beziehungen zeigt, womit das Asset verknüpft ist: Budgetzeilen, Vert
 | Abschnitt | Spalten |
 |---|---|
 | **Budgetzeilen** | Referenz (`BL-12`), Name, Typ (OPEX oder CAPEX), Lieferant und der Betrag des laufenden Jahres in Ihrer Standard-Budgetspalte, in der Berichtswährung. Ein Strich bedeutet, dass die Zeile für das Jahr kein Budget hat |
-| **Verträge** | Name, Lieferant, Ende der laufenden Laufzeit, Jahresbetrag in der Vertragswährung, Verlängerung (stillschweigend oder manuell) |
+| **Verträge** | Referenz (`CTR-3`), Name, Lieferant, Ende der laufenden Laufzeit, Jahresbetrag in der Vertragswährung, Verlängerung (stillschweigend oder manuell) |
 | **Projekte** | Referenz (`PRJ-7`), Name, Status, geplantes Ende |
 | **Aufgaben** | Referenz (`T-118`), Titel, Status, zugewiesene Person, Fälligkeit. Offene Aufgaben stehen zuerst |
 | **Vorfälle** | Referenz (`INC-14`), Titel, Schweregrad, Status, Erkennungsdatum |

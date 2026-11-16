@@ -10,7 +10,7 @@ export const PAGE = 30;
 /** The placeholder of an empty cell. */
 export const DASH = '—';
 
-type RefType = 'budget' | 'project' | 'request' | 'task' | 'incident';
+type RefType = 'budget' | 'project' | 'request' | 'task' | 'incident' | 'contract';
 
 export function refOf(type: RefType, itemNumber: number | null): string | null {
   return itemNumber != null ? formatItemRef(type, itemNumber) : null;

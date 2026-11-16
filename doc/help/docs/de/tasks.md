@@ -89,7 +89,7 @@ Das Aufgaben-Raster zeigt alle Aufgaben in Ihrer Organisation.
 
 | Spalte | Was sie zeigt |
 |--------|---------------|
-| **Verknüpfter Eintrag** | Der verknüpfte Entitätsname (leer für eigenständige Aufgaben) |
+| **Verknüpfter Eintrag** | Der verknüpfte Entitätsname (leer für eigenständige Aufgaben). Ein Vertrag zeigt seine Referenz und seinen Namen, etwa `CTR-3 · Acme support` |
 | **Phase** | Projektphase (für Projektaufgaben) |
 | **Priorität** | Prioritätsstufe |
 | **Fälligkeitsdatum** | Wann die Aufgabe fällig ist |
@@ -536,7 +536,7 @@ Drei Exportmodi sind verfügbar:
 | `related_object_id` | Entitäts-UUID | Bedingt | Erforderlich, wenn verknüpfte Aufgabe und `related_object_name` nicht angegeben |
 | `related_object_name` | Entitätsname | Bedingt | Erforderlich, wenn verknüpfte Aufgabe und `related_object_id` nicht angegeben |
 | `phase_name` | Projektphase | Nein | Muss mit vorhandenem Phasennamen übereinstimmen (nur Projektaufgaben) |
-| `priority_level` | Aufgabenpriorität | Nein | Akzeptiert Code oder Bezeichnung |
+| `priority_level` | Aufgabenpriorität | Nein | Akzeptiert den Code oder den Namen, in jeder der vier Sprachen |
 | `source_name` | Quelle | Nein | Portfolio-Quelle (eigenständige und Projektaufgaben) |
 | `category_name` | Kategorie | Nein | Portfolio-Kategorie (eigenständige und Projektaufgaben) |
 | `stream_name` | Stream | Nein | Portfolio-Stream (eigenständige und Projektaufgaben) |
@@ -550,7 +550,7 @@ Drei Exportmodi sind verfügbar:
 
 | CSV-Spalte | Beschreibung | Hinweise |
 |------------|-------------|-------|
-| `status` | Aufgabenstatus | Akzeptiert Code oder Bezeichnung |
+| `status` | Aufgabenstatus | Akzeptiert den Code oder den Namen, in jeder der vier Sprachen |
 | `start_date` | Startdatum | Datumsformat: YYYY-MM-DD |
 | `due_date` | Fälligkeitsdatum | Datumsformat: YYYY-MM-DD |
 
@@ -603,7 +603,7 @@ Für **status**, **priority_level** und **related_object_type** können Sie entw
 | `contract` | `Contract` |
 | `capex_item` | `CAPEX Item`, `CAPEX` |
 
-Das System normalisiert Werte automatisch beim Import.
+Das System normalisiert Werte automatisch beim Import. Ein Status oder eine Priorität wird auch mit dem Namen gelesen, den der Bildschirm zeigt, in jeder der vier Sprachen. Ein unbekannter Wert wird abgelehnt, und die Meldung nennt die zulässigen Namen.
 
 ### Abgleich und Updates
 
@@ -613,7 +613,7 @@ Aufgaben werden nach **Titel + related_object_id** (Groß-/Kleinschreibung ignor
 
 Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf Titel + verwandtes Objekt zurück.
 
-**Hinweis**: Wenn Sie `related_object_name` anstelle von `related_object_id` angeben, löst das System den Namen vor dem Abgleich zur ID auf. Das bedeutet, Sie können in Ihrer Importdatei durchgehend für Menschen lesbare Namen verwenden.
+**Hinweis**: Wenn Sie `related_object_name` anstelle von `related_object_id` angeben, löst das System den Namen vor dem Abgleich zur ID auf. Das bedeutet, Sie können in Ihrer Importdatei durchgehend für Menschen lesbare Namen verwenden. Für einen Vertrag nimmt `related_object_name` auch seine Referenz an, etwa `CTR-12`.
 
 ### Nur-Export-Felder
 

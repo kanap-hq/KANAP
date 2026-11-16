@@ -88,7 +88,7 @@ Drücken Sie **Escape** oder klicken Sie auf die Schließen-Schaltfläche, um zu
 
 ### Verwendet in
 
-Der Abschnitt **Verwendet in**, unter den Notizen, listet alles auf, womit der Kontakt verknüpft ist, eine Liste pro Typ, jede mit ihrer Anzahl: Lieferanten, Budgetzeilen (OPEX und CAPEX, mit ihrer Referenz `BL-`), Verträge, Anwendungen, Assets, Standorte, Projekte (`PRJ-`) und Anfragen (`REQ-`). Jede Zeile zeigt die Rolle des Kontakts dort: den Kontakttyp bei Lieferanten, Budgetzeilen und Verträgen, die bei der Anwendung, dem Asset oder dem Standort eingetragene Rolle.
+Der Abschnitt **Verwendet in**, unter den Notizen, listet alles auf, womit der Kontakt verknüpft ist, eine Liste pro Typ, jede mit ihrer Anzahl: Lieferanten, Budgetzeilen (OPEX und CAPEX, mit ihrer Referenz `BL-`), Verträge (`CTR-`), Anwendungen, Assets, Standorte, Projekte (`PRJ-`) und Anfragen (`REQ-`). Jede Zeile zeigt die Rolle des Kontakts dort: den Kontakttyp bei Lieferanten, Budgetzeilen und Verträgen, die bei der Anwendung, dem Asset oder dem Standort eingetragene Rolle.
 
 Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Eine Liste zeigt bis zu 50 Einträge und nennt ihre Gesamtzahl. Sie sehen nur die Listen, die Sie lesen dürfen. Ein Kontakt, der mit nichts verknüpft ist, zeigt eine Zeile, die das sagt.
 

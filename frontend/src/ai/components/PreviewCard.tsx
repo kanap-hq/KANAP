@@ -15,7 +15,6 @@ import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/prev
 import { getPreviewTitle } from '../utils/previewClassification';
 import { usePreviewChangeLabels } from './previewChangeLabels';
 import ImportMappingPreview from './ImportMappingPreview';
-import { ImportLookalikeCount, ImportLookalikeLines, importLookalikes } from './ImportLookalikes';
 import { downloadServerExport } from '../../components/csv/serverExport';
 import { setImportChoices } from '../previewChains';
 import type { BudgetFileChoice } from '../../components/finance/budgetFile';
@@ -153,8 +152,6 @@ function PreviewCard({
   const { fieldLabel, valueLabel, amountsLabel, classificationLabel, relationItemsLabel } = usePreviewChangeLabels(preview);
   // The reference shows once: the server's title often starts with it ("APP-36 - CheeseTrack").
   const title = getPreviewTitle(preview);
-  // The rows of a budget file that look like existing lines: counted on the summary line, listed before the actions.
-  const lookalikes = importLookalikes(preview.import_mapping);
   // The person's choices on a budget file's check: sent whole, answered by the card that replaces this one.
   const [choosing, setChoosing] = React.useState(false);
   const [choiceError, setChoiceError] = React.useState<{ text: string; detail: string | null } | null>(null);
@@ -398,10 +395,8 @@ function PreviewCard({
             >
               {preview.error_message || preview.summary}
             </Typography>
-            {lookalikes && <ImportLookalikeCount count={lookalikes.count} />}
           </Stack>
         )}
-        {lookalikes && <ImportLookalikeLines lookalikes={lookalikes} />}
 
         {(isPending || canDownload) && (
           <Stack

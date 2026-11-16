@@ -88,7 +88,7 @@ Pulse **Escape** o haga clic en el botón de cerrar para volver a la lista.
 
 ### Usado en
 
-La sección **Usado en**, bajo las notas, lista todo aquello a lo que está vinculado el contacto, una lista por tipo, cada una con su número: proveedores, líneas presupuestarias (OPEX y CAPEX, con su referencia `BL-`), contratos, aplicaciones, activos, ubicaciones, proyectos (`PRJ-`) y solicitudes (`REQ-`). Cada fila muestra el rol del contacto: el tipo de contacto para proveedores, líneas presupuestarias y contratos, el rol escrito en la aplicación, el activo o la ubicación.
+La sección **Usado en**, bajo las notas, lista todo aquello a lo que está vinculado el contacto, una lista por tipo, cada una con su número: proveedores, líneas presupuestarias (OPEX y CAPEX, con su referencia `BL-`), contratos (`CTR-`), aplicaciones, activos, ubicaciones, proyectos (`PRJ-`) y solicitudes (`REQ-`). Cada fila muestra el rol del contacto: el tipo de contacto para proveedores, líneas presupuestarias y contratos, el rol escrito en la aplicación, el activo o la ubicación.
 
 Haga clic en una fila para abrir su página. Una lista muestra hasta 50 elementos e indica cuántos hay en total. Solo ve las listas que tiene permiso para leer. Un contacto sin vínculos muestra una línea que lo indica.
 

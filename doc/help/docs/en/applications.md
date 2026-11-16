@@ -371,7 +371,7 @@ The Relations tab shows what this application is linked to: its budget lines, co
 | Section | Columns |
 |---|---|
 | **Budget lines** | Reference (`BL-12`), name, type (OPEX or CAPEX), supplier, and the amount of the current year in your default budget column, in the reporting currency. A dash means the line has no budget for the year |
-| **Contracts** | Name, supplier, end of the current term, yearly amount in the contract currency, renewal (tacit or manual) |
+| **Contracts** | Reference (`CTR-3`), name, supplier, end of the current term, yearly amount in the contract currency, renewal (tacit or manual) |
 | **Projects** | Reference (`PRJ-7`), name, status, planned end |
 | **Requests** | Reference (`REQ-23`), name, status, desired delivery |
 | **Tasks** | Reference (`T-118`), title, status, assignee, due date. Only the tasks linked to this application itself appear, not the tasks of its projects |

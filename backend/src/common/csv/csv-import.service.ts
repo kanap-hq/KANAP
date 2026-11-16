@@ -7,6 +7,7 @@ import { knownTimeZone, readTimeZoneHeader } from '../csv-sheet/date';
 import { CsvDecodeError } from '../csv-sheet/decode';
 import { csvSeparatorOf, readImportText } from '../csv-sheet/read';
 import { looseKey } from '../csv-sheet/text';
+import { labelsForEnum } from '../../ai/import/ai-import-code-labels';
 import { sameStoredValues } from '../csv-sheet/unchanged';
 import { AuditLog } from '../../audit/audit.entity';
 import { omitAuditSecrets } from '../../audit/audit.service';
@@ -1088,7 +1089,7 @@ export class CsvImportService {
         return this.parseDate(rawValue, field.csvColumn);
 
       case CsvFieldType.ENUM:
-        return this.parseEnum(rawValue, field);
+        return this.parseEnum(rawValue, field, context.language);
 
       case CsvFieldType.ARRAY:
         // Comma-separated arrays
@@ -1196,25 +1197,31 @@ export class CsvImportService {
   }
 
   /**
-   * Parse an enum value.
+   * Parse an enum value: its code, whatever its case, or, for a list the screens name
+   * (`labelsForEnum`), its name in any of the four languages. A value of neither is refused with the
+   * names of the file's language (lot I2 of 26.11.9), the codes for a list the screens do not name.
    */
-  private parseEnum(value: string, field: CsvFieldDefinition): string {
+  private parseEnum(value: string, field: CsvFieldDefinition, language?: CsvLanguage): string {
     if (!field.enumValues) {
       return value;
     }
 
     const normalized = value.toLowerCase();
     const match = field.enumValues.find((v) => v.toLowerCase() === normalized);
+    if (match) return match;
 
-    if (!match) {
-      throw new CsvCellError(
-        'CSV_ENUM_INVALID',
-        `Invalid ${field.csvColumn}: "${value}". Valid values: ${field.enumValues.join(', ')}`,
-        { value, allowed: field.enumValues.join(', ') },
-      );
-    }
+    const labels = labelsForEnum(field.enumValues);
+    const named = labels && Object.values(labels)
+      .flatMap((names) => Object.entries(names))
+      .find(([, name]) => name.toLowerCase() === normalized.trim());
+    if (named) return named[0];
 
-    return match;
+    const allowed = field.enumValues.map((code) => labels?.[language ?? 'en']?.[code] ?? code).join(', ');
+    throw new CsvCellError(
+      'CSV_ENUM_INVALID',
+      `Invalid ${field.csvColumn}: "${value}". Valid values: ${allowed}`,
+      { value, allowed },
+    );
   }
 
   /**

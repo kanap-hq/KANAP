@@ -367,15 +367,15 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     // A1: contracts of the application's supplier.
     if (access.contracts && supplierId) {
       rules.push(() => mg.query(
-        `SELECT c.id, c.name
+        `SELECT c.id, c.item_number, c.name
          FROM contracts c
          WHERE c.tenant_id = $1 AND c.supplier_id = $3 AND ${ACTIVE_CONTRACT}
            AND NOT EXISTS (SELECT 1 FROM application_contracts al WHERE al.tenant_id = c.tenant_id AND al.application_id = $2 AND al.contract_id = c.id)
          ORDER BY lower(c.name), c.id
          LIMIT ${SUGGESTIONS_PER_RULE}`,
         [tenantId, appId, supplierId],
-      ).then((rows: Array<{ id: string; name: string }>) => rows.map((row) => ({
-        type: 'contract' as const, id: row.id, item_number: null, name: row.name, via: { kind: 'same_supplier' as const, label: null },
+      ).then((rows: Array<{ id: string; item_number: number | null; name: string }>) => rows.map((row) => ({
+        type: 'contract' as const, id: row.id, item_number: row.item_number == null ? null : Number(row.item_number), name: row.name, via: { kind: 'same_supplier' as const, label: null },
       }))));
     }
 

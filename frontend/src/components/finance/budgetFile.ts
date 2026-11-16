@@ -102,7 +102,40 @@ export type BudgetFileSentence = { message: string; code?: string; params?: Reco
  */
 export type BudgetFileChoice =
   | { kind: 'unmatch'; column: string; value: string }
-  | { kind: 'create_suppliers'; value: boolean };
+  | { kind: 'create_suppliers'; value: boolean }
+  /**
+   * A row that looks like a stored line (lot I2 of 26.11.9): `line` is the row's line in the person's
+   * file; "Ignore" is the default and is sent only to override a choice for all rows. `item` and
+   * `state` for "Update": the line's number and its `target.state` from the report.
+   */
+  | { kind: 'lookalike'; line: number; action: 'ignore' | 'create' }
+  | { kind: 'lookalike'; line: number; action: 'update'; item: number; state?: string }
+  /**
+   * Every row that looks like a stored line; a choice for one row wins. `targets`: the report's
+   * `lookalikes.targets`, the line each row looked like at the check shown. The check gives this
+   * choice back, `ignore` when the person chose nothing: a row keeps its target, so a row left out
+   * stays left out and a line changed since is refused.
+   */
+  | { kind: 'lookalikes'; action: 'ignore' | 'create' | 'update'; targets?: Record<string, BudgetFileLookalikeTarget> };
+
+/** The line a row looks like, and its state at the check. */
+export type BudgetFileLookalikeTarget = { item: number; state: string };
+
+/** A row to create that looks like a stored line the person reads (lot I2 of 26.11.9). */
+export type BudgetFileLookalike = {
+  line: number;
+  nature: BudgetFileScope;
+  name: string;
+  /** The line it looks like: its number, reference (`BL-n`), title and state at the check. */
+  target: { item: number; ref: string; name: string; state: string };
+  /** Absent when the row keeps a line it no longer looks like (the line changed since the check). */
+  reason?: 'title_supplier' | 'amounts' | 'close_title';
+  outcome: 'ignored' | 'created' | 'updated';
+  /** "Update" is offered only when true. */
+  updatable: boolean;
+  /** For an update: the fields it changes. */
+  fields?: string[];
+};
 
 /** The matching of a check: `lines` are the lines of the person's file, the first 20; `count` all of them. */
 export type BudgetFileMatching = {
@@ -163,7 +196,7 @@ export type BudgetFileReport = {
   }>;
   changedSinceExportCount: number;
   warnings: {
-    /** New rows that look like a line the person reads, or an earlier row of the file: the first 20. */
+    /** New rows that look like an earlier row of the file (`BUDGET_FILE_LOOKS_LIKE_ROW`): the first 20. Created. */
     duplicates: Array<{ line: number } & BudgetFileSentence>;
     /** How many there are in all (absent from a report of before 26.11.8). */
     duplicatesCount?: number;
@@ -187,6 +220,19 @@ export type BudgetFileReport = {
     calculationLines?: Array<{ line: number; item: string; column: string; year: number; count: number; total: string; message: string }>;
     /** How many calculation lines warnings there are in all; the list holds the first 20. */
     calculationLinesCount?: number;
+    /** Consistency warnings of the lines written (amount, dates, currency), the first 20; `code` names the sentence in `errors`. */
+    consistency?: Array<{ line: number } & BudgetFileSentence>;
+    consistencyCount?: number;
+  };
+  /** The rows that look like a stored line, the first 200, and what the check does with them (lot I2 of 26.11.9). */
+  lookalikes?: {
+    lines: BudgetFileLookalike[];
+    /** Every row's target, by its line in the file, beyond the 200 listed: what "Update all" sends. */
+    targets: Record<string, BudgetFileLookalikeTarget>;
+    count: number;
+    ignored: number;
+    created: number;
+    updated: number;
   };
   creates: {
     /** Unknown values the load will create; `name` is the dimension's name (null for the unnamed default dimension). */
@@ -210,6 +256,8 @@ export type BudgetFileLoad = {
   dryRun: false;
   inserted: number;
   updated: number;
+  /** The rows left out because they look like a stored line. */
+  skipped?: number;
 };
 
 /* ---- Server sentences the dialog shows ---- */

@@ -45,7 +45,7 @@ export const CONTACT_USAGE_QUERIES: readonly UsageQuery[] = [
   {
     type: 'contracts',
     resource: 'contracts',
-    sql: `SELECT c.id, NULL::text AS reference, c.name, c.status::text AS status, ${activeSql('c')} AS active,
+    sql: `SELECT c.id, 'CTR-' || c.item_number AS reference, c.name, c.status::text AS status, ${activeSql('c')} AS active,
                  ${typedRoles('l')} AS roles, count(*) OVER () AS total
             FROM contract_contacts l
             JOIN contracts c ON c.tenant_id = l.tenant_id AND c.id = l.contract_id

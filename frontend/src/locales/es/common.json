@@ -600,6 +600,7 @@
     "insertOnly": "Solo insertar",
     "validationPassed_one": "Validación superada. Listo para importar {{count}} fila.",
     "validationPassed_other": "Validación superada. Listo para importar {{count}} filas.",
+    "nothingToImport": "Nada que importar.",
     "importCompleted": "Importación completada correctamente.",
     "validationFailed": "Validación fallida. Por favor, corrija los errores e inténtelo de nuevo.",
     "totalRows_one": "{{count}} fila",

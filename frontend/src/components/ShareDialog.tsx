@@ -130,8 +130,8 @@ export default function ShareDialog({
   const [copied, setCopied] = React.useState(false);
   const tooManyRecipients = recipients.length > MAX_RECIPIENTS;
 
-  // Contracts have no business reference: their link names the id.
-  const displayRef = itemRef || (itemNumber && itemType !== 'contract' ? formatItemRef(itemType === 'opex' || itemType === 'capex' ? 'budget' : itemType, itemNumber) : null);
+  // The link names the item by its reference when it has one (a contract's CTR-n included), else by its id.
+  const displayRef = itemRef || (itemNumber ? formatItemRef(itemType === 'opex' || itemType === 'capex' ? 'budget' : itemType, itemNumber) : null);
   const refOrId = displayRef || itemId;
   const itemUrl = `${window.location.origin}${buildItemPath(itemType, refOrId)}`;
 

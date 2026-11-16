@@ -23,7 +23,7 @@ import { AiMutationPreview } from './ai-mutation-preview.entity';
 import { AiPolicyService, isRightRefusalMessage } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
-import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
+import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview, AiPreviewExecutionRefusal } from './mutation/ai-mutation-operation.types';
 import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
 import { isBudgetOperationRunning } from '../spend/budget-locks';
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
@@ -1335,6 +1335,8 @@ export class AiMutationPreviewService {
           return this.toPreviewDto(await repo.save(preview), await this.languageOf(context));
         }
       }
+      // What the operation refused, kept on the card once its writes are undone.
+      if (error instanceof AiPreviewExecutionRefusal) preview.current_values = { ...(preview.current_values ?? {}), ...error.kept };
       preview.status = 'failed';
       preview.approved_at = new Date();
       preview.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview execution failed.');
@@ -1423,7 +1425,25 @@ export class AiMutationPreviewService {
     }
 
     await this.assertPreviewWriteRights(context, operation, preview);
+    const refused = await this.refuseApproval(context, operation, preview);
+    if (refused) return refused;
     return this.executePreviewInternal(context, preview);
+  }
+
+  /**
+   * A pending preview its operation refuses to approve as it stands (an import with nothing to
+   * import): nothing runs, the preview stays pending with the reason, and a choice on its card may
+   * still make it approvable. Null when the approval may go on.
+   */
+  private async refuseApproval(
+    context: AiExecutionContextWithManager,
+    operation: AiMutationOperation,
+    preview: AiMutationPreview,
+  ): Promise<AiMutationPreviewDto | null> {
+    const reason = operation.approvalRefusal?.(preview) ?? null;
+    if (!reason) return null;
+    preview.error_message = reason;
+    return this.toPreviewDto(await this.getRepo(context.manager).save(preview), await this.languageOf(context));
   }
 
   private normalizePreviewIds(previewIds: string[]): string[] {
@@ -1474,7 +1494,7 @@ export class AiMutationPreviewService {
       }
 
       // "Approve all" leaves out a card that cannot be approved as it stands (an import whose check
-      // refused the file): it is neither run nor failed, and stays pending with its errors.
+      // refused the file, or with nothing to import): it is neither run nor failed, and stays pending.
       if (ids.length > 1 && operation.isApprovable?.(preview) === false) {
         continue;
       }
@@ -1489,6 +1509,11 @@ export class AiMutationPreviewService {
       }
 
       await this.assertPreviewWriteRights(context, operation, preview);
+      const refused = await this.refuseApproval(context, operation, preview);
+      if (refused) {
+        results.push(refused);
+        continue;
+      }
       results.push(await this.executePreviewInternal(context, preview, followUpPreviews));
     }
     return { results, followUpPreviews };

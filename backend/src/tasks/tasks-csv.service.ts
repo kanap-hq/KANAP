@@ -15,7 +15,15 @@ import {
   CsvFieldType,
 } from '../common/csv';
 import type { ExportFileFormat } from '../common/xlsx';
-import { TASK_INHERITED_CLASSIFICATION, taskCsvConfig, taskProjectClassifications } from './task-csv.config';
+import {
+  CONTRACT_OUTSIDE_ACCESS,
+  TASK_INHERITED_CLASSIFICATION,
+  TASK_UUID_RE,
+  isContractOutsideAccessLabel,
+  relatedObjectIdsByName,
+  taskCsvConfig,
+  taskProjectClassifications,
+} from './task-csv.config';
 import { inIdOrder } from '../common/pagination';
 import { assertTaskWritten } from './task-data-access';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
@@ -23,6 +31,13 @@ import {
   IncidentViewer,
   taskIncidentVisibilityQueryBuilderClause,
 } from '../incidents/incident-visibility';
+
+/** A task's stored list of people (jsonb) names the same people as the file, in any order. */
+const samePeople = (stored: unknown, next: string[]): boolean => {
+  const current = Array.isArray(stored) ? stored.map(String) : [];
+  const wanted = new Set(next);
+  return current.length === wanted.size && current.every((id) => wanted.has(id));
+};
 
 /** The task types of a budget line, which a limited person may see tasks of without the line. */
 const LINE_TYPES = new Set(['spend_item', 'capex_item']);
@@ -95,7 +110,7 @@ export class TasksCsvService {
 
     // Pre-load related object names for export
     if (tasks.length > 0) {
-      await this.loadRelatedObjectNames(tasks, manager, tenantId);
+      await this.loadRelatedObjectNames(tasks, manager, tenantId, opts.language);
       await this.loadInheritedClassification(tasks, manager, tenantId);
     }
 
@@ -142,6 +157,7 @@ export class TasksCsvService {
     tasks: Task[],
     manager: EntityManager,
     tenantId: string,
+    language: CsvLanguage,
   ): Promise<void> {
     // Group tasks by related object type
     const byType = new Map<string, Task[]>();
@@ -165,7 +181,8 @@ export class TasksCsvService {
     };
 
     // A limited person's export shows no trace of a line out of access (spec §5.4, §5.6): a task
-    // they see (a participation) of a line they cannot read exports neither its name nor its id.
+    // they see (a participation) of a line they cannot read exports neither its name nor its id. A
+    // contract they cannot read gives the list's label instead of its name (lot R4 of 26.11.9).
     const limited = await isLimitedTransaction(manager);
 
     // Load names for each type
@@ -188,10 +205,13 @@ export class TasksCsvService {
       // Attach names to tasks
       for (const task of typeTasks) {
         const relatedObjectId = task.related_object_id;
-        if (limited && LINE_TYPES.has(type) && relatedObjectId && !nameById.has(relatedObjectId)) {
+        const hidden = limited && relatedObjectId && !nameById.has(relatedObjectId);
+        if (hidden && (LINE_TYPES.has(type) || type === 'contract')) {
           task.related_object_id = null;
         }
-        (task as any)._relatedObjectName = relatedObjectId ? (nameById.get(relatedObjectId) ?? '') : '';
+        (task as any)._relatedObjectName = hidden && type === 'contract'
+          ? CONTRACT_OUTSIDE_ACCESS[language] ?? CONTRACT_OUTSIDE_ACCESS.en
+          : relatedObjectId ? (nameById.get(relatedObjectId) ?? '') : '';
       }
     }
   }
@@ -245,35 +265,25 @@ export class TasksCsvService {
       userByEmail.set(String(u.email).toLowerCase(), u.id);
     }
 
-    // Table mapping for resolving related_object_name (mirrors taskCsvConfig.beforeCommit)
-    const relatedTableMap: Record<string, { table: string; nameColumn: string; where?: string }> = {
-      project: { table: 'portfolio_projects', nameColumn: 'name' },
-      spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'` },
-      contract: { table: 'contracts', nameColumn: 'name' },
-      capex_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'capex'` },
-      incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
-    };
     const normalizeType = (raw: string): string => {
       const t = raw.trim().toLowerCase().replace(/\s+/g, '_');
       if (t === 'capex') return 'capex_item';
       if (t === 'spend') return 'spend_item';
       return t;
     };
+    // The object a row names, resolved as taskCsvConfig.beforeCommit does (a contract also by its
+    // reference); the label of a contract outside the exporting person's access names none.
     const relatedIdCache = new Map<string, string | null>();
     const resolveRelatedId = async (row: Record<string, string>): Promise<string | null> => {
       const explicit = (row['related_object_id'] || '').trim();
       if (explicit) return explicit;
       const type = normalizeType(row['related_object_type'] || '');
       const name = (row['related_object_name'] || '').trim();
-      const mapping = relatedTableMap[type];
-      if (!mapping || !name) return null;
+      if (!name || (type === 'contract' && isContractOutsideAccessLabel(name))) return null;
       const cacheKey = `${type}||${name.toLowerCase()}`;
       if (!relatedIdCache.has(cacheKey)) {
-        const found = await manager.query(
-          `SELECT id FROM ${mapping.table} WHERE tenant_id = $1${mapping.where ?? ''} AND LOWER(${mapping.nameColumn}) = LOWER($2) LIMIT 1`,
-          [tenantId, name],
-        );
-        relatedIdCache.set(cacheKey, found.length ? found[0].id : null);
+        const idOf = await relatedObjectIdsByName(manager, tenantId, type, [name]);
+        relatedIdCache.set(cacheKey, idOf?.(name) ?? null);
       }
       return relatedIdCache.get(cacheKey) ?? null;
     };
@@ -282,18 +292,28 @@ export class TasksCsvService {
     for (const row of rows) {
       const taskTitle = (row['title'] || '').trim();
       if (!taskTitle) continue;
-      const relatedObjectId = await resolveRelatedId(row);
 
-      // Find task by upsert key (title + related object; standalone tasks have none)
-      const taskRows = relatedObjectId
-        ? await manager.query(
-            `SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND LOWER(title) = LOWER($2) AND related_object_id = $3 LIMIT 1`,
-            [tenantId, taskTitle, relatedObjectId],
-          )
-        : await manager.query(
-            `SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND LOWER(title) = LOWER($2) AND related_object_id IS NULL LIMIT 1`,
-            [tenantId, taskTitle],
-          );
+      // The row's task: by its id when the row gives one; else by the upsert key (title + related
+      // object; standalone tasks have none). A row whose object names nothing touches no task.
+      const taskId = (row['id'] || '').trim();
+      // The people lists come along: a row that names the people the task has leaves it as it is.
+      let taskRows: Array<{ id: string; viewer_ids: unknown; owner_ids: unknown }>;
+      if (taskId) {
+        if (!TASK_UUID_RE.test(taskId)) continue;
+        taskRows = await manager.query(`SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND id = $2`, [tenantId, taskId]);
+      } else {
+        const relatedObjectId = await resolveRelatedId(row);
+        if (!relatedObjectId && normalizeType(row['related_object_type'] || '')) continue;
+        taskRows = relatedObjectId
+          ? await manager.query(
+              `SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND LOWER(title) = LOWER($2) AND related_object_id = $3 LIMIT 1`,
+              [tenantId, taskTitle, relatedObjectId],
+            )
+          : await manager.query(
+              `SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND LOWER(title) = LOWER($2) AND related_object_id IS NULL LIMIT 1`,
+              [tenantId, taskTitle],
+            );
+      }
       if (taskRows.length === 0) continue;
       const task = taskRows[0];
 
@@ -315,23 +335,25 @@ export class TasksCsvService {
         }
       }
 
-      // Update task with viewer and owner arrays (only if columns were present). The columns are NOT
+      // Update task with viewer and owner arrays (only if columns were present and change). The columns are NOT
       // NULL jsonb lists: none is `[]`, and the list goes as JSON (a bare array is a PostgreSQL array).
-      const hasViewerColumns = [1, 2, 3, 4].some((i) => `viewer_email_${i}` in row);
-      const hasOwnerColumns = [1, 2, 3, 4].some((i) => `owner_email_${i}` in row);
+      // A list that names the people the task already has, in any order, is left as it is: a task
+      // the file does not change keeps its updated_at.
+      const writeViewers = [1, 2, 3, 4].some((i) => `viewer_email_${i}` in row) && !samePeople(task.viewer_ids, viewerIds);
+      const writeOwners = [1, 2, 3, 4].some((i) => `owner_email_${i}` in row) && !samePeople(task.owner_ids, ownerIds);
 
-      if (hasViewerColumns || hasOwnerColumns) {
+      if (writeViewers || writeOwners) {
         const updates: string[] = [];
         const params: any[] = [task.id];
         let paramIndex = 2;
 
-        if (hasViewerColumns) {
+        if (writeViewers) {
           updates.push(`viewer_ids = $${paramIndex}::jsonb`);
           params.push(JSON.stringify(viewerIds));
           paramIndex++;
         }
 
-        if (hasOwnerColumns) {
+        if (writeOwners) {
           updates.push(`owner_ids = $${paramIndex}::jsonb`);
           params.push(JSON.stringify(ownerIds));
           paramIndex++;

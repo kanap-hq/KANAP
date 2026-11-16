@@ -292,7 +292,7 @@ Kadratis vuelve a cotejar la tecnología en cuanto cambian sus identificadores, 
 Los registros vinculados a la tecnología, una sección por tipo:
 
 - **Líneas presupuestarias**: con el importe del año en curso en la columna presupuestaria de su espacio de trabajo, y un total. Una línea cuya moneda no tiene tipo de cambio para el año muestra su importe en su propia moneda con una pequeña marca naranja, y el total la excluye. Un aviso de una línea bajo la tabla la indica. Vea [Tipos manuales](currencies.md#tipos-manuales).
-- **Contratos**: proveedor, fecha de fin e importe anual, con un total por moneda.
+- **Contratos**: referencia (`CTR-3`), proveedor, fecha de fin e importe anual, con un total por moneda.
 - **Proyectos**: estado y fin previsto.
 - **Incidentes**: gravedad, estado y fecha de detección. Vincular un incidente requiere `incidents:contributor`. Un incidente cerrado o cancelado no se puede vincular ni desvincular.
 - **Enlaces y archivos**: los enlaces web de la tecnología y sus archivos, una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con el nivel Miembro en la infraestructura, **Añadir enlace** y **Adjuntar archivo** añaden una fila, y los archivos también se pueden soltar sobre la sección. Pase el cursor sobre una fila para editar un enlace o quitar una fila. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide una confirmación. Una dirección escrita sin `http://` ni `https://` recibe `https://`. Cualquier otro esquema se rechaza.

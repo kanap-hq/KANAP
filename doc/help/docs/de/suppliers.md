@@ -99,7 +99,7 @@ Der Reiter **Kontakte** listet die mit diesem Lieferanten verknüpften Kontakte 
 Der Abschnitt **Verwendet in**, unter den Notizen im Reiter **Übersicht**, listet auf, was auf diesen Lieferanten verweist, eine Liste pro Typ, jede mit ihrer Anzahl:
 
 - **Budgetzeilen**: OPEX- und CAPEX-Zeilen mit diesem Lieferanten, mit ihrer Referenz (`BL-12`) und ihrem Typ.
-- **Verträge**: Verträge mit diesem Lieferanten.
+- **Verträge**: Verträge mit diesem Lieferanten, mit ihrer Referenz (`CTR-3`).
 - **Anwendungen**: Anwendungen, deren Hersteller er ist.
 - **Assets**: Assets, die er betreut (der Support-Lieferant des Assets).
 

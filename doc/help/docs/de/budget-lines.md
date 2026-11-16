@@ -608,7 +608,7 @@ Der Reiter Verknüpfungen zeigt, was diese Zeile bezahlt: ihre Projekte, Anwendu
 | **Projekte** | Referenz (`PRJ-7`), Name, Status, geplantes Ende |
 | **Anwendungen** | Referenz (`APP-3`), Name, Lebenszyklus, Geschäftskritikalität |
 | **Technologien** | Referenz (`TEC-5`), Name, Familie, Hersteller |
-| **Verträge** | Name, Lieferant, Ende der laufenden Laufzeit, Jahresbetrag in der Vertragswährung, Verlängerung (stillschweigend oder manuell) |
+| **Verträge** | Referenz (`CTR-3`), Name, Lieferant, Ende der laufenden Laufzeit, Jahresbetrag in der Vertragswährung, Verlängerung (stillschweigend oder manuell) |
 | **Assets** | Referenz (`AST-12`), Name, Typ, Umgebung, Status |
 
 Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen. Technologien und Assets erfordern Leserechte auf die Infrastruktur. Ein Fachbereichs-Mitwirkender sieht nur die Projekte und Anwendungen, an denen er beteiligt ist. Die Projektnamen erscheinen auch in der Spalte **Projekt** der Liste, wo die Schnellsuche sie findet. Die Vertragsnamen erscheinen in ihrer Spalte **Vertrag**. Ein Vertrag, der von der Zeile beim zahlenden Unternehmen, bei der Kostenstelle, beim Lieferanten oder bei der Währung abweicht, zeigt eine kleine orangefarbene Markierung neben seinem Namen. Fahren Sie mit der Maus über die Markierung, um jeden Unterschied zu sehen, mit dem Wert auf der Zeile und dem Wert auf dem Vertrag. Die Auswahl zeigt dieselbe Markierung an einem Vertrag, bevor Sie ihn verknüpfen. Die Verknüpfung bleibt möglich. Die Markierung erscheint für einen Vertrag, den Sie lesen dürfen.

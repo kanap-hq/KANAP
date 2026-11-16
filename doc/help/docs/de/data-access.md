@@ -189,10 +189,11 @@ Für eine begrenzte Person enthalten Budget und Verträge nur, was ihr Zugriff a
 **Links zu verborgenen Elementen.**
 
 - Eine verborgene Zeile erscheint nur mit ihrer Referenz, etwa `BL-12`, ohne Link.
-- Ein verborgener Vertrag erscheint als „Vertrag außerhalb Ihres Zugriffs“, ohne Link.
+- Ein verborgener Vertrag erscheint als „Vertrag außerhalb Ihres Zugriffs“, ohne Link. Der Export der Aufgaben nennt ihn ebenso.
+- Über seine Adresse oder seine Referenz geöffnet, wird ein verborgener Vertrag nicht gefunden, wie ein Vertrag, der nicht existiert.
 - Linklisten (die Zeilen eines Vertrags, einer Anwendung, eines Servers, einer Technologie, eines Projekts oder eines Antrags) zeigen die sichtbaren Links und dann eine Anzahl wie „und 3 Zeilen außerhalb Ihres Zugriffs“. Kein Name, kein Betrag.
 - Der Vertrag einer sichtbaren Zeile öffnet sich schreibgeschützt. Seine Anhänge und Dokumentlinks bleiben geschlossen, mit einer Anzahl wie „2 Anhänge, nur für Personen sichtbar, die diesen Vertrag sehen“.
-- Suche, Kad, MCP und Exporte zeigen keine Spur eines verborgenen Elements.
+- Suche, Kad und MCP zeigen keine Spur eines verborgenen Elements. Exporte lassen verborgene Elemente weg.
 
 Diese Anzahlen erscheinen für Personen, die das Budget lesen dürfen, diese Zeilen aber nicht. Eine Person ohne Budgetrecht sieht in den Bereichen von Anwendungen, Servern und Projekten keine Budgetzeilen und keine Anzahl.
 

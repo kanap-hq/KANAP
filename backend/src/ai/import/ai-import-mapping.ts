@@ -257,8 +257,16 @@ export function buildImportMapping(
   };
 }
 
-function describeAccepted(column: { kind: AiImportColumnKind; codes?: readonly string[]; options?: readonly { code: string; label?: string | null }[] }): string {
-  if (column.kind === 'codes' && column.codes?.length) return ` (one of ${column.codes.join(', ')})`;
+function describeAccepted(column: {
+  kind: AiImportColumnKind;
+  codes?: readonly string[];
+  options?: readonly { code: string; label?: string | null }[];
+  displayName?: (code: string) => string;
+}): string {
+  // A code with the name the screens show, which the model names it by.
+  if (column.kind === 'codes' && column.codes?.length) {
+    return ` (one of ${column.codes.map((code) => (column.displayName ? `${column.displayName(code)} (${code})` : code)).join(', ')})`;
+  }
   if (column.kind === 'catalog' && column.options?.length) {
     return ` (one of ${column.options.map((option) => option.label || option.code).join(', ')})`;
   }

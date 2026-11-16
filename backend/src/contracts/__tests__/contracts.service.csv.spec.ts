@@ -66,7 +66,7 @@ const HEADER =
 
 // The template and the export write the titles of the file's language; the import reads them and HEADER.
 const FRENCH_TITLES =
-  'Nom;Société;Fournisseur;Centre de coûts;Date de début;Durée en mois;Reconduction tacite;Préavis en mois;Montant annuel à la signature;Devise;Fréquence de facturation;Statut;E-mail du responsable;Notes';
+  'Référence;Nom;Société;Fournisseur;Centre de coûts;Date de début;Durée en mois;Reconduction tacite;Préavis en mois;Montant annuel à la signature;Devise;Fréquence de facturation;Statut;E-mail du responsable;Notes';
 const ENGLISH_TITLES = CONTRACT_CSV_COLUMNS.map((column) => CONTRACT_CSV_HEADERS[column].en).join(',');
 
 async function testTemplateContainsHeaderRow() {

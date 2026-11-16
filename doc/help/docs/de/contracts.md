@@ -50,6 +50,7 @@ Jede Zeile öffnet den Vertrag. Ihre Suche, Filter und Sortierung bleiben bei de
 
 **Standardspalten**:
 
+- **Referenz**: die von Kadratis vergebene Referenz (`CTR-3`). Zum Öffnen des Vertrags anklicken
 - **Vertrag**, **Lieferant**, **Unternehmen**
 - **Nächste Frist**: „Kündigung möglich bis {date}“, wenn dieses Datum der Kündigungstermin ist und vor dem Ende der Laufzeit liegt, oder „Endet am {date}“, wenn das Datum das Vertragsende ist. Die Zeile endet mit „in n Tagen“. Ein abgelaufener Vertrag zeigt ausgegraut den Tag, an dem er endete
 - **Stand**: siehe unten
@@ -102,8 +103,8 @@ Die unten angeheftete Zeile lautet **Gesamt (n Verträge)**. Sie summiert die Ja
 
 ### Suche, Filter und Bereich
 
-- **Schnellsuche**: Vertragsname, Lieferant und Unternehmen
-- **Spaltenfilter**: in jeder Spaltenüberschrift. **Stand**, **Konformität** und **Budgetdeckung** bieten ihre Werte als Kontrollkästchen an. Der Filter **Status** zeigt die Auswahl von **Anzeigen** (**Alle**, **Aktiv** oder **Deaktiviert**): Eine Änderung an einem ändert auch das andere
+- **Schnellsuche**: Vertragsname, Lieferant und Unternehmen. Geben Sie eine Referenz ein, etwa `CTR-3`, um diesen Vertrag zu finden. Ziffern allein suchen im Text
+- **Spaltenfilter**: in jeder Spaltenüberschrift. Der Filter **Referenz** nimmt `CTR-3` oder `3` an. **Stand**, **Konformität** und **Budgetdeckung** bieten ihre Werte als Kontrollkästchen an. Der Filter **Status** zeigt die Auswahl von **Anzeigen** (**Alle**, **Aktiv** oder **Deaktiviert**): Eine Änderung an einem ändert auch das andere
 - **Anzeigen: Alle / Aktiv / Deaktiviert**: der Umschalter über der Liste. Standardmäßig zeigt die Liste aktivierte Verträge. Wählen Sie **Alle** oder **Deaktiviert**, um Verträge zu finden, deren Ende der Gültigkeit überschritten ist
 
 ### Aktionen
@@ -120,7 +121,7 @@ Die unten angeheftete Zeile lautet **Gesamt (n Verträge)**. Sie summiert die Ja
 
 ### Kopfzeile und Eigenschaften
 
-Die Kopfzeile zeigt den Vertragsnamen (zum Umbenennen anklicken), **Zurück** / **Weiter** mit der Position in der Liste und eine Leiste mit **Lieferant**, **Vertragsunternehmen**, **Verantwortlicher** und **Status**. Verantwortlicher und Status ändern Sie direkt dort. Lieferant und Unternehmen öffnen den Bereich **Eigenschaften**.
+Die Kopfzeile zeigt die Referenz des Vertrags (`CTR-5`, zum Kopieren anklicken) und den Vertragsnamen (den Namen anklicken, um den Vertrag umzubenennen), **Zurück** / **Weiter** mit der Position in der Liste und eine Leiste mit **Lieferant**, **Vertragsunternehmen**, **Verantwortlicher** und **Status**. Verantwortlicher und Status ändern Sie direkt dort. Lieferant und Unternehmen öffnen den Bereich **Eigenschaften**.
 
 Der Bereich **Eigenschaften** rechts enthält alle Felder des Vertrags: die Parteien, **Beginn**, **Laufzeit (Monate)**, **Kündigungsfrist (Monate)**, **Stillschweigende Verlängerung**, **Jahresbetrag**, **Währung**, **Abrechnung**, dann **Lebenszyklus** (**Status** und **Ende der Gültigkeit**), **Erstellt** und **Aktualisiert**. Öffnen oder schließen Sie ihn mit seiner Schaltfläche; Kadratis merkt sich Ihre Wahl.
 
@@ -136,7 +137,9 @@ Jede Änderung speichert sich selbst: Auswahllisten und Daten sofort, eingetippt
 
 Zum Bearbeiten benötigen Sie `contracts:member`. Leser sehen dieselbe Seite mit gesperrten Feldern.
 
-**Teilen** in der Kopfzeile schickt Kollegen Ihres Arbeitsbereichs einen Link zum Vertrag per E-Mail.
+**Seitenadresse**: Die Adresse der Seite verwendet die Referenz, zum Beispiel `/ops/contracts/CTR-5/overview`. Die frühere Adresse der Seite eines Vertrags öffnet ihn weiterhin und wird durch die neue ersetzt.
+
+**Teilen** in der Kopfzeile schickt Kollegen Ihres Arbeitsbereichs einen Link zum Vertrag per E-Mail. Dieser Link und der Link einer Ablaufwarnung öffnen den Vertrag über seine Referenz.
 
 Die Seite hat fünf Reiter: **Übersicht**, **Budget**, **Konformität**, **Verknüpfungen** und **Verlauf** (die Änderungen am Vertrag, siehe [Verlauf der Datensätze](record-history.md)). Die Adressen der früheren Reiter **Details** und **Aufgaben** öffnen die Übersicht.
 
@@ -323,17 +326,21 @@ Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wähl
 
 Halten Sie Ihre Vertragsliste mit CSV-Dateien oder Excel-Arbeitsmappen mit anderen Werkzeugen synchron (`contracts:admin`).
 
-**Export**: lädt die Verträge der Liste (oder, auf Wunsch im Dialog, alle Verträge) herunter. Die Spalten tragen Titel in der Sprache Ihrer Oberfläche; ihre technischen Namen, die der Import ebenfalls liest, sind `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Die berechneten Daten (Laufzeitende, Kündigungstermine, Stand) werden nicht exportiert.
+**Export**: lädt die Verträge der Liste (oder, auf Wunsch im Dialog, alle Verträge) herunter. Die Spalten tragen Titel in der Sprache Ihrer Oberfläche; ihre technischen Namen, die der Import ebenfalls liest, sind `reference`, `name`, `company_name`, `supplier_name`, `cost_center`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Die berechneten Daten (Laufzeitende, Kündigungstermine, Stand) werden nicht exportiert.
 
 **Import**:
 
-- Verwenden Sie die **Vorprüfung**, um die Datei vor dem Anwenden zu prüfen
+- Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen
 - **Beispiel herunterladen** im Importdialog liefert zwei Beispielverträge und was jede Spalte aufnimmt. Siehe [Beispieldateien](csv-files.md#example-files)
-- Eine Zeile wird einem Vertrag über Vertragsnamen und Lieferant zugeordnet
+- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`CTR-12` oder `12`) bezeichnet den Vertrag, den die Zeile aktualisiert, auch wenn sich sein Name oder sein Lieferant geändert hat. Der Vertrag erhält dann den Namen und den Lieferanten der Zeile. Die Vorabprüfung meldet jeden Vertrag, der umbenannt wird oder zu einem anderen Lieferanten wechselt
+- **Zuordnung über den Namen**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird eine Zeile einem Vertrag über Vertragsnamen und Lieferant zugeordnet
+- **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„CTR-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
+- **Eine Zeile pro Vertrag**: Zwei Zeilen, die denselben Vertrag aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert CTR-4, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“ Zwei Zeilen, die denselben Vertrag anlegen (gleicher Name und gleicher Lieferant, unabhängig von der Groß- und Kleinschreibung), werden ebenfalls abgelehnt: „Gleiche Werte in name, supplier_name wie in Zeile 3.“
+- `reference` und `cost_center` dürfen in der Datei fehlen. Ohne `cost_center` behält ein aktualisierter Vertrag seine Kostenstelle oder Gruppe
 - Unterstützt Neuanlage und Aktualisierungen
 - Die Datei hat keine Spalte für das Ende der Gültigkeit. Bei einer Aktualisierung behält ein leeres `status`, oder eines, das dem aktuellen Status des Vertrags entspricht, sein Ende der Gültigkeit. Ein abweichender Status wird angewendet: `enabled` löscht das Ende der Gültigkeit, und `disabled` beendet den Vertrag heute, sofern sein Ende der Gültigkeit nicht bereits vergangen ist
 - Ein neuer Vertrag ist aktiviert, sofern die Zeile nicht `disabled` angibt
-- Eine Zeile, die `auto_renewal` bei einem bereits verlängerten Vertrag ohne Ende der Gültigkeit auf false setzt, wird abgelehnt, auch in der Vorprüfung: Sie würde die Perioden löschen, die der Vertrag durchlaufen hat. Beenden Sie die Verlängerung auf der Vertragsseite, die das Ende setzt
+- Eine Zeile, die `auto_renewal` bei einem bereits verlängerten Vertrag ohne Ende der Gültigkeit auf false setzt, wird abgelehnt, auch in der Vorabprüfung: Sie würde die Perioden löschen, die der Vertrag durchlaufen hat. Beenden Sie die Verlängerung auf der Vertragsseite, die das Ende setzt
 
 **Hinweise**:
 

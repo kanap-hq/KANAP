@@ -1,5 +1,5 @@
-﻿Name,Company,Supplier,Cost center,Start date,Duration in months,Auto renewal,Notice period in months,Yearly amount at signature,Currency,Billing frequency,Status,Owner email,Notes
-"Line; ""quoted""
+﻿Reference,Name,Company,Supplier,Cost center,Start date,Duration in months,Auto renewal,Notice period in months,Yearly amount at signature,Currency,Billing frequency,Status,Owner email,Notes
+CTR-2,"Line; ""quoted""
 second, line","Line; ""quoted""
 second, line","Zeta; ""Z""",,2024-12-31,12,no,1,-0.5,USD,monthly,disabled,,
-Support,Alpha SA,Acme,Group,2026-03-01,36,yes,3,1250.5,EUR,annual,enabled,ada@example.com,"'=HYPERLINK(""http://x"")"
+CTR-1,Support,Alpha SA,Acme,Group,2026-03-01,36,yes,3,1250.5,EUR,annual,enabled,ada@example.com,"'=HYPERLINK(""http://x"")"

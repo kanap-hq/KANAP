@@ -10,6 +10,16 @@ import {
   AiWritePreviewCapabilityDto,
 } from '../ai.types';
 
+/**
+ * An approval the operation refuses, with values the card keeps once its execution is undone (lot I2
+ * of 26.11.9: what the load of an import refused, row by row, which the failed card shows).
+ */
+export class AiPreviewExecutionRefusal extends Error {
+  constructor(message: string, readonly kept: Record<string, unknown>) {
+    super(message);
+  }
+}
+
 export type AiPreparedMutationPreview = {
   targetEntityType: string;
   targetEntityId: string | null;
@@ -65,6 +75,13 @@ export interface AiMutationOperation<TInput = unknown> {
    * cannot). "Approve all" leaves out the ones that cannot; approved on its own, one fails.
    */
   isApprovable?(preview: AiMutationPreview): boolean;
+
+  /**
+   * Why a pending preview's approval is refused while the preview stays pending (an import with
+   * nothing to import, which a choice on the card can change), or null. A fixed preview error
+   * (`ai-write-texts`), checked before anything runs.
+   */
+  approvalRefusal?(preview: AiMutationPreview): string | null;
 
   /** The card of a preview: its summary in the person's language (English when not given). */
   presentPreview(preview: AiMutationPreview, language?: AiWriteLanguage): AiMutationPreviewPresentation;

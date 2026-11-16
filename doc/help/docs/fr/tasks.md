@@ -89,7 +89,7 @@ La grille Tâches affiche toutes les tâches de votre organisation.
 
 | Colonne | Ce qu'elle affiche |
 |---------|--------------------|
-| **Entrée liée** | Le nom de l'entité liée (vide pour les tâches autonomes) |
+| **Entrée liée** | Le nom de l'entité liée (vide pour les tâches autonomes). Un contrat affiche sa référence et son nom, comme `CTR-3 · Acme support` |
 | **Phase** | Phase du projet (pour les tâches de projet) |
 | **Priorité** | Niveau de priorité |
 | **Date d'échéance** | Quand la tâche est due |
@@ -536,7 +536,7 @@ Trois modes d'export sont disponibles :
 | `related_object_id` | UUID de l'entité | Conditionnel | Requis si tâche liée et `related_object_name` non fourni |
 | `related_object_name` | Nom de l'entité | Conditionnel | Requis si tâche liée et `related_object_id` non fourni |
 | `phase_name` | Phase du projet | Non | Doit correspondre au nom d'une phase existante (tâches de projet uniquement) |
-| `priority_level` | Priorité de la tâche | Non | Accepte un code ou un libellé |
+| `priority_level` | Priorité de la tâche | Non | Accepte le code ou le nom, dans chacune des quatre langues |
 | `source_name` | Source | Non | Source du portefeuille (tâches autonomes et de projet) |
 | `category_name` | Catégorie | Non | Catégorie du portefeuille (tâches autonomes et de projet) |
 | `stream_name` | Stream | Non | Stream du portefeuille (tâches autonomes et de projet) |
@@ -550,7 +550,7 @@ Trois modes d'export sont disponibles :
 
 | Colonne CSV | Description | Notes |
 |-------------|-------------|-------|
-| `status` | Statut de la tâche | Accepte un code ou un libellé |
+| `status` | Statut de la tâche | Accepte le code ou le nom, dans chacune des quatre langues |
 | `start_date` | Date de début | Format de date : YYYY-MM-DD |
 | `due_date` | Date d'échéance | Format de date : YYYY-MM-DD |
 
@@ -603,7 +603,7 @@ Pour **status**, **priority_level** et **related_object_type**, vous pouvez util
 | `contract` | `Contract` |
 | `capex_item` | `CAPEX Item`, `CAPEX` |
 
-Le système normalise les valeurs automatiquement lors de l'import.
+Le système normalise les valeurs automatiquement lors de l'import. Un statut ou une priorité se lit aussi par le nom que l'écran affiche, dans chacune des quatre langues. Une valeur inconnue est refusée, et le message liste les noms acceptés.
 
 ### Correspondance et mises à jour
 
@@ -613,7 +613,7 @@ Les tâches sont identifiées par **titre + related_object_id** (insensible à l
 
 Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur titre + objet lié.
 
-**Note** : Si vous fournissez `related_object_name` au lieu de `related_object_id`, le système résout le nom vers l'ID avant la correspondance. Cela signifie que vous pouvez utiliser des noms lisibles tout au long de votre fichier d'import.
+**Note** : Si vous fournissez `related_object_name` au lieu de `related_object_id`, le système résout le nom vers l'ID avant la correspondance. Cela signifie que vous pouvez utiliser des noms lisibles tout au long de votre fichier d'import. Pour un contrat, `related_object_name` accepte aussi sa référence, comme `CTR-12`.
 
 ### Champs en export uniquement
 

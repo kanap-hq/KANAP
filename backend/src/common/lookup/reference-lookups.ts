@@ -154,7 +154,8 @@ export const BUSINESS_PROCESS_LOOKUP: LookupSpec = {
 
 export const CONTRACT_LOOKUP: LookupSpec = {
   table: 'contracts',
-  columns: { id: 't.id', name: 't.name' },
+  // The number names the contract CTR-n in a picker.
+  columns: { id: 't.id', name: 't.name', item_number: 't.item_number' },
   label: 't.name',
   offered: ACTIVE_BY_DISABLED_AT,
 };

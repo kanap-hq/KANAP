@@ -110,7 +110,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 - `item_number` contiene la referencia de la línea, `BL-12`. En un archivo con columna `nature`, un número solo es la misma referencia. Los números `OPX-12` y `CPX-3` de archivos anteriores siguen designando su línea. Nombrar dos veces la misma línea en un archivo es un error de fila.
 - Una línea conserva su tipo. Una fila que nombra una línea existente con la otra `nature` se rechaza, por ejemplo "BL-125 is a CAPEX line, not an OPEX line. A file does not change the type of a line."
 - Cada fila se comprueba según su propio tipo: las dimensiones y los valores que puede tener, su cuenta, las columnas congeladas y la advertencia de duplicado. Una columna congelada para CAPEX rechaza un cambio solo en una línea CAPEX.
-- No hay otra clave. Una fila nueva que se parezca a una línea existente de su tipo, o a otra fila nueva del mismo tipo en el archivo, es una advertencia que puede ignorar.
+- No hay otra clave. Una fila nueva que se parezca a otra fila nueva del mismo tipo en el archivo es una advertencia que puede ignorar. Una fila nueva que se parezca a una línea existente de su tipo se descarta, salvo que usted elija otra cosa: vea [Filas que se parecen a una línea existente](#lookalike-lines).
 - Los proveedores se hacen coincidir por `supplier_erp_id` cuando está relleno, y si no por `supplier_name`, sin distinguir mayúsculas, minúsculas ni acentos. El archivo no tiene columna para la referencia del proveedor: un valor como `SUP-12` es un ID ERP en `supplier_erp_id` y un nombre en `supplier_name`. La carga crea un proveedor que el archivo nombra y que Kadratis no tiene cuando **Crear los proveedores que faltan** está marcada, una sola vez para dos grafías del mismo nombre. Sin esa opción, la verificación lista los que faltan y le pide crearlos en **Datos maestros > Proveedores**.
 - Un valor de dimensión se asocia a un valor existente sin distinguir mayúsculas, minúsculas ni acentos. En una dimensión recomendada, también se asocia un valor escrito en otro de los cuatro idiomas, por ejemplo `Matériel` a `Hardware`. La carga crea un valor que no se asocia a ninguno y lo lista en la verificación. Las cuentas, los centros de coste, las empresas y los usuarios nunca se crean: un elemento desconocido es un error de fila que indica dónde añadirlo. Para una persona con el acceso a los datos limitado, solo en una dimensión con valores abiertos: vea [Acceso a los datos limitado](#limited-data-access).
 - Un valor, o `-`, en una dimensión que solo se usa para el otro tipo de línea es un error de fila en su celda `analytics:<code>`, por ejemplo "The Recurrence dimension is for CAPEX lines only. Leave it out." La exportación deja esa celda vacía: un valor oculto en una línea no se exporta, y una carga lo deja en su sitio. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-opex-o-capex).
@@ -130,13 +130,46 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 | **Errores** | Las filas que la carga rechaza, por fila del archivo con la columna cuando la conoce. Una empresa desconocida va seguida de los nombres más parecidos del espacio de trabajo. Un archivo con un solo error no carga nada |
 | **Cambios** | Las líneas que se crearán, las que se actualizarán y las que el archivo deja tal como están |
 | **Modificadas desde la exportación** | Las líneas que alguien modificó después de su exportación, con quién y cuándo. Cargar el archivo escribe sus valores sobre esos cambios |
-| **Advertencias** | Una fila que se parece a otra línea, un `company_name` distinto de la empresa del centro de coste de la fila, un importe que hace que una columna deje de seguir sus líneas de cálculo, columnas y celdas que el archivo ignora |
+| **Se parece a una línea existente** | Las filas nuevas que se parecen a una línea que ya existe, y lo que pasa con cada una. Vea [Filas que se parecen a una línea existente](#lookalike-lines) |
+| **Advertencias** | Una fila que se parece a otra fila del archivo, un `company_name` distinto de la empresa del centro de coste de la fila, un importe que hace que una columna deje de seguir sus líneas de cálculo, un importe, una fecha o una moneda inusuales (vea [Advertencias de coherencia](#consistency-warnings)), columnas y celdas que el archivo ignora |
 | **N valores asociados** | Los proveedores y los valores de dimensión del archivo leídos como un valor existente, plegados. Despliegue la línea para ver cada asociación, por ejemplo `Tipo de coste: Matériel → Hardware`. **Deshacer** conserva el valor tal como está escrito: la carga lo crea, o la comprobación lo rechaza cuando no se puede crear. **Volver a asociar** restablece la asociación. Un valor que solo difiere en mayúsculas y minúsculas es el mismo valor y no se lista |
 | **Creados por la carga** | Los proveedores y los valores de dimensión que la carga añadiría. Señale un valor subrayado para ver los nombres existentes parecidos |
 
 3. Haga clic en **Cargar**. La carga escribe todo o nada.
 
 Si una línea cambia entre la comprobación y la carga, la carga se detiene y le pide comprobar el archivo de nuevo. La verificación también indica cómo ha leído el archivo cuando una fecha o un importe podían leerse de dos maneras, con un botón para cambiar la lectura.
+
+Cuando el archivo no crea ni cambia nada, **Cargar** no está disponible y la comprobación indica «Nada que cargar: el archivo coincide con los datos actuales.» Es el caso de un archivo cargado dos veces. Después de una carga, el diálogo indica cuántas filas ha descartado porque se parecen a una línea existente, por ejemplo «3 filas descartadas».
+
+### Filas que se parecen a una línea existente { #lookalike-lines }
+
+Una fila nueva que se parece a una línea existente del mismo tipo se descarta por defecto. Así, un archivo cargado dos veces, o una línea ya introducida a mano, no se convierte en una segunda línea. Una fila se parece a una línea de la misma empresa pagadora en tres casos:
+
+- el mismo título y el mismo proveedor
+- los mismos importes en la misma moneda: basta un importe con el mismo proveedor; si no, hacen falta dos
+- un título parecido, el mismo proveedor y la misma moneda, y un importe igual
+
+Una línea que termina antes del primer año de los importes del archivo no se compara.
+
+La comprobación lista estas filas en **Se parece a una línea existente**, con la línea a la que se parece cada una. Señale una fila para ver por qué se ha encontrado. Para cada fila, elija:
+
+- **Descartar**: la fila no se carga. Es la opción por defecto.
+- **Crear de todos modos**: la fila se convierte en una línea nueva.
+- **Actualizar BL-12**: la fila actualiza la línea a la que se parece. Cada valor que el archivo rellena sustituye al guardado. Una celda vacía conserva el valor guardado. Señale la fila para ver qué valores cambian.
+
+**Crear todas de todos modos**, **Actualizar todas** y **Descartar todas**, encima de la lista, se aplican a todas las filas, incluidas las que eligió una a una. **Actualizar todas** deja como está una fila cuya línea presupuestaria usted no puede modificar. Una elección hecha después en una fila solo cambia esa fila. Cada elección vuelve a comprobar el archivo.
+
+Si BL-12 cambia entre la comprobación y la carga, la fila se rechaza con «BL-12 ha cambiado desde la comprobación.» Vuelva a elegir qué pasa con ella.
+
+Una fila se compara con las líneas de su tipo que usted puede leer.
+
+### Advertencias de coherencia { #consistency-warnings }
+
+La comprobación también señala los valores que parecen inusuales. Son advertencias: la carga está permitida.
+
+- Un importe diez veces superior o inferior al de las líneas comparables: la línea que la fila actualiza, o las demás líneas del mismo proveedor.
+- Una fecha de inicio posterior a los años de los importes, o una fecha de fin anterior a ellos.
+- Una moneda distinta de la de la empresa pagadora.
 
 ### Columnas calculadas por cantidad y precio
 
@@ -157,6 +190,7 @@ Una persona limitada a una parte del presupuesto usa el archivo dentro de su acc
 - Una línea que ve en Lectura se acepta cuando su fila no cambia. Un cambio se rechaza con «BL-12 es de solo lectura en su acceso.»
 - Una línea nueva, o una nueva empresa o un nuevo centro de coste en una línea, debe corresponder a uno de sus nodos en Edición. Si no, la fila se rechaza con «Esta empresa o este centro de coste no forma parte de su acceso.»
 - Un valor desconocido solo se crea en una dimensión con valores abiertos. En las demás dimensiones, es un error de fila.
+- Una fila que se parece a una línea existente solo ofrece **Actualizar BL-12** cuando la persona puede modificar esa línea.
 
 Estas filas aparecen entre los **Errores** de la comprobación, como cualquier otra fila rechazada.
 
