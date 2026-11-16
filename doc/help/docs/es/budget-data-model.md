@@ -152,7 +152,7 @@ Las asignaciones alimentan los informes de contracargo, para las líneas OPEX y 
 
 ## Datos maestros
 
-El archivo de presupuesto encuentra los datos maestros por identificadores de negocio. Cargue primero los datos maestros. El archivo de presupuesto crea los proveedores que faltan cuando **Crear los proveedores que faltan** está marcada, y los valores analíticos que faltan. No crea nada más.
+El archivo de presupuesto encuentra los datos maestros por identificadores de negocio. Cargue primero los datos maestros. El archivo de presupuesto asocia los proveedores y los valores analíticos a los existentes, sin distinguir mayúsculas, minúsculas ni acentos. Crea los proveedores que faltan cuando **Crear los proveedores que faltan** está marcada, y los valores analíticos que faltan. No crea nada más.
 
 | Objeto | Identificado en los archivos por | Obligatorio | En una línea presupuestaria |
 |---|---|---|---|

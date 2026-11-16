@@ -15,6 +15,8 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 type Props = {
   companyId: string;
+  /** COMP-n: the company's own cache entry, which a metric leaves alone (the lists read again). */
+  companyReference?: string | null;
   year: number;
   onYearChange: (year: number) => void;
   readOnly: boolean;
@@ -58,7 +60,7 @@ const INVALID_MESSAGE: Record<MetricField, string> = {
  * Headcount, IT users and turnover per year; each is saved for the selected year when its field
  * loses focus. The endpoint replaces the whole year, so every write carries the three values.
  */
-export default function CompanyMetricsTab({ companyId, year, onYearChange, readOnly, baseCurrency, onSave }: Props) {
+export default function CompanyMetricsTab({ companyId, companyReference, year, onYearChange, readOnly, baseCurrency, onSave }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   const locale = useLocale();
   // The application language decides the decimal mark, not the browser's.
@@ -102,7 +104,7 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
       try {
         const res = await api.patch<RawMetrics>(`/company-metrics/${companyId}`, body, { params: { year: key[2] } });
         queryClient.setQueryData(key, toMetrics({ ...body, ...(res.data ?? {}) }));
-        void queryClient.invalidateQueries({ queryKey: ['companies'], predicate: (q) => q.queryKey[1] !== companyId });
+        void queryClient.invalidateQueries({ queryKey: ['companies'], predicate: (q) => q.queryKey[1] !== companyId && q.queryKey[1] !== companyReference });
         return true;
       } catch (e) {
         if (currentScopeRef.current === target) {

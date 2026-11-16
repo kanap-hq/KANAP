@@ -2,6 +2,8 @@ import { BadRequestException, CallHandler, ExecutionContext, Injectable, NestInt
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { csvImportMulterOptions } from '../../common/upload';
+import { parseBudgetFileChoices } from './matching';
+import type { BudgetFileChoice } from './types';
 
 /**
  * A monthly row of five columns over three years is about 2 KB (the spec
@@ -23,16 +25,17 @@ export const BUDGET_FILE_TOO_LARGE =
   'This file is too large. A budget file can hold 20,000 lines. Export fewer lines or fewer years.';
 
 // The shared multipart limits and file filter (CSV, and .xlsx while `IMPORT_XLSX` is on), with the
-// budget file's own sizes. The load sends one text field (`snapshot`), the preflight none:
-// `fields: 1` keeps the large field size from applying to ten fields.
+// budget file's own sizes. The load sends two text fields (`snapshot`, and `choices` when the person
+// made some), the preflight `choices` at most: `fields: 2` keeps the large field size from applying
+// to ten fields.
 export const budgetFileMulterOptions = {
   ...csvImportMulterOptions,
   limits: {
     ...csvImportMulterOptions.limits,
     fileSize: BUDGET_FILE_MAX_BYTES,
     fieldSize: BUDGET_FILE_SNAPSHOT_MAX_BYTES,
-    fields: 1,
-    parts: 2,
+    fields: 2,
+    parts: 3,
   },
 };
 
@@ -54,5 +57,18 @@ export class BudgetFileSizeInterceptor implements NestInterceptor {
         return throwError(() => err);
       }),
     );
+  }
+}
+
+/**
+ * The person's choices on the check (lot I1 of 26.11.9: the matches they undo, the "Create missing
+ * suppliers" option), sent as the `choices` field of the form, a JSON list, never in the address: they
+ * hold values of the file. The load receives the same list as the check it follows.
+ */
+export function budgetFileChoices(raw: unknown): BudgetFileChoice[] {
+  try {
+    return parseBudgetFileChoices(raw);
+  } catch {
+    throw new BadRequestException('The choices are not valid.');
   }
 }

@@ -1,6 +1,7 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,6 +18,7 @@ import { AGENT_NAME, PRODUCT_NAME } from '../../config/product';
 let capabilitiesState: { data: any } = { data: undefined };
 let canOpenAiSettings = true;
 let fleetCost: { today_eur: number; last_7_days_eur: number } | undefined;
+let fleetDefinitions: Array<Record<string, unknown>> = [];
 
 vi.mock('../../ai/useAiCapabilities', () => ({
   useAiCapabilities: () => capabilitiesState,
@@ -36,7 +38,7 @@ const idleMutation = { isPending: false, mutate: vi.fn(), mutateAsync: vi.fn() }
 
 vi.mock('./useAgentControlData', () => ({
   useAgentControlData: () => ({
-    queueQuery: { data: { definitions: [], emergency_pause: null, cost: fleetCost }, isLoading: false },
+    queueQuery: { data: { definitions: fleetDefinitions, emergency_pause: null, cost: fleetCost }, isLoading: false },
     badgesQuery: { data: { pendingApprovals: 0 } },
     error: null,
     message: null,
@@ -46,7 +48,7 @@ vi.mock('./useAgentControlData', () => ({
     revokePauseMutation: idleMutation,
     createAgentMutation: idleMutation,
     deleteAgentMutation: idleMutation,
-    actionPool: null,
+    actionPool: [],
     agent: null,
   }),
 }));
@@ -64,12 +66,58 @@ function renderPage() {
   );
 }
 
+function PathProbe() {
+  const { pathname } = useLocation();
+  return <div data-testid="path">{pathname}</div>;
+}
+
+function renderFleet() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <ThemeProvider theme={createAppTheme('light')}>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/agents']}>
+          <PathProbe />
+          <AgentsOverviewPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
+  );
+}
+
+function deleteAgentButton(): HTMLElement {
+  const button = screen.getAllByRole('button').find((candidate) => candidate.getAttribute('aria-label') === 'Delete agent');
+  if (!button) throw new Error('Delete agent button not found');
+  return button;
+}
+
+function warned(spy: { mock: { calls: unknown[][] } }): string {
+  return spy.mock.calls.map((call) => call.map((part) => String(part)).join(' ')).join('\n');
+}
+
+const fleetAgent = {
+  id: 'agent-1',
+  agent_key: 'night-watch',
+  name: 'Night watch',
+  description: 'Watches the night queue',
+  agent_type: 'sre',
+  status: 'enabled',
+  environment: 'production',
+  trigger_policy_json: null,
+  provider_bindings_json: null,
+  automatic_action_classes: [],
+};
+
 const PAUSED = `Agents that use the ${PRODUCT_NAME} included model are paused until an administrator confirms it in Admin > ${AGENT_NAME}.`;
 
 // Testing Library collapses the no-break spaces Intl writes before EUR. Compare that form.
 function shown(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
+
+beforeEach(() => {
+  fleetDefinitions = [];
+});
 
 describe('AgentsOverviewPage included model banner', () => {
   beforeEach(async () => {
@@ -166,5 +214,69 @@ describe('AgentsOverviewPage new agent', () => {
     const body = await createAgent('Helpdesk');
     expect(body.agent_type).toBe('helpdesk');
     expect(body.scope_policy_json.knowledge_sources?.knowledge).toBeUndefined();
+  });
+});
+
+describe('AgentsOverviewPage agent card', () => {
+  beforeEach(async () => {
+    capabilitiesState = { data: { builtin_confirmation_needed: false } };
+    canOpenAiSettings = true;
+    fleetCost = undefined;
+    fleetDefinitions = [fleetAgent];
+    idleMutation.mutate.mockReset();
+    await i18n.changeLanguage('en');
+  });
+
+  it('keeps the delete button outside the card button', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      renderFleet();
+      const remove = deleteAgentButton();
+      // A button inside the card button is invalid: the delete control must have no button ancestor.
+      expect(remove.parentElement?.closest('button') ?? null).toBeNull();
+      expect(warned(errors)).not.toContain('validateDOMNesting');
+    } finally {
+      errors.mockRestore();
+    }
+  });
+
+  it('opens the agent from the card and the confirmation from delete', async () => {
+    renderFleet();
+    fireEvent.click(screen.getByRole('button', { name: /Night watch/ }));
+    expect(screen.getByTestId('path')).toHaveTextContent('/agents/night-watch');
+
+    cleanup();
+    renderFleet();
+    fireEvent.click(deleteAgentButton());
+    expect(screen.getByTestId('path')).toHaveTextContent('/agents');
+    expect(screen.getByRole('heading', { name: 'Delete Night watch?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(idleMutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it('opens the agent and the delete confirmation from the keyboard', async () => {
+    const user = userEvent.setup();
+    renderFleet();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'New agent' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Pause all agents' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: /Night watch/ })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('path')).toHaveTextContent('/agents/night-watch');
+
+    cleanup();
+    renderFleet();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    expect(deleteAgentButton()).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('heading', { name: 'Delete Night watch?' })).toBeInTheDocument();
+    expect(screen.getByTestId('path')).toHaveTextContent('/agents');
+    expect(idleMutation.mutate).not.toHaveBeenCalled();
   });
 });

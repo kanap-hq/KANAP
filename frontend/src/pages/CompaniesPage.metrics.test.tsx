@@ -55,6 +55,22 @@ function renderPage() {
   );
 }
 
+describe('CompaniesPage reference column', () => {
+  afterEach(() => cleanup());
+
+  it('comes first, visible, writes COMP-n in mono and filters as text', () => {
+    renderPage();
+    const columns = grid.props?.columns as Array<Record<string, any>>;
+    expect(columns[0].field).toBe('item_number');
+    expect(columns[0].headerName).toBe('companies.columns.reference');
+    expect(columns[0].filter).toBe('agTextColumnFilter');
+    expect(columns[0].valueFormatter({ value: 12 })).toBe('COMP-12');
+    expect(columns[0].valueFormatter({ value: undefined })).toBe('');
+    expect(String(columns[0].cellStyle.fontFamily)).toContain('Mono');
+    expect(grid.props?.defaultHiddenColumns).not.toContain('item_number');
+  });
+});
+
 describe('CompaniesPage metric cells', () => {
   beforeEach(() => {
     totalsPayload.current = { headcount: 0, it_users: 0, turnover: 332.5, turnover_currency: null };

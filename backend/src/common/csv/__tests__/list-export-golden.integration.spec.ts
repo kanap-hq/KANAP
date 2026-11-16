@@ -192,11 +192,13 @@ async function testXlsx(manager: EntityManager, tenantId: string): Promise<void>
   const company = await new CompaniesService(undefined as any, undefined as any, metrics).exportCsv('data', { manager, year: 2026, language: 'fr', format: 'xlsx' });
   assert.equal(company.filename, 'companies_2026.xlsx');
   const k = sheetOf(company.content);
-  assert.equal(k.L2[1], '46022', 'companies: end of validity, the UTC day of the instant');
-  assert.deepEqual([k.Q3, k.R3], [['general', '120'], ['general', '40']], 'companies: headcount and IT users as numbers');
-  assert.equal(k.S3[1], '-1250.500', 'companies: turnover exact');
-  assert.deepEqual(k.H3, ['text', '00123'], 'companies: registration number keeps its zeros');
-  assert.deepEqual(k.T2, ['general', '0']);
+  // The reference comes first (lot R2 of 26.11.9): every company column moves one letter on.
+  assert.deepEqual(k.A2, ['text', 'COMP-2']);
+  assert.equal(k.M2[1], '46022', 'companies: end of validity, the UTC day of the instant');
+  assert.deepEqual([k.R3, k.S3], [['general', '120'], ['general', '40']], 'companies: headcount and IT users as numbers');
+  assert.equal(k.T3[1], '-1250.500', 'companies: turnover exact');
+  assert.deepEqual(k.I3, ['text', '00123'], 'companies: registration number keeps its zeros');
+  assert.deepEqual(k.U2, ['general', '0']);
 
   const calendars = await new WorkingDayProfilesCsvService(new WorkingDayProfilesService(undefined as any)).exportCsv('data', ctx, 'fr', undefined, 'xlsx');
   const w = sheetOf(calendars.content);

@@ -1,15 +1,20 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Box, Button, Checkbox, Typography } from '@mui/material';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Button, Checkbox, Tooltip, Typography } from '@mui/material';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import KanapDialog from '../design/KanapDialog';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { formatAmount } from '../../i18n/formatters';
 import { useBudgetColumns, type BudgetColumns } from '../../hooks/useBudgetColumns';
+import { useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
+import type { AnalyticsAxis } from '../../services/analytics';
 import { forgetAllAllocations } from './allocationsCache';
 import {
   AmountReading,
   BUDGET_LIST_QUERY_KEYS,
+  BudgetFileChoice,
   BudgetFileLoad,
   BudgetFileReport,
   BudgetFileScope,
@@ -32,6 +37,16 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 const K = 'operations.budgetFile.';
 
 const MISSING_TYPES = new Set(['companies', 'accounts', 'costCenters', 'users', 'projects']);
+
+/** A dimension's column in the file and in the check: `analytics:<code>`. */
+const ANALYTICS_COLUMN = 'analytics:';
+const SUPPLIER_COLUMN = 'supplier_name';
+const COMPANY_COLUMN = 'company_name';
+/** Where a line's values go in its sentence (`{{names}}`), so each value can carry its own tooltip. */
+const VALUES = '\u2063values\u2063';
+
+type Unmatch = Extract<BudgetFileChoice, { kind: 'unmatch' }>;
+type LineAction = { label: string; onClick: () => void; disabled?: boolean };
 
 type Failure = { text: string; action: 'check' | 'load'; kind: 'stale' | 'retry' | 'final' };
 
@@ -65,6 +80,10 @@ export default function BudgetFileImportDialog({
   const [dateOrder, setDateOrder] = useState<DateReading | null>(null);
   const [amountReading, setAmountReading] = useState<AmountReading | null>(null);
   const [checkNonce, setCheckNonce] = useState(0);
+  // The person's choices on the check (matches undone): the check shown and the load follow the same list.
+  const [choices, setChoices] = useState<BudgetFileChoice[]>([]);
+  // The matches stay unfolded while the file is checked again after an undo.
+  const [matchesOpen, setMatchesOpen] = useState(false);
   const [report, setReport] = useState<BudgetFileReport | null>(null);
   const [loaded, setLoaded] = useState<BudgetFileLoad | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
@@ -76,7 +95,7 @@ export default function BudgetFileImportDialog({
   const appliedAmounts = amountReadingOf(report?.notices.amounts ?? null);
   // Keep the preflight's amount reading for later checks and Load without another request.
   const decimalMark = amountReading ?? appliedAmounts;
-  const options = { language, dateOrder, decimalMark, createSuppliers: canCreateSuppliers && createSuppliers };
+  const options = { language, dateOrder, decimalMark, createSuppliers: canCreateSuppliers && createSuppliers, choices };
 
   useEffect(() => {
     if (open) return;
@@ -85,6 +104,8 @@ export default function BudgetFileImportDialog({
     setCreateSuppliers(false);
     setDateOrder(null);
     setAmountReading(null);
+    setChoices([]);
+    setMatchesOpen(false);
     setReport(null);
     setLoaded(null);
     setFailure(null);
@@ -113,12 +134,14 @@ export default function BudgetFileImportDialog({
       });
     // `options` is derived from the states listed here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, file, createSuppliers, dateOrder, amountReading, checkNonce, scope, screen, t]);
+  }, [open, file, createSuppliers, dateOrder, amountReading, choices, checkNonce, scope, screen, t]);
 
   const chooseFile = (next: File | undefined | null) => {
     if (!next) return;
     setDateOrder(null);
     setAmountReading(null);
+    setChoices([]);
+    setMatchesOpen(false);
     setReport(null);
     setFile(next);
     setCheckNonce((n) => n + 1);
@@ -166,7 +189,7 @@ export default function BudgetFileImportDialog({
       if (id === requestId.current) setPhase('idle');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file, report, scope, language, dateOrder, decimalMark, createSuppliers, canCreateSuppliers, queryClient, onImported, t]);
+  }, [file, report, scope, language, dateOrder, decimalMark, createSuppliers, canCreateSuppliers, choices, queryClient, onImported, t]);
 
   const onSave = async () => {
     if (loaded) {
@@ -318,7 +341,16 @@ export default function BudgetFileImportDialog({
         )}
 
         {report && !loaded && phase !== 'checking' && (
-          <ReportView report={report} locale={locale} canCreateSuppliers={canCreateSuppliers} nothingToLoad={nothingToLoad} />
+          <ReportView
+            report={report}
+            locale={locale}
+            canCreateSuppliers={canCreateSuppliers}
+            nothingToLoad={nothingToLoad}
+            onChoices={setChoices}
+            choicesDisabled={busy}
+            matchesOpen={matchesOpen}
+            onMatchesOpen={setMatchesOpen}
+          />
         )}
       </Box>
     </KanapDialog>
@@ -360,6 +392,10 @@ export function ReportView({
   nothingToLoad,
   showStatus = true,
   hideDuplicates = false,
+  onChoices,
+  choicesDisabled = false,
+  matchesOpen: openFromParent,
+  onMatchesOpen,
 }: {
   report: BudgetFileReport;
   locale: string;
@@ -368,9 +404,82 @@ export function ReportView({
   showStatus?: boolean;
   /** The rows that look like existing lines are shown elsewhere (Kad's import card). */
   hideDuplicates?: boolean;
+  /**
+   * Undo a match, or match a value again: receives the whole new list of choices, which the check
+   * runs again with. Without it the matches are read only.
+   */
+  onChoices?: (choices: BudgetFileChoice[]) => void;
+  /** A check is running: the choices wait for it. */
+  choicesDisabled?: boolean;
+  /** The matches unfolded, held by a parent that shows the next check in a new view. */
+  matchesOpen?: boolean;
+  onMatchesOpen?: (open: boolean) => void;
 }) {
   const { t } = useTranslation('ops');
   const columns = useBudgetColumns();
+  const axes = useAnalyticsAxes();
+  const [ownOpen, setOwnOpen] = useState(false);
+  const matchesOpen = openFromParent ?? ownOpen;
+  const toggleMatches = () => (onMatchesOpen ?? setOwnOpen)(!matchesOpen);
+  const matching = report.matching;
+  const matches = matching?.matches ?? [];
+  const refusedProposals = matching?.refusedProposals ?? [];
+  const choices = matching?.choices ?? [];
+  const undone = choices.filter((choice): choice is Unmatch => choice.kind === 'unmatch');
+  const dimensionNames = useMemo(() => namesOfDimensions(report, axes.axes), [report, axes.axes]);
+  // A dimension by its name (the default one without a name by its label), a column by the list's label: never a code.
+  const columnName = (column: string, name?: string | null): string => {
+    const own = name?.trim();
+    if (own) return own;
+    if (column.startsWith(ANALYTICS_COLUMN)) return dimensionNames.get(column.slice(ANALYTICS_COLUMN.length)) ?? axes.label({ name: null });
+    return fileColumnLabel(column, columns, t);
+  };
+  const closeTo = (column: string, value: string): string | null => {
+    const entry = matching?.candidates.find((item) => item.column === column && sameValue(item.value, value));
+    return entry && entry.candidates.length > 0
+      ? t(`${K}matching.closeTo`, { names: entry.candidates.map((candidate) => candidate.name).join(', ') })
+      : null;
+  };
+  const companyCloseTo = (error: BudgetFileReport['errors'][number]): string | null => {
+    const value = error.params?.value;
+    const entry = matching?.candidates.find((item) => item.column === COMPANY_COLUMN
+      && (value != null ? sameValue(item.value, String(value)) : item.lines.includes(error.line)));
+    return entry && entry.candidates.length > 0 ? closeTo(COMPANY_COLUMN, entry.value) : null;
+  };
+  const linesOf = (entry: { lines: number[]; count: number }): string => {
+    const extra = entry.count - entry.lines.length;
+    const lines = extra > 0 ? `${entry.lines.join(', ')} ${t(`${K}andMoreInline`, { count: extra })}` : entry.lines.join(', ');
+    return t(`${K}matching.lines`, { count: entry.count, lines });
+  };
+  const undo = (entry: { column: string; value: string }) => onChoices?.([...choices, { kind: 'unmatch', column: entry.column, value: entry.value }]);
+  const redo = (entry: Unmatch) => onChoices?.(choices.filter((choice) => !(choice.kind === 'unmatch' && choice.column === entry.column && choice.value === entry.value)));
+  const choiceAction = (label: string, onClick: () => void): LineAction | undefined => (
+    onChoices ? { label, onClick, disabled: choicesDisabled } : undefined
+  );
+  // A value whose match was undone shows where it goes now: among the values created, or with the errors.
+  const createdNames = (column: string): string[] => {
+    if (column === SUPPLIER_COLUMN) return report.creates.suppliers.map((supplier) => supplier.name);
+    if (!column.startsWith(ANALYTICS_COLUMN)) return [];
+    const code = column.slice(ANALYTICS_COLUMN.length);
+    return report.creates.dimensionValues.find((entry) => entry.dimension === code)?.names ?? [];
+  };
+  const isUndone = (column: string, value: string) => undone.some((entry) => entry.column === column && sameValue(entry.value, value));
+  const undoneCreated = undone.filter((entry) => createdNames(entry.column).some((name) => sameValue(name, entry.value)));
+  const undoneRefused = undone.filter((entry) => !undoneCreated.includes(entry));
+  const undoneLine = (entry: Unmatch, danger?: boolean) => (
+    <Line
+      key={`x-${entry.column}-${entry.value}`}
+      danger={danger}
+      text={t(`${K}dimensionValues`, { dimension: columnName(entry.column), names: entry.value })}
+      action={choiceAction(t(`${K}matching.redo`), () => redo(entry))}
+    />
+  );
+  const valueList = (column: string, values: Array<{ name: string; label?: string }>) => values.map((value, index) => (
+    <React.Fragment key={value.name}>
+      {index > 0 && ', '}
+      <ValueName text={value.label ?? value.name} hint={closeTo(column, value.name)} />
+    </React.Fragment>
+  ));
   const more = (count: number, shown: number) => (count > shown ? t(`${K}andMore`, { count: count - shown }) : null);
   const blocking = !report.ok;
   const supplierCount = missingSupplierCount(report.supplierMessage);
@@ -387,7 +496,13 @@ export function ReportView({
     || report.firstSheetOnly !== undefined;
   // A limited person's check names the unknown values of a closed list it refuses (their rows are among the errors).
   const refusedValues = report.creates.refusedDimensionValues ?? [];
-  const hasCreates = report.creates.suppliers.length > 0 || report.creates.dimensionValues.length > 0 || refusedValues.length > 0;
+  const undoneInErrors = hasErrors ? undoneRefused : [];
+  const undoneInCreates = hasErrors ? undoneCreated : undone;
+  const suppliersCreated = report.creates.suppliers.filter((supplier) => !isUndone(SUPPLIER_COLUMN, supplier.name));
+  const valuesCreated = report.creates.dimensionValues
+    .map((entry) => ({ ...entry, names: entry.names.filter((name) => !isUndone(`${ANALYTICS_COLUMN}${entry.dimension}`, name)) }))
+    .filter((entry) => entry.names.length > 0);
+  const hasCreates = suppliersCreated.length > 0 || valuesCreated.length > 0 || refusedValues.length > 0 || undoneInCreates.length > 0;
 
   return (
     <Box
@@ -424,16 +539,23 @@ export function ReportView({
             <Line key={`d-${line.line}`} danger text={t(`${K}deletedLine`, { line: line.line, ref: line.itemNumber })} />
           ))}
           {more(report.deletedCount, report.deleted.length) && <Line text={more(report.deletedCount, report.deleted.length)!} />}
-          {report.errors.map((error) => (
-            <Line
-              key={`e-${error.line}-${error.column ?? ''}-${error.message}`}
-              danger
-              text={error.column
-                ? t(`${K}rowColumn`, { line: error.line, column: fileColumnLabel(error.column, columns, t), message: checkSentence(error, t) })
-                : t(`${K}row`, { line: error.line, message: checkSentence(error, t) })}
-            />
-          ))}
+          {report.errors.map((error) => {
+            // An unknown company: the closest names of the workspace's companies, under its error.
+            const near = error.column === COMPANY_COLUMN ? companyCloseTo(error) : null;
+            return (
+              <React.Fragment key={`e-${error.line}-${error.column ?? ''}-${error.message}`}>
+                <Line
+                  danger
+                  text={error.column
+                    ? t(`${K}rowColumn`, { line: error.line, column: columnName(error.column), message: checkSentence(error, t) })
+                    : t(`${K}row`, { line: error.line, message: checkSentence(error, t) })}
+                />
+                {near && <Line muted text={near} />}
+              </React.Fragment>
+            );
+          })}
           {more(report.errorCount, report.errors.length) && <Line text={more(report.errorCount, report.errors.length)!} />}
+          {undoneInErrors.map((entry) => undoneLine(entry, true))}
         </Section>
       )}
 
@@ -478,7 +600,7 @@ export function ReportView({
               key={`cc-${warning.line}`}
               text={t(`${K}rowColumn`, {
                 line: warning.line,
-                column: 'company_name',
+                column: columnName(COMPANY_COLUMN),
                 message: t(`errors:${warning.code}`, { ...warning, defaultValue: warning.message }),
               })}
             />
@@ -488,7 +610,7 @@ export function ReportView({
           ))}
           {more(calculationLinesCount, calculationLines.length) && <Line text={more(calculationLinesCount, calculationLines.length)!} />}
           {ignoredCells.map((warning) => (
-            <Line key={`c-${warning.line}-${warning.column}`} text={t(`${K}rowColumn`, { line: warning.line, column: warning.column, message: warning.message })} />
+            <Line key={`c-${warning.line}-${warning.column}`} text={t(`${K}rowColumn`, { line: warning.line, column: columnName(warning.column), message: warning.message })} />
           ))}
           {report.warnings.ignoredColumns.length > 0 && (
             <Line text={t(`${K}ignoredColumns`, { count: report.warnings.ignoredColumns.length, columns: report.warnings.ignoredColumns.join(', ') })} />
@@ -497,24 +619,62 @@ export function ReportView({
         </Section>
       )}
 
-      {hasCreates && (
-        <Section title={t(`${K}createsTitle`)}>
-          {report.creates.suppliers.length > 0 && (
-            <Line text={t(`${K}createSuppliersList`, {
-              names: report.creates.suppliers
-                .map((supplier) => (supplier.erpId ? t(`${K}supplierWithErp`, { name: supplier.name, erpId: supplier.erpId }) : supplier.name))
-                .join(', '),
-            })}
-            />
+      {(matches.length > 0 || refusedProposals.length > 0) && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+          {matches.length > 0 && (
+            <FoldToggle open={matchesOpen} onToggle={toggleMatches} label={t(`${K}matching.count`, { count: matches.length })} />
           )}
-          {report.creates.dimensionValues.map((dimension) => (
+          {matchesOpen && matches.map((entry) => (
             <Line
-              key={`v-${dimension.dimension}`}
-              text={t(refusedValues.length > 0 ? `${K}dimensionValuesCreated` : `${K}dimensionValues`, { dimension: dimension.dimension, names: dimension.names.join(', ') })}
+              key={`mt-${entry.column}-${entry.value}`}
+              text={t(`${K}matching.match`, { dimension: columnName(entry.column, entry.name), value: entry.value, target: entry.target })}
+              kad={entry.origin === 'model' ? t(`${K}matching.byKad`) : undefined}
+              tooltip={linesOf(entry)}
+              action={choiceAction(t(`${K}matching.undo`), () => undo(entry))}
             />
           ))}
+          {refusedProposals.map((entry) => (
+            <Line
+              key={`rp-${entry.column}-${entry.value}`}
+              muted
+              text={t(entry.reason === 'disabled' ? `${K}matching.refusedDisabled` : `${K}matching.refusedMissing`, {
+                dimension: columnName(entry.column, entry.name),
+                value: entry.value,
+                target: entry.target,
+              })}
+              kad={t(`${K}matching.byKad`)}
+              tooltip={linesOf(entry)}
+            />
+          ))}
+        </Box>
+      )}
+
+      {hasCreates && (
+        <Section title={t(`${K}createsTitle`)}>
+          {suppliersCreated.length > 0 && (
+            <Line>
+              {withValues(t(`${K}createSuppliersList`, { names: VALUES }), valueList(SUPPLIER_COLUMN, suppliersCreated.map((supplier) => ({
+                name: supplier.name,
+                label: supplier.erpId ? t(`${K}supplierWithErp`, { name: supplier.name, erpId: supplier.erpId }) : supplier.name,
+              }))))}
+            </Line>
+          )}
+          {valuesCreated.map((dimension) => (
+            <Line key={`v-${dimension.dimension}`}>
+              {withValues(
+                t(refusedValues.length > 0 ? `${K}dimensionValuesCreated` : `${K}dimensionValues`, { dimension: columnName(`${ANALYTICS_COLUMN}${dimension.dimension}`, dimension.name), names: VALUES }),
+                valueList(`${ANALYTICS_COLUMN}${dimension.dimension}`, dimension.names.map((name) => ({ name }))),
+              )}
+            </Line>
+          ))}
+          {undoneInCreates.map((entry) => undoneLine(entry))}
           {refusedValues.map((dimension) => (
-            <Line key={`r-${dimension.dimension}`} danger text={t(`${K}dimensionValuesRefused`, { dimension: dimension.dimension, names: dimension.names.join(', ') })} />
+            <Line key={`r-${dimension.dimension}`} danger>
+              {withValues(
+                t(`${K}dimensionValuesRefused`, { dimension: columnName(`${ANALYTICS_COLUMN}${dimension.dimension}`, dimension.name), names: VALUES }),
+                valueList(`${ANALYTICS_COLUMN}${dimension.dimension}`, dimension.names.map((name) => ({ name }))),
+              )}
+            </Line>
           ))}
         </Section>
       )}
@@ -596,8 +756,17 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   );
 }
 
-function Line({ text, danger, muted }: { text: string; danger?: boolean; muted?: boolean }) {
-  return (
+function Line({ text, children, danger, muted, kad, tooltip, action }: {
+  text?: string;
+  children?: React.ReactNode;
+  danger?: boolean;
+  muted?: boolean;
+  /** Proposed by Kad: the accessible name of its mark, also said in the tooltip. */
+  kad?: string;
+  tooltip?: string;
+  action?: LineAction;
+}) {
+  const body = (
     <Typography
       sx={{
         fontSize: 13,
@@ -606,7 +775,89 @@ function Line({ text, danger, muted }: { text: string; danger?: boolean; muted?:
         overflowWrap: 'anywhere',
       }}
     >
-      {text}
+      {children ?? text}
+      {kad && (
+        <Box component="span" role="img" aria-label={kad} sx={{ display: 'inline-flex', verticalAlign: '-2px', ml: 0.5, color: 'kanap.text.tertiary' }}>
+          <AutoAwesomeOutlinedIcon sx={{ fontSize: 13 }} />
+        </Box>
+      )}
     </Typography>
   );
+  const title = kad && tooltip ? <>{kad}<br />{tooltip}</> : (tooltip ?? kad);
+  const shown = title ? <Tooltip title={title} placement="bottom-start">{body}</Tooltip> : body;
+  if (!action) return shown;
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.25 }}>
+      {shown}
+      <ActionLink onClick={action.onClick} disabled={action.disabled}>{action.label}</ActionLink>
+    </Box>
+  );
+}
+
+/** One value of a line; its closest names, when it has some, in a tooltip. */
+function ValueName({ text, hint }: { text: string; hint: string | null }) {
+  if (!hint) return <>{text}</>;
+  return (
+    <Tooltip title={hint} placement="bottom-start">
+      <Box
+        component="span"
+        sx={(theme) => ({ textDecoration: 'underline dotted', textDecorationColor: theme.palette.kanap.text.tertiary, textUnderlineOffset: '3px' })}
+      >
+        {text}
+      </Box>
+    </Tooltip>
+  );
+}
+
+/** A sentence written with `VALUES` in place of its values, with the values drawn there. */
+function withValues(sentence: string, values: React.ReactNode): React.ReactNode {
+  const [before, after = ''] = sentence.split(VALUES);
+  return <>{before}{values}{after}</>;
+}
+
+/** The fold of the matches: a count, which unfolds into one line per match. */
+function FoldToggle({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
+  return (
+    <Button
+      type="button"
+      variant="text"
+      size="small"
+      aria-expanded={open}
+      onClick={onToggle}
+      startIcon={<KeyboardArrowRightIcon sx={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 120ms' }} />}
+      sx={{
+        alignSelf: 'flex-start',
+        p: 0,
+        minWidth: 0,
+        fontSize: 12,
+        fontWeight: 500,
+        lineHeight: 1.4,
+        textTransform: 'none',
+        color: 'kanap.text.tertiary',
+        '& .MuiButton-startIcon': { ml: 0, mr: 0.25, '& svg': { fontSize: 16 } },
+        '&:hover': { bgcolor: 'transparent', color: 'kanap.text.secondary' },
+      }}
+    >
+      {label}
+    </Button>
+  );
+}
+
+function sameValue(a: string, b: string): boolean {
+  return a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
+}
+
+/** The names of the dimensions, by code: the tenant's, then those the check gives. */
+function namesOfDimensions(report: BudgetFileReport, axes: AnalyticsAxis[]): Map<string, string> {
+  const names = new Map<string, string>();
+  const note = (code: string, name: string | null | undefined) => {
+    if (name?.trim()) names.set(code, name.trim());
+  };
+  for (const axis of axes) note(axis.code, axis.name);
+  for (const entry of [...report.creates.dimensionValues, ...(report.creates.refusedDimensionValues ?? [])]) note(entry.dimension, entry.name);
+  const matching = report.matching;
+  for (const entry of [...(matching?.matches ?? []), ...(matching?.refusedProposals ?? []), ...(matching?.candidates ?? [])]) {
+    if (entry.column.startsWith(ANALYTICS_COLUMN)) note(entry.column.slice(ANALYTICS_COLUMN.length), entry.name);
+  }
+  return names;
 }

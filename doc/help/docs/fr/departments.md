@@ -25,6 +25,7 @@ Naviguez vers **Données de référence > Départements** pour voir votre liste 
 La grille des départements vous offre une vue d'ensemble de tous les départements avec leur effectif pour une année donnée.
 
 **Colonnes par défaut** :
+- **Référence** : La référence attribuée par Kadratis (`DEPT-4`). Cliquez dessus pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
 - **Nom** : Nom du département ; cliquez pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
 - **Société** : Société parente ; cliquez pour ouvrir l'onglet Vue d'ensemble de l'espace de travail
 - **Effectif (Année)** : Nombre d'employés pour l'année sélectionnée ; cliquez pour accéder directement à l'onglet Détails pour modification
@@ -37,9 +38,11 @@ La grille des départements vous offre une vue d'ensemble de tous les départeme
 
 **Filtre de statut** : Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** pour filtrer par statut de département. La liste affiche par défaut uniquement les départements activés.
 
-**Recherche rapide** : La barre de recherche filtre les noms de départements.
+**Recherche rapide** : La barre de recherche filtre les noms de départements. Tapez une référence, comme `DEPT-4`, pour trouver ce département. Des chiffres seuls cherchent dans le texte.
 
-**Liens profonds** : Chaque cellule de la grille est un lien cliquable. Nom et Société ouvrent l'onglet Vue d'ensemble ; Effectif ouvre l'onglet Détails. Lorsque vous naviguez vers un espace de travail puis revenez, votre ordre de tri, requête de recherche et filtres sont préservés.
+**Filtres de colonnes** : Le filtre **Référence** accepte `DEPT-4` ou `4`.
+
+**Liens profonds** : Chaque cellule de la grille est un lien cliquable. Référence, Nom et Société ouvrent l'onglet Vue d'ensemble ; Effectif ouvre l'onglet Détails. Lorsque vous naviguez vers un espace de travail puis revenez, votre ordre de tri, requête de recherche et filtres sont préservés.
 
 **Actions** :
 - **Nouveau** : Créer un nouveau département (nécessite `departments:member`)
@@ -53,8 +56,10 @@ La grille des départements vous offre une vue d'ensemble de tous les départeme
 
 Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte trois onglets : **Vue d'ensemble**, **Détails** et **Historique** (les modifications apportées au département, voir [Historique des fiches](record-history.md)).
 
-- **En-tête** : le nom du département. Cliquez dessus pour renommer le département. **Préc** / **Suiv** parcourent les départements dans l'ordre et les filtres de la liste sans revenir à la liste, et le bouton de fermeture ramène à la liste
+- **En-tête** : la référence du département (`DEPT-5`, cliquez dessus pour la copier) et son nom. Cliquez sur le nom pour renommer le département. **Préc** / **Suiv** parcourent les départements dans l'ordre et les filtres de la liste sans revenir à la liste, et le bouton de fermeture ramène à la liste
 - **Panneau Propriétés** à droite : **Société** et **Cycle de vie**
+
+**Adresse de la page** : l'adresse de la page utilise la référence, par exemple `/master-data/departments/DEPT-5/overview`. L'ancienne adresse de la page d'un département l'ouvre toujours, et laisse place à la nouvelle.
 
 **Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Le nom et la description s'enregistrent quand vous quittez le champ ; la société et le cycle de vie s'enregistrent dès que vous les changez. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné.
 
@@ -97,12 +102,13 @@ L'onglet Détails gère les métriques d'effectif année par année.
 
 L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
 
-**Exporter** télécharge les départements que la liste affiche (ou, sur demande dans la fenêtre, tous les départements) avec leur société, leur nom, leur description, leur statut et leur fin de validité. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
+**Exporter** télécharge les départements que la liste affiche (ou, sur demande dans la fenêtre, tous les départements) avec leur référence, leur société, leur nom, leur description, leur statut et leur fin de validité. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
 
-Les colonnes :
+Les colonnes, dans cet ordre :
 
 | Colonne | Contenu |
 |---|---|
+| `reference` | Facultative. La référence du département (`DEPT-12`). L'export l'écrit |
 | `company_name` | Obligatoire. La société à laquelle appartient le département, par son nom |
 | `name` | Obligatoire. Le nom du département |
 | `description` | Texte libre |
@@ -112,11 +118,15 @@ Les colonnes :
 **Import** :
 
 - Utilisez la **Vérification préalable** pour valider le fichier avant de l'appliquer, puis **Charger**
-- Correspondance par nom de département et nom de société : une ligne met à jour le département qu'elle nomme, toute autre ligne en crée un
+- **Correspondance par référence** : une `reference` remplie (`DEPT-12` ou `12`) désigne le département que la ligne met à jour, même si son nom a changé. Le département prend le nom et la société de la ligne : une autre société l'y déplace. La vérification préalable signale chaque département qui sera renommé ou changera de société
+- **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, une ligne est rapprochée par nom de département et nom de société. Elle met à jour le département qu'elle nomme, et toute autre ligne en crée un
+- **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « DEPT-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
+- **Renommage ou déplacement** : un nom qu'un autre département de la société de la ligne porte déjà est refusé, et le message donne la référence de ce département : « « Finance » appartient déjà à DEPT-7. »
+- **Une ligne par département** : deux lignes qui mettent à jour le même département sont refusées : « Cette ligne met à jour DEPT-7, comme la ligne 3. Gardez une seule ligne par fiche. »
 
 **Cellules obligatoires** : `name` et `company_name`, une société existante
 
-**Cellules facultatives** : `description`, `status`, `disabled_at`
+**Cellules facultatives** : `reference`, `description`, `status`, `disabled_at`
 
 **Colonnes de cycle de vie** :
 - `status` vaut `enabled` ou `disabled`, et `disabled_at` est la fin de validité, une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit le statut déduit de la fin de validité. Un nouveau département est activé sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le département aujourd'hui

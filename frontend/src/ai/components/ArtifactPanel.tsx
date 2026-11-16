@@ -57,6 +57,8 @@ type ArtifactPanelProps = {
   onApprove: (previewId: string) => void;
   onReject: (previewId: string) => void;
   onApproveMany: (previewIds: string[]) => void;
+  /** A choice on an import card made a new card, which takes the place of the previous one. */
+  onReplace?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
 };
 
 function ArtifactTab({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
@@ -266,6 +268,7 @@ export default function ArtifactPanel({
   onApprove,
   onReject,
   onApproveMany,
+  onReplace,
 }: ArtifactPanelProps) {
   const { t } = useTranslation(['ai']);
   const [width, setWidth] = useState<number>(() => clampWidth(readStoredWidth()));
@@ -395,6 +398,7 @@ export default function ArtifactPanel({
               disabled={disabled}
               onApprove={onApprove}
               onReject={onReject}
+              onReplace={onReplace}
               stickyActions
             />
           </Box>

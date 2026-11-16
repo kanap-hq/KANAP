@@ -367,13 +367,17 @@
       "no": "Nein",
       "readErrors": {
         "mixed-date-orders": "Datumsangaben mit Tag zuerst und mit Monat zuerst",
-        "mixed-decimal-marks": "Zahlen mit Dezimalkomma und mit Dezimalpunkt"
+        "mixed-decimal-marks": "Zahlen mit Dezimalkomma und mit Dezimalpunkt",
+        "reference-without-prefix": "Werte ohne Referenzpräfix: nicht gelesen"
       }
     },
     "importRun": {
       "check": "Prüfung des Imports",
       "result": "Import",
       "download": "Datei herunterladen (.xlsx)"
+    },
+    "importChoices": {
+      "stale": "Diese Karte kann nicht mehr geändert werden. Bitten Sie {{agent}} um eine neue."
     }
   },
   "previewStatuses": {

@@ -1092,7 +1092,20 @@
       "checkFailed": "Die Datei konnte nicht geprüft werden. Versuchen Sie es erneut.",
       "loadFailed": "Die Datei konnte nicht geladen werden. Versuchen Sie es erneut.",
       "dimensionValuesCreated": "{{dimension}}, werden angelegt: {{names}}",
-      "dimensionValuesRefused": "{{dimension}}, abgelehnt: {{names}}"
+      "dimensionValuesRefused": "{{dimension}}, abgelehnt: {{names}}",
+      "matching": {
+        "count": "{{count}} Werte zugeordnet",
+        "count_one": "{{count}} Wert zugeordnet",
+        "match": "{{dimension}}: {{value}} → {{target}}",
+        "byKad": "Von {{agent}} vorgeschlagen",
+        "undo": "Rückgängig",
+        "redo": "Wieder zuordnen",
+        "refusedMissing": "{{dimension}}: {{value}} → {{target}}: Wert nicht vorhanden",
+        "refusedDisabled": "{{dimension}}: {{value}} → {{target}}: Wert deaktiviert",
+        "closeTo": "Ähnlich: {{names}}",
+        "lines": "Zeilen {{lines}}",
+        "lines_one": "Zeile {{lines}}"
+      }
     },
     "budgetAdminOnly": "Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.",
     "budgetColumnsSettings": {

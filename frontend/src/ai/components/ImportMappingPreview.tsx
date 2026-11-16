@@ -2,11 +2,15 @@ import React from 'react';
 import { Box, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { AiImportMapping } from '../aiTypes';
+import type { BudgetFileChoice } from '../../components/finance/budgetFile';
 import ImportRunReport from './ImportRunReport';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 
 type ImportMappingPreviewProps = {
   mapping: AiImportMapping;
+  /** The person's choices on a pending budget file check, the whole list; absent: read only. */
+  onChoices?: (choices: BudgetFileChoice[]) => void;
+  choicesDisabled?: boolean;
 };
 
 const cellSx = {
@@ -42,7 +46,7 @@ const sectionLabelSx = {
  * is not used, what was supposed, and the first rows as the template will hold them. Last, the
  * import's check of the file, or what the import did once the card is approved.
  */
-function ImportMappingPreview({ mapping }: ImportMappingPreviewProps) {
+function ImportMappingPreview({ mapping, onChoices, choicesDisabled }: ImportMappingPreviewProps) {
   const { t, i18n } = useTranslation(['ai']);
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const kindOf = new Map(mapping.columns.map((column) => [column.column, column.kind]));
@@ -228,7 +232,14 @@ function ImportMappingPreview({ mapping }: ImportMappingPreviewProps) {
         </Stack>
       )}
 
-      {(mapping.result ?? mapping.validation) && <ImportRunReport run={(mapping.result ?? mapping.validation)!} titles={titleOf} />}
+      {(mapping.result ?? mapping.validation) && (
+        <ImportRunReport
+          run={(mapping.result ?? mapping.validation)!}
+          titles={titleOf}
+          onChoices={mapping.result ? undefined : onChoices}
+          choicesDisabled={choicesDisabled}
+        />
+      )}
     </Stack>
   );
 }

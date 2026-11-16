@@ -99,6 +99,52 @@ describe('formatAuditValue', () => {
     expect(formatAuditValue('plant_stop', 'category', app).text).toBe('plant_stop');
   });
 
+  it('names a classification level from the workspace catalog, then the fixed label, then the code', () => {
+    const catalogLabel = (list: string, code: string) => {
+      const labels: Record<string, Record<string, string>> = {
+        businessCriticalityLevels: { medium: 'Moderate', business_critical: 'Critical', floor: 'Shop floor' },
+        cyberCriticalityLevels: { moderate: 'Contained' },
+        recoveryWaves: { vital: 'V1: Vital activities' },
+      };
+      return labels[list]?.[code] ?? null;
+    };
+    const app = context({ table: 'applications', catalogLabel });
+    expect(formatAuditValue('medium', 'criticality', app).text).toBe('Moderate');
+    expect(formatAuditValue('business_critical', 'criticality', app).text).toBe('Critical');
+    expect(formatAuditValue('floor', 'criticality', app).text).toBe('Shop floor');
+    // A shipped code the catalog does not list keeps the fixed label. An unknown code stays as stored.
+    expect(formatAuditValue('low', 'criticality', app).text).toBe('Low');
+    expect(formatAuditValue('not_a_level', 'criticality', app).text).toBe('not_a_level');
+    // Connections and interfaces carry the same business criticality.
+    expect(formatAuditValue('medium', 'criticality', context({ table: 'connections', catalogLabel })).text).toBe('Moderate');
+    expect(formatAuditValue('medium', 'criticality', context({ table: 'interfaces', catalogLabel })).text).toBe('Moderate');
+    // Cyber criticality and the recovery wave: the catalog name, then the fixed one.
+    expect(formatAuditValue('moderate', 'cyber_criticality', app).text).toBe('Contained');
+    expect(formatAuditValue('high', 'cyber_criticality', app).text).toBe('High');
+    const technology = context({ table: 'technologies', catalogLabel });
+    expect(formatAuditValue('vital', 'recovery_wave', technology).text).toBe('V1: Vital activities');
+    expect(formatAuditValue('foundation', 'recovery_wave', technology).text).toBe('V0 Foundation');
+
+    const fr = context({
+      locale: 'fr',
+      t: tFrAll,
+      table: 'applications',
+      catalogLabel: (list, code) => (
+        list === 'businessCriticalityLevels' && code === 'medium' ? 'Modérée'
+          : list === 'businessCriticalityLevels' && code === 'business_critical' ? 'Critique'
+            : null
+      ),
+    });
+    expect(formatAuditValue('medium', 'criticality', fr).text).toBe('Modérée');
+    expect(formatAuditValue('business_critical', 'criticality', fr).text).toBe('Critique');
+    expect(formatAuditValue('high', 'criticality', fr).text).toBe('Élevée');
+    expect(formatAuditValue('not_a_level', 'criticality', fr).text).toBe('not_a_level');
+
+    // Without a catalog, the fixed labels stay, as on the admin audit log.
+    expect(formatAuditValue('medium', 'criticality', context({ table: 'applications' })).text).toBe('Medium');
+    expect(formatAuditValue('business_critical', 'criticality', context({ table: 'applications' })).text).toBe('Business critical');
+  });
+
   it('marks every empty value with the empty-cell glyph', () => {
     expect(formatAuditValue(null, 'notes', context()).text).toBe('—');
     expect(formatAuditValue(undefined, 'notes', context()).text).toBe('—');

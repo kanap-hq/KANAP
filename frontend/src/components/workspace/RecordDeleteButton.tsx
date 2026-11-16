@@ -41,6 +41,11 @@ type Props = {
    * choice instead of the refusal. Other callers leave it unset: a refusal stays a refusal.
    */
   deleteRelated?: DeleteRelatedOption;
+  /**
+   * The reference the page keeps the record under in the cache (`COMP-5`), when its address is the
+   * reference: forgotten with the id, so that nothing loads the deleted record again.
+   */
+  reference?: string | null;
   onDeleted: () => void;
 };
 
@@ -58,7 +63,7 @@ function liftsRefusal(option: DeleteRelatedOption | undefined, refusal: DeleteFa
  * asks, deletes, and hands back so the page can return to the list without loading the deleted
  * record again.
  */
-export default function RecordDeleteButton({ base, id, name, deleteFailed, confirmMessage, checkUsages = true, bulk = false, deleteRelated, onDeleted }: Props) {
+export default function RecordDeleteButton({ base, id, name, deleteFailed, confirmMessage, checkUsages = true, bulk = false, deleteRelated, reference, onDeleted }: Props) {
   const { t } = useTranslation(['master-data', 'common', 'errors']);
   const locale = useLocale();
   const dialogs = useKanapDialogs();
@@ -69,8 +74,9 @@ export default function RecordDeleteButton({ base, id, name, deleteFailed, confi
   const resource = base.replace(/^\//, '');
 
   const forgetRecord = () => {
-    queryClient.removeQueries({ queryKey: [resource, id], exact: true });
-    void queryClient.invalidateQueries({ queryKey: [resource], predicate: (q) => q.queryKey[1] !== id });
+    const keys = reference ? [id, reference] : [id];
+    for (const key of keys) queryClient.removeQueries({ queryKey: [resource, key], exact: true });
+    void queryClient.invalidateQueries({ queryKey: [resource], predicate: (q) => !keys.includes(q.queryKey[1] as string) });
   };
 
   const reportFailure = async (err: unknown, title: string) => {

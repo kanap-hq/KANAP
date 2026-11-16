@@ -3,6 +3,7 @@ import { AiEvidenceService } from '../control-plane/evidence/ai-evidence.service
 import {
   actionInputWithoutValues,
   actionMetadataWithoutValues,
+  agentRunClauses,
   inputWithoutValues,
   isPersonRun,
   metadataWithoutErrorMessage,
@@ -30,6 +31,24 @@ function testOriginOfARun() {
   assert.equal(isPersonRun(run('webhook', 'internal')), true);
   assert.equal(isPersonRun(run('internal', 'webhook')), true);
   assert.equal(isPersonRun(run(undefined as any, undefined as any)), true);
+}
+
+function testTheSqlNamesAnAgentsRun() {
+  // The list queries use the same two sets as isPersonRun, one clause per set.
+  const clauses = agentRunClauses('run');
+  assert.equal(clauses.length, 2);
+  assert.equal(clauses[0].sql, 'run.invocation_channel IN (:...runAgentChannels)');
+  assert.deepEqual(clauses[0].params.runAgentChannels, ['internal', 'scheduler', 'alert']);
+  assert.equal(clauses[1].sql, 'run.trigger_kind IN (:...runAgentTriggers)');
+  assert.deepEqual(clauses[1].params.runAgentTriggers, ['internal', 'scheduled_trigger', 'alert_trigger']);
+  const channels = clauses[0].params.runAgentChannels;
+  const triggers = clauses[1].params.runAgentTriggers;
+  for (const channel of ['internal', 'scheduler', 'alert', 'chat', 'mcp', 'webhook', '']) {
+    for (const trigger of ['internal', 'scheduled_trigger', 'alert_trigger', 'human_user', 'mcp_client', 'webhook', '']) {
+      const agent = channels.includes(channel) && triggers.includes(trigger);
+      assert.equal(agent, !isPersonRun(run(channel, trigger)), `${channel}/${trigger}`);
+    }
+  }
 }
 
 async function testWhoReadsAResult() {
@@ -129,6 +148,7 @@ async function testAnActionWithoutARun() {
 
 async function main() {
   testOriginOfARun();
+  testTheSqlNamesAnAgentsRun();
   testTheInputOfACallWithoutItsValues();
   testTheFailureAToolReportedWithoutItsMessage();
   await testWhoReadsAResult();

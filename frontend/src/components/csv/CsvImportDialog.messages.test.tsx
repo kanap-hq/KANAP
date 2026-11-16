@@ -120,6 +120,23 @@ describe('CsvImportDialog messages', () => {
     expect(await screen.findByText('Ligne 2, name : « sap » a été rapproché de « SAP ».')).toBeInTheDocument();
   });
 
+  // D12 of 26.11.9: a file from another workspace names unrelated records by the same references.
+  it('says which record a reference renames or moves, agreed with its family, and still loads', async () => {
+    check([], {
+      ok: true,
+      updated: 3,
+      warnings: [
+        { row: 2, message: 'COMP-3 "Acme SA" will be renamed "Beta".', code: 'CSV_REFERENCE_RENAMES', params: { reference: 'COMP-3', stored: 'Acme SA', name: 'Beta', context: 'company' } },
+        { row: 3, message: 'DEPT-5 "Achat" will be renamed "Achats".', code: 'CSV_REFERENCE_RENAMES', params: { reference: 'DEPT-5', stored: 'Achat', name: 'Achats', context: 'department' } },
+        { row: 4, message: 'DEPT-4 "Achats" will move from company "Acme SA" to "Beta".', code: 'CSV_REFERENCE_MOVES', params: { reference: 'DEPT-4', name: 'Achats', from: 'Acme SA', to: 'Beta', context: 'company' } },
+      ],
+    });
+    expect(await screen.findByText('Ligne 2 : COMP-3 « Acme SA » sera renommée « Beta ».')).toBeInTheDocument();
+    expect(screen.getByText('Ligne 3 : DEPT-5 « Achat » sera renommé « Achats ».')).toBeInTheDocument();
+    expect(screen.getByText('Ligne 4 : DEPT-4 « Achats » passera de la société « Acme SA » à « Beta ».')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Charger' })).toBeEnabled();
+  });
+
   it('translates the end of validity that contradicts the status', async () => {
     check([
       { row: 2, column: 'status', message: 'Status is enabled but the end of validity has passed.', code: 'CSV_STATUS_DATE_PASSED' },

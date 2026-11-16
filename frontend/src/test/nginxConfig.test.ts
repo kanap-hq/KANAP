@@ -52,6 +52,18 @@ function directives(body: string, name: string): string[] {
     .filter((part) => part === name || part.startsWith(`${name} `));
 }
 
+/** One nginx time directive, in seconds. A bare number is seconds. Missing or repeated is null. */
+function nginxSeconds(body: string, name: string): number | null {
+  const found = directives(body, name);
+  if (found.length !== 1) return null;
+  const match = /^(\d+)(ms|s|m|h|d)?$/.exec(found[0].slice(name.length).trim());
+  if (!match) return null;
+  const amount = Number(match[1]);
+  const unit = match[2] ?? 's';
+  const factor: Record<string, number> = { ms: 0.001, s: 1, m: 60, h: 3600, d: 86400 };
+  return amount * factor[unit];
+}
+
 const includesFragment = (body: string) => directives(body, 'include').includes(`include ${FRAGMENT}`);
 
 const headerDirectives = directives(stripComments(headersConf), 'add_header');
@@ -145,6 +157,32 @@ describe('web container nginx configuration', () => {
         includes: directives(block.body, 'include'),
         hidden: directives(block.body, 'proxy_hide_header'),
       }).toEqual({ location: block.head, headers: [permissionsPolicy], includes: [], hidden: [] });
+    }
+  });
+
+  it('keeps the proxied API locations open for at least 300 seconds', () => {
+    // nginx waits 60 s by default, then returns 504. Bulk writes may hold a statement for
+    // 2 minutes and a directory sync may keep the request open for several minutes. The
+    // cloud host proxy waits 300 s (infra/nginx/host/prod.conf). OAuth discovery answers
+    // at once and is not one of these locations.
+    const heads = ['/api/', '~ ^/api/(spend|capex)-items/budget-file/(preflight|import)$'];
+    for (const head of heads) {
+      const block = blocks.find((candidate) => candidate.head === head);
+      const read = block ? nginxSeconds(block.body, 'proxy_read_timeout') : null;
+      const send = block ? nginxSeconds(block.body, 'proxy_send_timeout') : null;
+      expect({
+        location: head,
+        readSeconds: read,
+        sendSeconds: send,
+        readLongEnough: read !== null && read >= 300,
+        sendLongEnough: send !== null && send >= 300,
+      }).toEqual({
+        location: head,
+        readSeconds: read,
+        sendSeconds: send,
+        readLongEnough: true,
+        sendLongEnough: true,
+      });
     }
   });
 

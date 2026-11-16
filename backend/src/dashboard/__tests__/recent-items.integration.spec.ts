@@ -24,6 +24,10 @@ async function testExisting() {
     const taskId = await one(`INSERT INTO tasks (tenant_id, item_number, title, related_object_type, related_object_id) VALUES ($1, 1, 'T', 'contract', $2) RETURNING id`, [tenantId, contractId]);
     const goneTaskId = await one(`INSERT INTO tasks (tenant_id, item_number, title) VALUES ($1, 2, 'Gone') RETURNING id`, [tenantId]);
     await runner.query(`DELETE FROM tasks WHERE id = $1`, [goneTaskId]);
+    const contactId = await one(`INSERT INTO contacts (tenant_id, email, supplier_id) VALUES ($1, 'ana@sup.test', $2) RETURNING id`, [tenantId, supplierId]);
+    const departmentId = await one(`INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Finance') RETURNING id`, [tenantId, companyId]);
+    const goneDepartmentId = await one(`INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Gone') RETURNING id`, [tenantId, companyId]);
+    await runner.query(`DELETE FROM departments WHERE id = $1`, [goneDepartmentId]);
     const appId = await one(`INSERT INTO applications (tenant_id, name) VALUES ($1, 'App') RETURNING id`, [tenantId]);
     const processId = await one(`INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Order to cash') RETURNING id`, [tenantId]);
     const goneProcessId = await one(`INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Gone process') RETURNING id`, [tenantId]);
@@ -37,6 +41,10 @@ async function testExisting() {
     const asked = [
       { type: 'company', id: companyId },
       { type: 'contract', id: contractId },
+      { type: 'supplier', id: supplierId },
+      { type: 'contact', id: contactId },
+      { type: 'department', id: departmentId },
+      { type: 'department', id: goneDepartmentId },
       { type: 'task', id: taskId },
       { type: 'task', id: goneTaskId },
       { type: 'application', id: appId },
@@ -52,7 +60,8 @@ async function testExisting() {
     const { existing } = await existingRecentItems(runner.manager, tenantId, asked);
     assert.deepEqual(
       existing.map((item) => `${item.type}:${item.id}`).sort(),
-      [`application:${appId}`, `business_process:${processId}`, `company:${companyId}`, `contract:${contractId}`, `spend_item:${capexId}`, `task:${taskId}`].sort(),
+      [`application:${appId}`, `business_process:${processId}`, `company:${companyId}`, `contact:${contactId}`, `contract:${contractId}`,
+        `department:${departmentId}`, `spend_item:${capexId}`, `supplier:${supplierId}`, `task:${taskId}`].sort(),
     );
 
     // The task goes with its contract: the next check no longer lists it.

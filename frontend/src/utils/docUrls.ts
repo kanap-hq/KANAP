@@ -135,13 +135,23 @@ const STEP_GUIDES: Record<string, string> = Object.fromEntries(Object.entries({
 
 /**
  * The guide of the trial step a screen was opened from (`?step=<key>`, while its hint shows).
- * `own_invite` ends the three own-data paths: on the contributor profile it is the portfolio one;
- * on the users list the path is unknown and the route's manual applies.
+ * `own_invite` ends the three own-data paths. The contributor profile is the portfolio guide.
+ * The users list ends the IT budget path and the IT landscape map path, and the link names the
+ * path (`angle=budget` or `angle=cartography`). Without that name, the Administration manual applies.
  */
 function stepGuideSlug(pathname: string, search?: string): string | null {
-  const step = new URLSearchParams(search ?? '').get('step');
+  const params = new URLSearchParams(search ?? '');
+  const step = params.get('step');
   if (!step) return null;
-  if (step === 'own_invite') return /^\/portfolio\/contributors/.test(pathname) ? 'first-steps/portfolio-own-data' : null;
+  if (step === 'own_invite') {
+    if (/^\/portfolio\/contributors/.test(pathname)) return 'first-steps/portfolio-own-data';
+    if (/^\/admin\/users(?:\/|$)/.test(pathname)) {
+      const angle = params.get('angle');
+      if (angle === 'budget') return 'first-steps/budget-own-data';
+      if (angle === 'cartography') return 'first-steps/landscape-own-data';
+    }
+    return null;
+  }
   return STEP_GUIDES[step] ?? null;
 }
 

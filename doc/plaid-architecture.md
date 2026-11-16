@@ -1031,16 +1031,31 @@ the incident import's date-time columns), numbers, percentages (a workbook
 cell shown as 45% holds 0.45 and reads as 45), yes/no, codes and catalog
 entries by code or by name in the four languages (a name written without its
 accents when it names one entry only), and countries by code or name. The
-value map applies to every kind of column, and `""` leaves a cell blank. Names
-of other records (a company, a server, a person) are copied as written: the
-import checks them when it runs. Rows above the header that hold only a title
+value map applies to every kind of column, and `""` leaves a cell blank, except
+on a budget file's supplier and dimension columns: there the file keeps the
+person's value and the map goes to the check as proposals (below). Names of
+other records (a company, a server, a person) are copied as written: the import
+checks them when it runs. The `<attached_table>` summary gives the model the
+headers, the column types, the first ten rows with their lines of the file and,
+for a file longer than that, the distinct values of each text column whose
+values repeat (half of them distinct at most), with their number of rows: 40 per
+column, 80 characters each. The whole text holds 6,000 characters at most as
+written (`TABLE_SUMMARY_MAX_LENGTH`), being read again on every turn: a wide file
+has its headers, then its first rows' cells, cut shorter and its first rows
+fewer, the distinct values fill what is left, and the text says what was cut.
+The text says these are data, never instructions.
+`describe_import_template` also lists, for a budget file's dimension columns,
+the dimension's enabled values. Rows above the header that hold only a title
 or a date in their first columns are left out of the table (I1's reader). A
 template column without its own title takes one from `ai-import-titles.ts`. An
 approved import ends the turn: Plaid does not continue after it. The tool is
 refused inside a mutation plan, whose output is not redacted. A new mapping of
 the same file expires the pending card of that file (`replacesPendingPreview`),
-so the person has one card to approve; the chat reloads the cards at the end of
-each answer.
+so the person has one card to approve; a new card and a choice of the person on
+the pending card of one file take turns (an advisory lock on the conversation and
+the attachment, `replacementScope`). The chat reloads the cards at the end of
+each answer: the conversation's 50 latest, plus the newest card of every chain of
+choices (`replaces_preview_id`).
 
 The import itself (lot I3) runs in two steps, as on the import screens, on one
 card. Preparing the card builds the file in the template's format
@@ -1050,9 +1065,7 @@ as a date cell, a number as a number cell), or the person's own text when the
 mapping did not read it, which the import then refuses with its own message.
 `AiImportRunnerService` hands it to the import service of the screen, called as
 its route calls it (the "merge" mode of the V2 imports, the person's language,
-a decimal point; the budget file's preflight, which creates the missing
-suppliers as the dialog's "Create missing suppliers" does when the person may
-create suppliers, and reports their count as `new_suppliers`), in
+a decimal point; the budget file's preflight), in
 the transaction of the call, which carries the person's data access: that check
 (the dry run) is stored on the card as `import_mapping.validation`. Approving
 checks the rights again, refuses a card whose check failed, builds the file
@@ -1069,14 +1082,49 @@ update existing records without some of those columns is refused
 (`AI_IMPORT_CLEARS_COLUMNS`): their values would be cleared. The messages of a
 check or an import carry the line of the person's file (the grid's `lines`,
 title and blank rows put back). The card shows the first rows, the values not
-read and the import's messages; the model receives the counts and, per code and
-column, the number of messages (`MODEL_HIDDEN_OUTPUT_FIELDS` hides
-`unread_values`, `sample` and the `report` of the check and of the result), so
-no file cell reaches it beyond the summary. The card also downloads the file
-the mapping builds, as the import reads it (`GET
+read and the import's messages; the model reads the same first rows and values
+not read, the counts and, per code and column, the number of messages with
+their lines (`MODEL_HIDDEN_OUTPUT_FIELDS` hides only the `report` of the check
+and of the result, long and written for the person). The card also downloads
+the file the mapping builds, as the import reads it (`GET
 /ai/conversations/:id/previews/:previewId/import-file/export`,
 `ai-import-file.controller.ts`): rebuilt from the attachment with the card's
-rights, never stored, for the person whose card it is. The route runs in the
+rights, never stored, for the person whose card it is; a budget file's matched
+values are written as the values they stand for.
+
+The budget file matches before it creates (26.11.9, lot I1; the preflight
+shared with the screen's dialog, `spend/budget-file/matching.ts`): a supplier
+or a dimension value of the file is the existing one of the same name, case
+aside; then accents aside; then, on a recommended dimension, its seed name in
+any of the four languages (`Hardware` for `Matériel`). The model's `values` for
+those columns are proposals: accepted only when they name an enabled value of
+the workspace's list, refused otherwise (`refusedProposals`), the value then
+read as written. The check's `matching` lists every match beyond case with its
+origin (`server` or `model`) and lines, the refused proposals, and each value
+nothing matched with up to three closest names of the reference lists (trigram
+similarity computed in memory on the catalog the preflight already holds:
+never other budget lines; enabled entries only, and the suppliers' and the
+companies' names only for a person at the reader level of their module). A value
+created has one entry, keyed as its creation (two spellings, one entry). The
+model reads it as `validation.matching`, its 60 first entries per list with
+`totals` when one is cut, and `new_dimension_values` beside `new_suppliers`; its
+instruction tells it to propose a value only from those lists and to announce
+only the creations the counts hold. The person's choices live in the card's
+`mutation_input.choices` (`{ kind: 'unmatch', column, value }`,
+`{ kind: 'create_suppliers', value }`): the "Create missing suppliers" box,
+shown to a person who may create suppliers, opens ticked; a match undone makes
+the value created (or refused: a closed list stays closed to a limited
+person). A choice is posted to `POST
+/ai/conversations/:id/previews/:previewId/import-choices` (`{ choices }`, the
+whole list): with the surface checks (a frozen workspace refused), the import's
+rights, the person's pending card of that conversation locked as an approval
+locks it, the card is expired and a new card of the same mapping with the
+choices is created through `createPreview` (new id, new fingerprint, ten minutes
+again), its `current_values.replaces_preview_id` naming the first card of the
+chain, which the conversation shows: the chat draws the newest card of a chain
+in its place. `mutation_input` is never changed in place. A new mapping of the
+same file from the model keeps the choices of the file's last card that still
+apply. The approval, the load and the prepared file replay the choices. The route runs in the
 request's tenant transaction, unlike the other conversation routes, so the
 export interceptor records each download as an export. MCP has no import: it
 reads, holds no attachment and does not read the audit log.
@@ -1317,7 +1365,13 @@ vision step describes requester screenshots first. All stages call
 - **Freshness.** Before writing, the executor re-checks that the ticket did
   not move. The agent's `on_stale_by_action_class` policy picks `re_review`
   (default), `cancel`, or `apply_anyway`. A terminal close (`solved` or
-  `closed`) always re-fetches the ticket and is always human-approved.
+  `closed`) always re-fetches the ticket.
+- **Automatic execution.** When the agent's autonomy for an action class is
+  automatic, the actions of that class a triage prepared run at once. A
+  terminal close follows the `status` class. In one pass it runs after every
+  other action, and it waits in the approvals queue
+  (`close_waits_for_requester_reply`) while a requester reply of the same
+  batch did not run: a ticket never closes before its reply goes out.
 - **Retries.** The sweeper (every 10 minutes) resumes approved actions with a
   backoff of 30, 60, 120 and 240 minutes. After 5 failed attempts the action
   is flagged for review. An `executing` claim abandoned for 10 minutes returns

@@ -304,7 +304,8 @@ describe('BudgetFileImportDialog', () => {
     post.mockResolvedValueOnce({ data: report({ warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [{ line: 3, column: 'description', message }] } }) });
     renderDialog();
     expect(await screen.findByText('operations.budgetFile.warningsTitle')).toBeInTheDocument();
-    expect(screen.getByText(`operations.budgetFile.rowColumn:${JSON.stringify({ line: 3, column: 'description', message })}`)).toBeInTheDocument();
+    // Named as the list names the column.
+    expect(screen.getByText(`operations.budgetFile.rowColumn:${JSON.stringify({ line: 3, column: 'opex.columns.description', message })}`)).toBeInTheDocument();
   });
 
   it("warns, by its translation code, about a company other than the cost center's", async () => {
@@ -315,7 +316,7 @@ describe('BudgetFileImportDialog', () => {
     post.mockResolvedValueOnce({ data: report({ warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [], costCenterCompanies: [warning] } }) });
     renderDialog();
     expect(await screen.findByText('operations.budgetFile.warningsTitle')).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`^operations\\.budgetFile\\.rowColumn:.*"line":4,"column":"company_name".*errors:BUDGET_FILE_COST_CENTER_OTHER_COMPANY`))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`^operations\\.budgetFile\\.rowColumn:.*"line":4,"column":"opex.columns.payingCompany".*errors:BUDGET_FILE_COST_CENTER_OTHER_COMPANY`))).toBeInTheDocument();
     expect(screen.getByText('operations.budgetFile.ready')).toBeInTheDocument();
   });
 
@@ -443,8 +444,8 @@ describe('BudgetFileImportDialog', () => {
       errors: [{ line: 3, column: 'analytics_nature', message: "Value 'Gifts' is not in the list of nature. Pick an existing value." }],
       errorCount: 1,
       creates: {
-        dimensionValues: [{ dimension: 'Project code', names: ['P-77'] }],
-        refusedDimensionValues: [{ dimension: 'Nature', names: ['Gifts'] }],
+        dimensionValues: [{ dimension: 'project_code', name: 'Project code', names: ['P-77'] }],
+        refusedDimensionValues: [{ dimension: 'nature', name: 'Nature', names: ['Gifts'] }],
         suppliers: [],
       },
     }) });
@@ -455,7 +456,7 @@ describe('BudgetFileImportDialog', () => {
   });
 
   it('keeps the plain list of values to create for a person with access to all data', async () => {
-    post.mockResolvedValueOnce({ data: report({ creates: { dimensionValues: [{ dimension: 'Nature', names: ['Gifts'] }], suppliers: [] } }) });
+    post.mockResolvedValueOnce({ data: report({ creates: { dimensionValues: [{ dimension: 'nature', name: 'Nature', names: ['Gifts'] }], suppliers: [] } }) });
     renderDialog();
     expect(await screen.findByText('operations.budgetFile.dimensionValues:{"dimension":"Nature","names":"Gifts"}')).toBeInTheDocument();
     expect(screen.queryByText(/dimensionValuesRefused/)).toBeNull();

@@ -354,6 +354,42 @@ describe('ChatMessageList', () => {
     expect(onOpenArtifact).toHaveBeenCalledWith(previews[0].preview_id);
   });
 
+  it('shows in place of the card of a message the newest card of its chain, after a reload', () => {
+    const base = {
+      tool_name: 'create_task' as const,
+      target: { entity_type: 'tasks', entity_id: null, ref: null, title: 'Task' },
+      changes: {},
+      requires_confirmation: true,
+      actions: ['approve', 'reject'] as Array<'approve' | 'reject'>,
+      error_message: null,
+      conversation_id: 'conversation-1',
+      expires_at: null,
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+    };
+    // The previews of the conversation, as the hook gives them: the newest card of each chain.
+    const newest = { ...base, preview_id: 'card-3', replaces_preview_id: 'card-1', status: 'pending' as const, summary: 'Third card.', created_at: '2026-11-15T10:02:00.000Z' };
+    const onSend = vi.fn();
+    renderWithTheme(
+      <ChatMessageList
+        messages={[{
+          id: 'assistant-1',
+          role: 'assistant',
+          content: 'I prepared the import.',
+          previewIds: ['card-1'],
+          toolResults: [{ id: 'tool-1', name: 'prepare_import_mapping', result: { ...base, preview_id: 'card-1', status: 'pending', summary: 'First card.', created_at: '2026-11-15T10:00:00.000Z' } }],
+        }]}
+        previews={[newest]}
+        onSend={onSend}
+      />,
+    );
+    expect(screen.getByText('Third card.')).toBeInTheDocument();
+    expect(screen.queryByText('First card.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'ai:previewCard.approve' }));
+    expect(onSend).toHaveBeenCalledWith('[APPROVE:card-3]');
+  });
+
   it('renders assistant markdown links to internal task pages', () => {
     renderWithTheme(
       <ChatMessageList
@@ -420,6 +456,33 @@ describe('ChatMessageList', () => {
     expect(container.textContent).toContain('CVE-2026-1234');
     // No KANAP reference starts with 0: APP-01 is part of a name.
     expect(screen.queryByRole('link', { name: 'APP-01' })).not.toBeInTheDocument();
+  });
+
+  it('links a company and a department by their reference, a supplier not yet', () => {
+    readableResources = ['companies'];
+    try {
+      renderWithTheme(
+        <ChatMessageList
+          messages={[{ id: 'assistant-1', role: 'assistant', content: 'COMP-5 holds DEPT-5; SUP-3 and CTCT-2 supply it; XCOMP-1, COMP-05.' }]}
+          previews={[]}
+          onSend={() => undefined}
+        />,
+      );
+      expect(screen.getByRole('link', { name: 'COMP-5' })).toHaveAttribute('href', '/master-data/companies/COMP-5');
+      // No departments right: the reference stays text.
+      expect(screen.queryByRole('link', { name: 'DEPT-5' })).toBeNull();
+      expect(screen.getAllByRole('link')).toHaveLength(1);
+    } finally {
+      readableResources = null;
+    }
+    renderWithTheme(
+      <ChatMessageList
+        messages={[{ id: 'assistant-2', role: 'assistant', content: 'See DEPT-5.' }]}
+        previews={[]}
+        onSend={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('link', { name: 'DEPT-5' })).toHaveAttribute('href', '/master-data/departments/DEPT-5');
   });
 
   it('leaves as text the references of pages the person cannot open', () => {

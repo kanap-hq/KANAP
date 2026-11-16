@@ -25,6 +25,7 @@ Navigieren Sie zu **Stammdaten > Abteilungen**, um Ihre Abteilungsliste zu sehen
 Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer Mitarbeiterzahl für ein bestimmtes Jahr.
 
 **Standardspalten**:
+- **Referenz**: Die von Kadratis vergebene Referenz (`DEPT-4`). Zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
 - **Name**: Abteilungsname. Zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
 - **Unternehmen**: Übergeordnetes Unternehmen. Zum Öffnen des Arbeitsbereichs Übersichts-Tab anklicken
 - **Mitarbeiterzahl (Jahr)**: Mitarbeiterzahl für das ausgewählte Jahr. Zum direkten Wechsel zum Details-Tab anklicken
@@ -37,9 +38,11 @@ Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer
 
 **Statusbereich**: Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert**, um nach Abteilungsstatus zu filtern. Die Liste zeigt standardmäßig nur aktivierte Abteilungen.
 
-**Schnellsuche**: Die Suchleiste filtert über Abteilungsnamen.
+**Schnellsuche**: Die Suchleiste filtert über Abteilungsnamen. Geben Sie eine Referenz ein, etwa `DEPT-4`, um diese Abteilung zu finden. Ziffern allein suchen im Text.
 
-**Deep-Linking**: Jede Zelle im Grid ist ein anklickbarer Link. Name und Unternehmen öffnen den Übersichts-Tab; Mitarbeiterzahl öffnet den Details-Tab. Wenn Sie zu einem Arbeitsbereich navigieren und zurückkehren, bleiben Sortierreihenfolge, Suchabfrage und Filter erhalten.
+**Spaltenfilter**: Der Filter **Referenz** nimmt `DEPT-4` oder `4` an.
+
+**Deep-Linking**: Jede Zelle im Grid ist ein anklickbarer Link. Referenz, Name und Unternehmen öffnen den Übersichts-Tab; Mitarbeiterzahl öffnet den Details-Tab. Wenn Sie zu einem Arbeitsbereich navigieren und zurückkehren, bleiben Sortierreihenfolge, Suchabfrage und Filter erhalten.
 
 **Aktionen**:
 - **Neu**: Neue Abteilung erstellen (erfordert `departments:member`)
@@ -53,8 +56,10 @@ Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer
 
 Klicken Sie auf eine beliebige Zeile, um den Arbeitsbereich zu öffnen. Er hat drei Tabs: **Übersicht**, **Details** und **Verlauf** (die Änderungen an der Abteilung, siehe [Verlauf der Datensätze](record-history.md)).
 
-- **Kopfzeile**: der Name der Abteilung. Klicken Sie darauf, um die Abteilung umzubenennen. **Zurück** / **Weiter** wechseln zwischen Abteilungen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren, und die Schließen-Schaltfläche führt zur Liste zurück
+- **Kopfzeile**: die Referenz der Abteilung (`DEPT-5`, zum Kopieren anklicken) und ihr Name. Klicken Sie auf den Namen, um die Abteilung umzubenennen. **Zurück** / **Weiter** wechseln zwischen Abteilungen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren, und die Schließen-Schaltfläche führt zur Liste zurück
 - **Bereich Eigenschaften** rechts: **Unternehmen** und **Lebenszyklus**
+
+**Seitenadresse**: Die Adresse der Seite verwendet die Referenz, zum Beispiel `/master-data/departments/DEPT-5/overview`. Die frühere Adresse der Seite einer Abteilung öffnet sie weiterhin und wird durch die neue ersetzt.
 
 **Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Name und Beschreibung werden gespeichert, wenn Sie das Feld verlassen; Unternehmen und Lebenszyklus werden gespeichert, sobald Sie sie ändern. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat.
 
@@ -97,12 +102,13 @@ Der Details-Tab verwaltet jahresbezogene Mitarbeiterzahl-Kennzahlen.
 
 Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
 
-**Exportieren** lädt die Abteilungen der Liste (oder, auf Wunsch im Dialog, alle Abteilungen) mit ihrem Unternehmen, Namen, Beschreibung, Status und Ende der Gültigkeit herunter. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
+**Exportieren** lädt die Abteilungen der Liste (oder, auf Wunsch im Dialog, alle Abteilungen) mit ihrer Referenz, ihrem Unternehmen, Namen, Beschreibung, Status und Ende der Gültigkeit herunter. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
 
-Die Spalten:
+Die Spalten in dieser Reihenfolge:
 
 | Spalte | Inhalt |
 |---|---|
+| `reference` | Optional. Die Referenz der Abteilung (`DEPT-12`). Der Export schreibt sie |
 | `company_name` | Pflicht. Das Unternehmen, zu dem die Abteilung gehört, über seinen Namen |
 | `name` | Pflicht. Der Name der Abteilung |
 | `description` | Freier Text |
@@ -112,11 +118,15 @@ Die Spalten:
 **Import**:
 
 - Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
-- Zuordnung über Abteilungsname und Unternehmensname: Eine Zeile aktualisiert die Abteilung, die sie nennt, jede andere Zeile legt eine an
+- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`DEPT-12` oder `12`) bezeichnet die Abteilung, die die Zeile aktualisiert, auch wenn sich ihr Name geändert hat. Die Abteilung erhält den Namen und das Unternehmen der Zeile: Ein anderes Unternehmen verschiebt sie dorthin. Die Vorabprüfung meldet jede Abteilung, die umbenannt wird oder das Unternehmen wechselt
+- **Zuordnung über den Namen**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird eine Zeile über Abteilungsname und Unternehmensname zugeordnet. Sie aktualisiert die Abteilung, die sie nennt, und jede andere Zeile legt eine an
+- **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„DEPT-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
+- **Umbenennen oder Verschieben**: Ein Name, den bereits eine andere Abteilung im Unternehmen der Zeile trägt, wird abgelehnt, und die Meldung nennt deren Referenz: „„Finance“ gehört bereits zu DEPT-7.“
+- **Eine Zeile pro Abteilung**: Zwei Zeilen, die dieselbe Abteilung aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert DEPT-7, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“
 
 **Pflichtzellen**: `name` und `company_name`, ein bestehendes Unternehmen
 
-**Optionale Zellen**: `description`, `status`, `disabled_at`
+**Optionale Zellen**: `reference`, `description`, `status`, `disabled_at`
 
 **Lebenszyklusspalten**:
 - `status` ist `enabled` oder `disabled`, und `disabled_at` ist das Ende der Gültigkeit, ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Eine neue Abteilung ist aktiviert, außer die Zeile sagt `disabled`. Bei einer Aktualisierung behalten ein leeres `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum, andernfalls beendet es die Abteilung heute

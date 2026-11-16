@@ -7,6 +7,7 @@ import { createAppTheme } from '../config/ThemeContext';
 import DepartmentsPage from './DepartmentsPage';
 
 const deleteButton = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
+const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
 const post = vi.hoisted(() => vi.fn());
 
 vi.mock('react-i18next', () => ({
@@ -16,7 +17,12 @@ vi.mock('react-i18next', () => ({
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })), post } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
-vi.mock('../components/ServerDataGrid', () => ({ default: () => null }));
+vi.mock('../components/ServerDataGrid', () => ({
+  default: (props: Record<string, any>) => {
+    grid.props = props;
+    return null;
+  },
+}));
 vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
 vi.mock('../components/DeleteSelectedButton', () => ({
@@ -41,5 +47,22 @@ describe('DepartmentsPage delete', () => {
     expect(post).toHaveBeenCalledWith('/departments/delete-check', { ids: ['a', 'b'] });
     expect(String(props.itemLabels.toDelete(2))).toBe('departments.delete.toDelete');
     expect(String(props.itemLabels.kept(1))).toBe('departments.delete.kept');
+  });
+});
+
+describe('DepartmentsPage reference column', () => {
+  it('comes first, visible, writes DEPT-n in mono and filters as text', () => {
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter><DepartmentsPage /></MemoryRouter>
+      </ThemeProvider>,
+    );
+    const columns = grid.props?.columns as Array<Record<string, any>>;
+    expect(columns[0].field).toBe('item_number');
+    expect(columns[0].headerName).toBe('departments.columns.reference');
+    expect(columns[0].filter).toBe('agTextColumnFilter');
+    expect(columns[0].valueFormatter({ value: 7 })).toBe('DEPT-7');
+    expect(String(columns[0].cellStyle.fontFamily)).toContain('Mono');
+    expect(grid.props?.defaultHiddenColumns).not.toContain('item_number');
   });
 });

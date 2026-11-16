@@ -1,9 +1,10 @@
 import React from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Checkbox, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { AiImportReportMessage, AiImportRun } from '../aiTypes';
 import { csvMessageColumn, csvMessageText } from '../../components/csv/csvMessage';
 import { ReportView as BudgetFileReportView } from '../../components/finance/BudgetFileImportDialog';
+import type { BudgetFileChoice } from '../../components/finance/budgetFile';
 
 /** The messages shown of each kind, as the import dialog shows them. */
 const SHOWN_ERRORS = 10;
@@ -19,6 +20,10 @@ type ImportRunReportProps = {
   run: AiImportRun;
   /** The title of each template column in the person's language, to name the column of a message. */
   titles: ReadonlyMap<string, string>;
+  /** The person's choices on a pending budget file check (matches undone, missing suppliers): the whole list. */
+  onChoices?: (choices: BudgetFileChoice[]) => void;
+  /** A choice is being applied: the controls wait for the new card. */
+  choicesDisabled?: boolean;
 };
 
 /** One message: its line of the person's file, the sentence of the import screen, then its column. */
@@ -63,12 +68,17 @@ function Messages({ title, items, total, shown, more, titles, tone }: {
  * approved one: the counts and the messages of the import screen, on the lines of the person's file.
  * The budget file's check shows as its own dialog shows it, under the card's status line.
  */
-function ImportRunReport({ run, titles }: ImportRunReportProps) {
-  const { t, i18n } = useTranslation(['ai', 'common']);
+function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunReportProps) {
+  const { t, i18n } = useTranslation(['ai', 'common', 'ops']);
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const check = run.dry_run;
   // The budget file's check lists its own changes, errors and warnings.
   const budgetFile = run.report.kind === 'budget_file' ? run.report.file : null;
+  // Choices are made on the check only, never on what the import did.
+  const choose = check ? onChoices : undefined;
+  const matching = budgetFile?.matching;
+  // The server says whether the person may create suppliers, and whether the check created them.
+  const suppliersBox = !!choose && !!matching?.createSuppliers.allowed;
   const counts = budgetFile ? '' : (check
     ? [
       run.inserted > 0 && t('common:csv.toInsert', { count: run.inserted }),
@@ -95,11 +105,30 @@ function ImportRunReport({ run, titles }: ImportRunReportProps) {
         {status}
         {counts && <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{' '}{counts}</Box>}
       </Typography>
+      {suppliersBox && matching && (
+        <Box component="label" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', alignSelf: 'flex-start' }}>
+          <Checkbox
+            size="small"
+            checked={matching.createSuppliers.value}
+            disabled={choicesDisabled}
+            onChange={(event) => choose?.([
+              ...matching.choices.filter((choice) => choice.kind !== 'create_suppliers'),
+              { kind: 'create_suppliers', value: event.target.checked },
+            ])}
+            sx={{ p: 0.25 }}
+          />
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary', lineHeight: 1.4 }}>
+            {t('ops:operations.budgetFile.createSuppliers')}
+          </Typography>
+        </Box>
+      )}
       {budgetFile && (
         <BudgetFileReportView
           report={budgetFile}
           locale={locale}
-          canCreateSuppliers={false}
+          canCreateSuppliers={suppliersBox}
+          onChoices={choose}
+          choicesDisabled={choicesDisabled}
           nothingToLoad={run.inserted + run.updated === 0}
           showStatus={false}
           // The card lists the lookalikes of its check before its actions.

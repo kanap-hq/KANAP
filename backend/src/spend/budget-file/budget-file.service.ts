@@ -13,7 +13,23 @@ import { loadExportLines, loadFileDimensions, loadPreflight } from './load';
 import { buildPreflight, changedSinceText } from './preflight';
 import { planWithAccess } from './access';
 import { isLimitedTransaction } from '../../data-access/line-write-checks';
-import { BudgetFileReport, BudgetFileExportScope, BudgetFileScope, emptyCatalog } from './types';
+import { BudgetFileMatchOptions, BudgetFileReport, BudgetFileExportScope, BudgetFileScope, emptyCatalog } from './types';
+
+/**
+ * The switches of a check or a load: the file's reading, the "Create missing suppliers" option, and
+ * the person's choices and Kad's proposals (`matching`), which the load replays as the check followed them.
+ */
+export interface BudgetFileOptions {
+  language: unknown;
+  dateOrder: unknown;
+  decimalMark?: unknown;
+  createSuppliers: boolean;
+  canCreateSuppliers: boolean;
+  /** Whether the person reads the suppliers' and the companies' lists: the check names them as candidates only then (absent: not read). */
+  canReadSuppliers?: boolean;
+  canReadCompanies?: boolean;
+  matching?: BudgetFileMatchOptions;
+}
 
 const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 
@@ -23,6 +39,15 @@ type CallerRights = { isAdmin?: boolean; permissions?: Record<string, string> } 
 export function canCreateSuppliers(ctx: CallerRights): boolean {
   if (ctx?.isAdmin) return true;
   return (LEVEL_RANK[ctx?.permissions?.suppliers ?? ''] ?? 0) >= LEVEL_RANK.member;
+}
+
+/**
+ * The lists whose names the check may give as the closest names of a value nothing matched: the
+ * suppliers and the companies, at the reader level of their module, as GET /suppliers and GET /companies.
+ */
+export function readableLists(ctx: CallerRights): { canReadSuppliers: boolean; canReadCompanies: boolean } {
+  const reads = (resource: string) => !!ctx?.isAdmin || (LEVEL_RANK[ctx?.permissions?.[resource] ?? ''] ?? 0) >= LEVEL_RANK.reader;
+  return { canReadSuppliers: reads('suppliers'), canReadCompanies: reads('companies') };
 }
 
 /** An exported budget file: its name, type and content, and how many lines it holds. */
@@ -55,7 +80,7 @@ export class BudgetFileService {
     scope: BudgetFileScope,
     file: Buffer,
     caller: BudgetFileCaller,
-    options: { language: unknown; dateOrder: unknown; decimalMark?: unknown; createSuppliers: boolean; canCreateSuppliers: boolean },
+    options: BudgetFileOptions,
   ): Promise<BudgetFileReport> {
     const manager = requireManager(caller.manager);
     const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
@@ -84,9 +109,12 @@ export class BudgetFileService {
       names: loaded.names,
       createSuppliers: options.createSuppliers,
       canCreateSuppliers: options.canCreateSuppliers,
+      canReadSuppliers: options.canReadSuppliers,
+      canReadCompanies: options.canReadCompanies,
       currentYear,
       labels: loaded.labels,
       access: loaded.access,
+      matching: options.matching,
     });
     const natureOf = new Map(loaded.stored.map((line) => [line.id, line.nature]));
     await nameChanges(manager, natureOf, caller.tenantId, report);
@@ -143,7 +171,7 @@ export class BudgetFileService {
     file: Buffer,
     snapshot: unknown,
     caller: BudgetFileCaller,
-    options: { language: unknown; dateOrder: unknown; decimalMark?: unknown; createSuppliers: boolean; canCreateSuppliers: boolean },
+    options: BudgetFileOptions,
     deps: { items: BudgetFileLineServices; audit: BudgetFileAudit; freeze: BudgetFileFreeze },
   ): Promise<BudgetFileImportResult> {
     const manager = requireManager(caller.manager);
@@ -163,6 +191,9 @@ export class BudgetFileService {
       decimalMark,
       createSuppliers: options.createSuppliers,
       canCreateSuppliers: options.canCreateSuppliers,
+      canReadSuppliers: options.canReadSuppliers,
+      canReadCompanies: options.canReadCompanies,
+      matching: options.matching,
       allowedCurrencies: settings.allowedCurrencies,
       items: deps.items,
       audit: deps.audit,

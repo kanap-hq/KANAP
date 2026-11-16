@@ -118,6 +118,7 @@
       "year": "<year>"
     },
     "filters": {
+      "item_number": "text",
       "name": "text",
       "country_iso": "text",
       "city": "text",
@@ -134,6 +135,7 @@
       "created_at": "date"
     },
     "fields": [
+      "item_number",
       "name",
       "country_iso",
       "city",
@@ -497,6 +499,7 @@
       "year": "<year>"
     },
     "filters": {
+      "item_number": "text",
       "name": "text",
       "company_name": "text",
       "headcount_year": "number",
@@ -504,6 +507,7 @@
       "created_at": "date"
     },
     "fields": [
+      "item_number",
       "name",
       "company_name",
       "headcount_year",

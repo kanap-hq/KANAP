@@ -17,6 +17,8 @@ type UserSelectProps = {
   onChange: (v: string | null, user: User | null) => void;
   /** Hide one person from the list, e.g. a contributor cannot manage themselves. */
   excludeUserId?: string | null;
+  /** Hide these people as well, e.g. accounts that are already contributors. */
+  excludeUserIds?: ReadonlySet<string> | null;
   disabled?: boolean;
   error?: boolean;
   helperText?: React.ReactNode;
@@ -51,6 +53,7 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
     value,
     onChange,
     excludeUserId = null,
+    excludeUserIds = null,
     disabled,
     error,
     helperText,
@@ -81,22 +84,27 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
     enabled: picker.open,
   });
   const suggestedIds = React.useMemo(() => new Set(suggested.map((u) => u.id)), [suggested]);
+  // withMeFirst inserts the signed-in person first when this page does not hold them,
+  // so the exclusion has to be part of that predicate.
+  const leaveOut = React.useCallback((user: User) => (
+    (excludeUserId != null && user.id === excludeUserId) || (excludeUserIds?.has(user.id) ?? false)
+  ), [excludeUserId, excludeUserIds]);
   const suggestedVisible = React.useMemo(
-    () => suggested.filter((u) => u.id !== excludeUserId),
-    [suggested, excludeUserId],
+    () => suggested.filter((user) => !leaveOut(user)),
+    [suggested, leaveOut],
   );
   // A typed text searches exactly as before; the group only leads an empty field.
   const showSuggestions = picker.text.trim() === '' && !picker.searching && suggestedVisible.length > 0;
   const options = React.useMemo(() => {
     if (!showSuggestions) {
-      return withMeFirst(picker.options, me, picker.searching, (u) => u.id === excludeUserId)
-        .filter((u) => u.id !== excludeUserId);
+      return withMeFirst(picker.options, me, picker.searching, leaveOut)
+        .filter((user) => !leaveOut(user));
     }
     return [
       ...suggestedVisible,
-      ...picker.options.filter((u) => u.id !== excludeUserId && !suggestedIds.has(u.id)),
+      ...picker.options.filter((user) => !leaveOut(user) && !suggestedIds.has(user.id)),
     ];
-  }, [showSuggestions, suggestedVisible, suggestedIds, picker.options, me, picker.searching, excludeUserId]);
+  }, [showSuggestions, suggestedVisible, suggestedIds, picker.options, me, picker.searching, leaveOut]);
   const firstSuggestedId = showSuggestions ? suggestedVisible[0]?.id ?? null : null;
   const lastSuggestedId = showSuggestions ? suggestedVisible[suggestedVisible.length - 1]?.id ?? null : null;
   const selected = value ? picker.selected[0] ?? null : null;

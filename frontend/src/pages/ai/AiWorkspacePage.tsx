@@ -13,6 +13,7 @@ import { aiConversationsApi } from '../../ai/aiApi';
 import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../../ai/includedModel';
 import { useAiCapabilities } from '../../ai/useAiCapabilities';
 import { AiMutationPreview, ChatConversation, ChatMessage } from '../../ai/aiTypes';
+import { previewChainId } from '../../ai/previewChains';
 import ArtifactPanel from '../../ai/components/ArtifactPanel';
 import BuiltinUsageIndicator from '../../ai/components/BuiltinUsageIndicator';
 import ChatMessageList from '../../ai/components/ChatMessageList';
@@ -101,7 +102,7 @@ function buildPreviewGroups(messages: ChatMessage[]): PreviewGroup[] {
 
 function pickPreviewForGroup(previews: AiMutationPreview[], previewIds: string[]): AiMutationPreview | null {
   const idSet = new Set(previewIds);
-  const groupPreviews = previews.filter((preview) => idSet.has(preview.preview_id));
+  const groupPreviews = previews.filter((preview) => idSet.has(previewChainId(preview)));
   return groupPreviews.find((preview) => preview.status === 'pending') || groupPreviews[groupPreviews.length - 1] || null;
 }
 
@@ -140,8 +141,9 @@ export default function AiWorkspacePage() {
       ? activeArtifactPreviewIds
       : latestPreviewGroup?.previewIds ?? []);
   const artifactPreviews = useMemo(() => {
+    // A message names the first card of a chain; the newest card of the chain shows in its place.
     const idSet = new Set(artifactPreviewIds);
-    return allPreviews.filter((preview) => idSet.has(preview.preview_id));
+    return allPreviews.filter((preview) => idSet.has(previewChainId(preview)));
   }, [allPreviews, artifactPreviewIds]);
 
   const [artifactPanelOpen, setArtifactPanelOpen] = useState<boolean>(() => {
@@ -196,11 +198,19 @@ export default function AiWorkspacePage() {
   }, []);
 
   const openArtifactPanel = useCallback((previewId: string) => {
-    const group = previewGroups.find((item) => item.previewIds.includes(previewId));
-    setActiveArtifactPreviewIds(group?.previewIds ?? [previewId]);
+    const shown = allPreviews.find((preview) => preview.preview_id === previewId);
+    const chain = shown ? previewChainId(shown) : previewId;
+    const group = previewGroups.find((item) => item.previewIds.includes(chain));
+    setActiveArtifactPreviewIds(group?.previewIds ?? [chain]);
     setSelectedArtifactId(previewId);
     setArtifactPanelOpen(true);
-  }, [previewGroups]);
+  }, [allPreviews, previewGroups]);
+
+  // A choice on an import card answers a new card: it takes the place of the previous one, chosen if that one was.
+  const handleReplacePreview = useCallback((previous: AiMutationPreview, next: AiMutationPreview) => {
+    chat.replacePreview(next);
+    setSelectedArtifactId((current) => (current === previous.preview_id ? next.preview_id : current));
+  }, [chat.replacePreview]);
 
   const handleArtifactApprove = useCallback((previewId: string) => {
     void chat.sendMessage(`[APPROVE:${previewId}]`);
@@ -455,6 +465,7 @@ export default function AiWorkspacePage() {
                   disabled={chat.isStreaming}
                   onSend={handleSend}
                   onOpenArtifact={openArtifactPanel}
+                  onReplacePreview={handleReplacePreview}
                   selectedArtifactId={artifactPanelOpen ? selectedArtifactId : null}
                   onEdit={handleEditMessage}
                   onSubmitEdit={handleSubmitEdit}
@@ -506,6 +517,7 @@ export default function AiWorkspacePage() {
         onApprove={handleArtifactApprove}
         onReject={handleArtifactReject}
         onApproveMany={handleArtifactApproveMany}
+        onReplace={handleReplacePreview}
       />
     </Box>
   );

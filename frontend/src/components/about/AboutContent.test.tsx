@@ -6,8 +6,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import AboutContent from './AboutContent';
 import { PRODUCT_NAME } from '../../config/product';
 
-// The path line reads the onboarding API: covered by its own test.
-vi.mock('../onboarding/AboutOnboardingLine', () => ({ default: () => null }));
+// The path line reads the onboarding API: covered by its own test. Here, only that it
+// receives the same closing callback as the links that leave this window.
+const pathLine = vi.hoisted(() => ({ onNavigate: undefined as (() => void) | undefined }));
+vi.mock('../onboarding/AboutOnboardingLine', () => ({
+  default: (props: { onNavigate?: () => void }) => {
+    pathLine.onNavigate = props.onNavigate;
+    return null;
+  },
+}));
 // The discovery call link: covered by its own test; here only where it goes.
 vi.mock('../BookDiscoveryCallButton', () => ({
   default: ({ placement }: { placement: string }) => <a href="https://cal.example/discovery">{`book:${placement}`}</a>,
@@ -72,6 +79,7 @@ afterEach(() => {
   state.tenantName = 'Acme';
   state.tenantSlug = 'acme';
   state.discoveryCall = false;
+  pathLine.onNavigate = undefined;
   writeText.mockReset();
 });
 
@@ -153,6 +161,24 @@ describe('AboutContent', () => {
     state.discoveryCall = true;
     renderContent();
     expect(screen.getByText(/9 days left in your trial/)).toContainElement(screen.getByText('book:about'));
+  });
+
+  it('gives the path line the callback that closes the About window, and none on the settings tab', () => {
+    state.subscription = { status: 'trialing', trial_days_remaining: 9 };
+    state.isBillingAdmin = true;
+    const onNavigate = vi.fn();
+    const { unmount } = render(
+      <MemoryRouter>
+        <AboutContent onNavigate={onNavigate} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('link', { name: 'Choose a plan' }));
+    expect(onNavigate).toHaveBeenCalledTimes(1);
+    expect(pathLine.onNavigate).toBe(onNavigate);
+    unmount();
+
+    renderContent();
+    expect(pathLine.onNavigate).toBeUndefined();
   });
 
   it('shows the trial days only during a running trial, with a plan link for billing admins', () => {

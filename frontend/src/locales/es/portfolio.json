@@ -481,6 +481,8 @@
           "phaseComplete": "{{phase}} completada"
         },
         "dialogs": {
+          "confirmDeletePhase": "¿Eliminar esta fase?",
+          "confirmDeleteMilestone": "¿Eliminar este hito?",
           "replaceAll": {
             "description": "Esto eliminará todas las fases e hitos existentes y luego aplicará la plantilla seleccionada.",
             "title": "¿Reemplazar todas las fases?"

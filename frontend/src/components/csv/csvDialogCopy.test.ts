@@ -36,6 +36,29 @@ const COPY = {
 
 const TECHNICAL = /workflow|preset|préréglage|preconfiguraci|flujo de trabajo|vorlage/i;
 
+// Issue 1639: a dialog that offers CSV or Excel does not call the export CSV only.
+// The CSV-only sentence stays on a stored template. The format choice carries a note about the CSV file.
+const CSV_ONLY_LEAD = {
+  en: 'Export data as CSV',
+  fr: 'Exporter les données au format CSV',
+  de: 'Daten als CSV exportieren',
+  es: 'Exportar datos como CSV',
+} as const;
+
+const CSV_FILE_NOTE = {
+  en: 'A CSV file uses semicolon separators.',
+  fr: 'Un fichier CSV utilise le séparateur point-virgule.',
+  de: 'Eine CSV-Datei verwendet Semikolon als Trennzeichen.',
+  es: 'Un archivo CSV usa punto y coma como separador.',
+} as const;
+
+const CSV_FILE_NOTE_FLEXIBLE = {
+  en: 'In a CSV file, the separator, the decimal mark and the dates follow the language of the screen.',
+  fr: "Dans un fichier CSV, le séparateur, le séparateur décimal et les dates suivent la langue de l'écran.",
+  de: 'In einer CSV-Datei richten sich Trennzeichen, Dezimaltrennzeichen und Datumsformat nach der Sprache der Oberfläche.',
+  es: 'En un archivo CSV, el separador, el separador decimal y las fechas siguen el idioma de la pantalla.',
+} as const;
+
 describe('csv dialog copy', () => {
   const locales = { en, fr, de, es };
 
@@ -49,6 +72,18 @@ describe('csv dialog copy', () => {
       for (const value of [csv.importWorkflow, csv.overridePresetNote, csv.exportPreset, csv.fieldsSelected]) {
         expect(value).not.toMatch(TECHNICAL);
       }
+    }
+  });
+
+  it('names CSV in a CSV-only export, and talks about the CSV file when the dialog also offers Excel', () => {
+    for (const language of Object.keys(CSV_ONLY_LEAD) as (keyof typeof CSV_ONLY_LEAD)[]) {
+      const csv = locales[language].csv;
+      expect(csv.exportDescription.startsWith(CSV_ONLY_LEAD[language])).toBe(true);
+      expect(csv.exportDescriptionFlexible.startsWith(CSV_ONLY_LEAD[language])).toBe(true);
+      expect(csv.csvFileNote).toBe(CSV_FILE_NOTE[language]);
+      expect(csv.csvFileNoteFlexible).toBe(CSV_FILE_NOTE_FLEXIBLE[language]);
+      expect(csv.csvFileNote.includes(CSV_ONLY_LEAD[language])).toBe(false);
+      expect(csv.csvFileNoteFlexible.includes(CSV_ONLY_LEAD[language])).toBe(false);
     }
   });
 });

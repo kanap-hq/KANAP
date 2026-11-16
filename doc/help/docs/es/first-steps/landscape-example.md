@@ -61,7 +61,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué ve.** La exportación titula sus columnas en su idioma y la importación lee las mismas columnas: úsela como plantilla para sus propias aplicaciones. El libro de ejemplo contiene algunas aplicaciones, las demás columnas en una hoja **Avanzado** y lo que admite cada columna en una hoja **Notas**. Vincule después cada aplicación a sus tecnologías, en su pestaña **Operaciones**: Kadratis aporta el fin de soporte y las vulnerabilidades. **Exportar** e **Importar** se muestran a los administradores de la lista.
 
-Para partir de un archivo que ya mantiene, adjúntelo a un mensaje en Kad con **Adjuntar un archivo**. Kad lee los títulos de sus columnas, el tipo de cada columna y las diez primeras filas, y puede decir qué contiene cada columna.
+Para partir de un archivo que ya mantiene, adjúntelo a un mensaje en Kad con **Adjuntar un archivo**. Kad lee los títulos de sus columnas, el tipo de cada columna, las diez primeras filas y los valores que se repiten en sus columnas de texto, y puede decir qué contiene cada columna.
 
 ## Y después
 

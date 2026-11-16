@@ -84,7 +84,10 @@ export default function RequestsPage() {
   ) as Record<string, string>, [t]);
 
   const renderStatusCell = useCallback((props: any) => {
-    const status = props.value as string;
+    const status = props.value as string | null | undefined;
+    // No status (a loading placeholder, or an empty value): an empty cell.
+    // The key would otherwise be `statuses.request.undefined`.
+    if (status == null || status === '') return null;
     const label = t(`statuses.request.${status}`, { defaultValue: STATUS_LABELS[status] ?? status });
     return (
       <Box component="span" sx={(theme) => {

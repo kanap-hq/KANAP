@@ -249,7 +249,7 @@
     "title": "Agentenaktivität",
     "subtitle": "Vorschläge, Entscheidungen, Ausführungen, Pausen und Fehler prüfen.",
     "filters": "Filter",
-    "ticketSearch": "Ticketnummer",
+    "ticketSearch": "Referenz (T-15) oder Ticketnummer",
     "search": "Suchen",
     "timeline": "Zeitachse",
     "loadFailed": "Aktivität konnte nicht geladen werden.",
@@ -313,6 +313,7 @@
       "poller_cycle_completed": "Nach Tickets gesucht",
       "poller_cycle_completed_sre": "Nach Alarmen gesucht",
       "work_item_processing_failed": "Dieses Ticket konnte nicht verarbeitet werden",
+      "work_item_processing_failed_kad": "Diese Änderung konnte nicht verarbeitet werden",
       "work_item_processing_failed_sre": "Alarmverarbeitung fehlgeschlagen",
       "agent_deleted": "Agent gelöscht",
       "agent_attention_acknowledged": "Eintrag zur Kenntnis genommen"
@@ -739,7 +740,7 @@
     "actionClasses": {
       "internal_note": "Interne Notiz",
       "classification": "Klassifizierung aktualisieren",
-      "status": "Status aktualisieren",
+      "status": "Status aktualisieren (inklusive Schließen und Lösen)",
       "public_reply": "Antwort an Anfragende",
       "assignment": "Zuweisung",
       "participant": "Beobachter"

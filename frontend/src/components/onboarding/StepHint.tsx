@@ -6,7 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { readActiveStep, writeActiveStep, type ActiveStep } from './activeStep';
 import { onboardingApi } from './onboardingApi';
-import { STEP_PARAM, stepHintKey, stepScreen, stepTitleKey, type StepLocationState } from './onboardingPaths';
+import { STEP_ANGLE_PARAM, STEP_PARAM, stepHintKey, stepScreen, stepTitleKey, type StepLocationState } from './onboardingPaths';
 import { ONBOARDING_QUERY_KEY, useOnboarding, useOnboardingActions } from './useOnboarding';
 import { useOpenStep } from './useOpenStep';
 
@@ -74,6 +74,7 @@ export default function StepHint() {
     if (!paramKey) return;
     const params = new URLSearchParams(location.search);
     params.delete(STEP_PARAM);
+    params.delete(STEP_ANGLE_PARAM);
     const search = params.toString();
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
   }, [location.pathname, location.search, navigate, paramKey]);

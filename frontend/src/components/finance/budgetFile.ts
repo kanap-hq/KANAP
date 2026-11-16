@@ -95,6 +95,48 @@ export function yearsOfRange(from: number, to: number): number[] {
  */
 export type BudgetFileSentence = { message: string; code?: string; params?: Record<string, string | number> };
 
+/**
+ * A choice of the person on a check: a match undone (the value is then created, or refused), or the
+ * "Create missing suppliers" option. Sent as the `choices` form field, a JSON list, to the preflight
+ * and to the load; and in `{ choices }` to the import card's choice route.
+ */
+export type BudgetFileChoice =
+  | { kind: 'unmatch'; column: string; value: string }
+  | { kind: 'create_suppliers'; value: boolean };
+
+/** The matching of a check: `lines` are the lines of the person's file, the first 20; `count` all of them. */
+export type BudgetFileMatching = {
+  /** Values matched to an existing value beyond case; every one can be undone. */
+  matches: Array<{
+    column: string;
+    /** The dimension's name for an `analytics:` column; null for the supplier and the unnamed default dimension. */
+    name: string | null;
+    value: string;
+    target: string;
+    origin: 'server' | 'model';
+    reason: 'accents' | 'translation' | 'model';
+    lines: number[];
+    count: number;
+    undoable: true;
+  }>;
+  /** Kad's proposals the check refused: no such value (`missing`) or a disabled one. */
+  refusedProposals: Array<{ column: string; name: string | null; value: string; target: string; reason: 'missing' | 'disabled'; lines: number[]; count: number }>;
+  /** Values nothing matched (unknown companies included), with up to three closest names of the workspace's list. */
+  candidates: Array<{
+    column: string;
+    name: string | null;
+    value: string;
+    outcome: 'create' | 'refused';
+    lines: number[];
+    count: number;
+    candidates: Array<{ name: string; score: number }>;
+  }>;
+  /** The choices the check followed. */
+  choices: BudgetFileChoice[];
+  /** The "Create missing suppliers" box: shown when `allowed`, `value` the one followed. */
+  createSuppliers: { allowed: boolean; value: boolean };
+};
+
 export type BudgetFileReport = {
   ok: boolean;
   notices: { dates: string | null; amounts: string | null };
@@ -147,12 +189,14 @@ export type BudgetFileReport = {
     calculationLinesCount?: number;
   };
   creates: {
-    /** Unknown values the load will create. */
-    dimensionValues: Array<{ dimension: string; names: string[] }>;
+    /** Unknown values the load will create; `name` is the dimension's name (null for the unnamed default dimension). */
+    dimensionValues: Array<{ dimension: string; name?: string | null; names: string[] }>;
     /** Unknown values of a closed list, refused to a limited person (their rows are errors too). Limited only. */
-    refusedDimensionValues?: Array<{ dimension: string; names: string[] }>;
+    refusedDimensionValues?: Array<{ dimension: string; name?: string | null; names: string[] }>;
     suppliers: Array<{ name: string; erpId: string | null }>;
   };
+  /** What the check matched before creating, and what it could not (absent when the file was refused before its rows). */
+  matching?: BudgetFileMatching;
   supplierMessage: string | null;
   snapshot: { lines: unknown[] };
   /** An Excel workbook of several sheets: the name of the one read, the first. */
@@ -336,7 +380,17 @@ export type CheckOptions = {
   dateOrder: DateReading | null;
   decimalMark: AmountReading | null;
   createSuppliers: boolean;
+  /** The person's choices (matches undone): the load sends the list of the check it follows. */
+  choices?: BudgetFileChoice[];
 };
+
+/** The file and the choices, in the form's body: a choice names values of the file, never in the address. */
+function checkBody(file: File, options: CheckOptions): FormData {
+  const body = new FormData();
+  body.append('file', file);
+  if (options.choices?.length) body.append('choices', JSON.stringify(options.choices));
+  return body;
+}
 
 function checkParams(options: CheckOptions): Record<string, string> {
   const params: Record<string, string> = {
@@ -353,8 +407,7 @@ export function isBudgetFileReport(value: unknown): value is BudgetFileReport {
 }
 
 export async function preflightBudgetFile(scope: BudgetFileScope, file: File, options: CheckOptions): Promise<BudgetFileReport> {
-  const body = new FormData();
-  body.append('file', file);
+  const body = checkBody(file, options);
   const response = await api.post(`${budgetFileBase(scope)}/preflight`, body, { params: checkParams(options) });
   if (!isBudgetFileReport(response.data)) throw new Error('Unexpected preflight answer.');
   return response.data;
@@ -367,8 +420,7 @@ export async function loadBudgetFile(
   snapshot: BudgetFileReport['snapshot'],
   options: CheckOptions,
 ): Promise<BudgetFileLoad | BudgetFileReport> {
-  const body = new FormData();
-  body.append('file', file);
+  const body = checkBody(file, options);
   body.append('snapshot', JSON.stringify(snapshot));
   const response = await api.post(`${budgetFileBase(scope)}/import`, body, { params: checkParams(options) });
   return response.data as BudgetFileLoad | BudgetFileReport;

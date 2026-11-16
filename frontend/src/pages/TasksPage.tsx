@@ -179,6 +179,9 @@ export default function TasksPage() {
 
   const renderStatusCell = useCallback((props: any) => {
     const status = String(props.value || '');
+    // No status (a loading placeholder, or an empty value): an empty cell.
+    // The key would otherwise be `statuses.task.`.
+    if (!status) return null;
     const label = t(`statuses.task.${status}`, { defaultValue: STATUS_LABEL_MAP[status] || status });
     const colorKey = STATUS_COLOR_MAP[status] || 'default';
     return (

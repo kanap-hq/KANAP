@@ -348,8 +348,9 @@ export type TicketStatusUpdateActionPayload = {
   transitionKey: string;
   targetStatus: string;
   targetStatusLabel?: string | null;
-  // Terminal (solve/close) transitions are destructive cleanup actions that must
-  // always be human-approved and surfaced distinctly in approvals/audit.
+  // Terminal (solve/close) transitions are destructive cleanup actions, surfaced
+  // distinctly in approvals/audit and confirmed when approved by hand. They run
+  // on their own only under automatic Status update, after the requester reply.
   terminal: boolean;
   providerFields?: Record<string, unknown>;
   reason: string;
