@@ -267,6 +267,8 @@ Les délais et les seuils dépendent de votre juridiction et de votre secteur. K
 
 Les en-têtes, la gravité et le statut sont écrits dans la langue de l'export. L'import accepte les en-têtes et les valeurs dans chacune des quatre langues, ainsi que les codes techniques (`major`, `in_progress`). Une valeur inconnue est refusée, et le message liste les noms acceptés.
 
+Les colonnes du déclarant et du responsable prennent l'e-mail du compte de la personne ou son nom, prénom d'abord ou nom d'abord (`Camille Roux` ou `Roux Camille`). Un nom est retrouvé quelles que soient la casse et les accents. Voir [Noms des fiches](csv-files.md#names-of-records). Un nom partagé par plusieurs personnes refuse la ligne, et le message liste leurs e-mails : écrivez plutôt l'e-mail.
+
 Un statut peut avancer par fichier. Le faire reculer, ou annuler un incident, demande `incidents:admin` : le journal enregistre alors une réouverture ou une annulation avec le motif « Imported from CSV ». Pour un contributeur, une telle ligne est refusée avec un message.
 
 Le fichier porte la **Description** courte dans une colonne et toute la **Revue d'incident** dans une autre, sous forme de texte mis en forme. Cette unique colonne de revue remplace les anciennes colonnes Impact, Cause racine, Actions correctives et Enseignements. Titres, listes et liens survivent à l'aller-retour ; les images collées, non, puisqu'elles vivent dans le document. Une cellule de revue vide laisse le texte existant intact.
