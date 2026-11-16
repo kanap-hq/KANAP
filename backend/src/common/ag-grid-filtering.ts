@@ -312,8 +312,9 @@ export function bindPositional(compiled: CompiledCondition, params: unknown[]): 
 /**
  * A filter on a business reference column (`REQ-12`): the database holds the number
  * (`expression`), the grid shows it after its prefix. A text model matches the number's digits,
- * the prefix the user may type taken off first ("REQ-12" and "12" both find REQ-12); a number
- * model compares the number.
+ * the prefix the user may type taken off first ("REQ-12" and "12" both find REQ-12); a set model
+ * (the assistant's `["SUP-12"]`) compares each value's digits as a whole; a number model compares
+ * the number.
  */
 export function compileReferenceFilter(
   rawModel: any,
@@ -322,9 +323,12 @@ export function compileReferenceFilter(
   nextParam: ParamNameFactory,
 ): CompiledCondition | null {
   const typed = new RegExp(`^\\s*${prefix}\\s*-?\\s*`, 'i');
-  const strip = (model: any) => (model && typeof model === 'object' && typeof model.filter === 'string'
-    ? { ...model, filter: model.filter.replace(typed, '').trim() }
-    : model);
+  const stripText = (value: unknown) => (typeof value === 'string' ? value.replace(typed, '').trim() : value);
+  const strip = (model: any) => {
+    if (!model || typeof model !== 'object') return model;
+    if (Array.isArray(model.values)) return { ...model, values: model.values.map(stripText) };
+    return typeof model.filter === 'string' ? { ...model, filter: stripText(model.filter) } : model;
+  };
   const model = rawModel && typeof rawModel === 'object' && Array.isArray(rawModel.conditions)
     ? { ...rawModel, conditions: rawModel.conditions.map(strip) }
     : strip(rawModel);

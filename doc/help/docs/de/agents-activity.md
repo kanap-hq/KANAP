@@ -16,14 +16,14 @@ Die Aktivität ist der schreibgeschützte Verlauf all dessen, was Ihre Agenten g
 
 Die Zeitachse zeigt die neuesten Ereignisse zuerst. Zwei Steuerelemente grenzen sie ein:
 
-- **Ticketnummer**: geben Sie eine Ticketnummer ein und drücken Sie **Suchen** (oder die Eingabetaste), um nur die Ereignisse zu sehen, die mit diesem einen Ticket verknüpft sind. Das ist der schnellste Weg, die vollständige Geschichte eines einzelnen Tickets nachzuvollziehen: jede Prüfung, jeder Entwurf, jede Entscheidung und jede Änderung, der Reihe nach. Leeren Sie das Feld und suchen Sie erneut, um zum vollständigen Feed zurückzukehren.
+- **Referenz oder Ticketnummer**: geben Sie die auf dem Eintrag angezeigte Referenz (T-15, PRJ-3, APP-4) oder eine Ticketnummer ein und drücken Sie **Suchen** (oder die Eingabetaste). Die Zeitachse behält die Ereignisse zu diesem Datensatz. Eine Ticketnummer listet weiterhin die Ereignisse dieses Tickets. Leeren Sie das Feld und suchen Sie erneut, um zum vollständigen Feed zurückzukehren.
 - **Typ-Chips**: sieben Umschalter am oberen Rand: **Vorschlag**, **Entscheidung**, **Ausführung**, **Konfiguration**, **Prüfungen**, **Pause** und **Fehler**. Jeder ist ein Ein/Aus-Schalter und keine Einzelauswahl: Ein gefüllter Chip ist eingeschlossen, ein umrandeter ausgeschlossen, und Sie können beliebig viele kombinieren.
 
 **Standardmäßig sind alle Kategorien außer Prüfungen eingeschaltet.** Diese Voreinstellung ist Absicht. Ein überwachender Agent schreibt alle paar Minuten einen Prüfungseintrag, ob er etwas gefunden hat oder nicht; eingeschaltet begraben diese Zeilen genau die Einträge, die Sie tatsächlich lesen. Schalten Sie **Prüfungen** ein, wenn Sie sich vergewissern wollen, dass ein Agent lebt, oder wenn Sie untersuchen, warum er etwas aufgegriffen hat, oder eben nicht.
 
 Schalten Sie alle Chips aus, bleibt nichts zu zeigen, und die Zeitachse sagt das auch: *Wählen Sie mindestens eine Aktivitätsart, um den Verlauf zu sehen.*
 
-Die Ticketsuche und die Typ-Chips lassen sich kombinieren, sodass Sie sich zum Beispiel nur die Fehler zu Ticket #482 ansehen können. Ihre Auswahl steht in der Seitenadresse, eine gefilterte Ansicht ist also ein Link, den Sie einer Kollegin schicken können.
+Die Suche und die Typ-Chips lassen sich kombinieren, sodass Sie sich zum Beispiel nur die Fehler zu T-15 oder zu Ticket #482 ansehen können. Ihre Auswahl steht in der Seitenadresse, eine gefilterte Ansicht ist also ein Link, den Sie einer Kollegin schicken können.
 
 ---
 
@@ -112,7 +112,7 @@ Dieselbe Schaltfläche **Trace** erscheint unter [Freigaben](agents-approvals.md
 
 ## Tipps
 
-- Die Suche nach **Ticketnummer** ist der schnellste Weg, jemandem die vollständige, geordnete Geschichte eines Tickets zu übergeben (Prüfung, Vorschlag, Entscheidung und was gesendet wurde), ohne sich durch das Ticket selbst klicken zu müssen.
+- Die Suche nach der auf einem Eintrag angezeigten **Referenz** (T-15, PRJ-3) oder nach einer **Ticketnummer** ist der schnellste Weg, jemandem die geordnete Geschichte eines Datensatzes zu übergeben (Prüfung, Vorschlag, Entscheidung und was gesendet wurde), ohne den Datensatz selbst zu öffnen.
 - **Schalten Sie „Prüfungen" ein, wenn ein Agent untätig wirkt, und danach wieder aus.** Das ist der Unterschied zwischen „der Agent ist kaputt" und „der Agent überwacht, und es gibt nichts zu tun", aber es ist laut, und genau deshalb ist es standardmäßig aus.
 - Greifen Sie zum Filter **Ausführung**, um nur das zu sehen, was das System tatsächlich verlassen hat. Vorschläge und Entscheidungen sind Absichten; Ausführungen sind die Änderungen, die ein Anfragender oder Techniker sehen kann.
 - Ein Eintrag **Tageslimit erreicht** ist das System, das wie vorgesehen arbeitet, kein Fehler. Wenn ein Agent für den Rest eines Tages verstummt, ist das meist der Grund: erhöhen Sie seine Tageslimits in den [Einstellungen](agents-workspace.md) des Agenten, wenn das Limit für Ihr Volumen zu eng ist, und sehen Sie sich dort die **Heute**-Werte an, bevor Sie eine neue Zahl wählen.

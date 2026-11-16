@@ -5,6 +5,7 @@ import { formatCsvDate, formatCsvEndOfValidity } from './date';
 import { csvDecodeErrorCode } from './decode';
 import { CSV_FILE_EMPTY_MESSAGE, readSheet } from './read';
 import { CsvAmountColumn, CsvDataRow, CsvDateOrder, CsvLanguage } from './types';
+import { sameStoredValue } from './unchanged';
 
 /**
  * Reading a master-data file: companies, departments, users, suppliers,
@@ -246,6 +247,53 @@ export function nameMatchedWarning(row: number, column: string, fileName: string
     message: `'${fileName}' was matched to '${storedName}'.`,
     code: 'CSV_NAME_MATCHED_CASE',
     params: { name: fileName, stored: storedName },
+  };
+}
+
+/**
+ * The families whose file names a record by its reference (`COMP-3`), and the parent records a
+ * row can move it to. Each is the `context` of the warning's sentence (i18next): the interface
+ * writes `CSV_REFERENCE_RENAMES_<family>` or `CSV_REFERENCE_MOVES_<parent>` when that key exists,
+ * since a language may agree the verb or the article with the noun (« sera renommée », « de la
+ * société »), and the bare code otherwise.
+ */
+export type ReferenceFamily = 'company' | 'department' | 'supplier' | 'contact' | 'contract';
+export type ReferenceParent = 'company' | 'supplier';
+
+/**
+ * The warning of a row whose filled reference renames its record (D12 of 26.11.9): a file
+ * exported from another workspace names unrelated records by the same references, so the
+ * check says each name it will change. It blocks nothing. Null when the row keeps the stored
+ * name, compared as the import decides that a row is unchanged (`sameStoredValue`).
+ */
+export function referenceRenameWarning(
+  row: number,
+  change: { family: ReferenceFamily; reference: string; stored: string; next: string },
+): ImportReportError | null {
+  if (sameStoredValue(change.stored, change.next)) return null;
+  return {
+    row,
+    message: `${change.reference} "${change.stored}" will be renamed "${change.next}".`,
+    code: 'CSV_REFERENCE_RENAMES',
+    params: { reference: change.reference, stored: change.stored, name: change.next, context: change.family },
+  };
+}
+
+/**
+ * The warning of a row whose filled reference moves its record to another parent (a department
+ * to another company, a contract or a contact to another supplier). `name` is the record's
+ * stored name, `from` and `to` the names of the two parents. Null when the parent stays, by id.
+ */
+export function referenceMoveWarning(
+  row: number,
+  move: { parent: ReferenceParent; reference: string; name: string; storedParentId: string | null; nextParentId: string | null; from: string; to: string },
+): ImportReportError | null {
+  if (sameStoredValue(move.storedParentId, move.nextParentId)) return null;
+  return {
+    row,
+    message: `${move.reference} "${move.name}" will move from ${move.parent} "${move.from}" to "${move.to}".`,
+    code: 'CSV_REFERENCE_MOVES',
+    params: { reference: move.reference, name: move.name, from: move.from, to: move.to, context: move.parent },
   };
 }
 

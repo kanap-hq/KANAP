@@ -12,6 +12,16 @@ const COMPANY_METRIC_JOIN =
 export const companiesRegistry: AiEntityFilterRegistry = {
   entityType: 'companies',
   fields: {
+    reference: {
+      ai: 'reference',
+      grid: 'item_number',
+      type: 'set',
+      description: 'Company reference, such as COMP-12.',
+      acceptedValueKind: 'COMP-n reference',
+      examples: ['COMP-12'],
+      sortable: true,
+      groupable: false,
+    },
     status: {
       ai: 'status',
       grid: 'status',
@@ -111,6 +121,7 @@ export const companiesRegistry: AiEntityFilterRegistry = {
     },
   },
   sortFields: {
+    reference: 'item_number',
     label: 'name',
     name: 'name',
     status: 'status',

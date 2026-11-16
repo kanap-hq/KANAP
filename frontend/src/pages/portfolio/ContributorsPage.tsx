@@ -2,13 +2,14 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Alert, Autocomplete, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
+  Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
   IconButton, MenuItem, Stack, Tab, Tabs, TextField, type Theme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import PageHeader from '../../components/PageHeader';
+import UserSelect from '../../components/fields/UserSelect';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +18,7 @@ import { formatFigure } from './figures';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import {
-  compactSelectMenuProps, drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, pageSelectSx,
+  compactSelectMenuProps, drawerMenuItemSx, pageSelectSx,
 } from '../../theme/formSx';
 import {
   filterContributorsByEmploymentType, groupContributorsByTeam, sortGroupIds, UNASSIGNED_GROUP,
@@ -66,12 +67,6 @@ interface EmploymentType {
   is_active: boolean;
 }
 
-interface User {
-  id: string;
-  display_name: string;
-  email: string;
-}
-
 interface ContributorTimeStats {
   avgProjectDays: number;
   avgTotalDays: number;
@@ -114,7 +109,7 @@ export default function ContributorsPage() {
   const canEdit = hasLevel('portfolio_settings', 'member');
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterTeamId, setFilterTeamId] = useState<string>('all');
@@ -184,15 +179,6 @@ export default function ContributorsPage() {
     enabled: view === 'matrix',
   });
 
-  const { data: allUsers } = useQuery({
-    queryKey: ['users-for-contributor-select'],
-    queryFn: async () => {
-      const res = await api.get('/users', { params: { limit: 1000 } });
-      return (res.data?.items || []) as User[];
-    },
-    enabled: addDialogOpen,
-  });
-
   const teams = teamsData || [];
   const employmentTypes = employmentTypesData || [];
   const skills = skillsData?.items || [];
@@ -222,27 +208,24 @@ export default function ContributorsPage() {
       .filter(({ members }) => filterTeamId !== 'all' || members.length > 0);
   }, [contributors, filterTeamId, getTeamName, teams]);
 
-  // Users without a config yet, sorted by name (email only as a degraded fallback).
-  const availableUsers = useMemo(() => {
-    if (!allUsers || !data) return [];
-    const existingUserIds = new Set(data.map((m) => m.user_id));
-    return allUsers
-      .filter((u) => !existingUserIds.has(u.id))
-      .sort((a, b) => (a.display_name || a.email).localeCompare(b.display_name || b.email));
-  }, [allUsers, data]);
+  // People who already have a contributor page stay out of the add dialog.
+  const contributorUserIds = useMemo(
+    () => new Set((data || []).map((member) => member.user_id)),
+    [data],
+  );
 
   const toggleTeam = useCallback((groupId: string) => {
     setCollapsedTeams((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   }, []);
 
   const handleAdd = useCallback(async () => {
-    if (!selectedUser) return;
+    if (!selectedUserId) return;
     setAdding(true);
     setError(null);
     try {
-      const res = await api.post('/portfolio/team-members', { user_id: selectedUser.id });
+      const res = await api.post('/portfolio/team-members', { user_id: selectedUserId });
       setAddDialogOpen(false);
-      setSelectedUser(null);
+      setSelectedUserId(null);
       refetch();
       navigate(buildItemPath('contributor', formatItemRef('contributor', res.data.item_number)));
     } catch (e: any) {
@@ -250,7 +233,7 @@ export default function ContributorsPage() {
     } finally {
       setAdding(false);
     }
-  }, [navigate, refetch, selectedUser, t]);
+  }, [navigate, refetch, selectedUserId, t]);
 
   // Same shape as the requests page: the primary action first, secondary ones
   // as plain text buttons after it.
@@ -438,31 +421,19 @@ export default function ContributorsPage() {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error && <Alert severity="error">{error}</Alert>}
-            <Autocomplete
-              options={availableUsers}
-              getOptionLabel={(option: User) => option.display_name || option.email}
-              value={selectedUser}
-              onChange={(_, v) => setSelectedUser(v)}
-              ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-              renderOption={(props, option) => (
-                <li {...props} key={option.id}>{option.display_name || option.email}</li>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  variant="standard"
-                  label={t('contributors.dialog.selectUser')}
-                  placeholder={t('contributors.dialog.searchUsers')}
-                  sx={drawerFieldValueSx}
-                />
-              )}
-              fullWidth
+            <UserSelect
+              label={t('contributors.dialog.selectUser')}
+              placeholder={t('contributors.dialog.searchUsers')}
+              value={selectedUserId}
+              onChange={(id) => setSelectedUserId(id)}
+              excludeUserIds={contributorUserIds}
+              disabled={adding}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button variant="action" onClick={() => setAddDialogOpen(false)}>{t('common:buttons.cancel')}</Button>
-          <Button variant="action-primary" onClick={handleAdd} disabled={adding || !selectedUser}>
+          <Button variant="action-primary" onClick={handleAdd} disabled={adding || !selectedUserId}>
             {adding ? t('contributors.dialog.adding') : t('common:buttons.add')}
           </Button>
         </DialogActions>

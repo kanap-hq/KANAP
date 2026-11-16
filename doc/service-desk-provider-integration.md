@@ -101,7 +101,7 @@ Priority keys understood downstream (task import): `very_low`, `low`, `medium`/`
 
 ### 4.3 Lifecycle transitions — terminal flag is load-bearing
 
-`TicketLifecycleTransition` requires `{ key, label, requiresApproval, destructive, terminal }`. `terminal: true` on solve/close transitions is what makes the control plane **hard-block auto-execution** of ticket-closing actions (they always need human approval). Rules:
+`TicketLifecycleTransition` requires `{ key, label, requiresApproval, destructive, terminal }`. `terminal: true` on solve/close transitions is what makes the control plane treat them as ticket-closing actions: a red title and a confirmation when approved by hand, and, under automatic Status update, execution only after the requester reply of the same batch went out. Rules:
 
 - Use `solved` and `closed` as the transition keys for your terminal transitions (aligns with the legacy persisted-row backstops, §2).
 - Stamp `terminal` into `TicketStatusUpdateActionPayload` at prepare time (the field is required; the compiler enforces it).

@@ -25,6 +25,7 @@ Navigate to **Master Data > Departments** to see your department list. Click **N
 The Departments grid gives you an overview of all departments with their headcount for a given year.
 
 **Default columns**:
+- **Reference**: The reference Kadratis assigns (`DEPT-4`). Click it to open the workspace Overview tab
 - **Name**: Department name. Click to open the workspace Overview tab
 - **Company**: Parent company. Click to open the workspace Overview tab
 - **Headcount (Year)**: Employee count for the selected year. Click to jump straight to the Details tab for editing
@@ -37,9 +38,11 @@ The Departments grid gives you an overview of all departments with their headcou
 
 **Status scope**: Use the **Show: All / Enabled / Disabled** toggle to filter by department status. The list defaults to showing only enabled departments.
 
-**Quick search**: The search bar filters across department names.
+**Quick search**: The search bar filters across department names. Type a reference, such as `DEPT-4`, to find that department. Digits alone search the text.
 
-**Deep-linking**: Every cell in the grid is a clickable link. Name and Company open the Overview tab; Headcount opens the Details tab. When you navigate to a workspace and then return, your sort order, search query, and filters are preserved.
+**Column filters**: The **Reference** filter takes `DEPT-4` or `4`.
+
+**Deep-linking**: Every cell in the grid is a clickable link. Reference, Name and Company open the Overview tab; Headcount opens the Details tab. When you navigate to a workspace and then return, your sort order, search query, and filters are preserved.
 
 **Actions**:
 - **New**: Create a new department (requires `departments:member`)
@@ -53,8 +56,10 @@ The Departments grid gives you an overview of all departments with their headcou
 
 Click any row to open the workspace. It has three tabs: **Overview**, **Details** and **History** (the changes made to the department, see [Record history](record-history.md)).
 
-- **Header**: the department name. Click it to rename the department. **Prev** / **Next** move between departments in the list's order and filters without returning to the list, and the close button returns to the list
+- **Header**: the department reference (`DEPT-5`, click it to copy it) and the department name. Click the name to rename the department. **Prev** / **Next** move between departments in the list's order and filters without returning to the list, and the close button returns to the list
 - **Properties panel** on the right: **Company** and **Lifecycle**
+
+**Page address**: the address of the page uses the reference, for example `/master-data/departments/DEPT-5/overview`. The former address of a department page still opens it, and changes to the new one.
 
 **Autosave**: Every change saves on its own. There is no Save button. The name and the description save when you leave the field; the company and the lifecycle save as soon as you change them. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it.
 
@@ -97,12 +102,13 @@ The Details tab manages year-by-year headcount metrics.
 
 The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
 
-**Export** downloads the departments the list shows (or, on request in the dialog, every department) with its company, name, description, status and end of validity. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
+**Export** downloads the departments the list shows (or, on request in the dialog, every department) with its reference, company, name, description, status and end of validity. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
 
-The columns:
+The columns, in this order:
 
 | Column | Content |
 |---|---|
+| `reference` | Optional. The department reference (`DEPT-12`). The export writes it |
 | `company_name` | Required. The company the department belongs to, by name |
 | `name` | Required. The department name |
 | `description` | Free text |
@@ -112,11 +118,15 @@ The columns:
 **Import**:
 
 - Use **Preflight check** to validate the file before applying it, then **Load**
-- Matched by department name and company name: a row updates the department it names, any other row creates one
+- **Matching by reference**: a filled `reference` (`DEPT-12` or `12`) names the department the row updates, even when the name has changed. The department takes the name and the company of the row: a different company moves it to that company. The preflight check lists each department that will be renamed or move to another company
+- **Matching by name**: when `reference` is empty, or the file has no such column, a row is matched by department name and company name. It updates the department it names, and any other row creates one
+- **Unknown reference**: a reference your workspace does not know refuses the row: "\"DEPT-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
+- **Renaming or moving**: a name that another department of the row's company already has is refused, and the message names that department's reference: "\"Finance\" already belongs to DEPT-7."
+- **One row per department**: two rows that update the same department are refused: "This row updates DEPT-7, as row 3 does. Keep one row per record."
 
 **Required cells**: `name` and `company_name`, an existing company
 
-**Optional cells**: `description`, `status`, `disabled_at`
+**Optional cells**: `reference`, `description`, `status`, `disabled_at`
 
 **Lifecycle columns**:
 - `status` is `enabled` or `disabled`, and `disabled_at` is the end of validity, a date (`2026-12-31`) or a full date and time. The export writes the status read from the end of validity. A new department is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the department today

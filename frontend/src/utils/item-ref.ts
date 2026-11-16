@@ -5,6 +5,11 @@ export function formatItemRef(type: ItemType, itemNumber: number): string {
   return `${PREFIXES[type]}-${itemNumber}`;
 }
 
+/** A record's page address segment: its reference (`COMP-12`) when it has a number, else its uuid. */
+export function itemAddress(type: ItemType, record: { id: string; item_number?: number | null }): string {
+  return record.item_number ? formatItemRef(type, record.item_number) : record.id;
+}
+
 export function buildItemPath(type: ItemType, idOrRef: string): string {
   const paths = {
     task: '/portfolio/tasks',
@@ -22,11 +27,11 @@ export function buildItemPath(type: ItemType, idOrRef: string): string {
     incident: '/it/incidents',
     contributor: '/portfolio/contributors',
     technology: '/it/technologies',
-    // These pages open by the uuid until their reference address ships (lots R2 to R4): pass the id.
-    supplier: '/master-data/suppliers',
     company: '/master-data/companies',
-    contact: '/master-data/contacts',
     department: '/master-data/departments',
+    // These pages open by the uuid until their reference address ships (lots R3 and R4): pass the id.
+    supplier: '/master-data/suppliers',
+    contact: '/master-data/contacts',
     contract: '/ops/contracts',
   };
   return `${paths[type]}/${idOrRef}`;

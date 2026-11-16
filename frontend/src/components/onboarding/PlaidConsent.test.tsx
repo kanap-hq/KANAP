@@ -81,4 +81,25 @@ describe('PlaidConsent', () => {
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(env.getSettings).not.toHaveBeenCalled();
   });
+
+  // The provider name comes from the server, so the French sentence cannot elide "que" itself.
+  // A passive wording stays correct for a vowel (Anthropic) and a consonant (Mistral).
+  it('states the French consent without placing the provider name after que', async () => {
+    await i18n.changeLanguage('fr');
+    const sentence = (name: string) => new RegExp(
+      `^J'accepte que mes questions et les données qu'elles concernent soient traitées par ${name} \\(.+\\) pour les réponses de ${AGENT_NAME}\\. Elles ne servent pas à entraîner ses modèles\\.$`,
+    );
+
+    const first = renderConsent();
+    await screen.findByRole('checkbox');
+    expect(screen.getByText(sentence('Anthropic'))).toBeInTheDocument();
+    expect(screen.queryByText(/que Anthropic/)).not.toBeInTheDocument();
+    first.unmount();
+
+    env.provider = { name: 'Mistral', location: 'EU', key: 'k2' };
+    renderConsent();
+    await screen.findByRole('checkbox');
+    expect(screen.getByText(sentence('Mistral'))).toBeInTheDocument();
+    expect(screen.queryByText(/que Mistral/)).not.toBeInTheDocument();
+  });
 });

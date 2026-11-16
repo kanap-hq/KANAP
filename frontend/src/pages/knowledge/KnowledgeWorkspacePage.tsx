@@ -41,7 +41,7 @@ import { knowledgeFolderName, knowledgeLibraryName } from '../../utils/knowledge
 import { normalizeMarkdownForRichTextEditor } from '../../lib/markdownEditorNormalization';
 import { releaseLockKeepalive } from '../../lib/releaseLockKeepalive';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
-import { classifyKnowledgeLoadError } from './knowledgeLoadError';
+import { classifyKnowledgeLoadError, isKnowledgeDocumentAddress } from './knowledgeLoadError';
 import EditableTitle from '../../components/workspace/EditableTitle';
 import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 
@@ -414,7 +414,7 @@ export default function KnowledgeWorkspacePage() {
     queryKey: ['knowledge', id],
     queryFn: async () => (await api.get(`/knowledge/${id}`)).data,
     enabled: !isCreate,
-    // A 404/403 is a final answer: retrying only delays the "not found" screen.
+    // A 400, 404 or 403 is a final answer: retrying only delays the "not found" screen.
     retry: (failureCount, err) => classifyKnowledgeLoadError(err) === 'failure' && failureCount < 2,
   });
   const documentLoadErrorKind = isCreate ? null : classifyKnowledgeLoadError(documentLoadError);
@@ -454,16 +454,20 @@ export default function KnowledgeWorkspacePage() {
     addToRecent('document', doc.id, title || itemNumber || t('shared.document'), itemNumber);
   }, [addToRecent, doc?.id, doc?.item_number, doc?.title, isCreate, t]);
 
+  // `/knowledge/documents` is neither an id nor a DOC-N reference. Versions and
+  // activities use that same segment, so they are not requested.
+  const documentAddress = isKnowledgeDocumentAddress(id);
+
   const { data: versions } = useQuery({
     queryKey: ['knowledge-versions', id],
     queryFn: async () => (await api.get(`/knowledge/${id}/versions`)).data,
-    enabled: !isCreate && sidebarOpen,
+    enabled: !isCreate && sidebarOpen && documentAddress,
   });
 
   const { data: activities } = useQuery({
     queryKey: ['knowledge-activities', id],
     queryFn: async () => (await api.get(`/knowledge/${id}/activities`)).data,
-    enabled: !isCreate && sidebarOpen,
+    enabled: !isCreate && sidebarOpen && documentAddress,
   });
 
   const { data: libraries = [], status: librariesStatus } = useQuery({

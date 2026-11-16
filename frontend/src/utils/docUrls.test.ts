@@ -48,15 +48,30 @@ describe('getDocUrl', () => {
     expect(getDocUrl('/it/locations', 'fr', '?step=own_sites')).toBe('https://doc.kadratis.com/fr/first-steps/landscape-own-data/');
     expect(getDocUrl('/portfolio/projects/PRJ-3/relations', 'de', '?step=own_project_budget')).toBe('https://doc.kadratis.com/de/first-steps/portfolio-own-data/');
     expect(getDocUrl('/portfolio/contributors/me', 'es', '?step=own_invite')).toBe('https://doc.kadratis.com/es/first-steps/portfolio-own-data/');
-    // On the users list, the colleague step ends two paths: the route's manual stays.
+    // The colleague step on the users list names its path. Without that name, the Administration manual stays.
+    expect(stepHref('own_invite', 'budget')).toBe('/admin/users?step=own_invite&angle=budget');
+    expect(stepHref('own_invite', 'cartography')).toBe('/admin/users?step=own_invite&angle=cartography');
+    expect(stepHref('own_invite', 'portfolio')).toBe('/portfolio/contributors/me?step=own_invite');
+    for (const locale of [undefined, 'fr', 'de', 'es'] as const) {
+      const prefix = locale ? `/${locale}` : '';
+      const budget = stepHref('own_invite', 'budget') ?? '';
+      const landscape = stepHref('own_invite', 'cartography') ?? '';
+      expect(getDocUrl('/admin/users', locale, `?${budget.split('?')[1]}`)).toBe(`https://doc.kadratis.com${prefix}/first-steps/budget-own-data/`);
+      expect(getDocUrl('/admin/users', locale, `?${landscape.split('?')[1]}`)).toBe(`https://doc.kadratis.com${prefix}/first-steps/landscape-own-data/`);
+      expect(getDocUrl('/admin/users', locale)).toBe(`https://doc.kadratis.com${prefix}/admin/`);
+    }
     expect(getDocUrl('/admin/users', undefined, '?step=own_invite')).toBe('https://doc.kadratis.com/admin/');
+    expect(getDocUrl('/admin/users', 'fr', '?step=own_invite&angle=portfolio')).toBe('https://doc.kadratis.com/fr/admin/');
     expect(getDocUrl('/ops/budget', undefined, '?step=unknown')).toBe('https://doc.kadratis.com/budget-lines/');
   });
 
   it('gives every trial step a guide', () => {
     for (const key of Object.keys(STEP_SCREENS)) {
-      const [path, search] = (stepHref(key, key === 'own_invite' ? 'portfolio' : null) ?? '').split('?');
-      expect(getDocUrl(path, undefined, `?${search}`), key).toMatch(/^https:\/\/doc\.kadratis\.com\/first-steps\//);
+      const angles = key === 'own_invite' ? (['budget', 'cartography', 'portfolio'] as const) : [null];
+      for (const angle of angles) {
+        const [path, search] = (stepHref(key, angle) ?? '').split('?');
+        expect(getDocUrl(path, undefined, `?${search}`), `${key} ${angle ?? ''}`).toMatch(/^https:\/\/doc\.kadratis\.com\/first-steps\//);
+      }
     }
   });
 

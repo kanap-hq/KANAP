@@ -182,6 +182,9 @@ function useActionClassLabel() {
 
 const COMPACT_ACTIVITY_LIMIT = 10;
 
+// Kad's approved changes (`backend/src/ai/control-plane/capability/capability-contract.ts`).
+const APPROVED_CHANGE_CAPABILITY = 'kanap.mutation_preview.execute_approved';
+
 export default function AgentsActivityPage({ agentKey, compact = false }: { agentKey?: string; compact?: boolean }) {
   const { t } = useTranslation(['agents']);
   const locale = useLocale();
@@ -241,8 +244,13 @@ export default function AgentsActivityPage({ agentKey, compact = false }: { agen
     return map;
   }, [queueQuery.data]);
   // SRE entries use alert-flavored titles where one exists (`<key>_sre`),
-  // falling back to the shared ticket-flavored title. Resolved at render time
-  // so historical entries are relabeled too.
+  // falling back to the shared ticket-flavored title. A Kad entry (an approved
+  // change, or a record with no agent) uses `<key>_kad` the same way. The keys
+  // such an entry carries are proposal_created, action_executed, action_failed,
+  // decision_approved, decision_rejected, decision_dismissed and run_failed;
+  // of those, only work_item_processing_failed names a ticket, so only that one
+  // has a `_kad` text. Watcher titles (`poller_*`) have none and stay as they are.
+  // Resolved at render time so historical entries are relabeled too.
   const agentTypeByKey = React.useMemo(() => {
     const map = new Map<string, string>();
     for (const definition of queueQuery.data?.definitions ?? []) map.set(definition.agent_key, definition.agent_type ?? 'helpdesk');
@@ -251,11 +259,18 @@ export default function AgentsActivityPage({ agentKey, compact = false }: { agen
   const activityTitle = React.useCallback((entry: {
     agentKey?: string | null;
     titleKey: string;
+    capabilityName?: string | null;
+    actionClass?: string | null;
+    targetType?: string | null;
     detail?: AiAgentControlActivityDetail | null;
   }) => {
     const isSre = !!entry.agentKey && agentTypeByKey.get(entry.agentKey) === 'sre';
+    const isKad = entry.capabilityName === APPROVED_CHANGE_CAPABILITY
+      || entry.actionClass === APPROVED_CHANGE_CAPABILITY
+      || (!entry.agentKey && !!entry.targetType && entry.targetType !== 'ticket' && entry.targetType !== 'alert');
     const fallback = t(`activity.titles.${entry.titleKey}`, { defaultValue: humanize(entry.titleKey) });
-    const base = isSre ? t(`activity.titles.${entry.titleKey}_sre`, { defaultValue: fallback }) : fallback;
+    const flavoredKey = isSre ? `${entry.titleKey}_sre` : isKad ? `${entry.titleKey}_kad` : null;
+    const base = flavoredKey ? t(`activity.titles.${flavoredKey}`, { defaultValue: fallback }) : fallback;
     const summary = entry.detail?.check ? checkSummary(entry.detail.check, isSre) : null;
     return summary ? t('activity.titleWithSummary', { title: base, summary }) : base;
   }, [agentTypeByKey, checkSummary, t]);

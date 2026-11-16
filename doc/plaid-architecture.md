@@ -1447,7 +1447,13 @@ vision step describes requester screenshots first. All stages call
 - **Freshness.** Before writing, the executor re-checks that the ticket did
   not move. The agent's `on_stale_by_action_class` policy picks `re_review`
   (default), `cancel`, or `apply_anyway`. A terminal close (`solved` or
-  `closed`) always re-fetches the ticket and is always human-approved.
+  `closed`) always re-fetches the ticket.
+- **Automatic execution.** When the agent's autonomy for an action class is
+  automatic, the actions of that class a triage prepared run at once. A
+  terminal close follows the `status` class. In one pass it runs after every
+  other action, and it waits in the approvals queue
+  (`close_waits_for_requester_reply`) while a requester reply of the same
+  batch did not run: a ticket never closes before its reply goes out.
 - **Retries.** The sweeper (every 10 minutes) resumes approved actions with a
   backoff of 30, 60, 120 and 240 minutes. After 5 failed attempts the action
   is flagged for review. An `executing` claim abandoned for 10 minutes returns

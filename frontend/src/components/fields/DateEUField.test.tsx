@@ -230,6 +230,18 @@ describe('DateEUField sends a typed date once, when the typing ends', () => {
     expect(onChangeYmd.mock.calls).toEqual([['2022-03-15']]);
   });
 
+  it('types a month that starts with zero without taking the year digit', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    await user.type(input, '01012026', { skipClick: true });
+    expect(input.value).toBe('01/01/2026');
+    expect(onChangeYmd).not.toHaveBeenCalled();
+    fireEvent.blur(input);
+    expect(onChangeYmd.mock.calls).toEqual([['2026-01-01']]);
+  });
+
   it('sends the date on Enter, keeps the focus, and does not send it again on blur', async () => {
     const user = userEvent.setup();
     const { onChangeYmd } = renderField({ valueYmd: '2022-03-21' });

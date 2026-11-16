@@ -249,7 +249,7 @@
     "title": "Agent activity",
     "subtitle": "Review proposals, decisions, executions, pauses, and errors.",
     "filters": "Filters",
-    "ticketSearch": "Ticket number",
+    "ticketSearch": "Reference (T-15) or ticket number",
     "search": "Search",
     "timeline": "Timeline",
     "loadFailed": "Could not load activity.",
@@ -313,6 +313,7 @@
       "poller_cycle_completed": "Looked for tickets",
       "poller_cycle_completed_sre": "Looked for alerts",
       "work_item_processing_failed": "Couldn't process this ticket",
+      "work_item_processing_failed_kad": "Couldn't process this change",
       "work_item_processing_failed_sre": "Alert processing failed",
       "agent_deleted": "Agent deleted",
       "agent_attention_acknowledged": "Attention item acknowledged"
@@ -739,7 +740,7 @@
     "actionClasses": {
       "internal_note": "Internal note",
       "classification": "Classification update",
-      "status": "Status update",
+      "status": "Status update (including close and solve)",
       "public_reply": "Requester reply",
       "assignment": "Assignment",
       "participant": "Observers"

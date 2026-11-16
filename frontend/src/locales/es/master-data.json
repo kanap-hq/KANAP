@@ -87,6 +87,7 @@
     "companyFallback": "Empresa",
     "loadError": "Error al cargar la empresa.",
     "columns": {
+      "reference": "Referencia",
       "city": "Ciudad",
       "postalCode": "Código postal",
       "address1": "Dirección 1",
@@ -185,6 +186,7 @@
     "loadError": "Error al cargar el departamento.",
     "selectCompanyFirst": "Seleccione primero una empresa",
     "columns": {
+      "reference": "Referencia",
       "company": "Empresa",
       "headcountYear": "Plantilla ({{year}})"
     },

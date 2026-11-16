@@ -63,6 +63,7 @@ function templateColumn(spec: AiImportColumnSpec, settings: ItOpsSettings | null
     kind: spec.kind,
     multi: spec.multi === true,
     percent: spec.percent === true,
+    ...(spec.prefix ? { prefix: spec.prefix } : {}),
   };
   if (spec.kind === 'catalog' && spec.catalog && settings) {
     const list = spec.catalog;
@@ -292,10 +293,13 @@ function writeMatches(file: AiImportMappingResult['file'], matches: readonly Bud
  * An import that replaces every value of a record it updates clears the template's columns the file
  * lacks: a file without some of them is refused when it would update existing records, whose values in
  * those columns would be lost. A file of new records only, or of every column, imports as on the screen.
+ * The family's own reference column (`COMP-n`) is a key, not a value: a file without it updates by
+ * name and clears nothing.
  */
 export function refuseClearedColumns(run: AiImportRunDto, left: readonly AiImportTemplateColumn[]): AiImportRunDto {
-  if (left.length === 0 || run.updated === 0 || run.report.kind !== 'rows') return run;
-  const columns = left.map((column) => column.title).join(', ');
+  const cleared = left.filter((column) => !(column.kind === 'reference' && column.prefix));
+  if (cleared.length === 0 || run.updated === 0 || run.report.kind !== 'rows') return run;
+  const columns = cleared.map((column) => column.title).join(', ');
   const error = {
     row: 0,
     message: (run.updated === 1

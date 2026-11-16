@@ -211,6 +211,7 @@ export default function AdminAiModelsPage() {
     destination: null,
   });
   const [error, setError] = React.useState<string | null>(null);
+  const [dialogError, setDialogError] = React.useState<string | null>(null);
   const [testResult, setTestResult] = React.useState<AiProviderTestResult | null>(null);
 
   const invalidate = () => {
@@ -228,8 +229,8 @@ export default function AdminAiModelsPage() {
   const saveMutation = useMutation({
     mutationFn: (input: { id: string | null; payload: AiModelConfigInput }) =>
       input.id ? aiModelConfigsApi.update(input.id, input.payload) : aiModelConfigsApi.create(input.payload),
-    onSuccess: () => { invalidate(); setDialogOpen(false); setError(null); },
-    onError: (err) => setError(readError(err, t('aiModels.errors.saveFailed'))),
+    onSuccess: () => { invalidate(); setDialogOpen(false); setError(null); setDialogError(null); },
+    onError: (err) => setDialogError(readError(err, t('aiModels.errors.saveFailed'))),
   });
   const archiveMutation = useMutation({
     mutationFn: (id: string) => aiModelConfigsApi.archive(id),
@@ -249,8 +250,8 @@ export default function AdminAiModelsPage() {
   });
   const testMutation = useMutation({
     mutationFn: (input: { id: string | null; draft: AiModelTestDraft }) => aiModelConfigsApi.test(input.id, input.draft),
-    onSuccess: (result) => setTestResult(result),
-    onError: (err) => setError(readError(err, t('aiModels.errors.testFailed'))),
+    onSuccess: (result) => { setDialogError(null); setTestResult(result); },
+    onError: (err) => setDialogError(readError(err, t('aiModels.errors.testFailed'))),
   });
 
   // The levels the chosen provider and model accept (backend reasoning-effort.capability.ts).
@@ -275,6 +276,8 @@ export default function AdminAiModelsPage() {
     if (!effortSupport || draft.reasoning_effort === '') return;
     if (!effortSupport.levels.includes(draft.reasoning_effort)) {
       setDraft((prev) => ({ ...prev, reasoning_effort: '' }));
+      // The test described the effort that was on screen. That level is no longer offered.
+      setTestResult(null);
     }
   }, [effortSupport, draft.reasoning_effort]);
 
@@ -314,6 +317,7 @@ export default function AdminAiModelsPage() {
     setDraft(EMPTY_DRAFT);
     setSavedKey({ present: false, destination: null });
     setError(null);
+    setDialogError(null);
     setTestResult(null);
     setDialogOpen(true);
   };
@@ -325,11 +329,13 @@ export default function AdminAiModelsPage() {
       destination: keyDestination(modelConfig.provider, modelConfig.endpoint_url),
     });
     setError(null);
+    setDialogError(null);
     setTestResult(null);
     setDialogOpen(true);
   };
 
   const handleProviderChange = (provider: string) => {
+    if (provider !== draft.provider) setTestResult(null);
     setDraft((prev) => ({
       ...prev,
       provider,
@@ -368,6 +374,7 @@ export default function AdminAiModelsPage() {
   const handleTest = () => {
     if (testDisabled) return;
     setTestResult(null);
+    setDialogError(null);
     testMutation.mutate({
       id: editingId,
       draft: {
@@ -382,6 +389,7 @@ export default function AdminAiModelsPage() {
 
   const handleSave = () => {
     if (saveDisabled) return;
+    setDialogError(null);
     const payload: AiModelConfigInput = {
       name: draft.name.trim(),
       provider: draft.provider,
@@ -584,6 +592,9 @@ export default function AdminAiModelsPage() {
           saveLoading={saveMutation.isPending}
         >
           <Stack spacing={1.5}>
+            {dialogError && (
+              <Alert severity="error" onClose={() => setDialogError(null)}>{dialogError}</Alert>
+            )}
             {testResult && (
               <Alert severity={testResult.ok ? 'success' : 'error'} onClose={() => setTestResult(null)}>
                 {testResultLine(testResult)}
@@ -618,7 +629,11 @@ export default function AdminAiModelsPage() {
                 value={draft.model}
                 placeholder={t('aiModels.dialog.modelPlaceholder')}
                 sx={drawerFieldValueSx}
-                onChange={(event) => setDraft((prev) => ({ ...prev, model: event.target.value }))}
+                onChange={(event) => {
+                  const model = event.target.value;
+                  if (model !== draft.model) setTestResult(null);
+                  setDraft((prev) => ({ ...prev, model }));
+                }}
               />
             </PropertyRow>
             {(selectedProvider?.capabilities.allowsCustomEndpoint ?? true) && (
@@ -629,7 +644,11 @@ export default function AdminAiModelsPage() {
                   value={draft.endpoint_url}
                   placeholder={t('aiModels.dialog.endpointPlaceholder')}
                   sx={drawerFieldValueSx}
-                  onChange={(event) => setDraft((prev) => ({ ...prev, endpoint_url: event.target.value }))}
+                  onChange={(event) => {
+                    const endpointUrl = event.target.value;
+                    if (endpointUrl !== draft.endpoint_url) setTestResult(null);
+                    setDraft((prev) => ({ ...prev, endpoint_url: endpointUrl }));
+                  }}
                 />
               </PropertyRow>
             )}
@@ -651,7 +670,9 @@ export default function AdminAiModelsPage() {
                 }}
                 onChange={(event) => {
                   const next = event.target.value;
-                  setDraft((prev) => ({ ...prev, api_key: next === API_KEY_MASK ? '' : next }));
+                  const apiKey = next === API_KEY_MASK ? '' : next;
+                  if (apiKey !== draft.api_key) setTestResult(null);
+                  setDraft((prev) => ({ ...prev, api_key: apiKey }));
                 }}
               />
             )}
@@ -771,10 +792,11 @@ export default function AdminAiModelsPage() {
                       disabled={effortUnavailable}
                       sx={drawerSelectSx}
                       SelectDisplayProps={{ 'aria-label': t('aiModels.dialog.reasoningEffort') } as React.HTMLAttributes<HTMLDivElement>}
-                      onChange={(event) => setDraft((prev) => ({
-                        ...prev,
-                        reasoning_effort: event.target.value as AiReasoningEffort | '',
-                      }))}
+                      onChange={(event) => {
+                        const reasoningEffort = event.target.value as AiReasoningEffort | '';
+                        if (reasoningEffort !== draft.reasoning_effort) setTestResult(null);
+                        setDraft((prev) => ({ ...prev, reasoning_effort: reasoningEffort }));
+                      }}
                     >
                       <MenuItem value="" sx={drawerMenuItemSx}>{t('aiModels.dialog.reasoningEffortDefault')}</MenuItem>
                       {effortLevels.map((effort) => (

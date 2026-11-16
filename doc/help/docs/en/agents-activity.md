@@ -16,14 +16,14 @@ Activity is the read-only history of everything your agents have done and everyt
 
 The timeline shows the most recent events first. Two controls narrow it down:
 
-- **Ticket number**: type a ticket number and press **Search** (or Enter) to see only the events tied to that one ticket. This is the fastest way to reconstruct the full story of a single ticket: every check, draft, decision, and change, in order. Clear the box and search again to return to the full feed.
+- **Reference or ticket number**: type the reference shown on the entry (T-15, PRJ-3, APP-4) or a ticket number, then press **Search** (or Enter). The timeline keeps the events about that record. A ticket number still lists the events of that ticket. Clear the box and search again to return to the full feed.
 - **Type chips**: seven toggles across the top (**Proposal**, **Decision**, **Execution**, **Configuration**, **Checks**, **Pause**, and **Error**). Each one is an on/off switch, not a single choice: a filled chip is included, an outlined one is excluded, and you can combine as many as you like.
 
 **By default every category is on except Checks.** That default is deliberate. A watching agent writes a check entry every few minutes whether or not it found anything, and left on, those rows bury the entries you actually read. Turn **Checks** on when you want to confirm an agent is alive, or when you're investigating why it did (or didn't) pick something up.
 
 Turning every chip off leaves nothing to show, and the timeline says so: *Pick at least one activity type to see the timeline.*
 
-The ticket search and the type chips combine, so you can look at, say, only the errors on ticket #482. Your selection lives in the page address, so a filtered view is a link you can send to a colleague.
+The search and the type chips combine, so you can look at, say, only the errors for T-15 or for ticket #482. Your selection lives in the page address, so a filtered view is a link you can send to a colleague.
 
 ---
 
@@ -112,7 +112,7 @@ The same **Trace** button appears in [Approvals](agents-approvals.md) and on an 
 
 ## Tips
 
-- Searching by **ticket number** is the fastest way to hand someone the full, ordered story of one ticket (check, proposal, decision, and what was sent) without clicking through the ticket itself.
+- Searching by the **reference** shown on an entry (T-15, PRJ-3) or by a **ticket number** is the fastest way to hand someone the ordered story of one record (check, proposal, decision, and what was sent) without opening the record itself.
 - **Turn Checks on when an agent seems idle, and off again afterwards.** It is the difference between "the agent is broken" and "the agent is watching and there's nothing to do", but it is noisy, which is why it starts off.
 - Reach for the **Execution** filter to see only what actually left the building. Proposals and decisions are intentions; executions are the changes a requester or technician can see.
 - A **Daily safety cap reached** entry is the system working as designed, not a bug. If an agent went quiet for the rest of a day, this is usually why. Raise its daily limits in the agent's [Settings](agents-workspace.md) if the cap is too tight for your volume, and check the **Today** figures there before you pick a new number.

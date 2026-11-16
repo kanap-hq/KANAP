@@ -369,7 +369,8 @@
       "no": "No",
       "readErrors": {
         "mixed-date-orders": "Fechas escritas con el día primero y con el mes primero",
-        "mixed-decimal-marks": "Números escritos con coma decimal y con punto decimal"
+        "mixed-decimal-marks": "Números escritos con coma decimal y con punto decimal",
+        "reference-without-prefix": "Valores sin el prefijo de referencia: no leídos"
       }
     },
     "importRun": {

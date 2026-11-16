@@ -20,6 +20,9 @@ vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.
 vi.mock('../../hooks/useDepartmentNav', () => ({
   useDepartmentNav: () => ({ ids: [], index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
+vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
+  useRecentlyViewed: () => ({ items: [], addToRecent: vi.fn(), clearRecent: vi.fn() }),
+}));
 // The company picker searches the API: a button stands in.
 vi.mock('../../components/fields/CompanySelect', () => ({
   default: (props: { onChange: (v: string | null) => void }) => (
@@ -33,7 +36,7 @@ import DepartmentWorkspacePage from './DepartmentWorkspacePage';
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
 /** What the server stores for the department the draft created: only what was sent with it. */
-const STORED = { id: 'd-new', name: 'Finance', company_id: 'company-2', description: null, status: 'enabled', disabled_at: null };
+const STORED = { id: 'd-new', item_number: 7, name: 'Finance', company_id: 'company-2', description: null, status: 'enabled', disabled_at: null };
 
 /** The server's copy of the department: a patch changes what a read returns. */
 let server: typeof STORED;
@@ -78,7 +81,8 @@ describe('DepartmentWorkspacePage typing while the department is created', () =>
     resetCreationStore();
     server = { ...STORED };
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === '/departments/d-new') return { data: server };
+      // The server reads the department by its uuid or its reference alike.
+      if (url === '/departments/d-new' || url === '/departments/DEPT-7') return { data: server };
       return { data: { items: [] } };
     });
     mocked.patch.mockImplementation(async (_url: string, body: object) => {
@@ -99,7 +103,7 @@ describe('DepartmentWorkspacePage typing while the department is created', () =>
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });
-      await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/master-data/departments/d-new/overview'));
+      await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/master-data/departments/DEPT-7/overview'));
       await until(() => { if (!mocked.get.mock.calls.some(([url]) => url === '/departments/d-new')) throw new Error('department not read'); });
     };
     return { finish };

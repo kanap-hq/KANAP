@@ -194,6 +194,9 @@ export default function TaskWorkspacePage() {
   const canManage = hasLevel('tasks', 'member');
   const canDelete = hasLevel('tasks', 'admin');
   const canCreateRequest = hasLevel('portfolio_requests', 'member');
+  // A new task has no server row. Null hides the field, as on a task the person cannot read.
+  const canReadApplications = hasLevel('applications', 'reader');
+  const canReadAssets = hasLevel('infrastructure', 'reader');
   const origin = React.useMemo(() => parseTaskOrigin(cleanedSearchParams), [cleanedSearchParams]);
   const originProjectId = origin.kind === 'project' ? origin.id : null;
   const createSpendItemId = cleanedSearchParams.get('spendItemId');
@@ -602,10 +605,10 @@ export default function TaskWorkspacePage() {
       phase_id: createPhaseId || null,
       labels: [],
       viewer_ids: [],
-      application_ids: [],
-      asset_ids: [],
-      applications: [],
-      assets: [],
+      application_ids: canReadApplications ? [] : null,
+      asset_ids: canReadAssets ? [] : null,
+      applications: canReadApplications ? [] : null,
+      assets: canReadAssets ? [] : null,
     });
     setTitle('');
     setDescription('');
@@ -621,6 +624,8 @@ export default function TaskWorkspacePage() {
     createIncidentId,
     createPhaseId,
     resetClassificationTouched,
+    canReadApplications,
+    canReadAssets,
   ]);
 
   // Auto-focus on comment composer disabled — toolbar loads on user click via hideToolbarUntilFocus
@@ -1238,10 +1243,10 @@ export default function TaskWorkspacePage() {
     owner_ids: [],
     viewer_ids: [],
     labels: [],
-    application_ids: [],
-    asset_ids: [],
-    applications: [],
-    assets: [],
+    application_ids: canReadApplications ? [] : null,
+    asset_ids: canReadAssets ? [] : null,
+    applications: canReadApplications ? [] : null,
+    assets: canReadAssets ? [] : null,
     related_object_type: createRelation.type as TaskData['related_object_type'],
     related_object_id: createRelation.id,
     related_object_name: createRelationPreviewName,
@@ -1257,7 +1262,7 @@ export default function TaskWorkspacePage() {
     company_name: null,
     created_at: '',
     updated_at: '',
-  } : null), [createClassification, createRelation, createRelationPreviewName, defaultTaskTypeId, form, isCreate]);
+  } : null), [canReadApplications, canReadAssets, createClassification, createRelation, createRelationPreviewName, defaultTaskTypeId, form, isCreate]);
 
   // The title creates the task through the route of its relation, with the defaults the creation
   // form sent with only a title; the page moves to it, every tab open, with Create and Cancel (or

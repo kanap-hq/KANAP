@@ -481,6 +481,8 @@
           "phaseComplete": "{{phase}} abgeschlossen"
         },
         "dialogs": {
+          "confirmDeletePhase": "Diese Phase löschen?",
+          "confirmDeleteMilestone": "Diesen Meilenstein löschen?",
           "replaceAll": {
             "description": "Dies löscht alle bestehenden Phasen und Meilensteine und wendet dann die ausgewählte Vorlage an.",
             "title": "Alle Phasen ersetzen?"

@@ -393,25 +393,85 @@ function testSystemEntriesInReportLanguage() {
   assert.ok(buildMarkdown(withNote, 'fr', labelsFor('fr')).includes('Incident logged'));
 }
 
-function testLinkChangeUsesContentOnly() {
-  const markdown = buildMarkdown(
-    fixture({
-      entries: [
-        {
-          kind: 'link_change',
-          content: 'Assets linked: PAR-ESX-01',
-          changed_fields: { assets: { from: [], to: [UUID] } },
-          occurred_at: '2026-03-10T10:00:00.000Z',
-          created_at: '2026-03-10T10:00:00.000Z',
-          author_name: 'Thomas Berger',
+/**
+ * Link changes are stored as an English sentence. The report rebuilds one line per family and
+ * direction from `changed_fields`, as the Journal tab does, including the count of applications
+ * the reader does not see. A snapshot that is not two lists of references keeps that sentence.
+ */
+function testLinkChangeLinesInReportLanguage() {
+  const stored = 'Applications linked: APP-59, APP-7. Applications unlinked: APP-1. Technologies linked: TEC-9.';
+  const record = fixture({
+    entries: [
+      {
+        kind: 'link_change',
+        content: stored,
+        changed_fields: {
+          applications: {
+            from: ['APP-1'],
+            to: ['APP-59'],
+            hidden: { linked: 2, unlinked: 1 },
+          },
+          technologies: { from: [], to: ['TEC-9'] },
         },
-      ],
-    }),
-    'en',
-    labelsFor('en'),
-  );
-  assert.ok(markdown.includes('Assets linked: PAR-ESX-01'));
-  assert.equal(markdown.includes(UUID), false);
+        occurred_at: '2026-03-10T10:00:00.000Z',
+        created_at: '2026-03-10T10:00:00.000Z',
+        author_name: 'Thomas Berger',
+      },
+    ],
+  });
+  const expected: Record<string, string[]> = {
+    en: [
+      'Applications linked: APP-59, 2 not shown.',
+      'Applications unlinked: APP-1, 1 not shown.',
+      'Technologies linked: TEC-9.',
+    ],
+    fr: [
+      'Applications liées\u00a0: APP-59, 2 non affichées.',
+      'Applications déliées\u00a0: APP-1, 1 non affichée.',
+      'Technologies liées\u00a0: TEC-9.',
+    ],
+    de: [
+      'Anwendungen verknüpft: APP-59, 2 nicht angezeigt.',
+      'Anwendungen getrennt: APP-1, 1 nicht angezeigt.',
+      'Technologien verknüpft: TEC-9.',
+    ],
+    es: [
+      'Aplicaciones vinculadas: APP-59, 2 no mostradas.',
+      'Aplicaciones desvinculadas: APP-1, 1 no mostrada.',
+      'Tecnologías vinculadas: TEC-9.',
+    ],
+  };
+  for (const [lang, lines] of Object.entries(expected)) {
+    const markdown = buildMarkdown(record, lang as any, labelsFor(lang as any));
+    let previous = -1;
+    for (const line of lines) {
+      const index = markdown.indexOf(line);
+      assert.ok(index > previous, `${lang}: missing or out of order "${line}"`);
+      previous = index;
+    }
+    assert.equal(markdown.includes('APP-7'), false, `${lang}: a reference only in the stored sentence is left out`);
+    assert.equal(markdown.includes(stored), false, `${lang}: the stored sentence is not repeated next to the lines`);
+  }
+
+  const legacy = 'Assets linked: PAR-ESX-01';
+  const unreadable = fixture({
+    entries: [
+      {
+        kind: 'link_change',
+        content: legacy,
+        changed_fields: { assets: { from: [], to: UUID } },
+        occurred_at: '2026-03-10T10:00:00.000Z',
+        created_at: '2026-03-10T10:00:00.000Z',
+        author_name: 'Thomas Berger',
+      },
+    ],
+  });
+  for (const lang of ['en', 'fr', 'de', 'es'] as const) {
+    const markdown = buildMarkdown(unreadable, lang, labelsFor(lang));
+    assert.ok(markdown.includes(legacy), `${lang}: an unreadable snapshot keeps the stored sentence`);
+    assert.equal(markdown.includes(UUID), false, `${lang}: the snapshot is not printed raw`);
+    assert.equal(markdown.includes('Actifs liés'), false, `${lang}: the stored sentence is not translated by guessing`);
+  }
 }
 
 /**
@@ -637,7 +697,7 @@ async function run() {
   testReporterAndJournalWords();
   testFrenchChangeLabels();
   testSystemEntriesInReportLanguage();
-  testLinkChangeUsesContentOnly();
+  testLinkChangeLinesInReportLanguage();
   testReviewMarkdownIsNotEscaped();
   testReviewOmissionIsConservative();
   testTemplateChangeDoesNotAffectOmission();

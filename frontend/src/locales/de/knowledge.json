@@ -307,7 +307,16 @@
       "actions": {
         "revert": "Wiederherstellen"
       },
-      "empty": "Noch keine Versionen."
+      "empty": "Noch keine Versionen.",
+      "notes": {
+        "initial": "Ursprüngliche Version",
+        "revert": "Wiederherstellung von Version {{version}}",
+        "importedRequest": "Aus dem früheren Anfragefeld importiert",
+        "importedInterfaces": "Aus den früheren Schnittstellenfeldern importiert",
+        "importedApplication": "Aus der früheren Anwendungsbeschreibung importiert",
+        "importedIncident": "Aus den früheren Vorfallfeldern importiert",
+        "importedProject": "Aus dem früheren Projektfeld importiert"
+      }
     },
     "workflow": {
       "actions": {

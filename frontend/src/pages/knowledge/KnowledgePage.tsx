@@ -167,6 +167,9 @@ function StatusCellRenderer(props: any) {
   const status = props.value;
   const { t } = useTranslation(['knowledge']);
   const mode = useTheme().palette.mode;
+  // No status (a loading placeholder, or an empty value): an empty cell.
+  // The key would otherwise be `statuses.undefined`.
+  if (status == null || status === '') return null;
   const colorKey = KNOWLEDGE_STATUS_COLORS[status] || 'default';
   return (
     <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap sx={{ height: '100%' }}>

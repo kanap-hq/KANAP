@@ -154,3 +154,69 @@ describe('AgentsActivityPage cited sources', () => {
     expect(screen.getByText('3 sources citées')).toBeInTheDocument();
   });
 });
+
+describe('AgentsActivityPage search and Kad titles', () => {
+  beforeEach(async () => {
+    items = [
+      entry({
+        titleKey: 'work_item_processing_failed',
+        targetType: 'tasks',
+        targetRef: TASK_ID,
+        targetDisplay: 'T-15',
+        capabilityName: EXECUTE_APPROVED,
+        actionClass: EXECUTE_APPROVED,
+      }),
+      entry({
+        id: 'helpdesk-failed',
+        titleKey: 'work_item_processing_failed',
+        agentKey: 'desk',
+        targetType: 'ticket',
+        targetRef: '4711',
+        capabilityName: 'ticketing.ticket.public_reply.add_approved',
+        actionClass: 'public_reply',
+      }),
+      entry({
+        id: 'helpdesk-poll',
+        titleKey: 'poller_cycle_completed',
+        agentKey: 'desk',
+        targetType: 'ticket',
+        targetRef: '4712',
+      }),
+      entry({
+        id: 'kad-proposal',
+        titleKey: 'proposal_created',
+        targetType: 'tasks',
+        targetRef: TASK_ID,
+        targetDisplay: 'T-15',
+        capabilityName: EXECUTE_APPROVED,
+        actionClass: EXECUTE_APPROVED,
+      }),
+    ];
+    await i18n.changeLanguage('en');
+  });
+
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('says what the search field finds', async () => {
+    renderPage();
+    expect(await screen.findByPlaceholderText('Reference (T-15) or ticket number')).toBeInTheDocument();
+  });
+
+  it('names a Kad failure without calling it a ticket, and keeps the watcher wording', async () => {
+    renderPage();
+    expect(await screen.findByText("Couldn't process this change")).toBeInTheDocument();
+    expect(screen.getByText("Couldn't process this ticket")).toBeInTheDocument();
+    expect(screen.getByText('Looked for tickets')).toBeInTheDocument();
+    expect(screen.getByText('Drafted a proposal')).toBeInTheDocument();
+  });
+
+  it('names a Kad failure in French', async () => {
+    await i18n.changeLanguage('fr');
+    renderPage();
+    expect(await screen.findByText('Impossible de traiter ce changement')).toBeInTheDocument();
+    expect(screen.getByText('Impossible de traiter ce ticket')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Référence (T-15) ou numéro de ticket')).toBeInTheDocument();
+  });
+});

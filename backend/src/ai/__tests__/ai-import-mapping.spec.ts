@@ -152,9 +152,14 @@ async function testTemplatesAreTheColumnsTheImportsRead() {
   assert.equal(importColumnTitle(tasks.find((column) => column.column === 'viewer_email_2')!, 'de'), 'E-Mail Beobachter 2');
   const calendars = await AI_IMPORT_TARGETS.working_day_calendars.columns(ctx);
   assert.equal(importColumnTitle(calendars.find((column) => column.column === 'aug')!, 'fr'), 'Août');
-  // The identity columns stay out: the person's file has no KANAP id or reference.
+  // The identity columns stay out: an application's reference is export-only. The companies and the
+  // departments read theirs as their key, with its prefix (lot R2 of 26.11.9).
   const applications = (await AI_IMPORT_TARGETS.applications.columns(ctx)).map((column) => column.column);
   assert.ok(!applications.includes('id') && !applications.includes('reference'));
+  for (const [key, prefix] of [['companies', 'COMP'], ['departments', 'DEPT']] as const) {
+    const [first] = await AI_IMPORT_TARGETS[key].columns(ctx);
+    assert.deepEqual([first.column, first.kind, first.prefix], ['reference', 'reference', prefix], key);
+  }
   console.log('  templates are the columns the imports read: OK');
 }
 
@@ -273,6 +278,21 @@ function testConversions() {
     { status: 'unread', raw: 'Resume' },
   ]);
   console.log('  conversions: OK');
+}
+
+// A column of the family's own references reads a value only with its prefix, in any case; one value
+// without it (a column numbering the rows 1 to N) and the column reads no cell (lot R2 of 26.11.9).
+function testReferencesNeedTheirPrefix() {
+  const rule = { kind: 'reference' as const, prefix: 'COMP' };
+  let { reader, results } = read(rule, ['COMP-4', 'comp-12', '']);
+  assert.equal(reader.error, null);
+  assert.deepEqual(results, [{ status: 'converted', value: 'COMP-4' }, { status: 'converted', value: 'COMP-12' }, { status: 'blank' }]);
+  for (const values of [['1', '2', '3'], ['COMP-1', '2'], ['COMP-1', 'DEPT-2'], ['COMP-013']]) {
+    ({ reader, results } = read(rule, values));
+    assert.equal(reader.error, 'reference-without-prefix', values.join(','));
+    assert.ok(results.every((result) => result.status === 'blank'), values.join(','));
+  }
+  console.log('  a column of references reads only prefixed values: OK');
 }
 
 function testConversionsOfRealExports() {
@@ -1012,6 +1032,7 @@ async function run() {
     testCodeLabelsMatchTheScreens();
     await testEveryFixedListIsNamed();
     testConversions();
+    testReferencesNeedTheirPrefix();
     testConversionsOfRealExports();
     await testCleanFile();
     await testMessyFile();

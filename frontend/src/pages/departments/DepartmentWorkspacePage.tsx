@@ -15,6 +15,8 @@ import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
 import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
+import { formatItemRef } from '../../utils/item-ref';
+import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import DepartmentHeadcountTab from './DepartmentHeadcountTab';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
@@ -30,6 +32,8 @@ const LIST_PATH = '/master-data/departments';
 
 type Department = {
   id: string;
+  /** DEPT-n once written; none on the draft. */
+  item_number?: number | null;
   name: string;
   company_id: string;
   description: string | null;
@@ -48,6 +52,17 @@ const DRAFT_FIELDS = ['name', 'company_id', 'description', 'status', 'disabled_a
 
 const fetchDepartment = async (departmentId: string) => (await api.get<Department>(`/departments/${departmentId}`)).data;
 
+/** The department's reference (`DEPT-5`), the one its address and its cache entry name. */
+const departmentReference = (department: Pick<Department, 'item_number'> | null | undefined) => (
+  department?.item_number ? formatItemRef('department', department.item_number) : null
+);
+/**
+ * The department's cache entry: `['departments', 'DEPT-5']`, read by its page and written by every
+ * save. A page opened by a legacy address (a uuid, `dept-5`) reads under that address, then puts the
+ * department under its reference and moves there.
+ */
+const departmentKey = (reference: string) => ['departments', reference] as const;
+
 const DEPARTMENT_FIELDS: ReadonlySet<string> = new Set<DepartmentField>(['name', 'company_id', 'description', 'disabled_at']);
 
 /** The field a refusal names in its 400 body (`{ message, field }`), when the form shows it. */
@@ -64,7 +79,9 @@ export default function DepartmentWorkspacePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
+  const { addToRecent } = useRecentlyViewed();
 
+  // The address names the department by its reference (`DEPT-5`); a uuid or `dept-5` moves to it once read.
   const id = String(params.id || '');
   const isCreate = id === 'new';
   // The department the draft has just created: its fields stay mounted, so that what is typed
@@ -80,8 +97,19 @@ export default function DepartmentWorkspacePage() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : new Date().getFullYear();
   }, [searchParams]);
 
+  const detailKey = React.useMemo(() => departmentKey(id), [id]);
+  // Set once the department is deleted: the page leaves without loading it again.
+  const [deletedId, setDeletedId] = React.useState<string | null>(null);
+  const { data: stored, error: loadError } = useQuery({
+    queryKey: detailKey,
+    queryFn: () => fetchDepartment(id),
+    enabled: !isCreate && !!id && deletedId !== id,
+  });
+  const reference = isCreate ? null : departmentReference(stored);
+
   const nav = useDepartmentNav({
-    id,
+    // The ids list carries uuids: the department read gives its own.
+    id: stored?.id ?? '',
     sort: searchParams.get('sort'),
     q: searchParams.get('q'),
     filters: searchParams.get('filters'),
@@ -90,29 +118,26 @@ export default function DepartmentWorkspacePage() {
     enabled: !isCreate,
   });
 
-  const detailKey = React.useMemo(() => ['departments', id] as const, [id]);
-  // Set once the department is deleted: the page leaves without loading it again.
-  const [deletedId, setDeletedId] = React.useState<string | null>(null);
-  const { data: stored, error: loadError } = useQuery({
-    queryKey: detailKey,
-    queryFn: async () => (await api.get<Department>(`/departments/${id}`)).data,
-    enabled: !isCreate && !!id && deletedId !== id,
-  });
   // The new page is the department's own page on a draft: the fields write here, Create sends it.
   const [draft, setDraft] = React.useState<Department>(NEW_DEPARTMENT);
   const draftRef = React.useRef(draft);
   const data = isCreate ? draft : stored;
 
+  React.useEffect(() => {
+    if (!isCreate && data?.id && data.name) addToRecent('department', data.id, data.name, reference ?? undefined);
+  }, [addToRecent, data?.id, data?.name, isCreate, reference]);
+
   const [errors, setErrors] = React.useState<FieldErrors>({});
   // Autosave never blocks the fields: writes queue one after the other, so a response never
   // overwrites a newer one, and results for a record the user has left are dropped.
   const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
-  const currentIdRef = React.useRef(id);
-  currentIdRef.current = id;
+  // The department shown: a save answered for another one is dropped.
+  const currentIdRef = React.useRef(stored?.id);
+  currentIdRef.current = stored?.id;
 
   React.useEffect(() => {
     setErrors({});
-  }, [id]);
+  }, [stored?.id]);
 
   const listContext = React.useMemo(() => {
     const sp = new URLSearchParams();
@@ -123,6 +148,15 @@ export default function DepartmentWorkspacePage() {
     return sp.toString();
   }, [searchParams]);
   const withContext = (path: string) => `${path}${listContext ? `?${listContext}` : ''}`;
+
+  // A legacy address (uuid, `dept-5`) becomes the reference's, tab and list context kept: the
+  // department read is put under the reference's entry first, so nothing is read again or mounted again.
+  React.useEffect(() => {
+    if (isCreate || !stored || !reference || id === reference) return;
+    queryClient.setQueryData(departmentKey(reference), stored);
+    const search = searchParams.toString();
+    navigate(`${LIST_PATH}/${reference}/${tab}${search ? `?${search}` : ''}`, { replace: true });
+  }, [id, isCreate, navigate, queryClient, reference, searchParams, stored, tab]);
 
   const handleClose = () => navigate(withContext(LIST_PATH));
   const goTo = (targetId: string | null, nextTab: TabKey = tab) => {
@@ -138,13 +172,15 @@ export default function DepartmentWorkspacePage() {
         return Promise.resolve();
       }
       const recordId = data?.id;
+      // The page's entry: the reference's, or the address's while a legacy address is replaced.
+      const recordRef = departmentReference(data) ?? id;
       if (!recordId || !canEdit) return Promise.resolve();
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       const run = async () => {
         try {
           const res = await api.patch<Department>(`/departments/${recordId}`, body);
-          queryClient.setQueryData(['departments', recordId], res.data);
-          void queryClient.invalidateQueries({ queryKey: ['departments'], predicate: (q) => q.queryKey[1] !== recordId });
+          queryClient.setQueryData(departmentKey(recordRef), res.data);
+          void queryClient.invalidateQueries({ queryKey: ['departments'], predicate: (q) => q.queryKey[1] !== recordRef && q.queryKey[1] !== recordId });
         } catch (e) {
           if (currentIdRef.current !== recordId) return;
           const target = departmentRefusalField(e) ?? field;
@@ -159,7 +195,7 @@ export default function DepartmentWorkspacePage() {
       chainRef.current = result.catch(() => undefined);
       return result;
     },
-    [canEdit, data?.id, isCreate, queryClient, t],
+    [canEdit, data, id, isCreate, queryClient, t],
   );
 
   const setYear = (next: number) => {
@@ -197,7 +233,8 @@ export default function DepartmentWorkspacePage() {
         void queryClient.invalidateQueries({ queryKey: ['departments'] });
         // The page moves to the department with its data in hand, and keeps what was typed since the
         // draft was sent (the next field, while the department was written): saved on the department.
-        const createdKey = ['departments', created.id] as const;
+        const createdRef = departmentReference(created) ?? created.id;
+        const createdKey = departmentKey(createdRef);
         await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => fetchDepartment(created.id) }).catch(() => undefined);
         try {
           await saveEditsSince({
@@ -212,7 +249,12 @@ export default function DepartmentWorkspacePage() {
         } catch (e) {
           setCreateError(getApiErrorMessage(e, t, t('departments.messages.saveFailed')));
         }
-        return { id: created.id, token: created.creation_token, path: withContext(`${LIST_PATH}/${created.id}/overview`) };
+        return {
+          id: created.id,
+          token: created.creation_token,
+          path: withContext(`${LIST_PATH}/${createdRef}/overview`),
+          reference: departmentReference(created),
+        };
       } catch (e) {
         const message = getApiErrorMessage(e, t, t('departments.messages.createFailed'));
         const field = departmentRefusalField(e);
@@ -292,7 +334,7 @@ export default function DepartmentWorkspacePage() {
         notices={loadError ? <Alert severity="error">{t('departments.loadError')}</Alert> : undefined}
         activeTab={tab}
         tabs={tabs}
-        onTabChange={(next) => goTo(id, next as TabKey)}
+        onTabChange={(next) => goTo(reference ?? id, next as TabKey)}
         drawerStorageKey="kanap.departments.drawerOpen"
         backLabel={t('departments.title')}
         onBack={isCreate ? leave : handleClose}
@@ -305,6 +347,8 @@ export default function DepartmentWorkspacePage() {
           },
         })}
         titleFallback={isCreate ? t('departments.newDepartment') : t('departments.departmentFallback')}
+        itemReference={reference}
+        onCopyReference={reference ? () => { void navigator.clipboard?.writeText(reference); } : undefined}
         isCreate={isCreate}
         // A new record's required fields sit in the drawer: it stays open.
         forceDrawerOpen={isCreate}
@@ -329,9 +373,10 @@ export default function DepartmentWorkspacePage() {
           <RecordDeleteButton
             base="/departments"
             id={data.id}
+            reference={reference}
             name={data.name}
             deleteFailed="departments.messages.deleteFailed"
-            onDeleted={() => { setDeletedId(data.id); handleClose(); }}
+            onDeleted={() => { setDeletedId(id); handleClose(); }}
           />
         ) : undefined}
         properties={properties}
@@ -351,6 +396,7 @@ export default function DepartmentWorkspacePage() {
         {data && tab === 'details' && (
           <DepartmentHeadcountTab
             departmentId={data.id}
+            departmentReference={reference}
             year={year}
             onYearChange={setYear}
             readOnly={!canEdit}

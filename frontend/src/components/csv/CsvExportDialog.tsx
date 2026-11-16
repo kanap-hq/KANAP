@@ -117,7 +117,7 @@ export default function CsvExportDialog({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        {format === 'csv' && (
+        {csvOnly && (
           <Typography variant="body2" sx={{ mb: 2 }}>
             {t(flexibleFormat ? 'csv.exportDescriptionFlexible' : 'csv.exportDescription')}
           </Typography>
@@ -163,6 +163,9 @@ export default function CsvExportDialog({
                 </Box>
               ))}
             </Box>
+            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 }}>
+              {t(flexibleFormat ? 'csv.csvFileNoteFlexible' : 'csv.csvFileNote')}
+            </Typography>
           </Box>
         )}
         <Button variant="contained" disabled={listEmpty} onClick={() => download('data')}>{t('csv.exportData')}</Button>
