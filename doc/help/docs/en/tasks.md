@@ -535,7 +535,7 @@ Three export modes are available:
 | `related_object_type` | Entity type | No | Empty for standalone tasks; accepts code or label |
 | `related_object_id` | Entity UUID | Conditional | Required if linked task and `related_object_name` not provided |
 | `related_object_name` | Entity name | Conditional | Required if linked task and `related_object_id` not provided |
-| `phase_name` | Project phase | No | Must match existing phase name (project tasks only) |
+| `phase_name` | Project phase | No | A phase of the task's project (project tasks only) |
 | `priority_level` | Task priority | No | Accepts the code or the name, in any of the four languages |
 | `source_name` | Source | No | Portfolio source (standalone and project tasks) |
 | `category_name` | Category | No | Portfolio category (standalone and project tasks) |
@@ -560,8 +560,10 @@ Three export modes are available:
 |------------|-------------|-------|
 | `assignee_email` | Responsible person | Must match existing user email |
 | `creator_email` | Requestor email | Export only (shown as **Requestor Email** in field metadata) |
-| `viewer_email_1` through `_4` | Viewers | Must match existing user emails |
-| `owner_email_1` through `_4` | Owners | Must match existing user emails |
+| `viewer_email_1` through `_4` | Viewers | Existing user emails. An unknown email is left out, with a warning |
+| `owner_email_1` through `_4` | Owners | Existing user emails. An unknown email is left out, with a warning |
+
+In `Enrich` mode, a row that updates a task keeps its viewers when one viewer cell names an unknown email, and its owners in the same way.
 
 **Other fields**:
 
@@ -613,7 +615,7 @@ Tasks are matched by **title + related_object_id** (case-insensitive). When a ma
 
 If you include the `id` column with a valid UUID, matching uses ID first, then falls back to title + related object.
 
-**Note**: If you provide `related_object_name` instead of `related_object_id`, the system resolves the name to the ID before matching. This means you can use human-readable names throughout your import file. For a contract, `related_object_name` also takes its reference, such as `CTR-12`.
+**Note**: If you provide `related_object_name` instead of `related_object_id`, the system resolves the name to the ID before matching. This means you can use human-readable names throughout your import file. For a contract, `related_object_name` also takes its reference, such as `CTR-12`. The name and the phase are found whatever the case, and the accents too for a project, a contract or a budget line you can read. See [Names of records](csv-files.md#names-of-records). **Preflight** refuses a row whose related object is not found or names several records. It also refuses a phase that several phases of the project answer, or that only another project has.
 
 ### Export-only fields
 

@@ -310,6 +310,16 @@ You can record that a server carries a technology from either side:
 
 Record the technology on the server where it is installed: the host for a hypervisor, each domain controller for Active Directory, the database server for SQL Server. The servers that run inside it, and the cluster of those servers, then show it without further work. A cloud technology, such as Entra ID, runs on none of your servers: declare it on the applications instead.
 
+### Version labels { #version-labels }
+
+A version label typed in a version picker, written in an import file or given to Kad finds a version of the technology:
+
+- the version with the same label, whatever the case;
+- otherwise, the only version whose label starts with the typed one followed by a space: `22.04` finds `22.04 LTS`;
+- otherwise, the only version whose label starts the typed one, followed by a space: `2022 Datacenter` finds `2022`. When several versions answer, the longest label wins: `2012 R2 Datacenter` finds `2012 R2`.
+
+When no version answers, or several, the label is created as a new version. `22.04.3 LTS` is created as written. An import lists each match of the last two rules with its other matches, and **Undo** creates the version as written. See [Names of records](csv-files.md#names-of-records).
+
 ---
 
 ## Import and export links
@@ -356,7 +366,8 @@ The import never removes the operating system mark from a link.
 - An existing link keeps where it comes from. Its notes change when the `notes` cell holds a different text, and an empty cell leaves them as they are.
 - A new link is marked as coming from an import, with the file name.
 - The technology must already be in your list. Adopt it from the catalog or create it first.
-- A version you do not track yet is created on the technology. The preview names it.
+- The server, the application and the technology are found by their names as described in [Names of records](csv-files.md#names-of-records). A name that several records share is an error.
+- A version label follows the rule of [Version labels](#version-labels). A version you do not track yet is created on the technology. The preview names it.
 
 A large file takes some time to load, and holds the links of its technologies until it finishes. Several smaller files are easier on the people working at the same time.
 
