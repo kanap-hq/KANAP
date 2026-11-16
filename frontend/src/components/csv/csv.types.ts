@@ -73,6 +73,24 @@ export interface CsvImportResult {
    */
   matches?: CsvImportMatch[];
   matchesTotal?: number;
+  /** Kad's proposals the import refused (its card), the first ones, `refusedProposalsTotal` in all. Absent when none. */
+  refusedProposals?: CsvImportRefusedProposal[];
+  refusedProposalsTotal?: number;
+}
+
+/**
+ * A name Kad proposed for a value of the file that the import refused (the budget file's have the same
+ * shape): `missing`, no such record the person reads (`target` is then Kad's own words); `disabled`,
+ * the record is disabled (the budget file only).
+ */
+export interface CsvImportRefusedProposal {
+  column: string;
+  name: string | null;
+  value: string;
+  target: string;
+  reason: 'missing' | 'disabled';
+  lines: number[];
+  count: number;
 }
 
 /**

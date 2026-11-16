@@ -1,6 +1,6 @@
 import type { CsvReportMessage } from '../components/csv/csvMessage';
 import type { BudgetFileChoice, BudgetFileReport } from '../components/finance/budgetFile';
-import type { CsvImportMatch } from '../components/csv/csv.types';
+import type { CsvImportMatch, CsvImportRefusedProposal } from '../components/csv/csv.types';
 
 export type AiMutationWriteToolName =
   | 'import_ticket'
@@ -135,8 +135,15 @@ export type AiImportRun = {
     create_suppliers: { allowed: boolean; value: boolean };
   };
   report:
-    /** A row import: its first messages and, for a declarative import, the names found beyond case (lines of the person's file). */
-    | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[]; matches?: CsvImportMatch[]; matchesTotal?: number }
+    /**
+     * A row import: its first messages, the names it found beyond case and Kad's proposals it refused
+     * (lines of the person's file), each absent when none.
+     */
+    | {
+      kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[];
+      matches?: CsvImportMatch[]; matchesTotal?: number;
+      refusedProposals?: CsvImportRefusedProposal[]; refusedProposalsTotal?: number;
+    }
     | { kind: 'budget_file'; file: BudgetFileReport | null };
 };
 

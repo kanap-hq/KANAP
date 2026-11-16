@@ -6,6 +6,7 @@ import { withListContext } from '../../lib/listContext';
 import { statusScopeParams } from '../../utils/statusScopeParams';
 import type { AmountReading, DateReading, ScreenLanguage } from '../csv/readings';
 import type { ExportFormat } from '../csv/exportFormat';
+import type { CsvImportRefusedProposal } from '../csv/csv.types';
 
 // The reading helpers are shared with every other CSV import; they live in
 // `components/csv/readings.ts` and are re-exported here for this dialog.
@@ -153,7 +154,7 @@ export type BudgetFileMatching = {
     undoable: true;
   }>;
   /** Kad's proposals the check refused: no such value (`missing`) or a disabled one. */
-  refusedProposals: Array<{ column: string; name: string | null; value: string; target: string; reason: 'missing' | 'disabled'; lines: number[]; count: number }>;
+  refusedProposals: CsvImportRefusedProposal[];
   /** Values nothing matched (unknown companies included), with up to three closest names of the workspace's list. */
   candidates: Array<{
     column: string;
