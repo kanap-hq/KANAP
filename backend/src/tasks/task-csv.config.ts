@@ -9,7 +9,7 @@ import {
 import { allocateItemNumbers } from '../common/item-number.service';
 import { richTextCell } from '../common/csv/rich-text-cell';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
-import { taskIncidentVisibilitySql } from '../incidents/incident-visibility';
+import { incidentViewerForSql, incidentVisibilitySql, taskIncidentVisibilitySql, type IncidentViewer } from '../incidents/incident-visibility';
 import { contractReference, contractReferenceNumber } from '../contracts/contract-reference';
 import type { CsvLanguage } from '../common/csv-sheet';
 import type { CsvCallerAccess, CsvImportParams } from '../common/csv';
@@ -158,14 +158,16 @@ export type RelatedObjectLookup =
  * then accents aside when `beyondCase` says so for that name (a family named by its name: not an
  * incident's `INC-n`); several names there are an ambiguity. The rows are read in the person's
  * transaction: for a person limited by data access, a contract or a line outside their access is no
- * row, so it is neither found nor named. Null for a type that has no names.
+ * row, so it is neither found nor named. A restricted incident the `viewer` does not see (neither
+ * incidents:admin, its reporter nor its owner) is no row either, as on the incidents screen; without a
+ * viewer, none is seen. Null for a type that has no names.
  */
 export async function relatedObjectsByName(
   manager: { query: (sql: string, params: unknown[]) => Promise<any> },
   tenantId: string,
   type: string,
   names: string[],
-  options: { beyondCase?: (name: string) => boolean } = {},
+  options: { beyondCase?: (name: string) => boolean; viewer?: IncidentViewer | null } = {},
 ): Promise<((name: string) => RelatedObjectLookup) | null> {
   const mapping = RELATED_OBJECT_TABLES[type];
   if (!mapping) return null;
@@ -173,12 +175,15 @@ export async function relatedObjectsByName(
   const beyondCase = (name: string) => !!mapping.module && options.beyondCase?.(name) === true;
   const itemNumber = mapping.ref ? ', item_number' : '';
   // Beyond case, every name of the family is a candidate; else only the names of the file, case aside.
-  const read: Array<{ id: string; name: string | null; item_number?: unknown }> = names.some(beyondCase)
-    ? await manager.query(`SELECT id, ${nameColumn} AS name${itemNumber} FROM ${table} WHERE tenant_id = $1${where ?? ''}`, [tenantId])
-    : await manager.query(
-      `SELECT id, ${nameColumn} AS name${itemNumber} FROM ${table} WHERE tenant_id = $1${where ?? ''} AND LOWER(${nameColumn}) = ANY($2)`,
-      [tenantId, names.map((name) => name.toLowerCase())],
-    );
+  const params: unknown[] = [tenantId];
+  const byName = names.some(beyondCase)
+    ? ''
+    : ` AND LOWER(${nameColumn}) = ANY($${params.push(names.map((name) => name.toLowerCase()))})`;
+  const visible = type === 'incident' ? incidentVisibilitySql(table, incidentViewerForSql(options.viewer), params) : '';
+  const read: Array<{ id: string; name: string | null; item_number?: unknown }> = await manager.query(
+    `SELECT id, ${nameColumn} AS name${itemNumber} FROM ${table} WHERE tenant_id = $1${where ?? ''}${byName}${visible}`,
+    params,
+  );
   const rows = read.filter((row): row is { id: string; name: string; item_number?: unknown } => typeof row.name === 'string' && row.name.trim() !== '');
   const refOf = (row: { item_number?: unknown }) => mapping.ref?.(row.item_number ?? null) ?? null;
   const idByNumber = new Map<number, string>();
@@ -208,7 +213,7 @@ export async function relatedObjectIdsByName(
   tenantId: string,
   type: string,
   names: string[],
-  options: { beyondCase?: (name: string) => boolean } = {},
+  options: { beyondCase?: (name: string) => boolean; viewer?: IncidentViewer | null } = {},
 ): Promise<((name: string) => string | undefined) | null> {
   const lookup = await relatedObjectsByName(manager, tenantId, type, names, options);
   if (!lookup) return null;
@@ -304,7 +309,7 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
   for (const [type, typeRows] of byType) {
     const beyondCase = relatedObjectBeyondCase(context.access, context.params.unmatched, 'related_object_name', RELATED_OBJECT_TABLES[type]?.module);
     const names = typeRows.map((row) => String(row.parsed._related_object_name).trim());
-    const lookup = await relatedObjectsByName(context.manager, context.tenantId, type, names, { beyondCase });
+    const lookup = await relatedObjectsByName(context.manager, context.tenantId, type, names, { beyondCase, viewer: context.viewer });
     if (!lookup) continue;
     const proposalOf = (name: string) => (undoneMatch(context.params.unmatched, 'related_object_name', name)
       ? undefined
@@ -312,7 +317,7 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
     const proposals = [...new Set(names.map(proposalOf).filter((proposal): proposal is string => proposal !== undefined))];
     const module = RELATED_OBJECT_TABLES[type]?.module ?? RELATED_OBJECT_TABLES[type]?.reader;
     const reads = !!module && !!context.access && hasLevel(context.access, module, 'reader');
-    const proposed = proposals.length > 0 && reads ? await relatedObjectsByName(context.manager, context.tenantId, type, proposals) : null;
+    const proposed = proposals.length > 0 && reads ? await relatedObjectsByName(context.manager, context.tenantId, type, proposals, { viewer: context.viewer }) : null;
     for (const row of typeRows) {
       const name = String(row.parsed._related_object_name).trim();
       const proposal = proposalOf(name);
@@ -1090,7 +1095,7 @@ export const taskCsvConfig: CsvEntityConfig = {
     // Resolve names to IDs for each type (`relatedObjectIdsByName`: a spend_item names an OPEX line,
     // a contract is also named by its reference).
     for (const [type, items] of byType.entries()) {
-      const idOf = await relatedObjectIdsByName(context.manager, context.tenantId, type, items.map((i) => i.name));
+      const idOf = await relatedObjectIdsByName(context.manager, context.tenantId, type, items.map((i) => i.name), { viewer: context.viewer });
       if (!idOf) continue;
 
       // Resolve each entity
