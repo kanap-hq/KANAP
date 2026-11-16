@@ -142,6 +142,8 @@
   "CSV_REFERENCE_NOT_FOUND_SKIPPED": "No se encontró «{{value}}» y no se importa.",
   "CSV_REFERENCE_NOT_FOUND_CLEARED": "No se encontró «{{value}}»: el campo queda vacío.",
   "CSV_REFERENCE_NOT_FOUND_KEPT": "No se encontró «{{value}}»: se conserva el valor actual.",
+  "CSV_TASK_PHASE_OUTSIDE_PROJECT": "«{{value}}» no se importa: solo una tarea de proyecto tiene fase.",
+  "CSV_TASK_CLASSIFICATION_NOT_ALLOWED": "«{{value}}» no se importa: solo una tarea independiente o de proyecto tiene clasificación.",
   "CSV_JSON_INVALID": "Esta celda no contiene un JSON válido.",
   "CSV_JSON_OBJECT_REQUIRED": "Esta celda debe contener un objeto JSON.",
   "CSV_JSON_ARRAY_REQUIRED": "Esta celda debe contener una lista JSON.",

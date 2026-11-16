@@ -142,6 +142,8 @@
   "CSV_REFERENCE_NOT_FOUND_SKIPPED": "„{{value}}“ wurde nicht gefunden und wird nicht importiert.",
   "CSV_REFERENCE_NOT_FOUND_CLEARED": "„{{value}}“ wurde nicht gefunden: Das Feld bleibt leer.",
   "CSV_REFERENCE_NOT_FOUND_KEPT": "„{{value}}“ wurde nicht gefunden: Der aktuelle Wert bleibt erhalten.",
+  "CSV_TASK_PHASE_OUTSIDE_PROJECT": "„{{value}}“ wird nicht importiert: Nur eine Projektaufgabe hat eine Phase.",
+  "CSV_TASK_CLASSIFICATION_NOT_ALLOWED": "„{{value}}“ wird nicht importiert: Nur eine eigenständige Aufgabe oder eine Projektaufgabe hat eine Klassifizierung.",
   "CSV_JSON_INVALID": "Diese Zelle enthält kein gültiges JSON.",
   "CSV_JSON_OBJECT_REQUIRED": "Diese Zelle muss ein JSON-Objekt enthalten.",
   "CSV_JSON_ARRAY_REQUIRED": "Diese Zelle muss eine JSON-Liste enthalten.",

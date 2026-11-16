@@ -264,7 +264,95 @@ async function testSameNameAccentsAside() {
   });
 }
 
+// Fixes F: a task outside a project, as on the task screen. Moved out of a project without the cells,
+// its phase is cleared and said, and its source, category, stream and company too when it moves to an
+// incident (to none, it keeps them). A phase or a classification the file gives a task that cannot have
+// it is not imported and said on its cell; the row is not refused. In both modes, at the check as at the load.
+async function testTaskOutsideAProject() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'task-csv-fix-f-outside');
+    const a = await seedProject(runner, tenantId, 'Projet A', 1);
+    const [build] = await runner.query(`INSERT INTO portfolio_project_phases (tenant_id, project_id, name) VALUES ($1, $2, 'Build') RETURNING id`, [tenantId, a]);
+    const [source] = await runner.query(`INSERT INTO portfolio_sources (tenant_id, name) VALUES ($1, 'Audit') RETURNING id`, [tenantId]);
+    const [category] = await runner.query(`INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, 'Infra') RETURNING id`, [tenantId]);
+    const [stream] = await runner.query(`INSERT INTO portfolio_streams (tenant_id, category_id, name) VALUES ($1, $2, 'Réseau') RETURNING id`, [tenantId, category.id]);
+    const [company] = await runner.query(
+      `INSERT INTO companies (tenant_id, name, city, country_iso, item_number) VALUES ($1, 'Fromage SA', 'Lyon', 'FR', 1) RETURNING id`, [tenantId],
+    );
+    const [incident] = await runner.query(`INSERT INTO incidents (tenant_id, item_number, title, severity) VALUES ($1, 7, 'Panne', 'major') RETURNING id`, [tenantId]);
+    const classified = async (itemNumber: number, title: string) => (await runner.query(
+      `INSERT INTO tasks (tenant_id, item_number, title, status, related_object_type, related_object_id, phase_id,
+                          source_id, category_id, stream_id, company_id, viewer_ids, owner_ids)
+       VALUES ($1, $2, $3, 'open', 'project', $4, $5, $6, $7, $8, $9, '[]'::jsonb, '[]'::jsonb) RETURNING id`,
+      [tenantId, itemNumber, title, a, build.id, source.id, category.id, stream.id, company.id],
+    ))[0].id;
+    const fields = async (id: string) => {
+      const [row] = await runner.query(`SELECT phase_id, source_id, category_id, stream_id, company_id FROM tasks WHERE id = $1`, [id]);
+      return [row.phase_id, row.source_id, row.category_id, row.stream_id, row.company_id];
+    };
+    const CLASSIFICATION = ['source_name', 'category_name', 'stream_name', 'company_name'];
+
+    // Moved to an incident in merge mode, the cells blank: everything is cleared and said, by its name.
+    const q1 = await classified(31, 'Q un');
+    const toIncident = [
+      'id;title;related_object_type;related_object_id;related_object_name;phase_name;source_name;category_name;stream_name;company_name',
+      `${q1};Q un;incident;${incident.id};;;;;;`,
+    ].join('\n');
+    const check = await importCsv(runner.manager, tenantId, toIncident, {});
+    assert.deepEqual(codes(check), []);
+    assert.deepEqual(warned(check), ['phase_name', ...CLASSIFICATION].map((column) => [2, column, 'CSV_REFERENCE_NOT_FOUND_CLEARED']));
+    assert.deepEqual(check.warnings.map((w) => w.params?.value), ['Build', 'Audit', 'Infra', 'Réseau', 'Fromage SA']);
+    const load = await importCsv(runner.manager, tenantId, toIncident, { dryRun: false });
+    assert.equal(load.ok, true, JSON.stringify(load.errors));
+    assert.deepEqual(await fields(q1), [null, null, null, null, null]);
+
+    // Moved out of its project to none (full replace, the columns left out): the phase only.
+    const q2 = await classified(32, 'Q deux');
+    const toNone = ['id;title;related_object_type;related_object_id;related_object_name', `${q2};Q deux;;;`].join('\n');
+    const check2 = await importCsv(runner.manager, tenantId, toNone, { mode: 'replace' });
+    assert.deepEqual(codes(check2), []);
+    assert.deepEqual(warned(check2), [[2, 'phase_name', 'CSV_REFERENCE_NOT_FOUND_CLEARED']]);
+    const load2 = await importCsv(runner.manager, tenantId, toNone, { mode: 'replace', dryRun: false });
+    assert.equal(load2.ok, true, JSON.stringify(load2.errors));
+    assert.deepEqual(await fields(q2), [null, source.id, category.id, stream.id, company.id]);
+
+    // The file gives what the task cannot have: not imported, said on its cell, the row kept. A new
+    // incident task, a new standalone task (its classification is imported), an incident task updated
+    // (a name nothing finds included), and a task moved to an incident with its cells filled.
+    const q3 = await classified(33, 'Q trois');
+    const given = [
+      'id;title;related_object_type;related_object_id;related_object_name;phase_name;source_name;category_name;stream_name;company_name',
+      `;Nouvelle;incident;;INC-7;Build;Audit;Infra;Réseau;Fromage SA`,
+      `;Seule;;;;Build;Audit;Infra;Réseau;Fromage SA`,
+      `${q1};Q un;incident;${incident.id};;Inconnue;;Inconnue;;`,
+      `${q3};Q trois;incident;${incident.id};;Build;Audit;Infra;Réseau;Fromage SA`,
+    ].join('\n');
+    for (const mode of ['enrich', 'replace'] as const) {
+      const check3 = await importCsv(runner.manager, tenantId, given, { mode });
+      assert.deepEqual(codes(check3), [], mode);
+      assert.deepEqual(warned(check3), [
+        [2, 'phase_name', 'CSV_TASK_PHASE_OUTSIDE_PROJECT'],
+        ...CLASSIFICATION.map((column) => [2, column, 'CSV_TASK_CLASSIFICATION_NOT_ALLOWED']),
+        [3, 'phase_name', 'CSV_TASK_PHASE_OUTSIDE_PROJECT'],
+        [4, 'phase_name', 'CSV_TASK_PHASE_OUTSIDE_PROJECT'],
+        [4, 'category_name', 'CSV_TASK_CLASSIFICATION_NOT_ALLOWED'],
+        [5, 'phase_name', 'CSV_TASK_PHASE_OUTSIDE_PROJECT'],
+        ...CLASSIFICATION.map((column) => [5, column, 'CSV_TASK_CLASSIFICATION_NOT_ALLOWED']),
+      ], mode);
+      assert.deepEqual([check3.inserted, check3.updated, check3.unchanged], [2, 1, 1], mode);
+    }
+    const load3 = await importCsv(runner.manager, tenantId, given, { dryRun: false });
+    assert.equal(load3.ok, true, JSON.stringify(load3.errors));
+    const created = async (title: string) => fields((await runner.query(`SELECT id FROM tasks WHERE tenant_id = $1 AND title = $2`, [tenantId, title]))[0].id);
+    assert.deepEqual(await created('Nouvelle'), [null, null, null, null, null]);
+    assert.deepEqual(await created('Seule'), [null, source.id, category.id, stream.id, company.id]);
+    assert.deepEqual(await fields(q1), [null, null, null, null, null]);
+    assert.deepEqual(await fields(q3), [null, null, null, null, null]);
+  });
+}
+
 void runSpecs('task-csv-object-by-name.integration.spec', [
+  ['testTaskOutsideAProject', testTaskOutsideAProject],
   ['testExistingTaskObjectByName', testExistingTaskObjectByName],
   ['testPhaseOfAMovedTask', testPhaseOfAMovedTask],
   ['testRestrictedIncident', testRestrictedIncident],
