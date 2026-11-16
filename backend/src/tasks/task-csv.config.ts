@@ -11,8 +11,17 @@ import { richTextCell } from '../common/csv/rich-text-cell';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { contractReferenceNumber } from '../contracts/contract-reference';
+import type { CsvLanguage } from '../common/csv-sheet';
 
-const TASK_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** The label of a contract outside the person's access, as the tasks list writes it (`ops:contracts.outsideYourAccess`). */
+export const CONTRACT_OUTSIDE_ACCESS: Record<CsvLanguage, string> = {
+  en: 'Contract outside your access',
+  fr: 'Contrat hors de votre accès',
+  de: 'Vertrag außerhalb Ihres Zugriffs',
+  es: 'Contrato fuera de su acceso',
+};
+
+export const TASK_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Status label to code mapping
 const statusLookup = new Map<string, string>([
@@ -114,6 +123,92 @@ export async function taskProjectClassifications(
     [tenantId, ids],
   );
   return new Map(rows.map((row) => [row.id, row]));
+}
+
+/** The tables a task's related object is named in. `where`: a `spend_item` names an OPEX line (`spend/budget-nature.ts`). */
+const RELATED_OBJECT_TABLES: Record<string, { table: string; nameColumn: string; where?: string }> = {
+  project: { table: 'portfolio_projects', nameColumn: 'name' },
+  spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'` },
+  contract: { table: 'contracts', nameColumn: 'name' },
+  capex_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'capex'` },
+  incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
+};
+
+/**
+ * The id each name of a related object of one type resolves to: a contract is also named by its
+ * reference (`CTR-12`), as the task list shows it, and the reference wins over a contract that
+ * would carry it as its name. Null for a type that has no names.
+ */
+export async function relatedObjectIdsByName(
+  manager: { query: (sql: string, params: unknown[]) => Promise<any> },
+  tenantId: string,
+  type: string,
+  names: string[],
+): Promise<((name: string) => string | undefined) | null> {
+  const mapping = RELATED_OBJECT_TABLES[type];
+  if (!mapping) return null;
+  const { table, nameColumn, where } = mapping;
+  const rows = await manager.query(
+    `SELECT id, ${nameColumn} AS name FROM ${table} WHERE tenant_id = $1${where ?? ''} AND LOWER(${nameColumn}) = ANY($2)`,
+    [tenantId, names.map((name) => name.toLowerCase())],
+  );
+  const idByName = new Map<string, string>();
+  for (const row of rows) idByName.set(String(row.name).toLowerCase(), row.id);
+  const idByNumber = new Map<number, string>();
+  if (type === 'contract') {
+    const numbers = names.map((name) => contractReferenceNumber(name)).filter((n): n is number => n !== null);
+    if (numbers.length > 0) {
+      const byNumber: Array<{ id: string; item_number: number }> = await manager.query(
+        `SELECT id, item_number FROM contracts WHERE tenant_id = $1 AND item_number = ANY($2::int[])`,
+        [tenantId, numbers],
+      );
+      for (const row of byNumber) idByNumber.set(Number(row.item_number), row.id);
+    }
+  }
+  return (name: string) => {
+    const reference = type === 'contract' ? contractReferenceNumber(name) : null;
+    return (reference !== null ? idByNumber.get(reference) : undefined) ?? idByName.get(name.toLowerCase());
+  };
+}
+
+/** The hidden contract's label in any of the export's languages, lower case. */
+const CONTRACT_OUTSIDE_ACCESS_LABELS = new Set(Object.values(CONTRACT_OUTSIDE_ACCESS).map((label) => label.toLowerCase()));
+
+/** Whether a related object name is the label of a contract outside the exporting person's access. */
+export function isContractOutsideAccessLabel(name: unknown): boolean {
+  return CONTRACT_OUTSIDE_ACCESS_LABELS.has(String(name ?? '').trim().toLowerCase());
+}
+
+/**
+ * A limited person's tasks export leaves out the object they cannot read (`TasksCsvService.export`):
+ * a contract by the list's label and an empty id, a budget line by an empty id and name. Read back
+ * on a task of that type, the row keeps the task's stored object, in full replace as in enrich mode.
+ * The label never names a contract: a labelled row without a stored contract to keep is refused.
+ */
+function keepObjectsOutsideAccess(rows: CsvImportRow[], operation: string): void {
+  for (const row of rows) {
+    if (row.errors.length > 0 || String(row.raw.related_object_id ?? '').trim()) continue;
+    const type = objectTypeLookup.get(String(row.raw.related_object_type ?? '').trim().toLowerCase());
+    const name = String(row.raw.related_object_name ?? '').trim();
+    const labelled = type === 'contract' && isContractOutsideAccessLabel(name);
+    const hiddenLine = (type === 'spend_item' || type === 'capex_item') && !name;
+    if (!labelled && !hiddenLine) continue;
+    const stored = row.existingEntity;
+    if (stored?.related_object_id && stored.related_object_type === type) {
+      row.parsed.related_object_id = stored.related_object_id;
+      delete row.parsed._related_object_name;
+      continue;
+    }
+    // Rows the operation skips are not checked.
+    if (!labelled || (row.isInsert ? operation === 'update_only' : operation === 'insert_only')) continue;
+    row.errors.push({
+      row: row.rowNumber,
+      column: 'related_object_name',
+      message: `"${name}" was not found.`,
+      code: 'CSV_REFERENCE_NOT_FOUND',
+      params: { value: name },
+    });
+  }
 }
 
 /** The project a matched row's task belongs to once imported (the file's, else the stored one); null when none. */
@@ -615,11 +710,13 @@ export const taskCsvConfig: CsvEntityConfig = {
   },
 
   /**
+   * The object a limited person's export leaves out stays the task's (`keepObjectsOutsideAccess`).
    * The export writes the classification a project task inherits (TASK_INHERITED_CLASSIFICATION). Read
    * back, a cell equal to the project's value on a task that has no value of its own is the inherited
    * value, left as it is: the task keeps following its project. Any other value is the task's own.
    */
   afterValidate: async (rows, context) => {
+    keepObjectsOutsideAccess(rows, context.params.operation);
     const matched = rows
       .filter((row) => row.errors.length === 0 && row.existingEntity)
       .map((row) => ({ row, projectId: importedProjectId(row) }))
@@ -691,16 +788,6 @@ export const taskCsvConfig: CsvEntityConfig = {
    * Accepts both codes and common labels for enum fields.
    */
   beforeCommit: async (entities: any[], context: CsvImportContext) => {
-    // Table mapping for related object resolution. `where`: a `spend_item` names an OPEX line
-    // (`spend/budget-nature.ts`), never a line of another nature with the same name.
-    const tableMap: Record<string, { table: string; nameColumn: string; where?: string }> = {
-      project: { table: 'portfolio_projects', nameColumn: 'name' },
-      spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'` },
-      contract: { table: 'contracts', nameColumn: 'name' },
-      capex_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'capex'` },
-      incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
-    };
-
     // First pass: normalize enum values
     for (const entity of entities) normalizeTaskCodes(entity);
 
@@ -730,43 +817,15 @@ export const taskCsvConfig: CsvEntityConfig = {
       byType.get(type)!.push({ entity, name: String(name).trim() });
     }
 
-    // Resolve names to IDs for each type
+    // Resolve names to IDs for each type (`relatedObjectIdsByName`: a spend_item names an OPEX line,
+    // a contract is also named by its reference).
     for (const [type, items] of byType.entries()) {
-      const mapping = tableMap[type];
-      if (!mapping) continue;
-
-      const { table, nameColumn, where } = mapping;
-      const names = items.map((i) => i.name.toLowerCase());
-
-      const rows = await context.manager.query(
-        `SELECT id, ${nameColumn} AS name FROM ${table} WHERE tenant_id = $1${where ?? ''} AND LOWER(${nameColumn}) = ANY($2)`,
-        [context.tenantId, names],
-      );
-
-      // Build lookup map
-      const idByName = new Map<string, string>();
-      for (const row of rows) {
-        idByName.set(String(row.name).toLowerCase(), row.id);
-      }
-      // A contract is also named by its reference (`CTR-12`), as the task list shows it; the
-      // reference wins over a contract that would carry it as its name.
-      if (type === 'contract') {
-        const numbers = items
-          .map((i) => contractReferenceNumber(i.name))
-          .filter((n): n is number => n !== null);
-        if (numbers.length > 0) {
-          const byNumber: Array<{ id: string; item_number: number }> = await context.manager.query(
-            `SELECT id, item_number FROM contracts WHERE tenant_id = $1 AND item_number = ANY($2::int[])`,
-            [context.tenantId, numbers],
-          );
-          for (const row of byNumber) idByName.set(`ctr-${row.item_number}`, row.id);
-        }
-      }
+      const idOf = await relatedObjectIdsByName(context.manager, context.tenantId, type, items.map((i) => i.name));
+      if (!idOf) continue;
 
       // Resolve each entity
       for (const { entity, name } of items) {
-        const reference = type === 'contract' ? contractReferenceNumber(name) : null;
-        const id = (reference !== null ? idByName.get(`ctr-${reference}`) : undefined) ?? idByName.get(name.toLowerCase());
+        const id = idOf(name);
         if (id) {
           entity.related_object_id = id;
         } else {
