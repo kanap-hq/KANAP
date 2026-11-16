@@ -500,7 +500,7 @@ export class ApplicationsCsvService {
     mode: CsvImportParams['mode'],
     written: Set<string>,
     opts: { manager: EntityManager; tenantId: string; userId?: string | null },
-    updatedByName: ReadonlyMap<string, string>,
+    updatedByName: ReadonlyMap<string, string> = new Map(),
   ) {
     const { manager, tenantId, userId } = opts;
 
@@ -586,7 +586,7 @@ export class ApplicationsCsvService {
     manager: EntityManager,
     tenantId: string,
     row: Record<string, string>,
-    updatedByName: ReadonlyMap<string, string>,
+    updatedByName: ReadonlyMap<string, string> = new Map(),
   ): Promise<string | null> {
     const id = (row['id'] || '').trim();
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
@@ -610,7 +610,7 @@ export class ApplicationsCsvService {
     mode: CsvImportParams['mode'],
     written: Set<string>,
     opts: { manager: EntityManager; tenantId: string; userId?: string | null },
-    updatedByName: ReadonlyMap<string, string>,
+    updatedByName: ReadonlyMap<string, string> = new Map(),
   ) {
     const { manager, tenantId, userId } = opts;
 

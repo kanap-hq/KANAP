@@ -712,8 +712,8 @@ export class ApplicationsController {
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
     @Query('language') languageRaw: string | undefined,
     @Body('unmatched') unmatchedRaw: unknown,
-    @Body('lookalikes') lookalikesRaw: unknown,
     @Tenant() ctx: TenantRequest,
+    @Body('lookalikes') lookalikesRaw?: unknown,
   ) {
     // The person's choices, read before any work: a list the route cannot read is refused (400).
     const unmatched = csvUnmatched(unmatchedRaw);
