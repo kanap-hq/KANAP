@@ -66,6 +66,8 @@ export interface AiImportColumnSpec {
   labels?: Readonly<Record<CsvLanguage, Readonly<Record<string, string>>>>;
   /** What the column takes, for the model, when its name does not say it. */
   hint?: string;
+  /** The servers' type column: the model's values never turn a hosting word into a type (`hostingWords`). */
+  keepsHostingWords?: boolean;
   titles?: Partial<Record<CsvLanguage, string>>;
 }
 
@@ -202,7 +204,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       + 'in a cloud) comes from its location (location_reference, LOC-n), never from its type: "Cloud", "AWS" or "Azure" '
       + 'is no asset type, so never map such a value to a type.',
     columns: () => fromCsvConfig(assetCsvConfig, {
-      kind: { ...catalog('serverKinds'), hint: 'the kind of machine (virtual machine, physical server...); "Cloud" is a hosting, not a type' },
+      kind: { ...catalog('serverKinds'), hint: 'the kind of machine (virtual machine, physical server...); "Cloud" is a hosting, not a type', keepsHostingWords: true },
       environment: { kind: 'codes', codes: Object.keys(ASSET_ENVIRONMENT_LABELS.en), labels: ASSET_ENVIRONMENT_LABELS },
       admin_zone: catalog('adminZones'),
       status: catalog('lifecycleStates'),

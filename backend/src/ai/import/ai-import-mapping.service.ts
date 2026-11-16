@@ -11,7 +11,7 @@ import { readTableAttachment, TABLE_ATTACHMENT_KIND } from '../attachments/table
 import { AI_IMPORT_KEYS, AI_IMPORT_WHOLE_ROWS, aiImportAccess, type AiImportKey } from './ai-import-access';
 import { DESCRIBED_CATALOG_ENTRIES, enabledDimensionValues } from './ai-import-dimension-values';
 import { buildImportFile } from './ai-import-file';
-import { serverHosting } from './ai-import-hosting';
+import { hostingWords, serverHosting } from './ai-import-hosting';
 import { AiImportColumnMappingInput, AiImportMappingResult, AiImportTemplateColumn, buildImportMapping } from './ai-import-mapping';
 import { AiImportRunnerService, rowsApprovalFacts } from './ai-import-runner.service';
 import { AI_IMPORT_TARGETS, AiImportColumnSpec, AiImportTarget, importColumnTitle } from './ai-import-targets';
@@ -72,6 +72,7 @@ function templateColumn(spec: AiImportColumnSpec, settings: ItOpsSettings | null
     return {
       ...base,
       options,
+      ...(spec.keepsHostingWords ? { asWritten: hostingWords(settings.hostingTypes ?? []) } : {}),
       displayName: (code) => {
         const option = options.find((entry) => entry.code === code);
         return option ? shippedLabelIn(list, option, language) ?? (option.label || code) : code;
