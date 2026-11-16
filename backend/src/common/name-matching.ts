@@ -122,32 +122,34 @@ export type RecordNameLookup<T> =
 
 /**
  * The record of `rows` a name of a file finds, for the imports that read their own lists (contracts,
- * cost centers, business processes, a task's related object), by `matchByName`'s steps. With
+ * cost centers, business processes, a task's related object and phase), by `matchByName`'s steps. With
  * `caseBlind` (an import that kept the first record of a name), records whose names are equal case
- * aside are one name, the first listed, at every step. Without, each record counts: two records of
- * the very same name are several, at every step. Several names at a step: `many`, named by `label`
- * (a reference, else the name), the first `AMBIGUOUS_NAMES_SHOWN`.
+ * aside are one name, the first listed, exactly and case aside. Accents aside, and at every step
+ * without `caseBlind`, each record counts: two records of the very same name are several (T-I3a).
+ * Several records at a step: `many`, named by `label` (a reference, else the name), the first
+ * `AMBIGUOUS_NAMES_SHOWN`.
  */
 export function findRecordByName<T extends { name: string }>(
   rows: readonly T[],
   cell: string,
   options: { beyondCase: boolean; caseBlind: boolean; label?: (row: T) => string | null | undefined },
 ): RecordNameLookup<T> {
-  let names: readonly T[] = rows;
   if (options.caseBlind) {
     const named = new Map<string, T>();
     for (const row of rows) {
       const key = row.name.trim().toLowerCase();
       if (!named.has(key)) named.set(key, row);
     }
-    names = [...named.values()];
+    // One record per name: exactly or case aside, at most one answers.
+    const first = matchByName([...named.values()], cell, { beyondCase: false });
+    if (first.kind === 'one') return first;
   }
-  const found = matchByName(names, cell, { beyondCase: options.beyondCase });
+  const found = matchByName(rows, cell, { beyondCase: options.beyondCase });
   if (found.kind !== 'many') return found;
   const text = cell.trim().toLowerCase();
-  const sameCase = names.filter((row) => row.name.trim().toLowerCase() === text);
+  const sameCase = rows.filter((row) => row.name.trim().toLowerCase() === text);
   const level = sameCase.length > 1 ? 'case' : 'accents';
-  const among = level === 'case' ? sameCase : names.filter((row) => accentFreeKey(row.name) === accentFreeKey(cell));
+  const among = level === 'case' ? sameCase : rows.filter((row) => accentFreeKey(row.name) === accentFreeKey(cell));
   return {
     kind: 'many',
     level,

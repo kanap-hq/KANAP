@@ -5,7 +5,8 @@ import { findRecordByName, proposedRecord, type ImportMatchState } from '../name
 // of several records exactly or case aside (`caseBlind: false`: the links of the technologies, the
 // contracts, the cost centers) refuses it at every step: two records of the very same name are two
 // records, accents aside and for Kad's proposal too, named by their references. An import that
-// keeps the first record of a name (`caseBlind: true`) keeps it, as before.
+// keeps the first record of a name (`caseBlind: true`) keeps it exactly and case aside, as before;
+// accents aside, every record counts there too (T-I3a, fixes E): several refuse the row, named.
 
 type Row = { id: string; name: string; ref: string };
 const rows: Row[] = [
@@ -32,6 +33,19 @@ function testSameNameRefusedWhenNotCaseBlind() {
 function testFirstRecordKeptWhenCaseBlind() {
   const found = findRecordByName(rows, 'Serveur-É', { beyondCase: true, caseBlind: true, label });
   assert.deepEqual(found.kind === 'one' && [found.row.id, found.how], ['a', 'exact'], 'the first record, as before');
+  const folded = findRecordByName(rows, 'serveur-é', { beyondCase: true, caseBlind: true, label });
+  assert.deepEqual(folded.kind === 'one' && [folded.row.id, folded.how], ['a', 'case'], 'case aside: the first record, as before');
+}
+
+function testSameNameRefusedAccentsAsideWhenCaseBlind() {
+  const found = findRecordByName(rows, 'Serveur-E', { beyondCase: true, caseBlind: true, label });
+  assert.equal(found.kind, 'many', 'accents aside, two records of one name are two');
+  assert.deepEqual(found.kind === 'many' && [found.level, found.names], ['accents', ['AST-1', 'AST-2']]);
+  const named = findRecordByName(rows, 'Serveur-E', { beyondCase: true, caseBlind: true });
+  assert.deepEqual(named.kind === 'many' && named.names, ['Serveur-É', 'Serveur-É'], 'named by their names without a label');
+  const one = findRecordByName(rows, 'Àutre', { beyondCase: true, caseBlind: true, label });
+  assert.deepEqual(one.kind === 'one' && [one.row.id, one.how], ['c', 'accents']);
+  assert.equal(findRecordByName(rows, 'Serveur-E', { beyondCase: false, caseBlind: true, label }).kind, 'none', 'no accent step');
 }
 
 function testProposalOfSeveralRecords() {
@@ -49,6 +63,7 @@ function testProposalOfSeveralRecords() {
 function run() {
   testSameNameRefusedWhenNotCaseBlind();
   testFirstRecordKeptWhenCaseBlind();
+  testSameNameRefusedAccentsAsideWhenCaseBlind();
   testProposalOfSeveralRecords();
   console.log('name-matching.spec: ok');
 }

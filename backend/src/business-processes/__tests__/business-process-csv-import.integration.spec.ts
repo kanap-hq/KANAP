@@ -198,7 +198,8 @@ async function testFutureEndOfValidityAndCase() {
 /**
  * Lot I3 of 26.11.9: a parent is found exactly or case aside, as before, then accents aside, among the
  * stored processes and those of the file. One name answering is a match, listed and undoable; several
- * refuse the row (CSV_NAME_AMBIGUOUS_AMONG).
+ * refuse the row (CSV_NAME_AMBIGUOUS_AMONG). A process of the file that updates a stored one is that
+ * process once.
  */
 async function testParentBeyondAccents() {
   await inRolledBackTransaction(async (runner) => {
@@ -214,6 +215,8 @@ async function testParentBeyondAccents() {
       'Paie;;Ressources humaines;;;',
       'Ressources Humaines;;;;;',
       'Contrats de travail;;ressources humaînes;;;',
+      // A stored process the file updates is one process: accents aside, its name is no ambiguity (fixes E).
+      'Achats généraux;;;;;',
     ];
     for (const dryRun of [true, false]) {
       const result: any = await svc.importCsv({ file: file(lines), dryRun }, { manager: runner.manager });

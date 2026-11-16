@@ -588,9 +588,16 @@ export class BusinessProcessesService {
     const storedByName = new Map(stored.map((row) => [row.name.toLowerCase(), row]));
     const storedById = new Map(stored.map((row) => [row.id, row]));
     // A parent: a process of the file or a stored one, by its name case aside, then accents aside. A
-    // match beyond case takes the process's own name, so the rows below find it case aside.
-    const processNames = [...normalized.map((item) => ({ name: String(item.body.name ?? '') })), ...stored.map((row) => ({ name: row.name }))]
-      .filter((entry) => entry.name.trim() !== '');
+    // match beyond case takes the process's own name, so the rows below find it case aside. A name is
+    // one process case aside (the file's and the stored one's when the file updates it), listed once.
+    const processNames: Array<{ name: string }> = [];
+    const listed = new Set<string>();
+    for (const name of [...normalized.map((item) => String(item.body.name ?? '')), ...stored.map((row) => row.name)]) {
+      const key = name.trim().toLowerCase();
+      if (key === '' || listed.has(key)) continue;
+      listed.add(key);
+      processNames.push({ name });
+    }
     const state: ImportMatchState = { matches: new Map(), refused: new Map() };
     const { matches } = state;
     for (const item of normalized) {
