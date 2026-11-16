@@ -7,7 +7,7 @@ import { AiChatController } from '../ai-chat.controller';
 import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
 import { AiConversationsController } from '../ai-conversations.controller';
 import { PrepareImportMappingAiMutationOperation } from '../mutation/operations/prepare-import-mapping.ai-mutation-operation';
-import { IMPORT_LOAD_REFUSALS } from '../ai-write-texts';
+import { IMPORT_LOAD_REFUSALS, importRefusalText } from '../ai-write-texts';
 import { AI_IMPORT_TARGETS, importColumnTitle } from '../import/ai-import-targets';
 
 /**
@@ -141,6 +141,23 @@ function loadRefusalsAreTheCardsWords() {
 }
 
 /**
+ * The load of an applications import refuses a row whose situation changed since the check (lot I3 of
+ * 26.11.9, T-I3l): the failed card's summary says why, and names no column (correctifs I).
+ */
+function applicationLoadRefusalsSaid() {
+  for (const code of ['CSV_LOOKALIKE_CHANGED', 'CSV_LOOKALIKE_GONE', 'CSV_LOOKALIKE_NAME_FOUND']) {
+    assert.ok(IMPORT_LOAD_REFUSALS[code], `${code}: said after the approval`);
+  }
+  const text = importRefusalText(
+    'fr',
+    { report: { kind: 'rows', errors: [{ row: 2, code: 'CSV_LOOKALIKE_CHANGED', params: { ref: 'APP-52' } }] } },
+    new Map([['name', 'Nom']]),
+  );
+  assert.equal(text, 'Ligne 2 : APP-52 a changé depuis la vérification.');
+  console.log('  refusals of an applications load, said after the approval: OK');
+}
+
+/**
  * The card names the columns of a task or an incident as the import screen does (lot I3 of 26.11.9,
  * correctifs G): its title is the screen's label (`csv.fields.<import>.<column>` in `common.json`),
  * in the four languages.
@@ -168,6 +185,7 @@ async function taskAndIncidentColumnsAsTheImportScreenNamesThem() {
 async function main() {
   phrasesInEveryLanguage();
   loadRefusalsAreTheCardsWords();
+  applicationLoadRefusalsSaid();
   await taskAndIncidentColumnsAsTheImportScreenNamesThem();
   instructionsNameLinesAndColumnsNeverCodes();
   instructionsProposeExistingRecordsOnly();
