@@ -185,9 +185,59 @@ async function testUndoneWithSpacesInTheCell() {
   });
 }
 
+// Fixes after the adversarial review (finding 3): Kad's proposal names a cluster two clusters are
+// named: the row is refused, naming both by their references, as a name written so would be.
+async function testClusterProposalOfTwoClusters() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'asset-csv-cluster-twice');
+    await seedLocation(runner, tenantId);
+    await asset(runner, tenantId, 'Grappe Double', true);
+    await asset(runner, tenantId, 'Grappe Double', true);
+    const refs = (await runner.query(`SELECT asset_reference AS ref FROM assets WHERE tenant_id = $1 ORDER BY asset_reference`, [tenantId]))
+      .map((row: { ref: string }) => row.ref).join(', ');
+    const header = 'name;location_reference;kind;environment;is_cluster;cluster';
+    const check = await importCsv(runner, tenantId, [header, 'node-1;LOC-1;vm;prod;no;GD'], { proposals: { cluster: { GD: 'Grappe Double' } } }, ADMIN);
+    assert.deepEqual(check.errors.map((error) => [error.row, error.column, error.code, String(error.params?.names).split(', ').sort().join(', ')]), [[2, 'cluster', 'CSV_NAME_AMBIGUOUS_AMONG', refs]]);
+    assert.equal(check.matches, undefined);
+  });
+}
+
+// Lot I3 of 26.11.9, point the review left unchecked: a catalog product the workspace adopted already
+// (here renamed, so the label names the catalog's product) keeps the versions the workspace holds; its
+// adoption adds none back. The check and the load find the same version and say the same thing.
+async function testAdoptedProductAtTheCheckAndTheLoad() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'asset-csv-os-adopted');
+    await seedLocation(runner, tenantId);
+    const first = await importCsv(runner, tenantId, [OS_HEADER, 'srv-a;LOC-1;vm;prod;Ubuntu 22.04'], { dryRun: false }, ADMIN);
+    assert.equal(first.ok, true, JSON.stringify(first.errors));
+    await runner.query(`UPDATE technologies SET name = 'Serveurs Ubuntu' WHERE tenant_id = $1 AND catalog_key IS NOT NULL`, [tenantId]);
+    await runner.query(`DELETE FROM technology_versions WHERE tenant_id = $1 AND label = '20.04 LTS'`, [tenantId]);
+    const file = [OS_HEADER, 'srv-b;LOC-1;vm;prod;Ubuntu 20.04', 'srv-c;LOC-1;vm;prod;Ubuntu 24.04'];
+    const said = (result: CsvImportResult) => ({
+      matches: listed(result),
+      warnings: result.warnings.map((w) => [w.row, w.code, w.params?.value]),
+      errors: codes(result),
+    });
+    const check = await importCsv(runner, tenantId, file, {}, ADMIN);
+    const load = await importCsv(runner, tenantId, file, { dryRun: false }, ADMIN);
+    assert.deepEqual(said(load), said(check), 'the load says what the check said');
+    assert.deepEqual(said(check), {
+      matches: ['operating_system:Ubuntu 24.04>Serveurs Ubuntu 24.04 LTS:version:server:3:true'],
+      warnings: [[2, 'CSV_TECHNOLOGY_VERSION_CREATED', '20.04']],
+      errors: [],
+    });
+    const stored = await systems(runner, tenantId);
+    assert.equal(stored['srv-b'], 'Serveurs Ubuntu 20.04', 'the version said is the one written');
+    assert.equal(stored['srv-c'], 'Serveurs Ubuntu 24.04 LTS');
+  });
+}
+
 void runSpecs('asset-csv-matching.integration.spec.ts', [
   ['operating system at the check', testOperatingSystemAtTheCheck],
   ['Cloud is no type', testCloudIsNoType],
   ['cluster names', testClusterNames],
   ['a match undone with spaces in the cell', testUndoneWithSpacesInTheCell],
+  ['Kad proposes a name of two clusters', testClusterProposalOfTwoClusters],
+  ['an adopted product at the check and the load', testAdoptedProductAtTheCheckAndTheLoad],
 ]);
