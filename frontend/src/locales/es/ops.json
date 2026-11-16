@@ -1099,6 +1099,7 @@
         "count_one": "{{count}} valor asociado",
         "match": "{{dimension}}: {{value}} → {{target}}",
         "byKad": "Propuesto por {{agent}}",
+        "byEditor": "{{column}} (editor)",
         "catalogVersion": "Versión del catálogo",
         "undo": "Deshacer",
         "redo": "Volver a asociar",

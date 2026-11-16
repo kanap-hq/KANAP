@@ -1099,6 +1099,7 @@
         "count_one": "{{count}} Wert zugeordnet",
         "match": "{{dimension}}: {{value}} → {{target}}",
         "byKad": "Von {{agent}} vorgeschlagen",
+        "byEditor": "{{column}} (Herausgeber)",
         "catalogVersion": "Katalogversion",
         "undo": "Rückgängig",
         "redo": "Wieder zuordnen",

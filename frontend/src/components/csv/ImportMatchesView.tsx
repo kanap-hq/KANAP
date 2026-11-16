@@ -174,7 +174,14 @@ export default function ImportMatchesView({
       {open && matches.map((entry) => (
         <Line
           key={`mt-${entry.column}-${entry.value}`}
-          text={t(`${K}matching.match`, { dimension: columnName(entry.column, entry.name), value: entry.value, target: record(entry) })}
+          text={t(`${K}matching.match`, {
+            // A supplier found by the application's publisher says so after its column.
+            dimension: entry.origin === 'editor'
+              ? t(`${K}matching.byEditor`, { column: columnName(entry.column, entry.name) })
+              : columnName(entry.column, entry.name),
+            value: entry.value,
+            target: record(entry),
+          })}
           kad={entry.origin === 'model' ? t(`${K}matching.byKad`) : undefined}
           tooltip={entry.reason === 'version' ? <>{t(`${K}matching.catalogVersion`)}<br />{linesOf(entry)}</> : linesOf(entry)}
           action={onUndo && entry.undoable ? { label: t(`${K}matching.undo`), onClick: () => onUndo(entry), disabled } : undefined}
