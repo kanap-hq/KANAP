@@ -934,6 +934,17 @@
         "priority_override": "Prioritätsüberschreibung",
         "override_value": "Überschreibungswert",
         "override_justification": "Begründung der Überschreibung"
+      },
+      "contracts": {
+        "company_name": "Unternehmen",
+        "supplier_name": "Lieferant",
+        "cost_center": "Kostenstelle"
+      },
+      "cost-centers": {
+        "company_name": "Unternehmen"
+      },
+      "business-processes": {
+        "parent_name": "Übergeordnet"
       }
     }
   },

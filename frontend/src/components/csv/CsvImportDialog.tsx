@@ -11,6 +11,8 @@ import { CsvReportMessage, csvMessageText } from './csvMessage';
 import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
 import { useImportFiles } from './importFiles';
 import ImportExampleButton, { type ImportExampleKey } from './ImportExampleButton';
+import ImportMatchesView from './ImportMatchesView';
+import type { CsvImportResult } from './csv.types';
 
 type ImportReport = {
   ok: boolean;
@@ -28,7 +30,7 @@ type ImportReport = {
   notices?: { dates: string | null; amounts: string | null; firstSheetOnly?: string };
   /** Headers the importer does not know and left out of the import. */
   ignoredColumns?: string[];
-};
+} & Pick<CsvImportResult, 'matches' | 'matchesTotal' | 'refusedProposals' | 'refusedProposalsTotal'>;
 
 /**
  * `code`: the error code the interface translates, when the server gave one (MARKDOWN_TOO_LARGE, ...),
@@ -117,6 +119,10 @@ export default function CsvImportDialog({
   // The request itself failed: the server's message, shown instead of a report.
   const [requestError, setRequestError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // The matches the person undid on the check (lot I3 of 26.11.9): the next check and the load send them.
+  const [unmatched, setUnmatched] = useState<Array<{ column: string; value: string }>>([]);
+  // The matches stay unfolded while the file is checked again after an undo.
+  const [matchesOpen, setMatchesOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const dateNotice = report?.notices?.dates ?? null;
@@ -142,6 +148,8 @@ export default function CsvImportDialog({
     setRequestError(null);
     setLoading(false);
     setHover(false);
+    setUnmatched([]);
+    setMatchesOpen(false);
   }, []);
 
   const chooseFile = (next: File | null | undefined) => {
@@ -149,9 +157,11 @@ export default function CsvImportDialog({
     // A new file decides its own reading: the next check starts from the server's choice.
     setDateOrder(null);
     setAmountReading(null);
-    // The report and the error were about the previous file.
+    // The report, the error and the matches undone were about the previous file.
     setReport(null);
     setRequestError(null);
+    setUnmatched([]);
+    setMatchesOpen(false);
     setFile(next);
   };
 
@@ -166,10 +176,10 @@ export default function CsvImportDialog({
     chooseFile(e.target.files?.[0] || null);
   };
 
-  /** `chosen` carries the reading a switch just picked, before the state has caught up. */
+  /** `chosen` carries the reading a switch, or the matches an Undo, just picked, before the state has caught up. */
   const upload = async (
     dryRun: boolean,
-    chosen: { dateOrder?: DateReading | null; decimalMark?: AmountReading | null } = {},
+    chosen: { dateOrder?: DateReading | null; decimalMark?: AmountReading | null; unmatched?: Array<{ column: string; value: string }> } = {},
   ) => {
     if (!file) return;
     setLoading(true);
@@ -178,6 +188,9 @@ export default function CsvImportDialog({
     try {
       const fd = new FormData();
       fd.append('file', file);
+      // In the form, never in the address: they hold values of the file.
+      const undone = chosen.unmatched ?? unmatched;
+      if (undone.length > 0) fd.append('unmatched', JSON.stringify(undone));
       const queryParams: Record<string, string | number | boolean | null | undefined> = {
         ...(params ?? {}),
         language,
@@ -218,6 +231,15 @@ export default function CsvImportDialog({
     setAmountReading(next);
     if (report?.dryRun) void upload(true, { dateOrder: order, decimalMark: next });
   };
+
+  // An Undo checks the file again without that match, with the reading the shown check applied.
+  const undo = (entry: { column: string; value: string }) => {
+    const next = [...unmatched, { column: entry.column, value: entry.value }];
+    setUnmatched(next);
+    void upload(true, { unmatched: next });
+  };
+  const matches = report?.matches ?? [];
+  const refusedProposals = report?.refusedProposals ?? [];
 
   const canLoad = useMemo(() => !!report && (report as any).ok && (report as any).dryRun, [report]);
 
@@ -374,6 +396,22 @@ export default function CsvImportDialog({
                   <Box component="span" sx={{ display: 'block' }}>{t('csv.andMoreErrors', { count: warnings.length - 5 })}</Box>
                 )}
               </Alert>
+            )}
+            {/* Under the warnings: the names found beyond case, undone on the check only. */}
+            {(matches.length > 0 || refusedProposals.length > 0) && (
+              <Box sx={{ mt: 1.5 }}>
+                <ImportMatchesView
+                  matches={matches}
+                  matchesTotal={report.matchesTotal}
+                  refusedProposals={refusedProposals}
+                  refusedTotal={report.refusedProposalsTotal}
+                  columnName={(column) => csvFieldLabel(t, entity, { csvColumn: column, label: column })}
+                  open={matchesOpen}
+                  onToggle={() => setMatchesOpen((open) => !open)}
+                  onUndo={report.dryRun ? undo : undefined}
+                  disabled={loading}
+                />
+              </Box>
             )}
           </Box>
         )}

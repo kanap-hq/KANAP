@@ -17,7 +17,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
-import { csvEntityOf } from './csvLabels';
+import { csvEntityOf, csvFieldLabel } from './csvLabels';
 import { screenLanguage } from './readings';
 import api from '../../api';
 import { useCsvImport } from './useCsvImport';
@@ -28,6 +28,7 @@ import { CsvValidationResults } from './CsvValidationResults';
 import { CsvImportResult } from './csv.types';
 import { useImportFiles } from './importFiles';
 import ImportExampleButton, { type ImportExampleKey } from './ImportExampleButton';
+import ImportMatchesView from './ImportMatchesView';
 
 interface CsvImportDialogV2Props {
   open: boolean;
@@ -79,18 +80,29 @@ export default function CsvImportDialogV2({
   const [showAdvanced, setShowAdvanced] = React.useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [hover, setHover] = React.useState(false);
+  // The matches the person undid on the check (lot I3 of 26.11.9): the next check and the load send them.
+  const [unmatched, setUnmatched] = React.useState<Array<{ column: string; value: string }>>([]);
+  // The matches stay unfolded while the file is checked again after an undo.
+  const [matchesOpen, setMatchesOpen] = React.useState(false);
+  const entity = csvEntityOf(endpoint);
 
   const handleClose = useCallback(() => {
     onClose();
     // Reset after dialog closes
-    setTimeout(reset, 300);
+    setTimeout(() => {
+      reset();
+      setUnmatched([]);
+      setMatchesOpen(false);
+    }, 300);
   }, [onClose, reset]);
 
   const chooseFile = (next: File | null | undefined) => {
     if (!next) return;
-    // The report and the error were about the previous file.
+    // The report, the error and the matches undone were about the previous file.
     setResult(null);
     setError(null);
+    setUnmatched([]);
+    setMatchesOpen(false);
     setFile(next);
   };
 
@@ -105,7 +117,8 @@ export default function CsvImportDialogV2({
     chooseFile(e.target.files?.[0]);
   };
 
-  const upload = async (dryRun: boolean) => {
+  /** `undone` carries the matches undone with an Undo just clicked, before the state has caught up. */
+  const upload = async (dryRun: boolean, undone: Array<{ column: string; value: string }> = unmatched) => {
     if (!file) return;
     setLoading(true);
     setError(null);
@@ -114,6 +127,8 @@ export default function CsvImportDialogV2({
     try {
       const fd = new FormData();
       fd.append('file', file);
+      // In the form, never in the address: they hold values of the file.
+      if (undone.length > 0) fd.append('unmatched', JSON.stringify(undone));
       const queryParams = { ...(params ?? {}), dryRun, mode, operation, language };
       const res = await api.post(`${endpoint}/import`, fd, { params: queryParams });
       const data = res.data as CsvImportResult;
@@ -130,6 +145,12 @@ export default function CsvImportDialogV2({
     } finally {
       setLoading(false);
     }
+  };
+
+  const undo = (entry: { column: string; value: string }) => {
+    const next = [...unmatched, { column: entry.column, value: entry.value }];
+    setUnmatched(next);
+    void upload(true, next);
   };
 
   const canValidate = !!file && !loading;
@@ -239,7 +260,25 @@ export default function CsvImportDialogV2({
         )}
 
         {(phase === 'validate' || phase === 'result') && result && (
-          <CsvValidationResults result={result} entity={csvEntityOf(endpoint)} />
+          <>
+            <CsvValidationResults result={result} entity={entity} />
+            {/* Under the warnings: the names found beyond case, undone on the check only. */}
+            {((result.matches?.length ?? 0) > 0 || (result.refusedProposals?.length ?? 0) > 0) && (
+              <Box sx={{ mt: 2 }}>
+                <ImportMatchesView
+                  matches={result.matches ?? []}
+                  matchesTotal={result.matchesTotal}
+                  refusedProposals={result.refusedProposals ?? []}
+                  refusedTotal={result.refusedProposalsTotal}
+                  columnName={(column) => csvFieldLabel(t, entity, { csvColumn: column, label: column })}
+                  open={matchesOpen}
+                  onToggle={() => setMatchesOpen((open) => !open)}
+                  onUndo={phase === 'validate' && result.dryRun ? undo : undefined}
+                  disabled={loading}
+                />
+              </Box>
+            )}
+          </>
         )}
 
         {loading && <LinearProgress sx={{ mt: 2 }} />}
