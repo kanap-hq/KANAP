@@ -804,6 +804,112 @@ async function testServerVersionAndHosting(h: Harness, runner: QueryRunner, s: S
   console.log('  servers: Ubuntu 22.04 found as 22.04 LTS and undone from the card; the sites\' hosting said: OK');
 }
 
+/** A person of the workspace with these rights, and a conversation of theirs: the context of their card. */
+async function personWith(runner: QueryRunner, s: Seed, name: string, permissions: Record<string, string>) {
+  const role = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, $2, $2)`, [s.tenantId, name]);
+  for (const [resource, level] of Object.entries(permissions)) {
+    await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, $4)`, [s.tenantId, role, resource, level]);
+  }
+  const user = await insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status, locale) VALUES ($1, $2, $3, 'Tester', $4, 'enabled', 'en')`,
+    [s.tenantId, `${name.toLowerCase().replace(/\W+/g, '-')}-${s.tenantId.slice(0, 8)}@example.test`, name, role]);
+  const conversation = randomUUID();
+  await runner.query(
+    `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+     VALUES ($1, $2, $3, 'AI import run integration', 'custom', 'import-model', 'custom', now(), now())`,
+    [conversation, s.tenantId, user],
+  );
+  return { role, context: { ...ctx(runner, s, 'admin'), userId: user, conversationId: conversation } };
+}
+
+// Fixes after the adversarial review (finding 6): the card names the hosting of the sites only to a
+// person who reads the sites (the right the sites screen asks); without it, no hosting at all.
+async function testHostingNeedsTheSites(h: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query(
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type, provider) VALUES ($1, 'LOC-4601', 'Site secret F46', 'public_cloud', 'AWS')`,
+    [s.tenantId],
+  );
+  const { role, context } = await personWith(runner, s, 'Infra sans sites', { ai_chat: 'member', infrastructure: 'admin' });
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'location_reference', source: 2, confidence: 'high' },
+    { column: 'kind', source: 3, confidence: 'high' },
+    { column: 'environment', source: 4, confidence: 'high' },
+  ];
+  const file = () => attach(h, 'Serveurs F46.csv', ['Nom;Site;Type;Environnement', 'srv-f46;LOC-4601;virtual_machine;prod'].join('\n'));
+  const blind = await h.previews.createPreview(context, 'prepare_import_mapping', { attachment_id: file(), entity_type: 'assets', columns });
+  assert.equal(blind.import_mapping.validation.report.hosting, undefined, 'no site named without the sites right');
+  assert.doesNotMatch(JSON.stringify(blind), /Site secret F46/);
+  await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'locations', 'reader')`, [s.tenantId, role]);
+  const seeing = await h.previews.createPreview(context, 'prepare_import_mapping', { attachment_id: file(), entity_type: 'assets', columns });
+  assert.deepEqual(seeing.import_mapping.validation.report.hosting?.map((site: any) => site.name), ['Site secret F46']);
+  console.log('  servers: the sites\' hosting named to a person who reads the sites only: OK');
+}
+
+// Fixes after the adversarial review (finding 9): the file prepared from a card is imported by the
+// list's own import, which reads no proposal of Kad: the file writes each proposal the check took,
+// all of them (more than the card's 200 first matches), in a cell of several names (clusters) too.
+async function testPreparedFileKeepsEveryProposal(h: Harness, runner: QueryRunner, s: Seed) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const { readTableAttachment } = require('../attachments/table-attachment');
+  const controller = h.app.get(AiImportFileController);
+  const admin = ctx(runner, s, 'admin');
+  const download = async (previewId: string) => {
+    const sent: { body: Buffer | null } = { body: null };
+    const res = { setHeader: () => undefined, end: (body: Buffer) => { sent.body = body; } };
+    await controller.download(s.conversations.admin, previewId, { user: { sub: s.users.admin } }, { tenantId: s.tenantId, manager: runner.manager }, res);
+    const built = await readTableAttachment(sent.body!);
+    const header = built.header.map((cell: any) => cell.value);
+    return built.rows.map((row: any[]) => Object.fromEntries(header.map((name: string, at: number) => [name, row[at]?.value ?? ''])));
+  };
+
+  const count = 205;
+  await runner.query(`INSERT INTO suppliers (tenant_id, name) SELECT $1, 'Fournisseur PF ' || g FROM generate_series(1, $2::int) g`, [s.tenantId, count]);
+  const lines = ['Appli;Editeur'];
+  const values: Record<string, string> = {};
+  for (let n = 1; n <= count; n += 1) {
+    lines.push(`Appli PF ${n};FPF ${n}`);
+    values[`FPF ${n}`] = `Fournisseur PF ${n}`;
+  }
+  const apps = await h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: attach(h, 'Applications PF.csv', lines.join('\n')),
+    entity_type: 'applications',
+    columns: [
+      { column: 'name', source: 1, confidence: 'high' },
+      { column: 'supplier_name', source: 2, confidence: 'high', values },
+    ],
+  });
+  assert.equal(apps.import_mapping.validation.report.matchesTotal, count);
+  const appRows = await download(apps.preview_id);
+  assert.equal(appRows.length, count);
+  assert.deepEqual(appRows.filter((row: any) => row.supplier_name !== row.name.replace('Appli', 'Fournisseur')).map((row: any) => row.name), [], 'every proposal written');
+
+  await runner.query(
+    `INSERT INTO assets (tenant_id, name, kind, environment, is_cluster) VALUES ($1, 'Grappe A PF', 'vm', 'prod', true), ($1, 'Grappe B PF', 'vm', 'prod', true)`,
+    [s.tenantId],
+  );
+  await runner.query(
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type) VALUES ($1, 'LOC-4701', 'Site PF', 'on_prem')`,
+    [s.tenantId],
+  );
+  const nodes = await h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: attach(h, 'Noeuds PF.csv', ['Nom;Site;Type;Environnement;Grappes', 'node-pf;LOC-4701;virtual_machine;prod;GA, GB'].join('\n')),
+    entity_type: 'assets',
+    columns: [
+      { column: 'name', source: 1, confidence: 'high' },
+      { column: 'location_reference', source: 2, confidence: 'high' },
+      { column: 'kind', source: 3, confidence: 'high' },
+      { column: 'environment', source: 4, confidence: 'high' },
+      { column: 'cluster', source: 5, confidence: 'high', values: { GA: 'Grappe A PF', GB: 'Grappe B PF' } },
+    ],
+  });
+  const check = nodes.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check.report.errors));
+  const [node] = await download(nodes.preview_id);
+  assert.equal(node.cluster, 'Grappe A PF, Grappe B PF', 'each name of the cell written');
+  console.log('  prepared file: every proposal the check took written, beyond 200 and in a cell of several names: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -827,6 +933,8 @@ async function run() {
       await testProposalsOfTheOtherImports(harness, runner, s);
       await testLinkServerNameUndoneByTheRoute(harness, runner, s);
       await testServerVersionAndHosting(harness, runner, s);
+      await testHostingNeedsTheSites(harness, runner, s);
+      await testPreparedFileKeepsEveryProposal(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

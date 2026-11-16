@@ -216,7 +216,7 @@ export class AiImportMappingService {
       const matches = check.report.kind === 'rows'
         ? check.report.matches
         : (file?.matching as { matches?: BudgetFileMatch[] } | undefined)?.matches;
-      writeMatches(converted.file, matches ?? []);
+      writeMatches(converted.file, matches ?? [], NAME_LIST_COLUMNS[target.key] ?? []);
     }
     return { content: buildImportFile(converted.file, language), rows: converted.file.rows.length };
   }
@@ -241,7 +241,8 @@ export class AiImportMappingService {
 
   /**
    * A servers import's report with the hosting of the sites its file names (T-I3f of lot I3): a
-   * server is hosted as its site is, which the card says under the messages.
+   * server is hosted as its site is, which the card says under the messages. Only to a person who
+   * reads the sites (the right of the sites screen): otherwise the card names none.
    */
   private async withHosting(
     context: AiExecutionContextWithManager,
@@ -251,6 +252,7 @@ export class AiImportMappingService {
     run: AiImportRunDto,
   ): Promise<AiImportRunDto> {
     if (target.key !== 'assets' || run.report.kind !== 'rows') return run;
+    if (!(await this.policy.readableResources(context, ['locations'], context.manager)).has('locations')) return run;
     const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
     const hosting = await serverHosting(context.manager, context.tenantId, converted.file, settings.hostingTypes ?? [], language);
     return hosting.length > 0 ? { ...run, report: { ...run.report, hosting } } : run;
@@ -299,19 +301,30 @@ export class AiImportMappingService {
   }
 }
 
+/** The columns whose cell holds several names, separated by commas, each one matched on its own. */
+const NAME_LIST_COLUMNS: Partial<Record<AiImportKey, readonly string[]>> = { assets: ['cluster'] };
+
 /**
- * Writes the matched values in the file: each cell of a matched column whose value the check matched
- * holds the existing value it stands for. The matches' `value` is the file's cell, case aside.
+ * Writes the matched values in the file, for the list's own import, which reads no proposal of Kad
+ * (lot I3 of 26.11.9): each cell of a matched column whose value the check matched holds the existing
+ * value it stands for; in a cell of several names (`listColumns`), each name. The matches' `value` is
+ * the file's cell, case aside. The check lists every proposal of Kad it took (`listedMatchEntries`):
+ * none is lost.
  */
-function writeMatches(file: AiImportMappingResult['file'], matches: readonly BudgetFileMatch[]): void {
+function writeMatches(file: AiImportMappingResult['file'], matches: readonly BudgetFileMatch[], listColumns: readonly string[]): void {
   if (matches.length === 0) return;
   const byKey = new Map(matches.map((match) => [cellKey(match.column, match.value), match.target]));
   file.columns.forEach((column, index) => {
+    const several = listColumns.includes(column.column);
     for (const row of file.rows) {
       const cell = row[index];
       if (typeof cell !== 'string' || cell === '') continue;
       const target = byKey.get(cellKey(column.column, cell));
       if (target !== undefined) row[index] = target;
+      else if (several && cell.includes(',')) {
+        row[index] = cell.split(',').map((name) => name.trim()).filter((name) => name !== '')
+          .map((name) => byKey.get(cellKey(column.column, name)) ?? name).join(', ');
+      }
     }
   });
   delete file.proposals;

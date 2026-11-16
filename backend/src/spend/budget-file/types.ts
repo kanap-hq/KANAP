@@ -514,7 +514,10 @@ export interface BudgetFileMatching {
   /** Kad's proposals the check refused. */
   refusedProposals: BudgetFileRefusedProposal[];
   candidates: BudgetFileCandidates[];
-  /** How many entries each list has: the lists hold the first MATCH_LIST_LIMIT. */
+  /**
+   * How many entries each list has: `matches` holds each one Kad proposed and the first MATCH_LIST_LIMIT
+   * others, `refusedProposals` all, `candidates` the first MATCH_LIST_LIMIT.
+   */
   totals: { matches: number; refusedProposals: number; candidates: number };
   /** The choices the check followed: the undone matches it would otherwise make, and the suppliers option. */
   choices: BudgetFileChoice[];

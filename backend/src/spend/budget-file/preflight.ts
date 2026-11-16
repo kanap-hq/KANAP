@@ -22,6 +22,7 @@ import {
   closestNames,
   createSuppliersChoice,
   foldKey,
+  listedMatchEntries,
   matchByName,
   NameMatch,
   translatedValues,
@@ -1997,8 +1998,9 @@ function matchingOf(input: PreflightInput, bag: Bag): NonNullable<BudgetFileRepo
   if (chosen !== undefined) choices.push({ kind: 'create_suppliers', value: chosen });
   choices.push(...bag.lookalikeChoices);
   return {
-    matches: [...state.matches.values()].slice(0, MATCH_LIST_LIMIT),
-    refusedProposals: [...state.refused.values()].slice(0, MATCH_LIST_LIMIT),
+    // Kad's proposals all, taken or refused (the file prepared from Kad's card writes the ones taken).
+    matches: listedMatchEntries([...state.matches.values()]),
+    refusedProposals: [...state.refused.values()],
     candidates: [...state.candidates.values()].slice(0, MATCH_LIST_LIMIT),
     totals: { matches: state.matches.size, refusedProposals: state.refused.size, candidates: state.candidates.size },
     choices,
