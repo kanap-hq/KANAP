@@ -61,7 +61,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What you see.** The export titles its columns in your language and the import reads the same columns: use it as a template for your own projects. The example workbook holds a few projects, the other columns on an **Advanced** sheet and what each column takes on a **Notes** sheet. Requests and tasks have their own **Export** and **Import**. These buttons are shown to the administrators of the list.
 
-To start from a file you already keep, attach it to a message in Kad with **Attach a file**. Kad reads its column headers, the type of each column and the first ten rows, and can say what each column holds.
+To start from a file you already keep, attach it to a message in Kad with **Attach a file**. Kad reads its column headers, the type of each column, the first ten rows and the values that repeat in its text columns, and can say what each column holds.
 
 ## Next
 

@@ -8,6 +8,7 @@ type Titles = Record<CsvLanguage, string>;
  */
 const COLUMN_TITLES: Record<string, Titles> = {
   name: { en: 'Name', fr: 'Nom', de: 'Name', es: 'Nombre' },
+  reference: { en: 'Reference', fr: 'Référence', de: 'Referenz', es: 'Referencia' },
   title: { en: 'Title', fr: 'Titre', de: 'Titel', es: 'Título' },
   description: { en: 'Description', fr: 'Description', de: 'Beschreibung', es: 'Descripción' },
   notes: { en: 'Notes', fr: 'Notes', de: 'Notizen', es: 'Notas' },

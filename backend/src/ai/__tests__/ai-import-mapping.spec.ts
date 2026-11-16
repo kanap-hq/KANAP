@@ -152,9 +152,14 @@ async function testTemplatesAreTheColumnsTheImportsRead() {
   assert.equal(importColumnTitle(tasks.find((column) => column.column === 'viewer_email_2')!, 'de'), 'E-Mail Beobachter 2');
   const calendars = await AI_IMPORT_TARGETS.working_day_calendars.columns(ctx);
   assert.equal(importColumnTitle(calendars.find((column) => column.column === 'aug')!, 'fr'), 'Août');
-  // The identity columns stay out: the person's file has no KANAP id or reference.
+  // The identity columns stay out: an application's reference is export-only. The companies and the
+  // departments read theirs as their key, with its prefix (lot R2 of 26.11.9).
   const applications = (await AI_IMPORT_TARGETS.applications.columns(ctx)).map((column) => column.column);
   assert.ok(!applications.includes('id') && !applications.includes('reference'));
+  for (const [key, prefix] of [['companies', 'COMP'], ['departments', 'DEPT']] as const) {
+    const [first] = await AI_IMPORT_TARGETS[key].columns(ctx);
+    assert.deepEqual([first.column, first.kind, first.prefix], ['reference', 'reference', prefix], key);
+  }
   console.log('  templates are the columns the imports read: OK');
 }
 
@@ -273,6 +278,21 @@ function testConversions() {
     { status: 'unread', raw: 'Resume' },
   ]);
   console.log('  conversions: OK');
+}
+
+// A column of the family's own references reads a value only with its prefix, in any case; one value
+// without it (a column numbering the rows 1 to N) and the column reads no cell (lot R2 of 26.11.9).
+function testReferencesNeedTheirPrefix() {
+  const rule = { kind: 'reference' as const, prefix: 'COMP' };
+  let { reader, results } = read(rule, ['COMP-4', 'comp-12', '']);
+  assert.equal(reader.error, null);
+  assert.deepEqual(results, [{ status: 'converted', value: 'COMP-4' }, { status: 'converted', value: 'COMP-12' }, { status: 'blank' }]);
+  for (const values of [['1', '2', '3'], ['COMP-1', '2'], ['COMP-1', 'DEPT-2'], ['COMP-013']]) {
+    ({ reader, results } = read(rule, values));
+    assert.equal(reader.error, 'reference-without-prefix', values.join(','));
+    assert.ok(results.every((result) => result.status === 'blank'), values.join(','));
+  }
+  console.log('  a column of references reads only prefixed values: OK');
 }
 
 function testConversionsOfRealExports() {
@@ -733,23 +753,25 @@ async function testApprovalRunsTheImportAndTheModelSeesNoCell() {
     },
   );
 
-  // The model receives the counts, never the cells beyond the summary, the card's first rows nor the import's messages.
+  // The model reads the values not read and the first rows (lot I1 of 26.11.9: the file's cells
+  // reach it, so that it can map them with `values`); the import's report stays the card's: the model
+  // reads it as the counts and the issues by code and column.
   const hidden = MODEL_HIDDEN_OUTPUT_FIELDS.prepare_import_mapping;
+  assert.deepEqual([...hidden], ['/import_mapping/validation/report', '/import_mapping/result/report']);
   for (const shown of [dto, approved]) {
     const forModel = new AiEvidenceService({} as any).redact(shown, [...hidden]) as any;
-    assert.equal(forModel.import_mapping.unread_values, '[REDACTED]');
-    assert.equal(forModel.import_mapping.sample, '[REDACTED]');
+    assert.deepEqual(forModel.import_mapping.unread_values, { lifecycle: ['En prod'] });
+    assert.deepEqual(forModel.import_mapping.sample, shown.import_mapping!.sample);
     assert.equal(forModel.import_mapping.validation.report, '[REDACTED]');
     assert.equal(forModel.import_mapping.columns.length, dto.import_mapping!.columns.length);
     assert.equal(forModel.import_mapping.columns[1].unread, 1);
     assert.deepEqual(forModel.import_mapping.validation.issues, [{ level: 'warning', code: 'unknown_value', column: 'lifecycle', count: 1 }]);
-    assert.ok(!JSON.stringify(forModel).includes('En prod'), 'no cell of the file');
   }
   const forModel = new AiEvidenceService({} as any).redact(approved, [...hidden]) as any;
   assert.equal(forModel.import_mapping.result.report, '[REDACTED]');
   assert.equal(forModel.import_mapping.result.inserted, 2);
   assert.deepEqual(dto.import_mapping!.unread_values.lifecycle, ['En prod'], 'the card keeps them');
-  console.log('  approval runs the import, the model sees no cell: OK');
+  console.log('  approval runs the import, the model reads the values not read, not the report: OK');
 }
 
 async function testARefusedFileIsNotImported() {
@@ -875,6 +897,103 @@ function testLookalikesReachTheModel() {
   console.log('  lookalikes of a budget file reach the model, by line and reference: OK');
 }
 
+// Review of lot I1: the model counts what the approval creates from the check itself, and is told the
+// length of a matching list cut to its first entries.
+function testMatchingCountsReachTheModel() {
+  const lines = [2, 3];
+  const candidate = (index: number) => ({
+    column: 'analytics:business_domain', name: 'Domaine', value: `Valeur ${index}`, outcome: 'create' as const, lines: [2], count: 1, candidates: [],
+  });
+  const matching = {
+    matches: [], refusedProposals: [], candidates: Array.from({ length: 70 }, (_, index) => candidate(index)),
+    totals: { matches: 0, refusedProposals: 0, candidates: 250 },
+    choices: [], createSuppliers: { allowed: true, value: true },
+  };
+  const budget = budgetBilan({
+    ok: true, changes: { created: 2, updated: 0, unchanged: 0 }, creates: { supplierCount: 0, dimensionValueCount: 250 }, matching,
+  }, true, lines);
+  assert.equal(budget.new_dimension_values, 250);
+  assert.equal(budget.matching?.candidates.length, 60);
+  assert.deepEqual(budget.matching?.totals, { matches: 0, refused_proposals: 0, candidates: 250 });
+  const short = budgetBilan({
+    ok: true, changes: { created: 2, updated: 0, unchanged: 0 }, creates: { supplierCount: 0, dimensionValueCount: 1 },
+    matching: { ...matching, candidates: [candidate(1)], totals: { matches: 0, refusedProposals: 0, candidates: 1 } },
+  }, true, lines);
+  assert.equal(short.matching?.totals, undefined, 'no totals when nothing is cut');
+  // The facts of the approval, first: what it creates, by name, and what the check matched.
+  assert.equal(Object.keys(short)[0], 'on_approval');
+  assert.equal(short.on_approval,
+    'On approval: 2 lines created, 0 updated; 0 suppliers created; 1 dimension values created: Valeur 1 (Domaine); '
+    + '0 values of the file matched to existing ones.');
+  const nothing = budgetBilan({
+    ok: true, changes: { created: 8, updated: 0, unchanged: 0 }, creates: { supplierCount: 0, dimensionValueCount: 0 },
+    matching: {
+      ...matching, candidates: [],
+      matches: [{ column: 'analytics:business_domain', name: 'Domaine', value: 'Delivery', target: 'Support et exploitation', origin: 'server', reason: 'translation', lines: [2], count: 1, undoable: true }],
+      totals: { matches: 1, refusedProposals: 0, candidates: 0 },
+    },
+  }, true, lines);
+  assert.equal(nothing.on_approval,
+    'On approval: 8 lines created, 0 updated; 0 suppliers created; 0 dimension values created; '
+    + '1 values of the file matched to existing ones: Delivery → Support et exploitation.');
+  const refused = budgetBilan({ ok: false, changes: { created: 0, updated: 0, unchanged: 0 }, errors: [], matching }, true, lines);
+  assert.match(refused.on_approval!, /^This card cannot be approved/);
+  assert.equal(budgetBilan({ ok: true, inserted: 2 }, false, lines).on_approval, undefined, 'the import\'s result has none');
+  console.log('  the model reads the values created and the length of a cut list: OK');
+}
+
+// Lot I1, fourth fixes: the facts of the approval count the lines by nature, from the check, so the
+// model never counts them in the file; a nature at zero is not written, a total at zero has no
+// parentheses, and a check without the split keeps its sentence.
+function testApprovalFactsByNature() {
+  const lines = [2, 3];
+  const matching = {
+    matches: [], refusedProposals: [], candidates: [], totals: { matches: 0, refusedProposals: 0, candidates: 0 },
+    choices: [], createSuppliers: { allowed: true, value: true },
+  };
+  const facts = (changes: Parameters<typeof budgetBilan>[0]['changes']) => budgetBilan({
+    ok: true, changes, creates: { supplierCount: 0, dimensionValueCount: 0 }, matching,
+  }, true, lines).on_approval;
+  const tail = '0 suppliers created; 0 dimension values created; 0 values of the file matched to existing ones.';
+  assert.equal(facts({
+    created: 8, updated: 0, unchanged: 0, byNature: { created: { opex: 5, capex: 3 }, updated: { opex: 0, capex: 0 } },
+  }), `On approval: 8 lines created (5 OPEX, 3 CAPEX), 0 updated; ${tail}`);
+  assert.equal(facts({
+    created: 3, updated: 2, unchanged: 1, byNature: { created: { opex: 3, capex: 0 }, updated: { opex: 1, capex: 1 } },
+  }), `On approval: 3 lines created (3 OPEX), 2 updated (1 OPEX, 1 CAPEX); ${tail}`);
+  assert.equal(facts({
+    created: 0, updated: 2, unchanged: 0, byNature: { created: { opex: 0, capex: 0 }, updated: { opex: 0, capex: 2 } },
+  }), `On approval: 0 lines created, 2 updated (2 CAPEX); ${tail}`);
+  assert.equal(facts({ created: 8, updated: 0, unchanged: 0 }), `On approval: 8 lines created, 0 updated; ${tail}`, 'no split: the sentence of before');
+  console.log('  the facts of the approval count the lines by nature: OK');
+}
+
+// Lot I1, second fixes: a dimension value to create comes to the model with the enabled values of its
+// dimension (the template's list), since a translation is no near name; a supplier, a refused value
+// and a value matched carry no list.
+function testCreatedDimensionValueCarriesItsList() {
+  const lines = [2, 3];
+  const values = new Map([['analytics:site', ['Siège', 'Usine de Lyon']], ['analytics:priority', ['Haute']]]);
+  const entry = (column: string, value: string, outcome: 'create' | 'refused') => ({ column, name: null, value, outcome, lines: [2], count: 1, candidates: [] });
+  const budget = budgetBilan({
+    ok: true, changes: { created: 2, updated: 0, unchanged: 0 }, creates: { supplierCount: 1, dimensionValueCount: 1 },
+    matching: {
+      matches: [], refusedProposals: [],
+      candidates: [entry('analytics:site', 'Head office', 'create'), entry('supplier_name', 'Propreté Armor', 'create'), entry('analytics:priority', 'Urgent', 'refused')],
+      totals: { matches: 0, refusedProposals: 0, candidates: 3 }, choices: [], createSuppliers: { allowed: true, value: true },
+    },
+  }, true, lines, values);
+  const byColumn = Object.fromEntries(budget.matching!.candidates.map((item) => [item.column, item]));
+  assert.deepEqual(byColumn['analytics:site'].dimension_values, ['Siège', 'Usine de Lyon']);
+  assert.equal(byColumn.supplier_name.dimension_values, undefined, 'a supplier keeps its near names');
+  assert.equal(byColumn['analytics:priority'].dimension_values, undefined, 'a refused value is not created');
+  assert.match(budget.matching!.note, /Before you present the card, read each dimension value created against its `dimension_values`/);
+  assert.doesNotMatch(budget.matching!.note, /never a name that is not listed/);
+  const file = budget.report.kind === 'budget_file' ? budget.report.file as { matching: { candidates: Array<Record<string, unknown>> } } : null;
+  assert.ok(file!.matching.candidates.every((item) => !('dimension_values' in item)), 'the card\'s report is the check\'s');
+  console.log('  a dimension value to create carries its dimension\'s values for the model: OK');
+}
+
 function testAFileImportIsAWrite() {
   for (const message of ['Importe ce fichier dans les applications', 'Import these servers', 'Importiere die Datei', 'Importa este archivo']) {
     const profile = selectAiContextProfile(message);
@@ -913,6 +1032,7 @@ async function run() {
     testCodeLabelsMatchTheScreens();
     await testEveryFixedListIsNamed();
     testConversions();
+    testReferencesNeedTheirPrefix();
     testConversionsOfRealExports();
     await testCleanFile();
     await testMessyFile();
@@ -923,6 +1043,9 @@ async function run() {
     await testARefusedFileIsNotImported();
     testBilanOnThePersonsLines();
     testLookalikesReachTheModel();
+    testMatchingCountsReachTheModel();
+    testApprovalFactsByNature();
+    testCreatedDimensionValueCarriesItsList();
     testAFileImportIsAWrite();
     testApprovalEndsTheTurn();
   } finally {

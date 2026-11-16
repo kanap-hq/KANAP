@@ -131,7 +131,8 @@ async function testCompaniesAndDepartments() {
     assert.deepEqual(namesIn(disabled.content, [...NAMES, 'Orange']), ['Orange'], 'companies export: the Show scope');
 
     const deptShown = await departments.exportCsv('data', { ...opts, language: 'en', listQuery: exportListQuery({ rows: 'list', sort: 'name:DESC', filters: JSON.stringify({ name: { filterType: 'text', type: 'contains', filter: 'e' } }) }) });
-    assert.deepEqual(namesIn(deptShown.content, NAMES, 1), ['Eric', 'Élodie'], 'departments export: column filter and sort');
+    // The name is the third column, after the reference and the company.
+    assert.deepEqual(namesIn(deptShown.content, NAMES, 2), ['Eric', 'Élodie'], 'departments export: column filter and sort');
   });
 }
 

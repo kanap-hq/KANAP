@@ -62,7 +62,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../api';
 import { useAuth } from '../../../../auth/AuthContext';
-import { KanapDialog, StatusDot } from '../../../../components/design';
+import { KanapDialog, StatusDot, useKanapDialogs } from '../../../../components/design';
 import { useTheme } from '@mui/material/styles';
 import DateEUField from '../../../../components/fields/DateEUField';
 import DateCalendarPopover from '../../../../components/fields/DateCalendarPopover';
@@ -585,6 +585,7 @@ function SortablePhaseRow({
   onLinkExistingTask,
 }: SortablePhaseRowProps) {
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
+  const dialogs = useKanapDialogs();
   const { hasLevel } = useAuth();
   const locale = useLocale();
   const [addMenuAnchor, setAddMenuAnchor] = React.useState<null | HTMLElement>(null);
@@ -840,6 +841,11 @@ function SortablePhaseRow({
             disabled={!canManage}
             title={t('workspace.project.timeline.actions.deletePhase')}
             onClick={async () => {
+              if (!(await dialogs.confirm({
+                message: t('workspace.project.timeline.dialogs.confirmDeletePhase'),
+                confirmLabel: t('common:buttons.delete'),
+                intent: 'danger',
+              }))) return;
               try {
                 await api.delete(`/portfolio/projects/${projectId}/phases/${phase.id}`);
                 await onRefetch();
@@ -965,6 +971,7 @@ export default function ProjectTimelineTab({
   onSetForm,
 }: ProjectTimelineTabProps) {
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
+  const dialogs = useKanapDialogs();
   const locale = useLocale();
   const [phaseTemplates, setPhaseTemplates] = React.useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = React.useState('');
@@ -1434,6 +1441,11 @@ export default function ProjectTimelineTab({
                         disabled={!canManage || !!linkedPhase}
                         title={linkedPhase ? t('workspace.project.timeline.messages.unlinkPhaseMilestoneFirst') : undefined}
                         onClick={async () => {
+                          if (!(await dialogs.confirm({
+                            message: t('workspace.project.timeline.dialogs.confirmDeleteMilestone'),
+                            confirmLabel: t('common:buttons.delete'),
+                            intent: 'danger',
+                          }))) return;
                           try {
                             await api.delete(`/portfolio/projects/${projectId}/milestones/${milestone.id}`);
                             await onRefetch();

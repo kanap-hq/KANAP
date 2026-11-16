@@ -40,6 +40,15 @@ export type ReportLabels = {
   systemAuthor: string;
   /** The fixed sentences of system entries, stored in English, by stored text. */
   systemEntries: Record<string, string>;
+  /**
+   * Link-change lines, one per family and direction. `{refs}` is the references
+   * the reader may see; applications also name a hidden count (`{count}`).
+   */
+  linkChanges: {
+    assets: { linked: string; unlinked: string };
+    applications: { linked: string; unlinked: string; hiddenOne: string; hiddenOther: string };
+    technologies: { linked: string; unlinked: string };
+  };
   unknownAuthor: string;
   linkedObjects: string;
   assets: string;
@@ -89,7 +98,12 @@ export type IncidentReportIncident = {
 export type IncidentReportEntry = {
   kind?: string | null;
   content?: string | null;
-  changed_fields?: Record<string, { from: unknown; to: unknown }> | null;
+  changed_fields?: Record<string, {
+    from: unknown;
+    to: unknown;
+    /** Applications the reader does not see, counted per direction by `IncidentEntriesService.list`. */
+    hidden?: { linked?: unknown; unlinked?: unknown };
+  }> | null;
   occurred_at?: Date | string | null;
   created_at?: Date | string | null;
   author_name?: string | null;
@@ -172,6 +186,16 @@ const LABELS: Record<ReportLang, ReportLabels> = {
       'Incident review imported from CSV': 'Incident review imported from CSV',
       'Incident review imported': 'Incident review imported',
     },
+    linkChanges: {
+      assets: { linked: 'Assets linked: {refs}.', unlinked: 'Assets unlinked: {refs}.' },
+      applications: {
+        linked: 'Applications linked: {refs}.',
+        unlinked: 'Applications unlinked: {refs}.',
+        hiddenOne: '1 not shown',
+        hiddenOther: '{count} not shown',
+      },
+      technologies: { linked: 'Technologies linked: {refs}.', unlinked: 'Technologies unlinked: {refs}.' },
+    },
     unknownAuthor: 'Unknown',
     linkedObjects: 'Linked objects',
     assets: 'Assets',
@@ -233,6 +257,17 @@ const LABELS: Record<ReportLang, ReportLabels> = {
       'Imported from CSV': 'Importé depuis un fichier CSV',
       'Incident review imported from CSV': 'Revue d’incident importée depuis un fichier CSV',
       'Incident review imported': 'Revue d’incident importée',
+    },
+    // The no-break space before the colon is the one the Journal tab shows (frenchSpacing).
+    linkChanges: {
+      assets: { linked: 'Actifs liés\u00a0: {refs}.', unlinked: 'Actifs déliés\u00a0: {refs}.' },
+      applications: {
+        linked: 'Applications liées\u00a0: {refs}.',
+        unlinked: 'Applications déliées\u00a0: {refs}.',
+        hiddenOne: '1 non affichée',
+        hiddenOther: '{count} non affichées',
+      },
+      technologies: { linked: 'Technologies liées\u00a0: {refs}.', unlinked: 'Technologies déliées\u00a0: {refs}.' },
     },
     unknownAuthor: 'Inconnu',
     linkedObjects: 'Objets liés',
@@ -296,6 +331,16 @@ const LABELS: Record<ReportLang, ReportLabels> = {
       'Incident review imported from CSV': 'Vorfallanalyse aus CSV importiert',
       'Incident review imported': 'Vorfallanalyse importiert',
     },
+    linkChanges: {
+      assets: { linked: 'Assets verknüpft: {refs}.', unlinked: 'Assets getrennt: {refs}.' },
+      applications: {
+        linked: 'Anwendungen verknüpft: {refs}.',
+        unlinked: 'Anwendungen getrennt: {refs}.',
+        hiddenOne: '1 nicht angezeigt',
+        hiddenOther: '{count} nicht angezeigt',
+      },
+      technologies: { linked: 'Technologien verknüpft: {refs}.', unlinked: 'Technologien getrennt: {refs}.' },
+    },
     unknownAuthor: 'Unbekannt',
     linkedObjects: 'Verknüpfte Objekte',
     assets: 'Assets',
@@ -357,6 +402,16 @@ const LABELS: Record<ReportLang, ReportLabels> = {
       'Imported from CSV': 'Importado desde CSV',
       'Incident review imported from CSV': 'Revisión del incidente importada desde CSV',
       'Incident review imported': 'Revisión del incidente importada',
+    },
+    linkChanges: {
+      assets: { linked: 'Activos vinculados: {refs}.', unlinked: 'Activos desvinculados: {refs}.' },
+      applications: {
+        linked: 'Aplicaciones vinculadas: {refs}.',
+        unlinked: 'Aplicaciones desvinculadas: {refs}.',
+        hiddenOne: '1 no mostrada',
+        hiddenOther: '{count} no mostradas',
+      },
+      technologies: { linked: 'Tecnologías vinculadas: {refs}.', unlinked: 'Tecnologías desvinculadas: {refs}.' },
     },
     unknownAuthor: 'Desconocido',
     linkedObjects: 'Objetos vinculados',
@@ -579,13 +634,63 @@ function describeReviewVersion(
   return label;
 }
 
+/** Same order as the Journal tab and as the English sentence the server stores. */
+const LINK_CHANGE_FAMILIES = ['assets', 'applications', 'technologies'] as const;
+
+function stringList(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) return null;
+  return value;
+}
+
+/**
+ * One line per family and direction, rebuilt from `from` / `to` (added = to minus from,
+ * removed = from minus to). Applications append the count of records the reader does not
+ * see (`hidden`). Returns null when no family has two lists of references, so an old row
+ * keeps the sentence stored in `content`.
+ */
+function linkChangeLines(entry: IncidentReportEntry, labels: ReportLabels): string[] | null {
+  const changed = entry.changed_fields;
+  if (!changed) return null;
+  const lines: string[] = [];
+  let readable = false;
+  for (const family of LINK_CHANGE_FAMILIES) {
+    if (!Object.prototype.hasOwnProperty.call(changed, family)) continue;
+    const change = changed[family];
+    const from = stringList(change?.from);
+    const to = stringList(change?.to);
+    if (!from || !to) continue;
+    readable = true;
+    const added = to.filter((ref) => !from.includes(ref));
+    const removed = from.filter((ref) => !to.includes(ref));
+    const familyLabels = labels.linkChanges[family];
+    const withHidden = (refs: string[], count: unknown) => {
+      const hidden = Number(count);
+      if (family !== 'applications' || !(hidden > 0)) return refs;
+      const phrase = hidden === 1
+        ? labels.linkChanges.applications.hiddenOne
+        : labels.linkChanges.applications.hiddenOther.replace('{count}', String(hidden));
+      return [...refs, phrase];
+    };
+    const linkedRefs = withHidden(added, change?.hidden?.linked);
+    const unlinkedRefs = withHidden(removed, change?.hidden?.unlinked);
+    if (linkedRefs.length > 0) lines.push(familyLabels.linked.replace('{refs}', linkedRefs.join(', ')));
+    if (unlinkedRefs.length > 0) lines.push(familyLabels.unlinked.replace('{refs}', unlinkedRefs.join(', ')));
+  }
+  return readable ? lines : null;
+}
+
 function journalContent(
   entry: IncidentReportEntry,
   labels: ReportLabels,
   review?: IncidentReportReview | null,
 ): string {
+  if (entry.kind === 'link_change') {
+    const lines = linkChangeLines(entry, labels);
+    if (lines && lines.length > 0) return lines.join('\n');
+    return hasText(entry.content) ? entryContent(entry, labels) : '';
+  }
   const parts: string[] = [];
-  if (entry.kind !== 'link_change' && entry.changed_fields) {
+  if (entry.changed_fields) {
     for (const [field, change] of Object.entries(entry.changed_fields)) {
       if (!change || typeof change !== 'object') continue;
       if (field === 'review_version') {

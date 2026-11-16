@@ -16,14 +16,14 @@ Actividad es el historial de solo lectura de todo lo que sus agentes han hecho y
 
 La cronología muestra primero los eventos más recientes. Dos controles la acotan:
 
-- **Número de ticket**: escriba un número de ticket y pulse **Buscar** (o Intro) para ver solo los eventos vinculados a ese único ticket. Es la forma más rápida de reconstruir la historia completa de un solo ticket: cada comprobación, borrador, decisión y cambio, en orden. Borre el campo y vuelva a buscar para regresar al listado completo.
+- **Referencia o número de ticket**: escriba la referencia que aparece en la entrada (T-15, PRJ-3, APP-4) o un número de ticket y pulse **Buscar** (o Intro). La cronología conserva los eventos de ese registro. Un número de ticket sigue mostrando los eventos de ese ticket. Borre el campo y vuelva a buscar para regresar al listado completo.
 - **Chips de tipo**: siete conmutadores en la parte superior: **Propuesta**, **Decisión**, **Ejecución**, **Configuración**, **Comprobaciones**, **Pausa** y **Error**. Cada uno es un interruptor de encendido y apagado, no una elección única: un chip relleno está incluido, uno con solo el contorno está excluido, y puede combinar tantos como quiera.
 
 **De forma predeterminada, todas las categorías están activadas salvo Comprobaciones.** Ese valor predeterminado es deliberado. Un agente en vigilancia escribe una entrada de comprobación cada pocos minutos, encuentre algo o no, y dejarlas activadas hace que esas filas sepulten las entradas que realmente lee. Active **Comprobaciones** cuando quiera confirmar que un agente sigue vivo, o cuando esté investigando por qué recogió (o no recogió) algo.
 
 Si desactiva todos los chips no queda nada que mostrar, y la cronología lo dice: *Elige al menos un tipo de actividad para ver el historial.*
 
-La búsqueda por ticket y los chips de tipo se combinan, de modo que puede ver, por ejemplo, solo los errores del ticket #482. Su selección queda en la dirección de la página, así que una vista filtrada es un enlace que puede enviar a un compañero.
+La búsqueda y los chips de tipo se combinan, de modo que puede ver, por ejemplo, solo los errores de T-15 o del ticket #482. Su selección queda en la dirección de la página, así que una vista filtrada es un enlace que puede enviar a un compañero.
 
 ---
 
@@ -112,7 +112,7 @@ El mismo botón **Traza** aparece en [Aprobaciones](agents-approvals.md) y en la
 
 ## Consejos
 
-- Buscar por **número de ticket** es la forma más rápida de entregar a alguien la historia completa y ordenada de un ticket (comprobación, propuesta, decisión y qué se envió) sin tener que navegar por el propio ticket.
+- Buscar por la **referencia** que aparece en una entrada (T-15, PRJ-3) o por un **número de ticket** es la forma más rápida de entregar a alguien la historia ordenada de un registro (comprobación, propuesta, decisión y qué se envió) sin abrir el propio registro.
 - **Active Comprobaciones cuando un agente parezca inactivo, y vuelva a desactivarlo después.** Es la diferencia entre «el agente está roto» y «el agente está vigilando y no hay nada que hacer»; pero es ruidoso, y por eso empieza desactivado.
 - Recurra al filtro **Ejecución** para ver solo lo que realmente salió al exterior. Las propuestas y las decisiones son intenciones; las ejecuciones son los cambios que un solicitante o técnico puede ver.
 - Una entrada de **Límite diario alcanzado** es el sistema funcionando según lo previsto, no un fallo. Si un agente se quedó en silencio el resto del día, normalmente es por esto; suba sus límites diarios en la [Configuración](agents-workspace.md) del agente si el tope es demasiado estricto para su volumen, y consulte allí las cifras de **Hoy** antes de elegir un número nuevo.

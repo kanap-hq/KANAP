@@ -629,10 +629,15 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       // Pinned rows (totals) use the default renderer so numeric columns keep
       // AG Grid's right alignment. Custom React renderers wrap content in a
       // flex box that ignores text-align, which shifts totals vs body values.
+      // A loading row of the infinite model has no data yet, so its value is
+      // undefined. A custom renderer would turn that into a label (the status
+      // column shows a raw translation key). The default renderer leaves the
+      // cell empty. AG Grid asks again once setDataAndId fills the row.
       if (agGridCol.cellRenderer) {
         const orig = agGridCol.cellRenderer;
         agGridCol.cellRendererSelector = (params: any) => {
-          if (params.node?.rowPinned) return undefined;
+          const row = params.data ?? params.node?.data;
+          if (params.node?.rowPinned || row == null) return undefined;
           return { component: orig };
         };
         delete agGridCol.cellRenderer;

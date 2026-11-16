@@ -335,15 +335,13 @@ function toCapabilitySurface(surface: string): CapabilitySurface {
 }
 
 /**
- * Output fields of a tool the model never receives: the user's card shows them, from the handler's
- * own output. The column mapping of an import holds cells of the person's file that its summary did
- * not show (lot I2 of the Plaid import: no file data reaches the model beyond the summary).
+ * Output fields of a tool the model does not receive: the user's card shows them, from the handler's
+ * own output. The model reads the cells of an attached file (its summary, the card's first rows and
+ * values not read: lot I1 of 26.11.9); the import's full report is the card's, long and written for
+ * the person, and the model reads it as the counts, the `issues` by code and line, and the matching.
  */
 export const MODEL_HIDDEN_OUTPUT_FIELDS: Readonly<Record<string, readonly string[]>> = {
-  // The card's first rows, the values not read and the import's messages quote cells of the file.
   prepare_import_mapping: [
-    '/import_mapping/unread_values',
-    '/import_mapping/sample',
     '/import_mapping/validation/report',
     '/import_mapping/result/report',
   ],

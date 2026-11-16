@@ -307,7 +307,16 @@
       "actions": {
         "revert": "Revertir"
       },
-      "empty": "Sin versiones aún."
+      "empty": "Sin versiones aún.",
+      "notes": {
+        "initial": "Versión inicial",
+        "revert": "Reversión a la versión {{version}}",
+        "importedRequest": "Importado desde el campo antiguo de la solicitud",
+        "importedInterfaces": "Importado desde los campos antiguos de la interfaz",
+        "importedApplication": "Importado desde la descripción antigua de la aplicación",
+        "importedIncident": "Importado desde los campos antiguos del incidente",
+        "importedProject": "Importado desde el campo antiguo del proyecto"
+      }
     },
     "workflow": {
       "actions": {

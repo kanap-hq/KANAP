@@ -63,7 +63,7 @@ Durante la prueba, Kad empieza desactivado. Un administrador lo activa marcando 
 
 **Qué ve.** La exportación es el archivo de presupuesto: las mismas columnas que lee la importación. Úsela como plantilla para actualizar líneas en bloque o cargar otras nuevas. El libro de ejemplo contiene algunas líneas, las demás columnas en una hoja **Avanzado** y lo que admite cada columna en una hoja **Notas**. Una importación comprueba todo el archivo antes de cargar nada. **Exportar** e **Importar** se muestran a los administradores del presupuesto.
 
-Para partir de un archivo que ya mantiene, adjúntelo a un mensaje en Kad con **Adjuntar un archivo**. Kad lee los títulos de sus columnas, el tipo de cada columna y las diez primeras filas, y puede decir qué contiene cada columna.
+Para partir de un archivo que ya mantiene, adjúntelo a un mensaje en Kad con **Adjuntar un archivo**. Kad lee los títulos de sus columnas, el tipo de cada columna, las diez primeras filas y los valores que se repiten en sus columnas de texto, y puede decir qué contiene cada columna.
 
 ## Y después
 

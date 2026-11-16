@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { ITEM_NUMBER_MAX, parseItemNumber } from '../parse-item-number';
+import { ITEM_NUMBER_MAX, parseItemNumber, parseReferenceNumber } from '../parse-item-number';
 import { budgetLineReferenceNumbers, parseItemRef } from '../resolve-item-id';
 
 function testBounds() {
@@ -51,8 +51,28 @@ function testBudgetLineReferences() {
   assert.deepEqual(budgetLineReferenceNumbers('OPX-2147483648'), { itemNumber: null, legacyNumber: null });
 }
 
+/** A typed reference of one family (a list's quick search, an import cell): its number, or null. */
+function testParseReferenceNumber() {
+  const typed = { prefixRequired: true };
+  assert.equal(parseReferenceNumber('COMP-3', 'COMP', typed), 3);
+  assert.equal(parseReferenceNumber(' comp-3 ', 'COMP', typed), 3);
+  assert.equal(parseReferenceNumber('COMP-30', 'COMP', typed), 30);
+  assert.equal(parseReferenceNumber('COMP-013', 'COMP', typed), null, 'a leading zero is no reference of the family');
+  assert.equal(parseReferenceNumber('DEPT-3', 'COMP', typed), null, 'another family');
+  assert.equal(parseReferenceNumber('3', 'COMP', typed), null, 'bare digits only when no prefix is required');
+  assert.equal(parseReferenceNumber('3', 'COMP'), 3);
+  assert.equal(parseReferenceNumber('013', 'COMP'), null);
+  assert.equal(parseReferenceNumber('COMP-', 'COMP'), null);
+  assert.equal(parseReferenceNumber('COMP-2147483648', 'COMP'), null);
+  assert.equal(parseReferenceNumber('Acme', 'COMP'), null);
+  assert.equal(parseReferenceNumber('', 'COMP'), null);
+  assert.equal(parseReferenceNumber(null, 'COMP'), null);
+  assert.equal(parseReferenceNumber('REQ-012', 'REQ', typed), 12, 'a family without the rule keeps its zeros');
+}
+
 function main() {
   testBounds();
+  testParseReferenceNumber();
   testReferences();
   testBudgetLineReferences();
   console.log('parse-item-number.spec: ok');

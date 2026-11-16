@@ -48,15 +48,26 @@ export type AuditValueContext = {
   /** The audited table. `status` and `mode` name different lists on different tables. */
   table?: string;
   /**
-   * The tenant's label of a code of an IT catalog list (`applicationCategories`, `serverRoles`...),
-   * as the record's screen shows it, or null when the tenant's catalog has no such code. Without
-   * it, a catalog code reads with the shipped label.
+   * The tenant's label of a catalog code, as the record's screen shows it, or null when the
+   * tenant's catalog has no such code. The lists are the IT settings (`applicationCategories`,
+   * `serverRoles`...) and the classification catalog (`businessCriticalityLevels`,
+   * `cyberCriticalityLevels`, `recoveryWaves`). Without it, a code reads with the shipped label.
    */
   catalogLabel?: (list: AuditCatalogList, code: string) => string | null;
 };
 
-/** The IT catalog lists an audit value may name, with a tenant label (`useItOpsEnumOptions`). */
-export type AuditCatalogList = 'applicationCategories' | 'accessMethods' | 'incidentCategories' | 'serverRoles';
+/**
+ * The catalog lists an audit value may name with a tenant label: the IT settings
+ * (`useItOpsEnumOptions`) and the classification catalog (`useApplicationClassificationCatalog`).
+ */
+export type AuditCatalogList =
+  | 'applicationCategories'
+  | 'accessMethods'
+  | 'incidentCategories'
+  | 'serverRoles'
+  | 'businessCriticalityLevels'
+  | 'cyberCriticalityLevels'
+  | 'recoveryWaves';
 
 /** The catalog list of a field, by table when the field name is shared. */
 export function auditCatalogList(field: string, table: string | undefined): AuditCatalogList | null {
@@ -65,6 +76,11 @@ export function auditCatalogList(field: string, table: string | undefined): Audi
   }
   if (field === 'access_methods') return 'accessMethods';
   if (field === 'server_role') return 'serverRoles';
+  // Business criticality, cyber criticality and the recovery wave: the classification catalog,
+  // as the application, connection, interface and technology screens name them.
+  if (field === 'criticality') return 'businessCriticalityLevels';
+  if (field === 'cyber_criticality') return 'cyberCriticalityLevels';
+  if (field === 'recovery_wave') return 'recoveryWaves';
   return null;
 }
 
@@ -127,6 +143,7 @@ const RECORD_TEXT_FIELDS: Record<string, string> = {
  */
 const ENUM_GROUPS: Record<string, string> = {
   environment: 'it:enums.environment',
+  // Fallback when the classification catalog has no such code (the screen does the same).
   criticality: 'it:enums.criticality',
   hosting_model: 'it:enums.hostingModel',
   severity: 'it:enums.incidentSeverity',

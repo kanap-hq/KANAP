@@ -117,8 +117,13 @@ export default function useRecordCreation({
     return () => scheduleCreationClear(key);
   }, [key]);
 
-  const startCreation = React.useCallback((created: { recordId: string; token: string; returnTo: string }) => {
-    setCreation(creationKey(family, created.recordId), { token: created.token, returnTo: created.returnTo });
+  /** `reference`: the record's business reference (`COMP-5`), when its page may open by it. */
+  const startCreation = React.useCallback((created: { recordId: string; token: string; returnTo: string; reference?: string | null }) => {
+    setCreation(
+      creationKey(family, created.recordId),
+      { token: created.token, returnTo: created.returnTo },
+      created.reference ? [creationKey(family, created.reference)] : [],
+    );
   }, [family]);
 
   const finishCreation = React.useCallback(() => {

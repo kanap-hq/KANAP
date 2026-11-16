@@ -87,6 +87,7 @@
     "companyFallback": "Unternehmen",
     "loadError": "Fehler beim Laden des Unternehmens.",
     "columns": {
+      "reference": "Referenz",
       "city": "Stadt",
       "postalCode": "Postleitzahl",
       "address1": "Adresse 1",
@@ -185,6 +186,7 @@
     "loadError": "Fehler beim Laden der Abteilung.",
     "selectCompanyFirst": "Wählen Sie zuerst ein Unternehmen",
     "columns": {
+      "reference": "Referenz",
       "company": "Unternehmen",
       "headcountYear": "Mitarbeiterzahl ({{year}})"
     },

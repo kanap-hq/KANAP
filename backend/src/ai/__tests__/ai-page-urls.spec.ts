@@ -15,24 +15,28 @@ async function testListItems() {
   const result = await withAiPageUrls({
     items: [
       { type: 'contracts', id: CONTRACT, ref: null, label: 'SAP Maintenance' },
-      { type: 'companies', id: COMPANY, ref: null, label: 'Fromage SA' },
+      { type: 'companies', id: COMPANY, ref: 'COMP-5', label: 'Fromage SA' },
+      { type: 'departments', id: COMPANY, ref: 'DEPT-5', label: 'Finance' },
+      { type: 'accounts', id: COMPANY, ref: '612100', label: 'Software' },
       { type: 'applications', id: APPLICATION, ref: 'APP-8', label: 'SAP S/4HANA' },
       { type: 'contracts', id: 'not-an-id', ref: null, label: 'Broken' },
     ],
-  }, { readableResources: reads('contracts', 'companies', 'applications'), origin: async () => null });
+  }, { readableResources: reads('contracts', 'companies', 'departments', 'accounts', 'applications'), origin: async () => null });
   assert.deepEqual(result.items.map((item: any) => item.page_url), [
     `/ops/contracts/${CONTRACT}`,
-    `/master-data/companies/${COMPANY}`,
     undefined,
     undefined,
-  ], 'pages for the families without reference, none for a referenced record or a malformed id');
+    `/master-data/accounts/${COMPANY}`,
+    undefined,
+    undefined,
+  ], 'pages for the families without reference, none for a referenced record (a company or a department opens by COMP-n, DEPT-n) or a malformed id');
 }
 
 async function testRights() {
   const result = await withAiPageUrls({
-    items: [{ type: 'contracts', id: CONTRACT }, { type: 'companies', id: COMPANY }],
-  }, { readableResources: reads('companies'), origin: async () => null });
-  assert.deepEqual(result.items.map((item: any) => item.page_url), [undefined, `/master-data/companies/${COMPANY}`], 'no page without its right');
+    items: [{ type: 'contracts', id: CONTRACT }, { type: 'accounts', id: COMPANY }],
+  }, { readableResources: reads('accounts'), origin: async () => null });
+  assert.deepEqual(result.items.map((item: any) => item.page_url), [undefined, `/master-data/accounts/${COMPANY}`], 'no page without its right');
 
   let asked: string[] = [];
   await withAiPageUrls({ items: [{ type: 'connections', id: CONTRACT }, { type: 'locations', id: COMPANY }] }, {
@@ -86,7 +90,7 @@ async function testMcpOrigin() {
 }
 
 function testRoutesHaveNoReferenceFamilies() {
-  for (const family of ['applications', 'assets', 'technologies', 'projects', 'requests', 'tasks', 'documents', 'incidents', 'budget_lines']) {
+  for (const family of ['applications', 'assets', 'technologies', 'projects', 'requests', 'tasks', 'documents', 'incidents', 'budget_lines', 'companies', 'departments']) {
     assert.equal(AI_PAGE_ROUTES[family], undefined, `${family} opens by its reference`);
   }
 }

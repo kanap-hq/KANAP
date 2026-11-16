@@ -12,13 +12,15 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 type Props = {
   departmentId: string;
+  /** DEPT-n: the department's own cache entry, which a headcount leaves alone (the lists read again). */
+  departmentReference?: string | null;
   year: number;
   onYearChange: (year: number) => void;
   readOnly: boolean;
 };
 
 /** Headcount per year; saved for the selected year when the field loses focus. */
-export default function DepartmentHeadcountTab({ departmentId, year, onYearChange, readOnly }: Props) {
+export default function DepartmentHeadcountTab({ departmentId, departmentReference, year, onYearChange, readOnly }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   const queryClient = useQueryClient();
   const availableYears = React.useMemo(() => {
@@ -73,7 +75,7 @@ export default function DepartmentHeadcountTab({ departmentId, year, onYearChang
     try {
       await api.patch(`/department-metrics/${departmentId}`, { headcount: value }, { params: { year } });
       queryClient.setQueryData(metricsKey, value);
-      void queryClient.invalidateQueries({ queryKey: ['departments'], predicate: (q) => q.queryKey[1] !== departmentId });
+      void queryClient.invalidateQueries({ queryKey: ['departments'], predicate: (q) => q.queryKey[1] !== departmentId && q.queryKey[1] !== departmentReference });
     } catch (e) {
       if (currentKeyRef.current === key) setError(getApiErrorMessage(e, t, t('shared.messages.failedToSaveMetrics')));
     }

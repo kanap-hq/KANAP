@@ -37,9 +37,10 @@ function testOptionObjects() {
     assert.deepEqual(options.limits, { ...MULTIPART_LIMITS, fileSize }, `${label}: complete limits`);
     assert.equal(typeof options.fileFilter, 'function', `${label}: keeps its file filter`);
   }
-  // The budget file: its own file and snapshot sizes, and room for the snapshot field only.
+  // The budget file: its own file and snapshot sizes, and room for its two text fields only (the
+  // load's `snapshot`, and `choices` on the check and the load, lot I1 of 26.11.9).
   assert.deepEqual(budgetFileMulterOptions.limits, {
-    ...MULTIPART_LIMITS, fileSize: BUDGET_FILE_MAX_BYTES, fieldSize: BUDGET_FILE_SNAPSHOT_MAX_BYTES, fields: 1, parts: 2,
+    ...MULTIPART_LIMITS, fileSize: BUDGET_FILE_MAX_BYTES, fieldSize: BUDGET_FILE_SNAPSHOT_MAX_BYTES, fields: 2, parts: 3,
   }, 'budget file: complete limits');
   assert.equal(typeof budgetFileMulterOptions.fileFilter, 'function', 'budget file: keeps its file filter');
   assert.equal(MULTIPART_LIMITS.files, 1);

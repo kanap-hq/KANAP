@@ -15,6 +15,8 @@ import {
 import { AI_IMPORT_KEYS, AI_IMPORT_RESOURCES, aiImportAccess } from '../../import/ai-import-access';
 import { AiImportMappingService, aiImportTarget, PrepareImportMappingInput } from '../../import/ai-import-mapping.service';
 import { AI_IMPORT_TARGETS } from '../../import/ai-import-targets';
+import { parseBudgetFileChoices } from '../../../spend/budget-file/matching';
+import type { BudgetFileChoice } from '../../../spend/budget-file/types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
 
@@ -33,7 +35,9 @@ const ColumnMappingSchema = z.object({
     .describe('For a number column written as text, when the first rows show the decimal mark. Else the file settles it.'),
   values: z.record(z.string(), z.string().trim().max(200)).optional()
     .describe('A value of the file and the value it stands for, for the values the column does not read by itself: a code or catalog name '
-      + '({"Prod": "Production"}), a number ({"3 months": "3"}), a person\'s e-mail, a name as the workspace writes it; "" leaves the cell blank.'),
+      + '({"Prod": "Production"}), a number ({"3 months": "3"}), a person\'s e-mail, a name as the workspace writes it; "" leaves the cell blank. '
+      + 'For a budget file\'s supplier or dimension column: an existing value of the workspace only (a dimension\'s `values` in the template, '
+      + 'a name of `matching.candidates`); the check refuses any other and the card shows each one.'),
   note: z.string().trim().max(200).nullable().optional()
     .describe('What you supposed for this column, in the person\'s language, when it is not obvious.'),
 });
@@ -74,6 +78,9 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     + 'The server also has the import check the file it builds (its dry run): the result gives the counts (rows to create, update, '
     + 'unchanged) and, per code and column, the number of errors and warnings with `file_lines`, the line of the file each one is on, '
     + 'as the card numbers it (header counted): name a line by that number. The card writes each message in the person\'s language. '
+    + 'For a budget file, the check matches suppliers and dimension values to existing ones before creating any (accents, the four '
+    + 'languages of the recommended dimensions, your `values`) and returns `matching`: the matches, your refused proposals, and the values '
+    + 'nothing matched with their closest names. '
     + 'Requires explicit user approval. Approving runs the import with the user\'s rights; a card whose check found errors cannot be approved.';
   readonly inputSchema = PrepareImportMappingInputSchema;
   readonly inputSummary = {
@@ -92,11 +99,26 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'call `describe_import_template` for the import it fits, then `prepare_import_mapping` with the attachment id and the mapping. '
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
       + 'and name the file columns you leave out. When the card shows values not read, ask the user what they stand for and call again with `values`. '
-      + 'References to other records (a company, a supplier, a server, a person) are copied as written: the import checks them when it runs, '
-      + 'and neither you nor the card has checked them. '
-      + 'A budget file creates the suppliers it names that do not exist yet, as the import dialog does, when the user may create '
-      + 'suppliers: the check counts them in `new_suppliers` and the card lists them, so say they will be created on approval. '
-      + 'Without that right the check refuses them: the suppliers are created in their list first. '
+      + 'References to other records (a company, a supplier, a server, a person) are copied as written: the import checks them when it runs. '
+      + 'A budget file matches its suppliers and dimension values to the workspace\'s before it creates any: same name with other accents, '
+      + 'or a value of a recommended dimension or of the sample data\'s business domain in another language (`matching.matches`, origin server). '
+      + 'For a value the workspace names otherwise (a translation, a synonym, a spelling), map it in that column\'s `values` to an '
+      + 'existing value from your first call: a dimension\'s `values` in the template or its `dimension_values` in `matching.candidates`; '
+      + 'for a supplier, a name `matching.candidates` gives or a supplier you recognise as the same under another name '
+      + '(AWS for Amazon Web Services), listed or not. The check accepts only an enabled value that exists and refuses the others '
+      + '(`matching.refused_proposals`). '
+      + 'Before you present the card, read each dimension value it creates (`matching.candidates` of outcome create) against its '
+      + '`dimension_values`: when one is the same thing, call again with `values`. '
+      + 'The card lists every match and the person may undo one. '
+      + 'The card has a "Create missing suppliers" box, ticked unless the person unticked it, for a person who may create suppliers '
+      + '(`matching.create_suppliers`): `new_suppliers` counts the suppliers the approval creates and the card lists them; '
+      + '`new_dimension_values` counts the dimension values the approval creates, and the `matching.candidates` of outcome create name them '
+      + '(one entry per value created; `matching.totals` gives the length of a list cut to its first entries). '
+      + '`import_mapping.on_approval` says in one sentence what the approval creates, by name, and what the check matched: '
+      + 'announce exactly that, never a creation it does not name (none when it says 0), and call a matched value matched. '
+      + 'Give no count of what the approval creates or updates (by nature included) other than the counts of that sentence, '
+      + 'and never count the lines of the file yourself; lines in error, line numbers and amounts stay yours to cite. '
+      + 'The person\'s choices on the card (`matching.choices`) are kept when you call again for the same file. '
       + 'A new card for the same file closes the pending one at once: it can no longer be approved, so do not warn the person about it. '
       + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say which columns and lines they are on, '
       + 'a column by its title and a row by its line of the file: the card writes each message in the person\'s language, so never write a code '
@@ -119,12 +141,19 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     return String(params.input?.entity_type ?? params.preview?.mutation_input?.entity_type ?? '');
   }
 
+  /**
+   * The card of a mapping. A budget file's card carries the person's choices (`choices`, set by the
+   * choice route): a new mapping of the same file from the model keeps the choices of the file's last
+   * card that still apply, and its check tells the model which.
+   */
   async prepareCreatePreview(
     context: AiExecutionContextWithManager,
     input: PrepareImportMappingInput,
   ): Promise<AiPreparedMutationPreview> {
     const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
-    const { target, mapping } = await this.mapping.prepareMapping(context, input, language);
+    const budget = input.entity_type === 'budget_lines';
+    const choices = budget ? input.choices ?? await this.lastChoices(context, input.attachment_id) : undefined;
+    const { target, mapping } = await this.mapping.prepareMapping(context, { ...input, choices }, language);
     return {
       // The import as the target type: the reservation of the import route is checked on it again at approval.
       targetEntityType: target.key,
@@ -135,9 +164,41 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         filename: mapping.filename,
         columns: input.columns,
         assumptions: input.assumptions ?? [],
+        // The choices the check followed: an undone match the file no longer makes is dropped. A check
+        // that refused the file before reading its rows followed none: the choices are kept as received.
+        ...(budget ? { choices: mapping.validation?.matching ? mapping.validation.matching.choices : choices ?? [] } : {}),
       },
       currentValues: { import_mapping: mapping },
     };
+  }
+
+  /**
+   * The choices of the person's last card of this file in the conversation, whatever its state (a
+   * card replaced by a choice is expired, and the card that replaced it holds the choices): none once
+   * that card was imported, the next import of the file starts afresh.
+   */
+  private async lastChoices(context: AiExecutionContextWithManager, attachmentId: string): Promise<BudgetFileChoice[]> {
+    if (!context.conversationId) return [];
+    const [last]: Array<{ status: string; choices: unknown }> = await context.manager.query(
+      `SELECT status, mutation_input->'choices' AS choices
+         FROM ai_mutation_previews
+        WHERE tenant_id = $1 AND conversation_id = $2 AND user_id = $3 AND tool_name = $4
+          AND mutation_input->>'attachment_id' = $5
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1`,
+      [context.tenantId, context.conversationId, context.userId, this.toolName, attachmentId],
+    );
+    if (!last || last.status === 'executed') return [];
+    try {
+      return parseBudgetFileChoices(last.choices ?? []);
+    } catch {
+      return [];
+    }
+  }
+
+  /** The cards that replace one another: those of one attached file. */
+  replacementScope(input: Record<string, unknown>): string | null {
+    return typeof input?.attachment_id === 'string' ? input.attachment_id : null;
   }
 
   /** A new mapping of the same file replaces the pending one: the person has one card to approve. */

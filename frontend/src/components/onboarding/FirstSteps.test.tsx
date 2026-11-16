@@ -146,7 +146,7 @@ describe('FirstStepsTile', () => {
     expect(links.map((link) => link.textContent)).toEqual([
       'Your locations', 'Your applications', 'Your technologies', 'Your assets', 'A colleague',
     ]);
-    expect(links[4]).toHaveAttribute('href', '/admin/users?step=own_invite');
+    expect(links[4]).toHaveAttribute('href', '/admin/users?step=own_invite&angle=cartography');
   });
 
   it('marks a step done and not done from its mark', async () => {
@@ -358,6 +358,16 @@ describe('StepHint', () => {
     expect(await screen.findByRole('dialog', { name: 'Your budget lines' })).toHaveTextContent('click Import first to download the example file');
   });
 
+  it('carries the path when the next step opens the users list', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
+    for (const key of ['own_company', 'own_budget_lines', 'own_contract', 'own_report']) {
+      env.server.db.done.set(`budget/own_data/${key}`, '2026-11-02T09:20:00.000Z');
+    }
+    renderAt('/ops/reports/top-opex?step=own_report', page);
+    fireEvent.click(await screen.findByRole('button', { name: 'Next step' }));
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/admin/users?step=own_invite&angle=budget'));
+  });
+
   it('stays with its step on every screen until it is closed', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
     renderAt('/master-data/companies?step=own_company', (
@@ -467,12 +477,13 @@ describe('StepHint', () => {
 
   it('leaves a step that creates an object to that object, and gives the hint of the angle', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
-    renderAt('/admin/users?step=own_invite', page);
+    renderAt('/admin/users?step=own_invite&angle=budget', page);
     const hint = await screen.findByRole('dialog', { name: 'A colleague' });
     expect(hint).toHaveTextContent('Use the Authentication menu to set up SSO');
     expect(within(hint).queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
     fireEvent.click(within(hint).getByRole('button', { name: 'Got it' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/admin\/users$/);
     expect(done('own_invite')).toBeFalsy();
   });
 

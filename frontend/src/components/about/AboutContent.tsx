@@ -130,7 +130,7 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
             )}
           </Typography>
         )}
-        <AboutOnboardingLine />
+        <AboutOnboardingLine onNavigate={onNavigate} />
         <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, pt: 0.5 }}>
           <ExternalLink href={releaseNotesUrl(config.version)}>{t('about.releaseNotes')}</ExternalLink>
           <ExternalLink href={getDocHomeUrl(locale)}>{t('about.docs')}</ExternalLink>

@@ -43,7 +43,8 @@ describe('CsvExportDialogV2', () => {
 
   it('writes the file in the screen language, and says so', async () => {
     render(<CsvExportDialogV2 open onClose={() => undefined} endpoint="/assets" />);
-    expect(await screen.findByText('csv.exportDescriptionFlexible')).toBeInTheDocument();
+    expect(await screen.findByText('csv.csvFileNoteFlexible')).toBeInTheDocument();
+    expect(screen.queryByText('csv.exportDescriptionFlexible')).toBeNull();
     expect(screen.getAllByText('csv.exportPreset').length).toBeGreaterThan(0);
     expect(screen.getByText('csv.fieldsSelected')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
@@ -82,11 +83,15 @@ describe('CsvExportDialogV2', () => {
     const csv = screen.getByRole('radio', { name: 'ops:operations.budgetFile.formatCsv' });
     const xlsx = screen.getByRole('radio', { name: 'ops:operations.budgetFile.formatXlsx' });
     expect(csv).toBeChecked();
-    expect(screen.getByText('csv.exportDescriptionFlexible')).toBeInTheDocument();
+    // With a format choice, nothing calls the export CSV only. The CSV-file note stays put when Excel is selected.
+    expect(screen.queryByText('csv.exportDescription')).toBeNull();
+    expect(screen.queryByText('csv.exportDescriptionFlexible')).toBeNull();
+    expect(screen.getByText('csv.csvFileNoteFlexible')).toBeInTheDocument();
     fireEvent.click(xlsx);
     expect(xlsx).toBeChecked();
     expect(store.get('kanap.exportFormat')).toBe('xlsx');
-    expect(screen.queryByText('csv.exportDescriptionFlexible')).not.toBeInTheDocument();
+    expect(screen.getByText('csv.csvFileNoteFlexible')).toBeInTheDocument();
+    expect(screen.queryByText('csv.exportDescriptionFlexible')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
     await waitFor(() => expect(get).toHaveBeenCalledWith('/portfolio/projects/export', expect.objectContaining({
       params: expect.objectContaining({ rows: 'list', q: 'alpha', scope: 'data', format: 'xlsx' }),
@@ -98,6 +103,8 @@ describe('CsvExportDialogV2', () => {
     stubStorage({ 'kanap.exportFormat': 'xlsx' });
     render(<CsvExportDialogV2 open onClose={() => undefined} endpoint="/tasks" />);
     expect(await screen.findByRole('radio', { name: 'ops:operations.budgetFile.formatXlsx' })).toBeChecked();
+    expect(screen.getByText('csv.csvFileNoteFlexible')).toBeInTheDocument();
+    expect(screen.queryByText('csv.exportDescriptionFlexible')).toBeNull();
     fireEvent.click(screen.getByRole('radio', { name: 'ops:operations.budgetFile.formatCsv' }));
     fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
     await waitFor(() => expect(get).toHaveBeenCalledWith('/tasks/export', expect.anything()));

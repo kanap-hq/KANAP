@@ -1,5 +1,5 @@
 import type { CsvReportMessage } from '../components/csv/csvMessage';
-import type { BudgetFileReport } from '../components/finance/budgetFile';
+import type { BudgetFileChoice, BudgetFileReport } from '../components/finance/budgetFile';
 
 export type AiMutationWriteToolName =
   | 'import_ticket'
@@ -85,7 +85,7 @@ export type AiImportMapping = {
   }>;
   /** Some values the import will not read, by column; shown here only. */
   unread_values?: Record<string, string[]>;
-  read_errors?: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks'>;
+  read_errors?: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks' | 'reference-without-prefix'>;
   missing_required: Array<{ column: string; title: string }>;
   unplaced: Array<{ position: number; header: string | null }>;
   assumptions: string[];
@@ -111,6 +111,13 @@ export type AiImportRun = {
   skipped: number;
   error_count: number;
   warning_count: number;
+  /** The budget file: the suppliers its load creates. */
+  new_suppliers?: number;
+  /** The budget file's matching as the model reads it; the card reads `report.file.matching` (full lists). */
+  matching?: {
+    choices: BudgetFileChoice[];
+    create_suppliers: { allowed: boolean; value: boolean };
+  };
   report:
     | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[] }
     | { kind: 'budget_file'; file: BudgetFileReport | null };
@@ -151,6 +158,11 @@ export type AiMutationPreview = {
   /** The column mapping of an import (`prepare_import_mapping`), drawn in place of the changes. */
   import_mapping?: AiImportMapping;
   conversation_id: string | null;
+  /**
+   * A card made by a choice of the person on an import card: the id of the card the conversation
+   * shows (the first of the chain). The conversation draws the newest card of a chain in its place.
+   */
+  replaces_preview_id?: string;
   created_at: string;
   expires_at: string | null;
   approved_at: string | null;

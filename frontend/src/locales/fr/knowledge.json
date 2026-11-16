@@ -307,7 +307,16 @@
       "actions": {
         "revert": "Restaurer"
       },
-      "empty": "Aucune version pour le moment."
+      "empty": "Aucune version pour le moment.",
+      "notes": {
+        "initial": "Version initiale",
+        "revert": "Restauration de la version {{version}}",
+        "importedRequest": "Importé depuis l'ancien champ de la demande",
+        "importedInterfaces": "Importé depuis les anciens champs de l'interface",
+        "importedApplication": "Importé depuis l'ancienne description de l'application",
+        "importedIncident": "Importé depuis les anciens champs de l'incident",
+        "importedProject": "Importé depuis l'ancien champ du projet"
+      }
     },
     "workflow": {
       "actions": {

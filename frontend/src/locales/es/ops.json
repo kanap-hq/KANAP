@@ -1091,7 +1091,20 @@
       "checkFailed": "No se pudo comprobar el archivo. Vuelva a intentarlo.",
       "loadFailed": "No se pudo cargar el archivo. Vuelva a intentarlo.",
       "dimensionValuesCreated": "{{dimension}}, se crearán: {{names}}",
-      "dimensionValuesRefused": "{{dimension}}, rechazados: {{names}}"
+      "dimensionValuesRefused": "{{dimension}}, rechazados: {{names}}",
+      "matching": {
+        "count": "{{count}} valores asociados",
+        "count_one": "{{count}} valor asociado",
+        "match": "{{dimension}}: {{value}} → {{target}}",
+        "byKad": "Propuesto por {{agent}}",
+        "undo": "Deshacer",
+        "redo": "Volver a asociar",
+        "refusedMissing": "{{dimension}}: {{value}} → {{target}}: valor inexistente",
+        "refusedDisabled": "{{dimension}}: {{value}} → {{target}}: valor desactivado",
+        "closeTo": "Parecido a: {{names}}",
+        "lines": "Líneas {{lines}}",
+        "lines_one": "Línea {{lines}}"
+      }
     },
     "budgetAdminOnly": "Necesita derechos de administrador de presupuesto para usar esta página.",
     "budgetColumnsSettings": {

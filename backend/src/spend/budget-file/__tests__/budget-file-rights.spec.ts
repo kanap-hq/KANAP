@@ -45,8 +45,8 @@ async function testControllers() {
     const controller = build(budgetFile);
     const file = { buffer: Buffer.from('nature,item_number\n') };
     const ctx = { manager: {}, tenantId: 'tenant', userId: 'user', isAdmin: false, permissions: { budget: 'admin' } };
-    await controller.preflightBudgetFile(file, 'en', '', '', 'false', ctx);
-    await controller.importBudgetFile(file, '{"lines":[]}', 'en', '', '', 'false', ctx, {});
+    await controller.preflightBudgetFile(file, 'en', '', '', 'false', undefined, ctx);
+    await controller.importBudgetFile(file, '{"lines":[]}', 'en', '', '', 'false', undefined, ctx, {});
     assert.deepEqual(
       calls.map((call) => [call.method, call.scope, call.caller]),
       [

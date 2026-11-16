@@ -307,7 +307,16 @@
       "actions": {
         "revert": "Revert"
       },
-      "empty": "No versions yet."
+      "empty": "No versions yet.",
+      "notes": {
+        "initial": "Initial version",
+        "revert": "Revert to version {{version}}",
+        "importedRequest": "Imported from legacy request field",
+        "importedInterfaces": "Imported from legacy interface fields",
+        "importedApplication": "Imported from legacy application description",
+        "importedIncident": "Imported from legacy incident fields",
+        "importedProject": "Imported from legacy project field"
+      }
     },
     "workflow": {
       "actions": {
