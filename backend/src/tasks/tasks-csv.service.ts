@@ -12,36 +12,20 @@ import {
   CsvExportResult,
   CsvImportResult,
   CsvFieldInfo,
-  CsvFieldType,
-  csvColumnOfHeader,
 } from '../common/csv';
 import type { ExportFileFormat } from '../common/xlsx';
 import {
   CONTRACT_OUTSIDE_ACCESS,
   TASK_INHERITED_CLASSIFICATION,
-  TASK_UUID_RE,
-  isContractOutsideAccessLabel,
-  keepsStoredPeople,
-  relatedObjectBeyondCase,
-  relatedObjectIdsByName,
-  RELATED_OBJECT_MODULES,
   taskCsvConfig,
   taskProjectClassifications,
 } from './task-csv.config';
 import { inIdOrder } from '../common/pagination';
-import { assertTaskWritten } from './task-data-access';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
 import {
   IncidentViewer,
   taskIncidentVisibilityQueryBuilderClause,
 } from '../incidents/incident-visibility';
-
-/** A task's stored list of people (jsonb) names the same people as the file, in any order. */
-const samePeople = (stored: unknown, next: string[]): boolean => {
-  const current = Array.isArray(stored) ? stored.map(String) : [];
-  const wanted = new Set(next);
-  return current.length === wanted.size && current.every((id) => wanted.has(id));
-};
 
 /** The task types of a budget line, which a limited person may see tasks of without the line. */
 const LINE_TYPES = new Set(['spend_item', 'capex_item']);
@@ -142,15 +126,8 @@ export class TasksCsvService {
     params: CsvImportParams,
     opts: CsvImportOptions,
   ): Promise<CsvImportResult> {
-    // First run the base import
-    const result = await this.importSvc.import(taskCsvConfig, file, params, opts);
-
-    // If successful and not dry run, handle viewers and owners, as the check said (a list kept whole).
-    if (result.ok && !params.dryRun) {
-      await this.handleViewerOwnerImport(file, opts, { unmatched: params.unmatched, warnings: result.warnings });
-    }
-
-    return result;
+    // The viewers and owners are written with the task (`taskCsvConfig`, `importPeople`).
+    return this.importSvc.import(taskCsvConfig, file, params, opts);
   }
 
   /**
@@ -234,153 +211,6 @@ export class TasksCsvService {
       if (!project) continue;
       for (const key of TASK_INHERITED_CLASSIFICATION) {
         if (task[key] == null) task[key] = project[key];
-      }
-    }
-  }
-
-  /**
-   * Handle viewer and owner import from CSV after main import. A row's task is found as the import
-   * found its related object (accents aside for a person who reads its family, unless undone); a
-   * list the check said kept (`CSV_REFERENCE_NOT_FOUND_KEPT` on one of its cells) is not written.
-   */
-  private async handleViewerOwnerImport(
-    file: Express.Multer.File,
-    opts: { manager: EntityManager; tenantId: string; access?: CsvImportOptions['access'] },
-    checked: { unmatched?: CsvImportParams['unmatched']; warnings?: CsvImportResult['warnings'] } = {},
-  ): Promise<void> {
-    const { manager, tenantId } = opts;
-
-    // Re-parse the file to get viewer/owner columns
-    const { parseString } = await import('@fast-csv/parse');
-    const { csvSeparatorOf, readImportText } = await import('../common/csv-sheet/read');
-
-    // The CSV text of the file, or of the first sheet of a workbook, as the main import read it.
-    const text = (await readImportText(file.buffer)).text;
-    const rows: Record<string, string>[] = [];
-
-    await new Promise<void>((resolve, reject) => {
-      // The columns as the import read them: a header in another case, or with spaces, is the column.
-      const headers = (names: Array<string | null | undefined>) => names.map((name) => (name == null ? name : csvColumnOfHeader(taskCsvConfig, name)));
-      parseString(text, { headers, delimiter: csvSeparatorOf(text) ?? ';', ignoreEmpty: true })
-        .on('data', (row) => rows.push(row))
-        .on('end', () => resolve())
-        .on('error', (err) => reject(err));
-    });
-
-    // Load user lookup
-    const users = await manager.query(`SELECT id, email FROM users WHERE tenant_id = $1`, [tenantId]);
-    const userByEmail = new Map<string, string>();
-    for (const u of users) {
-      userByEmail.set(String(u.email).toLowerCase(), u.id);
-    }
-
-    const normalizeType = (raw: string): string => {
-      const t = raw.trim().toLowerCase().replace(/\s+/g, '_');
-      if (t === 'capex') return 'capex_item';
-      if (t === 'spend') return 'spend_item';
-      return t;
-    };
-    // The object a row names, resolved as taskCsvConfig.beforeCommit does (a contract also by its
-    // reference); the label of a contract outside the exporting person's access names none.
-    const relatedIdCache = new Map<string, string | null>();
-    const resolveRelatedId = async (row: Record<string, string>): Promise<string | null> => {
-      const explicit = (row['related_object_id'] || '').trim();
-      if (explicit) return explicit;
-      const type = normalizeType(row['related_object_type'] || '');
-      const name = (row['related_object_name'] || '').trim();
-      if (!name || (type === 'contract' && isContractOutsideAccessLabel(name))) return null;
-      const cacheKey = `${type}||${name.toLowerCase()}`;
-      if (!relatedIdCache.has(cacheKey)) {
-        const beyondCase = relatedObjectBeyondCase(opts.access, checked.unmatched, 'related_object_name', RELATED_OBJECT_MODULES[type]);
-        const idOf = await relatedObjectIdsByName(manager, tenantId, type, [name], { beyondCase });
-        relatedIdCache.set(cacheKey, idOf?.(name) ?? null);
-      }
-      return relatedIdCache.get(cacheKey) ?? null;
-    };
-
-    // Process each row: the import's lines (header first, blank lines skipped by both reads).
-    for (const [index, row] of rows.entries()) {
-      const line = index + 2;
-      const taskTitle = (row['title'] || '').trim();
-      if (!taskTitle) continue;
-
-      // The row's task: by its id when the row gives one; else by the upsert key (title + related
-      // object; standalone tasks have none). A row whose object names nothing touches no task.
-      const taskId = (row['id'] || '').trim();
-      // The people lists come along: a row that names the people the task has leaves it as it is.
-      let taskRows: Array<{ id: string; viewer_ids: unknown; owner_ids: unknown }>;
-      if (taskId) {
-        if (!TASK_UUID_RE.test(taskId)) continue;
-        taskRows = await manager.query(`SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND id = $2`, [tenantId, taskId]);
-      } else {
-        const relatedObjectId = await resolveRelatedId(row);
-        if (!relatedObjectId && normalizeType(row['related_object_type'] || '')) continue;
-        taskRows = relatedObjectId
-          ? await manager.query(
-              `SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND LOWER(title) = LOWER($2) AND related_object_id = $3 LIMIT 1`,
-              [tenantId, taskTitle, relatedObjectId],
-            )
-          : await manager.query(
-              `SELECT id, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 AND LOWER(title) = LOWER($2) AND related_object_id IS NULL LIMIT 1`,
-              [tenantId, taskTitle],
-            );
-      }
-      if (taskRows.length === 0) continue;
-      const task = taskRows[0];
-
-      // Collect viewer IDs from columns
-      const viewerIds: string[] = [];
-      for (let i = 1; i <= 4; i++) {
-        const email = (row[`viewer_email_${i}`] || '').trim().toLowerCase();
-        if (email && userByEmail.has(email)) {
-          viewerIds.push(userByEmail.get(email)!);
-        }
-      }
-
-      // Collect owner IDs from columns
-      const ownerIds: string[] = [];
-      for (let i = 1; i <= 4; i++) {
-        const email = (row[`owner_email_${i}`] || '').trim().toLowerCase();
-        if (email && userByEmail.has(email)) {
-          ownerIds.push(userByEmail.get(email)!);
-        }
-      }
-
-      // Update task with viewer and owner arrays (only if columns were present and change). The columns are NOT
-      // NULL jsonb lists: none is `[]`, and the list goes as JSON (a bare array is a PostgreSQL array).
-      // A list that names the people the task already has, in any order, is left as it is: a task
-      // the file does not change keeps its updated_at.
-      const writes = (prefix: string, stored: unknown, next: string[]) => [1, 2, 3, 4].some((i) => `${prefix}_${i}` in row)
-        && !keepsStoredPeople(checked.warnings ?? [], line, prefix) && !samePeople(stored, next);
-      const writeViewers = writes('viewer_email', task.viewer_ids, viewerIds);
-      const writeOwners = writes('owner_email', task.owner_ids, ownerIds);
-
-      if (writeViewers || writeOwners) {
-        const updates: string[] = [];
-        const params: any[] = [task.id];
-        let paramIndex = 2;
-
-        if (writeViewers) {
-          updates.push(`viewer_ids = $${paramIndex}::jsonb`);
-          params.push(JSON.stringify(viewerIds));
-          paramIndex++;
-        }
-
-        if (writeOwners) {
-          updates.push(`owner_ids = $${paramIndex}::jsonb`);
-          params.push(JSON.stringify(ownerIds));
-          paramIndex++;
-        }
-
-        if (updates.length > 0) {
-          const [{ n }] = await manager.query(
-            `WITH c AS (UPDATE tasks SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING 1)
-             SELECT count(*)::int AS n FROM c`,
-            params,
-          );
-          // A task the person reads but may not modify: the clear 403, never a silent success.
-          await assertTaskWritten(manager, Number(n));
-        }
       }
     }
   }

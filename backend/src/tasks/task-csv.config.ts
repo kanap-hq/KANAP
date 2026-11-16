@@ -91,7 +91,7 @@ function normalizeTaskCodes(entity: any): void {
   }
 }
 
-/** The users a row's numbered email columns name, in order; null when none (as TasksCsvService writes them). */
+/** The users a row's numbered email columns name, in order; null when none. */
 function csvUserIds(raw: Record<string, string>, prefix: string, userByEmail: Map<string, string>): string[] | null {
   const ids: string[] = [];
   for (let i = 1; i <= 4; i++) {
@@ -132,20 +132,18 @@ export async function taskProjectClassifications(
 /**
  * The tables a task's related object is named in. `where`: a `spend_item` names an OPEX line
  * (`spend/budget-nature.ts`). `module` and `ref`: a family named by its name, found accents aside
- * for a person who reads that module (lot I3 of 26.11.9), and its business reference.
+ * for a person who reads that module (lot I3 of 26.11.9), and its business reference. `reader`: the
+ * module a person reads to have Kad's proposal for the type taken, when it is not `module`: an
+ * incident is named by its reference (`INC-n`), which keeps its reading, so Kad's `INC-n` is judged
+ * as the cell would be, for a reader of the incidents (T-I3i).
  */
-const RELATED_OBJECT_TABLES: Record<string, { table: string; nameColumn: string; where?: string; module?: string; ref?: (itemNumber: unknown) => string | null }> = {
+const RELATED_OBJECT_TABLES: Record<string, { table: string; nameColumn: string; where?: string; module?: string; reader?: string; ref?: (itemNumber: unknown) => string | null }> = {
   project: { table: 'portfolio_projects', nameColumn: 'name', module: 'portfolio_projects', ref: (n) => (n == null ? null : `PRJ-${n}`) },
   spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'`, module: 'budget', ref: (n) => budgetLineReference(n as number | null) },
   contract: { table: 'contracts', nameColumn: 'name', module: 'contracts', ref: (n) => contractReference(n as number | null) },
   capex_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'capex'`, module: 'budget', ref: (n) => budgetLineReference(n as number | null) },
-  incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
+  incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text", reader: 'incidents' },
 };
-
-/** The module whose readers find a related object of each type accents aside. */
-export const RELATED_OBJECT_MODULES: Record<string, string | undefined> = Object.fromEntries(
-  Object.entries(RELATED_OBJECT_TABLES).map(([type, mapping]) => [type, mapping.module]),
-);
 
 /** What a name of a related object finds: nothing, several records (named), or one record and how. */
 export type RelatedObjectLookup =
@@ -432,28 +430,42 @@ async function anchorPhases(rows: CsvImportRow[], context: CsvImportContext): Pr
   }
 }
 
-/** The numbered e-mail columns of the people lists TasksCsvService writes after the import. */
+/** The numbered e-mail columns of a task's people lists, and the stored list each one writes. */
 const PEOPLE_LISTS = [{ prefix: 'viewer_email', key: 'viewer_ids' }, { prefix: 'owner_email', key: 'owner_ids' }] as const;
 
+/** A task's stored list of people (jsonb) names the same people as the file, in any order. */
+function samePeople(stored: unknown, next: string[]): boolean {
+  const current = Array.isArray(stored) ? stored.map(String) : [];
+  const wanted = new Set(next);
+  return current.length === wanted.size && current.every((id) => wanted.has(id));
+}
+
+/** Whether a row keeps its stored list of `prefix` (`importPeople` said so on one of its cells). */
+function keepsStoredPeople(warnings: ReadonlyArray<{ row: number; column?: string; code?: string }>, row: number, prefix: string): boolean {
+  return warnings.some((warning) => warning.row === row && warning.code === 'CSV_REFERENCE_NOT_FOUND_KEPT' && !!warning.column?.startsWith(`${prefix}_`));
+}
+
 /**
- * Viewers and owners (written after the import by TasksCsvService): an e-mail nothing finds is said
- * at the check as at the load (lot I3 of 26.11.9). In merge mode, on a row that updates a task, the
- * stored list is kept whole (`CSV_REFERENCE_NOT_FOUND_KEPT`); elsewhere the e-mail is skipped
- * (`CSV_REFERENCE_NOT_FOUND_SKIPPED`). The warning is the decision the people pass follows.
+ * Viewers and owners: the row's lists, written with the task the import writes (lot I3 of 26.11.9,
+ * review fixes: the task whose related object the import found, Kad's proposal and an undone match
+ * included). A list the file leaves out (none of its numbered columns) is not touched; a list that
+ * names the people the task has, in any order, is left as it is. An e-mail nothing finds is said at
+ * the check as at the load: in merge mode, on a row that updates a task, the stored list is kept whole
+ * (`CSV_REFERENCE_NOT_FOUND_KEPT`); elsewhere the e-mail is skipped (`CSV_REFERENCE_NOT_FOUND_SKIPPED`).
+ * The people are read once, by the file's e-mails.
  */
-async function sayUnknownPeople(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+async function importPeople(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const checked = rows.filter((row) => row.errors.length === 0 && !skippedByOperation(row, context.params.operation));
   const cells = checked.flatMap((row) => PEOPLE_LISTS.flatMap(({ prefix }) => [1, 2, 3, 4]
     .map((i) => ({ row, column: `${prefix}_${i}`, value: String(row.raw[`${prefix}_${i}`] ?? '').trim() }))
     .filter((cell) => cell.value)));
-  if (cells.length === 0) return;
-  const known: Array<{ email: string }> = await context.manager.query(
-    `SELECT lower(email) AS email FROM users WHERE tenant_id = $1 AND lower(email) = ANY($2::text[])`,
+  const known: Array<{ id: string; email: string }> = cells.length === 0 ? [] : await context.manager.query(
+    `SELECT id::text AS id, lower(email) AS email FROM users WHERE tenant_id = $1 AND lower(email) = ANY($2::text[])`,
     [context.tenantId, [...new Set(cells.map((cell) => cell.value.toLowerCase()))]],
   );
-  const emails = new Set(known.map((user) => user.email));
+  const userByEmail = new Map(known.map((user) => [user.email, user.id]));
   for (const { row, column, value } of cells) {
-    if (emails.has(value.toLowerCase())) continue;
+    if (userByEmail.has(value.toLowerCase())) continue;
     const keep = context.params.mode === 'enrich' && !row.isInsert;
     row.warnings.push({
       row: row.rowNumber,
@@ -463,11 +475,13 @@ async function sayUnknownPeople(rows: CsvImportRow[], context: CsvImportContext)
       params: { value },
     });
   }
-}
-
-/** Whether a row keeps its stored list of `prefix` (`sayUnknownPeople` said so on one of its cells). */
-export function keepsStoredPeople(warnings: ReadonlyArray<{ row: number; column?: string; code?: string }>, row: number, prefix: string): boolean {
-  return warnings.some((warning) => warning.row === row && warning.code === 'CSV_REFERENCE_NOT_FOUND_KEPT' && !!warning.column?.startsWith(`${prefix}_`));
+  for (const row of checked) {
+    for (const { prefix, key } of PEOPLE_LISTS) {
+      if (!hasColumns(row.raw, prefix) || keepsStoredPeople(row.warnings, row.rowNumber, prefix)) continue;
+      const ids = csvUserIds(row.raw, prefix, userByEmail) ?? [];
+      if (row.isInsert || !samePeople(row.existingEntity?.[key], ids)) row.parsed[key] = ids;
+    }
+  }
 }
 
 /** The project a matched row's task belongs to once imported (the file's, else the stored one); null when none. */
@@ -982,7 +996,7 @@ export const taskCsvConfig: CsvEntityConfig = {
     keepObjectsOutsideAccess(rows, context.params.operation);
     await resolveRelatedObjects(rows, context);
     await anchorPhases(rows, context);
-    await sayUnknownPeople(rows, context);
+    await importPeople(rows, context);
     const matched = rows
       .filter((row) => row.errors.length === 0 && row.existingEntity)
       .map((row) => ({ row, projectId: importedProjectId(row) }))
@@ -1002,22 +1016,14 @@ export const taskCsvConfig: CsvEntityConfig = {
 
   /**
    * The row as the commit stores it: codes normalized, the related object named by its id, the
-   * phase re-anchored to the task's project, and the viewers and owners TasksCsvService writes
-   * after the import.
+   * phase re-anchored to the task's project, and the viewers and owners `importPeople` set.
    */
   sameAsStored: async (rows, context) => {
-    const ids = rows.map((row) => row.existingEntity.id);
     const phaseIds = [...new Set(rows.flatMap((row) => [row.parsed.phase_id, row.existingEntity.phase_id]).filter(Boolean))];
-    // One after the other: the request's single connection runs its queries in turn anyway.
-    const users = ids.length === 0 ? [] : await context.manager.query(
-      `SELECT id, email FROM users WHERE tenant_id = $1`,
-      [context.tenantId],
-    );
-    const phases = ids.length === 0 || phaseIds.length === 0 ? [] : await context.manager.query(
+    const phases = rows.length === 0 || phaseIds.length === 0 ? [] : await context.manager.query(
       `SELECT id, name, project_id FROM portfolio_project_phases WHERE tenant_id = $1 AND id = ANY($2)`,
       [context.tenantId, phaseIds],
     );
-    const userByEmail = new Map<string, string>(users.map((u: any) => [String(u.email).toLowerCase(), u.id]));
     const phaseById = new Map<string, any>(phases.map((p: any) => [p.id, p]));
 
     return rows.map((row) => {
@@ -1042,10 +1048,6 @@ export const taskCsvConfig: CsvEntityConfig = {
 
       delete next._viewer_emails;
       delete next._owner_emails;
-      // A list kept whole (an unknown e-mail in merge mode) stays the stored one.
-      for (const { prefix, key } of PEOPLE_LISTS) {
-        if (hasColumns(row.raw, prefix) && !keepsStoredPeople(row.warnings, row.rowNumber, prefix)) next[key] = csvUserIds(row.raw, prefix, userByEmail);
-      }
       return sameStoredValues(stored, next);
     });
   },
@@ -1190,8 +1192,8 @@ export const taskCsvConfig: CsvEntityConfig = {
       // Standalone tasks are valid - no type and no id
     }
 
-    // Viewer/owner emails are handled by TasksCsvService.handleViewerOwnerImport
-    // after the main import; drop the temp props so they never reach save/audit.
+    // The viewers and owners are in viewer_ids and owner_ids (`importPeople`); drop the temp props
+    // so they never reach save/audit.
     for (const entity of entities) {
       delete entity._viewer_emails;
       delete entity._owner_emails;

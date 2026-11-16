@@ -1,63 +1,81 @@
 /**
- * The task import's second pass (viewers and owners) writes a task only when its viewers or owners
- * change: a task the file leaves as it is keeps its `updated_at`, and a person who reads it without
- * the right to change it gets no refusal for a row that changes nothing.
+ * The task import writes a task's viewers or owners only when they change: a row that names the
+ * people the task has, in any order, is unchanged (the task keeps its `updated_at`, and a person who
+ * reads it without the right to change it gets no refusal for a row that changes nothing). The lists
+ * go with the task the import writes (lot I3 of 26.11.9, review fixes): no second pass.
  */
 import * as assert from 'node:assert/strict';
-import { TasksCsvService } from '../tasks-csv.service';
+import type { CsvImportContext, CsvImportRow } from '../../common/csv/csv-field.types';
+import { taskCsvConfig } from '../task-csv.config';
 
 const TENANT = 't1';
 const ADA = 'user-ada';
 const BOB = 'user-bob';
 
-function csv(content: string): Express.Multer.File {
-  return { buffer: Buffer.from(content, 'utf8') } as Express.Multer.File;
-}
-
-/** A manager that answers the pass's reads with one task and records every statement. */
-function taskManager(task: { viewer_ids: string[]; owner_ids: string[] }) {
+/** A manager that answers the people's read; any other statement is recorded and answers nothing. */
+function context(): CsvImportContext & { statements: string[] } {
   const statements: string[] = [];
   return {
     statements,
-    query: async (sql: string) => {
-      statements.push(sql);
-      if (/FROM users/.test(sql)) return [{ id: ADA, email: 'ada@example.com' }, { id: BOB, email: 'bob@example.com' }];
-      if (/FROM tasks/.test(sql)) return [{ id: 'task-1', ...task }];
-      if (/UPDATE tasks/.test(sql)) return [{ n: 1 }];
-      return [];
+    tenantId: TENANT,
+    params: { dryRun: true, mode: 'enrich', operation: 'upsert' },
+    resolverCache: new Map(),
+    manager: {
+      query: async (sql: string) => {
+        statements.push(sql);
+        if (/FROM users/.test(sql)) return [{ id: ADA, email: 'ada@example.com' }, { id: BOB, email: 'bob@example.com' }];
+        return [];
+      },
     },
   } as any;
 }
 
-const updates = (statements: string[]) => statements.filter((sql) => /UPDATE tasks/.test(sql));
-
-async function run(file: string, task: { viewer_ids: string[]; owner_ids: string[] }): Promise<string[]> {
-  const svc = new (TasksCsvService as any)(null, null, null);
-  const manager = taskManager(task);
-  await svc.handleViewerOwnerImport(csv(file), { manager, tenantId: TENANT });
-  return updates(manager.statements);
+/** The row of the stored task « Migration » after the hooks, and whether the import counts it unchanged. */
+async function run(raw: Record<string, string>, task: { viewer_ids: string[]; owner_ids: string[] }) {
+  const row: CsvImportRow = {
+    rowNumber: 2,
+    raw: { title: 'Migration', ...raw },
+    parsed: { title: 'Migration' },
+    existingEntity: { id: 'task-1', title: 'Migration', ...task },
+    isInsert: false,
+    errors: [],
+    warnings: [],
+  };
+  const ctx = context();
+  await taskCsvConfig.afterValidate!([row], ctx);
+  const [unchanged] = await taskCsvConfig.sameAsStored!([row], ctx);
+  return { parsed: row.parsed, unchanged, statements: ctx.statements };
 }
 
 async function testUnchangedTaskIsNotWritten() {
-  const file = 'title;viewer_email_1;viewer_email_2;owner_email_1\r\nMigration;bob@example.com;ada@example.com;ada@example.com\r\n';
   // Same people, in another order: nothing changes.
-  assert.deepEqual(await run(file, { viewer_ids: [ADA, BOB], owner_ids: [ADA] }), []);
+  const same = await run(
+    { viewer_email_1: 'bob@example.com', viewer_email_2: 'ada@example.com', owner_email_1: 'ada@example.com' },
+    { viewer_ids: [ADA, BOB], owner_ids: [ADA] },
+  );
+  assert.equal(same.unchanged, true);
+  assert.ok(!('viewer_ids' in same.parsed) && !('owner_ids' in same.parsed), JSON.stringify(same.parsed));
+  assert.equal(same.statements.filter((sql) => /FROM users/.test(sql)).length, 1, 'the people are read once');
 }
 
 async function testChangedTaskIsWritten() {
-  const file = 'title;viewer_email_1;owner_email_1\r\nMigration;bob@example.com;ada@example.com\r\n';
-  assert.equal((await run(file, { viewer_ids: [ADA], owner_ids: [ADA] })).length, 1);
+  const changed = await run({ viewer_email_1: 'bob@example.com', owner_email_1: 'ada@example.com' }, { viewer_ids: [ADA], owner_ids: [ADA] });
+  assert.equal(changed.unchanged, false);
+  assert.deepEqual(changed.parsed.viewer_ids, [BOB]);
+  assert.ok(!('owner_ids' in changed.parsed), 'the owners did not change');
   // Only the owners' columns: the viewers are not compared nor written.
-  const owners = await run('title;owner_email_1\r\nMigration;bob@example.com\r\n', { viewer_ids: [ADA], owner_ids: [ADA] });
-  assert.equal(owners.length, 1);
-  assert.ok(!/viewer_ids/.test(owners[0]), owners[0]);
-  assert.deepEqual(await run('title;owner_email_1\r\nMigration;ada@example.com\r\n', { viewer_ids: [BOB], owner_ids: [ADA] }), []);
+  const owners = await run({ owner_email_1: 'bob@example.com' }, { viewer_ids: [ADA], owner_ids: [ADA] });
+  assert.deepEqual(owners.parsed.owner_ids, [BOB]);
+  assert.ok(!('viewer_ids' in owners.parsed), JSON.stringify(owners.parsed));
+  assert.equal((await run({ owner_email_1: 'ada@example.com' }, { viewer_ids: [BOB], owner_ids: [ADA] })).unchanged, true);
+  // A list the file empties is written empty, as before.
+  assert.deepEqual((await run({ viewer_email_1: '' }, { viewer_ids: [ADA], owner_ids: [] })).parsed.viewer_ids, []);
 }
 
 (async () => {
   await testUnchangedTaskIsNotWritten();
   await testChangedTaskIsWritten();
-  console.log('Task CSV viewer and owner pass tests passed.');
+  console.log('Task CSV viewer and owner tests passed.');
 })().catch((err) => {
   console.error(err);
   process.exitCode = 1;
