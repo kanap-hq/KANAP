@@ -152,11 +152,13 @@ function PreviewCard({
   const { fieldLabel, valueLabel, amountsLabel, classificationLabel, relationItemsLabel } = usePreviewChangeLabels(preview);
   // The reference shows once: the server's title often starts with it ("APP-36 - CheeseTrack").
   const title = getPreviewTitle(preview);
-  // The person's choices on a budget file's check: sent whole, answered by the card that replaces this one.
+  // The person's choices on a budget file's check, or the matches undone on another import's: sent
+  // whole, answered by the card that replaces this one.
   const [choosing, setChoosing] = React.useState(false);
   const [choiceError, setChoiceError] = React.useState<{ text: string; detail: string | null } | null>(null);
-  const canChoose = isPending && !!onReplace && !!preview.conversation_id
-    && preview.import_mapping?.validation?.report.kind === 'budget_file' && !preview.import_mapping.result;
+  const checked = preview.import_mapping?.validation?.report;
+  const canChoose = isPending && !!onReplace && !!preview.conversation_id && !preview.import_mapping?.result
+    && (checked?.kind === 'budget_file' || (checked?.kind === 'rows' && !!checked.matches?.some((match) => match.undoable)));
   // One request per card: a second click before the new render would act on the card being replaced.
   // The card that sent it stays answered; its replacement takes choices again.
   const sentFor = React.useRef<string | null>(null);

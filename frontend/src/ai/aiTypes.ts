@@ -143,6 +143,8 @@ export type AiImportRun = {
       kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[];
       matches?: CsvImportMatch[]; matchesTotal?: number;
       refusedProposals?: CsvImportRefusedProposal[]; refusedProposalsTotal?: number;
+      /** The matches the person undid on the card, absent when none: Undo sends them all with the new one. */
+      undone?: Array<{ column: string; value: string }>;
     }
     | { kind: 'budget_file'; file: BudgetFileReport | null };
 };
