@@ -56,6 +56,8 @@ function phrasesInEveryLanguage() {
   // The scan itself: the budget file alone has 30 codes, the imports about a hundred more.
   assert.ok(codes.size > 120, `refusal codes found: ${codes.size}`);
   assert.ok(codes.has('BUDGET_FILE_DIMENSION_VALUE_TOO_LONG') && codes.has('AI_IMPORT_CLEARS_COLUMNS') && codes.has('XLSX_INVALID'));
+  // The name rule of the imports (lot I3 of 26.11.9): a name that may designate several records, a stored value kept.
+  assert.ok(codes.has('CSV_NAME_AMBIGUOUS_AMONG') && codes.has('CSV_REFERENCE_NOT_FOUND_KEPT'));
   const missing: string[] = [];
   for (const language of LANGUAGES) {
     const phrases = JSON.parse(fs.readFileSync(backendPath('..', 'frontend', 'src', 'locales', language, 'errors.json'), 'utf8')) as Record<string, unknown>;
