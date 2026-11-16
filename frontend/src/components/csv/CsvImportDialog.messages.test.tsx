@@ -137,6 +137,23 @@ describe('CsvImportDialog messages', () => {
     expect(screen.getByRole('button', { name: 'Charger' })).toBeEnabled();
   });
 
+  // R3 of 26.11.9: the contact a reference names keeps its e-mail address unless the check says so.
+  it('says which supplier or contact a reference renames, moves or gives another e-mail address, and still loads', async () => {
+    check([], {
+      ok: true,
+      updated: 3,
+      warnings: [
+        { row: 2, message: 'SUP-3 "Acme" will be renamed "Beta".', code: 'CSV_REFERENCE_RENAMES', params: { reference: 'SUP-3', stored: 'Acme', name: 'Beta', context: 'supplier' } },
+        { row: 3, message: 'CTCT-4 "Jean Dupont" will be renamed "Jean Martin".', code: 'CSV_REFERENCE_RENAMES', params: { reference: 'CTCT-4', stored: 'Jean Dupont', name: 'Jean Martin', context: 'contact' } },
+        { row: 4, message: 'CTCT-4 "Jean Dupont" will change its e-mail address.', code: 'CSV_REFERENCE_EMAIL_CHANGES', params: { reference: 'CTCT-4', name: 'Jean Dupont', from: 'a@x.fr', to: 'b@x.fr' } },
+      ],
+    });
+    expect(await screen.findByText('Ligne 2 : SUP-3 « Acme » sera renommé « Beta ».')).toBeInTheDocument();
+    expect(screen.getByText('Ligne 3 : CTCT-4 « Jean Dupont » sera renommé « Jean Martin ».')).toBeInTheDocument();
+    expect(screen.getByText("Ligne 4 : CTCT-4 « Jean Dupont » changera d'adresse e-mail : « a@x.fr » → « b@x.fr ».")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Charger' })).toBeEnabled();
+  });
+
   it('translates the end of validity that contradicts the status', async () => {
     check([
       { row: 2, column: 'status', message: 'Status is enabled but the end of validity has passed.', code: 'CSV_STATUS_DATE_PASSED' },

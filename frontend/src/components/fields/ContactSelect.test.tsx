@@ -51,6 +51,22 @@ describe('ContactSelect', () => {
     expect(screen.queryByText(/anna\.berg@acme\.test/)).toBeNull();
   });
 
+  // Lot R3 of 26.11.9: the list's quick search finds a typed CTCT-n exactly; the option shows it.
+  it('sends a typed CTCT-n to the search and shows the reference of each option', async () => {
+    apiGet.mockImplementation(async (url: string, config?: { params?: { q?: string } }) => {
+      if (url !== '/contacts') throw new Error(`unexpected ${url}`);
+      const q = config?.params?.q ?? '';
+      return { data: { items: q.toUpperCase() === 'CTCT-4' ? [{ ...CONTACTS[0], item_number: 4 }] : [] } };
+    });
+    renderSelect();
+    const input = screen.getByRole('combobox');
+    fireEvent.mouseDown(input);
+    fireEvent.change(input, { target: { value: 'ctct-4' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/contacts', { params: { limit: 20, q: 'ctct-4' } }));
+    const option = await screen.findByRole('option', { name: /Anna Berg/ });
+    expect(option.textContent).toBe('Anna BergCTCT-4');
+  });
+
   it('names the supplier on the same line when the list is not grouped', async () => {
     renderSelect({ groupByCompany: false });
     fireEvent.mouseDown(screen.getByRole('combobox'));

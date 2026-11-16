@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { TFunction } from 'i18next';
+import type { SupplierOption } from '../../components/fields/SupplierSelect';
 
 export const CONTACT_ROLES = ['commercial', 'technical', 'support', 'other'] as const;
 export type ContactRole = typeof CONTACT_ROLES[number];
@@ -8,6 +9,8 @@ export const DEFAULT_CONTACT_ROLE: ContactRole = 'commercial';
 
 export type Contact = {
   id: string;
+  /** CTCT-n once written; none on the draft. */
+  item_number?: number | null;
   first_name: string | null;
   last_name: string | null;
   job_title: string | null;
@@ -20,9 +23,11 @@ export type Contact = {
   supplier_id: string | null;
   supplier_role: ContactRole | null;
   supplier_name?: string | null;
+  /** The supplier as its picker shows it, reference included. */
+  supplier_option?: SupplierOption | null;
 };
 
-export type ContactPatch = Partial<Omit<Contact, 'id' | 'supplier_name'>>;
+export type ContactPatch = Partial<Omit<Contact, 'id' | 'item_number' | 'supplier_name' | 'supplier_option'>>;
 
 export const NOTES_MAX_LENGTH = 2000;
 

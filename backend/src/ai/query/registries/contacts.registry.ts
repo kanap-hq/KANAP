@@ -3,6 +3,18 @@ import { AiEntityFilterRegistry } from '../ai-filter.types';
 export const contactsRegistry: AiEntityFilterRegistry = {
   entityType: 'contacts',
   fields: {
+    // The list's reference column (`item_number`, shown `CTCT-12`): `ContactsService.list` compares
+    // each value's number whole (`compileReferenceFilter`).
+    reference: {
+      ai: 'reference',
+      grid: 'item_number',
+      type: 'set',
+      description: 'Contact reference, such as CTCT-12.',
+      acceptedValueKind: 'CTCT-n reference',
+      examples: ['CTCT-12'],
+      sortable: true,
+      groupable: false,
+    },
     country: {
       ai: 'country',
       grid: 'country',
@@ -31,6 +43,7 @@ export const contactsRegistry: AiEntityFilterRegistry = {
     },
   },
   sortFields: {
+    reference: 'item_number',
     label: 'last_name',
     first_name: 'first_name',
     last_name: 'last_name',

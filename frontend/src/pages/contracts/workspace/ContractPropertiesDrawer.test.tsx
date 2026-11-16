@@ -18,7 +18,10 @@ vi.mock('../../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: () => true, profile: { id: 'user-1' }, dataAccess: { mode: 'all', nodes: [] } }),
 }));
 vi.mock('../../../api', () => ({ default: { get: apiGet } }));
-vi.mock('../../../components/fields/SupplierSelect', () => ({ default: () => null }));
+const supplierProps = vi.hoisted(() => ({ current: null as null | { selectedOption?: unknown } }));
+vi.mock('../../../components/fields/SupplierSelect', () => ({
+  default: (props: { selectedOption?: unknown }) => { supplierProps.current = props; return null; },
+}));
 vi.mock('../../../components/fields/CompanySelect', () => ({ default: () => null }));
 vi.mock('../../../components/fields/CostCenterSelect', () => ({ default: () => null }));
 vi.mock('../../../components/fields/DateEUField', () => ({ default: () => null }));
@@ -47,14 +50,17 @@ const VALUES: ContractFormValues = {
   updated_at: null,
 };
 
-function renderDrawer(props: { disabled?: boolean; onPatch?: (patch: unknown) => void } = {}) {
+const SALESFORCE = { id: 'supplier-1', item_number: 3, name: 'Salesforce', erp_supplier_id: 'SUP-003', status: 'enabled' };
+
+function renderDrawer(props: { disabled?: boolean; onPatch?: (patch: unknown) => void; supplierOption?: Record<string, unknown> | null } = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
         <ContractPropertiesDrawer
           values={VALUES}
-          names={{ supplier: null, company: null, owner: 'Luca Ferrari' }}
+          names={{ supplier: SALESFORCE.name, company: null, owner: 'Luca Ferrari' }}
+          supplierOption={props.supplierOption as never}
           disabled={props.disabled ?? false}
           onPatch={props.onPatch ?? vi.fn()}
           onTyped={vi.fn()}
@@ -90,5 +96,24 @@ describe('ContractPropertiesDrawer owner', () => {
     const field = screen.getByRole('combobox', { name: 'contracts.fields.owner' });
     expect(field).toHaveValue('Luca Ferrari');
     expect(field).toBeDisabled();
+  });
+});
+
+describe('ContractPropertiesDrawer supplier', () => {
+  beforeEach(() => {
+    supplierProps.current = null;
+    apiGet.mockReset();
+    apiGet.mockResolvedValue({ data: { items: [] } });
+  });
+
+  // The chosen supplier shows its reference (`SUP-3`) and its ERP ID in the list, as the others do.
+  it('gives the picker the saved supplier as the detail returns it, reference included', () => {
+    renderDrawer({ supplierOption: SALESFORCE });
+    expect(supplierProps.current?.selectedOption).toEqual(SALESFORCE);
+  });
+
+  it('gives no label for a supplier the detail does not describe (a pick not saved yet)', () => {
+    renderDrawer({ supplierOption: { ...SALESFORCE, id: 'supplier-9' } });
+    expect(supplierProps.current?.selectedOption).toBeNull();
   });
 });

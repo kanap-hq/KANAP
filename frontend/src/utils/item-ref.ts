@@ -30,7 +30,6 @@ export function buildItemPath(type: ItemType, idOrRef: string): string {
     company: '/master-data/companies',
     department: '/master-data/departments',
     contract: '/ops/contracts',
-    // These pages open by the uuid until their reference address ships (lot R3): pass the id.
     supplier: '/master-data/suppliers',
     contact: '/master-data/contacts',
   };

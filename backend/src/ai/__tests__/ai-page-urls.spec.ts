@@ -52,11 +52,11 @@ async function testRights() {
 }
 
 async function testDetailAndContext() {
-  const detail = await withAiPageUrls({ entity: { type: 'suppliers', id: COMPANY }, data: { name: 'Supplier' } }, {
-    readableResources: reads('suppliers'),
+  const detail = await withAiPageUrls({ entity: { type: 'business_processes', id: COMPANY }, data: { name: 'Order to cash' } }, {
+    readableResources: reads('business_processes'),
     origin: async () => null,
   });
-  assert.equal((detail.entity as any).page_url, `/master-data/suppliers/${COMPANY}`);
+  assert.equal((detail.entity as any).page_url, `/master-data/business-processes/${COMPANY}`);
   assert.equal((detail.data as any).page_url, undefined, 'the data is left alone');
 
   const context = await withAiPageUrls({
@@ -92,7 +92,7 @@ async function testMcpOrigin() {
 }
 
 function testRoutesHaveNoReferenceFamilies() {
-  for (const family of ['applications', 'assets', 'technologies', 'projects', 'requests', 'tasks', 'documents', 'incidents', 'budget_lines', 'companies', 'departments', 'contracts']) {
+  for (const family of ['applications', 'assets', 'technologies', 'projects', 'requests', 'tasks', 'documents', 'incidents', 'budget_lines', 'companies', 'departments', 'contracts', 'suppliers', 'contacts']) {
     assert.equal(AI_PAGE_ROUTES[family], undefined, `${family} opens by its reference`);
   }
 }

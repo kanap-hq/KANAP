@@ -61,7 +61,7 @@ export const COMPANY_USAGE_QUERIES: readonly UsageQuery[] = [
   {
     type: 'departments',
     resource: 'departments',
-    sql: `SELECT d.id, NULL::text AS reference, d.name, d.status::text AS status, ${activeSql('d')} AS active,
+    sql: `SELECT d.id, 'DEPT-' || d.item_number::text AS reference, d.name, d.status::text AS status, ${activeSql('d')} AS active,
                  count(*) OVER () AS total
             FROM departments d
            WHERE d.tenant_id = $1 AND d.company_id = $2

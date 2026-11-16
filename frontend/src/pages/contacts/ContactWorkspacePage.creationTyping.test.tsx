@@ -17,6 +17,9 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: () => true, profile: { id: 'user-1' }, dataAccess: null }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
+  useRecentlyViewed: () => ({ items: [], addToRecent: vi.fn(), clearRecent: vi.fn() }),
+}));
 // The supplier picker searches the API: a plain input stands in.
 vi.mock('../../components/fields/SupplierSelect', () => ({
   default: (props: { label?: string; value: string | null }) => <input aria-label={props.label} value={props.value ?? ''} readOnly />,
@@ -29,7 +32,7 @@ const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', Ret
 
 /** What the server stores for the contact the draft created: only what was sent with it. */
 const STORED = {
-  id: 'c-new', first_name: null, last_name: null, job_title: null, email: 'alex@example.com', phone: null, mobile: null,
+  id: 'c-new', item_number: 7, first_name: null, last_name: null, job_title: null, email: 'alex@example.com', phone: null, mobile: null,
   country: null, notes: null, active: true, supplier_id: null, supplier_role: null, supplier_name: null,
 };
 
@@ -76,7 +79,8 @@ describe('ContactWorkspacePage typing while the contact is created', () => {
     resetCreationStore();
     server = { ...STORED };
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === '/contacts/c-new') return { data: server };
+      // The server reads the contact by its uuid or its reference alike.
+      if (url === '/contacts/c-new' || url === '/contacts/CTCT-7') return { data: server };
       if (url.endsWith('/usages')) return { data: { total: 0, groups: [] } };
       return { data: { items: [] } };
     });
@@ -98,7 +102,7 @@ describe('ContactWorkspacePage typing while the contact is created', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });
-      await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/master-data/contacts/c-new/overview'));
+      await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/master-data/contacts/CTCT-7/overview'));
       await until(() => { if (!mocked.get.mock.calls.some(([url]) => url === '/contacts/c-new')) throw new Error('contact not read'); });
     };
     return { drawer, finish };

@@ -8,6 +8,8 @@ import { CompanyMetricsService } from '../company-metrics.service';
 import { companiesRegistry } from '../../ai/query/registries/companies.registry';
 import { adaptFilters } from '../../ai/query/ai-filter.adapter';
 import { resolveToUuid } from '../../common/resolve-item-id';
+import { readUsages } from '../../common/record-usages';
+import { COMPANY_USAGE_QUERIES, companyUsageQueries } from '../company-usages';
 import {
   assert,
   captureAudit,
@@ -15,6 +17,7 @@ import {
   realFreeze,
   runSpecs,
   seedTenant,
+  underSavepoint,
 } from '../../spend/__tests__/round-inputs.fixtures';
 
 // The company reference (`COMP-n`, lot R2 of 26.11.9) in the list and its file: the reference
@@ -281,6 +284,82 @@ async function testCreateReturnsReference() {
   });
 }
 
+// One row per company: a second row naming the same company, by its reference (the family's
+// CSV_DUPLICATE_KEY on the reference) or by its name (CSV_COMPANY_NAME_DUPLICATE), is refused on its line, at the check as at the
+// load; a new company named twice too. Nothing is written.
+async function testImportRefusesSecondRowOfACompany() {
+  await withCompanies('ref-second-row', async (seeded) => {
+    const run = importer(seeded);
+    const headers = ['reference', ...BASE];
+    const stored = async () => seeded.runner.query(
+      `SELECT name, notes FROM companies WHERE tenant_id = $1 ORDER BY item_number`, [seeded.tenantId],
+    );
+    const before = await stored();
+    const cases: Array<[string, Array<Record<string, string>>, Array<[number, string, string, Record<string, unknown>]>]> = [
+      ['same reference', [row({ reference: 'COMP-8', name: 'Company 8', notes: 'A' }), row({ reference: '8', name: 'Eight renamed', notes: 'B' })],
+        [[3, 'reference', 'CSV_DUPLICATE_KEY', { columns: 'reference', firstRow: 2 }]]],
+      ['same name', [row({ reference: '', name: 'Company 8', notes: 'A' }), row({ reference: '', name: 'company 8', notes: 'B' })],
+        [[3, 'name', 'CSV_COMPANY_NAME_DUPLICATE', { name: 'company 8', firstRow: 2 }]]],
+      ['a new company twice', [row({ reference: '', name: 'Brand new', notes: 'A' }), row({ reference: '', name: 'brand NEW', notes: 'B' })],
+        [[3, 'name', 'CSV_COMPANY_NAME_DUPLICATE', { name: 'brand NEW', firstRow: 2 }]]],
+    ];
+    for (const [label, rows, expected] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await run(headers, rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((e) => [e.row, e.column, e.code, e.params]), expected, `${label}, dryRun=${dryRun}`);
+      }
+    }
+    assert.deepEqual(await stored(), before, 'a refused file writes nothing');
+  });
+}
+
+// A rename by reference and another row of the file that lead to the same name, whatever its case:
+// the second row is refused on its line (CSV_COMPANY_NAME_DUPLICATE), at the check as at the load,
+// and nothing is written. The load runs under a savepoint, so a refusal by the database shows.
+async function testImportRefusesARenameOntoAnotherRowsName() {
+  await withCompanies('ref-rename-collision', async (seeded) => {
+    const run = importer(seeded);
+    const attempt = (rows: Array<Record<string, string>>, dryRun: boolean) => underSavepoint(seeded.runner, () => run(headers, rows, dryRun))
+      .catch((err: Error) => ({ ok: false, errors: [], thrown: err.message }) as Report & { thrown: string });
+    const headers = ['reference', ...BASE];
+    const stored = async () => seeded.runner.query(
+      `SELECT name, notes FROM companies WHERE tenant_id = $1 ORDER BY item_number`, [seeded.tenantId],
+    );
+    const before = await stored();
+    const cases: Array<[string, Array<Record<string, string>>, string]> = [
+      ['a rename, then a new company', [row({ reference: 'COMP-8', name: 'Fresh name' }), row({ reference: '', name: 'fresh NAME' })], 'fresh NAME'],
+      ['a new company, then a rename', [row({ reference: '', name: 'Fresh name' }), row({ reference: 'COMP-8', name: 'fresh NAME' })], 'fresh NAME'],
+      ['two renames', [row({ reference: 'COMP-8', name: 'Same name' }), row({ reference: 'COMP-9', name: 'same NAME' })], 'same NAME'],
+    ];
+    for (const [label, rows, name] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await attempt(rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((e) => [e.row, e.column, e.code, e.params]),
+          [[3, 'name', 'CSV_COMPANY_NAME_DUPLICATE', { name, firstRow: 2 }]], `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+      }
+    }
+    assert.deepEqual(await stored(), before, 'a refused file writes nothing');
+  });
+}
+
+// A company's departments come with their reference (`DEPT-n`), in the delete check's list and in
+// the reader's variant alike, as the other groups that have one.
+async function testUsagesNameDepartmentsByReference() {
+  await withCompanies('ref-usages-departments', async (seeded) => {
+    const [dept] = await seeded.runner.query(
+      `INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Finance') RETURNING id, item_number`,
+      [seeded.tenantId, seeded.idOf(1)],
+    );
+    for (const queries of [COMPANY_USAGE_QUERIES, companyUsageQueries({ userId: null, isAdmin: false })]) {
+      const usages = await readUsages(seeded.runner.manager, seeded.tenantId, seeded.idOf(1), { isAdmin: true }, queries);
+      const group = usages.groups.find((g) => g.type === 'departments');
+      assert.deepEqual(group?.items.map((item) => [item.id, item.reference, item.name]), [[dept.id, `DEPT-${dept.item_number}`, 'Finance']]);
+    }
+  });
+}
+
 void runSpecs('company references', [
   ['a created company comes back with its reference', testCreateReturnsReference],
   ['the reference column filters the list, the ids and the totals alike', testReferenceColumnFilter],
@@ -288,6 +367,9 @@ void runSpecs('company references', [
   ['the ids carry the references, and the list sorts by reference', testIdsAndSort],
   ['Kad filters and sorts by reference through the list service', testAssistantField],
   ['the file updates by reference, refuses an unknown one and still reads an older file', testImportByReference],
+  ['the file refuses a second row of the same company', testImportRefusesSecondRowOfACompany],
+  ['the file refuses a rename onto the name of another row', testImportRefusesARenameOntoAnotherRowsName],
   ['a rename by reference is announced, without blocking the check or the load', testRenameWarning],
   ['an export imports back without change', testExportThenImport],
+  ['the usages name the departments by their reference', testUsagesNameDepartmentsByReference],
 ]);

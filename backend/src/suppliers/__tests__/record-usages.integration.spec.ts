@@ -171,7 +171,7 @@ async function testContactUsages() {
   await withWorld(async (runner, w) => {
     const usages = await readContactUsages(runner.manager, w.tenantA, w.contact, ADMIN);
     assert.deepEqual(shape(usages), {
-      suppliers: ['-|Microsoft|-|active|technical'],
+      suppliers: ['SUP-1|Microsoft|-|active|technical'],
       budget_lines: ['BL-1|OPEX A|opex|active|commercial+technical', `BL-${1 + CAPEX_NUMBER_OFFSET}|CAPEX A|capex|active|support`],
       contracts: ['CTR-1|Contract A|-|active|commercial'],
       applications: ['APP-1|Application A|-|active|Account manager'],

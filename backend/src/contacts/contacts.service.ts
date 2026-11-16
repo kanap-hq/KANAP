@@ -19,11 +19,14 @@ import {
   DecimalMark,
   ImportReportError,
   readMasterDataFile,
+  referenceEmailWarning,
+  referenceRenameWarning,
   rowError,
   rowProblemErrors,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
-import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerator, type FilterTargetConfig } from '../common/ag-grid-filtering';
+import { assertSetFilterModes, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type FilterTargetConfig } from '../common/ag-grid-filtering';
+import { parseReferenceNumber } from '../common/parse-item-number';
 import { uploadedBytes } from '../common/upload';
 import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
@@ -43,17 +46,52 @@ const CONTACT_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
   created_at: { expression: 'c.created_at', dataType: 'date' },
 };
 
-/** The grid's column filters on a contact query (`c`, its supplier joined as `s`). */
+/** The prefix of a contact's reference (`CTCT-12`), whose number is `item_number`. */
+const CONTACT_PREFIX = 'CTCT';
+
+const contactReference = (itemNumber: number) => `${CONTACT_PREFIX}-${itemNumber}`;
+
+/** A contact's name as its page shows it, first then last name; empty when it has none. */
+const contactName = (contact: { first_name?: string | null; last_name?: string | null }) =>
+  [contact.first_name, contact.last_name].map((part) => part?.trim()).filter(Boolean).join(' ');
+
+/**
+ * The grid's column filters on a contact query (`c`, its supplier joined as `s`). The reference
+ * column (`item_number`, shown `CTCT-12`) filters on the number, with or without the prefix.
+ */
 function applyContactFilters(qb: SelectQueryBuilder<ExternalContact>, filters: any) {
   if (!filters || typeof filters !== 'object') return;
   const nextParam = createParamNameGenerator('contact_filter_');
   for (const [field, model] of Object.entries(filters)) {
     const target = CONTACT_FILTER_TARGETS[field];
-    if (!target) continue;
-    const compiled = compileAgFilterCondition(model, target, nextParam);
+    const compiled = field === 'item_number'
+      ? compileReferenceFilter(model, 'c.item_number', CONTACT_PREFIX, nextParam)
+      : target ? compileAgFilterCondition(model, target, nextParam) : null;
     if (compiled) qb.andWhere(`(${compiled.sql})`, compiled.params);
   }
 }
+
+/** The quick search: several text columns, or the contact a `CTCT-12` names (digits alone stay text). */
+function applyContactSearch(qb: SelectQueryBuilder<ExternalContact>, q: string | undefined) {
+  if (!q) return;
+  const like = `%${q}%`;
+  const exact = parseReferenceNumber(q, CONTACT_PREFIX, { prefixRequired: true });
+  qb.andWhere(new Brackets((qb2) => {
+    qb2
+      .where('c.email ILIKE :like', { like })
+      .orWhere('c.first_name ILIKE :like', { like })
+      .orWhere('c.last_name ILIKE :like', { like })
+      .orWhere('c.phone ILIKE :like', { like })
+      .orWhere('c.mobile ILIKE :like', { like })
+      .orWhere('s.name ILIKE :like', { like });
+    if (exact != null) qb2.orWhere('c.item_number = :contactRef', { contactRef: exact });
+  }));
+}
+
+/** The sorts of the contact list (the reference column sorts by number). */
+const CONTACT_SORT_FIELDS = [
+  'item_number', 'last_name', 'first_name', 'email', 'country', 'active', 'created_at', 'updated_at', 'supplier_name',
+];
 
 /** The request's tenant: every statement filters on it. */
 type TenantOpts = { manager?: EntityManager; tenantId: string };
@@ -165,9 +203,6 @@ export class ContactsService {
     const repo = this.getRepo(opts.manager);
     const { page, limit, skip, sort, q, filters } = opts.exportAll ? parseExportPagination(query) : parsePagination(query);
     assertSetFilterModes(filters);
-    const allowedSortFields = [
-      'last_name', 'first_name', 'email', 'country', 'active', 'created_at', 'updated_at', 'supplier_name'
-    ];
     const qb = repo.createQueryBuilder('c').leftJoinAndSelect('c.supplier', 's', 's.tenant_id = c.tenant_id');
 
     qb.where('c.tenant_id = :tenantId', { tenantId: opts.tenantId });
@@ -178,19 +213,9 @@ export class ContactsService {
       if (v === 'true' || v === 'false') qb.andWhere({ active: v === 'true' });
     }
 
-    if (q) {
-      const like = `%${q}%`;
-      qb.andWhere(new Brackets((qb2) => qb2
-        .where('c.email ILIKE :like', { like })
-        .orWhere('c.first_name ILIKE :like', { like })
-        .orWhere('c.last_name ILIKE :like', { like })
-        .orWhere('c.phone ILIKE :like', { like })
-        .orWhere('c.mobile ILIKE :like', { like })
-        .orWhere('s.name ILIKE :like', { like })
-      ));
-    }
+    applyContactSearch(qb, q);
 
-    await this.orderList(qb, allowedSortFields, sort);
+    await this.orderList(qb, CONTACT_SORT_FIELDS, sort);
 
     qb.skip(skip).take(limit);
     const [items, total] = await qb.getManyAndCount();
@@ -209,9 +234,6 @@ export class ContactsService {
     const repo = this.getRepo(opts.manager);
     const { sort, q, filters } = parsePagination(query);
     assertSetFilterModes(filters);
-    const allowedSortFields = [
-      'last_name', 'first_name', 'email', 'country', 'active', 'created_at', 'updated_at', 'supplier_name'
-    ];
     const qb = repo.createQueryBuilder('c').leftJoin('c.supplier', 's', 's.tenant_id = c.tenant_id').select('c.id', 'id');
 
     qb.where('c.tenant_id = :tenantId', { tenantId: opts.tenantId });
@@ -222,19 +244,9 @@ export class ContactsService {
       if (v === 'true' || v === 'false') qb.andWhere({ active: v === 'true' });
     }
 
-    if (q) {
-      const like = `%${q}%`;
-      qb.andWhere(new Brackets((qb2) => qb2
-        .where('c.email ILIKE :like', { like })
-        .orWhere('c.first_name ILIKE :like', { like })
-        .orWhere('c.last_name ILIKE :like', { like })
-        .orWhere('c.phone ILIKE :like', { like })
-        .orWhere('c.mobile ILIKE :like', { like })
-        .orWhere('s.name ILIKE :like', { like })
-      ));
-    }
+    applyContactSearch(qb, q);
 
-    await this.orderList(qb, allowedSortFields, sort);
+    await this.orderList(qb, CONTACT_SORT_FIELDS, sort);
 
     const total = await qb.clone().getCount();
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
@@ -248,7 +260,15 @@ export class ContactsService {
     if (!item) throw new NotFoundException('Contact not found');
     const supplierRole = await this.findSupplierRole(id, item.supplier_id, opts);
     const { supplier, ...rest } = item as any;
-    return { ...rest, supplier_role: supplierRole ?? null, supplier_name: supplier?.name ?? null };
+    return {
+      ...rest,
+      supplier_role: supplierRole ?? null,
+      supplier_name: supplier?.name ?? null,
+      // The supplier picker's option, reference included, as the supplier lookup gives it.
+      supplier_option: supplier
+        ? { id: supplier.id, item_number: supplier.item_number, name: supplier.name, erp_supplier_id: supplier.erp_supplier_id ?? null, status: supplier.status }
+        : null,
+    };
   }
 
   async create(body: Partial<ExternalContact>, opts: WriteOpts) {
@@ -413,9 +433,10 @@ export class ContactsService {
   }
 
   // CSV helpers for contacts
+  /** The file's columns: the contact's reference (`CTCT-12`) first, which a file may leave out. */
   private csvHeaders(): string[] {
     return [
-      'first_name', 'last_name', 'job_title', 'email', 'phone', 'mobile', 'country', 'notes', 'active'
+      'reference', 'first_name', 'last_name', 'job_title', 'email', 'phone', 'mobile', 'country', 'notes', 'active'
     ];
   }
 
@@ -434,6 +455,7 @@ export class ContactsService {
         : await repo.find({ where: { tenant_id: opts.tenantId }, order: { created_at: 'DESC' as any, id: 'ASC' as any } });
       for (const c of items) {
         rows.push([
+          contactReference(c.item_number),
           c.first_name ?? '',
           c.last_name ?? '',
           c.job_title ?? '',
@@ -453,8 +475,9 @@ export class ContactsService {
 
   /**
    * Reads the contacts file through the shared layer: either separator, UTF-8 or Windows-1252,
-   * physical line numbers. Rows are matched by email; a row equal to the stored contact is
-   * unchanged and is not written.
+   * physical line numbers. A row with a reference (`CTCT-12` or `12`) updates that contact, its
+   * e-mail included, and an unknown one refuses the row; a row without one is matched by email. A
+   * row equal to the stored contact is unchanged and is not written.
    */
   async importCsv(
     {
@@ -476,6 +499,8 @@ export class ContactsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: this.csvHeaders(),
+      // A file from before the reference column still imports.
+      optional: ['reference'],
       language: language ?? 'en',
       dateOrder,
       decimalMark,
@@ -489,7 +514,8 @@ export class ContactsService {
 
     // Validate + normalize
     type Norm = Partial<ExternalContact> & { email: string };
-    const normalized: Norm[] = [];
+    /** A row: its values, its line, and its reference cell when filled. */
+    const normalized: Array<{ item: Norm; line: number; reference: string | null }> = [];
     for (const row of read.rows) {
       const line = row.line;
       const problems = rowProblemErrors(row);
@@ -506,42 +532,110 @@ export class ContactsService {
       const country = cellOf(row, 'country');
       if (country && country.length !== 2) { errors.push(rowError(line, 'country', 'CSV_COUNTRY_INVALID', 'country must be 2-letter ISO code', { value: country })); continue; }
       normalized.push({
-        email,
-        first_name: cellOf(row, 'first_name') || null,
-        last_name: cellOf(row, 'last_name') || null,
-        job_title: cellOf(row, 'job_title') || null,
-        phone: cellOf(row, 'phone') || null,
-        mobile: cellOf(row, 'mobile') || null,
-        country: country || null,
-        notes: cellOf(row, 'notes') || null,
-        active: active ?? true,
+        line,
+        reference: cellOf(row, 'reference') || null,
+        item: {
+          email,
+          first_name: cellOf(row, 'first_name') || null,
+          last_name: cellOf(row, 'last_name') || null,
+          job_title: cellOf(row, 'job_title') || null,
+          phone: cellOf(row, 'phone') || null,
+          mobile: cellOf(row, 'mobile') || null,
+          country: country || null,
+          notes: cellOf(row, 'notes') || null,
+          active: active ?? true,
+        },
       });
     }
     const rows = read.rows;
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
 
-    // Deduplicate by email
-    const uniqueMap = new Map<string, Norm>();
-    for (const n of normalized) uniqueMap.set(n.email, n);
-    const unique = [...uniqueMap.values()];
+    // The contacts the references name; an unknown reference (or `CTCT-013`, no reference) refuses its row.
+    const numberOf = (reference: string) => parseReferenceNumber(reference, CONTACT_PREFIX);
+    const wantedNumbers = [...new Set(normalized.flatMap((row) => {
+      const number = row.reference ? numberOf(row.reference) : null;
+      return number == null ? [] : [number];
+    }))];
+    const byNumber = new Map(
+      (wantedNumbers.length > 0
+        ? await repo.find({ where: { tenant_id: opts.tenantId, item_number: In(wantedNumbers) as any } })
+        : []).map((contact) => [contact.item_number, contact] as const),
+    );
+    const targetOf = new Map<number, ExternalContact>();
+    for (const row of normalized) {
+      if (!row.reference) continue;
+      const number = numberOf(row.reference);
+      const contact = number == null ? undefined : byNumber.get(number);
+      if (contact) targetOf.set(row.line, contact);
+      else errors.push(rowError(row.line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"${row.reference}" is no reference in this workspace.`, { value: row.reference }));
+    }
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
+
+    // One row per contact: a second row naming the same contact, by its reference or by its e-mail,
+    // is refused on its line below.
+    const kept = normalized;
 
     // Emails are stored lower-cased (create, update and this import), so one read finds every existing contact.
-    const existingRows = unique.length > 0
-      ? await repo.find({ where: { tenant_id: opts.tenantId, email: In(unique.map((item) => item.email)) as any } })
+    const emails = [...new Set(kept.map((row) => row.item.email))];
+    const existingRows = emails.length > 0
+      ? await repo.find({ where: { tenant_id: opts.tenantId, email: In(emails) as any } })
       : [];
     const existingByEmail = new Map(existingRows.map((row) => [row.email, row] as const));
+    // Each contact takes one row, each e-mail one contact: refused at the check, never at the load.
+    const firstLineById = new Map<string, number>();
+    const firstLineByEmail = new Map<string, number>();
+    const toCompare: Array<{ item: Norm; existing: ExternalContact | undefined }> = [];
+    // A file from another workspace names unrelated contacts by the same references: the check says
+    // each name and each e-mail address a reference changes (D12). It blocks nothing.
+    const warnings: ImportReportError[] = [];
+    for (const row of kept) {
+      const target = targetOf.get(row.line);
+      const holder = existingByEmail.get(row.item.email);
+      if (target && holder && holder.id !== target.id) {
+        const reference = contactReference(holder.item_number);
+        errors.push(rowError(row.line, 'email', 'CSV_VALUE_TAKEN', `'${row.item.email}' is already the email of ${reference}.`, { value: row.item.email, reference }));
+        continue;
+      }
+      const existing = target ?? holder;
+      const firstRow = existing ? firstLineById.get(existing.id) : undefined;
+      if (existing && firstRow !== undefined) {
+        const reference = contactReference(existing.item_number);
+        errors.push(rowError(row.line, row.reference ? 'reference' : 'email', 'CSV_SAME_RECORD',
+          `This row updates ${reference}, as row ${firstRow} does. Keep one row per contact.`, { reference, firstRow }));
+        continue;
+      }
+      const firstEmailRow = firstLineByEmail.get(row.item.email);
+      if (firstEmailRow !== undefined) {
+        errors.push(rowError(row.line, 'email', 'CSV_DUPLICATE_KEY', `Same email as row ${firstEmailRow}.`, { columns: 'email', firstRow: firstEmailRow }));
+        continue;
+      }
+      if (existing) firstLineById.set(existing.id, row.line);
+      firstLineByEmail.set(row.item.email, row.line);
+      if (target) {
+        const reference = contactReference(target.item_number);
+        const stored = contactName(target);
+        const next = contactName(row.item);
+        // A contact without a name, or a row that leaves the names empty, renames nothing a person reads.
+        const renamed = stored && next ? referenceRenameWarning(row.line, { family: 'contact', reference, stored, next }) : null;
+        if (renamed) warnings.push(renamed);
+        const readdressed = referenceEmailWarning(row.line, { reference, name: stored || target.email, stored: target.email, next: row.item.email });
+        if (readdressed) warnings.push(readdressed);
+      }
+      toCompare.push({ item: row.item, existing });
+    }
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
+
     // A row equal to the stored contact is unchanged and is not written. The import sets
     // only columns of `contacts` (no supplier link), so those columns are all it compares.
     let inserted = 0, updated = 0, unchanged = 0;
     const toWrite: Array<{ item: Norm; existing: ExternalContact | undefined }> = [];
-    for (const item of unique) {
-      const existing = existingByEmail.get(item.email);
+    for (const { item, existing } of toCompare) {
       if (!existing) inserted += 1;
       else if (sameStoredValues(existing as unknown as Record<string, unknown>, item)) { unchanged += 1; continue; }
       else updated += 1;
       toWrite.push({ item, existing });
     }
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], ...report };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
 
     for (const { item, existing } of toWrite) {
       if (existing) {
@@ -552,6 +646,6 @@ export class ContactsService {
         await repo.save(created);
       }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, errors: [], ...report };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
   }
 }

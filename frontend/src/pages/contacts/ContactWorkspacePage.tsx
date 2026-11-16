@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Link as MuiLink, Stack, TextField, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
@@ -14,6 +14,7 @@ import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetai
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
 import { PropertyGroup, PropertyRow } from '../../components/design';
 import SupplierSelect from '../../components/fields/SupplierSelect';
+import { matching } from '../../components/finance/itemReferences';
 import { guessCountryFromDialCode, splitPhone } from '../../lib/phoneUtils';
 import { attentionDotSx, drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -36,6 +37,9 @@ import RecordUsagesSection, { recordUsagesKey, scrollToUsages, useRecordUsages }
 import { SUPPLIERS_PATH } from '../suppliers/supplierModel';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useDraftCreation } from '../../components/workspace/creation';
+import useRecordEditorKey from '../../components/workspace/useRecordEditorKey';
+import { formatItemRef, itemAddress } from '../../utils/item-ref';
+import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 
 const LIST_PATH = '/master-data/contacts';
 const DRAWER_KEY = 'kanap.contacts.drawerOpen';
@@ -82,13 +86,27 @@ const asSent = (values: Contact): Contact => ({
 
 const fetchContact = async (contactId: string) => (await api.get<Contact>(`/contacts/${contactId}`)).data;
 
+/** The contact's reference (`CTCT-4`), the one its address and its cache entry name. */
+const contactReference = (contact: Pick<Contact, 'item_number'> | null | undefined) => (
+  contact?.item_number ? formatItemRef('contact', contact.item_number) : null
+);
+/**
+ * The contact's cache entry: `['contacts', 'CTCT-4']`, read by its page and written by every save.
+ * A page opened by a legacy address (a uuid, `ctct-4`) reads under that address, then puts the
+ * contact under its reference and moves there.
+ */
+const contactKey = (address: string) => ['contacts', address] as const;
+
 export default function ContactWorkspacePage() {
   const params = useParams();
   const location = useLocation();
+  // The address names the contact by its reference (`CTCT-4`); a uuid or `ctct-4` moves to it once read.
   const id = String(params.id || '');
   // The contact the draft has just created: the page stays the draft's, so that what is typed
   // while it is written, and the field being typed in, are kept.
   const fromDraft = useCreatedFromDraft('contacts', id);
+  // The same through the move from a legacy address to the reference.
+  const editorKey = useRecordEditorKey('contacts', id);
   // One tab: any other address of the former page (or the former Used by tab) opens it.
   if (params.tab && params.tab !== 'overview') {
     return <Navigate replace to={`${LIST_PATH}/${id}/overview${location.search}`} />;
@@ -96,7 +114,7 @@ export default function ContactWorkspacePage() {
   // The new page is the contact's own page on a draft, sent by Create.
   if (id === 'new') return <ContactEditor key="draft" id="new" />;
   // Keyed by contact: drafts and pending saves belong to the contact they were typed on.
-  return <ContactEditor key={fromDraft ? 'draft' : id} id={id} />;
+  return <ContactEditor key={fromDraft ? 'draft' : editorKey} id={id} />;
 }
 
 function ContactEditor({ id }: { id: string }) {
@@ -111,6 +129,7 @@ function ContactEditor({ id }: { id: string }) {
   const canEdit = hasLevel('contacts', 'manager');
   const canDelete = hasLevel('contacts', 'admin') && !dataAccessLimited;
   const withContext = useListContext();
+  const { addToRecent } = useRecentlyViewed();
   const roleOptions = useContactRoleOptions();
   const isCreate = id === 'new';
   const [searchParams] = useSearchParams();
@@ -122,14 +141,17 @@ function ContactEditor({ id }: { id: string }) {
   // Where the contact was opened from (a supplier page): its back arrow leads there.
   const returnTo = safeReturnTo(searchParams.get('returnTo'));
 
-  const detailKey = React.useMemo(() => ['contacts', id] as const, [id]);
+  const detailKey = React.useMemo(() => contactKey(id), [id]);
   // Set once the contact is deleted: the page leaves without loading it again.
   const [deletedId, setDeletedId] = React.useState<string | null>(null);
   const { data: stored, error: loadError } = useQuery({
     queryKey: detailKey,
-    queryFn: async () => (await api.get<Contact>(`/contacts/${id}`)).data,
+    queryFn: () => fetchContact(id),
     enabled: deletedId !== id && !isCreate,
   });
+  const reference = isCreate ? null : contactReference(stored);
+  // The contact's uuid, for its child routes and its saves.
+  const recordId = isCreate ? '' : stored?.id ?? '';
   // A new contact: the fields write here, Create sends it.
   const [draft, setDraft] = React.useState<Contact>(() => ({
     id: '', first_name: null, last_name: null, job_title: null, email: '', phone: null, mobile: null, country: null,
@@ -138,7 +160,22 @@ function ContactEditor({ id }: { id: string }) {
   }));
   const draftRef = React.useRef(draft);
   const data = isCreate ? draft : stored;
-  const { data: usages } = useRecordUsages('contacts', id, !isCreate);
+  const { data: usages } = useRecordUsages('contacts', recordId, !!recordId);
+
+  React.useEffect(() => {
+    const shown = stored ? contactName(stored) || stored.email : null;
+    if (!isCreate && stored?.id && shown) addToRecent('contact', stored.id, shown, reference ?? undefined);
+  }, [addToRecent, isCreate, reference, stored]);
+
+  // A legacy address (uuid, `ctct-4`) becomes the reference's, its query kept (the supplier it was
+  // opened from): the contact read is put under the reference's entry first, so nothing is read
+  // again or mounted again.
+  React.useEffect(() => {
+    if (isCreate || !stored || !reference || id === reference) return;
+    queryClient.setQueryData(contactKey(reference), stored);
+    const search = searchParams.toString();
+    navigate(`${LIST_PATH}/${reference}/overview${search ? `?${search}` : ''}`, { replace: true });
+  }, [id, isCreate, navigate, queryClient, reference, searchParams, stored]);
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [pageError, setPageError] = React.useState<string | null>(null);
@@ -160,26 +197,29 @@ function ContactEditor({ id }: { id: string }) {
       setDraft(draftRef.current);
       return Promise.resolve();
     }
-    if (!canEdit || !queryClient.getQueryData(detailKey)) return Promise.resolve();
+    const contactId = queryClient.getQueryData<Contact>(detailKey)?.id;
+    if (!canEdit || !contactId) return Promise.resolve();
+    // The page's entry: the reference's, or the address's while a legacy address is replaced.
+    const recordKey = contactKey(contactReference(queryClient.getQueryData<Contact>(detailKey)) ?? id);
     setErrors((prev) => ({ ...prev, [field]: undefined }));
     if (field === 'name') setPageError(null);
-    if (optimistic) queryClient.setQueryData<Contact>(detailKey, (prev) => (prev ? { ...prev, ...optimistic } : prev));
+    if (optimistic) queryClient.setQueryData<Contact>(recordKey, (prev) => (prev ? { ...prev, ...optimistic } : prev));
     const run = async () => {
-      const stored = queryClient.getQueryData<Contact>(detailKey);
+      const stored = queryClient.getQueryData<Contact>(recordKey);
       try {
-        const res = await api.patch<Contact>(`/contacts/${id}`, { email: stored?.email, ...patch });
-        queryClient.setQueryData<Contact>(detailKey, (prev) => ({
+        const res = await api.patch<Contact>(`/contacts/${contactId}`, { email: stored?.email, ...patch });
+        queryClient.setQueryData<Contact>(recordKey, (prev) => ({
           ...(prev as Contact),
           ...res.data,
           // The update's answer has no supplier name: the chosen one stays until the reload.
           supplier_name: res.data.supplier_id === prev?.supplier_id ? prev?.supplier_name ?? null : null,
         }));
-        void queryClient.invalidateQueries({ queryKey: detailKey, exact: true });
+        void queryClient.invalidateQueries({ queryKey: recordKey, exact: true });
         // Supplier pages list their contacts with names, roles and phones.
         void queryClient.invalidateQueries({ queryKey: ['supplier-contacts'] });
         // The "Used by" section shows the supplier with the contact type.
         if (field === 'supplier_id' || field === 'supplier_role') {
-          void queryClient.invalidateQueries({ queryKey: recordUsagesKey('contacts', id), exact: true });
+          void queryClient.invalidateQueries({ queryKey: recordUsagesKey('contacts', contactId), exact: true });
         }
       } catch (e) {
         const status = (e as { response?: { status?: number } } | null)?.response?.status;
@@ -188,7 +228,7 @@ function ContactEditor({ id }: { id: string }) {
           : getApiErrorMessage(e, t, t('contacts.messages.saveFailed'));
         if (field === 'name') setPageError(message);
         else setErrors((prev) => ({ ...prev, [field]: message }));
-        if (optimistic) void queryClient.invalidateQueries({ queryKey: detailKey, exact: true });
+        if (optimistic) void queryClient.invalidateQueries({ queryKey: recordKey, exact: true });
         throw e;
       }
     };
@@ -319,7 +359,8 @@ function ContactEditor({ id }: { id: string }) {
         void queryClient.invalidateQueries({ queryKey: ['supplier-contacts'] });
         // The page moves to the contact with its data in hand, and keeps what was typed since the
         // draft was sent (the next field, while the contact was written): saved on the contact.
-        const createdKey = ['contacts', created.id] as const;
+        const createdRef = contactReference(created) ?? created.id;
+        const createdKey = contactKey(createdRef);
         await queryClient.fetchQuery({ queryKey: createdKey, queryFn: () => fetchContact(created.id) }).catch(() => undefined);
         try {
           await saveEditsSince({
@@ -343,8 +384,8 @@ function ContactEditor({ id }: { id: string }) {
         }
         // Its back arrow still leads to the supplier it came from.
         const back = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '';
-        const path = returnTo ? `${LIST_PATH}/${created.id}/overview${back}` : withContext(`${LIST_PATH}/${created.id}/overview`);
-        return { id: created.id, token: created.creation_token, path };
+        const path = returnTo ? `${LIST_PATH}/${createdRef}/overview${back}` : withContext(`${LIST_PATH}/${createdRef}/overview`);
+        return { id: created.id, token: created.creation_token, path, reference: contactReference(created) };
       } catch (e) {
         const status = (e as { response?: { status?: number } } | null)?.response?.status;
         const message = getApiErrorMessage(e, t, t('contacts.messages.createFailed'));
@@ -395,7 +436,7 @@ function ContactEditor({ id }: { id: string }) {
         <PortfolioMetadataItem label={t('contacts.fields.supplier')}>
           <Box
             component={RouterLink}
-            to={`/master-data/suppliers/${data.supplier_id}/overview`}
+            to={`${SUPPLIERS_PATH}/${itemAddress('supplier', matching(data.supplier_option, data.supplier_id) ?? { id: data.supplier_id })}/overview`}
             title={t('contacts.metadata.openSupplier')}
             sx={(th) => ({
               color: 'inherit',
@@ -471,9 +512,7 @@ function ContactEditor({ id }: { id: string }) {
             label={t('contacts.fields.supplier')}
             hideLabel
             value={data.supplier_id}
-            selectedOption={data.supplier_id && data.supplier_name
-              ? { id: data.supplier_id, name: data.supplier_name, erp_supplier_id: null, status: 'enabled' }
-              : null}
+            selectedOption={matching(data.supplier_option, data.supplier_id)}
             onChange={(supplierId) => changeSupplier(supplierId, null)}
             disabled={disabled || !!prefillSupplierId}
             error={!!errors.supplier_id}
@@ -548,6 +587,23 @@ function ContactEditor({ id }: { id: string }) {
     </>
   ) : <Box />;
 
+  // A contact that does not exist (the API answers 404): the not found page, as the other records
+  // have. Any other failure keeps the record frame.
+  if (!isCreate && !data && (loadError as { response?: { status?: number } } | null)?.response?.status === 404) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <Alert severity="error">{t('contacts.messages.notFound')}</Alert>
+        <MuiLink
+          component={RouterLink}
+          to={withContext(LIST_PATH)}
+          sx={{ display: 'inline-block', mt: 2, fontSize: 13, fontWeight: 400, color: 'kanap.teal' }}
+        >
+          {t('shared.backToList')}
+        </MuiLink>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <PortfolioDetailWorkspaceShell
@@ -565,6 +621,8 @@ function ContactEditor({ id }: { id: string }) {
         backLabel={returnTo?.startsWith(`${SUPPLIERS_PATH}/`) ? t('suppliers.title') : t('contacts.title')}
         onBack={isCreate ? leaveCreation : () => { void close(); }}
         title={isCreate ? '' : name ?? ''}
+        itemReference={reference}
+        onCopyReference={reference ? () => { void navigator.clipboard?.writeText(reference)?.catch(() => undefined); } : undefined}
         titleFallback={isCreate ? t('contacts.newContact') : t('contacts.contactFallback')}
         isCreate={isCreate}
         // A new record's required fields sit in the drawer: it stays open.
@@ -608,12 +666,13 @@ function ContactEditor({ id }: { id: string }) {
               <RecordDeleteButton
                 base="/contacts"
                 id={data.id}
+                reference={reference}
                 name={name ?? t('contacts.contactFallback')}
                 deleteFailed="contacts.messages.deleteFailed"
                 // Nothing refuses a contact's delete: the confirmation says which links go with it.
                 confirmMessage={t('contacts.delete.warning', { count: 1 })}
                 checkUsages={false}
-                onDeleted={() => { setDeletedId(data.id); navigate(withContext(LIST_PATH)); }}
+                onDeleted={() => { setDeletedId(id); navigate(withContext(LIST_PATH)); }}
               />
             )}
             <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} size="small" onClick={() => { void close(); }}>
@@ -634,7 +693,7 @@ function ContactEditor({ id }: { id: string }) {
               }}
               onCommit={() => { void autosave.flush(); }}
             />
-            {!isCreate && <RecordUsagesSection owner="contacts" id={id} />}
+            {!isCreate && <RecordUsagesSection owner="contacts" id={data.id} />}
           </Stack>
         )}
       </PortfolioDetailWorkspaceShell>

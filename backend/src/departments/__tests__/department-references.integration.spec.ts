@@ -14,6 +14,7 @@ import {
   inRolledBackTransaction,
   runSpecs,
   seedTenant,
+  underSavepoint,
 } from '../../spend/__tests__/round-inputs.fixtures';
 
 // The department reference (`DEPT-n`, lot R2 of 26.11.9) in the list and its file: the reference
@@ -247,6 +248,117 @@ async function testCreateReturnsReference() {
   });
 }
 
+// One row per department: a second row naming the same department, by its reference (the family's
+// CSV_DUPLICATE_KEY on the reference) or by its company and name, is refused on its line, at the
+// check as at the load; a new department named twice too. Nothing is written.
+async function testImportRefusesSecondRowOfADepartment() {
+  await withDepartments('dref-second-row', async (seeded) => {
+    const run = importer(seeded);
+    const headers = ['reference', ...BASE];
+    const all = async () => seeded.runner.query(
+      `SELECT name, company_id, description FROM departments WHERE tenant_id = $1 ORDER BY item_number`, [seeded.tenantId],
+    );
+    const before = await all();
+    const cases: Array<[string, Array<Record<string, string>>, Array<[number, string, string, Record<string, unknown>]>]> = [
+      ['same reference', [
+        { reference: 'DEPT-8', company_name: 'Alpha', name: 'Dept 8', description: 'A' },
+        { reference: '8', company_name: 'Alpha', name: 'Eight renamed', description: 'B' },
+      ], [[3, 'reference', 'CSV_DUPLICATE_KEY', { columns: 'reference', firstRow: 2 }]]],
+      ['same company and name', [
+        { reference: '', company_name: 'Alpha', name: 'Dept 8', description: 'A' },
+        { reference: '', company_name: 'Alpha', name: 'dept 8', description: 'B' },
+      ], [[3, 'name', 'CSV_SAME_RECORD', { firstRow: 2, reference: 'DEPT-8' }]]],
+      ['a new department twice', [
+        { reference: '', company_name: 'Beta', name: 'Brand new', description: 'A' },
+        { reference: '', company_name: 'Beta', name: 'brand NEW', description: 'B' },
+      ], [[3, 'name', 'CSV_DUPLICATE_KEY', { columns: 'company_name, name', firstRow: 2 }]]],
+    ];
+    for (const [label, rows, expected] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await run(headers, rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((e) => [e.row, e.column, e.code, e.params]), expected, `${label}, dryRun=${dryRun}`);
+      }
+    }
+    // The same name in two companies is two departments.
+    const twoCompanies = await run(headers, [
+      { reference: '', company_name: 'Alpha', name: 'Shared', description: 'A' },
+      { reference: '', company_name: 'Beta', name: 'Shared', description: 'B' },
+    ], true);
+    assert.deepEqual([twoCompanies.ok, twoCompanies.inserted, twoCompanies.errors], [true, 2, []]);
+    assert.deepEqual(await all(), before, 'a refused file writes nothing');
+  });
+}
+
+// A rename or a move by reference and another row of the file that lead to the same company and
+// name, whatever its case: the second row is refused on its line (CSV_DUPLICATE_KEY on company and
+// name), at the check as at the load, and nothing is written. The load runs under a savepoint, so a
+// refusal by the database shows.
+async function testImportRefusesARenameOntoAnotherRowsName() {
+  await withDepartments('dref-rename-collision', async (seeded) => {
+    const run = importer(seeded);
+    const headers = ['reference', ...BASE];
+    const attempt = (rows: Array<Record<string, string>>, dryRun: boolean) => underSavepoint(seeded.runner, () => run(headers, rows, dryRun))
+      .catch((err: Error) => ({ ok: false, errors: [], thrown: err.message }) as Report & { thrown: string });
+    const all = async () => seeded.runner.query(
+      `SELECT name, company_id, description FROM departments WHERE tenant_id = $1 ORDER BY item_number`, [seeded.tenantId],
+    );
+    const before = await all();
+    const cases: Array<[string, Array<Record<string, string>>]> = [
+      ['a rename, then a new department', [
+        { reference: 'DEPT-8', company_name: 'Alpha', name: 'Fresh name' },
+        { reference: '', company_name: 'Alpha', name: 'fresh NAME' },
+      ]],
+      ['a new department, then a rename', [
+        { reference: '', company_name: 'Alpha', name: 'Fresh name' },
+        { reference: 'DEPT-8', company_name: 'Alpha', name: 'fresh NAME' },
+      ]],
+      ['two renames', [
+        { reference: 'DEPT-8', company_name: 'Alpha', name: 'Same name' },
+        { reference: 'DEPT-9', company_name: 'Alpha', name: 'same NAME' },
+      ]],
+      ['a move, then a new department of the same name', [
+        { reference: 'DEPT-8', company_name: 'Beta', name: 'Dept 8' },
+        { reference: '', company_name: 'Beta', name: 'DEPT 8' },
+      ]],
+    ];
+    for (const [label, rows] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await attempt(rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((e) => [e.row, e.column, e.code, e.params]),
+          [[3, 'name', 'CSV_DUPLICATE_KEY', { columns: 'company_name, name', firstRow: 2 }]], `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+      }
+    }
+    assert.deepEqual(await all(), before, 'a refused file writes nothing');
+  });
+}
+
+// The company of a row is found whatever the case of its name, as the company's own file and the
+// other families' files find theirs; a first row that spells it otherwise does not refuse the next.
+async function testImportFindsTheCompanyWhateverItsCase() {
+  await withDepartments('dref-company-case', async (seeded) => {
+    const run = importer(seeded);
+    const rows = [
+      { company_name: 'alpha', name: 'Lower case' },
+      { company_name: 'Alpha', name: 'Exact case' },
+      { company_name: 'BETA', name: 'Upper case' },
+    ];
+    for (const dryRun of [true, false]) {
+      const report = await run(BASE, rows, dryRun);
+      assert.deepEqual([report.ok, report.inserted, report.errors], [true, 3, []], `dryRun=${dryRun}: ${JSON.stringify(report)}`);
+    }
+    const created = await seeded.runner.query(
+      `SELECT name, company_id FROM departments WHERE tenant_id = $1 AND item_number > 31 ORDER BY item_number`, [seeded.tenantId],
+    );
+    assert.deepEqual(created, [
+      { name: 'Lower case', company_id: seeded.alpha },
+      { name: 'Exact case', company_id: seeded.alpha },
+      { name: 'Upper case', company_id: seeded.beta },
+    ]);
+  });
+}
+
 void runSpecs('department references', [
   ['a created department comes back with its reference', testCreateReturnsReference],
   ['the reference column filters the list and the ids alike', testReferenceColumnFilter],
@@ -254,6 +366,9 @@ void runSpecs('department references', [
   ['the ids carry the references, and the list sorts by reference', testIdsAndSort],
   ['Kad filters and sorts by reference through the list service', testAssistantField],
   ['the file updates by reference, refuses an unknown one and still reads an older file', testImportByReference],
+  ['the file refuses a second row of the same department', testImportRefusesSecondRowOfADepartment],
+  ['the file refuses a rename or a move onto the name of another row', testImportRefusesARenameOntoAnotherRowsName],
+  ['the file finds the company whatever the case of its name', testImportFindsTheCompanyWhateverItsCase],
   ['a rename or a move by reference is announced, without blocking the check or the load', testRenameAndMoveWarnings],
   ['an export imports back without change', testExportThenImport],
 ]);

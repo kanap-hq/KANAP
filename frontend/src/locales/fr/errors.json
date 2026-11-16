@@ -161,6 +161,7 @@
   "CSV_REFERENCE_MOVES": "{{reference}} « {{name}} » passera de « {{from}} » à « {{to}} ».",
   "CSV_REFERENCE_MOVES_company": "{{reference}} « {{name}} » passera de la société « {{from}} » à « {{to}} ».",
   "CSV_REFERENCE_MOVES_supplier": "{{reference}} « {{name}} » passera du fournisseur « {{from}} » à « {{to}} ».",
+  "CSV_REFERENCE_EMAIL_CHANGES": "{{reference}} « {{name}} » changera d'adresse e-mail : « {{from}} » → « {{to}} ».",
   "CSV_SUPPLIER_NAME_DUPLICATE": "« {{name}} » figure déjà à la ligne {{firstRow}}. Gardez une seule ligne par fournisseur.",
   "CSV_COMPANY_NAME_DUPLICATE": "« {{name}} » figure déjà à la ligne {{firstRow}}. Gardez une seule ligne par société.",
   "CSV_COMPANY_METRICS_FROZEN": "Les indicateurs pour {{year}} sont gelés. Un administrateur budgétaire peut les dégeler.",

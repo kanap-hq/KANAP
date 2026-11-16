@@ -13,6 +13,7 @@ import api from '../../api';
 import ContactSelect from '../fields/ContactSelect';
 import { drawerFieldValueSx, drawerSelectSx, drawerMenuItemSx, inlineControlSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { itemAddress } from '../../utils/item-ref';
 import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../workspace/RelationsTable';
 
 type SupplierContactRole = 'commercial' | 'technical' | 'support' | 'other';
@@ -25,6 +26,8 @@ type ItemContactLink = {
   origin: ContactOrigin;
   contact: {
     id: string;
+    /** CTCT-n: the contact's page opens by it. */
+    item_number?: number | null;
     first_name: string | null;
     last_name: string | null;
     job_title: string | null;
@@ -197,7 +200,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
           columns={columns}
           rows={contacts}
           rowKey={(link) => link.id}
-          rowHref={(link) => `/master-data/contacts/${link.contact.id}/overview`}
+          rowHref={(link) => `/master-data/contacts/${itemAddress('contact', link.contact)}/overview`}
           linkRows
           onRemove={canManage ? (link) => { void run(() => detach(link.id)); } : undefined}
           removeLabel={() => t('contacts.removeContact')}
