@@ -89,7 +89,7 @@ The Tasks grid shows all tasks across your organization.
 
 | Column | What it shows |
 |--------|---------------|
-| **Related Entry** | The linked entity name (empty for standalone tasks) |
+| **Related Entry** | The linked entity name (empty for standalone tasks). A contract shows its reference and its name, such as `CTR-3 · Acme support` |
 | **Phase** | Project phase (for project tasks) |
 | **Priority** | Priority level |
 | **Due Date** | When the task is due |
@@ -613,7 +613,7 @@ Tasks are matched by **title + related_object_id** (case-insensitive). When a ma
 
 If you include the `id` column with a valid UUID, matching uses ID first, then falls back to title + related object.
 
-**Note**: If you provide `related_object_name` instead of `related_object_id`, the system resolves the name to the ID before matching. This means you can use human-readable names throughout your import file.
+**Note**: If you provide `related_object_name` instead of `related_object_id`, the system resolves the name to the ID before matching. This means you can use human-readable names throughout your import file. For a contract, `related_object_name` also takes its reference, such as `CTR-12`.
 
 ### Export-only fields
 

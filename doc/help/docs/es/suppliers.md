@@ -95,7 +95,7 @@ La pestaña **Contactos** lista los contactos vinculados a este proveedor por ti
 La sección **Usado en**, bajo las notas de la pestaña **Vista general**, lista lo que hace referencia a este proveedor, una lista por tipo, cada una con su número:
 
 - **Líneas presupuestarias**: las líneas OPEX y CAPEX cuyo proveedor es, con su referencia (`BL-12`) y su tipo.
-- **Contratos**: los contratos con este proveedor.
+- **Contratos**: los contratos con este proveedor, con su referencia (`CTR-3`).
 - **Aplicaciones**: las aplicaciones de las que es el fabricante.
 - **Activos**: los activos a los que da soporte (el proveedor de soporte del activo).
 

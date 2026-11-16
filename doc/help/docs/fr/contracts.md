@@ -50,6 +50,7 @@ Chaque ligne ouvre le contrat. Votre recherche, vos filtres et votre tri sont co
 
 **Colonnes par défaut** :
 
+- **Référence** : la référence attribuée par Kadratis (`CTR-3`). Cliquez dessus pour ouvrir le contrat
 - **Contrat**, **Fournisseur**, **Société**
 - **Prochaine échéance** : « Résiliation possible jusqu'au {date} » lorsque cette date est la date limite de résiliation et qu'elle précède la fin du terme, ou « Fin le {date} » lorsque la date est la fin du contrat. La ligne se termine par « dans n j ». Un contrat échu affiche le jour de sa fin, en grisé
 - **État** : voir plus bas
@@ -102,8 +103,8 @@ La ligne épinglée en bas indique **Total (n contrats)**. Elle additionne les m
 
 ### Recherche, filtres et périmètre
 
-- **Recherche rapide** : nom du contrat, fournisseur et société
-- **Filtres de colonnes** : sur chaque en-tête de colonne. **État**, **Conformité** et **Couverture du budget** proposent leurs valeurs en cases à cocher. Le filtre **Statut** reprend le choix de **Afficher** (**Tous**, **Activés** ou **Désactivés**) : changer l'un change l'autre
+- **Recherche rapide** : nom du contrat, fournisseur et société. Tapez une référence, comme `CTR-3`, pour trouver ce contrat. Des chiffres seuls cherchent dans le texte
+- **Filtres de colonnes** : sur chaque en-tête de colonne. Le filtre **Référence** accepte `CTR-3` ou `3`. **État**, **Conformité** et **Couverture du budget** proposent leurs valeurs en cases à cocher. Le filtre **Statut** reprend le choix de **Afficher** (**Tous**, **Activés** ou **Désactivés**) : changer l'un change l'autre
 - **Afficher : Tous / Activés / Désactivés** : le bouton bascule au-dessus de la liste. Par défaut, la liste affiche les contrats activés. Choisissez **Tous** ou **Désactivés** pour retrouver les contrats dont la fin de validité est passée
 
 ### Actions
@@ -120,7 +121,7 @@ La ligne épinglée en bas indique **Total (n contrats)**. Elle additionne les m
 
 ### En-tête et propriétés
 
-L'en-tête affiche le nom du contrat (cliquez dessus pour le renommer), **Précédent** / **Suivant** avec la position dans la liste, et une barre avec **Fournisseur**, **Société contractante**, **Responsable** et **Statut**. Le responsable et le statut se modifient sur place. Le fournisseur et la société ouvrent le panneau **Propriétés**.
+L'en-tête affiche la référence du contrat (`CTR-5`, cliquez dessus pour la copier) et le nom du contrat (cliquez sur le nom pour renommer le contrat), **Précédent** / **Suivant** avec la position dans la liste, et une barre avec **Fournisseur**, **Société contractante**, **Responsable** et **Statut**. Le responsable et le statut se modifient sur place. Le fournisseur et la société ouvrent le panneau **Propriétés**.
 
 Le panneau **Propriétés**, à droite, contient tous les champs du contrat : les parties, **Début**, **Durée (mois)**, **Préavis (mois)**, **Reconduction tacite**, **Montant annuel**, **Devise**, **Facturation**, puis **Cycle de vie** (**Statut** et **Fin de validité**), **Créé** et **Mis à jour**. Ouvrez-le ou fermez-le avec son bouton ; Kadratis retient votre choix.
 
@@ -136,7 +137,9 @@ Chaque modification s'enregistre d'elle-même : listes et dates aussitôt, valeu
 
 Il faut `contracts:member` pour modifier. Les lecteurs voient la même page, tous les champs verrouillés.
 
-**Partager**, dans l'en-tête, envoie par e-mail un lien vers le contrat à des collègues de votre espace de travail.
+**Adresse de la page** : l'adresse de la page utilise la référence, par exemple `/ops/contracts/CTR-5/overview`. L'ancienne adresse de la page d'un contrat l'ouvre toujours, et laisse place à la nouvelle.
+
+**Partager**, dans l'en-tête, envoie par e-mail un lien vers le contrat à des collègues de votre espace de travail. Ce lien, et celui d'une alerte d'expiration, ouvrent le contrat par sa référence.
 
 La fiche a cinq onglets : **Vue d'ensemble**, **Budget**, **Conformité**, **Relations** et **Historique** (les modifications du contrat, voir [Historique des fiches](record-history.md)). Les adresses des anciens onglets **Détails** et **Tâches** ouvrent la vue d'ensemble.
 
@@ -323,13 +326,17 @@ L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous 
 
 Gardez votre liste de contrats synchronisée avec d'autres outils grâce aux fichiers CSV ou aux classeurs Excel (`contracts:admin`).
 
-**Export** : télécharge les contrats que la liste affiche (ou, sur demande dans la fenêtre, tous les contrats). Les colonnes sont titrées dans la langue de votre écran ; leurs noms techniques, que l'import lit aussi, sont `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
+**Export** : télécharge les contrats que la liste affiche (ou, sur demande dans la fenêtre, tous les contrats). Les colonnes sont titrées dans la langue de votre écran ; leurs noms techniques, que l'import lit aussi, sont `reference`, `name`, `company_name`, `supplier_name`, `cost_center`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
 
 **Import** :
 
 - Utilisez le **Contrôle préalable** pour vérifier le fichier avant de l'appliquer
 - **Télécharger un exemple**, dans la fenêtre d'import, donne deux contrats d'exemple et ce que chaque colonne accepte. Voir [Fichiers d'exemple](csv-files.md#example-files)
-- Une ligne correspond à un contrat par son nom et son fournisseur
+- **Correspondance par référence** : une `reference` remplie (`CTR-12` ou `12`) désigne le contrat que la ligne met à jour, même si son nom ou son fournisseur a changé. Le contrat prend alors le nom et le fournisseur de la ligne. La vérification préalable signale chaque contrat qui sera renommé ou changera de fournisseur
+- **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, une ligne correspond à un contrat par son nom et son fournisseur
+- **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « CTR-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
+- **Une ligne par contrat** : deux lignes qui mettent à jour le même contrat sont refusées : « Cette ligne met à jour CTR-4, comme la ligne 3. Gardez une seule ligne par fiche. »
+- `reference` et `cost_center` peuvent manquer dans le fichier. Sans `cost_center`, un contrat mis à jour garde son centre de coûts ou groupe
 - Création et mises à jour sont prises en charge
 - Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du contrat, conserve sa fin de validité. Un statut différent l'applique : `enabled` efface la fin de validité, et `disabled` termine le contrat aujourd'hui, sauf si sa fin de validité est déjà passée
 - Un nouveau contrat est activé sauf si la ligne indique `disabled`

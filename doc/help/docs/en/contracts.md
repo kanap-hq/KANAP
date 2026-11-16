@@ -50,6 +50,7 @@ Each row opens the contract. Your search, filters and sort are kept when you com
 
 **Default columns**:
 
+- **Reference**: the reference Kadratis assigns (`CTR-3`). Click it to open the contract
 - **Contract**, **Supplier**, **Company**
 - **Next due date**: "Cancellation possible until {date}" when that date is the cancellation deadline and it comes before the end of the term, or "Ends on {date}" when the date is the end of the contract. The line ends with "in n days". An ended contract shows the day it ended, greyed out
 - **State**: see below
@@ -102,8 +103,8 @@ The row pinned at the bottom reads **Total (n contracts)**. It sums the yearly a
 
 ### Search, filters and scope
 
-- **Quick search**: contract name, supplier and company
-- **Column filters**: on each column header. **State**, **Compliance** and **Budget coverage** offer their values as checkboxes. The **Status** filter shows the **Show** choice (**All**, **Enabled** or **Disabled**): changing one changes the other
+- **Quick search**: contract name, supplier and company. Type a reference, such as `CTR-3`, to find that contract. Digits alone search the text
+- **Column filters**: on each column header. The **Reference** filter takes `CTR-3` or `3`. **State**, **Compliance** and **Budget coverage** offer their values as checkboxes. The **Status** filter shows the **Show** choice (**All**, **Enabled** or **Disabled**): changing one changes the other
 - **Show: All / Enabled / Disabled**: the toggle above the list. The list shows enabled contracts by default. Pick **All** or **Disabled** to find contracts past their end of validity
 
 ### Actions
@@ -120,7 +121,7 @@ The row pinned at the bottom reads **Total (n contracts)**. It sums the yearly a
 
 ### Header and properties
 
-The header shows the contract name (click it to rename), **Previous** / **Next** with the position in the list, and a bar with **Supplier**, **Contracting company**, **Owner** and **Status**. The owner and the status change in place. Supplier and company open the **Properties** panel.
+The header shows the contract reference (`CTR-5`, click it to copy it) and the contract name (click the name to rename the contract), **Previous** / **Next** with the position in the list, and a bar with **Supplier**, **Contracting company**, **Owner** and **Status**. The owner and the status change in place. Supplier and company open the **Properties** panel.
 
 The **Properties** panel on the right holds every field of the contract: the parties, **Start**, **Duration (months)**, **Notice (months)**, **Tacit renewal**, **Yearly amount**, **Currency**, **Billing**, then **Lifecycle** (**Status** and **End of validity**), **Created** and **Updated**. Open or close it with its button; Kadratis remembers your choice.
 
@@ -136,7 +137,9 @@ Every change saves itself: lists and dates at once, typed values and notes after
 
 You need `contracts:member` to edit. Readers see the same page with every field locked.
 
-**Share** in the header emails a link to the contract to colleagues of your workspace.
+**Page address**: the address of the page uses the reference, for example `/ops/contracts/CTR-5/overview`. The former address of a contract page still opens it, and changes to the new one.
+
+**Share** in the header emails a link to the contract to colleagues of your workspace. That link, and the link of an expiration warning, open the contract by its reference.
 
 The page has five tabs: **Overview**, **Budget**, **Compliance**, **Relations** and **History** (the changes made to the contract, see [Record history](record-history.md)). The addresses of the former **Details** and **Tasks** tabs open the overview.
 
@@ -323,13 +326,17 @@ The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Form
 
 Keep your contract list in sync with other tools using CSV files or Excel workbooks (`contracts:admin`).
 
-**Export**: downloads the contracts the list shows (or, on request in the dialog, every contract). The columns are titled in the language of your screen; their technical names, which the import also reads, are `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
+**Export**: downloads the contracts the list shows (or, on request in the dialog, every contract). The columns are titled in the language of your screen; their technical names, which the import also reads, are `reference`, `name`, `company_name`, `supplier_name`, `cost_center`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
 
 **Import**:
 
 - Use **Preflight** to check the file before applying it
 - **Download an example** in the import dialog gives two sample contracts and what each column takes. See [Example files](csv-files.md#example-files)
-- A row is matched to a contract by contract name and supplier
+- **Matching by reference**: a filled `reference` (`CTR-12` or `12`) names the contract the row updates, even when its name or its supplier has changed. The contract then takes the name and the supplier of the row. The preflight check lists each contract that will be renamed or move to another supplier
+- **Matching by name**: when `reference` is empty, or the file has no such column, a row is matched to a contract by contract name and supplier
+- **Unknown reference**: a reference your workspace does not know refuses the row: "\"CTR-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
+- **One row per contract**: two rows that update the same contract are refused: "This row updates CTR-4, as row 3 does. Keep one row per record."
+- `reference` and `cost_center` may be left out of the file. Without `cost_center`, an updated contract keeps its cost center or group
 - Supports creation and updates
 - The file has no end of validity column. On an update, a blank `status`, or one equal to the contract's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the contract today unless its end of validity has already passed
 - A new contract is enabled unless the row says `disabled`

@@ -371,7 +371,7 @@ L'onglet Relations montre ce à quoi l'actif est lié : lignes budgétaires, con
 | Section | Colonnes |
 |---|---|
 | **Lignes budgétaires** | Référence (`BL-12`), nom, type (OPEX ou CAPEX), fournisseur, et le montant de l'année en cours dans votre colonne budgétaire par défaut, dans la devise de reporting. Un tiret signifie que la ligne n'a pas de budget pour l'année |
-| **Contrats** | Nom, fournisseur, fin de la période en cours, montant annuel dans la devise du contrat, renouvellement (tacite ou manuel) |
+| **Contrats** | Référence (`CTR-3`), nom, fournisseur, fin de la période en cours, montant annuel dans la devise du contrat, renouvellement (tacite ou manuel) |
 | **Projets** | Référence (`PRJ-7`), nom, statut, fin prévue |
 | **Tâches** | Référence (`T-118`), titre, statut, assigné, échéance. Les tâches ouvertes viennent en premier |
 | **Incidents** | Référence (`INC-14`), titre, sévérité, statut, date de détection |

@@ -371,7 +371,7 @@ La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus l�
 | Sección | Columnas |
 |---|---|
 | **Líneas presupuestarias** | Referencia (`BL-12`), nombre, tipo (OPEX o CAPEX), proveedor y el importe del año en curso en su columna presupuestaria por defecto, en la moneda de reporte. Un guion significa que la línea no tiene presupuesto para el año |
-| **Contratos** | Nombre, proveedor, fin del periodo en curso, importe anual en la moneda del contrato, renovación (tácita o manual) |
+| **Contratos** | Referencia (`CTR-3`), nombre, proveedor, fin del periodo en curso, importe anual en la moneda del contrato, renovación (tácita o manual) |
 | **Proyectos** | Referencia (`PRJ-7`), nombre, estado, fin previsto |
 | **Solicitudes** | Referencia (`REQ-23`), nombre, estado, entrega deseada |
 | **Tareas** | Referencia (`T-118`), título, estado, asignado, vencimiento. Solo aparecen las tareas vinculadas a esta aplicación, no las tareas de sus proyectos |

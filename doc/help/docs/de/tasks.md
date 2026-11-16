@@ -89,7 +89,7 @@ Das Aufgaben-Raster zeigt alle Aufgaben in Ihrer Organisation.
 
 | Spalte | Was sie zeigt |
 |--------|---------------|
-| **Verknüpfter Eintrag** | Der verknüpfte Entitätsname (leer für eigenständige Aufgaben) |
+| **Verknüpfter Eintrag** | Der verknüpfte Entitätsname (leer für eigenständige Aufgaben). Ein Vertrag zeigt seine Referenz und seinen Namen, etwa `CTR-3 · Acme support` |
 | **Phase** | Projektphase (für Projektaufgaben) |
 | **Priorität** | Prioritätsstufe |
 | **Fälligkeitsdatum** | Wann die Aufgabe fällig ist |
@@ -613,7 +613,7 @@ Aufgaben werden nach **Titel + related_object_id** (Groß-/Kleinschreibung ignor
 
 Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf Titel + verwandtes Objekt zurück.
 
-**Hinweis**: Wenn Sie `related_object_name` anstelle von `related_object_id` angeben, löst das System den Namen vor dem Abgleich zur ID auf. Das bedeutet, Sie können in Ihrer Importdatei durchgehend für Menschen lesbare Namen verwenden.
+**Hinweis**: Wenn Sie `related_object_name` anstelle von `related_object_id` angeben, löst das System den Namen vor dem Abgleich zur ID auf. Das bedeutet, Sie können in Ihrer Importdatei durchgehend für Menschen lesbare Namen verwenden. Für einen Vertrag nimmt `related_object_name` auch seine Referenz an, etwa `CTR-12`.
 
 ### Nur-Export-Felder
 

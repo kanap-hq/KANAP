@@ -89,7 +89,7 @@ La cuadrícula de Tareas muestra todas las tareas de su organización.
 
 | Columna | Qué muestra |
 |---------|-------------|
-| **Entrada relacionada** | El nombre de la entidad vinculada (vacío para tareas independientes) |
+| **Entrada relacionada** | El nombre de la entidad vinculada (vacío para tareas independientes). Un contrato muestra su referencia y su nombre, como `CTR-3 · Acme support` |
 | **Fase** | Fase del proyecto (para tareas de proyecto) |
 | **Prioridad** | Nivel de prioridad |
 | **Fecha de vencimiento** | Cuándo vence la tarea |
@@ -613,7 +613,7 @@ Las tareas se emparejan por **título + related_object_id** (sin distinción de 
 
 Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el ID, luego recurre a título + objeto relacionado.
 
-**Nota**: Si proporciona `related_object_name` en lugar de `related_object_id`, el sistema resuelve el nombre al ID antes de la coincidencia. Esto significa que puede usar nombres legibles en todo su archivo de importación.
+**Nota**: Si proporciona `related_object_name` en lugar de `related_object_id`, el sistema resuelve el nombre al ID antes de la coincidencia. Esto significa que puede usar nombres legibles en todo su archivo de importación. Para un contrato, `related_object_name` también acepta su referencia, como `CTR-12`.
 
 ### Campos de solo exportación
 

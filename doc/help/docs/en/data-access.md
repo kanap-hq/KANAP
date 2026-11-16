@@ -189,7 +189,8 @@ For a limited person, the budget and the contracts hold only what their access c
 **Links to hidden items.**
 
 - A hidden line shows by its reference only, such as `BL-12`, without a link.
-- A hidden contract shows as "Contract outside your access", without a link.
+- A hidden contract shows as "Contract outside your access", without a link. The tasks export names it the same way.
+- Opened by its address or its reference, a hidden contract is not found, like a contract that does not exist.
 - Lists of links (the lines of a contract, an application, a server, a technology, a project or a request) show the visible links, then a count such as "and 3 lines outside your access". No name, no amount.
 - The contract of a visible line opens in read only. Its attachments and document links stay closed, with a count such as "2 attachments, for people who see this contract".
 - Search, Kad, MCP and exports show no trace of a hidden item.

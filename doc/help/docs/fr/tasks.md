@@ -89,7 +89,7 @@ La grille Tâches affiche toutes les tâches de votre organisation.
 
 | Colonne | Ce qu'elle affiche |
 |---------|--------------------|
-| **Entrée liée** | Le nom de l'entité liée (vide pour les tâches autonomes) |
+| **Entrée liée** | Le nom de l'entité liée (vide pour les tâches autonomes). Un contrat affiche sa référence et son nom, comme `CTR-3 · Acme support` |
 | **Phase** | Phase du projet (pour les tâches de projet) |
 | **Priorité** | Niveau de priorité |
 | **Date d'échéance** | Quand la tâche est due |
@@ -613,7 +613,7 @@ Les tâches sont identifiées par **titre + related_object_id** (insensible à l
 
 Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur titre + objet lié.
 
-**Note** : Si vous fournissez `related_object_name` au lieu de `related_object_id`, le système résout le nom vers l'ID avant la correspondance. Cela signifie que vous pouvez utiliser des noms lisibles tout au long de votre fichier d'import.
+**Note** : Si vous fournissez `related_object_name` au lieu de `related_object_id`, le système résout le nom vers l'ID avant la correspondance. Cela signifie que vous pouvez utiliser des noms lisibles tout au long de votre fichier d'import. Pour un contrat, `related_object_name` accepte aussi sa référence, comme `CTR-12`.
 
 ### Champs en export uniquement
 

@@ -189,7 +189,8 @@ Para una persona limitada, el presupuesto y los contratos solo contienen lo que 
 **Enlaces a elementos ocultos.**
 
 - Una línea oculta aparece solo por su referencia, como `BL-12`, sin enlace.
-- Un contrato oculto aparece como «Contrato fuera de su acceso», sin enlace.
+- Un contrato oculto aparece como «Contrato fuera de su acceso», sin enlace. La exportación de las tareas lo nombra igual.
+- Abierto por su dirección o su referencia, un contrato oculto no se encuentra, como un contrato que no existe.
 - Las listas de enlaces (las líneas de un contrato, una aplicación, un servidor, una tecnología, un proyecto o una solicitud) muestran los enlaces visibles y después un número como «y 3 líneas fuera de su acceso». Ni nombre, ni importe.
 - El contrato de una línea visible se abre en solo lectura. Sus adjuntos y enlaces documentales siguen cerrados, con un número como «2 adjuntos, reservados a las personas que ven este contrato».
 - La búsqueda, Kad, MCP y las exportaciones no muestran ningún rastro de un elemento oculto.

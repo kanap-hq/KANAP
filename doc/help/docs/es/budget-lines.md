@@ -608,7 +608,7 @@ La pestaña Relaciones muestra lo que paga esta línea: sus proyectos, aplicacio
 | **Proyectos** | Referencia (`PRJ-7`), nombre, estado, fin previsto |
 | **Aplicaciones** | Referencia (`APP-3`), nombre, ciclo de vida, criticidad de negocio |
 | **Tecnologías** | Referencia (`TEC-5`), nombre, familia, editor |
-| **Contratos** | Nombre, proveedor, fin del periodo en curso, importe anual en la moneda del contrato, renovación (tácita o manual) |
+| **Contratos** | Referencia (`CTR-3`), nombre, proveedor, fin del periodo en curso, importe anual en la moneda del contrato, renovación (tácita o manual) |
 | **Activos** | Referencia (`AST-12`), nombre, tipo, entorno, estado |
 
 Solo ve las secciones de los módulos que puede leer. Las tecnologías y los activos requieren poder leer la infraestructura. Un Colaborador de negocio solo ve los proyectos y las aplicaciones en los que participa. Los nombres de los proyectos también aparecen en la columna **Proyecto** de la lista, donde la búsqueda rápida los encuentra. Los nombres de los contratos aparecen en su columna **Contrato**. Un contrato que difiere de la línea en la empresa pagadora, el centro de coste, el proveedor o la moneda muestra una marca naranja pequeña junto a su nombre. Pase el cursor sobre la marca para ver cada diferencia, con el valor en la línea y el valor en el contrato. El selector muestra la misma marca en un contrato antes de vincularlo. El vínculo sigue siendo posible. La marca aparece para un contrato que usted puede leer.

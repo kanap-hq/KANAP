@@ -292,7 +292,7 @@ Kadratis matches the technology again as soon as its identifiers, CVE.org names,
 The records linked to the technology, one section per kind:
 
 - **Budget lines**: with the amount of the current year in the budget column of your workspace, and a total. A line whose currency has no exchange rate for the year shows its amount in its own currency with a small orange mark, and the total leaves it out. A one-line warning under the table names it. See [Manual rates](currencies.md#manual-rates).
-- **Contracts**: supplier, end date and yearly amount, with a total per currency.
+- **Contracts**: reference (`CTR-3`), supplier, end date and yearly amount, with a total per currency.
 - **Projects**: status and planned end.
 - **Incidents**: severity, status and detection date. Linking an incident needs `incidents:contributor`. A closed or cancelled incident cannot be linked or unlinked.
 - **Links and files**: the web links of the technology and its files, one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With the Member level on infrastructure, **Add link** and **Attach file** add a row, and files can also be dropped on the section. Hover a row to edit a link or to remove a row. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation. An address typed without `http://` or `https://` gets `https://`. Any other scheme is refused.
