@@ -330,7 +330,7 @@ Keep your contract list in sync with other tools using CSV files or Excel workbo
 
 **Import**:
 
-- Use **Preflight** to check the file before applying it
+- Use **Preflight check** to check the file before applying it
 - **Download an example** in the import dialog gives two sample contracts and what each column takes. See [Example files](csv-files.md#example-files)
 - **Matching by reference**: a filled `reference` (`CTR-12` or `12`) names the contract the row updates, even when its name or its supplier has changed. The contract then takes the name and the supplier of the row. The preflight check lists each contract that will be renamed or move to another supplier
 - **Matching by name**: when `reference` is empty, or the file has no such column, a row is matched to a contract by contract name and supplier

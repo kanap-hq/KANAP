@@ -330,7 +330,7 @@ Halten Sie Ihre Vertragsliste mit CSV-Dateien oder Excel-Arbeitsmappen mit ander
 
 **Import**:
 
-- Verwenden Sie die **Vorprüfung**, um die Datei vor dem Anwenden zu prüfen
+- Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen
 - **Beispiel herunterladen** im Importdialog liefert zwei Beispielverträge und was jede Spalte aufnimmt. Siehe [Beispieldateien](csv-files.md#example-files)
 - **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`CTR-12` oder `12`) bezeichnet den Vertrag, den die Zeile aktualisiert, auch wenn sich sein Name oder sein Lieferant geändert hat. Der Vertrag erhält dann den Namen und den Lieferanten der Zeile. Die Vorabprüfung meldet jeden Vertrag, der umbenannt wird oder zu einem anderen Lieferanten wechselt
 - **Zuordnung über den Namen**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird eine Zeile einem Vertrag über Vertragsnamen und Lieferant zugeordnet

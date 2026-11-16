@@ -330,7 +330,7 @@ Gardez votre liste de contrats synchronisée avec d'autres outils grâce aux fic
 
 **Import** :
 
-- Utilisez le **Contrôle préalable** pour vérifier le fichier avant de l'appliquer
+- Utilisez la **Vérification préalable** pour vérifier le fichier avant de l'appliquer
 - **Télécharger un exemple**, dans la fenêtre d'import, donne deux contrats d'exemple et ce que chaque colonne accepte. Voir [Fichiers d'exemple](csv-files.md#example-files)
 - **Correspondance par référence** : une `reference` remplie (`CTR-12` ou `12`) désigne le contrat que la ligne met à jour, même si son nom ou son fournisseur a changé. Le contrat prend alors le nom et le fournisseur de la ligne. La vérification préalable signale chaque contrat qui sera renommé ou changera de fournisseur
 - **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, une ligne correspond à un contrat par son nom et son fournisseur

@@ -330,7 +330,7 @@ Mantenga su lista de contratos sincronizada con otras herramientas mediante arch
 
 **Importar**:
 
-- Utilice **Verificación previa** para comprobar el archivo antes de aplicarlo
+- Utilice la **Verificación previa** para comprobar el archivo antes de aplicarlo
 - **Descargar un ejemplo**, en el diálogo de importación, ofrece dos contratos de ejemplo y lo que admite cada columna. Consulte [Archivos de ejemplo](csv-files.md#example-files)
 - **Emparejamiento por referencia**: una `reference` rellenada (`CTR-12` o `12`) designa el contrato que la fila actualiza, aunque su nombre o su proveedor hayan cambiado. El contrato toma entonces el nombre y el proveedor de la fila. La verificación previa señala cada contrato que cambiará de nombre o pasará a otro proveedor
 - **Emparejamiento por nombre**: cuando `reference` está vacía, o el archivo no tiene esa columna, una fila corresponde a un contrato por su nombre y su proveedor

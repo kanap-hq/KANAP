@@ -132,7 +132,7 @@ Le séparateur suit la langue de votre écran. Voir [Fichiers CSV et Excel](csv-
 Cliquez sur **Importer** sur la page de la liste, puis :
 
 1. Téléversez votre fichier CSV ou votre classeur Excel avec les titres de colonnes du modèle. Dans un fichier CSV, les virgules comme les points-virgules conviennent.
-2. Lancez le **Contrôle préalable** : cela valide les en-têtes et les données, et montre combien de lignes seront créées vs mises à jour.
+2. Lancez la **Vérification préalable** : cela valide les en-têtes et les données, et montre combien de lignes seront créées vs mises à jour.
 3. Si le contrôle réussit, cliquez sur **Charger** pour appliquer les modifications.
 
 **Règles de correspondance** :
