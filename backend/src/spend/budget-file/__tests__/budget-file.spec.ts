@@ -5,7 +5,10 @@ import { writeCsv } from '../../../common/csv-sheet';
 import { budgetCsvRows, buildBudgetExport, exportListQuery, parseAmountYears, parseFileColumns } from '../export-file';
 import { parseItemNumber, readBudgetCsv } from '../interpret';
 import { periodForYearlyTotal } from '../period';
-import { buildPreflight, planBudgetFile } from '../preflight';
+import { buildPreflight, planBudgetFile, storedState } from '../preflight';
+import { AMOUNT_MEASURES } from '../../amounts-write.util';
+import type { BudgetFileAccess } from '../preflight';
+import type { BudgetFileChoice } from '../types';
 import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, MISSING_BUDGET_HEADER_MESSAGE, OLD_BUDGET_FILE_MESSAGE } from '../columns';
 import { writeXlsx } from '../../../common/xlsx';
 import { natureChangeMessage } from '../preflight';
@@ -112,7 +115,7 @@ async function preflight(
     // The stored lines and names the service reads: those of both natures (one right, lot R).
     stored,
     names: options.names ?? stored
-      .map((item) => ({ nature: item.nature, itemNumber: item.itemNumber, name: item.name, supplierId: item.supplierId })),
+      .map((item) => ({ nature: item.nature, itemNumber: item.itemNumber, name: item.name, supplierId: item.supplierId, companyId: item.companyId })),
     createSuppliers: options.createSuppliers ?? false,
     canCreateSuppliers: options.canCreateSuppliers ?? false,
     currentYear: YEAR,
@@ -352,8 +355,12 @@ async function testSuppliersAndDuplicates() {
   assert.deepEqual(on.creates.suppliers, [{ name: 'Newco', erpId: null }]);
   assert.equal(on.changes.created, 1);
 
+  // A new row that looks like a stored line (the same title and no supplier on either) is left out
+  // (lot I2 of 26.11.9): no warning of the file's, an entry of the lookalikes, nothing created.
   const hint = await preflight('opex', 'item_number,name,currency\n,Widget,EUR\n', [line()]);
-  assert.ok(hint.warnings.duplicates.some((warning) => warning.message === 'row 2 looks like BL-3'));
+  assert.deepEqual(hint.warnings.duplicates, []);
+  assert.deepEqual(hint.lookalikes?.lines.map((entry) => [entry.line, entry.target.ref, entry.reason, entry.outcome]), [[2, 'BL-3', 'title_supplier', 'ignored']]);
+  assert.equal(hint.changes.created, 0);
 }
 
 async function testCreateRules() {
@@ -688,7 +695,8 @@ const rowErrors = (report: { errors: Array<{ line: number; column: string | null
 async function testNatureColumn() {
   const { stored, cat } = natureFixture();
   const header = 'nature,item_number,name,company_name,account_number,currency\n';
-  const mixed = await planOf('opex', `${header}opex,,Widget,Acme,6100,EUR\ncapex,,Server,Acme,2100,EUR\nCAPEX,BL-120,Racks v2,,,\n,BL-3,Widget Pro,,,\n`, stored, {
+  // A new title: a row titled as a stored line would be left out as its lookalike (lot I2 of 26.11.9).
+  const mixed = await planOf('opex', `${header}opex,,Gadget,Acme,6100,EUR\ncapex,,Server,Acme,2100,EUR\nCAPEX,BL-120,Racks v2,,,\n,BL-3,Widget Pro,,,\n`, stored, {
     cat,
   });
   assert.equal(mixed.report.ok, true, JSON.stringify(mixed.report.errors));
@@ -816,7 +824,8 @@ async function testDimensionsByNature() {
   assert.equal(fine.ok, true, `each line needs the required dimensions of its own nature: ${JSON.stringify(fine.errors)}`);
   const refused = await preflight('opex', [
     header.trim(),
-    'opex,,Widget,Acme,6100,EUR,Fromage,High,',
+    // Not titled as BL-3: its lookalike would be left out, errors included (lot I2 of 26.11.9).
+    'opex,,Gadget,Acme,6100,EUR,Fromage,High,',
     'capex,,Server,Acme,2100,EUR,Fromage,High,',
     'capex,BL-120,Racks,,,,-,,',
     'capex,,Bare,Acme,2100,EUR,,,',
@@ -840,7 +849,10 @@ async function testFreezeByNature() {
   assert.deepEqual(rowErrors(opexFrozen), [[2, 'budget_2026', 'Budget for 2026 is frozen.']]);
 }
 
-/** The duplicate hint compares a new line with the lines of its own nature (OPEX by name and supplier, CAPEX by name). */
+/**
+ * A new row looks like a stored line of its own nature only (lot I2 of 26.11.9), and is left out; two
+ * rows of the file alike stay a warning, both created.
+ */
 async function testDuplicatesByNature() {
   const { stored, cat } = natureFixture();
   const header = 'nature,item_number,name,company_name,account_number,currency\n';
@@ -854,9 +866,330 @@ async function testDuplicatesByNature() {
     'capex,,Twin,Acme,2100,EUR',
   ].join('\n'), stored, { cat });
   assert.equal(report.ok, true, JSON.stringify(report.errors));
+  assert.deepEqual(report.lookalikes?.lines.map((entry) => [entry.line, entry.nature, entry.target.ref, entry.outcome]), [[4, 'capex', 'BL-120', 'ignored']]);
   assert.deepEqual(report.warnings.duplicates, [
-    { line: 4, message: 'row 4 looks like BL-120', code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line: 4, ref: 'BL-120' } },
     { line: 7, message: 'row 7 looks like row 6', code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: 7, row: 6 } },
+  ]);
+  assert.deepEqual(report.changes.createdLines.map((entry) => entry.line), [2, 3, 5, 6, 7]);
+}
+
+/* ---- Lookalikes and consistency (lot I2 of 26.11.9) ---- */
+
+/** The lines the check reads for the lookalikes: every stored line, with its yearly totals and state. */
+function hintsOf(stored: StoredLine[]): LineHint[] {
+  return stored.map((item) => ({
+    nature: item.nature, itemNumber: item.itemNumber, name: item.name, supplierId: item.supplierId,
+    id: item.id, companyId: item.companyId, accountId: item.accountId, currency: item.currency, rowVersion: item.rowVersion,
+    endOfValidity: item.endOfValidity,
+    years: item.versions.map((version) => ({
+      year: version.year, versionId: version.id, budgetRev: version.budgetRev,
+      totals: Object.fromEntries(AMOUNT_MEASURES.map((measure) => [measure, version.months[measure].reduce((sum, cell) => sum + (cell.cents ?? 0n), 0n)])),
+    })),
+  }));
+}
+
+/** A version of `year` whose Budget is `cents`, in January. */
+function budgetOf(cents: bigint, year = YEAR, id = `ver-${year}-${cents}`): StoredVersion {
+  const months = emptyMonths();
+  months.planned[0] = { cents };
+  return { id, year, budgetRev: 1, months };
+}
+
+const LOOK_HEADER = 'nature,item_number,name,company_name,account_number,currency,supplier_name,budget_2026';
+const TWO_YEARS = `${LOOK_HEADER},budget_2027`;
+
+/** Two companies, an account, two suppliers; four lines: Microsoft 365 E3 and E5 (OPEX), two data centres (CAPEX, no supplier, two years). */
+function lookFixture(patch: { stored?: StoredLine[]; cat?: Partial<BudgetCatalog> } = {}) {
+  const cat = catalog({
+    companies: [
+      { id: 'c1', name: 'Acme', coaId: 'chart', disabledAt: null, baseCurrency: 'EUR' },
+      { id: 'c2', name: 'Other', coaId: 'chart', disabledAt: null, baseCurrency: 'EUR' },
+    ],
+    accounts: [{ id: 'a1', number: '6100', coaId: 'chart', disabledAt: null }],
+    suppliers: [
+      { id: 's1', name: 'Microsoft', erpId: null, disabledAt: null },
+      { id: 's2', name: 'Orange', erpId: null, disabledAt: null },
+    ],
+    ...patch.cat,
+  });
+  const base = { companyId: 'c1', accountId: 'a1', legacyNumber: null };
+  const stored = patch.stored ?? [
+    line({ ...base, id: 'l10', itemNumber: 10, name: 'Microsoft 365 E3', supplierId: 's1', versions: [budgetOf(12000000n)] }),
+    line({ ...base, id: 'l11', itemNumber: 11, name: 'Microsoft 365 E5', supplierId: 's1', versions: [budgetOf(20000000n)] }),
+    line({ ...base, id: 'l13', itemNumber: 13, nature: 'capex', name: 'Data center', versions: [budgetOf(25000000n), budgetOf(26000000n, YEAR + 1)] }),
+    line({ ...base, id: 'l12', itemNumber: 12, nature: 'capex', name: 'Rénovation data center', versions: [budgetOf(25000000n), budgetOf(26000000n, YEAR + 1)] }),
+  ];
+  return { cat, stored };
+}
+
+async function lookPlan(
+  rows: string[],
+  options: { header?: string; stored?: StoredLine[]; cat?: BudgetCatalog; choices?: BudgetFileChoice[]; access?: BudgetFileAccess; createSuppliers?: boolean } = {},
+) {
+  const fixture = lookFixture({ stored: options.stored });
+  const read = await readBudgetCsv([options.header ?? LOOK_HEADER, ...rows].join('\n'), { language: 'en', dimensionCodes: [] });
+  return planBudgetFile({
+    scope: 'opex', read, catalog: options.cat ?? fixture.cat, stored: fixture.stored, names: hintsOf(fixture.stored),
+    createSuppliers: options.createSuppliers ?? false, canCreateSuppliers: options.createSuppliers ?? false,
+    currentYear: YEAR, labels: { budget: 'Budget' },
+    ...(options.access ? { access: options.access } : {}),
+    ...(options.choices ? { matching: { choices: options.choices } } : {}),
+  });
+}
+
+/** The choices for one row the check followed. */
+const rowChoices = (report: { matching?: { choices: BudgetFileChoice[] } }) => (report.matching?.choices ?? []).filter((choice) => choice.kind === 'lookalike');
+
+const looks = (report: { lookalikes?: { lines: Array<{ line: number; target: { ref: string }; reason?: string; outcome: string }> } }) =>
+  report.lookalikes?.lines.map((entry) => [entry.line, entry.target.ref, entry.reason, entry.outcome]) ?? [];
+
+/** The three rules, their order, and what is no lookalike. */
+async function testLookalikeRules() {
+  // a. The same title, case and accents aside, and the same supplier (none on both included).
+  const a = await lookPlan(['opex,,microsoft 365 e3,Acme,6100,EUR,Microsoft,999', 'capex,,Renovation Data Center,Acme,6100,EUR,,1']);
+  assert.deepEqual(looks(a.report), [[2, 'BL-10', 'title_supplier', 'ignored'], [3, 'BL-12', 'title_supplier', 'ignored']]);
+  assert.deepEqual(a.plans, [], 'a row left out is not planned');
+  assert.equal(a.report.ok, true);
+  // b. Every amount equal, the same currency, company and account: a translated title. Two lines hold
+  // the amount: the smaller number. A line found by its title comes before one found by its amounts.
+  const b = await lookPlan(['capex,,Data centre refresh,Acme,6100,EUR,,250000,260000', 'capex,,Data center,Acme,6100,EUR,,250000,260000'], { header: TWO_YEARS });
+  assert.deepEqual(looks(b.report), [[2, 'BL-12', 'amounts', 'ignored'], [3, 'BL-13', 'title_supplier', 'ignored']]);
+  // c. A close title, the same supplier and one amount equal (another one differs: not b).
+  const close = await lookPlan(['opex,,Microsoft 365 E3 licence,Acme,6100,EUR,Microsoft,120000,5000'], { header: `${LOOK_HEADER},budget_2027` });
+  assert.deepEqual(looks(close.report), [[2, 'BL-10', 'close_title', 'ignored']]);
+  // No lookalike: E5 against E3 alone without an equal amount; equal amounts in another currency; equal
+  // amounts of another company and another supplier.
+  const e3 = lookFixture().stored.filter((item) => item.itemNumber === 10);
+  const e5 = await lookPlan(['opex,,Microsoft 365 E5,Acme,6100,EUR,Microsoft,200000'], { stored: e3 });
+  assert.deepEqual(looks(e5.report), []);
+  assert.equal(e5.report.changes.created, 1);
+  const usd = await lookPlan(['capex,,Data centre refresh,Acme,6100,USD,,250000,260000'], { header: TWO_YEARS });
+  assert.deepEqual(looks(usd.report), []);
+  const other = await lookPlan(['opex,,Licences,Other,6100,EUR,Orange,120000']);
+  assert.deepEqual(looks(other.report), []);
+  // Months summed by year before they are compared with the yearly total.
+  const months = await lookPlan(['capex,,Data centre refresh,Acme,6100,EUR,,100000,150000,260000'],
+    { header: 'nature,item_number,name,company_name,account_number,currency,supplier_name,budget_2026_01,budget_2026_02,budget_2027' });
+  assert.deepEqual(looks(months.report), [[2, 'BL-12', 'amounts', 'ignored']]);
+}
+
+/** A row left out leaves nothing behind: its supplier to create is not created, nor listed. */
+async function testLeftOutLeavesNothing() {
+  const left = await lookPlan(['capex,,Data centre refresh,Acme,6100,EUR,Newco,250000,260000'], { header: TWO_YEARS, createSuppliers: true });
+  assert.deepEqual(looks(left.report), [[2, 'BL-12', 'amounts', 'ignored']], 'a supplier to create does not stop the amounts rule');
+  assert.equal(left.report.creates.supplierCount, 0);
+  assert.deepEqual(left.report.creates.suppliers, []);
+  assert.deepEqual(left.report.matching?.candidates, []);
+  assert.deepEqual(left.plans, []);
+  const anyway = await lookPlan(['capex,,Data centre refresh,Acme,6100,EUR,Newco,250000,260000'], {
+    header: TWO_YEARS, createSuppliers: true, choices: [{ kind: 'lookalike', line: 2, action: 'create' }],
+  });
+  assert.deepEqual(looks(anyway.report), [[2, 'BL-12', 'amounts', 'created']]);
+  assert.equal(anyway.report.creates.supplierCount, 1);
+  assert.equal(anyway.plans.length, 1);
+  assert.deepEqual(rowChoices(anyway.report), [{ kind: 'lookalike', line: 2, action: 'create' }]);
+}
+
+/** "Update BL-n": through the read, as if the file named the line; refused when it cannot be. */
+async function testLookalikeUpdate() {
+  const { stored } = lookFixture();
+  const e3 = stored.find((item) => item.itemNumber === 10)!;
+  const state = storedState(e3);
+  const row = 'opex,,Microsoft 365 E3,Acme,6100,EUR,Microsoft,130000';
+  const shown = await lookPlan([row]);
+  assert.equal(shown.report.lookalikes?.lines[0].target.state, state);
+  assert.equal(shown.report.lookalikes?.lines[0].updatable, true);
+  const updated = await lookPlan([row], { choices: [{ kind: 'lookalike', line: 2, action: 'update', item: 10 }] });
+  assert.equal(updated.report.ok, true, JSON.stringify(updated.report.errors));
+  assert.deepEqual([updated.report.changes.created, updated.report.changes.updated], [0, 1]);
+  assert.deepEqual(updated.plans.map((plan) => [plan.itemId, plan.creating, plan.amounts.map((amount) => amount.cents)]), [['l10', false, [13000000n]]]);
+  assert.deepEqual(updated.report.lookalikes?.lines[0].fields, ['budget 2026']);
+  assert.deepEqual(rowChoices(updated.report), [{ kind: 'lookalike', line: 2, action: 'update', item: 10, state }], 'the state kept');
+  assert.equal(updated.report.snapshot.lines[0].id, 'l10', 'the load\'s snapshot holds the line');
+  // Another target than the line it looks like: no longer applies, the row is left out.
+  const elsewhere = await lookPlan([row], { choices: [{ kind: 'lookalike', line: 2, action: 'update', item: 11 }] });
+  assert.deepEqual(looks(elsewhere.report), [[2, 'BL-10', 'title_supplier', 'ignored']]);
+  assert.deepEqual(rowChoices(elsewhere.report), []);
+  // Changed since the check: a new error on the row.
+  const stale = await lookPlan([row], { choices: [{ kind: 'lookalike', line: 2, action: 'update', item: 10, state: '0000000000000000' }] });
+  assert.equal(stale.report.ok, false);
+  assert.deepEqual(stale.report.errors.map((error) => [error.line, error.code, error.params]), [[2, 'BUDGET_FILE_LOOKALIKE_CHANGED', { ref: 'BL-10' }]]);
+  // A frozen year: the update fails on its row.
+  const frozen = await lookPlan([row], {
+    cat: { ...lookFixture().cat, frozen: ['opex:2026:budget'] }, choices: [{ kind: 'lookalike', line: 2, action: 'update', item: 10 }],
+  });
+  assert.deepEqual(frozen.report.errors.map((error) => [error.line, error.code]), [[2, 'BUDGET_FILE_FROZEN']]);
+  // A line read only in a limited person's access: "Update" is not offered, the choice falls back.
+  const readOnly: BudgetFileAccess = { editable: new Set(['l11']), places: new Map(), wanted: new Map() };
+  const limited = await lookPlan([row], { access: readOnly, choices: [{ kind: 'lookalike', line: 2, action: 'update', item: 10 }] });
+  assert.deepEqual(limited.report.lookalikes?.lines.map((entry) => [entry.updatable, entry.outcome]), [[false, 'ignored']]);
+  assert.deepEqual(limited.plans, []);
+  // Two rows of the file on the same line: the first one updates it, the next one is left out (C1).
+  const second = 'opex,,MICROSOFT 365 E3,Acme,6100,EUR,Microsoft,140000';
+  const twice = await lookPlan([row, second], { choices: [{ kind: 'lookalikes', action: 'update' }] });
+  assert.equal(twice.report.ok, true, JSON.stringify(twice.report.errors));
+  assert.deepEqual(looks(twice.report), [[2, 'BL-10', 'title_supplier', 'updated'], [3, 'BL-10', 'title_supplier', 'ignored']]);
+  assert.deepEqual(twice.report.warnings.consistency?.map((warning) => [warning.line, warning.code, warning.params]), [
+    [3, 'BUDGET_FILE_LOOKALIKE_SAME_LINE', { line: 3, other: 2, ref: 'BL-10' }],
+  ]);
+  assert.deepEqual(twice.plans.map((plan) => plan.itemId), ['l10']);
+  const both = await lookPlan([row, second], { choices: [
+    { kind: 'lookalike', line: 2, action: 'update', item: 10, state }, { kind: 'lookalike', line: 3, action: 'update', item: 10, state },
+  ] });
+  assert.deepEqual(looks(both.report), [[2, 'BL-10', 'title_supplier', 'updated'], [3, 'BL-10', 'title_supplier', 'ignored']]);
+  assert.deepEqual(rowChoices(both.report), [{ kind: 'lookalike', line: 2, action: 'update', item: 10, state }], 'the second choice falls back');
+  // A row that names the line by its number updates it, wherever it stands.
+  const named = await lookPlan([row, 'opex,BL-10,Microsoft 365 E3,Acme,6100,EUR,Microsoft,140000'], {
+    choices: [{ kind: 'lookalike', line: 2, action: 'update', item: 10, state }],
+  });
+  assert.equal(named.report.ok, true, JSON.stringify(named.report.errors));
+  assert.deepEqual(looks(named.report), [[2, 'BL-10', 'title_supplier', 'ignored']]);
+  assert.deepEqual(named.report.warnings.consistency?.map((warning) => [warning.line, warning.code, warning.params]), [
+    [2, 'BUDGET_FILE_LOOKALIKE_SAME_LINE', { line: 2, other: 3, ref: 'BL-10' }],
+  ]);
+  assert.equal(named.report.changes.updated, 1);
+}
+
+/**
+ * A choice that names a line keeps it when the row no longer looks like it (B1): an update is refused
+ * when the line changed since the check, and a row left out by default stays left out.
+ */
+async function testLookalikeTargetKept() {
+  const { stored } = lookFixture();
+  const e3 = stored.find((item) => item.itemNumber === 10)!;
+  const row = 'opex,,Microsoft 365 E3,Acme,6100,EUR,Microsoft,130000';
+  const renamed = stored.map((item) => (item.itemNumber === 10 ? { ...item, name: 'M365 E3 (renewed)', rowVersion: item.rowVersion + 1 } : item));
+  const refused = (report: { ok: boolean; errors: Array<{ line: number; code?: string }>; changes: { created: number; updated: number } }) =>
+    [report.ok, report.errors.map((error) => [error.line, error.code]), report.changes.created, report.changes.updated];
+  // "Update BL-10", then BL-10 renamed before the load.
+  const one = await lookPlan([row], { stored: renamed, choices: [{ kind: 'lookalike', line: 2, action: 'update', item: 10, state: storedState(e3) }] });
+  assert.deepEqual(refused(one.report), [false, [[2, 'BUDGET_FILE_LOOKALIKE_CHANGED']], 0, 0]);
+  // "Update all", with the targets the check gave.
+  const shown = await lookPlan([row]);
+  assert.deepEqual(shown.report.lookalikes?.targets, { 2: { item: 10, state: storedState(e3) } });
+  const all = await lookPlan([row], { stored: renamed, choices: [{ kind: 'lookalikes', action: 'update', targets: shown.report.lookalikes!.targets }] });
+  assert.deepEqual(refused(all.report), [false, [[2, 'BUDGET_FILE_LOOKALIKE_CHANGED']], 0, 0]);
+  // Left out by default: the check gives its targets back, and the row stays left out.
+  const left = await lookPlan([row], { stored: renamed, choices: shown.report.matching!.choices });
+  assert.deepEqual(refused(left.report), [true, [], 0, 0]);
+  assert.deepEqual(looks(left.report), [[2, 'BL-10', undefined, 'ignored']]);
+  // Found by its amounts; its Budget edited meanwhile.
+  const dcRow = 'capex,,Data centre refresh,Acme,6100,EUR,,250000,260000';
+  const dcShown = await lookPlan([dcRow], { header: TWO_YEARS });
+  assert.deepEqual(looks(dcShown.report), [[2, 'BL-12', 'amounts', 'ignored']]);
+  const edited = stored.map((item) => (item.itemNumber === 12
+    ? { ...item, versions: [{ ...budgetOf(26500000n), id: item.versions[0].id, budgetRev: 2 }, item.versions[1]] }
+    : item));
+  const dc = await lookPlan([dcRow], {
+    header: TWO_YEARS, stored: edited,
+    choices: [{ kind: 'lookalike', line: 2, action: 'update', item: 12, state: dcShown.report.lookalikes!.lines[0].target.state }],
+  });
+  assert.deepEqual(refused(dc.report), [false, [[2, 'BUDGET_FILE_LOOKALIKE_CHANGED']], 0, 0]);
+  const dcLeft = await lookPlan([dcRow], { header: TWO_YEARS, stored: edited, choices: dcShown.report.matching!.choices });
+  assert.deepEqual(refused(dcLeft.report), [true, [], 0, 0]);
+  // Chosen again on the new state: the update goes through.
+  const again = await lookPlan([dcRow], {
+    header: TWO_YEARS, stored: edited, choices: [...dcShown.report.matching!.choices, { kind: 'lookalike', line: 2, action: 'update', item: 12, state: dcLeft.report.lookalikes!.lines[0].target.state }],
+  });
+  assert.deepEqual(refused(again.report), [true, [], 0, 1]);
+}
+
+/** T-I2f: the same paying company in every rule, two amounts without the same supplier, a close title in the same currency, no ended line. */
+async function testLookalikeCompanyAndEnd() {
+  const base = { accountId: 'a1', legacyNumber: null };
+  const acme = line({ ...base, id: 'l10', itemNumber: 10, name: 'Microsoft 365 E3', supplierId: 's1', companyId: 'c1', versions: [budgetOf(1200000n)] });
+  const other = line({ ...base, id: 'l20', itemNumber: 20, name: 'Microsoft 365 E3', supplierId: 's1', companyId: 'c2', companyName: 'Other', versions: [budgetOf(800000n)] });
+  // A. A row of Other looks like Other's line, not Acme's.
+  const a = await lookPlan(['opex,,Microsoft 365 E3,Other,6100,EUR,Microsoft,9000'], { stored: [acme, other] });
+  assert.deepEqual(looks(a.report), [[2, 'BL-20', 'title_supplier', 'ignored']]);
+  // B. Equal amounts and the same supplier: the line of the row's company.
+  const b1 = line({ ...base, id: 'b1', itemNumber: 30, name: 'Licences Acme', supplierId: 's1', companyId: 'c1', versions: [budgetOf(500000n)] });
+  const b2 = line({ ...base, id: 'b2', itemNumber: 31, name: 'Licences Other', supplierId: 's1', companyId: 'c2', companyName: 'Other', versions: [budgetOf(500000n)] });
+  const b = await lookPlan(['opex,,Lizenzen,Other,6100,EUR,Microsoft,5000'], { stored: [b1, b2] });
+  assert.deepEqual(looks(b.report), [[2, 'BL-31', 'amounts', 'ignored']]);
+  // A new subsidiary's budget, titled and priced as the parent company's lines: nothing left out.
+  const fixture = lookFixture();
+  const subsidiary = { ...fixture.cat, companies: [...fixture.cat.companies, { id: 'c3', name: 'Filiale', coaId: 'chart', disabledAt: null, baseCurrency: 'EUR' }] };
+  const sub = await lookPlan(['opex,,Microsoft 365 E3,Filiale,6100,EUR,Microsoft,120000,', 'capex,,Rénovation data center,Filiale,6100,EUR,,250000,260000'], {
+    header: TWO_YEARS, cat: subsidiary,
+  });
+  assert.deepEqual(looks(sub.report), []);
+  assert.equal(sub.report.changes.created, 2);
+  // E. One equal amount without a common supplier is no lookalike; two are.
+  const hosting = line({ ...base, id: 'e1', itemNumber: 50, name: 'Hosting', versions: [budgetOf(1200000n), budgetOf(1300000n, YEAR + 1)] });
+  const e = await lookPlan(['opex,,Brand new SaaS,Acme,6100,EUR,,12000,'], { stored: [hosting], header: TWO_YEARS });
+  assert.deepEqual([looks(e.report), e.report.changes.created], [[], 1]);
+  const two = await lookPlan(['opex,,Hébergement,Acme,6100,EUR,,12000,13000'], { stored: [hosting], header: TWO_YEARS });
+  assert.deepEqual(looks(two.report), [[2, 'BL-50', 'amounts', 'ignored']]);
+  // A close title and an equal amount in another currency: no lookalike.
+  const close = await lookPlan(['opex,,Microsoft 365 E3 licence,Acme,6100,USD,Microsoft,12000'], { stored: [acme] });
+  assert.deepEqual(looks(close.report), []);
+  // H. A line ended in 2024 is no target of a 2026 row; a line still running is.
+  const ended = line({ ...base, id: 'd1', itemNumber: 40, name: 'Antivirus', supplierId: 's1', endOfValidity: '2024-12-31T12:00:00.000Z', versions: [budgetOf(300000n, 2024)] });
+  const h = await lookPlan(['opex,,Antivirus,Acme,6100,EUR,Microsoft,4000'], { stored: [ended] });
+  assert.deepEqual([looks(h.report), h.report.changes.created], [[], 1]);
+  const running = line({ ...base, id: 'd2', itemNumber: 41, name: 'Antivirus', supplierId: 's1' });
+  const h2 = await lookPlan(['opex,,Antivirus,Acme,6100,EUR,Microsoft,4000'], { stored: [ended, running] });
+  assert.deepEqual(looks(h2.report), [[2, 'BL-41', 'title_supplier', 'ignored']]);
+  // A file without a company column: the workspace's only company pays the row.
+  const single = { ...fixture.cat, companies: [fixture.cat.companies[0]] };
+  const bare = await lookPlan(['opex,,Microsoft 365 E3,6100,EUR,Microsoft,999'], {
+    cat: single, header: 'nature,item_number,name,account_number,currency,supplier_name,budget_2026',
+  });
+  assert.deepEqual(looks(bare.report), [[2, 'BL-10', 'title_supplier', 'ignored']]);
+}
+
+/** More lookalikes than the report lists: the choice for all rows reaches them; a row's own choice wins. */
+async function testManyLookalikes() {
+  const stored = Array.from({ length: 250 }, (_, index) => line({
+    id: `m${index}`, itemNumber: 100 + index, legacyNumber: null, name: `Line ${index}`, supplierId: 's2', companyId: 'c1', accountId: 'a1',
+    versions: [budgetOf(BigInt(100 + index) * 100n)],
+  }));
+  const rows = stored.map((item, index) => `opex,,Line ${index},Acme,6100,EUR,Orange,${100 + index}`);
+  const left = await lookPlan(rows, { stored });
+  assert.deepEqual([left.report.lookalikes?.lines.length, left.report.lookalikes?.count, left.report.lookalikes?.ignored], [200, 250, 250]);
+  const created = await lookPlan(rows, { stored, choices: [{ kind: 'lookalikes', action: 'create' }, { kind: 'lookalike', line: 2, action: 'ignore' }] });
+  assert.deepEqual([created.report.changes.created, created.report.lookalikes?.ignored], [249, 1]);
+  const updated = await lookPlan(rows, { stored, choices: [{ kind: 'lookalikes', action: 'update' }] });
+  assert.equal(updated.report.ok, true, JSON.stringify(updated.report.errors.slice(0, 3)));
+  assert.deepEqual([updated.report.lookalikes?.updated, updated.report.changes.unchanged], [250, 250]);
+  const all = updated.report.matching?.choices.find((choice) => choice.kind === 'lookalikes');
+  assert.equal(all?.kind === 'lookalikes' && Object.keys(all.targets ?? {}).length, 250);
+  // "Update all" as the screen sends it: the targets of every row, beyond the 200 listed (B3).
+  assert.equal(Object.keys(left.report.lookalikes?.targets ?? {}).length, 250);
+  const screen = await lookPlan(rows, { stored, choices: [{ kind: 'lookalikes', action: 'update', targets: left.report.lookalikes!.targets }] });
+  assert.deepEqual([screen.report.ok, screen.report.lookalikes?.updated, screen.report.lookalikes?.ignored], [true, 250, 0]);
+}
+
+/** The consistency warnings: never a refusal (P3), never below three comparable lines or without a supplier. */
+async function testConsistency() {
+  const orange = (n: number, cents: bigint) => line({
+    id: `o${n}`, itemNumber: 200 + n, legacyNumber: null, name: `Orange ${n}`, supplierId: 's2', companyId: 'c1', accountId: 'a1', versions: [budgetOf(cents)],
+  });
+  const { stored } = lookFixture();
+  const three = [...stored, orange(1, 1000000n), orange(2, 1200000n), orange(3, 1100000n)];
+  const far = await lookPlan(['opex,,Fibre,Acme,6100,EUR,Orange,500000', 'opex,,Fibre 2,Acme,6100,EUR,Orange,11000'], { stored: three });
+  assert.equal(far.report.ok, true);
+  assert.deepEqual(far.report.warnings.consistency?.map((warning) => [warning.line, warning.code, warning.params]), [
+    [2, 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER', { label: 'Budget', year: 2026, amount: '500 000', median: '11 000', count: 3, supplier: 'Orange' }],
+  ]);
+  const two = await lookPlan(['opex,,Fibre,Acme,6100,EUR,Orange,500000'], { stored: [...stored, orange(1, 1000000n), orange(2, 1200000n)] });
+  assert.deepEqual(two.report.warnings.consistency, [], 'two comparable lines are no reference');
+  const none = await lookPlan(['capex,,Serveurs,Acme,6100,EUR,,9000000'], { stored: three });
+  assert.deepEqual(none.report.warnings.consistency, [], 'no supplier, no median');
+  // Against the line the row looks like, created anyway.
+  const anyway = await lookPlan(['opex,,Microsoft 365 E3,Acme,6100,EUR,Microsoft,1200000'], { choices: [{ kind: 'lookalike', line: 2, action: 'create' }] });
+  assert.deepEqual(anyway.report.warnings.consistency?.map((warning) => [warning.code, warning.params]), [
+    ['BUDGET_FILE_AMOUNT_FAR_FROM_LINE', { label: 'Budget', year: 2026, amount: '1 200 000', other: '120 000', ref: 'BL-10' }],
+  ]);
+  // Dates outside the years of the amounts, and a currency other than the company's.
+  const dates = await lookPlan(['opex,,Fibre,Acme,6100,EUR,Orange,10500,2028-01-01,', 'opex,,Fibre 2,Acme,6100,USD,Orange,10500,,2025-06-30'],
+    { header: `${LOOK_HEADER},effective_start,end_of_validity`, stored: three });
+  assert.equal(dates.report.ok, true, JSON.stringify(dates.report.errors));
+  assert.deepEqual(dates.report.warnings.consistency?.map((warning) => [warning.line, warning.code, warning.params]), [
+    [2, 'BUDGET_FILE_START_AFTER_AMOUNTS', { start: '2028-01-01', year: 2026 }],
+    [3, 'BUDGET_FILE_END_BEFORE_AMOUNTS', { end: '2025-06-30', year: 2026 }],
+    [3, 'BUDGET_FILE_CURRENCY_NOT_COMPANY', { currency: 'USD', company: 'Acme', base: 'EUR' }],
   ]);
 }
 
@@ -1008,6 +1341,13 @@ async function main() {
   await testDimensionsByNature();
   await testFreezeByNature();
   await testDuplicatesByNature();
+  await testLookalikeRules();
+  await testLeftOutLeavesNothing();
+  await testLookalikeUpdate();
+  await testManyLookalikes();
+  await testLookalikeTargetKept();
+  await testLookalikeCompanyAndEnd();
+  await testConsistency();
   await testTrailingLineBreak();
   await testCapexDescription();
   await testCostCenterOfAnotherCompany();

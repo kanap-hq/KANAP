@@ -42,7 +42,7 @@ import { AI_IMPORT_CODE_LISTS, BUDGET_NATURE_LABELS, LINE_USAGE_LABELS, RUN_BUIL
 import { AI_IMPORT_TARGETS, STATUS_LABELS, importColumnTitle } from '../import/ai-import-targets';
 import { columnReader } from '../import/ai-import-convert';
 import { AiImportMappingService } from '../import/ai-import-mapping.service';
-import { AiImportRunnerService, budgetBilan, personLine, rowsBilan } from '../import/ai-import-runner.service';
+import { AiImportRunnerService, budgetBilan, builtLineChoices, personLine, rowsBilan } from '../import/ai-import-runner.service';
 import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
 import { readTableAttachment } from '../attachments/table-attachment';
 import { AuditLog } from '../../audit/audit.entity';
@@ -802,7 +802,9 @@ async function testARefusedFileIsNotImported() {
   const late = await changed.previews.executePreview(changed.context, card.preview_id);
   assert.equal(late.status, 'failed');
   assert.equal(late.error_message, 'Die Prüfung dieser Datei hat Fehler gefunden, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.');
-  assert.equal(late.import_mapping!.result ?? null, null, 'no result on a refused import');
+  // The refused load stays on the card with the reason of each row (lot I2 of 26.11.9); nothing is imported.
+  assert.equal(late.import_mapping!.result?.ok, false, 'the refused load is shown on the card');
+  assert.deepEqual(late.import_mapping!.result?.report, refusal.report);
   assert.equal(changed.manager.audits.length, 0);
   console.log('  a refused file is not imported: OK');
 }
@@ -860,33 +862,69 @@ function testBilanOnThePersonsLines() {
 function testLookalikesReachTheModel() {
   // The person's rows sat on lines 3 to 16 of their file; the built file numbers them 2 to 15.
   const lines = Array.from({ length: 14 }, (_, index) => index + 3);
-  const looksLike = (line: number, ref: string) => ({ line, message: `row ${line} looks like ${ref}`, code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line, ref } });
-  const duplicates = [
-    ...Array.from({ length: 11 }, (_, index) => looksLike(index + 2, `BL-${index + 101}`)),
-    { line: 14, message: 'row 14 looks like row 2', code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: 14, row: 2 } },
-  ];
+  // Lot I2 of 26.11.9: the rows that look like a stored line are a section of their own, left out
+  // unless the person chose otherwise; the rows alike within the file stay a warning.
+  const target = (n: number) => ({ item: n, ref: `BL-${n}`, name: `Line ${n}`, state: '0123456789abcdef' });
+  const lookalikes = {
+    lines: Array.from({ length: 11 }, (_, index) => ({
+      line: index + 2, nature: 'opex' as const, name: `Row ${index}`, target: target(index + 101), reason: 'amounts' as const,
+      outcome: index === 0 ? 'updated' as const : 'ignored' as const, updatable: true,
+    })),
+    targets: { 2: { item: 101, state: '0123456789abcdef' }, 3: { item: 102, state: '0123456789abcdef' } },
+    count: 29, ignored: 28, created: 0, updated: 1,
+  };
+  const duplicates = [{ line: 14, message: 'row 14 looks like row 2', code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: 14, row: 2 } }];
+  const matching = {
+    matches: [], refusedProposals: [], candidates: [], totals: { matches: 0, refusedProposals: 0, candidates: 0 },
+    choices: [
+      { kind: 'lookalike' as const, line: 2, action: 'update' as const, item: 101, state: '0123456789abcdef' },
+      { kind: 'lookalikes' as const, action: 'ignore' as const, targets: { 3: { item: 102, state: '0123456789abcdef' } } },
+    ],
+    createSuppliers: { allowed: true, value: true },
+  };
   const budget = budgetBilan({
     ok: true,
-    changes: { created: 14, updated: 0, unchanged: 0 },
-    warnings: { duplicates, duplicatesCount: 30, ignoredColumns: [] },
+    changes: { created: 0, updated: 1, unchanged: 0 },
+    warnings: { duplicates, duplicatesCount: 1, ignoredColumns: [] },
+    lookalikes,
+    matching,
   }, true, lines);
-  // The model reads how many there are and the first ten: the line of the person's file and the line it looks like.
-  assert.deepEqual(budget.similar_lines?.count, 30);
+  // The model reads how many there are and the first ten: the line of the person's file, the line it
+  // looks like, why, and what the check does with it; the rows left out are the skipped ones.
+  assert.equal(budget.similar_lines?.count, 30);
+  assert.deepEqual([budget.similar_lines?.ignored, budget.similar_lines?.created_anyway, budget.similar_lines?.updated], [28, 0, 1]);
+  assert.equal(budget.skipped, 28);
   assert.equal(budget.similar_lines?.first.length, 10);
-  assert.deepEqual(budget.similar_lines?.first.slice(0, 2), [{ file_line: 3, looks_like: 'BL-101' }, { file_line: 4, looks_like: 'BL-102' }]);
-  assert.ok(budget.similar_lines?.note, 'what they are, said with them');
-  // The card numbers an earlier row as the person's file does, as the model does.
+  assert.deepEqual(budget.similar_lines?.first.slice(0, 2), [
+    { file_line: 3, looks_like: 'BL-101', reason: 'amounts', outcome: 'updated' },
+    { file_line: 4, looks_like: 'BL-102', reason: 'amounts', outcome: 'ignored' },
+  ]);
+  assert.match(budget.similar_lines?.note ?? '', /leaves them out unless the person chooses/);
+  assert.match(budget.on_approval ?? '', /; 29 rows of the file look like existing lines: 28 left out, 0 created anyway, 1 updating the line they look like\.$/);
+  // The card and the model number the rows as the person's file does, the choices included: a new
+  // card keeps them on the same line (no drift).
   const file = budget.report.kind === 'budget_file' ? budget.report.file as any : null;
-  assert.deepEqual(file.warnings.duplicates[11].params, { line: 15, row: 3 });
+  assert.equal(file.lookalikes.lines[0].line, 3);
+  assert.equal(file.matching.choices[0].line, 3);
+  // The targets of the rows, by line, on the person's lines too (B1 and B3 of lot I2).
+  assert.deepEqual(Object.keys(file.lookalikes.targets), ['3', '4']);
+  assert.deepEqual(file.matching.choices[1].targets, { 4: { item: 102, state: '0123456789abcdef' } });
+  assert.deepEqual(budget.matching?.choices[1], { kind: 'lookalikes', action: 'ignore', targets: { 4: { item: 102, state: '0123456789abcdef' } } });
+  assert.equal(budget.matching?.choices[0].kind === 'lookalike' && budget.matching.choices[0].line, 3);
+  assert.deepEqual(file.warnings.duplicates[0].params, { line: 15, row: 3 });
+  assert.deepEqual(builtLineChoices(budget.matching!.choices, lines), matching.choices, 'back to the built file\'s line');
+  assert.deepEqual(builtLineChoices([{ kind: 'lookalike', line: 40, action: 'create' }, { kind: 'create_suppliers', value: false }], lines),
+    [{ kind: 'create_suppliers', value: false }], 'a line the built file does not hold: dropped');
   const onlyRows = budgetBilan({
     ok: true,
     changes: { created: 14, updated: 0, unchanged: 0 },
-    warnings: { duplicates: duplicates.slice(11), duplicatesCount: 1 },
+    warnings: { duplicates, duplicatesCount: 1 },
   }, true, lines);
   assert.deepEqual(onlyRows.similar_lines?.first, [{ file_line: 15, looks_like_file_line: 3 }]);
   // No lookalike: nothing more for the model.
   const none = budgetBilan({ ok: true, changes: { created: 1, updated: 0, unchanged: 0 }, warnings: { duplicates: [] } }, true, lines);
   assert.equal(none.similar_lines, undefined);
+  assert.equal(none.skipped, 0);
   // The model receives them with the check; the card's messages stay hidden.
   const forModel = new AiEvidenceService({} as any).redact(
     { import_mapping: { validation: budget } },
@@ -894,7 +932,7 @@ function testLookalikesReachTheModel() {
   ) as any;
   assert.equal(forModel.import_mapping.validation.report, '[REDACTED]');
   assert.equal(forModel.import_mapping.validation.similar_lines.count, 30);
-  console.log('  lookalikes of a budget file reach the model, by line and reference: OK');
+  console.log('  lookalikes of a budget file reach the model, by line, reference and outcome: OK');
 }
 
 // Review of lot I1: the model counts what the approval creates from the check itself, and is told the

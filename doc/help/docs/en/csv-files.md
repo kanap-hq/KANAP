@@ -55,6 +55,8 @@ On the master data pages, a date the file cannot settle on its own, such as `01/
 
 An import reads yes or no in any of these languages, and the `true`, `false`, `1` and `0` of older files. The files of applications, assets, incidents, projects, requests and tasks follow the same table, and so do the link files of the technologies list. See [Technologies](technologies.md#import-and-export-links).
 
+**Statuses, priorities and severities.** The files of projects, requests, tasks and incidents read a status, a priority or a severity by its name in any of the four languages, such as `On hold` or `Suspendu`, or by its code (`on_hold`). An unknown value is refused, and the message lists the accepted names in the language of your screen.
+
 **Size.** A file holds up to 20,000 rows.
 
 On an on-premise installation, the administrator can turn off Excel workbooks in imports. The import buttons then read **Import CSV** and take CSV files only. See [Configuration](on-premise/configuration.md#optional-excel-imports).

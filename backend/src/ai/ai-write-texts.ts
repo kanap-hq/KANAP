@@ -144,7 +144,8 @@ export function previewSummaryText(
   details: { pending?: string[]; executed?: string[]; errorMessage?: string | null } = {},
 ): string {
   const extra = (lines: string[] | undefined) => (lines && lines.length > 0 ? ` ${lines.join(' ')}` : '');
-  if (status === 'failed' && details.errorMessage) return details.errorMessage;
+  // The error in the person's language: an error the backend writes itself reaches them translated.
+  if (status === 'failed' && details.errorMessage) return previewErrorText(language, details.errorMessage) ?? details.errorMessage;
   if (status === 'pending') return `${capitalize(action)}.${extra(details.pending)}`;
   const word = STATUS_WORDS[language][status as keyof (typeof STATUS_WORDS)['fr']];
   if (!word) return `${capitalize(action)}.`;
@@ -1499,6 +1500,13 @@ export const PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE =
   'The incident review is being edited by someone else, so nothing was changed. Try again once that edit is saved or its lock is released.';
 
 /**
+ * The approval of an import card whose check found nothing to create or update (lot I2 of 26.11.9):
+ * refused, and the card stays pending, so a choice on it can still give it something to import.
+ */
+export const PREVIEW_IMPORT_NOTHING_MESSAGE =
+  'Nothing to import: this file creates and changes nothing, so there is nothing to approve.';
+
+/**
  * An import of an attached file whose check found errors, on the card or again at the load: no row
  * was written (lot I3). Said as a check that failed, never as a refusal of the person or their rights.
  */
@@ -1529,6 +1537,11 @@ const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
     fr: "La vérification de ce fichier a trouvé des erreurs : rien n'a été importé. Corrigez la correspondance ou le fichier, puis préparez l'import de nouveau.",
     de: 'Die Prüfung dieser Datei hat Fehler gefunden, daher wurde nichts importiert. Korrigieren Sie die Zuordnung oder die Datei und bereiten Sie den Import erneut vor.',
     es: 'La comprobación de este archivo encontró errores, así que no se ha importado nada. Corrija la correspondencia o el archivo y vuelva a preparar la importación.',
+  },
+  [PREVIEW_IMPORT_NOTHING_MESSAGE]: {
+    fr: "Rien à importer : ce fichier ne crée et ne modifie rien, il n'y a donc rien à approuver.",
+    de: 'Nichts zu importieren: Diese Datei erstellt und ändert nichts, daher gibt es nichts zu genehmigen.',
+    es: 'Nada que importar: este archivo no crea ni modifica nada, así que no hay nada que aprobar.',
   },
   [PREVIEW_EXPIRED_MESSAGE]: {
     fr: "L'aperçu a expiré avant l'approbation.",
@@ -2014,3 +2027,70 @@ export const followUpPreviewText = {
     ? `${count} more.`
     : labelled(language, { fr: 'Autres', de: 'Weitere', es: 'Otras' }[language], count)),
 };
+
+/**
+ * The sentence of a refusal the load of an approved import gives when the data changed since the
+ * card's check (lot I2 of 26.11.9), in the four languages: the words of the card
+ * (`frontend/src/locales/<lang>/errors.json`), which `ai-import-card-texts.spec.ts` compares.
+ * `{{name}}` takes the refusal's value of that name.
+ */
+export const IMPORT_LOAD_REFUSALS: Record<string, Texts> = {
+  BUDGET_FILE_LOOKALIKE_CHANGED: {
+    en: '{{ref}} changed since the check.',
+    fr: '{{ref}} a changé depuis la vérification.',
+    de: '{{ref}} wurde seit der Prüfung geändert.',
+    es: '{{ref}} ha cambiado desde la comprobación.',
+  },
+};
+
+const REFUSED_ROW_TEXTS = {
+  line: { en: 'Line', fr: 'Ligne', de: 'Zeile', es: 'Fila' } as Texts,
+  /** A refusal without a sentence here: the card gives it. */
+  refused: {
+    en: 'refused, the card gives the reason.',
+    fr: 'refusée, la carte en donne la raison.',
+    de: 'abgelehnt, die Karte nennt den Grund.',
+    es: 'rechazada, la tarjeta indica el motivo.',
+  } as Texts,
+  more: {
+    en: '{{count}} more rows refused, listed on the card.',
+    fr: '{{count}} autres lignes refusées, listées sur la carte.',
+    de: '{{count}} weitere abgelehnte Zeilen, auf der Karte aufgeführt.',
+    es: '{{count}} filas rechazadas más, indicadas en la tarjeta.',
+  } as Texts,
+};
+
+/** The rows of a refused load named in its sentence; the card lists the others. */
+const REFUSED_ROWS_SHOWN = 10;
+
+/**
+ * The rows the load of an approved import refused, one sentence each, in the person's language (lot
+ * I2 of 26.11.9): `Ligne 5 : BL-67 a changé depuis la vérification.` The failed card's summary
+ * carries it, so the message after the approval says it and the model reads it back. A column is
+ * named by its title on the card (`titles`), never by its code.
+ */
+export function importRefusalText(
+  language: AiWriteLanguage,
+  result: { report: { kind: 'rows'; errors: Array<{ row: number; column?: string; code?: string; params?: Record<string, string | number> }> } | { kind: 'budget_file'; file: Record<string, unknown> | null } },
+  titles: ReadonlyMap<string, string>,
+): string {
+  type Refusal = { line: number; column?: string | null; code?: string | null; params?: Record<string, unknown> | null };
+  const refusals: Refusal[] = result.report.kind === 'rows'
+    ? result.report.errors.map((error) => ({ line: error.row, column: error.column, code: error.code, params: error.params }))
+    : ((result.report.file?.errors as Refusal[] | undefined) ?? []);
+  const colon = language === 'fr' ? ' : ' : ': ';
+  const rows = refusals.filter((refusal) => refusal.line > 0);
+  const sentences = rows.slice(0, REFUSED_ROWS_SHOWN).map((refusal) => {
+    const column = refusal.column ? titles.get(refusal.column) : undefined;
+    const where = `${REFUSED_ROW_TEXTS.line[language]} ${refusal.line}${column ? ` (${column})` : ''}`;
+    const sentence = refusal.code ? IMPORT_LOAD_REFUSALS[refusal.code]?.[language] : undefined;
+    const said = sentence
+      ? sentence.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(refusal.params?.[name] ?? ''))
+      : REFUSED_ROW_TEXTS.refused[language];
+    return `${where}${colon}${said}`;
+  });
+  if (rows.length > REFUSED_ROWS_SHOWN) {
+    sentences.push(REFUSED_ROW_TEXTS.more[language].replace('{{count}}', String(rows.length - REFUSED_ROWS_SHOWN)));
+  }
+  return sentences.join(' ');
+}

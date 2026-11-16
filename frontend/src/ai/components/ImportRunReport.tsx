@@ -5,6 +5,7 @@ import type { AiImportReportMessage, AiImportRun } from '../aiTypes';
 import { csvMessageColumn, csvMessageText } from '../../components/csv/csvMessage';
 import { ReportView as BudgetFileReportView } from '../../components/finance/BudgetFileImportDialog';
 import type { BudgetFileChoice } from '../../components/finance/budgetFile';
+import { useAuth } from '../../auth/AuthContext';
 
 /** The messages shown of each kind, as the import dialog shows them. */
 const SHOWN_ERRORS = 10;
@@ -70,6 +71,7 @@ function Messages({ title, items, total, shown, more, titles, tone }: {
  */
 function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunReportProps) {
   const { t, i18n } = useTranslation(['ai', 'common', 'ops']);
+  const { hasLevel } = useAuth();
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const check = run.dry_run;
   // The budget file's check lists its own changes, errors and warnings.
@@ -89,12 +91,17 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
       run.updated > 0 && t('common:csv.updated', { count: run.updated }),
     ]).concat([
     run.unchanged > 0 && t('common:csv.unchanged', { count: run.unchanged }),
-    run.skipped > 0 && t('common:csv.skipped', { count: run.skipped }),
+    // The budget file's skipped rows are those left out because they look like an existing line.
+    run.skipped > 0 && (run.report.kind === 'budget_file'
+      ? t('ops:operations.budgetFile.lookalikes.skipped', { count: run.skipped })
+      : t('common:csv.skipped', { count: run.skipped })),
   ]).filter(Boolean).join(' · ');
 
   const status = !run.ok
     ? t('common:csv.validationFailed')
-    : check ? t('common:csv.validationPassed', { count: run.total }) : t('common:csv.importCompleted');
+    : !check ? t('common:csv.importCompleted')
+      // A check that passes with nothing to create or change: nothing to approve, said in the normal colour.
+      : run.nothing_to_import ? t('common:csv.nothingToImport') : t('common:csv.validationPassed', { count: run.total });
 
   return (
     <Stack spacing={0.75}>
@@ -129,10 +136,10 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
           canCreateSuppliers={suppliersBox}
           onChoices={choose}
           choicesDisabled={choicesDisabled}
-          nothingToLoad={run.inserted + run.updated === 0}
+          nothingToLoad={run.nothing_to_import === true}
           showStatus={false}
-          // The card lists the lookalikes of its check before its actions.
-          hideDuplicates={check}
+          ownScroll={false}
+          canOpenLines={hasLevel('budget', 'reader')}
         />
       )}
       {run.report.kind === 'rows' && (

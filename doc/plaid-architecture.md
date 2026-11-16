@@ -1211,6 +1211,71 @@ request's tenant transaction, unlike the other conversation routes, so the
 export interceptor records each download as an export. MCP has no import: it
 reads, holds no attachment and does not read the audit log.
 
+A row the budget file creates that looks like a stored line is left out by
+default (26.11.9, lot I2; `spend/budget-file/lookalikes.ts`, the same check for
+the screen and the card). A row looks like a line of its nature the person reads,
+after the matching of its supplier and company, by three rules in this order,
+each one with the same paying company once resolved (the workspace's default
+when the file names none) and never a line that ends before the first year of
+the file's amounts: the same title (case and accents aside) and supplier; every
+non-zero amount of the row equal (months summed by year), the same currency, and
+account when the file gives one, one amount being enough with the same supplier
+and two needed without; a close title (trigram similarity of 0.6), the same
+supplier and currency, and one equal amount. The smallest line number wins
+within a rule. The lines' yearly totals are read from `spend_version_totals` in
+the person's transaction, only when the file has rows to create or writes an
+amount, so a limited person's policies bound the comparison. The decision is
+taken before the rows are read: a row left out leaves no plan, no supplier or
+value to create and no match. The report's `lookalikes` lists them (the first
+200, each with the line it looks like, its state, the reason and `updatable`),
+counts them and gives `targets`, every row's line and state by file line;
+`warnings.duplicates` keeps the rows alike within the file, still created. The
+choices `{ kind: 'lookalike', line, action: 'ignore' | 'create' | 'update',
+item, state }` and `{ kind: 'lookalikes', action: 'ignore' | 'create' |
+'update', targets }` travel with the other choices (200 at most, all kinds). The
+check gives back a `lookalikes` choice with the `targets` of the rows it shows,
+`ignore` when the person chose nothing: the load and the card's approval replay
+it, so a row keeps its target even when it no longer looks like it. A row left
+out stays left out, and an update of a line changed since is refused on its
+row; "Update all" sends `targets` whole and so reaches every row, beyond the 200
+listed. A second row that would update a line the file already updates (by a
+lookalike or by its number) is left out with a warning
+(`BUDGET_FILE_LOOKALIKE_SAME_LINE`). "Update" goes through the
+read: the row is given the line's number before the plan, and that number joins
+the lines the check reads whole, so rights, read-only lines, frozen years, the
+changed fields and the snapshot apply as if the file named it. The state is a
+hash of the line's `row_version` and its versions' `budget_rev`: a line changed
+since the choice is an error on its row (`BUDGET_FILE_LOOKALIKE_CHANGED`). On the
+card, a choice's line is the person's file's line, translated to the built
+file's on the way in (`builtLineChoices`) and back on the way out, so a new card
+of the model keeps it; the `ignore` choice of the last card is not carried to a
+new mapping, which looks again. The model reads `similar_lines` (with `ignored`,
+`created_anyway`, `updated`), `skipped` and the facts of `on_approval`. The check
+also warns, never refuses, on the lines it writes: an amount ten times away from
+the line the row looks like, else from the median of three lines or more of its
+supplier (same nature, currency, year and measure); a start after the last year
+of the row's amounts or an end before the first; a currency other than the paying
+company's (`warnings.consistency`).
+
+Every import's check carries `on_approval` (lot I2 of 26.11.9): the budget
+file's sentence above, or the counts of a row import (created, updated,
+unchanged; no record named). A check that passes with nothing to create or
+update, and for the budget file no supplier or dimension value to create, sets
+`nothing_to_import`: the operation's `isApprovable` is false, so "Approve all"
+leaves the card out, and its `approvalRefusal` refuses a single approval before
+anything runs, the card staying pending with a fixed message
+(`PREVIEW_IMPORT_NOTHING_MESSAGE`), so a choice on a budget card can still give
+it something to import. Imports count every write in their own counts: owners,
+data residency, viewers, supplier contacts, company metrics, document texts and
+operating systems are compared by each import's `sameAsStored` or its
+equivalent, so a file that changes only them is an update. A fixed list's values
+reach the model with their names (`entries` of `describe_import_template`), and
+the screens' row import reads a name in any of the four languages and refuses an
+unknown value with the names of the person's language (`CSV_ENUM_INVALID`): the
+routes of projects, requests, tasks and incidents take the screen's `language`
+(the person's own when the screen sends none), and the runner passes the
+person's language to the same four imports.
+
 Writes go through existing domain services where practical, so normal validation,
 workflow rules, side effects, and audit logging still apply. AI-originated domain
 audit rows use `source: ai_chat` and the preview ID as `sourceRef`.

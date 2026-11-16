@@ -536,7 +536,7 @@ Trois modes d'export sont disponibles :
 | `related_object_id` | UUID de l'entité | Conditionnel | Requis si tâche liée et `related_object_name` non fourni |
 | `related_object_name` | Nom de l'entité | Conditionnel | Requis si tâche liée et `related_object_id` non fourni |
 | `phase_name` | Phase du projet | Non | Doit correspondre au nom d'une phase existante (tâches de projet uniquement) |
-| `priority_level` | Priorité de la tâche | Non | Accepte un code ou un libellé |
+| `priority_level` | Priorité de la tâche | Non | Accepte le code ou le nom, dans chacune des quatre langues |
 | `source_name` | Source | Non | Source du portefeuille (tâches autonomes et de projet) |
 | `category_name` | Catégorie | Non | Catégorie du portefeuille (tâches autonomes et de projet) |
 | `stream_name` | Stream | Non | Stream du portefeuille (tâches autonomes et de projet) |
@@ -550,7 +550,7 @@ Trois modes d'export sont disponibles :
 
 | Colonne CSV | Description | Notes |
 |-------------|-------------|-------|
-| `status` | Statut de la tâche | Accepte un code ou un libellé |
+| `status` | Statut de la tâche | Accepte le code ou le nom, dans chacune des quatre langues |
 | `start_date` | Date de début | Format de date : YYYY-MM-DD |
 | `due_date` | Date d'échéance | Format de date : YYYY-MM-DD |
 
@@ -603,7 +603,7 @@ Pour **status**, **priority_level** et **related_object_type**, vous pouvez util
 | `contract` | `Contract` |
 | `capex_item` | `CAPEX Item`, `CAPEX` |
 
-Le système normalise les valeurs automatiquement lors de l'import.
+Le système normalise les valeurs automatiquement lors de l'import. Un statut ou une priorité se lit aussi par le nom que l'écran affiche, dans chacune des quatre langues. Une valeur inconnue est refusée, et le message liste les noms acceptés.
 
 ### Correspondance et mises à jour
 

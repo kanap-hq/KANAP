@@ -55,6 +55,8 @@ En las páginas de datos maestros, una fecha que el archivo no puede decidir por
 
 Una importación lee sí o no en cualquiera de estos idiomas, y los `true`, `false`, `1` y `0` de los archivos anteriores. Los archivos de aplicaciones, activos, incidentes, proyectos, solicitudes y tareas siguen la misma tabla, al igual que los archivos de vínculos de la lista de tecnologías. Consulte [Tecnologías](technologies.md#importar-y-exportar-vinculos).
 
+**Estados, prioridades y gravedades.** Los archivos de proyectos, solicitudes, tareas e incidentes leen un estado, una prioridad o una gravedad por su nombre en cualquiera de los cuatro idiomas, como `On hold` o `Suspendu`, o por su código (`on_hold`). Un valor desconocido se rechaza, y el mensaje lista los nombres aceptados en el idioma de su pantalla.
+
 **Tamaño.** Un archivo contiene hasta 20.000 filas.
 
 En una instalación local, el administrador puede desactivar los libros de Excel en las importaciones. Los botones de importación muestran entonces **Importar CSV** y solo aceptan archivos CSV. Consulte [Configuración](on-premise/configuration.md#optional-excel-imports).

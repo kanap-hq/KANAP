@@ -21,7 +21,13 @@ import { PortfolioProjectsCsvService } from '../../portfolio/portfolio-projects-
 import { PortfolioRequestsCsvService } from '../../portfolio/portfolio-requests-csv.service';
 import { BudgetFileService, canCreateSuppliers, readableLists } from '../../spend/budget-file/budget-file.service';
 import { createSuppliersChoice } from '../../spend/budget-file/matching';
-import type { BudgetFileMatching, BudgetFileMatchOptions, BudgetFileNatureCounts } from '../../spend/budget-file/types';
+import type {
+  BudgetFileChoice,
+  BudgetFileLookalikes,
+  BudgetFileMatching,
+  BudgetFileMatchOptions,
+  BudgetFileNatureCounts,
+} from '../../spend/budget-file/types';
 import type { BudgetNature } from '../../spend/budget-nature';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
@@ -56,6 +62,7 @@ type BudgetFileAnswer = {
   ok: boolean;
   inserted?: number;
   updated?: number;
+  skipped?: number;
   snapshot?: unknown;
   fileErrors?: string[];
   headerErrors?: string[];
@@ -68,6 +75,7 @@ type BudgetFileAnswer = {
   matching?: BudgetFileMatching;
   changes?: { created: number; updated: number; unchanged: number; byNature?: BudgetFileNatureCounts };
   warnings?: Record<string, unknown>;
+  lookalikes?: BudgetFileLookalikes;
 };
 
 /** How an import is called: the file built in its template's format, the check or the load, the person's language. */
@@ -133,13 +141,17 @@ export class AiImportRunnerService {
       size: content.length,
       buffer: content,
     } as Express.Multer.File;
-    const call: ImportCall = { file, dryRun: options.dryRun, language: options.language, context, matching: options.matching };
+    // A choice for one row names the line of the person's file: the built file's line goes to the check.
+    const matching = options.matching
+      ? { ...options.matching, choices: builtLineChoices(options.matching.choices ?? [], options.lines) }
+      : undefined;
+    const call: ImportCall = { file, dryRun: options.dryRun, language: options.language, context, matching };
     if (key === 'budget_lines') {
       const answer = await this.runBudgetFile(call);
       // A dimension value the check would create comes with its dimension's values, for the model to read.
       const createsValues = answer.matching?.candidates.some((entry) => entry.outcome === 'create' && entry.column.startsWith('analytics:'));
       const values = options.dryRun && createsValues ? await enabledDimensionValues(context) : undefined;
-      return budgetBilan(answer, options.dryRun, options.lines, values);
+      return budgetBilan(answer, options.dryRun, options.lines, values, options.language);
     }
     return rowsBilan(await this.runRows(key, call), options.dryRun, options.lines);
   }
@@ -160,9 +172,9 @@ export class AiImportRunnerService {
       case 'portfolio_projects':
         return this.projects.import(file, merge, { manager, tenantId, userId, language });
       case 'portfolio_requests':
-        return this.requests.import(file, merge, { manager, tenantId, userId });
+        return this.requests.import(file, merge, { manager, tenantId, userId, language });
       case 'tasks':
-        return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: await this.incidentViewer(context) });
+        return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: await this.incidentViewer(context), language });
       case 'incidents': {
         const viewer = await this.incidentViewer(context);
         return this.incidents.import(file, merge, { manager, tenantId, userId: userId || null, isAdmin: viewer.isAdmin, viewer, language });
@@ -245,6 +257,42 @@ export function personLine(row: number, lines: readonly number[]): number {
   return lines[row - 2] ?? row;
 }
 
+/**
+ * The choices of the card, whose rows are lines of the person's file, with the line of the built file
+ * instead (the inverse of `personLine`): a choice for a line the built file does not hold is dropped.
+ */
+export function builtLineChoices(choices: readonly BudgetFileChoice[], lines: readonly number[]): BudgetFileChoice[] {
+  const built = (line: number) => {
+    const index = lines.indexOf(line);
+    return index < 0 ? null : index + 2;
+  };
+  return choices.flatMap((choice): BudgetFileChoice[] => {
+    if (choice.kind === 'lookalikes' && choice.targets) return [{ ...choice, targets: rekeyed(choice.targets, built) }];
+    if (choice.kind !== 'lookalike') return [choice];
+    const line = built(choice.line);
+    return line === null ? [] : [{ ...choice, line }];
+  });
+}
+
+/** The choices the check followed, on the lines of the person's file. */
+function personLineChoices(choices: readonly BudgetFileChoice[], lines: readonly number[]): BudgetFileChoice[] {
+  return choices.map((choice) => {
+    if (choice.kind === 'lookalike') return { ...choice, line: personLine(choice.line, lines) };
+    if (choice.kind === 'lookalikes' && choice.targets) return { ...choice, targets: rekeyed(choice.targets, (line) => personLine(line, lines)) };
+    return choice;
+  });
+}
+
+/** A record keyed by line of a file (`targets`), keyed by the line `to` gives instead; a line it drops (null) is dropped. */
+function rekeyed<T>(byLine: Readonly<Record<string, T>>, to: (line: number) => number | null): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const [key, value] of Object.entries(byLine)) {
+    const line = to(Number(key));
+    if (line !== null && line > 0) out[String(line)] = value;
+  }
+  return out;
+}
+
 /** The lines an issue names for the model: the first ones, as the card lists its messages. */
 const KEPT_ISSUE_LINES = 20;
 
@@ -281,12 +329,16 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
   const issues: AiImportRunDto['issues'] = [];
   for (const error of errors) tally(issues, 'error', error.code ?? null, error.column ?? null, personLine(error.row, lines));
   for (const warning of warnings) tally(issues, 'warning', warning.code ?? null, warning.column ?? null, personLine(warning.row, lines));
+  const ok = result.ok === true && errors.length === 0;
+  const inserted = result.inserted ?? 0;
+  const updated = result.updated ?? 0;
   return {
-    ok: result.ok === true && errors.length === 0,
+    ok,
+    ...(dryRun && nothingToImport({ ok, inserted, updated }) ? { nothing_to_import: true as const } : {}),
     dry_run: dryRun,
     total: result.total ?? result.processed ?? lines.length,
-    inserted: result.inserted ?? 0,
-    updated: result.updated ?? 0,
+    inserted,
+    updated,
     unchanged: result.unchanged ?? 0,
     skipped: result.skipped ?? 0,
     error_count: errors.length,
@@ -301,6 +353,38 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
 }
 
 /**
+ * Whether a check that passed leaves nothing to write (P5 of 26.11.9): no record created or updated
+ * and, for the budget file, no supplier or dimension value created. Every import counts what it
+ * writes: a row whose owners, data residency, viewers, contacts, metrics, document texts or
+ * operating system change is an update (each import's `sameAsStored` or its equivalent compares
+ * them), so a file that changes only those is never "nothing to import".
+ */
+export function nothingToImport(counts: { ok: boolean; inserted: number; updated: number; newSuppliers?: number; newDimensionValues?: number }): boolean {
+  return counts.ok
+    && counts.inserted + counts.updated + (counts.newSuppliers ?? 0) + (counts.newDimensionValues ?? 0) === 0;
+}
+
+/** The facts of the approval of a refused check, for every import. */
+const CANNOT_BE_APPROVED = 'This card cannot be approved: the check found errors (issues). Nothing is created or imported until they are corrected.';
+
+function unchangedNote(count: number, what: string): string {
+  return count > 0 ? ` (${count} ${what} unchanged)` : '';
+}
+
+/**
+ * What the approval of a row import's check does, in one sentence, from its counts (lot I2 of
+ * 26.11.9): the records it creates, updates and leaves unchanged, or that there is nothing to import.
+ * The imports of these lists report counts only: the sentence names no record.
+ */
+export function rowsApprovalFacts(run: Pick<AiImportRunDto, 'ok' | 'inserted' | 'updated' | 'unchanged'>): string {
+  if (!run.ok) return CANNOT_BE_APPROVED;
+  if (nothingToImport(run)) {
+    return `Nothing to import: the approval would create and update nothing${unchangedNote(run.unchanged, 'records')}. The card cannot be approved.`;
+  }
+  return `On approval: ${run.inserted} records created, ${run.updated} updated, ${run.unchanged} unchanged.`;
+}
+
+/**
  * A copy of the budget file's report whose `line` fields are the lines of the person's file, and so
  * is the earlier row a row looks like (`BUDGET_FILE_LOOKS_LIKE_ROW`, its `row`).
  */
@@ -309,6 +393,7 @@ function relined(value: unknown, lines: readonly number[]): unknown {
   if (!value || typeof value !== 'object') return value;
   const record = value as Record<string, unknown>;
   const earlierRow = record.code === LOOKS_LIKE_ROW;
+  const sameLine = record.code === LOOKALIKE_SAME_LINE;
   return Object.fromEntries(Object.entries(record).map(([key, item]) => [
     key,
     key === 'line' && typeof item === 'number'
@@ -317,6 +402,10 @@ function relined(value: unknown, lines: readonly number[]): unknown {
         ? (item as number[]).map((entry) => personLine(entry, lines))
       : earlierRow && key === 'params' && item && typeof item === 'object'
         ? relinedRow(relined(item, lines) as Record<string, unknown>, lines)
+      : sameLine && key === 'params' && item && typeof item === 'object'
+        ? relinedOther(relined(item, lines) as Record<string, unknown>, lines)
+      : key === 'targets' && item && typeof item === 'object' && !Array.isArray(item)
+        ? rekeyed(item as Record<string, unknown>, (line) => personLine(line, lines))
         : relined(item, lines),
   ]));
 }
@@ -325,34 +414,69 @@ function relinedRow(params: Record<string, unknown>, lines: readonly number[]): 
   return typeof params.row === 'number' ? { ...params, row: personLine(params.row, lines) } : params;
 }
 
-const LOOKS_LIKE_LINE = 'BUDGET_FILE_LOOKS_LIKE_LINE';
+/** The row that already updates the line a row looks like (`BUDGET_FILE_LOOKALIKE_SAME_LINE`, its `other`). */
+function relinedOther(params: Record<string, unknown>, lines: readonly number[]): Record<string, unknown> {
+  return typeof params.other === 'number' ? { ...params, other: personLine(params.other, lines) } : params;
+}
+
 const LOOKS_LIKE_ROW = 'BUDGET_FILE_LOOKS_LIKE_ROW';
+const LOOKALIKE_SAME_LINE = 'BUDGET_FILE_LOOKALIKE_SAME_LINE';
 
 /** The lookalikes the model reads: the first ones, as the card lists them at once. */
 const MODEL_LOOKALIKES = 10;
 
-const SIMILAR_LINES_NOTE = 'New rows of the file that look like a budget line the person can read, or an earlier row of '
-  + 'the file: the import would create them as new lines. Tell the person in one sentence before they approve '
-  + '(file line and reference); the card lists them.';
+/**
+ * The card's words for the choices of a row that looks like a stored line, keyed by the row's `outcome`,
+ * as the screen writes them (`operations.budgetFile.lookalikes.ignore`, `create`, `update` of the
+ * frontend's `ops` locales); BL-n stands for the row's `looks_like`.
+ */
+const CARD_CHOICES: Record<CsvLanguage, { ignored: string; created: string; updated: string }> = {
+  en: { ignored: 'Leave out', created: 'Create anyway', updated: 'Update BL-n' },
+  fr: { ignored: 'Écarter', created: 'Créer quand même', updated: 'Mettre à jour BL-n' },
+  de: { ignored: 'Auslassen', created: 'Trotzdem anlegen', updated: 'BL-n aktualisieren' },
+  es: { ignored: 'Descartar', created: 'Crear de todos modos', updated: 'Actualizar BL-n' },
+};
+
+/** How the model names the choices of these rows: the prepare tool's hint says it too. */
+export const LOOKALIKE_CHOICE_WORDS_RULE = 'Name these choices only by the card\'s words (`similar_lines.card_choices`, BL-n being the row\'s '
+  + '`looks_like`), never by a code (ignore, create, update, ignored, created, updated). Never say the person must choose for each row: '
+  + 'a row left out is simply not imported, and the card can be approved as soon as it has something to import.';
+
+const SIMILAR_LINES_NOTE = 'Rows of the file that look like a budget line the person can read (`looks_like`, with the reason): '
+  + 'the import leaves them out unless the person chooses on the card to create them anyway or to update that line '
+  + '(`outcome`: ignored, created, updated). Rows that look like an earlier row of the file (`looks_like_file_line`) '
+  + 'are created. Tell the person in one sentence before they approve (file line and reference); the card lists them '
+  + `and holds the choices: never call a row left out created. ${LOOKALIKE_CHOICE_WORDS_RULE}`;
 
 type Lookalike = { line?: number; code?: string; params?: Record<string, unknown> };
 
-/** The budget file's lookalikes for the model: their number and the first ones, on the person's lines. */
-function similarLines(warnings: Record<string, unknown> | undefined, lines: readonly number[]): AiImportRunDto['similar_lines'] {
-  const found = Array.isArray(warnings?.duplicates) ? warnings!.duplicates as Lookalike[] : [];
-  if (found.length === 0) return undefined;
-  const total = typeof warnings?.duplicatesCount === 'number' ? Math.max(warnings.duplicatesCount, found.length) : found.length;
+/**
+ * The budget file's lookalikes for the model, on the person's lines: the rows that look like a stored
+ * line (`lookalikes`, left out unless the person chose otherwise) and those that look like an earlier
+ * row of the file (`warnings.duplicates`), their number and the first ones.
+ */
+function similarLines(answer: BudgetFileAnswer, lines: readonly number[], language: CsvLanguage): AiImportRunDto['similar_lines'] {
+  const stored = answer.lookalikes;
+  const warnings = answer.warnings;
+  const rows = Array.isArray(warnings?.duplicates) ? warnings!.duplicates as Lookalike[] : [];
+  const rowCount = typeof warnings?.duplicatesCount === 'number' ? Math.max(warnings.duplicatesCount, rows.length) : rows.length;
+  if ((stored?.count ?? 0) === 0 && rowCount === 0) return undefined;
   type Similar = NonNullable<AiImportRunDto['similar_lines']>['first'][number];
-  const first = found.slice(0, MODEL_LOOKALIKES).flatMap((item): Similar[] => {
+  const first: Similar[] = (stored?.lines ?? []).slice(0, MODEL_LOOKALIKES).map((entry) => ({
+    file_line: personLine(entry.line, lines), looks_like: entry.target.ref, reason: entry.reason, outcome: entry.outcome,
+  }));
+  for (const item of rows.slice(0, Math.max(0, MODEL_LOOKALIKES - first.length))) {
     const line = typeof item.line === 'number' ? personLine(item.line, lines) : 0;
-    if (line <= 0) return [];
-    if (item.code === LOOKS_LIKE_LINE && typeof item.params?.ref === 'string') return [{ file_line: line, looks_like: item.params.ref }];
-    if (item.code === LOOKS_LIKE_ROW && typeof item.params?.row === 'number') {
-      return [{ file_line: line, looks_like_file_line: personLine(item.params.row, lines) }];
+    if (line > 0 && item.code === LOOKS_LIKE_ROW && typeof item.params?.row === 'number') {
+      first.push({ file_line: line, looks_like_file_line: personLine(item.params.row, lines) });
     }
-    return [];
-  });
-  return { count: total, first, note: SIMILAR_LINES_NOTE };
+  }
+  return {
+    count: (stored?.count ?? 0) + rowCount,
+    ...(stored ? { ignored: stored.ignored, created_anyway: stored.created, updated: stored.updated, card_choices: CARD_CHOICES[language] } : {}),
+    first,
+    note: SIMILAR_LINES_NOTE,
+  };
 }
 
 /** Entries of each matching list the model reads: the card lists them all. */
@@ -400,7 +524,8 @@ function modelMatching(
         ? { dimension_values: [...dimensionValues.get(entry.column)!] }
         : {}),
     })),
-    choices: matching.choices,
+    // On the person's lines, as the card sends them: the next card keeps them without drift.
+    choices: personLineChoices(matching.choices, lines),
     create_suppliers: matching.createSuppliers,
     ...(cut ? { totals: { matches: totals.matches, refused_proposals: totals.refusedProposals, candidates: totals.candidates } } : {}),
     note: MATCHING_NOTE,
@@ -431,9 +556,7 @@ function byNature(total: number, counts: Record<BudgetNature, number> | undefine
  * existing ones. The model announces this and nothing else (a small model does not count from the lists).
  */
 export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatching): string {
-  if (answer.ok !== true) {
-    return 'This card cannot be approved: the check found errors (issues). Nothing is created or imported until they are corrected.';
-  }
+  if (answer.ok !== true) return CANNOT_BE_APPROVED;
   const created = matching.candidates.filter((entry) => entry.outcome === 'create');
   const suppliers = answer.creates?.supplierCount ?? 0;
   const values = answer.creates?.dimensionValueCount ?? 0;
@@ -444,22 +567,38 @@ export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatc
   const changes = answer.changes ?? { created: 0, updated: 0, unchanged: 0 };
   // The lines by nature, from the check: the model never counts them in the file.
   const split = changes.byNature;
+  // The rows that look like a stored line: left out unless the person chose otherwise (lot I2 of 26.11.9).
+  const look = answer.lookalikes;
+  const lookalikes = look && look.count > 0
+    ? `; ${look.count} rows of the file look like existing lines: ${look.ignored} left out, ${look.created} created anyway, `
+      + `${look.updated} updating the line they look like`
+    : '';
+  if (nothingToImport({ ok: true, inserted: changes.created, updated: changes.updated, newSuppliers: suppliers, newDimensionValues: values })) {
+    return `Nothing to import: the approval would create and update nothing${unchangedNote(changes.unchanged, 'lines')}${lookalikes}. `
+      + (look && look.ignored > 0
+        ? 'Say in one sentence that nothing is imported until a row left out is created anyway or updates the line it looks like, '
+          + 'with the card\'s words (`similar_lines.card_choices`).'
+        : 'The card cannot be approved.');
+  }
   return `On approval: ${changes.created} lines created${byNature(changes.created, split?.created)}, `
     + `${changes.updated} updated${byNature(changes.updated, split?.updated)}; `
     + `${suppliers} suppliers created${listed(supplierNames, suppliers)}; `
     + `${values} dimension values created${listed(valueNames, values)}; `
-    + `${matching.totals.matches} values of the file matched to existing ones${listed(matchNames, matching.totals.matches)}.`;
+    + `${matching.totals.matches} values of the file matched to existing ones${listed(matchNames, matching.totals.matches)}`
+    + `${lookalikes}.`;
 }
 
 /**
  * The bilan of the budget file: its check as its dialog shows it, or the counts of its load.
  * `dimensionValues`: the enabled values of each dimension, by column, for the dimension values the check creates.
+ * `language`: the person's, for the card's words the model reads.
  */
 export function budgetBilan(
   answer: BudgetFileAnswer,
   dryRun: boolean,
   lines: readonly number[],
   dimensionValues?: ReadonlyMap<string, readonly string[]>,
+  language: CsvLanguage = 'en',
 ): AiImportRunDto {
   const issues: AiImportRunDto['issues'] = [];
   const fileErrors = (answer.fileErrors?.length ?? 0) + (answer.headerErrors?.length ?? 0);
@@ -479,16 +618,25 @@ export function budgetBilan(
   const shown: Record<string, unknown> = { ...answer };
   delete shown.snapshot;
   const isCheck = answer.changes !== undefined;
-  const similar = isCheck ? similarLines(answer.warnings, lines) : undefined;
+  const similar = isCheck ? similarLines(answer, lines, language) : undefined;
+  const nothing = isCheck && nothingToImport({
+    ok: answer.ok === true,
+    inserted: answer.changes!.created,
+    updated: answer.changes!.updated,
+    newSuppliers: answer.creates?.supplierCount,
+    newDimensionValues: answer.creates?.dimensionValueCount,
+  });
   return {
     ...(isCheck && answer.matching ? { on_approval: approvalFacts(answer, answer.matching) } : {}),
     ok: answer.ok === true,
+    ...(nothing ? { nothing_to_import: true as const } : {}),
     dry_run: dryRun,
     total: lines.length,
     inserted: isCheck ? answer.changes!.created : answer.inserted ?? 0,
     updated: isCheck ? answer.changes!.updated : answer.updated ?? 0,
     unchanged: isCheck ? answer.changes!.unchanged : 0,
-    skipped: 0,
+    // The rows left out because they look like a stored line.
+    skipped: isCheck ? answer.lookalikes?.ignored ?? 0 : answer.skipped ?? 0,
     error_count: errorCount,
     warning_count: warningCount,
     issues,

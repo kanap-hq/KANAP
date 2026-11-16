@@ -12,7 +12,7 @@ import { AI_IMPORT_KEYS, AI_IMPORT_WHOLE_ROWS, aiImportAccess, type AiImportKey 
 import { DESCRIBED_CATALOG_ENTRIES, enabledDimensionValues } from './ai-import-dimension-values';
 import { buildImportFile } from './ai-import-file';
 import { AiImportColumnMappingInput, AiImportMappingResult, AiImportTemplateColumn, buildImportMapping } from './ai-import-mapping';
-import { AiImportRunnerService } from './ai-import-runner.service';
+import { AiImportRunnerService, rowsApprovalFacts } from './ai-import-runner.service';
 import { AI_IMPORT_TARGETS, AiImportColumnSpec, AiImportTarget, importColumnTitle } from './ai-import-targets';
 import { cellKey } from '../../spend/budget-file/matching';
 import type { BudgetFileChoice, BudgetFileMatch } from '../../spend/budget-file/types';
@@ -38,7 +38,7 @@ export type AiImportTemplateColumnDto = {
   multi?: boolean;
   takes?: string;
   codes?: readonly string[];
-  /** The workspace's entries of a catalog column, by code and name. */
+  /** The workspace's entries of a catalog column, or a fixed list's codes, by code and name in the person's language. */
   entries?: Array<{ code: string; name: string }>;
   /** A budget file's dimension column: the dimension's enabled values, by name (the first ones). */
   values?: string[];
@@ -155,6 +155,10 @@ export class AiImportMappingService {
         ...(column.multi ? { multi: true } : {}),
         ...(specs[index].hint ? { takes: specs[index].hint } : {}),
         ...(column.kind === 'codes' ? { codes: column.codes ?? [] } : {}),
+        // A fixed list the screens name: each code with its name in the person's language.
+        ...(column.kind === 'codes' && column.displayName
+          ? { entries: (column.codes ?? []).map((code) => ({ code, name: column.displayName!(code) })) }
+          : {}),
         ...(column.kind === 'catalog' ? {
           entries: (column.options ?? [])
             .filter((option) => !option.deprecated)
@@ -181,8 +185,10 @@ export class AiImportMappingService {
     const validation = await this.runner.run(target.key, buildImportFile(converted.file, language), {
       dryRun: true, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
     }, context);
-    // The budget file's facts of the approval lead the card the model reads.
-    const { on_approval: onApproval, ...checked } = refuseClearedColumns(validation, left);
+    // The facts of the approval lead the card the model reads: the budget file's, or the counts of a
+    // row import, once a file that would clear columns is refused.
+    const { on_approval: budgetFacts, ...checked } = refuseClearedColumns(validation, left);
+    const onApproval = budgetFacts ?? (checked.report.kind === 'rows' ? rowsApprovalFacts(checked) : undefined);
     return { target, mapping: { ...(onApproval ? { on_approval: onApproval } : {}), ...converted.preview, validation: checked } };
   }
 

@@ -315,6 +315,36 @@ function testChoicesParsing() {
   for (const bad of ['nope', [{ kind: 'unmatch', column: 'company_name', value: 'X' }], [{ kind: 'drop' }], [{ kind: 'create_suppliers', value: 'yes' }]]) {
     assert.throws(() => parseBudgetFileChoices(bad), /not valid/);
   }
+  // Lot I2 of 26.11.9: the rows that look like a stored line, one by one or all of them.
+  const state = '0123456789abcdef';
+  assert.deepEqual(parseBudgetFileChoices([
+    { kind: 'lookalike', line: 4, action: 'update', item: 12, state },
+    { kind: 'lookalike', line: 4, action: 'create' },
+    { kind: 'lookalike', line: 5, action: 'ignore' },
+    { kind: 'lookalikes', action: 'update', targets: { 4: { item: 12, state } } },
+    { kind: 'lookalikes', action: 'create' },
+  ]), [
+    { kind: 'lookalike', line: 4, action: 'update', item: 12, state },
+    { kind: 'lookalike', line: 5, action: 'ignore' },
+    { kind: 'lookalikes', action: 'update', targets: { 4: { item: 12, state } } },
+  ], 'one choice per row, one for all rows');
+  // The choice the check gives back when the person chose nothing: every row left out, with its target.
+  assert.deepEqual(parseBudgetFileChoices([{ kind: 'lookalikes', action: 'ignore', targets: { 6: { item: 3, state } } }]),
+    [{ kind: 'lookalikes', action: 'ignore', targets: { 6: { item: 3, state } } }]);
+  for (const bad of [
+    [{ kind: 'lookalike', line: 0, action: 'create' }],
+    [{ kind: 'lookalike', line: 2, action: 'drop' }],
+    [{ kind: 'lookalike', line: 2, action: 'update' }],
+    [{ kind: 'lookalike', line: 2, action: 'update', item: 3, state: 'nope' }],
+    [{ kind: 'lookalikes', action: 'drop' }],
+    [{ kind: 'lookalikes', action: 'create', targets: [] }],
+    [{ kind: 'lookalikes', action: 'update', targets: { x: { item: 3, state } } }],
+    [{ kind: 'lookalikes', action: 'update', targets: { 4: { item: 0, state } } }],
+    [{ kind: 'lookalikes', action: 'update', targets: { 4: { item: 3, state: 'nope' } } }],
+    Array.from({ length: 201 }, (_, index) => ({ kind: 'lookalike', line: index + 2, action: 'create' })),
+  ]) {
+    assert.throws(() => parseBudgetFileChoices(bad), /not valid/, JSON.stringify(bad).slice(0, 80));
+  }
   console.log('  choices parsed and bounded: OK');
 }
 

@@ -32,6 +32,13 @@ import {
   taskIncidentVisibilityQueryBuilderClause,
 } from '../incidents/incident-visibility';
 
+/** A task's stored list of people (jsonb) names the same people as the file, in any order. */
+const samePeople = (stored: unknown, next: string[]): boolean => {
+  const current = Array.isArray(stored) ? stored.map(String) : [];
+  const wanted = new Set(next);
+  return current.length === wanted.size && current.every((id) => wanted.has(id));
+};
+
 /** The task types of a budget line, which a limited person may see tasks of without the line. */
 const LINE_TYPES = new Set(['spend_item', 'capex_item']);
 
@@ -328,23 +335,25 @@ export class TasksCsvService {
         }
       }
 
-      // Update task with viewer and owner arrays (only if columns were present). The columns are NOT
+      // Update task with viewer and owner arrays (only if columns were present and change). The columns are NOT
       // NULL jsonb lists: none is `[]`, and the list goes as JSON (a bare array is a PostgreSQL array).
-      const hasViewerColumns = [1, 2, 3, 4].some((i) => `viewer_email_${i}` in row);
-      const hasOwnerColumns = [1, 2, 3, 4].some((i) => `owner_email_${i}` in row);
+      // A list that names the people the task already has, in any order, is left as it is: a task
+      // the file does not change keeps its updated_at.
+      const writeViewers = [1, 2, 3, 4].some((i) => `viewer_email_${i}` in row) && !samePeople(task.viewer_ids, viewerIds);
+      const writeOwners = [1, 2, 3, 4].some((i) => `owner_email_${i}` in row) && !samePeople(task.owner_ids, ownerIds);
 
-      if (hasViewerColumns || hasOwnerColumns) {
+      if (writeViewers || writeOwners) {
         const updates: string[] = [];
         const params: any[] = [task.id];
         let paramIndex = 2;
 
-        if (hasViewerColumns) {
+        if (writeViewers) {
           updates.push(`viewer_ids = $${paramIndex}::jsonb`);
           params.push(JSON.stringify(viewerIds));
           paramIndex++;
         }
 
-        if (hasOwnerColumns) {
+        if (writeOwners) {
           updates.push(`owner_ids = $${paramIndex}::jsonb`);
           params.push(JSON.stringify(ownerIds));
           paramIndex++;

@@ -91,9 +91,10 @@ function testTaskCreation() {
   assert.equal(summary(operation, rejected, 'en'), 'Task creation preview for "Migration" was rejected.');
   assert.equal(summary(operation, rejected, 'fr'), 'Rejeté : création de la tâche « Migration ».');
   assert.equal(summary(operation, rejected, 'es'), 'Rechazada: creación de la tarea «Migration».');
-  // A failure shows its error, whatever the language.
+  // A failure shows its error, in the person's language when the backend wrote it (lot I2 of 26.11.9).
   const failed = preview({ ...pending, status: 'failed', error_message: 'Task type not found.' });
-  assert.equal(summary(operation, failed, 'de'), 'Task type not found.');
+  assert.equal(summary(operation, failed, 'de'), 'Aufgabentyp nicht gefunden.');
+  assert.equal(summary(operation, failed, 'en'), 'Task type not found.');
 }
 
 function testTaskStatusAndAssignee() {

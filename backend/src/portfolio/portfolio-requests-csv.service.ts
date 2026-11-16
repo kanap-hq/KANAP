@@ -214,6 +214,8 @@ export class PortfolioRequestsCsvService {
       manager: EntityManager;
       tenantId: string;
       userId?: string | null;
+      /** The screen language: a status the file names wrongly is refused with the names of this language. */
+      language?: CsvLanguage;
     },
   ): Promise<CsvImportResult> {
     return this.importSvc.import(this.buildCsvConfig(), file, params, opts);

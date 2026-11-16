@@ -9,7 +9,7 @@ import {
   type RecommendedDimensionKey,
   SEED_LANGUAGES,
 } from '../../analytics/recommended-dimensions.seed';
-import type { BudgetFileChoice, CatalogDimension } from './types';
+import type { BudgetFileChoice, BudgetFileLookalikeTarget, CatalogDimension } from './types';
 
 /**
  * How the budget file finds an existing supplier, company or dimension value for a value of the
@@ -257,9 +257,43 @@ export function isMatchedColumn(column: string): boolean {
 const CHOICE_LIMIT = 200;
 const CHOICE_VALUE_MAX = 200;
 
+const LOOKALIKE_ACTIONS = new Set(['ignore', 'create', 'update']);
+
+/**
+ * The targets a choice for all rows keeps, one per row that looks like a line: a file's rows at most
+ * (the screen's upload limit holds fewer).
+ */
+const CHOICE_TARGETS_MAX = 20000;
+
+/** A line of a file, or a line's number: a whole number from 1. */
+function isLine(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 1;
+}
+
+/** A line's state (`lineState`): 16 hexadecimal characters. */
+function isState(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{16}$/.test(value);
+}
+
+/** `targets` of a choice for all rows, copied: by line of the file, a line's number and state. */
+function targetsOf(value: unknown): Record<string, BudgetFileLookalikeTarget> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.length > CHOICE_TARGETS_MAX) return null;
+  const targets: Record<string, BudgetFileLookalikeTarget> = {};
+  for (const [line, raw] of entries) {
+    const target = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+    if (!/^[1-9]\d{0,9}$/.test(line) || !isLine(target.item) || !isState(target.state)) return null;
+    targets[line] = { item: target.item, state: target.state };
+  }
+  return targets;
+}
+
 /**
  * The person's choices on a check, as a route or a card receives them (a JSON text or a list): the
- * matches they undo, and whether the missing suppliers are created. Anything else is refused.
+ * matches they undo, whether the missing suppliers are created, and what becomes of the rows that look
+ * like a stored line (one row, or all of them). Anything else is refused. 200 choices at most, all
+ * kinds together.
  */
 export function parseBudgetFileChoices(raw: unknown): BudgetFileChoice[] {
   let value = raw;
@@ -286,6 +320,29 @@ export function parseBudgetFileChoices(raw: unknown): BudgetFileChoice[] {
     if (item.kind === 'create_suppliers' && typeof item.value === 'boolean') {
       if (!seen.has('create_suppliers')) choices.push({ kind: 'create_suppliers', value: item.value });
       seen.add('create_suppliers');
+      continue;
+    }
+    // A row that looks like a stored line (lot I2 of 26.11.9): left out, created anyway, or that line updated.
+    if (item.kind === 'lookalike' && isLine(item.line) && LOOKALIKE_ACTIONS.has(item.action as string)) {
+      const key = `lookalike|${item.line}`;
+      if (item.action === 'update') {
+        if (!isLine(item.item) || (item.state !== undefined && !isState(item.state))) throw new Error('The choices are not valid.');
+        if (!seen.has(key)) {
+          choices.push({ kind: 'lookalike', line: item.line, action: 'update', item: item.item, ...(item.state !== undefined ? { state: item.state as string } : {}) });
+        }
+      } else if (!seen.has(key)) {
+        choices.push({ kind: 'lookalike', line: item.line, action: item.action as 'ignore' | 'create' });
+      }
+      seen.add(key);
+      continue;
+    }
+    if (item.kind === 'lookalikes' && LOOKALIKE_ACTIONS.has(item.action as string)) {
+      const targets = item.targets === undefined ? undefined : targetsOf(item.targets);
+      if (targets === null) throw new Error('The choices are not valid.');
+      if (!seen.has('lookalikes')) {
+        choices.push({ kind: 'lookalikes', action: item.action as 'ignore' | 'create' | 'update', ...(targets ? { targets } : {}) });
+      }
+      seen.add('lookalikes');
       continue;
     }
     throw new Error('The choices are not valid.');

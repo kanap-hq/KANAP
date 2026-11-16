@@ -329,7 +329,7 @@ describe('BudgetFileImportDialog', () => {
       }],
       errorCount: 1,
       warnings: {
-        duplicates: [{ line: 5, message: 'row 5 looks like BL-3', code: 'BUDGET_FILE_LOOKS_LIKE_LINE', params: { line: 5, ref: 'BL-3' } }],
+        duplicates: [{ line: 5, message: 'row 5 looks like row 3', code: 'BUDGET_FILE_LOOKS_LIKE_ROW', params: { line: 5, row: 3 } }],
         ignoredColumns: [],
         supplierNames: [],
         ignoredCells: [],
@@ -343,7 +343,7 @@ describe('BudgetFileImportDialog', () => {
     // The column reads as the budget list names it, never by its file key.
     expect(row).toContain('"column":"opex.columns.supplier"');
     expect(row).not.toContain('supplier_name');
-    expect(screen.getByText(/^errors:BUDGET_FILE_LOOKS_LIKE_LINE:.*"ref":"BL-3"/)).toBeInTheDocument();
+    expect(screen.getByText(/^errors:BUDGET_FILE_LOOKS_LIKE_ROW:.*"row":3/)).toBeInTheDocument();
   });
 
   it.each([

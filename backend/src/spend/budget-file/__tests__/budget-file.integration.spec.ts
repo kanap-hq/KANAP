@@ -1310,6 +1310,25 @@ async function testOwnersAccountsAndCurrency(runner: { query: Function; manager:
   assert.deepEqual(rowErrors(notAllowed), ["2 currency: currency 'USD' is not allowed."], 'a currency outside the tenant\'s allowed list is a row error');
 }
 
+/**
+ * A file that only updates lines still compares an amount with the median of its supplier's lines
+ * (lot I2 of 26.11.9, C2): the check reads the lines' yearly totals as soon as the file writes an amount.
+ */
+async function testMedianOnUpdateOnlyFile(runner: { query: Function; manager: EntityManager }) {
+  const tenantId = await seedTenant(runner as any, 'csv-i2-median');
+  await seedCompany(runner as any, tenantId, 'File company');
+  await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Orange')`, [tenantId]);
+  const amounts = ['10000', '12000', '11000', '10500'];
+  await loadBudgetFile(runner.manager, 'opex', tenantId, csvOf(newLineColumns('opex', ['supplier_name', 'budget_2026']),
+    amounts.map((amount, index) => newLine('opex', `Fibre ${index + 1}`, { supplier_name: 'Orange', budget_2026: amount }))));
+  const fourth = (await linesByName(runner, 'opex', tenantId)).get('Fibre 4');
+  const report = await preflightBudgetFile(runner.manager, 'opex', tenantId, csvOf(['item_number', 'budget_2026'], [{ item_number: `BL-${fourth.n}`, budget_2026: '500000' }]));
+  assert.equal(report.ok, true, rowErrors(report).join('; '));
+  assert.deepEqual(report.warnings.consistency?.map((warning) => [warning.line, warning.code, warning.params?.median]), [
+    [2, 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER', '11 000'],
+  ]);
+}
+
 /** An unchanged French export retains its date order on an English import screen. */
 async function testExportLanguageHint(runner: { query: Function; manager: EntityManager }, kind: Kind) {
   const tenantId = await seedTenant(runner as any, `csv-p1-${kind}`);
@@ -1580,6 +1599,7 @@ async function main() {
       await testNewDimensionValuesGoLast(runner, kind);
     }
     await testOwnersAccountsAndCurrency(runner);
+    await testMedianOnUpdateOnlyFile(runner);
     await testCapexCriteriaColumns(runner);
     await testSingleBudgetFile(runner);
     await testBareNumbersOfOldFiles(runner);

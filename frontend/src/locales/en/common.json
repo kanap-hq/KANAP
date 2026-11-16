@@ -600,6 +600,7 @@
     "insertOnly": "Insert only",
     "validationPassed_one": "Validation passed. Ready to import {{count}} row.",
     "validationPassed_other": "Validation passed. Ready to import {{count}} rows.",
+    "nothingToImport": "Nothing to import.",
     "importCompleted": "Import completed successfully.",
     "validationFailed": "Validation failed. Please fix the errors and try again.",
     "totalRows_one": "{{count}} row",
