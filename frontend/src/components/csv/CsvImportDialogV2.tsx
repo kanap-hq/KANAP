@@ -32,6 +32,9 @@ import ImportMatchesView, { type UndoneMatch } from './ImportMatchesView';
 import ImportLookalikesView, { applicationLookalikeReason, applicationUpdateChoice } from './ImportLookalikesView';
 import { buildEntityUrl } from '../../ai/utils/entityUrls';
 
+/** A load refused for a row whose situation changed since the check: nothing was written (T-I3l). */
+const LOAD_REFUSALS = new Set(['CSV_LOOKALIKE_CHANGED', 'CSV_LOOKALIKE_GONE', 'CSV_LOOKALIKE_NAME_FOUND']);
+
 interface CsvImportDialogV2Props {
   open: boolean;
   onClose: () => void;
@@ -150,7 +153,10 @@ export default function CsvImportDialogV2({
       const res = await api.post(`${endpoint}/import`, fd, { params: queryParams });
       const data = res.data as CsvImportResult;
       setResult(data);
-      setPhase(dryRun ? 'validate' : 'result');
+      // A load refused because a row's situation changed since the check (T-I3l) wrote nothing: back to
+      // the check, the row in error and its choices open, as the budget file's dialog does.
+      const stale = !dryRun && !data.ok && data.errors.some((entry) => !!entry.code && LOAD_REFUSALS.has(entry.code));
+      setPhase(dryRun || stale ? 'validate' : 'result');
 
       if (!dryRun && data.ok) {
         onImported?.();
@@ -183,8 +189,8 @@ export default function CsvImportDialogV2({
 
   const canValidate = !!file && !loading;
   const canImport = result?.ok && result?.dryRun && !loading;
-  // Choices are made on the check only.
-  const choosing = phase === 'validate' && !!result?.dryRun;
+  // Choices are made on the check: a dry run, or a load refused and brought back to it (it wrote nothing).
+  const choosing = phase === 'validate';
 
   const downloadTemplate = async () => {
     setError(null);

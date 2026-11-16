@@ -747,7 +747,7 @@ La importación sigue la elección hecha en la comprobación. Cuando la situaci�
 - APP-12 se ha eliminado, para una fila que la actualiza: «La aplicación elegida en la comprobación ya no existe.»
 - otra aplicación ha tomado el nombre de la fila: «APP-15 tomó este nombre después de la comprobación.»
 
-Compruebe el archivo de nuevo: la nueva comprobación lee las aplicaciones tal como están ahora.
+La ventana vuelve a la comprobación, con la fila rechazada en error. Elija de nuevo para esa fila: la nueva comprobación lee las aplicaciones tal como están ahora.
 
 ### Limitaciones
 

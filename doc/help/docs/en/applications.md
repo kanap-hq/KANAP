@@ -747,7 +747,7 @@ The import follows the choice made at the check. When the situation of a row cha
 - APP-12 was deleted, for a row that updates it: "The application chosen at the check no longer exists."
 - another application took the row's name: "APP-15 took this name after the check."
 
-Check the file again: the new check reads the applications as they are now.
+The dialog goes back to the check, with the refused row in error. Choose again for that row: the new check reads the applications as they are now.
 
 ### Limitations
 

@@ -747,7 +747,7 @@ L'import suit le choix fait à la vérification. Quand la situation d'une ligne 
 - APP-12 a été supprimée, pour une ligne qui la met à jour : « L'application choisie à la vérification n'existe plus. »
 - une autre application a pris le nom de la ligne : « APP-15 a pris ce nom après la vérification. »
 
-Vérifiez le fichier de nouveau : la nouvelle vérification lit les applications telles qu'elles sont.
+La fenêtre revient à la vérification, la ligne refusée en erreur. Choisissez de nouveau pour cette ligne : la nouvelle vérification lit les applications telles qu'elles sont.
 
 ### Limitations
 

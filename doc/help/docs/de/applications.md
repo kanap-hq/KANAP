@@ -747,7 +747,7 @@ Der Import folgt der Wahl, die bei der Prüfung getroffen wurde. Hat sich die La
 - APP-12 wurde gelöscht, bei einer Zeile, die sie aktualisiert: „Die bei der Prüfung gewählte Anwendung existiert nicht mehr.“
 - eine andere Anwendung hat den Namen der Zeile erhalten: „APP-15 hat diesen Namen nach der Prüfung erhalten.“
 
-Prüfen Sie die Datei erneut: Die neue Prüfung liest die Anwendungen in ihrem aktuellen Stand.
+Der Dialog kehrt zur Prüfung zurück, die abgelehnte Zeile als Fehler. Wählen Sie für diese Zeile erneut: Die neue Prüfung liest die Anwendungen in ihrem aktuellen Stand.
 
 ### Einschränkungen
 

@@ -189,4 +189,43 @@ describe('CsvImportDialogV2, the rows that look like an existing application', (
     await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
     expect(fieldOf(post.mock.calls[2], 'lookalikes')).toBeNull();
   });
+
+  it('brings a load refused for a row changed since the check back to the check: the row in error, its choices open, Import waiting', async () => {
+    const update: ImportLookalikeChoice = { kind: 'lookalike', line: 4, action: 'update', id: ID_7, state: 'fedcba9876543210' };
+    const checked = lookalikes([accents, { ...close, outcome: 'updated', fields: ['description'] }], [update]);
+    const reread = lookalikes([accents, { ...close, outcome: 'updated', target: { ...close.target, state: '00000000000000ff' } }], [update]);
+    post
+      .mockResolvedValueOnce({ data: result({ lookalikes: checked }) })
+      .mockResolvedValueOnce({
+        data: result({
+          ok: false, dryRun: false, inserted: 0,
+          errors: [{ row: 4, message: 'APP-7 changed since the check.', code: 'CSV_LOOKALIKE_CHANGED', params: { ref: 'APP-7' } }],
+          lookalikes: reread,
+        }),
+      })
+      .mockResolvedValueOnce({ data: result({ lookalikes: reread }) });
+    const onImported = vi.fn();
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <CsvImportDialogV2 open onClose={() => undefined} endpoint="/applications" onImported={onImported} />
+      </ThemeProvider>,
+    );
+    pickFile();
+    fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    // The refusal of a whole row names no column.
+    const refusal = await screen.findByText((_, element) => element?.tagName === 'P' && /APP-7 changed since the check\./.test(element.textContent ?? ''));
+    expect(refusal.textContent).not.toMatch(/\(Name\)/);
+    // Back to the check: Back, Cancel and Import (waiting for a new check), no Close.
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Import' })).toBeDisabled();
+    expect(onImported).not.toHaveBeenCalled();
+    // A click on Update reads APP-7 again: a check, with the state the refused load read.
+    fireEvent.click(choice(ROW_4, 'Update APP-7'));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
+    expect(post.mock.calls[2][2]).toEqual({ params: expect.objectContaining({ dryRun: true }) });
+    expect(fieldOf(post.mock.calls[2], 'lookalikes')).toContainEqual({ ...update, state: '00000000000000ff' });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled());
+  });
 });
