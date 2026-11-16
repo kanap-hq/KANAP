@@ -287,11 +287,20 @@ function importedValue(row: CsvImportRow, key: string): any {
   return Object.prototype.hasOwnProperty.call(row.parsed, key) ? row.parsed[key] : row.existingEntity?.[key];
 }
 
+/** Whether the row's own cell gives the related object's id (merge mode copies the stored id into a blank one). */
+function givesRelatedObjectId(row: CsvImportRow): boolean {
+  return String(row.raw.related_object_id ?? '').trim() !== '';
+}
+
 /**
  * The related object a row names by its name (lot I3 of 26.11.9), found at the check as at the load,
  * as `relatedObjectsByName` finds it: case aside, then accents aside for a person who reads its
  * family. A match beyond case is listed; a name nothing finds, or several, refuses the row. A row
- * whose task keeps or takes an object by its id is left as it is; the commit resolves nothing more.
+ * that gives the object's id is left as it is: the id wins. A row of an existing task that names its
+ * object without its id (a blank cell, or no column) has the name read as for a new task, whatever
+ * object the task has: the stored one leaves the row unchanged, another one moves the task (fixes C).
+ * The label of an object outside the person's access was settled before (`keepObjectsOutsideAccess`).
+ * The commit resolves nothing more.
  * Kad's proposal for a name comes first: the record it names, exactly or case aside (a contract also
  * by its reference, an incident by its `INC-n`), in a family the person reads, is a match of origin
  * model; otherwise the proposal is listed as refused and the name is found by its own rule.
@@ -301,7 +310,7 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
   for (const row of rows) {
     if (row.errors.length > 0 || skippedByOperation(row, context.params.operation)) continue;
     const name = String(row.parsed._related_object_name ?? '').trim();
-    if (!name || importedValue(row, 'related_object_id')) continue;
+    if (!name || givesRelatedObjectId(row)) continue;
     const type = objectTypeLookup.get(String(importedValue(row, 'related_object_type') ?? '').trim().toLowerCase());
     if (!type || (type === 'contract' && isContractOutsideAccessLabel(name))) continue;
     byType.set(type, [...(byType.get(type) ?? []), row]);
@@ -1036,8 +1045,6 @@ export const taskCsvConfig: CsvEntityConfig = {
       const next: Record<string, any> = { ...row.parsed };
       normalizeTaskCodes(next);
       const relatedId = next.related_object_id ?? stored.related_object_id;
-      // A name without an id is resolved by the commit: not proven equal here.
-      if (!relatedId && next._related_object_name) return false;
       delete next._related_object_name;
 
       // The phase resolver matches names tenant-wide; the commit moves the phase to the task's
@@ -1074,6 +1081,9 @@ export const taskCsvConfig: CsvEntityConfig = {
       // Skip if already has an ID or no name provided
       if (entity.related_object_id) {
         // Clean up temporary field
+      // A name is read at the check (`resolveRelatedObjects`): a name still there on a row that gives
+      // no id was not resolved, and is not proven equal. A row that gives the id keeps it, whatever its name.
+      if (next._related_object_name && !givesRelatedObjectId(row)) return false;
         delete entity._related_object_name;
         continue;
       }

@@ -84,9 +84,10 @@ async function testPeopleFollowKadsRelatedObject() {
     const proposals = { related_object_name: { Alpha: 'Projet Alpha' } };
     const load = await importCsv(runner.manager, tenantId, csv, { dryRun: false, proposals });
     assert.equal(load.ok, true, JSON.stringify(load.errors));
-    // The task « Suivi » keeps its stored project in merge mode: only the new task's name is matched.
+    // The task « Suivi » names its stored project without its id: the name is read as for the new task
+    // (fixes C), and the match is listed on both lines.
     assert.deepEqual((load.matches ?? []).map((m) => [m.column, m.value, m.target, m.origin, m.lines]), [
-      ['related_object_name', 'Alpha', 'Projet Alpha', 'model', [2]],
+      ['related_object_name', 'Alpha', 'Projet Alpha', 'model', [2, 3]],
     ]);
     const tasks = await runner.query(
       `SELECT title, related_object_id = $2 AS on_project, viewer_ids, owner_ids FROM tasks WHERE tenant_id = $1 ORDER BY title`,
