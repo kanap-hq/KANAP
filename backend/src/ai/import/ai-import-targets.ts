@@ -198,14 +198,16 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     key: 'assets',
     names: { en: 'Servers', fr: 'Serveurs', de: 'Server', es: 'Servidores' },
     ...AI_IMPORT_ACCESS.assets,
-    about: 'One row per server or other asset, matched to a stored one by its name.',
+    about: 'One row per server or other asset, matched to a stored one by its name. Where a server is hosted (on site, '
+      + 'in a cloud) comes from its location (location_reference, LOC-n), never from its type: "Cloud", "AWS" or "Azure" '
+      + 'is no asset type, so never map such a value to a type.',
     columns: () => fromCsvConfig(assetCsvConfig, {
-      kind: catalog('serverKinds'),
+      kind: { ...catalog('serverKinds'), hint: 'the kind of machine (virtual machine, physical server...); "Cloud" is a hosting, not a type' },
       environment: { kind: 'codes', codes: Object.keys(ASSET_ENVIRONMENT_LABELS.en), labels: ASSET_ENVIRONMENT_LABELS },
       admin_zone: catalog('adminZones'),
       status: catalog('lifecycleStates'),
       domain: catalog('domains'),
-      location_reference: { hint: 'the reference of a location of the workspace, such as LOC-1' },
+      location_reference: { hint: 'the reference of a location of the workspace, such as LOC-1; the server is hosted as its location is (on site, in a cloud)' },
       cluster: { hint: 'the names of the clusters the asset belongs to, separated by commas' },
       aliases: { hint: 'other names, separated by commas' },
       ...Object.fromEntries([1, 2, 3, 4].map((index) => [`ip_${index}_type`, catalog('ipAddressTypes')])),
@@ -497,6 +499,10 @@ export const AI_IMPORT_MATCHED_COLUMNS: Readonly<Partial<Record<AiImportKey, rea
   contracts: ['company_name', 'supplier_name', 'cost_center'],
   cost_centers: ['company_name'],
   business_processes: ['parent_name'],
+  assets: ['operating_system', 'cluster'],
+  incidents: ['reporter', 'owner'],
+  technology_asset_links: ['asset_name', 'technology_name', 'version'],
+  technology_application_links: ['application_name', 'technology_name', 'version'],
 };
 
 /** Whether the import `key` finds the column's names beyond case, takes Kad's proposals for it and lets a match be undone. */

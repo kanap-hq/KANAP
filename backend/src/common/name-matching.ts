@@ -74,7 +74,8 @@ export interface ImportNameMatch {
   ref?: string | null;
   /** `server`: the check found it (accents, another language); `model`: Kad proposed it and the check found the record. */
   origin: 'server' | 'model';
-  reason: 'accents' | 'translation' | 'model';
+  /** `version`: a version label found by a prefix rule (`22.04` for `22.04 LTS`, `technologies/version-label-match.ts`). */
+  reason: 'accents' | 'translation' | 'model' | 'version';
   /** The lines of the file the value is on (the first ones), and how many there are. */
   lines: number[];
   count: number;

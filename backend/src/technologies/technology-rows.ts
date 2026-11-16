@@ -4,6 +4,7 @@ import type { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { parseItemNumber } from '../common/parse-item-number';
 import { UUID_RE } from '../common/relations/relation-target';
 import { vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
+import { matchVersionLabel } from './version-label-match';
 
 export { UUID_RE };
 
@@ -160,26 +161,29 @@ export type VersionAuditOptions = {
 };
 
 /**
- * The version of `technologyId` labelled `label` (compared without case, trimmed): its id, created
- * when missing and `create` is set (null otherwise). Shared by the pickers, the CSV, the assistant
- * and an agent: they all write a label. The unique index on lower(label) makes a concurrent
- * creation of the same label land once (the second insert does nothing and reads the first). A
- * creation writes its own audit row, `recordId` the technology, as the Versions tab does.
+ * The version of `technologyId` a label names (compared without case, trimmed), else the only
+ * version a prefix rule finds (`matchVersionLabel`, lot I3 of 26.11.9: `22.04` finds `22.04 LTS`):
+ * its id, created as written when nothing answers and `create` is set (null otherwise).
+ * `prefix: false` (a match the person undid) keeps the equality alone. Shared by the pickers, the
+ * CSV, the assistant and an agent: they all write a label. The unique index on lower(label) makes a
+ * concurrent creation of the same label land once (the second insert does nothing and reads the
+ * first). A creation writes its own audit row, `recordId` the technology, as the Versions tab does.
  */
 export async function resolveVersionLabel(
   mg: EntityManager,
   tenantId: string,
   technologyId: string,
   label: string,
-  opts: { create: boolean; audit?: VersionAuditOptions },
+  opts: { create: boolean; audit?: VersionAuditOptions; prefix?: boolean },
 ): Promise<{ id: string; created: boolean } | null> {
   const text = optionalText(label, 'Version', 100);
   if (!text) return null;
-  const found: Array<{ id: string }> = await mg.query(
-    `SELECT id FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND lower(label) = lower($3)`,
-    [tenantId, technologyId, text],
+  const versions: Array<{ id: string; label: string }> = await mg.query(
+    `SELECT id, label FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 ORDER BY lower(label), id`,
+    [tenantId, technologyId],
   );
-  if (found[0]) return { id: found[0].id, created: false };
+  const found = matchVersionLabel(versions, text, { prefix: opts.prefix !== false });
+  if (found.kind !== 'none') return { id: found.row.id, created: false };
   if (!opts.create) return null;
   const inserted: Array<{ id: string }> = await mg.query(
     `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, $3)
@@ -209,13 +213,15 @@ export async function resolveVersionLabel(
 
 /**
  * The version a link names: `technology_version_id` (a version of this technology, 400 otherwise),
- * else `version_label` resolved and created when missing, else null (unknown).
+ * else `version_label` resolved and created when missing, else null (unknown). With
+ * `version_label_as_written` (an import whose match the person undid, or that announced the version
+ * as created), the label is found case aside only, never by a prefix.
  */
 export async function versionOfInput(
   mg: EntityManager,
   tenantId: string,
   technologyId: string,
-  body: { technology_version_id?: unknown; version_label?: unknown },
+  body: { technology_version_id?: unknown; version_label?: unknown; version_label_as_written?: unknown },
   audit?: VersionAuditOptions,
 ): Promise<string | null> {
   const rawId = body.technology_version_id;
@@ -230,7 +236,9 @@ export async function versionOfInput(
     return id;
   }
   if (body.version_label !== undefined && body.version_label !== null && String(body.version_label).trim() !== '') {
-    return (await resolveVersionLabel(mg, tenantId, technologyId, String(body.version_label), { create: true, audit }))?.id ?? null;
+    return (await resolveVersionLabel(mg, tenantId, technologyId, String(body.version_label), {
+      create: true, audit, prefix: body.version_label_as_written !== true,
+    }))?.id ?? null;
   }
   return null;
 }
