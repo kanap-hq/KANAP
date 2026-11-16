@@ -13,6 +13,7 @@ import {
 } from '../../tenants/__tests__/tenant-reset-test-helpers';
 import { DiscoveryCallService } from '../../../discovery-call/discovery-call.service';
 import { AdminTrialsService, TrialFunnelRow } from '../admin-trials.service';
+import { weekStart } from '../trial-funnel';
 
 // The trial funnel (`doc/trial-funnel.md`) on the spec database: each milestone read from the audit
 // log and the tables that hold it, events made up at known instants; the 24-hour alert and the
@@ -128,14 +129,16 @@ async function testAttentionAndOrder() {
   try {
     silent = await createActivatedTenant(svc, { tag: 'tf-silent', orgName: 'Funnel Silent', signup: true });
     fresh = await createActivatedTenant(svc, { tag: 'tf-fresh', orgName: 'Funnel Fresh', signup: true });
-    await activatedAt(silent, new Date(Date.now() - 25 * HOUR));
-    await activatedAt(fresh, new Date(Date.now() - 2 * HOUR));
+    const now = new Date();
+    const created = [new Date(now.getTime() - 25 * HOUR), new Date(now.getTime() - 2 * HOUR), now];
+    await activatedAt(silent, created[0]);
+    await activatedAt(fresh, created[1]);
     await dataSource.query(
-      `INSERT INTO trial_signups (org_name, slug, email, created_at) VALUES ('Funnel Pending', $1, $2, now())`,
-      [pendingSlug, `${pendingSlug}@funnel-spec.test`],
+      `INSERT INTO trial_signups (org_name, slug, email, created_at) VALUES ('Funnel Pending', $1, $2, $3)`,
+      [pendingSlug, `${pendingSlug}@funnel-spec.test`, now],
     );
 
-    const funnel = await service().list();
+    const funnel = await service().list({}, now);
     const bySlug = new Map(funnel.items.map((item) => [item.slug, item]));
     assert.equal(bySlug.get(silent.slug)?.needs_attention, true, 'no sign-in 25 hours after the activation');
     assert.equal(bySlug.get(fresh.slug)?.needs_attention, false, 'two hours: not yet');
@@ -145,7 +148,13 @@ async function testAttentionAndOrder() {
     const firstCalm = funnel.items.findIndex((item) => !item.needs_attention);
     assert.ok(funnel.items.slice(firstCalm).every((item) => !item.needs_attention), 'the workspaces to look at come first');
     assert.ok(funnel.items.indexOf(bySlug.get(silent.slug)!) < firstCalm);
-    assert.ok(funnel.weeks[0].created >= 2, 'this week counts the new sign-ups');
+    // Each sign-up counts in the week it was made: early on a Monday (UTC), the two older ones
+    // belong to the week before.
+    assert.equal(funnel.weeks[0].week, weekStart(now), 'the current week comes first');
+    for (const week of new Set(created.map(weekStart))) {
+      const ours = created.filter((at) => weekStart(at) === week).length;
+      assert.ok((funnel.weeks.find((w) => w.week === week)?.created ?? 0) >= ours, `the week of ${week} counts the new sign-ups`);
+    }
 
     await signIn(silent, new Date());
     assert.equal((await rowOf(silent.slug))?.needs_attention, false, 'a sign-in clears it');
