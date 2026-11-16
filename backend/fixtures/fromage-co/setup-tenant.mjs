@@ -662,8 +662,12 @@ async function ensurePortfolioClassification() {
   const streams = await getAll('/portfolio/classification/streams');
   for (const [name, description, category] of [
     [t('Cheese Production Excellence'), t('Optimize production, aging and quality'), t('Digital Transformation')],
+    [t('Digital Commerce'), t('Online sales channels and the services behind them'), t('Digital Transformation')],
     [t('Customer Experience'), t('Improve B2B and B2C customer interactions'), t('Business Applications')],
+    [t('Core Business Systems'), t('ERP, HR, finance and purchasing processes'), t('Business Applications')],
     [t('IT Foundation'), t('Core IT infrastructure and shared services'), t('Infrastructure')],
+    [t('Cyber Resilience'), t('Network, identity and endpoint protection'), t('Security & Compliance')],
+    [t('Data Platform'), t('Shared data, data contracts and analytics foundations'), t('Data & Analytics')],
   ]) {
     if (streams.some((item) => lower(item.name) === lower(name))) continue;
     const category_id = categoryId(category);
