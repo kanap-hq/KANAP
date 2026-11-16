@@ -255,6 +255,35 @@ async function testExportRoundTrip() {
   });
 }
 
+// One row per supplier: a second row naming the same supplier, by its reference or by its name (the
+// family's CSV_SUPPLIER_NAME_DUPLICATE), is refused on its line, at the check as at the load; a new
+// supplier named twice too. Nothing is written.
+async function testImportRefusesSecondRowOfASupplier() {
+  await withTenant('second-row', async (ctx) => {
+    const run = importer(ctx);
+    const names = async () => (await ctx.runner.query(
+      `SELECT name, erp_supplier_id FROM suppliers WHERE tenant_id = $1 ORDER BY item_number`, [ctx.tenantId],
+    ));
+    const before = await names();
+    const cases: Array<[string, Array<Record<string, string>>, Array<[number, string, string, Record<string, unknown>]>]> = [
+      ['same reference', [{ reference: 'SUP-8', name: 'Supplier 08', erp_supplier_id: 'A' }, { reference: '8', name: 'Eight renamed', erp_supplier_id: 'B' }],
+        [[3, 'reference', 'CSV_SAME_RECORD', { reference: 'SUP-8', firstRow: 2 }]]],
+      ['same name', [{ reference: '', name: 'Supplier 08', erp_supplier_id: 'A' }, { reference: '', name: 'supplier 08', erp_supplier_id: 'B' }],
+        [[3, 'name', 'CSV_SUPPLIER_NAME_DUPLICATE', { name: 'supplier 08', firstRow: 2 }]]],
+      ['a new supplier twice', [{ reference: '', name: 'Brand new', erp_supplier_id: 'A' }, { reference: '', name: 'brand NEW', erp_supplier_id: 'B' }],
+        [[3, 'name', 'CSV_SUPPLIER_NAME_DUPLICATE', { name: 'brand NEW', firstRow: 2 }]]],
+    ];
+    for (const [label, rows, expected] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await run(rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((error) => [error.row, error.column, error.code, error.params]), expected, `${label}, dryRun=${dryRun}`);
+      }
+    }
+    assert.deepEqual(await names(), before, 'a refused file writes nothing');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   let failed = 0;
@@ -264,6 +293,7 @@ async function main() {
     ['testIdListReferences', testIdListReferences],
     ['testAssistantReference', testAssistantReference],
     ['testImportByReference', testImportByReference],
+    ['testImportRefusesSecondRowOfASupplier', testImportRefusesSecondRowOfASupplier],
     ['testErpIdIsNoReference', testErpIdIsNoReference],
     ['testExportRoundTrip', testExportRoundTrip],
   ];

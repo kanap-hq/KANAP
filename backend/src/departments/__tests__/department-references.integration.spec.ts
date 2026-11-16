@@ -247,6 +247,48 @@ async function testCreateReturnsReference() {
   });
 }
 
+// One row per department: a second row naming the same department, by its reference (the family's
+// CSV_DUPLICATE_KEY on the reference) or by its company and name, is refused on its line, at the
+// check as at the load; a new department named twice too. Nothing is written.
+async function testImportRefusesSecondRowOfADepartment() {
+  await withDepartments('dref-second-row', async (seeded) => {
+    const run = importer(seeded);
+    const headers = ['reference', ...BASE];
+    const all = async () => seeded.runner.query(
+      `SELECT name, company_id, description FROM departments WHERE tenant_id = $1 ORDER BY item_number`, [seeded.tenantId],
+    );
+    const before = await all();
+    const cases: Array<[string, Array<Record<string, string>>, Array<[number, string, string, Record<string, unknown>]>]> = [
+      ['same reference', [
+        { reference: 'DEPT-8', company_name: 'Alpha', name: 'Dept 8', description: 'A' },
+        { reference: '8', company_name: 'Alpha', name: 'Eight renamed', description: 'B' },
+      ], [[3, 'reference', 'CSV_DUPLICATE_KEY', { columns: 'reference', firstRow: 2 }]]],
+      ['same company and name', [
+        { reference: '', company_name: 'Alpha', name: 'Dept 8', description: 'A' },
+        { reference: '', company_name: 'Alpha', name: 'dept 8', description: 'B' },
+      ], [[3, 'name', 'CSV_SAME_RECORD', { firstRow: 2, reference: 'DEPT-8' }]]],
+      ['a new department twice', [
+        { reference: '', company_name: 'Beta', name: 'Brand new', description: 'A' },
+        { reference: '', company_name: 'Beta', name: 'brand NEW', description: 'B' },
+      ], [[3, 'name', 'CSV_DUPLICATE_KEY', { columns: 'company_name, name', firstRow: 2 }]]],
+    ];
+    for (const [label, rows, expected] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await run(headers, rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((e) => [e.row, e.column, e.code, e.params]), expected, `${label}, dryRun=${dryRun}`);
+      }
+    }
+    // The same name in two companies is two departments.
+    const twoCompanies = await run(headers, [
+      { reference: '', company_name: 'Alpha', name: 'Shared', description: 'A' },
+      { reference: '', company_name: 'Beta', name: 'Shared', description: 'B' },
+    ], true);
+    assert.deepEqual([twoCompanies.ok, twoCompanies.inserted, twoCompanies.errors], [true, 2, []]);
+    assert.deepEqual(await all(), before, 'a refused file writes nothing');
+  });
+}
+
 void runSpecs('department references', [
   ['a created department comes back with its reference', testCreateReturnsReference],
   ['the reference column filters the list and the ids alike', testReferenceColumnFilter],
@@ -254,6 +296,7 @@ void runSpecs('department references', [
   ['the ids carry the references, and the list sorts by reference', testIdsAndSort],
   ['Kad filters and sorts by reference through the list service', testAssistantField],
   ['the file updates by reference, refuses an unknown one and still reads an older file', testImportByReference],
+  ['the file refuses a second row of the same department', testImportRefusesSecondRowOfADepartment],
   ['a rename or a move by reference is announced, without blocking the check or the load', testRenameAndMoveWarnings],
   ['an export imports back without change', testExportThenImport],
 ]);

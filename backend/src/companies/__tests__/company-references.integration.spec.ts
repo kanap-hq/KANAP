@@ -281,6 +281,36 @@ async function testCreateReturnsReference() {
   });
 }
 
+// One row per company: a second row naming the same company, by its reference (the family's
+// CSV_DUPLICATE_KEY on the reference) or by its name (CSV_COMPANY_NAME_DUPLICATE), is refused on its line, at the check as at the
+// load; a new company named twice too. Nothing is written.
+async function testImportRefusesSecondRowOfACompany() {
+  await withCompanies('ref-second-row', async (seeded) => {
+    const run = importer(seeded);
+    const headers = ['reference', ...BASE];
+    const stored = async () => seeded.runner.query(
+      `SELECT name, notes FROM companies WHERE tenant_id = $1 ORDER BY item_number`, [seeded.tenantId],
+    );
+    const before = await stored();
+    const cases: Array<[string, Array<Record<string, string>>, Array<[number, string, string, Record<string, unknown>]>]> = [
+      ['same reference', [row({ reference: 'COMP-8', name: 'Company 8', notes: 'A' }), row({ reference: '8', name: 'Eight renamed', notes: 'B' })],
+        [[3, 'reference', 'CSV_DUPLICATE_KEY', { columns: 'reference', firstRow: 2 }]]],
+      ['same name', [row({ reference: '', name: 'Company 8', notes: 'A' }), row({ reference: '', name: 'company 8', notes: 'B' })],
+        [[3, 'name', 'CSV_COMPANY_NAME_DUPLICATE', { name: 'company 8', firstRow: 2 }]]],
+      ['a new company twice', [row({ reference: '', name: 'Brand new', notes: 'A' }), row({ reference: '', name: 'brand NEW', notes: 'B' })],
+        [[3, 'name', 'CSV_COMPANY_NAME_DUPLICATE', { name: 'brand NEW', firstRow: 2 }]]],
+    ];
+    for (const [label, rows, expected] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await run(headers, rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((e) => [e.row, e.column, e.code, e.params]), expected, `${label}, dryRun=${dryRun}`);
+      }
+    }
+    assert.deepEqual(await stored(), before, 'a refused file writes nothing');
+  });
+}
+
 void runSpecs('company references', [
   ['a created company comes back with its reference', testCreateReturnsReference],
   ['the reference column filters the list, the ids and the totals alike', testReferenceColumnFilter],
@@ -288,6 +318,7 @@ void runSpecs('company references', [
   ['the ids carry the references, and the list sorts by reference', testIdsAndSort],
   ['Kad filters and sorts by reference through the list service', testAssistantField],
   ['the file updates by reference, refuses an unknown one and still reads an older file', testImportByReference],
+  ['the file refuses a second row of the same company', testImportRefusesSecondRowOfACompany],
   ['a rename by reference is announced, without blocking the check or the load', testRenameWarning],
   ['an export imports back without change', testExportThenImport],
 ]);

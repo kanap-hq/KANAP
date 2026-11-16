@@ -563,10 +563,9 @@ export class ContactsService {
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
 
-    // Rows without a reference: one per email, the last one kept, as before the reference column.
-    const lastByEmail = new Map<string, number>();
-    for (const row of normalized) if (!row.reference) lastByEmail.set(row.item.email, row.line);
-    const kept = normalized.filter((row) => row.reference || lastByEmail.get(row.item.email) === row.line);
+    // One row per contact: a second row naming the same contact, by its reference or by its e-mail,
+    // is refused on its line below.
+    const kept = normalized;
 
     // Emails are stored lower-cased (create, update and this import), so one read finds every existing contact.
     const emails = [...new Set(kept.map((row) => row.item.email))];

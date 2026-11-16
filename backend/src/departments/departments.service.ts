@@ -698,14 +698,9 @@ export class DepartmentsService {
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
-    // Deduplicate by combination of company_id + name (case-insensitive on name); a row with a
-    // reference is its department's own row.
-    const uniqueMap = new Map<string, (typeof normalized)[number]>();
-    for (const item of normalized) {
-      const key = referenceOf.has(item) ? `ref:${referenceOf.get(item)}` : `${item.company_id}|${item.name.toLowerCase()}`;
-      if (!uniqueMap.has(key)) uniqueMap.set(key, item);
-    }
-    const unique = Array.from(uniqueMap.values());
+    // One row per department: a second row naming the same department, by its reference or by its
+    // company and name, is refused on its line below.
+    const unique = normalized;
     // A filled reference names the department the row updates, whatever company the row writes:
     // its company and name are values of the row (a move, a rename), refused when another
     // department of that company has the name. An unknown reference refuses the row.
@@ -727,6 +722,7 @@ export class DepartmentsService {
     // department the row matched.
     const warnings: ImportReportError[] = [];
     const firstLineOfDepartment = new Map<string, number>();
+    const firstLineOfNewDepartment = new Map<string, number>();
     for (const fileItem of unique) {
       const line = lineOf.get(fileItem) ?? 0;
       const reference = referenceOf.get(fileItem);
@@ -770,6 +766,15 @@ export class DepartmentsService {
           continue;
         }
         firstLineOfDepartment.set(existing.id, line);
+      } else {
+        // A new department takes one row: its company and name again, whatever the case, are refused.
+        const key = `${fileItem.company_id}|${fileItem.name.toLowerCase()}`;
+        const firstRow = firstLineOfNewDepartment.get(key);
+        if (firstRow !== undefined) {
+          errors.push(rowError(line, 'name', 'CSV_DUPLICATE_KEY', `Same company and name as row ${firstRow}.`, { columns: 'company_name, name', firstRow }));
+          continue;
+        }
+        firstLineOfNewDepartment.set(key, line);
       }
       // The stored end of validity's day keeps its time of day: the export writes the day only.
       const item = existing

@@ -227,6 +227,34 @@ async function testExportRoundTrip() {
   });
 }
 
+// One row per contact: a second row naming the same contact, by its reference or by its e-mail, is
+// refused on its line, at the check as at the load; a new contact named twice too. Nothing is written.
+async function testImportRefusesSecondRowOfAContact() {
+  await withTenant('second-row', async (ctx) => {
+    const run = importer(ctx);
+    const stored = async () => (await ctx.runner.query(
+      `SELECT email, first_name, last_name FROM contacts WHERE tenant_id = $1 ORDER BY item_number`, [ctx.tenantId],
+    ));
+    const before = await stored();
+    const cases: Array<[string, Array<Record<string, string>>, Array<[number, string, string, Record<string, unknown>]>]> = [
+      ['same reference', [{ reference: 'CTCT-8', email: 'c08@example.test', first_name: 'A' }, { reference: '8', email: 'eight@example.test', first_name: 'B' }],
+        [[3, 'reference', 'CSV_SAME_RECORD', { reference: 'CTCT-8', firstRow: 2 }]]],
+      ['same e-mail', [{ reference: '', email: 'c08@example.test', first_name: 'A' }, { reference: '', email: 'C08@example.test', first_name: 'B' }],
+        [[3, 'email', 'CSV_SAME_RECORD', { reference: 'CTCT-8', firstRow: 2 }]]],
+      ['a new contact twice', [{ reference: '', email: 'brand-new@example.test', first_name: 'A' }, { reference: '', email: 'Brand-New@example.test', first_name: 'B' }],
+        [[3, 'email', 'CSV_DUPLICATE_KEY', { columns: 'email', firstRow: 2 }]]],
+    ];
+    for (const [label, rows, expected] of cases) {
+      for (const dryRun of [true, false]) {
+        const report = await run(rows, dryRun);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(report.errors.map((error) => [error.row, error.column, error.code, error.params]), expected, `${label}, dryRun=${dryRun}`);
+      }
+    }
+    assert.deepEqual(await stored(), before, 'a refused file writes nothing');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   let failed = 0;
@@ -235,6 +263,7 @@ async function main() {
     ['testQuickSearch', testQuickSearch],
     ['testAssistantReference', testAssistantReference],
     ['testImportByReference', testImportByReference],
+    ['testImportRefusesSecondRowOfAContact', testImportRefusesSecondRowOfAContact],
     ['testExportRoundTrip', testExportRoundTrip],
   ];
   try {

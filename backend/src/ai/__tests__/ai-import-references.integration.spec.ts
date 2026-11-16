@@ -200,6 +200,32 @@ async function testRowNumbersAreNoReferences(h: Harness, runner: QueryRunner, s:
   console.log('  companies: a column of row numbers mapped onto reference updates nothing: OK');
 }
 
+// Two rows of Achat by its company and name, the second in another case: the card refuses the second
+// on its line, as the screen's check does (one row per department), and the check writes nothing.
+async function testDepartmentSameNameTwice(h: Harness, runner: QueryRunner, s: Seed) {
+  const read = async () => (await runner.query(
+    `SELECT 'DEPT-' || item_number || ' ' || name || ' ' || coalesce(description, '-') AS r FROM departments WHERE tenant_id = $1 ORDER BY item_number`,
+    [s.tenantId],
+  )).map((row: any) => row.r);
+  const before = await read();
+  const header = ['reference', 'company_name', 'name', 'description', 'status', 'disabled_at'];
+  const file = attach(h, 'd2-doublon.csv', [
+    header.join(';'),
+    ';Alpha;Achat;first;enabled;',
+    ';Alpha;ACHAT;second;enabled;',
+  ]);
+  const card = await h.previews.createPreview(ctx(runner, s), 'prepare_import_mapping', { attachment_id: file, entity_type: 'departments', columns: sameNames(header) });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, false, JSON.stringify(check));
+  assert.deepEqual(
+    check.report.errors.map((error: any) => [error.row, error.column, error.code, error.params]),
+    [[3, 'name', 'CSV_SAME_RECORD', { firstRow: 2, reference: 'DEPT-1' }]],
+    JSON.stringify(check.report.errors),
+  );
+  assert.deepEqual(await read(), before, 'nothing written by the check');
+  console.log('  departments: a second row of the same company and name is refused on its line: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -211,6 +237,7 @@ async function run() {
       await testRowNumbersAreNoReferences(harness, runner, s);
       await testOwnFileWithoutReference(harness, runner, s);
       await testCompanyRename(harness, runner, s);
+      await testDepartmentSameNameTwice(harness, runner, s);
       await testDepartmentChanges(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();

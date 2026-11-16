@@ -219,6 +219,26 @@ async function testContactRowNumbersAndOwnFile(h: Harness, runner: QueryRunner, 
   console.log('  contacts: row numbers are no references, a file without the column updates by e-mail: OK');
 }
 
+// Two rows of b@x.test, the second in another case: the card refuses the second on its line, as the
+// screen's check does (one row per contact), and the check writes nothing.
+async function testContactSameEmailTwice(h: Harness, runner: QueryRunner, s: Seed) {
+  const before = await contacts(runner, s);
+  const own = (await headerOf(h, runner, s, 'contacts')).filter((column) => column !== 'reference');
+  const card = await check(h, runner, s, 'contacts', 'contacts-doublon.csv', own, [
+    rowOf(own, { first_name: 'Anne', last_name: 'Morel', email: 'b@x.test', job_title: 'Buyer' }),
+    rowOf(own, { first_name: 'Anne', last_name: 'Morel', email: 'B@x.test', job_title: 'Manager' }),
+  ]);
+  const result = card.import_mapping.validation;
+  assert.equal(result.ok, false, JSON.stringify(result));
+  assert.deepEqual(
+    result.report.errors.map((error: any) => [error.row, error.column, error.code, error.params]),
+    [[3, 'email', 'CSV_SAME_RECORD', { reference: 'CTCT-2', firstRow: 2 }]],
+    JSON.stringify(result.report.errors),
+  );
+  assert.deepEqual(await contacts(runner, s), before, 'nothing written by the check');
+  console.log('  contacts: a second row of the same e-mail is refused on its line: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -231,6 +251,7 @@ async function run() {
       await testSupplierOwnFile(harness, runner, s);
       await testSupplierRename(harness, runner, s);
       await testContactRowNumbersAndOwnFile(harness, runner, s);
+      await testContactSameEmailTwice(harness, runner, s);
       await testContactChanges(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
