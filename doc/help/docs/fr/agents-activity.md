@@ -16,14 +16,14 @@ L'Activité est l'historique en lecture seule de tout ce que vos agents ont fait
 
 La chronologie affiche les événements les plus récents en premier. Deux contrôles permettent de l'affiner :
 
-- **Numéro de ticket** : saisissez un numéro de ticket et appuyez sur **Rechercher** (ou Entrée) pour ne voir que les événements liés à ce ticket précis. C'est le moyen le plus rapide de reconstituer l'histoire complète d'un même ticket : chaque contrôle, brouillon, décision et modification, dans l'ordre. Videz le champ et relancez la recherche pour revenir au flux complet.
+- **Référence ou numéro de ticket** : saisissez la référence affichée sur l'entrée (T-15, PRJ-3, APP-4) ou un numéro de ticket, puis appuyez sur **Rechercher** (ou Entrée). La chronologie conserve les événements de cet enregistrement. Un numéro de ticket liste toujours les événements de ce ticket. Videz le champ et relancez la recherche pour revenir au flux complet.
 - **Puces de type** : sept bascules en haut (**Proposition**, **Décision**, **Exécution**, **Configuration**, **Vérifications**, **Pause** et **Erreur**). Chacune est un interrupteur, et non un choix unique : une puce pleine est incluse, une puce en contour est exclue, et vous pouvez en combiner autant que vous le souhaitez.
 
 **Par défaut, toutes les catégories sont activées sauf Vérifications.** Ce choix est délibéré. Un agent en surveillance écrit une entrée de vérification toutes les quelques minutes, qu'il ait trouvé quelque chose ou non, et si on les laisse actives, ces lignes enfouissent les entrées que vous lisez vraiment. Activez **Vérifications** lorsque vous voulez confirmer qu'un agent est bien vivant, ou lorsque vous cherchez pourquoi il a (ou n'a pas) pris en charge quelque chose.
 
 Désactiver toutes les puces ne laisse rien à afficher, et la chronologie le dit : *Choisissez au moins un type d'activité pour afficher le journal.*
 
-La recherche par ticket et les puces de type se combinent, ce qui vous permet de consulter, par exemple, uniquement les erreurs du ticket #482. Votre sélection est inscrite dans l'adresse de la page : une vue filtrée est donc un lien que vous pouvez envoyer à un collègue.
+La recherche et les puces de type se combinent, ce qui vous permet de consulter, par exemple, uniquement les erreurs de T-15 ou du ticket #482. Votre sélection est inscrite dans l'adresse de la page : une vue filtrée est donc un lien que vous pouvez envoyer à un collègue.
 
 ---
 
@@ -112,7 +112,7 @@ Le même bouton **Trace** figure dans les [Approbations](agents-approvals.md) et
 
 ## Conseils
 
-- La recherche par **numéro de ticket** est le moyen le plus rapide de transmettre à quelqu'un l'histoire complète et ordonnée d'un ticket (contrôle, proposition, décision et ce qui a été envoyé) sans naviguer dans le ticket lui-même.
+- La recherche par la **référence** affichée sur une entrée (T-15, PRJ-3) ou par un **numéro de ticket** est le moyen le plus rapide de transmettre à quelqu'un l'histoire ordonnée d'un même enregistrement (contrôle, proposition, décision et ce qui a été envoyé) sans ouvrir l'enregistrement lui-même.
 - **Activez Vérifications lorsqu'un agent semble inactif, puis désactivez-les.** C'est ce qui fait la différence entre « l'agent est cassé » et « l'agent surveille et il n'y a rien à faire ». Mais c'est bruyant, d'où sa désactivation par défaut.
 - Utilisez le filtre **Exécution** pour ne voir que ce qui est réellement sorti. Les propositions et les décisions sont des intentions ; les exécutions sont les modifications qu'un demandeur ou un technicien peut voir.
 - Une entrée **Limite quotidienne atteinte** correspond au système fonctionnant comme prévu, pas à un bug. Si un agent est resté silencieux le reste de la journée, c'est généralement pour cette raison : relevez ses limites quotidiennes dans les [Paramètres](agents-workspace.md) de l'agent si le plafond est trop serré pour votre volume, et consultez-y les chiffres **Aujourd'hui** avant de choisir une nouvelle valeur.
