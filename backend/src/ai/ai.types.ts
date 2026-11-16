@@ -635,6 +635,8 @@ export type AiImportRunDto = {
       kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[];
       matches?: ImportNameMatch[]; matchesTotal?: number;
       refusedProposals?: ImportRefusedProposal[]; refusedProposalsTotal?: number;
+      /** The matches the person undid on the card (its choices `unmatch`), absent when none: the card sends them all with the next one. */
+      undone?: Array<{ column: string; value: string }>;
     }
     /** The budget file's check, as its dialog shows it (`BudgetFileReport` without its snapshot). */
     | { kind: 'budget_file'; file: Record<string, unknown> | null };

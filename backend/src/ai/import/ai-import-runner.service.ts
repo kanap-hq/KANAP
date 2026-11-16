@@ -38,6 +38,7 @@ import { WorkingDayProfilesCsvService } from '../../working-day-profiles/working
 import { AiPolicyService } from '../ai-policy.service';
 import type { AiExecutionContextWithManager, AiImportReportMessage, AiImportRunDto } from '../ai.types';
 import type { AiImportKey } from './ai-import-access';
+import { isImportMatchedColumn } from './ai-import-targets';
 import { enabledDimensionValues } from './ai-import-dimension-values';
 import { AI_IMPORT_FILE_NAME } from './ai-import-file';
 
@@ -160,7 +161,7 @@ export class AiImportRunnerService {
       const values = options.dryRun && createsValues ? await enabledDimensionValues(context) : undefined;
       return budgetBilan(answer, options.dryRun, options.lines, values, options.language);
     }
-    return rowsBilan(await this.runRows(key, call), options.dryRun, options.lines);
+    return rowsCard(key, rowsBilan(await this.runRows(key, call), options.dryRun, options.lines), options.matching?.choices ?? []);
   }
 
   private async runRows(key: Exclude<AiImportKey, 'budget_lines'>, { file, dryRun, language, context, matching }: ImportCall): Promise<RowsReport> {
@@ -341,6 +342,21 @@ function message(item: AiImportReportMessage, lines: readonly number[]): AiImpor
  * model; the names it found beyond case and Kad's proposals it refused, on the person's lines (the
  * card shows them from lot I3's fifth pass).
  */
+/**
+ * The card of a row import (lot I3 of 26.11.9, fifth pass): a match is undoable there only in a column
+ * the card's choice route takes for the import, and the report gives back the matches the person undid
+ * on the card (`undone`), for it to send the whole list with the next one, as a budget file's card
+ * sends its choices.
+ */
+export function rowsCard(key: AiImportKey, run: AiImportRunDto, choices: readonly BudgetFileChoice[]): AiImportRunDto {
+  if (run.report.kind !== 'rows') return run;
+  const undone = choices.flatMap((choice) => (choice.kind === 'unmatch' ? [{ column: choice.column, value: choice.value }] : []));
+  const matches = run.report.matches?.map((match) => (
+    match.undoable && !isImportMatchedColumn(key, match.column) ? { ...match, undoable: false } : match
+  ));
+  return { ...run, report: { ...run.report, ...(matches ? { matches } : {}), ...(undone.length > 0 ? { undone } : {}) } };
+}
+
 export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly number[]): AiImportRunDto {
   const errors = result.errors ?? [];
   const warnings = result.warnings ?? [];
