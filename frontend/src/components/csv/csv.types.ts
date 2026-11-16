@@ -77,7 +77,56 @@ export interface CsvImportResult {
   /** Kad's proposals the import refused (its card), all of them, `refusedProposalsTotal` in all. Absent when none. */
   refusedProposals?: CsvImportRefusedProposal[];
   refusedProposalsTotal?: number;
+  /** The rows that look like an existing record (the applications), left out unless the person chooses. Absent when none. */
+  lookalikes?: ImportLookalikes;
 }
+
+/** The record a row looks like, and its state at the check: what "Update" sends back. */
+export interface ImportLookalikeTarget {
+  id: string;
+  state: string;
+}
+
+/**
+ * A row to create that looks like an existing record the person reads (lot I3 of 26.11.9, the
+ * applications; the budget file's rows have the same shape, with a line's number for its id).
+ */
+export interface ImportLookalike {
+  /** The row's line in the person's file. */
+  line: number;
+  name: string;
+  /** The record it looks like: its id, reference (`APP-4`), name and state at the check. */
+  target: ImportLookalikeTarget & { ref: string; name: string };
+  /** `name_accents`: the same name, accents aside; `close_name`: a close name and the same supplier or publisher. */
+  reason?: 'name_accents' | 'close_name';
+  /** What the check does with it: left out (the default), created anyway, or the record updated. */
+  outcome: 'ignored' | 'created' | 'updated';
+  /** "Update" is offered only when true. */
+  updatable: boolean;
+  /** For an update: the columns it changes (none when the record already holds the row). */
+  fields?: string[];
+}
+
+export interface ImportLookalikes {
+  /** The first 200, in file order. */
+  lines: ImportLookalike[];
+  /** Every row's target, by its line in the file, beyond the rows listed: what a choice for all rows sends. */
+  targets: Record<string, ImportLookalikeTarget>;
+  count: number;
+  ignored: number;
+  created: number;
+  updated: number;
+}
+
+/**
+ * A choice on a row that looks like an existing record: the budget file's choice, the record named by
+ * its `id`. Sent as the `lookalikes` form field of the import screen, and in `{ choices }` to the
+ * import card's choice route. Leaving a row out is the default, sent only against a choice for all rows.
+ */
+export type ImportLookalikeChoice =
+  | { kind: 'lookalike'; line: number; action: 'ignore' | 'create' }
+  | { kind: 'lookalike'; line: number; action: 'update'; id: string; state: string }
+  | { kind: 'lookalikes'; action: 'ignore' | 'create' | 'update'; targets?: Record<string, ImportLookalikeTarget> };
 
 /**
  * A name Kad proposed for a value of the file that the import refused (the budget file's have the same
