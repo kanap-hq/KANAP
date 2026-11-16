@@ -6,6 +6,7 @@ import { CsvImportService } from '../../common/csv/csv-import.service';
 import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
 import type { CsvCallerAccess, CsvImportParams, CsvImportResult, ImportLookalikeChoice } from '../../common/csv';
+import { csvLookalikes } from '../../common/csv/csv-lookalikes';
 import { AuditLog } from '../../audit/audit.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
@@ -263,6 +264,30 @@ async function testPublisherProposesTheSupplier() {
   });
 }
 
+/**
+ * A target gone since the check (the fusion of passes 3a and 3b): the row keeps it, with an empty
+ * reference, name and state, may not update it, and stays left out. The choices the check gives back,
+ * and "Update all" with its targets, are read again by the route: never refused for the empty state.
+ */
+async function testGoneTarget() {
+  await inTenant(async (ctx) => {
+    const compta = await app(ctx, 'Comptabilité');
+    const file = ['name;editor', 'Comptabilite;Cegid'];
+    const first = await importCsv(ctx, file, { dryRun: true, lookalikes: [{ kind: 'lookalike', line: 2, action: 'update', id: compta.id }] });
+    await ctx.runner.query(`DELETE FROM applications WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, compta.id]);
+    const check = await importCsv(ctx, file, { dryRun: true, lookalikes: csvLookalikes(JSON.stringify(first.lookalikes!.choices)) });
+    const entry = check.lookalikes!.lines[0];
+    assert.deepEqual([entry.target, entry.reason, entry.outcome, entry.updatable], [{ id: compta.id, ref: '', name: '', state: '' }, undefined, 'ignored', false]);
+    // What the screen sends at the load, and on "Update all": read without a 400.
+    const followed = csvLookalikes(JSON.stringify(check.lookalikes!.choices));
+    csvLookalikes(JSON.stringify([{ kind: 'lookalikes', action: 'update', targets: check.lookalikes!.targets }]));
+    const load = await importCsv(ctx, file, { lookalikes: followed });
+    assert.equal(load.ok, true, JSON.stringify(load.errors));
+    assert.deepEqual([load.inserted, load.updated, load.skipped], [0, 0, 1], 'left out at the check, left out at the load');
+    assert.deepEqual(await names(ctx), []);
+  });
+}
+
 void runSpecs('application-lookalikes.integration', [
   ['the rule', testRule],
   ['the choices', testChoices],
@@ -270,4 +295,5 @@ void runSpecs('application-lookalikes.integration', [
   ['one application, two rows', testOneApplicationTwoRows],
   ['owners of an update under another name', testOwnersOfAnUpdateUnderAnotherName],
   ['the publisher proposes the supplier', testPublisherProposesTheSupplier],
+  ['a target gone since the check', testGoneTarget],
 ]);

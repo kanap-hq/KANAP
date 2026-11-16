@@ -10,7 +10,7 @@ import { BadRequestException } from '@nestjs/common';
 /** Why a row looks like a record: its name equal once accents are set aside, or close with the same supplier or publisher. */
 export type ImportLookalikeReason = 'name_accents' | 'close_name';
 
-/** The record a row looked like at a check, and its state then (16 hexadecimal characters). */
+/** The record a row looked like at a check, and its state then (16 hexadecimal characters; empty when it is gone). */
 export interface ImportLookalikeTarget {
   id: string;
   state: string;
@@ -91,7 +91,8 @@ function targetsOf(value: unknown): Record<string, ImportLookalikeTarget> | null
   const targets: Record<string, ImportLookalikeTarget> = {};
   for (const [line, raw] of entries) {
     const target = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-    if (!/^[1-9]\d{0,9}$/.test(line) || !isId(target.id) || !isState(target.state)) return null;
+    // A record gone since the check has an empty state: the row keeps it and stays left out.
+    if (!/^[1-9]\d{0,9}$/.test(line) || !isId(target.id) || !(isState(target.state) || target.state === '')) return null;
     targets[line] = { id: String(target.id).toLowerCase(), state: target.state };
   }
   return targets;
