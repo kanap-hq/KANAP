@@ -322,9 +322,10 @@ async function seedTab(runner: QueryRunner, tag: string): Promise<Seed> {
 function opexSuggestions(seed: Seed) {
   return [
     suggestion('application', { ...seed.apps.capex, name: 'Capex app' }),
-    suggestion('contract', { id: seed.contracts.capex, reference: null, name: 'Capex contract' }),
+    // A suggested contract carries its reference (lot R4 of 26.11.9): numbered in the order of the seed.
+    suggestion('contract', { id: seed.contracts.capex, reference: 'CTR-3', name: 'Capex contract' }),
     suggestion('application', { ...seed.apps.cedar, name: 'Cedar app' }),
-    suggestion('contract', { id: seed.contracts.cedar, reference: null, name: 'Cedar contract' }),
+    suggestion('contract', { id: seed.contracts.cedar, reference: 'CTR-2', name: 'Cedar contract' }),
     suggestion('application', { ...seed.apps.echo, name: 'Echo app' }),
   ];
 }
@@ -353,7 +354,7 @@ async function testPayload() {
     ]);
     assert.deepEqual(res.contracts, [
       {
-        id: seed.contracts.alpha, name: 'Alpha contract', supplier_name: seed.supplierName,
+        id: seed.contracts.alpha, item_number: 1, name: 'Alpha contract', supplier_name: seed.supplierName,
         end_date: CONTRACT_END, yearly_amount: 1200, currency: 'EUR', auto_renewal: true,
         in_renewal_window: true, status: 'enabled',
         // The line has no paying company; the contract names one. Cost center is unset on the contract, so it is not checked.
@@ -438,9 +439,9 @@ async function testContributor() {
     assert.equal(res.technologies?.length, 2);
     assert.equal(res.contracts?.length, 1);
     assert.deepEqual(res.suggestions, [
-      suggestion('contract', { id: seed.contracts.capex, reference: null, name: 'Capex contract' }),
+      suggestion('contract', { id: seed.contracts.capex, reference: 'CTR-3', name: 'Capex contract' }),
       suggestion('application', { ...seed.apps.cedar, name: 'Cedar app' }),
-      suggestion('contract', { id: seed.contracts.cedar, reference: null, name: 'Cedar contract' }),
+      suggestion('contract', { id: seed.contracts.cedar, reference: 'CTR-2', name: 'Cedar contract' }),
     ]);
 
     const admin = await http.relations(seed.opexId, ctx(runner, seed, WRITE, seed.contributorId, true));
@@ -680,7 +681,7 @@ async function testSuggestionCap() {
     const contracts = res.suggestions.filter((row) => row.type === 'contract');
     assert.equal(apps.length, 20);
     assert.deepEqual(apps.map((row) => row.name), Array.from({ length: 20 }, (_, i) => `Cap ${String(i + 1).padStart(2, '0')}`));
-    assert.deepEqual(contracts, [suggestion('contract', { id: contractId, reference: null, name: 'Cap contract' })]);
+    assert.deepEqual(contracts, [suggestion('contract', { id: contractId, reference: 'CTR-1', name: 'Cap contract' })]);
     assert.equal(res.suggestions[res.suggestions.length - 1].name, 'Cap contract');
   });
 }

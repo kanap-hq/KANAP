@@ -79,7 +79,7 @@ Press **Escape** or click the close button to go back to the list.
 
 ### Used by
 
-The **Used by** section, under the notes, lists everything the contact is linked to, one list per type, each with its count: suppliers, budget lines (OPEX and CAPEX, with their `BL-` reference), contracts, applications, assets, locations, projects (`PRJ-`) and requests (`REQ-`). Each row shows the contact's role there: the contact type for suppliers, budget lines and contracts, the role typed on the application, asset or location.
+The **Used by** section, under the notes, lists everything the contact is linked to, one list per type, each with its count: suppliers, budget lines (OPEX and CAPEX, with their `BL-` reference), contracts (`CTR-`), applications, assets, locations, projects (`PRJ-`) and requests (`REQ-`). Each row shows the contact's role there: the contact type for suppliers, budget lines and contracts, the role typed on the application, asset or location.
 
 Click a row to open that page. A list shows up to 50 items and says how many there are in all. You only see the lists you are allowed to read. A contact linked to nothing shows one line that says so.
 

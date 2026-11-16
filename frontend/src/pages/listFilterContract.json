@@ -789,6 +789,7 @@
       "budget_column": "planned"
     },
     "filters": {
+      "item_number": "text",
       "name": "text",
       "supplier_name": "text",
       "company_name": "text",
@@ -814,6 +815,7 @@
       "latest_task_text": "text"
     },
     "fields": [
+      "item_number",
       "name",
       "next_due_date",
       "term_state",

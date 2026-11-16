@@ -50,6 +50,7 @@ Cada fila abre el contrato. Su búsqueda, sus filtros y su orden se conservan al
 
 **Columnas por defecto**:
 
+- **Referencia**: la referencia que asigna Kadratis (`CTR-3`). Haga clic en ella para abrir el contrato
 - **Contrato**, **Proveedor**, **Empresa**
 - **Próximo vencimiento**: «Rescisión posible hasta el {date}» cuando esa fecha es la fecha límite de rescisión y es anterior al fin del periodo, o «Termina el {date}» cuando la fecha es el fin del contrato. La línea termina con «en n días». Un contrato vencido muestra en gris el día en que terminó
 - **Situación**: vea más abajo
@@ -102,8 +103,8 @@ La fila fijada abajo dice **Total (n contratos)**. Suma los importes anuales de 
 
 ### Búsqueda, filtros y alcance
 
-- **Búsqueda rápida**: nombre del contrato, proveedor y empresa
-- **Filtros de columna**: en cada encabezado de columna. **Situación**, **Conformidad** y **Cobertura del presupuesto** ofrecen sus valores como casillas. El filtro **Estado** muestra la opción de **Mostrar** (**Todos**, **Activos** o **Desactivados**): cambiar uno cambia el otro
+- **Búsqueda rápida**: nombre del contrato, proveedor y empresa. Escriba una referencia, como `CTR-3`, para encontrar ese contrato. Las cifras solas buscan en el texto
+- **Filtros de columna**: en cada encabezado de columna. El filtro **Referencia** acepta `CTR-3` o `3`. **Situación**, **Conformidad** y **Cobertura del presupuesto** ofrecen sus valores como casillas. El filtro **Estado** muestra la opción de **Mostrar** (**Todos**, **Activos** o **Desactivados**): cambiar uno cambia el otro
 - **Mostrar: Todos / Activos / Desactivados**: el selector sobre la lista. La lista muestra por defecto los contratos activados. Elija **Todos** o **Desactivados** para encontrar los contratos cuyo fin de validez ya pasó
 
 ### Acciones
@@ -120,7 +121,7 @@ La fila fijada abajo dice **Total (n contratos)**. Suma los importes anuales de 
 
 ### Encabezado y propiedades
 
-El encabezado muestra el nombre del contrato (haga clic para cambiarlo), **Anterior** / **Siguiente** con la posición en la lista, y una barra con **Proveedor**, **Empresa contratante**, **Responsable** y **Estado**. El responsable y el estado se cambian ahí mismo. El proveedor y la empresa abren el panel de propiedades.
+El encabezado muestra la referencia del contrato (`CTR-5`, haga clic en ella para copiarla) y el nombre del contrato (haga clic en el nombre para cambiar el nombre del contrato), **Anterior** / **Siguiente** con la posición en la lista, y una barra con **Proveedor**, **Empresa contratante**, **Responsable** y **Estado**. El responsable y el estado se cambian ahí mismo. El proveedor y la empresa abren el panel de propiedades.
 
 El panel de propiedades, a la derecha, contiene todos los campos del contrato: las partes, **Inicio**, **Duración (meses)**, **Preaviso (meses)**, **Renovación tácita**, **Importe anual**, **Moneda**, **Facturación**, luego **Ciclo de vida** (**Estado** y **Fin de validez**), **Creado** y **Actualizado**. Ábralo o ciérrelo con su botón; Kadratis recuerda su elección.
 
@@ -136,7 +137,9 @@ Cada cambio se guarda solo: listas y fechas al instante, valores escritos y nota
 
 Necesita `contracts:member` para editar. Los lectores ven la misma página con todos los campos bloqueados.
 
-**Compartir**, en el encabezado, envía por correo un enlace al contrato a colegas de su espacio de trabajo.
+**Dirección de la página**: la dirección de la página usa la referencia, por ejemplo `/ops/contracts/CTR-5/overview`. La dirección anterior de la página de un contrato lo sigue abriendo y se sustituye por la nueva.
+
+**Compartir**, en el encabezado, envía por correo un enlace al contrato a colegas de su espacio de trabajo. Ese enlace, y el de una alerta de vencimiento, abren el contrato por su referencia.
 
 La ficha tiene cinco pestañas: **Vista general**, **Presupuesto**, **Conformidad**, **Relaciones** e **Historial** (los cambios del contrato, vea [Historial de los registros](record-history.md)). Las direcciones de las antiguas pestañas **Detalles** y **Tareas** abren la vista general.
 
@@ -323,13 +326,17 @@ La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en *
 
 Mantenga su lista de contratos sincronizada con otras herramientas mediante archivos CSV o libros de Excel (`contracts:admin`).
 
-**Exportar**: descarga los contratos que muestra la lista (o, a petición en el diálogo, todos los contratos). Las columnas llevan títulos en el idioma de su pantalla; sus nombres técnicos, que la importación también lee, son `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
+**Exportar**: descarga los contratos que muestra la lista (o, a petición en el diálogo, todos los contratos). Las columnas llevan títulos en el idioma de su pantalla; sus nombres técnicos, que la importación también lee, son `reference`, `name`, `company_name`, `supplier_name`, `cost_center`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
 
 **Importar**:
 
-- Utilice **Verificación previa** para comprobar el archivo antes de aplicarlo
+- Utilice la **Verificación previa** para comprobar el archivo antes de aplicarlo
 - **Descargar un ejemplo**, en el diálogo de importación, ofrece dos contratos de ejemplo y lo que admite cada columna. Consulte [Archivos de ejemplo](csv-files.md#example-files)
-- Una fila corresponde a un contrato por su nombre y su proveedor
+- **Emparejamiento por referencia**: una `reference` rellenada (`CTR-12` o `12`) designa el contrato que la fila actualiza, aunque su nombre o su proveedor hayan cambiado. El contrato toma entonces el nombre y el proveedor de la fila. La verificación previa señala cada contrato que cambiará de nombre o pasará a otro proveedor
+- **Emparejamiento por nombre**: cuando `reference` está vacía, o el archivo no tiene esa columna, una fila corresponde a un contrato por su nombre y su proveedor
+- **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“CTR-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
+- **Una fila por contrato**: dos filas que actualizan el mismo contrato se rechazan: «Esta fila actualiza CTR-4, como la fila 3. Deje una sola fila por registro.» Dos filas que crean el mismo contrato (mismo nombre y mismo proveedor, sin distinguir mayúsculas y minúsculas) también se rechazan: «Mismos valores en name, supplier_name que en la fila 3.»
+- `reference` y `cost_center` pueden faltar en el archivo. Sin `cost_center`, un contrato actualizado conserva su centro de coste o grupo
 - Admite creación y actualizaciones
 - El archivo no tiene columna de fin de validez. En una actualización, un `status` vacío, o igual al estado actual del contrato, conserva su fin de validez. Un estado distinto se aplica: `enabled` borra el fin de validez, y `disabled` termina el contrato hoy, salvo que su fin de validez ya haya pasado
 - Un contrato nuevo queda activado salvo que la fila indique `disabled`

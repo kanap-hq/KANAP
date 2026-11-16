@@ -1,16 +1,26 @@
 import type { CsvLanguage } from '../common/csv-sheet';
 
-/** The columns of the contracts file, in the order the export writes them. */
+/**
+ * The columns of the contracts file, in the order the export writes them. `reference` (`CTR-12`)
+ * names the contract a row updates; blank, the row is matched by its name and supplier.
+ */
 export const CONTRACT_CSV_COLUMNS = [
-  'name', 'company_name', 'supplier_name', 'cost_center', 'start_date', 'duration_months', 'auto_renewal', 'notice_period_months',
+  'reference', 'name', 'company_name', 'supplier_name', 'cost_center', 'start_date', 'duration_months', 'auto_renewal', 'notice_period_months',
   'yearly_amount_at_signature', 'currency', 'billing_frequency', 'status', 'owner_email', 'notes',
 ] as const;
+
+/**
+ * The columns a file may leave out: older files have no reference and no place column. A row
+ * without the place column keeps the stored place.
+ */
+export const CONTRACT_CSV_OPTIONAL: Array<(typeof CONTRACT_CSV_COLUMNS)[number]> = ['reference', 'cost_center'];
 
 /**
  * The title of each column in the file's language. The export and the template write it, and the
  * import reads the titles of every language as well as the technical column (`company_name`).
  */
 export const CONTRACT_CSV_HEADERS: Record<(typeof CONTRACT_CSV_COLUMNS)[number], Record<CsvLanguage, string>> = {
+  reference: { en: 'Reference', fr: 'Référence', de: 'Referenz', es: 'Referencia' },
   name: { en: 'Name', fr: 'Nom', de: 'Name', es: 'Nombre' },
   company_name: { en: 'Company', fr: 'Société', de: 'Unternehmen', es: 'Empresa' },
   supplier_name: { en: 'Supplier', fr: 'Fournisseur', de: 'Lieferant', es: 'Proveedor' },

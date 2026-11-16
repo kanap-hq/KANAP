@@ -509,9 +509,9 @@ describe('ChatMessageList', () => {
     expect(hrefOf('TEC-3')).toBe('/it/technologies/TEC-3');
     expect(hrefOf('MEM-4')).toBe('/portfolio/contributors/MEM-4');
     expect(hrefOf('T-115')).toBe('/portfolio/tasks/task-115');
-    // CTR-n is a contract reference: it opens nothing here, and never a contributor.
-    expect(screen.queryByRole('link', { name: 'CTR-5' })).toBeNull();
-    expect(screen.getAllByRole('link')).toHaveLength(14);
+    // CTR-n is a contract reference: it opens the contract's page (lot R4), never a contributor.
+    expect(hrefOf('CTR-5')).toBe('/ops/contracts/CTR-5');
+    expect(screen.getAllByRole('link')).toHaveLength(15);
     expect(container.querySelector('code')?.textContent).toBe('APP-99');
     expect(container.querySelector('pre')?.textContent).toContain('INC-77');
     expect(container.textContent).toContain('CVE-2026-1234');
@@ -544,6 +544,23 @@ describe('ChatMessageList', () => {
       />,
     );
     expect(screen.getByRole('link', { name: 'DEPT-5' })).toHaveAttribute('href', '/master-data/departments/DEPT-5');
+  });
+
+  it('leaves a contract reference as text without the contracts right', () => {
+    readableResources = ['applications'];
+    try {
+      renderWithTheme(
+        <ChatMessageList
+          messages={[{ id: 'assistant-1', role: 'assistant', content: 'CTR-5 covers APP-36.' }]}
+          previews={[]}
+          onSend={() => undefined}
+        />,
+      );
+      expect(screen.queryByRole('link', { name: 'CTR-5' })).toBeNull();
+      expect(screen.getByRole('link', { name: 'APP-36' })).toBeInTheDocument();
+    } finally {
+      readableResources = null;
+    }
   });
 
   it('leaves as text the references of pages the person cannot open', () => {

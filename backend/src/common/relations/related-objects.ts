@@ -50,6 +50,8 @@ export type RelatedBudgetLine = {
 };
 export type RelatedContract = {
   id: string;
+  /** CTR-n: the row names and opens the contract by its reference. */
+  item_number: number | null;
   name: string;
   supplier_name: string | null;
   end_date: string | null;
@@ -211,7 +213,7 @@ export async function listRelatedContracts(mg: EntityManager, t: RelationLinkTab
   const windowDays = await readDecisionWindowDays(mg, tenantId);
   const terms = contractTermsSql('c', SQL_TODAY_UTC, { decisionWindowDays: windowDays, renewalDecision: renewalDecisionSql('c') });
   const rows: Array<Record<string, any>> = await mg.query(
-    `SELECT c.id, c.name, s.name AS supplier_name, c.status::text AS status, COALESCE(c.auto_renewal, false) AS auto_renewal,
+    `SELECT c.id, c.item_number, c.name, s.name AS supplier_name, c.status::text AS status, COALESCE(c.auto_renewal, false) AS auto_renewal,
             c.yearly_amount_at_signature AS yearly_amount, NULLIF(trim(c.currency), '') AS currency,
             ${dateText('ct.current_term_end')} AS end_date, (ct.term_state = 'to_decide') AS in_renewal_window
      FROM ${t.links} l
@@ -224,6 +226,7 @@ export async function listRelatedContracts(mg: EntityManager, t: RelationLinkTab
   );
   return rows.map((row) => ({
     id: row.id,
+    item_number: row.item_number == null ? null : Number(row.item_number),
     name: row.name,
     supplier_name: row.supplier_name ?? null,
     end_date: row.end_date ?? null,

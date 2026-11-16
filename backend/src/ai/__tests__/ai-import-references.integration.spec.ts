@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 
-// Kad reads the reference column of a company or department file (lot R2 of 26.11.9), as the
+// Kad reads the reference column of a company, department (lot R2 of 26.11.9) or contract file (R4), as the
 // screen's import does: a filled `COMP-n` or `DEPT-n` names the record the row updates, and the
 // check warns of each rename and each move (D12). A value is a reference for Kad only when it
 // carries the family's prefix: a column "ID" numbering the rows 1 to N, mapped onto `reference`,
@@ -20,7 +20,7 @@ process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
 type Harness = { app: any; dataSource: DataSource; previews: any; mapping: any; files: Map<string, { name: string; buffer: Buffer }> };
-type Seed = { tenantId: string; userId: string; conversationId: string; alpha: string; beta: string };
+type Seed = { tenantId: string; userId: string; conversationId: string; alpha: string; beta: string; dell: string };
 
 async function createHarness(): Promise<Harness> {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for ai-import-references.integration.spec.ts.');
@@ -79,7 +79,18 @@ async function seed(runner: QueryRunner): Promise<Seed> {
   for (const [name, number] of [['Achat', 1], ['Finance', 2]] as const) {
     await runner.query(`INSERT INTO departments (tenant_id, company_id, name, item_number) VALUES ($1, $2, $3, $4)`, [tenantId, alpha, name, number]);
   }
-  return { tenantId, userId: user.id, conversationId, alpha, beta };
+  // Contracts of Alpha with Dell: Support (CTR-1) and Licences (CTR-2), with notes; a supplier HP.
+  const supplier = async (name: string) => (await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2) RETURNING id`, [tenantId, name]))[0].id as string;
+  const dell = await supplier('Dell');
+  await supplier('HP');
+  for (const [name, number] of [['Support', 1], ['Licences', 2]] as const) {
+    await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, duration_months, item_number, yearly_amount_at_signature, currency, notes)
+       VALUES ($1, $2, $3, $4, '2026-01-01', 12, $5, 100, 'EUR', 'Kept notes')`,
+      [tenantId, name, alpha, dell, number],
+    );
+  }
+  return { tenantId, userId: user.id, conversationId, alpha, beta, dell };
 }
 
 function ctx(runner: QueryRunner, s: Seed) {
@@ -200,6 +211,113 @@ async function testRowNumbersAreNoReferences(h: Harness, runner: QueryRunner, s:
   console.log('  companies: a column of row numbers mapped onto reference updates nothing: OK');
 }
 
+/** The contracts file as the export writes it: every column of the template, `reference` first. */
+async function contractHeader(h: Harness, runner: QueryRunner, s: Seed): Promise<string[]> {
+  const template = await h.mapping.describeTemplate(ctx(runner, s), 'contracts', 'en');
+  return ['reference', ...template.columns.map((column: any) => column.column).filter((column: string) => column !== 'reference')];
+}
+
+function contractRow(header: string[], values: Record<string, string>): string {
+  const defaults: Record<string, string> = {
+    company_name: 'Alpha', supplier_name: 'Dell', start_date: '2026-01-01', duration_months: '12', auto_renewal: 'yes',
+    notice_period_months: '1', yearly_amount_at_signature: '100', currency: 'EUR', billing_frequency: 'annual', status: 'enabled', notes: 'Kept notes',
+  };
+  return header.map((column) => values[column] ?? defaults[column] ?? '').join(';');
+}
+
+async function contracts(runner: QueryRunner, s: Seed): Promise<string[]> {
+  return (await runner.query(
+    `SELECT 'CTR-' || c.item_number || ' ' || c.name || ' (' || su.name || ') ' || c.yearly_amount_at_signature::int || ' ' || coalesce(c.notes, '-') AS r
+       FROM contracts c JOIN suppliers su ON su.id = c.supplier_id WHERE c.tenant_id = $1 ORDER BY c.item_number`,
+    [s.tenantId],
+  )).map((row: any) => row.r);
+}
+
+// The export of the contracts with CTR-1 renamed and moved to HP: one update, its two warnings.
+async function testContractRenameAndMove(h: Harness, runner: QueryRunner, s: Seed) {
+  const header = await contractHeader(h, runner, s);
+  const file = attach(h, 'contrats-export.csv', [
+    header.join(';'),
+    contractRow(header, { reference: 'CTR-1', name: 'Support R9', supplier_name: 'HP' }),
+    contractRow(header, { reference: 'ctr-2', name: 'Licences' }),
+  ]);
+  const card = await h.previews.createPreview(ctx(runner, s), 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns: sameNames(header) });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual([check.inserted, check.updated, check.unchanged], [0, 1, 1], JSON.stringify(check));
+  assert.deepEqual(card.import_mapping.read_errors, {});
+  assert.deepEqual(check.report.warnings.map((warning: any) => [warning.row, warning.code, warning.params]), [
+    [2, 'CSV_REFERENCE_RENAMES', { reference: 'CTR-1', stored: 'Support', name: 'Support R9', context: 'contract' }],
+    [2, 'CSV_REFERENCE_MOVES', { reference: 'CTR-1', name: 'Support', from: 'Dell', to: 'HP', context: 'supplier' }],
+  ]);
+  const done = await h.previews.executePreview(ctx(runner, s), card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  assert.deepEqual(await contracts(runner, s), ['CTR-1 Support R9 (HP) 100 Kept notes', 'CTR-2 Licences (Dell) 100 Kept notes']);
+  console.log('  contracts: CTR-1 renamed and moved by reference, with both warnings: OK');
+}
+
+// A column "ID" numbering the rows, mapped onto `reference`: not read; the rows keep the key by
+// name and supplier, so two new contracts.
+async function testContractRowNumbersAreNoReferences(h: Harness, runner: QueryRunner, s: Seed) {
+  const before = await contracts(runner, s);
+  const header = await contractHeader(h, runner, s);
+  const fileHeader = ['ID', ...header.slice(1)];
+  const file = attach(h, 'contrats.csv', [
+    fileHeader.join(';'),
+    contractRow(header, { reference: '1', name: 'Gamma' }),
+    contractRow(header, { reference: '2', name: 'Delta' }),
+  ]);
+  const card = await h.previews.createPreview(ctx(runner, s), 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns: sameNames(header) });
+  const check = card.import_mapping.validation;
+  assert.deepEqual(card.import_mapping.read_errors, { reference: 'reference-without-prefix' });
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual([check.inserted, check.updated], [2, 0], JSON.stringify(check));
+  assert.deepEqual(check.report.warnings ?? [], []);
+  assert.deepEqual(await contracts(runner, s), before, 'nothing written by the check');
+  console.log('  contracts: a column of row numbers mapped onto reference updates nothing: OK');
+}
+
+// A person's own file without the reference column: the row updates its contract by name and
+// supplier, and empties none of its values.
+async function testContractFileWithoutReference(h: Harness, runner: QueryRunner, s: Seed) {
+  const header = (await contractHeader(h, runner, s)).filter((column) => column !== 'reference');
+  const file = attach(h, 'mes-contrats.csv', [
+    header.join(';'),
+    contractRow(header, { name: 'Licences', yearly_amount_at_signature: '250' }),
+  ]);
+  const card = await h.previews.createPreview(ctx(runner, s), 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns: sameNames(header) });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check.report.errors));
+  assert.deepEqual([check.inserted, check.updated], [0, 1], JSON.stringify(check));
+  assert.deepEqual(check.report.warnings ?? [], []);
+  const done = await h.previews.executePreview(ctx(runner, s), card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  assert.deepEqual(await contracts(runner, s), ['CTR-1 Support R9 (HP) 100 Kept notes', 'CTR-2 Licences (Dell) 250 Kept notes']);
+  console.log('  contracts: a file without the reference column updates by name and supplier, nothing emptied: OK');
+}
+
+// Two rows of CTR-2, the second under another name: the card refuses the second on its line, as the
+// screen's check does (one row per contract), and the check writes nothing.
+async function testContractSameReferenceTwice(h: Harness, runner: QueryRunner, s: Seed) {
+  const before = await contracts(runner, s);
+  const header = await contractHeader(h, runner, s);
+  const file = attach(h, 'contrats-doublon.csv', [
+    header.join(';'),
+    contractRow(header, { reference: 'CTR-2', name: 'Licences', yearly_amount_at_signature: '300' }),
+    contractRow(header, { reference: 'CTR-2', name: 'Licences bis', yearly_amount_at_signature: '400' }),
+  ]);
+  const card = await h.previews.createPreview(ctx(runner, s), 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns: sameNames(header) });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, false, JSON.stringify(check));
+  assert.deepEqual(
+    check.report.errors.map((error: any) => [error.row, error.column, error.code, error.params]),
+    [[3, 'reference', 'CSV_SAME_RECORD', { firstRow: 2, reference: 'CTR-2' }]],
+    JSON.stringify(check.report.errors),
+  );
+  assert.deepEqual(await contracts(runner, s), before, 'nothing written by the check');
+  console.log('  contracts: a second row of the same reference is refused on its line: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -212,6 +330,10 @@ async function run() {
       await testOwnFileWithoutReference(harness, runner, s);
       await testCompanyRename(harness, runner, s);
       await testDepartmentChanges(harness, runner, s);
+      await testContractRowNumbersAreNoReferences(harness, runner, s);
+      await testContractRenameAndMove(harness, runner, s);
+      await testContractFileWithoutReference(harness, runner, s);
+      await testContractSameReferenceTwice(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

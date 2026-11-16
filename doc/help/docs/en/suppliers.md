@@ -95,7 +95,7 @@ The **Contacts** tab lists the contacts linked to this supplier by contact type:
 The **Used by** section, under the notes on the **Overview** tab, lists what refers to this supplier, one list per type, each with its count:
 
 - **Budget lines**: OPEX and CAPEX lines whose supplier it is, with their reference (`BL-12`) and type.
-- **Contracts**: contracts with this supplier.
+- **Contracts**: contracts with this supplier, with their reference (`CTR-3`).
 - **Applications**: applications whose vendor it is.
 - **Assets**: assets it supports (the support vendor of the asset).
 

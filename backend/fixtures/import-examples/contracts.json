@@ -3,9 +3,10 @@
     "name", "company_name", "supplier_name", "cost_center", "start_date", "duration_months", "auto_renewal", "notice_period_months",
     "yearly_amount_at_signature", "currency", "billing_frequency", "status", "owner_email", "notes"
   ],
-  "advanced": [],
+  "advanced": ["reference"],
   "rows": [
     {
+      "reference": "",
       "name": {
         "en": "Datadog monitoring subscription",
         "fr": "Abonnement de supervision Datadog",
@@ -32,6 +33,7 @@
       }
     },
     {
+      "reference": "",
       "name": {
         "en": "Veeam backup licences, Benelux",
         "fr": "Licences de sauvegarde Veeam, Benelux",

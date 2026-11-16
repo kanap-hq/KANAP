@@ -24,6 +24,16 @@ export function contractsRegistryFor(decisionWindowDays: number): AiEntityFilter
   return {
     entityType: 'contracts',
     fields: {
+      reference: {
+        ai: 'reference',
+        grid: 'item_number',
+        type: 'set',
+        description: 'Contract reference, such as CTR-12.',
+        acceptedValueKind: 'CTR-n reference',
+        examples: ['CTR-12'],
+        sortable: true,
+        groupable: false,
+      },
       term_state: {
         ai: 'term_state',
         grid: 'term_state',
@@ -226,6 +236,7 @@ export function contractsRegistryFor(decisionWindowDays: number): AiEntityFilter
     },
     sortFields: {
       label: 'name',
+      reference: 'item_number',
       status: 'status',
       supplier: 'supplier_name',
       company: 'company_name',

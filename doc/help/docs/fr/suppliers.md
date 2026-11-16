@@ -95,7 +95,7 @@ L'onglet **Contacts** liste les contacts liés à ce fournisseur par type de con
 La section **Lié à**, sous les notes de l'onglet **Vue d'ensemble**, liste ce qui fait référence à ce fournisseur, une liste par type, chacune avec son nombre :
 
 - **Lignes budgétaires** : les lignes OPEX et CAPEX dont il est le fournisseur, avec leur référence (`BL-12`) et leur type.
-- **Contrats** : les contrats passés avec ce fournisseur.
+- **Contrats** : les contrats passés avec ce fournisseur, avec leur référence (`CTR-3`).
 - **Applications** : les applications dont il est l'éditeur.
 - **Actifs** : les actifs dont il assure le support (le fournisseur de support de l'actif).
 

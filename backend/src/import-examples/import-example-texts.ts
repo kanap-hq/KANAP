@@ -8,7 +8,8 @@ export type ReferenceThing =
 /** A column whose notes need more than its kind says. */
 export type ColumnHint =
   | 'countries' | 'minutes' | 'manDays' | 'percent' | 'names' | 'ipAddress' | 'subnet' | 'currency' | 'months'
-  | 'operatingSystem' | 'erpId' | 'endDay' | 'startDay' | 'hostname' | 'userEmail' | 'contactEmail' | 'version';
+  | 'operatingSystem' | 'erpId' | 'endDay' | 'startDay' | 'hostname' | 'userEmail' | 'contactEmail' | 'version'
+  | 'contractReference';
 
 export interface ExampleTexts {
   /** The word of the file name: `applications-example.xlsx`. */
@@ -79,6 +80,7 @@ export const EXAMPLE_TEXTS: Record<CsvLanguage, ExampleTexts> = {
       userEmail: 'The email of a user of the workspace',
       contactEmail: 'The email of a contact of the workspace',
       version: 'Text, such as 4.2',
+      contractReference: 'The reference of a contract to update, such as CTR-12. Empty: a new contract, or the one with the same name and supplier',
     },
     dimension: (name) => `A value of the ${name} dimension. A value that does not exist is created`,
     amountColumn: (column, year) => `The ${column} amount for ${year}`,
@@ -131,6 +133,7 @@ export const EXAMPLE_TEXTS: Record<CsvLanguage, ExampleTexts> = {
       userEmail: 'L’e-mail d’un utilisateur de l’espace',
       contactEmail: 'L’e-mail d’un contact de l’espace',
       version: 'Texte, par exemple 4.2',
+      contractReference: 'La référence d’un contrat à mettre à jour, par exemple CTR-12. Vide : un nouveau contrat, ou celui de même nom et de même fournisseur',
     },
     dimension: (name) => `Une valeur de la dimension ${name}. Une valeur qui n’existe pas est créée`,
     amountColumn: (column, year) => `Le montant ${column} de ${year}`,
@@ -183,6 +186,7 @@ export const EXAMPLE_TEXTS: Record<CsvLanguage, ExampleTexts> = {
       userEmail: 'Die E-Mail-Adresse eines Benutzers des Arbeitsbereichs',
       contactEmail: 'Die E-Mail-Adresse eines Kontakts des Arbeitsbereichs',
       version: 'Text, zum Beispiel 4.2',
+      contractReference: 'Die Referenz eines zu aktualisierenden Vertrags, zum Beispiel CTR-12. Leer: ein neuer Vertrag oder der mit demselben Namen und Lieferanten',
     },
     dimension: (name) => `Ein Wert der Dimension ${name}. Ein Wert, der nicht existiert, wird angelegt`,
     amountColumn: (column, year) => `Der Betrag ${column} für ${year}`,
@@ -235,6 +239,7 @@ export const EXAMPLE_TEXTS: Record<CsvLanguage, ExampleTexts> = {
       userEmail: 'El correo de un usuario del espacio de trabajo',
       contactEmail: 'El correo de un contacto del espacio de trabajo',
       version: 'Texto, por ejemplo 4.2',
+      contractReference: 'La referencia de un contrato que actualizar, por ejemplo CTR-12. Vacía: un contrato nuevo, o el del mismo nombre y proveedor',
     },
     dimension: (name) => `Un valor de la dimensión ${name}. Un valor que no existe se crea`,
     amountColumn: (column, year) => `El importe ${column} de ${year}`,

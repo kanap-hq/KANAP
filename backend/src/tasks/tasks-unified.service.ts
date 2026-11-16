@@ -55,6 +55,13 @@ type TaskRelationPayload = Partial<Task> & {
   asset_ids?: string[];
 };
 
+/**
+ * A task's object its author does not read, as the activity names it: true for every reader of the
+ * task, in English as the activity's stored prefixes.
+ */
+const UNREAD_CONTRACT = 'A contract';
+const UNREAD_LINE = 'A budget line';
+
 @Injectable()
 export class TasksUnifiedService {
   private readonly logger = new Logger(TasksUnifiedService.name);
@@ -658,6 +665,12 @@ export class TasksUnifiedService {
     });
   }
 
+  /**
+   * The name of a task's object in its activity ("related to"), which every reader of the task reads
+   * as stored. A budget line or a contract the author does not read is absent from its table
+   * (data-scoped access): the activity names its kind alone, never its id, name or reference. A
+   * contract is named without its reference, which a reader in limited access may not read.
+   */
   private async resolveRelatedObjectName(
     type: RelatedType,
     id: string | null,
@@ -681,7 +694,7 @@ export class TasksUnifiedService {
         `SELECT product_name FROM spend_items WHERE id = $1 AND nature = 'opex' LIMIT 1`,
         [id],
       );
-      if (!row) return id;
+      if (!row) return UNREAD_LINE;
       return `Spend: ${row.product_name}`;
     }
 
@@ -690,7 +703,7 @@ export class TasksUnifiedService {
         'SELECT name FROM contracts WHERE id = $1 LIMIT 1',
         [id],
       );
-      if (!row) return id;
+      if (!row) return UNREAD_CONTRACT;
       return `Contract: ${row.name}`;
     }
 
@@ -700,7 +713,7 @@ export class TasksUnifiedService {
         `SELECT product_name FROM spend_items WHERE id = $1 AND nature = 'capex' LIMIT 1`,
         [id],
       );
-      if (!row) return id;
+      if (!row) return UNREAD_LINE;
       return `CAPEX: ${row.product_name}`;
     }
 

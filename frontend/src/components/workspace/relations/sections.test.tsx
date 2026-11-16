@@ -169,3 +169,26 @@ describe('contracts outside the data access', () => {
     expect(contractsSection({ t, rows: [contract('k-1')], lang: 'en' }).outside?.count).toBe(0);
   });
 });
+
+describe('contracts by their reference (lot R4)', () => {
+  const row: ContractRow = {
+    id: 'k-1', item_number: 12, name: 'SAP Maintenance', supplier_name: null, end_date: null, yearly_amount: null,
+    currency: null, auto_renewal: false, in_renewal_window: false, status: 'enabled',
+  };
+
+  it('opens a linked contract by CTR-n, by its uuid without a number, and shows the reference first', () => {
+    const section = contractsSection({ t, rows: [row], lang: 'en' });
+    expect(section.href?.(row)).toBe('/ops/contracts/CTR-12/overview');
+    expect(section.href?.({ ...row, item_number: null })).toBe('/ops/contracts/k-1/overview');
+    const first = section.columns[0];
+    expect(first.key).toBe('ref');
+    render(<>{first.render(row)}</>);
+    expect(screen.getByText('CTR-12')).toBeInTheDocument();
+  });
+
+  it('names the contracts of the picker by their reference', async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: { items: [{ id: 'k-1', item_number: 12, name: 'SAP Maintenance' }, { id: 'k-2', name: 'Old' }] } });
+    const options = await contractsSection({ t, rows: [], lang: 'en' }).search!('', new AbortController().signal);
+    expect(options.map((option) => [option.id, option.ref ?? null, option.label])).toEqual([['k-1', 'CTR-12', 'SAP Maintenance'], ['k-2', null, 'Old']]);
+  });
+});

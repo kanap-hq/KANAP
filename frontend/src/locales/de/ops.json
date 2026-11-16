@@ -367,6 +367,7 @@
     "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff",
     "outsideYourAccess": "Vertrag außerhalb Ihres Zugriffs",
     "columns": {
+      "reference": "Referenz",
       "contract": "Vertrag",
       "supplier": "Lieferant",
       "company": "Unternehmen",
@@ -470,6 +471,7 @@
     },
     "messages": {
       "loadFailed": "Der Vertrag konnte nicht geladen werden.",
+      "notFound": "Vertrag nicht gefunden.",
       "saveFailed": "Die Änderung konnte nicht gespeichert werden.",
       "createFailed": "Der Vertrag konnte nicht erstellt werden.",
       "nameRequired": "Geben Sie einen Namen ein.",

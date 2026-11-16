@@ -367,6 +367,7 @@
     "readOnlyInYourAccess": "Solo lectura en su acceso",
     "outsideYourAccess": "Contrato fuera de su acceso",
     "columns": {
+      "reference": "Referencia",
       "contract": "Contrato",
       "supplier": "Proveedor",
       "company": "Empresa",
@@ -470,6 +471,7 @@
     },
     "messages": {
       "loadFailed": "No se pudo cargar el contrato.",
+      "notFound": "Contrato no encontrado.",
       "saveFailed": "No se pudo guardar el cambio.",
       "createFailed": "No se pudo crear el contrato.",
       "nameRequired": "Introduzca un nombre.",

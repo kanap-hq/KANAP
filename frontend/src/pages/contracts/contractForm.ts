@@ -3,6 +3,8 @@ import type { StatusValue } from '../../constants/status';
 /** A contract as `GET /contracts/:id` returns it. */
 export type ContractDetail = {
   id: string;
+  /** CTR-n once written. */
+  item_number?: number | null;
   name: string;
   status: string;
   disabled_at: string | null;

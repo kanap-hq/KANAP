@@ -90,6 +90,8 @@ import {
   cellOf,
   fieldAmounts,
   readMasterDataFile,
+  referenceMoveWarning,
+  referenceRenameWarning,
   rowError,
   rowProblemErrors,
   type CsvDateOrder,
@@ -111,7 +113,8 @@ import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-w
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { amountCell, dayCell, ListExportCell, ListExportFile, numberCell, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
-import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS } from './contract-csv-headers';
+import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS, CONTRACT_CSV_OPTIONAL } from './contract-csv-headers';
+import { contractReference, contractReferenceFilter, contractReferenceNumber } from './contract-reference';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -413,6 +416,12 @@ export class ContractsService {
     if (filtersToApply && typeof filtersToApply === 'object') {
       for (const [field, model] of Object.entries(filtersToApply)) {
         if (opts?.omitFilters?.includes(field)) continue;
+        // The reference column shows `CTR-12`; the assistant's `reference` filter lists references.
+        if (field === 'item_number') {
+          const reference = contractReferenceFilter(model, 'c.item_number', nextParam);
+          if (reference) compiledFilters.push(reference);
+          continue;
+        }
         if (field === COVERED_APPLICATION_FILTER) {
           // Not applied for a caller who does not read the applications: it would name what they cover.
           if (!opts.coveredApplications) continue;
@@ -429,6 +438,12 @@ export class ContractsService {
     const quickSearchConditions = q
       ? buildQuickSearchConditions(q, ['c.name', 'comp.name', 'sup.name', 'c.notes'], nextParam)
       : [];
+    // `CTR-12` also finds that contract exactly; digits alone stay a text search.
+    const searchedNumber = q ? contractReferenceNumber(q) : null;
+    if (searchedNumber !== null) {
+      const param = nextParam();
+      quickSearchConditions.push({ sql: `c.item_number = :${param}`, params: { [param]: searchedNumber } });
+    }
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
@@ -481,6 +496,7 @@ export class ContractsService {
     const sortExpressions: Record<string, string> = {
       ...budgetSorts,
       ...complianceSorts,
+      item_number: 'c.item_number',
       name: 'c.name',
       status: 'c.status',
       company_name: 'comp.name',
@@ -1184,12 +1200,13 @@ export class ContractsService {
     // Not the parsed limit: parsePagination defaults to a page of 20, and the prev/next
     // navigation that calls this sends no limit, so it only ever knew 20 contracts.
     const limit = Math.min(Number(query?.limit) || 10000, 10000);
-    qb.select(['c.id']);
+    qb.select(['c.id', 'c.item_number']);
     await this.applyListSort(qb, sort, filterTargets);
     qb.offset(skip).limit(limit);
 
     const [rows, total] = await qb.getManyAndCount();
-    return { ids: rows.map(r => (r as any).id as string), total };
+    // The references too: the previous / next band opens a neighbour by its reference.
+    return { ids: rows.map((r) => r.id), refs: rows.map((r) => contractReference(r.item_number)), total };
   }
   async listFilterValues(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
     const rawFields = String(query?.fields || query?.field || '')
@@ -1358,6 +1375,7 @@ export class ContractsService {
         for (const it of items) {
           const start = isoDate(it.start_date);
           rows.push([
+            contractReference(it.item_number) ?? '',
             it.name,
             cMap.get(it.company_id)?.name ?? '',
             sMap.get(it.supplier_id)?.name ?? '',
@@ -1385,7 +1403,8 @@ export class ContractsService {
   /**
    * Reads the contracts file through the shared layer: either separator, UTF-8 or Windows-1252,
    * the start date in the file's own form, the amount with its decimal mark, physical line
-   * numbers. Rows are matched by name and supplier.
+   * numbers. A row with a reference (`CTR-12`, or `12`) updates that contract, an unknown one is
+   * refused with its line; a row without one is matched by name and supplier.
    */
   async importCsv(
     {
@@ -1414,8 +1433,8 @@ export class ContractsService {
       fields: this.csvHeaders(),
       fieldLabels: CONTRACT_CSV_HEADERS,
       dateFields: ['start_date'],
-      // Older files have no place column: a row without it keeps the stored place.
-      optional: ['cost_center'],
+      // Older files have no reference and no place column: a row without the place keeps the stored one.
+      optional: CONTRACT_CSV_OPTIONAL,
       language: readLanguage,
       dateOrder,
       decimalMark,
@@ -1438,14 +1457,28 @@ export class ContractsService {
     const uByEmail = new Map<string, any>(allUsers.map((r: any) => [r.email.toLowerCase(), r]));
     const nByName = new Map<string, any>(allNodes.map((r: any) => [r.name, r]));
     const hasPlaceColumn = read.present.includes('cost_center');
+    // The contracts the file names by reference, read at once (a number of no contract is refused below).
+    const referenced = Array.from(new Set(rows
+      .map((r) => contractReferenceNumber(cellOf(r, 'reference'), { bare: true }))
+      .filter((n): n is number => n !== null)));
+    const byNumber = new Map<number, Contract>(
+      (referenced.length ? await repo.find({ where: { tenant_id: sessionTenant(), item_number: In(referenced) } }) : [])
+        .map((row) => [Number(row.item_number), row]),
+    );
 
-    const norm: Array<ContractUpsertDto & { line: number; supplier_name: string; company_name: string; owner_email?: string | null; cost_center_name?: string | null }> = [];
+    const norm: Array<ContractUpsertDto & { line: number; supplier_name: string; company_name: string; owner_email?: string | null; cost_center_name?: string | null; target?: Contract }> = [];
     for (const r of rows) {
       const line = r.line;
       const problems = rowProblemErrors(r);
       if (problems.length > 0) {
         errors.push(...problems);
         continue;
+      }
+      const referenceRaw = cellOf(r, 'reference');
+      const referencedNumber = referenceRaw ? contractReferenceNumber(referenceRaw, { bare: true }) : null;
+      const target = referencedNumber !== null ? byNumber.get(referencedNumber) : undefined;
+      if (referenceRaw && !target) {
+        errors.push(rowError(line, 'reference', 'CSV_RECORD_REFERENCE_NOT_FOUND', `"${referenceRaw}" is no reference in this workspace.`, { value: referenceRaw }));
       }
       const name = cellOf(r, 'name');
       const company_name = cellOf(r, 'company_name');
@@ -1500,31 +1533,72 @@ export class ContractsService {
       if (!BILLING_FREQUENCIES.includes(billing_frequency)) {
         errors.push(rowError(line, 'billing_frequency', 'CSV_ENUM_INVALID', 'billing_frequency invalid', { value: billing_frequency, allowed: BILLING_FREQUENCIES.join(', ') }));
       }
-      norm.push({ line, name, company_name, supplier_name, cost_center_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
+      norm.push({ line, target, name, company_name, supplier_name, cost_center_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
 
-    // Deduplicate by composite key name+supplier_name (first wins)
-    const uniqMap = new Map<string, typeof norm[number]>();
-    for (const item of norm) {
-      const key = `${item.name}||${item.supplier_name}`.toLowerCase();
-      if (!uniqMap.has(key)) uniqMap.set(key, item);
-    }
-    const unique = Array.from(uniqMap.values());
+    // One row per contract: a second row naming the same contract, by its reference or by its name
+    // and supplier, is refused on its line below.
+    const unique = norm;
 
-    // Determine inserts/updates by composite (name + supplier). A row identical to the stored
-    // contract counts as unchanged and is not written: no audit line, no new `updated_at`.
+    // Determine inserts/updates by reference, else by composite (name + supplier). A row identical
+    // to the stored contract counts as unchanged and is not written: no audit line, no new `updated_at`.
     let inserted = 0; let updated = 0; let unchanged = 0;
     const toWrite: typeof unique = [];
+    const existingOf = new Map<typeof unique[number], Contract | null>();
+    // A filled reference that renames its contract or moves it to another supplier is said, without
+    // blocking (D12): a file of another workspace names unrelated contracts by the same references.
+    const warnings: ImportReportError[] = [];
+    const supplierNameOf = new Map<string, string>(allSuppliers.map((r: any) => [r.id, r.name]));
+    const firstLineOfContract = new Map<string, number>();
+    const firstLineOfNewContract = new Map<string, number>();
     const markdownBudget = markdownWorkBudget();
     const now = new Date();
     const today = utcDateYmd(now);
     for (const item of unique) {
       const s = sByName.get(item.supplier_name);
       if (!s) { updated += 0; continue; }
-      const exists = await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: s.id as any } });
+      const exists = item.target
+        ?? await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: s.id as any } });
+      if (exists && item.target) {
+        const reference = contractReference(exists.item_number) ?? '';
+        const renamed = referenceRenameWarning(item.line, { family: 'contract', reference, stored: exists.name, next: String(item.name ?? '') });
+        if (renamed) warnings.push(renamed);
+        const moved = referenceMoveWarning(item.line, {
+          parent: 'supplier',
+          reference,
+          name: exists.name,
+          storedParentId: exists.supplier_id ?? null,
+          nextParentId: s.id,
+          from: supplierNameOf.get(exists.supplier_id as string) ?? '',
+          to: s.name,
+        });
+        if (moved) warnings.push(moved);
+      }
+      if (exists) {
+        // One row per contract: a reference and a name may name the same one.
+        const firstRow = firstLineOfContract.get(exists.id);
+        if (firstRow !== undefined) {
+          const reference = contractReference(exists.item_number);
+          errors.push(rowError(item.line, item.target ? 'reference' : 'name', 'CSV_SAME_RECORD', `This row updates ${reference}, as row ${firstRow} does.`, { firstRow, reference: reference ?? '' }));
+          continue;
+        }
+        firstLineOfContract.set(exists.id, item.line);
+      } else {
+        // A new contract takes one row: its name and supplier again, whatever the case, are refused.
+        const key = `${item.name}||${item.supplier_name}`.toLowerCase();
+        const firstRow = firstLineOfNewContract.get(key);
+        if (firstRow !== undefined) {
+          errors.push(rowError(item.line, 'name', 'CSV_DUPLICATE_KEY', `Same name and supplier as row ${firstRow}.`, { columns: 'name, supplier_name', firstRow }));
+          continue;
+        }
+        firstLineOfNewContract.set(key, item.line);
+      }
+      existingOf.set(item, exists);
       if (!exists) inserted += 1;
       else if (importRowUnchanged(exists, {
+        // A row matched by its reference may rename the contract or change its supplier.
+        ...(item.target ? { name: item.name, supplier_id: s.id } : {}),
         company_id: cByName.get(item.company_name)?.id,
         ...(hasPlaceColumn && (item.cost_center_name || (exists.cost_center_id ?? null) !== null)
           ? { cost_center_id: item.cost_center_name ? nByName.get(item.cost_center_name)?.id ?? null : null }
@@ -1559,7 +1633,7 @@ export class ContractsService {
       }
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], ...report };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
 
     // Commit
     let processed = 0;
@@ -1568,7 +1642,7 @@ export class ContractsService {
       const supplier = sByName.get(item.supplier_name);
       const owner = item.owner_email ? uByEmail.get(item.owner_email.toLowerCase()) : null;
       if (!company || !supplier) continue; // skip unresolved refs silently
-      const exists = await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: supplier.id as any } });
+      const exists = existingOf.get(item) ?? null;
       // The file has no end of validity: a status equal to the current one (read from the date)
       // or blank keeps the stored date; a new contract is enabled unless the row says disabled.
       const status = exists
@@ -1595,7 +1669,7 @@ export class ContractsService {
       if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg }); processed += 1; }
       else { await this.create(payload, userId ?? undefined, { manager: mg }); processed += 1; }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], ...report };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report };
   }
 
   // Symmetric linking from OPEX side
@@ -1974,7 +2048,7 @@ export class ContractsService {
         recipients,
         rawEmails,
         tenantId,
-        // No request manager: the send outlives the request (a contract link needs no lookup).
+        // No request manager: the send outlives the request, and reads the CTR-n of its link on its own connection.
       });
     }
     // The chosen persons who cannot open the contract: the screen warns the sender (spec §5.6). No

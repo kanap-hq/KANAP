@@ -608,7 +608,7 @@ L'onglet Relations montre ce que finance cette ligne : ses projets, applications
 | **Projets** | Référence (`PRJ-7`), nom, statut, fin prévue |
 | **Applications** | Référence (`APP-3`), nom, cycle de vie, criticité business |
 | **Technologies** | Référence (`TEC-5`), nom, famille, éditeur |
-| **Contrats** | Nom, fournisseur, fin de la période en cours, montant annuel dans la devise du contrat, renouvellement (tacite ou manuel) |
+| **Contrats** | Référence (`CTR-3`), nom, fournisseur, fin de la période en cours, montant annuel dans la devise du contrat, renouvellement (tacite ou manuel) |
 | **Actifs** | Référence (`AST-12`), nom, type, environnement, statut |
 
 Vous ne voyez que les sections des modules que vous pouvez lire. Les technologies et les actifs demandent de pouvoir lire l'infrastructure. Un Contributeur métier ne voit que les projets et les applications auxquels il participe. Les noms des projets apparaissent aussi dans la colonne **Projet** de la liste, où la recherche rapide les trouve. Les noms des contrats apparaissent dans sa colonne **Contrat**. Un contrat qui diffère de la ligne sur la société payeuse, le centre de coûts, le fournisseur ou la devise affiche une petite marque orange à côté de son nom. Survolez la marque pour voir chaque écart, avec la valeur sur la ligne et la valeur sur le contrat. Le sélecteur montre la même marque sur un contrat avant de le lier. Le lien reste possible. La marque apparaît pour un contrat que vous pouvez lire.

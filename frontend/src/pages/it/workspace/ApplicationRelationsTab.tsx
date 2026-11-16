@@ -250,8 +250,10 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
       <RelationSuggestions
         suggestions={suggestions}
         canEdit={canEdit}
-        referenceOf={(row) => (row.type === 'budget_line' ? refOf('budget', row.item_number) : row.type === 'project' ? refOf('project', row.item_number) : null)}
-        href={(row) => (row.type === 'contract' ? `/ops/contracts/${row.id}/overview` : pathOf(row.type === 'budget_line' ? 'budget' : 'project', row))}
+        referenceOf={(row) => refOf(row.type === 'budget_line' ? 'budget' : row.type, row.item_number)}
+        href={(row) => (row.type === 'contract'
+          ? `/ops/contracts/${refOf('contract', row.item_number) ?? row.id}/overview`
+          : pathOf(row.type === 'budget_line' ? 'budget' : 'project', row))}
         onLink={(row) => { void handleLink(SUGGESTION_KIND[row.type], row.id); }}
       />
 

@@ -17,7 +17,7 @@ import DashboardTile from './tiles/DashboardTile';
 import { AmountColumnKey, amountFieldKey, slotYear, YearSlot, yearSlotLabel } from '../../components/finance/amountColumns';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import type { BudgetOperationScope as NatureScope } from '../../services/budgetOperations';
-import { buildItemPath, formatItemRef } from '../../utils/item-ref';
+import { buildItemPath, formatItemRef, itemAddress } from '../../utils/item-ref';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import type { BudgetSummaryRow } from '../reports/useReportScope';
 import {
@@ -136,7 +136,7 @@ function useNextContractRenewal(enabled: boolean) {
         sort: 'next_due_date:ASC',
         filters: JSON.stringify(filters),
       };
-      const res = await api.get<ServerListResponse<{ id: string; name: string; next_due_date?: string | null }>>('/contracts', { params });
+      const res = await api.get<ServerListResponse<{ id: string; item_number?: number | null; name: string; next_due_date?: string | null }>>('/contracts', { params });
       return res.data;
     },
     staleTime: 60 * 1000,
@@ -725,7 +725,7 @@ export default function BudgetSection({ tiles: tilesConfig, loading = false, lea
           <DashboardTile icon="EventAvailable" title={t('dashboard.nextRenewals')} isLoading={contractsLoading} isEmpty={upcomingRenewals.length === 0} action={<Button size="small" onClick={() => navigate('/ops/contracts')}>{t('buttons.viewAll')}</Button>}>
             <Stack spacing={0.5}>
               {upcomingRenewals.map((r) => (
-                <Stack key={r.id} component={RouterLink} to={`/ops/contracts/${r.id}/overview`} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                <Stack key={r.id} component={RouterLink} to={`/ops/contracts/${itemAddress('contract', r)}/overview`} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.next_due_date ? new Date(r.next_due_date).toLocaleDateString(locale) : '\u2014'}</Typography>
                   <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
                 </Stack>

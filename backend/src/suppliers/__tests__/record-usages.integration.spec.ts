@@ -154,7 +154,7 @@ async function testSupplierUsages() {
     const capexRef = `BL-${1 + CAPEX_NUMBER_OFFSET}`;
     assert.deepEqual(shape(usages), {
       budget_lines: ['BL-1|OPEX A|opex|active|-', `${capexRef}|CAPEX A|capex|inactive|-`],
-      contracts: ['-|Contract A|-|active|-'],
+      contracts: ['CTR-1|Contract A|-|active|-'],
       applications: ['APP-1|Application A|-|active|-'],
       assets: ['AST-1|Asset A|-|active|-'],
     }, 'every object of tenant A naming the supplier, both natures, active ones first');
@@ -173,7 +173,7 @@ async function testContactUsages() {
     assert.deepEqual(shape(usages), {
       suppliers: ['-|Microsoft|-|active|technical'],
       budget_lines: ['BL-1|OPEX A|opex|active|commercial+technical', `BL-${1 + CAPEX_NUMBER_OFFSET}|CAPEX A|capex|active|support`],
-      contracts: ['-|Contract A|-|active|commercial'],
+      contracts: ['CTR-1|Contract A|-|active|commercial'],
       applications: ['APP-1|Application A|-|active|Account manager'],
       assets: ['AST-1|Asset A|-|active|Hardware support'],
       technologies: ['TEC-1|Technology A|-|active|Database support'],
