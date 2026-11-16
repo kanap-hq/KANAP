@@ -110,6 +110,7 @@ Attach a spreadsheet and ask Kad to import it into a Kadratis list: applications
 - Each choice you make on a budget file's preview checks the file again and gives a new preview in the same place.
 - For applications, assets, projects, requests, tasks and incidents, a blank cell keeps the value already stored on a record the file updates.
 - Contracts, suppliers, contacts, companies, departments, cost centers, accounts, analytics dimension values, business processes, working-day calendars and technology links replace every value of a record they update. When rows of the file match existing records and the file lacks some columns of the import, the check reports an error and the preview cannot be approved, because those values would be cleared. Map the missing columns, or keep only new records in the file.
+- For companies and departments, a column of references as their export writes it (`COMP-12`, `DEPT-4`) names the record each row updates, as in the list's import. The check lists each record that will be renamed or move to another company. When a value of that column lacks the prefix, as in a column of row numbers, Kad reads none of its values and matches the rows by name.
 - The **Download file (.xlsx)** button, next to **Reject**, gives the file Kad prepared, as an .xlsx file in the format of the list's import: the columns of the import, your values as the import reads them (list codes, dates), one row per row of your file. For the imports that replace every value, the file holds every column of the import, blank where your file had none. Fill in the missing values and import the file with the list's own **Import** button. The [Audit log](admin.md#audit-log) records each download, as for any export.
 - For budget lines, every row creates a new line, except the rows left out or set to update the line they look like.
 - The [Audit log](admin.md#audit-log) records each import made through Kad, with the file name and the counts, under the source **AI chat**.
@@ -173,7 +174,7 @@ Kad lists, counts and reads incidents. It filters them by asset, application or 
 
 Kad reads contracts as the [Contracts](contracts.md) list shows them: the state of the current term (to decide, in progress, renewed, ends without renewal, expired), the next due date and the cancellation deadline, with the decision window of your workspace and the renewal decisions already recorded. It also reads what a contract covers: its applications, assets, technologies and budget lines. Ask, for example: "Which contracts are to decide, and which applications do they cover?" or "Which contracts cover APP-8?" Assistants connected over MCP get the same answers.
 
-Kad names a record by its reference, such as `APP-8` or `BL-14`, or by its name when it has none, such as a business process. The reference or the name links to the record's page when you can open it.
+Kad names a record by its reference, such as `APP-8`, `BL-14` or `COMP-3`, or by its name when it has none, such as a business process. The reference or the name links to the record's page when you can open it. You can ask for a record by its reference too, for example "Show me COMP-3."
 
 Kad names a record linked to the one you ask about only when you can read its module, as the record's page does: the applications of a project need the applications, its assets the infrastructure, its source requests the requests. A Business Contributor only gets the projects, requests and applications they take part in. The servers an application runs on are the exception: they come with the application, as on its **Deployments** tab. Asked about a person, Kad gives what the users list shows you: an administrator of users gets the full profile, everyone else the name, email and status. Assistants connected over MCP get the same answers.
 
@@ -219,6 +220,26 @@ With the Member level on infrastructure, Kad creates a technology, adopts it fro
 With the same level, when vulnerabilities are followed, Kad changes the state of vulnerabilities to **To review**, **Handled** or **Not affected**, with a note if you give one. Name a CVE to change all its rows, add a technology or a technology and a version to narrow it, or describe the rows with the filters of the page. One change covers 5,000 rows at most, as on the page. The preview says how many rows and CVE change. **Accepted** is not a state: Kad offers **Handled** with a note, or **Not affected**. Ask Kad to undo the change in the conversation. Ask, for example: "Mark CVE-2024-3094 as not affected on TEC-3, the package is not installed". See [Ask the assistant](vulnerabilities.md#ask-the-assistant).
 
 When Kad creates a budget line, it asks whether the line is OPEX or CAPEX if you did not say. It does not change the type of an existing line: use **Change type...** in the line's workspace (see [Changing the type](budget-lines.md#changing-the-type)). Kad sets the contract of OPEX lines only. A CAPEX line reaches its contracts through the links of its **Relations** tab.
+
+### Changing records in bulk { #changing-records-in-bulk }
+
+Kad changes one field on many budget lines or applications at once, as **Change the selection** does on the list. It needs the same right: the Member level on budget, or on applications. Name the records with a filter of the list, such as a supplier or a cost center, or with their references (`BL-3`, `APP-7`). Use one or the other in a request. A filter takes the enabled records, unless it names a status. Retired applications stay out, unless it names a lifecycle.
+
+- On budget lines: the cost center, the account, the paying company, the supplier, the IT owner, the business owner, run or build, or the value of a dimension.
+- On applications: the business owners or the IT owners (the people you name replace those of the role), the category, the lifecycle, the business criticality or the cyber criticality.
+
+Ask, for example: "Move the lines of supplier Acme to cost center IT-01" or "Make Claire Martin the IT owner of APP-3 and APP-7".
+
+The preview shows the records targeted, the field and its new value, how many records change, how many already have this value and how many are refused, with the reason. It lists the first records by reference. Approve it to apply the change. A change cannot be undone. The **History** tab of each record shows it as made by Kad for you.
+
+Kad refuses a change:
+
+- When the request names no records, or names a filter and references together
+- When it does not find the value or the person you name
+- Above 5,000 records. Narrow the filter
+- That would empty the account, the paying company, a required dimension, the category or the lifecycle
+
+If the list changes between the preview and your approval, the preview fails. Ask Kad for a new one. While another budget operation is running, the preview stays open: approve it again once that operation has finished. Assistants connected over MCP read only.
 
 ### Deleting a record { #deleting-a-record }
 
@@ -282,6 +303,8 @@ For pending change previews, the panel offers two buttons:
 - **Approve**: confirms the change and lets Kad apply it
 - **Reject**: cancels the change. Kad says the change was rejected and prepares nothing in its place. When your request asked for several changes, it goes on with the others.
 
+When several previews are pending, **Approve all** and **Reject all** act on all of them at once.
+
 A preview, and the message Kad writes after you approve or reject it, are in the language of your profile (of your browser when your profile sets none), with the field names and values the screens use. A budget line asked for with an amount comes as one preview: one approval creates the line, its budget version for the year and the amount.
 
 When you ask for a change Kad cannot make, such as deleting a project or running the vulnerability matching again, it says so and names the screen where you can make it. It prepares no other change in its place.
@@ -298,7 +321,7 @@ People who can open **Admin > Kad** also see a thin bar under the composer, once
 
 ## Tips
 
-- **Use prefixes for precision**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` map directly to native Kadratis references. They are the fastest way to point Kad at a specific record and they survive copy-paste because they look identical to what you see elsewhere in the application.
+- **Use prefixes for precision**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@COMP-`, `@DEPT-` map directly to native Kadratis references. They are the fastest way to point Kad at a specific record and they survive copy-paste because they look identical to what you see elsewhere in the application.
 - **Start a new conversation per topic**: keeping unrelated questions in separate conversations makes the context window smaller, the answers faster, and the token bill lower. The conversation list is grouped by date so you can find them again easily.
 - **Approve and reject deliberately**: previews are the only thing standing between Kad and your live data. Take the extra second to read the diff before clicking **Approve**.
 - **Stop instead of waiting**: if Kad heads down the wrong path mid-stream, hit the **Stop** button rather than waiting for it to finish. You will save tokens, and your follow-up message can correct the course.

@@ -483,6 +483,9 @@
         "location": "Location",
         "document": "Document",
         "company": "Company",
+        "department": "Department",
+        "supplier": "Supplier",
+        "contact": "Contact",
         "businessProcess": "Business process"
       },
       "myTimeTitle": "My time",
@@ -551,6 +554,8 @@
     "importTitle": "Import CSV",
     "exportDescription": "Export data as CSV. Files use semicolon separators.",
     "exportDescriptionFlexible": "Export data as CSV. The separator, the decimal mark and the dates follow the language of the screen.",
+    "csvFileNote": "A CSV file uses semicolon separators.",
+    "csvFileNoteFlexible": "In a CSV file, the separator, the decimal mark and the dates follow the language of the screen.",
     "exportData": "Export data",
     "exportPreset": "Fields to export",
     "fullExport": "Full export",

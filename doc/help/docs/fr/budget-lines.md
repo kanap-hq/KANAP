@@ -221,6 +221,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - Les montants ne se modifient pas ainsi. Modifiez-les sur la ligne ou dans le [fichier budgétaire](budget-file.md)
 - Chaque ligne modifiée a sa propre entrée dans son onglet **Historique**
 - Avec un accès aux données limité, vous modifiez les lignes de votre accès. Une modification qui ferait sortir une ligne de votre accès est refusée pour cette ligne
+- [Kad](ai-assistant.md#changing-records-in-bulk) fait la même modification quand vous la lui demandez dans une conversation, avec les mêmes droits. Vous approuvez son aperçu
 
 ---
 

@@ -193,9 +193,11 @@
       "applies_to": "Verwendet für",
       "as_of_date": "Stichtag",
       "asset_ids": "Verknüpfte Assets",
+      "application_bulk_edit": "Massenänderung",
       "asset_reference": "Asset-Referenz",
       "assets": "Verknüpfte Assets",
       "audit_logging": "Audit-Protokollierung",
+      "budget_line_bulk_edit": "Massenänderung",
       "budget_year": "Budgetjahr",
       "business_objects": "Geschäftsobjekte",
       "business_purpose": "Geschäftszweck",
@@ -367,7 +369,8 @@
       "no": "Nein",
       "readErrors": {
         "mixed-date-orders": "Datumsangaben mit Tag zuerst und mit Monat zuerst",
-        "mixed-decimal-marks": "Zahlen mit Dezimalkomma und mit Dezimalpunkt"
+        "mixed-decimal-marks": "Zahlen mit Dezimalkomma und mit Dezimalpunkt",
+        "reference-without-prefix": "Werte ohne Referenzpräfix: nicht gelesen"
       }
     },
     "importRun": {
@@ -395,6 +398,7 @@
     "confirmTitle_other": "{{count}} Vorschauen genehmigen?",
     "more_one": "{{count}} weitere Vorschau",
     "more_other": "{{count}} weitere Vorschauen",
+    "rejectAll": "Alle ablehnen",
     "title_one": "{{count}} Vorschau",
     "title_other": "{{count}} Vorschauen"
   },

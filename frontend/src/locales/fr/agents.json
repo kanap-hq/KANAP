@@ -249,7 +249,7 @@
     "title": "Activité agents",
     "subtitle": "Consultez les propositions, décisions, exécutions, pauses et erreurs.",
     "filters": "Filtres",
-    "ticketSearch": "Numéro de ticket",
+    "ticketSearch": "Référence (T-15) ou numéro de ticket",
     "search": "Rechercher",
     "timeline": "Chronologie",
     "loadFailed": "Impossible de charger l'activité.",
@@ -313,6 +313,7 @@
       "poller_cycle_completed": "Recherche de tickets",
       "poller_cycle_completed_sre": "Recherche d'alertes",
       "work_item_processing_failed": "Impossible de traiter ce ticket",
+      "work_item_processing_failed_kad": "Impossible de traiter ce changement",
       "work_item_processing_failed_sre": "Échec du traitement de l'alerte",
       "agent_deleted": "Agent supprimé",
       "agent_attention_acknowledged": "Élément d'attention pris en compte"
@@ -739,7 +740,7 @@
     "actionClasses": {
       "internal_note": "Note interne",
       "classification": "Mise à jour classification",
-      "status": "Mise à jour statut",
+      "status": "Mise à jour statut (clôture et résolution comprises)",
       "public_reply": "Réponse demandeur",
       "assignment": "Affectation",
       "participant": "Observateurs"

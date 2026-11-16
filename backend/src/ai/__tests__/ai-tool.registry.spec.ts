@@ -650,6 +650,25 @@ async function testListAvailableTools() {
   );
 }
 
+// Lot K1 of 26.11.9: on dev, "do it in bulk" on the category of applications gave a plan of four cards of one
+// application each, presented as the change in bulk asked for. The plan tool says it is not one.
+async function testMutationPlanIsNotAChangeInBulk() {
+  // The definition itself: the plan is offered only with a write tool, which this registry has not.
+  const plan = (createRegistry() as any).getRegisteredDefinitions().find((tool: any) => tool.name === 'prepare_mutation_plan');
+  assert.ok(plan, 'prepare_mutation_plan is registered');
+  for (const [where, text] of [['description', plan.description], ['hint', plan.writePreview?.prompt_hint || '']] as const) {
+    assert.ok(
+      text.includes('A plan of cards that each change one record is not a change in bulk: never present it as one.'),
+      `prepare_mutation_plan ${where}: a plan is not a change in bulk`,
+    );
+    assert.ok(
+      text.includes('When the person asks to change budget lines or applications in bulk on a field that bulk_update_budget_lines or bulk_update_applications does not take, '
+        + 'first say in the answer that this field is not changed in bulk and which fields are, then prepare the cards.'),
+      `prepare_mutation_plan ${where}: another field is said not changed in bulk`,
+    );
+  }
+}
+
 // Plaid L6, lot A: what the model reads about the vulnerabilities, one sentence per tool.
 async function testVulnerabilityReadsAreDescribed() {
   const tools = await createRegistry().listAvailableTools(createContext());
@@ -2425,6 +2444,7 @@ async function run() {
   await testRecordHistoryOfferFollowsTheFamilyRights();
   await testReadToolTextStatesFacts();
   await testVulnerabilityReadsAreDescribed();
+  await testMutationPlanIsNotAChangeInBulk();
   await testListRegisteredToolsExposesRuntimeRegistry();
   await testListAvailableToolsIncludesCategories();
   await testRegisteredToolCategoriesMatchExpectedAssignments();

@@ -20,7 +20,7 @@ L'espace de travail est également accessible aux administrateurs disposant de `
 
 Sur le service hébergé, Kad peut fonctionner avec le modèle inclus de Kadratis. Avant cela, un administrateur accepte le fournisseur et le lieu où il traite les données. Les nouveaux espaces de travail en essai commencent dans cet état, avec Kad désactivé.
 
-D'ici là, la page de Kad s'ouvre normalement avec ses suggestions. Une case prend la place du champ de message : *J'accepte que {fournisseur} ({lieu}) traite mes questions et les données qu'elles concernent pour les réponses de Kad. Elles ne servent pas à entraîner ses modèles.*, suivie de *Autre modèle ou désactivation : Administration › Kad*.
+D'ici là, la page de Kad s'ouvre normalement avec ses suggestions. Une case prend la place du champ de message : *J'accepte que mes questions et les données qu'elles concernent soient traitées par {fournisseur} ({lieu}) pour les réponses de Kad. Elles ne servent pas à entraîner ses modèles.*, suivie de *Autre modèle ou désactivation : Administration › Kad*.
 
 - Un administrateur des paramètres de Kad coche la case. Cela active Kad et enregistre l'acceptation, avec son auteur et sa date. Le champ de message apparaît alors.
 - Les autres personnes lisent *Kad attend qu'un administrateur l'active.*
@@ -110,6 +110,7 @@ Joignez un tableur et demandez à Kad de l'importer dans une liste Kadratis : ap
 - Chaque choix fait sur l'aperçu d'un fichier budgétaire vérifie de nouveau le fichier et donne un nouvel aperçu, au même endroit.
 - Pour les applications, les actifs, les projets, les demandes, les tâches et les incidents, une cellule vide conserve la valeur déjà enregistrée sur une fiche que le fichier met à jour.
 - Les contrats, fournisseurs, contacts, sociétés, départements, centres de coûts, comptes, valeurs des dimensions analytiques, processus métier, calendriers de jours ouvrés et liens des technologies remplacent toutes les valeurs d'une fiche qu'ils mettent à jour. Quand des lignes du fichier correspondent à des fiches existantes et qu'il manque au fichier des colonnes de l'import, la vérification signale une erreur et l'aperçu ne peut pas être approuvé, car ces valeurs seraient effacées. Associez les colonnes manquantes, ou ne gardez dans le fichier que de nouvelles fiches.
+- Pour les sociétés et les départements, une colonne de références telle que leur export l'écrit (`COMP-12`, `DEPT-4`) désigne la fiche que chaque ligne met à jour, comme dans l'import de la liste. La vérification liste chaque fiche qui sera renommée ou changera de société. Quand une valeur de cette colonne n'a pas le préfixe, comme dans une colonne de numéros de ligne, Kad ne lit aucune de ses valeurs et rapproche les lignes par leur nom.
 - Le bouton **Télécharger le fichier (.xlsx)**, à côté de **Rejeter**, donne le fichier préparé par Kad, en .xlsx au format de l'import de la liste : les colonnes de l'import, vos valeurs telles que l'import les lit (codes de liste, dates), une ligne par ligne de votre fichier. Pour les imports qui remplacent toutes les valeurs, le fichier contient toutes les colonnes de l'import, vides là où votre fichier n'en avait pas. Complétez les valeurs manquantes et importez le fichier avec le bouton **Importer** de la liste. Le [Journal d'audit](admin.md#journal-daudit) enregistre chaque téléchargement, comme pour tout export.
 - Pour les lignes budgétaires, chaque ligne du fichier crée une nouvelle ligne budgétaire, sauf les lignes écartées ou choisies pour mettre à jour la ligne à laquelle elles ressemblent.
 - Le [Journal d'audit](admin.md#journal-daudit) enregistre chaque import fait par Kad, avec le nom du fichier et les nombres de lignes, sous la source **Chat IA**.
@@ -173,7 +174,7 @@ Kad liste, compte et lit les incidents. Il les filtre par actif, application ou 
 
 Kad lit les contrats comme les montre la liste des [Contrats](contracts.md) : l'état du terme en cours (à décider, en cours, reconduit, fin sans reconduction, échu), la prochaine échéance et la date limite de résiliation, avec le délai de décision de votre espace de travail et les décisions de renouvellement déjà enregistrées. Il lit aussi ce que couvre un contrat : ses applications, actifs, technologies et lignes budgétaires. Demandez par exemple : « Quels contrats sont à décider, et quelles applications couvrent-ils ? » ou « Quels contrats couvrent APP-8 ? » Les assistants connectés par MCP obtiennent les mêmes réponses.
 
-Kad désigne une fiche par sa référence, comme `APP-8` ou `BL-14`, ou par son nom quand elle n'en a pas, comme un processus métier. La référence ou le nom mène à la page de la fiche quand vous pouvez l'ouvrir.
+Kad désigne une fiche par sa référence, comme `APP-8`, `BL-14` ou `COMP-3`, ou par son nom quand elle n'en a pas, comme un processus métier. La référence ou le nom mène à la page de la fiche quand vous pouvez l'ouvrir. Vous pouvez aussi demander une fiche par sa référence, par exemple « Montre-moi COMP-3. »
 
 Kad ne nomme une fiche liée à celle que vous interrogez que si vous pouvez lire son module, comme la page de la fiche : les applications d'un projet demandent les applications, ses actifs l'infrastructure, ses demandes d'origine les demandes. Un Business Contributor n'obtient que les projets, demandes et applications auxquels il participe. Les serveurs sur lesquels tourne une application font exception : ils viennent avec l'application, comme dans son onglet **Déploiements**. Interrogé sur une personne, Kad donne ce que la liste des utilisateurs vous montre : un administrateur des utilisateurs obtient le profil complet, les autres le nom, l'e-mail et le statut. Les assistants connectés via MCP obtiennent les mêmes réponses.
 
@@ -219,6 +220,26 @@ Avec le niveau Membre sur l'infrastructure, Kad crée une technologie, l'adopte 
 Avec le même niveau, quand les vulnérabilités sont suivies, Kad change l'état des vulnérabilités en **À traiter**, **Traitée** ou **Non concernée**, avec une note si vous en donnez une. Nommez une CVE pour changer toutes ses lignes, ajoutez une technologie, ou une technologie et une version, pour restreindre, ou décrivez les lignes avec les filtres de la page. Un changement porte sur 5 000 lignes au plus, comme sur la page. L'aperçu dit combien de lignes et de CVE changent. **Acceptée** n'est pas un état : Kad propose **Traitée** avec une note, ou **Non concernée**. Demandez à Kad d'annuler le changement dans la conversation. Demandez par exemple : « Passe CVE-2024-3094 en non concernée sur TEC-3, le paquet n'est pas installé ». Voir [Demander à l'assistant](vulnerabilities.md#demander-a-lassistant).
 
 Quand Kad crée une ligne budgétaire, il demande si la ligne est OPEX ou CAPEX si vous ne l'avez pas dit. Il ne change pas le type d'une ligne existante : utilisez **Changer le type...** dans l'espace de travail de la ligne (voir [Changer le type](budget-lines.md#changer-le-type)). Kad ne définit le contrat que des lignes OPEX. Une ligne CAPEX rejoint ses contrats par les liens de son onglet **Relations**.
+
+### Modifier des fiches en masse { #changing-records-in-bulk }
+
+Kad modifie un champ sur de nombreuses lignes budgétaires ou applications à la fois, comme **Modifier la sélection** dans la liste. Il lui faut le même droit : le niveau Membre sur le budget, ou sur les applications. Désignez les fiches par un filtre de la liste, comme un fournisseur ou un centre de coûts, ou par leurs références (`BL-3`, `APP-7`). Utilisez l'un ou l'autre dans une demande. Un filtre prend les fiches activées, sauf s'il nomme un statut. Les applications retirées restent à l'écart, sauf s'il nomme un cycle de vie.
+
+- Sur les lignes budgétaires : le centre de coûts, le compte, la société payeuse, le fournisseur, le responsable IT, le responsable métier, run ou build, ou la valeur d'une dimension.
+- Sur les applications : les responsables métier ou les responsables IT (les personnes nommées remplacent celles du rôle), la catégorie, le cycle de vie, la criticité business ou la criticité cyber.
+
+Demandez par exemple : « Passe les lignes du fournisseur Acme sur le centre de coûts IT-01 » ou « Mets Claire Martin responsable IT de APP-3 et APP-7 ».
+
+L'aperçu montre les fiches visées, le champ et sa nouvelle valeur, combien de fiches changent, combien ont déjà cette valeur et combien sont refusées, avec la raison. Il liste les premières fiches par leur référence. Approuvez-le pour appliquer la modification. Une modification ne s'annule pas. L'onglet **Historique** de chaque fiche l'indique comme faite par Kad pour vous.
+
+Kad refuse une modification :
+
+- Quand la demande ne désigne aucune fiche, ou nomme un filtre et des références ensemble
+- Quand il ne trouve pas la valeur ou la personne nommée
+- Au-delà de 5 000 fiches. Resserrez le filtre
+- Qui viderait le compte, la société payeuse, une dimension obligatoire, la catégorie ou le cycle de vie
+
+Si la liste change entre l'aperçu et votre approbation, l'aperçu échoue. Demandez-en un nouveau à Kad. Pendant qu'une autre opération sur le budget est en cours, l'aperçu reste ouvert : approuvez-le de nouveau une fois cette opération terminée. Les assistants connectés par MCP ne font que lire.
 
 ### Supprimer une fiche { #deleting-a-record }
 
@@ -282,6 +303,8 @@ Pour les aperçus de modification en attente, le panneau propose deux boutons :
 - **Approuver** : confirme la modification et permet à Kad de l'appliquer
 - **Rejeter** : annule la modification. Kad indique que la modification a été rejetée et ne prépare rien à sa place. Si votre demande portait sur plusieurs modifications, il poursuit avec les autres.
 
+Quand plusieurs aperçus sont en attente, **Tout approuver** et **Tout rejeter** agissent sur tous à la fois.
+
 Un aperçu, et le message que Kad écrit après votre approbation ou votre rejet, sont dans la langue de votre profil (celle de votre navigateur si votre profil n'en fixe pas), avec les noms de champs et les valeurs des écrans. Une ligne budgétaire demandée avec un montant arrive en un seul aperçu : une seule approbation crée la ligne, sa version budgétaire de l'année et le montant.
 
 Quand vous demandez une modification que Kad ne peut pas faire, comme supprimer un projet ou relancer le rapprochement des vulnérabilités, il le dit et nomme l'écran où vous pouvez la faire. Il ne prépare aucune autre modification à sa place.
@@ -298,7 +321,7 @@ Les personnes qui peuvent ouvrir **Administration > Kad** voient aussi une fine 
 
 ## Conseils
 
-- **Utilisez les préfixes pour plus de précision** : `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` correspondent directement aux références natives de Kadratis. C'est le moyen le plus rapide de diriger Kad vers un enregistrement précis et ils résistent au copier-coller car ils sont identiques à ce que vous voyez ailleurs dans l'application.
+- **Utilisez les préfixes pour plus de précision** : `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@COMP-`, `@DEPT-` correspondent directement aux références natives de Kadratis. C'est le moyen le plus rapide de diriger Kad vers un enregistrement précis et ils résistent au copier-coller car ils sont identiques à ce que vous voyez ailleurs dans l'application.
 - **Démarrez une nouvelle conversation par sujet** : garder des questions sans rapport dans des conversations distinctes réduit la fenêtre de contexte, accélère les réponses et allège la facture de tokens. La liste des conversations est regroupée par date, ce qui vous permet de les retrouver facilement.
 - **Approuvez et rejetez en connaissance de cause** : les aperçus sont la seule barrière entre Kad et vos données en production. Prenez la seconde nécessaire pour lire la comparaison avant de cliquer sur **Approuver**.
 - **Arrêtez plutôt que d'attendre** : si Kad s'engage sur une mauvaise voie en cours de diffusion, cliquez sur le bouton **Arrêter** plutôt que d'attendre la fin. Vous économiserez des tokens et votre message suivant pourra corriger le tir.

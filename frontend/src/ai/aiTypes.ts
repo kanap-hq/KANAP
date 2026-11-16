@@ -18,6 +18,8 @@ export type AiMutationWriteToolName =
   | 'update_technology_web_links'
   | 'set_technology_vulnerability_alerts'
   | 'change_vulnerability_state'
+  | 'bulk_update_budget_lines'
+  | 'bulk_update_applications'
   | 'update_entity_relations'
   | 'update_document_content'
   | 'update_document_metadata'
@@ -85,7 +87,7 @@ export type AiImportMapping = {
   }>;
   /** Some values the import will not read, by column; shown here only. */
   unread_values?: Record<string, string[]>;
-  read_errors?: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks'>;
+  read_errors?: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks' | 'reference-without-prefix'>;
   missing_required: Array<{ column: string; title: string }>;
   unplaced: Array<{ position: number; header: string | null }>;
   assumptions: string[];

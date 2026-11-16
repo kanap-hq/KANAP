@@ -193,9 +193,11 @@
       "applies_to": "Used for",
       "as_of_date": "As of date",
       "asset_ids": "Linked assets",
+      "application_bulk_edit": "Change in bulk",
       "asset_reference": "Asset reference",
       "assets": "Linked assets",
       "audit_logging": "Audit logging",
+      "budget_line_bulk_edit": "Change in bulk",
       "budget_year": "Budget year",
       "business_objects": "Business objects",
       "business_purpose": "Business purpose",
@@ -367,7 +369,8 @@
       "no": "No",
       "readErrors": {
         "mixed-date-orders": "Dates written day first and month first",
-        "mixed-decimal-marks": "Numbers written with a decimal comma and a decimal point"
+        "mixed-decimal-marks": "Numbers written with a decimal comma and a decimal point",
+        "reference-without-prefix": "Values without the reference prefix: not read"
       }
     },
     "importRun": {
@@ -395,6 +398,7 @@
     "confirmTitle_other": "Approve {{count}} previews?",
     "more_one": "{{count}} more preview",
     "more_other": "{{count}} more previews",
+    "rejectAll": "Reject all",
     "title_one": "{{count}} preview",
     "title_other": "{{count}} previews"
   },

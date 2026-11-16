@@ -225,6 +225,11 @@ export default function AiWorkspacePage() {
     void chat.sendMessage(`[APPROVE_SELECTED:${previewIds.join(',')}]`);
   }, [chat.sendMessage]);
 
+  const handleArtifactRejectMany = useCallback((previewIds: string[]) => {
+    if (previewIds.length === 0) return;
+    void chat.sendMessage(`[REJECT_SELECTED:${previewIds.join(',')}]`);
+  }, [chat.sendMessage]);
+
   // Auto-focus input when AI finishes responding
   const wasStreamingRef = useRef(false);
   useEffect(() => {
@@ -517,6 +522,7 @@ export default function AiWorkspacePage() {
         onApprove={handleArtifactApprove}
         onReject={handleArtifactReject}
         onApproveMany={handleArtifactApproveMany}
+        onRejectMany={handleArtifactRejectMany}
         onReplace={handleReplacePreview}
       />
     </Box>

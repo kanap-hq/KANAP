@@ -10,7 +10,7 @@ import { KanapDialogProvider } from '../../components/design';
 import { createAppTheme } from '../../config/ThemeContext';
 import { releaseLockKeepaliveUrl } from '../../lib/releaseLockKeepalive';
 import KnowledgeWorkspacePage from './KnowledgeWorkspacePage';
-import { classifyKnowledgeLoadError } from './knowledgeLoadError';
+import { classifyKnowledgeLoadError, isKnowledgeDocumentAddress } from './knowledgeLoadError';
 
 const navigateMock = vi.hoisted(() => vi.fn());
 
@@ -67,7 +67,7 @@ function workspaceTree(queryClient: QueryClient, path = '/knowledge/DOC-9') {
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={queryClient}>
         <KanapDialogProvider>
-          <MemoryRouter initialEntries={['/knowledge/DOC-9']}>
+          <MemoryRouter initialEntries={[path]}>
             {/* `location` drives the match, so the page keeps its instance and
                 simply re-renders with the next document id — the situation the
                 cache-drop effect has to get right. */}
@@ -100,8 +100,21 @@ describe('classifyKnowledgeLoadError', () => {
     expect(classifyKnowledgeLoadError(null)).toBeNull();
     expect(classifyKnowledgeLoadError(httpError(404))).toBe('access');
     expect(classifyKnowledgeLoadError(httpError(403))).toBe('access');
+    expect(classifyKnowledgeLoadError(httpError(400))).toBe('access');
     expect(classifyKnowledgeLoadError(httpError(500))).toBe('failure');
     expect(classifyKnowledgeLoadError(new Error('Network Error'))).toBe('failure');
+  });
+});
+
+describe('isKnowledgeDocumentAddress', () => {
+  it('accepts an id, a DOC-N reference or a bare number, and refuses other text', () => {
+    expect(isKnowledgeDocumentAddress('3f1c2a40-7b2e-4d1a-9c55-0a1b2c3d4e5f')).toBe(true);
+    expect(isKnowledgeDocumentAddress('DOC-12')).toBe(true);
+    expect(isKnowledgeDocumentAddress('doc-3')).toBe(true);
+    expect(isKnowledgeDocumentAddress('12')).toBe(true);
+    expect(isKnowledgeDocumentAddress('documents')).toBe(false);
+    expect(isKnowledgeDocumentAddress('PRJ-4')).toBe(false);
+    expect(isKnowledgeDocumentAddress('')).toBe(false);
   });
 });
 
@@ -129,6 +142,12 @@ describe('KnowledgeWorkspacePage — document load errors', () => {
     await screen.findByText('workspace.errors.notFoundTitle');
     expect(screen.queryByText('Confidential incident review')).not.toBeInTheDocument();
     expect(screen.queryByText('common:buttons.retry')).not.toBeInTheDocument();
+    // A real reference that is missing still loads its versions and activities.
+    await waitFor(() => {
+      const urls = vi.mocked(api.get).mock.calls.map(([url]) => url);
+      expect(urls).toContain('/knowledge/DOC-9/versions');
+      expect(urls).toContain('/knowledge/DOC-9/activities');
+    });
 
     fireEvent.click(screen.getByText('workspace.errors.backToLibrary'));
     expect(navigateMock).toHaveBeenCalledWith('/knowledge');
@@ -178,6 +197,29 @@ describe('KnowledgeWorkspacePage — document load errors', () => {
       const calls = vi.mocked(api.get).mock.calls.filter(([url]) => url === DOC_URL).length;
       expect(calls).toBeGreaterThan(callsBeforeRetry);
     });
+  });
+
+  it('shows not found for an address that is not a document, and does not retry', async () => {
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === '/knowledge/documents') throw httpError(400);
+      return { data: [] } as any;
+    });
+    window.localStorage.setItem('kanap.knowledge.sidebarOpen', '1');
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+
+    render(workspaceTree(queryClient, '/knowledge/documents'));
+
+    await screen.findByText('workspace.errors.notFoundTitle');
+    expect(screen.queryByText('workspace.errors.loadFailedTitle')).not.toBeInTheDocument();
+    expect(screen.queryByText('common:buttons.retry')).not.toBeInTheDocument();
+    expect(screen.getByText('workspace.errors.backToLibrary')).toBeInTheDocument();
+
+    const urls = () => vi.mocked(api.get).mock.calls.map(([url]) => url);
+    await waitFor(() => {
+      expect(urls().filter((url) => url === '/knowledge/documents')).toHaveLength(1);
+    });
+    expect(urls()).not.toContain('/knowledge/documents/versions');
+    expect(urls()).not.toContain('/knowledge/documents/activities');
   });
 });
 

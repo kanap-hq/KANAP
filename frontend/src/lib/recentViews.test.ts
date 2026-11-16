@@ -37,6 +37,9 @@ describe('recentIdsGone', () => {
     expect(recentIdsGone({ method: 'get', url: `/knowledge/${A}`, status: 404 })).toEqual([A]);
     expect(recentIdsGone({ method: 'get', url: `/companies/${A}`, status: 404 })).toEqual([A]);
     expect(recentIdsGone({ method: 'get', url: `/business-processes/${A}`, status: 404 })).toEqual([A]);
+    expect(recentIdsGone({ method: 'get', url: `/suppliers/${A}`, status: 404 })).toEqual([A]);
+    expect(recentIdsGone({ method: 'get', url: `/contacts/${A}`, status: 404 })).toEqual([A]);
+    expect(recentIdsGone({ method: 'delete', url: `/departments/${A}`, status: 200 })).toEqual([A]);
   });
 
   it('leaves the rest alone', () => {
@@ -47,7 +50,7 @@ describe('recentIdsGone', () => {
     expect(recentIdsGone({ method: 'delete', url: `/portfolio/projects/${A}/dependencies/project/${B}`, status: 200 })).toEqual([]);
     expect(recentIdsGone({ method: 'get', url: `/contracts/${A}/tasks`, status: 404 })).toEqual([]);
     expect(recentIdsGone({ method: 'get', url: `/contracts/${A}`, status: 403 })).toEqual([]);
-    expect(recentIdsGone({ method: 'get', url: `/suppliers/${A}`, status: 404 })).toEqual([]);
+    expect(recentIdsGone({ method: 'get', url: `/cost-centers/${A}`, status: 404 })).toEqual([]);
     expect(recentIdsGone({ method: 'patch', url: `/contracts/${A}`, status: 404 })).toEqual([]);
   });
 });

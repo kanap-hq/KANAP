@@ -39,9 +39,12 @@ export function bulkTooMany(rows?: number): BadRequestException {
   });
 }
 
+/** The message of `bulkListChanged`: Kad's card words it in the person's language (`ai-write-texts.ts`). */
+export const BULK_LIST_CHANGED_MESSAGE = 'The list changed since the count: count again.';
+
 /** The 409 of a write that reaches more rows than its dry run counted: nothing is written. */
 export function bulkListChanged(): ConflictException {
-  return new ConflictException({ code: 'bulk_list_changed', message: 'The list changed since the count: count again.' });
+  return new ConflictException({ code: 'bulk_list_changed', message: BULK_LIST_CHANGED_MESSAGE });
 }
 
 export type BulkSelection = {
@@ -253,6 +256,16 @@ export type BulkEditResult = {
   as_of?: string;
   /** The dry run's: the rows it reached and the change it counted (`bulkFingerprint`), sent back by the write. */
   fingerprint?: string;
+  /**
+   * The dry run's, with `changedIds` only: the rows that would change, in the write order. Kad names
+   * the first ones on its card; the routes of the screens never ask for them.
+   */
+  changed_ids?: string[];
+};
+
+export type BulkEditOptions = {
+  /** The dry run also returns the ids of the rows that would change (`changed_ids`). */
+  changedIds?: boolean;
 };
 
 const DRY_RUN_SAVEPOINT = 'bulk_edit_dry_run';
@@ -271,6 +284,7 @@ export async function runBulkEdit<Row extends { id: string }>(
   selection: BulkSelection,
   confirmation: BulkConfirmation,
   changes: BulkChanges,
+  options: BulkEditOptions = {},
 ): Promise<BulkEditResult> {
   if (!manager.queryRunner?.isTransactionActive) throw new Error('A change in bulk runs in the request transaction.');
   if (selection.all && !confirmation.dryRun && confirmation.fingerprint === null) {
@@ -294,6 +308,7 @@ export async function runBulkEdit<Row extends { id: string }>(
   const refused: Record<string, number> = notFound > 0 ? { [BULK_REFUSAL_NOT_FOUND]: notFound } : {};
   let changed = 0;
   let unchanged = 0;
+  const changedIds: string[] = [];
   for (const row of rows) {
     await manager.query(`SAVEPOINT ${ROW_SAVEPOINT}`);
     let outcome: BulkEditOutcome;
@@ -308,13 +323,18 @@ export async function runBulkEdit<Row extends { id: string }>(
       continue;
     }
     await manager.query(`RELEASE SAVEPOINT ${ROW_SAVEPOINT}`);
-    if (outcome === 'changed') changed += 1;
-    else unchanged += 1;
+    if (outcome === 'changed') {
+      changed += 1;
+      if (options.changedIds) changedIds.push(row.id);
+    } else unchanged += 1;
   }
   if (confirmation.dryRun) {
     await manager.query(`ROLLBACK TO SAVEPOINT ${DRY_RUN_SAVEPOINT}`);
     await manager.query(`RELEASE SAVEPOINT ${DRY_RUN_SAVEPOINT}`);
-    return { dry_run: true, rows: reached, changes: changed, unchanged, refused, as_of: asOf!, fingerprint };
+    return {
+      dry_run: true, rows: reached, changes: changed, unchanged, refused, as_of: asOf!, fingerprint,
+      ...(options.changedIds ? { changed_ids: changedIds } : {}),
+    };
   }
   return { dry_run: false, rows: reached, changed, unchanged, refused };
 }

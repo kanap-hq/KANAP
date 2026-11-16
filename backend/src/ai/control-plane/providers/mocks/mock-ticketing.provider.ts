@@ -563,8 +563,8 @@ export class MockTicketingProvider implements TicketingProvider {
       allowedTransitions: [
         { key: 'pending_user', label: 'Waiting for requester', requiresApproval: true, destructive: false, terminal: false },
         { key: 'escalated_l2', label: 'Escalate to L2', requiresApproval: true, destructive: false, terminal: false },
-        // Terminal solve mirrors GLPI's 'solved' transition so the approval-gated
-        // terminal-close flow can be rehearsed end-to-end on mock/demo tenants.
+        // Terminal solve mirrors GLPI's 'solved' transition so the terminal-close
+        // flow can be rehearsed end-to-end on mock/demo tenants.
         { key: 'solved', label: 'Mark solved', requiresApproval: true, destructive: true, terminal: true },
       ],
       updatedAt: '2026-05-24T09:05:00.000Z',
@@ -724,8 +724,8 @@ export class MockTicketingProvider implements TicketingProvider {
     }
     const transition = lifecycle.data.allowedTransitions.find((candidate) => candidate.key === input.transitionKey);
     // Mirrors GLPI semantics: destructive (terminal solve/close) transitions CAN be
-    // prepared/proposed — they are gated by human approval — but a ticket that is
-    // already terminal cannot transition further.
+    // prepared/proposed — they follow the agent's Status update autonomy — but a
+    // ticket that is already terminal cannot transition further.
     if (!reason || !transition || lifecycle.data.terminal) {
       return providerError<TicketProviderActionPrepared<TicketStatusUpdateActionPayload>>('unsafe_operation', 'Mock provider rejected an unsupported status transition.', false);
     }

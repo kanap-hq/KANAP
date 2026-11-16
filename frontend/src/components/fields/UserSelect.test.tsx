@@ -243,4 +243,63 @@ describe('UserSelect owner suggestions', () => {
       'fried@kanap.net selects.meSuffix',
     ]));
   });
+
+  it('leaves an excluded person out of the cost centre group and the rest of the list', async () => {
+    wrap(<UserSelect
+      value={null}
+      onChange={() => undefined}
+      suggestedFirst={{ costCenterId: 'cc-1' }}
+      excludeUserIds={new Set(['zoe', 'me'])}
+    />);
+    open(screen.getByRole('combobox'));
+    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'Ana Diaz',
+      'admin@kanap.net',
+    ]));
+    expect(screen.queryByText('Zoe Zulu')).toBeNull();
+    expect(screen.queryByText(/selects\.meSuffix/)).toBeNull();
+  });
+});
+
+describe('UserSelect exclusions', () => {
+  beforeEach(() => {
+    apiGet.mockReset();
+    apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+      if (url !== '/users/lookup') throw new Error(`unexpected ${url}`);
+      return { data: { items: lookupPeople(config), has_more: false } };
+    });
+  });
+
+  it('still hides the one person named by excludeUserId', async () => {
+    wrap(<UserSelect value={null} onChange={() => undefined} excludeUserId="ana" />);
+    open(screen.getByRole('combobox'));
+    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'fried@kanap.net selects.meSuffix',
+      'admin@kanap.net',
+    ]));
+  });
+
+  it('still hides the signed-in person named by excludeUserId, so they are not listed first', async () => {
+    wrap(<UserSelect value={null} onChange={() => undefined} excludeUserId="me" />);
+    open(screen.getByRole('combobox'));
+    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'Ana Diaz',
+      'admin@kanap.net',
+    ]));
+  });
+
+  it('hides a set of people, and does not list the signed-in person first when that set includes them', async () => {
+    apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+      if (url !== '/users/lookup') throw new Error(`unexpected ${url}`);
+      // The first page does not hold the signed-in person. Without the exclusion
+      // reaching withMeFirst, that person is inserted at the top of the list.
+      const page = lookupPeople(config).filter((person) => person.id !== 'me');
+      return { data: { items: page, has_more: false } };
+    });
+    wrap(<UserSelect value={null} onChange={() => undefined} excludeUserIds={new Set(['me', 'ana'])} />);
+    open(screen.getByRole('combobox'));
+    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'admin@kanap.net',
+    ]));
+  });
 });

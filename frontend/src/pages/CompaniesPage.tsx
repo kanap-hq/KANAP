@@ -10,6 +10,7 @@ import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { recordsInUseCheck } from '../utils/deleteCheck';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
+import { MONO_FONT_FAMILY } from '../config/ThemeContext';
 import { getWithListContext } from '../lib/listContext';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
@@ -22,6 +23,7 @@ import { companyListYear } from './companies/companyYear';
 import ListYearField from '../components/navigation/ListYearField';
 import { displayedCompanyCity } from './companies/companyCity';
 import { ImportLabel } from '../components/csv/importFiles';
+import { itemAddress } from '../utils/item-ref';
 
 /** The pinned total, with the orange mark when some turnover was left out. */
 function TurnoverTotalCell({ value, missing }: { value: React.ReactNode; missing: CompanyTurnoverFxMissing[] }) {
@@ -39,6 +41,7 @@ function TurnoverTotalCell({ value, missing }: { value: React.ReactNode; missing
 
 type CompanyRow = {
   id: string;
+  item_number?: number | null;
   name: string;
   country_iso: string;
   city?: string | null;
@@ -122,7 +125,7 @@ export default function CompaniesPage() {
   const openWorkspace = useCallback((row: CompanyRow, tab: 'overview' | 'details') => {
     if (!row?.id) return;
     const sp = buildWorkspaceSearch();
-    navigate(`/master-data/companies/${row.id}/${tab}?${sp.toString()}`);
+    navigate(`/master-data/companies/${itemAddress('company', row)}/${tab}?${sp.toString()}`);
   }, [buildWorkspaceSearch, navigate]);
 
   const handleMetricClick = useCallback((row: CompanyRow) => {
@@ -133,10 +136,28 @@ export default function CompaniesPage() {
     const company = row as CompanyRow | null | undefined;
     if (!company?.id) return null;
     const sp = buildWorkspaceSearch();
-    return `/master-data/companies/${company.id}/${tab}?${sp.toString()}`;
+    return `/master-data/companies/${itemAddress('company', company)}/${tab}?${sp.toString()}`;
   }, [buildWorkspaceSearch]);
 
   const columns: EnhancedColDef<CompanyRow>[] = useMemo(() => [
+    {
+      // The reference (`COMP-12`): filtered and sorted on the number by the server.
+      field: 'item_number',
+      headerName: t('companies.columns.reference'),
+      width: 100,
+      filter: 'agTextColumnFilter',
+      valueFormatter: (p: any) => (p.value ? `COMP-${p.value}` : ''),
+      comparator: (a: number, b: number) => (a || 0) - (b || 0),
+      cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px', color: 'var(--kanap-text-secondary)', fontVariantNumeric: 'tabular-nums' },
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getWorkspaceHref(row, 'overview')}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
     {
       field: 'name',
       headerName: t('shared.columns.name'),

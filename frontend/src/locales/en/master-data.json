@@ -87,6 +87,7 @@
     "companyFallback": "Company",
     "loadError": "Failed to load company.",
     "columns": {
+      "reference": "Reference",
       "city": "City",
       "postalCode": "Postal code",
       "address1": "Address 1",
@@ -185,6 +186,7 @@
     "loadError": "Failed to load department.",
     "selectCompanyFirst": "Select a company first",
     "columns": {
+      "reference": "Reference",
       "company": "Company",
       "headcountYear": "Headcount ({{year}})"
     },

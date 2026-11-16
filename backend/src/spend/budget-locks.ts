@@ -296,6 +296,13 @@ export const BUDGET_OPERATION_RUNNING =
  */
 const BUDGET_OPERATIONS_LOCK_NAMESPACE = 0x424f5053;
 
+/** Whether an error is the 409 `operation_running` of `lockTenantBudgetOperations`. */
+export function isBudgetOperationRunning(error: unknown): boolean {
+  if (!(error instanceof ConflictException)) return false;
+  const response = error.getResponse();
+  return !!response && typeof response === 'object' && (response as { code?: unknown }).code === BUDGET_OPERATION_RUNNING_CODE;
+}
+
 /**
  * The tenant's budget-operations lock: a transaction advisory lock shared by
  * the column copy and clear, the allocation copy, the budget file load, the

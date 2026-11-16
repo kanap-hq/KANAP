@@ -226,6 +226,67 @@ describe('ChatMessageList', () => {
     expect(onSend).toHaveBeenCalledWith(`[APPROVE_SELECTED:${previews.map((preview) => preview.preview_id).join(',')}]`);
   });
 
+  // Lot K1 of 26.11.9: next to Approve all, Reject all rejects every pending card at once, without a dialog.
+  it('rejects every pending card once with Reject all, without a confirmation', () => {
+    const previews = Array.from({ length: 4 }, (_, index) => ({
+      preview_id: `${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}-${index + 1}${index + 1}${index + 1}${index + 1}-4${index + 1}${index + 1}${index + 1}-8${index + 1}${index + 1}${index + 1}-${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}`,
+      tool_name: 'update_business_record' as const,
+      status: (index === 3 ? 'rejected' : 'pending') as 'pending' | 'rejected',
+      target: {
+        entity_type: 'applications',
+        entity_id: `app-${index + 1}`,
+        ref: `APP-${index + 1}`,
+        title: `App ${index + 1}`,
+      },
+      changes: {
+        category: {
+          label: 'Category',
+          from: 'Analytics',
+          to: 'Infrastructure',
+          format: 'text' as const,
+        },
+      },
+      requires_confirmation: true,
+      actions: ['approve', 'reject'] as Array<'approve' | 'reject'>,
+      summary: `Change APP-${index + 1}.`,
+      error_message: null,
+      conversation_id: 'conversation-1',
+      created_at: '2026-03-28T17:00:00.000Z',
+      expires_at: '2026-03-28T17:10:00.000Z',
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+    }));
+    // The third card imports a file its check refuses: it cannot be approved, but it can be rejected.
+    Object.assign(previews[2], { import_mapping: { validation: { ok: false } } });
+    const onSend = vi.fn();
+
+    renderWithTheme(
+      <ChatMessageList
+        messages={[
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: 'I prepared the changes.',
+            toolResults: [{
+              id: 'tool-1',
+              name: 'prepare_mutation_plan',
+              result: { previews, total: previews.length },
+            }],
+          },
+        ]}
+        previews={previews}
+        onSend={onSend}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'previewBatch.rejectAll' }));
+
+    expect(onSend).toHaveBeenCalledTimes(1);
+    expect(onSend).toHaveBeenCalledWith(`[REJECT_SELECTED:${previews.slice(0, 3).map((preview) => preview.preview_id).join(',')}]`);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('leaves out of Approve all an import whose check refuses the file', () => {
     const previews = Array.from({ length: 3 }, (_, index) => ({
       preview_id: `${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}-${index + 1}${index + 1}${index + 1}${index + 1}-4${index + 1}${index + 1}${index + 1}-8${index + 1}${index + 1}${index + 1}-${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}${index + 1}`,
@@ -456,6 +517,33 @@ describe('ChatMessageList', () => {
     expect(container.textContent).toContain('CVE-2026-1234');
     // No KANAP reference starts with 0: APP-01 is part of a name.
     expect(screen.queryByRole('link', { name: 'APP-01' })).not.toBeInTheDocument();
+  });
+
+  it('links a company and a department by their reference, a supplier not yet', () => {
+    readableResources = ['companies'];
+    try {
+      renderWithTheme(
+        <ChatMessageList
+          messages={[{ id: 'assistant-1', role: 'assistant', content: 'COMP-5 holds DEPT-5; SUP-3 and CTCT-2 supply it; XCOMP-1, COMP-05.' }]}
+          previews={[]}
+          onSend={() => undefined}
+        />,
+      );
+      expect(screen.getByRole('link', { name: 'COMP-5' })).toHaveAttribute('href', '/master-data/companies/COMP-5');
+      // No departments right: the reference stays text.
+      expect(screen.queryByRole('link', { name: 'DEPT-5' })).toBeNull();
+      expect(screen.getAllByRole('link')).toHaveLength(1);
+    } finally {
+      readableResources = null;
+    }
+    renderWithTheme(
+      <ChatMessageList
+        messages={[{ id: 'assistant-2', role: 'assistant', content: 'See DEPT-5.' }]}
+        previews={[]}
+        onSend={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('link', { name: 'DEPT-5' })).toHaveAttribute('href', '/master-data/departments/DEPT-5');
   });
 
   it('leaves as text the references of pages the person cannot open', () => {

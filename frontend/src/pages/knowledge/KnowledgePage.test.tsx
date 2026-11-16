@@ -94,6 +94,49 @@ function renderPage(url = '/knowledge?library=managed-docs&allLibraries=1') {
 const column = (field: string) => grid.columns.find((col) => col.field === field);
 const filterOptions = (field: string) => column(field).filterParams.getValues({ context: { getQueryState: () => ({}) } });
 
+describe('KnowledgePage status column', () => {
+  beforeEach(() => {
+    grid.columns = [];
+    grid.props = null;
+    auth.level = 'admin';
+    scope.value = 'all';
+    get.mockReset();
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => undefined, removeItem: () => undefined });
+    get.mockImplementation(async (url: string) => {
+      if (url === '/knowledge-libraries') return { data: LIBRARIES } as any;
+      return { data: {} } as any;
+    });
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  function renderStatus(value: unknown) {
+    const view = render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        {React.createElement(column('status').cellRenderer, {
+          value,
+          data: value == null ? undefined : { id: 'doc-1', status: value },
+        })}
+      </ThemeProvider>,
+    );
+    const result = { text: view.container.textContent ?? '', html: view.container.innerHTML };
+    view.unmount();
+    return result;
+  }
+
+  it('leaves the status cell empty when the row has no status, and names a real one', async () => {
+    renderPage();
+    await waitFor(() => expect(column('status')?.cellRenderer).toBeTypeOf('function'));
+    for (const value of [undefined, null, '']) {
+      const cell = renderStatus(value);
+      expect(cell.text).toBe('');
+      expect(cell.html).toBe('');
+    }
+    const published = renderStatus('published');
+    expect(published.text).toContain('Publié');
+    expect(published.html).not.toBe('');
+  });
+});
+
 describe('KnowledgePage library and folder names', () => {
   beforeEach(() => {
     grid.columns = [];

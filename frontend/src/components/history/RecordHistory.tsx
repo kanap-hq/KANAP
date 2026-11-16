@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
+import { useApplicationClassificationCatalog } from '../../hooks/useApplicationClassificationCatalog';
 import { useItOpsEnumOptions } from '../../hooks/useItOpsEnumOptions';
 import type { AuditCatalogList } from '../../lib/audit/auditLogValues';
 import {
@@ -38,27 +39,46 @@ export type RecordHistoryProps = {
 const PAGE_SIZE = 50;
 const QUERY_ROOT = 'record-history';
 
-/** The records whose history names IT catalog codes (categories, access methods, server roles). */
+/** The records whose history names IT settings codes (categories, access methods, server roles). */
 const CATALOG_TABLES = new Set(['applications', 'incidents']);
 
+/**
+ * The records whose history names a classification level (business criticality, cyber criticality,
+ * recovery wave). An asset has no such column: its impact panel names a related application's level.
+ */
+const CLASSIFICATION_TABLES = new Set(['applications', 'connections', 'interfaces', 'technologies']);
+
+/** The IT settings lists. The classification axes are read from the classification catalog. */
+type ItCatalogList = 'applicationCategories' | 'accessMethods' | 'incidentCategories' | 'serverRoles';
+
 /** The catalog list of the IT settings that holds each code list of the history. */
-const CATALOG_FIELDS: Record<AuditCatalogList, Parameters<ReturnType<typeof useItOpsEnumOptions>['labelFor']>[0]> = {
+const CATALOG_FIELDS: Record<ItCatalogList, Parameters<ReturnType<typeof useItOpsEnumOptions>['labelFor']>[0]> = {
   applicationCategories: 'applicationCategory',
   accessMethods: 'accessMethod',
   incidentCategories: 'incidentCategories',
   serverRoles: 'serverRole',
 };
 
+function isItCatalogList(list: AuditCatalogList): list is ItCatalogList {
+  return list === 'applicationCategories' || list === 'accessMethods' || list === 'incidentCategories' || list === 'serverRoles';
+}
+
 /**
- * The tenant's label of a catalog code, as the record's screen shows it (`useItOpsEnumOptions`):
- * null when the tenant's catalog has no such code, so the shipped label or the code shows instead.
+ * The tenant's label of a catalog code, as the record's screen shows it: the IT settings for a
+ * category or a role, the classification catalog for a criticality or a recovery wave. Null when
+ * that catalog has no such code, so the shipped label or the code shows instead.
  */
 function useCatalogLabel(table: string) {
   const { byField, labelFor } = useItOpsEnumOptions({ enabled: CATALOG_TABLES.has(table) });
+  const classification = useApplicationClassificationCatalog({ enabled: CLASSIFICATION_TABLES.has(table) });
   return React.useCallback((list: AuditCatalogList, code: string): string | null => {
+    if (!isItCatalogList(list)) {
+      const level = classification.data?.[list]?.find((item) => item.code === code);
+      return level?.label || null;
+    }
     const field = CATALOG_FIELDS[list];
     return (byField[field] ?? []).some((option) => option.code === code) ? labelFor(field, code) : null;
-  }, [byField, labelFor]);
+  }, [byField, classification.data, labelFor]);
 }
 
 function HistoryLineView({ line, separator }: { line: HistoryLine; separator: string }) {

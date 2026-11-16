@@ -142,6 +142,31 @@ const RELATION_LABELS: Record<RelationKey, string> = {
   incidents: 'Incidents',
 };
 
+// The server stores these version notes in English. They are shown in the reader's language,
+// existing versions included. A note someone typed is shown as written.
+const SYSTEM_VERSION_NOTES: Record<string, string> = {
+  'Initial version': 'sidebar.versions.notes.initial',
+  'Imported from legacy request field': 'sidebar.versions.notes.importedRequest',
+  'Imported from legacy interface fields': 'sidebar.versions.notes.importedInterfaces',
+  'Imported from legacy application description': 'sidebar.versions.notes.importedApplication',
+  'Imported from legacy incident fields': 'sidebar.versions.notes.importedIncident',
+  'Imported from legacy project field': 'sidebar.versions.notes.importedProject',
+};
+
+const REVERT_VERSION_NOTE = /^Revert to version (\d+)$/;
+
+function versionChangeNote(
+  note: string,
+  translate: (key: string, options?: { version: string }) => string,
+): string {
+  if (Object.prototype.hasOwnProperty.call(SYSTEM_VERSION_NOTES, note)) {
+    return translate(SYSTEM_VERSION_NOTES[note]);
+  }
+  const revert = REVERT_VERSION_NOTE.exec(note);
+  if (revert) return translate('sidebar.versions.notes.revert', { version: revert[1] });
+  return note;
+}
+
 const EMPTY_CLASSIFICATION_ROW: ClassificationRow = { category_id: '', stream_id: null };
 
 function ManagedReadonlyBadge({ title }: { title: string }) {
@@ -1131,7 +1156,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {version.created_at ? formatShortDateTime(version.created_at, locale) : ''}
-                          {version.change_note ? ` - ${version.change_note}` : ''}
+                          {version.change_note ? ` - ${versionChangeNote(String(version.change_note), (key, options) => t(key, options))}` : ''}
                         </Typography>
                       </Box>
                       {editMode && !isCreate && (

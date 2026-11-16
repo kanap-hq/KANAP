@@ -3,6 +3,16 @@ import { AiEntityFilterRegistry } from '../ai-filter.types';
 export const departmentsRegistry: AiEntityFilterRegistry = {
   entityType: 'departments',
   fields: {
+    reference: {
+      ai: 'reference',
+      grid: 'item_number',
+      type: 'set',
+      description: 'Department reference, such as DEPT-12.',
+      acceptedValueKind: 'DEPT-n reference',
+      examples: ['DEPT-12'],
+      sortable: true,
+      groupable: false,
+    },
     status: {
       ai: 'status',
       grid: 'status',
@@ -44,6 +54,7 @@ export const departmentsRegistry: AiEntityFilterRegistry = {
     },
   },
   sortFields: {
+    reference: 'item_number',
     label: 'name',
     name: 'name',
     status: 'status',

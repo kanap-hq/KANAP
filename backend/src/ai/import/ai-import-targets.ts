@@ -58,6 +58,8 @@ export interface AiImportColumnSpec {
   multi?: boolean;
   /** A number that is a percentage, 0 to 100. */
   percent?: boolean;
+  /** A `reference` column of the family's own references: the prefix its values carry (`COMP`). */
+  prefix?: string;
   /** The name of each code in each language: read as the code, shown on the card. */
   labels?: Readonly<Record<CsvLanguage, Readonly<Record<string, string>>>>;
   /** What the column takes, for the model, when its name does not say it. */
@@ -91,11 +93,28 @@ const number = (column: string, hint?: string): AiImportColumnSpec => ({ column,
 const email = (column: string, hint = 'the e-mail of a person of the workspace'): AiImportColumnSpec => ({ column, kind: 'email', hint });
 const reference = (column: string, hint: string, required = false): AiImportColumnSpec => ({ column, kind: 'reference', hint, required });
 const country = (column: string, required = false): AiImportColumnSpec => ({ column, kind: 'country', required });
+/**
+ * The reference column of a family whose import reads it as its key (convention 7 of R2): a file
+ * exported from Kadratis holds it, and its `COMP-n` names the record the row updates. Read only with
+ * the prefix (`prefixedReferenceReader`): a column numbering the person's rows is no reference.
+ */
+const ownReference = (prefix: string, family: string): AiImportColumnSpec => ({
+  column: 'reference',
+  kind: 'reference',
+  prefix,
+  hint: `the Kadratis reference of a ${family}, ${prefix}-n, as an export of the ${family} list writes it: `
+    + `it names the ${family} the row updates, even renamed. Only values written ${prefix}-n are read: map no column of row numbers here`,
+});
 /** A person the incident import finds by e-mail or by name. */
 const PERSON = 'a person of the workspace, by e-mail or by "First Last" name';
 
-/** Identity columns a person's own file never holds (a KANAP id or reference): left to the template. */
-const IDENTITY_COLUMNS = new Set(['id', 'ref', 'reference', 'item_number', 'kanap_token']);
+/**
+ * Identity columns of the declarative imports and the budget file that Kad leaves to the template
+ * (an id, an incident's `ref`, a budget line's `item_number`). The `reference` columns of those
+ * templates are export-only (`importable: false`); a family whose import reads its reference as its
+ * key declares it with `ownReference`.
+ */
+const IDENTITY_COLUMNS = new Set(['id', 'ref', 'item_number', 'kanap_token']);
 
 function isStatusList(codes: readonly string[] | undefined): boolean {
   return codes?.length === STATUS_CODES.length && STATUS_CODES.every((code) => codes.includes(code));
@@ -332,9 +351,11 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     key: 'companies',
     names: { en: 'Companies', fr: 'Sociétés', de: 'Gesellschaften', es: 'Empresas' },
     ...AI_IMPORT_ACCESS.companies,
-    about: 'One row per company, matched to a stored one by its name. A year of metrics needs its three columns: '
+    about: 'One row per company, matched to a stored one by its Kadratis reference (COMP-n) when the file has a column of them, '
+      + 'else by its name. A year of metrics needs its three columns: '
       + 'headcount_<year>, it_users_<year> and turnover_<year> (millions).',
     columns: () => [
+      ownReference('COMP', 'company'),
       text('name', undefined, true), country('country_iso', true),
       text('address1'), text('address2'), text('postal_code'), text('city', undefined, true), text('state'),
       text('reg_number'), text('vat_number'), text('base_currency', 'a three-letter currency code', true),
@@ -348,8 +369,12 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     key: 'departments',
     names: { en: 'Departments', fr: 'Départements', de: 'Abteilungen', es: 'Departamentos' },
     ...AI_IMPORT_ACCESS.departments,
-    about: 'One row per department, matched to a stored one by its company and name.',
-    columns: () => [reference('company_name', 'a company by name', true), text('name', undefined, true), text('description'), status, disabledAt],
+    about: 'One row per department, matched to a stored one by its Kadratis reference (DEPT-n) when the file has a column of them, '
+      + 'else by its company and name.',
+    columns: () => [
+      ownReference('DEPT', 'department'),
+      reference('company_name', 'a company by name', true), text('name', undefined, true), text('description'), status, disabledAt,
+    ],
   },
   cost_centers: {
     key: 'cost_centers',

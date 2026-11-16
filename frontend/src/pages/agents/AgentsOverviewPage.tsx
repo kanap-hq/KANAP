@@ -549,7 +549,7 @@ export default function AgentsOverviewPage() {
                 const automaticCount = definition.automatic_action_classes?.length ?? 0;
                 const label = lifecycleStatusKey(definition.status, watching, automaticCount, !!activePause || !!agentHelpdeskSummary?.ingestion.paused);
                 return (
-                  <Card key={definition.id} variant="outlined" sx={{ borderRadius: 1 }}>
+                  <Card key={definition.id} variant="outlined" sx={{ borderRadius: 1, position: 'relative' }}>
                     <CardActionArea onClick={() => navigate(`/agents/${definition.agent_key}`)}>
                       <CardContent>
                         <Stack spacing={1.25}>
@@ -561,15 +561,9 @@ export default function AgentsOverviewPage() {
                             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
                               <LifecycleText lifecycleKey={label} />
                               {canAdmin && (
-                                <Tooltip title={t('overview.deleteAgent')}>
-                                  <IconButton
-                                    size="small"
-                                    sx={{ color: 'text.secondary' }}
-                                    onClick={(event) => { event.stopPropagation(); event.preventDefault(); setAgentToDelete({ id: definition.id, name: definition.name }); }}
-                                  >
-                                    <DeleteOutlineIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
+                                // Reserves the delete control (small IconButton: 5px padding and a 20px icon)
+                                // so the status stays where it was. The control itself is a sibling of this button.
+                                <Box aria-hidden sx={{ width: 30, height: 30, flexShrink: 0 }} />
                               )}
                             </Stack>
                           </Stack>
@@ -595,6 +589,18 @@ export default function AgentsOverviewPage() {
                         </Stack>
                       </CardContent>
                     </CardActionArea>
+                    {canAdmin && (
+                      <Tooltip title={t('overview.deleteAgent')}>
+                        <IconButton
+                          size="small"
+                          aria-label={t('overview.deleteAgent')}
+                          sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1, color: 'text.secondary' }}
+                          onClick={() => setAgentToDelete({ id: definition.id, name: definition.name })}
+                        >
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </Card>
                 );
               })}

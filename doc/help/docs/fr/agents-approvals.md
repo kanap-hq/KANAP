@@ -86,7 +86,9 @@ Recourir à l'écartement alors que vous voulez en réalité dire « c'était fa
 
 Les titres **Clôturer le ticket** et **Résoudre le ticket** s'affichent en rouge, car ils mettent fin au ticket et le demandeur voit le changement immédiatement. Ce titre rouge est le seul signal supplémentaire : il n'y a pas de badge « terminal » à part.
 
-Approuver l'une de ces actions (seule ou dans le cadre d'un **Tout approuver** où un élément clôture ou résout le ticket) ouvre une confirmation nommée d'après l'action (**Appliquer Résoudre le ticket ?**). Elle nomme le ticket, avertit que le demandeur verra le changement immédiatement, liste chaque élément de clôture d'une approbation groupée, et vous fournit un champ de motif pour la trace. Vous confirmez avec le nom de l'action elle-même (**Résoudre le ticket** ou **Clôturer le ticket**). Il s'agit d'une friction délibérée : les réponses et notes de routine s'appliquent en un clic, mais la clôture ou la résolution d'un ticket vous demande toujours de marquer une pause et de confirmer.
+Approuver l'une de ces actions (seule ou dans le cadre d'un **Tout approuver** où un élément clôture ou résout le ticket) ouvre une confirmation nommée d'après l'action (**Appliquer Résoudre le ticket ?**). Elle nomme le ticket, avertit que le demandeur verra le changement immédiatement, liste chaque élément de clôture d'une approbation groupée, et vous fournit un champ de motif pour la trace. Vous confirmez avec le nom de l'action elle-même (**Résoudre le ticket** ou **Clôturer le ticket**). Il s'agit d'une friction délibérée : les réponses et notes de routine s'appliquent en un clic, et la clôture ou la résolution d'un ticket à la main vous demande de marquer une pause et de confirmer.
+
+Un agent dont la **Mise à jour statut** est en **Automatique** clôture et résout les tickets seul, sans cette étape, une fois sa réponse au demandeur partie.
 
 ---
 

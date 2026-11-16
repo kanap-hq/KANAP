@@ -519,7 +519,15 @@ export class SpendItemsService {
     id: string,
     body: SpendItemUpsertDto | Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string; fields?: ItemWriteFields; native?: boolean },
+    opts?: {
+      manager?: EntityManager;
+      statusEmail?: boolean;
+      source?: string;
+      /** The audit row's source and reference only (Kad's card): the row's values stay as they are. */
+      audit?: { source: string; sourceRef: string | null };
+      fields?: ItemWriteFields;
+      native?: boolean;
+    },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const itemId = await resolveToUuid(id, this.contract.reference, mg);
@@ -532,7 +540,7 @@ export class SpendItemsService {
       table: auditTableOf(this.nature, 'spend_items'), recordId: saved.id, action: 'update',
       before: { ...(opts?.native ? presentNativeLine(before) : auditLine(this.nature, before)), ...itemAnalyticsAuditFields(analyticsBefore) },
       after: { ...(opts?.native ? presentNativeLine(saved) : auditLine(this.nature, saved)), ...itemAnalyticsAuditFields(analyticsAfter), ...(opts?.source ? { source: opts.source } : {}) },
-      userId, source: opts?.source,
+      userId, source: opts?.audit?.source ?? opts?.source, ...(opts?.audit ? { sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
 
     // Sync contacts from supplier if supplier changed
@@ -540,7 +548,12 @@ export class SpendItemsService {
     const newSupplierId = saved.supplier_id ?? null;
     if (oldSupplierId !== newSupplierId) {
       await syncSupplierContactsWithinUpdate(mg, `${this.contract.label} ${saved.id}`, () =>
-        this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId }));
+        this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, {
+          manager: mg,
+          tenantId,
+          // The contacts' history row carries the line's own source (Kad's card, the budget file).
+          audit: { source: opts?.audit?.source ?? opts?.source, sourceRef: opts?.audit?.sourceRef ?? null },
+        }));
     }
 
     // Notify owners on status change

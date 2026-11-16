@@ -59,9 +59,21 @@ export function stepScreen(key: string, angle: OnboardingAngle | null): StepScre
 /** The query parameter that carries a step to its screen. */
 export const STEP_PARAM = 'step';
 
+/**
+ * Names the path when `own_invite` opens the users list. That screen ends the IT budget path
+ * and the IT landscape map path. The portfolio path opens the contributor profile, whose address
+ * already names its guide.
+ */
+export const STEP_ANGLE_PARAM = 'angle';
+
 export function stepHref(key: string, angle: OnboardingAngle | null = null): string | null {
   const screen = stepScreen(key, angle);
-  return screen ? `${screen.to}?${STEP_PARAM}=${encodeURIComponent(key)}` : null;
+  if (!screen) return null;
+  const search = `${STEP_PARAM}=${encodeURIComponent(key)}`;
+  if (key === 'own_invite' && (angle === 'budget' || angle === 'cartography')) {
+    return `${screen.to}?${search}&${STEP_ANGLE_PARAM}=${encodeURIComponent(angle)}`;
+  }
+  return `${screen.to}?${search}`;
 }
 
 /** The title of a step: on the portfolio, the last one is the person's own contributor profile. */

@@ -155,6 +155,8 @@ type FieldConfig = {
   classificationAxis?: 'business' | 'cyber' | 'confidentiality' | 'recovery';
   /** A tenant catalog of IT settings: the card accepts the code or the exact label and shows the label. */
   itCatalog?: ItCatalogList;
+  /** The screen still offers a value marked retired in the settings: accept it like the others. */
+  offersRetired?: boolean;
   minimum?: number;
   maximum?: number;
   /** The service's text bound, in characters; absent keeps the generic text rule. */
@@ -185,7 +187,6 @@ type NormalizedFields = {
 
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
 const STATUS_STATES = ['enabled', 'disabled'] as const;
-const APPLICATION_LIFECYCLES = ['active', 'planned', 'in_development', 'retired'] as const;
 const USERS_MODES = ['manual', 'it_users', 'headcount'] as const;
 const PROJECT_STATUSES = ['waiting_list', 'planned', 'in_progress', 'in_testing', 'on_hold', 'done', 'cancelled'] as const;
 const PROJECT_ORIGINS = ['standard', 'fast_track', 'legacy'] as const;
@@ -231,7 +232,9 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       end_of_support_date: { label: 'End of Support Date', kind: 'date', nullable: true },
       go_live_date: { label: 'Go-Live Date', kind: 'date', nullable: true },
       predecessor_id: { label: 'Predecessor', kind: 'relation', nullable: true, relationTarget: 'applications', aliases: ['predecessor'] },
-      lifecycle: { label: 'Lifecycle', kind: 'enum', enumValues: APPLICATION_LIFECYCLES },
+      // The workspace's states, as the Applications screen and the change in bulk offer them: a state
+      // marked retired in the settings stays offered there, so it stays accepted here.
+      lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates', offersRetired: true },
       environment: { label: 'Environment', kind: 'enum', enumValues: ENVIRONMENTS },
       criticality: { label: 'Business criticality', kind: 'application_classification', classificationAxis: 'business', nullable: true, aliases: ['business_criticality'] },
       cyber_criticality: { label: 'Cyber Criticality', kind: 'application_classification', classificationAxis: 'cyber', nullable: true, aliases: ['cyber'] },
@@ -823,16 +826,17 @@ export class AiBusinessRecordMutationSupportService {
     if (field.kind === 'it_catalog') {
       // The tenant's own list, with the labels the app shows for a shipped value in every
       // language: the code or an exact label is accepted. A retired value is refused unless it is
-      // the one the record already holds, as the screen hides it. An ambiguous label is refused.
+      // the one the record already holds, as the screen hides it (`offersRetired` keeps it when the
+      // screen still offers it). An ambiguous label is refused.
       const settings = withShippedLabels(await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager }));
       const options = field.itCatalog
         ? settings[field.itCatalog] as Array<{ code: string; label: string; deprecated?: boolean }>
         : [];
       const current = existing?.[fieldName] == null ? null : String(existing[fieldName]);
-      const option = findCatalogOption(rawValue, options, current, true);
+      const option = findCatalogOption(rawValue, options, current, !field.offersRetired);
       if (!option) {
         const allowed = options
-          .filter((item) => !item.deprecated || item.code === current)
+          .filter((item) => field.offersRetired || !item.deprecated || item.code === current)
           .slice(0, 10)
           .map((item) => item.label || item.code)
           .join(', ');
@@ -1155,8 +1159,8 @@ export class AiBusinessRecordMutationSupportService {
     return { value: id, displayValue: value?.name ?? null, locked: !writable };
   }
 
-  /** The value of one dimension named by `ref` (its id, or its name, unique within the dimension). */
-  private async findDimensionValue(
+  /** The value of one dimension named by `ref` (its id, or its name, unique within the dimension); also Kad's change in bulk. */
+  async findDimensionValue(
     context: AiExecutionContextWithManager,
     axisId: string,
     ref: string,
@@ -2248,10 +2252,11 @@ export class AiBusinessRecordMutationSupportService {
       }
       throw error;
     }
-    // The incident and technology services write their own audit row, with the preview's source
-    // and reference; the detail they return stays the author's, even when the change makes the
-    // record invisible to them.
-    if (entityType === 'incidents' || entityType === 'technologies') return;
+    // The incident, technology and budget line services write their own audit row, with the
+    // preview's source and reference (a budget line's contacts too, when a new supplier brings
+    // theirs); the detail they return stays the author's, even when the change makes the record
+    // invisible to them.
+    if (entityType === 'incidents' || entityType === 'technologies' || entityType === 'budget_lines') return;
     const after = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
     await this.logAiAudit(context, preview, entityType, 'update', before, after);
   }
@@ -2404,7 +2409,7 @@ export class AiBusinessRecordMutationSupportService {
       case 'connections':
         return this.connections.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager });
       case 'budget_lines':
-        return this.budgetLines.update(id, fields, context.userId, { manager: context.manager });
+        return this.budgetLines.update(id, fields, context.userId, { manager: context.manager, ...(audit ? { audit } : {}) });
       case 'incidents':
         return this.incidents.update(id, fields, context.userId, await this.incidentWriteOptions(context, audit));
       case 'technologies':

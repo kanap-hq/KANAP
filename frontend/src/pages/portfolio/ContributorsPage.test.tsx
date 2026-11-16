@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
@@ -18,7 +18,10 @@ vi.mock('../../api', () => ({
 vi.mock('../../components/csv/serverExport', () => ({ downloadServerExport: vi.fn(async () => undefined) }));
 
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: () => true, profile: { id: 'user-1' } }),
+  useAuth: () => ({
+    hasLevel: () => true,
+    profile: { id: 'user-1', first_name: 'Signed', last_name: 'In', email: 'me@example.com' },
+  }),
 }));
 
 function resolveKey(key: string, opts?: Record<string, unknown>): string | undefined {
@@ -99,7 +102,12 @@ const MIXED_CONTRIBUTORS = [
 
 function LocationProbe() {
   const location = useLocation();
-  return <div data-testid="search">{location.search}</div>;
+  return (
+    <>
+      <div data-testid="path">{location.pathname}</div>
+      <div data-testid="search">{location.search}</div>
+    </>
+  );
 }
 
 function renderAt(path: string) {
@@ -302,5 +310,62 @@ describe('ContributorsPage empty list', () => {
     expect(await screen.findByText('No contributors yet.')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByRole('button', { name: /Add contributor/ })).toBeInTheDocument();
+  });
+});
+
+describe('ContributorsPage add contributor', () => {
+  const LOOKUP_PEOPLE = [
+    { id: 'u-1', first_name: 'Ada', last_name: 'Lovelace', email: null, status: 'enabled' },
+    { id: 'u-grace', first_name: 'Grace', last_name: 'Hopper', email: null, status: 'enabled' },
+  ];
+
+  beforeEach(() => {
+    vi.mocked(api.post).mockReset();
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === '/portfolio/team-members') return { data: { items: CONTRIBUTORS } } as any;
+      if (url === '/portfolio/teams') return { data: [] } as any;
+      if (url === '/portfolio/employment-types') return { data: EMPLOYMENT_TYPES } as any;
+      if (url === '/portfolio/team-members/time-stats') return { data: { stats: {} } } as any;
+      if (url === '/users/lookup') return { data: { items: LOOKUP_PEOPLE, has_more: false } } as any;
+      if (url === '/users') throw new Error('the add dialog must read /users/lookup, not /users');
+      return { data: {} } as any;
+    });
+  });
+
+  function openPicker(input: HTMLElement) {
+    act(() => { input.focus(); });
+    fireEvent.mouseDown(input);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+  }
+
+  it('reads the person lookup, leaves out current contributors, and posts the chosen id', async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: { item_number: 4 } } as any);
+    renderAt('/portfolio/contributors');
+    await screen.findByText('Ada Lovelace');
+
+    fireEvent.click(screen.getByRole('button', { name: /Add contributor/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add contributor' });
+    // Nothing is read until the list opens, and the whole-table route is never used.
+    expect(calledUrls()).not.toContain('/users');
+    expect(calledUrls()).not.toContain('/users/lookup');
+
+    openPicker(within(dialog).getByRole('combobox'));
+    const listbox = await screen.findByRole('listbox');
+    await waitFor(() => expect(within(listbox).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      // The signed-in person is not a contributor, so the picker still lists them first.
+      'Signed In selects.meSuffix',
+      'Grace Hopper',
+    ]));
+    expect(calledUrls()).toContain('/users/lookup');
+    expect(calledUrls()).not.toContain('/users');
+
+    fireEvent.click(within(listbox).getByRole('option', { name: 'Grace Hopper' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.add' }));
+
+    await waitFor(() => expect(vi.mocked(api.post)).toHaveBeenCalledWith(
+      '/portfolio/team-members',
+      { user_id: 'u-grace' },
+    ));
+    await waitFor(() => expect(screen.getByTestId('path').textContent).toBe('/portfolio/contributors/MEM-4'));
   });
 });

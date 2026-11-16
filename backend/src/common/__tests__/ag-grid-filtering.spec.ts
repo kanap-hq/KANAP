@@ -231,6 +231,11 @@ function testReferenceFilter() {
   assert.deepEqual(compile({ filterType: 'number', type: 'greaterThan', filter: 4 }), { sql: 'r.item_number > :p0', params: { p0: 4 } });
   assert.deepEqual(compile({ filterType: 'text', type: 'blank' }), { sql: "NULLIF((r.item_number)::text, '') IS NULL", params: {} });
   assert.equal(compile({ filterType: 'text', type: 'contains', filter: 'REQ-' }), null, 'the prefix alone filters nothing');
+  // The assistant's set of references (`["REQ-12"]`): each value's digits, compared whole.
+  assert.deepEqual(compile({ filterType: 'set', values: ['REQ-12', ' req-3 ', '7'] }), { sql: '(r.item_number)::text IN (:...p0)', params: { p0: ['12', '3', '7'] } });
+  // A leading zero is text: `SUP-013` compares "013", which no number is written as.
+  const supplier = compileReferenceFilter({ filterType: 'set', values: ['SUP-013'] }, 's.item_number', 'SUP', createParamNameGenerator('p'));
+  assert.deepEqual(supplier, { sql: '(s.item_number)::text IN (:...p0)', params: { p0: ['013'] } });
 }
 
 /** The lists that hand their filters to TypeORM: a date model reaches the column by day; an unknown column or a text model on a date is a 400. */

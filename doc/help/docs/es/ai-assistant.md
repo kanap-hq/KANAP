@@ -110,6 +110,7 @@ Adjunte una hoja de cálculo y pida a Kad que la importe en una lista de Kadrati
 - Cada elección que hace en la vista previa de un archivo de presupuesto vuelve a comprobar el archivo y da una nueva vista previa en el mismo lugar.
 - En las aplicaciones, los activos, los proyectos, las solicitudes, las tareas y los incidentes, una celda vacía conserva el valor ya guardado en un registro que el archivo actualiza.
 - Los contratos, proveedores, contactos, empresas, departamentos, centros de coste, cuentas, valores de dimensiones analíticas, procesos de negocio, calendarios laborales y vínculos de tecnologías sustituyen todos los valores de un registro que actualizan. Cuando filas del archivo corresponden a registros existentes y al archivo le faltan columnas de la importación, la comprobación señala un error y la vista previa no se puede aprobar, porque esos valores se vaciarían. Asocie las columnas que faltan, o deje en el archivo solo registros nuevos.
+- Para las empresas y los departamentos, una columna de referencias tal como la escribe su exportación (`COMP-12`, `DEPT-4`) designa el registro que actualiza cada fila, como en la importación de la lista. La comprobación lista cada registro que se renombrará o pasará a otra empresa. Cuando un valor de esa columna no lleva el prefijo, como en una columna de números de fila, Kad no lee ninguno de sus valores y empareja las filas por nombre.
 - El botón **Descargar el archivo (.xlsx)**, junto a **Rechazar**, da el archivo que Kad preparó, en .xlsx con el formato de la importación de la lista: las columnas de la importación, sus valores tal como los lee la importación (códigos de lista, fechas), una fila por cada fila de su archivo. En las importaciones que sustituyen todos los valores, el archivo tiene todas las columnas de la importación, vacías donde su archivo no tenía ninguna. Complete los valores que faltan e importe el archivo con el botón **Importar** de la lista. El [Registro de auditoría](admin.md#registro-de-auditoria) anota cada descarga, como cualquier exportación.
 - En las líneas presupuestarias, cada fila del archivo crea una nueva línea, salvo las filas descartadas o elegidas para actualizar la línea a la que se parecen.
 - El [Registro de auditoría](admin.md#registro-de-auditoria) anota cada importación hecha con Kad, con el nombre del archivo y los recuentos, bajo el origen **Chat de IA**.
@@ -173,7 +174,7 @@ Kad lista, cuenta y lee los incidentes. Los filtra por activo, aplicación o tec
 
 Kad lee los contratos como los muestra la lista de [Contratos](contracts.md): el estado del periodo en curso (por decidir, en curso, renovado, termina sin renovación, vencido), el próximo vencimiento y la fecha límite de rescisión, con el plazo de decisión de su espacio de trabajo y las decisiones de renovación ya registradas. También lee lo que cubre un contrato: sus aplicaciones, activos, tecnologías y líneas presupuestarias. Pregunte, por ejemplo: «¿Qué contratos están por decidir y qué aplicaciones cubren?» o «¿Qué contratos cubren APP-8?» Los asistentes conectados por MCP obtienen las mismas respuestas.
 
-Kad nombra un registro por su referencia, como `APP-8` o `BL-14`, o por su nombre cuando no tiene, como un proceso de negocio. La referencia o el nombre lleva a la página del registro cuando usted puede abrirla.
+Kad nombra un registro por su referencia, como `APP-8`, `BL-14` o `COMP-3`, o por su nombre cuando no tiene, como un proceso de negocio. La referencia o el nombre lleva a la página del registro cuando usted puede abrirla. También puede pedirle un registro por su referencia, por ejemplo «Muéstrame COMP-3.»
 
 Kad nombra un registro vinculado al que usted consulta solo si puede leer su módulo, como la página del registro: las aplicaciones de un proyecto requieren las aplicaciones, sus activos la infraestructura, sus solicitudes de origen las solicitudes. Un Business Contributor solo obtiene los proyectos, solicitudes y aplicaciones en los que participa. Los servidores en los que se ejecuta una aplicación son la excepción: vienen con la aplicación, como en su pestaña **Despliegues**. Si se le pregunta por una persona, Kad da lo que le muestra la lista de usuarios: un administrador de usuarios obtiene el perfil completo, los demás el nombre, el correo electrónico y el estado. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
@@ -219,6 +220,26 @@ Con el nivel Miembro en la infraestructura, Kad crea una tecnología, la adopta 
 Con el mismo nivel, cuando se siguen las vulnerabilidades, Kad cambia el estado de las vulnerabilidades a **Por revisar**, **Tratada** o **No afectada**, con una nota si usted la da. Nombre una CVE para cambiar todas sus filas, añada una tecnología, o una tecnología y una versión, para acotar, o describa las filas con los filtros de la página. Un cambio abarca 5000 filas como máximo, como en la página. La vista previa dice cuántas filas y CVE cambian. **Aceptada** no es un estado: Kad propone **Tratada** con una nota, o **No afectada**. Pida a Kad que deshaga el cambio en la conversación. Pregunte, por ejemplo: «Marca CVE-2024-3094 como no afectada en TEC-3, el paquete no está instalado». Consulte [Preguntar al asistente](vulnerabilities.md#preguntar-al-asistente).
 
 Cuando Kad crea una línea presupuestaria, pregunta si la línea es OPEX o CAPEX si usted no lo ha dicho. No cambia el tipo de una línea existente: use **Cambiar el tipo...** en el espacio de trabajo de la línea (consulte [Cambiar el tipo](budget-lines.md#cambiar-el-tipo)). Kad solo define el contrato de las líneas OPEX. Una línea CAPEX llega a sus contratos mediante los vínculos de su pestaña **Relaciones**.
+
+### Modificar registros en bloque { #changing-records-in-bulk }
+
+Kad modifica un campo en muchas líneas presupuestarias o aplicaciones a la vez, como **Modificar la selección** en la lista. Necesita el mismo derecho: el nivel Miembro en el presupuesto, o en las aplicaciones. Designe los registros con un filtro de la lista, como un proveedor o un centro de coste, o con sus referencias (`BL-3`, `APP-7`). Use uno u otro en una solicitud. Un filtro toma los registros activados, salvo que nombre un estado. Las aplicaciones retiradas quedan fuera, salvo que nombre un ciclo de vida.
+
+- En las líneas presupuestarias: el centro de coste, la cuenta, la empresa pagadora, el proveedor, el responsable de TI, el responsable de negocio, run o build, o el valor de una dimensión.
+- En las aplicaciones: los responsables de negocio o los responsables IT (las personas que nombre sustituyen a las del rol), la categoría, el ciclo de vida, la criticidad de negocio o la criticidad cibernética.
+
+Pida, por ejemplo: "Pasa las líneas del proveedor Acme al centro de coste IT-01" o "Haz a Claire Martin responsable IT de APP-3 y APP-7".
+
+La vista previa muestra los registros afectados, el campo y su nuevo valor, cuántos registros cambian, cuántos ya tienen este valor y cuántos se rechazan, con el motivo. Lista los primeros registros por su referencia. Apruébela para aplicar el cambio. Un cambio no se puede deshacer. La pestaña **Historial** de cada registro lo muestra como hecho por Kad para usted.
+
+Kad rechaza un cambio:
+
+- Cuando la solicitud no designa ningún registro, o nombra un filtro y referencias a la vez
+- Cuando no encuentra el valor o la persona que nombra
+- Por encima de 5000 registros. Acote el filtro
+- Que vaciaría la cuenta, la empresa pagadora, una dimensión obligatoria, la categoría o el ciclo de vida
+
+Si la lista cambia entre la vista previa y su aprobación, la vista previa falla. Pida una nueva a Kad. Mientras otra operación de presupuesto está en curso, la vista previa sigue abierta: apruébela de nuevo cuando esa operación haya terminado. Los asistentes conectados por MCP solo leen.
 
 ### Eliminar un registro { #deleting-a-record }
 
@@ -282,6 +303,8 @@ Para las vistas previas de cambios pendientes, el panel ofrece dos botones:
 - **Aprobar**: confirma el cambio y permite que Kad lo aplique
 - **Rechazar**: cancela el cambio. Kad indica que el cambio se ha rechazado y no prepara nada en su lugar. Si su solicitud pedía varios cambios, continúa con los demás.
 
+Cuando hay varias vistas previas pendientes, **Aprobar todas** y **Rechazar todas** actúan sobre todas a la vez.
+
 Una vista previa, y el mensaje que Kad escribe después de que usted la apruebe o la rechace, están en el idioma de su perfil (el de su navegador si su perfil no fija ninguno), con los nombres de campo y los valores de las pantallas. Una línea presupuestaria pedida con un importe llega como una sola vista previa: una sola aprobación crea la línea, su versión presupuestaria del año y el importe.
 
 Cuando usted pide un cambio que Kad no puede hacer, como eliminar un proyecto o volver a lanzar el cotejo de las vulnerabilidades, Kad lo dice e indica la pantalla donde puede hacerlo. No prepara ningún otro cambio en su lugar.
@@ -298,7 +321,7 @@ Las personas que pueden abrir **Administración > Kad** ven también una barra f
 
 ## Consejos
 
-- **Use prefijos para mayor precisión**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` corresponden directamente a las referencias nativas de Kadratis. Son la forma más rápida de apuntar Kad a un registro concreto y sobreviven al copiar y pegar porque son idénticos a lo que ve en el resto de la aplicación.
+- **Use prefijos para mayor precisión**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@COMP-`, `@DEPT-` corresponden directamente a las referencias nativas de Kadratis. Son la forma más rápida de apuntar Kad a un registro concreto y sobreviven al copiar y pegar porque son idénticos a lo que ve en el resto de la aplicación.
 - **Inicie una nueva conversación por tema**: mantener las preguntas no relacionadas en conversaciones separadas reduce la ventana de contexto, acelera las respuestas y disminuye el gasto en tokens. La lista de conversaciones está agrupada por fecha para que pueda encontrarlas de nuevo con facilidad.
 - **Apruebe y rechace con criterio**: las vistas previas son lo único que se interpone entre Kad y sus datos reales. Tómese el segundo extra para leer la comparación antes de hacer clic en **Aprobar**.
 - **Detenga en lugar de esperar**: si Kad toma un camino equivocado a mitad de la generación, pulse el botón **Detener** en lugar de esperar a que termine. Ahorrará tokens y su siguiente mensaje puede corregir el rumbo.

@@ -110,6 +110,7 @@ Hängen Sie eine Tabelle an und bitten Sie Kad, sie in eine Kadratis-Liste zu im
 - Jede Wahl, die Sie in der Vorschau einer Budgetdatei treffen, prüft die Datei erneut und ergibt eine neue Vorschau an derselben Stelle.
 - Bei Anwendungen, Assets, Projekten, Anfragen, Aufgaben und Vorfällen behält eine leere Zelle den Wert, der bereits auf einem Datensatz gespeichert ist, den die Datei aktualisiert.
 - Verträge, Lieferanten, Kontakte, Unternehmen, Abteilungen, Kostenstellen, Konten, Werte von Analysedimensionen, Geschäftsprozesse, Arbeitstagekalender und Technologie-Verknüpfungen ersetzen jeden Wert eines Datensatzes, den sie aktualisieren. Wenn Zeilen der Datei zu bestehenden Datensätzen passen und der Datei Spalten des Imports fehlen, meldet die Prüfung einen Fehler und die Vorschau kann nicht genehmigt werden, weil diese Werte geleert würden. Ordnen Sie die fehlenden Spalten zu, oder behalten Sie nur neue Datensätze in der Datei.
+- Bei Unternehmen und Abteilungen bezeichnet eine Spalte mit Referenzen, wie ihr Export sie schreibt (`COMP-12`, `DEPT-4`), den Datensatz, den jede Zeile aktualisiert, wie beim Import der Liste. Die Prüfung listet jeden Datensatz, der umbenannt wird oder zu einem anderen Unternehmen wechselt. Fehlt einem Wert dieser Spalte das Präfix, wie in einer Spalte mit Zeilennummern, liest Kad keinen ihrer Werte und ordnet die Zeilen nach dem Namen zu.
 - Die Schaltfläche **Datei herunterladen (.xlsx)** neben **Ablehnen** liefert die von Kad vorbereitete Datei als .xlsx im Format des Imports der Liste: die Spalten des Imports, Ihre Werte so, wie der Import sie liest (Listencodes, Datumsangaben), eine Zeile je Zeile Ihrer Datei. Bei den Importen, die jeden Wert ersetzen, enthält die Datei jede Spalte des Imports, leer, wo Ihre Datei keine hatte. Ergänzen Sie die fehlenden Werte und importieren Sie die Datei mit der Schaltfläche **Importieren** der Liste. Das [Audit-Protokoll](admin.md#audit-protokoll) verzeichnet jeden Download, wie bei jedem Export.
 - Bei Budgetzeilen legt jede Zeile der Datei eine neue Budgetzeile an, außer den ausgelassenen Zeilen und denen, die die Budgetzeile aktualisieren sollen, der sie ähneln.
 - Das [Audit-Protokoll](admin.md#audit-protokoll) verzeichnet jeden Import über Kad mit dem Dateinamen und den Zeilenzahlen, unter der Quelle **KI-Chat**.
@@ -173,7 +174,7 @@ Kad listet, zählt und liest Vorfälle. Es filtert sie nach Asset, Anwendung ode
 
 Kad liest Verträge so, wie die Liste der [Verträge](contracts.md) sie zeigt: den Zustand der laufenden Periode (zu entscheiden, laufend, verlängert, endet ohne Verlängerung, abgelaufen), die nächste Frist und den Kündigungstermin, mit dem Entscheidungszeitraum Ihres Arbeitsbereichs und den bereits erfassten Verlängerungsentscheidungen. Es liest auch, was ein Vertrag abdeckt: seine Anwendungen, Assets, Technologien und Budgetzeilen. Fragen Sie zum Beispiel: „Welche Verträge sind zu entscheiden, und welche Anwendungen decken sie ab?“ oder „Welche Verträge decken APP-8 ab?“ Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
-Kad nennt einen Datensatz bei seiner Referenz, etwa `APP-8` oder `BL-14`, oder bei seinem Namen, wenn er keine hat, etwa einen Geschäftsprozess. Die Referenz oder der Name führt zur Seite des Datensatzes, wenn Sie sie öffnen können.
+Kad nennt einen Datensatz bei seiner Referenz, etwa `APP-8`, `BL-14` oder `COMP-3`, oder bei seinem Namen, wenn er keine hat, etwa einen Geschäftsprozess. Die Referenz oder der Name führt zur Seite des Datensatzes, wenn Sie sie öffnen können. Sie können einen Datensatz auch über seine Referenz erfragen, zum Beispiel „Zeig mir COMP-3.“
 
 Kad nennt einen Datensatz, der mit dem erfragten verknüpft ist, nur dann, wenn Sie sein Modul lesen dürfen, wie die Seite des Datensatzes: Die Anwendungen eines Projekts erfordern die Anwendungen, seine Assets die Infrastruktur, seine Ursprungsanträge die Anträge. Ein Business Contributor erhält nur die Projekte, Anträge und Anwendungen, an denen er beteiligt ist. Die Server, auf denen eine Anwendung läuft, sind die Ausnahme: Sie gehören zur Anwendung, wie auf ihrem Reiter **Bereitstellungen**. Auf eine Person angesprochen, gibt Kad wieder, was Ihnen die Benutzerliste zeigt: Ein Benutzeradministrator erhält das vollständige Profil, alle anderen Name, E-Mail und Status. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
@@ -219,6 +220,26 @@ Mit der Stufe Mitglied für die Infrastruktur legt Kad eine Technologie an, übe
 Mit derselben Stufe ändert Kad, wenn Schwachstellen verfolgt werden, den Status von Schwachstellen auf **Zu prüfen**, **Behandelt** oder **Nicht betroffen**, mit einer Notiz, wenn Sie eine angeben. Nennen Sie eine CVE, um alle ihre Zeilen zu ändern, fügen Sie eine Technologie oder eine Technologie und eine Version hinzu, um einzugrenzen, oder beschreiben Sie die Zeilen mit den Filtern der Seite. Eine Änderung umfasst höchstens 5.000 Zeilen, wie auf der Seite. Die Vorschau sagt, wie viele Zeilen und CVE sich ändern. **Akzeptiert** ist kein Status: Kad bietet **Behandelt** mit einer Notiz an, oder **Nicht betroffen**. Bitten Sie Kad, die Änderung in der Konversation rückgängig zu machen. Fragen Sie zum Beispiel: „Setze CVE-2024-3094 auf TEC-3 auf nicht betroffen, das Paket ist nicht installiert“. Siehe [Den Assistenten fragen](vulnerabilities.md#den-assistenten-fragen).
 
 Wenn Kad eine Budgetzeile anlegt, fragt es, ob die Zeile OPEX oder CAPEX ist, falls Sie es nicht gesagt haben. Den Typ einer bestehenden Zeile ändert es nicht: Verwenden Sie **Typ ändern...** im Arbeitsbereich der Zeile (siehe [Typ ändern](budget-lines.md#typ-andern)). Kad setzt den Vertrag nur bei OPEX-Zeilen. Eine CAPEX-Zeile erreicht ihre Verträge über die Verknüpfungen ihres Reiters **Verknüpfungen**.
+
+### Datensätze in großer Zahl ändern { #changing-records-in-bulk }
+
+Kad ändert ein Feld auf vielen Budgetzeilen oder Anwendungen auf einmal, wie **Auswahl ändern** in der Liste. Dafür braucht es dasselbe Recht: die Stufe Mitglied für das Budget oder für die Anwendungen. Benennen Sie die Datensätze mit einem Filter der Liste, etwa einem Lieferanten oder einer Kostenstelle, oder mit ihren Referenzen (`BL-3`, `APP-7`). Verwenden Sie in einer Anfrage das eine oder das andere. Ein Filter nimmt die aktivierten Datensätze, es sei denn, er nennt einen Status. Anwendungen außer Betrieb bleiben außen vor, es sei denn, er nennt einen Lebenszyklus.
+
+- Bei Budgetzeilen: die Kostenstelle, das Konto, das zahlende Unternehmen, den Lieferanten, den IT-Verantwortlichen, den Fachverantwortlichen, Run oder Build oder den Wert einer Dimension.
+- Bei Anwendungen: die Fachverantwortlichen oder die IT-Verantwortlichen (die genannten Personen ersetzen die der Rolle), die Kategorie, den Lebenszyklus, die Geschäftskritikalität oder die Cyberkritikalität.
+
+Fragen Sie zum Beispiel: „Setze die Zeilen des Lieferanten Acme auf die Kostenstelle IT-01“ oder „Mach Claire Martin zur IT-Verantwortlichen von APP-3 und APP-7“.
+
+Die Vorschau zeigt die betroffenen Datensätze, das Feld und seinen neuen Wert, wie viele Datensätze geändert werden, wie viele diesen Wert bereits haben und wie viele abgelehnt werden, jeweils mit dem Grund. Sie listet die ersten Datensätze mit ihrer Referenz. Genehmigen Sie sie, um die Änderung anzuwenden. Eine Änderung lässt sich nicht rückgängig machen. Der Tab **Verlauf** jedes Datensatzes zeigt sie als von Kad für Sie vorgenommen.
+
+Kad lehnt eine Änderung ab:
+
+- Wenn die Anfrage keine Datensätze benennt oder einen Filter und Referenzen zusammen nennt
+- Wenn es den genannten Wert oder die genannte Person nicht findet
+- Über 5.000 Datensätze. Grenzen Sie den Filter ein
+- Die das Konto, das zahlende Unternehmen, eine Pflichtdimension, die Kategorie oder den Lebenszyklus leeren würde
+
+Ändert sich die Liste zwischen der Vorschau und Ihrer Genehmigung, schlägt die Vorschau fehl. Bitten Sie Kad um eine neue. Solange ein anderer Budgetvorgang läuft, bleibt die Vorschau offen: Genehmigen Sie sie erneut, sobald dieser Vorgang beendet ist. Über MCP verbundene Assistenten lesen nur.
 
 ### Einen Datensatz löschen { #deleting-a-record }
 
@@ -282,6 +303,8 @@ Bei ausstehenden Änderungsvorschauen bietet das Panel zwei Schaltflächen:
 - **Genehmigen**: bestätigt die Änderung und lässt Kad sie anwenden
 - **Ablehnen**: verwirft die Änderung. Kad teilt mit, dass die Änderung abgelehnt wurde, und bereitet nichts an ihrer Stelle vor. Wenn Ihre Anfrage mehrere Änderungen umfasste, fährt es mit den übrigen fort.
 
+Wenn mehrere Vorschauen ausstehen, wirken **Alle genehmigen** und **Alle ablehnen** auf alle zugleich.
+
 Eine Vorschau und die Nachricht, die Kad nach Ihrer Genehmigung oder Ablehnung schreibt, sind in der Sprache Ihres Profils (der Ihres Browsers, wenn Ihr Profil keine festlegt), mit den Feldnamen und Werten der Bildschirme. Eine Budgetzeile, die mit einem Betrag angefragt wird, kommt als eine einzige Vorschau: Eine Genehmigung legt die Zeile, ihre Budgetversion für das Jahr und den Betrag an.
 
 Wenn Sie eine Änderung anfragen, die Kad nicht vornehmen kann, etwa ein Projekt löschen oder den Abgleich der Schwachstellen erneut starten, sagt es das und nennt den Bildschirm, auf dem Sie sie vornehmen können. Es bereitet keine andere Änderung an ihrer Stelle vor.
@@ -298,7 +321,7 @@ Personen, die **Administration > Kad** öffnen können, sehen außerdem einen sc
 
 ## Tipps
 
-- **Präfixe für Präzision nutzen**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` sind direkt nativen Kadratis-Referenzen zugeordnet. Sie sind der schnellste Weg, Kad auf einen bestimmten Datensatz zu lenken, und sie überstehen Kopieren und Einfügen, weil sie identisch mit dem aussehen, was Sie an anderer Stelle in der Anwendung sehen.
+- **Präfixe für Präzision nutzen**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-`, `@COMP-`, `@DEPT-` sind direkt nativen Kadratis-Referenzen zugeordnet. Sie sind der schnellste Weg, Kad auf einen bestimmten Datensatz zu lenken, und sie überstehen Kopieren und Einfügen, weil sie identisch mit dem aussehen, was Sie an anderer Stelle in der Anwendung sehen.
 - **Pro Thema eine neue Konversation beginnen**: Wenn Sie unzusammenhängende Fragen in getrennten Konversationen halten, bleibt das Kontextfenster kleiner, die Antworten kommen schneller und die Token-Kosten sinken. Die Konversationsliste ist nach Datum gruppiert, sodass Sie sie leicht wiederfinden.
 - **Bewusst genehmigen und ablehnen**: Vorschauen sind das Einzige, was zwischen Kad und Ihren Live-Daten steht. Nehmen Sie sich die zusätzliche Sekunde, um die Gegenüberstellung zu lesen, bevor Sie auf **Genehmigen** klicken.
 - **Stoppen statt warten**: Wenn Kad mitten im Stream in die falsche Richtung läuft, drücken Sie die **Stopp**-Schaltfläche, statt auf das Ende zu warten. Sie sparen Tokens, und Ihre Anschlussnachricht kann den Kurs korrigieren.

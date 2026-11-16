@@ -142,21 +142,23 @@ A cell with no value shows a dash.
 **Changing a field**:
 
 1. Select the applications, then click **Change the selection** (edit icon). The icon shows the number of applications selected
-2. Choose the **Field**: **Business owners**, **IT owners**, **Lifecycle** or **Business criticality**
+2. Choose the **Field**: **Business owners**, **IT owners**, **Category**, **Lifecycle**, **Business criticality** or **Cyber criticality**
 3. Choose the **New value**. For owners, pick one or more people. The dialog counts the applications: how many will change, how many already have this value, and how many are refused. The count runs again at each new value
 4. Click **Change 12 applications** (with your count) to confirm. The window then shows the outcome. Click **Close** to close it. The list behind it is already up to date
 
 **Owners**: The people you choose replace the owners of that role on each application. The other role keeps its people: changing the **Business owners** leaves the **IT owners** as they are.
 
-**Emptying a field**: For **Business owners**, **IT owners** and **Business criticality**, click **Empty the field** (eraser icon) beside the value. The value reads **Empty**. For owners, the role is left with nobody. **Lifecycle** cannot be emptied.
+**Emptying a field**: For **Business owners**, **IT owners**, **Business criticality** and **Cyber criticality**, click **Empty the field** (eraser icon) beside the value. The value reads **Empty**. For owners, the role is left with nobody. **Category** and **Lifecycle** cannot be emptied.
 
 **Good to know**:
 
 - One change covers up to 5,000 applications. Above that, narrow the filters or select fewer applications
 - If the list changes between the count and your confirmation, the dialog shows the new count. Check it, then confirm again
 - If the count fails, click **Retry** beside the message to count again
-- A new business criticality marks a reviewed application **Review needed**, as on the application page
+- **Category**, **Business criticality** and **Cyber criticality** list only the values still offered in **IT Landscape > Settings**
+- A new business or cyber criticality marks a reviewed application **Review needed**, as on the application page
 - Each changed application gets its own entry in its **History** tab
+- [Kad](ai-assistant.md#changing-records-in-bulk) makes the same change when you ask for it in a conversation, with the same rights. You approve its preview
 
 ---
 

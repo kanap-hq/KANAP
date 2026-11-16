@@ -7,7 +7,7 @@ import { BUDGET_COLUMNS_QUERY_KEY, resolveBudgetColumns } from '../../hooks/useB
 import { DEFAULT_BUDGET_COLUMNS, getBudgetColumns } from '../../services/budgetColumns';
 import { buildItemPath, formatItemRef } from '../../utils/item-ref';
 import type { OnboardingAngle } from './onboardingApi';
-import { STEP_PARAM, stepScreen, type StepLocationState } from './onboardingPaths';
+import { STEP_PARAM, stepHref, stepScreen, type StepLocationState } from './onboardingPaths';
 
 type TopLine = { id: string; item_number: number | null; product_name: string | null };
 type Application = { id: string; name: string | null };
@@ -37,10 +37,10 @@ export function useOpenStep() {
   const { t } = useTranslation(['ops']);
   return React.useCallback(async (stepKey: string, angle: OnboardingAngle | null) => {
     const screen = stepScreen(stepKey, angle);
-    if (!screen) return;
-    const fallback = `${screen.to}?${STEP_PARAM}=${encodeURIComponent(stepKey)}`;
+    const href = stepHref(stepKey, angle);
+    if (!screen || !href) return;
     const kind = screen.opensRecord;
-    if (!kind) { navigate(fallback); return; }
+    if (!kind) { navigate(href); return; }
     const projectTab = screen.tab ?? 'summary';
     const find = async (): Promise<Opened | null> => {
       if (kind === 'topBudgetLine') {
@@ -82,11 +82,11 @@ export function useOpenStep() {
     };
     try {
       const opened = await find();
-      if (!opened) { navigate(fallback); return; }
+      if (!opened) { navigate(href); return; }
       const state: StepLocationState = { onboardingRecord: opened.record ?? undefined };
       navigate(`${opened.path}?${STEP_PARAM}=${encodeURIComponent(stepKey)}`, { state });
     } catch {
-      navigate(fallback);
+      navigate(href);
     }
   }, [navigate, queryClient, t]);
 }

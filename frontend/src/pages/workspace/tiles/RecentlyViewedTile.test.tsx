@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -35,13 +35,20 @@ function stubStorage(initial: Record<string, string>) {
   return values;
 }
 
+function Where() {
+  return <div data-testid="where">{useLocation().pathname}</div>;
+}
+
 function renderTile() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
-          <MemoryRouter><RecentlyViewedTile config={{ limit: 5 }} /></MemoryRouter>
+          <MemoryRouter>
+            <Where />
+            <Routes><Route path="*" element={<RecentlyViewedTile config={{ limit: 5 }} />} /></Routes>
+          </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
@@ -70,6 +77,40 @@ describe('RecentlyViewedTile', () => {
       items: [{ type: 'task', id: TASK }, { type: 'contract', id: CONTRACT }],
     });
     expect(JSON.parse(values.get(KEY)!).map((item: { id: string }) => item.id)).toEqual([CONTRACT]);
+  });
+
+  it('shows suppliers, contacts and departments with their reference, and opens them', async () => {
+    const SUPPLIER = '7a1e2b3c-4d5e-4f60-8a7b-1c2d3e4f5a61';
+    const CONTACT = '7a1e2b3c-4d5e-4f60-8a7b-1c2d3e4f5a62';
+    const DEPARTMENT = '7a1e2b3c-4d5e-4f60-8a7b-1c2d3e4f5a63';
+    stubStorage({
+      [KEY]: JSON.stringify([
+        { type: 'supplier', id: SUPPLIER, label: 'Fromagerie Bleue', ref: 'SUP-12', viewedAt: Date.now() },
+        { type: 'contact', id: CONTACT, label: 'Ana Lopez', ref: 'CTCT-3', viewedAt: Date.now() - 1000 },
+        { type: 'department', id: DEPARTMENT, label: 'Finance', ref: 'DEPT-7', viewedAt: Date.now() - 2000 },
+      ]),
+    });
+    api.post.mockResolvedValue({ data: { existing: [
+      { type: 'supplier', id: SUPPLIER }, { type: 'contact', id: CONTACT }, { type: 'department', id: DEPARTMENT },
+    ] } });
+    renderTile();
+    expect(screen.getByText('SUP-12')).toBeInTheDocument();
+    expect(screen.getByText('CTCT-3')).toBeInTheDocument();
+    expect(screen.getByText('DEPT-7')).toBeInTheDocument();
+    expect(screen.getByText(/dashboard\.tiles\.entityTypes\.supplier/)).toBeInTheDocument();
+    expect(screen.getByText(/dashboard\.tiles\.entityTypes\.contact/)).toBeInTheDocument();
+    expect(screen.getByText(/dashboard\.tiles\.entityTypes\.department/)).toBeInTheDocument();
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    // Confirmed by the check: they stay.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByText('Fromagerie Bleue')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Fromagerie Bleue'));
+    expect(screen.getByTestId('where')).toHaveTextContent(`/master-data/suppliers/${SUPPLIER}`);
+    fireEvent.click(screen.getByText('Ana Lopez'));
+    expect(screen.getByTestId('where')).toHaveTextContent(`/master-data/contacts/${CONTACT}`);
+    fireEvent.click(screen.getByText('Finance'));
+    // The department page opens by its reference.
+    expect(screen.getByTestId('where')).toHaveTextContent('/master-data/departments/DEPT-7');
   });
 
   it('keeps the list as it is when the check fails', async () => {

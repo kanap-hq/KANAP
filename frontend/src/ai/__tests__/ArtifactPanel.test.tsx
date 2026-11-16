@@ -81,6 +81,7 @@ describe('ArtifactPanel', () => {
         onApprove={() => undefined}
         onReject={() => undefined}
         onApproveMany={onApproveMany}
+        onRejectMany={() => undefined}
       />,
     );
 
@@ -89,6 +90,88 @@ describe('ArtifactPanel', () => {
 
     expect(onApproveMany).toHaveBeenCalledWith(previews.map((preview) => preview.preview_id));
     expect(screen.getByText('previewBatch.title:3')).toBeInTheDocument();
+  });
+
+  // Lot K1 of 26.11.9: next to Approve all, Reject all rejects every pending card at once, without a dialog.
+  it('rejects every pending card once with Reject all, without a confirmation', () => {
+    const previews = Array.from({ length: 4 }, (_, index) => ({
+      preview_id: `card-${index + 1}`,
+      tool_name: 'update_business_record' as const,
+      status: (index === 3 ? 'rejected' : 'pending') as 'pending' | 'rejected',
+      target: { entity_type: 'applications', entity_id: `app-${index + 1}`, ref: `APP-${index + 1}`, title: `App ${index + 1}` },
+      changes: { category: { label: 'Category', from: 'Analytics', to: 'Infrastructure', format: 'text' as const } },
+      requires_confirmation: true,
+      actions: ['approve', 'reject'] as Array<'approve' | 'reject'>,
+      summary: `Change APP-${index + 1}.`,
+      error_message: null,
+      conversation_id: 'conversation-1',
+      created_at: '2026-03-28T17:00:00.000Z',
+      expires_at: '2026-03-28T17:10:00.000Z',
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+    }));
+    // The third card imports a file its check refuses: it cannot be approved, but it can be rejected.
+    Object.assign(previews[2], { import_mapping: { validation: { ok: false } } });
+    const onRejectMany = vi.fn();
+    const onReject = vi.fn();
+
+    renderWithTheme(
+      <ArtifactPanel
+        previews={previews}
+        selectedId={previews[0].preview_id}
+        open
+        onToggle={() => undefined}
+        onSelect={() => undefined}
+        onApprove={() => undefined}
+        onReject={onReject}
+        onApproveMany={() => undefined}
+        onRejectMany={onRejectMany}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'previewBatch.rejectAll' }));
+
+    expect(onRejectMany).toHaveBeenCalledTimes(1);
+    expect(onRejectMany).toHaveBeenCalledWith(['card-1', 'card-2', 'card-3']);
+    expect(onReject).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('shows Reject all only where Approve all shows', () => {
+    const preview = {
+      preview_id: 'card-1',
+      tool_name: 'update_business_record' as const,
+      status: 'pending' as const,
+      target: { entity_type: 'applications', entity_id: 'app-1', ref: 'APP-1', title: 'App 1' },
+      changes: { category: { label: 'Category', from: 'Analytics', to: 'Infrastructure', format: 'text' as const } },
+      requires_confirmation: true,
+      actions: ['approve', 'reject'] as Array<'approve' | 'reject'>,
+      summary: 'Change APP-1.',
+      error_message: null,
+      conversation_id: 'conversation-1',
+      created_at: '2026-03-28T17:00:00.000Z',
+      expires_at: '2026-03-28T17:10:00.000Z',
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+    };
+    renderWithTheme(
+      <ArtifactPanel
+        previews={[preview, { ...preview, preview_id: 'card-2', status: 'rejected' as any }]}
+        selectedId="card-1"
+        open
+        onToggle={() => undefined}
+        onSelect={() => undefined}
+        onApprove={() => undefined}
+        onReject={() => undefined}
+        onApproveMany={() => undefined}
+        onRejectMany={() => undefined}
+      />,
+    );
+
+    expect(screen.queryByText('previewBatch.approveAll')).toBeNull();
+    expect(screen.queryByText('previewBatch.rejectAll')).toBeNull();
   });
 
   it('keeps the actions of a long card in view at the bottom of the panel', () => {
@@ -121,6 +204,7 @@ describe('ArtifactPanel', () => {
         onApprove={() => undefined}
         onReject={() => undefined}
         onApproveMany={() => undefined}
+        onRejectMany={() => undefined}
       />,
     );
     const actions = screen.getByRole('button', { name: 'ai:previewCard.approve' }).parentElement!;
@@ -191,6 +275,7 @@ describe('ArtifactPanel', () => {
           onApprove={() => undefined}
           onReject={() => undefined}
           onApproveMany={() => undefined}
+          onRejectMany={() => undefined}
         />
       </QueryClientProvider>,
     );

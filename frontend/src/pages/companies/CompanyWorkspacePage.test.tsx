@@ -669,7 +669,7 @@ describe('CompanyWorkspacePage', () => {
   it('remembers the company in recently viewed', async () => {
     renderAt('/master-data/companies/co-1/overview');
     await screen.findByText('Acme France');
-    await waitFor(() => expect(addToRecent).toHaveBeenCalledWith('company', 'co-1', 'Acme France'));
+    await waitFor(() => expect(addToRecent).toHaveBeenCalledWith('company', 'co-1', 'Acme France', undefined));
   });
 
   it('hides delete from someone who is not a companies admin', async () => {

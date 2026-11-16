@@ -116,6 +116,7 @@ const BUDGET_LINE_FIELDS: Record<string, string> = {
   cost_center_id: 'ops:opex.fields.costCenter',
   run_build: 'ops:opex.fields.runBuild',
   contract_id: 'ops:opex.columns.contract',
+  budget_line_bulk_edit: 'ai:previewCard.fields.budget_line_bulk_edit',
   notes: 'ops:opex.fields.notes',
 };
 
@@ -149,6 +150,7 @@ const TASK_FIELDS: Record<string, string> = {
 
 const SCREEN_FIELD_KEYS: Record<string, Record<string, string>> = {
   applications: {
+    application_bulk_edit: 'ai:previewCard.fields.application_bulk_edit',
     name: 'it:common.name',
     supplier_id: 'it:workspace.application.overview.supplier',
     category: 'it:workspace.application.overview.category',
