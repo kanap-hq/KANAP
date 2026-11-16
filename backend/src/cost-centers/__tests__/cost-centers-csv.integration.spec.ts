@@ -295,6 +295,62 @@ async function testEndOfValidityFormat() {
   });
 }
 
+// Lot I3 of 26.11.9: the company is found exactly, then once case aside if only one answers (else
+// CSV_NAME_AMBIGUOUS, as before), then accents aside for a person who reads the companies: one name
+// answering is a match, listed and undoable; several refuse the row (CSV_NAME_AMBIGUOUS_AMONG).
+async function testCompanyBeyondAccents() {
+  await withRollback(async (runner) => {
+    const { tenantId, csv, ctx } = await seed(runner, 'accents');
+    await seedCompany(runner, tenantId, 'Société Générale SA');
+    await seedCompany(runner, tenantId, 'Crème SA');
+    await seedCompany(runner, tenantId, 'Creme SA');
+    const refs = new Map<string, string>((await runner.query(
+      `SELECT name, item_number FROM companies WHERE tenant_id = $1`, [tenantId],
+    )).map((row: any) => [row.name, `COMP-${row.item_number}`]));
+    const admin = { ...ctx, access: { isAdmin: true } };
+    const lines = [
+      'A1;cost_center;Accents;;Societe Generale SA;;;enabled;',
+      'A2;cost_center;Case;;SOCIÉTÉ GÉNÉRALE SA;;;enabled;',
+      'A3;cost_center;Accents twice;;societe generale sa;;;enabled;',
+    ];
+    for (const dryRun of [true, false]) {
+      const result: any = await csv.importCsv({ file: file(lines), dryRun, access: admin.access }, ctx);
+      assert.equal(result.ok, true, JSON.stringify(result.errors));
+      assert.deepEqual(result.matches, [{
+        column: 'company_name', name: null, value: 'Societe Generale SA', target: 'Société Générale SA',
+        ref: refs.get('Société Générale SA'), origin: 'server', reason: 'accents', lines: [2, 4], count: 2, undoable: true,
+      }]);
+      assert.equal(result.matchesTotal, 1);
+    }
+    const stored = await runner.query(
+      `SELECT cc.code, c.name FROM cost_centers cc JOIN companies c ON c.id = cc.company_id WHERE cc.tenant_id = $1 ORDER BY cc.code`,
+      [tenantId],
+    );
+    assert.deepEqual(stored.map((row: any) => [row.code, row.name]), [
+      ['A1', 'Société Générale SA'], ['A2', 'Société Générale SA'], ['A3', 'Société Générale SA'],
+    ]);
+
+    // Several names accents aside refuse the row; undone, or for a person who does not read the
+    // companies, the name is unknown, as before.
+    const refused = async (row: string, params: Record<string, unknown>) => {
+      const result: any = await csv.importCsv({ file: file([row]), dryRun: true, ...params }, ctx);
+      assert.equal(result.ok, false);
+      assert.equal(result.matches, undefined);
+      return result.errors.map(({ code, params: values }: any) => [code, values]);
+    };
+    const [[code, values]] = await refused('B1;cost_center;Two;;Crême SA;;;enabled;', { access: { isAdmin: true } });
+    assert.deepEqual([code, values.value, values.names.split(', ').sort()], [
+      'CSV_NAME_AMBIGUOUS_AMONG', 'Crême SA', [refs.get('Crème SA'), refs.get('Creme SA')].sort(),
+    ]);
+    assert.deepEqual(await refused('B2;cost_center;Undone;;Societe Generale SA;;;enabled;', {
+      access: { isAdmin: true }, unmatched: [{ column: 'company_name', value: 'Societe Generale SA' }],
+    }), [['CSV_REFERENCE_NOT_FOUND', { value: 'Societe Generale SA' }]]);
+    assert.deepEqual(await refused('B3;cost_center;Unread;;Societe Generale SA;;;enabled;', {
+      access: { permissions: { cost_centers: 'admin' } },
+    }), [['CSV_REFERENCE_NOT_FOUND', { value: 'Societe Generale SA' }]]);
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   const failures: string[] = [];
@@ -306,6 +362,7 @@ async function main() {
       testExportImportIsUnchanged,
       testConversionInFileAgainstLines,
       testEndOfValidityFormat,
+      testCompanyBeyondAccents,
     ]) {
       try {
         await test();

@@ -36,6 +36,9 @@ import {
 import { uploadedBytes } from '../common/upload';
 import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import type { CsvCallerAccess } from '../common/csv/csv-field.types';
+import { hasLevel } from '../common/relations/relations-access';
+import { findRecordByName, ImportNameMatch, listedMatches, noteNameMatch, undoneMatch } from '../common/name-matching';
 
 export const COST_CENTER_CSV_HEADERS = [
   'code', 'kind', 'name', 'parent_code', 'company_name', 'owner_email', 'description', 'status', 'disabled_at',
@@ -54,6 +57,9 @@ export interface CostCenterImportResult {
   /** The unknown headers the file carried, and what the shared layer noticed. */
   ignoredColumns: string[];
   notices: { dates: string | null; amounts: string | null };
+  /** The companies found beyond case (lot I3 of 26.11.9), each undoable; absent when none. */
+  matches?: ImportNameMatch[];
+  matchesTotal?: number;
 }
 
 interface ParsedRow {
@@ -131,19 +137,26 @@ export class CostCentersCsvService {
       language,
       dateOrder,
       decimalMark,
+      access,
+      unmatched,
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /** The person's rights: a company is found accents aside when they read the companies. */
+      access?: CsvCallerAccess;
+      /** The matches the person undid, by file column and value: found case aside only. */
+      unmatched?: Array<{ column: string; value: string }>;
     },
     ctx: CostCenterContext,
   ): Promise<CostCenterImportResult> {
     const read = await this.parseFile(file, language ?? 'en', dateOrder, decimalMark);
+    const matches = new Map<string, ImportNameMatch>();
     const result = (errors: CostCenterImportResult['errors'], total = 0): CostCenterImportResult => ({
       ok: false, dryRun, total, inserted: 0, updated: 0, unchanged: 0, errors,
-      ignoredColumns: read.ignoredColumns, notices: read.notices,
+      ignoredColumns: read.ignoredColumns, notices: read.notices, ...listedMatches(matches),
     });
     if (read.headerError) return result([read.headerError]);
     const { rows } = read;
@@ -153,15 +166,12 @@ export class CostCentersCsvService {
     await this.costCenters.lockTree(ctx);
     const stored = await this.costCenters.loadStored(ctx);
     const storedByCode = new Map(stored.map((row) => [row.code.toLowerCase(), row]));
-    const companies: Array<{ id: string; name: string; disabled_at: Date | null }> = await ctx.manager.query(
-      `SELECT id, name, disabled_at FROM companies WHERE tenant_id = $1`,
+    const companies: Array<{ id: string; name: string; disabled_at: Date | null; item_number: number | string | null }> = await ctx.manager.query(
+      `SELECT id, name, disabled_at, item_number FROM companies WHERE tenant_id = $1`,
       [ctx.tenantId],
     );
-    const companiesByName = new Map<string, typeof companies>();
-    for (const company of companies) {
-      const key = company.name.trim().toLowerCase();
-      companiesByName.set(key, [...(companiesByName.get(key) ?? []), company]);
-    }
+    const companyRef = (company: { item_number: number | string | null }) => (company.item_number != null ? `COMP-${Number(company.item_number)}` : null);
+    const readsCompanies = !!access && hasLevel(access, 'companies', 'reader');
     const emails = Array.from(new Set(rows.map((row) => cellOf(row, 'owner_email').toLowerCase()).filter(Boolean)));
     const users: Array<{ id: string; email: string; status: string }> = emails.length
       ? await ctx.manager.query(
@@ -205,12 +215,23 @@ export class CostCentersCsvService {
       let companyId: string | null = null;
       const companyName = cellOf(raw, 'company_name');
       if (companyName) {
-        const matches = companiesByName.get(companyName.toLowerCase()) ?? [];
-        const company = matches.find((entry) => entry.name.trim() === companyName) ?? (matches.length === 1 ? matches[0] : undefined);
+        // Exactly, else case aside when one name answers (two refuse the row, as before), else accents
+        // aside for a person who reads the companies and has not undone that match.
+        const beyondCase = readsCompanies && !undoneMatch(unmatched, 'company_name', companyName);
+        const found = findRecordByName(companies, companyName, { beyondCase, caseBlind: false, label: companyRef });
+        const company = found.kind === 'one' ? found.row : undefined;
+        if (found.kind === 'one' && found.how === 'accents') {
+          noteNameMatch(matches, {
+            column: 'company_name', name: null, value: companyName.trim(), target: found.row.name, ref: companyRef(found.row),
+            origin: 'server', reason: 'accents', undoable: true,
+          }, line);
+        }
         if (!company) {
-          rowErrors.push(matches.length > 1
+          rowErrors.push(found.kind === 'many' && found.level === 'case'
             ? rowError(line, 'company_name', 'CSV_NAME_AMBIGUOUS', `Company name '${companyName}' matches several companies.`, { value: companyName })
-            : rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown company '${companyName}'.`, { value: companyName }));
+            : found.kind === 'many'
+              ? rowError(line, 'company_name', 'CSV_NAME_AMBIGUOUS_AMONG', `Company '${companyName}' may designate several companies: ${found.names.join(', ')}`, { value: companyName, names: found.names.join(', ') })
+              : rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown company '${companyName}'.`, { value: companyName }));
         } else if (company.id !== existing?.company_id && !isActiveAt(company.disabled_at)) {
           rowErrors.push(rowError(line, 'company_name', 'CSV_REFERENCE_DISABLED', `Company '${companyName}' is disabled.`, { value: companyName }));
         } else {
@@ -327,7 +348,7 @@ export class CostCentersCsvService {
     }
     return {
       ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [],
-      ignoredColumns: read.ignoredColumns, notices: read.notices,
+      ignoredColumns: read.ignoredColumns, notices: read.notices, ...listedMatches(matches),
     };
   }
 

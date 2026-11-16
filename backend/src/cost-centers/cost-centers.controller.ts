@@ -32,6 +32,7 @@ import { CostCenterBulkDeleteDto, CostCenterCreateDto, CostCenterUpdateDto } fro
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
+import { csvCallerAccess } from '../common/csv/csv-field.types';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 
@@ -166,6 +167,7 @@ export class CostCentersController {
         language,
         dateOrder: parseDateOrder(dateOrderRaw),
         decimalMark: parseDecimalMark(decimalMarkRaw),
+        access: csvCallerAccess(ctx),
       },
       caller,
     );
