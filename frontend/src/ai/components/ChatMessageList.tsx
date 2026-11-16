@@ -22,7 +22,7 @@ import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import { useTranslation } from 'react-i18next';
 import { MarkdownContent } from '../../components/MarkdownContent';
 import { AiMutationPreview, ChatMessage } from '../aiTypes';
-import { isApprovable } from '../previewApproval';
+import { isApprovable, isRejectable } from '../previewApproval';
 import { getPreviewLabel } from '../utils/previewClassification';
 import { getPreviewStatusColorKey, getPreviewStatusDisplay, PreviewStatusDisplay } from '../utils/previewStatus';
 import { getDotColor } from '../../utils/statusColors';
@@ -501,6 +501,7 @@ function PreviewBatch({
   onApprove,
   onReject,
   onApproveMany,
+  onRejectMany,
   onOpenArtifact,
   selectedArtifactId,
   onReplacePreview,
@@ -510,6 +511,8 @@ function PreviewBatch({
   onApprove: (previewId: string) => void;
   onReject: (previewId: string) => void;
   onApproveMany: (previewIds: string[]) => void;
+  /** Reject all: every pending card at once, with no confirmation (nothing is written). */
+  onRejectMany: (previewIds: string[]) => void;
   onOpenArtifact?: (previewId: string) => void;
   selectedArtifactId?: string | null;
   onReplacePreview?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
@@ -535,6 +538,7 @@ function PreviewBatch({
 
   const selected = previews.find((preview) => previewChainId(preview) === selectedId) || previews[0];
   const approvablePreviews = previews.filter(isApprovable);
+  const rejectablePreviews = previews.filter(isRejectable);
   const showBulkAction = approvablePreviews.length >= PREVIEW_BATCH_BULK_MIN && !onOpenArtifact;
   const visibleConfirmPreviews = approvablePreviews.slice(0, 6);
   const remainingConfirmCount = Math.max(0, approvablePreviews.length - visibleConfirmPreviews.length);
@@ -573,6 +577,18 @@ function PreviewBatch({
               sx={{ textTransform: 'none', fontSize: 12, flexShrink: 0 }}
             >
               {t('previewBatch.approveAll')}
+            </Button>
+          )}
+          {showBulkAction && (
+            <Button
+              size="small"
+              variant="outlined"
+              color="inherit"
+              disabled={disabled}
+              onClick={() => onRejectMany(rejectablePreviews.map((preview) => preview.preview_id))}
+              sx={{ textTransform: 'none', fontSize: 12, flexShrink: 0 }}
+            >
+              {t('previewBatch.rejectAll')}
             </Button>
           )}
         </Stack>
@@ -772,6 +788,12 @@ function AssistantMessage({
     onSend(`[APPROVE_SELECTED:${previewIds.join(',')}]`);
   }, [onSend]);
 
+  // One message for every card, rejected as by its own Reject button (the server's reject path takes a list).
+  const handleRejectMany = useCallback((previewIds: string[]) => {
+    if (previewIds.length === 0) return;
+    onSend(`[REJECT_SELECTED:${previewIds.join(',')}]`);
+  }, [onSend]);
+
   return (
     <MessageRow role="assistant" copyText={message.content} onRegenerate={onRegenerate}>
       <Stack spacing={0.5}>
@@ -800,6 +822,7 @@ function AssistantMessage({
             onApprove={handleApprove}
             onReject={handleReject}
             onApproveMany={handleApproveMany}
+            onRejectMany={handleRejectMany}
             onOpenArtifact={onOpenArtifact}
             selectedArtifactId={selectedArtifactId}
             onReplacePreview={onReplacePreview}

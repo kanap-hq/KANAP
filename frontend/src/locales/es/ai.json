@@ -397,6 +397,7 @@
     "confirmTitle_other": "¿Aprobar {{count}} vistas previas?",
     "more_one": "{{count}} vista previa más",
     "more_other": "{{count}} vistas previas más",
+    "rejectAll": "Rechazar todas",
     "title_one": "{{count}} vista previa",
     "title_other": "{{count}} vistas previas"
   },

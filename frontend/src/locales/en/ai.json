@@ -397,6 +397,7 @@
     "confirmTitle_other": "Approve {{count}} previews?",
     "more_one": "{{count}} more preview",
     "more_other": "{{count}} more previews",
+    "rejectAll": "Reject all",
     "title_one": "{{count}} preview",
     "title_other": "{{count}} previews"
   },

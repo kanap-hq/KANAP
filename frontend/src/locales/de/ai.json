@@ -397,6 +397,7 @@
     "confirmTitle_other": "{{count}} Vorschauen genehmigen?",
     "more_one": "{{count}} weitere Vorschau",
     "more_other": "{{count}} weitere Vorschauen",
+    "rejectAll": "Alle ablehnen",
     "title_one": "{{count}} Vorschau",
     "title_other": "{{count}} Vorschauen"
   },

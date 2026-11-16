@@ -397,6 +397,7 @@
     "confirmTitle_other": "Approuver {{count}} aperçus ?",
     "more_one": "{{count}} aperçu supplémentaire",
     "more_other": "{{count}} aperçus supplémentaires",
+    "rejectAll": "Tout rejeter",
     "title_one": "{{count}} aperçu",
     "title_other": "{{count}} aperçus"
   },
