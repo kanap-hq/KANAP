@@ -1099,6 +1099,7 @@
         "count_one": "{{count}} value matched",
         "match": "{{dimension}}: {{value}} → {{target}}",
         "byKad": "Proposed by {{agent}}",
+        "catalogVersion": "Catalog version",
         "undo": "Undo",
         "redo": "Match again",
         "refusedMissing": "{{dimension}}: {{value}} → {{target}}: no such value",

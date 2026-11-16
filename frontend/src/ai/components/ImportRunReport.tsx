@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Checkbox, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import type { AiImportReportMessage, AiImportRun } from '../aiTypes';
+import type { AiImportHostingSite, AiImportReportMessage, AiImportRun } from '../aiTypes';
 import { csvMessageColumn, csvMessageText } from '../../components/csv/csvMessage';
 import { ReportView as BudgetFileReportView } from '../../components/finance/BudgetFileImportDialog';
 import type { BudgetFileChoice } from '../../components/finance/budgetFile';
@@ -65,6 +65,25 @@ function Messages({ title, items, total, shown, more, titles, tone }: {
         <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>{more}</Typography>
       )}
     </Stack>
+  );
+}
+
+/**
+ * How the servers of an import are hosted, in one line (lot I3 of 26.11.9, T-I3f): each site the file
+ * names, by its reference and name, with its category (on site, cloud), or its hosting type when the
+ * type has none, and its provider.
+ */
+function HostingLine({ sites }: { sites: AiImportHostingSite[] }) {
+  const { t } = useTranslation(['ai']);
+  const hosting = (site: AiImportHostingSite) => [
+    site.category === 'on_prem' ? t('ai:previewCard.importRun.onPremises') : site.category === 'cloud' ? t('ai:previewCard.importRun.cloud') : site.label,
+    site.provider,
+  ].filter(Boolean).join(', ');
+  const text = sites.map((site) => `${site.ref} ${site.name} (${hosting(site)})`).join(t('ai:previewCard.importRun.hostingSeparator'));
+  return (
+    <Typography sx={{ fontSize: 12, lineHeight: 1.5, color: 'kanap.text.secondary', overflowWrap: 'anywhere' }}>
+      {t('ai:previewCard.importRun.hosting', { sites: text })}
+    </Typography>
   );
 }
 
@@ -169,6 +188,7 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
             titles={titles}
             tone="warning"
           />
+          {run.report.hosting && run.report.hosting.length > 0 && <HostingLine sites={run.report.hosting} />}
           <ImportMatchesView
             matches={run.report.matches ?? []}
             matchesTotal={run.report.matchesTotal}

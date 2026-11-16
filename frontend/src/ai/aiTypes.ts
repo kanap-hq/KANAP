@@ -104,6 +104,19 @@ export type AiImportMapping = {
 export type AiImportReportMessage = CsvReportMessage;
 
 /** What an import reported on the file Plaid built: its check (`dry_run`) or the import itself. */
+/**
+ * A site a servers import names (`LOC-n`): the label of its hosting type in the person's language,
+ * its category in the catalog (null when the type has none), its provider (null when none).
+ */
+export type AiImportHostingSite = {
+  ref: string;
+  name: string;
+  hostingType: string;
+  label: string;
+  category: 'on_prem' | 'cloud' | null;
+  provider: string | null;
+};
+
 export type AiImportRun = {
   ok: boolean;
   /** A check that passed with nothing to create or update: the card says "Nothing to import" and cannot be approved. */
@@ -145,6 +158,8 @@ export type AiImportRun = {
       refusedProposals?: CsvImportRefusedProposal[]; refusedProposalsTotal?: number;
       /** The matches the person undid on the card, absent when none: Undo sends them all with the new one. */
       undone?: Array<{ column: string; value: string }>;
+      /** A servers import: how each site the file names hosts its servers, absent when none. */
+      hosting?: AiImportHostingSite[];
     }
     | { kind: 'budget_file'; file: BudgetFileReport | null };
 };

@@ -108,7 +108,8 @@ export interface CsvImportMatch {
   /** The record's business reference (`SUP-3`), null when its family has none. */
   ref?: string | null;
   origin: 'server' | 'model';
-  reason: 'accents' | 'translation' | 'model';
+  /** `version`: a version label found in the catalog by a prefix rule (`22.04` for `22.04 LTS`). */
+  reason: 'accents' | 'translation' | 'model' | 'version';
   lines: number[];
   count: number;
   undoable: boolean;

@@ -148,7 +148,7 @@ export type BudgetFileMatching = {
     value: string;
     target: string;
     origin: 'server' | 'model';
-    reason: 'accents' | 'translation' | 'model';
+    reason: 'accents' | 'translation' | 'model' | 'version';
     lines: number[];
     count: number;
     undoable: true;

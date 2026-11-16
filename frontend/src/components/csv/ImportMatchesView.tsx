@@ -114,13 +114,14 @@ export function FoldToggle({ open, onToggle, label }: { open: boolean; onToggle:
   );
 }
 
-type Match = Pick<CsvImportMatch, 'column' | 'name' | 'value' | 'target' | 'ref' | 'origin' | 'lines' | 'count' | 'undoable'>;
+type Match = Pick<CsvImportMatch, 'column' | 'name' | 'value' | 'target' | 'ref' | 'origin' | 'reason' | 'lines' | 'count' | 'undoable'>;
 type Refused = Pick<CsvImportRefusedProposal, 'column' | 'name' | 'value' | 'target' | 'reason' | 'lines' | 'count'>;
 
 /**
  * The matches of an import's check (lot I3 of 26.11.9): the values of the file found beyond case, as
  * one folded count that unfolds into one line per match ("Supplier: Societe Generale → SUP-3 Société
- * Générale"), the file's lines in a tooltip, Kad's proposals marked, each with its Undo when it can be
+ * Générale"), the file's lines in a tooltip (with "Catalog version" for a version found by a prefix
+ * rule), Kad's proposals marked, each with its Undo when it can be
  * undone; then the proposals of Kad the import refused. The budget file's check, the card of any import
  * and the import dialogs show it alike. Nothing when there is no match and no refusal.
  */
@@ -170,7 +171,7 @@ export default function ImportMatchesView({
           key={`mt-${entry.column}-${entry.value}`}
           text={t(`${K}matching.match`, { dimension: columnName(entry.column, entry.name), value: entry.value, target: record(entry) })}
           kad={entry.origin === 'model' ? t(`${K}matching.byKad`) : undefined}
-          tooltip={linesOf(entry)}
+          tooltip={entry.reason === 'version' ? <>{t(`${K}matching.catalogVersion`)}<br />{linesOf(entry)}</> : linesOf(entry)}
           action={onUndo && entry.undoable ? { label: t(`${K}matching.undo`), onClick: () => onUndo(entry), disabled } : undefined}
         />
       ))}

@@ -1100,6 +1100,7 @@
         "count_one": "{{count}} valeur rapprochée",
         "match": "{{dimension}} : {{value}} → {{target}}",
         "byKad": "Proposé par {{agent}}",
+        "catalogVersion": "Version du catalogue",
         "undo": "Défaire",
         "redo": "Rétablir",
         "refusedMissing": "{{dimension}} : {{value}} → {{target}} : valeur absente",
