@@ -65,6 +65,8 @@ test('files read across the two trees bring the other suite', (t) => {
     'frontend/src/pages/admin/rolePermissionGroups.ts',
     'frontend/src/pages/portfolio/contributorsOrdering.ts', 'frontend/src/pages/portfolio/skillsMatrix.ts',
     'frontend/src/pages/portfolio/roadmapOccupation.ts',
+    // The version picker's copy of the version rule (`version-label-rule.integration.spec.ts`).
+    'frontend/src/pages/it/components/versionLabelMatch.ts',
     // The label tables of the report exports are checked against these locale files.
     'frontend/src/locales/fr/portfolio.json', 'frontend/src/locales/de/it.json', 'frontend/src/locales/es/ops.json',
     'frontend/src/locales/de/master-data.json',

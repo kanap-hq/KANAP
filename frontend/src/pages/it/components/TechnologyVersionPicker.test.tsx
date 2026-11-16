@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
@@ -65,5 +65,51 @@ describe('TechnologyVersionPicker anchor', () => {
   it('stays right-aligned on a row anchor', () => {
     renderPicker('right');
     expectAnchoredRight(932, 300);
+  });
+});
+
+describe('TechnologyVersionPicker typed label', () => {
+  const versions = [
+    { id: 'v-sp1', label: '11 SP1' },
+    { id: 'v-2022', label: '2022' },
+    { id: 'v-lts', label: '22.04 LTS' },
+  ];
+  const CREATE = 'workspace.technology.versionPicker.create';
+
+  function typeIn(text: string) {
+    const onPick = vi.fn();
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <TechnologyVersionPicker anchorEl={anchorAt({ left: 280, top: 80, width: 160, height: 32 })} versions={versions} onPick={onPick} onClose={vi.fn()} />
+      </ThemeProvider>,
+    );
+    const input = screen.getByRole('combobox');
+    fireEvent.change(input, { target: { value: text } });
+    return { onPick, enter: () => fireEvent.keyDown(input, { key: 'Enter' }) };
+  }
+
+  afterEach(() => {
+    anchors.splice(0).forEach((anchor) => anchor.remove());
+  });
+
+  it('offers the version the server finds for an edition, never its creation', () => {
+    const { onPick, enter } = typeIn('2022 Datacenter');
+    expect(screen.getByRole('option', { name: '2022' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: CREATE })).toBeNull();
+    enter();
+    expect(onPick).toHaveBeenCalledWith({ technology_version_id: 'v-2022' });
+  });
+
+  it('offers the catalog version a short label names', () => {
+    const { onPick, enter } = typeIn('22.04');
+    expect(screen.queryByRole('option', { name: CREATE })).toBeNull();
+    enter();
+    expect(onPick).toHaveBeenCalledWith({ technology_version_id: 'v-lts' });
+  });
+
+  it('offers to create a label that names another version', () => {
+    typeIn('11');
+    expect(screen.getByRole('option', { name: CREATE })).toBeTruthy();
+    expect(screen.getByRole('option', { name: '11 SP1' })).toBeTruthy();
   });
 });

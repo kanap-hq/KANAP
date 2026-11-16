@@ -318,6 +318,8 @@ A version label typed in a version picker, written in an import file or given to
 - otherwise, the only version whose label starts with the typed one followed by a space: `22.04` finds `22.04 LTS`;
 - otherwise, the only version whose label starts the typed one, followed by a space: `2022 Datacenter` finds `2022`. When several versions answer, the longest label wins: `2012 R2 Datacenter` finds `2012 R2`.
 
+In the last two rules, the words that follow the shorter label hold no digit, since they name an edition: `11` does not find `11 SP1`, and `2012` does not find `2012 R2`.
+
 When no version answers, or several, the label is created as a new version. `22.04.3 LTS` is created as written. An import lists each match of the last two rules with its other matches, and **Undo** creates the version as written. See [Names of records](csv-files.md#names-of-records).
 
 ---
