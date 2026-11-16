@@ -296,6 +296,28 @@ async function testContractFileWithoutReference(h: Harness, runner: QueryRunner,
   console.log('  contracts: a file without the reference column updates by name and supplier, nothing emptied: OK');
 }
 
+// Two rows of CTR-2, the second under another name: the card refuses the second on its line, as the
+// screen's check does (one row per contract), and the check writes nothing.
+async function testContractSameReferenceTwice(h: Harness, runner: QueryRunner, s: Seed) {
+  const before = await contracts(runner, s);
+  const header = await contractHeader(h, runner, s);
+  const file = attach(h, 'contrats-doublon.csv', [
+    header.join(';'),
+    contractRow(header, { reference: 'CTR-2', name: 'Licences', yearly_amount_at_signature: '300' }),
+    contractRow(header, { reference: 'CTR-2', name: 'Licences bis', yearly_amount_at_signature: '400' }),
+  ]);
+  const card = await h.previews.createPreview(ctx(runner, s), 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns: sameNames(header) });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, false, JSON.stringify(check));
+  assert.deepEqual(
+    check.report.errors.map((error: any) => [error.row, error.column, error.code, error.params]),
+    [[3, 'reference', 'CSV_SAME_RECORD', { firstRow: 2, reference: 'CTR-2' }]],
+    JSON.stringify(check.report.errors),
+  );
+  assert.deepEqual(await contracts(runner, s), before, 'nothing written by the check');
+  console.log('  contracts: a second row of the same reference is refused on its line: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -311,6 +333,7 @@ async function run() {
       await testContractRowNumbersAreNoReferences(harness, runner, s);
       await testContractRenameAndMove(harness, runner, s);
       await testContractFileWithoutReference(harness, runner, s);
+      await testContractSameReferenceTwice(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

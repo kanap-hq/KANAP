@@ -271,6 +271,45 @@ async function testImportWarnsOfRenamesAndMoves() {
   });
 }
 
+// One row per contract: a second row naming the same contract, by its reference (whatever its name)
+// or by its name and supplier, is refused on its line, at the check as at the load; a new contract
+// named twice by name and supplier too. Nothing is written.
+async function testImportRefusesSecondRowOfAContract() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, svc, opts } = await seed(runner);
+    const before = await runner.query(
+      `SELECT name, yearly_amount_at_signature::text AS amount FROM contracts WHERE tenant_id = $1 ORDER BY item_number`,
+      [tenantId],
+    );
+    const cases: Array<[string, string[], Array<[number, string, string, Record<string, unknown>]>]> = [
+      ['same reference, same name', [row('CTR-30', 'Contract number thirty', '150'), row('CTR-30', 'Contract number thirty', '160')],
+        [[3, 'reference', 'CSV_SAME_RECORD', { firstRow: 2, reference: 'CTR-30' }]]],
+      ['same reference, another name', [row('CTR-30', 'Contract number thirty', '150'), row('30', 'Thirty renamed', '160')],
+        [[3, 'reference', 'CSV_SAME_RECORD', { firstRow: 2, reference: 'CTR-30' }]]],
+      ['same name and supplier', [row('', 'Contract number thirteen', '150'), row('', 'Contract number thirteen', '160')],
+        [[3, 'name', 'CSV_SAME_RECORD', { firstRow: 2, reference: 'CTR-13' }]]],
+      ['a new contract twice', [row('', 'Brand new', '150'), row('', 'brand NEW', '160')],
+        [[3, 'name', 'CSV_DUPLICATE_KEY', { columns: 'name, supplier_name', firstRow: 2 }]]],
+    ];
+    for (const [label, rows, expected] of cases) {
+      for (const dryRun of [true, false]) {
+        const report: any = await svc.importCsv({ file: file([HEADER, ...rows].join('\n')), dryRun }, opts);
+        assert.equal(report.ok, false, `${label}, dryRun=${dryRun}: ${JSON.stringify(report)}`);
+        assert.deepEqual(
+          report.errors.map((e: any) => [e.row, e.column, e.code, e.params]),
+          expected,
+          `${label}, dryRun=${dryRun}`,
+        );
+      }
+    }
+    const after = await runner.query(
+      `SELECT name, yearly_amount_at_signature::text AS amount FROM contracts WHERE tenant_id = $1 ORDER BY item_number`,
+      [tenantId],
+    );
+    assert.deepEqual(after, before, 'a refused file writes nothing');
+  });
+}
+
 void runSpecs('contract references outside the page (R4)', [
   ['reference column filter on the list, the ids and the totals; numeric sort', testReferenceColumnFilter],
   ['quick search: CTR-n exactly, digits stay text', testQuickSearch],
@@ -279,4 +318,5 @@ void runSpecs('contract references outside the page (R4)', [
   ['Kad: reference filter and sort through the list', testAssistantReferenceFilterAndSort],
   ['import by reference, unknown refused, old file, export round trip', testImportByReference],
   ['import warns of renames and supplier moves by reference', testImportWarnsOfRenamesAndMoves],
+  ['import refuses a second row of the same contract', testImportRefusesSecondRowOfAContract],
 ]);

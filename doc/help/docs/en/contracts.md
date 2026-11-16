@@ -335,7 +335,7 @@ Keep your contract list in sync with other tools using CSV files or Excel workbo
 - **Matching by reference**: a filled `reference` (`CTR-12` or `12`) names the contract the row updates, even when its name or its supplier has changed. The contract then takes the name and the supplier of the row. The preflight check lists each contract that will be renamed or move to another supplier
 - **Matching by name**: when `reference` is empty, or the file has no such column, a row is matched to a contract by contract name and supplier
 - **Unknown reference**: a reference your workspace does not know refuses the row: "\"CTR-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
-- **One row per contract**: two rows that update the same contract are refused: "This row updates CTR-4, as row 3 does. Keep one row per record."
+- **One row per contract**: two rows that update the same contract are refused: "This row updates CTR-4, as row 3 does. Keep one row per record." Two rows that create the same contract (same name and supplier, whatever the case) are refused too: "Same values in name, supplier_name as row 3."
 - `reference` and `cost_center` may be left out of the file. Without `cost_center`, an updated contract keeps its cost center or group
 - Supports creation and updates
 - The file has no end of validity column. On an update, a blank `status`, or one equal to the contract's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the contract today unless its end of validity has already passed

@@ -1537,13 +1537,9 @@ export class ContractsService {
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
 
-    // Deduplicate by the contract a reference names, else by name+supplier_name (first wins)
-    const uniqMap = new Map<string, typeof norm[number]>();
-    for (const item of norm) {
-      const key = item.target ? `#${item.target.id}` : `${item.name}||${item.supplier_name}`.toLowerCase();
-      if (!uniqMap.has(key)) uniqMap.set(key, item);
-    }
-    const unique = Array.from(uniqMap.values());
+    // One row per contract: a second row naming the same contract, by its reference or by its name
+    // and supplier, is refused on its line below.
+    const unique = norm;
 
     // Determine inserts/updates by reference, else by composite (name + supplier). A row identical
     // to the stored contract counts as unchanged and is not written: no audit line, no new `updated_at`.
@@ -1555,6 +1551,7 @@ export class ContractsService {
     const warnings: ImportReportError[] = [];
     const supplierNameOf = new Map<string, string>(allSuppliers.map((r: any) => [r.id, r.name]));
     const firstLineOfContract = new Map<string, number>();
+    const firstLineOfNewContract = new Map<string, number>();
     const markdownBudget = markdownWorkBudget();
     const now = new Date();
     const today = utcDateYmd(now);
@@ -1587,6 +1584,15 @@ export class ContractsService {
           continue;
         }
         firstLineOfContract.set(exists.id, item.line);
+      } else {
+        // A new contract takes one row: its name and supplier again, whatever the case, are refused.
+        const key = `${item.name}||${item.supplier_name}`.toLowerCase();
+        const firstRow = firstLineOfNewContract.get(key);
+        if (firstRow !== undefined) {
+          errors.push(rowError(item.line, 'name', 'CSV_DUPLICATE_KEY', `Same name and supplier as row ${firstRow}.`, { columns: 'name, supplier_name', firstRow }));
+          continue;
+        }
+        firstLineOfNewContract.set(key, item.line);
       }
       existingOf.set(item, exists);
       if (!exists) inserted += 1;
