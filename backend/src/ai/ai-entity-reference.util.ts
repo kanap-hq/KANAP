@@ -143,6 +143,51 @@ export function familyReference(family: string, itemNumber: unknown): string | n
   return prefix && itemNumber != null && Number.isSafeInteger(number) && number > 0 ? `${prefix}-${number}` : null;
 }
 
+/**
+ * The record ids a business reference names in this tenant (T-15, PRJ-3, APP-4, DOC-2, BL-7, and
+ * the other references the Activity column shows). A ticket number, a pasted id, or a reference
+ * this workspace does not have names none, so the caller can still match the typed text itself.
+ * A well-formed reference with no row is not an error. Every lookup is scoped by `tenant_id`.
+ */
+export async function resolveRecordIdsByReference(
+  manager: Pick<EntityManager, 'query'>,
+  tenantId: string,
+  raw: string,
+): Promise<string[]> {
+  const value = String(raw ?? '').trim();
+  if (!value || isUuid(value)) return [];
+  const ids: string[] = [];
+  for (const family of Object.keys(REFERENCE_LOOKUPS)) {
+    if (!REFERENCE_LOOKUPS[family].pattern.test(value)) continue;
+    try {
+      const id = await resolveAiEntityReference(manager, tenantId, family, value);
+      if (id) ids.push(id);
+    } catch (error) {
+      if (!(error instanceof NotFoundException)) throw error;
+    }
+  }
+  const documentNumber = familyReferenceNumber('documents', value);
+  if (documentNumber != null && documentNumber > 0) {
+    const rows: Array<{ id: string }> = await manager.query(
+      'SELECT id FROM documents WHERE tenant_id = $1 AND item_number = $2 LIMIT 1',
+      [tenantId, documentNumber],
+    );
+    if (rows[0]?.id) ids.push(String(rows[0].id));
+  }
+  const lineMatch = value.match(/^BL-(\d+)$/i);
+  const lineNumber = lineMatch ? parseItemNumber(lineMatch[1]) : null;
+  if (lineNumber != null && lineNumber > 0) {
+    const rows: Array<{ id: string }> = await manager.query(
+      'SELECT id FROM spend_items WHERE tenant_id = $1 AND item_number = $2',
+      [tenantId, lineNumber],
+    );
+    for (const row of rows) {
+      if (row.id) ids.push(String(row.id));
+    }
+  }
+  return ids;
+}
+
 /** The number a value names when it is the family's own reference (`SUP-3` for suppliers), else null (`SUP-013` too). */
 export function familyReferenceNumber(family: string, value: string): number | null {
   const prefix = ITEM_NUMBER_PREFIXES[family];

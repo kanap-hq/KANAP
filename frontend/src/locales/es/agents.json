@@ -249,7 +249,7 @@
     "title": "Actividad de agentes",
     "subtitle": "Revisa propuestas, decisiones, ejecuciones, pausas y errores.",
     "filters": "Filtros",
-    "ticketSearch": "Número de ticket",
+    "ticketSearch": "Referencia (T-15) o número de ticket",
     "search": "Buscar",
     "timeline": "Cronología",
     "loadFailed": "No se pudo cargar la actividad.",
@@ -313,6 +313,7 @@
       "poller_cycle_completed": "Búsqueda de tickets",
       "poller_cycle_completed_sre": "Búsqueda de alertas",
       "work_item_processing_failed": "No se ha podido procesar este ticket",
+      "work_item_processing_failed_kad": "No se ha podido procesar este cambio",
       "work_item_processing_failed_sre": "Fallo en el procesamiento de la alerta",
       "agent_deleted": "Agente eliminado",
       "agent_attention_acknowledged": "Elemento dado por visto"
