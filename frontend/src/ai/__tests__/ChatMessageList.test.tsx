@@ -458,7 +458,7 @@ describe('ChatMessageList', () => {
     expect(screen.queryByRole('link', { name: 'APP-01' })).not.toBeInTheDocument();
   });
 
-  it('links a company and a department by their reference, a supplier not yet', () => {
+  it('links a company and a department by their reference, for a person who may read them', () => {
     readableResources = ['companies'];
     try {
       renderWithTheme(
@@ -483,6 +483,33 @@ describe('ChatMessageList', () => {
       />,
     );
     expect(screen.getByRole('link', { name: 'DEPT-5' })).toHaveAttribute('href', '/master-data/departments/DEPT-5');
+  });
+
+  it('links a supplier and a contact by their reference, for a person who may read them', () => {
+    readableResources = ['suppliers'];
+    try {
+      renderWithTheme(
+        <ChatMessageList
+          messages={[{ id: 'assistant-1', role: 'assistant', content: 'SUP-3 has CTCT-2; SUP-03 is an ERP ID.' }]}
+          previews={[]}
+          onSend={() => undefined}
+        />,
+      );
+      expect(screen.getByRole('link', { name: 'SUP-3' })).toHaveAttribute('href', '/master-data/suppliers/SUP-3');
+      // No contacts right: the reference stays text.
+      expect(screen.queryByRole('link', { name: 'CTCT-2' })).toBeNull();
+      expect(screen.getAllByRole('link')).toHaveLength(1);
+    } finally {
+      readableResources = null;
+    }
+    renderWithTheme(
+      <ChatMessageList
+        messages={[{ id: 'assistant-2', role: 'assistant', content: 'See CTCT-2.' }]}
+        previews={[]}
+        onSend={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('link', { name: 'CTCT-2' })).toHaveAttribute('href', '/master-data/contacts/CTCT-2');
   });
 
   it('leaves as text the references of pages the person cannot open', () => {
