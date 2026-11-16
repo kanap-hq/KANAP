@@ -136,7 +136,7 @@ Gestione contactos de forma masiva usando archivos CSV o libros de Excel.
 **Exportar**: Descarga los contactos que muestra la lista con su referencia y sus detalles. Elija **Todo el registro** en el diálogo para todos los contactos.
 
 **Importar**:
-- Utilice **Verificación previa** para validar antes de aplicar
+- Utilice la **Verificación previa** para validar antes de aplicar
 - Puede crear nuevos contactos o actualizar los existentes
 - **Emparejamiento por referencia**: una `reference` rellenada (`CTCT-4` o `4`) designa el contacto que la fila actualiza, aunque su correo electrónico haya cambiado. El contacto toma el nombre y el correo electrónico de la fila. La verificación previa señala cada contacto que cambiará de nombre o de dirección de correo electrónico
 - **Emparejamiento por correo electrónico**: cuando `reference` está vacía, o el archivo no tiene esa columna, la fila se empareja por la dirección de correo electrónico

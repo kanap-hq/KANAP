@@ -136,7 +136,7 @@ Gérez les contacts en masse avec des fichiers CSV ou des classeurs Excel.
 **Export** : Télécharge les contacts que la liste affiche avec leur référence et leurs détails. Choisissez **Tout le référentiel** dans la fenêtre pour tous les contacts.
 
 **Import** :
-- Utilisez le **Contrôle préalable** pour valider avant d'appliquer
+- Utilisez la **Vérification préalable** pour valider avant d'appliquer
 - Peut créer de nouveaux contacts ou mettre à jour les existants
 - **Correspondance par référence** : une `reference` remplie (`CTCT-4` ou `4`) désigne le contact que la ligne met à jour, même si son e-mail a changé. Le contact prend le nom et l'e-mail de la ligne. La vérification préalable signale chaque contact qui sera renommé ou changera d'adresse e-mail
 - **Correspondance par e-mail** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, la ligne est rapprochée par l'adresse e-mail

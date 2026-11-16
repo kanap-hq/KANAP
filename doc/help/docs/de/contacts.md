@@ -136,7 +136,7 @@ Verwalten Sie Kontakte in großen Mengen mit CSV-Dateien oder Excel-Arbeitsmappe
 **Export**: Lädt die Kontakte der Liste mit ihrer Referenz und ihren Details herunter. Wählen Sie im Dialog **Das ganze Verzeichnis** für alle Kontakte.
 
 **Import**:
-- Verwenden Sie die **Vorprüfung** zum Validieren vor dem Anwenden
+- Verwenden Sie die **Vorabprüfung** zum Validieren vor dem Anwenden
 - Kann neue Kontakte erstellen oder bestehende aktualisieren
 - **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`CTCT-4` oder `4`) bezeichnet den Kontakt, den die Zeile aktualisiert, auch wenn sich seine E-Mail geändert hat. Der Kontakt erhält den Namen und die E-Mail der Zeile. Die Vorabprüfung meldet jeden Kontakt, der umbenannt wird oder seine E-Mail-Adresse ändert
 - **Zuordnung über die E-Mail**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird die Zeile über die E-Mail-Adresse zugeordnet

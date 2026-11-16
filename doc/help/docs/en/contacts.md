@@ -136,7 +136,7 @@ Manage contacts in bulk using CSV files or Excel workbooks.
 **Export**: Downloads the contacts the list shows with their reference and details. Choose **The whole register** in the dialog for every contact.
 
 **Import**:
-- Use **Preflight** to validate before applying
+- Use **Preflight check** to validate before applying
 - Can create new contacts or update existing ones
 - **Matching by reference**: a filled `reference` (`CTCT-4` or `4`) names the contact the row updates, even when its email has changed. The contact takes the name and the email of the row. The preflight check lists each contact that will be renamed or change its email address
 - **Matching by email**: when `reference` is empty, or the file has no such column, the row is matched by email address
