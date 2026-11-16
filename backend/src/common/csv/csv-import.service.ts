@@ -1125,7 +1125,7 @@ export class CsvImportService {
   ): any {
     // Custom transform function
     if (field.importTransformFn) {
-      return field.importTransformFn(rawValue, row.raw, context);
+      return field.importTransformFn(rawValue, row.raw, context, row.rowNumber);
     }
 
     switch (field.type) {
