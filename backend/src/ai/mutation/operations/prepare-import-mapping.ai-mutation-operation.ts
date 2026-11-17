@@ -139,8 +139,9 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + '(`BUDGET_FILE_...`, `CSV_...`), a template column key (`analytics:...`) or a cell. Help the user correct the mapping or the file, and call again. '
       + 'On a record the file updates, a blank cell and a column the mapping leaves out keep the stored value; in the imports of master data, '
       + 'contracts, calendars and technology links, a cell holding `-` clears it (the check counts them, `cleared`, and `on_approval` says it). '
-      + 'Never turn a blank cell or a value into `-`: write `-` (in `values` or as a value for every row) only when the person asks to clear that value. '
-      + 'A `-` of the file reaches the import as it is: never map it in `values`. '
+      + 'A `-` written in the file is the person asking to clear, as on the screen: map its column like any other and say what the card clears; '
+      + 'the person approves or refuses. That `-` reaches the import as it is: never map it in `values`. '
+      + 'Write `-` yourself (in `values` or as a value for every row) only when the person asks to clear that value; never turn a blank cell or a value into `-`. '
       + 'Approving the card runs the import, and its card then shows what was created and updated: until then nothing is imported, '
       + 'so never say it is.',
   };
