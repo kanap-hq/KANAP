@@ -745,7 +745,8 @@ The import follows the choice made at the check. When the situation of a row cha
 
 - APP-12 changed (its values, owners or data residency), for a row that updates it: "APP-12 changed since the check."
 - APP-12 was deleted, for a row that updates it: "The application chosen at the check no longer exists."
-- another application took the row's name: "APP-15 took this name after the check."
+- another application took the name of a row set to be created or to update an application: "APP-15 took this name after the check." A row left out stays left out, and the rest of the file is imported.
+- a row the check would have created now looks like an application created since: "The row looks like APP-16 since the check."
 
 The dialog goes back to the check, with the refused row in error. Choose again for that row: the new check reads the applications as they are now.
 

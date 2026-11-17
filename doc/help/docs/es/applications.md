@@ -745,7 +745,8 @@ La importación sigue la elección hecha en la comprobación. Cuando la situaci�
 
 - APP-12 ha cambiado (sus valores, sus responsables o la residencia de sus datos), para una fila que la actualiza: «APP-12 ha cambiado desde la comprobación.»
 - APP-12 se ha eliminado, para una fila que la actualiza: «La aplicación elegida en la comprobación ya no existe.»
-- otra aplicación ha tomado el nombre de la fila: «APP-15 tomó este nombre después de la comprobación.»
+- otra aplicación ha tomado el nombre de una fila que se iba a crear o que actualiza una aplicación: «APP-15 tomó este nombre después de la comprobación.» Una fila descartada sigue descartada, y el resto del archivo se importa.
+- una fila que la comprobación habría creado se parece ahora a una aplicación creada desde entonces: «La fila se parece a APP-16 desde la comprobación.»
 
 La ventana vuelve a la comprobación, con la fila rechazada en error. Elija de nuevo para esa fila: la nueva comprobación lee las aplicaciones tal como están ahora.
 

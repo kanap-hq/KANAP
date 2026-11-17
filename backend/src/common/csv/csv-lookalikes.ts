@@ -106,7 +106,8 @@ export function isLookalikeChoiceEntry(entry: unknown): boolean {
 
 /**
  * The lookalike choices of a list (a JSON text or an array): one per row at most (the first one), one
- * choice for all rows at most. Anything else, or more than 200 entries, throws.
+ * choice for all rows at most. An update without the state of the check (`state` for one row, `targets`
+ * for all rows), anything else, or more than 200 entries, throws.
  */
 export function parseLookalikeChoices(raw: unknown): ImportLookalikeChoice[] {
   if (raw === undefined || raw === null || raw === '') return [];
@@ -126,10 +127,9 @@ export function parseLookalikeChoices(raw: unknown): ImportLookalikeChoice[] {
     if (item.kind === 'lookalike' && isLine(item.line) && ACTIONS.has(item.action as string)) {
       const key = `lookalike|${item.line}`;
       if (item.action === 'update') {
-        if (!isId(item.id) || (item.state !== undefined && !isState(item.state))) throw new Error('The choices are not valid.');
-        if (!seen.has(key)) {
-          choices.push({ kind: 'lookalike', line: item.line, action: 'update', id: item.id.toLowerCase(), ...(item.state !== undefined ? { state: item.state as string } : {}) });
-        }
+        // The state of the check it was chosen on: without it, a change since would go unseen (review 4, C5).
+        if (!isId(item.id) || !isState(item.state)) throw new Error('The choices are not valid.');
+        if (!seen.has(key)) choices.push({ kind: 'lookalike', line: item.line, action: 'update', id: item.id.toLowerCase(), state: item.state });
       } else if (!seen.has(key)) {
         choices.push({ kind: 'lookalike', line: item.line, action: item.action as 'ignore' | 'create' });
       }
@@ -138,7 +138,8 @@ export function parseLookalikeChoices(raw: unknown): ImportLookalikeChoice[] {
     }
     if (item.kind === 'lookalikes' && ACTIONS.has(item.action as string)) {
       const targets = item.targets === undefined ? undefined : targetsOf(item.targets);
-      if (targets === null) throw new Error('The choices are not valid.');
+      // "Update all" names the targets of the check shown, with their state (review 4, C5).
+      if (targets === null || (item.action === 'update' && !targets)) throw new Error('The choices are not valid.');
       if (!seen.has('lookalikes')) choices.push({ kind: 'lookalikes', action: item.action as 'ignore' | 'create' | 'update', ...(targets ? { targets } : {}) });
       seen.add('lookalikes');
       continue;

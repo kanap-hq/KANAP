@@ -302,7 +302,8 @@ async function described(ctx: Ctx, id: string): Promise<{ name: string; descript
 /**
  * Review 3, C1: a row the check listed follows the choice made on it, even when its name now finds an
  * application. "Update APP-1" never updates another one: an application created since under the row's
- * name refuses the row, and nothing is imported; checking again makes it an update of that one.
+ * name refuses the row, and nothing is imported; checking again makes it an update of that one. A row
+ * left out writes nothing and stays left out (review 4, C1, T-I3l).
  */
 async function testNameFindsAnApplicationSinceTheCheck() {
   await inTenant(async (ctx) => {
@@ -320,15 +321,16 @@ async function testNameFindsAnApplicationSinceTheCheck() {
     assert.deepEqual(await names(ctx), ['Comptabilite', 'Comptabilité'], 'nothing imported, the new row neither');
     // Checking again with what the refusal gave back: the row is an update of the application its name finds.
     const again = await importCsv(ctx, file, { dryRun: true, lookalikes: csvLookalikes(JSON.stringify(load.lookalikes?.choices ?? [])) });
-    assert.deepEqual([again.ok, again.updated, again.inserted, again.lookalikes], [true, 1, 1, undefined], JSON.stringify(again.errors));
+    assert.deepEqual([again.ok, again.updated, again.inserted, again.lookalikes?.count], [true, 1, 1, 0], JSON.stringify(again.errors));
 
-    // A row left out at the check is refused the same way.
+    // A row left out at the check writes nothing: it stays left out, never refused (review 4, C1).
     await ctx.runner.query(`DELETE FROM applications WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, other.id]);
     const leftOut = await importCsv(ctx, ['name', 'Comptabilite'], { dryRun: true });
     assert.deepEqual(leftOut.lookalikes!.lines.map((entry) => [entry.target.ref, entry.outcome]), [[compta.ref, 'ignored']]);
     const third = await app(ctx, 'COMPTABILITE');
-    const refused = await importCsv(ctx, ['name', 'Comptabilite'], { lookalikes: leftOut.lookalikes!.choices });
-    assert.deepEqual(refused.errors.map((error) => [error.row, error.code, error.params?.ref]), [[2, 'CSV_LOOKALIKE_NAME_FOUND', third.ref]]);
+    const kept = await importCsv(ctx, ['name', 'Comptabilite'], { lookalikes: leftOut.lookalikes!.choices });
+    assert.deepEqual([kept.ok, kept.inserted, kept.updated, kept.skipped], [true, 0, 0, 1], JSON.stringify(kept.errors));
+    assert.deepEqual(await described(ctx, third.id), { name: 'COMPTABILITE', description: null });
   });
 }
 
@@ -433,6 +435,131 @@ async function testOwnersOrResidencyChangedSinceTheCheck() {
   });
 }
 
+/** The applications of the tenant with their owners and data residency counted. */
+async function written(ctx: Ctx): Promise<Record<string, [string | null, number, string | null]>> {
+  const rows = await ctx.runner.query(
+    `SELECT a.name, a.description, (SELECT count(*)::int FROM application_owners o WHERE o.tenant_id = a.tenant_id AND o.application_id = a.id) AS owners,
+            (SELECT string_agg(r.country_iso, ',') FROM application_data_residency r WHERE r.tenant_id = a.tenant_id AND r.application_id = a.id) AS residency
+       FROM applications a WHERE a.tenant_id = $1`,
+    [ctx.tenantId],
+  );
+  return Object.fromEntries(rows.map((row: any) => [row.name, [row.description, row.owners, row.residency]]));
+}
+
+/**
+ * Review 4, C1 (T-I3l: the refusal holds only for a row that would write). A row left out at the check,
+ * by default or by "Leave out", whose name finds an application since (one created under that name, or
+ * its target renamed to it) stays left out, and the rest of the file loads (P1a to P1c). Checking again
+ * with the choices given back keeps it left out: it never becomes an update of that application (P1d).
+ */
+async function testLeftOutStaysLeftOut() {
+  for (const variant of ['default', 'leave out', 'renamed'] as const) {
+    await inTenant(async (ctx) => {
+      const compta = await app(ctx, 'Comptabilité');
+      const file = ['name;description;it_owner_email_1;data_residency', 'Comptabilite;écrite par le fichier;;', `Nouvelle;neuve;${ctx.userEmail};FR`];
+      const chosen: ImportLookalikeChoice[] = variant === 'leave out' ? [{ kind: 'lookalike', line: 2, action: 'ignore' }] : [];
+      const check = await importCsv(ctx, file, { dryRun: true, lookalikes: chosen });
+      assert.deepEqual(check.lookalikes!.lines.map((entry) => [entry.line, entry.outcome]), [[2, 'ignored']], variant);
+      const followed = csvLookalikes(JSON.stringify(check.lookalikes!.choices));
+      if (variant === 'renamed') {
+        await ctx.runner.query(`UPDATE applications SET name = 'Comptabilite', updated_at = now() + interval '1 second' WHERE tenant_id = $1 AND id = $2`, [ctx.tenantId, compta.id]);
+      } else await app(ctx, 'Comptabilite', { description: 'créée entre-temps' });
+      const again = await importCsv(ctx, file, { dryRun: true, lookalikes: followed });
+      assert.deepEqual([again.ok, again.inserted, again.updated, again.skipped], [true, 1, 0, 1], `${variant}, checked again: ${JSON.stringify(again.errors)}`);
+      const load = await importCsv(ctx, file, { lookalikes: csvLookalikes(JSON.stringify(again.lookalikes!.choices)) });
+      assert.equal(load.ok, true, `${variant}: ${JSON.stringify(load.errors)}`);
+      assert.deepEqual([load.inserted, load.updated, load.skipped], [1, 0, 1], variant);
+      assert.deepEqual(load.lookalikes!.lines.map((entry) => [entry.line, entry.target.ref, entry.outcome]), [[2, compta.ref, 'ignored']], variant);
+      assert.deepEqual(await written(ctx), {
+        Comptabilite: [variant === 'renamed' ? null : 'créée entre-temps', 0, null],
+        ...(variant === 'renamed' ? {} : { 'Comptabilité': [null, 0, null] }),
+        Nouvelle: ['neuve', 1, 'FR'],
+      }, variant);
+    });
+  }
+}
+
+/**
+ * Review 4, C1 variant (P5): in "add new only", "Create anyway" whose name finds an application since is
+ * skipped by the operation, as the same row without a choice: never refused. In "add and update", the
+ * same row would update that application: refused, nothing imported.
+ */
+async function testCreateAnywayNameTakenSinceTheCheck() {
+  for (const operation of ['insert_only', 'upsert'] as const) {
+    await inTenant(async (ctx) => {
+      await app(ctx, 'Comptabilité');
+      const file = ['name;description', 'Comptabilite;écrite par le fichier', 'Nouvelle;neuve'];
+      const check = await importCsv(ctx, file, { dryRun: true, operation, lookalikes: [{ kind: 'lookalike', line: 2, action: 'create' }] });
+      assert.deepEqual([check.inserted, check.lookalikes!.created], [2, 1], operation);
+      const other = await app(ctx, 'Comptabilite', { description: 'créée entre-temps' });
+      const load = await importCsv(ctx, file, { operation, lookalikes: csvLookalikes(JSON.stringify(check.lookalikes!.choices)) });
+      if (operation === 'insert_only') {
+        assert.equal(load.ok, true, JSON.stringify(load.errors));
+        assert.deepEqual([load.inserted, load.updated, load.skipped], [1, 0, 1]);
+      } else {
+        assert.deepEqual(load.errors.map((error) => [error.row, error.code, error.params?.ref]), [[2, 'CSV_LOOKALIKE_NAME_FOUND', other.ref]]);
+      }
+      assert.equal((await described(ctx, other.id))!.description, 'créée entre-temps', operation);
+      assert.deepEqual(Object.keys(await written(ctx)).sort(), operation === 'insert_only'
+        ? ['Comptabilite', 'Comptabilité', 'Nouvelle']
+        : ['Comptabilite', 'Comptabilité'], operation);
+    });
+  }
+}
+
+/**
+ * Review 4, C6: a row the check would create, that looks like an application created since, is refused
+ * at the load and nothing is imported, whether the check listed other lookalikes or none. A check run
+ * since lists it, left out by default, and the load that follows that check goes through.
+ */
+async function testLooksLikeAnApplicationSinceTheCheck() {
+  await inTenant(async (ctx) => {
+    const compta = await app(ctx, 'Comptabilité');
+    const file = ['name;description', 'Comptabilite;', 'Paie;neuve', 'Nouvelle;neuve'];
+    const check = await importCsv(ctx, file, { dryRun: true });
+    assert.deepEqual([check.inserted, check.skipped], [2, 1]);
+    const followed = csvLookalikes(JSON.stringify(check.lookalikes!.choices));
+    const paie = await app(ctx, 'Paié');
+    const load = await importCsv(ctx, file, { lookalikes: followed });
+    assert.equal(load.ok, false);
+    assert.deepEqual(load.errors.map((error) => [error.row, error.code, error.params?.ref, error.column]), [[3, 'CSV_LOOKALIKE_NEW', paie.ref, undefined]]);
+    assert.deepEqual(Object.keys(await written(ctx)).sort(), ['Comptabilité', 'Paié'], 'nothing imported');
+    // The check after it shows the row left out, with its application, and its load goes through.
+    for (const sent of [followed, csvLookalikes(JSON.stringify(load.lookalikes!.choices))]) {
+      const again = await importCsv(ctx, file, { dryRun: true, lookalikes: sent });
+      assert.equal(again.ok, true, JSON.stringify(again.errors));
+      assert.deepEqual(again.lookalikes!.lines.map((entry) => [entry.line, entry.target.ref, entry.outcome]), [[2, compta.ref, 'ignored'], [3, paie.ref, 'ignored']]);
+    }
+    const again = await importCsv(ctx, file, { dryRun: true, lookalikes: csvLookalikes(JSON.stringify(load.lookalikes!.choices)) });
+    const second = await importCsv(ctx, file, { lookalikes: csvLookalikes(JSON.stringify(again.lookalikes!.choices)) });
+    assert.deepEqual([second.ok, second.inserted, second.skipped], [true, 1, 2], JSON.stringify(second.errors));
+  });
+  // A check that listed no lookalike: its choices are given back all the same, and the load refuses the row.
+  await inTenant(async (ctx) => {
+    const check = await importCsv(ctx, ['name', 'Paie'], { dryRun: true });
+    assert.deepEqual([check.inserted, check.lookalikes?.count], [1, 0]);
+    const paie = await app(ctx, 'Paié');
+    const load = await importCsv(ctx, ['name', 'Paie'], { lookalikes: csvLookalikes(JSON.stringify(check.lookalikes?.choices ?? [])) });
+    assert.deepEqual(load.errors.map((error) => [error.row, error.code, error.params?.ref]), [[2, 'CSV_LOOKALIKE_NEW', paie.ref]]);
+    // "Create anyway" for all rows: the row the check created is created, as the check said.
+    const all = await importCsv(ctx, ['name', 'Paie'], { lookalikes: [{ kind: 'lookalikes', action: 'create', targets: {} }] });
+    assert.deepEqual([all.ok, all.inserted], [true, 1], JSON.stringify(all.errors));
+  });
+}
+
+/** Review 4, C5: "Update" without the state of the check is not a valid choice, for one row or for all of them. */
+async function testUpdateWithoutStateIsRefused() {
+  const id = randomUUID();
+  for (const bad of [[{ kind: 'lookalikes', action: 'update' }], [{ kind: 'lookalike', line: 2, action: 'update', id }]]) {
+    assert.throws(() => csvLookalikes(JSON.stringify(bad)), /not valid/, JSON.stringify(bad));
+  }
+  assert.deepEqual(csvLookalikes(JSON.stringify([{ kind: 'lookalikes', action: 'update', targets: {} }, { kind: 'lookalike', line: 2, action: 'update', id, state: '0123456789abcdef' }])), [
+    { kind: 'lookalikes', action: 'update', targets: {} },
+    { kind: 'lookalike', line: 2, action: 'update', id, state: '0123456789abcdef' },
+  ]);
+  for (const action of ['ignore', 'create']) assert.equal(csvLookalikes(JSON.stringify([{ kind: 'lookalikes', action }])).length, 1);
+}
+
 void runSpecs('application-lookalikes.integration', [
   ['the rule', testRule],
   ['the choices', testChoices],
@@ -446,4 +573,8 @@ void runSpecs('application-lookalikes.integration', [
   ['the target gone before the load', testGoneBeforeTheLoad],
   ['rows left out count as duplicates', testLeftOutRowsCountAsDuplicates],
   ['owners or residency changed since the check', testOwnersOrResidencyChangedSinceTheCheck],
+  ['a row left out stays left out when its name finds an application since', testLeftOutStaysLeftOut],
+  ['"Create anyway" whose name is taken since the check', testCreateAnywayNameTakenSinceTheCheck],
+  ['a row that looks like an application since the check', testLooksLikeAnApplicationSinceTheCheck],
+  ['"Update" without the state of the check', testUpdateWithoutStateIsRefused],
 ]);

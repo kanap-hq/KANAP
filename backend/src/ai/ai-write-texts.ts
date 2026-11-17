@@ -2060,6 +2060,12 @@ export const IMPORT_LOAD_REFUSALS: Record<string, Texts> = {
     de: '{{ref}} hat diesen Namen nach der Prüfung erhalten.',
     es: '{{ref}} tomó este nombre después de la comprobación.',
   },
+  CSV_LOOKALIKE_NEW: {
+    en: 'The row looks like {{ref}} since the check.',
+    fr: 'La ligne ressemble à {{ref}} depuis la vérification.',
+    de: 'Die Zeile ähnelt seit der Prüfung {{ref}}.',
+    es: 'La fila se parece a {{ref}} desde la comprobación.',
+  },
 };
 
 const REFUSED_ROW_TEXTS = {

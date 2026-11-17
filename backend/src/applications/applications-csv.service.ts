@@ -337,7 +337,8 @@ export class ApplicationsCsvService {
         .map((row: { id: string; name: string }) => [row.id, row.name] as const),
     );
     const result = await this.importSvc.import(config, file, params, { ...opts, itOpsSettings });
-    if (look.decisions.size > 0) {
+    // Given whenever the rows were judged, none listed included: the load sends the choices back (C6).
+    if (look.followed.length > 0) {
       const entries = [...look.decisions.values()].sort((a, b) => a.line - b.line).map((decision) => lookalikeEntry(decision, look.fields.get(decision.line)));
       result.lookalikes = lookalikesResult(entries, look.followed);
     }
@@ -359,7 +360,9 @@ export class ApplicationsCsvService {
    * "update only" nothing changes; in "add new only" no row may update one. A row whose situation changed
    * since the check it was chosen on is refused, and the import writes nothing (T-I3j, review 3): the
    * application it updates changed (`CSV_LOOKALIKE_CHANGED`, its row, owners or data residency, read once
-   * locked) or is gone (`CSV_LOOKALIKE_GONE`), or its name now finds an application (`CSV_LOOKALIKE_NAME_FOUND`).
+   * locked) or is gone (`CSV_LOOKALIKE_GONE`), or its name now finds an application and it would write
+   * (`CSV_LOOKALIKE_NAME_FOUND`). A load refuses a row the check would have created that looks like an
+   * application since (`CSV_LOOKALIKE_NEW`); a check lists it, left out (review 4, C6).
    */
   private async settleRows(
     rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>,
@@ -400,6 +403,7 @@ export class ApplicationsCsvService {
       const decision = decided.decisions.get(row.rowNumber);
       if (!decision) return { entity: row.found };
       const ref = decision.app?.sequential_id || decision.app?.name || '';
+      if (decision.appeared && !params.dryRun) return refuse('CSV_LOOKALIKE_NEW', `The row looks like ${ref} since the check.`, ref);
       if (decision.gone) return refuse('CSV_LOOKALIKE_GONE', 'The application chosen at the check no longer exists.');
       if (decision.action === 'ignore') {
         return {

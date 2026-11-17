@@ -745,7 +745,8 @@ Der Import folgt der Wahl, die bei der Prüfung getroffen wurde. Hat sich die La
 
 - APP-12 wurde geändert (ihre Werte, Verantwortlichen oder Datenresidenz), bei einer Zeile, die sie aktualisiert: „APP-12 wurde seit der Prüfung geändert.“
 - APP-12 wurde gelöscht, bei einer Zeile, die sie aktualisiert: „Die bei der Prüfung gewählte Anwendung existiert nicht mehr.“
-- eine andere Anwendung hat den Namen der Zeile erhalten: „APP-15 hat diesen Namen nach der Prüfung erhalten.“
+- eine andere Anwendung hat den Namen einer Zeile erhalten, die angelegt werden oder eine Anwendung aktualisieren soll: „APP-15 hat diesen Namen nach der Prüfung erhalten.“ Eine ausgelassene Zeile bleibt ausgelassen, und der Rest der Datei wird importiert.
+- eine Zeile, die die Prüfung angelegt hätte, ähnelt jetzt einer seitdem angelegten Anwendung: „Die Zeile ähnelt seit der Prüfung APP-16.“
 
 Der Dialog kehrt zur Prüfung zurück, die abgelehnte Zeile als Fehler. Wählen Sie für diese Zeile erneut: Die neue Prüfung liest die Anwendungen in ihrem aktuellen Stand.
 

@@ -33,7 +33,7 @@ import ImportLookalikesView, { applicationLookalikeReason, applicationUpdateChoi
 import { buildEntityUrl } from '../../ai/utils/entityUrls';
 
 /** A load refused for a row whose situation changed since the check: nothing was written (T-I3l). */
-const LOAD_REFUSALS = new Set(['CSV_LOOKALIKE_CHANGED', 'CSV_LOOKALIKE_GONE', 'CSV_LOOKALIKE_NAME_FOUND']);
+const LOAD_REFUSALS = new Set(['CSV_LOOKALIKE_CHANGED', 'CSV_LOOKALIKE_GONE', 'CSV_LOOKALIKE_NAME_FOUND', 'CSV_LOOKALIKE_NEW']);
 
 interface CsvImportDialogV2Props {
   open: boolean;

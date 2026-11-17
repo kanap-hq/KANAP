@@ -166,6 +166,11 @@ export interface LookalikeDecision {
   gone?: boolean;
   /** An update left out because another row of the file already updates that application: that row's line. */
   claimedBy?: number;
+  /**
+   * A row the check the choices come from would have created (it kept no target for it), that looks
+   * like an application since: listed by a check, refused by a load (review 4, C6).
+   */
+  appeared?: boolean;
 }
 
 /**
@@ -176,13 +181,19 @@ export interface LookalikeDecision {
  * no longer looks like it, and follows the choice made on it (T-I3j, review 3):
  * - an update is refused when the application changed since (`expected`, compared by the caller once
  *   the application is locked) or is gone (`gone`);
- * - a row the check listed whose name (or id) now finds an application is refused (`nameFound`), unless
- *   it is the update of that very application: it never updates another one;
- * - a row left out stays left out, a row created anyway is created.
+ * - a row the check listed whose name (or id) now finds an application is refused (`nameFound`) when it
+ *   would write, unless it is the update of that very application: it never updates another one. A row
+ *   left out writes nothing and stays left out; in "add new only", the operation skips it (T-I3l);
+ * - a row left out stays left out, a row created anyway is created;
+ * - a row the check would have created that looks like an application since is left out and marked
+ *   (`appeared`), unless "Create anyway" was chosen for all rows: the check that kept no target for it
+ *   announced a creation.
  * A choice that no longer applies (`updatable` false, a target gone after a check that showed it there)
  * falls back to leaving the row out, and so does a second row that would update an application the file
- * already updates. `followed`: the choices the import followed, for the load to send back; a refused
- * row's are dropped, so that checking again shows its new situation.
+ * already updates. `followed`: the choices the import followed, for the load to send back, always with
+ * the choice for all rows and its targets (none listed included: the load then knows the check ran); a
+ * row refused because its name finds an application loses its own, so that checking again shows its new
+ * situation.
  */
 export function decideLookalikes(
   rows: readonly LookalikeRow[],
@@ -212,12 +223,18 @@ export function decideLookalikes(
     const remembered = memory?.[String(row.line)];
     if (row.foundId) {
       if (!checked(row)) continue;
-      // Listed at the check, the row's name now finds an application: refused, unless the person chose
-      // to update that very application, whose state then decides.
-      if (!(chosen?.action === 'update' && chosen.state !== undefined && chosen.id === row.foundId)) {
-        const app = index.get(row.foundId);
-        if (app) nameFound.set(row.line, app);
-        continue;
+      // Listed at the check, the row's name now finds an application. Left out, it writes nothing and
+      // stays left out; in "add new only", the operation skips it. Otherwise it is refused, unless the
+      // person chose to update that very application, whose state then decides (T-I3l).
+      const intended = chosen?.action ?? all?.action ?? 'ignore';
+      if (intended !== 'ignore') {
+        if (!options.updatable) continue;
+        const target = chosen ? (chosen.action === 'update' ? chosen.id : undefined) : remembered?.id;
+        if (!(intended === 'update' && target === row.foundId)) {
+          const app = index.get(row.foundId);
+          if (app) nameFound.set(row.line, app);
+          continue;
+        }
       }
     }
     const found = row.foundId ? null : index.find(row.keys);
@@ -235,6 +252,8 @@ export function decideLookalikes(
     let follow: ImportLookalikeChoice | null = null;
     let claimedBy: number | undefined;
     let gone = false;
+    // The check these choices come from kept no target for the row: it announced a creation.
+    const appeared = !!found && !chosen && !!memory && !remembered && all?.action !== 'create';
     if (chosen) {
       if (chosen.action !== 'update') {
         action = chosen.action;
@@ -262,7 +281,7 @@ export function decideLookalikes(
     if (follow) followed.push(follow);
     // A target gone is kept with an empty state: checking again leaves the row out, as the check shows it.
     if (gone) kept[String(row.line)] = { id, state: '' };
-    else if (remembered || all?.action !== 'update' || action === 'update') kept[String(row.line)] = remembered ?? { id, state };
+    else if (remembered || appeared || all?.action !== 'update' || action === 'update') kept[String(row.line)] = remembered ?? { id, state };
     decisions.set(row.line, {
       line: row.line,
       name: row.keys.name,
@@ -275,11 +294,13 @@ export function decideLookalikes(
       ...(expected !== undefined ? { expected } : {}),
       ...(gone ? { gone } : {}),
       ...(claimedBy !== undefined ? { claimedBy } : {}),
+      ...(appeared ? { appeared } : {}),
     });
   }
   // The choice for all rows, with the target of every row it covers: what the person saw. Given back
-  // even when they chose nothing (`ignore`), so that the load and the card's approval keep it.
-  if (Object.keys(kept).length > 0) followed.push({ kind: 'lookalikes', action: all?.action ?? 'ignore', targets: kept });
+  // even when they chose nothing (`ignore`) or no row is listed, so that the load and the card's
+  // approval keep it, and know the rows the check would have created.
+  followed.push({ kind: 'lookalikes', action: all?.action ?? 'ignore', targets: kept });
   return { decisions, followed, nameFound };
 }
 

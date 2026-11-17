@@ -179,6 +179,7 @@
   "CSV_LOOKALIKE_SAME_RECORD": "Se parece a {{ref}}, ya actualizada por la fila {{other}}. Descartada.",
   "CSV_LOOKALIKE_GONE": "La aplicación elegida en la comprobación ya no existe.",
   "CSV_LOOKALIKE_NAME_FOUND": "{{ref}} tomó este nombre después de la comprobación.",
+  "CSV_LOOKALIKE_NEW": "La fila se parece a {{ref}} desde la comprobación.",
   "CSV_NAME_AMBIGUOUS_AMONG": "«{{value}}» puede designar varios registros: {{names}}.",
   "CSV_LINK_DUPLICATE": "Este vínculo ya figura en la fila {{firstRow}}.",
   "CSV_TECHNOLOGY_REQUIRED": "Indique la tecnología por su referencia (TEC-n) o por su nombre.",

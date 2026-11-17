@@ -179,6 +179,7 @@
   "CSV_LOOKALIKE_SAME_RECORD": "Ähnelt {{ref}}, das Zeile {{other}} bereits aktualisiert. Ausgelassen.",
   "CSV_LOOKALIKE_GONE": "Die bei der Prüfung gewählte Anwendung existiert nicht mehr.",
   "CSV_LOOKALIKE_NAME_FOUND": "{{ref}} hat diesen Namen nach der Prüfung erhalten.",
+  "CSV_LOOKALIKE_NEW": "Die Zeile ähnelt seit der Prüfung {{ref}}.",
   "CSV_NAME_AMBIGUOUS_AMONG": "„{{value}}“ kann mehrere Einträge bezeichnen: {{names}}.",
   "CSV_LINK_DUPLICATE": "Diese Verknüpfung steht bereits in Zeile {{firstRow}}.",
   "CSV_TECHNOLOGY_REQUIRED": "Nennen Sie die Technologie über ihre Referenz (TEC-n) oder ihren Namen.",

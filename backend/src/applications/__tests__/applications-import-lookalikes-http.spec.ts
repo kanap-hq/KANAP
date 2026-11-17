@@ -97,7 +97,9 @@ async function run() {
     assert.equal(none.status, 201, none.text);
     assert.deepEqual((seen[1][1] as { lookalikes?: unknown }).lookalikes, [], 'no field: no choice');
 
+    // "Update" without the state of the check (review 4, C5): for one row, and for all rows without their targets.
     for (const bad of ['{not json', JSON.stringify([{ kind: 'lookalike', line: 2, action: 'update', id: 'APP-4' }]),
+      JSON.stringify([{ kind: 'lookalike', line: 2, action: 'update', id: ID }]), JSON.stringify([{ kind: 'lookalikes', action: 'update' }]),
       JSON.stringify(Array.from({ length: 201 }, (_, i) => ({ kind: 'lookalike', line: i + 2, action: 'create' })))]) {
       const refused = await post(app, [['lookalikes', bad]]);
       assert.equal(refused.status, 400, refused.text);

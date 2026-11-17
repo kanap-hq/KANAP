@@ -745,7 +745,8 @@ L'import suit le choix fait à la vérification. Quand la situation d'une ligne 
 
 - APP-12 a changé (ses valeurs, ses responsables ou la résidence de ses données), pour une ligne qui la met à jour : « APP-12 a changé depuis la vérification. »
 - APP-12 a été supprimée, pour une ligne qui la met à jour : « L'application choisie à la vérification n'existe plus. »
-- une autre application a pris le nom de la ligne : « APP-15 a pris ce nom après la vérification. »
+- une autre application a pris le nom d'une ligne à créer ou qui met à jour une application : « APP-15 a pris ce nom après la vérification. » Une ligne écartée reste écartée, et le reste du fichier est importé.
+- une ligne que la vérification aurait créée ressemble maintenant à une application créée depuis : « La ligne ressemble à APP-16 depuis la vérification. »
 
 La fenêtre revient à la vérification, la ligne refusée en erreur. Choisissez de nouveau pour cette ligne : la nouvelle vérification lit les applications telles qu'elles sont.
 
