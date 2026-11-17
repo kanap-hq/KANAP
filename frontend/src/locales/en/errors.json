@@ -171,6 +171,7 @@
   "CSV_EMAIL_INVALID": "\"{{value}}\" is not a valid e-mail address.",
   "CSV_STATUS_DATE_PASSED": "The status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.",
   "CSV_STATUS_DATE_FUTURE": "The status is disabled but the end of validity is still to come. Set the status to enabled or enter a date that has passed.",
+  "CSV_STATUS_DISABLED_DATE_CLEARED": "The status is disabled, but \"-\" clears the end of validity. Keep one or the other.",
   "CSV_IMPORT_FAILED": "The import failed: {{reason}}",
   "CSV_PROJECT_ORIGIN_STANDARD": "A new project cannot have the origin Request. Convert a request, or use fast_track or legacy.",
   "CSV_PROJECT_ORIGIN_LOCKED": "Only a fast-track or legacy project can change its origin, to fast-track or legacy.",

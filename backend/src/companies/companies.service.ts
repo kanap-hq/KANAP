@@ -43,6 +43,7 @@ import {
   clearRefusals,
   clearsEndOfValidity,
   endOfValidityToCheck,
+  lifecycleConflictError,
   withClearedEndOfValidity,
   clearsCell,
   CsvDataRow,
@@ -1190,9 +1191,9 @@ export class CompaniesService {
         }
         disabled_at_iso = end.value ? end.value.toISOString() : null;
       }
-      const lifecycleConflict = csvLifecycleConflict(statusValue, endOfValidityToCheck(disabled_at_iso, clearsEnd));
+      const lifecycleConflict = lifecycleConflictError(line, statusValue, csvLifecycleConflict(statusValue, endOfValidityToCheck(disabled_at_iso, clearsEnd)), clearsEnd);
       if (lifecycleConflict) {
-        errors.push(rowError(line, 'status', statusValue === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
+        errors.push(lifecycleConflict);
         return;
       }
       const rowMetrics = new Map<number, RowMetric>();

@@ -46,6 +46,8 @@ export {
   clearsEndOfValidity,
   endOfValidityToCheck,
   keepsStoredValue,
+  lifecycleConflictError,
+  STATUS_DISABLED_DATE_CLEARED,
   storedRecordValues,
   withClearedEndOfValidity,
 } from './import-mode';

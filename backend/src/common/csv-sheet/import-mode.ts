@@ -105,11 +105,28 @@ const NO_END_OF_VALIDITY = new Date(8.64e15);
 
 /**
  * The end of validity the row's status is checked against (`csvLifecycleConflict`): the date the
- * row gives, or, when `-` clears it, none. `disabled` with `-` is then refused as a status whose
- * end of validity is still to come.
+ * row gives, or, when `-` clears it, none. `disabled` with `-` is then a contradiction of its own
+ * (`lifecycleConflictError`).
  */
 export function endOfValidityToCheck<T>(date: T, clears: boolean): T | Date {
   return clears ? NO_END_OF_VALIDITY : date;
+}
+
+/** The code of a row whose status says disabled while `-` clears the end of validity. */
+export const STATUS_DISABLED_DATE_CLEARED = 'CSV_STATUS_DISABLED_DATE_CLEARED';
+
+/**
+ * The row error, on the status, of a status that contradicts the end of validity
+ * (`csvLifecycleConflict` against `endOfValidityToCheck`), or null when `conflict` is null.
+ * When `-` clears the date, the only contradiction is `disabled`, worded as such; otherwise an
+ * enabled status with a date passed, or a disabled one with a date to come.
+ */
+export function lifecycleConflictError(line: number, status: string | null, conflict: string | null, clears: boolean): ImportReportError | null {
+  if (!conflict) return null;
+  if (clears) {
+    return rowError(line, 'status', STATUS_DISABLED_DATE_CLEARED, 'Status is disabled, but "-" clears the end of validity. Keep one or the other.');
+  }
+  return rowError(line, 'status', status === 'enabled' ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', conflict);
 }
 
 /**

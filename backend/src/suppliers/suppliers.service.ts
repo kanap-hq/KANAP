@@ -21,6 +21,7 @@ import {
   clearsCell,
   clearsEndOfValidity,
   endOfValidityToCheck,
+  lifecycleConflictError,
   CsvDataRow,
   CsvDateOrder,
   CsvImportMode,
@@ -466,15 +467,8 @@ export class SuppliersService {
           errors.push({ row: line, column: 'disabled_at', message: end.error, code: 'CSV_DATE_INVALID', params: { value: disabledAtRaw } });
         } else disabledAt = end.value;
       }
-      const conflict = csvLifecycleConflict(status, endOfValidityToCheck(disabledAt, clearsEnd));
-      if (conflict) {
-        errors.push({
-          row: line,
-          column: 'status',
-          message: conflict,
-          code: status === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE',
-        });
-      }
+      const conflict = lifecycleConflictError(line, status, csvLifecycleConflict(status, endOfValidityToCheck(disabledAt, clearsEnd)), clearsEnd);
+      if (conflict) errors.push(conflict);
       const body: SupplierUpsertDto = {
         name,
         erp_supplier_id: cellText(row, 'erp_supplier_id', mode) || null,

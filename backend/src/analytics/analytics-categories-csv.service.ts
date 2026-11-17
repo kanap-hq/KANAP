@@ -7,6 +7,7 @@ import {
   clearRefusals,
   clearsEndOfValidity,
   endOfValidityToCheck,
+  lifecycleConflictError,
   CsvDateOrder,
   CsvImportMode,
   CsvLanguage,
@@ -247,8 +248,8 @@ export class AnalyticsCategoriesCsvService {
         if (end.error) rowErrors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
         else disabledAt = keepStoredEndOfValidity(existing?.disabled_at, end.value);
       }
-      const lifecycleConflict = csvLifecycleConflict(status, endOfValidityToCheck(disabledAt, clearsEnd));
-      if (lifecycleConflict) rowErrors.push(rowError(line, 'status', status === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
+      const lifecycleConflict = lifecycleConflictError(line, status, csvLifecycleConflict(status, endOfValidityToCheck(disabledAt, clearsEnd)), clearsEnd);
+      if (lifecycleConflict) rowErrors.push(lifecycleConflict);
       // An absent column keeps what is stored (null for a new value); a blank cell clears it, or
       // keeps it when the row completes the stored value.
       const keeps = (column: string) => !has(column) || (!!existing && keepsStoredValue(raw, read.present, column, mode));

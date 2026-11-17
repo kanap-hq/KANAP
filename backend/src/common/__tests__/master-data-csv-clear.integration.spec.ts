@@ -32,8 +32,8 @@ import { realFreeze } from '../../spend/__tests__/round-inputs.fixtures';
 //   (`CSV_VALUE_CANNOT_BE_CLEARED`), and nothing is written;
 // - `-` on an optional value of a new record reads as a blank cell;
 // - `-` in `disabled_at` clears the end of validity, as the screen empties it, and the record is
-//   active again; with `disabled` in `status` it is the status contradiction; on a new record it
-//   reads as a blank cell (T-I4d);
+//   active again; with `disabled` in `status` the row is refused with a contradiction of its own
+//   (`CSV_STATUS_DISABLED_DATE_CLEARED`); on a new record it reads as a blank cell (T-I4d);
 // - `-` on a year's headcount or turnover says to write 0 (`CSV_NUMBER_CANNOT_BE_CLEARED`);
 // - suppliers: `-` in a contact column removes the links of that role (T-I4e);
 // - accounts: a chart template still loads by replacing, `-` read as text.
@@ -92,7 +92,7 @@ async function endOfValidityClears(
 ) {
   await load(run, [`${key[0]};disabled_at`, `${key[1]};2020-01-15`], [0, 1, 0, 0], 'set a past end of validity');
   assert.equal((await lifecycle()).status, 'disabled');
-  await refused(run, [`${key[0]};status;disabled_at`, `${key[1]};disabled;-`], ['2:status:CSV_STATUS_DATE_FUTURE'], lifecycle, 'disabled and `-`');
+  await refused(run, [`${key[0]};status;disabled_at`, `${key[1]};disabled;-`], ['2:status:CSV_STATUS_DISABLED_DATE_CLEARED'], lifecycle, 'disabled and `-`');
   await load(run, [`${key[0]};disabled_at`, `${key[1]};-`], [0, 1, 0, 1], 'clear the end of validity');
   assert.deepEqual(await lifecycle(), { status: 'enabled', disabled_at: null });
   await load(run, [`${key[0]};status;disabled_at`, `${key[1]};enabled;__CLEAR__`], [0, 0, 1, 0], '`-` on no end of validity');
