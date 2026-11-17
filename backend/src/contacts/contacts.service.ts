@@ -393,6 +393,10 @@ export class ContactsService {
   async update(id: string, body: Partial<ExternalContact>, opts: WriteOpts) {
     const repo = this.getRepo(opts.manager);
     const supplierRepo = this.getSupplierRepo(opts.manager);
+    // The contact's row is locked first, in the caller's transaction: a second change of the same
+    // contact (another import, the screen) waits and reads the links this one leaves, so the contact
+    // keeps one primary supplier link.
+    await repo.manager.query(`SELECT 1 FROM contacts WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, [opts.tenantId, id]);
     const existing = await repo.findOne({ where: { tenant_id: opts.tenantId, id } });
     if (!existing) throw new NotFoundException('Contact not found');
     const beforeRole = await this.findSupplierRole(id, existing.supplier_id, opts);
@@ -751,7 +755,7 @@ export class ContactsService {
     const firstLineById = new Map<string, number>();
     const firstLineByEmail = new Map<string, number>();
     /** A row to compare: its contact's values, and the supplier and type it gives the contact when they change. */
-    type Compared = { item: Norm; existing: ExternalContact | undefined; supplier: { supplier_id: string | null; supplier_role: SupplierContactRole | null } | null };
+    type Compared = { item: Norm; existing: ExternalContact | undefined; supplier: { supplier_id?: string | null; supplier_role: SupplierContactRole | null } | null };
     const toCompare: Compared[] = [];
     // The stored values the rows clear with `-` (a `-` on an empty value is not counted).
     let cleared = 0;
@@ -798,7 +802,10 @@ export class ContactsService {
           continue;
         }
         const role = supplierId ? row.supplier.role ?? storedRole ?? DEFAULT_SUPPLIER_ROLE : null;
-        if (supplierId !== storedSupplierId || (supplierId && role !== storedRole)) supplier = { supplier_id: supplierId, supplier_role: role };
+        // A row that keeps the supplier sends only the type: `update` reads the supplier once it holds
+        // the contact's row, so a change of the supplier made meanwhile is kept.
+        if (supplierId !== storedSupplierId) supplier = { supplier_id: supplierId, supplier_role: role };
+        else if (supplierId && role !== storedRole) supplier = { supplier_role: role };
         if (row.supplier.clears && storedSupplierId) cleared += 1;
       }
       // A stored contact takes only the values the row writes: an absent column, or a blank cell
