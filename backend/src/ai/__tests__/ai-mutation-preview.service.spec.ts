@@ -827,6 +827,29 @@ async function testCreatePreviewReusesEquivalentPendingPreviewInConversation() {
   assert.equal(saved.length, 1);
 }
 
+/** A card that is no import: asked again once executed, it is still that card (lot I3 of 26.11.9, correctifs M). */
+async function testCreatePreviewReusesEquivalentExecutedPreviewInConversation() {
+  const { service, context, saved } = createService({
+    previews: [],
+    taskRow: {
+      id: 'task-1',
+      item_number: 42,
+      title: 'Fix login bug',
+      status: 'open',
+      assignee_user_id: null,
+      assignee_label: null,
+    },
+  });
+
+  const first = await service.createPreview(context, 'update_task_status', { ref: 'T-42', status: 'done' });
+  saved[0].status = 'executed';
+  const second = await service.createPreview(context, 'update_task_status', { ref: 'T-42', status: 'done' });
+
+  assert.equal(second.preview_id, first.preview_id);
+  assert.equal(second.status, 'executed');
+  assert.equal(saved.length, 1);
+}
+
 async function testMutationPlanCreatesDependentPreviewAfterApproval() {
   const { service, context, planSteps } = createService({
     previews: [],
@@ -3137,6 +3160,7 @@ async function main() {
   await testCreatePreviewPersistsCorrectData();
   await testCreatePreviewAllowsMultiplePendingPreviewsInConversation();
   await testCreatePreviewReusesEquivalentPendingPreviewInConversation();
+  await testCreatePreviewReusesEquivalentExecutedPreviewInConversation();
   await testMutationPlanCreatesDependentPreviewAfterApproval();
   await testMutationPlanNormalizesLegacyGlpiImportStep();
   await testMutationPlanDeduplicatesEquivalentOperationsAndRemapsDependents();

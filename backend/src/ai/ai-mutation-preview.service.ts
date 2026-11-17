@@ -490,16 +490,19 @@ export class AiMutationPreviewService {
    * What makes two previews the same request: the tool, the target, the change and the state it
    * was asked against (`current_values.values`, as stored: JSON). A retry finds its preview, even
    * once executed; the same change asked again after the record moved on (back and forth between
-   * two values) is a new preview.
+   * two values) is a new preview. `withCheck` adds an import card's check: compared for a pending card only.
    */
   private previewSignature(
     toolName: string,
     prepared: Pick<AiPreparedMutationPreview, 'targetEntityType' | 'targetEntityId' | 'mutationInput' | 'currentValues'>,
+    withCheck: boolean,
   ): string {
     const values = prepared.currentValues?.values;
     // An import card's check (lot I3 of 26.11.9, review 4, C2): the same mapping of a file whose data
-    // changed since is another card, never the old one with its stale check (a refusal included).
-    const check = (prepared.currentValues?.import_mapping as { validation?: unknown } | undefined)?.validation;
+    // changed since is another card, never the old pending one with its stale check (a refusal included).
+    const check = withCheck
+      ? (prepared.currentValues?.import_mapping as { validation?: unknown } | undefined)?.validation
+      : undefined;
     return stableStringify({
       tool_name: toolName,
       target_entity_type: prepared.targetEntityType,
@@ -571,15 +574,21 @@ export class AiMutationPreviewService {
       },
       order: { created_at: 'ASC' },
     });
-    const signature = this.previewSignature(toolName, prepared);
-    return candidates.find((candidate) =>
-      this.previewSignature(candidate.tool_name, {
+    // A card approved or imported stays the card of its request whatever its check says now: asking the
+    // same import again never offers to import the file twice. A pending card is compared on its check.
+    const signatures = {
+      pending: this.previewSignature(toolName, prepared, true),
+      settled: this.previewSignature(toolName, prepared, false),
+    };
+    return candidates.find((candidate) => {
+      const pending = candidate.status === 'pending';
+      return this.previewSignature(candidate.tool_name, {
         targetEntityType: candidate.target_entity_type,
         targetEntityId: candidate.target_entity_id,
         mutationInput: candidate.mutation_input,
         currentValues: candidate.current_values,
-      }) === signature,
-    ) ?? null;
+      }, pending) === (pending ? signatures.pending : signatures.settled);
+    }) ?? null;
   }
 
   private applyPlanPlaceholders(

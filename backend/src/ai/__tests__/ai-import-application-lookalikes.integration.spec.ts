@@ -322,6 +322,33 @@ async function testStaleChoiceOfACheckIsDropped(h: Harness, runner: QueryRunner,
   assert.equal(next.import_mapping.validation.ok, true, JSON.stringify(next.import_mapping.validation.issues));
 }
 
+/**
+ * Correctifs M: an imported card asked again in the conversation is that card, as before the check joined
+ * the signature, though its check changed since (its creations are stored now): no new pending card offers
+ * to import the same file twice. Only a pending card is compared on its check (C2 above).
+ */
+async function testExecutedCardAskedAgainAfterItsCheckChanged(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s);
+  const attachment = randomUUID();
+  const { writeXlsx } = require('../../common/xlsx');
+  h.files.set(attachment, {
+    name: 'Applications.xlsx',
+    buffer: writeXlsx({ language: 'fr', sheets: [{ name: 'Applications', header: 'plain', headers: ['Nom', 'Éditeur', 'Description'], rows: [['Atlas', null, 'Cartes']] }] }),
+  });
+  const input = { attachment_id: attachment, entity_type: 'applications', columns: COLUMNS };
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', input);
+  assert.equal(card.import_mapping.validation.inserted, 1, JSON.stringify(card.import_mapping.validation));
+  const done = await h.previews.executePreview(admin, card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message);
+
+  const again = await h.previews.createPreview(admin, 'prepare_import_mapping', input);
+  assert.equal(again.preview_id, card.preview_id, 'the imported card is the card of the same request');
+  assert.equal(again.status, 'executed');
+  const [{ cards }] = await runner.query(`SELECT count(*)::int AS cards FROM ai_mutation_previews WHERE tenant_id = $1 AND conversation_id = $2`, [s.tenantId, s.conversationId]);
+  assert.equal(cards, 1, 'no new card');
+  assert.deepEqual(await names(runner, s), ['Atlas', 'Comptabilité']);
+}
+
 async function testChoiceRouteParsing() {
   const { parseImportChoices } = require('../import/ai-import-targets');
   const id = randomUUID();
@@ -367,6 +394,7 @@ async function run() {
     await inTenant(harness, testLeftOutRowNameTakenBeforeTheApproval);
     await inTenant(harness, testStaleChoiceAfterARefusedApproval);
     await inTenant(harness, testStaleChoiceOfACheckIsDropped);
+    await inTenant(harness, testExecutedCardAskedAgainAfterItsCheckChanged);
   } finally {
     await harness.app.close();
   }
