@@ -121,6 +121,38 @@ async function testWithoutModeReplaces() {
   });
 }
 
+// A file needs only the code (lot I4 of 26.11.9): an absent column is never written, in both
+// modes; the year and the twelve months come together, when one of them is in the file.
+async function testOnlyTheCodeIsRequired() {
+  await withRollback(async (runner) => {
+    const { tenantId, csv, ctx } = await seed(runner, 'columns');
+    const csvOf = (header: string, lines: string[]) =>
+      ({ buffer: Buffer.from(`${header}\n${lines.join('\n')}\n`, 'utf8'), originalname: 'c.csv' }) as Express.Multer.File;
+    for (const mode of ['enrich', undefined] as const) {
+      const check = await csv.importCsv({ file: csvOf('code;description', ['OFF;Office staff']), dryRun: true, mode }, ctx);
+      assert.equal(check.ok, true, `${mode}: ${JSON.stringify(check.errors)}`);
+      assert.deepEqual([check.inserted, check.updated, check.unchanged], [0, 0, 1], `${mode}: nothing changes`);
+    }
+    const done = await csv.importCsv({ file: csvOf('code;description', ['OFF;Back office']), dryRun: false }, ctx);
+    assert.equal(done.ok, true, JSON.stringify(done.errors));
+    const calendar = await stored(runner, tenantId);
+    assert.deepEqual([calendar.name, calendar.description, calendar.status], ['Office', 'Back office', 'disabled'], 'absent name and status are kept');
+    assert.deepEqual(Object.keys(calendar.days_by_year), ['2026']);
+    // A new calendar from a file without the months: no year, as with a blank year.
+    const created = await csv.importCsv({ file: csvOf('code;name', ['NEW;New calendar']), dryRun: true, mode: 'enrich' }, ctx);
+    assert.deepEqual([created.ok, created.inserted], [true, 1], JSON.stringify(created.errors));
+    // A month without the year and the other months is a header refusal.
+    const partial = await csv.importCsv({ file: csvOf('code;jan', ['OFF;20']), dryRun: true, mode: 'enrich' }, ctx);
+    assert.equal(partial.ok, false);
+    assert.equal(partial.errors[0]?.row, 0);
+    assert.match(partial.errors[0]?.message ?? '', /year/);
+    // The code stays required.
+    const keyless = await csv.importCsv({ file: csvOf('name;description', ['Office;x']), dryRun: true, mode: 'enrich' }, ctx);
+    assert.equal(keyless.ok, false);
+    assert.match(keyless.errors[0]?.message ?? '', /code/);
+  });
+}
+
 async function testRouteAppliesTheRule() {
   const calls: any[] = [];
   const controller = Object.create(WorkingDayProfilesController.prototype) as any;
@@ -136,6 +168,7 @@ runSpecs('working-day-profiles-csv-clear.integration.spec', [
   testDashRefused,
   testWithoutModeReplaces,
   testRouteAppliesTheRule,
+  testOnlyTheCodeIsRequired,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

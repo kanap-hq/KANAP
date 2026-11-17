@@ -351,6 +351,8 @@ Klicken Sie in der Symbolleiste auf **Verknüpfungen importieren** oder **Verkn�
 | `notes` | Freitext zur Verknüpfung |
 | `source` | Woher die Verknüpfung stammt: manuelle Eingabe, Import, Assistent, Agent oder Netbox. Der Export schreibt sie; der Import ignoriert sie |
 
+Eine Datei braucht nur den Server oder die Anwendung und die Technologie, jeweils über die Referenz oder den Namen. Eine Spalte, die die Datei weglässt, wird nie geschrieben.
+
 Die Spalte `operating_system` kennt drei Werte:
 
 - **Ja**: Die Verknüpfung wird zum Betriebssystem des Servers. Der Import lehnt die Zeile ab, wenn die Technologie nicht zur Familie **Betriebssystem** gehört, wenn der Server ein Cluster mit Mitgliedern ist oder wenn der Server bereits ein anderes Betriebssystem hat.

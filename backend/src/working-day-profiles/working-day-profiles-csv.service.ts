@@ -13,6 +13,7 @@ import {
   CsvLanguage,
   DecimalMark,
   endOfValidityOf,
+  headerMismatchError,
   keepStoredEndOfValidity,
   keepsStoredValue,
   lifecycleConflictError,
@@ -58,11 +59,13 @@ export const WORKING_DAY_PROFILE_CSV_HEADERS = [
   'code', 'name', 'description', 'country', 'region', 'status', 'disabled_at', 'year', ...CALENDAR_MONTH_HEADERS,
 ] as const;
 /**
- * Accepted when absent: without `disabled_at` the file sets the lifecycle
- * through `status` alone; without `country` and `region` it creates custom
- * calendars and keeps the source of the existing ones.
+ * A file needs the code only (lot I4 of 26.11.9): a column it leaves out is never written. Without
+ * `disabled_at` the file sets the lifecycle through `status` alone; without `country` and `region`
+ * it creates custom calendars and keeps the source of the existing ones. The year and the twelve
+ * months come together (`YEAR_HEADERS`): a file with one of them carries all.
  */
-const OPTIONAL_HEADERS = ['disabled_at', 'country', 'region'] as const;
+const KEY_HEADERS = [['code']] as const;
+const YEAR_HEADERS = ['year', ...CALENDAR_MONTH_HEADERS] as const;
 
 export interface WorkingDayProfileImportResult {
   ok: boolean;
@@ -211,9 +214,11 @@ export class WorkingDayProfilesCsvService {
       ignoredColumns: read.ignoredColumns, notices: read.notices,
     });
     if (read.headerError) return failed([read.headerError]);
+    if (YEAR_HEADERS.some((column) => read.present.includes(column))) {
+      const yearError = headerMismatchError(YEAR_HEADERS.filter((column) => !read.present.includes(column)), []);
+      if (yearError) return failed([yearError]);
+    }
     const { rows } = read;
-    // An absent `disabled_at` column is not a blank cell: the file then sets the lifecycle through `status` alone.
-    const hasDisabledAt = read.present.includes('disabled_at');
 
     const stored = await this.calendars.lockAll(ctx);
     const storedByCode = new Map(stored.map((row) => [row.code.toLowerCase(), row]));
@@ -224,7 +229,7 @@ export class WorkingDayProfilesCsvService {
     rows.forEach((raw) => {
       // The physical line Excel shows, blank lines included.
       const line = raw.line;
-      const row = this.parseRow(raw, line, hasDisabledAt, mode, errors);
+      const row = this.parseRow(raw, line, read.present, mode, errors);
       if (!row) return;
       const group = calendars.get(row.key);
       if (!group) {
@@ -370,7 +375,7 @@ export class WorkingDayProfilesCsvService {
   private parseRow(
     raw: CsvDataRow,
     line: number,
-    hasDisabledAt: boolean,
+    present: readonly string[],
     mode: CsvImportMode,
     errors: WorkingDayProfileImportResult['errors'],
   ): ParsedRow | null {
@@ -394,8 +399,9 @@ export class WorkingDayProfilesCsvService {
       () => normalizeCalendarCode(cellOf(raw, 'code')),
       (message) => textCellError(line, 'code', cellOf(raw, 'code'), WORKING_DAY_PROFILE_CODE_MAX, message),
     );
-    // A blank name under the import rule keeps the stored calendar's: decided once the code is matched.
-    const keepsName = mode === 'enrich' && cellOf(raw, 'name') === '';
+    // An absent name, or a blank one under the import rule, keeps the stored calendar's: decided once
+    // the code is matched.
+    const keepsName = keepsStoredValue(raw, present, 'name', mode);
     const name = keepsName ? null : attempt(
       () => normalizeCalendarName(cellOf(raw, 'name')),
       (message) => textCellError(line, 'name', cellOf(raw, 'name'), WORKING_DAY_PROFILE_NAME_MAX, message),
@@ -406,7 +412,7 @@ export class WorkingDayProfilesCsvService {
       rowErrors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`, { value: cellOf(raw, 'status'), allowed: 'enabled, disabled' }));
     }
     const clearsEnd = clearsEndOfValidity(raw, mode);
-    const disabledAtRaw = hasDisabledAt && !clearsEnd ? cellOf(raw, 'disabled_at') : '';
+    const disabledAtRaw = present.includes('disabled_at') && !clearsEnd ? cellOf(raw, 'disabled_at') : '';
     let disabledAt: Date | null | undefined;
     if (disabledAtRaw) {
       // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
@@ -427,8 +433,9 @@ export class WorkingDayProfilesCsvService {
       if (entry?.[1]) [normalizedYear, days] = entry as [string, string[]];
     }
 
-    // A blank status: enabled when replacing; under the import rule, the stored calendar's (enabled for a new one).
-    const status = statusRaw ? statusRaw as StatusState : mode === 'enrich' ? undefined : StatusState.ENABLED;
+    // A blank status: enabled when replacing; under the import rule, or with no status column, the
+    // stored calendar's (enabled for a new one).
+    const status = statusRaw ? statusRaw as StatusState : keepsStoredValue(raw, present, 'status', mode) ? undefined : StatusState.ENABLED;
     // `disabled` while `-` clears the end of validity: a contradiction of its own.
     const conflict = lifecycleConflictError(line, statusRaw, clearsEnd && status === StatusState.DISABLED ? 'disabled' : null, true);
     if (conflict) rowErrors.push(conflict);
@@ -443,7 +450,7 @@ export class WorkingDayProfilesCsvService {
       code,
       name: name ?? null,
       description: normalizeCalendarDescription(cellText(raw, 'description', mode)),
-      keepsDescription: keepsStoredValue(raw, ['description'], 'description', mode),
+      keepsDescription: keepsStoredValue(raw, present, 'description', mode),
       status,
       disabledAt,
       clearsEnd,
@@ -466,7 +473,7 @@ export class WorkingDayProfilesCsvService {
       file: buf as Buffer,
       fields: WORKING_DAY_PROFILE_CSV_HEADERS,
       dateFields: ['disabled_at'],
-      optional: OPTIONAL_HEADERS,
+      keys: KEY_HEADERS,
       language,
       dateOrder,
       decimalMark,

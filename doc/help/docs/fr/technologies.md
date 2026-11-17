@@ -351,6 +351,8 @@ Cliquez sur **Importer les liens** ou **Exporter les liens** dans la barre d'out
 | `notes` | Texte libre sur le lien |
 | `source` | L'origine du lien : saisie manuelle, import, assistant, agent ou Netbox. L'export l'écrit ; l'import l'ignore |
 
+Un fichier n'a besoin que du serveur ou de l'application et de la technologie, chacun par sa référence ou son nom. Une colonne que le fichier omet n'est jamais écrite.
+
 La colonne `operating_system` prend trois valeurs :
 
 - **oui** : le lien devient le système d'exploitation du serveur. L'import refuse la ligne quand la technologie n'est pas de la famille **Système d'exploitation**, quand le serveur est un cluster qui a des membres, ou quand le serveur a déjà un autre système d'exploitation.

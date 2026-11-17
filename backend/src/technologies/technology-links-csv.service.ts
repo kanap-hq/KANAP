@@ -50,8 +50,17 @@ export const APPLICATION_LINK_CSV_HEADERS = [
   'application_reference', 'application_name', 'technology_reference', 'technology_name', 'version', 'notes', 'source',
 ] as const;
 
-/** `source` is written by the export, in the file's language, and ignored on import: a file without it still reads. */
-const OPTIONAL_COLUMNS = ['source'] as const;
+/**
+ * A file needs only the columns that find its links (lot I4 of 26.11.9): the server or the
+ * application, and the technology, each by reference or by name. A column it leaves out is never
+ * written: no version is the link without version, no note keeps the note. `source` is written by
+ * the export, in the file's language, and ignored on import.
+ */
+function keyColumns(headers: readonly string[]): string[][] {
+  const [subjectReference, subjectName] = headers;
+  return [subjectReference, subjectName].flatMap((subject) =>
+    ['technology_reference', 'technology_name'].map((tech) => [subject, tech]));
+}
 const VERSION_MAX = 100;
 const NOTES_MAX = 2000;
 const OS_FAMILY = 'operating_system';
@@ -357,7 +366,7 @@ export class TechnologyLinksCsvService {
     spec: SideSpec,
   ): Promise<TechnologyLinksImportResult> {
     const { file, dryRun, language } = request;
-    const read = await readMasterDataFile({ file: uploadedBytes(file), fields: spec.headers, optional: OPTIONAL_COLUMNS, language });
+    const read = await readMasterDataFile({ file: uploadedBytes(file), fields: spec.headers, keys: keyColumns(spec.headers), language });
     const lookup: NameLookup = { request, state: { matches: new Map(), refused: new Map() } };
     const report = (errors: ImportReportError[], warnings: ImportReportError[], counts = { inserted: 0, updated: 0, unchanged: 0, cleared: 0 }) => ({
       ok: errors.length === 0, dryRun, total: read.rows.length, ...counts, errors, warnings,

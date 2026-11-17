@@ -351,6 +351,8 @@ Haga clic en **Importar vínculos** o **Exportar vínculos** en la barra de herr
 | `notes` | Texto libre sobre el vínculo |
 | `source` | De dónde viene el vínculo: entrada manual, importación, asistente, agente o Netbox. La exportación la escribe; la importación la ignora |
 
+Un archivo solo necesita el servidor o la aplicación y la tecnología, cada uno por su referencia o su nombre. Una columna que el archivo omite nunca se escribe.
+
 La columna `operating_system` admite tres valores:
 
 - **sí**: el vínculo pasa a ser el sistema operativo del servidor. La importación rechaza la fila cuando la tecnología no es de la familia **Sistema operativo**, cuando el servidor es un clúster que tiene miembros o cuando el servidor ya tiene otro sistema operativo.

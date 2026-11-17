@@ -351,6 +351,8 @@ Click **Import links** or **Export links** in the toolbar, then pick the file. T
 | `notes` | Free text about the link |
 | `source` | Where the link comes from: manual entry, import, assistant, agent or Netbox. The export writes it; the import ignores it |
 
+A file needs only the server or the application and the technology, each by its reference or its name. A column the file leaves out is never written.
+
 The `operating_system` column takes three values:
 
 - **yes**: the link becomes the server's operating system. The import refuses the row when the technology is not of the **Operating system** family, when the server is a cluster that has members, or when the server already has another operating system.

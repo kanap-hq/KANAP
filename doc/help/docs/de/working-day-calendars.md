@@ -183,7 +183,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 - Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 - Eine Zeile pro Kalender und Jahr. Ein Kalender mit drei Jahren belegt drei Zeilen. Ein Kalender ohne Jahr wird als eine Zeile mit leerem Jahr und leeren Monaten exportiert
 - Ein Standardkalender exportiert nur die Jahre, die Sie geändert haben. Die anderen Jahre folgen den Feiertagen und brauchen keine Zeile
-- Die Spalten `country`, `region` und `disabled_at` sind beim Import optional. Eine Datei ohne `country` und `region` legt individuelle Kalender an
+- Beim Import ist nur die Spalte `code` Pflicht: Eine Spalte, die die Datei weglässt, wird nie geschrieben. `year` und die zwölf Monate gehören zusammen. Eine Datei ohne `country` und `region` legt individuelle Kalender an
 
 | Spalte | Inhalt |
 |---|---|

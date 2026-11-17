@@ -183,7 +183,7 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 - L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 - Une ligne par calendrier et par année. Un calendrier avec trois années occupe trois lignes. Un calendrier sans aucune année est exporté sur une ligne, avec l'année et les mois vides
 - Un calendrier standard n'exporte que les années que vous avez modifiées. Les autres années suivent les jours fériés et n'ont besoin d'aucune ligne
-- Les colonnes `country`, `region` et `disabled_at` sont facultatives à l'import. Un fichier sans `country` ni `region` crée des calendriers personnalisés
+- Seule la colonne `code` est obligatoire à l'import : une colonne que le fichier omet n'est jamais écrite. `year` et les douze mois vont ensemble. Un fichier sans `country` ni `region` crée des calendriers personnalisés
 
 | Colonne | Contenu |
 |---|---|

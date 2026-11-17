@@ -125,6 +125,37 @@ async function testWithoutModeReplaces() {
   });
 }
 
+// A file needs only the columns that find the link (lot I4 of 26.11.9): its subject and its
+// technology, by reference or name. An absent note, version or operating system is never written.
+async function testOnlyTheKeyIsRequired() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'links-columns');
+    const srv = await asset(runner, tenantId, 'Srv');
+    const sql = await technology(runner, tenantId, 2, 'SQL Server');
+    const link = await installed(runner, tenantId, srv, sql, null, 'manual');
+    await runner.query(`UPDATE asset_technologies SET notes = 'Cluster node' WHERE id = $1`, [link]);
+    const crm = await application(runner, tenantId, 'CRM');
+    const [{ id }] = await runner.query(
+      `INSERT INTO application_technologies (tenant_id, application_id, technology_id, notes, source) VALUES ($1, $2, $3, 'Reporting', 'manual') RETURNING id`,
+      [tenantId, crm, sql],
+    );
+    const csv = csvService();
+    const ctx = caller(runner, tenantId);
+    for (const mode of ['enrich', undefined] as const) {
+      const servers = await csv.importAssetLinks({ file: csvFile('asset_name,technology_name', ['Srv,SQL Server']), dryRun: false, language: 'en', mode }, ctx);
+      assert.deepEqual([servers.ok, servers.unchanged], [true, 1], `${mode}: ${JSON.stringify(servers.errors)}`);
+      const apps = await csv.importApplicationLinks({ file: csvFile('application_name,technology_name', ['CRM,SQL Server']), dryRun: false, language: 'en', mode }, ctx, {});
+      assert.deepEqual([apps.ok, apps.unchanged], [true, 1], `${mode}: ${JSON.stringify(apps.errors)}`);
+    }
+    assert.equal(await notesOf(runner, 'asset_technologies', link), 'Cluster node');
+    assert.equal(await notesOf(runner, 'application_technologies', id), 'Reporting');
+    // Without the subject or the technology, the file is refused.
+    const keyless = await csv.importAssetLinks({ file: csvFile('asset_name,notes', ['Srv,x']), dryRun: true, language: 'en', mode: 'enrich' }, ctx);
+    assert.equal(keyless.ok, false);
+    assert.equal(keyless.errors[0]?.row, 0);
+  });
+}
+
 async function testRoutesApplyTheRule() {
   const requests: any[] = [];
   const linkFiles = {
@@ -147,6 +178,7 @@ runSpecs('technology-links-csv-clear.integration.spec', [
   ['application link note', testApplicationLinkNote],
   ['without a mode', testWithoutModeReplaces],
   ['routes', testRoutesApplyTheRule],
+  ['only the key is required', testOnlyTheKeyIsRequired],
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

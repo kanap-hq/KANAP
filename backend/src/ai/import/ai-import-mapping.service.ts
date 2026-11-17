@@ -8,7 +8,7 @@ import { AiAttachmentService } from '../ai-attachment.service';
 import { AiPolicyService } from '../ai-policy.service';
 import type { AiExecutionContextWithManager, AiImportMappingPreviewDto, AiImportRunDto } from '../ai.types';
 import { readTableAttachment, TABLE_ATTACHMENT_KIND } from '../attachments/table-attachment';
-import { AI_IMPORT_EVERY_COLUMN, AI_IMPORT_KEYS, aiImportAccess, type AiImportKey } from './ai-import-access';
+import { AI_IMPORT_KEYS, aiImportAccess, type AiImportKey } from './ai-import-access';
 import { DESCRIBED_CATALOG_ENTRIES, enabledDimensionValues } from './ai-import-dimension-values';
 import { buildImportFile } from './ai-import-file';
 import { hostingWords, serverHosting } from './ai-import-hosting';
@@ -275,15 +275,7 @@ export class AiImportMappingService {
       columns: input.columns,
       assumptions: input.assumptions ?? [],
     }, language);
-    // An import whose file carries every column of its template gets them all: the ones the mapping
-    // leaves out, blank, which keep the stored values. The other imports never touch a column the file leaves out.
-    if (AI_IMPORT_EVERY_COLUMN.has(target.key)) {
-      const mapped = new Set(converted.file.columns.map((column) => column.column));
-      for (const column of columns.filter((entry) => !mapped.has(entry.column))) {
-        converted.file.columns.push({ column: column.column, kind: column.kind });
-        for (const row of converted.file.rows) row.push('');
-      }
-    }
+    // No import touches a column the file leaves out.
     return { converted, lines: grid.lines };
   }
 

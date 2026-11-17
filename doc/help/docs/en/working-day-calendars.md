@@ -183,7 +183,7 @@ Load or update calendars and their working days from a file.
 - The export writes the separator of the screen language. See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
 - One row per calendar and year. A calendar with three years takes three rows. A calendar without any year is exported as one row with the year and the months empty
 - A standard calendar exports the years you edited only. The other years follow the public holidays and need no row
-- The `country`, `region` and `disabled_at` columns are optional on import. A file without `country` and `region` creates custom calendars
+- Only `code` is required on import: a column the file leaves out is never written. `year` and the twelve months come together. A file without `country` and `region` creates custom calendars
 
 | Column | Content |
 |---|---|

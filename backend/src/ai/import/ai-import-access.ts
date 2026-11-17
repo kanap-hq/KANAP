@@ -57,15 +57,6 @@ export const AI_IMPORT_CLEARING_RULE: ReadonlySet<AiImportKey> = new Set<AiImpor
   'technology_asset_links', 'technology_application_links',
 ]);
 
-/**
- * The imports whose file carries every column of its template, as their screen's file must (a fixed
- * header): Kad's file holds the columns the mapping leaves out, blank. Under the clearing rule a blank
- * cell keeps the stored value, so these columns change nothing.
- */
-export const AI_IMPORT_EVERY_COLUMN: ReadonlySet<AiImportKey> = new Set<AiImportKey>([
-  'working_day_calendars', 'technology_asset_links', 'technology_application_links',
-]);
-
 /** The rights of an import named by its key, null for an unknown one. */
 export function aiImportAccess(key: unknown): AiImportAccess | null {
   const normalized = String(key ?? '').trim();

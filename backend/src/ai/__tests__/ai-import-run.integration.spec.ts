@@ -547,7 +547,12 @@ async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
   for (const key of AI_IMPORT_KEYS as string[]) {
     const template = await h.mapping.describeTemplate(admin, key, 'en');
     const required = template.columns.filter((column: any) => column.required).map((column: any) => column.column);
-    const columns = required.length > 0 ? required : [template.columns[0].column];
+    // A link file needs its subject and its technology, each by reference or by name (lot I4 of 26.11.9).
+    const linkKeys: Record<string, string[]> = {
+      technology_asset_links: ['asset_name', 'technology_name'],
+      technology_application_links: ['application_name', 'technology_name'],
+    };
+    const columns = required.length > 0 ? required : linkKeys[key] ?? [template.columns[0].column];
     const file = attach(h, `${key}.csv`, `${columns.map((_: string, index: number) => `Colonne ${index + 1}`).join(';')}\n${columns.map(() => 'Plaid check').join(';')}\n`);
     const card = await h.previews.createPreview(admin, 'prepare_import_mapping', {
       attachment_id: file,
@@ -559,7 +564,7 @@ async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
     assert.equal(check.dry_run, true, key);
     assert.equal(typeof check.ok, 'boolean', key);
     assert.equal(check.report.kind, key === 'budget_lines' ? 'budget_file' : 'rows', key);
-    // Every import reads the file Plaid builds: an import that needs every column of its template gets them.
+    // Every import reads the file Plaid builds, with the columns the mapping fills only.
     assert.ok(!check.issues.some((issue: any) => /HEADER/.test(String(issue.code))), `${key}: ${JSON.stringify(check.issues)}`);
     // A value nothing names beyond case: no match listed.
     if (check.report.kind === 'rows') assert.equal(check.report.matches, undefined, key);

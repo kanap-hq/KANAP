@@ -183,7 +183,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 - La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 - Una fila por calendario y año. Un calendario con tres años ocupa tres filas. Un calendario sin ningún año se exporta como una fila con el año y los meses vacíos
 - Un calendario estándar solo exporta los años que usted modificó. Los demás años siguen los festivos y no necesitan fila
-- Las columnas `country`, `region` y `disabled_at` son opcionales al importar. Un archivo sin `country` ni `region` crea calendarios personalizados
+- Al importar, solo la columna `code` es obligatoria: una columna que el archivo omite nunca se escribe. `year` y los doce meses van juntos. Un archivo sin `country` ni `region` crea calendarios personalizados
 
 | Columna | Contenido |
 |---|---|
