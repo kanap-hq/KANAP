@@ -52,6 +52,17 @@ function testACheckWithoutMatchesKeepsItsSentence() {
   console.log('  a check without matches keeps its sentence: OK');
 }
 
+// Lot I4 of 26.11.9 (D21): the stored values the rows clear with `-` are said, as the card counts them.
+function testTheClearedValuesAreSaid() {
+  const clearing = (cleared: number) => rowsBilan({ ok: true, total: 2, inserted: 0, updated: 2, unchanged: 0, cleared, errors: [], warnings: [] } as any, true, [2, 3]);
+  assert.equal(clearing(3).cleared, 3, 'the card\'s count');
+  assert.equal(rowsApprovalFacts(clearing(3)), 'On approval: 0 records created, 2 updated, 0 unchanged; 3 stored values cleared (cells holding "-").');
+  assert.equal(rowsApprovalFacts(clearing(1)), 'On approval: 0 records created, 2 updated, 0 unchanged; 1 stored value cleared (cells holding "-").');
+  assert.equal(rowsApprovalFacts(clearing(0)), 'On approval: 0 records created, 2 updated, 0 unchanged.');
+  console.log('  the values cleared with `-`, only when there are some: OK');
+}
+
 testThePublishersMatchesAreSaid();
 testTheFirstMatchesThenHowManyMore();
 testACheckWithoutMatchesKeepsItsSentence();
+testTheClearedValuesAreSaid();

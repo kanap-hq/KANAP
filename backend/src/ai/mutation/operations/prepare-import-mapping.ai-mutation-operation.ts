@@ -137,9 +137,9 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say which columns and lines they are on, '
       + 'a column by its title and a row by its line of the file: the card writes each message in the person\'s language, so never write a code '
       + '(`BUDGET_FILE_...`, `CSV_...`), a template column key (`analytics:...`) or a cell. Help the user correct the mapping or the file, and call again. '
-      + 'The imports of master data and technology links replace every value of a record they update: when the check refuses the file '
-      + 'with AI_IMPORT_CLEARS_COLUMNS, rows of the file match existing records and the template columns it lacks would be cleared; '
-      + 'offer to map those columns or to keep only the new records. '
+      + 'On a record the file updates, a blank cell and a column the mapping leaves out keep the stored value; in the imports of master data, '
+      + 'contracts, calendars and technology links, a cell holding `-` clears it (the check counts them, `cleared`, and `on_approval` says it). '
+      + 'Never turn a blank cell or a value into `-`: write `-` (in `values` or as a value for every row) only when the person asks to clear that value. '
       + 'Approving the card runs the import, and its card then shows what was created and updated: until then nothing is imported, '
       + 'so never say it is.',
   };

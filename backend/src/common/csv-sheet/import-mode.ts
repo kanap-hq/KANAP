@@ -7,7 +7,7 @@ import { sameStoredValue } from './unchanged';
  * What a row does to a record it updates, in the master-data imports that have their own
  * `importCsv` (suppliers, contacts, companies, departments, accounts, dimension values).
  *
- * `enrich` is the rule of every import route (D21 of 26.11.9, the budget file's rule): a blank
+ * `enrich` is the rule of every import route and of Kad's imports (D21 of 26.11.9, the budget file's rule): a blank
  * cell keeps the stored value, `-` clears it (`readImportCell`), and `-` on a value that cannot
  * be cleared refuses the row: `CSV_VALUE_CANNOT_BE_CLEARED` for a key, a required value or a
  * status, `CSV_NUMBER_CANNOT_BE_CLEARED` for an amount or a count (write 0). `-` in `disabled_at`
@@ -16,7 +16,7 @@ import { sameStoredValue } from './unchanged';
  * they always apply this rule.
  *
  * `replace` is kept for the internal callers that call a service without a mode, as these
- * imports always did: Kad (until its own pass) and the chart of accounts templates. A blank
+ * imports always did: the chart of accounts templates. A blank
  * cell clears the stored value, or refuses the row when the value cannot be empty, and `-` is
  * read as any other text.
  *

@@ -3,6 +3,7 @@ import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../../common/csv-sh
 import { sheetCellText } from '../../common/csv-sheet/read';
 import type { AiImportMappingPreviewDto } from '../ai.types';
 import { clip, isBlank, TABLE_SUMMARY_MAX_COLUMNS, TableGrid } from '../attachments/table-attachment';
+import { AI_IMPORT_CLEARING_RULE, type AiImportKey } from './ai-import-access';
 import { isImportMatchedColumn } from './ai-import-targets';
 import { AiImportCellResult, AiImportColumnKind, AiImportColumnReadError, AiImportColumnRule, columnReader } from './ai-import-convert';
 
@@ -167,7 +168,7 @@ export function buildImportMapping(
       if (proposed.length > 0) proposals[column.column] = Object.fromEntries(proposed);
       values = Object.fromEntries(Object.entries(values).filter(([, to]) => String(to).trim() === ''));
     }
-    const hints = { dateOrder: entry.date_order, decimalMark: entry.decimal_mark, values };
+    const hints = { dateOrder: entry.date_order, decimalMark: entry.decimal_mark, values, clearMark: AI_IMPORT_CLEARING_RULE.has(request.importKey as AiImportKey) };
     const note = entry.note ? oneLine(entry.note) || null : null;
 
     if (entry.source === undefined || entry.source === null) {

@@ -170,7 +170,7 @@ async function testCreation() {
   });
 }
 
-// Called without a mode (Kad, until its own pass), the service replaces as it always did: a
+// Called without a mode, the service replaces as it always did: a
 // blank owner clears the stored one.
 async function testWithoutModeReplaces() {
   await inRolledBackTransaction(async (runner) => {

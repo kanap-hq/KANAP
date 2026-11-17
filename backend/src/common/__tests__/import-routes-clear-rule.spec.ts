@@ -6,7 +6,7 @@ import { BusinessProcessesController } from '../../business-processes/business-p
 
 // The contracts, cost centers and business processes import routes call their service with the
 // clearing rule of every import route (D21 of 26.11.9, `mode: 'enrich'`), whatever the address
-// says: a service called without a mode replaces, as Kad still calls it.
+// says, as Kad does: a service called without a mode replaces, as the chart of accounts templates call it.
 
 function probe<T extends object>(controller: new (...args: any[]) => T, field: string) {
   const calls: any[] = [];
