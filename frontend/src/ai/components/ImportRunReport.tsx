@@ -147,6 +147,11 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
         {status}
         {counts && <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{' '}{counts}</Box>}
       </Typography>
+      {check && (run.cleared ?? 0) > 0 && (
+        <Typography sx={{ fontSize: 12, color: 'kanap.text.primary' }}>
+          {t('common:csv.valuesWillBeCleared', { count: run.cleared })}
+        </Typography>
+      )}
       {suppliersBox && matching && (
         <Box component="label" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', alignSelf: 'flex-start' }}>
           <Checkbox

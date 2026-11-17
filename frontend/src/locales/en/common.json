@@ -615,6 +615,8 @@
     "unchanged_other": "{{count}} unchanged",
     "skipped_one": "{{count}} skipped",
     "skipped_other": "{{count}} skipped",
+    "valuesWillBeCleared_one": "{{count}} value will be cleared",
+    "valuesWillBeCleared_other": "{{count}} values will be cleared",
     "errors": "Errors ({{count}})",
     "warnings": "Warnings ({{count}})",
     "andMoreErrors2_one": "…and {{count}} more error",

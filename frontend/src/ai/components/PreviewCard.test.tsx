@@ -1116,7 +1116,7 @@ describe('PreviewCard in French', () => {
           report: {
             kind: 'rows',
             errors: [
-              { row: 0, message: 'clears', code: 'AI_IMPORT_CLEARS_COLUMNS', params: { count: 1, columns: 'Notes, Statut' } },
+              { row: 2, column: 'name', message: 'name cannot be cleared.', code: 'CSV_VALUE_CANNOT_BE_CLEARED' },
               { row: 6, column: 'erp_supplier_id', message: 'ERP id too long' },
             ],
             warnings: [{ row: 4, column: 'name', message: 'Matched "SAVENCIA" to "Savencia"' }],
@@ -1127,7 +1127,8 @@ describe('PreviewCard in French', () => {
 
     expect(screen.getByText("Vérification de l'import")).toBeInTheDocument();
     expect(screen.getByText(/^La validation a échoué/)).toBeInTheDocument();
-    expect(screen.getByText(/^1 ligne met à jour une fiche existante, et cet import remplace toutes ses valeurs\s: le fichier n'a pas de colonne pour Notes, Statut/)).toBeInTheDocument();
+    // A coded message in the person's language: `-` on a value that cannot be cleared (D21 of 26.11.9).
+    expect(screen.getByText(/Ligne 2\s: Cette valeur ne peut pas être vidée\./)).toBeInTheDocument();
     // A message on the line of the person's file, its column by the template's title.
     expect(screen.getByText(/Ligne 6\s:/)).toBeInTheDocument();
     expect(screen.getByText('(ID fournisseur ERP)')).toBeInTheDocument();
@@ -1150,6 +1151,17 @@ describe('PreviewCard in French', () => {
     }));
     expect(screen.getByText(/^Validation réussie\. Prêt à importer 3 lignes\./)).toBeInTheDocument();
     expect(screen.getByText('2 à insérer · 1 à mettre à jour')).toBeInTheDocument();
+    expect(screen.queryByText(/seront? effacées?/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approuver' })).toBeEnabled();
+    cleanup();
+
+    // The stored values the rows clear with `-` (D21 of 26.11.9): one line of the check, only when there are some.
+    renderCard(preview({
+      tool_name: 'prepare_import_mapping',
+      target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Fournisseurs · fournisseurs.xlsx' },
+      import_mapping: importMapping({ validation: { ...passed, cleared: 3 } }),
+    }));
+    expect(screen.getByText('3 valeurs seront effacées')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Approuver' })).toBeEnabled();
     cleanup();
 
