@@ -361,7 +361,7 @@ UK-GAAP;5200;Postage and courier;6200;IT Services and Software;
 DE-HGB;4920;Portokosten;6200;IT Services and Software;
 ```
 
-Seul le numéro de compte de consolidation compte lorsque le plan de consolidation le contient : l'import remplace les colonnes de nom et de description par celles du plan de consolidation. Lorsque le numéro n'est pas dans le plan de consolidation, le nom et la description du fichier sont conservés, et le compte est signalé comme absent du plan de consolidation. `-` dans le numéro supprime le rattachement, le nom et la description. Un numéro vide les garde.
+Seul le numéro de compte de consolidation compte lorsque le plan de consolidation le contient : l'import remplace les colonnes de nom et de description par celles du plan de consolidation. Lorsque le numéro n'est pas dans le plan de consolidation, le nom et la description du fichier sont conservés, et le compte est signalé comme absent du plan de consolidation. `-` dans le numéro supprime le rattachement, le nom et la description. Un numéro vide les garde.
 
 **Option 3 : Saisie manuelle**
 Ouvrez un compte et choisissez son **Compte de consolidation** dans l'espace de travail du compte.
@@ -475,8 +475,8 @@ Le fichier global `/accounts` inclut une colonne `coa_code` qui identifie le CoA
   - **Exporter** : les comptes que la liste affiche (ou, sur demande dans la fenêtre, tous les comptes) avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation, statut et **Utilisé pour**
   - **Importer** : **Télécharger le modèle** dans la fenêtre donne un fichier avec les seuls en-têtes. Commencez par la **Vérification préalable** pour valider la structure, l'encodage, les champs obligatoires et les doublons, puis **Charger** pour appliquer les insertions et les mises à jour
   - **Correspondance** : par `(coa_code, account_number)` dans votre espace de travail
-  - **Colonnes obligatoires** : `coa_code` et `account_number`, plus `account_name` pour un nouveau compte. Toutes les lignes d'un fichier doivent porter le même `coa_code`
-  - **Colonnes facultatives** : `native_name`, `description`, les colonnes de consolidation, `status`, `nature`. Un fichier peut les omettre : les comptes qu'il met à jour gardent leurs valeurs enregistrées, et les nouveaux comptes prennent les valeurs par défaut (vide, enabled, **OPEX et CAPEX**). Sur un compte que le fichier met à jour, une cellule vide garde la valeur enregistrée, et `-` l'efface. `-` ne peut pas effacer `coa_code`, `account_number`, `account_name` ni `status` : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
+  - **Colonnes obligatoires** : `coa_code` et `account_number`, plus `account_name` pour un nouveau compte. Toutes les lignes d'un fichier doivent porter le même `coa_code`
+  - **Colonnes facultatives** : `native_name`, `description`, les colonnes de consolidation, `status`, `nature`. Un fichier peut les omettre : les comptes qu'il met à jour gardent leurs valeurs enregistrées, et les nouveaux comptes prennent les valeurs par défaut (vide, enabled, **OPEX et CAPEX**). Sur un compte que le fichier met à jour, une cellule vide garde la valeur enregistrée, et `-` l'efface. `-` ne peut pas effacer `coa_code`, `account_number`, `account_name` ni `status` : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
   - Les doublons du fichier (même coa_code + account_number) sont dédoublonnés ; la première occurrence l'emporte
 
 **Schéma CSV** (l'export écrit le séparateur de la langue de l'écran ; montré ici avec des points-virgules) :
@@ -503,8 +503,8 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Les numéros de compte doivent être uniques au sein d'un CoA
   - `account_number` et `consolidation_account_number` : nombres entiers de 15 chiffres au plus. Un numéro plus long est refusé pour cette ligne. Les zéros en tête sont supprimés (`06156` est enregistré comme `6156`) : la **Vérification préalable** signale ces lignes par un avertissement, et le fichier se charge quand même
   - Valeurs de statut : `enabled` ou `disabled` (enabled par défaut)
-  - `nature` est le réglage **Utilisé pour**, toujours la dernière colonne. Valeurs : `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages inchangés. Une cellule vide garde le réglage d'un compte enregistré, et un nouveau compte est pour **OPEX et CAPEX**. `-` applique **OPEX et CAPEX**. Toute autre valeur est refusée pour cette ligne
-  - Colonnes de consolidation : lorsque `consolidation_account_number` existe dans votre plan de consolidation, son nom et sa description remplacent les cellules `consolidation_account_name` et `consolidation_account_description`. `-` dans le numéro efface les trois, et un numéro vide les garde. Voir [Configurer les correspondances de consolidation](#configurer-les-correspondances-de-consolidation)
+  - `nature` est le réglage **Utilisé pour**, toujours la dernière colonne. Valeurs : `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages inchangés. Une cellule vide garde le réglage d'un compte enregistré, et un nouveau compte est pour **OPEX et CAPEX**. `-` applique **OPEX et CAPEX**. Toute autre valeur est refusée pour cette ligne
+  - Colonnes de consolidation : lorsque `consolidation_account_number` existe dans votre plan de consolidation, son nom et sa description remplacent les cellules `consolidation_account_name` et `consolidation_account_description`. `-` dans le numéro efface les trois, et un numéro vide les garde. Voir [Configurer les correspondances de consolidation](#configurer-les-correspondances-de-consolidation)
 
 ## Conseils
 
