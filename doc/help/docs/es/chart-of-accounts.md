@@ -361,7 +361,7 @@ UK-GAAP;5200;Postage and courier;6200;IT Services and Software;
 DE-HGB;4920;Portokosten;6200;IT Services and Software;
 ```
 
-Solo importa el número de cuenta de consolidación cuando el plan de consolidación lo contiene: la importación sustituye las columnas de nombre y descripción por las del plan de consolidación. Cuando el número no está en el plan de consolidación, se conservan el nombre y la descripción del archivo, y la cuenta se marca como fuera del plan de consolidación. Un número vacío borra la asignación, el nombre y la descripción.
+Solo importa el número de cuenta de consolidación cuando el plan de consolidación lo contiene: la importación sustituye las columnas de nombre y descripción por las del plan de consolidación. Cuando el número no está en el plan de consolidación, se conservan el nombre y la descripción del archivo, y la cuenta se marca como fuera del plan de consolidación. `-` en el número borra la asignación, el nombre y la descripción. Un número vacío los conserva.
 
 **Opción 3: Entrada manual**
 Abra una cuenta y elija su **Cuenta de consolidación** en el espacio de trabajo de la cuenta.
@@ -475,8 +475,8 @@ El archivo global `/accounts` incluye una columna `coa_code` para identificar a 
   - **Exportar**: las cuentas que muestra la lista (o, a petición en el diálogo, todas las cuentas) con sus códigos de CoA, números de cuenta, nombres, nombres locales, descripciones, mapeos de consolidación, estado y **Usada para**
   - **Importar**: **Descargar plantilla** en el diálogo da un archivo solo con los encabezados. Empiece por la **Verificación previa** para validar la estructura, la codificación, los campos obligatorios y los duplicados, y después **Cargar** para aplicar las inserciones y las actualizaciones
   - **Coincidencia**: por `(coa_code, account_number)` dentro de su espacio de trabajo
-  - **Columnas obligatorias**: `coa_code`, `account_number`, `account_name`. Todas las filas de un archivo deben llevar el mismo `coa_code`
-  - **Columnas opcionales**: `native_name`, `description`, las columnas de consolidación, `status`, `nature`. Un archivo puede omitirlas: las cuentas que actualiza conservan sus valores guardados, y las cuentas nuevas toman los valores predeterminados (vacío, enabled, **OPEX y CAPEX**). Una columna presente en el archivo aplica sus celdas, incluidas las vacías
+  - **Columnas obligatorias**: `coa_code` y `account_number`, más `account_name` para una cuenta nueva. Todas las filas de un archivo deben llevar el mismo `coa_code`
+  - **Columnas opcionales**: `native_name`, `description`, las columnas de consolidación, `status`, `nature`. Un archivo puede omitirlas: las cuentas que actualiza conservan sus valores guardados, y las cuentas nuevas toman los valores predeterminados (vacío, enabled, **OPEX y CAPEX**). En una cuenta que el archivo actualiza, una celda vacía conserva el valor guardado, y `-` lo borra. `-` no puede borrar `coa_code`, `account_number`, `account_name` ni `status`: la fila se rechaza. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing)
   - Los duplicados en el archivo (mismo coa_code + account_number) se deduplican; gana la primera ocurrencia
 
 **Esquema CSV** (la exportación escribe el separador del idioma de la pantalla; aquí se muestra con puntos y coma):
@@ -490,7 +490,7 @@ Desde la página de Planes de cuentas, **Importar** y **Exportar** se limitan au
 
   - **Exportar**: cuentas de este CoA (no se necesita columna `coa_code`)
   - **Importar**: las cuentas se insertan o se actualizan en este CoA automáticamente. El título del diálogo nombra el plan, por ejemplo **Importar cuentas en FR-PCG**
-  - Solo `account_number` y `account_name` son obligatorias. Las demás columnas son opcionales, como en el archivo global
+  - Solo `account_number` es obligatoria, más `account_name` para una cuenta nueva. Las demás columnas son opcionales, como en el archivo global
 
 **Esquema CSV** (con alcance de CoA; aquí se muestra con puntos y coma):
 ```
@@ -503,8 +503,8 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Los números de cuenta deben ser únicos dentro de un CoA
   - `account_number` y `consolidation_account_number`: números enteros de 15 dígitos como máximo. Un número más largo se rechaza para esa fila. Se eliminan los ceros a la izquierda (`06156` se guarda como `6156`): la **Verificación previa** muestra esas filas como advertencias, y el archivo se carga igualmente
   - Valores de estado: `enabled` o `disabled` (predeterminado: enabled)
-  - `nature` es el ajuste **Usada para**, siempre la última columna. Valores: `opex`, `capex` o vacío para **OPEX y CAPEX**. Un archivo sin esta columna deja los ajustes sin cambios. Una celda vacía aplica **OPEX y CAPEX**. Cualquier otro valor se rechaza para esa fila
-  - Columnas de consolidación: cuando `consolidation_account_number` existe en su plan de consolidación, su nombre y su descripción sustituyen las celdas `consolidation_account_name` y `consolidation_account_description`. Un número vacío borra las tres. Consulte [Configurar mapeos de consolidación](#configurar-mapeos-de-consolidacion)
+  - `nature` es el ajuste **Usada para**, siempre la última columna. Valores: `opex`, `capex` o vacío para **OPEX y CAPEX**. Un archivo sin esta columna deja los ajustes sin cambios. Una celda vacía conserva el ajuste de una cuenta guardada, y una cuenta nueva es para **OPEX y CAPEX**. `-` aplica **OPEX y CAPEX**. Cualquier otro valor se rechaza para esa fila
+  - Columnas de consolidación: cuando `consolidation_account_number` existe en su plan de consolidación, su nombre y su descripción sustituyen las celdas `consolidation_account_name` y `consolidation_account_description`. `-` en el número borra las tres, y un número vacío las conserva. Consulte [Configurar mapeos de consolidación](#configurar-mapeos-de-consolidacion)
 
 ## Consejos
 

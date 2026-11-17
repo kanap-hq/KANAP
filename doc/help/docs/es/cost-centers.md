@@ -182,11 +182,11 @@ Cargue o actualice todo el árbol desde un archivo.
 | Columna | Contenido |
 |---|---|
 | `code` | Obligatoria. El código del elemento. Las filas se emparejan con los elementos existentes por código, sin distinguir mayúsculas y minúsculas |
-| `kind` | Obligatoria. `group` o `cost_center` |
-| `name` | Obligatoria |
-| `parent_code` | El código del grupo superior, del mismo archivo o ya existente en Kadratis. Vacía para el nivel superior |
+| `kind` | Obligatoria para un elemento nuevo. `group` o `cost_center` |
+| `name` | Obligatoria para un elemento nuevo |
+| `parent_code` | El código del grupo superior, del mismo archivo o ya existente en Kadratis. Una celda vacía conserva el padre de un elemento guardado y coloca un elemento nuevo en el nivel superior. `-` mueve el elemento al nivel superior |
 | `company_name` | Obligatoria para un `cost_center`, vacía para un `group`. Se empareja por nombre de empresa, sin distinguir mayúsculas y minúsculas |
-| `owner_email` | El correo electrónico del responsable del presupuesto, un usuario activo. Vacía para ningún responsable del presupuesto |
+| `owner_email` | El correo electrónico del responsable del presupuesto, un usuario activo. `-` quita el responsable del presupuesto |
 | `description` | Texto libre |
 | `status` | `enabled` o `disabled`. Vacía significa `enabled` para un nodo nuevo y conserva el estado guardado en una actualización |
 | `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado. Vacía si no hay fin. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina el nodo hoy |
@@ -202,7 +202,7 @@ Cargue o actualice todo el árbol desde un archivo.
 
 - **Filas en cualquier orden**: un elemento hijo puede aparecer antes que su grupo superior. Los superiores se resuelven con todo el archivo y con los elementos ya existentes en Kadratis.
 - **Todo el archivo se comprueba antes de escribir nada**: cada fila, después los superiores y después las reglas del árbol (un centro de coste tiene empresa, un grupo no, solo los grupos son superiores, sin bucles, un centro de coste usado por líneas sigue siendo centro de coste). Un archivo con cualquier error no carga nada: corrija las filas y vuelva a ejecutar la verificación previa. Cada error indica su fila con el número de línea del archivo tal como lo muestra un editor de texto, incluidas las líneas vacías y las celdas que ocupan varias líneas.
-- **Emparejamiento por código**: una fila cuyo código existe actualiza ese elemento; cualquier otra fila crea uno. Cada celda sustituye el valor almacenado, de modo que un `owner_email` o una `description` vacíos lo borran.
+- **Emparejamiento por código**: una fila cuyo código existe actualiza ese elemento; cualquier otra fila crea uno. En un elemento guardado, una celda vacía conserva el valor guardado, y `-` borra `company_name`, `owner_email`, `description` o `disabled_at`. Un centro de coste mantiene la regla del árbol, así que `-` en su empresa se rechaza. `-` no puede borrar `code`, `kind`, `name` ni `status`: la fila se rechaza. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing).
 - **Filas sin cambios**: una fila idéntica al elemento almacenado no cambia nada. Exportar e importar el mismo archivo indica todas las filas como sin cambios.
 - **Los elementos que faltan en el archivo** se dejan como están. La importación nunca elimina.
 

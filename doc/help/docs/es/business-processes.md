@@ -125,7 +125,7 @@ El separador sigue el idioma de su pantalla. Consulte [Archivos CSV y Excel](csv
 **Columnas**: `name`, `process_type`, `parent_name`, `description`, `notes`, `status`.
 
 - `process_type`: `management`, `core` o `support`, o vacío.
-- `parent_name`: el nombre del proceso padre, o vacío para el primer nivel.
+- `parent_name`: el nombre del proceso padre. Una celda vacía conserva el padre de un proceso guardado y coloca un proceso nuevo en el primer nivel. `-` mueve el proceso al primer nivel.
 
 ### Importar
 
@@ -140,6 +140,7 @@ Haga clic en **Importar** en la página de la lista, luego:
 - Las filas se emparejan por **Nombre**, sin distinguir mayúsculas y minúsculas. Un nombre coincidente actualiza el proceso existente y conserva la grafía guardada (la verificación previa indica con qué proceso se asoció la fila); un nombre nuevo crea un proceso nuevo.
 - `parent_name` se empareja por nombre, sin distinguir mayúsculas y minúsculas: un proceso del mismo archivo o uno que ya existe en Kadratis. Si existen ambos, prevalece el archivo. Las filas pueden ir en cualquier orden: los padres se crean antes que sus hijos.
 - Un nombre de padre desconocido, un proceso bajo sí mismo o un bucle se rechazan, con el número de fila.
+- En un proceso guardado, una celda vacía conserva el valor guardado, y `-` borra `process_type`, `description` o `notes`. `-` no puede borrar `name` ni `status`: la fila se rechaza. Una columna que falta en el archivo conserva sus valores. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing).
 - El archivo no tiene columna de fin de validez. En una actualización, un `status` vacío, o igual al estado actual del proceso, conserva su fin de validez. Un estado distinto se aplica: `enabled` borra el fin de validez, y `disabled` termina el proceso hoy, salvo que su fin de validez ya haya pasado. Un proceso nuevo está habilitado salvo que la fila indique `disabled`.
 
 **Consejo**: exporte sus datos actuales primero, modifique el archivo y vuelva a importar. Esto evita duplicados accidentales y garantiza que esté trabajando desde el estado más reciente.
