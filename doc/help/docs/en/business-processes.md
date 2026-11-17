@@ -125,7 +125,7 @@ The separator follows the language of your screen. See [CSV and Excel files](csv
 **Columns**: `name`, `process_type`, `parent_name`, `description`, `notes`, `status`.
 
 - `process_type`: `management`, `core` or `support`, or empty.
-- `parent_name`: the name of the parent process, or empty for the top level.
+- `parent_name`: the name of the parent process. An empty cell keeps the parent of a stored process and puts a new process at the top level. `-` moves the process to the top level.
 
 ### Importing
 
@@ -140,6 +140,7 @@ Click **Import** on the list page, then:
 - Rows are matched by **Name**, whatever the case. A matching name updates the existing process and keeps its stored spelling (the preflight check says which process the row matched); a new name creates a new process.
 - `parent_name` is matched by name, whatever the case: a process of the same file or one already in Kadratis. When both exist, the file wins. Rows can come in any order: parents are created before their children.
 - An unknown parent name, a process under itself, or a loop is refused, with the row number.
+- On a stored process, an empty cell keeps the stored value, and `-` clears `process_type`, `description` or `notes`. `-` cannot clear `name` or `status`: the row is refused. A column left out of the file keeps its values. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing).
 - The file has no end of validity column. On an update, a blank `status`, or one equal to the process's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the process today unless its end of validity has already passed. A new process is enabled unless the row says `disabled`.
 
 **Tip**: export your current data first, modify the file, and re-import. This avoids accidental duplicates and ensures you are working from the latest state.

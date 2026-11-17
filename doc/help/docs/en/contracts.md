@@ -332,12 +332,14 @@ Keep your contract list in sync with other tools using CSV files or Excel workbo
 
 - Use **Preflight check** to check the file before applying it
 - **Download an example** in the import dialog gives two sample contracts and what each column takes. See [Example files](csv-files.md#example-files)
-- **Matching by reference**: a filled `reference` (`CTR-12` or `12`) names the contract the row updates, even when its name or its supplier has changed. The contract then takes the name and the supplier of the row. The preflight check lists each contract that will be renamed or move to another supplier
+- **Matching by reference**: a filled `reference` (`CTR-12` or `12`) names the contract the row updates, even when its name or its supplier has changed. The contract then takes the name and the supplier the row gives. The preflight check lists each contract that will be renamed or move to another supplier
 - **Matching by name**: when `reference` is empty, or the file has no such column, a row is matched to a contract by contract name and supplier
 - **Company, supplier and cost center**: found by their names, whatever the case, and the accents too when you can read them. Two records whose names differ only by accents refuse the row. See [Names of records](csv-files.md#names-of-records)
 - **Unknown reference**: a reference your workspace does not know refuses the row: "\"CTR-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
 - **One row per contract**: two rows that update the same contract are refused: "This row updates CTR-4, as row 3 does. Keep one row per record." Two rows that create the same contract (same name and supplier, whatever the case) are refused too: "Same values in name, supplier_name as row 3."
-- `reference` and `cost_center` may be left out of the file. Without `cost_center`, an updated contract keeps its cost center or group
+- A file needs `reference`, or `name` and `supplier_name`. Every other column can be left out: an updated contract keeps its stored values
+- **Empty cells and `-`**: on a contract the file updates, an empty cell keeps the stored value, and `-` clears `cost_center`, `owner_email` or `notes`. `-` cannot clear `reference`, `name`, `company_name`, `supplier_name`, `start_date`, `auto_renewal`, `currency`, `billing_frequency` or `status`. On `yearly_amount_at_signature`, `duration_months` or `notice_period_months`, the message says to write `0`. The row is refused in both cases. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
+- **New contracts**: `company_name` and `start_date` are required. Empty cells take the defaults: a duration of 12 months, a notice of 1 month, an amount of 0, `EUR`, `annual` billing and no renewal. These defaults never apply to a contract the file updates
 - Supports creation and updates
 - The file has no end of validity column. On an update, a blank `status`, or one equal to the contract's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the contract today unless its end of validity has already passed
 - A new contract is enabled unless the row says `disabled`

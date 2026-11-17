@@ -182,11 +182,11 @@ Load or update the whole tree from a file.
 | Column | Content |
 |---|---|
 | `code` | Required. The code of the node. Rows are matched to existing nodes by code, regardless of case |
-| `kind` | Required. `group` or `cost_center` |
-| `name` | Required |
-| `parent_code` | The code of the parent group, from the same file or already in Kadratis. Empty for the top level |
+| `kind` | Required for a new node. `group` or `cost_center` |
+| `name` | Required for a new node |
+| `parent_code` | The code of the parent group, from the same file or already in Kadratis. An empty cell keeps the parent of a stored node and puts a new node at the top level. `-` moves the node to the top level |
 | `company_name` | Required for a `cost_center`, empty for a `group`. Matched by company name, regardless of case |
-| `owner_email` | The email of the budget holder, an active user. Empty for no budget holder |
+| `owner_email` | The email of the budget holder, an active user. `-` removes the budget holder |
 | `description` | Free text |
 | `status` | `enabled` or `disabled`. Empty means `enabled` for a new node and keeps the stored status on an update |
 | `disabled_at` | Optional column. The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity. Empty if there is no end. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the node today |
@@ -202,7 +202,7 @@ Load or update the whole tree from a file.
 
 - **Rows in any order**: a child can come before its parent group. Parents are resolved against the whole file and the nodes already in Kadratis.
 - **The whole file is checked before anything is written**: each row, then the parents, then the rules of the tree (a cost center has a company, a group has none, only groups are parents, no loops, a cost center used by lines stays a cost center). A file with any error loads nothing: fix the rows and run the preflight again. Each error names its row by the line of the file as a text editor shows it, blank lines and cells that span several lines included.
-- **Matching by code**: a row whose code exists updates that node; any other row creates one. Each cell replaces the stored value, so an empty `owner_email` or `description` clears it.
+- **Matching by code**: a row whose code exists updates that node; any other row creates one. On a stored node, an empty cell keeps the stored value, and `-` clears `company_name`, `owner_email`, `description` or `disabled_at`. A cost center keeps the rule of the tree, so `-` in its company is refused. `-` cannot clear `code`, `kind`, `name` or `status`: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing).
 - **Unchanged rows**: a row identical to the stored node changes nothing. Exporting and importing the same file reports every row as unchanged.
 - **Nodes missing from the file** are left as they are. The import never deletes.
 

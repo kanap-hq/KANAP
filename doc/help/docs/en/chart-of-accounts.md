@@ -361,7 +361,7 @@ UK-GAAP;5200;Postage and courier;6200;IT Services and Software;
 DE-HGB;4920;Portokosten;6200;IT Services and Software;
 ```
 
-Only the consolidation account number matters when the consolidation chart holds it: the import replaces the name and description columns with the consolidation chart's own. When the number is not in the consolidation chart, the name and description from the file are kept, and the account is flagged as outside the consolidation chart. An empty number clears the mapping, the name and the description.
+Only the consolidation account number matters when the consolidation chart holds it: the import replaces the name and description columns with the consolidation chart's own. When the number is not in the consolidation chart, the name and description from the file are kept, and the account is flagged as outside the consolidation chart. `-` in the number clears the mapping, the name and the description. An empty number keeps them.
 
 **Option 3: Manual entry**
 Open an account and choose its **Consolidation account** in the account workspace.
@@ -475,8 +475,8 @@ The global `/accounts` file includes a `coa_code` column to identify which CoA e
   - **Export**: the accounts the list shows (or, on request in the dialog, all accounts) with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status and **Used for**
   - **Import**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
   - **Matching**: by `(coa_code, account_number)` within your workspace
-  - **Required columns**: `coa_code`, `account_number`, `account_name`. All rows of one file must carry the same `coa_code`
-  - **Optional columns**: `native_name`, `description`, the consolidation columns, `status`, `nature`. A file can leave them out: the accounts it updates keep their stored values, and new accounts take the defaults (empty, enabled, **OPEX and CAPEX**). A column present in the file applies its cells, empty ones included
+  - **Required columns**: `coa_code` and `account_number`, plus `account_name` for a new account. All rows of one file must carry the same `coa_code`
+  - **Optional columns**: `native_name`, `description`, the consolidation columns, `status`, `nature`. A file can leave them out: the accounts it updates keep their stored values, and new accounts take the defaults (empty, enabled, **OPEX and CAPEX**). On an account the file updates, an empty cell keeps the stored value, and `-` clears it. `-` cannot clear `coa_code`, `account_number`, `account_name` or `status`: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
   - Duplicates in the file (same coa_code + account_number) are deduplicated; first occurrence wins
 
 **CSV schema** (the export writes the separator of the screen language; shown here with semicolons):
@@ -490,7 +490,7 @@ From the Charts of Accounts page, **Import** and **Export** are automatically sc
 
   - **Export**: accounts from this CoA (no `coa_code` column needed)
   - **Import**: accounts are inserted and updated in this CoA automatically. The dialog title names the chart, for example **Import accounts into FR-PCG**
-  - Only `account_number` and `account_name` are required. The other columns are optional, as in the global file
+  - Only `account_number` is required, plus `account_name` for a new account. The other columns are optional, as in the global file
 
 **CSV schema** (CoA-scoped; shown here with semicolons):
 ```
@@ -503,8 +503,8 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Account numbers should be unique within a CoA
   - `account_number` and `consolidation_account_number`: whole numbers of at most 15 digits. A longer number is refused for that row. Leading zeros are dropped (`06156` is stored as `6156`): the **Preflight check** lists these rows as warnings, and the file still loads
   - Status values: `enabled` or `disabled` (defaults to enabled)
-  - `nature` is the **Used for** setting, always the last column. Values: `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings unchanged. An empty cell sets **OPEX and CAPEX**. Any other value is refused for that row
-  - Consolidation columns: when `consolidation_account_number` exists in your consolidation chart, its name and description replace the `consolidation_account_name` and `consolidation_account_description` cells. An empty number clears all three. See [Setting up consolidation mappings](#setting-up-consolidation-mappings)
+  - `nature` is the **Used for** setting, always the last column. Values: `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings unchanged. An empty cell keeps the setting of a stored account, and a new account is for **OPEX and CAPEX**. `-` sets **OPEX and CAPEX**. Any other value is refused for that row
+  - Consolidation columns: when `consolidation_account_number` exists in your consolidation chart, its name and description replace the `consolidation_account_name` and `consolidation_account_description` cells. `-` in the number clears all three, and an empty number keeps them. See [Setting up consolidation mappings](#setting-up-consolidation-mappings)
 
 ## Tips
 

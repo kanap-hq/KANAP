@@ -128,7 +128,7 @@ The file titles the columns in the language of your screen. The table gives thei
 | `reference` | Optional. The supplier reference (`SUP-12`). The export writes it |
 | `name` | Required. The supplier name |
 | `erp_supplier_id` | The supplier's ID in your ERP. The import reads it as an ERP ID, even when it looks like a reference (`SUP-12`) |
-| `commercial_contact` | The email of an existing contact. The load links the supplier to it |
+| `commercial_contact` | The email of an existing contact. The load links the supplier to it, and keeps the links already there. `-` removes every contact of that role from the supplier |
 | `technical_contact` | The email of a contact, as above |
 | `support_contact` | The email of a contact, as above |
 | `notes` | Free text |
@@ -138,11 +138,12 @@ The file titles the columns in the language of your screen. The table gives thei
 **Import**:
 
 - Use **Preflight check** to validate the file before applying it, then **Load**
-- **Matching by reference**: a filled `reference` (`SUP-12` or `12`) names the supplier the row updates, even when the name has changed. The supplier then takes the name of the row, and the preflight check lists each supplier that will be renamed
+- **Matching by reference**: a filled `reference` (`SUP-12` or `12`) names the supplier the row updates, even when the name has changed. The supplier then takes the name the row gives, and the preflight check lists each supplier that will be renamed
 - **Matching by name**: when `reference` is empty, or the file has no such column, rows are matched by `name`, whatever the case: a row updates the supplier it names, any other row creates one. The stored spelling stays: a row `sap` updates `SAP`, and the preflight check says "sap" was matched to "SAP"
 - **Unknown reference**: a reference your workspace does not know refuses the row: "\"SUP-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
 - **Renaming**: a new name that another supplier already has is refused, and the message names that supplier's reference: "\"SAP\" already belongs to SUP-4."
-- `name` is required. Every other cell is optional
+- `name` is required on a new supplier. Every other column is optional. On a supplier the file updates, an empty cell keeps the stored value and `-` clears it: see [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
+- `-` clears `erp_supplier_id`, `notes` and `disabled_at`. It cannot clear `reference`, `name` or `status`: the row is refused
 - Each supplier takes one row. Two rows with the same name, even in a different case, are refused at the preflight check, with both row numbers. Two rows that update the same supplier are refused too: "This row updates SUP-4, as row 3 does. Keep one row per record."
 - A contact email must belong to a contact that already exists in **Contacts**. Otherwise the row is refused at the preflight check: create the contact first
 - `disabled_at` sets the end of validity, and the status follows from it. A status that contradicts the date is refused. A file without the `disabled_at` column still imports: the status alone then sets the lifecycle
