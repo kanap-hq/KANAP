@@ -192,7 +192,7 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 | `description` | Texte libre |
 | `country` | Facultative. Le code pays à deux lettres d'un calendrier standard, par exemple `FR`. Vide pour un calendrier personnalisé |
 | `region` | Facultative. Le code de la région, par exemple `57` pour la Moselle ou `BY` pour la Bavière. Nécessite un pays. Vide pour tout le pays |
-| `status` | `enabled` ou `disabled`. Vide signifie `enabled` |
+| `status` | `enabled` ou `disabled`. Vide signifie `enabled` pour un nouveau calendrier et garde le statut enregistré lors d'une mise à jour |
 | `disabled_at` | Colonne facultative. La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée. Vide s'il n'y a pas de fin |
 | `year` | Quatre chiffres, de 2000 à 2100. Vide sur une ligne qui ne définit que les champs du calendrier |
 | `jan` à `dec` | Les jours ouvrés de chaque mois, avec un point comme séparateur décimal (la virgule est aussi acceptée). Obligatoires sur une ligne qui a une année |
@@ -211,6 +211,7 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 - **Le pays et la région s'appliquent lorsque le fichier crée un calendrier.** Sur un calendrier existant, laissez-les vides ou donnez les valeurs du calendrier. Une valeur différente est refusée.
 - **Les années d'un calendrier standard deviennent des années modifiées.** Les autres années continuent de suivre les jours fériés.
 - **Les mois suivent les règles de l'espace de travail** : les douze mois, chacun au plus le nombre de jours calendaires du mois, avec 6 décimales au plus.
+- **Cellules vides et `-`** : sur un calendrier enregistré, un nom, une description, un statut ou une fin de validité vide garde la valeur enregistrée. `-` efface la description et la fin de validité. `-` ne peut pas effacer le code, le nom, le statut, le pays, la région, l'année ni un mois : la ligne est refusée, et pour un mois le message indique d'écrire `0`. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing).
 - **Les années absentes du fichier sont conservées.** Un import ajoute ou remplace des années. Il n'en retire jamais. Pour retirer une année, utilisez son lien **Retirer** dans l'espace de travail, ou **Revenir aux valeurs standard** sur un calendrier standard.
 - **Décompte** : un nouveau calendrier ou une nouvelle année compte comme une création. Une année modifiée, ou un changement de nom, de description ou de cycle de vie, compte comme une mise à jour. Une ligne identique à ce qui est enregistré compte comme inchangée. Exporter puis importer le même fichier signale toutes les lignes comme inchangées.
 - **Les calendriers absents du fichier** restent tels quels. L'import ne supprime jamais rien.

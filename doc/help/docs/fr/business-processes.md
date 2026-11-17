@@ -125,7 +125,7 @@ Le séparateur suit la langue de votre écran. Voir [Fichiers CSV et Excel](csv-
 **Colonnes** : `name`, `process_type`, `parent_name`, `description`, `notes`, `status`.
 
 - `process_type` : `management`, `core` ou `support`, ou vide.
-- `parent_name` : le nom du processus parent, ou vide pour le premier niveau.
+- `parent_name` : le nom du processus parent. Une cellule vide garde le parent d'un processus enregistré et place un nouveau processus au premier niveau. `-` déplace le processus au premier niveau.
 
 ### Import
 
@@ -140,6 +140,7 @@ Cliquez sur **Importer** sur la page de la liste, puis :
 - Les lignes sont mises en correspondance par **Nom**, quelle que soit la casse. Un nom correspondant met à jour le processus existant et garde le nom enregistré (la vérification préalable indique le processus rapproché) ; un nouveau nom crée un nouveau processus.
 - `parent_name` est mis en correspondance par nom, quelle que soit la casse : un processus du même fichier ou un processus déjà présent dans Kadratis. Quand les deux existent, le fichier l'emporte. Les lignes peuvent venir dans n'importe quel ordre : les parents sont créés avant leurs enfants.
 - Un nom de parent inconnu, un processus placé sous lui-même ou une boucle sont refusés, avec le numéro de la ligne.
+- Sur un processus enregistré, une cellule vide garde la valeur enregistrée, et `-` efface `process_type`, `description` ou `notes`. `-` ne peut pas effacer `name` ni `status` : la ligne est refusée. Une colonne absente du fichier garde ses valeurs. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing).
 - Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du processus, garde sa fin de validité. Un statut différent s'applique : `enabled` efface la fin de validité, et `disabled` termine le processus aujourd'hui, sauf si sa fin de validité est déjà passée. Un nouveau processus est activé, sauf si la ligne indique `disabled`.
 
 **Conseil** : exportez d'abord vos données actuelles, modifiez le fichier et réimportez. Cela évite les doublons accidentels et garantit que vous travaillez à partir de l'état le plus récent.

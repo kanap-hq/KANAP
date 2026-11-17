@@ -118,13 +118,15 @@ Les colonnes, dans cet ordre :
 **Import** :
 
 - Utilisez la **Vérification préalable** pour valider le fichier avant de l'appliquer, puis **Charger**
-- **Correspondance par référence** : une `reference` remplie (`DEPT-12` ou `12`) désigne le département que la ligne met à jour, même si son nom a changé. Le département prend le nom et la société de la ligne : une autre société l'y déplace. La vérification préalable signale chaque département qui sera renommé ou changera de société
+- **Correspondance par référence** : une `reference` remplie (`DEPT-12` ou `12`) désigne le département que la ligne met à jour, même si son nom a changé. Le département prend le nom et la société que donne la ligne : une autre société l'y déplace. La vérification préalable signale chaque département qui sera renommé ou changera de société
 - **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, une ligne est rapprochée par nom de département et nom de société. Elle met à jour le département qu'elle nomme, et toute autre ligne en crée un
 - **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « DEPT-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
 - **Renommage ou déplacement** : un nom qu'un autre département de la société de la ligne porte déjà est refusé, et le message donne la référence de ce département : « « Finance » appartient déjà à DEPT-7. »
 - **Une ligne par département** : deux lignes qui mettent à jour le même département sont refusées : « Cette ligne met à jour DEPT-7, comme la ligne 3. Gardez une seule ligne par fiche. » Deux lignes qui créent le même département (même société et même nom, quelle que soit la casse) sont refusées aussi : « Mêmes valeurs dans company_name, name qu'à la ligne 3. »
 
-**Cellules obligatoires** : `name` et `company_name`, une société existante
+**Cellules obligatoires** : `name` et `company_name`, une société existante. Une ligne avec une `reference` peut les laisser vides : le département garde son nom et sa société
+
+**Cellules vides et `-`** : sur un département que le fichier met à jour, une cellule vide garde la valeur enregistrée, et `-` efface `description` ou `disabled_at`. `-` ne peut pas effacer `reference`, `company_name`, `name` ni `status` : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
 
 **Cellules facultatives** : `reference`, `description`, `status`, `disabled_at`
 

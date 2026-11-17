@@ -226,26 +226,26 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 | `status` | `enabled` ou `disabled` |
 | `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée |
 | `notes` | Texte libre |
-| `headcount_<année>` | Un nombre entier. Obligatoire lorsque la ligne porte une métrique pour cette année |
+| `headcount_<année>` | Un nombre entier. Obligatoire lorsque la ligne donne une métrique pour une année où la société n'a pas encore de métriques |
 | `it_users_<année>` | Un nombre entier |
 | `turnover_<année>` | Jusqu'à 3 décimales, en millions de la devise de base de la société |
 
 **Import** :
 
 - Commencez par la **Vérification préalable**. Elle valide les en-têtes, l'encodage, les champs obligatoires, les doublons et les métriques. Si la vérification est propre, **Charger** applique les insertions et les mises à jour. Le dialogue compte ensuite les sociétés créées, mises à jour et inchangées, par exemple « 2 créées, 5 mises à jour, 30 inchangées »
-- **Correspondance par référence** : une `reference` remplie (`COMP-12` ou `12`) désigne la société que la ligne met à jour, même si son nom a changé. La société prend alors le nom de la ligne, et la vérification préalable signale chaque société qui sera renommée
+- **Correspondance par référence** : une `reference` remplie (`COMP-12` ou `12`) désigne la société que la ligne met à jour, même si son nom a changé. La société prend alors le nom que donne la ligne, et la vérification préalable signale chaque société qui sera renommée
 - **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, la ligne est rapprochée par le `name` de la société, quelle que soit la casse. Le nom enregistré ne change pas : une ligne `ACME` met à jour `Acme`, et la vérification préalable indique « ACME » a été rapproché de « Acme ». Toutes les lignes d'un fichier sans colonne `reference` sont rapprochées ainsi
 - **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « COMP-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
 - **Renommage** : un nouveau nom qu'une autre société porte déjà est refusé, et le message donne la référence de cette société : « « Acme » appartient déjà à COMP-4. »
 - **Une ligne par société** : deux lignes qui mettent à jour la même société sont refusées : « Cette ligne met à jour COMP-4, comme la ligne 3. Gardez une seule ligne par fiche. »
 - Un nom présent deux fois dans le fichier, quelle que soit la casse, est refusé dès la vérification : « « Acme » figure déjà à la ligne 4. Gardez une seule ligne par société. »
-- **Champs obligatoires** : `name`, `country_iso`, `city` et `base_currency`. Une ville vide est refusée dès la vérification, pour une nouvelle société comme pour une mise à jour
+- **Champs obligatoires** : `name`, `country_iso`, `city` et `base_currency`, pour une nouvelle société. Sur une société que le fichier met à jour, une cellule vide garde la valeur enregistrée
+- **Cellules vides et `-`** : une cellule vide garde la valeur enregistrée, et `-` l'efface : les lignes d'adresse, `postal_code`, `state`, `reg_number`, `vat_number`, `notes`, `disabled_at` et les `it_users` d'une année. `-` ne peut pas effacer `reference`, `name`, `country_iso`, `city`, `base_currency` ni `status`. Sur le `headcount` ou le `turnover` d'une année, le message indique d'écrire `0`. La ligne est refusée dans les deux cas. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
 - **Statut et fin de validité** : l'export écrit le statut déduit de la fin de validité. Une nouvelle société est activée sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la société aujourd'hui
 - Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »
 - **Années lues** : le dialogue nomme les années qu'il lit, par exemple « Métriques lues : 2025, 2026, 2027, d'après l'année de la liste. Chaque année est facultative. »
-- **Chaque année est facultative** : une année est un bloc de trois colonnes, `headcount_<année>`, `it_users_<année>` et `turnover_<année>`. Si vous omettez tout le bloc, les métriques enregistrées de cette année restent telles quelles. Une colonne d'une année hors des trois années lues est ignorée, et la vérification la liste avec les colonnes ignorées
-- **Une année vient entière** : un fichier qui porte une ou deux colonnes d'une année sans les autres est refusé sur la ligne **En-tête**, qui nomme les colonnes manquantes
-- **Métriques** : si une ligne porte une métrique pour une année, `headcount_<année>` est obligatoire pour cette année. `it_users_<année>` et `turnover_<année>` peuvent rester vides
+- **Chaque année est facultative** : une année a trois colonnes, `headcount_<année>`, `it_users_<année>` et `turnover_<année>`. Chacune peut être omise, et la valeur enregistrée d'une colonne omise reste telle quelle. Une colonne d'une année hors des trois années lues est ignorée, et la vérification la liste avec les colonnes ignorées
+- **Métriques** : une ligne qui donne une métrique pour une année où la société n'a pas de métriques exige `headcount_<année>` pour cette année. `it_users_<année>` et `turnover_<année>` peuvent rester vides. Une ligne qui n'a que des `-` pour une année ne crée aucune métrique
 - **Années gelées** : une ligne qui porte des métriques pour une année dont les métriques des sociétés sont gelées est refusée dès la vérification : « Les indicateurs pour 2025 sont gelés. Un administrateur budgétaire peut les dégeler. » Omettez les colonnes de cette année, ou dégelez d'abord l'année (voir [Geler les données de référence](master-data-operations.md))
 
 **Notes** :

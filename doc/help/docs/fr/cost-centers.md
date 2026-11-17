@@ -182,11 +182,11 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 | Colonne | Contenu |
 |---|---|
 | `code` | Obligatoire. Le code de l'élément. Les lignes sont rapprochées des éléments existants par code, sans tenir compte de la casse |
-| `kind` | Obligatoire. `group` ou `cost_center` |
-| `name` | Obligatoire |
-| `parent_code` | Le code du groupe parent, présent dans le même fichier ou déjà dans Kadratis. Vide pour le premier niveau |
+| `kind` | Obligatoire pour un nouvel élément. `group` ou `cost_center` |
+| `name` | Obligatoire pour un nouvel élément |
+| `parent_code` | Le code du groupe parent, présent dans le même fichier ou déjà dans Kadratis. Une cellule vide garde le parent d'un élément enregistré et place un nouvel élément au premier niveau. `-` déplace l'élément au premier niveau |
 | `company_name` | Obligatoire pour un `cost_center`, vide pour un `group`. Rapproché par nom de société, sans tenir compte de la casse |
-| `owner_email` | L'e-mail du responsable budgétaire, un utilisateur actif. Vide pour aucun responsable budgétaire |
+| `owner_email` | L'e-mail du responsable budgétaire, un utilisateur actif. `-` retire le responsable budgétaire |
 | `description` | Texte libre |
 | `status` | `enabled` ou `disabled`. Vide signifie `enabled` pour un nouveau nœud et conserve le statut enregistré lors d'une mise à jour |
 | `disabled_at` | Colonne facultative. La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée. Vide s'il n'y a pas de fin. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le nœud aujourd'hui |
@@ -202,7 +202,7 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 
 - **Lignes dans n'importe quel ordre** : un enfant peut précéder son groupe parent. Les parents sont résolus sur l'ensemble du fichier et sur les éléments déjà présents dans Kadratis.
 - **Le fichier entier est vérifié avant toute écriture** : chaque ligne, puis les parents, puis les règles de l'arbre (un centre de coûts a une société, un groupe n'en a pas, seuls les groupes sont parents, pas de boucle, un centre de coûts utilisé par des lignes reste un centre de coûts). Un fichier comportant une erreur ne charge rien : corrigez les lignes et relancez la vérification préalable. Chaque erreur désigne sa ligne par le numéro de ligne du fichier tel qu'un éditeur de texte l'affiche, lignes vides et cellules sur plusieurs lignes comprises.
-- **Rapprochement par code** : une ligne dont le code existe met à jour cet élément ; toute autre ligne en crée un. Chaque cellule remplace la valeur enregistrée : un `owner_email` ou une `description` vide l'efface.
+- **Rapprochement par code** : une ligne dont le code existe met à jour cet élément ; toute autre ligne en crée un. Sur un élément enregistré, une cellule vide garde la valeur enregistrée, et `-` efface `company_name`, `owner_email`, `description` ou `disabled_at`. Un centre de coûts garde la règle de l'arborescence : `-` dans sa société est donc refusé. `-` ne peut pas effacer `code`, `kind`, `name` ni `status` : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing).
 - **Lignes inchangées** : une ligne identique à l'élément enregistré ne change rien. Exporter puis importer le même fichier signale toutes les lignes comme inchangées.
 - **Les éléments absents du fichier** restent tels quels. L'import ne supprime jamais rien.
 
