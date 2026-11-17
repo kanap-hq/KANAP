@@ -124,7 +124,7 @@ export const STATUS_DISABLED_DATE_CLEARED = 'CSV_STATUS_DISABLED_DATE_CLEARED';
 export function lifecycleConflictError(line: number, status: string | null, conflict: string | null, clears: boolean): ImportReportError | null {
   if (!conflict) return null;
   if (clears) {
-    return rowError(line, 'status', STATUS_DISABLED_DATE_CLEARED, 'Status is disabled, but "-" clears the end of validity. Keep one or the other.');
+    return rowError(line, 'status', STATUS_DISABLED_DATE_CLEARED, 'The status is "Disabled", but "-" clears the end of validity. Keep one or the other.');
   }
   return rowError(line, 'status', status === 'enabled' ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', conflict);
 }
