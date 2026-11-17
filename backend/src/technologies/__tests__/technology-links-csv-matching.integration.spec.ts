@@ -43,10 +43,11 @@ async function storedVersions(runner: QueryRunner, tenantId: string): Promise<st
        JOIN assets a ON a.id = at.asset_id
        JOIN technologies t ON t.id = at.technology_id
        LEFT JOIN technology_versions v ON v.id = at.technology_version_id
-      WHERE at.tenant_id = $1 ORDER BY 1`,
+      WHERE at.tenant_id = $1`,
     [tenantId],
   );
-  return rows.map((row) => row.pair);
+  // Sorted here: the database's order depends on the server's collation (CI and dev differ).
+  return rows.map((row) => row.pair).sort();
 }
 
 async function testServerLinks() {
@@ -151,8 +152,8 @@ async function testSameNameTwice() {
     await application(runner, tenantId, 'Appli É');
     await technology(runner, tenantId, 1, 'Nginx');
     const refs = async (table: string, column: string) => (await runner.query(
-      `SELECT ${column} AS ref FROM ${table} WHERE tenant_id = $1 ORDER BY ${column}`, [tenantId],
-    )).map((row: { ref: string }) => row.ref).join(', ');
+      `SELECT ${column} AS ref FROM ${table} WHERE tenant_id = $1`, [tenantId],
+    )).map((row: { ref: string }) => row.ref).sort().join(', ');
     const servers = await refs('assets', 'asset_reference');
     const run = async (row: string, extra: Record<string, unknown> = {}) => {
       const result = await csv.importAssetLinks({ file: csvFile([ASSETS, row]), dryRun: false, language: 'en', access: ADMIN, ...extra }, ctx);
