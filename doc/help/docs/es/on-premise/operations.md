@@ -347,7 +347,7 @@ La lista muestra el tamaño y el nombre de los tres objetos. Cada objeto muestra
 
 - Volumen: cada noche sube todos los archivos del almacenamiento. El bucket guarda una copia completa por cada día de retención. Durante la noche, el servidor necesita espacio libre para el doble del tamaño de los archivos, y la duración de la subida crece con ese tamaño.
 - El script guarda una copia de los archivos en `/var/lib/kadratis-backup/files`, sin cifrar, como la copia de archivos de la copia local. Crea `/var/lib/kadratis-backup` en modo 700 y rechaza un directorio de trabajo que sea un enlace, pertenezca a otra cuenta o puedan escribir otros usuarios.
-- Si el bucket del almacenamiento está vacío y la copia local no, la noche falla sin borrar nada: el registro indica `the attachments bucket ... is empty, but the local copy ... holds N files`.
+- La copia local sigue al bucket del almacenamiento, hasta no contener ningún archivo: un bucket vaciado a propósito da una noche con `attachments: 0 files`. Un bucket que no se puede leer (nombre, claves o dirección erróneos) detiene la noche en el paso `attachments` sin borrar nada de la copia local.
 - Una subida rechazada por el bucket detiene la noche en el paso `upload`. Con `rclone` anterior a 1.61 y una política que niega las escrituras de ACL, el registro indica `ERROR : database.dump.age: Failed to copy: AccessDenied: Access Denied.` (vea «Prepare el bucket» en [Copia de seguridad nocturna cifrada en un bucket S3](#copia-de-seguridad-nocturna-cifrada-en-un-bucket-s3)).
 - Una noche fallida termina con el código de salida 1, la línea `backup FAILED during step '...'` en el registro, `failed` en `systemctl status kadratis-backup.service` y ninguna llamada a `BACKUP_SUCCESS_URL`.
 

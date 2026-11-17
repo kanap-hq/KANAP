@@ -294,14 +294,9 @@ main() {
   t=$SECONDS
   local mirror="$BACKUP_WORK_DIR/files"
   if [[ ! -d $mirror ]]; then mkdir -m 700 -- "$mirror"; fi
-  # An empty bucket would empty the local copy at the sync: refuse it once the copy holds files
-  # (a new installation, with no copy yet, has no attachments either).
-  local source_files
-  source_files=$(rclone_source lsf --recursive --files-only "source:$ATTACHMENTS_S3_BUCKET" | wc -l)
-  if (( source_files == 0 )) && [[ -n $(find "$mirror" -type f -print -quit) ]]; then
-    die "the attachments bucket $ATTACHMENTS_S3_BUCKET is empty, but the local copy $mirror holds $(find "$mirror" -type f | wc -l) files: check the ATTACHMENTS_S3_* settings; if the bucket was emptied on purpose, delete $mirror and run again"
-  fi
-  # Reads the attachments bucket only; the local copy follows the bucket from one night to the next.
+  # Reads the attachments bucket only; the local copy follows the bucket from one night to the next,
+  # down to no file at all when the bucket is empty. A bucket that cannot be read (wrong name, keys
+  # or address) fails the sync, and rclone then deletes nothing from the local copy.
   rclone_source sync "source:$ATTACHMENTS_S3_BUCKET" "$mirror"
   tar -C "$mirror" -cf - . 9>&- | age -e "${RECIPIENT_ARGS[@]}" -o "$OUT/attachments.tar.age" 9>&-
   log "attachments: $(find "$mirror" -type f | wc -l) files, $(du -sh --apparent-size -- "$mirror" | cut -f1)B copied, $(size_of "$OUT/attachments.tar.age") encrypted in $((SECONDS - t)) s"

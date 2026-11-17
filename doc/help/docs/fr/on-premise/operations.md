@@ -347,7 +347,7 @@ La liste montre la taille et le nom des trois objets. Chaque objet affiche `x-am
 
 - Volume : chaque nuit envoie tous les fichiers du stockage. Le bucket garde une copie complète par jour de conservation. Pendant la nuit, le serveur a besoin d'un espace libre de deux fois la taille des fichiers, et la durée de l'envoi croît avec cette taille.
 - Le script garde une copie des fichiers dans `/var/lib/kadratis-backup/files`, en clair, comme la copie des fichiers de la sauvegarde locale. Il crée `/var/lib/kadratis-backup` en mode 700 et refuse un répertoire de travail qui est un lien, appartient à un autre compte ou est inscriptible par d'autres utilisateurs.
-- Quand le bucket du stockage est vide alors que la copie locale ne l'est pas, la nuit échoue sans rien effacer : le journal indique `the attachments bucket ... is empty, but the local copy ... holds N files`.
+- La copie locale suit le bucket du stockage, jusqu'à ne plus contenir aucun fichier : un bucket vidé volontairement donne une nuit avec `attachments: 0 files`. Un bucket illisible (nom, clés ou adresse erronés) arrête la nuit à l'étape `attachments` sans rien effacer de la copie locale.
 - Un envoi refusé par le bucket arrête la nuit à l'étape `upload`. Avec `rclone` avant 1.61 et une politique qui refuse les écritures d'ACL, le journal indique `ERROR : database.dump.age: Failed to copy: AccessDenied: Access Denied.` (voir « Préparez le bucket » dans [Sauvegarde nocturne chiffrée vers un bucket S3](#sauvegarde-nocturne-chiffree-vers-un-bucket-s3)).
 - Une nuit en échec se termine par le code de sortie 1, la ligne `backup FAILED during step '...'` dans le journal, `failed` dans `systemctl status kadratis-backup.service`, et aucun appel à `BACKUP_SUCCESS_URL`.
 
