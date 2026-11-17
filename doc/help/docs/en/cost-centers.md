@@ -213,8 +213,8 @@ Load or update the whole tree from a file.
 - **"Unknown budget holder email '...'."** or **"Budget holder '...' is not an active user."**: the `owner_email` cell names the budget holder. Use the email of an active user, or leave the cell empty.
 - **"Code ... is already used on row N."**: two rows carry the same code. Keep one.
 - **"Type must be 'group' or 'cost_center'."**: fix the `kind` cell.
-- **"Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again."**: the row is enabled with a date that has passed. A file exported before the date passed still says `enabled`: export it again, or fix the cell.
-- **"Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."**: the row is disabled with a date still to come. Fix the `status` or the `disabled_at` cell.
+- **"The status is "Enabled", but the end of validity has passed. Write "-" in the end of validity, or "disabled" in the status. If the file comes from an older export, export the data again."**: the row is enabled with a date that has passed. A file exported before the date passed still says `enabled`: export it again, or fix the cell.
+- **"The status is "Disabled", but the end of validity is still to come. Write "enabled" in the status, or a date that has passed in the end of validity."**: the row is disabled with a date still to come. Fix the `status` or the `disabled_at` cell.
 - **"Header: Missing columns: ..."** or **"Header: Unknown columns: ..."**: download a fresh template.
 
 ---

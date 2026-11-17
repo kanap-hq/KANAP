@@ -213,8 +213,8 @@ Cargue o actualice todo el árbol desde un archivo.
 - **"Unknown budget holder email '...'."** o **"Budget holder '...' is not an active user."**: la celda `owner_email` designa al responsable del presupuesto. Use el correo electrónico de un usuario activo o deje la celda vacía.
 - **"Code ... is already used on row N."**: dos filas llevan el mismo código. Conserve una.
 - **"Type must be 'group' or 'cost_center'."**: corrija la celda `kind`.
-- **"Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again."**: la fila está activada con una fecha ya pasada. Un archivo exportado antes de esa fecha todavía indica `enabled`: vuelva a exportar o corrija la celda.
-- **"Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."**: la fila está desactivada con una fecha aún por llegar. Corrija la celda `status` o `disabled_at`.
+- **"El estado es «Activado», pero el fin de validez ya pasó. Escriba «-» en el fin de validez o «disabled» en el estado. Si el archivo viene de una exportación anterior, exporte los datos de nuevo."**: la fila está activada con una fecha ya pasada. Un archivo exportado antes de esa fecha todavía indica `enabled`: vuelva a exportar o corrija la celda.
+- **"El estado es «Desactivado», pero el fin de validez aún no ha llegado. Escriba «enabled» en el estado o una fecha pasada en el fin de validez."**: la fila está desactivada con una fecha aún por llegar. Corrija la celda `status` o `disabled_at`.
 - **"Encabezado: Columnas que faltan: ..."** o **"Encabezado: Columnas desconocidas: ..."**: descargue una plantilla nueva.
 
 ---

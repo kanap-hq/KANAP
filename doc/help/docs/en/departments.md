@@ -132,7 +132,7 @@ The columns, in this order:
 
 **Lifecycle columns**:
 - `status` is `enabled` or `disabled`, and `disabled_at` is the end of validity, a date (`2026-12-31`) or a full date and time. The export writes the status read from the end of validity. A new department is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the department today
-- A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
+- A row whose status contradicts its date is refused with a row error: "The status is "Enabled", but the end of validity has passed. Write "-" in the end of validity, or "disabled" in the status. If the file comes from an older export, export the data again." or "The status is "Disabled", but the end of validity is still to come. Write "enabled" in the status, or a date that has passed in the end of validity."
 
 **Notes**:
 - See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date forms and the two import steps

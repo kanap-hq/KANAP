@@ -132,7 +132,7 @@ Die Spalten in dieser Reihenfolge:
 
 **Lebenszyklusspalten**:
 - `status` ist `enabled` oder `disabled`, und `disabled_at` ist das Ende der Gültigkeit, ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Eine neue Abteilung ist aktiviert, außer die Zeile sagt `disabled`. Bei einer Aktualisierung behalten ein leeres `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum, andernfalls beendet es die Abteilung heute
-- Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“
+- Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Der Status ist „Aktiviert“, aber das Gültigkeitsende ist überschritten. Schreiben Sie „-“ in das Gültigkeitsende oder „disabled“ in den Status. Stammt die Datei aus einem älteren Export, exportieren Sie die Daten erneut.“ oder „Der Status ist „Deaktiviert“, aber das Gültigkeitsende liegt noch in der Zukunft. Schreiben Sie „enabled“ in den Status oder ein vergangenes Datum in das Gültigkeitsende.“
 
 **Hinweise**:
 - Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte

@@ -132,7 +132,7 @@ Les colonnes, dans cet ordre :
 
 **Colonnes de cycle de vie** :
 - `status` vaut `enabled` ou `disabled`, et `disabled_at` est la fin de validité, une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit le statut déduit de la fin de validité. Un nouveau département est activé sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le département aujourd'hui
-- Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »
+- Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Le statut est « Activé », mais la fin de validité est passée. Écrivez « - » dans la fin de validité, ou « disabled » dans le statut. Si le fichier vient d'un ancien export, exportez à nouveau les données. » ou « Le statut est « Désactivé », mais la fin de validité est encore à venir. Écrivez « enabled » dans le statut, ou une date passée dans la fin de validité. »
 
 **Notes** :
 - Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import

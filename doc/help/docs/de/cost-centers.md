@@ -213,8 +213,8 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 - **„Unknown budget holder email '...'.“** oder **„Budget holder '...' is not an active user.“**: Die Zelle `owner_email` benennt den Budgetverantwortlichen. Verwenden Sie die E-Mail-Adresse eines aktiven Benutzers oder lassen Sie die Zelle leer.
 - **„Code ... is already used on row N.“**: Zwei Zeilen tragen denselben Code. Behalten Sie eine.
 - **„Type must be 'group' or 'cost_center'.“**: Korrigieren Sie die Zelle `kind`.
-- **„Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“**: Die Zeile ist aktiviert, aber ihr Datum ist bereits vorbei. Eine vor diesem Datum exportierte Datei enthält noch `enabled`: Exportieren Sie erneut oder korrigieren Sie die Zelle.
-- **„Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“**: Die Zeile ist deaktiviert, aber ihr Datum liegt noch in der Zukunft. Korrigieren Sie die Zelle `status` oder `disabled_at`.
+- **„Der Status ist „Aktiviert“, aber das Gültigkeitsende ist überschritten. Schreiben Sie „-“ in das Gültigkeitsende oder „disabled“ in den Status. Stammt die Datei aus einem älteren Export, exportieren Sie die Daten erneut.“**: Die Zeile ist aktiviert, aber ihr Datum ist bereits vorbei. Eine vor diesem Datum exportierte Datei enthält noch `enabled`: Exportieren Sie erneut oder korrigieren Sie die Zelle.
+- **„Der Status ist „Deaktiviert“, aber das Gültigkeitsende liegt noch in der Zukunft. Schreiben Sie „enabled“ in den Status oder ein vergangenes Datum in das Gültigkeitsende.“**: Die Zeile ist deaktiviert, aber ihr Datum liegt noch in der Zukunft. Korrigieren Sie die Zelle `status` oder `disabled_at`.
 - **„Kopfzeile: Fehlende Spalten: ...“** oder **„Kopfzeile: Unbekannte Spalten: ...“**: Laden Sie eine neue Vorlage herunter.
 
 ---

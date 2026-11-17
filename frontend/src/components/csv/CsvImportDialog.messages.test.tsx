@@ -159,8 +159,8 @@ describe('CsvImportDialog messages', () => {
       { row: 2, column: 'status', message: 'Status is enabled but the end of validity has passed.', code: 'CSV_STATUS_DATE_PASSED' },
       { row: 3, column: 'status', message: 'Status is disabled but the end of validity is still to come.', code: 'CSV_STATUS_DATE_FUTURE' },
     ]);
-    expect(await screen.findByText(/^Ligne 2, status : Le statut est enabled mais la fin de validité est passée\./)).toBeInTheDocument();
-    expect(screen.getByText(/^Ligne 3, status : Le statut est disabled mais la fin de validité est encore à venir\./)).toBeInTheDocument();
+    expect(await screen.findByText(/^Ligne 2, status : Le statut est « Activé », mais la fin de validité est passée\. Écrivez « - » dans la fin de validité, ou « disabled » dans le statut\./)).toBeInTheDocument();
+    expect(screen.getByText(/^Ligne 3, status : Le statut est « Désactivé », mais la fin de validité est encore à venir\. Écrivez « enabled » dans le statut/)).toBeInTheDocument();
   });
 
   it('names an unknown column once when the header is refused for it', async () => {

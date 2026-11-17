@@ -423,8 +423,8 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 - **"Invalid status '...'. Use 'enabled' or 'disabled'."**: fix the `status` cell.
 - **"Invalid applies_to '...'. Use 'opex', 'capex' or leave it empty."**: fix the `applies_to` cell.
 - **"The ... dimension is for OPEX lines only."** (or CAPEX): the row limits a value to the kind of line its dimension excludes. Fix the `applies_to` cell, or change the dimension's **Used for**.
-- **"Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again."**: the row is enabled with a date that has passed. A file exported before the date passed still says `enabled`: export it again, or fix the cell.
-- **"Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."**: the row is disabled with a date still to come. Fix the `status` or the `disabled_at` cell.
+- **"The status is "Enabled", but the end of validity has passed. Write "-" in the end of validity, or "disabled" in the status. If the file comes from an older export, export the data again."**: the row is enabled with a date that has passed. A file exported before the date passed still says `enabled`: export it again, or fix the cell.
+- **"The status is "Disabled", but the end of validity is still to come. Write "enabled" in the status, or a date that has passed in the end of validity."**: the row is disabled with a date still to come. Fix the `status` or the `disabled_at` cell.
 - **"Header: Missing columns: ..."** or **"Header: Unknown columns: ..."**: download a fresh template.
 
 ---

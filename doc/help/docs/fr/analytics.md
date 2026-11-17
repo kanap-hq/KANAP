@@ -423,8 +423,8 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 - **« Invalid status '...'. Use 'enabled' or 'disabled'. »** : corrigez la cellule `status`.
 - **« Invalid applies_to '...'. Use 'opex', 'capex' or leave it empty. »** : corrigez la cellule `applies_to`.
 - **« The ... dimension is for OPEX lines only. »** (ou CAPEX) : la ligne réserve une valeur au type de ligne que sa dimension exclut. Corrigez la cellule `applies_to`, ou changez le réglage **Utilisé pour** de la dimension.
-- **« Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. »** : la ligne est activée avec une date déjà passée. Un fichier exporté avant cette date indique encore `enabled` : exportez à nouveau, ou corrigez la cellule.
-- **« Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »** : la ligne est désactivée avec une date encore à venir. Corrigez la cellule `status` ou `disabled_at`.
+- **« Le statut est « Activé », mais la fin de validité est passée. Écrivez « - » dans la fin de validité, ou « disabled » dans le statut. Si le fichier vient d'un ancien export, exportez à nouveau les données. »** : la ligne est activée avec une date déjà passée. Un fichier exporté avant cette date indique encore `enabled` : exportez à nouveau, ou corrigez la cellule.
+- **« Le statut est « Désactivé », mais la fin de validité est encore à venir. Écrivez « enabled » dans le statut, ou une date passée dans la fin de validité. »** : la ligne est désactivée avec une date encore à venir. Corrigez la cellule `status` ou `disabled_at`.
 - **« En-tête : Colonnes manquantes : ... »** ou **« En-tête : Colonnes inconnues : ... »** : téléchargez un nouveau modèle.
 
 ---

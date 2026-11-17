@@ -378,8 +378,9 @@ export function csvLifecycleConflict(status: StatusState | null, disabledAt: Dat
   if (status === StatusState.DISABLED && day(new Date(disabledAt)) === day(now)) return null;
   return status === StatusState.ENABLED
     // An older export may carry a status written before the date passed: say how to get a fresh one.
-    ? 'Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.'
-    : 'Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.';
+    // The status as the screen names it; the values to write as the file takes them (`-` clears the date).
+    ? 'The status is "Enabled", but the end of validity has passed. Write "-" in the end of validity, or "disabled" in the status. If the file comes from an older export, export the data again.'
+    : 'The status is "Disabled", but the end of validity is still to come. Write "enabled" in the status, or a date that has passed in the end of validity.';
 }
 
 /**

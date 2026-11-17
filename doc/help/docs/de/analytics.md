@@ -423,8 +423,8 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 - **„Invalid status '...'. Use 'enabled' or 'disabled'.“**: Korrigieren Sie die Zelle `status`.
 - **„Invalid applies_to '...'. Use 'opex', 'capex' or leave it empty.“**: Korrigieren Sie die Zelle `applies_to`.
 - **„The ... dimension is for OPEX lines only.“** (oder CAPEX): Die Zeile beschränkt einen Wert auf die Zeilenart, die seine Dimension ausschließt. Korrigieren Sie die Zelle `applies_to` oder ändern Sie **Verwendet für** der Dimension.
-- **„Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“**: Die Zeile ist aktiviert, aber ihr Datum ist bereits vorbei. Eine vor diesem Datum exportierte Datei enthält noch `enabled`: Exportieren Sie erneut oder korrigieren Sie die Zelle.
-- **„Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“**: Die Zeile ist deaktiviert, aber ihr Datum liegt noch in der Zukunft. Korrigieren Sie die Zelle `status` oder `disabled_at`.
+- **„Der Status ist „Aktiviert“, aber das Gültigkeitsende ist überschritten. Schreiben Sie „-“ in das Gültigkeitsende oder „disabled“ in den Status. Stammt die Datei aus einem älteren Export, exportieren Sie die Daten erneut.“**: Die Zeile ist aktiviert, aber ihr Datum ist bereits vorbei. Eine vor diesem Datum exportierte Datei enthält noch `enabled`: Exportieren Sie erneut oder korrigieren Sie die Zelle.
+- **„Der Status ist „Deaktiviert“, aber das Gültigkeitsende liegt noch in der Zukunft. Schreiben Sie „enabled“ in den Status oder ein vergangenes Datum in das Gültigkeitsende.“**: Die Zeile ist deaktiviert, aber ihr Datum liegt noch in der Zukunft. Korrigieren Sie die Zelle `status` oder `disabled_at`.
 - **„Kopfzeile: Fehlende Spalten: ...“** oder **„Kopfzeile: Unbekannte Spalten: ...“**: Laden Sie eine neue Vorlage herunter.
 
 ---

@@ -210,9 +210,12 @@ async function testConflictsAndExport(pick: number) {
     assert.deepEqual(conflicts.errors.map((e) => e.row), [4, 6], `${label}: ${JSON.stringify(conflicts.errors)}`);
     assert.equal(
       conflicts.errors[0].message,
-      'Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.',
+      'The status is "Enabled", but the end of validity has passed. Write "-" in the end of validity, or "disabled" in the status. If the file comes from an older export, export the data again.',
     );
-    assert.match(conflicts.errors[1].message, /^Status is disabled but the end of validity is still to come/);
+    assert.equal(
+      conflicts.errors[1].message,
+      'The status is "Disabled", but the end of validity is still to come. Write "enabled" in the status, or a date that has passed in the end of validity.',
+    );
 
     const seeded = await run(importer, [['Stale row', '', FUTURE], ['Open row', '', '']]);
     assert.equal(seeded.ok, true, `${label} seed: ${JSON.stringify(seeded.errors)}`);

@@ -16,6 +16,29 @@ describe('the status in an import message', () => {
       expect(text, path).not.toMatch(/\bdisabled\b/);
     }
   });
+
+  // The two contradictions of a status with a date: the status they describe by its label, the
+  // values to write as the file takes them (`-`, `enabled`, `disabled`), quoted.
+  it('describes the status by its label and quotes the values to write', () => {
+    const quoted = (path: string, value: string) => {
+      if (path.includes('/en/')) return `"${value}"`;
+      if (path.includes('/fr/')) return `« ${value} »`;
+      if (path.includes('/de/')) return `„${value}“`;
+      return `«${value}»`;
+    };
+    for (const [path, { default: texts }] of Object.entries(errors)) {
+      const labels = common[path.replace('errors.json', 'common.json')].default.statuses;
+      const passed = texts.CSV_STATUS_DATE_PASSED;
+      expect(passed, path).toContain(quoted(path, labels.enabled));
+      expect(passed, path).toContain(quoted(path, '-'));
+      expect(passed, path).toContain(quoted(path, 'disabled'));
+      expect(passed.match(/\b(en|dis)abled\b/g), path).toEqual(['disabled']);
+      const future = texts.CSV_STATUS_DATE_FUTURE;
+      expect(future, path).toContain(quoted(path, labels.disabled));
+      expect(future, path).toContain(quoted(path, 'enabled'));
+      expect(future.match(/\b(en|dis)abled\b/g), path).toEqual(['enabled']);
+    }
+  });
 });
 
 // The import dialog's line of the clears ends with a period, as the lines above it; Kad's card keeps
