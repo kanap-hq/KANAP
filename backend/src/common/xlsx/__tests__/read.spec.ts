@@ -695,8 +695,33 @@ async function readSlots() {
   assert.equal((await readXlsxGridAsync(workbook)).rows.length, 20_001);
 }
 
+/**
+ * `'-` typed in Excel: the cell holds "-" and its style `quotePrefix="1"`. The reader flags the text
+ * cells of such a style, through the shared strings, the inline strings and the formula strings.
+ */
+async function quotePrefixedText() {
+  const options: HandmadeParts = {
+    sharedStrings: [si('-')],
+    cellXfs: [0, 0],
+    sheetData: '<row r="1"><c r="A1" t="s" s="1"><v>0</v></c><c r="B1" t="s"><v>0</v></c>'
+      + '<c r="C1" t="inlineStr" s="1"><is><t>abc</t></is></c><c r="D1" t="str" s="1"><v>-</v></c><c r="E1" s="1"><v>2</v></c></row>',
+  };
+  const parts = workbookParts(options);
+  parts['xl/styles.xml'] = String(parts['xl/styles.xml']).replace(/(<cellXfs><xf [^>]*)\/>(<xf [^>]*)\/>/, '$1/>$2 quotePrefix="1"/>');
+  const expected: XlsxReadCell[] = [
+    { kind: 'text', value: '-', quotePrefix: true },
+    text('-'),
+    { kind: 'text', value: 'abc', quotePrefix: true },
+    { kind: 'text', value: '-', quotePrefix: true },
+    number('2'),
+  ];
+  assert.deepEqual(readXlsxGrid(zipOf(parts)).rows, [expected]);
+  assert.deepEqual((await readXlsxGridAsync(zipOf(parts))).rows, [expected]);
+}
+
 async function run() {
   sharedAndRichStrings();
+  await quotePrefixedText();
   inlineFormulaBooleanError();
   gaps();
   dateStyles();

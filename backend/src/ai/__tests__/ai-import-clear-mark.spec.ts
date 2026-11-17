@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { readTableAttachment, type TableGrid } from '../attachments/table-attachment';
 import { columnReader } from '../import/ai-import-convert';
+import { si, workbookParts, zipOf } from '../../common/xlsx/__tests__/fixtures/handmade';
 import { buildImportMapping, type AiImportTemplateColumn } from '../import/ai-import-mapping';
 
 // Lot I4 of 26.11.9 (D21): Kad's file carries the person's `-` to the imports that read it as the
@@ -115,6 +116,18 @@ async function testTheGuardedDashStaysAValue() {
   assert.deepEqual(grid.rows[0][1], text("'-"));
   const reader = columnReader({ kind: 'text' }, [text("'-")], { clearMark: true }, 'en');
   assert.deepEqual(reader.read(text("'-")), { status: 'converted', value: "'-" });
+  // `'-` typed in Excel: "-" in a cell whose style carries the apostrophe (`quotePrefix`).
+  const parts = workbookParts({
+    sharedStrings: [si('name'), si('notes'), si('Acme'), si('-')],
+    cellXfs: [0, 0],
+    sheetData: '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>'
+      + '<row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2" t="s" s="1"><v>3</v></c></row>'
+      + '<row r="3"><c r="A3" t="s"><v>2</v></c><c r="B3" t="s"><v>3</v></c></row>',
+  });
+  parts['xl/styles.xml'] = String(parts['xl/styles.xml']).replace(/(<cellXfs><xf [^>]*)\/>(<xf [^>]*)\/>/, '$1/>$2 quotePrefix="1"/>');
+  const typed = await readTableAttachment(zipOf(parts));
+  assert.deepEqual(typed.rows[0][1], text("'-"), 'the dash typed after an apostrophe stays a value');
+  assert.deepEqual(typed.rows[1][1], text('-'), 'a dash typed alone clears');
 }
 
 testEveryKindCarriesTheMark();

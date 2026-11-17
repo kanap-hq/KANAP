@@ -17,6 +17,14 @@ const LEGACY_CLEAR_MARK = '__CLEAR__';
  */
 export const GUARDED_DASH = "'-";
 
+/**
+ * The text of an .xlsx text cell. `'-` typed in Excel holds "-", the apostrophe going to the cell's
+ * format (`quotePrefix`): that cell is `GUARDED_DASH`, a dash kept as a value, as in a CSV file.
+ */
+export function quotePrefixedText(cell: { value: string; quotePrefix?: true }): string {
+  return cell.quotePrefix && cell.value.trim() === CLEAR_MARK ? GUARDED_DASH : cell.value;
+}
+
 /** The code of a row error for `-` on a value that cannot be cleared: a key, a required value, a status. */
 export const CANNOT_BE_CLEARED = 'CSV_VALUE_CANNOT_BE_CLEARED';
 /**

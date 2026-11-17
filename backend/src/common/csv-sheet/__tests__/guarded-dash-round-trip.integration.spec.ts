@@ -11,6 +11,7 @@ import { CompanyMetricsService } from '../../../companies/company-metrics.servic
 import { SuppliersService } from '../../../suppliers/suppliers.service';
 import { realFreeze } from '../../../spend/__tests__/round-inputs.fixtures';
 import type { MasterDataImportResult } from '../master-data';
+import { si, workbookParts, zipOf } from '../../xlsx/__tests__/fixtures/handmade';
 
 // Lot I4 of 26.11.9 (D21): an export re-imported as it is changes nothing. A stored "-" is exported
 // as `'-` (the formula guard), in CSV and in .xlsx; the import reads that cell as the text "-",
@@ -84,6 +85,26 @@ async function main() {
     assert.deepEqual(
       await runner.query(`SELECT erp_supplier_id, notes FROM suppliers WHERE tenant_id = $1`, [tenantId]),
       [{ erp_supplier_id: null, notes: '-' }],
+    );
+
+    // `'-` typed in Excel: the cell holds "-" and its style the apostrophe (`quotePrefix`). It keeps a
+    // dash, where "-" typed alone clears.
+    const parts = workbookParts({
+      sharedStrings: [si('name'), si('erp_supplier_id'), si('notes'), si('Acme'), si('-')],
+      cellXfs: [0, 0],
+      sheetData: '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c></row>'
+        + '<row r="2"><c r="A2" t="s"><v>3</v></c><c r="B2" t="s" s="1"><v>4</v></c><c r="C2" t="s"><v>4</v></c></row>',
+    });
+    parts['xl/styles.xml'] = String(parts['xl/styles.xml']).replace(/(<cellXfs><xf [^>]*)\/>(<xf [^>]*)\/>/, '$1/>$2 quotePrefix="1"/>');
+    const excel = await suppliers.importCsv(
+      { file: upload(zipOf(parts), 's.xlsx'), dryRun: false, userId: null, language: 'en', mode: 'enrich' },
+      { manager },
+    );
+    assert.deepEqual(excel.errors, []);
+    assert.equal(excel.cleared, 1, 'the dash typed alone clears the notes');
+    assert.deepEqual(
+      await runner.query(`SELECT erp_supplier_id, notes FROM suppliers WHERE tenant_id = $1`, [tenantId]),
+      [{ erp_supplier_id: '-', notes: null }],
     );
   } finally {
     await runner.rollbackTransaction();

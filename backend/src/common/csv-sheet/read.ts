@@ -3,7 +3,7 @@ import { parse } from 'csv-parse';
 import { Features } from '../../config/features';
 import { denormalizeCsvFormulaValue } from '../csv/csv-export.service';
 import { Decimal } from '../decimal';
-import { GUARDED_DASH } from './clear';
+import { GUARDED_DASH, quotePrefixedText } from './clear';
 import {
   hasOldExcelSignature,
   hasZipSignature,
@@ -128,7 +128,10 @@ export async function readSheet(input: Buffer, schema: CsvReadSchema): Promise<S
   const rows: GridRow[] = [];
   let dataRows = 0;
   for (let index = 0; index < grid.rows.length; index += 1) {
-    const cells = grid.rows[index].map((cell) => (cell.kind === 'text' ? textCell(cleanCell(cell.value, schema.keepsGuardedDash === true)) : cell));
+    const keepsGuardedDash = schema.keepsGuardedDash === true;
+    const cells = grid.rows[index].map((cell) => (cell.kind === 'text'
+      ? textCell(cleanCell(keepsGuardedDash ? quotePrefixedText(cell) : cell.value, keepsGuardedDash))
+      : cell));
     if (cells.every(isBlank)) continue;
     if (rows.length > 0) {
       dataRows += 1;
