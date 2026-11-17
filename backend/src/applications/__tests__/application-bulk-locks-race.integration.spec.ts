@@ -13,6 +13,12 @@ import { ApplicationsCrudService } from '../services/applications-crud.service';
 import { ApplicationsListService } from '../services/applications-list.service';
 import { ApplicationsOwnersService } from '../services/applications-owners.service';
 import { ApplicationsService } from '../services/applications.service';
+import { ApplicationsResidencyService } from '../services/applications-residency.service';
+import { ApplicationsCsvService } from '../applications-csv.service';
+import { CsvExportService } from '../../common/csv/csv-export.service';
+import { CsvImportService } from '../../common/csv/csv-import.service';
+import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
+import { CsvResolverService } from '../../common/csv/csv-resolver.service';
 
 // The locks of "Change the selection" on applications (lot F2 of 26.11.8, review fixes):
 // - B1: every writer of an application's owners locks the application first, as the change in bulk
@@ -22,6 +28,11 @@ import { ApplicationsService } from '../services/applications.service';
 //   which serializes the classification catalog and leaves alone the foreign key checks of the
 //   tenant's other tables: an unrelated insert of the tenant does not wait for a count or a write.
 //   A settings save still waits.
+// - B3 (lot I3 of 26.11.9, review 4, C3): the data residency saved from the application page locks the
+//   application first, as the writers of its owners: while a load of the applications import holds the
+//   application, the page waits for it, then writes, with no deadlock (the page used to delete the
+//   residency, its trigger then waiting for the application the load held, while the load waited for
+//   the rows the page deleted).
 
 function services(manager: EntityManager) {
   const audit = new AuditService(manager.getRepository(AuditLog));
@@ -135,8 +146,65 @@ async function catalogSavesStaySerialized() {
   });
 }
 
+function csvService(manager: EntityManager) {
+  const audit = new AuditService(manager.getRepository(AuditLog));
+  const settings = new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), audit);
+  const resolver = new CsvResolverService();
+  return new ApplicationsCsvService(
+    manager.getRepository(Application), null as any, null as any,
+    new CsvExportService(resolver), new CsvImportService(resolver, new CsvJsonValidators()), resolver, audit,
+    new ApplicationsListService(manager.getRepository(Application)), settings,
+  );
+}
+
+/**
+ * B3: a load of the import holds the application (it writes its owners, then its residency) when the
+ * residency is saved from the page: the page waits for the application before it touches the residency,
+ * then writes after the load, with no deadlock.
+ */
+async function residencyPageWaitsForTheLoad() {
+  await withRace('apps-residency', async (race) => {
+    const { appId } = await race.seedWith(async (runner) => {
+      const seeded = await seedApplication(runner, race.tenantId);
+      const audit = new AuditService(runner.manager.getRepository(AuditLog));
+      await new ApplicationsResidencyService(runner.manager.getRepository(Application), audit)
+        .bulkReplaceDataResidency(seeded.appId, ['FR'], null, { manager: runner.manager });
+      return seeded;
+    });
+    const load = await race.open('load of the import');
+    const page = await race.open('residency of the page');
+    const bounded = (manager: EntityManager) => manager.query(`SET LOCAL lock_timeout = '10s'`);
+    const holds = race.gate(load, { label: 'lock the application', when: 'after', match: (text) => /FROM applications WHERE tenant_id = \$1 AND id = \$2 FOR UPDATE/.test(text) });
+    const loadWork = race.start(load, async (manager) => {
+      await bounded(manager);
+      return csvService(manager).import(
+        // Its IT owner, already stored: the load locks the application before its owners, then writes the residency.
+        { buffer: Buffer.from(`name;it_owner_email_1;data_residency\nRace application;ben-${race.tenantId.slice(0, 8)}@example.com;DE\n`), originalname: 'apps.csv' } as Express.Multer.File,
+        { dryRun: false, mode: 'enrich', operation: 'upsert' },
+        { manager, tenantId: race.tenantId, access: { isAdmin: true, permissions: {} } },
+      );
+    });
+    assert.equal(await progress(loadWork, { party: load, gate: holds }), 'gated', 'harness: the load must pause holding the application');
+    const pageWork = race.start(page, async (manager) => {
+      await bounded(manager);
+      const audit = new AuditService(manager.getRepository(AuditLog));
+      return new ApplicationsResidencyService(manager.getRepository(Application), audit).bulkReplaceDataResidency(appId, ['IT'], null, { manager });
+    });
+    assert.equal(await progress(pageWork, { party: page }), 'blocked', 'the page waits for the application');
+    holds.release();
+    const loadDone = await settle(loadWork);
+    const pageDone = await settle(pageWork);
+    assertSucceeded(loadDone, 'the load');
+    assertSucceeded(pageDone, 'the residency saved from the page');
+    assert.equal((loadDone as any).value?.ok, true, JSON.stringify((loadDone as any).value?.errors));
+    const rows = await race.read(`SELECT country_iso FROM application_data_residency WHERE application_id = $1`, [appId]);
+    assert.deepEqual(rows.map((row) => row.country_iso), ['IT'], 'the page wrote after the load');
+  });
+}
+
 void runRaceSpecs('Application bulk edit locks', [
   ['B1: the owners saved from the page wait for a change in bulk of the same application, no deadlock', ownersPageWaitsForTheBulk],
   ['B2: an insert of the tenant waits neither for the count nor for the write of a lifecycle in bulk; a settings save does', tenantInsertsDoNotWait],
   ['B2: two settings saves stay one after the other', catalogSavesStaySerialized],
+  ['B3: the residency saved from the page waits for a load of the import that holds the application, no deadlock', residencyPageWaitsForTheLoad],
 ]);
