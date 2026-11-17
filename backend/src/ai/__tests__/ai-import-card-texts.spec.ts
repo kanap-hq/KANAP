@@ -9,6 +9,7 @@ import { AiConversationsController } from '../ai-conversations.controller';
 import { PrepareImportMappingAiMutationOperation } from '../mutation/operations/prepare-import-mapping.ai-mutation-operation';
 import { IMPORT_LOAD_REFUSALS, importRefusalText } from '../ai-write-texts';
 import { AI_IMPORT_TARGETS, importColumnTitle } from '../import/ai-import-targets';
+import { BY_EDITOR } from '../import/ai-import-runner.service';
 
 /**
  * The texts of Kad's import card (lot Q4 of 26.11.8). No cell of the file reaches the model
@@ -115,8 +116,13 @@ function instructionsProposeExistingRecordsOnly() {
 function instructionsPublisherLinksTheSupplier() {
   const hint = new PrepareImportMappingAiMutationOperation({} as any).writePreview.prompt_hint;
   assert.ok(hint.includes('An application row with a publisher (`editor`) and no supplier is linked to the existing supplier '
-    + 'the publisher names: the card lists it as a match of origin editor, so never say the supplier stays empty when the card links one.'), 'the publisher links the supplier');
-  console.log('  the model reads that a publisher links the supplier it names: OK');
+    + 'the publisher names (`on_approval` says so): never say the supplier stays empty.'), 'the publisher links the supplier');
+  // Correctifs L: the sentence of the approval names such a match with the card's words, in the four languages.
+  for (const language of LANGUAGES) {
+    const ops = JSON.parse(fs.readFileSync(backendPath('..', 'frontend', 'src', 'locales', language, 'ops.json'), 'utf8'));
+    assert.equal(BY_EDITOR[language], ops.operations.budgetFile.matching.byEditor, `${language}: the card's words for a publisher's match`);
+  }
+  console.log('  the model reads that a publisher links the supplier it names, with the card\'s words: OK');
 }
 
 async function screenLanguageWhenTheProfileHasNone() {
