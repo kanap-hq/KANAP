@@ -85,7 +85,102 @@ function unknown(column: string, value: string): string {
   return `User not found for ${column}: "${value}". Use the account e-mail or the name in either order ("First Last" or "Last First").`;
 }
 
+const ELODIE = '10000000-0000-4000-8000-000000000008';
+const ELODIE_EMAIL = 'elodie.lefevre@example.test';
+const HELENE = '10000000-0000-4000-8000-000000000009';
+const HELENE_2 = '10000000-0000-4000-8000-000000000010';
+
+/** Lot I3 of 26.11.9: a context with the person's rights, a few accented people, and the import's lists of matches. */
+function accentContext(params: Record<string, unknown> = {}): CsvImportContext {
+  const people = new Map<string, CachedUser>([
+    ...users,
+    [ELODIE_EMAIL, user(ELODIE, 'Élodie', 'Lefèvre')],
+    ['helene.a@example.test', user(HELENE, 'Hélène', 'Petit')],
+    ['helene.b@example.test', user(HELENE_2, 'Hélene', 'Petit')],
+  ]);
+  return {
+    ...context,
+    params: { dryRun: true, ...params },
+    access: { isAdmin: false, permissions: {} },
+    resolverCache: new Map([['users', people]]),
+    nameMatches: new Map(),
+    refusedProposals: new Map(),
+  } as CsvImportContext;
+}
+
+async function cellError(run: () => unknown): Promise<{ code?: string; params?: unknown; message: string }> {
+  try {
+    await run();
+  } catch (error: any) {
+    return { code: error.code, params: error.params, message: error.message };
+  }
+  assert.fail('must be refused');
+}
+
+async function testCodesAndAccents(): Promise<void> {
+  for (const column of COLUMNS) {
+    const unknownCell = await cellError(() => transform(column)('Camille Moreau', {}, context, 2));
+    assert.equal(unknownCell.code, 'CSV_REFERENCE_NOT_FOUND', `${column}: unknown has a code`);
+    assert.deepEqual(unknownCell.params, { value: 'Camille Moreau' });
+    const several = await cellError(() => transform(column)('Lea Roux', {}, context, 2));
+    assert.equal(several.code, 'CSV_NAME_AMBIGUOUS_AMONG', `${column}: several people has a code`);
+    assert.deepEqual(several.params, { value: 'Lea Roux', names: [LEA_EMAIL, LEA_DISABLED_EMAIL].sort().join(', ') });
+
+    const accents = accentContext();
+    assert.equal(await transform(column)('Lefevre Elodie', {}, accents, 3), ELODIE, `${column}: accents aside, either order`);
+    assert.deepEqual([...accents.nameMatches!.values()], [{
+      column, name: null, value: 'Lefevre Elodie', target: 'Élodie Lefèvre', ref: null,
+      origin: 'server', reason: 'accents', lines: [3], count: 1, undoable: true,
+    }], `${column}: the match is listed`);
+    assert.equal(await transform(column)('Élodie LEFÈVRE', {}, accents, 4), ELODIE, `${column}: case aside is no listed match`);
+    assert.equal(accents.nameMatches!.size, 1);
+    const twoHelene = await cellError(() => transform(column)('Helene Petit', {}, accents, 5));
+    assert.equal(twoHelene.code, 'CSV_NAME_AMBIGUOUS_AMONG', `${column}: two people accents aside`);
+    assert.deepEqual(twoHelene.params, { value: 'Helene Petit', names: 'helene.a@example.test, helene.b@example.test' });
+    assert.equal(await transform(column)('Hélène Petit', {}, accents, 6), HELENE, `${column}: the exact spelling wins`);
+
+    const undone = accentContext({ unmatched: [{ column, value: 'Lefevre Elodie' }] });
+    assert.equal((await cellError(() => transform(column)('Lefevre Elodie', {}, undone, 2))).code, 'CSV_REFERENCE_NOT_FOUND', `${column}: undone`);
+    const internal = { ...accentContext(), access: undefined } as CsvImportContext;
+    assert.equal((await cellError(() => transform(column)('Lefevre Elodie', {}, internal, 2))).code, 'CSV_REFERENCE_NOT_FOUND', `${column}: no rights given, case aside only`);
+
+    const proposed = accentContext({ proposals: { [column]: { 'E. Lefèvre': ELODIE_EMAIL, 'X. Inconnu': 'Personne Absente' } } });
+    assert.equal(await transform(column)('E. Lefèvre', {}, proposed, 2), ELODIE, `${column}: Kad's proposal of an existing person`);
+    assert.deepEqual([...proposed.nameMatches!.values()].map((m) => [m.value, m.target, m.origin, m.reason]), [['E. Lefèvre', 'Élodie Lefèvre', 'model', 'model']]);
+    assert.equal((await cellError(() => transform(column)('X. Inconnu', {}, proposed, 3))).code, 'CSV_REFERENCE_NOT_FOUND');
+    assert.deepEqual([...proposed.refusedProposals!.values()].map((r) => [r.column, r.value, r.target, r.reason]), [[column, 'X. Inconnu', 'Personne Absente', 'missing']]);
+  }
+}
+
+/**
+ * Two people whose names differ only by case: the name is refused as naming both, as before lot I3
+ * (one case-blind step), with or without the person's rights; the e-mail still finds each one.
+ */
+async function testCaseOnlyNamesakeIsAmbiguous(): Promise<void> {
+  const people = new Map<string, CachedUser>([
+    ['anne.martin@example.test', user('10000000-0000-4000-8000-000000000011', 'Anne', 'Martin')],
+    ['anne.martin2@example.test', user('10000000-0000-4000-8000-000000000012', 'Anne', 'MARTIN')],
+  ]);
+  const both = 'anne.martin2@example.test, anne.martin@example.test';
+  for (const column of COLUMNS) {
+    for (const rights of [context, accentContext()]) {
+      const ctx = { ...rights, resolverCache: new Map([['users', people]]) } as CsvImportContext;
+      for (const cell of ['Anne Martin', 'anne martin', 'Martin Anne']) {
+        const refused = await cellError(() => transform(column)(cell, {}, ctx, 2));
+        assert.equal(refused.code, 'CSV_NAME_AMBIGUOUS_AMONG', `${column} "${cell}": both people`);
+        assert.deepEqual(refused.params, { value: cell, names: both });
+      }
+      assert.equal(await transform(column)('anne.martin2@example.test', {}, ctx, 2), '10000000-0000-4000-8000-000000000012');
+    }
+    const proposed = accentContext({ proposals: { [column]: { 'A. Martin': 'Anne Martin' } } });
+    const proposedCtx = { ...proposed, resolverCache: new Map([['users', people]]) } as CsvImportContext;
+    assert.equal((await cellError(() => transform(column)('A. Martin', {}, proposedCtx, 2))).code, 'CSV_REFERENCE_NOT_FOUND', `${column}: Kad's name of both is refused`);
+  }
+}
+
 async function run(): Promise<void> {
+  await testCodesAndAccents();
+  await testCaseOnlyNamesakeIsAmbiguous();
   for (const column of COLUMNS) {
     assert.equal(await resolve(column, 'Berger Thomas'), THOMAS, `${column}: Last First`);
     assert.equal(await resolve(column, 'thomas  berger'), THOMAS, `${column}: case and repeated spaces`);

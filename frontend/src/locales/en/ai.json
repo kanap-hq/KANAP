@@ -376,7 +376,11 @@
     "importRun": {
       "check": "Import check",
       "result": "Import",
-      "download": "Download file (.xlsx)"
+      "download": "Download file (.xlsx)",
+      "hosting": "Hosting: {{sites}}",
+      "hostingSeparator": "; ",
+      "onPremises": "on-prem",
+      "cloud": "cloud"
     },
     "importChoices": {
       "stale": "This card can no longer be changed. Ask {{agent}} for a new one."

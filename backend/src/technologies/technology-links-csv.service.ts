@@ -20,6 +20,23 @@ import { OperatingSystemService } from './operating-system.service';
 import { TechnologyLinksService, type LinkOpts } from './technology-links.service';
 import { ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import type { CsvCallerAccess } from '../common/csv/csv-field.types';
+import { hasLevel } from '../common/relations/relations-access';
+import {
+  findRecordByName,
+  listedMatches,
+  listedRefusedProposals,
+  noteNameMatch,
+  noteRefusedProposal,
+  proposalFor,
+  proposedRecord,
+  undoneMatch,
+  type ImportMatchState,
+  type ImportNameMatch,
+  type ImportProposals,
+  type ImportRefusedProposal,
+} from '../common/name-matching';
+import { matchVersionLabel, type VersionLabelMatch } from './version-label-match';
 
 export const ASSET_LINK_CSV_HEADERS = [
   'asset_reference', 'asset_name', 'technology_reference', 'technology_name', 'version', 'operating_system', 'notes', 'source',
@@ -65,6 +82,12 @@ export interface TechnologyLinksImportResult {
   warnings: ImportReportError[];
   ignoredColumns: string[];
   notices: { dates: string | null; amounts: string | null };
+  /** The names and versions found beyond case (lot I3 of 26.11.9), each undoable; absent when none. */
+  matches?: ImportNameMatch[];
+  matchesTotal?: number;
+  /** Kad's proposals the check refused (lot I3 of 26.11.9); absent when none. */
+  refusedProposals?: ImportRefusedProposal[];
+  refusedProposalsTotal?: number;
 }
 
 export type TechnologyLinksCsvContext = { manager: EntityManager; tenantId: string; userId?: string | null };
@@ -72,14 +95,33 @@ export type TechnologyLinksCsvContext = { manager: EntityManager; tenantId: stri
 /** The applications the caller reads: all of them, or a Business Contributor's own (`scope`). */
 export type ApplicationsScope = { scope?: ParticipationAccessScope };
 
-type ImportRequest = { file: Express.Multer.File; dryRun: boolean; language: CsvLanguage };
+/** A file of links to check or load, as the route and Kad's import hand it. */
+export type LinkFileImportRequest = {
+  file: Express.Multer.File;
+  dryRun: boolean;
+  language: CsvLanguage;
+  /**
+   * The person's rights (lot I3 of 26.11.9): a server or a technology is found accents aside when they
+   * read the infrastructure, an application when they read the applications. Absent: case aside only.
+   */
+  access?: CsvCallerAccess;
+  /** The matches the person undid, by file column and value: found case aside (a version: as written). */
+  unmatched?: Array<{ column: string; value: string }>;
+  /** Kad's proposals, by file column: taken for a record the person reads, exactly or case aside. */
+  proposals?: ImportProposals;
+};
+type ImportRequest = LinkFileImportRequest;
+
+/** How a row's name finds its record: the request's say, and the matches noted so far. */
+type NameLookup = { request: ImportRequest; state: ImportMatchState };
 type LinkSide = 'asset' | 'application';
 
 /** The server or application a row names. `is_cluster` is the asset's, false for an application. */
 type Subject = { id: string; is_cluster: boolean };
 type SubjectRow = Subject & { name: string; name_key: string; reference_key: string | null };
-type Subjects = { byName: Map<string, SubjectRow[]>; byReference: Map<string, SubjectRow> };
+type Subjects = { all: SubjectRow[]; byReference: Map<string, SubjectRow> };
 type TechRow = { id: string; name: string; item_number: number; family: string };
+type Technologies = { byItem: Map<number, TechRow>; all: TechRow[] };
 type StoredLink = { id: string; subject_id: string; notes: string | null; is_operating_system: boolean };
 
 type PlannedLink = {
@@ -96,13 +138,15 @@ type PlannedLink = {
    */
   markOperatingSystem: boolean;
   outcome: 'inserted' | 'updated' | 'unchanged';
+  /** The version the label finds (as written or by a prefix rule); null: created as written. */
+  versionId: string | null;
 };
 
 type SideSpec = {
   side: LinkSide;
   headers: readonly string[];
   /** The subject of each usable row, or the row's error. */
-  resolve: (rows: CsvDataRow[]) => Promise<(row: CsvDataRow) => Subject | ImportReportError>;
+  resolve: (rows: CsvDataRow[], lookup: NameLookup) => Promise<(row: CsvDataRow) => Subject | ImportReportError>;
 };
 
 /**
@@ -176,12 +220,13 @@ export class TechnologyLinksCsvService {
     return this.importLinks(request, ctx, {
       side: 'asset',
       headers: ASSET_LINK_CSV_HEADERS,
-      resolve: async (rows) => {
+      resolve: async (rows, lookup) => {
         const assets = await this.assetsByKey(
           ctx,
           rows.map((row) => cellOf(row, 'asset_reference').toUpperCase()),
-          rows.filter((row) => !cellOf(row, 'asset_reference')).map((row) => cellOf(row, 'asset_name').toLowerCase()),
+          rows.some((row) => !cellOf(row, 'asset_reference') && cellOf(row, 'asset_name')),
         );
+        const reads = readsInfrastructure(request.access);
         return (row) => {
           const reference = cellOf(row, 'asset_reference');
           const name = cellOf(row, 'asset_name');
@@ -200,7 +245,7 @@ export class TechnologyLinksCsvService {
           if (!name) {
             return rowError(row.line, 'asset_reference', 'CSV_ASSET_REQUIRED', 'Name the server by its reference (AST-n) or its name.');
           }
-          return matchOne(row.line, 'asset_name', name, assets.byName.get(name.toLowerCase()) ?? []);
+          return subjectByName(row.line, 'asset_name', name, assets.all, reads, lookup);
         };
       },
     });
@@ -266,13 +311,14 @@ export class TechnologyLinksCsvService {
     return this.importLinks(request, ctx, {
       side: 'application',
       headers: APPLICATION_LINK_CSV_HEADERS,
-      resolve: async (rows) => {
+      resolve: async (rows, lookup) => {
         const apps = await this.applicationsByKey(
           ctx,
           applications,
           rows.map((row) => cellOf(row, 'application_reference')).filter((ref) => APP_REF_RE.test(ref)).map((ref) => ref.toUpperCase()),
-          rows.filter((row) => !cellOf(row, 'application_reference')).map((row) => cellOf(row, 'application_name').toLowerCase()),
+          rows.some((row) => !cellOf(row, 'application_reference') && cellOf(row, 'application_name')),
         );
+        const reads = !!request.access && hasLevel(request.access, 'applications', 'reader');
         return (row) => {
           const reference = cellOf(row, 'application_reference');
           if (reference) {
@@ -283,7 +329,7 @@ export class TechnologyLinksCsvService {
           if (!name) {
             return rowError(row.line, 'application_reference', 'CSV_APPLICATION_REQUIRED', 'Name the application by its reference (APP-n) or its name.');
           }
-          return matchOne(row.line, 'application_name', name, apps.byName.get(name.toLowerCase()) ?? []);
+          return subjectByName(row.line, 'application_name', name, apps.all, reads, lookup);
         };
       },
     });
@@ -292,18 +338,21 @@ export class TechnologyLinksCsvService {
   // ==================== SHARED ====================
 
   private async importLinks(
-    { file, dryRun, language }: ImportRequest,
+    request: ImportRequest,
     ctx: TechnologyLinksCsvContext,
     spec: SideSpec,
   ): Promise<TechnologyLinksImportResult> {
+    const { file, dryRun, language } = request;
     const read = await readMasterDataFile({ file: uploadedBytes(file), fields: spec.headers, optional: OPTIONAL_COLUMNS, language });
+    const lookup: NameLookup = { request, state: { matches: new Map(), refused: new Map() } };
     const report = (errors: ImportReportError[], warnings: ImportReportError[], counts = { inserted: 0, updated: 0, unchanged: 0 }) => ({
       ok: errors.length === 0, dryRun, total: read.rows.length, ...counts, errors, warnings,
       ignoredColumns: read.ignoredColumns, notices: read.notices,
+      ...listedMatches(lookup.state.matches), ...listedRefusedProposals(lookup.state.refused),
     });
     if (read.headerError) return report([read.headerError], []);
 
-    const planned = await this.plan(read.rows, ctx, spec);
+    const planned = await this.plan(read.rows, ctx, spec, lookup);
     if (planned.errors.length > 0) return report(planned.errors, planned.warnings);
     const counts = { inserted: 0, updated: 0, unchanged: 0 };
     for (const row of planned.rows) counts[row.outcome] += 1;
@@ -316,17 +365,18 @@ export class TechnologyLinksCsvService {
     rows: CsvDataRow[],
     ctx: TechnologyLinksCsvContext,
     spec: SideSpec,
+    lookup: NameLookup,
   ): Promise<{ rows: PlannedLink[]; errors: ImportReportError[]; warnings: ImportReportError[] }> {
     const errors: ImportReportError[] = [];
     const warnings: ImportReportError[] = [];
     const usable = rows.filter((row) => rowProblemErrors(row).length === 0);
-    const subjectOf = await spec.resolve(usable);
+    const subjectOf = await spec.resolve(usable, lookup);
     const techs = await this.technologies(
       ctx,
       usable.map((row) => technologyItemNumber(cellOf(row, 'technology_reference'))).filter((n): n is number => n != null),
-      usable.filter((row) => !cellOf(row, 'technology_reference')).map((row) => cellOf(row, 'technology_name').toLowerCase()),
+      usable.some((row) => !cellOf(row, 'technology_reference') && cellOf(row, 'technology_name')),
     );
-    const versions = await this.versionsByLabel(ctx, [...techs.byItem.values()].map((tech) => tech.id));
+    const versions = await this.versionsOf(ctx, [...techs.byItem.values()].map((tech) => tech.id));
     const subjects = new Map(usable.map((row) => [row, subjectOf(row)] as const));
     const stored = await this.storedLinks(ctx, spec.side, [...subjects.values()].flatMap((s) => ('row' in s ? [] : [s.id])));
     // A cluster with members has no operating system (a cluster without member may have one).
@@ -352,7 +402,7 @@ export class TechnologyLinksCsvService {
         errors.push(subject);
         continue;
       }
-      const tech = resolveTechnology(line, cellOf(row, 'technology_reference'), cellOf(row, 'technology_name'), techs, errors);
+      const tech = resolveTechnology(line, cellOf(row, 'technology_reference'), cellOf(row, 'technology_name'), techs, errors, lookup);
       if (!tech) continue;
 
       const versionLabel = cellOf(row, 'version');
@@ -365,16 +415,24 @@ export class TechnologyLinksCsvService {
         errors.push(rowError(line, 'notes', 'CSV_NOTES_TOO_LONG', `Notes are longer than ${NOTES_MAX} characters.`, { max: NOTES_MAX }));
         continue;
       }
+      // The version the label finds: as written (case aside), else by a prefix rule unless the person
+      // undid that match (lot I3 of 26.11.9); none, it is created as written.
+      const versionMatch = versionLabel ? this.versionOfRow(line, tech, versionLabel, versions.get(tech.id) ?? [], lookup) : null;
+      const versionId = versionMatch && versionMatch.kind !== 'none' ? versionMatch.row.id : null;
       // "No version" and a named version are two links (the key is NULLS NOT DISTINCT).
-      const linkKey = `${subject.id}|${tech.id}|${versionLabel.toLowerCase()}`;
+      const linkKey = `${subject.id}|${tech.id}|${versionId ?? `label:${versionLabel.toLowerCase()}`}`;
       const firstRow = seen.get(linkKey);
       if (firstRow != null) {
         errors.push(rowError(line, spec.side === 'asset' ? 'asset_name' : 'application_name', 'CSV_LINK_DUPLICATE', `This link is already on row ${firstRow}.`, { firstRow }));
         continue;
       }
       seen.set(linkKey, line);
-
-      const versionId = versionLabel ? versions.get(`${tech.id}|${versionLabel.toLowerCase()}`) ?? null : null;
+      if (versionMatch?.kind === 'prefix' && !versionMatch.proposed) {
+        noteNameMatch(lookup.state.matches, {
+          column: 'version', name: null, value: versionLabel, target: versionMatch.row.label, ref: null,
+          origin: 'server', reason: 'version', undoable: true,
+        }, line);
+      }
       // A label the technology does not have yet is a new link: it never matches the link without version.
       const link = versionLabel && !versionId ? null : stored.get(`${subject.id}|${tech.id}|${versionId ?? ''}`) ?? null;
 
@@ -416,6 +474,7 @@ export class TechnologyLinksCsvService {
         writeLink: !link || notesChange,
         markOperatingSystem,
         outcome: !link ? 'inserted' : notesChange || markOperatingSystem ? 'updated' : 'unchanged',
+        versionId,
       });
       if (autoCandidate) autoMark.set(subject.id, { index: planned.length - 1, line });
     }
@@ -429,13 +488,43 @@ export class TechnologyLinksCsvService {
     return { rows: planned, errors: errors.sort((a, b) => a.row - b.row), warnings: warnings.sort((a, b) => a.row - b.row) };
   }
 
+  /**
+   * The version a row's label finds (`matchVersionLabel`): Kad's proposal first, a version of the
+   * technology by its label, case aside (a match of origin model, noted; otherwise refused); then the
+   * label as written, else by a prefix rule unless the person undid that match.
+   */
+  private versionOfRow(
+    line: number,
+    tech: TechRow,
+    label: string,
+    versions: Array<{ id: string; label: string }>,
+    { request, state }: NameLookup,
+  ): (VersionLabelMatch<{ id: string; label: string }> & { proposed?: boolean }) {
+    const undone = undoneMatch(request.unmatched, 'version', label);
+    const proposal = undone ? undefined : proposalFor(request.proposals, 'version', label);
+    if (proposal !== undefined) {
+      const proposed = readsInfrastructure(request.access) ? matchVersionLabel(versions, proposal, { prefix: false }) : { kind: 'none' as const };
+      if (proposed.kind !== 'none') {
+        noteNameMatch(state.matches, {
+          column: 'version', name: null, value: label, target: proposed.row.label, ref: null, origin: 'model', reason: 'model', undoable: true,
+        }, line);
+        return { ...proposed, proposed: true };
+      }
+      noteRefusedProposal(state.refused, { column: 'version', name: null, value: label, target: proposal, reason: 'missing' }, line);
+    }
+    return matchVersionLabel(versions, label, { prefix: !undone });
+  }
+
   /** Through the screens' services. An existing link keeps its provenance (`keepExistingProvenance`). */
   private async write(side: LinkSide, rows: PlannedLink[], provenance: LinkProvenance, ctx: TechnologyLinksCsvContext) {
     const opts: LinkOpts = { manager: ctx.manager, tenantId: ctx.tenantId, userId: ctx.userId ?? null };
     for (const row of rows) {
       if (!row.writeLink && !row.markOperatingSystem) continue;
+      // The version the check found, or the label it announced as created, written as it is.
       const body = {
-        ...(row.versionLabel ? { version_label: row.versionLabel } : {}),
+        ...(row.versionId
+          ? { technology_version_id: row.versionId }
+          : row.versionLabel ? { version_label: row.versionLabel, version_label_as_written: true } : {}),
         ...(row.notes !== '' ? { notes: row.notes } : {}),
       };
       if (side === 'application') {
@@ -453,16 +542,17 @@ export class TechnologyLinksCsvService {
     }
   }
 
-  private async assetsByKey(ctx: TechnologyLinksCsvContext, references: string[], names: string[]): Promise<Subjects> {
+  /** The servers the rows name by reference, and every server when a row names one by name (found beyond case in JS). */
+  private async assetsByKey(ctx: TechnologyLinksCsvContext, references: string[], byName: boolean): Promise<Subjects> {
     const refs = unique(references);
-    const wanted = unique(names);
-    if (refs.length === 0 && wanted.length === 0) return indexSubjects([]);
+    if (refs.length === 0 && !byName) return indexSubjects([]);
     const rows: SubjectRow[] = await ctx.manager.query(
       `SELECT id::text AS id, btrim(name) AS name, lower(btrim(name)) AS name_key, upper(asset_reference) AS reference_key,
               COALESCE(is_cluster, false) AS is_cluster
          FROM assets
-        WHERE tenant_id = $1 AND (upper(asset_reference) = ANY($2::text[]) OR lower(btrim(name)) = ANY($3::text[]))`,
-      [ctx.tenantId, refs, wanted],
+        WHERE tenant_id = $1 AND (upper(asset_reference) = ANY($2::text[]) OR $3::boolean)
+        ORDER BY lower(btrim(name)), id`,
+      [ctx.tenantId, refs, byName],
     );
     return indexSubjects(rows);
   }
@@ -471,12 +561,11 @@ export class TechnologyLinksCsvService {
     ctx: TechnologyLinksCsvContext,
     applications: ApplicationsScope,
     references: string[],
-    names: string[],
+    byName: boolean,
   ): Promise<Subjects> {
     const refs = unique(references);
-    const wanted = unique(names);
-    if (refs.length === 0 && wanted.length === 0) return indexSubjects([]);
-    const params: unknown[] = [ctx.tenantId, refs, wanted];
+    if (refs.length === 0 && !byName) return indexSubjects([]);
+    const params: unknown[] = [ctx.tenantId, refs, byName];
     const scopeSql = applications.scope
       ? (params.push(applications.scope.userId), `AND ${applicationParticipantCondition('a', `$${params.length}`)}`)
       : '';
@@ -484,8 +573,9 @@ export class TechnologyLinksCsvService {
       `SELECT a.id::text AS id, btrim(a.name) AS name, lower(btrim(a.name)) AS name_key, upper(a.sequential_id) AS reference_key, false AS is_cluster
          FROM applications a
         WHERE a.tenant_id = $1
-          AND (upper(a.sequential_id) = ANY($2::text[]) OR lower(btrim(a.name)) = ANY($3::text[]))
-          ${scopeSql}`,
+          AND (upper(a.sequential_id) = ANY($2::text[]) OR $3::boolean)
+          ${scopeSql}
+        ORDER BY lower(btrim(a.name)), a.id`,
       params,
     );
     return indexSubjects(rows);
@@ -494,37 +584,36 @@ export class TechnologyLinksCsvService {
   private async technologies(
     ctx: TechnologyLinksCsvContext,
     itemNumbers: number[],
-    names: string[],
-  ): Promise<{ byItem: Map<number, TechRow>; byName: Map<string, TechRow[]> }> {
+    byName: boolean,
+  ): Promise<Technologies> {
     const byItem = new Map<number, TechRow>();
-    const byName = new Map<string, TechRow[]>();
     const numbers = [...new Set(itemNumbers)];
-    const wanted = unique(names);
-    if (numbers.length === 0 && wanted.length === 0) return { byItem, byName };
-    const rows: Array<TechRow & { name_key: string }> = await ctx.manager.query(
-      `SELECT id::text AS id, name, lower(btrim(name)) AS name_key, item_number, family
+    if (numbers.length === 0 && !byName) return { byItem, all: [] };
+    const rows: TechRow[] = await ctx.manager.query(
+      `SELECT id::text AS id, btrim(name) AS name, item_number, family
          FROM technologies
-        WHERE tenant_id = $1 AND (item_number = ANY($2::int[]) OR lower(btrim(name)) = ANY($3::text[]))`,
-      [ctx.tenantId, numbers, wanted],
+        WHERE tenant_id = $1 AND (item_number = ANY($2::int[]) OR $3::boolean)
+        ORDER BY lower(btrim(name)), id`,
+      [ctx.tenantId, numbers, byName],
     );
-    for (const row of rows) {
-      byItem.set(Number(row.item_number), row);
-      byName.set(row.name_key, [...(byName.get(row.name_key) ?? []), row]);
-    }
-    return { byItem, byName };
+    for (const row of rows) byItem.set(Number(row.item_number), row);
+    return { byItem, all: rows };
   }
 
-  /** `technology id|lower(label)` to the version id. */
-  private async versionsByLabel(ctx: TechnologyLinksCsvContext, technologyIds: string[]): Promise<Map<string, string>> {
+  /** The versions of each technology, by technology id (the version rule reads them all). */
+  private async versionsOf(ctx: TechnologyLinksCsvContext, technologyIds: string[]): Promise<Map<string, Array<{ id: string; label: string }>>> {
     const wanted = unique(technologyIds);
     const rows: Array<{ id: string; technology_id: string; label: string }> = wanted.length
       ? await ctx.manager.query(
         `SELECT id::text AS id, technology_id::text AS technology_id, label
-           FROM technology_versions WHERE tenant_id = $1 AND technology_id = ANY($2::uuid[])`,
+           FROM technology_versions WHERE tenant_id = $1 AND technology_id = ANY($2::uuid[])
+          ORDER BY lower(label), id`,
         [ctx.tenantId, wanted],
       )
       : [];
-    return new Map(rows.map((row) => [`${row.technology_id}|${row.label.toLowerCase()}`, row.id]));
+    const byTechnology = new Map<string, Array<{ id: string; label: string }>>();
+    for (const row of rows) byTechnology.set(row.technology_id, [...(byTechnology.get(row.technology_id) ?? []), row]);
+    return byTechnology;
   }
 
   /** `subject id|technology id|version id or ''` to the stored link. */
@@ -545,24 +634,66 @@ export class TechnologyLinksCsvService {
 }
 
 function indexSubjects(rows: SubjectRow[]): Subjects {
-  const byName = new Map<string, SubjectRow[]>();
   const byReference = new Map<string, SubjectRow>();
   for (const row of rows) {
-    byName.set(row.name_key, [...(byName.get(row.name_key) ?? []), row]);
     if (row.reference_key) byReference.set(row.reference_key, row);
   }
-  return { byName, byReference };
+  return { all: rows, byReference };
+}
+
+function readsInfrastructure(access: CsvCallerAccess | undefined): boolean {
+  return !!access && hasLevel(access, 'infrastructure', 'reader');
 }
 
 function notFound(line: number, column: string, value: string): ImportReportError {
   return rowError(line, column, 'CSV_REFERENCE_NOT_FOUND', `"${value}" was not found.`, { value });
 }
 
-/** One record by name: none is not found, several is ambiguous. */
-function matchOne(line: number, column: string, name: string, hits: SubjectRow[]): Subject | ImportReportError {
-  if (hits.length === 0) return notFound(line, column, name);
+function ambiguousAmong(line: number, column: string, name: string, among: string[]): ImportReportError {
+  const names = among.join(', ');
+  return rowError(line, column, 'CSV_NAME_AMBIGUOUS_AMONG', `"${name}" may designate several records: ${names}`, { value: name, names });
+}
+
+/**
+ * The record of `rows` a name of the file finds (lot I3 of 26.11.9): Kad's proposal first, for a
+ * person who `reads` the family (a name of several records refuses the row, naming them); then the name exactly or case aside (several: refused, as before);
+ * then accents aside for a person who reads the family and has not undone that match (several:
+ * `CSV_NAME_AMBIGUOUS_AMONG`, named by reference). A match beyond case is noted. `missing` is the
+ * error of a name nothing finds.
+ */
+function recordByName<T extends { name: string }>(
+  line: number,
+  column: string,
+  name: string,
+  rows: readonly T[],
+  reads: boolean,
+  { request, state }: NameLookup,
+  ref: (row: T) => string | null,
+  missing: () => ImportReportError,
+): T | ImportReportError {
+  const proposed = proposedRecord(state, {
+    proposals: request.proposals, unmatched: request.unmatched, column, value: name, line, rows, reads, caseBlind: false, ref,
+  });
+  if (proposed?.kind === 'one') return proposed.row;
+  if (proposed?.kind === 'many') return ambiguousAmong(line, column, name, proposed.names);
+  const key = name.trim().toLowerCase();
+  const hits = rows.filter((row) => row.name.trim().toLowerCase() === key);
   if (hits.length > 1) return rowError(line, column, 'CSV_NAME_AMBIGUOUS', `Several records are named "${name}".`, { value: name });
-  return { id: hits[0].id, is_cluster: hits[0].is_cluster };
+  if (hits.length === 1) return hits[0];
+  if (!reads || undoneMatch(request.unmatched, column, name)) return missing();
+  const found = findRecordByName(rows, name, { beyondCase: true, caseBlind: false, label: ref });
+  if (found.kind === 'many') return ambiguousAmong(line, column, name, found.names);
+  if (found.kind === 'none') return missing();
+  noteNameMatch(state.matches, {
+    column, name: null, value: name.trim(), target: found.row.name.trim(), ref: ref(found.row), origin: 'server', reason: 'accents', undoable: true,
+  }, line);
+  return found.row;
+}
+
+/** The server or application a row names by name (`recordByName`). */
+function subjectByName(line: number, column: string, name: string, rows: SubjectRow[], reads: boolean, lookup: NameLookup): Subject | ImportReportError {
+  const found = recordByName(line, column, name, rows, reads, lookup, (row) => row.reference_key, () => notFound(line, column, name));
+  return 'row' in found ? found : { id: found.id, is_cluster: found.is_cluster };
 }
 
 /**
@@ -573,8 +704,9 @@ function resolveTechnology(
   line: number,
   reference: string,
   name: string,
-  techs: { byItem: Map<number, TechRow>; byName: Map<string, TechRow[]> },
+  techs: Technologies,
   errors: ImportReportError[],
+  lookup: NameLookup,
 ): TechRow | null {
   const notAdopted = (column: string, value: string) => rowError(
     line, column, 'CSV_TECHNOLOGY_NOT_ADOPTED', `Unknown technology "${value}". Adopt it from the catalog first.`, { value },
@@ -596,10 +728,15 @@ function resolveTechnology(
     errors.push(rowError(line, 'technology_reference', 'CSV_TECHNOLOGY_REQUIRED', 'Name the technology by its reference (TEC-n) or its name.'));
     return null;
   }
-  const hits = techs.byName.get(name.toLowerCase()) ?? [];
-  if (hits.length === 0) errors.push(notAdopted('technology_name', name));
-  else if (hits.length > 1) errors.push(rowError(line, 'technology_name', 'CSV_NAME_AMBIGUOUS', `Several records are named "${name}".`, { value: name }));
-  return hits.length === 1 ? hits[0] : null;
+  const found = recordByName(
+    line, 'technology_name', name, techs.all, readsInfrastructure(lookup.request.access), lookup,
+    (row) => `TEC-${row.item_number}`, () => notAdopted('technology_name', name),
+  );
+  if ('row' in found && 'code' in found) {
+    errors.push(found);
+    return null;
+  }
+  return found as TechRow;
 }
 
 /**

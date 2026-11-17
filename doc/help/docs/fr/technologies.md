@@ -310,6 +310,18 @@ Vous pouvez indiquer qu'un serveur porte une technologie depuis l'un ou l'autre 
 
 Saisissez la technologie sur le serveur où elle est installée : l'hôte pour un hyperviseur, chaque contrôleur de domaine pour Active Directory, le serveur de base de données pour SQL Server. Les serveurs qui tournent dedans, et le cluster de ces serveurs, l'affichent alors sans autre saisie. Une technologie dans le cloud, comme Entra ID, ne tourne sur aucun de vos serveurs : déclarez-la plutôt sur les applications.
 
+### Libellés de version { #version-labels }
+
+Un libellé de version tapé dans un choix de version, écrit dans un fichier d'import ou donné à Kad retrouve une version de la technologie :
+
+- la version qui a le même libellé, quelle que soit la casse ;
+- sinon, la seule version dont le libellé commence par le libellé tapé suivi d'une espace : `22.04` retrouve `22.04 LTS` ;
+- sinon, la seule version dont le libellé commence le libellé tapé, suivi d'une espace : `2022 Datacenter` retrouve `2022`. Quand plusieurs versions répondent, le libellé le plus long l'emporte : `2012 R2 Datacenter` retrouve `2012 R2`.
+
+Dans les deux dernières règles, les mots qui suivent le libellé le plus court ne contiennent aucun chiffre, car ils nomment une édition : `11` ne retrouve pas `11 SP1`, et `2012` ne retrouve pas `2012 R2`.
+
+Quand aucune version ne répond, ou plusieurs, le libellé est créé comme une nouvelle version. `22.04.3 LTS` est créée telle qu'elle est écrite. Un import liste chaque rapprochement des deux dernières règles avec ses autres rapprochements, et **Défaire** crée la version telle qu'elle est écrite. Voir [Noms des fiches](csv-files.md#names-of-records).
+
 ---
 
 ## Importer et exporter les liens
@@ -356,7 +368,8 @@ L'import ne retire jamais la marque de système d'exploitation d'un lien.
 - Un lien existant garde son origine. Ses notes changent quand la cellule `notes` contient un texte différent, et une cellule vide les laisse telles quelles.
 - Un nouveau lien est marqué comme issu d'un import, avec le nom du fichier.
 - La technologie doit déjà figurer dans votre liste. Adoptez-la depuis le catalogue ou créez-la d'abord.
-- Une version que vous ne suivez pas encore est créée sur la technologie. L'aperçu la nomme.
+- Le serveur, l'application et la technologie sont retrouvés par leur nom comme le décrit [Noms des fiches](csv-files.md#names-of-records). Un nom que plusieurs fiches partagent est une erreur.
+- Un libellé de version suit la règle des [Libellés de version](#version-labels). Une version que vous ne suivez pas encore est créée sur la technologie. L'aperçu la nomme.
 
 Un gros fichier prend du temps à charger et retient les liens de ses technologies jusqu'à la fin. Plusieurs petits fichiers gênent moins les personnes qui travaillent au même moment.
 

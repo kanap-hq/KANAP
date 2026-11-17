@@ -13,6 +13,7 @@ import { AuditLog } from '../../audit/audit.entity';
 import { omitAuditSecrets } from '../../audit/audit.service';
 import {
   ArrayStrategy,
+  CsvCallerAccess,
   CsvEntityConfig,
   CsvFieldDefinition,
   CsvFieldType,
@@ -25,6 +26,7 @@ import {
   CsvImportWarning,
 } from './csv-field.types';
 import { CsvResolverService } from './csv-resolver.service';
+import { listedMatches, listedRefusedProposals, noteNameMatch, noteRefusedProposal, proposalFor, undoneMatch } from '../name-matching';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
 import { isRichTextContentRefusal } from '../markdown-limits';
@@ -63,7 +65,12 @@ export interface CsvImportOptions {
   itOpsSettings?: import('../../it-ops-settings/it-ops-settings.service').ItOpsSettings;
   /** The file's language (the screen's, else the user's). See CsvImportContext. */
   language?: CsvLanguage;
+  /** The person's rights: names found beyond case in the families they read. See CsvImportContext. */
+  access?: CsvCallerAccess;
 }
+
+/** A reference cell nothing finds, or that may name several records: what parseFk and the lists do with it. */
+type ReferenceLookup = { id: string } | { many: string[] } | null;
 
 /** What a full replace needs to know of a stored column to empty it. */
 interface StoredColumn {
@@ -183,6 +190,9 @@ export class CsvImportService {
       markdownBudget: markdownWorkBudget(),
       timeZones,
       language: opts.language,
+      access: opts.access,
+      nameMatches: new Map(),
+      refusedProposals: new Map(),
     };
 
     // Full replace empties the cells of the columns the file holds, by the stored column's rules.
@@ -193,11 +203,16 @@ export class CsvImportService {
     // Phase 1: Validate and parse all rows
     const parsedRows = await this.validateAndParseRows(config, rows, importFields, context, replace);
 
-    if (config.afterValidate) await config.afterValidate(parsedRows, context);
-    if (replace) this.checkEmptiedColumns(parsedRows, replace, params.operation);
-
-    // Check for duplicate upsert keys within the file
+    // Duplicate upsert keys within the file, as the file gives them: the rows the config left out
+    // count too, and a config's hooks may not change a row's key after (the applications' "Update
+    // APP-n" keeps the stored name).
     const duplicateErrors = this.checkDuplicateKeys(config, parsedRows);
+
+    // The rows the config left out (`settleRows`) are neither read nor written.
+    const readRows = parsedRows.filter((row) => !row.leftOut);
+    if (config.afterValidate) await config.afterValidate(readRows, context);
+    if (replace) this.checkEmptiedColumns(readRows, replace, params.operation);
+    else this.clearKeptReferencesOfChangedOwners(readRows, importFields);
 
     // Collect all errors
     const allErrors: CsvImportError[] = [];
@@ -211,7 +226,7 @@ export class CsvImportService {
 
     // Matched rows identical to what is stored: counted, never written.
     if (params.operation !== 'insert_only') {
-      const matched = parsedRows.filter((row) => row.errors.length === 0 && !row.isInsert);
+      const matched = readRows.filter((row) => row.errors.length === 0 && !row.isInsert);
       const same = config.sameAsStored
         ? await config.sameAsStored(matched, context)
         : matched.map((row) => sameStoredValues(row.existingEntity, row.parsed));
@@ -225,7 +240,7 @@ export class CsvImportService {
     let unchangedCount = 0;
 
     for (const row of parsedRows) {
-      if (row.errors.length > 0) {
+      if (row.errors.length > 0 || row.leftOut) {
         skipCount++;
         continue;
       }
@@ -259,6 +274,7 @@ export class CsvImportService {
         unchanged: unchangedCount,
         errors: allErrors,
         warnings: allWarnings,
+        ...this.matchesOf(context),
       };
     }
 
@@ -294,7 +310,16 @@ export class CsvImportService {
       unchanged: unchangedCount,
       errors: [],
       warnings: allWarnings,
+      ...this.matchesOf(context),
     };
+  }
+
+  /**
+   * The names the import found beyond case and Kad's proposals it refused, for the result: the first
+   * ones and their totals; nothing when none.
+   */
+  private matchesOf(context: CsvImportContext): Pick<CsvImportResult, 'matches' | 'matchesTotal' | 'refusedProposals' | 'refusedProposalsTotal'> {
+    return { ...listedMatches(context.nameMatches), ...listedRefusedProposals(context.refusedProposals) };
   }
 
   /**
@@ -534,10 +559,24 @@ export class CsvImportService {
 
     // Load existing entities for identity resolution
     const existingEntities = await this.loadExistingEntities(config, rows, context);
+    // The record each row updates, by its id or key, before any cell is read; then as the config
+    // settles it (another record, or the row left out: lot I3 of 26.11.9).
+    const found = rows.map((raw) => this.resolveIdentity(config, raw, existingEntities));
+    const settled = config.settleRows
+      ? await config.settleRows(rows.map((raw, i) => ({ raw, rowNumber: i + 2, found: found[i] })), context)
+      : null;
 
     for (let i = 0; i < rows.length; i++) {
       const raw = rows[i];
       const rowNumber = i + 2; // 1-based, accounting for header
+      const settle = settled?.[i];
+      if (settle?.leaveOut) {
+        // Only its key is read, for the file's duplicates.
+        const keyed: CsvImportRow = { rowNumber, raw, parsed: {}, isInsert: true, errors: [], warnings: [] };
+        for (const field of importFields) if (config.upsertKey.includes(field.entityProperty)) await this.parseField(field, raw, keyed, context, replace);
+        parsedRows.push({ rowNumber, raw, parsed: keyed.parsed, isInsert: true, leftOut: true, errors: [], warnings: settle.warnings ?? [] });
+        continue;
+      }
 
       const parsedRow: CsvImportRow = {
         rowNumber,
@@ -548,13 +587,18 @@ export class CsvImportService {
         warnings: [...(preliminaryRows[i]?.warnings ?? [])],
       };
 
+      if (settle) {
+        parsedRow.errors.push(...(settle.errors ?? []));
+        parsedRow.warnings.push(...(settle.warnings ?? []));
+      }
+
       // Parse and validate each field
       for (const field of importFields) {
         await this.parseField(field, raw, parsedRow, context, replace);
       }
 
       // Resolve identity
-      const existingEntity = this.resolveIdentity(config, raw, parsedRow, existingEntities);
+      const existingEntity = settle ? settle.entity : found[i];
       if (existingEntity) {
         parsedRow.existingEntity = existingEntity;
         parsedRow.isInsert = false;
@@ -580,6 +624,9 @@ export class CsvImportService {
 
         // Handle nested fields: merge CSV values with existing array entries
         this.mergeNestedFieldsForEnrich(importFields, raw, parsedRow, existingEntity);
+
+        // A name nothing finds keeps the stored reference of the record it updates.
+        this.keepStoredReferences(importFields, parsedRow, existingEntity);
       }
 
       // Run async JSON validators
@@ -589,6 +636,57 @@ export class CsvImportService {
     }
 
     return parsedRows;
+  }
+
+  /**
+   * Merge mode (`enrich`, the screen's "complete" and Kad's), on a row that updates a record (lot I3
+   * of 26.11.9): a reference cell whose name nothing finds keeps the stored value instead of emptying
+   * it, and a numbered list with such a cell keeps the stored list whole. Each such cell is said
+   * (`CSV_REFERENCE_NOT_FOUND_KEPT`). A new record, and full replace, are not concerned.
+   */
+  private keepStoredReferences(fields: CsvFieldDefinition[], row: CsvImportRow, existingEntity: any): void {
+    for (const field of fields) {
+      if (!field.fkEntity || !(field.entityProperty in existingEntity)) continue;
+      const numbered = field.type === CsvFieldType.ARRAY && field.arrayStrategy === ArrayStrategy.NUMBERED_COLUMNS;
+      const baseName = field.csvColumn.replace(/_\d+$/, '');
+      const columns = numbered
+        ? new Set(Array.from({ length: field.maxItems ?? this.DEFAULT_MAX_ITEMS }, (_, i) => `${baseName}_${i + 1}`))
+        : new Set([field.csvColumn]);
+      const code = numbered ? 'CSV_REFERENCE_NOT_FOUND_SKIPPED' : 'CSV_REFERENCE_NOT_FOUND_CLEARED';
+      const missing = row.warnings.filter((warning) => warning.code === code && warning.column !== undefined && columns.has(warning.column));
+      if (missing.length === 0) continue;
+      row.parsed[field.entityProperty] = existingEntity[field.entityProperty];
+      for (const warning of missing) {
+        warning.code = 'CSV_REFERENCE_NOT_FOUND_KEPT';
+        warning.message = `${field.fkEntity} not found: "${warning.params?.value ?? ''}" (kept)`;
+      }
+    }
+  }
+
+  /**
+   * Merge mode, once the hooks ran: a stored reference kept for a name nothing finds
+   * (`keepStoredReferences`) must still hold for the record as the row leaves it. A reference that
+   * belongs to other properties of the record (`keptWith`) is not kept when the row changes one of
+   * them: it is cleared, and said, as in full replace (`CSV_REFERENCE_NOT_FOUND_CLEARED`).
+   */
+  private clearKeptReferencesOfChangedOwners(rows: CsvImportRow[], fields: CsvFieldDefinition[]): void {
+    const dependent = fields.filter((field) => field.fkEntity && field.keptWith?.length);
+    if (dependent.length === 0) return;
+    const same = (left: unknown, right: unknown) => String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
+    for (const row of rows) {
+      const stored = row.existingEntity;
+      if (!stored) continue;
+      for (const field of dependent) {
+        const changed = field.keptWith!.some((property) => Object.prototype.hasOwnProperty.call(row.parsed, property) && !same(row.parsed[property], stored[property]));
+        if (!changed) continue;
+        for (const warning of row.warnings) {
+          if (warning.column !== field.csvColumn || warning.code !== 'CSV_REFERENCE_NOT_FOUND_KEPT') continue;
+          row.parsed[field.entityProperty] = null;
+          warning.code = 'CSV_REFERENCE_NOT_FOUND_CLEARED';
+          warning.message = `${field.fkEntity} not found: "${warning.params?.value ?? ''}" (set to null)`;
+        }
+      }
+    }
   }
 
   /**
@@ -885,13 +983,15 @@ export class CsvImportService {
 
       // Resolve FK if needed
       if (field.fkEntity) {
-        const resolved = this.resolver.resolveId(
-          field.fkEntity,
-          rawValue,
-          context.resolverCache,
-        );
-        if (resolved) {
-          values.push(resolved);
+        const found = this.findReference(field.fkEntity, colName, rawValue, row, context);
+        if (found && 'id' in found) {
+          values.push(found.id);
+        } else if (found) {
+          row.errors.push({
+            row: row.rowNumber,
+            column: colName,
+            ...this.ambiguity(field.fkEntity, rawValue, found.many),
+          });
         } else if (field.fkRequired) {
           row.errors.push({
             row: row.rowNumber,
@@ -1075,7 +1175,7 @@ export class CsvImportService {
   ): any {
     // Custom transform function
     if (field.importTransformFn) {
-      return field.importTransformFn(rawValue, row.raw, context);
+      return field.importTransformFn(rawValue, row.raw, context, row.rowNumber);
     }
 
     switch (field.type) {
@@ -1237,7 +1337,12 @@ export class CsvImportService {
       return value;
     }
 
-    const resolved = this.resolver.resolveId(field.fkEntity, value, context.resolverCache);
+    const found = this.findReference(field.fkEntity, field.csvColumn, value, row, context, field.nameMatchedByConfig === true);
+    if (found && 'many' in found) {
+      const { code, message, params } = this.ambiguity(field.fkEntity, value, found.many);
+      throw new CsvCellError(code, message, params);
+    }
+    const resolved = found?.id ?? null;
 
     if (!resolved) {
       if (field.fkRequired) {
@@ -1255,6 +1360,72 @@ export class CsvImportService {
     }
 
     return resolved;
+  }
+
+  /**
+   * The record a reference cell names (lot I3 of 26.11.9): by its name case aside, as before; beyond
+   * (accents set aside, a shipped name in another language) when the person reads the family and has
+   * not undone that value (`params.unmatched`). A match beyond case is noted for the result. Kad's
+   * proposal for the value comes first (`params.proposals`): the record it names, exactly or case
+   * aside, in a family the person reads, is a match of origin model; otherwise the proposal is noted
+   * as refused, naming nothing of the family, and the cell is found by its own name. `byConfig` (a
+   * field the config matches itself, `nameMatchedByConfig`): case aside only, no proposal.
+   */
+  private findReference(
+    fkEntity: string,
+    column: string,
+    value: string,
+    row: CsvImportRow,
+    context: CsvImportContext,
+    byConfig = false,
+  ): ReferenceLookup {
+    const undone = byConfig || undoneMatch(context.params.unmatched, column, value);
+    const reads = this.resolver.matchesBeyondCase(fkEntity, context.access);
+    const proposal = undone ? undefined : proposalFor(context.params.proposals, column, value);
+    if (proposal !== undefined) {
+      const target = reads ? this.resolver.resolveName(fkEntity, proposal, context.resolverCache, { beyondCase: false }) : null;
+      if (target?.kind === 'one') {
+        if (context.nameMatches) {
+          noteNameMatch(context.nameMatches, {
+            column, name: null, value: value.trim(), target: target.target, ref: target.ref, origin: 'model', reason: 'model', undoable: true,
+          }, row.rowNumber);
+        }
+        return { id: target.entry.id };
+      }
+      if (context.refusedProposals) {
+        noteRefusedProposal(context.refusedProposals, { column, name: null, value: value.trim(), target: proposal, reason: 'missing' }, row.rowNumber);
+      }
+    }
+    const beyondCase = !undone && reads;
+    const found = this.resolver.resolveName(fkEntity, value, context.resolverCache, { beyondCase });
+    if (found.kind === 'none') return null;
+    if (found.kind === 'many') return { many: found.names };
+    if (found.how === 'accents' || found.how === 'translation') {
+      if (undone) return null;
+      if (context.nameMatches) {
+        noteNameMatch(context.nameMatches, {
+          column,
+          name: null,
+          value: value.trim(),
+          target: found.target,
+          ref: found.ref,
+          origin: 'server',
+          reason: found.how,
+          undoable: true,
+        }, row.rowNumber);
+      }
+    }
+    return { id: found.entry.id };
+  }
+
+  /** A name that may designate several records, named by their references, else their names. */
+  private ambiguity(fkEntity: string, value: string, names: string[]): { code: string; message: string; params: Record<string, string> } {
+    const listed = names.join(', ');
+    return {
+      code: 'CSV_NAME_AMBIGUOUS_AMONG',
+      message: `${fkEntity} "${value}" may designate several records: ${listed}`,
+      params: { value, names: listed },
+    };
   }
 
   /**
@@ -1395,7 +1566,6 @@ export class CsvImportService {
   private resolveIdentity(
     config: CsvEntityConfig,
     raw: Record<string, string>,
-    row: CsvImportRow,
     existingEntities: Map<string, any>,
   ): any | null {
     // Check ID first
@@ -1484,13 +1654,16 @@ export class CsvImportService {
   ): Promise<void> {
     const repo = context.manager.getRepository(config.tableName);
     const entitiesToSave: any[] = [];
+    // The record each written row saves, for its relation handlers: rows the import does not write
+    // (unchanged, or left out by the operation) have none.
+    const written: Array<{ row: CsvImportRow; entity: any }> = [];
     const persistedRows: Array<{
       action: 'create' | 'update';
       before: any | null;
     }> = [];
 
     for (const row of rows) {
-      if (row.errors.length > 0) {
+      if (row.errors.length > 0 || row.leftOut) {
         continue;
       }
 
@@ -1523,6 +1696,7 @@ export class CsvImportService {
       }
 
       entitiesToSave.push(entity);
+      written.push({ row, entity });
       persistedRows.push({
         action: row.isInsert ? 'create' : 'update',
         before: row.isInsert ? null : row.existingEntity ?? null,
@@ -1543,26 +1717,15 @@ export class CsvImportService {
     // Handle relation handlers
     if (config.relationHandlers) {
       for (const handler of config.relationHandlers) {
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          if (row.errors.length > 0) continue;
-
-          const entity = entitiesToSave.find(
-            (e) =>
-              (row.existingEntity && e.id === row.existingEntity.id) ||
-              (!row.existingEntity && e === entitiesToSave[i]),
-          );
-
-          if (entity) {
-            await handler.importHandler(entity, row.raw, context);
-          }
+        for (const { row, entity } of written) {
+          await handler.importHandler(entity, row.raw, context);
         }
       }
     }
 
     // Call afterCommit hook
     if (config.afterCommit) {
-      await config.afterCommit(entitiesToSave, context);
+      await config.afterCommit(entitiesToSave, context, written);
     }
   }
 

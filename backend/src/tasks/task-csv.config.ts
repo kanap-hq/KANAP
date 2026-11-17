@@ -9,9 +9,13 @@ import {
 import { allocateItemNumbers } from '../common/item-number.service';
 import { richTextCell } from '../common/csv/rich-text-cell';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
-import { taskIncidentVisibilitySql } from '../incidents/incident-visibility';
-import { contractReferenceNumber } from '../contracts/contract-reference';
+import { incidentViewerForSql, incidentVisibilitySql, taskIncidentVisibilitySql, type IncidentViewer } from '../incidents/incident-visibility';
+import { contractReference, contractReferenceNumber } from '../contracts/contract-reference';
 import type { CsvLanguage } from '../common/csv-sheet';
+import type { CsvCallerAccess, CsvImportParams } from '../common/csv';
+import { hasLevel } from '../common/relations/relations-access';
+import { findRecordByName, noteNameMatch, noteRefusedProposal, proposalFor, takeProposal, undoneMatch, type MatchHow } from '../common/name-matching';
+import { budgetLineReference } from '../spend/budget-nature';
 
 /** The label of a contract outside the person's access, as the tasks list writes it (`ops:contracts.outsideYourAccess`). */
 export const CONTRACT_OUTSIDE_ACCESS: Record<CsvLanguage, string> = {
@@ -87,7 +91,7 @@ function normalizeTaskCodes(entity: any): void {
   }
 }
 
-/** The users a row's numbered email columns name, in order; null when none (as TasksCsvService writes them). */
+/** The users a row's numbered email columns name, in order; null when none. */
 function csvUserIds(raw: Record<string, string>, prefix: string, userByEmail: Map<string, string>): string[] | null {
   const ids: string[] = [];
   for (let i = 1; i <= 4; i++) {
@@ -125,35 +129,63 @@ export async function taskProjectClassifications(
   return new Map(rows.map((row) => [row.id, row]));
 }
 
-/** The tables a task's related object is named in. `where`: a `spend_item` names an OPEX line (`spend/budget-nature.ts`). */
-const RELATED_OBJECT_TABLES: Record<string, { table: string; nameColumn: string; where?: string }> = {
-  project: { table: 'portfolio_projects', nameColumn: 'name' },
-  spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'` },
-  contract: { table: 'contracts', nameColumn: 'name' },
-  capex_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'capex'` },
-  incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
+/**
+ * The tables a task's related object is named in. `where`: a `spend_item` names an OPEX line
+ * (`spend/budget-nature.ts`). `module` and `ref`: a family named by its name, found accents aside
+ * for a person who reads that module (lot I3 of 26.11.9), and its business reference. `reader`: the
+ * module a person reads to have Kad's proposal for the type taken, when it is not `module`: an
+ * incident is named by its reference (`INC-n`), which keeps its reading, so Kad's `INC-n` is judged
+ * as the cell would be, for a reader of the incidents (T-I3i).
+ */
+const RELATED_OBJECT_TABLES: Record<string, { table: string; nameColumn: string; where?: string; module?: string; reader?: string; ref?: (itemNumber: unknown) => string | null }> = {
+  project: { table: 'portfolio_projects', nameColumn: 'name', module: 'portfolio_projects', ref: (n) => (n == null ? null : `PRJ-${n}`) },
+  spend_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'opex'`, module: 'budget', ref: (n) => budgetLineReference(n as number | null) },
+  contract: { table: 'contracts', nameColumn: 'name', module: 'contracts', ref: (n) => contractReference(n as number | null) },
+  capex_item: { table: 'spend_items', nameColumn: 'product_name', where: ` AND nature = 'capex'`, module: 'budget', ref: (n) => budgetLineReference(n as number | null) },
+  incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text", reader: 'incidents' },
 };
 
+/** What a name of a related object finds: nothing, several records (named), or one record and how. */
+export type RelatedObjectLookup =
+  | { kind: 'none' }
+  | { kind: 'many'; names: string[] }
+  | { kind: 'one'; id: string; how: MatchHow; target: string; ref: string | null };
+
 /**
- * The id each name of a related object of one type resolves to: a contract is also named by its
+ * The record each name of a related object of one type finds: a contract is also named by its
  * reference (`CTR-12`), as the task list shows it, and the reference wins over a contract that
- * would carry it as its name. Null for a type that has no names.
+ * would carry it as its name. Else by its name case aside (the first record read wins, as before),
+ * then accents aside when `beyondCase` says so for that name (a family named by its name: not an
+ * incident's `INC-n`); several names there are an ambiguity. The rows are read in the person's
+ * transaction: for a person limited by data access, a contract or a line outside their access is no
+ * row, so it is neither found nor named. A restricted incident the `viewer` does not see (neither
+ * incidents:admin, its reporter nor its owner) is no row either, as on the incidents screen; without a
+ * viewer, none is seen. Null for a type that has no names.
  */
-export async function relatedObjectIdsByName(
+export async function relatedObjectsByName(
   manager: { query: (sql: string, params: unknown[]) => Promise<any> },
   tenantId: string,
   type: string,
   names: string[],
-): Promise<((name: string) => string | undefined) | null> {
+  options: { beyondCase?: (name: string) => boolean; viewer?: IncidentViewer | null } = {},
+): Promise<((name: string) => RelatedObjectLookup) | null> {
   const mapping = RELATED_OBJECT_TABLES[type];
   if (!mapping) return null;
   const { table, nameColumn, where } = mapping;
-  const rows = await manager.query(
-    `SELECT id, ${nameColumn} AS name FROM ${table} WHERE tenant_id = $1${where ?? ''} AND LOWER(${nameColumn}) = ANY($2)`,
-    [tenantId, names.map((name) => name.toLowerCase())],
+  const beyondCase = (name: string) => !!mapping.module && options.beyondCase?.(name) === true;
+  const itemNumber = mapping.ref ? ', item_number' : '';
+  // Beyond case, every name of the family is a candidate; else only the names of the file, case aside.
+  const params: unknown[] = [tenantId];
+  const byName = names.some(beyondCase)
+    ? ''
+    : ` AND LOWER(${nameColumn}) = ANY($${params.push(names.map((name) => name.toLowerCase()))})`;
+  const visible = type === 'incident' ? incidentVisibilitySql(table, incidentViewerForSql(options.viewer), params) : '';
+  const read: Array<{ id: string; name: string | null; item_number?: unknown }> = await manager.query(
+    `SELECT id, ${nameColumn} AS name${itemNumber} FROM ${table} WHERE tenant_id = $1${where ?? ''}${byName}${visible}`,
+    params,
   );
-  const idByName = new Map<string, string>();
-  for (const row of rows) idByName.set(String(row.name).toLowerCase(), row.id);
+  const rows = read.filter((row): row is { id: string; name: string; item_number?: unknown } => typeof row.name === 'string' && row.name.trim() !== '');
+  const refOf = (row: { item_number?: unknown }) => mapping.ref?.(row.item_number ?? null) ?? null;
   const idByNumber = new Map<number, string>();
   if (type === 'contract') {
     const numbers = names.map((name) => contractReferenceNumber(name)).filter((n): n is number => n !== null);
@@ -165,10 +197,44 @@ export async function relatedObjectIdsByName(
       for (const row of byNumber) idByNumber.set(Number(row.item_number), row.id);
     }
   }
-  return (name: string) => {
+  return (name: string): RelatedObjectLookup => {
     const reference = type === 'contract' ? contractReferenceNumber(name) : null;
-    return (reference !== null ? idByNumber.get(reference) : undefined) ?? idByName.get(name.toLowerCase());
+    const byReference = reference !== null ? idByNumber.get(reference) : undefined;
+    if (byReference) return { kind: 'one', id: byReference, how: 'exact', target: name, ref: contractReference(reference) };
+    const found = findRecordByName(rows, name, { beyondCase: beyondCase(name), caseBlind: true, label: refOf });
+    if (found.kind === 'one') return { kind: 'one', id: found.row.id, how: found.how, target: found.row.name, ref: refOf(found.row) };
+    return found.kind === 'many' ? { kind: 'many', names: found.names } : { kind: 'none' };
   };
+}
+
+/** The id each name of a related object of one type finds (`relatedObjectsByName`); undefined for none or several. */
+export async function relatedObjectIdsByName(
+  manager: { query: (sql: string, params: unknown[]) => Promise<any> },
+  tenantId: string,
+  type: string,
+  names: string[],
+  options: { beyondCase?: (name: string) => boolean; viewer?: IncidentViewer | null } = {},
+): Promise<((name: string) => string | undefined) | null> {
+  const lookup = await relatedObjectsByName(manager, tenantId, type, names, options);
+  if (!lookup) return null;
+  return (name: string) => {
+    const found = lookup(name);
+    return found.kind === 'one' ? found.id : undefined;
+  };
+}
+
+/**
+ * Whether a name of a related object of `type` (or of a phase, `portfolio_projects`) is found accents
+ * aside: the person reads the family's module and has not undone that match.
+ */
+export function relatedObjectBeyondCase(
+  access: CsvCallerAccess | null | undefined,
+  unmatched: CsvImportParams['unmatched'],
+  column: string,
+  module: string | undefined,
+): (name: string) => boolean {
+  const reads = !!module && !!access && hasLevel(access, module, 'reader');
+  return (name: string) => reads && !undoneMatch(unmatched, column, name);
 }
 
 /** The hidden contract's label in any of the export's languages, lower case. */
@@ -208,6 +274,347 @@ function keepObjectsOutsideAccess(rows: CsvImportRow[], operation: string): void
       code: 'CSV_REFERENCE_NOT_FOUND',
       params: { value: name },
     });
+  }
+}
+
+/** A row the operation skips (an insert in update-only, an update in insert-only): not checked. */
+function skippedByOperation(row: CsvImportRow, operation: string): boolean {
+  return row.isInsert ? operation === 'update_only' : operation === 'insert_only';
+}
+
+/** A value of the row once imported: the file's, else the stored one (none for a new task). */
+function importedValue(row: CsvImportRow, key: string): any {
+  return Object.prototype.hasOwnProperty.call(row.parsed, key) ? row.parsed[key] : row.existingEntity?.[key];
+}
+
+/** Whether the row's own cell gives the related object's id (merge mode copies the stored id into a blank one). */
+function givesRelatedObjectId(row: CsvImportRow): boolean {
+  return String(row.raw.related_object_id ?? '').trim() !== '';
+}
+
+/**
+ * The related object a row names by its name (lot I3 of 26.11.9), found at the check as at the load,
+ * as `relatedObjectsByName` finds it: case aside, then accents aside for a person who reads its
+ * family. A match beyond case is listed; a name nothing finds, or several, refuses the row. A row
+ * that gives the object's id is left as it is: the id wins. A row of an existing task that names its
+ * object without its id (a blank cell, or no column) has the name read as for a new task, whatever
+ * object the task has: the stored one leaves the row unchanged, another one moves the task (fixes C).
+ * The label of an object outside the person's access was settled before (`keepObjectsOutsideAccess`).
+ * The commit resolves nothing more.
+ * Kad's proposal for a name comes first: the record it names, exactly or case aside (a contract also
+ * by its reference, an incident by its `INC-n`), in a family the person reads, is a match of origin
+ * model; otherwise the proposal is listed as refused and the name is found by its own rule.
+ */
+async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+  const byType = new Map<string, CsvImportRow[]>();
+  for (const row of rows) {
+    if (row.errors.length > 0 || skippedByOperation(row, context.params.operation)) continue;
+    const name = String(row.parsed._related_object_name ?? '').trim();
+    if (!name || givesRelatedObjectId(row)) continue;
+    const type = objectTypeLookup.get(String(importedValue(row, 'related_object_type') ?? '').trim().toLowerCase());
+    if (!type || (type === 'contract' && isContractOutsideAccessLabel(name))) continue;
+    byType.set(type, [...(byType.get(type) ?? []), row]);
+  }
+  for (const [type, typeRows] of byType) {
+    const beyondCase = relatedObjectBeyondCase(context.access, context.params.unmatched, 'related_object_name', RELATED_OBJECT_TABLES[type]?.module);
+    const names = typeRows.map((row) => String(row.parsed._related_object_name).trim());
+    const lookup = await relatedObjectsByName(context.manager, context.tenantId, type, names, { beyondCase, viewer: context.viewer });
+    if (!lookup) continue;
+    const proposalOf = (name: string) => (undoneMatch(context.params.unmatched, 'related_object_name', name)
+      ? undefined
+      : proposalFor(context.params.proposals, 'related_object_name', name));
+    const proposals = [...new Set(names.map(proposalOf).filter((proposal): proposal is string => proposal !== undefined))];
+    const module = RELATED_OBJECT_TABLES[type]?.module ?? RELATED_OBJECT_TABLES[type]?.reader;
+    const reads = !!module && !!context.access && hasLevel(context.access, module, 'reader');
+    const proposed = proposals.length > 0 && reads ? await relatedObjectsByName(context.manager, context.tenantId, type, proposals, { viewer: context.viewer }) : null;
+    for (const row of typeRows) {
+      const name = String(row.parsed._related_object_name).trim();
+      const proposal = proposalOf(name);
+      if (proposal !== undefined) {
+        const target = proposed?.(proposal);
+        if (target?.kind === 'one') {
+          row.parsed.related_object_id = target.id;
+          delete row.parsed._related_object_name;
+          if (context.nameMatches) {
+            noteNameMatch(context.nameMatches, {
+              column: 'related_object_name', name: null, value: name, target: target.target, ref: target.ref,
+              origin: 'model', reason: 'model', undoable: true,
+            }, row.rowNumber);
+          }
+          continue;
+        }
+        if (context.refusedProposals) {
+          noteRefusedProposal(context.refusedProposals, { column: 'related_object_name', name: null, value: name, target: proposal, reason: 'missing' }, row.rowNumber);
+        }
+      }
+      const found = lookup(name);
+      if (found.kind === 'one') {
+        row.parsed.related_object_id = found.id;
+        delete row.parsed._related_object_name;
+        if (found.how === 'accents' && context.nameMatches) {
+          noteNameMatch(context.nameMatches, {
+            column: 'related_object_name', name: null, value: name, target: found.target, ref: found.ref,
+            origin: 'server', reason: 'accents', undoable: true,
+          }, row.rowNumber);
+        }
+        continue;
+      }
+      const names = found.kind === 'many' ? found.names.join(', ') : '';
+      row.errors.push(found.kind === 'many'
+        ? { row: row.rowNumber, column: 'related_object_name', message: `"${name}" may designate several records: ${names}`, code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: name, names } }
+        : { row: row.rowNumber, column: 'related_object_name', message: `"${name}" was not found.`, code: 'CSV_REFERENCE_NOT_FOUND', params: { value: name } });
+    }
+  }
+}
+
+/** The related object type a row's task has once imported, as a code (`incident`, `project`...); '' for none. */
+function importedObjectType(row: CsvImportRow): string {
+  const value = String(importedValue(row, 'related_object_type') ?? '').trim().toLowerCase();
+  return objectTypeLookup.get(value) ?? value;
+}
+
+/**
+ * A row that gives an incident by its id (lot I3 of 26.11.9, fixes E): the incident must be one the
+ * person sees, as by its `INC-n` (`relatedObjectsByName`). A restricted incident the `viewer` does not
+ * see (neither incidents:admin, its reporter nor its owner) is refused as not found, like an id that
+ * names no incident.
+ */
+async function checkIncidentIds(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+  const giving = rows.filter((row) => row.errors.length === 0 && !skippedByOperation(row, context.params.operation)
+    && givesRelatedObjectId(row) && importedObjectType(row) === 'incident');
+  if (giving.length === 0) return;
+  const idOf = (row: CsvImportRow) => String(row.raw.related_object_id).trim();
+  const ids = [...new Set(giving.map(idOf).filter((id) => TASK_UUID_RE.test(id)).map((id) => id.toLowerCase()))];
+  const params: unknown[] = [context.tenantId, ids];
+  const visible = incidentVisibilitySql('i', incidentViewerForSql(context.viewer), params);
+  const seen: Array<{ id: string }> = ids.length === 0 ? [] : await context.manager.query(
+    `SELECT i.id::text AS id FROM incidents i WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[])${visible}`,
+    params,
+  );
+  const found = new Set(seen.map((row) => row.id.toLowerCase()));
+  for (const row of giving) {
+    const id = idOf(row);
+    if (found.has(id.toLowerCase())) continue;
+    row.errors.push({ row: row.rowNumber, column: 'related_object_id', message: `"${id}" was not found.`, code: 'CSV_REFERENCE_NOT_FOUND', params: { value: id } });
+  }
+}
+
+/**
+ * The phase of a project task is its project's (lot I3 of 26.11.9). The shared lookup finds the
+ * file's phase name anywhere in the workspace, case aside only (`nameMatchedByConfig`); here, in the
+ * task's project, at the check as at the load: Kad's proposal first, for a person who reads the
+ * projects (a match of origin model; otherwise refused); then the name as the lookup found it when
+ * that phase is the project's; else the project's phase of that name case aside, then accents aside
+ * for a person who reads the projects and has not undone that match (a match, listed). Several: the
+ * row is refused. None: refused when the workspace has the name elsewhere; otherwise the lookup's
+ * warning stands (the phase is cleared, or kept on an update in merge mode), as before. A phase on a
+ * task outside a project is not imported (`followTaskObjects`), and Kad's proposal for it is refused.
+ */
+async function anchorPhases(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+  const { params } = context;
+  const state = { matches: context.nameMatches ?? new Map(), refused: context.refusedProposals ?? new Map() };
+  const reads = !!context.access && hasLevel(context.access, 'portfolio_projects', 'reader');
+  const naming = rows
+    .filter((row) => row.errors.length === 0 && !skippedByOperation(row, params.operation))
+    .filter((row) => String(row.raw.phase_name ?? '').trim())
+    .map((row) => {
+      const type = String(importedValue(row, 'related_object_type') ?? '').trim().toLowerCase();
+      const id = importedValue(row, 'related_object_id');
+      const projectId = type === 'project' && id ? String(id).trim().toLowerCase() : null;
+      return { row, projectId: projectId && TASK_UUID_RE.test(projectId) ? projectId : null };
+    });
+  for (const { row, projectId } of naming) {
+    if (projectId) continue;
+    const cell = String(row.raw.phase_name).trim();
+    const proposal = undoneMatch(params.unmatched, 'phase_name', cell) ? undefined : proposalFor(params.proposals, 'phase_name', cell);
+    if (proposal !== undefined) noteRefusedProposal(state.refused, { column: 'phase_name', name: null, value: cell, target: proposal, reason: 'missing' }, row.rowNumber);
+  }
+  const candidates = naming.filter((entry): entry is { row: CsvImportRow; projectId: string } => !!entry.projectId);
+  if (candidates.length === 0) return;
+  const parsedIds = candidates.map((entry) => String(entry.row.parsed.phase_id ?? '')).filter((id) => TASK_UUID_RE.test(id));
+  const phases: Array<{ id: string; name: string; project_id: string }> = await context.manager.query(
+    `SELECT id::text AS id, name, project_id::text AS project_id FROM portfolio_project_phases
+      WHERE tenant_id = $1 AND (project_id = ANY($2::uuid[]) OR id = ANY($3::uuid[]))`,
+    [context.tenantId, [...new Set(candidates.map((entry) => entry.projectId))], [...new Set(parsedIds)]],
+  );
+  const phaseById = new Map(phases.map((phase) => [phase.id.toLowerCase(), phase]));
+  const MISSING = new Set(['CSV_REFERENCE_NOT_FOUND_CLEARED', 'CSV_REFERENCE_NOT_FOUND_KEPT']);
+  for (const { row, projectId } of candidates) {
+    const cell = String(row.raw.phase_name).trim();
+    const own = phases.filter((phase) => phase.project_id.toLowerCase() === projectId);
+    const missing = row.warnings.find((warning) => warning.column === 'phase_name' && MISSING.has(String(warning.code)));
+    const take = (phase: { id: string }) => {
+      row.parsed.phase_id = phase.id;
+      if (missing) row.warnings.splice(row.warnings.indexOf(missing), 1);
+    };
+    const proposed = takeProposal(state, {
+      proposals: params.proposals, unmatched: params.unmatched, column: 'phase_name', value: cell, line: row.rowNumber, rows: own, reads, caseBlind: true,
+    });
+    if (proposed) {
+      take(proposed);
+      continue;
+    }
+    if (!missing && phaseById.get(String(row.parsed.phase_id ?? '').toLowerCase())?.project_id.toLowerCase() === projectId) continue;
+    const beyondCase = relatedObjectBeyondCase(context.access, params.unmatched, 'phase_name', 'portfolio_projects')(cell);
+    const found = findRecordByName(own, cell, { beyondCase, caseBlind: true });
+    if (found.kind === 'one') {
+      take(found.row);
+      if (found.how === 'accents') {
+        noteNameMatch(state.matches, {
+          column: 'phase_name', name: null, value: cell, target: found.row.name, ref: null,
+          origin: 'server', reason: 'accents', undoable: true,
+        }, row.rowNumber);
+      }
+      continue;
+    }
+    // Nothing anywhere in the workspace: the lookup's warning stands, as before.
+    if (missing && found.kind === 'none') continue;
+    const names = found.kind === 'many' ? found.names.join(', ') : '';
+    row.errors.push(found.kind === 'many'
+      ? { row: row.rowNumber, column: 'phase_name', message: `"${cell}" may designate several phases of the project: ${names}`, code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: cell, names } }
+      : { row: row.rowNumber, column: 'phase_name', message: `Phase "${cell}" does not exist in the task's project.`, code: 'CSV_REFERENCE_NOT_FOUND', params: { value: cell } });
+  }
+}
+
+/** The fields of a task its object rules (`TasksUnifiedService`), and the table their stored names are read in. */
+const TASK_OBJECT_FIELDS = [
+  { key: 'phase_id', column: 'phase_name', table: 'portfolio_project_phases' },
+  { key: 'source_id', column: 'source_name', table: 'portfolio_sources' },
+  { key: 'category_id', column: 'category_name', table: 'portfolio_categories' },
+  { key: 'stream_id', column: 'stream_name', table: 'portfolio_streams' },
+  { key: 'company_id', column: 'company_name', table: 'companies' },
+] as const;
+
+/** What the shared lookup said of a reference cell nothing found. */
+const LOOKUP_MISSES = new Set(['CSV_REFERENCE_NOT_FOUND_CLEARED', 'CSV_REFERENCE_NOT_FOUND_KEPT']);
+
+/**
+ * A task's object rules its phase and its classification, as on the task screen (lot I3 of 26.11.9,
+ * fixes C, E and F): only a project task has a phase; a task of a budget line, a contract or an
+ * incident has no source, category, stream or company. A row whose task cannot have a field it fills
+ * has that cell left out, and said on it (`CSV_TASK_PHASE_OUTSIDE_PROJECT`,
+ * `CSV_TASK_CLASSIFICATION_NOT_ALLOWED`); the row is not refused. A task the row moves to another
+ * object without that cell (a blank cell in merge mode, or no column) loses what its new object does
+ * not allow, cleared and said removed by the stored name (`CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT`,
+ * `CSV_TASK_CLASSIFICATION_CLEARED`; correctifs G); a task that keeps its object keeps what it has, as
+ * on the screen. Moved to another project, the phase of the same name there, case aside, is taken, as
+ * the commit always did; otherwise it is cleared and said not found in that project
+ * (`CSV_REFERENCE_NOT_FOUND_CLEARED`, the rule of `clearKeptReferencesOfChangedOwners`). The load no
+ * longer fails on it.
+ */
+async function followTaskObjects(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+  const clears: Array<{ row: CsvImportRow; key: string; column: string; projectId: string | null }> = [];
+  for (const row of rows) {
+    if (row.errors.length > 0 || skippedByOperation(row, context.params.operation)) continue;
+    const type = importedObjectType(row);
+    const stored = row.existingEntity;
+    const moved = !!stored && String(stored.related_object_id ?? '').toLowerCase() !== String(importedValue(row, 'related_object_id') ?? '').trim().toLowerCase();
+    for (const { key, column } of TASK_OBJECT_FIELDS) {
+      const allowed = key === 'phase_id' ? type === 'project' : type === '' || type === 'project';
+      const cell = String(row.raw[column] ?? '').trim();
+      if (!allowed && cell) {
+        row.warnings = row.warnings.filter((warning) => warning.column !== column || !LOOKUP_MISSES.has(String(warning.code)));
+        row.warnings.push(key === 'phase_id'
+          ? { row: row.rowNumber, column, message: `"${cell}" is not imported: only a project task has a phase.`, code: 'CSV_TASK_PHASE_OUTSIDE_PROJECT', params: { value: cell } }
+          : { row: row.rowNumber, column, message: `"${cell}" is not imported: only a standalone or project task has a classification.`, code: 'CSV_TASK_CLASSIFICATION_NOT_ALLOWED', params: { value: cell } });
+        if (moved) row.parsed[key] = null;
+        else delete row.parsed[key];
+        continue;
+      }
+      if (!moved || !stored[key] || cell || String(importedValue(row, key) ?? '') !== String(stored[key])) continue;
+      if (!allowed) clears.push({ row, key, column, projectId: null });
+      else if (key === 'phase_id') {
+        const projectId = importedProjectId(row);
+        if (projectId && TASK_UUID_RE.test(projectId)) clears.push({ row, key, column, projectId });
+      }
+    }
+  }
+  if (clears.length === 0) return;
+  const ids = [...new Set(clears.map(({ row, key }) => String(row.existingEntity[key])))];
+  const projectIds = [...new Set(clears.map((clear) => clear.projectId).filter((id): id is string => !!id))];
+  const named: Array<{ id: string; name: string; project_id: string | null }> = await context.manager.query(
+    [
+      `SELECT id::text AS id, name, project_id::text AS project_id FROM portfolio_project_phases
+        WHERE tenant_id = $1 AND (id = ANY($2::uuid[]) OR project_id = ANY($3::uuid[]))`,
+      ...TASK_OBJECT_FIELDS.filter((field) => field.key !== 'phase_id')
+        .map((field) => `SELECT id::text, name, NULL FROM ${field.table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`),
+    ].join(' UNION ALL '),
+    [context.tenantId, ids, projectIds],
+  );
+  const byId = new Map(named.map((record) => [record.id.toLowerCase(), record]));
+  for (const { row, key, column, projectId } of clears) {
+    const storedRecord = byId.get(String(row.existingEntity[key]).toLowerCase());
+    if (projectId) {
+      if (!storedRecord || storedRecord.project_id?.toLowerCase() === projectId) continue;
+      const name = storedRecord.name.toLowerCase();
+      const same = named.find((record) => record.project_id?.toLowerCase() === projectId && record.name.toLowerCase() === name);
+      if (same) {
+        row.parsed[key] = same.id;
+        continue;
+      }
+    }
+    row.parsed[key] = null;
+    if (!storedRecord) continue;
+    const value = storedRecord.name;
+    row.warnings.push(projectId
+      ? { row: row.rowNumber, column, message: `${TASK_OBJECT_FIELDS.find((field) => field.key === key)!.table} not found: "${value}" (set to null)`, code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value } }
+      : key === 'phase_id'
+        ? { row: row.rowNumber, column, message: `"${value}" is removed: only a project task has a phase.`, code: 'CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT', params: { value } }
+        : { row: row.rowNumber, column, message: `"${value}" is removed: only a standalone or project task has a classification.`, code: 'CSV_TASK_CLASSIFICATION_CLEARED', params: { value } });
+  }
+}
+
+/** The numbered e-mail columns of a task's people lists, and the stored list each one writes. */
+const PEOPLE_LISTS = [{ prefix: 'viewer_email', key: 'viewer_ids' }, { prefix: 'owner_email', key: 'owner_ids' }] as const;
+
+/** A task's stored list of people (jsonb) names the same people as the file, in any order. */
+function samePeople(stored: unknown, next: string[]): boolean {
+  const current = Array.isArray(stored) ? stored.map(String) : [];
+  const wanted = new Set(next);
+  return current.length === wanted.size && current.every((id) => wanted.has(id));
+}
+
+/** Whether a row keeps its stored list of `prefix` (`importPeople` said so on one of its cells). */
+function keepsStoredPeople(warnings: ReadonlyArray<{ row: number; column?: string; code?: string }>, row: number, prefix: string): boolean {
+  return warnings.some((warning) => warning.row === row && warning.code === 'CSV_REFERENCE_NOT_FOUND_KEPT' && !!warning.column?.startsWith(`${prefix}_`));
+}
+
+/**
+ * Viewers and owners: the row's lists, written with the task the import writes (lot I3 of 26.11.9,
+ * review fixes: the task whose related object the import found, Kad's proposal and an undone match
+ * included). A list the file leaves out (none of its numbered columns) is not touched; a list that
+ * names the people the task has, in any order, is left as it is. An e-mail nothing finds is said at
+ * the check as at the load: in merge mode, on a row that updates a task, the stored list is kept whole
+ * (`CSV_REFERENCE_NOT_FOUND_KEPT`); elsewhere the e-mail is skipped (`CSV_REFERENCE_NOT_FOUND_SKIPPED`).
+ * The people are read once, by the file's e-mails.
+ */
+async function importPeople(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+  const checked = rows.filter((row) => row.errors.length === 0 && !skippedByOperation(row, context.params.operation));
+  const cells = checked.flatMap((row) => PEOPLE_LISTS.flatMap(({ prefix }) => [1, 2, 3, 4]
+    .map((i) => ({ row, column: `${prefix}_${i}`, value: String(row.raw[`${prefix}_${i}`] ?? '').trim() }))
+    .filter((cell) => cell.value)));
+  const known: Array<{ id: string; email: string }> = cells.length === 0 ? [] : await context.manager.query(
+    `SELECT id::text AS id, lower(email) AS email FROM users WHERE tenant_id = $1 AND lower(email) = ANY($2::text[])`,
+    [context.tenantId, [...new Set(cells.map((cell) => cell.value.toLowerCase()))]],
+  );
+  const userByEmail = new Map(known.map((user) => [user.email, user.id]));
+  for (const { row, column, value } of cells) {
+    if (userByEmail.has(value.toLowerCase())) continue;
+    const keep = context.params.mode === 'enrich' && !row.isInsert;
+    row.warnings.push({
+      row: row.rowNumber,
+      column,
+      message: `user not found: "${value}" (${keep ? 'kept' : 'skipped'})`,
+      code: keep ? 'CSV_REFERENCE_NOT_FOUND_KEPT' : 'CSV_REFERENCE_NOT_FOUND_SKIPPED',
+      params: { value },
+    });
+  }
+  for (const row of checked) {
+    for (const { prefix, key } of PEOPLE_LISTS) {
+      if (!hasColumns(row.raw, prefix) || keepsStoredPeople(row.warnings, row.rowNumber, prefix)) continue;
+      const ids = csvUserIds(row.raw, prefix, userByEmail) ?? [];
+      if (row.isInsert || !samePeople(row.existingEntity?.[key], ids)) row.parsed[key] = ids;
+    }
   }
 }
 
@@ -330,6 +737,9 @@ export const taskCsvConfig: CsvEntityConfig = {
       type: CsvFieldType.FK_BY_NAME,
       fkEntity: 'portfolio_project_phases',
       fkLookupColumn: 'name',
+      // Found in the task's project, beyond case and with Kad's proposals, by `anchorPhases`.
+      nameMatchedByConfig: true,
+      keptWith: ['related_object_type', 'related_object_id'],
       fkRequired: false,
       required: false,
       defaultExport: true,
@@ -402,6 +812,7 @@ export const taskCsvConfig: CsvEntityConfig = {
       type: CsvFieldType.FK_BY_NAME,
       fkEntity: 'portfolio_streams',
       fkLookupColumn: 'name',
+      keptWith: ['category_id'],
       fkRequired: false,
       required: false,
       defaultExport: true,
@@ -717,6 +1128,11 @@ export const taskCsvConfig: CsvEntityConfig = {
    */
   afterValidate: async (rows, context) => {
     keepObjectsOutsideAccess(rows, context.params.operation);
+    await checkIncidentIds(rows, context);
+    await resolveRelatedObjects(rows, context);
+    await anchorPhases(rows, context);
+    await followTaskObjects(rows, context);
+    await importPeople(rows, context);
     const matched = rows
       .filter((row) => row.errors.length === 0 && row.existingEntity)
       .map((row) => ({ row, projectId: importedProjectId(row) }))
@@ -736,31 +1152,24 @@ export const taskCsvConfig: CsvEntityConfig = {
 
   /**
    * The row as the commit stores it: codes normalized, the related object named by its id, the
-   * phase re-anchored to the task's project, and the viewers and owners TasksCsvService writes
-   * after the import.
+   * phase re-anchored to the task's project, and the viewers and owners `importPeople` set.
    */
   sameAsStored: async (rows, context) => {
-    const ids = rows.map((row) => row.existingEntity.id);
     const phaseIds = [...new Set(rows.flatMap((row) => [row.parsed.phase_id, row.existingEntity.phase_id]).filter(Boolean))];
-    // One after the other: the request's single connection runs its queries in turn anyway.
-    const users = ids.length === 0 ? [] : await context.manager.query(
-      `SELECT id, email FROM users WHERE tenant_id = $1`,
-      [context.tenantId],
-    );
-    const phases = ids.length === 0 || phaseIds.length === 0 ? [] : await context.manager.query(
+    const phases = rows.length === 0 || phaseIds.length === 0 ? [] : await context.manager.query(
       `SELECT id, name, project_id FROM portfolio_project_phases WHERE tenant_id = $1 AND id = ANY($2)`,
       [context.tenantId, phaseIds],
     );
-    const userByEmail = new Map<string, string>(users.map((u: any) => [String(u.email).toLowerCase(), u.id]));
     const phaseById = new Map<string, any>(phases.map((p: any) => [p.id, p]));
 
     return rows.map((row) => {
       const stored = row.existingEntity;
       const next: Record<string, any> = { ...row.parsed };
       normalizeTaskCodes(next);
+      // A name is read at the check (`resolveRelatedObjects`): a name still there on a row that gives
+      // no id was not resolved, and is not proven equal. A row that gives the id keeps it, whatever its name.
+      if (next._related_object_name && !givesRelatedObjectId(row)) return false;
       const relatedId = next.related_object_id ?? stored.related_object_id;
-      // A name without an id is resolved by the commit: not proven equal here.
-      if (!relatedId && next._related_object_name) return false;
       delete next._related_object_name;
 
       // The phase resolver matches names tenant-wide; the commit moves the phase to the task's
@@ -776,8 +1185,6 @@ export const taskCsvConfig: CsvEntityConfig = {
 
       delete next._viewer_emails;
       delete next._owner_emails;
-      if (hasColumns(row.raw, 'viewer_email')) next.viewer_ids = csvUserIds(row.raw, 'viewer_email', userByEmail);
-      if (hasColumns(row.raw, 'owner_email')) next.owner_ids = csvUserIds(row.raw, 'owner_email', userByEmail);
       return sameStoredValues(stored, next);
     });
   },
@@ -820,7 +1227,7 @@ export const taskCsvConfig: CsvEntityConfig = {
     // Resolve names to IDs for each type (`relatedObjectIdsByName`: a spend_item names an OPEX line,
     // a contract is also named by its reference).
     for (const [type, items] of byType.entries()) {
-      const idOf = await relatedObjectIdsByName(context.manager, context.tenantId, type, items.map((i) => i.name));
+      const idOf = await relatedObjectIdsByName(context.manager, context.tenantId, type, items.map((i) => i.name), { viewer: context.viewer });
       if (!idOf) continue;
 
       // Resolve each entity
@@ -922,8 +1329,8 @@ export const taskCsvConfig: CsvEntityConfig = {
       // Standalone tasks are valid - no type and no id
     }
 
-    // Viewer/owner emails are handled by TasksCsvService.handleViewerOwnerImport
-    // after the main import; drop the temp props so they never reach save/audit.
+    // The viewers and owners are in viewer_ids and owner_ids (`importPeople`); drop the temp props
+    // so they never reach save/audit.
     for (const entity of entities) {
       delete entity._viewer_emails;
       delete entity._owner_emails;

@@ -14,7 +14,8 @@ import { writeXlsx } from '../../../common/xlsx';
 import { natureChangeMessage } from '../preflight';
 import type { BudgetNature } from '../../budget-nature';
 import { formatToken, parseToken, tokenError } from '../token';
-import { BUDGET_FILE_MAX_BYTES } from '../upload';
+import { BUDGET_FILE_MAX_BYTES, budgetFileChoices } from '../upload';
+import { parseImportChoices } from '../../../ai/import/ai-import-targets';
 import {
   BudgetCatalog,
   BudgetFileScope,
@@ -990,6 +991,30 @@ async function testLeftOutLeavesNothing() {
   assert.deepEqual(rowChoices(anyway.report), [{ kind: 'lookalike', line: 2, action: 'create' }]);
 }
 
+/**
+ * Review 3 of lot I3, C4: BL-10 deleted after a check, then a new check: its targets carry the line gone
+ * (an empty state). "Create all anyway", "Update all" and "Leave all out" send them back, through the
+ * screen's route and Kad's choice route alike: read, and followed (BL-10 cannot be updated: left out).
+ */
+async function testChoicesForAllWithALineGone() {
+  const row = 'opex,,Microsoft 365 E3,Acme,6100,EUR,Microsoft,130000';
+  const shown = await lookPlan([row]);
+  const chosen: BudgetFileChoice[] = [{ kind: 'lookalike', line: 2, action: 'update', item: 10, state: shown.report.lookalikes!.lines[0].target.state }];
+  const after = await lookPlan([row], { stored: [], choices: chosen });
+  const targets = after.report.lookalikes!.targets;
+  assert.deepEqual(targets, { 2: { item: 10, state: '' } });
+  for (const [action, outcome] of [['create', 'created'], ['update', 'ignored'], ['ignore', 'ignored']] as const) {
+    const all = [{ kind: 'lookalikes', action, targets }];
+    const screen = budgetFileChoices(JSON.stringify(all));
+    const card = parseImportChoices('budget_lines', all);
+    assert.deepEqual(card, screen, action);
+    const plan = await lookPlan([row], { stored: [], choices: screen as BudgetFileChoice[] });
+    assert.equal(plan.report.ok, true, JSON.stringify(plan.report.errors));
+    // Gone, BL-10 has no reference to show (correctifs J).
+    assert.deepEqual(plan.report.lookalikes!.lines.map((entry) => [entry.line, entry.target.ref, entry.outcome]), [[2, '', outcome]], action);
+  }
+}
+
 /** "Update BL-n": through the read, as if the file named the line; refused when it cannot be. */
 async function testLookalikeUpdate() {
   const { stored } = lookFixture();
@@ -1092,6 +1117,15 @@ async function testLookalikeTargetKept() {
     header: TWO_YEARS, stored: edited, choices: [...dcShown.report.matching!.choices, { kind: 'lookalike', line: 2, action: 'update', item: 12, state: dcLeft.report.lookalikes!.lines[0].target.state }],
   });
   assert.deepEqual(refused(again.report), [true, [], 0, 1]);
+  // Correctifs J: BL-10 deleted since the check. The row reads by its line and title only (no reference),
+  // offers no update, and stays left out, by default as with "Update all" (as the applications, T-I3l).
+  const deleted = stored.filter((item) => item.itemNumber !== 10);
+  for (const choices of [shown.report.matching!.choices, [{ kind: 'lookalikes' as const, action: 'update' as const, targets: shown.report.lookalikes!.targets }]]) {
+    const gone = await lookPlan([row], { stored: deleted, choices });
+    assert.deepEqual(refused(gone.report), [true, [], 0, 0]);
+    assert.deepEqual(gone.report.lookalikes?.lines.map((entry) => [entry.line, entry.name, entry.target.ref, entry.target.name, entry.updatable, entry.outcome]),
+      [[2, 'Microsoft 365 E3', '', '', false, 'ignored']]);
+  }
 }
 
 /** T-I2f: the same paying company in every rule, two amounts without the same supplier, a close title in the same currency, no ended line. */
@@ -1344,6 +1378,7 @@ async function main() {
   await testLookalikeRules();
   await testLeftOutLeavesNothing();
   await testLookalikeUpdate();
+  await testChoicesForAllWithALineGone();
   await testManyLookalikes();
   await testLookalikeTargetKept();
   await testLookalikeCompanyAndEnd();

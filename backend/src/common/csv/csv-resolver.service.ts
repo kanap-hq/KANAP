@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { CsvFieldDefinition, CsvFieldType } from './csv-field.types';
+import { CsvCallerAccess, CsvFieldDefinition, CsvFieldType } from './csv-field.types';
 import { SHIPPED_TASK_TYPE_LABELS } from '../../it-ops-settings/catalog-shipped-labels.data';
+import { accentFreeKey, AMBIGUOUS_NAMES_SHOWN, type MatchHow } from '../name-matching';
 
 /**
  * Supported FK entity types for resolution
@@ -28,7 +29,29 @@ interface FkEntityConfig {
   additionalColumns?: string[];
   /** Optional scope column (e.g., project_id for phases) */
   scopeColumn?: string;
+  /**
+   * A family looked up by its name (not by an e-mail or a code): a file's name finds a record once
+   * accents are set aside too (lot I3 of 26.11.9), for a person who reads one of these modules
+   * (the level `reader`, as the routes that list the family).
+   */
+  byName?: { readers: readonly string[] };
+  /** The prefix of the family's business reference, numbered by `item_number` (`SUP-3`). */
+  refPrefix?: string;
 }
+
+/** What a name of the file finds: nothing, several records (named), or one record and how. */
+export type FkNameLookup =
+  | { kind: 'none' }
+  | { kind: 'many'; names: string[] }
+  | { kind: 'one'; entry: FkCacheEntry; how: MatchHow; target: string; ref: string | null };
+
+
+const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
+
+/** The modules whose readers see the portfolio's classification lists (`GET /portfolio/classification/all`). */
+const PORTFOLIO_LIST_READERS = [
+  'tasks', 'portfolio_requests', 'portfolio_projects', 'portfolio_planning', 'portfolio_reports', 'portfolio_settings',
+] as const;
 
 /**
  * FK resolution cache entry
@@ -60,39 +83,51 @@ export class CsvResolverService {
       tableName: 'suppliers',
       lookupColumn: 'name',
       idColumn: 'id',
+      additionalColumns: ['item_number'],
+      byName: { readers: ['suppliers'] },
+      refPrefix: 'SUP',
     },
     portfolio_categories: {
       tableName: 'portfolio_categories',
       lookupColumn: 'name',
       idColumn: 'id',
+      byName: { readers: PORTFOLIO_LIST_READERS },
     },
     portfolio_streams: {
       tableName: 'portfolio_streams',
       lookupColumn: 'name',
       idColumn: 'id',
       additionalColumns: ['category_id'],
+      byName: { readers: PORTFOLIO_LIST_READERS },
     },
     portfolio_sources: {
       tableName: 'portfolio_sources',
       lookupColumn: 'name',
       idColumn: 'id',
+      byName: { readers: PORTFOLIO_LIST_READERS },
     },
     portfolio_task_types: {
       tableName: 'portfolio_task_types',
       lookupColumn: 'name',
       idColumn: 'id',
       additionalColumns: ['code'],
+      byName: { readers: ['tasks'] },
     },
     companies: {
       tableName: 'companies',
       lookupColumn: 'name',
       idColumn: 'id',
+      additionalColumns: ['item_number'],
+      byName: { readers: ['companies'] },
+      refPrefix: 'COMP',
     },
     departments: {
       tableName: 'departments',
       lookupColumn: 'name',
       idColumn: 'id',
-      additionalColumns: ['company_id'],
+      additionalColumns: ['company_id', 'item_number'],
+      byName: { readers: ['departments'] },
+      refPrefix: 'DEPT',
     },
     locations: {
       tableName: 'locations',
@@ -105,8 +140,17 @@ export class CsvResolverService {
       lookupColumn: 'name',
       idColumn: 'id',
       scopeColumn: 'project_id',
+      byName: { readers: ['portfolio_projects'] },
     },
   };
+
+  /**
+   * Beside each family's cache (whose shape the exports and the incidents read), its names once
+   * accents are set aside: by accent-free key, every record answering it, for the families looked up
+   * by name. The cache keeps one record per name; this index keeps each record read, so that two
+   * records of the same name are two (T-I3a, lot I3 of 26.11.9, fixes D).
+   */
+  private readonly accentIndexes = new WeakMap<Map<string, FkCacheEntry>, Map<string, FkCacheEntry[]>>();
 
   /**
    * Preload all necessary FK tables for the given field definitions.
@@ -200,6 +244,70 @@ export class CsvResolverService {
   }
 
   /**
+   * The record a name of the file finds (lot I3 of 26.11.9): exactly or case aside, as `resolve`
+   * (the first record read wins, as before); then, when `beyondCase` and the family is looked up by
+   * name, once accents are set aside. There, one record answering is that record; several records
+   * answering, even of the same name (two departments "Finance" of two companies), are an ambiguity,
+   * named by the records' references, else their names (the first five). A record found by a name other
+   * than its own beyond case (a shipped task type's name in another language) is a `translation`.
+   */
+  resolveName(
+    entityType: string,
+    lookupValue: string | null | undefined,
+    cache: Map<string, Map<string, FkCacheEntry>>,
+    options: { beyondCase: boolean },
+  ): FkNameLookup {
+    if (!lookupValue || lookupValue.trim() === '') return { kind: 'none' };
+    const entityCache = cache.get(entityType);
+    if (!entityCache) return { kind: 'none' };
+    const config = this.entityConfigs[entityType as FkEntityType];
+    const normalizedValue = this.normalizeValue(lookupValue);
+    const found = entityCache.get(normalizedValue);
+    if (found) {
+      const own = this.normalizeValue(String(found._originalLookupValue ?? ''));
+      const how: MatchHow = own === normalizedValue
+        ? (String(found._originalLookupValue).trim() === lookupValue.trim() ? 'exact' : 'case')
+        : 'translation';
+      return this.found(config, found, how);
+    }
+    if (!options.beyondCase || !config?.byName) return { kind: 'none' };
+    const candidates = this.accentIndexes.get(entityCache)?.get(accentFreeKey(lookupValue)) ?? [];
+    if (candidates.length === 0) return { kind: 'none' };
+    if (candidates.length > 1) {
+      return {
+        kind: 'many',
+        names: candidates.slice(0, AMBIGUOUS_NAMES_SHOWN).map((entry) => this.refOf(config, entry) ?? String(entry._originalLookupValue ?? '')),
+      };
+    }
+    const [entry] = candidates;
+    const how: MatchHow = accentFreeKey(String(entry._originalLookupValue ?? '')) === accentFreeKey(lookupValue) ? 'accents' : 'translation';
+    return this.found(config, entry, how);
+  }
+
+  /**
+   * Whether a person with `access` may have a name of `entityType` found beyond case: the family is
+   * looked up by name and the person reads one of its modules. Without access (an internal caller),
+   * no: the lookup stays case-blind, as before.
+   */
+  matchesBeyondCase(entityType: string, access: CsvCallerAccess | null | undefined): boolean {
+    const readers = this.entityConfigs[entityType as FkEntityType]?.byName?.readers;
+    if (!readers || !access) return false;
+    if (access.isAdmin) return true;
+    return readers.some((module) => (LEVEL_RANK[access.permissions?.[module] ?? ''] ?? 0) >= LEVEL_RANK.reader);
+  }
+
+  private found(config: FkEntityConfig | undefined, entry: FkCacheEntry, how: MatchHow): FkNameLookup {
+    return { kind: 'one', entry, how, target: String(entry._originalLookupValue ?? ''), ref: this.refOf(config, entry) };
+  }
+
+  private refOf(config: FkEntityConfig | undefined, entry: FkCacheEntry): string | null {
+    const number = Number(entry.item_number);
+    return config?.refPrefix && entry.item_number != null && Number.isSafeInteger(number) && number > 0
+      ? `${config.refPrefix}-${number}`
+      : null;
+  }
+
+  /**
    * Reverse lookup: get the display value for an entity ID.
    * Useful for exports.
    *
@@ -265,10 +373,13 @@ export class CsvResolverService {
     const types = new Set<FkEntityType>();
 
     for (const field of fieldDefs) {
+      // A list of references (`ARRAY` with `fkEntity`, numbered columns of owners) resolves its cells
+      // in the same cache as a single reference.
       if (
         (field.type === CsvFieldType.FK_BY_EMAIL ||
           field.type === CsvFieldType.FK_BY_NAME ||
-          field.type === CsvFieldType.FK_BY_CODE) &&
+          field.type === CsvFieldType.FK_BY_CODE ||
+          field.type === CsvFieldType.ARRAY) &&
         field.fkEntity
       ) {
         const entityType = field.fkEntity as FkEntityType;
@@ -318,6 +429,8 @@ export class CsvResolverService {
 
     // Execute query
     const rows = await manager.query(query, params);
+    // Every record read, by its own name, for the accent-free index (the cache keeps one per name).
+    const read: Array<[string, FkCacheEntry]> = [];
 
     // Build cache with lowercase normalization
     for (const row of rows) {
@@ -340,11 +453,28 @@ export class CsvResolverService {
         if (!cache.has(normalizedValue)) {
           cache.set(normalizedValue, entry);
         }
+        read.push([normalizedValue, entry]);
       }
     }
 
     if (entityType === 'portfolio_task_types') this.addShippedTaskTypeNames(cache);
+    if (config.byName) this.accentIndexes.set(cache, this.accentIndex([...read, ...cache]));
     return cache;
+  }
+
+  /**
+   * Records by the accent-free key of each name they answer to (their own name, a shipped name added
+   * to the cache); one record once per key.
+   */
+  private accentIndex(names: Iterable<[string, FkCacheEntry]>): Map<string, FkCacheEntry[]> {
+    const index = new Map<string, FkCacheEntry[]>();
+    for (const [name, entry] of names) {
+      const key = accentFreeKey(name);
+      const entries = index.get(key);
+      if (!entries) index.set(key, [entry]);
+      else if (!entries.some((other) => other.id === entry.id)) entries.push(entry);
+    }
+    return index;
   }
 
   /**

@@ -163,6 +163,44 @@ async function testApplications() {
   });
 }
 
+/**
+ * Lot I3 of 26.11.9, an application with its supplier: the supplier written without its accents is
+ * the stored one (unchanged, listed as a match); one nothing finds keeps the stored supplier in merge
+ * mode (unchanged), and empties it in full replace (an update), as before.
+ */
+async function testApplicationSupplierNames() {
+  const app = stored(applicationCsvConfig, {
+    id: 'p1', tenant_id: T, name: 'Ledger', description: 'Books', category: 'erp', supplier_id: 's1', editor: null,
+    criticality: 'high', lifecycle: 'active', is_suite: false, version: null, go_live_date: null,
+    end_of_support_date: null, retired_date: null, licensing: null, notes: null, access_methods: ['web'],
+    external_facing: false, etl_enabled: false, support_notes: null, data_class: 'internal',
+    last_dr_test: new Date(2026, 2, 1), contains_pii: false, status: 'enabled', rto_minutes: 240, rpo_minutes: 60,
+    cyber_criticality: 'moderate', recovery_wave: 'priority', classification_justification: 'Finance',
+    classification_revision: 3,
+  });
+  const data = {
+    applications: [app],
+    suppliers: [{ id: 's1', tenant_id: T, name: 'Société Générale', item_number: 4 }],
+    application_owners: [],
+    application_data_residency: [],
+  };
+  const header = 'id;name;description;category;lifecycle;is_suite;external_facing;etl_enabled;access_methods;criticality;cyber_criticality;data_class;recovery_wave;rto_minutes;rpo_minutes;classification_justification;contains_pii;last_dr_test;status;supplier_name';
+  const line = (supplier: string) => `${header}\np1;Ledger;Books;Enterprise planning;Active;false;false;false;Web browser;High;Moderate;Internal;V2 — Priority activities;240;60;Finance;false;2026-03-01;enabled;${supplier}`;
+  const run = (supplier: string, mode: CsvImportParams['mode']) => service.import(applicationCsvConfig, file(line(supplier)), { dryRun: true, mode, operation: 'upsert' }, {
+    manager: manager({ users, ...data }), tenantId: T, userId: U1, itOpsSettings, access: { permissions: { applications: 'admin', suppliers: 'reader' } },
+  });
+  for (const mode of ['enrich', 'replace'] as const) {
+    const exact = await run('Société Générale', mode);
+    assert.deepEqual([exact.ok, exact.updated, exact.unchanged, exact.matches], [true, 0, 1, undefined], `${mode}: the stored name`);
+    const same = await run('Societe Generale', mode);
+    assert.deepEqual([same.ok, same.updated, same.unchanged, same.matches?.map((match) => [match.value, match.target, match.ref])], [true, 0, 1, [['Societe Generale', 'Société Générale', 'SUP-4']]], `${mode}: without accents`);
+  }
+  const kept = await run('Banque Inconnue', 'enrich');
+  assert.deepEqual([kept.updated, kept.unchanged, kept.warnings.filter((warning) => warning.row > 0).map((warning) => warning.code)], [0, 1, ['CSV_REFERENCE_NOT_FOUND_KEPT']]);
+  const emptied = await run('Banque Inconnue', 'replace');
+  assert.deepEqual([emptied.updated, emptied.unchanged, emptied.warnings.filter((warning) => warning.row > 0).map((warning) => warning.code)], [1, 0, ['CSV_REFERENCE_NOT_FOUND_CLEARED']]);
+}
+
 async function testTasks() {
   const task = stored(taskCsvConfig, {
     id: 'k1', tenant_id: T, title: 'Migrate', description: 'Move it', task_type_id: null,
@@ -247,6 +285,7 @@ async function testIncidents() {
 (async () => {
   await testAssets();
   await testApplications();
+  await testApplicationSupplierNames();
   await testTasks();
   await testProjects();
   await testRequests();

@@ -4,6 +4,10 @@ import {
   CsvFieldType,
   CsvImportContext,
 } from '../common/csv';
+import { CsvCellError } from '../common/csv/csv-field.types';
+import {
+  accentFreeKey, foldKey, noteNameMatch, noteRefusedProposal, proposalFor, undoneMatch, type MatchHow,
+} from '../common/name-matching';
 import { formatCsvDateTime, instantInTimeZone, type CsvLanguage } from '../common/csv-sheet';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { parseItemNumber } from '../common/parse-item-number';
@@ -248,51 +252,66 @@ function parseCode(
 }
 
 /**
- * Users are preloaded by e-mail. A name matches in either order ("First Last" or
- * "Last First") when exactly one cached person answers to that text. Case and
- * repeated spaces are ignored. A spelling several people share is refused, and
- * the message names them by e-mail. The cache includes disabled accounts, so a
- * disabled account with the same name as an enabled one makes the name ambiguous.
- * One person counts once per spelling, even when both orders produce it
- * ("Anna Anna", or a person with only one name filled).
+ * Users are preloaded by e-mail. A name matches in either order ("First Last" or "Last First"),
+ * repeated spaces aside: case aside (one step, as before lot I3: two people whose names differ only by
+ * case are both named), then accents aside for a person whose rights the import knows and who has not
+ * undone that match (a match, listed; `common/name-matching.ts`). The first step that finds anyone
+ * decides: several people there refuse the cell (`CSV_NAME_AMBIGUOUS_AMONG`, named by e-mail). The cache includes disabled
+ * accounts, so a disabled account with the same name as an enabled one makes the name ambiguous.
+ * One person counts once per spelling, even when both orders produce it ("Anna Anna", or a person
+ * with only one name filled). Kad's proposal comes first: an e-mail or a name, exactly or case aside.
  */
-type NamedPerson = { id: string; email: string };
+type NamedPerson = { id: string; email: string; name: string };
+type PeopleIndex = Record<'case' | 'accents', Map<string, Map<string, NamedPerson>>>;
 
-const userNameIndexes = new WeakMap<Map<string, any>, Map<string, Map<string, NamedPerson>>>();
+const userNameIndexes = new WeakMap<Map<string, any>, PeopleIndex>();
 
-/** The spelling the import compares: trimmed, lower case, inner spaces collapsed. */
-function personNameKey(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+/** The spelling the import compares at each step: trimmed, inner spaces collapsed, case aside, then accents aside. */
+function personNameKeys(value: string): Record<keyof PeopleIndex, string> {
+  const spaced = value.normalize('NFKC').trim().replace(/\s+/g, ' ');
+  return { case: foldKey(spaced), accents: accentFreeKey(spaced) };
 }
 
-function peopleByName(users: Map<string, any>): Map<string, Map<string, NamedPerson>> {
+function peopleByName(users: Map<string, any>): PeopleIndex {
   const cached = userNameIndexes.get(users);
   if (cached) return cached;
 
-  const byName = new Map<string, Map<string, NamedPerson>>();
+  const index: PeopleIndex = { case: new Map(), accents: new Map() };
   for (const [email, user] of users) {
     const id = user?.id;
     if (typeof id !== 'string' || id === '') continue;
-    const spellings = new Set<string>();
-    const firstLast = personNameKey(`${user.first_name ?? ''} ${user.last_name ?? ''}`);
-    const lastFirst = personNameKey(`${user.last_name ?? ''} ${user.first_name ?? ''}`);
-    if (firstLast) spellings.add(firstLast);
-    if (lastFirst) spellings.add(lastFirst);
-    for (const spelling of spellings) {
-      let people = byName.get(spelling);
-      if (!people) {
-        people = new Map();
-        byName.set(spelling, people);
+    const name = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim();
+    const orders = [name, `${user.last_name ?? ''} ${user.first_name ?? ''}`];
+    for (const level of ['case', 'accents'] as const) {
+      for (const order of orders) {
+        const spelling = personNameKeys(order)[level];
+        if (!spelling) continue;
+        let people = index[level].get(spelling);
+        if (!people) {
+          people = new Map();
+          index[level].set(spelling, people);
+        }
+        // The id is the key, so both orders of one person stay a single candidate.
+        if (!people.has(id)) people.set(id, { id, email: String(email), name });
       }
-      // The id is the key, so both orders of one person stay a single candidate.
-      if (!people.has(id)) people.set(id, { id, email: String(email) });
     }
   }
-  userNameIndexes.set(users, byName);
-  return byName;
+  userNameIndexes.set(users, index);
+  return index;
 }
 
-function resolveUser(value: string, column: string, context: CsvImportContext): string | null {
+/** The people a name finds at the first step that finds anyone (`accents` only `beyondCase`). */
+function findPeople(users: Map<string, any>, text: string, beyondCase: boolean): { people: NamedPerson[]; how: MatchHow } {
+  const index = peopleByName(users);
+  const keys = personNameKeys(text);
+  for (const level of beyondCase ? (['case', 'accents'] as const) : (['case'] as const)) {
+    const people = index[level].get(keys[level]);
+    if (people && people.size > 0) return { people: [...people.values()], how: level };
+  }
+  return { people: [], how: 'case' };
+}
+
+function resolveUser(value: string, column: string, context: CsvImportContext, line: number): string | null {
   const text = value.trim();
   if (text === '') return null;
 
@@ -302,18 +321,51 @@ function resolveUser(value: string, column: string, context: CsvImportContext): 
   const byEmail = users.get(text.toLowerCase());
   if (byEmail) return byEmail.id;
 
-  const people = peopleByName(users).get(personNameKey(text));
-  if (!people || people.size === 0) {
-    throw new Error(
+  const { params } = context;
+  const reads = !!context.access;
+  const undone = undoneMatch(params.unmatched, column, text);
+  const note = (person: NamedPerson, origin: 'server' | 'model') => {
+    if (!context.nameMatches) return;
+    noteNameMatch(context.nameMatches, {
+      column, name: null, value: text, target: person.name, ref: null, origin, reason: origin === 'model' ? 'model' : 'accents', undoable: true,
+    }, line);
+  };
+  const proposal = undone ? undefined : proposalFor(params.proposals, column, text);
+  if (proposal !== undefined) {
+    const proposedByEmail = reads ? users.get(proposal.toLowerCase()) : undefined;
+    const proposed = proposedByEmail?.id
+      ? [{ id: proposedByEmail.id, email: proposal.toLowerCase(), name: `${proposedByEmail.first_name ?? ''} ${proposedByEmail.last_name ?? ''}`.trim() }]
+      : reads ? findPeople(users, proposal, false).people : [];
+    if (proposed.length === 1) {
+      note(proposed[0], 'model');
+      return proposed[0].id;
+    }
+    if (context.refusedProposals) {
+      noteRefusedProposal(context.refusedProposals, { column, name: null, value: text, target: proposal, reason: 'missing' }, line);
+    }
+  }
+
+  const found = findPeople(users, text, reads && !undone);
+  if (found.people.length === 0) {
+    throw new CsvCellError(
+      'CSV_REFERENCE_NOT_FOUND',
       `User not found for ${column}: "${value}". Use the account e-mail or the name in either order ("First Last" or "Last First").`,
+      { value: text },
     );
   }
-  if (people.size === 1) return [...people.values()][0].id;
+  if (found.people.length === 1) {
+    if (found.how === 'accents') note(found.people[0], 'server');
+    return found.people[0].id;
+  }
 
-  const emails = [...people.values()]
+  const emails = found.people
     .map((person) => person.email)
     .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
-  throw new Error(`Several people match ${column} "${value}": ${emails.join(', ')}. Use the account e-mail.`);
+  throw new CsvCellError(
+    'CSV_NAME_AMBIGUOUS_AMONG',
+    `Several people match ${column} "${value}": ${emails.join(', ')}. Use the account e-mail.`,
+    { value: text, names: emails.join(', ') },
+  );
 }
 
 const DATE_TIME_COLUMNS = ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at'] as const;
@@ -465,8 +517,8 @@ export const incidentCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Reporter',
       group: 'People',
-      importTransformFn: (value: string, _row: Record<string, string>, context: CsvImportContext) =>
-        resolveUser(value, 'reporter', context),
+      importTransformFn: (value: string, _row: Record<string, string>, context: CsvImportContext, line = 0) =>
+        resolveUser(value, 'reporter', context, line),
     },
     {
       csvColumn: 'owner',
@@ -479,8 +531,8 @@ export const incidentCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Owner',
       group: 'People',
-      importTransformFn: (value: string, _row: Record<string, string>, context: CsvImportContext) =>
-        resolveUser(value, 'owner', context),
+      importTransformFn: (value: string, _row: Record<string, string>, context: CsvImportContext, line = 0) =>
+        resolveUser(value, 'owner', context, line),
     },
     textField('source_ref', 'External reference', 'Source'),
     {

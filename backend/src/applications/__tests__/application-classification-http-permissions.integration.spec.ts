@@ -91,7 +91,7 @@ async function main() {
     const summaryResponse = await request(reader, '/applications/classification-summary?include_inactive=true');
     assert.equal(summaryResponse.status, 200);
     const summary: any = await summaryResponse.json();
-    assert.deepEqual(Object.keys(summary).sort(), ['incomplete', 'reviewed', 'stale', 'total']);
+    assert.deepEqual(Object.keys(summary).sort(), ['attention', 'incomplete', 'levels', 'reviewed', 'stale', 'total']);
     assert.equal(summary.reviewed + summary.stale + summary.incomplete, summary.total);
 
     // Recovery dependencies: readers may, a Business Contributor (restricted scope) may not, like interface routes.

@@ -168,8 +168,8 @@ test('the target only sees listings and write-only uploads: no sync, move, delet
   }
   assert.equal(target.filter((c) => c.includes(' copyto ')).length, 3);
   const source = calls(ctx).filter((c) => c.includes(' source:'));
-  assert.deepEqual(source.map((c) => c.split(' ')[3]), ['lsf', 'sync'], 'the attachments source is only read');
-  assert.match(source[1], / sync source:files-bucket \//);
+  assert.deepEqual(source.map((c) => c.split(' ')[3]), ['sync'], 'the attachments source is only read');
+  assert.match(source[0], / sync source:files-bucket \//);
 });
 
 test('each night writes new names, and a night prefix that already exists is refused', () => {
@@ -501,22 +501,28 @@ test('signal addresses are logged as scheme and host only, whatever their form',
   }
 });
 
-test('an empty attachments bucket never empties a local copy that holds files', () => {
-  const first = setup();
-  rmSync(first.source, { recursive: true });
-  mkdirSync(first.source);
-  const r0 = run(first);
-  assert.equal(r0.status, 0, 'a new installation has no attachments yet');
+test('an attachments bucket that becomes empty empties the local copy, and the night succeeds', () => {
   const ctx = setup();
   assert.equal(run(ctx, { FAKE_NIGHT: '2026-11-14T020000Z' }).status, 0);
+  assert.equal(read(join(ctx.work, 'files', 'tenant-a', 'invoice.pdf')), 'CLEAR ATTACHMENT CONTENT');
   rmSync(ctx.source, { recursive: true });
   mkdirSync(ctx.source);
   const res = run(ctx, { FAKE_NIGHT: '2026-11-15T020000Z' });
+  assert.equal(res.status, 0, res.output);
+  assert.match(res.stderr, /attachments: 0 files/);
+  assert.equal(existsSync(join(ctx.work, 'files', 'tenant-a', 'invoice.pdf')), false);
+  assert.equal(storedObjects(ctx).filter((o) => o.includes('2026-11-15T020000Z')).length, 3);
+  assert.equal(signals(ctx).length, 2, 'both nights signalled');
+});
+
+test('an attachments bucket that cannot be read fails the night and leaves the local copy', () => {
+  const ctx = setup();
+  assert.equal(run(ctx, { FAKE_NIGHT: '2026-11-14T020000Z' }).status, 0);
+  const res = run(ctx, { FAKE_NIGHT: '2026-11-15T020000Z', FAKE_FAIL_SYNC: '1' });
   assert.notEqual(res.status, 0);
-  assert.match(res.stderr, /attachments bucket files-bucket is empty, but the local copy .* holds 1 files/);
+  assert.match(res.stderr, /backup FAILED during step 'attachments'/);
   assert.equal(read(join(ctx.work, 'files', 'tenant-a', 'invoice.pdf')), 'CLEAR ATTACHMENT CONTENT');
   assert.equal(signals(ctx).length, 1, 'only the first night signalled');
-  assert.equal(calls(ctx).filter((c) => c.includes(' sync ')).length, 1, 'the second night did not sync');
 });
 
 test('the settings model reaches the file storage of the installation example from the host', () => {

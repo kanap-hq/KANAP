@@ -4,6 +4,18 @@ import { classificationReadState } from './services/application-classification';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
 import { lockApplicationNames, lockApplicationRow } from './application-rules';
+import { requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
+import { noteNameMatch, proposalFor, undoneMatch } from '../common/name-matching';
+import type { CsvImportContext, CsvImportRow, CsvSettledRow, ImportLookalikeChoice } from '../common/csv';
+import {
+  ApplicationIndex,
+  applicationState,
+  decideLookalikes,
+  lookalikeEntry,
+  lookalikesResult,
+  storedApplications,
+  type LookalikeDecision,
+} from './application-lookalikes';
 import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, In } from 'typeorm';
@@ -15,16 +27,16 @@ import { IntegratedDocumentsService } from '../knowledge/integrated-documents.se
 import {
   CsvExportService,
   CsvImportService,
+  CsvCallerAccess,
   CsvImportParams,
   CsvExportResult,
   CsvImportResult,
   CsvFieldInfo,
   CsvResolverService,
   CSV_CONTENT_TYPE,
-  csvColumnOfHeader,
 } from '../common/csv';
 import type { ExportFileFormat } from '../common/xlsx';
-import { applicationCsvConfig, csvOwnerKeys, sameKeys, usersByEmail } from './application-csv.config';
+import { applicationCsvConfig, changedApplicationColumns, csvOwnerKeys, sameKeys, usersByEmail } from './application-csv.config';
 import { inIdOrder } from '../common/pagination';
 import { applicationVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
 import {
@@ -66,9 +78,18 @@ export function exportFixedLabelsIn(row: Record<string, any>, language: ExportLa
   }
 }
 
-/** The headers of a file read again after the import, by column: a header may be a title of any language. */
-const csvColumns = (headers: Array<string | null | undefined>) =>
-  headers.map((header) => (header == null ? header : csvColumnOfHeader(applicationCsvConfig, header)));
+/**
+ * What one import learns of the rows that look like an application (lot I3 of 26.11.9): the decisions,
+ * the choices followed, and the columns each update changes.
+ */
+type LookalikeState = {
+  decisions: Map<number, LookalikeDecision>;
+  followed: ImportLookalikeChoice[];
+  fields: Map<number, string[]>;
+};
+
+/** A row the load wrote: the application it saved, and its cells (by column), for its owners and data residency. */
+type WrittenRow = { id: string; raw: Record<string, string> };
 
 @Injectable()
 export class ApplicationsCsvService {
@@ -262,6 +283,8 @@ export class ApplicationsCsvService {
       userId?: string | null;
       /** The screen language: a missing column is named by its title in this language. */
       language?: CsvLanguage;
+      /** The person's rights: a name is found beyond case in the families they read. */
+      access?: CsvCallerAccess;
     },
   ): Promise<CsvImportResult> {
     return opts.manager.transaction(async (manager) => {
@@ -275,16 +298,37 @@ export class ApplicationsCsvService {
     });
   }
 
-  private async importLocked(file: Express.Multer.File, params: CsvImportParams, opts: { manager: EntityManager; tenantId: string; userId?: string | null; language?: CsvLanguage }): Promise<CsvImportResult> {
+  private async importLocked(file: Express.Multer.File, params: CsvImportParams, opts: { manager: EntityManager; tenantId: string; userId?: string | null; language?: CsvLanguage; access?: CsvCallerAccess }): Promise<CsvImportResult> {
     // The tenant row is locked FOR NO KEY UPDATE by import(): the catalogs read here cannot change underneath.
     const itOpsSettings = await this.itOpsSettings.getSettings(opts.tenantId, { manager: opts.manager });
-    // The applications the load wrote: a row the operation skipped (an existing application in
-    // "add new only", a new one in "update only") or found unchanged keeps its owners and residency.
-    const written = new Set<string>();
+    // The rows the load wrote, with the application each saved: a row the operation skipped (an
+    // existing application in "add new only", a new one in "update only"), found unchanged or left out
+    // (it looks like an application) keeps the owners and residency of every application.
+    const written: WrittenRow[] = [];
+    const look: LookalikeState = { decisions: new Map(), followed: [], fields: new Map() };
     const config = {
       ...applicationCsvConfig,
-      afterCommit: async (entities: any[]) => {
-        for (const entity of entities) if (entity?.id) written.add(String(entity.id));
+      settleRows: (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) =>
+        this.settleRows(rows, context, look),
+      afterValidate: async (rows: CsvImportRow[], context: CsvImportContext) => {
+        await applicationCsvConfig.afterValidate!(rows, context);
+        for (const row of rows) {
+          // "Update APP-n": the application keeps its name, the file's name having found it (T-I3j).
+          if (look.decisions.get(row.rowNumber)?.action === 'update' && row.existingEntity) row.parsed.name = row.existingEntity.name;
+        }
+        this.supplierFromEditor(rows, context);
+      },
+      sameAsStored: async (rows: CsvImportRow[], context: CsvImportContext) => {
+        const same = await applicationCsvConfig.sameAsStored!(rows, context);
+        const updates = rows.map((row, i) => [row, i] as const).filter(([row]) => look.decisions.get(row.rowNumber)?.action === 'update');
+        if (updates.length > 0) {
+          const settings = await requireImportCatalogs(context);
+          for (const [row, i] of updates) look.fields.set(row.rowNumber, same[i] === true ? [] : changedApplicationColumns(row, settings));
+        }
+        return same;
+      },
+      afterCommit: async (_entities: any[], _context: CsvImportContext, rows: Array<{ row: CsvImportRow; entity: any }> = []) => {
+        for (const { row, entity } of rows) if (entity?.id) written.push({ id: String(entity.id), raw: row.raw });
       },
     };
     // The names before the load, to find the renamed applications afterwards.
@@ -293,15 +337,152 @@ export class ApplicationsCsvService {
         .map((row: { id: string; name: string }) => [row.id, row.name] as const),
     );
     const result = await this.importSvc.import(config, file, params, { ...opts, itOpsSettings });
+    // Given whenever the rows were judged, none listed included: the load sends the choices back (C6).
+    if (look.followed.length > 0) {
+      const entries = [...look.decisions.values()].sort((a, b) => a.line - b.line).map((decision) => lookalikeEntry(decision, look.fields.get(decision.line)));
+      result.lookalikes = lookalikesResult(entries, look.followed);
+    }
 
     // If successful and not dry run, handle owners and data residency
     if (result.ok && !params.dryRun) {
-      await this.handleOwnerImport(file, params.mode, written, opts);
-      await this.handleDataResidencyImport(file, params.mode, written, opts);
-      await this.syncRenamedDocumentTitles(namesBefore, written, opts);
+      await this.handleOwnerImport(written, params.mode, opts);
+      await this.handleDataResidencyImport(written, params.mode, opts);
+      await this.syncRenamedDocumentTitles(namesBefore, new Set(written.map((row) => row.id)), opts);
     }
 
     return result;
+  }
+
+  /**
+   * The rows that would create an application and look like one the person reads (lot I3 of 26.11.9,
+   * T-I3d): left out unless the person chose otherwise (`params.lookalikes`), created anyway, or the
+   * update of that application. A row the uniqueness rule finds (by its id or name) stays an update. In
+   * "update only" nothing changes; in "add new only" no row may update one. A row whose situation changed
+   * since the check it was chosen on is refused, and the import writes nothing (T-I3j, review 3): the
+   * application it updates changed (`CSV_LOOKALIKE_CHANGED`, its row, owners or data residency, read once
+   * locked) or is gone (`CSV_LOOKALIKE_GONE`), or its name now finds an application and it would write
+   * (`CSV_LOOKALIKE_NAME_FOUND`). A load refuses a row the check would have created that looks like an
+   * application since (`CSV_LOOKALIKE_NEW`); a check lists it, left out (review 4, C6).
+   */
+  private async settleRows(
+    rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>,
+    context: CsvImportContext,
+    look: LookalikeState,
+  ): Promise<CsvSettledRow[]> {
+    const { params } = context;
+    if (params.operation === 'update_only') return rows.map((row) => ({ entity: row.found }));
+    const index = new ApplicationIndex(await storedApplications(context.manager, context.tenantId));
+    const decided = decideLookalikes(rows.map((row) => {
+      const name = String(row.raw.name ?? '').trim();
+      const keys = !name ? null : row.found
+        ? { name, supplierId: null, editor: null }
+        : { name, supplierId: this.rowSupplier(row.raw, context), editor: String(row.raw.editor ?? '').trim() || null };
+      return { line: row.rowNumber, foundId: row.found ? String(row.found.id) : null, keys };
+    }), index, params.lookalikes ?? [], { updatable: params.operation !== 'insert_only' });
+    look.decisions = decided.decisions;
+    look.followed = decided.followed;
+    // The applications updated, locked in id order (as `lockApplicationRow`, the first lock of every
+    // writer of their owners), then their state read again: nothing changes them before the commit.
+    const ids = [...new Set([...decided.decisions.values()].filter((decision) => decision.action === 'update').map((decision) => decision.id))].sort();
+    const stored: any[] = ids.length === 0 ? [] : await context.manager.query(
+      `SELECT * FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE`,
+      [context.tenantId, ids],
+    );
+    const states = new Map((ids.length === 0 ? [] : await storedApplications(context.manager, context.tenantId, ids)).map((app) => [app.id, applicationState(app)]));
+    return rows.map((row): CsvSettledRow => {
+      // A refusal of the whole row: no column to name.
+      const refuse = (code: string, message: string, ref?: string): CsvSettledRow => ({
+        entity: row.found,
+        errors: [{ row: row.rowNumber, message, code, ...(ref !== undefined ? { params: { ref } } : {}) }],
+      });
+      const holder = decided.nameFound.get(row.rowNumber);
+      if (holder) {
+        const ref = holder.sequential_id || holder.name;
+        return refuse('CSV_LOOKALIKE_NAME_FOUND', `${ref} took this name after the check.`, ref);
+      }
+      const decision = decided.decisions.get(row.rowNumber);
+      if (!decision) return { entity: row.found };
+      const ref = decision.app?.sequential_id || decision.app?.name || '';
+      if (decision.appeared && !params.dryRun) return refuse('CSV_LOOKALIKE_NEW', `The row looks like ${ref} since the check.`, ref);
+      if (decision.gone) return refuse('CSV_LOOKALIKE_GONE', 'The application chosen at the check no longer exists.');
+      if (decision.action === 'ignore') {
+        return {
+          leaveOut: true,
+          warnings: decision.claimedBy === undefined ? [] : [{
+            row: row.rowNumber,
+            message: `Looks like ${ref}, already updated by line ${decision.claimedBy}. Left out.`,
+            code: 'CSV_LOOKALIKE_SAME_RECORD',
+            params: { ref, other: decision.claimedBy },
+          }],
+        };
+      }
+      if (decision.action === 'create') return { entity: null };
+      const entity = stored.find((app) => String(app.id) === decision.id) ?? null;
+      if (!entity) return refuse('CSV_LOOKALIKE_GONE', 'The application chosen at the check no longer exists.');
+      decision.state = states.get(decision.id) ?? decision.state;
+      if (decision.expected !== undefined && decision.expected !== decision.state) {
+        return { entity, errors: [{ row: row.rowNumber, message: `${ref} changed since the check.`, code: 'CSV_LOOKALIKE_CHANGED', params: { ref } }] };
+      }
+      return { entity };
+    });
+  }
+
+  /**
+   * The supplier a row names, as the import resolves it (Kad's proposal, the name case aside, then
+   * accents aside for a person who reads the suppliers and did not undo it), else the one its
+   * publisher names (`editorSupplier`); null for none.
+   */
+  private rowSupplier(raw: Record<string, string>, context: CsvImportContext): string | null {
+    const cell = String(raw.supplier_name ?? '').trim();
+    if (!cell) {
+      const editor = String(raw.editor ?? '').trim();
+      return editor ? this.editorSupplier(editor, context)?.id ?? null : null;
+    }
+    const undone = undoneMatch(context.params.unmatched, 'supplier_name', cell);
+    const reads = this.resolver.matchesBeyondCase('suppliers', context.access);
+    const proposal = undone || !reads ? undefined : proposalFor(context.params.proposals, 'supplier_name', cell);
+    if (proposal !== undefined) {
+      const target = this.resolver.resolveName('suppliers', proposal, context.resolverCache, { beyondCase: false });
+      if (target.kind === 'one') return target.entry.id;
+    }
+    const found = this.resolver.resolveName('suppliers', cell, context.resolverCache, { beyondCase: !undone && reads });
+    return found.kind === 'one' ? found.entry.id : null;
+  }
+
+  /**
+   * The supplier an application's publisher names (lot I3 of 26.11.9, T-I3k): one supplier of that
+   * name, exactly, case or accents aside, for a person who reads the suppliers and did not undo the
+   * match (`unmatched`, column `supplier_name`, the publisher's value). Several, or none: none.
+   */
+  private editorSupplier(editor: string, context: CsvImportContext): { id: string; target: string; ref: string | null } | null {
+    if (!this.resolver.matchesBeyondCase('suppliers', context.access)) return null;
+    if (undoneMatch(context.params.unmatched, 'supplier_name', editor)) return null;
+    const found = this.resolver.resolveName('suppliers', editor, context.resolverCache, { beyondCase: true });
+    return found.kind === 'one' ? { id: found.entry.id, target: found.target, ref: found.ref } : null;
+  }
+
+  /**
+   * A row that gives a publisher and no supplier is linked to the supplier its publisher names (T-I3k),
+   * a match listed (`origin: 'editor'`) that the person may undo. A supplier stored on the application
+   * the row updates is kept, except by full replace with a blank supplier cell (a file without the
+   * supplier column says nothing of it).
+   */
+  private supplierFromEditor(rows: CsvImportRow[], context: CsvImportContext): void {
+    for (const row of rows) {
+      if (row.errors.length > 0 || String(row.raw.supplier_name ?? '').trim() !== '') continue;
+      const editor = String(row.raw.editor ?? '').trim();
+      const existing = row.existingEntity;
+      if (!editor) continue;
+      if (existing?.supplier_id && (context.params.mode === 'enrich' || !('supplier_name' in row.raw))) continue;
+      const supplier = this.editorSupplier(editor, context);
+      if (!supplier) continue;
+      row.parsed.supplier_id = supplier.id;
+      if (context.nameMatches) {
+        noteNameMatch(context.nameMatches, {
+          column: 'supplier_name', name: null, value: editor, target: supplier.target, ref: supplier.ref, origin: 'editor', reason: 'editor', undoable: true,
+        }, row.rowNumber);
+      }
+    }
   }
 
   /**
@@ -329,37 +510,20 @@ export class ApplicationsCsvService {
   }
 
   /**
-   * Handle owner import from CSV after main import.
+   * The owners the rows the load wrote name, on the application each row wrote (by its id: a row left
+   * out, or that updates APP-n under another name, never reaches another one).
    */
-  private async handleOwnerImport(file: Express.Multer.File, mode: CsvImportParams['mode'], written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+  private async handleOwnerImport(
+    written: readonly WrittenRow[],
+    mode: CsvImportParams['mode'],
+    opts: { manager: EntityManager; tenantId: string; userId?: string | null },
+  ) {
     const { manager, tenantId, userId } = opts;
-
-    // Re-parse the file to get owner columns
-    const { parseString } = await import('@fast-csv/parse');
-    const { csvSeparatorOf, readImportText } = await import('../common/csv-sheet/read');
-
-    // The CSV text of the file, or of the first sheet of a workbook, as the main import read it.
-    const text = (await readImportText(file.buffer)).text;
-    const rows: Record<string, string>[] = [];
-
-    await new Promise<void>((resolve, reject) => {
-      parseString(text, { headers: csvColumns, delimiter: csvSeparatorOf(text) ?? ';', ignoreEmpty: true })
-        .on('data', (row) => rows.push(row))
-        .on('end', () => resolve())
-        .on('error', (err) => reject(err));
-    });
-
+    const rows = written.filter(({ raw }) => Object.keys(raw).some((key) => /^(business|it)_owner_email_/.test(key)));
+    if (rows.length === 0) return;
     const userByEmail = await usersByEmail(manager, tenantId);
 
-    // Process each row
-    for (const row of rows) {
-      const appName = (row['name'] || '').trim();
-      if (!Object.keys(row).some((key) => /^(business|it)_owner_email_/.test(key))) continue;
-      if (!appName) continue;
-
-      const appId = await this.importedApplicationId(manager, tenantId, row);
-      if (!appId || !written.has(String(appId))) continue;
-
+    for (const { id: appId, raw: row } of rows) {
       // The application, then its owners (`lockApplicationRow`), as every writer of them.
       await lockApplicationRow(manager, tenantId, appId);
       const ownerRepo = manager.getRepository(ApplicationOwner);
@@ -408,52 +572,19 @@ export class ApplicationsCsvService {
   }
 
   /**
-   * The application a loaded row wrote: by its id column when it names one of the tenant's
-   * applications, else by its name (an ambiguous name was refused by the validation).
+   * The data residency the rows the load wrote give, on the application each row wrote (by its id): a
+   * file without the column leaves residency alone.
    */
-  private async importedApplicationId(manager: EntityManager, tenantId: string, row: Record<string, string>): Promise<string | null> {
-    const id = (row['id'] || '').trim();
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      const byId = await manager.query(`SELECT id FROM applications WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
-      if (byId.length) return byId[0].id;
-    }
-    const byName = await manager.query(
-      `SELECT id FROM applications WHERE tenant_id = $1 AND lower(btrim(name)) = lower(btrim($2)) ORDER BY created_at ASC, id ASC LIMIT 1`,
-      [tenantId, (row['name'] || '').trim()],
-    );
-    return byName[0]?.id ?? null;
-  }
-
-  /**
-   * Handle data residency import from CSV after main import.
-   */
-  private async handleDataResidencyImport(file: Express.Multer.File, mode: CsvImportParams['mode'], written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+  private async handleDataResidencyImport(
+    written: readonly WrittenRow[],
+    mode: CsvImportParams['mode'],
+    opts: { manager: EntityManager; tenantId: string; userId?: string | null },
+  ) {
     const { manager, tenantId, userId } = opts;
 
-    // Re-parse the file
-    const { parseString } = await import('@fast-csv/parse');
-    const { csvSeparatorOf, readImportText } = await import('../common/csv-sheet/read');
-
-    // The CSV text of the file, or of the first sheet of a workbook, as the main import read it.
-    const text = (await readImportText(file.buffer)).text;
-    const rows: Record<string, string>[] = [];
-
-    await new Promise<void>((resolve, reject) => {
-      parseString(text, { headers: csvColumns, delimiter: csvSeparatorOf(text) ?? ';', ignoreEmpty: true })
-        .on('data', (row) => rows.push(row))
-        .on('end', () => resolve())
-        .on('error', (err) => reject(err));
-    });
-
-    // Process each row: a file without the column leaves residency alone.
-    for (const row of rows) {
-      const appName = (row['name'] || '').trim();
+    for (const { id: appId, raw: row } of written) {
       if (!Object.prototype.hasOwnProperty.call(row, 'data_residency')) continue;
       const residencyRaw = row['data_residency'] || '';
-      if (!appName) continue;
-
-      const appId = await this.importedApplicationId(manager, tenantId, row);
-      if (!appId || !written.has(String(appId))) continue;
 
       // Parse residency codes
       const codes = residencyRaw

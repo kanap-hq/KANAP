@@ -267,6 +267,8 @@ Los plazos y umbrales dependen de su jurisdicción y de su sector. Kadratis regi
 
 Los encabezados, la gravedad y el estado se escriben en el idioma de la exportación. La importación acepta encabezados y valores en cualquiera de los cuatro idiomas, así como los códigos técnicos (`major`, `in_progress`). Un valor desconocido se rechaza, y el mensaje lista los nombres aceptados.
 
+Las columnas del notificante y del responsable aceptan el correo de la cuenta de la persona o su nombre, primero el nombre o primero el apellido (`Camille Roux` o `Roux Camille`). Un nombre se encuentra sin distinguir mayúsculas, minúsculas ni acentos. Vea [Nombres de registros](csv-files.md#names-of-records). Un nombre que comparten varias personas rechaza la fila, y el mensaje lista sus correos: escriba el correo en su lugar.
+
 Un estado puede avanzar mediante un archivo. Hacerlo retroceder, o cancelar un incidente, requiere `incidents:admin`: el diario recibe entonces una reapertura o una cancelación con el motivo «Imported from CSV». Para un colaborador, esa línea se rechaza con un mensaje.
 
 El archivo lleva la **Descripción** breve en una columna y toda la **Revisión del incidente** en otra, como texto con formato. Esa única columna de revisión sustituye a las antiguas columnas Impacto, Causa raíz, Acciones correctivas y Lecciones aprendidas. Los títulos, las listas y los enlaces sobreviven al viaje de ida y vuelta; las imágenes pegadas no, porque viven en el documento. Una celda de revisión vacía deja intacto el texto existente.

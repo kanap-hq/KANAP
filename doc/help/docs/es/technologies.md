@@ -310,6 +310,18 @@ Puede registrar que un servidor lleva una tecnología desde cualquiera de los do
 
 Registre la tecnología en el servidor donde está instalada: el host para un hipervisor, cada controlador de dominio para Active Directory, el servidor de base de datos para SQL Server. Los servidores que se ejecutan dentro de él, y el clúster de esos servidores, la muestran entonces sin más trabajo. Una tecnología en la nube, como Entra ID, no se ejecuta en ninguno de sus servidores: declárela en las aplicaciones.
 
+### Etiquetas de versión { #version-labels }
+
+Una etiqueta de versión escrita en un selector de versión, en un archivo de importación o dada a Kad encuentra una versión de la tecnología:
+
+- la versión con la misma etiqueta, sin distinguir mayúsculas de minúsculas;
+- si no, la única versión cuya etiqueta empieza por la escrita seguida de un espacio: `22.04` encuentra `22.04 LTS`;
+- si no, la única versión con cuya etiqueta empieza la escrita, seguida de un espacio: `2022 Datacenter` encuentra `2022`. Cuando responden varias versiones, gana la etiqueta más larga: `2012 R2 Datacenter` encuentra `2012 R2`.
+
+En las dos últimas reglas, las palabras que siguen a la etiqueta más corta no contienen ninguna cifra, porque nombran una edición: `11` no encuentra `11 SP1`, y `2012` no encuentra `2012 R2`.
+
+Cuando no responde ninguna versión, o responden varias, la etiqueta se crea como una versión nueva. `22.04.3 LTS` se crea tal como está escrita. Una importación lista cada asociación de las dos últimas reglas con sus demás asociaciones, y **Deshacer** crea la versión tal como está escrita. Vea [Nombres de registros](csv-files.md#names-of-records).
+
 ---
 
 ## Importar y exportar vínculos
@@ -356,7 +368,8 @@ La importación nunca quita la marca de sistema operativo de un vínculo.
 - Un vínculo existente conserva su origen. Sus notas cambian cuando la celda `notes` contiene un texto distinto, y una celda vacía las deja como están.
 - Un vínculo nuevo se marca como procedente de una importación, con el nombre del archivo.
 - La tecnología debe figurar ya en su lista. Adóptela desde el catálogo o créela primero.
-- Una versión que aún no sigue se crea en la tecnología. La vista previa la nombra.
+- El servidor, la aplicación y la tecnología se encuentran por su nombre como describe [Nombres de registros](csv-files.md#names-of-records). Un nombre que comparten varios registros es un error.
+- Una etiqueta de versión sigue la regla de las [Etiquetas de versión](#version-labels). Una versión que aún no sigue se crea en la tecnología. La vista previa la nombra.
 
 Un archivo grande tarda en cargarse y retiene los vínculos de sus tecnologías hasta que termina. Varios archivos más pequeños molestan menos a las personas que trabajan al mismo tiempo.
 

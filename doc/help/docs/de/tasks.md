@@ -535,7 +535,7 @@ Drei Exportmodi sind verfügbar:
 | `related_object_type` | Entitätstyp | Nein | Leer für eigenständige Aufgaben; akzeptiert Code oder Bezeichnung |
 | `related_object_id` | Entitäts-UUID | Bedingt | Erforderlich, wenn verknüpfte Aufgabe und `related_object_name` nicht angegeben |
 | `related_object_name` | Entitätsname | Bedingt | Erforderlich, wenn verknüpfte Aufgabe und `related_object_id` nicht angegeben |
-| `phase_name` | Projektphase | Nein | Muss mit vorhandenem Phasennamen übereinstimmen (nur Projektaufgaben) |
+| `phase_name` | Projektphase | Nein | Eine Phase des Projekts der Aufgabe (nur Projektaufgaben) |
 | `priority_level` | Aufgabenpriorität | Nein | Akzeptiert den Code oder den Namen, in jeder der vier Sprachen |
 | `source_name` | Quelle | Nein | Portfolio-Quelle (eigenständige und Projektaufgaben) |
 | `category_name` | Kategorie | Nein | Portfolio-Kategorie (eigenständige und Projektaufgaben) |
@@ -560,8 +560,10 @@ Drei Exportmodi sind verfügbar:
 |------------|-------------|-------|
 | `assignee_email` | Verantwortliche Person | Muss mit vorhandener Benutzer-E-Mail übereinstimmen |
 | `creator_email` | Anforderer-E-Mail | Nur Export (in Feld-Metadaten als **Anforderer-E-Mail** angezeigt) |
-| `viewer_email_1` bis `_4` | Betrachter | Müssen mit vorhandenen Benutzer-E-Mails übereinstimmen |
-| `owner_email_1` bis `_4` | Verantwortliche | Müssen mit vorhandenen Benutzer-E-Mails übereinstimmen |
+| `viewer_email_1` bis `_4` | Betrachter | Vorhandene Benutzer-E-Mails. Eine unbekannte E-Mail wird ausgelassen, mit einer Warnung |
+| `owner_email_1` bis `_4` | Verantwortliche | Vorhandene Benutzer-E-Mails. Eine unbekannte E-Mail wird ausgelassen, mit einer Warnung |
+
+Im Modus `Anreichern` behält eine Zeile, die eine Aufgabe aktualisiert, deren Betrachter, wenn eine Betrachter-Zelle eine unbekannte E-Mail nennt, und ebenso deren Verantwortliche.
 
 **Andere Felder**:
 
@@ -602,6 +604,7 @@ Für **status**, **priority_level** und **related_object_type** können Sie entw
 | `spend_item` | `Spend Item`, `Spend` |
 | `contract` | `Contract` |
 | `capex_item` | `CAPEX Item`, `CAPEX` |
+| `incident` | `Incident` |
 
 Das System normalisiert Werte automatisch beim Import. Ein Status oder eine Priorität wird auch mit dem Namen gelesen, den der Bildschirm zeigt, in jeder der vier Sprachen. Ein unbekannter Wert wird abgelehnt, und die Meldung nennt die zulässigen Namen.
 
@@ -613,7 +616,7 @@ Aufgaben werden nach **Titel + related_object_id** (Groß-/Kleinschreibung ignor
 
 Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf Titel + verwandtes Objekt zurück.
 
-**Hinweis**: Wenn Sie `related_object_name` anstelle von `related_object_id` angeben, löst das System den Namen vor dem Abgleich zur ID auf. Das bedeutet, Sie können in Ihrer Importdatei durchgehend für Menschen lesbare Namen verwenden. Für einen Vertrag nimmt `related_object_name` auch seine Referenz an, etwa `CTR-12`.
+**Hinweis**: Wenn Sie `related_object_name` anstelle von `related_object_id` angeben, löst das System den Namen vor dem Abgleich zur ID auf. Das bedeutet, Sie können in Ihrer Importdatei durchgehend für Menschen lesbare Namen verwenden. Für einen Vertrag nimmt `related_object_name` auch seine Referenz an, etwa `CTR-12`. Name und Phase werden unabhängig von Groß- und Kleinschreibung gefunden, und auch unabhängig von Akzenten bei einem Projekt, einem Vertrag oder einer Budgetzeile, die Sie lesen dürfen. Siehe [Namen von Datensätzen](csv-files.md#names-of-records). **Preflight** lehnt eine Zeile ab, deren verknüpftes Objekt nicht gefunden wird oder mehrere Datensätze nennt. Es lehnt auch eine Phase ab, auf die mehrere Phasen des Projekts passen oder die nur ein anderes Projekt hat. Gibt eine Zeile beides an, gilt die ID. Eine Aufgabe, die ohne Phase in der Datei in ein anderes Projekt verschoben wird, behält ihre Phase, wenn dieses Projekt eine gleichnamige hat; sonst leert **Preflight** sie und meldet es. Eine Aufgabe, die ein Projekt verlässt, verliert ihre Phase auf dieselbe Weise, und auch ihre Quelle, Kategorie, ihren Stream und ihr Unternehmen, wenn sie zu einer Budgetzeile, einem Vertrag oder einem Vorfall wechselt; eine Phase oder eine Klassifizierung, die die Datei einer Aufgabe gibt, die sie nicht haben kann, wird nicht importiert, und **Preflight** meldet es an ihrer Zelle. Ein Vorfall, den Sie nicht sehen, wird nicht gefunden, ob die Zeile seine Referenz (`INC-4`) oder seine ID angibt.
 
 ### Nur-Export-Felder
 

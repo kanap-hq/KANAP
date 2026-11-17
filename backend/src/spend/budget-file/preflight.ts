@@ -22,6 +22,7 @@ import {
   closestNames,
   createSuppliersChoice,
   foldKey,
+  listedMatchEntries,
   matchByName,
   NameMatch,
   translatedValues,
@@ -371,6 +372,8 @@ interface LookalikeDecision {
   stale?: boolean;
   /** The line's state now (empty when it is gone). */
   state: string;
+  /** The line is gone, or the person no longer reads it: the row reads by its line and title only. */
+  gone?: boolean;
 }
 
 export function storedState(line: StoredLine): string {
@@ -490,6 +493,7 @@ function decideLookalikes(
       updatable,
       state,
       ...(action === 'update' && live ? { live, stale: expected !== undefined && expected !== state } : {}),
+      ...(known ? {} : { gone: true }),
     });
   }
   // The choice for all rows, with the target of every row it covers: what the person saw. Given back
@@ -505,7 +509,8 @@ function lookalikeEntry(row: InterpretedRow, look: LookalikeDecision): BudgetFil
     line: row.line,
     nature: hint.nature,
     name: textOf(row.fields.name),
-    target: { item: hint.itemNumber, ref: lineRef(hint.itemNumber), name: hint.name, state: look.state },
+    // A line gone since the check has no reference to show, as an application gone (lot I3 of 26.11.9).
+    target: { item: hint.itemNumber, ref: look.gone ? '' : lineRef(hint.itemNumber), name: hint.name, state: look.state },
     ...(reason ? { reason } : {}),
     outcome,
     updatable: look.updatable,
@@ -522,7 +527,7 @@ function lookalikeKeys(input: PreflightInput, row: InterpretedRow, bag: Bag, fir
   const nature = row.nature.kind === 'value' ? row.nature.nature : row.nature.kind === 'absent' ? input.scope : null;
   const name = textOf(row.fields.name);
   if (!nature || !name) return null;
-  const companyId = lookalikeCompany(input, row);
+  const companyId = lookalikeCompany(input, row, bag);
   const currency = row.fields.currency?.kind === 'value' ? row.fields.currency.text.trim().toUpperCase() : null;
   return {
     nature,
@@ -546,22 +551,32 @@ function lookalikeSupplier(input: PreflightInput, row: InterpretedRow, bag: Bag)
     const byErp = matchErp(suppliers, erp);
     return byErp.kind === 'one' ? byErp.row.id : undefined;
   }
+  const reads = !!input.canReadSuppliers;
   const key = cellKey('supplier_name', name!);
   const undone = bag.matching.unmatched.has(key);
   const proposal = bag.matching.proposals.get(key);
-  if (proposal !== undefined && !undone && foldKey(proposal) !== foldKey(name!)) {
+  if (reads && proposal !== undefined && !undone && foldKey(proposal) !== foldKey(name!)) {
     const target = matchByName(suppliers, proposal, { beyondCase: false });
     if (target.kind === 'one' && isActiveAt(target.row.disabledAt)) return target.row.id;
   }
-  const found = matchByName(suppliers, name!, { beyondCase: !undone });
+  const found = matchByName(suppliers, name!, { beyondCase: reads && !undone });
   return found.kind === 'one' ? found.row.id : undefined;
 }
 
 /** The row's paying company as `resolveCompany` finds it for a new line; null when none is found. */
-function lookalikeCompany(input: PreflightInput, row: InterpretedRow): string | null {
+function lookalikeCompany(input: PreflightInput, row: InterpretedRow, bag: Bag): string | null {
   const cell = row.fields.company_name ?? { kind: 'absent' as const };
   if (cell.kind === 'value') {
-    const found = matchName(input.catalog.companies, cell.text);
+    const companies = input.catalog.companies;
+    const reads = !!input.canReadCompanies;
+    const key = cellKey('company_name', cell.text);
+    const undone = bag.matching.unmatched.has(key);
+    const proposal = bag.matching.proposals.get(key);
+    if (reads && proposal !== undefined && !undone && foldKey(proposal) !== foldKey(cell.text)) {
+      const target = matchByName(companies, proposal, { beyondCase: false });
+      if (target.kind === 'one' && isActiveAt(target.row.disabledAt)) return target.row.id;
+    }
+    const found = matchByName(companies, cell.text, { beyondCase: reads && !undone });
     return found.kind === 'one' ? found.row.id : null;
   }
   if (cell.kind === 'clear') return null;
@@ -861,7 +876,9 @@ function resolveCompany(
     return { id: null, known: false };
   }
   if (cell.kind === 'value') {
-    const found = matchName(input.catalog.companies, cell.text);
+    // As the supplier: Kad's proposal first, then the file's name exactly, case aside, and accents aside
+    // for a person who reads the companies (a match listed, undoable); no other language.
+    const found = findListed(bag, 'company_name', null, cell.text, row.line, input.catalog.companies, undefined, !!input.canReadCompanies);
     if (found.kind === 'none') {
       fail('company_name', `Company '${cell.text}' was not found.`, 'CSV_REFERENCE_NOT_FOUND', { value: cell.text });
       miss(bag, 'companies', cell.text);
@@ -873,6 +890,8 @@ function resolveCompany(
       fail('company_name', `Company '${cell.text}' matches more than one company.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: cell.text });
       return { id: null, known: false };
     }
+    // Listed before the disabled check, as the supplier's: the person may undo a match to a disabled company.
+    noteMatch(bag, row.line, found);
     if (!isActiveAt(found.row.disabledAt) && found.row.id !== (live?.companyId ?? null)) {
       fail('company_name', `Company '${found.row.name}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: found.row.name });
       return { id: null, known: false };
@@ -1010,7 +1029,8 @@ function resolveSupplier(
   const nameText = name ?? '';
   const erpText = erp ?? '';
   const byErp = erpText ? matchErp(input.catalog.suppliers, erpText) : null;
-  const byName = nameText ? findListed(bag, 'supplier_name', null, nameText, row.line, input.catalog.suppliers) : null;
+  // Accents aside and Kad's proposal only for a person who reads the suppliers, as the company.
+  const byName = nameText ? findListed(bag, 'supplier_name', null, nameText, row.line, input.catalog.suppliers, undefined, !!input.canReadSuppliers) : null;
   if (byErp?.kind === 'many') {
     fail('supplier_erp_id', `Several suppliers share ERP id '${erpText}'.`, 'BUDGET_FILE_VALUE_AMBIGUOUS', { value: erpText });
     return { id: null, createKey: null };
@@ -1656,17 +1676,6 @@ function findCostCenter(
   return { kind: 'none' };
 }
 
-function matchName<T extends { name: string }>(rows: T[], cell: string): { kind: 'none' } | { kind: 'many' } | { kind: 'one'; row: T } {
-  const text = cell.trim();
-  const exact = rows.filter((row) => row.name.trim() === text);
-  if (exact.length === 1) return { kind: 'one', row: exact[0] };
-  if (exact.length > 1) return { kind: 'many' };
-  const folded = rows.filter((row) => row.name.trim().toLowerCase() === text.toLowerCase());
-  if (folded.length === 1) return { kind: 'one', row: folded[0] };
-  if (folded.length > 1) return { kind: 'many' };
-  return { kind: 'none' };
-}
-
 /** A list entry the matching reads: a supplier or a dimension value. */
 type Listed = { name: string; disabledAt: string | null };
 
@@ -1674,10 +1683,12 @@ type Listed = { name: string; disabledAt: string | null };
 type ListedMatch<T> = NameMatch<T> & { column?: string; dimensionName?: string | null; value?: string; byModel?: boolean };
 
 /**
- * The supplier or dimension value of `rows` a value of the file stands for. Kad's proposal for the
- * value comes first, accepted when it names an enabled value of the list (by its name, case aside);
- * else it is refused, and the value is matched as the file writes it. A match the person undid goes
- * no further than case. Every match beyond case is listed once the row uses it (`noteMatch`).
+ * The supplier, company or dimension value of `rows` a value of the file stands for. Kad's proposal
+ * for the value comes first, accepted when it names an enabled value of the list (by its name, case
+ * aside); else it is refused, and the value is matched as the file writes it. A match the person undid
+ * goes no further than case. Every match beyond case is listed once the row uses it (`noteMatch`).
+ * A list the person does not read (`reads` false, the suppliers or the companies without their module)
+ * goes no further than case and takes no proposal.
  */
 function findListed<T extends Listed>(
   bag: Bag,
@@ -1687,6 +1698,7 @@ function findListed<T extends Listed>(
   line: number,
   rows: readonly T[],
   translate?: (cell: string, rows: readonly T[]) => T[],
+  reads = true,
 ): ListedMatch<T> {
   const key = cellKey(column, cell);
   const state = bag.matching;
@@ -1696,7 +1708,8 @@ function findListed<T extends Listed>(
     if (undone) {
       state.applied.add(key);
     } else {
-      const target = matchByName(rows, proposal, { beyondCase: false });
+      // A list the person does not read: Kad's proposal is refused as missing, naming nothing of it.
+      const target = reads ? matchByName(rows, proposal, { beyondCase: false }) : { kind: 'none' as const };
       if (target.kind === 'one' && isActiveAt(target.row.disabledAt)) {
         return { kind: 'one', row: target.row, how: 'exact', column, dimensionName, value: cell, byModel: true };
       }
@@ -1710,8 +1723,8 @@ function findListed<T extends Listed>(
       state.refused.set(key, refused);
     }
   }
-  const found = matchByName(rows, cell, { beyondCase: !undone, translate });
-  if (undone && found.kind !== 'one') {
+  const found = matchByName(rows, cell, { beyondCase: reads && !undone, translate });
+  if (reads && undone && found.kind !== 'one') {
     const would = matchByName(rows, cell, { beyondCase: true, translate });
     if (would.kind === 'one' && (would.how === 'accents' || would.how === 'translation')) state.applied.add(key);
   }
@@ -1989,8 +2002,9 @@ function matchingOf(input: PreflightInput, bag: Bag): NonNullable<BudgetFileRepo
   if (chosen !== undefined) choices.push({ kind: 'create_suppliers', value: chosen });
   choices.push(...bag.lookalikeChoices);
   return {
-    matches: [...state.matches.values()].slice(0, MATCH_LIST_LIMIT),
-    refusedProposals: [...state.refused.values()].slice(0, MATCH_LIST_LIMIT),
+    // Kad's proposals all, taken or refused (the file prepared from Kad's card writes the ones taken).
+    matches: listedMatchEntries([...state.matches.values()]),
+    refusedProposals: [...state.refused.values()],
     candidates: [...state.candidates.values()].slice(0, MATCH_LIST_LIMIT),
     totals: { matches: state.matches.size, refusedProposals: state.refused.size, candidates: state.candidates.size },
     choices,

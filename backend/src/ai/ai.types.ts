@@ -1,6 +1,8 @@
 import { EntityManager } from 'typeorm';
 import { z } from 'zod';
 import type { BudgetFileChoice } from '../spend/budget-file/types';
+import type { ImportLookalikes } from '../common/csv/csv-lookalikes';
+import type { ImportNameMatch, ImportRefusedProposal } from '../common/name-matching';
 
 export type AiSurface = 'chat' | 'mcp';
 export type AiAuthMethod = 'jwt' | 'api_key' | 'oauth';
@@ -521,6 +523,11 @@ export type AiImportMappingPreviewDto = {
    * marks, or a column of references holds a value without the family's prefix.
    */
   read_errors: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks' | 'reference-without-prefix'>;
+  /**
+   * The titles of the columns the import matches that the mapping does not fill (an application's
+   * supplier found by its publisher), by column: the card names every column by its title. Absent when none.
+   */
+  matched_titles?: Record<string, string>;
   /** Required columns of the template no column of the file fills. */
   missing_required: Array<{ column: string; title: string }>;
   /** Columns of the file the mapping does not use. */
@@ -554,6 +561,20 @@ export type AiImportReportMessage = {
  * What an import reported on the file Plaid built: its check (dry run) or the import. The counts and
  * `issues` reach the model, with the budget file's `matching`; `report` holds the messages, written for the person, for the card.
  */
+/**
+ * A site a servers import names (`LOC-n`), with its hosting: the label of its hosting type in the
+ * person's language, its category in the catalog (`on_prem`, `cloud`, null when the type has none)
+ * and its provider (null when none).
+ */
+export type AiImportHostingSite = {
+  ref: string;
+  name: string;
+  hostingType: string;
+  label: string;
+  category: 'on_prem' | 'cloud' | null;
+  provider: string | null;
+};
+
 export type AiImportRunDto = {
   /** The check's facts of the approval, in one sentence (`approvalFacts`, `rowsApprovalFacts`); moved to the mapping. */
   on_approval?: string;
@@ -597,7 +618,7 @@ export type AiImportRunDto = {
     first: Array<{
       file_line: number;
       looks_like?: string;
-      reason?: 'title_supplier' | 'amounts' | 'close_title';
+      reason?: 'title_supplier' | 'amounts' | 'close_title' | 'name_accents' | 'close_name';
       outcome?: 'ignored' | 'created' | 'updated';
       looks_like_file_line?: number;
     }>;
@@ -610,7 +631,7 @@ export type AiImportRunDto = {
    * `report.file.matching`.
    */
   matching?: {
-    matches: Array<{ column: string; dimension?: string; value: string; target: string; origin: 'server' | 'model'; count: number; file_lines: number[] }>;
+    matches: Array<{ column: string; dimension?: string; value: string; target: string; origin: 'server' | 'model' | 'editor'; count: number; file_lines: number[] }>;
     refused_proposals: Array<{ column: string; dimension?: string; value: string; target: string; reason: 'missing' | 'disabled'; count: number; file_lines: number[] }>;
     candidates: Array<{
       column: string; dimension?: string; value: string; outcome: 'create' | 'refused'; count: number; file_lines: number[];
@@ -625,8 +646,25 @@ export type AiImportRunDto = {
     note: string;
   };
   report:
-    /** The messages of a row import, the first ones, as its dialog lists them. */
-    | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[] }
+    /**
+     * The messages of a row import, the first ones, as its dialog lists them; the names it found
+     * beyond case (`matches`, on the person's lines, the first ones, and `matchesTotal`) and Kad's
+     * proposals it refused (`refusedProposals`, likewise), each absent when none (lot I3 of 26.11.9).
+     */
+    | {
+      kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[];
+      matches?: ImportNameMatch[]; matchesTotal?: number;
+      refusedProposals?: ImportRefusedProposal[]; refusedProposalsTotal?: number;
+      /** The matches the person undid on the card (its choices `unmatch`), absent when none: the card sends them all with the next one. */
+      undone?: Array<{ column: string; value: string }>;
+      /** A servers import: how each site the file names hosts its servers (lot I3 of 26.11.9, T-I3f); absent when none. */
+      hosting?: AiImportHostingSite[];
+      /**
+       * The applications import: the rows that would create an application and look like one the person reads, on the
+       * person's lines, with the choices the check followed (lot I3 of 26.11.9, T-I3d); absent when none.
+       */
+      lookalikes?: ImportLookalikes;
+    }
     /** The budget file's check, as its dialog shows it (`BudgetFileReport` without its snapshot). */
     | { kind: 'budget_file'; file: Record<string, unknown> | null };
 };

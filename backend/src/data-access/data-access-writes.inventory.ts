@@ -154,7 +154,6 @@ export const DATA_ACCESS_WRITES: DataAccessWriteEntry[] = [
   { file: 'tasks/task-time-entries.service.ts', member: 'create', count: 1, handling: 'pre_check', reason: TASK_ELEMENT },
   { file: 'tasks/task-time-entries.service.ts', member: 'delete', count: 1, handling: 'pre_check', reason: TASK_ELEMENT },
   { file: 'tasks/task-time-entries.service.ts', member: 'update', count: 1, handling: 'pre_check', reason: TASK_ELEMENT },
-  { file: 'tasks/tasks-csv.service.ts', member: 'handleViewerOwnerImport', count: 1, handling: 'row_count', reason: 'assertTaskWritten on the rows the UPDATE returns' },
   { file: 'tasks/tasks-delete.service.ts', member: 'bulkDelete', count: 1, handling: 'delegates', reason: 'TasksDeleteService.delete, per task (a refusal is reported as failed)' },
   { file: 'tasks/tasks-delete.service.ts', member: 'delete', count: 1, handling: 'pre_check', reason: 'assertTaskDeletable: the DELETE policy asks for the line or contract modifiable' },
   { file: 'tasks/tasks-delete.service.ts', member: 'deleteTask', count: 1, handling: 'delegates', reason: 'TasksDeleteService.delete' },

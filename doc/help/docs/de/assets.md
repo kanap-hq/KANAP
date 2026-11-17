@@ -250,7 +250,7 @@ Ist eine Anwendung jedem Mitglied in Betrieb eines Clusters direkt zugeordnet, n
 - Eine auf diesem Server installierte Technologie entfernen Sie mit dem Kreuz am Ende ihrer Zeile.
 - Bei einem Cluster erscheint eine auf seinen Mitgliedern installierte Technologie einmal pro Version, mit den Mitgliedern, die sie tragen, unter **Über**. Eine solche Zeile folgt der Installation und wird dort entfernt.
 - Eine Technologie, die nur vom Host kommt, in dem dieser Server läuft, etwa das ESXi seines Hosts, ist die zugrunde liegende Plattform. Sie steht unter einer geschlossenen Zeile am Ende der Tabelle, **Zugrunde liegende Plattform (n)**, mit dem Host unter **Über**. Klicken Sie auf die Zeile, um sie anzuzeigen. Diese Zeilen werden im Abschnitt nicht gezählt.
-- **Hinzufügen** (`infrastructure:member`) öffnet eine Technologiesuche, dann die Versionsauswahl: Wählen Sie eine Version, **Version unbekannt**, oder geben Sie eine neue Bezeichnung ein und wählen Sie **Version „…“ hinzufügen**, um sie anzulegen. Jede Änderung wird sofort gespeichert.
+- **Hinzufügen** (`infrastructure:member`) öffnet eine Technologiesuche, dann die Versionsauswahl: Wählen Sie eine Version, **Version unbekannt**, oder geben Sie eine neue Bezeichnung ein und wählen Sie **Version „…“ hinzufügen**, um sie anzulegen. Eine eingegebene Bezeichnung kann auch eine Version finden, die Sie bereits haben, etwa `22.04` für `22.04 LTS`: siehe [Versionsbezeichnungen](technologies.md#version-labels). Jede Änderung wird sofort gespeichert.
 - **Version ändern** (`infrastructure:member`): Klicken Sie auf die Version einer installierten Technologie oder auf den Stift am Ende ihrer Zeile. Dieselbe Versionsauswahl öffnet sich.
 
 Die Notizen einer Installation ändern Sie im Reiter **Server** der Technologie. Siehe [Technologien](technologies.md#server).
@@ -503,9 +503,9 @@ Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können
 
 Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`, `virtual machine` und `vm` alle zum gleichen Asset-Typ aufgelöst werden. Ein Wert, der auf mehrere Einträge passt, wird abgelehnt statt erraten. Der Export schreibt für diese Spalten Namen, in der Sprache des Bildschirms, sodass eine exportierte Datei unverändert wieder importiert werden kann.
 
-**Betriebssystem**: Die Spalte `operating_system` enthält den Namen der Technologie, gefolgt von ihrer Version, so wie der Export sie schreibt (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Beim Import sucht Kadratis die Technologie unter Ihren Technologien, dann im Katalog, und erfasst die Version. Eine Technologie oder Version, die es nicht findet, wird angelegt: Prüfen Sie also vorher die Schreibweise. Der Wert wird zum Betriebssystem des Servers.
+**Betriebssystem**: Die Spalte `operating_system` enthält den Namen der Technologie, gefolgt von ihrer Version, so wie der Export sie schreibt (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Beim Import sucht Kadratis die Technologie unter Ihren Technologien, dann im Katalog, und erfasst die Version. Die Versionsbezeichnung folgt der Regel der [Versionsbezeichnungen](technologies.md#version-labels): `Ubuntu 22.04` findet die Version `22.04 LTS`, und `Windows Server 2022 Datacenter` findet `2022`. **Preflight** listet eine solche Zuordnung mit den anderen Zuordnungen auf und nennt jede Version, die das Laden anlegt. Eine Technologie oder Version, die es nicht findet, wird angelegt: Prüfen Sie also vorher die Schreibweise. `Ubuntu 22.04.3 LTS` legt eine eigene Version an. Der Wert wird zum Betriebssystem des Servers.
 
-**Cluster-Mitgliedschaft**: Die Spalte `cluster` nennt die Cluster des Assets, durch Kommas getrennt (`ESX-PROD, SQL-CLUSTER`). Groß- und Kleinschreibung spielen keine Rolle. Der Export schreibt die Cluster, in denen das Asset Mitglied ist. Beim Import:
+**Cluster-Mitgliedschaft**: Die Spalte `cluster` nennt die Cluster des Assets, durch Kommas getrennt (`ESX-PROD, SQL-CLUSTER`). Groß- und Kleinschreibung spielen keine Rolle, Akzente ebenfalls nicht, wenn Sie die Server lesen dürfen. Siehe [Namen von Datensätzen](csv-files.md#names-of-records). Der Export schreibt die Cluster, in denen das Asset Mitglied ist. Beim Import:
 
 - Im Modus `Anreichern` tritt das Asset den in der Zelle genannten Clustern bei und bleibt in seinen anderen Clustern.
 - Im Modus `Ersetzen` verlässt das Asset außerdem die Cluster, die seine Zelle nicht nennt.
@@ -525,6 +525,7 @@ Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der A
 
 Einige Felder werden berechnet und können nicht importiert werden:
 - **Anbieter**: Automatisch vom Standort des Assets abgeleitet und aktualisiert, wenn sich der Standort ändert
+- **Hosting**: Ein Server wird so gehostet wie sein Standort, vor Ort oder in einer Cloud. **Cloud** ist kein Asset-Typ: Wählen Sie für eine Cloud-Instanz einen Standort, dessen Hosting-Typ eine Cloud ist. Wenn [Kad](ai-assistant.md#eine-tabelle-importieren) Server importiert, nennt seine Vorschau das Hosting jedes Standorts der Datei, zum Beispiel `LOC-4 Rechenzentrum Paris (On-Premise)`
 - **FQDN**: Aus Hostname + Domäne berechnet
 - **Schwachstellen**: `vulnerabilities_to_review` (die noch zu prüfenden Schwachstellen) und `severe_vulnerabilities` (die kritischen oder hohen davon), gezählt wie in der Spalte der Liste. Nur Export: Der Import ignoriert sie. Leer für ein außer Betrieb genommenes Asset. Fehlen in der Datei, wenn Schwachstellen nicht verfolgt werden
 

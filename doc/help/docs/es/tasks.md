@@ -535,7 +535,7 @@ Hay tres modos de exportación disponibles:
 | `related_object_type` | Tipo de entidad | No | Vacío para tareas independientes; acepta código o etiqueta |
 | `related_object_id` | UUID de la entidad | Condicional | Obligatorio si es tarea vinculada y no se proporciona `related_object_name` |
 | `related_object_name` | Nombre de la entidad | Condicional | Obligatorio si es tarea vinculada y no se proporciona `related_object_id` |
-| `phase_name` | Fase del proyecto | No | Debe coincidir con un nombre de fase existente (solo tareas de proyecto) |
+| `phase_name` | Fase del proyecto | No | Una fase del proyecto de la tarea (solo tareas de proyecto) |
 | `priority_level` | Prioridad de la tarea | No | Acepta el código o el nombre, en cualquiera de los cuatro idiomas |
 | `source_name` | Origen | No | Origen del portafolio (tareas independientes y de proyecto) |
 | `category_name` | Categoría | No | Categoría del portafolio (tareas independientes y de proyecto) |
@@ -560,8 +560,10 @@ Hay tres modos de exportación disponibles:
 |-------------|-------------|-------|
 | `assignee_email` | Persona responsable | Debe coincidir con un correo de usuario existente |
 | `creator_email` | Correo del solicitante | Solo exportación (mostrado como **Correo del solicitante** en metadatos de campo) |
-| `viewer_email_1` a `_4` | Observadores | Deben coincidir con correos de usuarios existentes |
-| `owner_email_1` a `_4` | Responsables | Deben coincidir con correos de usuarios existentes |
+| `viewer_email_1` a `_4` | Observadores | Correos de usuarios existentes. Un correo desconocido se omite, con un aviso |
+| `owner_email_1` a `_4` | Responsables | Correos de usuarios existentes. Un correo desconocido se omite, con un aviso |
+
+En modo `Enriquecer`, una fila que actualiza una tarea conserva sus observadores cuando una celda de observador nombra un correo desconocido, y sus responsables del mismo modo.
 
 **Otros campos**:
 
@@ -602,6 +604,7 @@ Para los campos **status**, **priority_level** y **related_object_type**, puede 
 | `spend_item` | `Spend Item`, `Spend` |
 | `contract` | `Contract` |
 | `capex_item` | `CAPEX Item`, `CAPEX` |
+| `incident` | `Incident` |
 
 El sistema normaliza automáticamente los valores durante la importación. Un estado o una prioridad también se lee por el nombre que muestra la pantalla, en cualquiera de los cuatro idiomas. Un valor desconocido se rechaza, y el mensaje lista los nombres aceptados.
 
@@ -613,7 +616,7 @@ Las tareas se emparejan por **título + related_object_id** (sin distinción de 
 
 Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el ID, luego recurre a título + objeto relacionado.
 
-**Nota**: Si proporciona `related_object_name` en lugar de `related_object_id`, el sistema resuelve el nombre al ID antes de la coincidencia. Esto significa que puede usar nombres legibles en todo su archivo de importación. Para un contrato, `related_object_name` también acepta su referencia, como `CTR-12`.
+**Nota**: Si proporciona `related_object_name` en lugar de `related_object_id`, el sistema resuelve el nombre al ID antes de la coincidencia. Esto significa que puede usar nombres legibles en todo su archivo de importación. Para un contrato, `related_object_name` también acepta su referencia, como `CTR-12`. El nombre y la fase se encuentran sin distinguir mayúsculas de minúsculas, y tampoco acentos para un proyecto, un contrato o una línea de presupuesto que usted puede leer. Vea [Nombres de registros](csv-files.md#names-of-records). La **Verificación previa** rechaza una fila cuyo objeto vinculado no se encuentra o nombra varios registros. También rechaza una fase a la que responden varias fases del proyecto, o que solo tiene otro proyecto. Si una fila da ambos, prevalece el ID. Una tarea trasladada a otro proyecto sin fase en el archivo conserva su fase si ese proyecto tiene una con el mismo nombre; si no, la **Verificación previa** la vacía y lo indica. Una tarea que sale de un proyecto pierde su fase de la misma manera, y también su origen, su categoría, su flujo y su empresa cuando pasa a una línea presupuestaria, un contrato o un incidente; una fase o una clasificación que el archivo da a una tarea que no puede tenerla no se importa, y la **Verificación previa** lo indica en su celda. Un incidente que usted no ve no se encuentra, tanto si la fila da su referencia (`INC-4`) como su id.
 
 ### Campos de solo exportación
 

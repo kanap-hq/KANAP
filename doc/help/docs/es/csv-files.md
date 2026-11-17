@@ -28,6 +28,22 @@ El archivo de contratos empieza con la misma columna `reference` opcional (`CTR-
 
 **Otros archivos.** Una hoja de cálculo OpenDocument (`.ods`) se rechaza antes de leer ninguna columna, con un mensaje que indica cómo guardarla en CSV. En LibreOffice Calc: **Archivo › Guardar como › Texto CSV**, o **Excel 2007-365 (.xlsx)**. Cualquier otro archivo que no sea texto se rechaza de la misma forma.
 
+## Nombres de registros { #names-of-records }
+
+Una celda que nombra otro registro, como un proveedor, una empresa o un proyecto, lo encuentra en tres pasos:
+
+1. el mismo nombre, escrito exactamente igual;
+2. el mismo nombre con otras mayúsculas y minúsculas;
+3. el mismo nombre con otros acentos, por ejemplo `Fromagerie Leger` para `Fromagerie Léger`.
+
+El tercer paso solo vale para los registros que se encuentran por su nombre, en una lista que usted puede leer. Un correo, una referencia de ubicación como `LOC-4` o un código sigue los dos primeros pasos. Cuando varios registros responden al tercer paso, la fila se rechaza y el mensaje los nombra: escriba el nombre tal como está guardado.
+
+**Asociaciones.** La verificación previa lista los nombres encontrados en el tercer paso bajo **N valores asociados**, plegados. Despliegue la línea para ver cada asociación, por ejemplo `Proveedor: Fromagerie Leger → Fromagerie Léger`. La lista también incluye las versiones encontradas por su etiqueta del catálogo (vea [Etiquetas de versión](technologies.md#version-labels)). **Deshacer** comprueba de nuevo el archivo sin esa asociación: el nombre se lee entonces como un nombre que Kadratis no conoce, y la carga mantiene esa elección. La asociación deshecha sigue en la lista con **Volver a asociar**, que comprueba de nuevo el archivo con ella. Las importaciones de aplicaciones, activos, proyectos, solicitudes, tareas, incidentes, contratos, centros de coste, procesos de negocio, vínculos de tecnologías y el archivo de presupuesto muestran esta lista.
+
+**Un nombre que no se encuentra.** Las importaciones de aplicaciones, activos, proyectos, solicitudes, tareas e incidentes conservan los valores actuales para las celdas vacías, salvo si elige **Reemplazo completo**. Con estas opciones, una fila que actualiza un registro también conserva el valor actual cuando una celda nombra un registro que Kadratis no encuentra. La verificación avisa: «No se encontró «X»: se conserva el valor actual.» Un valor que depende de otra columna solo se conserva si la fila deja esa columna sin cambios: la fase de una tarea con su proyecto, la línea con su categoría, el departamento con su empresa. Si no, el campo queda vacío y la verificación avisa. Una tarea conserva sus observadores, o sus responsables, cuando una de sus celdas nombra un correo desconocido. En un registro nuevo, y con **Reemplazo completo**, el campo queda vacío y la verificación avisa. Una columna que exige un registro conocido rechaza la fila, como indica su página.
+
+Las importaciones de Kad siguen las mismas reglas y muestran las asociaciones en su vista previa. Vea [Importar una hoja de cálculo](ai-assistant.md#importar-una-hoja-de-calculo).
+
 ## Archivos de ejemplo { #example-files }
 
 El diálogo de importación de aplicaciones, activos, proyectos, proveedores, contratos y el archivo de presupuesto ofrece **Descargar un ejemplo**: un libro de Excel en el idioma de su pantalla.

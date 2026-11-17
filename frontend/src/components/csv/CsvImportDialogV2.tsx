@@ -17,7 +17,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
-import { csvEntityOf } from './csvLabels';
+import { csvEntityOf, csvFieldLabel } from './csvLabels';
 import { screenLanguage } from './readings';
 import api from '../../api';
 import { useCsvImport } from './useCsvImport';
@@ -25,9 +25,15 @@ import { csvRequestErrorMessage } from './csvRequestError';
 import { CsvImportWorkflowPresets } from './CsvImportWorkflowPresets';
 import { CsvImportAdvancedOptions } from './CsvImportAdvancedOptions';
 import { CsvValidationResults } from './CsvValidationResults';
-import { CsvImportResult } from './csv.types';
+import type { CsvImportResult, ImportLookalike, ImportLookalikeChoice } from './csv.types';
 import { useImportFiles } from './importFiles';
 import ImportExampleButton, { type ImportExampleKey } from './ImportExampleButton';
+import ImportMatchesView, { type UndoneMatch } from './ImportMatchesView';
+import ImportLookalikesView, { applicationLookalikeReason, applicationUpdateChoice } from './ImportLookalikesView';
+import { buildEntityUrl } from '../../ai/utils/entityUrls';
+
+/** A load refused for a row whose situation changed since the check: nothing was written (T-I3l). */
+const LOAD_REFUSALS = new Set(['CSV_LOOKALIKE_CHANGED', 'CSV_LOOKALIKE_GONE', 'CSV_LOOKALIKE_NAME_FOUND', 'CSV_LOOKALIKE_NEW']);
 
 interface CsvImportDialogV2Props {
   open: boolean;
@@ -79,18 +85,36 @@ export default function CsvImportDialogV2({
   const [showAdvanced, setShowAdvanced] = React.useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [hover, setHover] = React.useState(false);
+  // The matches the person undid on the check (lot I3 of 26.11.9): the next check and the load send them,
+  // and the check lists them with their way back, as they were found.
+  const [unmatched, setUnmatched] = React.useState<UndoneMatch[]>([]);
+  // The person's last choices on the rows that look like an existing record (the applications), for a
+  // check that gave none back; a check that did gives the list the next check and the load send.
+  const [lookalikes, setLookalikes] = React.useState<ImportLookalikeChoice[]>([]);
+  // The matches stay unfolded while the file is checked again after an undo.
+  const [matchesOpen, setMatchesOpen] = React.useState(false);
+  const entity = csvEntityOf(endpoint);
+  const columnName = (column: string) => csvFieldLabel(t, entity, { csvColumn: column, label: column });
 
   const handleClose = useCallback(() => {
     onClose();
     // Reset after dialog closes
-    setTimeout(reset, 300);
+    setTimeout(() => {
+      reset();
+      setUnmatched([]);
+      setLookalikes([]);
+      setMatchesOpen(false);
+    }, 300);
   }, [onClose, reset]);
 
   const chooseFile = (next: File | null | undefined) => {
     if (!next) return;
-    // The report and the error were about the previous file.
+    // The report, the error, the matches undone and the rows' choices were about the previous file.
     setResult(null);
     setError(null);
+    setUnmatched([]);
+    setLookalikes([]);
+    setMatchesOpen(false);
     setFile(next);
   };
 
@@ -105,7 +129,15 @@ export default function CsvImportDialogV2({
     chooseFile(e.target.files?.[0]);
   };
 
-  const upload = async (dryRun: boolean) => {
+  /** `next` carries the choice just made (a match undone, a row's choice), before the state has caught up. */
+  const upload = async (
+    dryRun: boolean,
+    next: { undone?: UndoneMatch[]; chosen?: ImportLookalikeChoice[] } = {},
+  ) => {
+    const undone = next.undone ?? unmatched;
+    // The choices of the check shown, as it gave them back, the targets of the rows it left out included:
+    // a row left out stays left out even when its application was renamed since (as the budget file's load).
+    const chosen = next.chosen ?? result?.lookalikes?.choices ?? lookalikes;
     if (!file) return;
     setLoading(true);
     setError(null);
@@ -114,11 +146,21 @@ export default function CsvImportDialogV2({
     try {
       const fd = new FormData();
       fd.append('file', file);
+      // In the form, never in the address: they hold values of the file.
+      if (undone.length > 0) fd.append('unmatched', JSON.stringify(undone.map(({ column, value }) => ({ column, value }))));
+      if (chosen.length > 0) fd.append('lookalikes', JSON.stringify(chosen));
       const queryParams = { ...(params ?? {}), dryRun, mode, operation, language };
       const res = await api.post(`${endpoint}/import`, fd, { params: queryParams });
       const data = res.data as CsvImportResult;
       setResult(data);
-      setPhase(dryRun ? 'validate' : 'result');
+      // A load refused because a row's situation changed since the check (T-I3l) wrote nothing: back to
+      // the check, the row in error and its choices open, as the budget file's dialog does.
+      const refused = !data.ok && data.errors.some((entry) => !!entry.code && LOAD_REFUSALS.has(entry.code));
+      const stale = !dryRun && refused;
+      // The choices the server followed dropped the refused row's: the next check shows its new situation
+      // (an update of the application that took its name, a row left out), never the same refusal (T-I3l).
+      if (refused) setLookalikes(data.lookalikes?.choices ?? []);
+      setPhase(dryRun || stale ? 'validate' : 'result');
 
       if (!dryRun && data.ok) {
         onImported?.();
@@ -132,8 +174,27 @@ export default function CsvImportDialogV2({
     }
   };
 
+  const undo = (entry: UndoneMatch) => {
+    const next = [...unmatched, { column: entry.column, value: entry.value, name: entry.name, origin: entry.origin }];
+    setUnmatched(next);
+    void upload(true, { undone: next });
+  };
+
+  const redo = (entry: UndoneMatch) => {
+    const next = unmatched.filter((item) => !(item.column === entry.column && item.value === entry.value));
+    setUnmatched(next);
+    void upload(true, { undone: next });
+  };
+
+  const chooseLookalikes = (next: ImportLookalikeChoice[]) => {
+    setLookalikes(next);
+    void upload(true, { chosen: next });
+  };
+
   const canValidate = !!file && !loading;
   const canImport = result?.ok && result?.dryRun && !loading;
+  // Choices are made on the check: a dry run, or a load refused and brought back to it (it wrote nothing).
+  const choosing = phase === 'validate';
 
   const downloadTemplate = async () => {
     setError(null);
@@ -239,7 +300,45 @@ export default function CsvImportDialogV2({
         )}
 
         {(phase === 'validate' || phase === 'result') && result && (
-          <CsvValidationResults result={result} entity={csvEntityOf(endpoint)} />
+          <>
+            <CsvValidationResults result={result} entity={entity} />
+            {/* Under the warnings: the names found beyond case, undone on the check only. */}
+            {((result.matches?.length ?? 0) > 0 || (result.refusedProposals?.length ?? 0) > 0 || (choosing && unmatched.length > 0)) && (
+              <Box sx={{ mt: 2 }}>
+                <ImportMatchesView
+                  matches={result.matches ?? []}
+                  matchesTotal={result.matchesTotal}
+                  refusedProposals={result.refusedProposals ?? []}
+                  refusedTotal={result.refusedProposalsTotal}
+                  columnName={columnName}
+                  open={matchesOpen}
+                  onToggle={() => setMatchesOpen((open) => !open)}
+                  onUndo={choosing ? undo : undefined}
+                  undone={unmatched}
+                  onRedo={choosing ? redo : undefined}
+                  disabled={loading}
+                />
+              </Box>
+            )}
+            {/* Under the matches: the rows that look like an existing record, chosen on the check only. */}
+            {result.lookalikes && result.lookalikes.count > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <ImportLookalikesView<ImportLookalike, ImportLookalikeChoice>
+                  lookalikes={result.lookalikes}
+                  title={t('ops:operations.budgetFile.lookalikes.applicationsTitle')}
+                  choices={result.lookalikes.choices ?? lookalikes}
+                  updateChoice={applicationUpdateChoice}
+                  onChoices={choosing ? chooseLookalikes : undefined}
+                  choicesDisabled={loading}
+                  reasonText={(look) => applicationLookalikeReason(look, t)}
+                  targetUrl={(look) => buildEntityUrl(entity, look.target.ref)}
+                  fieldName={columnName}
+                  changedLines={new Set(result.errors.filter((error) => error.code === 'CSV_LOOKALIKE_CHANGED').map((error) => error.row))}
+                  refusedLines={new Set(result.errors.map((error) => error.row))}
+                />
+              </Box>
+            )}
+          </>
         )}
 
         {loading && <LinearProgress sx={{ mt: 2 }} />}

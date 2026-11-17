@@ -18,9 +18,9 @@ async function testRoute() {
   const controller = new (TasksController as any)(null, null, null, null, null, null, csv, null, null, null, null);
   const req = { tenant: { id: 't1' }, user: { sub: 'u1' }, queryRunner: { manager: { query: async () => [{ locale: 'de' }] } } };
   const file = { buffer: Buffer.from('title\r\nA\r\n') };
-  await controller.importCsv(file, 'true', 'enrich', 'upsert', 'fr', req);
+  await controller.importCsv(file, 'true', 'enrich', 'upsert', 'fr', undefined, req);
   assert.equal(csv.calls[0].language, 'fr', 'the screen\'s language');
-  await controller.importCsv(file, 'true', 'enrich', 'upsert', undefined, req);
+  await controller.importCsv(file, 'true', 'enrich', 'upsert', undefined, undefined, req);
   assert.equal(csv.calls[1].language, 'de', 'the person\'s own when the screen sends none');
 }
 
@@ -29,6 +29,8 @@ async function testKad() {
   const runner = Object.create(AiImportRunnerService.prototype);
   runner.tasks = tasks;
   runner.incidentViewer = async () => ({ userId: 'u1', isAdmin: false });
+  // The person's rights, read once by the run (lot I3 of 26.11.9).
+  runner.policy = { effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   await runner.runRows('tasks', { file: Buffer.from(''), dryRun: true, language: 'es', context: { manager: {}, tenantId: 't1', userId: 'u1' } });
   assert.equal(tasks.calls[0].language, 'es');
 }

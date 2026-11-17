@@ -22,10 +22,11 @@ import { csvMessageColumn, csvMessageText, type CsvReportMessage } from './csvMe
 /** One error or warning: its row, the sentence, then its column when the sentence does not name it. */
 function ReportLine({ item, entity }: { item: CsvReportMessage; entity: string }) {
   const { t } = useTranslation('common');
-  const text = csvMessageText(item, t);
+  // The report names a column by its key. The screen uses the same label as the export.
+  const label = (key: string) => csvFieldLabel(t, entity, { csvColumn: key, label: key });
+  const text = csvMessageText(item, t, label);
   const column = csvMessageColumn(item, text);
-  // The report names the column by its file header. The screen uses the same label as the export.
-  const columnLabel = column ? csvFieldLabel(t, entity, { csvColumn: column, label: column }) : null;
+  const columnLabel = column ? label(column) : null;
   return (
     <Typography variant="body2">
       {item.row > 0 && <><strong>{t('csv.rowPrefix', { row: item.row })}</strong>{' '}</>}

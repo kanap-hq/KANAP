@@ -2041,6 +2041,31 @@ export const IMPORT_LOAD_REFUSALS: Record<string, Texts> = {
     de: '{{ref}} wurde seit der Prüfung geändert.',
     es: '{{ref}} ha cambiado desde la comprobación.',
   },
+  // An applications import (lot I3 of 26.11.9, T-I3l): a row whose situation changed since the check.
+  CSV_LOOKALIKE_CHANGED: {
+    en: '{{ref}} changed since the check.',
+    fr: '{{ref}} a changé depuis la vérification.',
+    de: '{{ref}} wurde seit der Prüfung geändert.',
+    es: '{{ref}} ha cambiado desde la comprobación.',
+  },
+  CSV_LOOKALIKE_GONE: {
+    en: 'The application chosen at the check no longer exists.',
+    fr: "L'application choisie à la vérification n'existe plus.",
+    de: 'Die bei der Prüfung gewählte Anwendung existiert nicht mehr.',
+    es: 'La aplicación elegida en la comprobación ya no existe.',
+  },
+  CSV_LOOKALIKE_NAME_FOUND: {
+    en: '{{ref}} took this name after the check.',
+    fr: '{{ref}} a pris ce nom après la vérification.',
+    de: '{{ref}} hat diesen Namen nach der Prüfung erhalten.',
+    es: '{{ref}} tomó este nombre después de la comprobación.',
+  },
+  CSV_LOOKALIKE_NEW: {
+    en: 'The row looks like {{ref}} since the check.',
+    fr: 'La ligne ressemble à {{ref}} depuis la vérification.',
+    de: 'Die Zeile ähnelt seit der Prüfung {{ref}}.',
+    es: 'La fila se parece a {{ref}} desde la comprobación.',
+  },
 };
 
 const REFUSED_ROW_TEXTS = {

@@ -722,6 +722,34 @@ Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el I
 
 Una fila encontrada por su `id` con otro nombre renombra la aplicación. El nuevo nombre debe estar libre. El título del documento de descripción de la aplicación sigue el nuevo nombre.
 
+**Editor y proveedor**: una fila con un editor (`editor`) y sin proveedor se vincula al proveedor de ese nombre, si existe. La comprobación lista esta asociación con los demás valores asociados, y **Deshacer** la quita. En modo `Enriquecer`, una aplicación que ya tiene un proveedor lo conserva. El editor se queda tal como está escrito. Sin el derecho de leer los proveedores, el editor no vincula ningún proveedor.
+
+### Filas que se parecen a una aplicación existente { #lookalike-applications }
+
+Una fila que crearía una aplicación se descarta por defecto cuando se parece a una aplicación existente. Así una aplicación no se crea dos veces con un nombre apenas distinto. Una fila se parece a una aplicación en dos casos:
+
+- el mismo nombre salvo acentos: `Gestion des depenses` y `Gestion des dépenses`
+- un nombre parecido, con el mismo proveedor o el mismo editor
+
+Una fila que encuentra una aplicación por su nombre la sigue actualizando, como antes. Las filas de un mismo archivo no se comparan entre sí. Dos filas con el mismo nombre se rechazan como duplicadas, incluida una fila descartada.
+
+La comprobación lista estas filas en **Se parece a una aplicación existente**, con la aplicación a la que se parece cada una. Señale una fila para ver por qué se encontró. Para cada fila, elija:
+
+- **Descartar**: la fila no se importa. Es la opción por defecto.
+- **Crear de todos modos**: la fila se convierte en una nueva aplicación.
+- **Actualizar APP-12**: la fila actualiza la aplicación a la que se parece, en el modo de la importación, responsables y residencia de datos incluidos. La aplicación conserva su nombre. Señale la fila para ver las columnas que cambian. «Nada cambia en APP-12» significa que el archivo no cambia ninguno de sus valores.
+
+**Crear todas de todos modos**, **Actualizar todas** y **Descartar todas**, encima de la lista, se aplican a todas las filas. Una elección hecha después en una fila solo cambia esa fila. Cada elección vuelve a comprobar el archivo. Con **Solo añadir los nuevos** (la operación `Solo insertar`), la actualización no se ofrece.
+
+La importación sigue la elección hecha en la comprobación. Cuando la situación de una fila ha cambiado desde entonces, la fila se rechaza y no se importa nada:
+
+- APP-12 ha cambiado (sus valores, sus responsables o la residencia de sus datos), para una fila que la actualiza: «APP-12 ha cambiado desde la comprobación.»
+- APP-12 se ha eliminado, para una fila que la actualiza: «La aplicación elegida en la comprobación ya no existe.»
+- otra aplicación ha tomado el nombre de una fila que se iba a crear o que actualiza una aplicación: «APP-15 tomó este nombre después de la comprobación.» Una fila descartada sigue descartada, y el resto del archivo se importa.
+- una fila que la comprobación habría creado se parece ahora a una aplicación creada desde entonces: «La fila se parece a APP-16 desde la comprobación.»
+
+La ventana vuelve a la comprobación, con la fila rechazada en error. Elija de nuevo para esa fila: la nueva comprobación lee las aplicaciones tal como están ahora.
+
 ### Limitaciones
 
 - **Despliegues no incluidos**: Los despliegues por entorno (Prod, QA, Dev) requieren configuración en el espacio de trabajo

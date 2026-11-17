@@ -934,6 +934,17 @@
         "priority_override": "Surcharge de priorité",
         "override_value": "Valeur de surcharge",
         "override_justification": "Justification de la surcharge"
+      },
+      "contracts": {
+        "company_name": "Société",
+        "supplier_name": "Fournisseur",
+        "cost_center": "Centre de coûts"
+      },
+      "cost-centers": {
+        "company_name": "Société"
+      },
+      "business-processes": {
+        "parent_name": "Parent"
       }
     }
   },

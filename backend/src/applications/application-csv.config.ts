@@ -14,7 +14,7 @@ import {
 } from '../common/csv';
 import { VULNERABILITY_CSV_HEADERS, vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { richTextCell } from '../common/csv/rich-text-cell';
-import { sameStoredValues } from '../common/csv-sheet/unchanged';
+import { sameStoredValue, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { formatApplicationCategoryOptions, ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
 
 const OWNER_COLUMN = /^(business|it)_owner_email_/;
@@ -27,7 +27,7 @@ const APPLICATION_STATUS_LABELS: Record<CsvExportContext['language'], Record<str
   es: { enabled: 'Activado', disabled: 'Desactivado' },
 };
 
-function resolveApplicationCatalogs(entity: any, settings: ItOpsSettings): void {
+export function resolveApplicationCatalogs(entity: any, settings: ItOpsSettings): void {
   if (entity.category) entity.category = resolveCatalogCode(entity.category, settings.applicationCategories);
   if (entity.lifecycle) entity.lifecycle = resolveCatalogCode(entity.lifecycle, settings.lifecycleStates);
   if (Array.isArray(entity.access_methods)) entity.access_methods = entity.access_methods.map((item: string) => resolveCatalogCode(item, settings.accessMethods) ?? item);
@@ -152,6 +152,34 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
     const count = existing ? childCount.get(String(existing.id)) ?? 0 : 0;
     if (count > 0) fail(row, 'suite_has_children', `Detach the ${count} child applications first`, { count }, 'is_suite');
   }
+}
+
+/**
+ * The file's columns a row that updates an application changes (lot I3 of 26.11.9, "Update APP-n"):
+ * the values it writes as the commit stores them (catalog names resolved), compared with the stored
+ * ones; when only its owners or data residency change, the columns that name them.
+ */
+export function changedApplicationColumns(row: CsvImportRow, settings: ItOpsSettings): string[] {
+  const stored = row.existingEntity ?? {};
+  const next: Record<string, any> = { ...row.parsed };
+  delete next._owners;
+  try {
+    resolveApplicationCatalogs(next, settings);
+  } catch {
+    // A value the catalog refuses was refused by the validation already: compared as written.
+  }
+  const columns = new Set<string>();
+  for (const field of applicationCsvConfig.fields) {
+    const property = field.entityProperty;
+    if (field.importable === false || property.startsWith('_') || !(property in next) || next[property] === undefined) continue;
+    if (!sameStoredValue(stored[property], next[property])) columns.add(field.csvColumn);
+  }
+  if (columns.size === 0) {
+    for (const [column, value] of Object.entries(row.raw)) {
+      if ((OWNER_COLUMN.test(column) || column === 'data_residency') && String(value ?? '').trim() !== '') columns.add(column);
+    }
+  }
+  return [...columns];
 }
 
 /** The ISO country codes of a `data_residency` cell. */

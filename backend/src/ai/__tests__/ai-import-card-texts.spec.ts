@@ -7,7 +7,9 @@ import { AiChatController } from '../ai-chat.controller';
 import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
 import { AiConversationsController } from '../ai-conversations.controller';
 import { PrepareImportMappingAiMutationOperation } from '../mutation/operations/prepare-import-mapping.ai-mutation-operation';
-import { IMPORT_LOAD_REFUSALS } from '../ai-write-texts';
+import { IMPORT_LOAD_REFUSALS, importRefusalText } from '../ai-write-texts';
+import { AI_IMPORT_TARGETS, importColumnTitle } from '../import/ai-import-targets';
+import { BY_EDITOR } from '../import/ai-import-runner.service';
 
 /**
  * The texts of Kad's import card (lot Q4 of 26.11.8). No cell of the file reaches the model
@@ -56,6 +58,8 @@ function phrasesInEveryLanguage() {
   // The scan itself: the budget file alone has 30 codes, the imports about a hundred more.
   assert.ok(codes.size > 120, `refusal codes found: ${codes.size}`);
   assert.ok(codes.has('BUDGET_FILE_DIMENSION_VALUE_TOO_LONG') && codes.has('AI_IMPORT_CLEARS_COLUMNS') && codes.has('XLSX_INVALID'));
+  // The name rule of the imports (lot I3 of 26.11.9): a name that may designate several records, a stored value kept.
+  assert.ok(codes.has('CSV_NAME_AMBIGUOUS_AMONG') && codes.has('CSV_REFERENCE_NOT_FOUND_KEPT'));
   const missing: string[] = [];
   for (const language of LANGUAGES) {
     const phrases = JSON.parse(fs.readFileSync(backendPath('..', 'frontend', 'src', 'locales', language, 'errors.json'), 'utf8')) as Record<string, unknown>;
@@ -82,6 +86,43 @@ function instructionsNameLinesAndColumnsNeverCodes() {
   const assumptions = (operation.inputSchema.shape.assumptions as any).description as string;
   assert.match(assumptions, /line of the file/);
   console.log('  the model names lines and columns as the person sees them, never a code: OK');
+}
+
+/**
+ * Lot I3 of 26.11.9, second pass: for a column that names a record, Kad's `values` propose an existing
+ * record's name only, never a case or accent variant (the check matches those itself), and Kad never
+ * announces a match the card does not show.
+ */
+function instructionsProposeExistingRecordsOnly() {
+  const operation = new PrepareImportMappingAiMutationOperation({} as any);
+  const values = (operation.inputSchema.shape.columns as any).element.shape.values.description as string;
+  const hint = operation.writePreview.prompt_hint;
+  for (const text of [values, hint]) {
+    assert.match(text, /names a record/);
+    assert.match(text, /existing record/);
+    assert.match(text, /search/);
+    assert.match(text, /case or accents?/);
+  }
+  assert.match(hint, /never announce a match the card does not show/i);
+  assert.doesNotMatch(hint, /are copied as written/, 'a name of a record is no longer copied as the model writes it');
+  console.log('  the model proposes existing records only, and announces no match the card does not show: OK');
+}
+
+/**
+ * Lot I3 of 26.11.9, correctifs K (recette by Kad, gap 2): with a "Vendor" column mapped to the publisher,
+ * Kad wrote that the column fills no supplier while the card linked six by the publisher (T-I3k). The
+ * hint the model reads with the tool says it, in one sentence.
+ */
+function instructionsPublisherLinksTheSupplier() {
+  const hint = new PrepareImportMappingAiMutationOperation({} as any).writePreview.prompt_hint;
+  assert.ok(hint.includes('An application row with a publisher (`editor`) and no supplier is linked to the existing supplier '
+    + 'the publisher names (`on_approval` says so): never say the supplier stays empty.'), 'the publisher links the supplier');
+  // Correctifs L: the sentence of the approval names such a match with the card's words, in the four languages.
+  for (const language of LANGUAGES) {
+    const ops = JSON.parse(fs.readFileSync(backendPath('..', 'frontend', 'src', 'locales', language, 'ops.json'), 'utf8'));
+    assert.equal(BY_EDITOR[language], ops.operations.budgetFile.matching.byEditor, `${language}: the card's words for a publisher's match`);
+  }
+  console.log('  the model reads that a publisher links the supplier it names, with the card\'s words: OK');
 }
 
 async function screenLanguageWhenTheProfileHasNone() {
@@ -117,10 +158,56 @@ function loadRefusalsAreTheCardsWords() {
   console.log(`  ${Object.keys(IMPORT_LOAD_REFUSALS).length} refusals of a load, the card's words in the four languages: OK`);
 }
 
+/**
+ * The load of an applications import refuses a row whose situation changed since the check (lot I3 of
+ * 26.11.9, T-I3l): the failed card's summary says why, and names no column (correctifs I).
+ */
+function applicationLoadRefusalsSaid() {
+  for (const code of ['CSV_LOOKALIKE_CHANGED', 'CSV_LOOKALIKE_GONE', 'CSV_LOOKALIKE_NAME_FOUND']) {
+    assert.ok(IMPORT_LOAD_REFUSALS[code], `${code}: said after the approval`);
+  }
+  const text = importRefusalText(
+    'fr',
+    { report: { kind: 'rows', errors: [{ row: 2, code: 'CSV_LOOKALIKE_CHANGED', params: { ref: 'APP-52' } }] } },
+    new Map([['name', 'Nom']]),
+  );
+  assert.equal(text, 'Ligne 2 : APP-52 a changé depuis la vérification.');
+  console.log('  refusals of an applications load, said after the approval: OK');
+}
+
+/**
+ * The card names the columns of a task or an incident as the import screen does (lot I3 of 26.11.9,
+ * correctifs G): its title is the screen's label (`csv.fields.<import>.<column>` in `common.json`),
+ * in the four languages.
+ */
+async function taskAndIncidentColumnsAsTheImportScreenNamesThem() {
+  const gaps: string[] = [];
+  let compared = 0;
+  for (const language of LANGUAGES) {
+    const common = JSON.parse(fs.readFileSync(backendPath('..', 'frontend', 'src', 'locales', language, 'common.json'), 'utf8'));
+    for (const key of ['tasks', 'incidents'] as const) {
+      const screen = (common.csv?.fields?.[key] ?? {}) as Record<string, string>;
+      // Their columns come from the import's settings alone: no database read.
+      for (const spec of await AI_IMPORT_TARGETS[key].columns({} as any)) {
+        compared += 1;
+        const card = importColumnTitle(spec, language);
+        if (card !== screen[spec.column]) gaps.push(`${language} ${key}.${spec.column}: card "${card}", screen "${screen[spec.column]}"`);
+      }
+    }
+  }
+  assert.ok(compared > 100, `columns compared: ${compared}`);
+  assert.deepEqual(gaps, [], 'the card names the columns of tasks and incidents as the import screen does');
+  console.log(`  ${compared} column titles of tasks and incidents, as the import screen names them: OK`);
+}
+
 async function main() {
   phrasesInEveryLanguage();
   loadRefusalsAreTheCardsWords();
+  applicationLoadRefusalsSaid();
+  await taskAndIncidentColumnsAsTheImportScreenNamesThem();
   instructionsNameLinesAndColumnsNeverCodes();
+  instructionsProposeExistingRecordsOnly();
+  instructionsPublisherLinksTheSupplier();
   await screenLanguageWhenTheProfileHasNone();
   console.log('ai-import-card-texts.spec: ok');
 }

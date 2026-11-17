@@ -473,6 +473,41 @@ async function testProjects(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  projects: names read, nothing to import, approve all leaves the cards out, statuses named: OK');
 }
 
+// Lot I3 of 26.11.9: a supplier named without its accents is found and listed on the person's lines;
+// one nothing finds keeps the stored supplier of the application the row updates (Kad merges).
+async function testSupplierNamesBeyondCase(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const [sg] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Société Générale') RETURNING id, item_number`, [s.tenantId]);
+  const [cegid] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Cegid I3') RETURNING id`, [s.tenantId]);
+  await runner.query(`INSERT INTO applications (tenant_id, name, supplier_id) VALUES ($1, 'Atlas I3', $2)`, [s.tenantId, cegid.id]);
+  // A blank row: the data rows are the person's lines 2 and 4 (lines 2 and 3 of the file Kad builds).
+  const file = attach(h, 'Fournisseurs.csv', ['Appli;Fournisseur', 'Atlas I3;Banque Inconnue', ';', 'Hermes I3;Societe Generale'].join('\n'));
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'supplier_name', source: 2, confidence: 'high' },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'applications', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual(check.report.matches, [{
+    column: 'supplier_name', name: null, value: 'Societe Generale', target: 'Société Générale', ref: `SUP-${sg.item_number}`,
+    origin: 'server', reason: 'accents', lines: [4], count: 1, undoable: true,
+  }]);
+  assert.equal(check.report.matchesTotal, 1);
+  assert.deepEqual(check.report.warnings.map((warning: any) => [warning.row, warning.code, warning.params]), [
+    [2, 'CSV_REFERENCE_NOT_FOUND_KEPT', { value: 'Banque Inconnue' }],
+  ]);
+  assert.deepEqual([check.inserted, check.updated, check.unchanged], [1, 0, 1]);
+  const done = await h.previews.executePreview(admin, card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const apps = await runner.query(
+    `SELECT name, supplier_id FROM applications WHERE tenant_id = $1 AND name LIKE '% I3' ORDER BY name`,
+    [s.tenantId],
+  );
+  assert.deepEqual(apps.map((app: any) => [app.name, app.supplier_id]), [['Atlas I3', cegid.id], ['Hermes I3', sg.id]]);
+  console.log('  applications: a supplier found beyond accents is listed on the person\'s lines, an unknown one keeps the stored supplier: OK');
+}
+
 async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
   const { AI_IMPORT_KEYS } = require('../import/ai-import-access');
   const admin = ctx(runner, s, 'admin');
@@ -494,6 +529,8 @@ async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
     assert.equal(check.report.kind, key === 'budget_lines' ? 'budget_file' : 'rows', key);
     // Every import reads the file Plaid builds: an import that needs every column of its template gets them.
     assert.ok(!check.issues.some((issue: any) => /HEADER/.test(String(issue.code))), `${key}: ${JSON.stringify(check.issues)}`);
+    // A value nothing names beyond case: no match listed.
+    if (check.report.kind === 'rows') assert.equal(check.report.matches, undefined, key);
     for (const error of check.report.kind === 'rows' ? check.report.errors : []) {
       assert.ok(error.row === 0 || error.row === 2, `${key}: an error on the person's line 2 or on the file: ${JSON.stringify(error)}`);
     }
@@ -501,6 +538,376 @@ async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
   const [after] = await runner.query(`SELECT count(*)::int AS n FROM audit_log WHERE tenant_id = $1`, [s.tenantId]);
   assert.equal(after.n, before.n, 'the checks write nothing');
   console.log(`  ${AI_IMPORT_KEYS.length} imports: checked, nothing written: OK`);
+}
+
+// Lot I3 of 26.11.9: Kad's contracts import finds a company case aside and a supplier without its
+// accents; the match is listed on the person's lines (a blank row shifts them).
+async function testContractNamesBeyondCase(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  await runner.query(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Fromage I3 SA', 'FR', 'Lyon')`, [s.tenantId]);
+  const [sg] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Société Générale I3') RETURNING id, item_number`, [s.tenantId]);
+  const file = attach(h, 'Contrats.csv', [
+    'Contrat;Société;Fournisseur;Début',
+    'Maintenance I3;fromage i3 sa;SOCIETE GENERALE I3;2026-01-01',
+    ';;;',
+    'Licences I3;Fromage I3 SA;Societe Generale I3;2026-02-01',
+  ].join('\n'));
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'company_name', source: 2, confidence: 'high' },
+    { column: 'supplier_name', source: 3, confidence: 'high' },
+    { column: 'start_date', source: 4, confidence: 'high' },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual(check.report.matches, [{
+    column: 'supplier_name', name: null, value: 'SOCIETE GENERALE I3', target: 'Société Générale I3', ref: `SUP-${sg.item_number}`,
+    origin: 'server', reason: 'accents', lines: [2, 4], count: 2, undoable: true,
+  }]);
+  assert.equal(check.report.matchesTotal, 1);
+  assert.deepEqual([check.inserted, check.updated, check.unchanged], [2, 0, 0]);
+  const done = await h.previews.executePreview(admin, card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const stored = await runner.query(
+    `SELECT name, supplier_id FROM contracts WHERE tenant_id = $1 AND name LIKE '% I3' ORDER BY name`,
+    [s.tenantId],
+  );
+  assert.deepEqual(stored.map((row: any) => [row.name, row.supplier_id]), [['Licences I3', sg.id], ['Maintenance I3', sg.id]]);
+  console.log('  contracts: a company case aside and a supplier beyond accents, listed on the person\'s lines: OK');
+}
+
+// Lot I3 of 26.11.9, second pass: Kad's `values` for an application's supplier are proposals the
+// import checks. "Cegid P2" exists: accepted, listed as Kad's on the person's line; "Cegid SA P2" does
+// not: refused as missing, and the file's "CGD2" follows its own rule (nothing finds it). A person who
+// does not read the suppliers has every proposal refused as missing, naming nothing of the list.
+async function testSupplierProposals(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const [cegid] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Cegid P2') RETURNING id, item_number`, [s.tenantId]);
+  const file = attach(h, 'Editeurs.csv', ['Appli;Editeur', 'Zephyr P2;CGD', 'Boreas P2;CGD2'].join('\n'));
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'supplier_name', source: 2, confidence: 'high', values: { CGD: 'Cegid P2', CGD2: 'Cegid SA P2' } },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'applications', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual(check.report.matches, [{
+    column: 'supplier_name', name: null, value: 'CGD', target: 'Cegid P2', ref: `SUP-${cegid.item_number}`,
+    origin: 'model', reason: 'model', lines: [2], count: 1, undoable: true,
+  }]);
+  assert.deepEqual(check.report.refusedProposals, [
+    { column: 'supplier_name', name: null, value: 'CGD2', target: 'Cegid SA P2', reason: 'missing', lines: [3], count: 1 },
+  ]);
+  assert.equal(check.report.refusedProposalsTotal, 1);
+  assert.deepEqual(check.report.warnings.map((warning: any) => [warning.row, warning.column, warning.params?.value]), [[3, 'supplier_name', 'CGD2']]);
+  assert.match(check.report.warnings[0].code, /^CSV_REFERENCE_NOT_FOUND/);
+  const done = await h.previews.executePreview(admin, card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const apps = await runner.query(`SELECT name, supplier_id FROM applications WHERE tenant_id = $1 AND name LIKE '% P2' ORDER BY name`, [s.tenantId]);
+  assert.deepEqual(apps.map((app: any) => [app.name, app.supplier_id]), [['Boreas P2', null], ['Zephyr P2', cegid.id]]);
+
+  // Without the suppliers' module: refused as missing, under Kad's own words.
+  const role = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Apps P2', 'Apps P2')`, [s.tenantId]);
+  for (const [resource, level] of [['ai_chat', 'member'], ['applications', 'admin']]) {
+    await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, $4)`, [s.tenantId, role, resource, level]);
+  }
+  const user = await insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status, locale) VALUES ($1, $2, 'Apps', 'Tester', $3, 'enabled', 'en')`,
+    [s.tenantId, `apps-p2-${s.tenantId.slice(0, 8)}@example.test`, role]);
+  const conversation = randomUUID();
+  await runner.query(
+    `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+     VALUES ($1, $2, $3, 'AI import run integration', 'custom', 'import-model', 'custom', now(), now())`,
+    [conversation, s.tenantId, user],
+  );
+  const apps2 = { ...admin, userId: user, conversationId: conversation };
+  const blind = await h.previews.createPreview(apps2, 'prepare_import_mapping', {
+    attachment_id: attach(h, 'Editeurs.csv', ['Appli;Editeur', 'Notus P2;CGD'].join('\n')), entity_type: 'applications', columns,
+  });
+  const unread = blind.import_mapping.validation;
+  assert.equal(unread.report.matches, undefined);
+  assert.deepEqual(unread.report.refusedProposals, [
+    { column: 'supplier_name', name: null, value: 'CGD', target: 'Cegid P2', reason: 'missing', lines: [2], count: 1 },
+  ]);
+  console.log('  applications: Kad\'s supplier accepted when it exists, refused when missing or unread: OK');
+}
+
+// Lot I3 of 26.11.9, second pass: on a contracts card, the person undoes the match of a supplier
+// found without its accents, through the card's choice route. The next card no longer makes it, and
+// the supplier is unknown; a new card of the model for the same file keeps the choice. The route
+// refuses a choice of the budget file's, and a column the import does not match.
+async function testContractMatchUndoneByTheRoute(h: Harness, runner: QueryRunner, s: Seed) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const controller = h.app.get(AiImportFileController);
+  const admin = ctx(runner, s, 'admin');
+  await runner.query(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Fromage P2 SA', 'FR', 'Lyon')`, [s.tenantId]);
+  await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Société Générale P2')`, [s.tenantId]);
+  const file = attach(h, 'Contrats.csv', ['Contrat;Société;Fournisseur;Début', 'Hébergement P2;Fromage P2 SA;Societe Generale P2;2026-03-01'].join('\n'));
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'company_name', source: 2, confidence: 'high' },
+    { column: 'supplier_name', source: 3, confidence: 'high' },
+    { column: 'start_date', source: 4, confidence: 'high' },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns });
+  assert.deepEqual(card.import_mapping.validation.report.matches.map((match: any) => [match.value, match.target, match.origin, match.undoable]), [
+    ['Societe Generale P2', 'Société Générale P2', 'server', true],
+  ]);
+  const req = { user: { sub: s.users.admin }, headers: {} };
+  const tenant = { manager: runner.manager, tenantId: s.tenantId };
+  for (const choices of [[{ kind: 'create_suppliers', value: false }], [{ kind: 'unmatch', column: 'name', value: 'Hébergement P2' }]]) {
+    await assert.rejects(controller.choose(s.conversations.admin, card.preview_id, { choices }, req, tenant), /not valid/);
+  }
+  const undo = [{ kind: 'unmatch', column: 'supplier_name', value: 'Societe Generale P2' }];
+  const next = await controller.choose(s.conversations.admin, card.preview_id, { choices: undo }, req, tenant);
+  assert.equal(next.replaces_preview_id, card.preview_id);
+  const check = next.import_mapping.validation;
+  assert.equal(check.ok, false);
+  assert.equal(check.report.matches, undefined, 'the next card no longer makes the match');
+  assert.deepEqual(check.report.errors.map((error: any) => [error.row, error.column, error.code]), [[2, 'supplier_name', 'CSV_REFERENCE_NOT_FOUND']]);
+  // The model maps the same file again: the choice stays.
+  const again = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'contracts', columns });
+  assert.equal(again.import_mapping.validation.report.matches, undefined);
+  assert.deepEqual(again.import_mapping.validation.report.errors.map((error: any) => error.code), ['CSV_REFERENCE_NOT_FOUND']);
+  console.log('  contracts: a match undone through the card\'s route is gone from the next cards, the supplier unknown: OK');
+}
+
+// Lot I3 of 26.11.9, second pass: the imports that read their own lists check Kad's proposals too: a
+// business process's parent, a cost center's company, a task's related object (a contract of the
+// earlier tests) and a request's company (the shared resolver).
+async function testProposalsOfTheOtherImports(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const card = async (entity_type: string, csv: string[], columns: unknown[]) => (await h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: attach(h, `${entity_type}.csv`, csv.join('\n')), entity_type, columns,
+  })).import_mapping.validation;
+  const summary = (check: any) => ({
+    matches: (check.report.matches ?? []).map((match: any) => [match.column, match.value, match.target, match.origin]),
+    refused: (check.report.refusedProposals ?? []).map((entry: any) => [entry.column, entry.value, entry.target, entry.reason]),
+  });
+  const processes = await card('business_processes', ['Processus;Parent', 'Finance P2;', 'Clôture P2;FIN', 'Paie P2;RH'], [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'parent_name', source: 2, confidence: 'high', values: { FIN: 'finance p2', RH: 'Ressources humaines P2' } },
+  ]);
+  assert.deepEqual(summary(processes), {
+    matches: [['parent_name', 'FIN', 'Finance P2', 'model']],
+    refused: [['parent_name', 'RH', 'Ressources humaines P2', 'missing']],
+  });
+  const centers = await card('cost_centers', ['Code;Type;Nom;Société', 'CC-P2;cost_center;Centre P2;FPS'], [
+    { column: 'code', source: 1, confidence: 'high' },
+    { column: 'kind', source: 2, confidence: 'high' },
+    { column: 'name', source: 3, confidence: 'high' },
+    { column: 'company_name', source: 4, confidence: 'high', values: { FPS: 'Fromage P2 SA' } },
+  ]);
+  assert.equal(centers.ok, true, JSON.stringify(centers));
+  assert.deepEqual(summary(centers), { matches: [['company_name', 'FPS', 'Fromage P2 SA', 'model']], refused: [] });
+  const tasks = await card('tasks', ['Tâche;Type;Objet', 'Relancer P2;contract;MAINT'], [
+    { column: 'title', source: 1, confidence: 'high' },
+    { column: 'related_object_type', source: 2, confidence: 'high' },
+    { column: 'related_object_name', source: 3, confidence: 'high', values: { MAINT: 'maintenance i3' } },
+  ]);
+  assert.deepEqual(summary(tasks), { matches: [['related_object_name', 'MAINT', 'Maintenance I3', 'model']], refused: [] });
+  const requests = await card('portfolio_requests', ['Demande;Société', 'Portail P2;FPS'], [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'company_name', source: 2, confidence: 'high', values: { FPS: 'Fromage P2 SA' } },
+  ]);
+  assert.deepEqual(summary(requests), { matches: [['company_name', 'FPS', 'Fromage P2 SA', 'model']], refused: [] });
+  console.log('  processes, cost centers, tasks, requests: Kad\'s proposals checked against their lists: OK');
+}
+
+// Lot I3 of 26.11.9, merge of the fourth and fifth passes: Kad's import of server links finds a
+// server written without its accents, for a person who reads the infrastructure, lists the match on
+// the card, and the card's choice route undoes it: the next card no longer makes it.
+async function testLinkServerNameUndoneByTheRoute(h: Harness, runner: QueryRunner, s: Seed) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const controller = h.app.get(AiImportFileController);
+  const admin = ctx(runner, s, 'admin');
+  const [server] = await runner.query(
+    `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, 'Serveur Énergie F45', 'virtual_machine', 'prod') RETURNING asset_reference`,
+    [s.tenantId],
+  );
+  await runner.query(`INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 4501, 'Moteur F45', 'other')`, [s.tenantId]);
+  const file = attach(h, 'Liens.csv', ['Serveur;Technologie', 'Serveur Energie F45;Moteur F45'].join('\n'));
+  const columns = [
+    { column: 'asset_name', source: 1, confidence: 'high' },
+    { column: 'technology_name', source: 2, confidence: 'high' },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'technology_asset_links', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual(check.report.matches, [{
+    column: 'asset_name', name: null, value: 'Serveur Energie F45', target: 'Serveur Énergie F45', ref: server.asset_reference,
+    origin: 'server', reason: 'accents', lines: [2], count: 1, undoable: true,
+  }]);
+  const req = { user: { sub: s.users.admin }, headers: {} };
+  const tenant = { manager: runner.manager, tenantId: s.tenantId };
+  const undo = [{ kind: 'unmatch', column: 'asset_name', value: 'Serveur Energie F45' }];
+  const next = await controller.choose(s.conversations.admin, card.preview_id, { choices: undo }, req, tenant);
+  assert.equal(next.replaces_preview_id, card.preview_id);
+  const undone = next.import_mapping.validation;
+  assert.equal(undone.report.matches, undefined, 'the next card no longer makes the match');
+  assert.deepEqual(undone.report.undone, [{ column: 'asset_name', value: 'Serveur Energie F45' }]);
+  assert.deepEqual(undone.report.errors.map((error: any) => [error.row, error.column, error.code]), [[2, 'asset_name', 'CSV_REFERENCE_NOT_FOUND']]);
+  console.log('  server links: a server beyond accents matched on the card, undone through its route: OK');
+}
+
+// Lot I3 of 26.11.9, merge of the fourth and fifth passes: Kad's import of servers finds "Ubuntu
+// 22.04" as the catalog's "22.04 LTS" (a match of reason version, undoable from the card), and the
+// card says how each site the file names hosts its servers (T-I3f).
+async function testServerVersionAndHosting(h: Harness, runner: QueryRunner, s: Seed) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const controller = h.app.get(AiImportFileController);
+  const admin = ctx(runner, s, 'admin');
+  await runner.query(
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type, provider)
+     VALUES ($1, 'LOC-4501', 'Datacenter Rennes F45', 'on_prem', NULL), ($1, 'LOC-4502', 'AWS Paris F45', 'public_cloud', 'AWS')`,
+    [s.tenantId],
+  );
+  const file = attach(h, 'Serveurs.csv', [
+    'Nom;Site;Type;Environnement;Système',
+    'srv-f45-a;LOC-4502;virtual_machine;prod;Ubuntu 22.04',
+    'srv-f45-b;loc-4501;virtual_machine;prod;Ubuntu 22.04',
+    'srv-f45-c;LOC-4502;virtual_machine;prod;',
+  ].join('\n'));
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'location_reference', source: 2, confidence: 'high' },
+    { column: 'kind', source: 3, confidence: 'high' },
+    { column: 'environment', source: 4, confidence: 'high' },
+    { column: 'operating_system', source: 5, confidence: 'high' },
+  ];
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file, entity_type: 'assets', columns });
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual(check.report.matches, [{
+    column: 'operating_system', name: null, value: 'Ubuntu 22.04', target: 'Ubuntu 22.04 LTS', ref: null,
+    origin: 'server', reason: 'version', lines: [2, 3], count: 2, undoable: true,
+  }]);
+  // Each site once, in the order of the file, with its hosting as the location screen shows it.
+  const hosting = [
+    { ref: 'LOC-4502', name: 'AWS Paris F45', hostingType: 'public_cloud', label: 'Public cloud', category: 'cloud', provider: 'AWS' },
+    { ref: 'LOC-4501', name: 'Datacenter Rennes F45', hostingType: 'on_prem', label: 'On-prem', category: 'on_prem', provider: null },
+  ];
+  assert.deepEqual(check.report.hosting, hosting);
+  const req = { user: { sub: s.users.admin }, headers: {} };
+  const tenant = { manager: runner.manager, tenantId: s.tenantId };
+  const undo = [{ kind: 'unmatch', column: 'operating_system', value: 'Ubuntu 22.04' }];
+  const next = await controller.choose(s.conversations.admin, card.preview_id, { choices: undo }, req, tenant);
+  const undone = next.import_mapping.validation;
+  assert.equal(undone.report.matches, undefined, 'the next card no longer makes the match');
+  assert.deepEqual(
+    undone.report.warnings.map((warning: any) => [warning.row, warning.code, warning.params?.value]),
+    [[2, 'CSV_TECHNOLOGY_VERSION_CREATED', '22.04'], [3, 'CSV_TECHNOLOGY_VERSION_CREATED', '22.04']],
+    'the version is created as written',
+  );
+  assert.deepEqual(undone.report.hosting, hosting);
+  console.log('  servers: Ubuntu 22.04 found as 22.04 LTS and undone from the card; the sites\' hosting said: OK');
+}
+
+/** A person of the workspace with these rights, and a conversation of theirs: the context of their card. */
+async function personWith(runner: QueryRunner, s: Seed, name: string, permissions: Record<string, string>) {
+  const role = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, $2, $2)`, [s.tenantId, name]);
+  for (const [resource, level] of Object.entries(permissions)) {
+    await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, $4)`, [s.tenantId, role, resource, level]);
+  }
+  const user = await insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status, locale) VALUES ($1, $2, $3, 'Tester', $4, 'enabled', 'en')`,
+    [s.tenantId, `${name.toLowerCase().replace(/\W+/g, '-')}-${s.tenantId.slice(0, 8)}@example.test`, name, role]);
+  const conversation = randomUUID();
+  await runner.query(
+    `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+     VALUES ($1, $2, $3, 'AI import run integration', 'custom', 'import-model', 'custom', now(), now())`,
+    [conversation, s.tenantId, user],
+  );
+  return { role, context: { ...ctx(runner, s, 'admin'), userId: user, conversationId: conversation } };
+}
+
+// Fixes after the adversarial review (finding 6): the card names the hosting of the sites only to a
+// person who reads the sites (the right the sites screen asks); without it, no hosting at all.
+async function testHostingNeedsTheSites(h: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query(
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type, provider) VALUES ($1, 'LOC-4601', 'Site secret F46', 'public_cloud', 'AWS')`,
+    [s.tenantId],
+  );
+  const { role, context } = await personWith(runner, s, 'Infra sans sites', { ai_chat: 'member', infrastructure: 'admin' });
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'location_reference', source: 2, confidence: 'high' },
+    { column: 'kind', source: 3, confidence: 'high' },
+    { column: 'environment', source: 4, confidence: 'high' },
+  ];
+  const file = () => attach(h, 'Serveurs F46.csv', ['Nom;Site;Type;Environnement', 'srv-f46;LOC-4601;virtual_machine;prod'].join('\n'));
+  const blind = await h.previews.createPreview(context, 'prepare_import_mapping', { attachment_id: file(), entity_type: 'assets', columns });
+  assert.equal(blind.import_mapping.validation.report.hosting, undefined, 'no site named without the sites right');
+  assert.doesNotMatch(JSON.stringify(blind), /Site secret F46/);
+  await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'locations', 'reader')`, [s.tenantId, role]);
+  const seeing = await h.previews.createPreview(context, 'prepare_import_mapping', { attachment_id: file(), entity_type: 'assets', columns });
+  assert.deepEqual(seeing.import_mapping.validation.report.hosting?.map((site: any) => site.name), ['Site secret F46']);
+  console.log('  servers: the sites\' hosting named to a person who reads the sites only: OK');
+}
+
+// Fixes after the adversarial review (finding 9): the file prepared from a card is imported by the
+// list's own import, which reads no proposal of Kad: the file writes each proposal the check took,
+// all of them (more than the card's 200 first matches), in a cell of several names (clusters) too.
+async function testPreparedFileKeepsEveryProposal(h: Harness, runner: QueryRunner, s: Seed) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const { readTableAttachment } = require('../attachments/table-attachment');
+  const controller = h.app.get(AiImportFileController);
+  const admin = ctx(runner, s, 'admin');
+  const download = async (previewId: string) => {
+    const sent: { body: Buffer | null } = { body: null };
+    const res = { setHeader: () => undefined, end: (body: Buffer) => { sent.body = body; } };
+    await controller.download(s.conversations.admin, previewId, { user: { sub: s.users.admin } }, { tenantId: s.tenantId, manager: runner.manager }, res);
+    const built = await readTableAttachment(sent.body!);
+    const header = built.header.map((cell: any) => cell.value);
+    return built.rows.map((row: any[]) => Object.fromEntries(header.map((name: string, at: number) => [name, row[at]?.value ?? ''])));
+  };
+
+  const count = 205;
+  await runner.query(`INSERT INTO suppliers (tenant_id, name) SELECT $1, 'Fournisseur PF ' || g FROM generate_series(1, $2::int) g`, [s.tenantId, count]);
+  const lines = ['Appli;Editeur'];
+  const values: Record<string, string> = {};
+  for (let n = 1; n <= count; n += 1) {
+    lines.push(`Appli PF ${n};FPF ${n}`);
+    values[`FPF ${n}`] = `Fournisseur PF ${n}`;
+  }
+  const apps = await h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: attach(h, 'Applications PF.csv', lines.join('\n')),
+    entity_type: 'applications',
+    columns: [
+      { column: 'name', source: 1, confidence: 'high' },
+      { column: 'supplier_name', source: 2, confidence: 'high', values },
+    ],
+  });
+  assert.equal(apps.import_mapping.validation.report.matchesTotal, count);
+  const appRows = await download(apps.preview_id);
+  assert.equal(appRows.length, count);
+  assert.deepEqual(appRows.filter((row: any) => row.supplier_name !== row.name.replace('Appli', 'Fournisseur')).map((row: any) => row.name), [], 'every proposal written');
+
+  await runner.query(
+    `INSERT INTO assets (tenant_id, name, kind, environment, is_cluster) VALUES ($1, 'Grappe A PF', 'vm', 'prod', true), ($1, 'Grappe B PF', 'vm', 'prod', true)`,
+    [s.tenantId],
+  );
+  await runner.query(
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type) VALUES ($1, 'LOC-4701', 'Site PF', 'on_prem')`,
+    [s.tenantId],
+  );
+  const nodes = await h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: attach(h, 'Noeuds PF.csv', ['Nom;Site;Type;Environnement;Grappes', 'node-pf;LOC-4701;virtual_machine;prod;GA, GB'].join('\n')),
+    entity_type: 'assets',
+    columns: [
+      { column: 'name', source: 1, confidence: 'high' },
+      { column: 'location_reference', source: 2, confidence: 'high' },
+      { column: 'kind', source: 3, confidence: 'high' },
+      { column: 'environment', source: 4, confidence: 'high' },
+      { column: 'cluster', source: 5, confidence: 'high', values: { GA: 'Grappe A PF', GB: 'Grappe B PF' } },
+    ],
+  });
+  const check = nodes.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check.report.errors));
+  const [node] = await download(nodes.preview_id);
+  assert.equal(node.cluster, 'Grappe A PF, Grappe B PF', 'each name of the cell written');
+  console.log('  prepared file: every proposal the check took written, beyond 200 and in a cell of several names: OK');
 }
 
 async function run() {
@@ -519,6 +926,15 @@ async function run() {
       await testIncidentRights(harness, runner, s);
       await testBudgetFile(harness, runner, s);
       await testSuppliers(harness, runner, s);
+      await testSupplierNamesBeyondCase(harness, runner, s);
+      await testContractNamesBeyondCase(harness, runner, s);
+      await testSupplierProposals(harness, runner, s);
+      await testContractMatchUndoneByTheRoute(harness, runner, s);
+      await testProposalsOfTheOtherImports(harness, runner, s);
+      await testLinkServerNameUndoneByTheRoute(harness, runner, s);
+      await testServerVersionAndHosting(harness, runner, s);
+      await testHostingNeedsTheSites(harness, runner, s);
+      await testPreparedFileKeepsEveryProposal(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

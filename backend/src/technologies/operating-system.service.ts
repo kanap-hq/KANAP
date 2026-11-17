@@ -16,6 +16,7 @@ import {
 } from './operating-system-codes';
 import { defaultVulnerabilityAlerts } from '../vulnerabilities/vulnerability-alerts';
 import { readTechnology, resolveVersionLabel, UUID_RE } from './technology-rows';
+import { matchVersionLabel } from './version-label-match';
 
 /**
  * The operating system of a server is one technology link marked `is_operating_system`
@@ -46,6 +47,24 @@ export type ResolveOptions = {
   create: boolean;
   /** Recorded on the link by `setOperatingSystem`, not on the technology. */
   source?: LinkSource;
+  /**
+   * The version is found by its label, case aside, and never by a prefix (`matchVersionLabel`): an
+   * import whose version match the person undid (lot I3 of 26.11.9). Missing, it is created as written.
+   */
+  exactVersion?: boolean;
+};
+
+/**
+ * What `resolve` would do with a label, without writing (lot I3 of 26.11.9): the label the server
+ * would show, the version the label writes, and how that version is found: as written (case
+ * aside), by a prefix rule (`22.04` for `22.04 LTS`, a match the imports list), or created.
+ */
+export type OperatingSystemPreview = {
+  label: string;
+  /** Where the technology comes from: the tenant's, a shipped product to adopt, or a new one. */
+  technology: 'tenant' | 'catalog' | 'created';
+  written: string | null;
+  version: { how: 'exact' | 'prefix' | 'created'; label: string } | null;
 };
 
 type Dates = { standard: string | null; extended: string | null };
@@ -171,14 +190,14 @@ export class OperatingSystemService {
     const prefixed = await this.prefixTechnology(mg, tenantId, text);
     const fromCatalog = this.prefixProduct(text);
     if (prefixed && (!fromCatalog || prefixed.length >= fromCatalog.length)) {
-      const versionId = await this.ensureVersion(mg, tenantId, prefixed.id, prefixed.remainder, true, EMPTY_DATES);
+      const versionId = await this.ensureVersion(mg, tenantId, prefixed.id, prefixed.remainder, true, EMPTY_DATES, undefined, !opts.exactVersion);
       return { technology_id: prefixed.id, technology_version_id: versionId };
     }
 
     if (fromCatalog) {
       const technologyId = await this.adopt(mg, tenantId, fromCatalog.product.key);
       if (!fromCatalog.remainder) return { technology_id: technologyId, technology_version_id: null };
-      const versionId = await this.ensureVersion(mg, tenantId, technologyId, fromCatalog.remainder, true, EMPTY_DATES);
+      const versionId = await this.ensureVersion(mg, tenantId, technologyId, fromCatalog.remainder, true, EMPTY_DATES, undefined, !opts.exactVersion);
       return { technology_id: technologyId, technology_version_id: versionId };
     }
 
@@ -190,6 +209,76 @@ export class OperatingSystemService {
       ? await this.ensureVersion(mg, tenantId, technologyId, split.version, true, EMPTY_DATES)
       : null;
     return { technology_id: technologyId, technology_version_id: versionId };
+  }
+
+  /**
+   * What `resolve` (with `create`) would do with `label`, by the same steps, writing nothing: the
+   * import of servers says it at the check (lot I3 of 26.11.9). A shipped product the tenant has not
+   * adopted is previewed on its catalog versions, as its adoption would write them. Null for an
+   * empty label, or a shipped code of no product.
+   */
+  async preview(
+    mg: EntityManager,
+    tenantId: string,
+    label: string | null | undefined,
+    opts: { exactVersion?: boolean } = {},
+  ): Promise<OperatingSystemPreview | null> {
+    const text = String(label ?? '').trim().replace(/\s+/g, ' ');
+    if (!text) return null;
+    const prefix = !opts.exactVersion;
+
+    const shipped = shippedOperatingSystemCode(text);
+    if (shipped) {
+      const product = this.catalog.shippedProduct(shipped.product);
+      if (!product) return null;
+      const version = product.versions.find((item) => item.label.toLowerCase() === shipped.version.toLowerCase());
+      const adopted = await this.adoptedProduct(mg, tenantId, product);
+      return previewVersion(adopted, version?.label ?? shipped.version, false);
+    }
+
+    const exact: Array<{ name: string }> = await mg.query(
+      `SELECT name FROM technologies WHERE tenant_id = $1 AND lower(name) = lower($2) LIMIT 1`,
+      [tenantId, text],
+    );
+    if (exact[0]) return { label: exact[0].name, technology: 'tenant', written: null, version: null };
+
+    const prefixed = await this.prefixTechnology(mg, tenantId, text);
+    const fromCatalog = this.prefixProduct(text);
+    if (prefixed && (!fromCatalog || prefixed.length >= fromCatalog.length)) {
+      return previewVersion({ name: prefixed.name, technology: 'tenant', versions: await this.versionLabels(mg, tenantId, prefixed.id) }, prefixed.remainder, prefix);
+    }
+    if (fromCatalog) {
+      const adopted = await this.adoptedProduct(mg, tenantId, fromCatalog.product);
+      if (!fromCatalog.remainder) return { label: adopted.name, technology: adopted.technology, written: null, version: null };
+      return previewVersion(adopted, fromCatalog.remainder, prefix);
+    }
+
+    const split = splitOperatingSystemLabel(text);
+    if (!split.name) return null;
+    return previewVersion({ name: split.name, technology: 'created', versions: [] }, split.version, prefix);
+  }
+
+  /**
+   * The technology a shipped product's adoption lands on, and the version labels it would then have:
+   * a product not adopted yet gets the catalog's versions; one adopted already keeps the workspace's,
+   * as its adoption adds none back (`TechnologyCatalogService.adopt`), so the check says what the load does.
+   */
+  private async adoptedProduct(mg: EntityManager, tenantId: string, product: CatalogProduct): Promise<PreviewTechnology> {
+    const existing: Array<{ id: string; name: string }> = await mg.query(
+      `SELECT id, name FROM technologies
+        WHERE tenant_id = $1 AND (catalog_key = $2 OR lower(name) = lower($3))
+        ORDER BY (catalog_key = $2) DESC NULLS LAST LIMIT 1`,
+      [tenantId, product.key, product.name],
+    );
+    if (!existing[0]) return { name: product.name, technology: 'catalog', versions: product.versions.map((item) => ({ label: item.label })) };
+    return { name: existing[0].name, technology: 'tenant', versions: await this.versionLabels(mg, tenantId, existing[0].id) };
+  }
+
+  private async versionLabels(mg: EntityManager, tenantId: string, technologyId: string): Promise<Array<{ label: string }>> {
+    return mg.query(
+      `SELECT label FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 ORDER BY lower(label), id`,
+      [tenantId, technologyId],
+    );
   }
 
   /**
@@ -432,7 +521,7 @@ export class OperatingSystemService {
     mg: EntityManager,
     tenantId: string,
     label: string,
-  ): Promise<{ id: string; remainder: string; length: number } | null> {
+  ): Promise<{ id: string; name: string; remainder: string; length: number } | null> {
     const rows: Array<{ id: string; name: string }> = await mg.query(
       `SELECT id, name FROM technologies
         WHERE tenant_id = $1
@@ -444,7 +533,7 @@ export class OperatingSystemService {
       [tenantId, label],
     );
     if (!rows[0]) return null;
-    return { id: rows[0].id, remainder: label.slice(rows[0].name.length).trim(), length: rows[0].name.length };
+    return { id: rows[0].id, name: rows[0].name, remainder: label.slice(rows[0].name.length).trim(), length: rows[0].name.length };
   }
 
   private prefixProduct(label: string): { product: CatalogProduct; remainder: string | null; length: number } | null {
@@ -491,7 +580,9 @@ export class OperatingSystemService {
   }
 
   /**
-   * The version `label` of the technology. Created when missing and `create` is set.
+   * The version `label` of the technology: by its label, case aside, else (with `prefix`, never
+   * for a shipped version) the only version a prefix rule finds (`matchVersionLabel`, lot I3 of
+   * 26.11.9: `22.04` finds `22.04 LTS`). Created as written when missing and `create` is set.
    * Empty date columns take `dates` (never a date already set). A shipped version also
    * receives its `cpe_version`, build prefixes and catalog key when the row is created.
    */
@@ -503,20 +594,23 @@ export class OperatingSystemService {
     create: boolean,
     dates: Dates,
     shipped?: CatalogVersion & { catalog_key: string },
+    prefix = true,
   ): Promise<string | null> {
     const text = shipped?.label ?? label.trim();
     if (!text) return null;
     if (text.length > 100) throw new BadRequestException('Version is longer than 100 characters.');
-    const found: Array<{ id: string; standard_support_end: string | null; extended_support_end: string | null }> = await mg.query(
-      `SELECT id, to_char(standard_support_end, 'YYYY-MM-DD') AS standard_support_end,
+    const versions: Array<{ id: string; label: string; standard_support_end: string | null; extended_support_end: string | null }> = await mg.query(
+      `SELECT id, label, to_char(standard_support_end, 'YYYY-MM-DD') AS standard_support_end,
               to_char(extended_support_end, 'YYYY-MM-DD') AS extended_support_end
          FROM technology_versions
-        WHERE tenant_id = $1 AND technology_id = $2 AND lower(label) = lower($3)`,
-      [tenantId, technologyId, text],
+        WHERE tenant_id = $1 AND technology_id = $2
+        ORDER BY lower(label), id`,
+      [tenantId, technologyId],
     );
-    if (found[0]) {
-      await this.fillEmptyDates(mg, tenantId, found[0], dates);
-      return found[0].id;
+    const found = matchVersionLabel(versions, text, { prefix: prefix && !shipped });
+    if (found.kind !== 'none') {
+      await this.fillEmptyDates(mg, tenantId, found.row, dates);
+      return found.row.id;
     }
     if (!create) return null;
     const standard = dates.standard;
@@ -536,7 +630,7 @@ export class OperatingSystemService {
       ],
     );
     if (inserted[0]) return inserted[0].id;
-    const resolved = await resolveVersionLabel(mg, tenantId, technologyId, text, { create: false });
+    const resolved = await resolveVersionLabel(mg, tenantId, technologyId, text, { create: false, prefix: false });
     return resolved?.id ?? null;
   }
 
@@ -704,3 +798,14 @@ type LinkRow = {
   notes: string | null;
 };
 
+/** A technology as `preview` sees it: its name, where it comes from, the version labels it has (or would have). */
+type PreviewTechnology = { name: string; technology: OperatingSystemPreview['technology']; versions: Array<{ label: string }> };
+
+/** The preview of a technology and the version `written` against the labels it has (or would have). */
+function previewVersion(tech: PreviewTechnology, written: string | null, prefix: boolean): OperatingSystemPreview {
+  const text = written?.trim() ?? '';
+  if (!text) return { label: tech.name, technology: tech.technology, written: null, version: null };
+  const found = matchVersionLabel(tech.versions, text, { prefix });
+  const version = found.kind === 'none' ? { how: 'created' as const, label: text } : { how: found.kind, label: found.row.label };
+  return { label: operatingSystemLabel(tech.name, version.label), technology: tech.technology, written: text, version };
+}

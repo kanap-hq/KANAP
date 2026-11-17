@@ -535,7 +535,7 @@ Trois modes d'export sont disponibles :
 | `related_object_type` | Type d'entité | Non | Vide pour les tâches autonomes ; accepte un code ou un libellé |
 | `related_object_id` | UUID de l'entité | Conditionnel | Requis si tâche liée et `related_object_name` non fourni |
 | `related_object_name` | Nom de l'entité | Conditionnel | Requis si tâche liée et `related_object_id` non fourni |
-| `phase_name` | Phase du projet | Non | Doit correspondre au nom d'une phase existante (tâches de projet uniquement) |
+| `phase_name` | Phase du projet | Non | Une phase du projet de la tâche (tâches de projet uniquement) |
 | `priority_level` | Priorité de la tâche | Non | Accepte le code ou le nom, dans chacune des quatre langues |
 | `source_name` | Source | Non | Source du portefeuille (tâches autonomes et de projet) |
 | `category_name` | Catégorie | Non | Catégorie du portefeuille (tâches autonomes et de projet) |
@@ -560,8 +560,10 @@ Trois modes d'export sont disponibles :
 |-------------|-------------|-------|
 | `assignee_email` | Personne responsable | Doit correspondre à l'e-mail d'un utilisateur existant |
 | `creator_email` | E-mail du demandeur | Export uniquement (affiché comme **Requestor Email** dans les métadonnées de champ) |
-| `viewer_email_1` à `_4` | Observateurs | Doivent correspondre à des e-mails d'utilisateurs existants |
-| `owner_email_1` à `_4` | Responsables | Doivent correspondre à des e-mails d'utilisateurs existants |
+| `viewer_email_1` à `_4` | Observateurs | E-mails d'utilisateurs existants. Un e-mail inconnu est laissé de côté, avec un avertissement |
+| `owner_email_1` à `_4` | Responsables | E-mails d'utilisateurs existants. Un e-mail inconnu est laissé de côté, avec un avertissement |
+
+En mode `Enrichir`, une ligne qui met à jour une tâche garde ses observateurs quand une cellule d'observateur nomme un e-mail inconnu, et ses responsables de la même façon.
 
 **Autres champs** :
 
@@ -602,6 +604,7 @@ Pour **status**, **priority_level** et **related_object_type**, vous pouvez util
 | `spend_item` | `Spend Item`, `Spend` |
 | `contract` | `Contract` |
 | `capex_item` | `CAPEX Item`, `CAPEX` |
+| `incident` | `Incident` |
 
 Le système normalise les valeurs automatiquement lors de l'import. Un statut ou une priorité se lit aussi par le nom que l'écran affiche, dans chacune des quatre langues. Une valeur inconnue est refusée, et le message liste les noms acceptés.
 
@@ -613,7 +616,7 @@ Les tâches sont identifiées par **titre + related_object_id** (insensible à l
 
 Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur titre + objet lié.
 
-**Note** : Si vous fournissez `related_object_name` au lieu de `related_object_id`, le système résout le nom vers l'ID avant la correspondance. Cela signifie que vous pouvez utiliser des noms lisibles tout au long de votre fichier d'import. Pour un contrat, `related_object_name` accepte aussi sa référence, comme `CTR-12`.
+**Note** : Si vous fournissez `related_object_name` au lieu de `related_object_id`, le système résout le nom vers l'ID avant la correspondance. Cela signifie que vous pouvez utiliser des noms lisibles tout au long de votre fichier d'import. Pour un contrat, `related_object_name` accepte aussi sa référence, comme `CTR-12`. Le nom et la phase sont retrouvés quelle que soit la casse, et quels que soient les accents pour un projet, un contrat ou une ligne budgétaire que vous pouvez lire. Voir [Noms des fiches](csv-files.md#names-of-records). La **Vérification préalable** refuse une ligne dont l'objet lié est introuvable ou nomme plusieurs fiches. Elle refuse aussi une phase à laquelle répondent plusieurs phases du projet, ou que seul un autre projet possède. Quand une ligne donne les deux, l'ID l'emporte. Une tâche déplacée vers un autre projet sans phase dans le fichier garde sa phase si ce projet en a une du même nom ; sinon, la **Vérification préalable** la vide et le signale. Une tâche qui quitte un projet perd sa phase de la même façon, et aussi sa source, sa catégorie, son stream et sa société quand elle passe sur une ligne budgétaire, un contrat ou un incident ; une phase ou une classification que le fichier donne à une tâche qui ne peut pas l'avoir n'est pas importée, et la **Vérification préalable** le signale sur sa cellule. Un incident que vous ne voyez pas est introuvable, que la ligne donne sa référence (`INC-4`) ou son id.
 
 ### Champs en export uniquement
 

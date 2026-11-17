@@ -28,6 +28,22 @@ The contracts file starts with the same optional `reference` column (`CTR-12`). 
 
 **Other files.** An OpenDocument spreadsheet (`.ods`) is refused before any column is read, with a message that says how to save it as CSV. In LibreOffice Calc: **File › Save As › Text CSV**, or **Excel 2007-365 (.xlsx)**. Any other file that is not text is refused the same way.
 
+## Names of records { #names-of-records }
+
+A cell that names another record, such as a supplier, a company or a project, finds it in three steps:
+
+1. the same name, exactly as written;
+2. the same name in other letter case;
+3. the same name with other accents, for example `Fromagerie Leger` for `Fromagerie Léger`.
+
+The third step applies only to records found by their name, in a list you can read. An email, a location reference such as `LOC-4` or a code takes the first two steps. When several records answer the third step, the row is refused and the message names them: write the name as it is stored.
+
+**Matches.** The preflight check lists the names found at the third step under **N values matched**, folded. Unfold the line to see each match, for example `Supplier: Fromagerie Leger → Fromagerie Léger`. The list also holds the versions found by their catalog label (see [Version labels](technologies.md#version-labels)). **Undo** checks the file again without that match: the name is then read as one Kadratis does not know, and the load keeps that choice. The undone match stays listed with **Match again**, which checks the file with it again. The imports of applications, assets, projects, requests, tasks, incidents, contracts, cost centers, business processes, technology links and the budget file show this list.
+
+**A name nothing finds.** The imports of applications, assets, projects, requests, tasks and incidents keep the current values for empty cells, unless you choose **Full replace**. With these choices, a row that updates a record also keeps the current value when a cell names a record Kadratis does not find. The check warns: "\"X\" was not found: the current value is kept." A value that belongs to another column is kept only while the row leaves that column as stored: a task's phase with its project, a stream with its category, a department with its company. Otherwise the field stays empty, and the check warns. A task keeps its viewers, or its owners, when one of their cells names an unknown email. On a new record, and with **Full replace**, the field stays empty and the check warns. A column that needs a known record refuses the row, as its page says.
+
+Kad's imports follow the same rules and show the matches on their preview. See [Importing a spreadsheet](ai-assistant.md#importing-a-spreadsheet).
+
 ## Example files { #example-files }
 
 The import dialog of applications, assets, projects, suppliers, contracts and the budget file offers **Download an example**: an Excel workbook in the language of your screen.

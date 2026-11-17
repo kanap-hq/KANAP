@@ -1,5 +1,6 @@
 import { exportListQuery } from '../common/pagination';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { csvUnmatched } from '../common/csv/csv-unmatched';
 import {
   Body,
   Controller,
@@ -185,6 +186,7 @@ export class BusinessProcessesController {
     @Query('language') languageRaw: string | undefined,
     @Query('dateOrder') dateOrderRaw: string | undefined,
     @Query('decimalMark') decimalMarkRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Req() req: any,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
@@ -197,6 +199,7 @@ export class BusinessProcessesController {
         language,
         dateOrder: parseDateOrder(dateOrderRaw),
         decimalMark: parseDecimalMark(decimalMarkRaw),
+        unmatched: csvUnmatched(unmatchedRaw),
       },
       { manager: req?.queryRunner?.manager },
     );

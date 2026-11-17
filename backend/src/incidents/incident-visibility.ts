@@ -144,7 +144,7 @@ export function incidentVisibilitySql(
  * label (headless agent runs, tool harnesses, AI specs) owns no incident. It
  * still fails closed for a restricted one.
  */
-function incidentViewerForSql(
+export function incidentViewerForSql(
   viewer: IncidentViewer | null | undefined,
 ): IncidentViewer | null | undefined {
   if (!viewer || viewer.isAdmin) return viewer;

@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Application } from '../application.entity';
 import { ApplicationDataResidency } from '../application-data-residency.entity';
 import { AuditService } from '../../audit/audit.service';
+import { lockApplicationRow } from '../application-rules';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
 
 /**
@@ -27,6 +28,11 @@ export class ApplicationsResidencyService extends ApplicationsBaseService {
   async bulkReplaceDataResidency(appId: string, countryCodes: string[], userId?: string | null, opts?: ServiceOpts) {
     const mg = this.getManager(opts);
     const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
+    const app = await mg.getRepository(Application).findOne({ where: { id: resolvedAppId } });
+    if (!app) throw new NotFoundException('Application not found');
+    // The application, then its residency (`lockApplicationRow`), as the writers of its owners: the state
+    // an import compares covers the residency, and its trigger writes the application (review 4 of I3, C3).
+    if (!(await lockApplicationRow(mg, app.tenant_id, resolvedAppId))) throw new NotFoundException('Application not found');
     const repo = mg.getRepository(ApplicationDataResidency);
     const existing = await repo.find({ where: { application_id: resolvedAppId } as any });
     const beforeState = existing.map((r) => r.country_iso).sort();

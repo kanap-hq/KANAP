@@ -376,7 +376,11 @@
     "importRun": {
       "check": "Prüfung des Imports",
       "result": "Import",
-      "download": "Datei herunterladen (.xlsx)"
+      "download": "Datei herunterladen (.xlsx)",
+      "hosting": "Hosting: {{sites}}",
+      "hostingSeparator": "; ",
+      "onPremises": "On-Premise",
+      "cloud": "Cloud"
     },
     "importChoices": {
       "stale": "Diese Karte kann nicht mehr geändert werden. Bitten Sie {{agent}} um eine neue."

@@ -212,6 +212,149 @@ async function testTaskTypesAcceptTheirShownNames() {
   assert.equal(service.reverseResolve('portfolio_task_types', 'tt-task', cache), 'Task', 'exports write the stored name');
 }
 
+
+// Lot I3 of 26.11.9: a name of the file finds a record once accents are set aside, for the families
+// looked up by name; case aside first, as before; several names answering are an ambiguity.
+async function testNamesBeyondAccents() {
+  const service = new CsvResolverService();
+  const mockData = {
+    suppliers: [
+      { id: 's1', name: 'Société Générale', item_number: 4, tenant_id: 't1' },
+      { id: 's2', name: 'Café', item_number: 7, tenant_id: 't1' },
+      { id: 's3', name: 'Cafè', item_number: 8, tenant_id: 't1' },
+    ],
+    companies: [
+      { id: 'c1', name: 'Café', item_number: 1, tenant_id: 't1' },
+      { id: 'c2', name: 'Cafe', item_number: 2, tenant_id: 't1' },
+    ],
+    portfolio_sources: [
+      { id: 'p1', name: 'Métier', tenant_id: 't1' },
+      { id: 'p2', name: 'Metièr', tenant_id: 't1' },
+    ],
+  };
+  const fields: CsvFieldDefinition[] = [
+    { csvColumn: 'supplier_name', entityProperty: 'supplier_id', type: CsvFieldType.FK_BY_NAME, fkEntity: 'suppliers' },
+    { csvColumn: 'company_name', entityProperty: 'company_id', type: CsvFieldType.FK_BY_NAME, fkEntity: 'companies' },
+    { csvColumn: 'source_name', entityProperty: 'source_id', type: CsvFieldType.FK_BY_NAME, fkEntity: 'portfolio_sources' },
+  ];
+  const cache = await service.preloadResolvers('t1', fields, createMockManager(mockData));
+  const beyond = { beyondCase: true };
+
+  for (const cell of ['Societe Generale', 'SOCIETE GENERALE']) {
+    const found = service.resolveName('suppliers', cell, cache, beyond);
+    assert.equal(found.kind, 'one', cell);
+    assert.deepEqual(found.kind === 'one' && [found.entry.id, found.how, found.target, found.ref], ['s1', 'accents', 'Société Générale', 'SUP-4'], cell);
+  }
+  // Case aside first: the same name, no match to list.
+  const sameCase = service.resolveName('suppliers', 'société générale', cache, beyond);
+  assert.deepEqual(sameCase.kind === 'one' && [sameCase.entry.id, sameCase.how], ['s1', 'case']);
+  const exact = service.resolveName('suppliers', 'Société Générale', cache, beyond);
+  assert.deepEqual(exact.kind === 'one' && exact.how, 'exact');
+  // The case-blind lookup is unchanged: resolveId never sets accents aside.
+  assert.equal(service.resolveId('suppliers', 'Societe Generale', cache), null);
+  // Not beyond case (the person does not read the family, or the value was undone): not found.
+  assert.deepEqual(service.resolveName('suppliers', 'Societe Generale', cache, { beyondCase: false }), { kind: 'none' });
+
+  // "Café" and "Cafe": the file's "cafe" is "Cafe" by case, no match beyond case.
+  const cafe = service.resolveName('companies', 'cafe', cache, beyond);
+  assert.deepEqual(cafe.kind === 'one' && [cafe.entry.id, cafe.how, cafe.ref], ['c2', 'case', 'COMP-2']);
+  // "Café" and "Cafè": the file's "cafe" may be either, named by their references.
+  assert.deepEqual(service.resolveName('suppliers', 'cafe', cache, beyond), { kind: 'many', names: ['SUP-7', 'SUP-8'] });
+  // A family without references: named by their names.
+  assert.deepEqual(service.resolveName('portfolio_sources', 'metier', cache, beyond), { kind: 'many', names: ['Métier', 'Metièr'] });
+  console.log('  names beyond accents, case first, ambiguity named: OK');
+}
+
+// The same name held by several records (two departments "Finance" of two companies). Exactly and
+// case aside, the first record read wins, as on main. Accents aside, a name answering several records
+// is refused, naming them, even when their names are the same (T-I3a, lot I3 of 26.11.9, fixes D).
+async function testSameNameOfSeveralRecordsBeyondAccents() {
+  const service = new CsvResolverService();
+  const mockData = {
+    departments: [
+      { id: 'd1', name: 'Finance', company_id: 'c1', item_number: 1, tenant_id: 't1' },
+      { id: 'd2', name: 'Finance', company_id: 'c2', item_number: 2, tenant_id: 't1' },
+      { id: 'd3', name: 'Études', company_id: 'c1', item_number: 3, tenant_id: 't1' },
+      { id: 'd4', name: 'études', company_id: 'c2', item_number: 4, tenant_id: 't1' },
+      { id: 'd5', name: 'Ventes', company_id: 'c1', item_number: 5, tenant_id: 't1' },
+    ],
+  };
+  const fields: CsvFieldDefinition[] = [
+    { csvColumn: 'department_name', entityProperty: 'department_id', type: CsvFieldType.FK_BY_NAME, fkEntity: 'departments' },
+  ];
+  const cache = await service.preloadResolvers('t1', fields, createMockManager(mockData));
+  const beyond = { beyondCase: true };
+  // Exactly and case aside: the first record read, as before.
+  assert.equal(service.resolveId('departments', 'FINANCE', cache), 'd1');
+  const exact = service.resolveName('departments', 'Finance', cache, beyond);
+  assert.deepEqual(exact.kind === 'one' && [exact.entry.id, exact.how], ['d1', 'exact']);
+  const folded = service.resolveName('departments', 'ÉTUDES', cache, beyond);
+  assert.deepEqual(folded.kind === 'one' && [folded.entry.id, folded.how], ['d3', 'case']);
+  // Accents aside: several records, refused and named, equal names included.
+  assert.deepEqual(service.resolveName('departments', 'Fînance', cache, beyond), { kind: 'many', names: ['DEPT-1', 'DEPT-2'] });
+  assert.deepEqual(service.resolveName('departments', 'Etudes', cache, beyond), { kind: 'many', names: ['DEPT-3', 'DEPT-4'] });
+  // One record accents aside: found, as before.
+  const one = service.resolveName('departments', 'Véntes', cache, beyond);
+  assert.deepEqual(one.kind === 'one' && [one.entry.id, one.how, one.ref], ['d5', 'accents', 'DEPT-5']);
+  console.log('  a name of several records accents aside is refused, equal names included: OK');
+}
+
+// A shipped task type found by its name in another language is a translation; e-mails and site
+// references are never looked up beyond case.
+async function testTranslationsAndCodesBeyondCase() {
+  const service = new CsvResolverService();
+  const mockData = {
+    portfolio_task_types: [{ id: 'tt-task', name: 'Task', code: 'task', tenant_id: 't1' }],
+    users: [{ id: 'u1', email: 'josé@example.com', first_name: 'José', last_name: 'Ruiz', tenant_id: 't1' }],
+    locations: [{ id: 'l1', location_reference: 'LOC-É1', name: 'Siège', tenant_id: 't1' }],
+  };
+  const fields: CsvFieldDefinition[] = [
+    { csvColumn: 'task_type_name', entityProperty: 'task_type_id', type: CsvFieldType.FK_BY_NAME, fkEntity: 'portfolio_task_types' },
+    { csvColumn: 'assignee_email', entityProperty: 'assignee_user_id', type: CsvFieldType.FK_BY_EMAIL, fkEntity: 'users' },
+    { csvColumn: 'location_reference', entityProperty: 'location_id', type: CsvFieldType.FK_BY_CODE, fkEntity: 'locations' },
+  ];
+  const cache = await service.preloadResolvers('t1', fields, createMockManager(mockData));
+  const beyond = { beyondCase: true };
+  const translated = service.resolveName('portfolio_task_types', 'Tâche', cache, beyond);
+  assert.deepEqual(translated.kind === 'one' && [translated.entry.id, translated.how, translated.target, translated.ref], ['tt-task', 'translation', 'Task', null]);
+  const shown = service.resolveName('portfolio_task_types', 'tache', cache, beyond);
+  assert.deepEqual(shown.kind === 'one' && [shown.entry.id, shown.how], ['tt-task', 'translation']);
+  const own = service.resolveName('portfolio_task_types', 'TASK', cache, beyond);
+  assert.deepEqual(own.kind === 'one' && own.how, 'case');
+  assert.deepEqual(service.resolveName('users', 'jose@example.com', cache, beyond), { kind: 'none' });
+  assert.deepEqual(service.resolveName('locations', 'LOC-E1', cache, beyond), { kind: 'none' });
+  assert.equal(service.matchesBeyondCase('users', { isAdmin: true }), false);
+  assert.equal(service.matchesBeyondCase('locations', { isAdmin: true }), false);
+  console.log('  translations noted, e-mails and site references never beyond case: OK');
+}
+
+// Beyond case only for a family whose module the person reads.
+async function testBeyondCaseFollowsReadRights() {
+  const service = new CsvResolverService();
+  assert.equal(service.matchesBeyondCase('suppliers', { isAdmin: true }), true);
+  assert.equal(service.matchesBeyondCase('suppliers', { permissions: { suppliers: 'reader' } }), true);
+  assert.equal(service.matchesBeyondCase('suppliers', { permissions: { applications: 'admin' } }), false);
+  assert.equal(service.matchesBeyondCase('suppliers', null), false, 'no access given: case-blind as before');
+  assert.equal(service.matchesBeyondCase('portfolio_sources', { permissions: { tasks: 'reader' } }), true);
+  assert.equal(service.matchesBeyondCase('portfolio_task_types', { permissions: { portfolio_projects: 'admin' } }), false);
+  assert.equal(service.matchesBeyondCase('portfolio_project_phases', { permissions: { portfolio_projects: 'reader' } }), true);
+  console.log('  beyond case for the families the person reads: OK');
+}
+
+// A list of references (numbered owner columns: `ARRAY` with `fkEntity`) loads its family like a
+// single reference does: without it, every name of the list read as unknown (lot I3 of 26.11.9).
+async function testListOfReferencesPreloadsItsFamily() {
+  const service = new CsvResolverService();
+  const mockData = { users: [{ id: 'u1', email: 'alice@example.com', tenant_id: 't1' }] };
+  const fields: CsvFieldDefinition[] = [
+    { csvColumn: 'owner_email_1', entityProperty: 'owner_ids', type: CsvFieldType.ARRAY, fkEntity: 'users' },
+  ];
+  const cache = await service.preloadResolvers('t1', fields, createMockManager(mockData));
+  assert.ok(cache.has('users'), 'the list preloads its family');
+  assert.equal(service.resolveId('users', 'Alice@example.com', cache), 'u1');
+  console.log('  a list of references preloads its family: OK');
+}
+
 (async () => {
   await testPreloadResolversLoadsUsers();
   await testResolveWithCaseInsensitiveMatch();
@@ -222,6 +365,11 @@ async function testTaskTypesAcceptTheirShownNames() {
   await testIsSupportedEntity();
   await testGetLookupColumn();
   await testTaskTypesAcceptTheirShownNames();
+  await testNamesBeyondAccents();
+  await testSameNameOfSeveralRecordsBeyondAccents();
+  await testTranslationsAndCodesBeyondCase();
+  await testBeyondCaseFollowsReadRights();
+  await testListOfReferencesPreloadsItsFamily();
 
   console.log('CSV resolver service tests passed.');
 })().catch((err) => {

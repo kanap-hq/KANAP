@@ -1,5 +1,12 @@
 import type { CsvReportMessage } from '../components/csv/csvMessage';
 import type { BudgetFileChoice, BudgetFileReport } from '../components/finance/budgetFile';
+import type { CsvImportMatch, CsvImportRefusedProposal, ImportLookalikeChoice, ImportLookalikes } from '../components/csv/csv.types';
+
+/**
+ * A choice of the person on an import card: a budget file's, a match undone on any import, or a row
+ * of an applications import that looks like an existing application. Sent whole to the choice route.
+ */
+export type AiImportChoice = BudgetFileChoice | ImportLookalikeChoice;
 
 export type AiMutationWriteToolName =
   | 'import_ticket'
@@ -88,6 +95,8 @@ export type AiImportMapping = {
   /** Some values the import will not read, by column; shown here only. */
   unread_values?: Record<string, string[]>;
   read_errors?: Record<string, 'mixed-date-orders' | 'mixed-decimal-marks' | 'reference-without-prefix'>;
+  /** The titles of the columns the import matches that the mapping does not fill (an application's supplier found by its publisher). */
+  matched_titles?: Record<string, string>;
   missing_required: Array<{ column: string; title: string }>;
   unplaced: Array<{ position: number; header: string | null }>;
   assumptions: string[];
@@ -103,6 +112,19 @@ export type AiImportMapping = {
 export type AiImportReportMessage = CsvReportMessage;
 
 /** What an import reported on the file Plaid built: its check (`dry_run`) or the import itself. */
+/**
+ * A site a servers import names (`LOC-n`): the label of its hosting type in the person's language,
+ * its category in the catalog (null when the type has none), its provider (null when none).
+ */
+export type AiImportHostingSite = {
+  ref: string;
+  name: string;
+  hostingType: string;
+  label: string;
+  category: 'on_prem' | 'cloud' | null;
+  provider: string | null;
+};
+
 export type AiImportRun = {
   ok: boolean;
   /** A check that passed with nothing to create or update: the card says "Nothing to import" and cannot be approved. */
@@ -134,7 +156,21 @@ export type AiImportRun = {
     create_suppliers: { allowed: boolean; value: boolean };
   };
   report:
-    | { kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[] }
+    /**
+     * A row import: its first messages, the names it found beyond case and Kad's proposals it refused
+     * (lines of the person's file), each absent when none.
+     */
+    | {
+      kind: 'rows'; errors: AiImportReportMessage[]; warnings: AiImportReportMessage[];
+      matches?: CsvImportMatch[]; matchesTotal?: number;
+      refusedProposals?: CsvImportRefusedProposal[]; refusedProposalsTotal?: number;
+      /** The matches the person undid on the card, absent when none: Undo sends them all with the new one. */
+      undone?: Array<{ column: string; value: string }>;
+      /** A servers import: how each site the file names hosts its servers, absent when none. */
+      hosting?: AiImportHostingSite[];
+      /** An applications import: the rows that look like an existing application, absent when none. */
+      lookalikes?: ImportLookalikes;
+    }
     | { kind: 'budget_file'; file: BudgetFileReport | null };
 };
 
