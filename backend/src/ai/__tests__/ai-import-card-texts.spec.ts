@@ -125,6 +125,28 @@ function instructionsPublisherLinksTheSupplier() {
   console.log('  the model reads that a publisher links the supplier it names, with the card\'s words: OK');
 }
 
+/**
+ * Lot I4 of 26.11.9, correctifs 10 (browser pass 5): Kad put a column holding only `-` in `left_aside`
+ * by itself, so the card cleared nothing; and its assumptions said a row created a supplier the check
+ * updated. `left_aside` is only for a column the person's message asks to leave out, and the model
+ * says nothing of a creation, an update or a record's content before the check does.
+ */
+function instructionsLeaveAsideOnlyOnRequest() {
+  const operation = new PrepareImportMappingAiMutationOperation({} as any);
+  const hint = operation.writePreview.prompt_hint;
+  const field = (operation.inputSchema.shape.left_aside as any).description as string;
+  for (const text of [hint, field, operation.inputSummary.left_aside]) {
+    assert.match(text, /message asks to leave out/);
+  }
+  for (const text of [hint, field]) {
+    assert.match(text, /holds only `-`/);
+    assert.match(text, /empty column/);
+  }
+  assert.match(hint, /stays read and the card announces it/);
+  assert.match(hint, /In `note` and `assumptions`, never say that a row creates or updates a record, nor what a record already holds/);
+  console.log('  left_aside only on the person\'s request; no creation or update announced before the check: OK');
+}
+
 async function screenLanguageWhenTheProfileHasNone() {
   const req = { tenant: { id: 'tenant-1' }, user: { sub: 'user-1' }, headers: { 'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8' } };
   const chat = new AiChatController({} as any, {} as any, {} as any, {} as any);
@@ -208,6 +230,7 @@ async function main() {
   instructionsNameLinesAndColumnsNeverCodes();
   instructionsProposeExistingRecordsOnly();
   instructionsPublisherLinksTheSupplier();
+  instructionsLeaveAsideOnlyOnRequest();
   await screenLanguageWhenTheProfileHasNone();
   console.log('ai-import-card-texts.spec: ok');
 }
