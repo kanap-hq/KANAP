@@ -31,6 +31,7 @@ import {
   LINE_USAGE_LABELS,
   PROCESS_TYPE_LABELS,
   RUN_BUILD_LABELS,
+  SUPPLIER_CONTACT_ROLE_LABELS,
   labelsForEnum,
 } from './ai-import-code-labels';
 
@@ -359,7 +360,10 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       ownReference('CTCT', 'contact'),
       text('first_name'), text('last_name'), text('job_title'),
       { column: 'email', kind: 'email', required: true },
-      text('phone'), text('mobile'), country('country'), text('notes'),
+      text('phone'), text('mobile'), country('country'),
+      reference('supplier_name', 'the contact\'s supplier, the company they work for: a supplier by name or by its reference, SUP-n'),
+      { column: 'supplier_role', kind: 'codes', codes: ['commercial', 'technical', 'support', 'other'], labels: SUPPLIER_CONTACT_ROLE_LABELS, hint: 'the contact\'s type for that supplier' },
+      text('notes'),
       { column: 'active', kind: 'boolean' },
     ],
   },
@@ -506,6 +510,7 @@ export const AI_IMPORT_MATCHED_COLUMNS: Readonly<Partial<Record<AiImportKey, rea
   portfolio_requests: PORTFOLIO_MATCHED_COLUMNS,
   tasks: ['phase_name', 'task_type_name', 'source_name', 'category_name', 'stream_name', 'company_name', 'related_object_name'],
   contracts: ['company_name', 'supplier_name', 'cost_center'],
+  contacts: ['supplier_name'],
   cost_centers: ['company_name'],
   business_processes: ['parent_name'],
   assets: ['operating_system', 'cluster'],

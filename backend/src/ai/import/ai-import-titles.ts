@@ -19,6 +19,7 @@ const COLUMN_TITLES: Record<string, Titles> = {
   company_name: { en: 'Company', fr: 'Société', de: 'Unternehmen', es: 'Empresa' },
   department_name: { en: 'Department', fr: 'Département', de: 'Abteilung', es: 'Departamento' },
   supplier_name: { en: 'Supplier', fr: 'Fournisseur', de: 'Lieferant', es: 'Proveedor' },
+  supplier_role: { en: 'Contact type', fr: 'Type de contact', de: 'Kontakttyp', es: 'Tipo de contacto' },
   supplier_erp_id: { en: 'Supplier ERP id', fr: 'ID fournisseur ERP', de: 'ERP-Lieferantennummer', es: 'ID de proveedor en el ERP' },
   source_name: { en: 'Source', fr: 'Source', de: 'Quelle', es: 'Origen' },
   category_name: { en: 'Category', fr: 'Catégorie', de: 'Kategorie', es: 'Categoría' },

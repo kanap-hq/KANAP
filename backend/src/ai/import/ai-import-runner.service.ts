@@ -215,7 +215,7 @@ export class AiImportRunnerService {
       case 'suppliers':
         return this.suppliers.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
       case 'contacts':
-        return this.contacts.importCsv({ file, dryRun, ...read }, { manager, tenantId });
+        return this.contacts.importCsv({ file, dryRun, ...read, access: await rights(), ...names }, caller);
       case 'contracts':
         return this.contracts.importCsv({ file, dryRun, userId: userId || null, ...read, access: await rights(), ...names }, { manager });
       case 'companies':
