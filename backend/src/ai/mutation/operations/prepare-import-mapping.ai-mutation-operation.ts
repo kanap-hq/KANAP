@@ -199,12 +199,15 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
   /**
    * The choices of the person's last card of this file in the conversation, whatever its state (a
    * card replaced by a choice is expired, and the card that replaced it holds the choices): none once
-   * that card was imported, or when it maps the file onto another import.
+   * that card was imported, or when it maps the file onto another import. A card whose approval the
+   * load refused keeps the lookalike choices that load followed, without the refused row's: the new card
+   * shows the row's new situation, as the screen checks again after a refused load (review 4, C2).
    */
   private async lastChoices(context: AiExecutionContextWithManager, attachmentId: string, key: string): Promise<ImportCardChoice[]> {
     if (!context.conversationId) return [];
-    const [last]: Array<{ status: string; choices: unknown; entity_type: string | null }> = await context.manager.query(
-      `SELECT status, mutation_input->'choices' AS choices, mutation_input->>'entity_type' AS entity_type
+    const [last]: Array<{ status: string; choices: unknown; entity_type: string | null; followed: unknown }> = await context.manager.query(
+      `SELECT status, mutation_input->'choices' AS choices, mutation_input->>'entity_type' AS entity_type,
+              current_values->'import_mapping'->'result'->'report'->'lookalikes'->'choices' AS followed
          FROM ai_mutation_previews
         WHERE tenant_id = $1 AND conversation_id = $2 AND user_id = $3 AND tool_name = $4
           AND mutation_input->>'attachment_id' = $5
@@ -215,8 +218,12 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     // A card of the file for another import: its choices are that import's.
     if (!last || last.status === 'executed' || last.entity_type !== key) return [];
     try {
+      const choices = parseImportChoices(key, last.choices ?? []);
+      const kept = last.status === 'failed' && Array.isArray(last.followed)
+        ? [...choices.filter((choice) => choice.kind !== 'lookalike' && choice.kind !== 'lookalikes'), ...parseImportChoices(key, last.followed)]
+        : choices;
       // The targets the last card left out by default are that card's: a new mapping looks again.
-      return parseImportChoices(key, last.choices ?? []).filter((choice) => !(choice.kind === 'lookalikes' && choice.action === 'ignore'));
+      return kept.filter((choice) => !(choice.kind === 'lookalikes' && choice.action === 'ignore'));
     } catch {
       return [];
     }

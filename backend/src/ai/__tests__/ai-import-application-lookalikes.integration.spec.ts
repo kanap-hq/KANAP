@@ -239,6 +239,86 @@ async function testAllLeftOutThenCreateAnywayFromTheCardChoices(h: Harness, runn
   assert.deepEqual(await names(runner, s), ['Comptabilite', 'Comptabilité']);
 }
 
+/**
+ * Review 4, C1 on the card (K2): a row the card leaves out, whose name an application takes before the
+ * approval, stays left out: the approval imports the rest of the file and never touches that application.
+ */
+async function testLeftOutRowNameTakenBeforeTheApproval(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s);
+  const attachment = randomUUID();
+  const { writeXlsx } = require('../../common/xlsx');
+  h.files.set(attachment, {
+    name: 'Applications.xlsx',
+    buffer: writeXlsx({ language: 'fr', sheets: [{ name: 'Applications', header: 'plain', headers: ['Nom', 'Éditeur', 'Description'], rows: [['Comptabilite', null, 'Grand livre'], ['Atlas', null, 'Cartes']] }] }),
+  });
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'applications', columns: COLUMNS });
+  assert.deepEqual(card.import_mapping.validation.report.lookalikes.lines.map((entry: any) => [entry.line, entry.outcome]), [[2, 'ignored']]);
+  const [other] = await runner.query(`INSERT INTO applications (tenant_id, name, description) VALUES ($1, 'Comptabilite', 'créée entre-temps') RETURNING id::text AS id`, [s.tenantId]);
+  const done = await h.previews.executePreview(admin, card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message);
+  const [after] = await runner.query(`SELECT description FROM applications WHERE tenant_id = $1 AND id = $2`, [s.tenantId, other.id]);
+  assert.equal(after.description, 'créée entre-temps', 'the application that took the name is untouched');
+  assert.deepEqual(await names(runner, s), ['Atlas', 'Comptabilite', 'Comptabilité']);
+}
+
+/**
+ * Review 4, C2 (K): "Update APP-1" chosen on the card, an application takes the row's name before the
+ * approval: the approval is refused. The next card shows the row's new situation (an update of the
+ * application its name finds, as the screen checks again with the choices the server gave back): it no
+ * longer carries the stale choice, and it is approved.
+ */
+async function testStaleChoiceAfterARefusedApproval(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s);
+  const attachment = randomUUID();
+  const { writeXlsx } = require('../../common/xlsx');
+  h.files.set(attachment, {
+    name: 'Applications.xlsx',
+    buffer: writeXlsx({ language: 'fr', sheets: [{ name: 'Applications', header: 'plain', headers: ['Nom', 'Éditeur', 'Description'], rows: [['Comptabilite', null, 'Grand livre'], ['Atlas', null, 'Cartes']] }] }),
+  });
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'applications', columns: COLUMNS });
+  const target = card.import_mapping.validation.report.lookalikes.lines[0].target;
+  const update = await h.previews.replaceImportChoices(admin, card.preview_id, [{ kind: 'lookalike', line: 2, action: 'update', id: target.id, state: target.state }]);
+  const [other] = await runner.query(`INSERT INTO applications (tenant_id, name, description) VALUES ($1, 'Comptabilite', 'créée entre-temps') RETURNING id::text AS id`, [s.tenantId]);
+  const failed = await h.previews.executePreview(admin, update.preview_id);
+  assert.equal(failed.status, 'failed');
+
+  const next = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'applications', columns: COLUMNS });
+  const check = next.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check.issues));
+  assert.deepEqual([check.inserted, check.updated], [1, 1], 'the row updates the application its name finds now');
+  const [stored] = await runner.query(`SELECT mutation_input->'choices' AS choices FROM ai_mutation_previews WHERE id = $1`, [next.preview_id]);
+  assert.ok(!(stored.choices ?? []).some((choice: any) => choice.kind === 'lookalike' && choice.action === 'update'), JSON.stringify(stored.choices));
+  const done = await h.previews.executePreview(admin, next.preview_id);
+  assert.equal(done.status, 'executed', done.error_message);
+  const [after] = await runner.query(`SELECT description FROM applications WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.compta.id]);
+  assert.equal(after.description, 'Ledger', 'APP-1 untouched');
+  const [taken] = await runner.query(`SELECT description FROM applications WHERE tenant_id = $1 AND id = $2`, [s.tenantId, other.id]);
+  assert.equal(taken.description, 'Grand livre');
+}
+
+/**
+ * The card's choices a check refused (C2): a check whose own choice is stale gives back the choices it
+ * followed, without that one, even when no row is listed any more: the card after it is approved.
+ */
+async function testStaleChoiceOfACheckIsDropped(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s);
+  const attachment = randomUUID();
+  const { writeXlsx } = require('../../common/xlsx');
+  h.files.set(attachment, {
+    name: 'Applications.xlsx',
+    buffer: writeXlsx({ language: 'fr', sheets: [{ name: 'Applications', header: 'plain', headers: ['Nom', 'Éditeur', 'Description'], rows: [['Comptabilite', null, 'Grand livre']] }] }),
+  });
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'applications', columns: COLUMNS });
+  const target = card.import_mapping.validation.report.lookalikes.lines[0].target;
+  await runner.query(`INSERT INTO applications (tenant_id, name) VALUES ($1, 'Comptabilite')`, [s.tenantId]);
+  const refused = await h.previews.replaceImportChoices(admin, card.preview_id, [{ kind: 'lookalike', line: 2, action: 'update', id: target.id, state: target.state }]);
+  assert.deepEqual(refused.import_mapping.validation.issues.map((issue: any) => issue.code), ['CSV_LOOKALIKE_NAME_FOUND']);
+  const [stored] = await runner.query(`SELECT mutation_input->'choices' AS choices FROM ai_mutation_previews WHERE id = $1`, [refused.preview_id]);
+  assert.ok(!(stored.choices ?? []).some((choice: any) => choice.kind === 'lookalike'), JSON.stringify(stored.choices));
+  const next = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'applications', columns: COLUMNS });
+  assert.equal(next.import_mapping.validation.ok, true, JSON.stringify(next.import_mapping.validation.issues));
+}
+
 async function testChoiceRouteParsing() {
   const { parseImportChoices } = require('../import/ai-import-targets');
   const id = randomUUID();
@@ -252,6 +332,9 @@ async function testChoiceRouteParsing() {
     { kind: 'lookalikes', action: 'create' },
   ]);
   assert.throws(() => parseImportChoices('applications', [{ kind: 'lookalike', line: 4, action: 'update', item: 3 }]));
+  // "Update" without the state of the check (review 4, C5): for one row, or for all rows without their targets.
+  assert.throws(() => parseImportChoices('applications', [{ kind: 'lookalike', line: 4, action: 'update', id }]));
+  assert.throws(() => parseImportChoices('applications', [{ kind: 'lookalikes', action: 'update' }]));
   assert.throws(() => parseImportChoices('applications', Array.from({ length: 201 }, (_, i) => ({ kind: 'lookalike', line: i + 2, action: 'create' }))));
   assert.equal(parseImportChoices('applications', Array.from({ length: 200 }, (_, i) => ({ kind: 'lookalike', line: i + 2, action: 'create' }))).length, 200);
   // Another import takes no lookalike choice.
@@ -278,6 +361,9 @@ async function run() {
     await inTenant(harness, testNothingToImportStaysPendingThenUpdate);
     await inTenant(harness, testAllLeftOutThenCreateAnywayFromTheCardChoices);
     await inTenant(harness, testTargetGoneBeforeTheApproval);
+    await inTenant(harness, testLeftOutRowNameTakenBeforeTheApproval);
+    await inTenant(harness, testStaleChoiceAfterARefusedApproval);
+    await inTenant(harness, testStaleChoiceOfACheckIsDropped);
   } finally {
     await harness.app.close();
   }

@@ -497,12 +497,16 @@ export class AiMutationPreviewService {
     prepared: Pick<AiPreparedMutationPreview, 'targetEntityType' | 'targetEntityId' | 'mutationInput' | 'currentValues'>,
   ): string {
     const values = prepared.currentValues?.values;
+    // An import card's check (lot I3 of 26.11.9, review 4, C2): the same mapping of a file whose data
+    // changed since is another card, never the old one with its stale check (a refusal included).
+    const check = (prepared.currentValues?.import_mapping as { validation?: unknown } | undefined)?.validation;
     return stableStringify({
       tool_name: toolName,
       target_entity_type: prepared.targetEntityType,
       target_entity_id: prepared.targetEntityId ?? null,
       mutation_input: prepared.mutationInput,
       current_values: values === undefined ? null : JSON.parse(JSON.stringify(values)),
+      ...(check === undefined ? {} : { import_check: JSON.parse(JSON.stringify(check)) }),
     });
   }
 
