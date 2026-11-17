@@ -450,12 +450,50 @@ function unchangedNote(count: number, what: string): string {
   return count > 0 ? ` (${count} ${what} unchanged)` : '';
 }
 
+/** Matches the approval's sentence names; the others are counted ("and N more"). */
+const APPROVAL_FACT_MATCHES = 3;
+
 /**
- * What the approval of a row import's check does, in one sentence, from its counts (lot I2 of
- * 26.11.9): the records it creates, updates and leaves unchanged, or that there is nothing to import.
- * The imports of these lists report counts only: the sentence names no record.
+ * The card's words for a supplier found by the application's publisher, after the column's title
+ * (`operations.budgetFile.matching.byEditor` of the frontend's `ops` locales; `ai-import-card-texts.spec.ts`).
  */
-export function rowsApprovalFacts(run: Pick<AiImportRunDto, 'ok' | 'inserted' | 'updated' | 'unchanged'> & { report?: AiImportRunDto['report'] }): string {
+export const BY_EDITOR: Record<CsvLanguage, string> = {
+  en: '{{column}} (publisher)',
+  fr: '{{column}} (éditeur)',
+  de: '{{column}} (Herausgeber)',
+  es: '{{column}} (editor)',
+};
+
+/**
+ * The check's matches of a row import as the card lists them (lot I3 of 26.11.9, correctifs L): how
+ * many, the first ones by the column's title the card shows, with the value of the file and the record
+ * (reference, then name); and, for a match found by the publisher (T-I3k), that the application is
+ * linked to that supplier. Empty when the check matched nothing.
+ */
+function rowsMatchFacts(report: AiImportRunDto['report'] | undefined, titles: ReadonlyMap<string, string>, language: CsvLanguage): string {
+  const matches = report?.kind === 'rows' ? report.matches ?? [] : [];
+  if (matches.length === 0) return '';
+  const total = Math.max(report?.kind === 'rows' ? report.matchesTotal ?? 0 : 0, matches.length);
+  const names = matches.map((entry) => {
+    const title = titles.get(entry.column) ?? entry.column;
+    const column = entry.origin === 'editor' ? BY_EDITOR[language].replace('{{column}}', title) : title;
+    return `${column}: ${entry.value} → ${entry.ref ? `${entry.ref} ${entry.target}` : entry.target}`;
+  });
+  const shown = names.slice(0, APPROVAL_FACT_MATCHES);
+  const more = total - shown.length;
+  return `; ${total} values of the file matched to existing records: ${shown.join(', ')}${more > 0 ? `, and ${more} more` : ''}`
+    + (matches.some((entry) => entry.origin === 'editor') ? '; each application whose publisher names an existing supplier is linked to that supplier' : '');
+}
+
+/**
+ * What the approval of a row import's check does, in one sentence (lot I2 of 26.11.9): the records it
+ * creates, updates and leaves unchanged, or that there is nothing to import; then the values the check
+ * matched to existing records, as the card names them (`titles`: the card's column titles, by column).
+ */
+export function rowsApprovalFacts(
+  run: Pick<AiImportRunDto, 'ok' | 'inserted' | 'updated' | 'unchanged'> & { report?: AiImportRunDto['report'] },
+  card: { titles?: ReadonlyMap<string, string>; language?: CsvLanguage } = {},
+): string {
   if (!run.ok) return CANNOT_BE_APPROVED;
   // The applications that look like a stored one (lot I3 of 26.11.9): left out unless the person chose otherwise.
   const look = run.report?.kind === 'rows' ? run.report.lookalikes : undefined;
@@ -470,7 +508,8 @@ export function rowsApprovalFacts(run: Pick<AiImportRunDto, 'ok' | 'inserted' | 
           + 'with the card\'s words (`similar_lines.card_choices`).'
         : 'The card cannot be approved.');
   }
-  return `On approval: ${run.inserted} records created, ${run.updated} updated, ${run.unchanged} unchanged${lookalikes}.`;
+  const matches = rowsMatchFacts(run.report, card.titles ?? new Map(), card.language ?? 'en');
+  return `On approval: ${run.inserted} records created, ${run.updated} updated, ${run.unchanged} unchanged${matches}${lookalikes}.`;
 }
 
 /**

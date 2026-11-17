@@ -190,7 +190,12 @@ export class AiImportMappingService {
     // The facts of the approval lead the card the model reads: the budget file's, or the counts of a
     // row import, once a file that would clear columns is refused.
     const { on_approval: budgetFacts, ...checked } = refuseClearedColumns(validation, left);
-    const onApproval = budgetFacts ?? (checked.report.kind === 'rows' ? rowsApprovalFacts(checked) : undefined);
+    // A row import's matches are named by the titles the card shows: the columns the mapping fills, and those the import matches without it.
+    const titles = new Map([
+      ...Object.entries(converted.preview.matched_titles ?? {}),
+      ...converted.preview.columns.map((column): [string, string] => [column.column, column.title]),
+    ]);
+    const onApproval = budgetFacts ?? (checked.report.kind === 'rows' ? rowsApprovalFacts(checked, { titles, language }) : undefined);
     return { target, mapping: { ...(onApproval ? { on_approval: onApproval } : {}), ...converted.preview, validation: checked } };
   }
 

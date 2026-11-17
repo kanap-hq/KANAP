@@ -126,7 +126,10 @@ async function testLeftOutThenCreatedAnyway(h: Harness, runner: QueryRunner, s: 
   assert.deepEqual([check.inserted, check.skipped], [1, 1]);
   assert.deepEqual(check.similar_lines.first, [{ file_line: 4, looks_like: s.compta.ref, reason: 'name_accents', outcome: 'ignored' }]);
   assert.deepEqual(check.similar_lines.card_choices, { ignored: 'Écarter', created: 'Créer quand même', updated: 'Mettre à jour APP-n' });
-  assert.match(card.import_mapping.on_approval, /^On approval: 1 records created, 0 updated, 0 unchanged; 1 rows of the file look like existing applications: 1 left out/);
+  // The match of the publisher in the card's words, with the link it makes (correctifs L).
+  assert.equal(card.import_mapping.on_approval, 'On approval: 1 records created, 0 updated, 0 unchanged; 1 values of the file matched to existing records: '
+    + `Fournisseur (éditeur): cegid → ${s.cegid.ref} Cegid; each application whose publisher names an existing supplier is linked to that supplier; `
+    + '1 rows of the file look like existing applications: 1 left out, 0 created anyway, 0 updating the application they look like.');
   // The publisher names a supplier: Atlas is linked to it, a match listed and undoable.
   assert.deepEqual(check.report.matches.map((match: any) => [match.column, match.value, match.target, match.ref, match.origin, match.lines, match.undoable]), [
     ['supplier_name', 'cegid', 'Cegid', s.cegid.ref, 'editor', [5], true],
