@@ -122,7 +122,7 @@ import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-w
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { amountCell, dayCell, ListExportCell, ListExportFile, numberCell, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
-import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS } from './contract-csv-headers';
+import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS, CONTRACT_CSV_KEYS } from './contract-csv-headers';
 import { contractReference, contractReferenceFilter, contractReferenceNumber } from './contract-reference';
 
 /**
@@ -1474,9 +1474,8 @@ export class ContractsService {
       fields: this.csvHeaders(),
       fieldLabels: CONTRACT_CSV_HEADERS,
       dateFields: ['start_date'],
-      // A row finds its contract by its reference, else its name and supplier: any other column may
-      // be absent (older files have no reference and no place column), and is then never written.
-      keys: [['reference'], ['name', 'supplier_name']],
+      // A row finds its contract by its reference, else its name and supplier: any other column may be absent.
+      keys: CONTRACT_CSV_KEYS,
       language: readLanguage,
       dateOrder,
       decimalMark,

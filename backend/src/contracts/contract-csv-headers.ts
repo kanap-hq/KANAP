@@ -10,10 +10,11 @@ export const CONTRACT_CSV_COLUMNS = [
 ] as const;
 
 /**
- * The columns a file may leave out: older files have no reference and no place column. A row
- * without the place column keeps the stored place.
+ * The columns a row finds its contract by (`keys` of `readMasterDataFile`): its reference, else its
+ * name and supplier. Any other column may be absent (older files have no reference and no place
+ * column), and is then never written.
  */
-export const CONTRACT_CSV_OPTIONAL: Array<(typeof CONTRACT_CSV_COLUMNS)[number]> = ['reference', 'cost_center'];
+export const CONTRACT_CSV_KEYS: ReadonlyArray<ReadonlyArray<(typeof CONTRACT_CSV_COLUMNS)[number]>> = [['reference'], ['name', 'supplier_name']];
 
 /**
  * The title of each column in the file's language. The export and the template write it, and the
