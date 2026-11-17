@@ -13,15 +13,28 @@ import { SupplierContactLink } from '../supplier-contact.entity';
 // Lot I4 of 26.11.9: two imports of the same contact at once, one moving it to another supplier, the
 // other changing its role. `ContactsService.update` locks the contact's row first, so the second
 // waits for the first and reads its links: one primary link at the end.
+// Then a change of the supplier (the contact's page) committed while an import that keeps the
+// supplier is between its read and its write: the import writes only its columns, the notes here.
 
 const upload = (lines: string[]) => ({ buffer: Buffer.from(`${lines.join('\n')}\n`, 'utf8'), originalname: 'i.csv' }) as any;
 
-async function session(tenantId: string) {
+async function session(tenantId: string, beforeWrite?: () => Promise<void>) {
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
   const manager = runner.manager;
+  if (beforeWrite) {
+    // The import's writes of the contact wait here: the test commits another change meanwhile.
+    const repo = manager.getRepository(ExternalContact) as any;
+    for (const method of ['save', 'update'] as const) {
+      const original = repo[method].bind(repo);
+      repo[method] = async (...args: unknown[]) => {
+        await beforeWrite();
+        return original(...args);
+      };
+    }
+  }
   const audit = new AuditService(manager.getRepository(AuditLog));
   const contacts = new ContactsService(
     manager.getRepository(ExternalContact),
@@ -34,7 +47,7 @@ async function session(tenantId: string) {
     { file: upload(lines), dryRun: false, language: 'en', mode: 'enrich', access: { isAdmin: true, levels: {} } } as any,
     { manager, tenantId, userId: null },
   );
-  return { runner, run };
+  return { runner, run, contacts, manager };
 }
 
 async function deleteRaceTenant(tenantId: string) {
@@ -102,6 +115,66 @@ async function main() {
       );
     });
     assert.deepEqual(links, [{ name: 'Two', role: 'technical', is_primary: true }], 'one primary link, on the supplier A set, with the role B set');
+
+    // The page moves a second contact to Two while an import that changes its notes, and names its
+    // stored supplier One, has read it and not written yet.
+    const [two] = await dataSource.transaction(async (manager) => {
+      await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+      return manager.query(`SELECT id FROM suppliers WHERE tenant_id = $1 AND name = 'Two'`, [tenantId]);
+    });
+    const [second] = await dataSource.transaction(async (manager) => {
+      await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+      const [row] = await manager.query(
+        `INSERT INTO contacts (tenant_id, email, supplier_id, item_number, notes) VALUES ($1, 'd@x.com', $2, 2, 'Old notes') RETURNING id`,
+        [tenantId, one.id],
+      );
+      await manager.query(
+        `INSERT INTO supplier_contacts (tenant_id, supplier_id, contact_id, role, is_primary) VALUES ($1, $2, $3, 'commercial', true)`,
+        [tenantId, one.id, row.id],
+      );
+      return [row];
+    });
+    let reached!: () => void;
+    const reachedWrite = new Promise<void>((resolve) => { reached = resolve; });
+    let go!: () => void;
+    const mayWrite = new Promise<void>((resolve) => { go = resolve; });
+    const page = await session(tenantId);
+    const importer = await session(tenantId, async () => {
+      reached();
+      await mayWrite;
+    });
+    try {
+      await page.contacts.update(second.id, { supplier_id: two.id, supplier_role: 'commercial' } as any, { manager: page.manager, tenantId, userId: null });
+      const imported = importer.run(['email;supplier_name;notes', 'd@x.com;One;New notes']);
+      await reachedWrite;
+      await page.runner.commitTransaction();
+      go();
+      const result = await imported;
+      assert.deepEqual(result.errors, []);
+      assert.equal(result.updated, 1, 'the import changes the notes');
+      await importer.runner.commitTransaction();
+    } finally {
+      go();
+      for (const s of [page, importer]) {
+        if (s.runner.isTransactionActive) await s.runner.rollbackTransaction();
+        await s.runner.release();
+      }
+    }
+    const after = await dataSource.transaction(async (manager) => {
+      await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+      const [contact] = await manager.query(
+        `SELECT s.name AS supplier, c.notes FROM contacts c JOIN suppliers s ON s.id = c.supplier_id WHERE c.tenant_id = $1 AND c.id = $2`,
+        [tenantId, second.id],
+      );
+      const primaries = await manager.query(
+        `SELECT s.name, l.role FROM supplier_contacts l JOIN suppliers s ON s.id = l.supplier_id
+          WHERE l.tenant_id = $1 AND l.contact_id = $2 AND l.is_primary`,
+        [tenantId, second.id],
+      );
+      return { contact, primaries };
+    });
+    assert.deepEqual(after.contact, { supplier: 'Two', notes: 'New notes' }, 'the supplier the page set, the notes the import set');
+    assert.deepEqual(after.primaries, [{ name: 'Two', role: 'commercial' }], 'one primary link, at the contact\'s supplier');
   } finally {
     await deleteRaceTenant(tenantId);
     await dataSource.destroy();

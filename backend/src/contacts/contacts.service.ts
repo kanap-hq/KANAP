@@ -844,10 +844,9 @@ export class ContactsService {
     for (const { item, existing, supplier, valuesChange } of toWrite) {
       let contactId = existing?.id;
       if (existing) {
-        if (valuesChange) {
-          Object.assign(existing, item);
-          await repo.save(existing);
-        }
+        // Only the columns the row writes: `existing` was read before any lock, and its supplier is
+        // written by `update` below, which locks the row. Like `save` before it, no audit row here.
+        if (valuesChange) await repo.update({ tenant_id: opts.tenantId, id: existing.id }, item);
       } else {
         const created = repo.create({ ...item, tenant_id: opts.tenantId });
         contactId = (await repo.save(created)).id;
