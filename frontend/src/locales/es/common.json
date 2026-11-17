@@ -943,6 +943,9 @@
         "supplier_name": "Proveedor",
         "cost_center": "Centro de coste"
       },
+      "contacts": {
+        "supplier_name": "Proveedor"
+      },
       "cost-centers": {
         "company_name": "Empresa"
       },
