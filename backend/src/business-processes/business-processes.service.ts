@@ -14,14 +14,21 @@ import { User } from '../users/user.entity';
 import { duplicateNameException } from '../common/duplicate-name';
 import {
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
+  CsvDataRow,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   ImportReportError,
+  keepsStoredValue,
   nameMatchedWarning,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
+  storedRecordValues,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { uploadedBytes } from '../common/upload';
@@ -66,14 +73,15 @@ function normalizeParentId(value: unknown): string | null {
 
 /**
  * True when re-importing a CSV row over the stored process writes nothing (`importCsv`): the
- * description, notes, type, parent and lifecycle it sets are stored.
+ * description, notes, type, parent and lifecycle it sets are stored. A value the row keeps is
+ * absent from `body`.
  */
 function importRowUnchanged(stored: BusinessProcess, body: BusinessProcessUpsertDto, now: Date): boolean {
   const lifecycle = resolveLifecycleState({ currentDisabledAt: stored.disabled_at ?? null, nextStatus: body.status, nowFactory: () => now });
   const values = {
     description: body.description,
     notes: body.notes,
-    process_type: body.process_type ?? null,
+    process_type: body.process_type === undefined ? undefined : body.process_type ?? null,
     parent_id: body.parent_id ?? null,
     status: lifecycle.status,
     disabled_at: lifecycle.disabled_at,
@@ -493,6 +501,11 @@ export class BusinessProcessesService {
    * (lot I3 of 26.11.9): such a match is listed (`matches`) unless the person undid it (`unmatched`).
    * Kad's proposal for a parent (`proposals`) comes first: accepted when it names a process, exactly
    * or case aside; refused (`refusedProposals`) otherwise.
+   *
+   * Under the clearing rule of the import route (`mode: 'enrich'`, D21 of 26.11.9) a blank cell
+   * keeps the stored value, the parent included, and `-` clears it: `-` in the parent moves the
+   * process to the top. `-` on the name or the status refuses the row. Any column but the name
+   * may be absent and is then never written. Without a mode, `replace`.
    */
   async importCsv(
     {
@@ -504,6 +517,7 @@ export class BusinessProcessesService {
       decimalMark,
       unmatched,
       proposals,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -515,6 +529,8 @@ export class BusinessProcessesService {
       unmatched?: Array<{ column: string; value: string }>;
       /** Kad's proposals, by file column: a value of the file and the name of the process it stands for. */
       proposals?: ImportProposals;
+      /** What a row does to a process it updates (`CsvImportMode`); without it, `replace`. */
+      mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager },
   ) {
@@ -522,6 +538,8 @@ export class BusinessProcessesService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: this.csvHeaders(),
+      // A row finds its process by its name: any other column may be absent, and is then never written.
+      keys: [['name']],
       language: language ?? 'en',
       dateOrder,
       decimalMark,
@@ -538,9 +556,12 @@ export class BusinessProcessesService {
     let unchanged = 0;
     const normalized: Array<{
       line: number;
+      row: CsvDataRow;
       body: BusinessProcessUpsertDto;
       status: StatusState | null;
       parentName: string;
+      /** The row leaves a stored process's parent as it is (`keepsStoredValue`). */
+      keepsParent: boolean;
     }> = [];
     const lineByName = new Map<string, number>();
 
@@ -551,9 +572,15 @@ export class BusinessProcessesService {
         errors.push(...problems);
         continue;
       }
+      // `-` cannot clear the name or the status (D21 of 26.11.9).
+      const refusals = clearRefusals(row, ['name', 'status'], mode);
+      if (refusals.length > 0) {
+        errors.push(...refusals);
+        continue;
+      }
       const name = cellOf(row, 'name');
       const rawStatus = cellOf(row, 'status').toLowerCase();
-      const rawType = cellOf(row, 'process_type').toLowerCase();
+      const rawType = cellText(row, 'process_type', mode).toLowerCase();
       if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'Name is required'));
       if (rawStatus && rawStatus !== 'enabled' && rawStatus !== 'disabled') {
         errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${rawStatus}'. Use 'enabled' or 'disabled'.`, { value: rawStatus, allowed: 'enabled, disabled' }));
@@ -570,12 +597,15 @@ export class BusinessProcessesService {
       }
       const body: BusinessProcessUpsertDto = {
         name,
-        description: cellOf(row, 'description') || null,
-        notes: cellOf(row, 'notes') || null,
+        description: cellText(row, 'description', mode) || null,
+        notes: cellText(row, 'notes', mode) || null,
         process_type: rawType || null,
       };
       const status = rawStatus === 'disabled' ? StatusState.DISABLED : rawStatus === 'enabled' ? StatusState.ENABLED : null;
-      normalized.push({ line, body, status, parentName: cellOf(row, 'parent_name') });
+      normalized.push({
+        line, row, body, status, parentName: cellText(row, 'parent_name', mode),
+        keepsParent: keepsStoredValue(row, read.present, 'parent_name', mode),
+      });
     }
 
     const manager = opts?.manager ?? this.repo.manager;
@@ -631,7 +661,12 @@ export class BusinessProcessesService {
       const parent = row.parent_id ? storedById.get(row.parent_id) : undefined;
       parentOf.set(row.name.toLowerCase(), parent ? parent.name.toLowerCase() : null);
     }
-    for (const item of normalized) parentOf.set((item.body.name as string).toLowerCase(), item.parentName ? item.parentName.toLowerCase() : null);
+    for (const item of normalized) {
+      const self = (item.body.name as string).toLowerCase();
+      // A stored process the row leaves under its parent keeps it in the tree checked below.
+      if (item.keepsParent && storedByName.has(self)) continue;
+      parentOf.set(self, item.parentName ? item.parentName.toLowerCase() : null);
+    }
     {
       for (const item of normalized) {
         const self = (item.body.name as string).toLowerCase();
@@ -668,9 +703,21 @@ export class BusinessProcessesService {
       const status = existing
         ? (fileItem.status && fileItem.status !== deriveStatusFromDisabledAt(existing.disabled_at ?? null) ? fileItem.status : undefined)
         : (fileItem.status ?? StatusState.ENABLED);
-      const parentId = fileItem.parentName ? storedByName.get(fileItem.parentName.toLowerCase())?.id ?? null : null;
-      const body = { ...fileItem.body, name: existing ? existing.name : name, parent_id: parentId, ...(status ? { status } : {}) };
-      found.push({ item: { ...fileItem, body }, existing });
+      // A stored process takes only the values the row writes: an absent column, or a blank cell
+      // under the rule, keeps the stored value, the parent included.
+      const keepsParent = !!existing && fileItem.keepsParent;
+      const parentId = keepsParent
+        ? existing!.parent_id ?? null
+        : fileItem.parentName ? storedByName.get(fileItem.parentName.toLowerCase())?.id ?? null : null;
+      const { name: _name, ...fileValues } = fileItem.body;
+      const values = existing ? storedRecordValues(fileValues, fileItem.row, read.present, mode) : fileValues;
+      const body = { ...values, name: existing ? existing.name : name, parent_id: parentId, ...(status ? { status } : {}) };
+      found.push({ item: { ...fileItem, body, keepsParent }, existing });
+    }
+    // The stored values the rows clear with `-` (a `-` on an empty one is not counted).
+    let cleared = 0;
+    for (const { item, existing } of found) {
+      cleared += clearedValueCount(existing, item.row, mode, ['process_type', 'parent_id', 'description', 'notes'], { parent_id: 'parent_name' });
     }
     const now = new Date();
     const toWrite: Array<{ item: (typeof normalized)[number]; existing: BusinessProcess | null }> = [];
@@ -686,7 +733,7 @@ export class BusinessProcessesService {
     }
 
     if (dryRun) {
-      return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
+      return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
     }
 
     // Rows by their depth in the tree after the import, top first: when a row is written, every
@@ -706,7 +753,7 @@ export class BusinessProcessesService {
     const idByName = new Map(stored.map((row) => [row.name.toLowerCase(), row.id]));
     for (const { item, existing } of writeOrder) {
       const parentId = item.parentName ? idByName.get(item.parentName.toLowerCase()) ?? null : null;
-      const body = { ...item.body, parent_id: parentId };
+      const body = item.keepsParent && existing ? item.body : { ...item.body, parent_id: parentId };
       if (existing) {
         await this.update(existing.id, body, userId ?? null, { manager });
       } else {
@@ -716,6 +763,6 @@ export class BusinessProcessesService {
       processed += 1;
     }
 
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
   }
 }
