@@ -1,5 +1,7 @@
 import type { CsvLanguage } from '../csv-sheet/types';
 import type { ExportFileFormat } from '../xlsx/format';
+import type { ImportNameMatch, ImportProposals, ImportRefusedProposal } from '../name-matching';
+import type { ImportLookalikeChoice, ImportLookalikes } from './csv-lookalikes';
 /**
  * CSV Field Type Definitions
  *
@@ -76,6 +78,13 @@ export interface CsvFieldDefinition {
   fkLookupColumn?: string;
   /** Whether the FK relationship is required (default: false) */
   fkRequired?: boolean;
+  /**
+   * The properties of the record a reference belongs to (a task's phase to its project, a stream to
+   * its category, a department to its company). In merge mode, the stored reference is kept for a name
+   * nothing finds only while the row leaves them as stored; a row that changes one clears it, as full
+   * replace does (lot I3 of 26.11.9, review fixes).
+   */
+  keptWith?: readonly string[];
   /** Name of JSON validator function for JSON fields */
   jsonValidator?: string;
   /** Strategy for array handling (default: COMMA_SEPARATED) */
@@ -97,8 +106,13 @@ export interface CsvFieldDefinition {
   /** Custom export function (for COMPUTED fields) */
   exportFn?: (entity: any, context: CsvExportContext) => string | null;
   /** Custom import transform function */
-  /** May return a promise: the import awaits it. */
-  importTransformFn?: (value: string, row: Record<string, string>, context: CsvImportContext) => any;
+  /**
+   * A name the config finds itself beyond case, with Kad's proposals (a task's phase, in its project:
+   * lot I3 of 26.11.9): the shared lookup finds it case aside only and leaves Kad's proposal to the config.
+   */
+  nameMatchedByConfig?: boolean;
+  /** May return a promise: the import awaits it. `line` is the row's line in the file (a match noted there). */
+  importTransformFn?: (value: string, row: Record<string, string>, context: CsvImportContext, line?: number) => any;
 }
 
 /**
@@ -135,6 +149,13 @@ export interface CsvEntityConfig {
   relationHandlers?: CsvRelationHandler[];
   /** Hook called before import validation */
   beforeValidate?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<void>;
+  /**
+   * Before the rows' cells are read, with the record each row was found to update by its id or key
+   * (`found`, null for a row that would create one): the record each row updates instead, or a row
+   * left out (lot I3 of 26.11.9, the applications' lookalikes). One entry per row, in order, with the
+   * errors and warnings the config gives the row.
+   */
+  settleRows?: (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) => Promise<CsvSettledRow[]>;
   /** Validate resolved rows identically in dry-run and execution, after identity resolution. */
   afterValidate?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<void>;
   /**
@@ -147,9 +168,14 @@ export interface CsvEntityConfig {
   sameAsStored?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<boolean[]>;
   /** Hook called before import commit */
   beforeCommit?: (entities: any[], context: CsvImportContext) => Promise<void>;
-  /** Hook called after import commit */
-  afterCommit?: (entities: any[], context: CsvImportContext) => Promise<void>;
+  /** Hook called after import commit, with each written row and the entity it saved (`id` set). */
+  afterCommit?: (entities: any[], context: CsvImportContext, written?: Array<{ row: CsvImportRow; entity: any }>) => Promise<void>;
 }
+
+/** What `settleRows` makes of a row: left out, or the record it updates (null to create one). */
+export type CsvSettledRow =
+  | { leaveOut: true; warnings?: CsvImportWarning[] }
+  | { leaveOut?: false; entity: any | null; errors?: CsvImportError[]; warnings?: CsvImportWarning[] };
 
 /**
  * Export preset definition
@@ -185,6 +211,24 @@ export interface CsvImportParams {
   mode: 'replace' | 'enrich';
   /** Operation type */
   operation: 'upsert' | 'update_only' | 'insert_only';
+  /**
+   * The matches the person undid (lot I3 of 26.11.9), by file column and value as the result lists
+   * them (`matches`): such a value is found by its name, case aside, and nothing beyond (no accents
+   * set aside, no other language). Otherwise it reads as a name nothing finds.
+   */
+  unmatched?: Array<{ column: string; value: string }>;
+  /**
+   * Kad's proposals (lot I3 of 26.11.9, second pass), by file column: a value of the file and the name
+   * of the record it stands for. Accepted when that record exists, by its name or case aside, in a
+   * family the person reads (a match, listed); otherwise refused (`refusedProposals`) and the value is
+   * found by its own name.
+   */
+  proposals?: ImportProposals;
+  /**
+   * The person's choices for the rows that look like a stored record (lot I3 of 26.11.9, the
+   * applications): an import whose config settles its rows (`settleRows`) follows them.
+   */
+  lookalikes?: ImportLookalikeChoice[];
 }
 
 /**
@@ -240,6 +284,21 @@ export interface CsvImportResult {
   errors: CsvImportError[];
   /** Non-fatal warnings */
   warnings: CsvImportWarning[];
+  /**
+   * The values of the file found beyond case (accents set aside, a name in another language), one
+   * entry per column, value and record, with the file's lines (lot I3 of 26.11.9): each one Kad
+   * proposed, then the first `MATCH_LIST_LIMIT` (`listedMatchEntries`). Each may be undone
+   * (`CsvImportParams.unmatched`). Absent when none.
+   */
+  matches?: ImportNameMatch[];
+  /** How many entries `matches` would hold uncut. Present with `matches`. */
+  matchesTotal?: number;
+  /** Kad's proposals the import refused (`CsvImportParams.proposals`), all of them; absent when none. */
+  refusedProposals?: ImportRefusedProposal[];
+  /** How many entries `refusedProposals` would hold uncut. Present with it. */
+  refusedProposalsTotal?: number;
+  /** The rows that would create a record and look like a stored one (lot I3 of 26.11.9, the applications); absent when none. */
+  lookalikes?: ImportLookalikes;
 }
 
 /**
@@ -307,6 +366,26 @@ export interface CsvImportContext {
    * value uses it. Absent, that value stays the stored code.
    */
   language?: CsvLanguage;
+  /**
+   * The rights of the person who imports: a name finds a record beyond case only in a family whose
+   * module they read (lot I3 of 26.11.9). Absent: names are found case aside only, as before.
+   */
+  access?: CsvCallerAccess;
+  /** The names found beyond case so far, noted by `noteNameMatch` (the result's `matches`). */
+  nameMatches?: Map<string, ImportNameMatch>;
+  /** Kad's proposals refused so far, noted by `noteRefusedProposal` (the result's `refusedProposals`). */
+  refusedProposals?: Map<string, ImportRefusedProposal>;
+}
+
+/** The rights of the person who imports, as the routes and Kad know them (`PermissionGuard`, `effectiveAccess`). */
+export interface CsvCallerAccess {
+  isAdmin?: boolean;
+  permissions?: Record<string, string>;
+}
+
+/** The person's rights as `PermissionGuard` leaves them on the request (`TenantRequest` or the raw request). */
+export function csvCallerAccess(request: { isAdmin?: boolean; permissions?: Record<string, string> | null } | null | undefined): CsvCallerAccess {
+  return { isAdmin: request?.isAdmin === true, permissions: request?.permissions ?? {} };
 }
 
 /**
@@ -325,6 +404,12 @@ export interface CsvImportRow {
   isInsert: boolean;
   /** A matched row whose values all equal the stored entity: counted, not written */
   unchanged?: boolean;
+  /**
+   * A row the config left out (`settleRows`, a row that looks like a stored record): not read, not
+   * written, no error of its own; counted as skipped. It carries only the config's own warnings, and
+   * its key (`parsed`), which counts in the file's duplicates.
+   */
+  leftOut?: boolean;
   /** Row-level errors */
   errors: CsvImportError[];
   /** Row-level warnings */

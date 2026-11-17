@@ -1,5 +1,6 @@
 import { AmountMeasure, AMOUNT_MEASURES } from '../amounts-write.util';
 import { budgetLineReference, type BudgetNature } from '../budget-nature';
+import type { ImportNameMatch, ImportRefusedProposal } from '../../common/name-matching';
 
 /**
  * The list a file is exported from or loaded on (`/spend-items/budget-file/*` or the CAPEX alias):
@@ -480,42 +481,19 @@ export interface BudgetFileMatchOptions {
   proposals?: Readonly<Record<string, Readonly<Record<string, string>>>>;
 }
 
-/** Lines of the file a matching entry names: the first ones. */
-export const MATCH_LINE_LIMIT = 20;
-/** Entries of each matching list. */
-export const MATCH_LIST_LIMIT = 200;
+/** Lines of the file a matching entry names (the first ones), and the entries of each matching list: common to every import. */
+export { MATCH_LINE_LIMIT, MATCH_LIST_LIMIT } from '../../common/name-matching';
 
-/** A value of the file matched to an existing value beyond case: listed, and the person may undo it. */
-export interface BudgetFileMatch {
-  /** The file column: `supplier_name` or `analytics:<code>`. */
-  column: string;
-  /** The dimension's name for an `analytics:` column (null for the unnamed default dimension, and for the supplier). */
-  name: string | null;
-  /** The value as the file writes it. */
-  value: string;
-  /** The existing value it stands for. */
-  target: string;
-  /** `server`: the check found it (accents, another language); `model`: Kad proposed it and the check found the value. */
-  origin: 'server' | 'model';
-  reason: 'accents' | 'translation' | 'model';
-  /** The lines of the file the value is on (the first ones), and how many there are. */
-  lines: number[];
-  count: number;
-  /** Every listed match can be undone; a match by case is no match (the same value) and is not listed. */
-  undoable: true;
-}
+/**
+ * A value of the file matched to an existing value beyond case: listed, and the person may undo it
+ * (`undoable: true`). Its column is `supplier_name` or `analytics:<code>`; `name` is the dimension's
+ * name for an `analytics:` column (null for the unnamed default dimension, and for the supplier). The
+ * shape every import shares (lot I3 of 26.11.9).
+ */
+export type BudgetFileMatch = ImportNameMatch;
 
-/** A value Kad proposed that the check did not accept. */
-export interface BudgetFileRefusedProposal {
-  column: string;
-  name: string | null;
-  value: string;
-  target: string;
-  /** `missing`: no such value in the workspace's list; `disabled`: the value is disabled. */
-  reason: 'missing' | 'disabled';
-  lines: number[];
-  count: number;
-}
+/** A value Kad proposed that the check did not accept: the shape every import shares (lot I3 of 26.11.9). */
+export type BudgetFileRefusedProposal = ImportRefusedProposal;
 
 /** A value of the file nothing matched, and the closest values of the workspace's list. */
 export interface BudgetFileCandidates {
@@ -536,7 +514,10 @@ export interface BudgetFileMatching {
   /** Kad's proposals the check refused. */
   refusedProposals: BudgetFileRefusedProposal[];
   candidates: BudgetFileCandidates[];
-  /** How many entries each list has: the lists hold the first MATCH_LIST_LIMIT. */
+  /**
+   * How many entries each list has: `matches` holds each one Kad proposed and the first MATCH_LIST_LIMIT
+   * others, `refusedProposals` all, `candidates` the first MATCH_LIST_LIMIT.
+   */
   totals: { matches: number; refusedProposals: number; candidates: number };
   /** The choices the check followed: the undone matches it would otherwise make, and the suppliers option. */
   choices: BudgetFileChoice[];

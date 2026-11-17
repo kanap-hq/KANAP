@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { findRecordByName, ImportMatchState, ImportProposals, listedMatches, listedRefusedProposals, noteNameMatch, takeProposal, undoneMatch } from '../common/name-matching';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { BusinessProcess } from './business-process.entity';
@@ -488,7 +489,10 @@ export class BusinessProcessesService {
    * Windows-1252, physical line numbers. A row matches the process of the same name whatever its
    * case (the stored spelling stays). The file has no end of validity: a blank status, or the
    * status the process already has, keeps the stored date; a new process is enabled unless the
-   * row says disabled.
+   * row says disabled. A parent is found by its name exactly or case aside, then accents aside
+   * (lot I3 of 26.11.9): such a match is listed (`matches`) unless the person undid it (`unmatched`).
+   * Kad's proposal for a parent (`proposals`) comes first: accepted when it names a process, exactly
+   * or case aside; refused (`refusedProposals`) otherwise.
    */
   async importCsv(
     {
@@ -498,6 +502,8 @@ export class BusinessProcessesService {
       language,
       dateOrder,
       decimalMark,
+      unmatched,
+      proposals,
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -505,6 +511,10 @@ export class BusinessProcessesService {
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /** The matches the person undid, by file column and value: found case aside only. */
+      unmatched?: Array<{ column: string; value: string }>;
+      /** Kad's proposals, by file column: a value of the file and the name of the process it stands for. */
+      proposals?: ImportProposals;
     },
     opts?: { manager?: EntityManager },
   ) {
@@ -577,10 +587,42 @@ export class BusinessProcessesService {
     const stored = await repo.createQueryBuilder('bp').where('bp.tenant_id = app_current_tenant()').getMany();
     const storedByName = new Map(stored.map((row) => [row.name.toLowerCase(), row]));
     const storedById = new Map(stored.map((row) => [row.id, row]));
+    // A parent: a process of the file or a stored one, by its name case aside, then accents aside. A
+    // match beyond case takes the process's own name, so the rows below find it case aside. A name is
+    // one process case aside (the file's and the stored one's when the file updates it), listed once.
+    const processNames: Array<{ name: string }> = [];
+    const listed = new Set<string>();
+    for (const name of [...normalized.map((item) => String(item.body.name ?? '')), ...stored.map((row) => row.name)]) {
+      const key = name.trim().toLowerCase();
+      if (key === '' || listed.has(key)) continue;
+      listed.add(key);
+      processNames.push({ name });
+    }
+    const state: ImportMatchState = { matches: new Map(), refused: new Map() };
+    const { matches } = state;
     for (const item of normalized) {
-      const key = item.parentName.toLowerCase();
-      if (item.parentName && !lineByName.has(key) && !storedByName.has(key)) {
+      if (!item.parentName) continue;
+      // The person imports the processes, so reads them: Kad's proposal names a process of the file or a stored one.
+      const proposed = takeProposal(state, {
+        proposals, unmatched, column: 'parent_name', value: item.parentName, line: item.line, rows: processNames, reads: true, caseBlind: true,
+      });
+      if (proposed) {
+        item.parentName = proposed.name.trim();
+        continue;
+      }
+      const beyondCase = !undoneMatch(unmatched, 'parent_name', item.parentName);
+      const found = findRecordByName(processNames, item.parentName, { beyondCase, caseBlind: true });
+      if (found.kind === 'many') {
+        const names = found.names.join(', ');
+        errors.push(rowError(item.line, 'parent_name', 'CSV_NAME_AMBIGUOUS_AMONG', `Parent process '${item.parentName}' may designate several processes: ${names}`, { value: item.parentName, names }));
+      } else if (found.kind === 'none') {
         errors.push(rowError(item.line, 'parent_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown parent process '${item.parentName}'.`, { value: item.parentName }));
+      } else if (found.how === 'accents') {
+        noteNameMatch(matches, {
+          column: 'parent_name', name: null, value: item.parentName.trim(), target: found.row.name, ref: null,
+          origin: 'server', reason: 'accents', undoable: true,
+        }, item.line);
+        item.parentName = found.row.name;
       }
     }
     // The tree after the import, by lower-case name: a row's parent replaces the stored one.
@@ -607,7 +649,7 @@ export class BusinessProcessesService {
     }
 
     if (errors.length > 0) {
-      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
+      return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
     }
 
     // A row identical to the stored process counts as unchanged and is not written: no audit
@@ -644,7 +686,7 @@ export class BusinessProcessesService {
     }
 
     if (dryRun) {
-      return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
+      return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
     }
 
     // Rows by their depth in the tree after the import, top first: when a row is written, every
@@ -674,6 +716,6 @@ export class BusinessProcessesService {
       processed += 1;
     }
 
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
   }
 }

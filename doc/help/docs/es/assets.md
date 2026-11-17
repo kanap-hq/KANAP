@@ -250,7 +250,7 @@ En un clúster, cuando una aplicación está asignada directamente a cada uno de
 - Una tecnología instalada en este servidor se quita con la cruz al final de su fila.
 - En un clúster, una tecnología instalada en sus miembros aparece una vez por versión, con los miembros que la llevan en **Vía**. Una línea así sigue a la instalación y se quita allí.
 - Una tecnología que solo viene del host en el que se ejecuta este servidor, como el ESXi de su host, es la plataforma subyacente. Se agrupa bajo una línea cerrada al final de la tabla, **Plataforma subyacente (n)**, con el host en **Vía**. Haga clic en la línea para mostrarla. Estas filas no se cuentan en la sección.
-- **Añadir** (`infrastructure:member`) abre una búsqueda de tecnología y luego el selector de versión: elija una versión, **Versión desconocida**, o escriba una etiqueta nueva y elija **Añadir la versión «…»** para crearla. Cada cambio se guarda de inmediato.
+- **Añadir** (`infrastructure:member`) abre una búsqueda de tecnología y luego el selector de versión: elija una versión, **Versión desconocida**, o escriba una etiqueta nueva y elija **Añadir la versión «…»** para crearla. Una etiqueta escrita también puede encontrar una versión que ya tiene, como `22.04` para `22.04 LTS`: vea [Etiquetas de versión](technologies.md#version-labels). Cada cambio se guarda de inmediato.
 - **Cambiar una versión** (`infrastructure:member`): haga clic en la versión de una tecnología instalada, o en el lápiz al final de su fila. Se abre el mismo selector de versión.
 
 Las notas de una instalación se cambian desde la pestaña **Servidores** de la tecnología. Consulte [Tecnologías](technologies.md#servidores).
@@ -503,9 +503,9 @@ Para campos configurados en **Panorama IT > Configuración**, puede usar tanto e
 
 El sistema normaliza automáticamente los valores durante la importación, por lo que `Virtual Machine`, `virtual machine` y `vm` se resuelven al mismo tipo de activo. Un valor que coincide con varias entradas se rechaza en lugar de adivinarse. La exportación escribe nombres en estas columnas, en el idioma de la pantalla, de modo que un archivo exportado se puede volver a importar tal cual.
 
-**Sistema operativo**: la columna `operating_system` contiene el nombre de la tecnología seguido de su versión, tal como lo escribe la exportación (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Al importar, Kadratis busca la tecnología entre las suyas y después en el catálogo, y registra la versión. Una tecnología o una versión que no encuentra se crea: revise antes la ortografía. El valor pasa a ser el sistema operativo del servidor.
+**Sistema operativo**: la columna `operating_system` contiene el nombre de la tecnología seguido de su versión, tal como lo escribe la exportación (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Al importar, Kadratis busca la tecnología entre las suyas y después en el catálogo, y registra la versión. La etiqueta de versión sigue la regla de las [Etiquetas de versión](technologies.md#version-labels): `Ubuntu 22.04` encuentra la versión `22.04 LTS`, y `Windows Server 2022 Datacenter` encuentra `2022`. La **Verificación previa** lista esa asociación con las demás asociaciones, y nombra cada versión que la carga va a crear. Una tecnología o una versión que no encuentra se crea: revise antes la ortografía. `Ubuntu 22.04.3 LTS` crea su propia versión. El valor pasa a ser el sistema operativo del servidor.
 
-**Pertenencia a clústeres**: la columna `cluster` nombra los clústeres del activo, separados por comas (`ESX-PROD, SQL-CLUSTER`). No distingue mayúsculas de minúsculas. La exportación escribe los clústeres de los que el activo es miembro. En la importación:
+**Pertenencia a clústeres**: la columna `cluster` nombra los clústeres del activo, separados por comas (`ESX-PROD, SQL-CLUSTER`). No distingue mayúsculas de minúsculas, ni acentos si usted puede leer los servidores. Vea [Nombres de registros](csv-files.md#names-of-records). La exportación escribe los clústeres de los que el activo es miembro. En la importación:
 
 - Con el modo `Enriquecer`, el activo se une a los clústeres nombrados en la celda y sigue en sus otros clústeres.
 - Con el modo `Reemplazar`, el activo además abandona los clústeres que su celda no nombra.
@@ -525,6 +525,7 @@ Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el I
 
 Algunos campos se calculan y no pueden importarse:
 - **Proveedor**: Derivado automáticamente de la ubicación del activo, y actualizado cuando cambia la ubicación
+- **Alojamiento**: un servidor se aloja como su ubicación, en local o en una nube. **Cloud** no es un tipo de activo: para una instancia en la nube, elija una ubicación cuyo tipo de alojamiento sea una nube. Cuando [Kad](ai-assistant.md#importar-una-hoja-de-calculo) importa servidores, su vista previa nombra el alojamiento de cada ubicación del archivo, por ejemplo `LOC-4 Centro de datos de París (local)`
 - **FQDN**: Calculado a partir del nombre de host + dominio
 - **Vulnerabilidades**: `vulnerabilities_to_review` (las vulnerabilidades aún por revisar) y `severe_vulnerabilities` (las críticas o altas), contadas como en la columna de la lista. Solo exportación: la importación las ignora. Vacías para un activo retirado. Ausentes del archivo cuando no se siguen las vulnerabilidades
 

@@ -18,7 +18,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions, inlineImageMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
-import { csvExportFormat } from '../common/csv';
+import { csvCallerAccess, csvExportFormat, csvUnmatched } from '../common/csv';
 import { exportListQuery } from '../common/pagination';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { createRequestReleaseConnection } from '../common/import-connection';
@@ -242,6 +242,7 @@ export class PortfolioProjectsController {
     @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
     @Query('language') languageRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Tenant() ctx: TenantRequest,
   ) {
     // The screen's language (the user's own when the screen sends none), as the export.
@@ -252,12 +253,14 @@ export class PortfolioProjectsController {
         dryRun: dryRun !== 'false',
         mode,
         operation,
+        unmatched: csvUnmatched(unmatchedRaw),
       },
       {
         manager: this.requireManager(ctx),
         tenantId: ctx.tenantId,
         userId: ctx.userId,
         language,
+        access: csvCallerAccess(ctx),
       },
     );
   }

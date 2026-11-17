@@ -17,9 +17,12 @@ import { CALENDAR_MONTH_HEADERS, WORKING_DAY_PROFILE_CSV_HEADERS } from '../../w
 import { APPLICATION_LINK_CSV_HEADERS, ASSET_LINK_CSV_HEADERS } from '../../technologies/technology-links-csv.service';
 import { BUSINESS_PROCESS_TYPES } from '../../business-processes/business-process-tree';
 import { detailColumns, EXPORT_ONLY_COLUMNS } from '../../spend/budget-file/columns';
+import { isMatchedColumn, parseBudgetFileChoices } from '../../spend/budget-file/matching';
+import type { BudgetFileChoice } from '../../spend/budget-file/types';
+import { isLookalikeChoiceEntry, parseLookalikeChoices, type ImportLookalikeChoice } from '../../common/csv/csv-lookalikes';
 import { DEFAULT_ANALYTICS_AXIS_LABELS, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import type { AiImportColumnKind } from './ai-import-convert';
-import { defaultColumnTitle } from './ai-import-titles';
+import { defaultColumnTitle, TASK_COLUMN_TITLES } from './ai-import-titles';
 import { AI_IMPORT_ACCESS, type AiImportAccess, type AiImportKey } from './ai-import-access';
 import {
   BILLING_FREQUENCY_LABELS,
@@ -64,6 +67,8 @@ export interface AiImportColumnSpec {
   labels?: Readonly<Record<CsvLanguage, Readonly<Record<string, string>>>>;
   /** What the column takes, for the model, when its name does not say it. */
   hint?: string;
+  /** The servers' type column: the model's values never turn a hosting word into a type (`hostingWords`). */
+  keepsHostingWords?: boolean;
   titles?: Partial<Record<CsvLanguage, string>>;
 }
 
@@ -196,15 +201,18 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     key: 'assets',
     names: { en: 'Servers', fr: 'Serveurs', de: 'Server', es: 'Servidores' },
     ...AI_IMPORT_ACCESS.assets,
-    about: 'One row per server or other asset, matched to a stored one by its name.',
+    about: 'One row per server or other asset, matched to a stored one by its name. Where a server is hosted (on site, '
+      + 'in a cloud) comes from its location (location_reference, LOC-n), never from its type: "Cloud", "AWS" or "Azure" '
+      + 'is no asset type, so never map such a value to a type.',
     columns: () => fromCsvConfig(assetCsvConfig, {
-      kind: catalog('serverKinds'),
+      kind: { ...catalog('serverKinds'), hint: 'the kind of machine (virtual machine, physical server...); "Cloud" is a hosting, not a type', keepsHostingWords: true },
       environment: { kind: 'codes', codes: Object.keys(ASSET_ENVIRONMENT_LABELS.en), labels: ASSET_ENVIRONMENT_LABELS },
       admin_zone: catalog('adminZones'),
       status: catalog('lifecycleStates'),
       domain: catalog('domains'),
-      location_reference: { hint: 'the reference of a location of the workspace, such as LOC-1' },
-      cluster: { hint: 'the names of the clusters the asset belongs to, separated by commas' },
+      location_reference: { hint: 'the reference of a location of the workspace, such as LOC-1; the server is hosted as its location is (on site, in a cloud)' },
+      operating_system: { kind: 'reference', hint: 'the operating system, its name then its version (Ubuntu 22.04, Windows Server 2022)' },
+      cluster: { kind: 'reference', hint: 'the names of the clusters the asset belongs to, separated by commas' },
       aliases: { hint: 'other names, separated by commas' },
       ...Object.fromEntries([1, 2, 3, 4].map((index) => [`ip_${index}_type`, catalog('ipAddressTypes')])),
     }),
@@ -234,12 +242,14 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     names: { en: 'Tasks', fr: 'Tâches', de: 'Aufgaben', es: 'Tareas' },
     ...AI_IMPORT_ACCESS.tasks,
     about: 'One row per task, matched to a stored one by its title.',
-    columns: () => fromCsvConfig(taskCsvConfig, {
+    // Its columns named as the import screen names them (`TASK_COLUMN_TITLES`).
+    columns: () => withTitles(fromCsvConfig(taskCsvConfig, {
       ...owners('viewer_email'),
       ...owners('owner_email'),
       labels: { hint: 'labels separated by commas' },
       related_object_id: { hint: 'the id of the record the task belongs to' },
-    }),
+      related_object_name: { kind: 'reference', hint: 'the record the task belongs to, of the type related_object_type names, by name (a contract also by CTR-n)' },
+    }), TASK_COLUMN_TITLES),
   },
   incidents: {
     key: 'incidents',
@@ -462,7 +472,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       asset_name: reference('asset_name', 'a server by name'),
       technology_reference: reference('technology_reference', 'the reference of a technology, TEC-n'),
       technology_name: reference('technology_name', 'a technology by name'),
-      version: text('version'),
+      version: reference('version', 'a version of the technology, by its label'),
       operating_system: { column: 'operating_system', kind: 'boolean', hint: 'yes when the technology is the server\'s operating system' } as AiImportColumnSpec,
     } as Record<string, AiImportColumnSpec>)[column] ?? text(column)),
   },
@@ -476,10 +486,70 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       application_name: reference('application_name', 'an application by name'),
       technology_reference: reference('technology_reference', 'the reference of a technology, TEC-n'),
       technology_name: reference('technology_name', 'a technology by name'),
-      version: text('version'),
+      version: reference('version', 'a version of the technology, by its label'),
     } as Record<string, AiImportColumnSpec>)[column] ?? text(column)),
   },
 };
+
+const PORTFOLIO_MATCHED_COLUMNS = ['source_name', 'category_name', 'stream_name', 'company_name', 'department_name'] as const;
+
+/**
+ * The reference columns each import finds by name beyond case (lot I3 of 26.11.9): Kad's `values` for
+ * them are proposals the import checks (the file keeps the person's text), and a match there may be
+ * undone from the card (a choice `unmatch`). The budget file's are `isMatchedColumn`. The other
+ * reference columns (codes, references, e-mails, and the names the imports do not match yet) read
+ * Kad's `values` as before.
+ */
+export const AI_IMPORT_MATCHED_COLUMNS: Readonly<Partial<Record<AiImportKey, readonly string[]>>> = {
+  applications: ['supplier_name'],
+  portfolio_projects: PORTFOLIO_MATCHED_COLUMNS,
+  portfolio_requests: PORTFOLIO_MATCHED_COLUMNS,
+  tasks: ['phase_name', 'task_type_name', 'source_name', 'category_name', 'stream_name', 'company_name', 'related_object_name'],
+  contracts: ['company_name', 'supplier_name', 'cost_center'],
+  cost_centers: ['company_name'],
+  business_processes: ['parent_name'],
+  assets: ['operating_system', 'cluster'],
+  incidents: ['reporter', 'owner'],
+  technology_asset_links: ['asset_name', 'technology_name', 'version'],
+  technology_application_links: ['application_name', 'technology_name', 'version'],
+};
+
+/** Whether the import `key` finds the column's names beyond case, takes Kad's proposals for it and lets a match be undone. */
+export function isImportMatchedColumn(key: string, column: string): boolean {
+  if (key === 'budget_lines') return isMatchedColumn(column);
+  return (AI_IMPORT_MATCHED_COLUMNS[key as AiImportKey] ?? []).includes(column);
+}
+
+/** A choice of the person on an import card: the budget file's, or another import's (a match undone, an application's lookalike). */
+export type ImportCardChoice = BudgetFileChoice | ImportLookalikeChoice;
+
+/** Choices of a card, all kinds together, as the budget file's. */
+const CARD_CHOICE_LIMIT = 200;
+
+/**
+ * The person's choices on the card of the import `key`: the budget file's choices; for another import
+ * the matches undone in its matched columns; for the applications, the choices for the rows that look
+ * like an application too (lot I3 of 26.11.9, an application named by its id). Throws on anything else.
+ */
+export function parseImportChoices(key: string, raw: unknown): ImportCardChoice[] {
+  if (key === 'budget_lines') return parseBudgetFileChoices(raw);
+  const unmatchOnly = (column: string) => isImportMatchedColumn(key, column);
+  if (key !== 'applications') return parseBudgetFileChoices(raw, { unmatchOnly });
+  let list = raw;
+  if (typeof raw === 'string' && raw !== '') {
+    try {
+      list = JSON.parse(raw);
+    } catch {
+      throw new Error('The choices are not valid.');
+    }
+  }
+  if (list === undefined || list === null || list === '') return [];
+  if (!Array.isArray(list) || list.length > CARD_CHOICE_LIMIT) throw new Error('The choices are not valid.');
+  return [
+    ...parseBudgetFileChoices(list.filter((entry) => !isLookalikeChoiceEntry(entry)), { unmatchOnly }),
+    ...parseLookalikeChoices(list.filter(isLookalikeChoiceEntry)),
+  ];
+}
 
 /** The column's title in the language, else the template's own header. */
 export function importColumnTitle(spec: AiImportColumnSpec, language: CsvLanguage): string {

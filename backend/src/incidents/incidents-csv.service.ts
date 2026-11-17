@@ -10,6 +10,7 @@ import {
   CsvExportService,
   CsvFieldInfo,
   CsvImportContext,
+  CsvCallerAccess,
   CsvImportParams,
   CsvImportResult,
   CsvImportService,
@@ -357,6 +358,8 @@ export class IncidentsCsvService {
       viewer?: IncidentViewer;
       /** The file's language: the names a refusal gives to the statuses. */
       language?: CsvLanguage;
+      /** The person's rights: a name is found beyond case in the families they read. */
+      access?: CsvCallerAccess;
     },
   ): Promise<CsvImportResult> {
     // The import service turns a commit failure into `ok: false` instead of

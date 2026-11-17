@@ -708,7 +708,7 @@ async function testRoutes() {
     await asset(runner, tenantId, 'Srv');
     await technology(runner, tenantId, 2, 'SQL Server');
     const ctx = { manager: runner.manager, tenantId, userId: null } as any;
-    const preview = await controller.importAssetLinks(fileOf(['Srv,,SQL Server,,,']), undefined, 'en', ctx) as TechnologyLinksImportResult;
+    const preview = await controller.importAssetLinks(fileOf(['Srv,,SQL Server,,,']), undefined, 'en', undefined, ctx) as TechnologyLinksImportResult;
     assert.equal(preview.dryRun, true);
     assert.equal(preview.inserted, 1);
     assert.equal((await counts(runner, tenantId)).links, 0);
@@ -896,7 +896,7 @@ async function testApplicationRoutes() {
   );
   const noApplications = { tenantId: 'x', permissions: { infrastructure: 'member' }, manager: {} } as any;
   await assert.rejects(() => controller.exportApplicationLinks('data', 'en', {} as any, noApplications), /cannot read applications/);
-  await assert.rejects(() => controller.importApplicationLinks(csvFile(APP_HEADER), 'false', 'en', noApplications), /cannot read applications/);
+  await assert.rejects(() => controller.importApplicationLinks(csvFile(APP_HEADER), 'false', 'en', undefined, noApplications), /cannot read applications/);
   assert.equal(called, false, 'nothing is read or written without the applications right');
 }
 

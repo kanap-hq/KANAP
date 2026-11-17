@@ -28,6 +28,22 @@ Le fichier des contrats commence par la même colonne facultative `reference` (`
 
 **Autres fichiers.** Une feuille de calcul OpenDocument (`.ods`) est refusée avant la lecture de toute colonne, avec un message qui explique comment l'enregistrer en CSV. Dans LibreOffice Calc : **Fichier › Enregistrer sous › Texte CSV**, ou **Excel 2007-365 (.xlsx)**. Tout autre fichier qui n'est pas du texte est refusé de la même façon.
 
+## Noms des fiches { #names-of-records }
+
+Une cellule qui nomme une autre fiche, comme un fournisseur, une société ou un projet, la retrouve en trois étapes :
+
+1. le même nom, écrit exactement de la même façon ;
+2. le même nom avec d'autres majuscules ;
+3. le même nom avec d'autres accents, par exemple `Fromagerie Leger` pour `Fromagerie Léger`.
+
+La troisième étape ne vaut que pour les fiches retrouvées par leur nom, dans une liste que vous pouvez lire. Un e-mail, une référence de site comme `LOC-4` ou un code suit les deux premières étapes. Quand plusieurs fiches répondent à la troisième étape, la ligne est refusée et le message les nomme : écrivez le nom tel qu'il est enregistré.
+
+**Rapprochements.** La vérification préalable liste les noms retrouvés à la troisième étape sous **N valeurs rapprochées**, repliés. Dépliez la ligne pour voir chaque rapprochement, par exemple `Fournisseur : Fromagerie Leger → Fromagerie Léger`. La liste contient aussi les versions retrouvées par leur libellé du catalogue (voir [Libellés de version](technologies.md#version-labels)). **Défaire** vérifie de nouveau le fichier sans ce rapprochement : le nom est alors lu comme un nom que Kadratis ne connaît pas, et le chargement garde ce choix. Le rapprochement défait reste listé avec **Rétablir**, qui vérifie de nouveau le fichier avec lui. Les imports des applications, des actifs, des projets, des demandes, des tâches, des incidents, des contrats, des centres de coûts, des processus métier, des liens des technologies et le fichier budgétaire montrent cette liste.
+
+**Un nom introuvable.** Les imports des applications, des actifs, des projets, des demandes, des tâches et des incidents gardent les valeurs actuelles pour les cellules vides, sauf si vous choisissez **Remplacement complet**. Avec ces choix, une ligne qui met à jour une fiche garde aussi la valeur actuelle quand une cellule nomme une fiche que Kadratis ne retrouve pas. La vérification avertit : « « X » est introuvable : la valeur actuelle est gardée. » Une valeur qui dépend d'une autre colonne n'est gardée que si la ligne laisse cette colonne inchangée : la phase d'une tâche avec son projet, la filière avec sa catégorie, le département avec sa société. Sinon, le champ reste vide et la vérification avertit. Une tâche garde ses observateurs, ou ses responsables, quand une de leurs cellules nomme un e-mail inconnu. Sur une nouvelle fiche, et avec **Remplacement complet**, le champ reste vide et la vérification avertit. Une colonne qui exige une fiche connue refuse la ligne, comme le dit sa page.
+
+Les imports de Kad suivent les mêmes règles et montrent les rapprochements sur leur aperçu. Voir [Importer un tableur](ai-assistant.md#importer-un-tableur).
+
 ## Fichiers d'exemple { #example-files }
 
 La fenêtre d'import des applications, des actifs, des projets, des fournisseurs, des contrats et du fichier budgétaire propose **Télécharger un exemple** : un classeur Excel dans la langue de votre écran.

@@ -250,7 +250,7 @@ Sur un cluster, quand une application est affectée directement à chacun de ses
 - Une technologie installée sur ce serveur se retire avec la croix au bout de sa ligne.
 - Sur un cluster, une technologie installée sur ses membres s'affiche une fois par version, avec sous **Via** les membres qui la portent. Une telle ligne suit l'installation et se retire là-bas.
 - Une technologie qui vient seulement de l'hôte dans lequel ce serveur tourne, comme l'ESXi de son hôte, est la plateforme sous-jacente. Elle se range sous une ligne fermée en fin de tableau, **Plateforme sous-jacente (n)**, avec l'hôte sous **Via**. Cliquez sur la ligne pour l'afficher. Ces lignes ne sont pas comptées dans la section.
-- **Ajouter** (`infrastructure:member`) ouvre une recherche de technologie, puis le choix de la version : choisissez une version, **Version inconnue**, ou tapez un nouveau libellé et choisissez **Ajouter la version « … »** pour la créer. Chaque modification s'enregistre aussitôt.
+- **Ajouter** (`infrastructure:member`) ouvre une recherche de technologie, puis le choix de la version : choisissez une version, **Version inconnue**, ou tapez un nouveau libellé et choisissez **Ajouter la version « … »** pour la créer. Un libellé tapé peut aussi retrouver une version que vous avez déjà, comme `22.04` pour `22.04 LTS` : voir [Libellés de version](technologies.md#version-labels). Chaque modification s'enregistre aussitôt.
 - **Changer une version** (`infrastructure:member`) : cliquez sur la version d'une technologie installée, ou sur le crayon au bout de sa ligne. Le même choix de version s'ouvre.
 
 Les notes d'une installation se changent depuis l'onglet **Serveurs** de la technologie. Voir [Technologies](technologies.md#serveurs).
@@ -503,9 +503,9 @@ Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez 
 
 Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export écrit les noms pour ces colonnes, dans la langue de l'écran, si bien qu'un fichier exporté peut être réimporté tel quel.
 
-**Système d'exploitation** : la colonne `operating_system` contient le nom de la technologie suivi de sa version, comme l'écrit l'export (`Windows Server 2019`, `Ubuntu 24.04 LTS`). À l'import, Kadratis cherche la technologie parmi les vôtres, puis dans le catalogue, et enregistre la version. Une technologie ou une version introuvable est créée : vérifiez donc l'orthographe avant. La valeur devient le système d'exploitation du serveur.
+**Système d'exploitation** : la colonne `operating_system` contient le nom de la technologie suivi de sa version, comme l'écrit l'export (`Windows Server 2019`, `Ubuntu 24.04 LTS`). À l'import, Kadratis cherche la technologie parmi les vôtres, puis dans le catalogue, et enregistre la version. Le libellé de version suit la règle des [Libellés de version](technologies.md#version-labels) : `Ubuntu 22.04` retrouve la version `22.04 LTS`, et `Windows Server 2022 Datacenter` retrouve `2022`. La **Vérification préalable** liste un tel rapprochement avec les autres rapprochements, et nomme chaque version que le chargement va créer. Une technologie ou une version introuvable est créée : vérifiez donc l'orthographe avant. `Ubuntu 22.04.3 LTS` crée sa propre version. La valeur devient le système d'exploitation du serveur.
 
-**Appartenance aux clusters** : la colonne `cluster` nomme les clusters de l'actif, séparés par des virgules (`ESX-PROD, SQL-CLUSTER`). La casse ne compte pas. L'export écrit les clusters dont l'actif est membre. À l'import :
+**Appartenance aux clusters** : la colonne `cluster` nomme les clusters de l'actif, séparés par des virgules (`ESX-PROD, SQL-CLUSTER`). La casse ne compte pas, ni les accents si vous pouvez lire les serveurs. Voir [Noms des fiches](csv-files.md#names-of-records). L'export écrit les clusters dont l'actif est membre. À l'import :
 
 - En mode `Enrichir`, l'actif rejoint les clusters nommés dans la cellule et reste dans ses autres clusters.
 - En mode `Remplacer`, l'actif quitte aussi les clusters que sa cellule ne nomme pas.
@@ -525,6 +525,7 @@ Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d
 
 Certains champs sont calculés et ne peuvent pas être importés :
 - **Fournisseur** : Dérivé automatiquement du site de l'actif, et mis à jour quand le site change
+- **Hébergement** : un serveur est hébergé comme son site, sur site ou dans un cloud. **Cloud** n'est pas un type d'actif : pour une instance cloud, choisissez un site dont le type d'hébergement est un cloud. Quand [Kad](ai-assistant.md#importer-un-tableur) importe des serveurs, son aperçu nomme l'hébergement de chaque site du fichier, par exemple `LOC-4 Datacenter de Paris (sur site)`
 - **FQDN** : Calculé à partir du nom d'hôte + domaine
 - **Vulnérabilités** : `vulnerabilities_to_review` (les vulnérabilités encore à traiter) et `severe_vulnerabilities` (celles critiques ou élevées), comptées comme dans la colonne de la liste. Export seulement : l'import les ignore. Vides pour un actif retiré. Absentes du fichier quand les vulnérabilités ne sont pas suivies
 

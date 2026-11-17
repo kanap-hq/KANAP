@@ -177,7 +177,7 @@ async function testErrors() {
       ['cl-b;LOC-1;vm;prod;yes;cl-a', 'cluster_member_is_cluster', { name: 'cl-b' }],
       ['node-2;LOC-1;vm;prod;yes;cl-a', 'cluster_member_is_cluster', { name: 'node-2' }],
       ['node-2;LOC-1;vm;prod;no;node-2', 'cluster_member_self', undefined],
-      ['node-2;LOC-1;vm;prod;no;cl-os', 'cluster_os_with_members', { os: 'Ubuntu 22.04' }],
+      ['node-2;LOC-1;vm;prod;no;cl-os', 'cluster_os_with_members', { os: 'Ubuntu 22.04 LTS' }],
       ['node-new;LOC-1;vm;prod;no;cl-a, ghost', 'CSV_CLUSTER_NOT_FOUND', { name: 'ghost' }],
     ];
     for (const dryRun of [true, false]) {

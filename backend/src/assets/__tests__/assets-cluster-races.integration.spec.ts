@@ -125,7 +125,7 @@ async function main() {
       assert.equal(result.ok, false);
       assert.equal((result as any).code, 'cluster_os_with_members');
       assert.equal(await memberCount(seed), 0);
-      assert.equal(await osLabel(seed), 'Ubuntu 22.04');
+      assert.equal(await osLabel(seed), 'Ubuntu 22.04 LTS');
     }
 
     // Switched back to a plain asset first; the members wait, then are refused.

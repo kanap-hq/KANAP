@@ -722,6 +722,34 @@ Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d
 
 Une ligne retrouvée par son `id` avec un autre nom renomme l'application. Le nouveau nom doit être libre. Le titre du document de description de l'application suit le nouveau nom.
 
+**Éditeur et fournisseur** : une ligne qui donne un éditeur (`editor`) et aucun fournisseur est liée au fournisseur de ce nom, s'il existe. La vérification liste ce rapprochement avec les autres valeurs rapprochées, et **Défaire** le retire. En mode `Enrichir`, une application qui a déjà un fournisseur le garde. L'éditeur reste tel qu'il est écrit. Sans le droit de lire les fournisseurs, l'éditeur ne lie aucun fournisseur.
+
+### Lignes qui ressemblent à une application existante { #lookalike-applications }
+
+Une ligne qui créerait une application est écartée par défaut quand elle ressemble à une application existante. Une application n'est ainsi pas créée deux fois sous un nom à peine différent. Une ligne ressemble à une application dans deux cas :
+
+- le même nom, aux accents près : `Gestion des depenses` et `Gestion des dépenses`
+- un nom proche, avec le même fournisseur ou le même éditeur
+
+Une ligne qui retrouve une application par son nom la met toujours à jour, comme avant. Les lignes d'un même fichier ne sont pas comparées entre elles. Deux lignes du même nom sont refusées comme doublons, une ligne écartée comprise.
+
+La vérification liste ces lignes sous **Ressemble à une application existante**, avec l'application à laquelle chacune ressemble. Pointez une ligne pour voir pourquoi elle a été trouvée. Pour chaque ligne, choisissez :
+
+- **Écarter** : la ligne n'est pas importée. C'est le choix par défaut.
+- **Créer quand même** : la ligne devient une nouvelle application.
+- **Mettre à jour APP-12** : la ligne met à jour l'application à laquelle elle ressemble, dans le mode de l'import, responsables et résidence des données compris. L'application garde son nom. Pointez la ligne pour voir les colonnes qui changent. « Rien ne change sur APP-12 » signifie que le fichier ne change aucune de ses valeurs.
+
+**Tout créer quand même**, **Tout mettre à jour** et **Tout écarter**, au-dessus de la liste, valent pour toutes les lignes. Un choix fait ensuite sur une ligne ne change que cette ligne. Chaque choix vérifie à nouveau le fichier. Avec **Ajouter les nouveaux uniquement** (l'opération `Insertion uniquement`), la mise à jour n'est pas proposée.
+
+L'import suit le choix fait à la vérification. Quand la situation d'une ligne a changé depuis, la ligne est refusée et rien n'est importé :
+
+- APP-12 a changé (ses valeurs, ses responsables ou la résidence de ses données), pour une ligne qui la met à jour : « APP-12 a changé depuis la vérification. »
+- APP-12 a été supprimée, pour une ligne qui la met à jour : « L'application choisie à la vérification n'existe plus. »
+- une autre application a pris le nom d'une ligne à créer ou qui met à jour une application : « APP-15 a pris ce nom après la vérification. » Une ligne écartée reste écartée, et le reste du fichier est importé.
+- une ligne que la vérification aurait créée ressemble maintenant à une application créée depuis : « La ligne ressemble à APP-16 depuis la vérification. »
+
+La fenêtre revient à la vérification, la ligne refusée en erreur. Choisissez de nouveau pour cette ligne : la nouvelle vérification lit les applications telles qu'elles sont.
+
 ### Limitations
 
 - **Déploiements non inclus** : Les déploiements d'environnement (Prod, QA, Dev) nécessitent une configuration dans l'espace de travail

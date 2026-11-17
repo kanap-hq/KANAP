@@ -267,6 +267,8 @@ Fristen und Schwellenwerte hängen von Ihrer Rechtsordnung und Ihrer Branche ab.
 
 Kopfzeilen, Schweregrad und Status werden in der Sprache des Exports geschrieben. Der Import akzeptiert Kopfzeilen und Werte in jeder der vier Sprachen, ebenso die technischen Codes (`major`, `in_progress`). Ein unbekannter Wert wird abgelehnt, und die Meldung nennt die zulässigen Namen.
 
+Die Spalten für den Melder und den Verantwortlichen nehmen die E-Mail des Kontos der Person oder ihren Namen, Vorname zuerst oder Nachname zuerst (`Camille Roux` oder `Roux Camille`). Ein Name wird unabhängig von Groß- und Kleinschreibung und von Akzenten gefunden. Siehe [Namen von Datensätzen](csv-files.md#names-of-records). Ein Name, den mehrere Personen teilen, lehnt die Zeile ab, und die Meldung listet ihre E-Mails auf: Schreiben Sie stattdessen die E-Mail.
+
 Ein Status kann per Datei vorwärts gehen. Ihn zurückzusetzen oder einen Vorfall abzubrechen erfordert `incidents:admin`: Das Journal erhält dann eine Wiedereröffnung oder einen Abbruch mit dem Grund „Imported from CSV“. Für einen Mitwirkenden wird eine solche Zeile mit einer Meldung abgelehnt.
 
 Die Datei führt die kurze **Beschreibung** in einer Spalte und die gesamte **Vorfallanalyse** in einer anderen, als formatierten Text. Diese eine Analysespalte ersetzt die früheren Spalten Auswirkung, Ursache, Korrekturmaßnahmen und Erkenntnisse. Überschriften, Listen und Links überstehen den Hin- und Rückweg; eingefügte Bilder nicht, denn sie liegen im Dokument. Eine leere Analysezelle lässt den vorhandenen Text unverändert.

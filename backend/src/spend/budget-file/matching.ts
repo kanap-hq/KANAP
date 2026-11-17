@@ -9,6 +9,7 @@ import {
   type RecommendedDimensionKey,
   SEED_LANGUAGES,
 } from '../../analytics/recommended-dimensions.seed';
+import { accentFreeKey, foldKey, nameWords as words, similarity as similarityOf } from '../../common/name-matching';
 import type { BudgetFileChoice, BudgetFileLookalikeTarget, CatalogDimension } from './types';
 
 /**
@@ -25,49 +26,8 @@ import type { BudgetFileChoice, BudgetFileLookalikeTarget, CatalogDimension } fr
  * the person may undo it (a choice): the value is then created, or refused, as an unknown one.
  */
 
-/** A value as the file and the list are compared: compatibility forms folded, outer spaces trimmed, lower case. */
-export function foldKey(value: string): string {
-  return value.normalize('NFKC').trim().toLowerCase();
-}
-
-/** A value set apart from its accents, the way exports often write capitals (`Elevee` for `Élevée`). */
-export function accentFreeKey(value: string): string {
-  return foldKey(value).normalize('NFD').replace(/\p{M}/gu, '');
-}
-
-export type MatchHow = 'exact' | 'case' | 'accents' | 'translation';
-
-export type NameMatch<T> = { kind: 'none' } | { kind: 'many' } | { kind: 'one'; row: T; how: MatchHow };
-
-/**
- * The row of `rows` whose name is `cell`: exactly, then case aside, then accents aside (`accents`),
- * then, for a dimension the server translates, by the value's name in another language (`translate`). Several
- * rows at the first step that finds any: `many`.
- */
-export function matchByName<T extends { name: string }>(
-  rows: readonly T[],
-  cell: string,
-  options: { beyondCase: boolean; translate?: (cell: string, rows: readonly T[]) => T[] } = { beyondCase: true },
-): NameMatch<T> {
-  const text = cell.trim();
-  const pick = (found: T[], how: MatchHow): NameMatch<T> | null => {
-    if (found.length === 1) return { kind: 'one', row: found[0], how };
-    return found.length > 1 ? { kind: 'many' } : null;
-  };
-  const exact = pick(rows.filter((row) => row.name.trim() === text), 'exact');
-  if (exact) return exact;
-  const folded = pick(rows.filter((row) => row.name.trim().toLowerCase() === text.toLowerCase()), 'case');
-  if (folded) return folded;
-  if (!options.beyondCase) return { kind: 'none' };
-  const key = accentFreeKey(text);
-  const accents = pick(rows.filter((row) => accentFreeKey(row.name) === key), 'accents');
-  if (accents) return accents;
-  if (options.translate) {
-    const translated = pick(options.translate(text, rows), 'translation');
-    if (translated) return translated;
-  }
-  return { kind: 'none' };
-}
+// The name rule is common to every import (lot I3 of 26.11.9): the budget file reads it from here as before.
+export { accentFreeKey, foldKey, listedMatchEntries, matchByName, similarity, type MatchHow, type NameMatch } from '../../common/name-matching';
 
 /** A dimension's own name without the ` (2)` the seed adds when another dimension holds it. */
 function baseName(name: string | null): string {
@@ -180,31 +140,6 @@ export function translatedValues<T extends { name: string }>(table: ReadonlyMap<
   return rows.filter((row) => table.get(accentFreeKey(row.name)) === wanted);
 }
 
-/** The words of a text, as pg_trgm cuts them: runs of letters and digits, lower case and accents aside. */
-function words(value: string): string[] {
-  return accentFreeKey(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
-}
-
-/** The trigrams of a text, as pg_trgm takes them: per word, lower case and accents aside, padded with two spaces before and one after. */
-function trigrams(value: string): Set<string> {
-  const grams = new Set<string>();
-  for (const word of words(value)) {
-    const padded = `  ${word} `;
-    for (let index = 0; index + 3 <= padded.length; index += 1) grams.add(padded.slice(index, index + 3));
-  }
-  return grams;
-}
-
-/** pg_trgm's similarity of two texts: shared trigrams over all trigrams, 0 to 1. */
-export function similarity(a: string, b: string): number {
-  const left = trigrams(a);
-  const right = trigrams(b);
-  if (left.size === 0 || right.size === 0) return 0;
-  let shared = 0;
-  for (const gram of left) if (right.has(gram)) shared += 1;
-  return shared / (left.size + right.size - shared);
-}
-
 /** pg_trgm's default threshold: below it, two names are not alike. */
 export const CANDIDATE_THRESHOLD = 0.3;
 export const CANDIDATE_LIMIT = 3;
@@ -238,7 +173,7 @@ export function closestNames(value: string, names: readonly string[]): Array<{ n
     const key = foldKey(name);
     if (seen.has(key)) continue;
     seen.add(key);
-    const score = similarity(value, name);
+    const score = similarityOf(value, name);
     const included = holdsWordForWord(value, name);
     if (included || score >= CANDIDATE_THRESHOLD) scored.push({ name, score: Math.round(score * 100) / 100, included });
   }
@@ -248,9 +183,9 @@ export function closestNames(value: string, names: readonly string[]): Array<{ n
     .map(({ name, score }) => ({ name, score }));
 }
 
-/** The columns whose values the check matches and Kad may propose a value for: the supplier and the dimensions. */
+/** The columns whose values the check matches and Kad may propose a value for: the supplier, the company and the dimensions. */
 export function isMatchedColumn(column: string): boolean {
-  return column === 'supplier_name' || column.startsWith('analytics:');
+  return column === 'supplier_name' || column === 'company_name' || column.startsWith('analytics:');
 }
 
 /** Choices bounded: a card or a request holds a few, each value as long as a cell. */
@@ -275,7 +210,10 @@ function isState(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f]{16}$/.test(value);
 }
 
-/** `targets` of a choice for all rows, copied: by line of the file, a line's number and state. */
+/**
+ * `targets` of a choice for all rows, copied: by line of the file, a line's number and state; an empty
+ * state for a line gone since the check (the row keeps it and stays left out, as the applications').
+ */
 function targetsOf(value: unknown): Record<string, BudgetFileLookalikeTarget> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const entries = Object.entries(value as Record<string, unknown>);
@@ -283,7 +221,7 @@ function targetsOf(value: unknown): Record<string, BudgetFileLookalikeTarget> | 
   const targets: Record<string, BudgetFileLookalikeTarget> = {};
   for (const [line, raw] of entries) {
     const target = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-    if (!/^[1-9]\d{0,9}$/.test(line) || !isLine(target.item) || !isState(target.state)) return null;
+    if (!/^[1-9]\d{0,9}$/.test(line) || !isLine(target.item) || !(isState(target.state) || target.state === '')) return null;
     targets[line] = { item: target.item, state: target.state };
   }
   return targets;
@@ -293,9 +231,11 @@ function targetsOf(value: unknown): Record<string, BudgetFileLookalikeTarget> | 
  * The person's choices on a check, as a route or a card receives them (a JSON text or a list): the
  * matches they undo, whether the missing suppliers are created, and what becomes of the rows that look
  * like a stored line (one row, or all of them). Anything else is refused. 200 choices at most, all
- * kinds together.
+ * kinds together. Another import's card (lot I3 of 26.11.9) takes the matches undone only, in the
+ * columns `unmatchOnly` accepts.
  */
-export function parseBudgetFileChoices(raw: unknown): BudgetFileChoice[] {
+export function parseBudgetFileChoices(raw: unknown, options: { unmatchOnly?: (column: string) => boolean } = {}): BudgetFileChoice[] {
+  const undoable = options.unmatchOnly ?? isMatchedColumn;
   let value = raw;
   if (raw === undefined || raw === null || raw === '') return [];
   if (typeof raw === 'string') {
@@ -311,12 +251,13 @@ export function parseBudgetFileChoices(raw: unknown): BudgetFileChoice[] {
   for (const entry of value) {
     const item = entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {};
     if (item.kind === 'unmatch' && typeof item.column === 'string' && typeof item.value === 'string'
-      && isMatchedColumn(item.column) && item.value.trim() !== '' && item.value.length <= CHOICE_VALUE_MAX && item.column.length <= 120) {
+      && undoable(item.column) && item.value.trim() !== '' && item.value.length <= CHOICE_VALUE_MAX && item.column.length <= 120) {
       const key = `unmatch|${item.column}|${foldKey(item.value)}`;
       if (!seen.has(key)) choices.push({ kind: 'unmatch', column: item.column, value: item.value.trim() });
       seen.add(key);
       continue;
     }
+    if (options.unmatchOnly) throw new Error('The choices are not valid.');
     if (item.kind === 'create_suppliers' && typeof item.value === 'boolean') {
       if (!seen.has('create_suppliers')) choices.push({ kind: 'create_suppliers', value: item.value });
       seen.add('create_suppliers');

@@ -141,7 +141,7 @@ async function testSwitch() {
       tenantId, null, opts,
     );
     assert.equal(created.is_cluster, true);
-    assert.equal(created.operating_system, 'Ubuntu 22.04');
+    assert.equal(created.operating_system, 'Ubuntu 22.04 LTS');
   });
 }
 
@@ -173,19 +173,19 @@ async function testMembers() {
     // A cluster that carries an operating system gets no member without the flag.
     await giveOs(runner, os, tenantId, cluster);
     assert.deepEqual(await refusal(runner, () => replace([node1])), {
-      code: 'cluster_os_with_members', params: { os: 'Ubuntu 22.04' }, status: 400,
+      code: 'cluster_os_with_members', params: { os: 'Ubuntu 22.04 LTS' }, status: 400,
     });
     assert.deepEqual(await members(runner, tenantId, cluster), []);
-    assert.equal(await os.labelOf(runner.manager, tenantId, cluster), 'Ubuntu 22.04');
+    assert.equal(await os.labelOf(runner.manager, tenantId, cluster), 'Ubuntu 22.04 LTS');
 
     // An empty list is always accepted and keeps the operating system, the flag included.
     await replace([], { removeOperatingSystem: true });
-    assert.equal(await os.labelOf(runner.manager, tenantId, cluster), 'Ubuntu 22.04');
+    assert.equal(await os.labelOf(runner.manager, tenantId, cluster), 'Ubuntu 22.04 LTS');
 
     // A failure after the removal leaves nothing: the operating system is still there, no member.
     const failing = services(runner, (entry) => entry.table === 'asset_cluster_members').crud;
     await refusal(runner, () => replace([node1], { removeOperatingSystem: true }, failing)).catch(() => undefined);
-    assert.equal(await os.labelOf(runner.manager, tenantId, cluster), 'Ubuntu 22.04');
+    assert.equal(await os.labelOf(runner.manager, tenantId, cluster), 'Ubuntu 22.04 LTS');
     assert.deepEqual(await members(runner, tenantId, cluster), []);
 
     // With the flag: the operating system goes (its own audit), then the members are written.
@@ -225,7 +225,7 @@ async function testOperatingSystem() {
     assert.equal((await refusal(runner, () => os.setFromBody(mg, tenantId, withMembers, { technology_id: ubuntu!.technology_id }, 'manual'))).code, 'os_cluster_with_members');
 
     assert.equal((await os.setOperatingSystem(mg, tenantId, empty, ubuntu, 'manual')).changed, true);
-    assert.equal(await os.labelOf(mg, tenantId, empty), 'Ubuntu 22.04');
+    assert.equal(await os.labelOf(mg, tenantId, empty), 'Ubuntu 22.04 LTS');
     assert.equal((await os.setOperatingSystem(mg, tenantId, node, ubuntu, 'manual')).changed, true);
 
     // Clearing is always accepted, also on a cluster with members (data from before the rule).
@@ -271,7 +271,7 @@ async function testAssistantMembers() {
     // A cluster with an operating system gets no member: the assistant has no removal flag.
     await giveOs(runner, os, tenantId, cluster);
     assert.deepEqual(await refusal(runner, () => prepare(cluster, { add: [node1] })), {
-      code: 'cluster_os_with_members', params: { os: 'Ubuntu 22.04' }, status: 400,
+      code: 'cluster_os_with_members', params: { os: 'Ubuntu 22.04 LTS' }, status: 400,
     });
     // Checked again at execution: the operating system came after the preview.
     await os.setOperatingSystem(runner.manager, tenantId, cluster, null, 'manual');
@@ -279,7 +279,7 @@ async function testAssistantMembers() {
     await giveOs(runner, os, tenantId, cluster);
     assert.equal((await refusal(runner, () => execute(preview))).code, 'cluster_os_with_members');
     assert.deepEqual(await members(runner, tenantId, cluster), []);
-    assert.equal(await os.labelOf(runner.manager, tenantId, cluster), 'Ubuntu 22.04');
+    assert.equal(await os.labelOf(runner.manager, tenantId, cluster), 'Ubuntu 22.04 LTS');
 
     // Without an operating system the members are written, with the assistant's audit.
     await os.setOperatingSystem(runner.manager, tenantId, cluster, null, 'manual');

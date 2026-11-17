@@ -11,11 +11,12 @@ import { readTableAttachment, TABLE_ATTACHMENT_KIND } from '../attachments/table
 import { AI_IMPORT_KEYS, AI_IMPORT_WHOLE_ROWS, aiImportAccess, type AiImportKey } from './ai-import-access';
 import { DESCRIBED_CATALOG_ENTRIES, enabledDimensionValues } from './ai-import-dimension-values';
 import { buildImportFile } from './ai-import-file';
+import { hostingWords, serverHosting } from './ai-import-hosting';
 import { AiImportColumnMappingInput, AiImportMappingResult, AiImportTemplateColumn, buildImportMapping } from './ai-import-mapping';
 import { AiImportRunnerService, rowsApprovalFacts } from './ai-import-runner.service';
-import { AI_IMPORT_TARGETS, AiImportColumnSpec, AiImportTarget, importColumnTitle } from './ai-import-targets';
+import { AI_IMPORT_TARGETS, AiImportColumnSpec, AiImportTarget, importColumnTitle, type ImportCardChoice } from './ai-import-targets';
 import { cellKey } from '../../spend/budget-file/matching';
-import type { BudgetFileChoice, BudgetFileMatch } from '../../spend/budget-file/types';
+import type { BudgetFileMatch } from '../../spend/budget-file/types';
 
 export type PrepareImportMappingInput = {
   attachment_id: string;
@@ -26,7 +27,7 @@ export type PrepareImportMappingInput = {
    * The person's choices on the card (a budget file: matches undone, "Create missing suppliers"),
    * set by the server, never by the model: the tool's input schema has no such field.
    */
-  choices?: BudgetFileChoice[];
+  choices?: ImportCardChoice[];
 };
 
 /** One column of an import's template, as `describe_import_template` gives it to the model. */
@@ -71,6 +72,7 @@ function templateColumn(spec: AiImportColumnSpec, settings: ItOpsSettings | null
     return {
       ...base,
       options,
+      ...(spec.keepsHostingWords ? { asWritten: hostingWords(settings.hostingTypes ?? []) } : {}),
       displayName: (code) => {
         const option = options.find((entry) => entry.code === code);
         return option ? shippedLabelIn(list, option, language) ?? (option.label || code) : code;
@@ -182,21 +184,26 @@ export class AiImportMappingService {
   ): Promise<{ target: AiImportTarget; mapping: AiImportMappingPreviewDto }> {
     const target = aiImportTarget(input.entity_type);
     const { converted, lines, left } = await this.convert(context, target, input, language);
-    const validation = await this.runner.run(target.key, buildImportFile(converted.file, language), {
+    const validation = await this.withHosting(context, target, converted, language, await this.runner.run(target.key, buildImportFile(converted.file, language), {
       dryRun: true, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
-    }, context);
+    }, context));
     // The facts of the approval lead the card the model reads: the budget file's, or the counts of a
     // row import, once a file that would clear columns is refused.
     const { on_approval: budgetFacts, ...checked } = refuseClearedColumns(validation, left);
-    const onApproval = budgetFacts ?? (checked.report.kind === 'rows' ? rowsApprovalFacts(checked) : undefined);
+    // A row import's matches are named by the titles the card shows: the columns the mapping fills, and those the import matches without it.
+    const titles = new Map([
+      ...Object.entries(converted.preview.matched_titles ?? {}),
+      ...converted.preview.columns.map((column): [string, string] => [column.column, column.title]),
+    ]);
+    const onApproval = budgetFacts ?? (checked.report.kind === 'rows' ? rowsApprovalFacts(checked, { titles, language }) : undefined);
     return { target, mapping: { ...(onApproval ? { on_approval: onApproval } : {}), ...converted.preview, validation: checked } };
   }
 
   /**
    * The file a mapping builds, as the import reads it, for the person to download from the card: with
    * the same rights as the card, converted again from the attachment, every template column of an
-   * import that reads them all included. A budget file holds the values the card's check matched
-   * (the ones the person did not undo), as the import's dialog will read them.
+   * import that reads them all included. A budget file, and a file whose names Kad proposed, hold the
+   * values the card's check matched (the ones the person did not undo), as the import's dialog will read them.
    */
   async preparedFile(
     context: AiExecutionContextWithManager,
@@ -206,12 +213,16 @@ export class AiImportMappingService {
     const target = aiImportTarget(input.entity_type);
     await this.assertImportRights(context, target);
     const { converted, lines } = await this.convert(context, target, input, language);
-    if (target.key === 'budget_lines') {
+    // Another import writes the records Kad's proposals name, which its screen would not find (lot I3).
+    if (target.key === 'budget_lines' || converted.file.proposals) {
       const check = await this.runner.run(target.key, buildImportFile(converted.file, language), {
         dryRun: true, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
       }, context);
       const file = check.report.kind === 'budget_file' ? check.report.file : null;
-      writeMatches(converted.file, ((file?.matching as { matches?: BudgetFileMatch[] } | undefined)?.matches) ?? []);
+      const matches = check.report.kind === 'rows'
+        ? check.report.matches
+        : (file?.matching as { matches?: BudgetFileMatch[] } | undefined)?.matches;
+      writeMatches(converted.file, matches ?? [], NAME_LIST_COLUMNS[target.key] ?? []);
     }
     return { content: buildImportFile(converted.file, language), rows: converted.file.rows.length };
   }
@@ -231,7 +242,26 @@ export class AiImportMappingService {
     const result = await this.runner.run(target.key, buildImportFile(converted.file, language), {
       dryRun: false, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
     }, context);
-    return refuseClearedColumns(result, left);
+    return refuseClearedColumns(await this.withHosting(context, target, converted, language, result), left);
+  }
+
+  /**
+   * A servers import's report with the hosting of the sites its file names (T-I3f of lot I3): a
+   * server is hosted as its site is, which the card says under the messages. Only to a person who
+   * reads the sites (the right of the sites screen): otherwise the card names none.
+   */
+  private async withHosting(
+    context: AiExecutionContextWithManager,
+    target: AiImportTarget,
+    converted: AiImportMappingResult,
+    language: CsvLanguage,
+    run: AiImportRunDto,
+  ): Promise<AiImportRunDto> {
+    if (target.key !== 'assets' || run.report.kind !== 'rows') return run;
+    if (!(await this.policy.readableResources(context, ['locations'], context.manager)).has('locations')) return run;
+    const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
+    const hosting = await serverHosting(context.manager, context.tenantId, converted.file, settings.hostingTypes ?? [], language);
+    return hosting.length > 0 ? { ...run, report: { ...run.report, hosting } } : run;
   }
 
   private async convert(
@@ -277,19 +307,30 @@ export class AiImportMappingService {
   }
 }
 
+/** The columns whose cell holds several names, separated by commas, each one matched on its own. */
+const NAME_LIST_COLUMNS: Partial<Record<AiImportKey, readonly string[]>> = { assets: ['cluster'] };
+
 /**
- * Writes the matched values in the file: each cell of a matched column whose value the check matched
- * holds the existing value it stands for. The matches' `value` is the file's cell, case aside.
+ * Writes the matched values in the file, for the list's own import, which reads no proposal of Kad
+ * (lot I3 of 26.11.9): each cell of a matched column whose value the check matched holds the existing
+ * value it stands for; in a cell of several names (`listColumns`), each name. The matches' `value` is
+ * the file's cell, case aside. The check lists every proposal of Kad it took (`listedMatchEntries`):
+ * none is lost.
  */
-function writeMatches(file: AiImportMappingResult['file'], matches: readonly BudgetFileMatch[]): void {
+function writeMatches(file: AiImportMappingResult['file'], matches: readonly BudgetFileMatch[], listColumns: readonly string[]): void {
   if (matches.length === 0) return;
   const byKey = new Map(matches.map((match) => [cellKey(match.column, match.value), match.target]));
   file.columns.forEach((column, index) => {
+    const several = listColumns.includes(column.column);
     for (const row of file.rows) {
       const cell = row[index];
       if (typeof cell !== 'string' || cell === '') continue;
       const target = byKey.get(cellKey(column.column, cell));
       if (target !== undefined) row[index] = target;
+      else if (several && cell.includes(',')) {
+        row[index] = cell.split(',').map((name) => name.trim()).filter((name) => name !== '')
+          .map((name) => byKey.get(cellKey(column.column, name)) ?? name).join(', ');
+      }
     }
   });
   delete file.proposals;

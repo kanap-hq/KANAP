@@ -267,6 +267,8 @@ Deadlines and thresholds depend on your jurisdiction and sector. Kadratis record
 
 The headers, the severity and the status are written in the language of the export. The import accepts headers and values in any of the four languages, and the technical codes too (`major`, `in_progress`). An unknown value is refused, and the message lists the accepted names.
 
+The reporter and owner columns take the person's account email or name, first name first or last name first (`Camille Roux` or `Roux Camille`). A name is found whatever the case and the accents. See [Names of records](csv-files.md#names-of-records). A name shared by several people refuses the row, and the message lists their emails: write the email instead.
+
 A status can move forward from a file. Taking it back, or cancelling an incident, needs `incidents:admin`: the journal then records a reopening or a cancellation with the reason "Imported from CSV". For a contributor, such a line is refused with a message.
 
 The file carries the short **Description** in one column and the whole **Incident review** in another, as formatted text. That single review column replaces the former Impact, Root cause, Corrective actions and Lessons learned columns. Headings, lists and links survive the round trip; pasted images do not, because they live in the document. An empty review cell leaves the existing text untouched.

@@ -310,6 +310,18 @@ Dass ein Server eine Technologie trägt, erfassen Sie von beiden Seiten:
 
 Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Host für einen Hypervisor, jedem Domänencontroller für Active Directory, dem Datenbankserver für SQL Server. Die Server, die darin laufen, und der Cluster dieser Server zeigen sie dann ohne weitere Eingabe. Eine Cloud-Technologie wie Entra ID läuft auf keinem Ihrer Server: Deklarieren Sie sie stattdessen bei den Anwendungen.
 
+### Versionsbezeichnungen { #version-labels }
+
+Eine Versionsbezeichnung, die in einer Versionsauswahl eingegeben, in eine Importdatei geschrieben oder Kad genannt wird, findet eine Version der Technologie:
+
+- die Version mit derselben Bezeichnung, unabhängig von Groß- und Kleinschreibung;
+- sonst die einzige Version, deren Bezeichnung mit der eingegebenen beginnt, gefolgt von einem Leerzeichen: `22.04` findet `22.04 LTS`;
+- sonst die einzige Version, mit deren Bezeichnung die eingegebene beginnt, gefolgt von einem Leerzeichen: `2022 Datacenter` findet `2022`. Wenn mehrere Versionen passen, gewinnt die längste Bezeichnung: `2012 R2 Datacenter` findet `2012 R2`.
+
+In den beiden letzten Regeln enthalten die Wörter nach der kürzeren Bezeichnung keine Ziffer, denn sie benennen eine Edition: `11` findet `11 SP1` nicht, und `2012` findet `2012 R2` nicht.
+
+Wenn keine Version passt, oder mehrere, wird die Bezeichnung als neue Version angelegt. `22.04.3 LTS` wird so angelegt, wie sie geschrieben ist. Ein Import listet jede Zuordnung der beiden letzten Regeln mit seinen anderen Zuordnungen auf, und **Rückgängig** legt die Version so an, wie sie geschrieben ist. Siehe [Namen von Datensätzen](csv-files.md#names-of-records).
+
 ---
 
 ## Verknüpfungen importieren und exportieren
@@ -356,7 +368,8 @@ Der Import entfernt die Betriebssystem-Markierung nie von einer Verknüpfung.
 - Eine vorhandene Verknüpfung behält ihre Herkunft. Ihre Notizen ändern sich, wenn die Zelle `notes` einen anderen Text enthält; eine leere Zelle lässt sie unverändert.
 - Eine neue Verknüpfung wird als aus einem Import stammend gekennzeichnet, mit dem Dateinamen.
 - Die Technologie muss bereits in Ihrer Liste stehen. Übernehmen Sie sie zuerst aus dem Katalog oder legen Sie sie an.
-- Eine Version, die Sie noch nicht führen, wird bei der Technologie angelegt. Die Vorschau nennt sie.
+- Server, Anwendung und Technologie werden über ihre Namen gefunden, wie unter [Namen von Datensätzen](csv-files.md#names-of-records) beschrieben. Ein Name, den mehrere Datensätze teilen, ist ein Fehler.
+- Eine Versionsbezeichnung folgt der Regel der [Versionsbezeichnungen](#version-labels). Eine Version, die Sie noch nicht führen, wird bei der Technologie angelegt. Die Vorschau nennt sie.
 
 Eine große Datei braucht Zeit zum Laden und hält die Verknüpfungen ihrer Technologien bis zum Ende fest. Mehrere kleinere Dateien behindern die Personen, die zur selben Zeit arbeiten, weniger.
 

@@ -250,7 +250,7 @@ On a cluster, when an application is assigned directly to each of its members in
 - A technology installed on this server can be removed with the cross at the end of its row.
 - On a cluster, a technology installed on its members shows once per version, with the members that carry it under **Via**. Such a row follows the installation and is removed there.
 - A technology that only comes from the host this server runs in, such as the ESXi of its host, is the underlying platform. It sits under a closed line at the end of the table, **Underlying platform (n)**, with the host under **Via**. Click the line to show it. These rows are not counted in the section.
-- **Add** (`infrastructure:member`) opens a search for a technology, then the version picker: choose a version, **Version unknown**, or type a new label and pick **Add version "…"** to create it. Each change saves at once.
+- **Add** (`infrastructure:member`) opens a search for a technology, then the version picker: choose a version, **Version unknown**, or type a new label and pick **Add version "…"** to create it. A typed label can also find a version you already have, such as `22.04` for `22.04 LTS`: see [Version labels](technologies.md#version-labels). Each change saves at once.
 - **Change a version** (`infrastructure:member`): click the version of an installed technology, or the pencil at the end of its row. The same version picker opens.
 
 The notes of an installation are changed from the technology's **Servers** tab. See [Technologies](technologies.md#servers).
@@ -503,9 +503,9 @@ For fields configured in **IT Landscape > Settings**, you can use either the int
 
 The system automatically normalizes values during import, so `Virtual Machine`, `virtual machine`, and `vm` all resolve to the same asset type. A value that matches several entries is refused rather than guessed. The export writes names for these columns, in the language of the screen, so an exported file can be imported back as is.
 
-**Operating system**: the `operating_system` column holds the technology name followed by its version, as the export writes it (`Windows Server 2019`, `Ubuntu 24.04 LTS`). On import, Kadratis looks for the technology among yours, then in the catalog, and records the version. A technology or a version it does not find is created, so check the spelling first. The value becomes the server's operating system.
+**Operating system**: the `operating_system` column holds the technology name followed by its version, as the export writes it (`Windows Server 2019`, `Ubuntu 24.04 LTS`). On import, Kadratis looks for the technology among yours, then in the catalog, and records the version. The version label follows the rule of [Version labels](technologies.md#version-labels): `Ubuntu 22.04` finds the version `22.04 LTS`, and `Windows Server 2022 Datacenter` finds `2022`. **Preflight** lists such a match with the other matches, and names each version the load will create. A technology or a version it does not find is created, so check the spelling first. `Ubuntu 22.04.3 LTS` creates its own version. The value becomes the server's operating system.
 
-**Cluster Membership**: the `cluster` column names the clusters of the asset, separated by commas (`ESX-PROD, SQL-CLUSTER`). Case does not matter. The export writes the clusters the asset is a member of. On import:
+**Cluster Membership**: the `cluster` column names the clusters of the asset, separated by commas (`ESX-PROD, SQL-CLUSTER`). Case does not matter, and neither do accents when you can read the servers. See [Names of records](csv-files.md#names-of-records). The export writes the clusters the asset is a member of. On import:
 
 - With `Enrich`, the asset joins the clusters named in the cell and stays in its other clusters.
 - With `Replace`, the asset also leaves the clusters its cell does not name.
@@ -525,6 +525,7 @@ If you include the `id` column with a valid UUID, matching uses ID first, then f
 
 Some fields are computed and cannot be imported:
 - **Provider**: Automatically derived from the asset's location, and updated when the location changes
+- **Hosting**: a server is hosted as its location is, on site or in a cloud. **Cloud** is no asset type: for a cloud instance, choose a location whose hosting type is a cloud. When [Kad](ai-assistant.md#importing-a-spreadsheet) imports servers, its preview names the hosting of each location of the file, for example `LOC-4 Paris data center (on-prem)`
 - **FQDN**: Computed from hostname + domain
 - **Vulnerabilities**: `vulnerabilities_to_review` (the vulnerabilities still to review) and `severe_vulnerabilities` (those critical or high), as the list column counts them. Export only: the import ignores them. Empty for a retired asset. Left out of the file when vulnerabilities are not followed
 

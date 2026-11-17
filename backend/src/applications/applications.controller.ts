@@ -16,7 +16,7 @@ import { Throttle } from '@nestjs/throttler';
 import { DataSource, EntityManager } from 'typeorm';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions, inlineImageMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
-import { csvExportFormat } from '../common/csv';
+import { csvCallerAccess, csvExportFormat, csvLookalikes, csvUnmatched } from '../common/csv';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { StorageService } from '../common/storage/storage.service';
 import { createRequestReleaseConnection } from '../common/import-connection';
@@ -711,8 +711,13 @@ export class ApplicationsController {
     @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
     @Query('language') languageRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Tenant() ctx: TenantRequest,
+    @Body('lookalikes') lookalikesRaw?: unknown,
   ) {
+    // The person's choices, read before any work: a list the route cannot read is refused (400).
+    const unmatched = csvUnmatched(unmatchedRaw);
+    const lookalikes = csvLookalikes(lookalikesRaw);
     // The screen's language (the user's own when the screen sends none), as the export.
     const language = await languageOf(this.requireManager(ctx), ctx.tenantId, ctx.userId ?? null, languageRaw);
     return this.csvSvc.import(
@@ -721,12 +726,15 @@ export class ApplicationsController {
         dryRun: dryRun !== 'false',
         mode,
         operation,
+        unmatched,
+        lookalikes,
       },
       {
         manager: this.requireManager(ctx),
         tenantId: ctx.tenantId,
         userId: ctx.userId,
         language,
+        access: csvCallerAccess(ctx),
       },
     );
   }

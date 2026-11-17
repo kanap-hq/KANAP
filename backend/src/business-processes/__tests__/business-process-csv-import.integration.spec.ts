@@ -195,9 +195,65 @@ async function testFutureEndOfValidityAndCase() {
   });
 }
 
+/**
+ * Lot I3 of 26.11.9: a parent is found exactly or case aside, as before, then accents aside, among the
+ * stored processes and those of the file. One name answering is a match, listed and undoable; several
+ * refuse the row (CSV_NAME_AMBIGUOUS_AMONG). A process of the file that updates a stored one is that
+ * process once.
+ */
+async function testParentBeyondAccents() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'bp-csv-accents');
+    const supply = await seedProcess(runner, { name: 'Achats généraux' });
+    await seedProcess(runner, { name: 'Contrôle' });
+    await seedProcess(runner, { name: 'Controle' });
+    const svc = service();
+    const lines = [
+      HEADER,
+      'Commandes;;Achats generaux;;;',
+      'Réception;;ACHATS GENERAUX;;;',
+      'Paie;;Ressources humaines;;;',
+      'Ressources Humaines;;;;;',
+      'Contrats de travail;;ressources humaînes;;;',
+      // A stored process the file updates is one process: accents aside, its name is no ambiguity (fixes E).
+      'Achats généraux;;;;;',
+    ];
+    for (const dryRun of [true, false]) {
+      const result: any = await svc.importCsv({ file: file(lines), dryRun }, { manager: runner.manager });
+      assert.equal(result.ok, true, JSON.stringify(result.errors));
+      assert.deepEqual(result.matches, [
+        { column: 'parent_name', name: null, value: 'Achats generaux', target: 'Achats généraux', ref: null, origin: 'server', reason: 'accents', lines: [2, 3], count: 2, undoable: true },
+        { column: 'parent_name', name: null, value: 'ressources humaînes', target: 'Ressources Humaines', ref: null, origin: 'server', reason: 'accents', lines: [6], count: 1, undoable: true },
+      ]);
+    }
+    const rows = await runner.query(
+      `SELECT c.name, p.name AS parent FROM business_processes c JOIN business_processes p ON p.id = c.parent_id
+        WHERE c.tenant_id = $1 ORDER BY c.name`,
+      [tenantId],
+    );
+    assert.deepEqual(rows.map((r: any) => [r.name, r.parent]), [
+      ['Commandes', 'Achats généraux'], ['Contrats de travail', 'Ressources Humaines'], ['Paie', 'Ressources Humaines'], ['Réception', 'Achats généraux'],
+    ]);
+    assert.ok(supply);
+
+    const refused = async (row: string, unmatched?: Array<{ column: string; value: string }>) => {
+      const result: any = await svc.importCsv({ file: file([HEADER, row]), dryRun: true, unmatched }, { manager: runner.manager });
+      assert.equal(result.ok, false);
+      assert.equal(result.matches, undefined);
+      return result.errors.map(({ code, params }: any) => [code, params]);
+    };
+    const [[code, params]] = await refused('Audit;;Contrôlé;;;');
+    assert.deepEqual([code, params.value, params.names.split(', ').sort()], ['CSV_NAME_AMBIGUOUS_AMONG', 'Contrôlé', ['Controle', 'Contrôle']]);
+    assert.deepEqual(await refused('Fournisseurs;;Achats generaux;;;', [{ column: 'parent_name', value: 'achats generaux' }]), [
+      ['CSV_REFERENCE_NOT_FOUND', { value: 'Achats generaux' }],
+    ]);
+  });
+}
+
 void runSpecs('business-process-csv-import.integration.spec', [
   ['testIdenticalRowsUnchanged', testIdenticalRowsUnchanged],
   ['testParents', testParents],
+  ['testParentBeyondAccents', testParentBeyondAccents],
   ['testReorderThroughStoredRows', testReorderThroughStoredRows],
   ['testFutureEndOfValidityAndCase', testFutureEndOfValidityAndCase],
 ]);

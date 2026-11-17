@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
-import { AiMutationPreview } from '../aiTypes';
+import type { AiImportChoice, AiMutationPreview } from '../aiTypes';
 import { isApprovable } from '../previewApproval';
 import { MarkdownContent } from '../../components/MarkdownContent';
 import { getDotColor } from '../../utils/statusColors';
@@ -17,7 +17,6 @@ import { usePreviewChangeLabels } from './previewChangeLabels';
 import ImportMappingPreview from './ImportMappingPreview';
 import { downloadServerExport } from '../../components/csv/serverExport';
 import { setImportChoices } from '../previewChains';
-import type { BudgetFileChoice } from '../../components/finance/budgetFile';
 
 const LINKED_MARKDOWN_IMAGE_RE = /\[\s*!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)\s*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
@@ -35,7 +34,7 @@ type PreviewCardProps = {
    */
   stickyActions?: boolean;
   /**
-   * A choice of the person on a budget file's import card made a new card: it takes the place of
+   * A choice of the person on an import card made a new card: it takes the place of
    * this one. Without it the card's choices are read only.
    */
   onReplace?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
@@ -152,15 +151,18 @@ function PreviewCard({
   const { fieldLabel, valueLabel, amountsLabel, classificationLabel, relationItemsLabel } = usePreviewChangeLabels(preview);
   // The reference shows once: the server's title often starts with it ("APP-36 - CheeseTrack").
   const title = getPreviewTitle(preview);
-  // The person's choices on a budget file's check: sent whole, answered by the card that replaces this one.
+  // The person's choices on a budget file's check, or on another import's (matches undone, rows that look
+  // like an existing application): sent whole, answered by the card that replaces this one.
   const [choosing, setChoosing] = React.useState(false);
   const [choiceError, setChoiceError] = React.useState<{ text: string; detail: string | null } | null>(null);
-  const canChoose = isPending && !!onReplace && !!preview.conversation_id
-    && preview.import_mapping?.validation?.report.kind === 'budget_file' && !preview.import_mapping.result;
+  const checked = preview.import_mapping?.validation?.report;
+  const canChoose = isPending && !!onReplace && !!preview.conversation_id && !preview.import_mapping?.result
+    && (checked?.kind === 'budget_file' || (checked?.kind === 'rows'
+      && (!!checked.matches?.some((match) => match.undoable) || (checked.undone?.length ?? 0) > 0 || (checked.lookalikes?.count ?? 0) > 0)));
   // One request per card: a second click before the new render would act on the card being replaced.
   // The card that sent it stays answered; its replacement takes choices again.
   const sentFor = React.useRef<string | null>(null);
-  const choose = React.useCallback((choices: BudgetFileChoice[]) => {
+  const choose = React.useCallback((choices: AiImportChoice[]) => {
     if (!onReplace || !preview.conversation_id || sentFor.current === preview.preview_id) return;
     sentFor.current = preview.preview_id;
     setChoosing(true);

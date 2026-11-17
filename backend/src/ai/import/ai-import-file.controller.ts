@@ -9,9 +9,9 @@ import { AiMutationPreviewService } from '../ai-mutation-preview.service';
 import { AiPolicyService } from '../ai-policy.service';
 import { personWriteLanguage, screenLanguageOf } from '../ai-write-texts';
 import type { AiExecutionContextWithManager } from '../ai.types';
-import { parseBudgetFileChoices } from '../../spend/budget-file/matching';
 import type { AiMutationPreviewDto } from '../ai.types';
 import { AiImportMappingService, aiImportTarget, PrepareImportMappingInput } from './ai-import-mapping.service';
+import { parseImportChoices } from './ai-import-targets';
 
 /** `inventaire.csv` → `inventaire-import.xlsx`. */
 export function preparedFileName(filename: unknown): string {
@@ -58,8 +58,9 @@ export class AiImportFileController {
   }
 
   /**
-   * The person's choices on the card of a budget file (lot I1 of 26.11.9): `{ choices: [...] }`, the
-   * whole list (matches undone, `create_suppliers`). Answers the new card, which replaces this one;
+   * The person's choices on an import card (lot I1 of 26.11.9): `{ choices: [...] }`, the whole list
+   * (matches undone, and for a budget file `create_suppliers` and the rows that look like a stored
+   * line; another import takes matches undone only, lot I3). Answers the new card, which replaces this one;
    * the same checks as the download, the frozen workspace included (`assertSurfaceAccess`), and the
    * rights of the import.
    */
@@ -74,17 +75,19 @@ export class AiImportFileController {
   ): Promise<AiMutationPreviewDto> {
     const context = this.context(id, req, tenant);
     await this.policy.assertSurfaceAccess(context, context.manager);
-    let choices: unknown[];
-    try {
-      choices = parseBudgetFileChoices((body as { choices?: unknown } | null)?.choices ?? []);
-    } catch {
-      throw new BadRequestException('The choices are not valid.');
-    }
     const preview = await this.previews.getPreviewForUser(context, previewId);
     if (preview.tool_name !== 'prepare_import_mapping' || preview.conversation_id !== id) {
       throw new NotFoundException('AI preview not found.');
     }
-    await this.mapping.assertImportRights(context, aiImportTarget(preview.mutation_input?.entity_type));
+    const target = aiImportTarget(preview.mutation_input?.entity_type);
+    // The choices the card of this import takes: a budget file's, or another import's matches undone.
+    let choices: unknown[];
+    try {
+      choices = parseImportChoices(target.key, (body as { choices?: unknown } | null)?.choices ?? []);
+    } catch {
+      throw new BadRequestException('The choices are not valid.');
+    }
+    await this.mapping.assertImportRights(context, target);
     return this.previews.replaceImportChoices(context, previewId, choices);
   }
 

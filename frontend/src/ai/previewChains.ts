@@ -1,6 +1,5 @@
 import api from '../api';
-import type { AiMutationPreview } from './aiTypes';
-import type { BudgetFileChoice } from '../components/finance/budgetFile';
+import type { AiImportChoice, AiMutationPreview } from './aiTypes';
 
 /**
  * A choice of the person on an import card makes a new card that replaces it (`replaces_preview_id`,
@@ -32,7 +31,7 @@ export function latestOfChains(previews: AiMutationPreview[]): AiMutationPreview
 }
 
 /** The person's choices on a budget file's import card, the whole list: answers the card that replaces it. */
-export async function setImportChoices(conversationId: string, previewId: string, choices: BudgetFileChoice[]): Promise<AiMutationPreview> {
+export async function setImportChoices(conversationId: string, previewId: string, choices: AiImportChoice[]): Promise<AiMutationPreview> {
   const response = await api.post(`/ai/conversations/${conversationId}/previews/${previewId}/import-choices`, { choices });
   return response.data as AiMutationPreview;
 }

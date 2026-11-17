@@ -16,10 +16,8 @@ import {
 } from '../../ai-write-texts';
 import { AI_IMPORT_KEYS, AI_IMPORT_RESOURCES, aiImportAccess } from '../../import/ai-import-access';
 import { AiImportMappingService, aiImportTarget, PrepareImportMappingInput } from '../../import/ai-import-mapping.service';
-import { AI_IMPORT_TARGETS } from '../../import/ai-import-targets';
+import { AI_IMPORT_TARGETS, parseImportChoices, type ImportCardChoice } from '../../import/ai-import-targets';
 import { LOOKALIKE_CHOICE_WORDS_RULE } from '../../import/ai-import-runner.service';
-import { parseBudgetFileChoices } from '../../../spend/budget-file/matching';
-import type { BudgetFileChoice } from '../../../spend/budget-file/types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview, AiPreviewExecutionRefusal } from '../ai-mutation-operation.types';
 
@@ -38,9 +36,10 @@ const ColumnMappingSchema = z.object({
     .describe('For a number column written as text, when the first rows show the decimal mark. Else the file settles it.'),
   values: z.record(z.string(), z.string().trim().max(200)).optional()
     .describe('A value of the file and the value it stands for, for the values the column does not read by itself: a code or catalog name '
-      + '({"Prod": "Production"}), a number ({"3 months": "3"}), a person\'s e-mail, a name as the workspace writes it; "" leaves the cell blank. '
-      + 'For a budget file\'s supplier or dimension column: an existing value of the workspace only (a dimension\'s `values` in the template, '
-      + 'a name of `matching.candidates`); the check refuses any other and the card shows each one.'),
+      + '({"Prod": "Production"}), a number ({"3 months": "3"}), a person\'s e-mail; "" leaves the cell blank. '
+      + 'For a column that names a record by its name (a supplier, a company, a dimension value): only the name of an existing record, '
+      + 'read in the template (a dimension\'s `values`, a name of `matching.candidates`) or found by a search; never a case or accents '
+      + 'variant, which the check matches itself. The check refuses a record that does not exist or that the person cannot read.'),
   note: z.string().trim().max(200).nullable().optional()
     .describe('What you supposed for this column, in the person\'s language, when it is not obvious.'),
 });
@@ -103,7 +102,12 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'call `describe_import_template` for the import it fits, then `prepare_import_mapping` with the attachment id and the mapping. '
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
       + 'and name the file columns you leave out. When the card shows values not read, ask the user what they stand for and call again with `values`. '
-      + 'References to other records (a company, a supplier, a server, a person) are copied as written: the import checks them when it runs. '
+      + 'The import checks the references to other records (a company, a supplier, a server, a person) when it runs. '
+      + 'For a column that names a record by its name, `values` proposes only the name of an existing record (read in the template, '
+      + 'else found by a search), never a case or accents variant: the check matches those itself, and refuses a proposal whose record '
+      + 'does not exist or that the person cannot read. Never announce a match the card does not show. '
+      + 'An application row with a publisher (`editor`) and no supplier is linked to the existing supplier the publisher names '
+      + '(`on_approval` says so): never say the supplier stays empty. '
       + 'A budget file matches its suppliers and dimension values to the workspace\'s before it creates any: same name with other accents, '
       + 'or a value of a recommended dimension or of the sample data\'s business domain in another language (`matching.matches`, origin server). '
       + 'For a value the workspace names otherwise (a translation, a synonym, a spelling), map it in that column\'s `values` to an '
@@ -118,15 +122,15 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + '(`matching.create_suppliers`): `new_suppliers` counts the suppliers the approval creates and the card lists them; '
       + '`new_dimension_values` counts the dimension values the approval creates, and the `matching.candidates` of outcome create name them '
       + '(one entry per value created; `matching.totals` gives the length of a list cut to its first entries). '
-      + '`import_mapping.on_approval` says in one sentence what the approval creates and updates (for a budget file, by name, '
-      + 'with what the check matched): announce exactly that, never a creation, an update or a record\'s name it does not carry '
+      + '`import_mapping.on_approval` says in one sentence what the approval creates and updates (for a budget file, by name) '
+      + 'and what the check matched: announce exactly that, never a creation, an update or a record\'s name it does not carry '
       + '(none when it says 0), and call a matched value matched. Do not say the card will name records: it shows the counts of that sentence. '
       + 'When it says "Nothing to import", say so: the card cannot be approved (`validation.nothing_to_import`). '
       + 'Give no count of what the approval creates or updates (by nature included) other than the counts of that sentence, '
       + 'and never count the lines of the file yourself; lines in error, line numbers and amounts stay yours to cite. '
       + 'Name a value of a fixed list (a status, a priority) by its name in the template\'s `entries`, never by its code. '
-      + 'Rows that look like a budget line the person reads (`similar_lines`) are left out unless the person chooses on the card '
-      + 'to create them anyway or to update that line; the card holds those choices: never announce such a row as created. '
+      + 'Rows that look like a budget line or an application the person reads (`similar_lines`) are left out unless the person chooses '
+      + 'on the card to create them anyway or to update that line or application; the card holds those choices: never announce such a row as created. '
       + `${LOOKALIKE_CHOICE_WORDS_RULE} `
       + 'The person\'s choices on the card (`matching.choices`) are kept when you call again for the same file. '
       + 'A new card for the same file closes the pending one at once: it can no longer be approved, so do not warn the person about it. '
@@ -152,9 +156,10 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
   }
 
   /**
-   * The card of a mapping. A budget file's card carries the person's choices (`choices`, set by the
-   * choice route): a new mapping of the same file from the model keeps the choices of the file's last
-   * card that still apply, and its check tells the model which.
+   * The card of a mapping. A card carries the person's choices (`choices`, set by the choice route: a
+   * budget file's, or the matches undone of another import, lot I3 of 26.11.9): a new mapping of the
+   * same file from the model keeps the choices of the file's last card; a budget file's check tells
+   * the model which still apply.
    */
   async prepareCreatePreview(
     context: AiExecutionContextWithManager,
@@ -162,8 +167,15 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
   ): Promise<AiPreparedMutationPreview> {
     const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
     const budget = input.entity_type === 'budget_lines';
-    const choices = budget ? input.choices ?? await this.lastChoices(context, input.attachment_id) : undefined;
+    const choices = input.choices ?? await this.lastChoices(context, input.attachment_id, input.entity_type);
     const { target, mapping } = await this.mapping.prepareMapping(context, { ...input, choices }, language);
+    // The applications (lot I3 of 26.11.9): the lookalike choices the check followed, the targets of the
+    // rows it left out by default included, so that the approval leaves out what the card left out.
+    const report = mapping.validation?.report;
+    const followed = !budget && report?.kind === 'rows' && report.lookalikes ? report.lookalikes.choices : undefined;
+    const kept = followed
+      ? [...choices.filter((choice) => choice.kind !== 'lookalike' && choice.kind !== 'lookalikes'), ...followed]
+      : choices;
     return {
       // The import as the target type: the reservation of the import route is checked on it again at approval.
       targetEntityType: target.key,
@@ -177,6 +189,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         // The choices the check followed: an undone match the file no longer makes is dropped. A check
         // that refused the file before reading its rows followed none: the choices are kept as received.
         ...(budget ? { choices: mapping.validation?.matching ? mapping.validation.matching.choices : choices ?? [] } : {}),
+        // Another import's matches undone, as received, and an application's lookalike choices as followed.
+        ...(!budget && kept.length > 0 ? { choices: kept } : {}),
       },
       currentValues: { import_mapping: mapping },
     };
@@ -185,12 +199,15 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
   /**
    * The choices of the person's last card of this file in the conversation, whatever its state (a
    * card replaced by a choice is expired, and the card that replaced it holds the choices): none once
-   * that card was imported, the next import of the file starts afresh.
+   * that card was imported, or when it maps the file onto another import. A card whose approval the
+   * load refused keeps the lookalike choices that load followed, without the refused row's: the new card
+   * shows the row's new situation, as the screen checks again after a refused load (review 4, C2).
    */
-  private async lastChoices(context: AiExecutionContextWithManager, attachmentId: string): Promise<BudgetFileChoice[]> {
+  private async lastChoices(context: AiExecutionContextWithManager, attachmentId: string, key: string): Promise<ImportCardChoice[]> {
     if (!context.conversationId) return [];
-    const [last]: Array<{ status: string; choices: unknown }> = await context.manager.query(
-      `SELECT status, mutation_input->'choices' AS choices
+    const [last]: Array<{ status: string; choices: unknown; entity_type: string | null; followed: unknown }> = await context.manager.query(
+      `SELECT status, mutation_input->'choices' AS choices, mutation_input->>'entity_type' AS entity_type,
+              current_values->'import_mapping'->'result'->'report'->'lookalikes'->'choices' AS followed
          FROM ai_mutation_previews
         WHERE tenant_id = $1 AND conversation_id = $2 AND user_id = $3 AND tool_name = $4
           AND mutation_input->>'attachment_id' = $5
@@ -198,10 +215,15 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         LIMIT 1`,
       [context.tenantId, context.conversationId, context.userId, this.toolName, attachmentId],
     );
-    if (!last || last.status === 'executed') return [];
+    // A card of the file for another import: its choices are that import's.
+    if (!last || last.status === 'executed' || last.entity_type !== key) return [];
     try {
+      const choices = parseImportChoices(key, last.choices ?? []);
+      const kept = last.status === 'failed' && Array.isArray(last.followed)
+        ? [...choices.filter((choice) => choice.kind !== 'lookalike' && choice.kind !== 'lookalikes'), ...parseImportChoices(key, last.followed)]
+        : choices;
       // The targets the last card left out by default are that card's: a new mapping looks again.
-      return parseBudgetFileChoices(last.choices ?? []).filter((choice) => !(choice.kind === 'lookalikes' && choice.action === 'ignore'));
+      return kept.filter((choice) => !(choice.kind === 'lookalikes' && choice.action === 'ignore'));
     } catch {
       return [];
     }

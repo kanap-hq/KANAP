@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
-import type { AiImportMapping } from '../aiTypes';
+import type { AiImportChoice, AiImportMapping } from '../aiTypes';
 import type { BudgetFileChoice, BudgetFileReport } from '../../components/finance/budgetFile';
 import ImportMappingPreview from './ImportMappingPreview';
 
@@ -69,7 +69,7 @@ function mapping(lines: Look[], choices: BudgetFileChoice[] = [], over: Partial<
   } as AiImportMapping;
 }
 
-function renderPreview(value: AiImportMapping, onChoices?: (choices: BudgetFileChoice[]) => void) {
+function renderPreview(value: AiImportMapping, onChoices?: (choices: AiImportChoice[]) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>

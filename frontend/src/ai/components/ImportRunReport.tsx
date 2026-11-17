@@ -1,11 +1,14 @@
 import React from 'react';
 import { Box, Checkbox, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import type { AiImportReportMessage, AiImportRun } from '../aiTypes';
+import type { AiImportChoice, AiImportHostingSite, AiImportReportMessage, AiImportRun } from '../aiTypes';
 import { csvMessageColumn, csvMessageText } from '../../components/csv/csvMessage';
 import { ReportView as BudgetFileReportView } from '../../components/finance/BudgetFileImportDialog';
-import type { BudgetFileChoice } from '../../components/finance/budgetFile';
 import { useAuth } from '../../auth/AuthContext';
+import ImportMatchesView from '../../components/csv/ImportMatchesView';
+import ImportLookalikesView, { applicationLookalikeReason, applicationUpdateChoice } from '../../components/csv/ImportLookalikesView';
+import type { ImportLookalike } from '../../components/csv/csv.types';
+import { buildEntityUrl } from '../utils/entityUrls';
 
 /** The messages shown of each kind, as the import dialog shows them. */
 const SHOWN_ERRORS = 10;
@@ -21,8 +24,11 @@ type ImportRunReportProps = {
   run: AiImportRun;
   /** The title of each template column in the person's language, to name the column of a message. */
   titles: ReadonlyMap<string, string>;
-  /** The person's choices on a pending budget file check (matches undone, missing suppliers): the whole list. */
-  onChoices?: (choices: BudgetFileChoice[]) => void;
+  /**
+   * The person's choices on a pending check, the whole list: a budget file's (matches undone, missing
+   * suppliers), or another import's (matches undone, rows that look like an existing application).
+   */
+  onChoices?: (choices: AiImportChoice[]) => void;
   /** A choice is being applied: the controls wait for the new card. */
   choicesDisabled?: boolean;
 };
@@ -30,7 +36,7 @@ type ImportRunReportProps = {
 /** One message: its line of the person's file, the sentence of the import screen, then its column. */
 function MessageLine({ item, titles, tone }: { item: AiImportReportMessage; titles: ReadonlyMap<string, string>; tone: 'error' | 'warning' }) {
   const { t } = useTranslation(['common']);
-  const text = csvMessageText(item, t);
+  const text = csvMessageText(item, t, (key) => titles.get(key) ?? key);
   const column = csvMessageColumn(item, text);
   return (
     <Box component="li" sx={{ color: tone === 'error' ? 'error.main' : 'kanap.text.primary' }}>
@@ -65,6 +71,25 @@ function Messages({ title, items, total, shown, more, titles, tone }: {
 }
 
 /**
+ * How the servers of an import are hosted, in one line (lot I3 of 26.11.9, T-I3f): each site the file
+ * names, by its reference and name, with its category (on site, cloud), or its hosting type when the
+ * type has none, and its provider.
+ */
+function HostingLine({ sites }: { sites: AiImportHostingSite[] }) {
+  const { t } = useTranslation(['ai']);
+  const hosting = (site: AiImportHostingSite) => [
+    site.category === 'on_prem' ? t('ai:previewCard.importRun.onPremises') : site.category === 'cloud' ? t('ai:previewCard.importRun.cloud') : site.label,
+    site.provider,
+  ].filter(Boolean).join(', ');
+  const text = sites.map((site) => `${site.ref} ${site.name} (${hosting(site)})`).join(t('ai:previewCard.importRun.hostingSeparator'));
+  return (
+    <Typography sx={{ fontSize: 12, lineHeight: 1.5, color: 'kanap.text.secondary', overflowWrap: 'anywhere' }}>
+      {t('ai:previewCard.importRun.hosting', { sites: text })}
+    </Typography>
+  );
+}
+
+/**
  * The import's check of the file Plaid built, on a pending card, or what the import did, on an
  * approved one: the counts and the messages of the import screen, on the lines of the person's file.
  * The budget file's check shows as its own dialog shows it, under the card's status line.
@@ -72,6 +97,7 @@ function Messages({ title, items, total, shown, more, titles, tone }: {
 function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunReportProps) {
   const { t, i18n } = useTranslation(['ai', 'common', 'ops']);
   const { hasLevel } = useAuth();
+  const [matchesOpen, setMatchesOpen] = React.useState(false);
   const locale = i18n.resolvedLanguage || i18n.language || 'en';
   const check = run.dry_run;
   // The budget file's check lists its own changes, errors and warnings.
@@ -79,6 +105,15 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
   // Choices are made on the check only, never on what the import did.
   const choose = check ? onChoices : undefined;
   const matching = budgetFile?.matching;
+  // A row import's choices on this card, the whole list a choice sends again: its matches undone, then
+  // the choices the check followed on the rows that look like an existing application, as it gave them
+  // back (the targets of the rows it left out included).
+  const undone = run.report.kind === 'rows' ? run.report.undone ?? [] : [];
+  const lookalikes = run.report.kind === 'rows' && run.report.lookalikes && run.report.lookalikes.count > 0 ? run.report.lookalikes : null;
+  const rowChoices: AiImportChoice[] = [
+    ...undone.map((item) => ({ kind: 'unmatch' as const, ...item })),
+    ...(lookalikes?.choices ?? []),
+  ];
   // The server says whether the person may create suppliers, and whether the check created them.
   const suppliersBox = !!choose && !!matching?.createSuppliers.allowed;
   const counts = budgetFile ? '' : (check
@@ -162,6 +197,35 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
             titles={titles}
             tone="warning"
           />
+          {run.report.hosting && run.report.hosting.length > 0 && <HostingLine sites={run.report.hosting} />}
+          <ImportMatchesView
+            matches={run.report.matches ?? []}
+            matchesTotal={run.report.matchesTotal}
+            refusedProposals={run.report.refusedProposals ?? []}
+            refusedTotal={run.report.refusedProposalsTotal}
+            columnName={(column) => titles.get(column) ?? column}
+            open={matchesOpen}
+            onToggle={() => setMatchesOpen((open) => !open)}
+            onUndo={choose ? (entry) => choose([...rowChoices, { kind: 'unmatch', column: entry.column, value: entry.value }]) : undefined}
+            undone={undone}
+            onRedo={choose ? (entry) => choose(rowChoices.filter((choice) => !(choice.kind === 'unmatch' && choice.column === entry.column && choice.value === entry.value))) : undefined}
+            disabled={choicesDisabled}
+          />
+          {lookalikes && (
+            <ImportLookalikesView<ImportLookalike, AiImportChoice>
+              lookalikes={lookalikes}
+              title={t('ops:operations.budgetFile.lookalikes.applicationsTitle')}
+              choices={rowChoices}
+              updateChoice={applicationUpdateChoice}
+              onChoices={choose}
+              choicesDisabled={choicesDisabled}
+              reasonText={(look) => applicationLookalikeReason(look, t)}
+              targetUrl={(look) => buildEntityUrl('applications', look.target.ref)}
+              fieldName={(field) => titles.get(field) ?? field}
+              changedLines={new Set(run.report.errors.filter((error) => error.code === 'CSV_LOOKALIKE_CHANGED').map((error) => error.row))}
+              refusedLines={new Set(run.report.errors.map((error) => error.row))}
+            />
+          )}
         </>
       )}
     </Stack>

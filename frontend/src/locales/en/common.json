@@ -934,6 +934,17 @@
         "priority_override": "Priority override",
         "override_value": "Override value",
         "override_justification": "Override justification"
+      },
+      "contracts": {
+        "company_name": "Company",
+        "supplier_name": "Supplier",
+        "cost_center": "Cost center"
+      },
+      "cost-centers": {
+        "company_name": "Company"
+      },
+      "business-processes": {
+        "parent_name": "Parent"
       }
     }
   },

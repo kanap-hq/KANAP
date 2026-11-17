@@ -25,10 +25,11 @@ import type {
   BudgetFileChoice,
   BudgetFileLookalikes,
   BudgetFileMatching,
-  BudgetFileMatchOptions,
   BudgetFileNatureCounts,
 } from '../../spend/budget-file/types';
+import type { ImportLookalikeChoice, ImportLookalikes } from '../../common/csv/csv-lookalikes';
 import type { BudgetNature } from '../../spend/budget-nature';
+import type { ImportNameMatch, ImportRefusedProposal } from '../../common/name-matching';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TasksCsvService } from '../../tasks/tasks-csv.service';
@@ -37,6 +38,7 @@ import { WorkingDayProfilesCsvService } from '../../working-day-profiles/working
 import { AiPolicyService } from '../ai-policy.service';
 import type { AiExecutionContextWithManager, AiImportReportMessage, AiImportRunDto } from '../ai.types';
 import type { AiImportKey } from './ai-import-access';
+import { isImportMatchedColumn, type ImportCardChoice } from './ai-import-targets';
 import { enabledDimensionValues } from './ai-import-dimension-values';
 import { AI_IMPORT_FILE_NAME } from './ai-import-file';
 
@@ -55,6 +57,20 @@ type RowsReport = {
   skipped?: number;
   errors?: AiImportReportMessage[];
   warnings?: AiImportReportMessage[];
+  /** The declarative imports: the names found beyond case, on the lines of the built file (lot I3 of 26.11.9). */
+  matches?: ImportNameMatch[];
+  matchesTotal?: number;
+  /** Kad's proposals the import refused, on the lines of the built file. */
+  refusedProposals?: ImportRefusedProposal[];
+  refusedProposalsTotal?: number;
+  /** The applications: the rows that would create one and look like one the person reads, on the lines of the built file (lot I3 of 26.11.9). */
+  lookalikes?: ImportLookalikes;
+};
+
+/** The person's choices on a card and the model's proposals, as the imports follow them. */
+type CardMatching = {
+  choices?: readonly ImportCardChoice[];
+  proposals?: Readonly<Record<string, Readonly<Record<string, string>>>>;
 };
 
 /** The budget file's report (`BudgetFileReport`) or its load (`BudgetFileImportOk`), as far as the bilan reads it. */
@@ -84,8 +100,8 @@ type ImportCall = {
   dryRun: boolean;
   language: CsvLanguage;
   context: AiExecutionContextWithManager;
-  /** The budget file: the person's choices on the card and the model's proposals. */
-  matching?: BudgetFileMatchOptions;
+  /** The person's choices on the card (a budget file's, the matches undone of any import, an application's lookalikes) and the model's proposals. */
+  matching?: CardMatching;
 };
 
 /**
@@ -130,7 +146,7 @@ export class AiImportRunnerService {
   async run(
     key: AiImportKey,
     content: Buffer,
-    options: { dryRun: boolean; language: CsvLanguage; lines: readonly number[]; matching?: BudgetFileMatchOptions },
+    options: { dryRun: boolean; language: CsvLanguage; lines: readonly number[]; matching?: CardMatching },
     context: AiExecutionContextWithManager,
   ): Promise<AiImportRunDto> {
     const file = {
@@ -153,60 +169,74 @@ export class AiImportRunnerService {
       const values = options.dryRun && createsValues ? await enabledDimensionValues(context) : undefined;
       return budgetBilan(answer, options.dryRun, options.lines, values, options.language);
     }
-    return rowsBilan(await this.runRows(key, call), options.dryRun, options.lines);
+    return rowsCard(key, rowsBilan(await this.runRows(key, call), options.dryRun, options.lines, options.language), options.matching?.choices ?? []);
   }
 
-  private async runRows(key: Exclude<AiImportKey, 'budget_lines'>, { file, dryRun, language, context }: ImportCall): Promise<RowsReport> {
+  private async runRows(key: Exclude<AiImportKey, 'budget_lines'>, { file, dryRun, language, context, matching }: ImportCall): Promise<RowsReport> {
     const manager = context.manager as EntityManager;
     const { tenantId, userId } = context;
+    // The matches the person undid on the card, by column and value (no line: nothing to carry back),
+    // and the model's proposals, which the import checks (lot I3 of 26.11.9).
+    const names = {
+      unmatched: (matching?.choices ?? []).flatMap((choice) => (choice.kind === 'unmatch' ? [{ column: choice.column, value: choice.value }] : [])),
+      ...(matching?.proposals ? { proposals: matching.proposals } : {}),
+    };
     // The file holds numbers as number cells and days as date cells, written with a decimal point.
     const read = { language, decimalMark: '.' as const };
     // The screen's recommended preset: add the new records, update the matched ones, keep what a blank cell does not say.
-    const merge = { dryRun, mode: 'enrich' as const, operation: 'upsert' as const };
+    const merge = { dryRun, mode: 'enrich' as const, operation: 'upsert' as const, ...names };
     const caller = { manager, tenantId, userId: userId || null };
+    // The person's rights, read once: a name is found beyond case in the families they read, as on the screen.
+    const rights = () => this.policy.effectiveAccess(context, manager);
     switch (key) {
-      case 'applications':
-        return this.applications.import(file, merge, { manager, tenantId, userId, language });
+      case 'applications': {
+        // The rows that look like an application: the person's choices on the card (lot I3 of 26.11.9).
+        const lookalikes = (matching?.choices ?? []).filter((choice) => choice.kind === 'lookalike' || choice.kind === 'lookalikes') as ImportLookalikeChoice[];
+        return this.applications.import(file, { ...merge, lookalikes }, { manager, tenantId, userId, language, access: await rights() });
+      }
       case 'assets':
-        return this.assets.import(file, merge, { manager, tenantId, userId, language });
+        return this.assets.import(file, merge, { manager, tenantId, userId, language, access: await rights() });
       case 'portfolio_projects':
-        return this.projects.import(file, merge, { manager, tenantId, userId, language });
+        return this.projects.import(file, merge, { manager, tenantId, userId, language, access: await rights() });
       case 'portfolio_requests':
-        return this.requests.import(file, merge, { manager, tenantId, userId, language });
-      case 'tasks':
-        return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: await this.incidentViewer(context), language });
+        return this.requests.import(file, merge, { manager, tenantId, userId, language, access: await rights() });
+      case 'tasks': {
+        const access = await rights();
+        return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: incidentViewerFromContext({ userId, ...access }), language, access });
+      }
       case 'incidents': {
-        const viewer = await this.incidentViewer(context);
-        return this.incidents.import(file, merge, { manager, tenantId, userId: userId || null, isAdmin: viewer.isAdmin, viewer, language });
+        const access = await rights();
+        const viewer = incidentViewerFromContext({ userId, ...access });
+        return this.incidents.import(file, merge, { manager, tenantId, userId: userId || null, isAdmin: viewer.isAdmin, viewer, language, access });
       }
       case 'suppliers':
         return this.suppliers.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
       case 'contacts':
         return this.contacts.importCsv({ file, dryRun, ...read }, { manager, tenantId });
       case 'contracts':
-        return this.contracts.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
+        return this.contracts.importCsv({ file, dryRun, userId: userId || null, ...read, access: await rights(), ...names }, { manager });
       case 'companies':
         return this.companies.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
       case 'departments':
         return this.departments.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
       case 'cost_centers':
-        return this.costCenters.importCsv({ file, dryRun, ...read }, caller);
+        return this.costCenters.importCsv({ file, dryRun, ...read, access: await rights(), ...names }, caller);
       case 'accounts':
         // The chart of each row is named by its `coa_code` column, as the import of the accounts page.
         return this.accounts.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager, allowCoaCodeColumn: true });
       case 'analytics_categories':
         return this.analytics.importCsv({ file, dryRun, ...read }, caller);
       case 'business_processes':
-        return this.businessProcesses.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
+        return this.businessProcesses.importCsv({ file, dryRun, userId: userId || null, ...read, ...names }, { manager });
       case 'working_day_calendars':
         return this.calendars.importCsv({ file, dryRun, ...read }, caller);
       case 'technology_asset_links':
-        return this.technologyLinks.importAssetLinks({ file, dryRun, language }, caller);
+        return this.technologyLinks.importAssetLinks({ file, dryRun, language, access: await rights(), ...names }, caller);
       case 'technology_application_links': {
         // The applications the person reads: all of them, or a Business Contributor's own, as the route.
-        const access = await this.policy.effectiveAccess(context, manager);
+        const access = await rights();
         const scope = await resolveBusinessContributorScopeForUser({ manager, userId, tenantId, isAdmin: access.isAdmin }, 'applications', 'reader');
-        return this.technologyLinks.importApplicationLinks({ file, dryRun, language }, caller, { scope });
+        return this.technologyLinks.importApplicationLinks({ file, dryRun, language, access, ...names }, caller, { scope });
       }
     }
   }
@@ -223,14 +253,16 @@ export class AiImportRunnerService {
     const caller = { manager, tenantId: context.tenantId, userId: context.userId || null };
     const access = await this.policy.effectiveAccess(context, manager);
     // The route's switches, as the dialog sends them: the file is written with a decimal point.
+    // The card of a budget file takes the budget file's choices only (`parseImportChoices`).
+    const budgetMatching = matching ? { ...matching, choices: (matching.choices ?? []) as BudgetFileChoice[] } : undefined;
     const options = {
       language,
       dateOrder: undefined,
       decimalMark: 'dot',
-      createSuppliers: createSuppliersChoice(matching?.choices ?? []) ?? true,
+      createSuppliers: createSuppliersChoice(budgetMatching?.choices ?? []) ?? true,
       canCreateSuppliers: canCreateSuppliers(access),
       ...readableLists(access),
-      matching,
+      matching: budgetMatching,
     };
     const preflight = await this.budgetFile.preflight('opex', file.buffer, caller, options);
     if (dryRun || !preflight.ok) return preflight;
@@ -241,10 +273,6 @@ export class AiImportRunnerService {
     });
   }
 
-  private async incidentViewer(context: AiExecutionContextWithManager) {
-    const access = await this.policy.effectiveAccess(context, context.manager as EntityManager);
-    return incidentViewerFromContext({ userId: context.userId, ...access });
-  }
 }
 
 /**
@@ -261,13 +289,13 @@ export function personLine(row: number, lines: readonly number[]): number {
  * The choices of the card, whose rows are lines of the person's file, with the line of the built file
  * instead (the inverse of `personLine`): a choice for a line the built file does not hold is dropped.
  */
-export function builtLineChoices(choices: readonly BudgetFileChoice[], lines: readonly number[]): BudgetFileChoice[] {
+export function builtLineChoices<T extends ImportCardChoice>(choices: readonly T[], lines: readonly number[]): T[] {
   const built = (line: number) => {
     const index = lines.indexOf(line);
     return index < 0 ? null : index + 2;
   };
-  return choices.flatMap((choice): BudgetFileChoice[] => {
-    if (choice.kind === 'lookalikes' && choice.targets) return [{ ...choice, targets: rekeyed(choice.targets, built) }];
+  return choices.flatMap((choice): T[] => {
+    if (choice.kind === 'lookalikes' && choice.targets) return [{ ...choice, targets: rekeyed(choice.targets as Readonly<Record<string, unknown>>, built) } as T];
     if (choice.kind !== 'lookalike') return [choice];
     const line = built(choice.line);
     return line === null ? [] : [{ ...choice, line }];
@@ -275,10 +303,12 @@ export function builtLineChoices(choices: readonly BudgetFileChoice[], lines: re
 }
 
 /** The choices the check followed, on the lines of the person's file. */
-function personLineChoices(choices: readonly BudgetFileChoice[], lines: readonly number[]): BudgetFileChoice[] {
-  return choices.map((choice) => {
+function personLineChoices<T extends ImportCardChoice>(choices: readonly T[], lines: readonly number[]): T[] {
+  return choices.map((choice): T => {
     if (choice.kind === 'lookalike') return { ...choice, line: personLine(choice.line, lines) };
-    if (choice.kind === 'lookalikes' && choice.targets) return { ...choice, targets: rekeyed(choice.targets, (line) => personLine(line, lines)) };
+    if (choice.kind === 'lookalikes' && choice.targets) {
+      return { ...choice, targets: rekeyed(choice.targets as Readonly<Record<string, unknown>>, (line) => personLine(line, lines)) } as T;
+    }
     return choice;
   });
 }
@@ -313,17 +343,50 @@ function tally(
 }
 
 function message(item: AiImportReportMessage, lines: readonly number[]): AiImportReportMessage {
+  // The row that already updates the application a row looks like (`CSV_LOOKALIKE_SAME_RECORD`, its `other`).
+  const params = item.code === 'CSV_LOOKALIKE_SAME_RECORD' && item.params && typeof item.params.other === 'number'
+    ? { ...item.params, other: personLine(item.params.other, lines) }
+    : item.params;
   return {
     row: personLine(item.row, lines),
     ...(item.column ? { column: item.column } : {}),
     message: item.message,
     ...(item.code ? { code: item.code } : {}),
-    ...(item.params ? { params: item.params } : {}),
+    ...(params ? { params } : {}),
   };
 }
 
-/** The bilan of a row import: its counts, its messages on the person's lines, and their tally for the model. */
-export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly number[]): AiImportRunDto {
+/** The applications' lookalikes on the lines of the person's file: each row, the targets and the choices followed. */
+function personLineLookalikes(lookalikes: ImportLookalikes, lines: readonly number[]): ImportLookalikes {
+  return {
+    ...lookalikes,
+    lines: lookalikes.lines.map((entry) => ({ ...entry, line: personLine(entry.line, lines) })),
+    targets: rekeyed(lookalikes.targets, (line) => personLine(line, lines)),
+    choices: personLineChoices(lookalikes.choices, lines),
+  };
+}
+
+/**
+ * The bilan of a row import: its counts, its messages on the person's lines, and their tally for the
+ * model; the names it found beyond case and Kad's proposals it refused, on the person's lines (the
+ * card shows them from lot I3's fifth pass).
+ */
+/**
+ * The card of a row import (lot I3 of 26.11.9, fifth pass): a match is undoable there only in a column
+ * the card's choice route takes for the import, and the report gives back the matches the person undid
+ * on the card (`undone`), for it to send the whole list with the next one, as a budget file's card
+ * sends its choices.
+ */
+export function rowsCard(key: AiImportKey, run: AiImportRunDto, choices: readonly ImportCardChoice[]): AiImportRunDto {
+  if (run.report.kind !== 'rows') return run;
+  const undone = choices.flatMap((choice) => (choice.kind === 'unmatch' ? [{ column: choice.column, value: choice.value }] : []));
+  const matches = run.report.matches?.map((match) => (
+    match.undoable && !isImportMatchedColumn(key, match.column) ? { ...match, undoable: false } : match
+  ));
+  return { ...run, report: { ...run.report, ...(matches ? { matches } : {}), ...(undone.length > 0 ? { undone } : {}) } };
+}
+
+export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly number[], language: CsvLanguage = 'en'): AiImportRunDto {
   const errors = result.errors ?? [];
   const warnings = result.warnings ?? [];
   const issues: AiImportRunDto['issues'] = [];
@@ -332,9 +395,12 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
   const ok = result.ok === true && errors.length === 0;
   const inserted = result.inserted ?? 0;
   const updated = result.updated ?? 0;
+  const lookalikes = result.lookalikes ? personLineLookalikes(result.lookalikes, lines) : undefined;
+  const similar = dryRun && lookalikes ? similarApplications(lookalikes, language) : undefined;
   return {
     ok,
     ...(dryRun && nothingToImport({ ok, inserted, updated }) ? { nothing_to_import: true as const } : {}),
+    ...(similar ? { similar_lines: similar } : {}),
     dry_run: dryRun,
     total: result.total ?? result.processed ?? lines.length,
     inserted,
@@ -348,6 +414,19 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
       kind: 'rows',
       errors: errors.slice(0, KEPT_ERRORS).map((error) => message(error, lines)),
       warnings: warnings.slice(0, KEPT_WARNINGS).map((warning) => message(warning, lines)),
+      ...(result.matches?.length
+        ? {
+            matches: result.matches.map((match) => ({ ...match, lines: match.lines.map((line) => personLine(line, lines)) })),
+            matchesTotal: result.matchesTotal ?? result.matches.length,
+          }
+        : {}),
+      ...(result.refusedProposals?.length
+        ? {
+            refusedProposals: result.refusedProposals.map((entry) => ({ ...entry, lines: entry.lines.map((line) => personLine(line, lines)) })),
+            refusedProposalsTotal: result.refusedProposalsTotal ?? result.refusedProposals.length,
+          }
+        : {}),
+      ...(lookalikes ? { lookalikes } : {}),
     },
   };
 }
@@ -371,17 +450,66 @@ function unchangedNote(count: number, what: string): string {
   return count > 0 ? ` (${count} ${what} unchanged)` : '';
 }
 
+/** Matches the approval's sentence names; the others are counted ("and N more"). */
+const APPROVAL_FACT_MATCHES = 3;
+
 /**
- * What the approval of a row import's check does, in one sentence, from its counts (lot I2 of
- * 26.11.9): the records it creates, updates and leaves unchanged, or that there is nothing to import.
- * The imports of these lists report counts only: the sentence names no record.
+ * The card's words for a supplier found by the application's publisher, after the column's title
+ * (`operations.budgetFile.matching.byEditor` of the frontend's `ops` locales; `ai-import-card-texts.spec.ts`).
  */
-export function rowsApprovalFacts(run: Pick<AiImportRunDto, 'ok' | 'inserted' | 'updated' | 'unchanged'>): string {
+export const BY_EDITOR: Record<CsvLanguage, string> = {
+  en: '{{column}} (publisher)',
+  fr: '{{column}} (éditeur)',
+  de: '{{column}} (Herausgeber)',
+  es: '{{column}} (editor)',
+};
+
+/**
+ * The check's matches of a row import as the card lists them (lot I3 of 26.11.9, correctifs L): how
+ * many, the first ones by the column's title the card shows, with the value of the file and the record
+ * (reference, then name); and, for a match found by the publisher (T-I3k), that the application is
+ * linked to that supplier. Empty when the check matched nothing.
+ */
+function rowsMatchFacts(report: AiImportRunDto['report'] | undefined, titles: ReadonlyMap<string, string>, language: CsvLanguage): string {
+  const matches = report?.kind === 'rows' ? report.matches ?? [] : [];
+  if (matches.length === 0) return '';
+  const total = Math.max(report?.kind === 'rows' ? report.matchesTotal ?? 0 : 0, matches.length);
+  const names = matches.map((entry) => {
+    const title = titles.get(entry.column) ?? entry.column;
+    const column = entry.origin === 'editor' ? BY_EDITOR[language].replace('{{column}}', title) : title;
+    return `${column}: ${entry.value} → ${entry.ref ? `${entry.ref} ${entry.target}` : entry.target}`;
+  });
+  const shown = names.slice(0, APPROVAL_FACT_MATCHES);
+  const more = total - shown.length;
+  return `; ${total} values of the file matched to existing records: ${shown.join(', ')}${more > 0 ? `, and ${more} more` : ''}`
+    + (matches.some((entry) => entry.origin === 'editor') ? '; each application whose publisher names an existing supplier is linked to that supplier' : '');
+}
+
+/**
+ * What the approval of a row import's check does, in one sentence (lot I2 of 26.11.9): the records it
+ * creates, updates and leaves unchanged, or that there is nothing to import; then the values the check
+ * matched to existing records, as the card names them (`titles`: the card's column titles, by column).
+ */
+export function rowsApprovalFacts(
+  run: Pick<AiImportRunDto, 'ok' | 'inserted' | 'updated' | 'unchanged'> & { report?: AiImportRunDto['report'] },
+  card: { titles?: ReadonlyMap<string, string>; language?: CsvLanguage } = {},
+): string {
   if (!run.ok) return CANNOT_BE_APPROVED;
+  // The applications that look like a stored one (lot I3 of 26.11.9): left out unless the person chose otherwise.
+  const look = run.report?.kind === 'rows' ? run.report.lookalikes : undefined;
+  const lookalikes = look && look.count > 0
+    ? `; ${look.count} rows of the file look like existing applications: ${look.ignored} left out, ${look.created} created anyway, `
+      + `${look.updated} updating the application they look like`
+    : '';
   if (nothingToImport(run)) {
-    return `Nothing to import: the approval would create and update nothing${unchangedNote(run.unchanged, 'records')}. The card cannot be approved.`;
+    return `Nothing to import: the approval would create and update nothing${unchangedNote(run.unchanged, 'records')}${lookalikes}. `
+      + (look && look.ignored > 0
+        ? 'Say in one sentence that nothing is imported until a row left out is created anyway or updates the application it looks like, '
+          + 'with the card\'s words (`similar_lines.card_choices`).'
+        : 'The card cannot be approved.');
   }
-  return `On approval: ${run.inserted} records created, ${run.updated} updated, ${run.unchanged} unchanged.`;
+  const matches = rowsMatchFacts(run.report, card.titles ?? new Map(), card.language ?? 'en');
+  return `On approval: ${run.inserted} records created, ${run.updated} updated, ${run.unchanged} unchanged${matches}${lookalikes}.`;
 }
 
 /**
@@ -437,8 +565,16 @@ const CARD_CHOICES: Record<CsvLanguage, { ignored: string; created: string; upda
   es: { ignored: 'Descartar', created: 'Crear de todos modos', updated: 'Actualizar BL-n' },
 };
 
+/** The card's words for an application's row (lot I3 of 26.11.9), as the screen writes them; APP-n stands for the row's `looks_like`. */
+const APPLICATION_CARD_CHOICES: Record<CsvLanguage, { ignored: string; created: string; updated: string }> = {
+  en: { ignored: 'Leave out', created: 'Create anyway', updated: 'Update APP-n' },
+  fr: { ignored: 'Écarter', created: 'Créer quand même', updated: 'Mettre à jour APP-n' },
+  de: { ignored: 'Auslassen', created: 'Trotzdem anlegen', updated: 'APP-n aktualisieren' },
+  es: { ignored: 'Descartar', created: 'Crear de todos modos', updated: 'Actualizar APP-n' },
+};
+
 /** How the model names the choices of these rows: the prepare tool's hint says it too. */
-export const LOOKALIKE_CHOICE_WORDS_RULE = 'Name these choices only by the card\'s words (`similar_lines.card_choices`, BL-n being the row\'s '
+export const LOOKALIKE_CHOICE_WORDS_RULE = 'Name these choices only by the card\'s words (`similar_lines.card_choices`, BL-n or APP-n standing for the row\'s '
   + '`looks_like`), never by a code (ignore, create, update, ignored, created, updated). Never say the person must choose for each row: '
   + 'a row left out is simply not imported, and the card can be approved as soon as it has something to import.';
 
@@ -447,6 +583,29 @@ const SIMILAR_LINES_NOTE = 'Rows of the file that look like a budget line the pe
   + '(`outcome`: ignored, created, updated). Rows that look like an earlier row of the file (`looks_like_file_line`) '
   + 'are created. Tell the person in one sentence before they approve (file line and reference); the card lists them '
   + `and holds the choices: never call a row left out created. ${LOOKALIKE_CHOICE_WORDS_RULE}`;
+
+const SIMILAR_APPLICATIONS_NOTE = 'Rows of the file that would create an application and look like an application the person can read '
+  + '(`looks_like`, its reference, with the reason: name_accents, the same name but for accents; close_name, a close name with the same '
+  + 'supplier or publisher): the import leaves them out unless the person chooses on the card to create them anyway or to update that '
+  + 'application (`outcome`: ignored, created, updated); an update keeps the application\'s name. Tell the person in one sentence before '
+  + 'they approve (file line and reference); the card lists them, names the applications and holds the choices: never call a row left out '
+  + `created. ${LOOKALIKE_CHOICE_WORDS_RULE}`;
+
+/** The applications' lookalikes for the model, on the person's lines: their number, the counts by outcome and the first ones. */
+function similarApplications(look: ImportLookalikes, language: CsvLanguage): AiImportRunDto['similar_lines'] {
+  if (look.count === 0) return undefined;
+  return {
+    count: look.count,
+    ignored: look.ignored,
+    created_anyway: look.created,
+    updated: look.updated,
+    card_choices: APPLICATION_CARD_CHOICES[language],
+    first: look.lines.slice(0, MODEL_LOOKALIKES).map((entry) => ({
+      file_line: entry.line, looks_like: entry.target.ref, ...(entry.reason ? { reason: entry.reason } : {}), outcome: entry.outcome,
+    })),
+    note: SIMILAR_APPLICATIONS_NOTE,
+  };
+}
 
 type Lookalike = { line?: number; code?: string; params?: Record<string, unknown> };
 

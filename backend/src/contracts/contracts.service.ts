@@ -36,6 +36,9 @@ import {
   FilterTargetConfig,
 } from '../common/ag-grid-filtering';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
+import type { CsvCallerAccess } from '../common/csv/csv-field.types';
+import { hasLevel } from '../common/relations/relations-access';
+import { findRecordByName, ImportMatchState, ImportProposals, listedMatches, listedRefusedProposals, noteNameMatch, proposedRecord, undoneMatch } from '../common/name-matching';
 import { contractTermFields, contractTermsSql, sqlDateLiteral, turnsOffRenewalOfRenewedContract, type ContractTermFields } from './contract-terms';
 import { readDecisionWindowDays } from './contract-settings.service';
 import { renewalDecisionSql } from './contract-renewal';
@@ -1412,6 +1415,12 @@ export class ContractsService {
    * the start date in the file's own form, the amount with its decimal mark, physical line
    * numbers. A row with a reference (`CTR-12`, or `12`) updates that contract, an unknown one is
    * refused with its line; a row without one is matched by name and supplier.
+   *
+   * The company, the supplier and the cost center are found by their name exactly, then case aside,
+   * then accents aside for a person who reads their module (`access`), unless the person undid that
+   * match (`unmatched`). Two names case aside, or accents aside, refuse the row; each match beyond
+   * case is listed (`matches`). Kad's proposal for a value (`proposals`) comes first: accepted when it
+   * names a record the person reads, exactly or case aside; refused (`refusedProposals`) otherwise.
    */
   async importCsv(
     {
@@ -1421,6 +1430,9 @@ export class ContractsService {
       language,
       dateOrder,
       decimalMark,
+      access,
+      unmatched,
+      proposals,
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -1428,6 +1440,12 @@ export class ContractsService {
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /** The person's rights: a name is found beyond case in the families they read. Absent: case aside only. */
+      access?: CsvCallerAccess;
+      /** The matches the person undid, by file column and value: found case aside only. */
+      unmatched?: Array<{ column: string; value: string }>;
+      /** Kad's proposals, by file column: a value of the file and the name of the record it stands for. */
+      proposals?: ImportProposals;
     },
     opts?: { manager?: EntityManager },
   ) {
@@ -1455,14 +1473,47 @@ export class ContractsService {
     if (rows.length === 0) return { ok: false, dryRun, total: 0, inserted: 0, updated: 0, unchanged: 0, errors: [{ row: 0, message: 'Empty CSV' }], ...report };
 
     // Preload reference maps by name/email for resolution
-    const allCompanies = await mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant()`);
-    const allSuppliers = await mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant()`);
+    type Named = { id: string; name: string; item_number?: number | string | null; code?: string | null };
+    const allCompanies: Named[] = await mg.query(`SELECT id, name, item_number FROM companies WHERE tenant_id = app_current_tenant()`);
+    const allSuppliers: Named[] = await mg.query(`SELECT id, name, item_number FROM suppliers WHERE tenant_id = app_current_tenant()`);
     const allUsers = await mg.query(`SELECT id, email FROM users WHERE tenant_id = app_current_tenant()`);
-    const allNodes = await mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND status = 'enabled'`);
-    const cByName = new Map<string, any>(allCompanies.map((r: any) => [r.name, r]));
-    const sByName = new Map<string, any>(allSuppliers.map((r: any) => [r.name, r]));
+    const allNodes: Named[] = await mg.query(`SELECT id, name, code FROM cost_centers WHERE tenant_id = app_current_tenant() AND status = 'enabled'`);
     const uByEmail = new Map<string, any>(allUsers.map((r: any) => [r.email.toLowerCase(), r]));
-    const nByName = new Map<string, any>(allNodes.map((r: any) => [r.name, r]));
+    // The record a name names, in each family (lot I3 of 26.11.9); its matches beyond case, for the result.
+    const state: ImportMatchState = { matches: new Map(), refused: new Map() };
+    const { matches } = state;
+    const families = {
+      company_name: { rows: allCompanies, module: 'companies', label: 'company', prefix: 'COMP' },
+      supplier_name: { rows: allSuppliers, module: 'suppliers', label: 'supplier', prefix: 'SUP' },
+      cost_center: { rows: allNodes, module: 'cost_centers', label: 'cost center', prefix: null },
+    } as const;
+    const refOf = (prefix: string | null, row: Named): string | null =>
+      prefix && row.item_number != null && Number(row.item_number) > 0 ? `${prefix}-${Number(row.item_number)}` : null;
+    // A record a refusal names: by its reference, a cost center (which has none) by its code.
+    const labelOf = (prefix: string | null, row: Named): string | null => refOf(prefix, row) ?? row.code ?? null;
+    const recordOf = (column: keyof typeof families, value: string, line: number): Named | null => {
+      const family = families[column];
+      const reads = !!access && hasLevel(access, family.module, 'reader');
+      const proposed = proposedRecord<Named>(state, {
+        proposals, unmatched, column, value, line, rows: family.rows, reads, caseBlind: false,
+        ref: (row) => refOf(family.prefix, row), label: (row) => labelOf(family.prefix, row),
+      });
+      const beyondCase = !undoneMatch(unmatched, column, value) && reads;
+      const found = proposed ?? findRecordByName<Named>(family.rows, value, { beyondCase, caseBlind: false, label: (row) => labelOf(family.prefix, row) });
+      if (found.kind === 'one') {
+        if ('how' in found && found.how === 'accents') {
+          noteNameMatch(matches, {
+            column, name: null, value: value.trim(), target: found.row.name, ref: refOf(family.prefix, found.row),
+            origin: 'server', reason: 'accents', undoable: true,
+          }, line);
+        }
+        return found.row;
+      }
+      errors.push(found.kind === 'many'
+        ? rowError(line, column, 'CSV_NAME_AMBIGUOUS_AMONG', `${family.label} '${value}' may designate several records: ${found.names.join(', ')}`, { value, names: found.names.join(', ') })
+        : rowError(line, column, 'CSV_REFERENCE_NOT_FOUND', `${family.label} '${value}' not found`, { value }));
+      return null;
+    };
     const hasPlaceColumn = read.present.includes('cost_center');
     // The contracts the file names by reference, read at once (a number of no contract is refused below).
     const referenced = Array.from(new Set(rows
@@ -1473,7 +1524,7 @@ export class ContractsService {
         .map((row) => [Number(row.item_number), row]),
     );
 
-    const norm: Array<ContractUpsertDto & { line: number; supplier_name: string; company_name: string; owner_email?: string | null; cost_center_name?: string | null; target?: Contract }> = [];
+    const norm: Array<ContractUpsertDto & { line: number; supplier: Named; company: Named; owner_email?: string | null; cost_center_name?: string | null; costCenterId: string | null; target?: Contract }> = [];
     for (const r of rows) {
       const line = r.line;
       const problems = rowProblemErrors(r);
@@ -1530,19 +1581,19 @@ export class ContractsService {
       // Coded on their column (`errors:CSV_*`): the dialog words them in the interface language.
       if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
       if (!company_name) errors.push(rowError(line, 'company_name', 'CSV_VALUE_REQUIRED', 'company_name is required'));
-      else if (!cByName.has(company_name)) errors.push(rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `company '${company_name}' not found`, { value: company_name }));
+      const company = company_name ? recordOf('company_name', company_name, line) : null;
       if (!supplier_name) errors.push(rowError(line, 'supplier_name', 'CSV_VALUE_REQUIRED', 'supplier_name is required'));
-      else if (!sByName.has(supplier_name)) errors.push(rowError(line, 'supplier_name', 'CSV_REFERENCE_NOT_FOUND', `supplier '${supplier_name}' not found`, { value: supplier_name }));
+      const supplier = supplier_name ? recordOf('supplier_name', supplier_name, line) : null;
       if (owner_email && !uByEmail.has(owner_email.toLowerCase())) errors.push(rowError(line, 'owner_email', 'CSV_REFERENCE_NOT_FOUND', `user '${owner_email}' not found`, { value: owner_email }));
-      if (cost_center_name && !nByName.has(cost_center_name)) errors.push(rowError(line, 'cost_center', 'CSV_REFERENCE_NOT_FOUND', `cost center '${cost_center_name}' not found`, { value: cost_center_name }));
+      const costCenter = cost_center_name ? recordOf('cost_center', cost_center_name, line) : null;
       if (!start_date) errors.push(rowError(line, 'start_date', 'CSV_VALUE_REQUIRED', 'start_date is required'));
       if (currency && currency.length !== 3) errors.push(rowError(line, 'currency', 'CSV_CURRENCY_INVALID', 'currency must be 3 letters', { value: currency }));
       if (!BILLING_FREQUENCIES.includes(billing_frequency)) {
         errors.push(rowError(line, 'billing_frequency', 'CSV_ENUM_INVALID', 'billing_frequency invalid', { value: billing_frequency, allowed: BILLING_FREQUENCIES.join(', ') }));
       }
-      norm.push({ line, target, name, company_name, supplier_name, cost_center_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
+      norm.push({ line, target, name, company: company!, supplier: supplier!, cost_center_name, costCenterId: costCenter?.id ?? null, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
     }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
 
     // One row per contract: a second row naming the same contract, by its reference or by its name
     // and supplier, is refused on its line below.
@@ -1563,8 +1614,7 @@ export class ContractsService {
     const now = new Date();
     const today = utcDateYmd(now);
     for (const item of unique) {
-      const s = sByName.get(item.supplier_name);
-      if (!s) { updated += 0; continue; }
+      const s = item.supplier;
       const exists = item.target
         ?? await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: s.id as any } });
       if (exists && item.target) {
@@ -1593,7 +1643,7 @@ export class ContractsService {
         firstLineOfContract.set(exists.id, item.line);
       } else {
         // A new contract takes one row: its name and supplier again, whatever the case, are refused.
-        const key = `${item.name}||${item.supplier_name}`.toLowerCase();
+        const key = `${String(item.name).toLowerCase()}||${s.id}`;
         const firstRow = firstLineOfNewContract.get(key);
         if (firstRow !== undefined) {
           errors.push(rowError(item.line, 'name', 'CSV_DUPLICATE_KEY', `Same name and supplier as row ${firstRow}.`, { columns: 'name, supplier_name', firstRow }));
@@ -1606,9 +1656,9 @@ export class ContractsService {
       else if (importRowUnchanged(exists, {
         // A row matched by its reference may rename the contract or change its supplier.
         ...(item.target ? { name: item.name, supplier_id: s.id } : {}),
-        company_id: cByName.get(item.company_name)?.id,
+        company_id: item.company.id,
         ...(hasPlaceColumn && (item.cost_center_name || (exists.cost_center_id ?? null) !== null)
-          ? { cost_center_id: item.cost_center_name ? nByName.get(item.cost_center_name)?.id ?? null : null }
+          ? { cost_center_id: item.costCenterId }
           : {}),
         owner_user_id: item.owner_email ? uByEmail.get(item.owner_email.toLowerCase())?.id : null,
         start_date: item.start_date,
@@ -1639,16 +1689,14 @@ export class ContractsService {
         errors.push({ row: item.line, message: `auto_renewal: ${RENEWED_CONTRACT_RENEWAL_OFF}` });
       }
     }
-    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
+    if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
 
     // Commit
     let processed = 0;
     for (const item of toWrite) {
-      const company = cByName.get(item.company_name);
-      const supplier = sByName.get(item.supplier_name);
+      const { company, supplier } = item;
       const owner = item.owner_email ? uByEmail.get(item.owner_email.toLowerCase()) : null;
-      if (!company || !supplier) continue; // skip unresolved refs silently
       const exists = existingOf.get(item) ?? null;
       // The file has no end of validity: a status equal to the current one (read from the date)
       // or blank keeps the stored date; a new contract is enabled unless the row says disabled.
@@ -1660,7 +1708,7 @@ export class ContractsService {
         company_id: company.id,
         supplier_id: supplier.id,
         ...(hasPlaceColumn && (item.cost_center_name || (exists?.cost_center_id ?? null) !== null)
-          ? { cost_center_id: item.cost_center_name ? nByName.get(item.cost_center_name)?.id ?? null : null }
+          ? { cost_center_id: item.costCenterId }
           : {}),
         owner_user_id: owner?.id ?? null,
         start_date: item.start_date as any,
@@ -1676,7 +1724,7 @@ export class ContractsService {
       if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg }); processed += 1; }
       else { await this.create(payload, userId ?? undefined, { manager: mg }); processed += 1; }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
   }
 
   // Symmetric linking from OPEX side

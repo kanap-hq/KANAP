@@ -10,7 +10,7 @@ import { AssetsDeleteService } from './assets-delete.service';
 import { AssetsCsvService } from './assets-csv.service';
 import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
-import { csvExportFormat } from '../common/csv';
+import { csvCallerAccess, csvExportFormat, csvUnmatched } from '../common/csv';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { StorageService } from '../common/storage/storage.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -127,6 +127,7 @@ export class AssetsController {
     @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
     @Query('language') languageRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
@@ -138,12 +139,14 @@ export class AssetsController {
         dryRun: dryRun !== 'false',
         mode,
         operation,
+        unmatched: csvUnmatched(unmatchedRaw),
       },
       {
         manager: req?.queryRunner?.manager,
         tenantId,
         userId: req.user?.sub,
         language,
+        access: csvCallerAccess(req),
       },
     );
   }
