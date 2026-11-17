@@ -804,8 +804,10 @@ export class ContactsService {
         const role = supplierId ? row.supplier.role ?? storedRole ?? DEFAULT_SUPPLIER_ROLE : null;
         // A row that keeps the supplier sends only the type: `update` reads the supplier once it holds
         // the contact's row, so a change of the supplier made meanwhile is kept.
+        // A kept supplier changes only by a type the row writes: a row with no type leaves a contact
+        // attached without a link (created by the API) as it is.
         if (supplierId !== storedSupplierId) supplier = { supplier_id: supplierId, supplier_role: role };
-        else if (supplierId && role !== storedRole) supplier = { supplier_role: role };
+        else if (supplierId && row.supplier.role && row.supplier.role !== storedRole) supplier = { supplier_role: row.supplier.role };
         if (row.supplier.clears && storedSupplierId) cleared += 1;
       }
       // A stored contact takes only the values the row writes: an absent column, or a blank cell
