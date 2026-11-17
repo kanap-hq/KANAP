@@ -11,6 +11,11 @@ export type ImportCell = { kind: 'blank' } | { kind: 'clear' } | { kind: 'value'
 export const CLEAR_MARK = '-';
 /** The clear mark of older files, read as `CLEAR_MARK`. */
 const LEGACY_CLEAR_MARK = '__CLEAR__';
+/**
+ * The cell an export writes for a stored "-" (the formula guard), which the import reads as the
+ * text "-": an export re-imported as it is changes nothing. Write it to keep a dash as a value.
+ */
+export const GUARDED_DASH = "'-";
 
 /** The code of a row error for `-` on a value that cannot be cleared: a key, a required value, a status. */
 export const CANNOT_BE_CLEARED = 'CSV_VALUE_CANNOT_BE_CLEARED';
@@ -25,5 +30,6 @@ export function readImportCell(raw: string | null | undefined): ImportCell {
   const text = (raw ?? '').trim();
   if (text === '') return { kind: 'blank' };
   if (text === CLEAR_MARK || text === LEGACY_CLEAR_MARK) return { kind: 'clear' };
+  if (text === GUARDED_DASH) return { kind: 'value', text: CLEAR_MARK };
   return { kind: 'value', text };
 }

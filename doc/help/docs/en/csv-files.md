@@ -33,7 +33,7 @@ The contracts file starts with the same optional `reference` column (`CTR-12`). 
 The imports of suppliers, contacts, companies, departments, contracts, cost centers, accounts, analytics dimension values, business processes, working-day calendars and technology links read each cell as the budget file does:
 
 - **An empty cell keeps the stored value.** An empty `status` keeps the stored status: it does not enable a disabled record.
-- **`-` clears the stored value.** A cell holding only `-` is a clear. A text such as `Jean-Pierre` or a number such as `-5` is a value.
+- **`-` clears the stored value.** A cell holding only `-` is a clear. A text such as `Jean-Pierre` or a number such as `-5` is a value. The export writes a stored `-` as `'-`, which the import reads as the text `-`: an exported file imported again changes nothing. To keep a dash as a value, write `'-`.
 - **A column the file leaves out is never written.** A file can hold only the columns that find each record, such as its reference, its name or its code, and the columns to change.
 - **Some values cannot be cleared**: a reference, a name or another column that finds the record, a required value and a status. `-` in such a cell refuses the row, and the message names the column. On a number that cannot be empty, such as a company's headcount or a contract's yearly amount, the message says to write `0`.
 - **End of validity.** `-` in `disabled_at` clears the date, and the record is active again. A row with `disabled` in `status` and `-` in `disabled_at` is refused: keep one or the other.

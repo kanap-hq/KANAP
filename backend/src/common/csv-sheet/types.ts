@@ -81,6 +81,12 @@ export interface CsvReadSchema {
    * this file's CSV export writes it, when the file records no language of its own. Unset, a point.
    */
   typedNumbersInLanguage?: boolean;
+  /**
+   * The cell `'-` (`GUARDED_DASH`, the export's formula guard on a stored "-") is kept as it is,
+   * for the import to read it as the text "-" where a typed `-` clears (`readImportCell`).
+   * Unset, the guard is undone as on any other cell.
+   */
+  keepsGuardedDash?: boolean;
 }
 
 export interface CsvFieldColumn {

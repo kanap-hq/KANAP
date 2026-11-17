@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { endOfValidityFromDate } from '../status';
 import { DecimalMark, ParsedAmount, parseCsvAmount, resolveAmountConvention } from './amount';
+import { CLEAR_MARK, GUARDED_DASH } from './clear';
 import { formatCsvDate, formatCsvEndOfValidity } from './date';
 import { csvDecodeErrorCode } from './decode';
 import { CSV_FILE_EMPTY_MESSAGE, readSheet } from './read';
@@ -109,6 +110,7 @@ export async function readMasterDataFile(request: MasterDataFileRequest): Promis
     dateOrder: request.dateOrder,
     decimalMark: request.decimalMark,
     typedNumbersInLanguage: true,
+    keepsGuardedDash: true,
   });
   if (read.fileErrors.length > 0) {
     const code = read.fileErrorCode
@@ -178,9 +180,13 @@ export function headerMismatchError(missing: readonly string[], extras: readonly
   };
 }
 
-/** A trimmed cell. A column the file does not carry, or an empty cell, is ''. */
+/**
+ * A trimmed cell. A column the file does not carry, or an empty cell, is ''. `'-`, which these
+ * files keep as written (`keepsGuardedDash`), is the text "-".
+ */
 export function cellOf(row: CsvDataRow, field: string): string {
-  return (row.cells[field] ?? '').trim();
+  const text = (row.cells[field] ?? '').trim();
+  return text === GUARDED_DASH ? CLEAR_MARK : text;
 }
 
 /**

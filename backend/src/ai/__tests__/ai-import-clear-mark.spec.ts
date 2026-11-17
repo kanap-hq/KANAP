@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import type { TableGrid } from '../attachments/table-attachment';
+import { readTableAttachment, type TableGrid } from '../attachments/table-attachment';
 import { columnReader } from '../import/ai-import-convert';
 import { buildImportMapping, type AiImportTemplateColumn } from '../import/ai-import-mapping';
 
@@ -108,7 +108,19 @@ function testTheValueMapNeverMovesTheMark() {
   }
 }
 
+// An export writes a stored "-" as `'-`: Kad's file carries it as written, and the import reads it
+// as the text "-" (an export re-imported changes nothing).
+async function testTheGuardedDashStaysAValue() {
+  const grid = await readTableAttachment(Buffer.from("name;notes\nAcme;'-\n", 'utf8'));
+  assert.deepEqual(grid.rows[0][1], text("'-"));
+  const reader = columnReader({ kind: 'text' }, [text("'-")], { clearMark: true }, 'en');
+  assert.deepEqual(reader.read(text("'-")), { status: 'converted', value: "'-" });
+}
+
 testEveryKindCarriesTheMark();
 testTheMappingSetsTheMarkByImport();
 testTheValueMapNeverMovesTheMark();
-console.log('ai-import-clear-mark.spec: ok');
+testTheGuardedDashStaysAValue().then(() => console.log('ai-import-clear-mark.spec: ok'), (error) => {
+  console.error(error);
+  process.exit(1);
+});

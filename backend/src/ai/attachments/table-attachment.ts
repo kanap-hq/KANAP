@@ -4,6 +4,7 @@ import { csvSeparatorOf, sheetCellText, SheetCell, XLSX_BLANK_ROW_MARGIN } from 
 import { Decimal } from '../../common/decimal';
 import { CsvDecodeError, decodeCsv } from '../../common/csv-sheet/decode';
 import { CSV_ROW_CAP } from '../../common/csv-sheet/types';
+import { GUARDED_DASH } from '../../common/csv-sheet/clear';
 import { denormalizeCsvFormulaValue } from '../../common/csv/csv-export.service';
 import { hasOldExcelSignature, hasZipSignature, readXlsxGridAsync, XlsxReadError } from '../../common/xlsx/read';
 
@@ -216,10 +217,14 @@ function tooManyRows(): BadRequestException {
   });
 }
 
-/** A text cell trimmed and with the import's formula guard undone; typed cells as they are. */
+/**
+ * A text cell trimmed and with the import's formula guard undone; typed cells as they are. `'-`,
+ * an export's stored "-", stays as written: the imports read it as the text "-" (`GUARDED_DASH`).
+ */
 function cleanCell(cell: SheetCell): SheetCell {
   if (cell.kind !== 'text') return cell;
-  const value = denormalizeCsvFormulaValue(cell.value.trim().replace(/^﻿/, ''));
+  const text = cell.value.trim().replace(/^﻿/, '');
+  const value = text === GUARDED_DASH ? text : denormalizeCsvFormulaValue(text);
   return value === '' ? { kind: 'empty' } : { kind: 'text', value };
 }
 

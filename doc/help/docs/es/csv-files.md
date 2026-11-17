@@ -33,7 +33,7 @@ El archivo de contratos empieza con la misma columna `reference` opcional (`CTR-
 Las importaciones de proveedores, contactos, empresas, departamentos, contratos, centros de coste, cuentas, valores de dimensiones analíticas, procesos de negocio, calendarios laborales y vínculos de tecnologías leen cada celda como el archivo de presupuesto:
 
 - **Una celda vacía conserva el valor guardado.** Un `status` vacío conserva el estado guardado: no activa un registro desactivado.
-- **`-` borra el valor guardado.** Una celda que solo contiene `-` es un borrado. Un texto como `Jean-Pierre` o un número como `-5` es un valor.
+- **`-` borra el valor guardado.** Una celda que solo contiene `-` es un borrado. Un texto como `Jean-Pierre` o un número como `-5` es un valor. La exportación escribe un `-` guardado como `'-`, que la importación lee como el texto `-`: un archivo exportado e importado de nuevo sin cambios no cambia nada. Para conservar un guion como valor, escriba `'-`.
 - **Una columna que el archivo omite nunca se escribe.** Un archivo puede contener solo las columnas que encuentran cada registro, como su referencia, su nombre o su código, y las columnas que se van a cambiar.
 - **Algunos valores no se pueden borrar**: una referencia, un nombre u otra columna que encuentra el registro, un valor obligatorio y un estado. `-` en una de esas celdas rechaza la fila, y el mensaje nombra la columna. En un número que no puede quedar vacío, como la plantilla de una empresa o el importe anual de un contrato, el mensaje indica escribir `0`.
 - **Fin de validez.** `-` en `disabled_at` borra la fecha, y el registro vuelve a estar activo. Una fila con `disabled` en `status` y `-` en `disabled_at` se rechaza: conserve uno u otro.
