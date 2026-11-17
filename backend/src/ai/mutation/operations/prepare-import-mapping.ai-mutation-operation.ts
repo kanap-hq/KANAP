@@ -106,6 +106,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'For a column that names a record by its name, `values` proposes only the name of an existing record (read in the template, '
       + 'else found by a search), never a case or accents variant: the check matches those itself, and refuses a proposal whose record '
       + 'does not exist or that the person cannot read. Never announce a match the card does not show. '
+      + 'An application row with a publisher (`editor`) and no supplier is linked to the existing supplier the publisher names: '
+      + 'the card lists it as a match of origin editor, so never say the supplier stays empty when the card links one. '
       + 'A budget file matches its suppliers and dimension values to the workspace\'s before it creates any: same name with other accents, '
       + 'or a value of a recommended dimension or of the sample data\'s business domain in another language (`matching.matches`, origin server). '
       + 'For a value the workspace names otherwise (a translation, a synonym, a spelling), map it in that column\'s `values` to an '

@@ -107,6 +107,18 @@ function instructionsProposeExistingRecordsOnly() {
   console.log('  the model proposes existing records only, and announces no match the card does not show: OK');
 }
 
+/**
+ * Lot I3 of 26.11.9, correctifs K (recette by Kad, gap 2): with a "Vendor" column mapped to the publisher,
+ * Kad wrote that the column fills no supplier while the card linked six by the publisher (T-I3k). The
+ * hint the model reads with the tool says it, in one sentence.
+ */
+function instructionsPublisherLinksTheSupplier() {
+  const hint = new PrepareImportMappingAiMutationOperation({} as any).writePreview.prompt_hint;
+  assert.ok(hint.includes('An application row with a publisher (`editor`) and no supplier is linked to the existing supplier '
+    + 'the publisher names: the card lists it as a match of origin editor, so never say the supplier stays empty when the card links one.'), 'the publisher links the supplier');
+  console.log('  the model reads that a publisher links the supplier it names: OK');
+}
+
 async function screenLanguageWhenTheProfileHasNone() {
   const req = { tenant: { id: 'tenant-1' }, user: { sub: 'user-1' }, headers: { 'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8' } };
   const chat = new AiChatController({} as any, {} as any, {} as any, {} as any);
@@ -189,6 +201,7 @@ async function main() {
   await taskAndIncidentColumnsAsTheImportScreenNamesThem();
   instructionsNameLinesAndColumnsNeverCodes();
   instructionsProposeExistingRecordsOnly();
+  instructionsPublisherLinksTheSupplier();
   await screenLanguageWhenTheProfileHasNone();
   console.log('ai-import-card-texts.spec: ok');
 }
