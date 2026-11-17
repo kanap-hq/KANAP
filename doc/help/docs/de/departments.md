@@ -118,13 +118,15 @@ Die Spalten in dieser Reihenfolge:
 **Import**:
 
 - Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
-- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`DEPT-12` oder `12`) bezeichnet die Abteilung, die die Zeile aktualisiert, auch wenn sich ihr Name geändert hat. Die Abteilung erhält den Namen und das Unternehmen der Zeile: Ein anderes Unternehmen verschiebt sie dorthin. Die Vorabprüfung meldet jede Abteilung, die umbenannt wird oder das Unternehmen wechselt
+- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`DEPT-12` oder `12`) bezeichnet die Abteilung, die die Zeile aktualisiert, auch wenn sich ihr Name geändert hat. Die Abteilung erhält den Namen und das Unternehmen, die die Zeile angibt: Ein anderes Unternehmen verschiebt sie dorthin. Die Vorabprüfung meldet jede Abteilung, die umbenannt wird oder das Unternehmen wechselt
 - **Zuordnung über den Namen**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird eine Zeile über Abteilungsname und Unternehmensname zugeordnet. Sie aktualisiert die Abteilung, die sie nennt, und jede andere Zeile legt eine an
 - **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„DEPT-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
 - **Umbenennen oder Verschieben**: Ein Name, den bereits eine andere Abteilung im Unternehmen der Zeile trägt, wird abgelehnt, und die Meldung nennt deren Referenz: „„Finance“ gehört bereits zu DEPT-7.“
 - **Eine Zeile pro Abteilung**: Zwei Zeilen, die dieselbe Abteilung aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert DEPT-7, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“ Zwei Zeilen, die dieselbe Abteilung anlegen (gleiches Unternehmen und gleicher Name, unabhängig von der Groß- und Kleinschreibung), werden ebenfalls abgelehnt: „Gleiche Werte in company_name, name wie in Zeile 3.“
 
-**Pflichtzellen**: `name` und `company_name`, ein bestehendes Unternehmen
+**Pflichtzellen**: `name` und `company_name`, ein bestehendes Unternehmen. Eine Zeile mit einer `reference` kann sie leer lassen: Die Abteilung behält ihren Namen und ihr Unternehmen
+
+**Leere Zellen und `-`**: Bei einer Abteilung, die die Datei aktualisiert, behält eine leere Zelle den gespeicherten Wert, und `-` leert `description` oder `disabled_at`. `-` kann `reference`, `company_name`, `name` oder `status` nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing)
 
 **Optionale Zellen**: `reference`, `description`, `status`, `disabled_at`
 

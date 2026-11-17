@@ -365,7 +365,7 @@ Der Import entfernt die Betriebssystem-Markierung nie von einer Verknüpfung.
 
 - Eine Verknüpfung besteht aus einem Server oder einer Anwendung, einer Technologie und einer Version: Eine Zeile mit einer anderen Version fügt eine zweite Verknüpfung hinzu. Dieselbe Verknüpfung zweimal in einer Datei ist ein Fehler.
 - Jede Zeile fügt eine Verknüpfung hinzu oder aktualisiert eine vorhandene. Verknüpfungen, die in der Datei fehlen, bleiben, wie sie sind: Der Import löscht nie eine Verknüpfung.
-- Eine vorhandene Verknüpfung behält ihre Herkunft. Ihre Notizen ändern sich, wenn die Zelle `notes` einen anderen Text enthält; eine leere Zelle lässt sie unverändert.
+- Eine vorhandene Verknüpfung behält ihre Herkunft. Ihre Notizen ändern sich, wenn die Zelle `notes` einen anderen Text enthält, eine leere Zelle lässt sie unverändert, und `-` leert sie. `-` in jeder anderen Spalte lehnt die Zeile ab. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing).
 - Eine neue Verknüpfung wird als aus einem Import stammend gekennzeichnet, mit dem Dateinamen.
 - Die Technologie muss bereits in Ihrer Liste stehen. Übernehmen Sie sie zuerst aus dem Katalog oder legen Sie sie an.
 - Server, Anwendung und Technologie werden über ihre Namen gefunden, wie unter [Namen von Datensätzen](csv-files.md#names-of-records) beschrieben. Ein Name, den mehrere Datensätze teilen, ist ein Fehler.

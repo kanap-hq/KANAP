@@ -182,11 +182,11 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 | Spalte | Inhalt |
 |---|---|
 | `code` | Pflicht. Der Code des Elements. Zeilen werden bestehenden Elementen über den Code zugeordnet, unabhängig von Groß- und Kleinschreibung |
-| `kind` | Pflicht. `group` oder `cost_center` |
-| `name` | Pflicht |
-| `parent_code` | Der Code der übergeordneten Gruppe, aus derselben Datei oder bereits in Kadratis vorhanden. Leer für die oberste Ebene |
+| `kind` | Pflicht für ein neues Element. `group` oder `cost_center` |
+| `name` | Pflicht für ein neues Element |
+| `parent_code` | Der Code der übergeordneten Gruppe, aus derselben Datei oder bereits in Kadratis vorhanden. Eine leere Zelle behält die übergeordnete Gruppe eines gespeicherten Elements und legt ein neues Element auf die oberste Ebene. `-` verschiebt das Element auf die oberste Ebene |
 | `company_name` | Pflicht für ein `cost_center`, leer für eine `group`. Über den Unternehmensnamen zugeordnet, unabhängig von Groß- und Kleinschreibung |
-| `owner_email` | Die E-Mail-Adresse des Budgetverantwortlichen, eines aktiven Benutzers. Leer für keinen Budgetverantwortlichen |
+| `owner_email` | Die E-Mail-Adresse des Budgetverantwortlichen, eines aktiven Benutzers. `-` entfernt den Budgetverantwortlichen |
 | `description` | Freitext |
 | `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` für einen neuen Knoten und behält bei einer Aktualisierung den gespeicherten Status |
 | `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Knoten sonst heute |
@@ -202,7 +202,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 
 - **Zeilen in beliebiger Reihenfolge**: Ein untergeordnetes Element kann vor seiner übergeordneten Gruppe stehen. Übergeordnete Elemente werden anhand der gesamten Datei und der bereits in Kadratis vorhandenen Elemente aufgelöst.
 - **Die gesamte Datei wird geprüft, bevor etwas geschrieben wird**: jede Zeile, dann die übergeordneten Elemente, dann die Regeln des Baums (eine Kostenstelle hat ein Unternehmen, eine Gruppe keines, nur Gruppen sind übergeordnet, keine Schleifen, eine von Zeilen verwendete Kostenstelle bleibt eine Kostenstelle). Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus. Jeder Fehler nennt seine Zeile mit der Zeilennummer der Datei, wie ein Texteditor sie anzeigt, einschließlich Leerzeilen und Zellen über mehrere Zeilen.
-- **Zuordnung über den Code**: Eine Zeile, deren Code existiert, aktualisiert dieses Element; jede andere Zeile erstellt eines. Jede Zelle ersetzt den gespeicherten Wert, sodass ein leeres `owner_email` oder `description` ihn löscht.
+- **Zuordnung über den Code**: Eine Zeile, deren Code existiert, aktualisiert dieses Element; jede andere Zeile erstellt eines. Bei einem gespeicherten Element behält eine leere Zelle den gespeicherten Wert, und `-` leert `company_name`, `owner_email`, `description` oder `disabled_at`. Eine Kostenstelle folgt der Regel des Baums, daher wird `-` in ihrem Unternehmen abgelehnt. `-` kann `code`, `kind`, `name` oder `status` nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing).
 - **Unveränderte Zeilen**: Eine Zeile, die dem gespeicherten Element entspricht, ändert nichts. Wenn Sie dieselbe Datei exportieren und importieren, werden alle Zeilen als unverändert gemeldet.
 - **In der Datei fehlende Elemente** bleiben unverändert. Der Import löscht nie.
 
