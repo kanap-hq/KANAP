@@ -55,6 +55,9 @@ const PrepareImportMappingInputSchema = z.object({
     .describe('What the mapping supposes about the whole file, in the person\'s language (one row per server, the amounts are in euros). '
       + 'A row is named by its line of the file, as the summary numbers it (header counted). The card shows the rows and the values '
       + 'not read: do not describe them here.'),
+  left_aside: z.array(z.string().trim().min(1).max(200)).max(150).optional()
+    .describe('Only the file columns the person asks to leave out, by header: in the imports where `-` clears, a column named like '
+      + 'a template column is read even when you do not map it.'),
 });
 
 function stringOf(value: unknown): string {
@@ -91,6 +94,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     entity_type: `The import the file fills: ${AI_IMPORT_KEYS.join(', ')}.`,
     columns: 'One entry per template column the file fills: column, source (file column position) or value (for every row), confidence, and optionally date_order, decimal_mark, values (file value to the value it stands for) and note.',
     assumptions: 'What the mapping supposes about the whole file, in the user\'s language.',
+    left_aside: 'Optional: the file columns, by header, the user asks to leave out.',
   };
   readonly businessResource = 'applications';
   readonly businessResources = AI_IMPORT_RESOURCES;
@@ -142,6 +146,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'A `-` written in the file is the person asking to clear, as on the screen: map its column like any other and say what the card clears; '
       + 'the person approves or refuses. That `-` reaches the import as it is: never map it in `values`. '
       + 'Write `-` yourself (in `values` or as a value for every row) only when the person asks to clear that value; never turn a blank cell or a value into `-`. '
+      + 'In those imports, a file column named like a template column (its key or its title) is read as on the screen, mapped or not; '
+      + 'list it in `left_aside` only when the person asks to leave it out. '
       + 'Approving the card runs the import, and its card then shows what was created and updated: until then nothing is imported, '
       + 'so never say it is.',
   };
@@ -188,6 +194,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         filename: mapping.filename,
         columns: input.columns,
         assumptions: input.assumptions ?? [],
+        // The file's columns the person left aside: the approval builds the same file.
+        ...(input.left_aside?.length ? { left_aside: input.left_aside } : {}),
         // The choices the check followed: an undone match the file no longer makes is dropped. A check
         // that refused the file before reading its rows followed none: the choices are kept as received.
         ...(budget ? { choices: mapping.validation?.matching ? mapping.validation.matching.choices : choices ?? [] } : {}),

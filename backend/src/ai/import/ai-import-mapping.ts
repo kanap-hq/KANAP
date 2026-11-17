@@ -1,6 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../../common/csv-sheet';
 import { readImportCell } from '../../common/csv-sheet/clear';
+import { classifyHeaders } from '../../common/csv-sheet/headers';
+import { labelLists } from '../../common/csv-sheet/master-data';
+import { looseKey } from '../../common/csv-sheet/text';
 import { sheetCellText } from '../../common/csv-sheet/read';
 import type { AiImportMappingPreviewDto } from '../ai.types';
 import { clip, isBlank, TABLE_SUMMARY_MAX_COLUMNS, TableGrid } from '../attachments/table-attachment';
@@ -20,6 +23,8 @@ export interface AiImportTemplateColumn extends AiImportColumnRule {
   column: string;
   /** Its title in the person's language. */
   title: string;
+  /** The titles the screen's import reads the column by, every language (`CsvReadSchema.fieldLabels`). */
+  titles?: Readonly<Partial<Record<CsvLanguage, string>>>;
   required: boolean;
   /** How a catalog value is named in the person's language, by code, for the card. */
   displayName?: (code: string) => string;
@@ -46,6 +51,8 @@ export interface AiImportMappingRequest {
   filename: string;
   columns: AiImportColumnMappingInput[];
   assumptions: string[];
+  /** The file's columns the person asked to leave aside, by header: never read by their header alone. */
+  leftAside?: string[];
 }
 
 /**
@@ -107,6 +114,50 @@ function assertMappingShape(request: AiImportMappingRequest, template: AiImportT
   }
 }
 
+function headerText(grid: TableGrid, position: number): string {
+  const cell = grid.header[position - 1];
+  return isBlank(cell) ? '' : sheetCellText(cell!);
+}
+
+/**
+ * The file's columns the screen's import would read and the model's mapping leaves out, under the
+ * clearing rule (D21 of 26.11.9): a header that names a template column the mapping does not fill,
+ * by its key or one of its titles, recognised as the screen's import recognises them
+ * (`classifyHeaders`). Each one is read as a column of high confidence, with no value map, unless the
+ * person asked to leave it aside (`leftAside`).
+ */
+function screenNamedColumns(
+  grid: TableGrid,
+  template: AiImportTemplateColumn[],
+  request: AiImportMappingRequest,
+  language: CsvLanguage,
+): AiImportColumnMappingInput[] {
+  if (!AI_IMPORT_CLEARING_RULE.has(request.importKey as AiImportKey)) return [];
+  const width = describedWidth(grid);
+  const headers = Array.from({ length: width }, (_, index) => headerText(grid, index + 1));
+  const headerKeys = new Set(headers.map(looseKey).filter((key) => key !== ''));
+  const aside = new Set<string>();
+  for (const name of request.leftAside ?? []) {
+    const key = looseKey(String(name));
+    if (!headerKeys.has(key)) {
+      throw refusal(`left_aside names ${clip(String(name))}, which is not a column of the file. Name a column by its header, as the summary writes it.`);
+    }
+    aside.add(key);
+  }
+  const filled = new Set(request.columns.map((entry) => entry.column));
+  const used = new Set(request.columns.map((entry) => entry.source).filter((source): source is number => typeof source === 'number'));
+  const titles = Object.fromEntries(template.filter((column) => column.titles).map((column) => [column.column, column.titles!]));
+  const { slots } = classifyHeaders(headers, { fields: template.map((column) => column.column), fieldLabels: labelLists(titles), language });
+  const added: AiImportColumnMappingInput[] = [];
+  slots.forEach((slot, index) => {
+    const position = index + 1;
+    if (slot?.kind !== 'field' || filled.has(slot.id) || used.has(position) || aside.has(looseKey(headers[index]))) return;
+    filled.add(slot.id);
+    added.push({ column: slot.id, source: position, confidence: 'high' });
+  });
+  return added;
+}
+
 function readAsOf(settled: { dateOrder?: CsvDateOrder; decimalMark?: DecimalMark }): string | null {
   if (settled.dateOrder) return settled.dateOrder;
   if (settled.decimalMark) return settled.decimalMark === ',' ? 'decimal-comma' : 'decimal-point';
@@ -144,7 +195,8 @@ export function buildImportMapping(
   language: CsvLanguage,
 ): AiImportMappingResult {
   assertMappingShape(request, template, grid);
-  const entries = new Map(request.columns.map((entry) => [entry.column, entry]));
+  const mappedColumns = [...request.columns, ...screenNamedColumns(grid, template, request, language)];
+  const entries = new Map(mappedColumns.map((entry) => [entry.column, entry]));
   const mapped = template.filter((column) => entries.has(column.column));
   const sampleCount = Math.min(IMPORT_MAPPING_SAMPLE_ROWS, grid.rows.length);
 
@@ -232,7 +284,7 @@ export function buildImportMapping(
     }
   }
 
-  const usedPositions = new Set(request.columns.map((entry) => entry.source).filter((source): source is number => typeof source === 'number'));
+  const usedPositions = new Set(mappedColumns.map((entry) => entry.source).filter((source): source is number => typeof source === 'number'));
   const unplaced: AiImportMappingPreviewDto['unplaced'] = [];
   for (let position = 1; position <= describedWidth(grid); position += 1) {
     if (usedPositions.has(position)) continue;

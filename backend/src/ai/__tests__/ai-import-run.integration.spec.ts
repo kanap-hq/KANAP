@@ -408,6 +408,32 @@ async function testSuppliers(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual(notes.map((row: any) => [row.name, row.notes]), [['Lactalis', null], ['Savencia', 'Affineur']]);
   const [count] = await runner.query(`SELECT count(*)::int AS n FROM suppliers WHERE tenant_id = $1`, [s.tenantId]);
   assert.equal(count.n, 3);
+
+  // A column the model leaves out is still read when its header names a template column, as the screen
+  // reads it (here the German title of the notes): its `-` clears. Unless the person asked to leave it
+  // aside (`left_aside`), which the card keeps for its approval.
+  const named = attach(h, 'fournisseurs v4.csv', 'Fournisseur;Notizen\nSavencia;-\n');
+  const nameColumn = [{ column: 'name', source: 1, confidence: 'high' }];
+  const aside = await h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: named, entity_type: 'suppliers', columns: nameColumn, left_aside: ['Notizen'],
+  });
+  assert.deepEqual(aside.import_mapping.columns.map((column: any) => column.column), ['name']);
+  assert.deepEqual([aside.import_mapping.validation.unchanged, aside.import_mapping.validation.cleared], [1, 0]);
+  const [stored] = await runner.query(
+    `SELECT mutation_input->'left_aside' AS aside FROM ai_mutation_previews WHERE tenant_id = $1 AND id = $2`,
+    [s.tenantId, aside.preview_id],
+  );
+  assert.deepEqual(stored.aside, ['Notizen']);
+  const reading = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: named, entity_type: 'suppliers', columns: nameColumn });
+  const read = reading.import_mapping.columns.find((column: any) => column.column === 'notes');
+  assert.deepEqual([read?.source, read?.confidence], [{ position: 2, header: 'Notizen' }, 'high']);
+  const readCheck = reading.import_mapping.validation;
+  assert.deepEqual([readCheck.ok, readCheck.updated, readCheck.cleared], [true, 1, 1], JSON.stringify(readCheck));
+  await assertSameAsTheRoute(h, runner, s, { attachment_id: named, entity_type: 'suppliers', columns: nameColumn }, readCheck);
+  const readDone = await h.previews.executePreview(admin, reading.preview_id);
+  assert.equal(readDone.status, 'executed', readDone.error_message ?? '');
+  const [savencia] = await runner.query(`SELECT notes FROM suppliers WHERE tenant_id = $1 AND name = 'Savencia'`, [s.tenantId]);
+  assert.equal(savencia.notes, null);
   console.log('  suppliers: imported; a blank cell or an absent column keeps, `-` clears, as the route: OK');
 }
 

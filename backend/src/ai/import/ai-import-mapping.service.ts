@@ -23,6 +23,8 @@ export type PrepareImportMappingInput = {
   entity_type: AiImportKey;
   columns: AiImportColumnMappingInput[];
   assumptions?: string[];
+  /** The file's columns the person asked to leave aside, by header (`AiImportMappingRequest.leftAside`). */
+  left_aside?: string[];
   /**
    * The person's choices on the card (a budget file: matches undone, "Create missing suppliers"),
    * set by the server, never by the model: the tool's input schema has no such field.
@@ -57,6 +59,7 @@ function templateColumn(spec: AiImportColumnSpec, settings: ItOpsSettings | null
   const base = {
     column: spec.column,
     title: importColumnTitle(spec, language),
+    ...(spec.titles ? { titles: spec.titles } : {}),
     required: spec.required === true,
     kind: spec.kind,
     multi: spec.multi === true,
@@ -274,6 +277,7 @@ export class AiImportMappingService {
       filename: attachment.original_filename,
       columns: input.columns,
       assumptions: input.assumptions ?? [],
+      leftAside: input.left_aside ?? [],
     }, language);
     // No import touches a column the file leaves out.
     return { converted, lines: grid.lines };

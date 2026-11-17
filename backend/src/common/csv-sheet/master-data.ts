@@ -130,8 +130,8 @@ export async function readMasterDataFile(request: MasterDataFileRequest): Promis
   };
 }
 
-/** The titles of each column, every language, for the reader. */
-function labelLists(labels: NonNullable<MasterDataFileRequest['fieldLabels']>): Record<string, string[]> {
+/** The titles of each column, every language, for the reader (`CsvReadSchema.fieldLabels`). */
+export function labelLists(labels: NonNullable<MasterDataFileRequest['fieldLabels']>): Record<string, string[]> {
   const lists: Record<string, string[]> = {};
   for (const [field, byLanguage] of Object.entries(labels)) {
     lists[field] = Object.values(byLanguage).filter((label): label is string => !!label);
