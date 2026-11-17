@@ -5,6 +5,8 @@ import {
   cellText,
   clearedValueCount,
   clearRefusals,
+  clearsEndOfValidity,
+  endOfValidityToCheck,
   CsvDateOrder,
   CsvImportMode,
   CsvLanguage,
@@ -185,8 +187,9 @@ export class AnalyticsCategoriesCsvService {
       // The physical line Excel shows, blank lines included.
       const line = raw.line;
       const rowErrors: ImportReportError[] = rowProblemErrors(raw, ['disabled_at']);
-      // `-` cannot clear the keys, the status or its end of validity (D21 of 26.11.9).
-      const refusals = clearRefusals(raw, ['axis_code', 'name', 'status', 'disabled_at'], mode);
+      // `-` cannot clear the keys or the status (D21 of 26.11.9). It clears the end of validity: the
+      // value is active again.
+      const refusals = clearRefusals(raw, ['axis_code', 'name', 'status'], mode);
       if (refusals.length > 0) {
         errors.push(...rowErrors, ...refusals);
         return;
@@ -235,15 +238,16 @@ export class AnalyticsCategoriesCsvService {
       }
       const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? statusRaw : null;
       const disabledAtRaw = has('disabled_at') ? cellOf(raw, 'disabled_at') : '';
+      const clearsEnd = clearsEndOfValidity(raw, mode);
       let disabledAt: Date | null = null;
-      if (disabledAtRaw) {
+      if (disabledAtRaw && !clearsEnd) {
         // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
         // The stored end of validity's day keeps its time of day: the export writes the day only.
         const end = endOfValidityOf(raw, 'disabled_at');
         if (end.error) rowErrors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
         else disabledAt = keepStoredEndOfValidity(existing?.disabled_at, end.value);
       }
-      const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
+      const lifecycleConflict = csvLifecycleConflict(status, endOfValidityToCheck(disabledAt, clearsEnd));
       if (lifecycleConflict) rowErrors.push(rowError(line, 'status', status === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
       // An absent column keeps what is stored (null for a new value); a blank cell clears it, or
       // keeps it when the row completes the stored value.
@@ -266,7 +270,8 @@ export class AnalyticsCategoriesCsvService {
       const lifecycle = resolveLifecycleState({
         currentDisabledAt: existing?.disabled_at ?? null,
         nextStatus: next.status,
-        nextDisabledAt: next.disabled_at,
+        // `-` clears a stored end of validity.
+        nextDisabledAt: existing && clearsEnd ? null : next.disabled_at,
       });
       const values: AnalyticsCategoryValues = {
         axis_id: axisId ?? '',
@@ -286,7 +291,7 @@ export class AnalyticsCategoriesCsvService {
       }
       const matched = existing && name ? nameMatchedWarning(line, 'name', name, existing.name) : null;
       if (matched) warnings.push(matched);
-      cleared += clearedValueCount(existing, raw, mode, ['description', 'applies_to']);
+      cleared += clearedValueCount(existing, raw, mode, ['description', 'applies_to', 'disabled_at']);
       parsedRows.push({ line, existing, axisName, values });
     });
     if (errors.length > 0) return failed([...errors].sort((a, b) => a.row - b.row), rows.length);

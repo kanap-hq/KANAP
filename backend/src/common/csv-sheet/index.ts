@@ -36,9 +36,19 @@ export {
 } from './master-data';
 export { csvSeparatorOf, readCsv, readImportText, readSheet, sheetCellText } from './read';
 export type { ImportFileText, SheetCell, SheetReadResult } from './read';
-export { CANNOT_BE_CLEARED, CLEAR_MARK, readImportCell } from './clear';
+export { CANNOT_BE_CLEARED, CLEAR_MARK, NUMBER_CANNOT_BE_CLEARED, readImportCell } from './clear';
 export type { ImportCell } from './clear';
-export { cellText, clearedValueCount, clearRefusals, clearsCell, keepsStoredValue, storedRecordValues } from './import-mode';
+export {
+  cellText,
+  clearedValueCount,
+  clearRefusals,
+  clearsCell,
+  clearsEndOfValidity,
+  endOfValidityToCheck,
+  keepsStoredValue,
+  storedRecordValues,
+  withClearedEndOfValidity,
+} from './import-mode';
 export type { CsvImportMode } from './import-mode';
 export { languageOf, parseDateOrder, parseDecimalMark, timeZoneOf } from './request-options';
 export { writeCsv, writeCsvHeader, writeCsvLine, writeCsvRows } from './write';

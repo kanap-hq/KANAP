@@ -12,8 +12,13 @@ export const CLEAR_MARK = '-';
 /** The clear mark of older files, read as `CLEAR_MARK`. */
 const LEGACY_CLEAR_MARK = '__CLEAR__';
 
-/** The code of a row error for `-` on a value that cannot be cleared: a key, a required value, a status, an amount. */
+/** The code of a row error for `-` on a value that cannot be cleared: a key, a required value, a status. */
 export const CANNOT_BE_CLEARED = 'CSV_VALUE_CANNOT_BE_CLEARED';
+/**
+ * The code of a row error for `-` on a number zero stands for: an amount, a count. Its text says
+ * to write 0, or to leave the cell empty to keep the stored value.
+ */
+export const NUMBER_CANNOT_BE_CLEARED = 'CSV_NUMBER_CANNOT_BE_CLEARED';
 
 /** A raw cell, trimmed (the spaces Excel writes around ` - ` included): blank, clear or a value. */
 export function readImportCell(raw: string | null | undefined): ImportCell {

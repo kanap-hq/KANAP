@@ -1,4 +1,4 @@
-import { CANNOT_BE_CLEARED, readImportCell } from './clear';
+import { CANNOT_BE_CLEARED, NUMBER_CANNOT_BE_CLEARED, readImportCell } from './clear';
 import { cellOf, ImportReportError, rowError } from './master-data';
 import { CsvDataRow } from './types';
 import { sameStoredValue } from './unchanged';
@@ -9,9 +9,11 @@ import { sameStoredValue } from './unchanged';
  *
  * `enrich` is the rule of every import route (D21 of 26.11.9, the budget file's rule): a blank
  * cell keeps the stored value, `-` clears it (`readImportCell`), and `-` on a value that cannot
- * be cleared (a key, a required value, a status, an amount) refuses the row with
- * `CSV_VALUE_CANNOT_BE_CLEARED`. On a new record `-` reads as a blank cell. The routes take no
- * mode: they always apply this rule.
+ * be cleared refuses the row: `CSV_VALUE_CANNOT_BE_CLEARED` for a key, a required value or a
+ * status, `CSV_NUMBER_CANNOT_BE_CLEARED` for an amount or a count (write 0). `-` in `disabled_at`
+ * clears the end of validity, as the screen empties it, and the record is active again
+ * (`clearsEndOfValidity`). On a new record `-` reads as a blank cell. The routes take no mode:
+ * they always apply this rule.
  *
  * `replace` is kept for the internal callers that call a service without a mode, as these
  * imports always did: Kad (until its own pass) and the chart of accounts templates. A blank
@@ -70,14 +72,52 @@ export function cellText(row: CsvDataRow, column: string, mode: CsvImportMode): 
 }
 
 /**
- * The row errors of `-` on the columns that cannot be cleared (keys, required values, statuses,
- * amounts), one per column, named by the column: nothing of the row is written. None when
- * replacing, where `-` is text.
+ * The row errors of `-` on the columns that cannot be cleared, one per column, named by the
+ * column: nothing of the row is written. `values` are keys, required values and statuses;
+ * `numbers` are amounts and counts, where the message says to write 0. None when replacing,
+ * where `-` is text.
  */
-export function clearRefusals(row: CsvDataRow, columns: readonly string[], mode: CsvImportMode): ImportReportError[] {
-  return columns
-    .filter((column) => clearsCell(row, column, mode))
-    .map((column) => rowError(row.line, column, CANNOT_BE_CLEARED, `${column} cannot be cleared.`));
+export function clearRefusals(
+  row: CsvDataRow,
+  values: readonly string[],
+  mode: CsvImportMode,
+  numbers: readonly string[] = [],
+): ImportReportError[] {
+  const refused = (columns: readonly string[]) => columns.filter((column) => clearsCell(row, column, mode));
+  return [
+    ...refused(values).map((column) => rowError(row.line, column, CANNOT_BE_CLEARED, `${column} cannot be cleared.`)),
+    ...refused(numbers).map((column) => rowError(row.line, column, NUMBER_CANNOT_BE_CLEARED,
+      `${column} cannot be cleared. Use 0 to set it to zero, or leave the cell empty to keep the stored value.`)),
+  ];
+}
+
+/**
+ * Whether the row clears the end of validity with `-` (T-I4d of 26.11.9): the screen empties
+ * `disabled_at`, and the record is active again. The row writes `disabled_at: null`
+ * (`withClearedEndOfValidity`) to a stored record; on a new record `-` is a blank cell.
+ */
+export function clearsEndOfValidity(row: CsvDataRow, mode: CsvImportMode): boolean {
+  return clearsCell(row, 'disabled_at', mode);
+}
+
+/** No end of validity, for the status check: a date never reached, the record stays active. */
+const NO_END_OF_VALIDITY = new Date(8.64e15);
+
+/**
+ * The end of validity the row's status is checked against (`csvLifecycleConflict`): the date the
+ * row gives, or, when `-` clears it, none. `disabled` with `-` is then refused as a status whose
+ * end of validity is still to come.
+ */
+export function endOfValidityToCheck<T>(date: T, clears: boolean): T | Date {
+  return clears ? NO_END_OF_VALIDITY : date;
+}
+
+/**
+ * The status and end of validity a row writes to a stored record (`csvItemLifecycle`), with no end
+ * of validity when `-` clears it: `update` then derives the enabled status.
+ */
+export function withClearedEndOfValidity<L extends object>(lifecycle: L, clears: boolean): L | (L & { disabled_at: null }) {
+  return clears ? { ...lifecycle, disabled_at: null } : lifecycle;
 }
 
 /**

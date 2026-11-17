@@ -128,6 +128,7 @@
   "CSV_VALUE_ONE_REQUIRED": "Füllen Sie mindestens eine Spalte {{column}} aus.",
   "CSV_VALUE_CANNOT_BE_EMPTIED": "Dieses Feld darf nicht geleert werden. Entfernen Sie die Spalte aus der Datei, um den gespeicherten Wert zu behalten.",
   "CSV_VALUE_CANNOT_BE_CLEARED": "Dieser Wert kann nicht geleert werden.",
+  "CSV_NUMBER_CANNOT_BE_CLEARED": "Diese Zahl kann nicht geleert werden. Schreiben Sie 0, um sie auf null zu setzen, oder lassen Sie die Zelle leer, um den gespeicherten Wert zu behalten.",
   "CSV_NUMBER_INVALID": "„{{value}}“ ist keine Zahl.",
   "CSV_DATE_INVALID": "„{{value}}“ ist kein Datum. Verwenden Sie 2026-09-02 oder 02.09.2026.",
   "CSV_BOOLEAN_INVALID": "„{{value}}“ ist ungültig. Verwenden Sie ja oder nein.",

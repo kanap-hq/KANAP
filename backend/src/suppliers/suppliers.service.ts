@@ -19,6 +19,8 @@ import {
   clearedValueCount,
   clearRefusals,
   clearsCell,
+  clearsEndOfValidity,
+  endOfValidityToCheck,
   CsvDataRow,
   CsvDateOrder,
   CsvImportMode,
@@ -52,10 +54,10 @@ const CONTACT_ROLE_OF: Record<(typeof CONTACT_COLUMNS)[number], SupplierContactR
   support_contact: SupplierContactRole.SUPPORT,
 };
 
-/** The values `-` cannot clear (D21 of 26.11.9): the keys, the status and its end of validity. */
-const UNCLEARABLE_CSV_HEADERS = ['reference', 'name', 'status', 'disabled_at'] as const;
-/** The values `-` clears on a stored supplier. */
-const CLEARABLE_FIELDS = ['erp_supplier_id', 'notes'] as const;
+/** The values `-` cannot clear (D21 of 26.11.9): the keys and the status. */
+const UNCLEARABLE_CSV_HEADERS = ['reference', 'name', 'status'] as const;
+/** The values `-` clears on a stored supplier, the end of validity included (the supplier is active again). */
+const CLEARABLE_FIELDS = ['erp_supplier_id', 'notes', 'disabled_at'] as const;
 
 /** The columns a row finds its supplier by: its reference, else its name. A file may leave out any other. */
 const KEY_CSV_HEADERS = [['reference'], ['name']] as const;
@@ -425,6 +427,7 @@ export class SuppliersService {
         errors.push(...refusals);
         return;
       }
+      const clearsEnd = clearsEndOfValidity(row, mode);
       const name = cellOf(row, 'name');
       const statusRaw = cellOf(row, 'status').toLowerCase();
       // A row with a reference may leave the name to the stored one (`enrich`): decided once matched.
@@ -457,13 +460,13 @@ export class SuppliersService {
       }
       const disabledAtRaw = hasDisabledAt ? cellOf(row, 'disabled_at') : '';
       let disabledAt: Date | null = null;
-      if (disabledAtRaw) {
+      if (disabledAtRaw && !clearsEnd) {
         const end = endOfValidityOf(row, 'disabled_at');
         if (end.error) {
           errors.push({ row: line, column: 'disabled_at', message: end.error, code: 'CSV_DATE_INVALID', params: { value: disabledAtRaw } });
         } else disabledAt = end.value;
       }
-      const conflict = csvLifecycleConflict(status, disabledAt);
+      const conflict = csvLifecycleConflict(status, endOfValidityToCheck(disabledAt, clearsEnd));
       if (conflict) {
         errors.push({
           row: line,
@@ -477,7 +480,10 @@ export class SuppliersService {
         erp_supplier_id: cellText(row, 'erp_supplier_id', mode) || null,
         notes: cellText(row, 'notes', mode) || null,
         // A date given decides the status (`resolveLifecycleState`); a blank status otherwise enables, as it always has.
-        ...(disabledAt ? { status: status ?? undefined, disabled_at: disabledAt.toISOString() } : { status: status ?? StatusState.ENABLED }),
+        // `-` clears a stored end of validity (`clearsEndOfValidity`).
+        ...(disabledAt
+          ? { status: status ?? undefined, disabled_at: disabledAt.toISOString() }
+          : { status: status ?? StatusState.ENABLED, ...(clearsEnd ? { disabled_at: null } : {}) }),
       };
       const emails: Record<string, string | null> = {};
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

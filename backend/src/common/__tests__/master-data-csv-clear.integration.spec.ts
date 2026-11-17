@@ -31,6 +31,10 @@ import { realFreeze } from '../../spend/__tests__/round-inputs.fixtures';
 // - `-` on a key, a required value, a status or an amount is a row error naming the column
 //   (`CSV_VALUE_CANNOT_BE_CLEARED`), and nothing is written;
 // - `-` on an optional value of a new record reads as a blank cell;
+// - `-` in `disabled_at` clears the end of validity, as the screen empties it, and the record is
+//   active again; with `disabled` in `status` it is the status contradiction; on a new record it
+//   reads as a blank cell (T-I4d);
+// - `-` on a year's headcount or turnover says to write 0 (`CSV_NUMBER_CANNOT_BE_CLEARED`);
 // - suppliers: `-` in a contact column removes the links of that role (T-I4e);
 // - accounts: a chart template still loads by replacing, `-` read as text.
 
@@ -46,6 +50,7 @@ type Run = (lines: string[], dryRun?: boolean) => Promise<Report>;
 
 const YEAR = new Date().getFullYear();
 const REFUSED = 'CSV_VALUE_CANNOT_BE_CLEARED';
+const NUMBER_REFUSED = 'CSV_NUMBER_CANNOT_BE_CLEARED';
 
 function file(lines: string[]): Express.Multer.File {
   return { buffer: Buffer.from(`${lines.join('\n')}\n`, 'utf8'), originalname: 'import.csv' } as Express.Multer.File;
@@ -71,6 +76,36 @@ async function refused(run: Run, lines: string[], expected: string[], read: () =
   assert.equal(report.ok, false, label);
   assert.deepEqual(codes(report), expected, label);
   assert.deepEqual(await read(), before, `${label}: nothing written`);
+}
+
+/**
+ * `-` in `disabled_at` on a stored record (T-I4d): it clears a past end of validity and the record
+ * is active again, counted once; with `disabled` in `status` the row is refused as a status
+ * contradiction; on a new record it is a blank cell. `key` and `create` are a header and its
+ * cells naming the stored record and a new one; `lifecycle` reads a record's status and date.
+ */
+async function endOfValidityClears(
+  run: Run,
+  key: [string, string],
+  create: [string, string],
+  lifecycle: (created?: boolean) => Promise<{ status: string; disabled_at: Date | null }>,
+) {
+  await load(run, [`${key[0]};disabled_at`, `${key[1]};2020-01-15`], [0, 1, 0, 0], 'set a past end of validity');
+  assert.equal((await lifecycle()).status, 'disabled');
+  await refused(run, [`${key[0]};status;disabled_at`, `${key[1]};disabled;-`], ['2:status:CSV_STATUS_DATE_FUTURE'], lifecycle, 'disabled and `-`');
+  await load(run, [`${key[0]};disabled_at`, `${key[1]};-`], [0, 1, 0, 1], 'clear the end of validity');
+  assert.deepEqual(await lifecycle(), { status: 'enabled', disabled_at: null });
+  await load(run, [`${key[0]};status;disabled_at`, `${key[1]};enabled;__CLEAR__`], [0, 0, 1, 0], '`-` on no end of validity');
+  await load(run, [`${create[0]};disabled_at`, `${create[1]};-`], [1, 0, 0, 0], 'create with `-`');
+  assert.deepEqual(await lifecycle(true), { status: 'enabled', disabled_at: null });
+}
+
+/** A record's status and end of validity, by name. */
+function lifecycleOf(runner: QueryRunner, tenantId: string, table: string, name: string, createdName: string) {
+  return async (created = false) => (await runner.query(
+    `SELECT status::text AS status, disabled_at FROM ${table} WHERE tenant_id = $1 AND name = $2`,
+    [tenantId, created ? createdName : name],
+  ))[0];
 }
 
 async function withTenant(tag: string, fn: (runner: QueryRunner, tenantId: string) => Promise<void>) {
@@ -150,7 +185,7 @@ async function testSuppliers() {
     await refused(run, ['reference;name;notes', `SUP-${item_number};-;x`], [`2:name:${REFUSED}`], read, 'name by reference');
     await refused(run, ['reference;notes', '-;x'], [`2:reference:${REFUSED}`], read, 'reference');
     await refused(run, ['name;status;notes', 'Acme;-;x'], [`2:status:${REFUSED}`], read, 'status');
-    await refused(run, ['name;disabled_at;notes', 'Acme;-;x'], [`2:disabled_at:${REFUSED}`], read, 'end of validity');
+    await endOfValidityClears(run, ['name', 'Acme'], ['name', 'Gamma'], lifecycleOf(runner, tenantId, 'suppliers', 'Acme', 'Gamma'));
 
     // A new supplier: `-` on an optional value is a blank cell, in a contact column too.
     await load(run, ['name;erp_supplier_id;notes;support_contact', 'Beta;-;__CLEAR__;-'], [1, 0, 0, 0], 'create');
@@ -188,7 +223,7 @@ async function testContacts() {
 }
 
 async function testCompanies() {
-  await withTenant('cmp', async (runner) => {
+  await withTenant('cmp', async (runner, tenantId) => {
     const a = audit(runner);
     const metrics = new CompanyMetricsService(runner.manager.getRepository(CompanyMetric), a, realFreeze());
     const svc = new CompaniesService(runner.manager.getRepository(Company), a, metrics);
@@ -210,10 +245,13 @@ async function testCompanies() {
     await load(run, [`name;notes;it_users_${YEAR}`, 'Acme SA;-;-'], [0, 0, 1, 0], '`-` on empty values');
     await load(run, [full, 'Acme SA;;;;;;;;'], [0, 0, 1, 0], 'blank cells');
 
-    for (const column of ['name', 'city', 'country_iso', 'base_currency', 'status', 'disabled_at', `headcount_${YEAR}`, `turnover_${YEAR}`]) {
+    for (const column of ['name', 'city', 'country_iso', 'base_currency', 'status', `headcount_${YEAR}`, `turnover_${YEAR}`]) {
       const lines = column === 'name' ? ['name;notes', '-;x'] : [`name;${column};notes`, 'Acme SA;-;x'];
-      await refused(run, lines, [`2:${column}:${REFUSED}`], read, column);
+      await refused(run, lines, [`2:${column}:${/_\d{4}$/.test(column) ? NUMBER_REFUSED : REFUSED}`], read, column);
     }
+    const refusal = await run([`name;turnover_${YEAR}`, 'Acme SA;-']);
+    assert.match(refusal.errors[0].message, /Use 0 to set it to zero, or leave the cell empty to keep the stored value/);
+    await endOfValidityClears(run, ['name', 'Acme SA'], ['name;country_iso;city;base_currency', 'Gamma SA;FR;Nice;EUR'], lifecycleOf(runner, tenantId, 'companies', 'Acme SA', 'Gamma SA'));
 
     // A new company: `-` on an optional value is a blank cell, and a year with only `-` holds no metric.
     await load(run, [`name;country_iso;city;base_currency;notes;address1;it_users_${YEAR}`, 'Beta SA;FR;Paris;EUR;-;-;-'], [1, 0, 0, 0], 'create');
@@ -244,7 +282,7 @@ async function testDepartments() {
     await refused(run, ['reference;name;description', `DEPT-${item_number};-;x`], [`2:name:${REFUSED}`], read, 'name');
     await refused(run, ['reference;description', '-;x'], [`2:reference:${REFUSED}`], read, 'reference');
     await refused(run, ['company_name;name;status', 'Dept Co;Finance;-'], [`2:status:${REFUSED}`], read, 'status');
-    await refused(run, ['company_name;name;disabled_at', 'Dept Co;Finance;-'], [`2:disabled_at:${REFUSED}`], read, 'end of validity');
+    await endOfValidityClears(run, ['company_name;name', 'Dept Co;Finance'], ['company_name;name', 'Dept Co;Audit'], lifecycleOf(runner, tenantId, 'departments', 'Finance', 'Audit'));
 
     await load(run, ['company_name;name;description', 'Dept Co;Legal;-'], [1, 0, 0, 0], 'create');
     assert.equal((await read('Legal')).description, null);
@@ -319,7 +357,7 @@ async function testAnalyticsValues() {
     await refused(run, ['name;description', '-;x'], [`2:name:${REFUSED}`], read, 'name');
     await refused(run, ['axis_code;name;description', '-;Cloud;x'], [`2:axis_code:${REFUSED}`], read, 'dimension');
     await refused(run, ['name;status', 'Cloud;-'], [`2:status:${REFUSED}`], read, 'status');
-    await refused(run, ['name;disabled_at', 'Cloud;-'], [`2:disabled_at:${REFUSED}`], read, 'end of validity');
+    await endOfValidityClears(run, ['name', 'Cloud'], ['name', 'Fog'], lifecycleOf(runner, tenantId, 'analytics_categories', 'Cloud', 'Fog'));
 
     await load(run, ['name;description;applies_to', 'Edge;-;-'], [1, 0, 0, 0], 'create');
     assert.deepEqual([(await read('Edge')).description, (await read('Edge')).applies_to], [null, null]);

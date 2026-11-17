@@ -41,6 +41,9 @@ import {
   cellText,
   clearedValueCount,
   clearRefusals,
+  clearsEndOfValidity,
+  endOfValidityToCheck,
+  withClearedEndOfValidity,
   clearsCell,
   CsvDataRow,
   CsvDateOrder,
@@ -92,13 +95,16 @@ const REQUIRED_COMPANY_CELLS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /**
- * The values `-` cannot clear (D21 of 26.11.9): the keys, the required values, the status and its
- * end of validity. Each year's headcount (required by its metrics) and turnover (an amount: 0
- * writes zero) refuse it too.
+ * The values `-` cannot clear (D21 of 26.11.9): the keys, the required values and the status. Each
+ * year's headcount (required by its metrics) and turnover (an amount) refuse it too, with the
+ * message that says to write 0.
  */
-const UNCLEARABLE_COMPANY_CELLS = ['reference', ...REQUIRED_COMPANY_CELLS.map(([column]) => column), 'status', 'disabled_at'];
-/** The values `-` clears on a stored company; a year's IT users are cleared with its metrics. */
-const CLEARABLE_COMPANY_FIELDS = ['address1', 'address2', 'postal_code', 'state', 'reg_number', 'vat_number', 'notes'] as const;
+const UNCLEARABLE_COMPANY_CELLS = ['reference', ...REQUIRED_COMPANY_CELLS.map(([column]) => column), 'status'];
+/**
+ * The values `-` clears on a stored company, the end of validity included (the company is active
+ * again); a year's IT users are cleared with its metrics.
+ */
+const CLEARABLE_COMPANY_FIELDS = ['address1', 'address2', 'postal_code', 'state', 'reg_number', 'vat_number', 'notes', 'disabled_at'] as const;
 
 @Injectable()
 export class CompaniesService {
@@ -1086,7 +1092,8 @@ export class CompaniesService {
       }
     }
     // Validate and normalize
-    type CsvLifecycle = { status: StatusState | null; disabled_at: string | null };
+    /** `clearsEnd`: `-` in `disabled_at` clears a stored end of validity (`clearsEndOfValidity`). */
+    type CsvLifecycle = { status: StatusState | null; disabled_at: string | null; clearsEnd: boolean };
     /**
      * A year's metrics as the row sets them. Undefined keeps the stored value: an absent column, or
      * a blank cell when completing. A blank cell otherwise clears it (the headcount cannot be empty).
@@ -1114,10 +1121,7 @@ export class CompaniesService {
         errors.push(...problems);
         return;
       }
-      const refusals = clearRefusals(row, [
-        ...UNCLEARABLE_COMPANY_CELLS,
-        ...yearsInFile.flatMap((fy) => [`headcount_${fy}`, `turnover_${fy}`]),
-      ], mode);
+      const refusals = clearRefusals(row, UNCLEARABLE_COMPANY_CELLS, mode, yearsInFile.flatMap((fy) => [`headcount_${fy}`, `turnover_${fy}`]));
       if (refusals.length > 0) {
         errors.push(...refusals);
         return;
@@ -1144,6 +1148,7 @@ export class CompaniesService {
         ? (STATUS_STATES.find((s) => s === statusRaw) ?? null)
         : null;
       const disabledAtRaw = cellOf(row, 'disabled_at');
+      const clearsEnd = clearsEndOfValidity(row, mode);
       let disabled_at_iso: string | null = null;
       // A row with a reference may leave the name to the stored one (`enrich`): decided once matched.
       if (!name) {
@@ -1177,7 +1182,7 @@ export class CompaniesService {
         errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.`, { value: statusRaw, allowed: 'enabled, disabled' }));
         return;
       }
-      if (disabledAtRaw) {
+      if (disabledAtRaw && !clearsEnd) {
         const end = endOfValidityOf(row, 'disabled_at');
         if (end.error) {
           errors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
@@ -1185,7 +1190,7 @@ export class CompaniesService {
         }
         disabled_at_iso = end.value ? end.value.toISOString() : null;
       }
-      const lifecycleConflict = csvLifecycleConflict(statusValue, disabled_at_iso);
+      const lifecycleConflict = csvLifecycleConflict(statusValue, endOfValidityToCheck(disabled_at_iso, clearsEnd));
       if (lifecycleConflict) {
         errors.push(rowError(line, 'status', statusValue === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
         return;
@@ -1265,7 +1270,7 @@ export class CompaniesService {
         },
         rowMetrics,
         metrics: new Map(),
-        lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
+        lifecycle: { status: statusValue, disabled_at: disabled_at_iso, clearsEnd },
       });
     });
     const total = read.rows.length;
@@ -1390,7 +1395,7 @@ export class CompaniesService {
       if (!existing) inserted += 1;
       else if (
         sameStoredValues(existing as any, item.company as Record<string, unknown>)
-        && sameStoredLifecycle(existing, csvItemLifecycle(item.lifecycle.status, item.lifecycle.disabled_at, true))
+        && sameStoredLifecycle(existing, withClearedEndOfValidity(csvItemLifecycle(item.lifecycle.status, item.lifecycle.disabled_at, true), item.lifecycle.clearsEnd))
         && Array.from(item.metrics.entries()).every(([fy, metric]) => sameMetric(existing.id, fy, metric))
       ) {
         unchanged += 1;
@@ -1406,7 +1411,8 @@ export class CompaniesService {
     for (const { item, existing } of toWrite) {
       let saved: Company | null = null;
       // A blank status or date keeps the stored value on an update; `update`/`create` resolve the rest.
-      const body = { ...item.company, ...csvItemLifecycle(item.lifecycle.status, item.lifecycle.disabled_at, !!existing) };
+      const lifecycle = csvItemLifecycle(item.lifecycle.status, item.lifecycle.disabled_at, !!existing);
+      const body = { ...item.company, ...withClearedEndOfValidity(lifecycle, !!existing && item.lifecycle.clearsEnd) };
       if (existing) {
         saved = await this.update(existing.id, body as any, userId ?? undefined, { manager: opts?.manager });
       } else {

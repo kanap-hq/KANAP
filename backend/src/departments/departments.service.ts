@@ -30,6 +30,9 @@ import {
   cellText,
   clearedValueCount,
   clearRefusals,
+  clearsEndOfValidity,
+  endOfValidityToCheck,
+  withClearedEndOfValidity,
   CsvDataRow,
   CsvDateOrder,
   CsvImportMode,
@@ -640,7 +643,8 @@ export class DepartmentsService {
       return companyNames.get(id)!;
     };
     // Validate and normalize rows
-    const normalized: Array<DepartmentUpsertDto & { company_id: string; name: string; lifecycle: { status: StatusState | null; disabled_at: string | null } }> = [];
+    // `clearsEnd`: `-` in `disabled_at` clears a stored end of validity (`clearsEndOfValidity`).
+    const normalized: Array<DepartmentUpsertDto & { company_id: string; name: string; lifecycle: { status: StatusState | null; disabled_at: string | null; clearsEnd: boolean } }> = [];
     const lineOf = new Map<object, number>();
     // The number of the department a row names in the reference column (`DEPT-12` or `12`).
     const referenceOf = new Map<object, number>();
@@ -653,8 +657,9 @@ export class DepartmentsService {
         errors.push(...problems);
         continue;
       }
-      // `-` cannot clear the keys, the status or its end of validity (D21 of 26.11.9): only the description.
-      const refusals = clearRefusals(row, ['reference', 'company_name', 'name', 'status', 'disabled_at'], mode);
+      // `-` cannot clear the keys or the status (D21 of 26.11.9): only the description and the end
+      // of validity (the department is active again).
+      const refusals = clearRefusals(row, ['reference', 'company_name', 'name', 'status'], mode);
       if (refusals.length > 0) {
         errors.push(...refusals);
         continue;
@@ -681,6 +686,7 @@ export class DepartmentsService {
         ? (STATUS_STATES.find((s) => s === statusRaw) ?? null)
         : null;
       const disabledAtRaw = cellOf(row, 'disabled_at');
+      const clearsEnd = clearsEndOfValidity(row, mode);
       let disabled_at_iso: string | null = null;
       // A row with a reference may leave its company and name to the stored ones (`enrich`): decided once matched.
       const writes = (column: string) => reference === null || !keepsStoredValue(row, read.present, column, mode);
@@ -690,7 +696,7 @@ export class DepartmentsService {
         errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${statusRaw}'. Use 'enabled' or 'disabled'.`, { value: statusRaw, allowed: 'enabled, disabled' }));
         continue;
       }
-      if (disabledAtRaw) {
+      if (disabledAtRaw && !clearsEnd) {
         const end = endOfValidityOf(row, 'disabled_at');
         if (end.error) {
           errors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
@@ -698,7 +704,7 @@ export class DepartmentsService {
         }
         disabled_at_iso = end.value ? end.value.toISOString() : null;
       }
-      const lifecycleConflict = csvLifecycleConflict(statusValue, disabled_at_iso);
+      const lifecycleConflict = csvLifecycleConflict(statusValue, endOfValidityToCheck(disabled_at_iso, clearsEnd));
       if (lifecycleConflict) {
         errors.push(rowError(line, 'status', statusValue === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
         continue;
@@ -717,7 +723,7 @@ export class DepartmentsService {
         company_id: companyId,
         name,
         description: cellText(row, 'description', mode) || null,
-        lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
+        lifecycle: { status: statusValue, disabled_at: disabled_at_iso, clearsEnd },
       };
       normalized.push(item);
       lineOf.set(item, line);
@@ -834,11 +840,11 @@ export class DepartmentsService {
         }
         : fileItem;
       const { lifecycle, ...values } = item;
-      cleared += clearedValueCount(existing, row, mode, ['description']);
+      cleared += clearedValueCount(existing, row, mode, ['description', 'disabled_at']);
       if (!existing) inserted += 1;
       else if (
         sameStoredValues(existing as any, values)
-        && sameStoredLifecycle(existing, csvItemLifecycle(lifecycle.status, lifecycle.disabled_at, true))
+        && sameStoredLifecycle(existing, withClearedEndOfValidity(csvItemLifecycle(lifecycle.status, lifecycle.disabled_at, true), lifecycle.clearsEnd))
       ) {
         unchanged += 1;
         continue;
@@ -856,7 +862,11 @@ export class DepartmentsService {
     for (const { item, existing } of toWrite) {
       // A blank status or date keeps the stored value on an update; `update`/`create` resolve the rest.
       const { lifecycle, ...values } = item;
-      const body: DepartmentUpsertDto = { ...values, ...csvItemLifecycle(lifecycle.status, lifecycle.disabled_at, !!existing) };
+      const { clearsEnd, ...written } = lifecycle;
+      const body: DepartmentUpsertDto = {
+        ...values,
+        ...withClearedEndOfValidity(csvItemLifecycle(written.status, written.disabled_at, !!existing), !!existing && clearsEnd),
+      };
       if (existing) {
         const saved = await this.update(existing.id, body, userId ?? undefined, { manager: opts?.manager });
         if (saved) processed += 1;
