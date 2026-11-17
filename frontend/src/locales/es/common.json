@@ -617,6 +617,7 @@
     "skipped_other": "{{count}} omitidas",
     "valuesWillBeCleared_one": "Se borrará {{count}} valor",
     "valuesWillBeCleared_other": "Se borrarán {{count}} valores",
+    "clearingRule": "Una celda vacía conserva el valor guardado. Un guion (-) lo borra.",
     "errors": "Errores ({{count}})",
     "warnings": "Advertencias ({{count}})",
     "andMoreErrors2_one": "…y {{count}} error más",

@@ -617,6 +617,7 @@
     "skipped_other": "{{count}} übersprungen",
     "valuesWillBeCleared_one": "{{count}} Wert wird geleert",
     "valuesWillBeCleared_other": "{{count}} Werte werden geleert",
+    "clearingRule": "Eine leere Zelle behält den gespeicherten Wert. Ein Bindestrich (-) leert ihn.",
     "errors": "Fehler ({{count}})",
     "warnings": "Warnungen ({{count}})",
     "andMoreErrors2_one": "…und {{count}} weiterer Fehler",

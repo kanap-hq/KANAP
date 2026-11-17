@@ -617,6 +617,7 @@
     "skipped_other": "{{count}} ignorées",
     "valuesWillBeCleared_one": "{{count}} valeur sera effacée",
     "valuesWillBeCleared_other": "{{count}} valeurs seront effacées",
+    "clearingRule": "Une cellule vide garde la valeur enregistrée. Un tiret (-) l'efface.",
     "errors": "Erreurs ({{count}})",
     "warnings": "Avertissements ({{count}})",
     "andMoreErrors2_one": "…et {{count}} erreur supplémentaire",

@@ -12,6 +12,8 @@ import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLangu
 import { useImportFiles } from './importFiles';
 import ImportExampleButton, { type ImportExampleKey } from './ImportExampleButton';
 import ImportMatchesView, { type UndoneMatch } from './ImportMatchesView';
+import { importFollowsClearingRule } from './clearingRule';
+import InfoHint from '../workspace/InfoHint';
 import type { CsvImportResult } from './csv.types';
 
 type ImportReport = {
@@ -23,6 +25,8 @@ type ImportReport = {
   processed?: number;
   /** Rows identical to what is stored, left untouched (budget rows import only). */
   unchanged?: number;
+  /** Stored values the rows clear with `-` (D21 of 26.11.9), counted alike at the check and at the load. */
+  cleared?: number;
   errors: RowError[];
   /** Rows that import, with a note on how (account numbers whose leading zeros are dropped). */
   warnings?: RowError[];
@@ -277,7 +281,10 @@ export default function CsvImportDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" onTransitionExited={reset}>
-      <DialogTitle>{titleProp || t(workbook ? 'buttons.import' : 'csv.importTitle')}</DialogTitle>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        {titleProp || t(workbook ? 'buttons.import' : 'csv.importTitle')}
+        {importFollowsClearingRule(endpoint) && <InfoHint text={t('csv.clearingRule')} />}
+      </DialogTitle>
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t(flexibleFormat
@@ -378,6 +385,9 @@ export default function CsvImportDialog({
                 )}
                 {report.dryRun && typeof report.unchanged === 'number' && (
                   <Box component="span" sx={{ display: 'block' }}>{t('csv.rowsUnchanged', { count: report.unchanged })}</Box>
+                )}
+                {report.dryRun && (report.cleared ?? 0) > 0 && (
+                  <Box component="span" sx={{ display: 'block' }}>{t('csv.valuesWillBeCleared', { count: report.cleared })}</Box>
                 )}
               </Alert>
             ) : (
