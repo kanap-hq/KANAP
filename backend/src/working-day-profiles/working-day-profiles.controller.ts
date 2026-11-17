@@ -171,6 +171,8 @@ export class WorkingDayProfilesController {
         language,
         dateOrder: parseDateOrder(dateOrderRaw),
         decimalMark: parseDecimalMark(decimalMarkRaw),
+        // The clearing rule of every import route (D21 of 26.11.9).
+        mode: 'enrich',
       },
       caller,
     );

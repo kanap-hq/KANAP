@@ -118,7 +118,8 @@ export class TechnologiesController {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
     const unmatched = csvUnmatched(unmatchedRaw);
     const language = await languageOf(requireManager(ctx.manager), ctx.tenantId, ctx.userId || null, languageRaw);
-    return run({ file, dryRun, language, access: csvCallerAccess(ctx), unmatched });
+    // The clearing rule of every import route (D21 of 26.11.9).
+    return run({ file, dryRun, language, access: csvCallerAccess(ctx), unmatched, mode: 'enrich' });
   }
 
   /** As `applicationsReach`, for a route that cannot answer without it: 403. */

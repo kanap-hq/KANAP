@@ -3,12 +3,16 @@ import type { EntityManager } from 'typeorm';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import {
   cellOf,
+  cellText,
+  clearRefusals,
+  clearsCell,
   formatCsvBoolean,
   parseCsvBoolean,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
   type CsvDataRow,
+  type CsvImportMode,
   type CsvLanguage,
   type ImportReportError,
 } from '../common/csv-sheet';
@@ -78,6 +82,8 @@ export interface TechnologyLinksImportResult {
   inserted: number;
   updated: number;
   unchanged: number;
+  /** The links' notes the rows clear with `-` (D21 of 26.11.9). */
+  cleared?: number;
   errors: ImportReportError[];
   warnings: ImportReportError[];
   ignoredColumns: string[];
@@ -109,6 +115,12 @@ export type LinkFileImportRequest = {
   unmatched?: Array<{ column: string; value: string }>;
   /** Kad's proposals, by file column: taken for a record the person reads, exactly or case aside. */
   proposals?: ImportProposals;
+  /**
+   * What a row does to a link that exists (`CsvImportMode`), the route's and Kad's `enrich`: a blank
+   * note keeps the link's note, `-` clears it, and `-` on any other column refuses the row (the
+   * links are only ever added). Without a mode (`replace`), `-` is a note's text, as before.
+   */
+  mode?: CsvImportMode;
 };
 type ImportRequest = LinkFileImportRequest;
 
@@ -130,6 +142,8 @@ type PlannedLink = {
   /** Trimmed label, empty when the link has no version. */
   versionLabel: string;
   notes: string;
+  /** `-` clears the stored note of the link (`enrich`). */
+  clearNotes: boolean;
   /** Insert the link, or replace its notes. An operating-system mark alone does not. */
   writeLink: boolean;
   /**
@@ -345,7 +359,7 @@ export class TechnologyLinksCsvService {
     const { file, dryRun, language } = request;
     const read = await readMasterDataFile({ file: uploadedBytes(file), fields: spec.headers, optional: OPTIONAL_COLUMNS, language });
     const lookup: NameLookup = { request, state: { matches: new Map(), refused: new Map() } };
-    const report = (errors: ImportReportError[], warnings: ImportReportError[], counts = { inserted: 0, updated: 0, unchanged: 0 }) => ({
+    const report = (errors: ImportReportError[], warnings: ImportReportError[], counts = { inserted: 0, updated: 0, unchanged: 0, cleared: 0 }) => ({
       ok: errors.length === 0, dryRun, total: read.rows.length, ...counts, errors, warnings,
       ignoredColumns: read.ignoredColumns, notices: read.notices,
       ...listedMatches(lookup.state.matches), ...listedRefusedProposals(lookup.state.refused),
@@ -354,8 +368,11 @@ export class TechnologyLinksCsvService {
 
     const planned = await this.plan(read.rows, ctx, spec, lookup);
     if (planned.errors.length > 0) return report(planned.errors, planned.warnings);
-    const counts = { inserted: 0, updated: 0, unchanged: 0 };
-    for (const row of planned.rows) counts[row.outcome] += 1;
+    const counts = { inserted: 0, updated: 0, unchanged: 0, cleared: 0 };
+    for (const row of planned.rows) {
+      counts[row.outcome] += 1;
+      if (row.clearNotes) counts.cleared += 1;
+    }
     if (!dryRun) await this.write(spec.side, planned.rows, importProvenance(fixMulterFilename(file.originalname)), ctx);
     return report([], planned.warnings, counts);
   }
@@ -369,7 +386,11 @@ export class TechnologyLinksCsvService {
   ): Promise<{ rows: PlannedLink[]; errors: ImportReportError[]; warnings: ImportReportError[] }> {
     const errors: ImportReportError[] = [];
     const warnings: ImportReportError[] = [];
-    const usable = rows.filter((row) => rowProblemErrors(row).length === 0);
+    const mode = lookup.request.mode ?? 'replace';
+    // `-` clears a link's note only (T-I4g of 26.11.9): the names, the version and the operating
+    // system find or mark the link.
+    const refusals = (row: CsvDataRow) => clearRefusals(row, spec.headers.filter((column) => column !== 'notes' && column !== 'source'), mode);
+    const usable = rows.filter((row) => rowProblemErrors(row).length === 0 && refusals(row).length === 0);
     const subjectOf = await spec.resolve(usable, lookup);
     const techs = await this.technologies(
       ctx,
@@ -397,6 +418,11 @@ export class TechnologyLinksCsvService {
         errors.push(...problems);
         continue;
       }
+      const refused = refusals(row);
+      if (refused.length > 0) {
+        errors.push(...refused);
+        continue;
+      }
       const subject = subjects.get(row)!;
       if ('row' in subject) {
         errors.push(subject);
@@ -410,7 +436,7 @@ export class TechnologyLinksCsvService {
         errors.push(rowError(line, 'version', 'CSV_VERSION_TOO_LONG', `Version is longer than ${VERSION_MAX} characters.`, { max: VERSION_MAX }));
         continue;
       }
-      const notes = cellOf(row, 'notes');
+      const notes = cellText(row, 'notes', mode);
       if (notes.length > NOTES_MAX) {
         errors.push(rowError(line, 'notes', 'CSV_NOTES_TOO_LONG', `Notes are longer than ${NOTES_MAX} characters.`, { max: NOTES_MAX }));
         continue;
@@ -465,12 +491,15 @@ export class TechnologyLinksCsvService {
       if (versionLabel && !versionId) {
         warnings.push(rowError(line, 'version', 'CSV_TECHNOLOGY_VERSION_CREATED', `Version "${versionLabel}" is created.`, { value: versionLabel }));
       }
-      const notesChange = link != null && notes !== '' && notes !== (link.notes ?? '');
+      // `-` on a link without a note, or on a new link, changes nothing.
+      const clearNotes = link != null && clearsCell(row, 'notes', mode) && (link.notes ?? '') !== '';
+      const notesChange = link != null && ((notes !== '' && notes !== (link.notes ?? '')) || clearNotes);
       planned.push({
         subjectId: subject.id,
         technologyId: tech.id,
         versionLabel,
         notes,
+        clearNotes,
         writeLink: !link || notesChange,
         markOperatingSystem,
         outcome: !link ? 'inserted' : notesChange || markOperatingSystem ? 'updated' : 'unchanged',
@@ -527,14 +556,15 @@ export class TechnologyLinksCsvService {
           : row.versionLabel ? { version_label: row.versionLabel, version_label_as_written: true } : {}),
         ...(row.notes !== '' ? { notes: row.notes } : {}),
       };
+      const write = { keepExistingProvenance: true, clearNotes: row.clearNotes };
       if (side === 'application') {
         if (row.writeLink) {
-          await this.links.setApplicationTechnology(row.subjectId, row.technologyId, true, body, opts, provenance, { keepExistingProvenance: true });
+          await this.links.setApplicationTechnology(row.subjectId, row.technologyId, true, body, opts, provenance, write);
         }
         continue;
       }
       // A mark alone: the call finds the existing link and leaves it as stored.
-      const written = await this.links.addAssetLink(row.technologyId, row.subjectId, body, opts, provenance, { keepExistingProvenance: true });
+      const written = await this.links.addAssetLink(row.technologyId, row.subjectId, body, opts, provenance, write);
       if (row.markOperatingSystem && written.link_id) {
         // Not requested: the service marks the link when the server has no mark, never deletes one.
         await this.operatingSystems.onAssetLinkAdded(ctx.manager, ctx.tenantId, row.subjectId, written.link_id, provenance.source, opts.userId, false);
