@@ -21,6 +21,8 @@ case $cmd in
     dst="$FAKE_S3/$(path "${args[2]}")"; mkdir -p "${dst%/*}"; cp "${args[1]}" "$dst"; exit 0 ;;
   sync)
     [[ -n ${FAKE_FAIL_SYNC:-} ]] && { echo 'Failed to sync: source unreachable' >&2; exit 1; }
-    mkdir -p "${args[2]}"; cp -r "$FAKE_SOURCE/." "${args[2]}/"; exit 0 ;;
+    # Like rclone: a failed read deletes nothing; a successful one makes the copy match the source.
+    mkdir -p "${args[2]}"; find "${args[2]}" -mindepth 1 -delete
+    [[ -d $FAKE_SOURCE ]] && cp -r "$FAKE_SOURCE/." "${args[2]}/"; exit 0 ;;
 esac
 echo "fake rclone: unexpected command $cmd" >&2; exit 2

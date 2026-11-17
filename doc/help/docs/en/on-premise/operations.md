@@ -347,7 +347,7 @@ The list shows the size and name of the three objects. Each object shows `x-amz-
 
 - Volume: each night uploads every file of the storage. The bucket holds one full copy per day of retention. During the night, the server needs free space for twice the size of the files, and the upload time grows with that size.
 - The script keeps a copy of the files in `/var/lib/kadratis-backup/files`, in the clear, like the files copy of the local backup. It creates `/var/lib/kadratis-backup` in mode 700 and refuses a work directory that is a link, belongs to another account or can be written by other users.
-- When the storage bucket is empty and the local copy is not, the night fails and deletes nothing: the journal reads `the attachments bucket ... is empty, but the local copy ... holds N files`.
+- The local copy follows the storage bucket, down to no file at all: a bucket emptied on purpose gives a night with `attachments: 0 files`. A bucket that cannot be read (wrong name, keys or address) stops the night at the `attachments` step and deletes nothing from the local copy.
 - An upload refused by the bucket stops the night at the `upload` step. With `rclone` before 1.61 and a policy that denies ACL writes, the journal reads `ERROR : database.dump.age: Failed to copy: AccessDenied: Access Denied.` (see [Prepare the bucket](#nightly-encrypted-backup-to-an-s3-bucket)).
 - A failed night ends with exit code 1, the line `backup FAILED during step '...'` in the journal, `failed` in `systemctl status kadratis-backup.service`, and no call to `BACKUP_SUCCESS_URL`.
 
