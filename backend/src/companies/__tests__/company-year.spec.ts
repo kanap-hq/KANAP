@@ -88,7 +88,7 @@ async function testRoutesRejectPartialYearBeforeQuery() {
     {} as never,
   );
   await rejectsBeforeQuery(() => controller.export('data', '2', undefined, {}, {} as never, {} as never));
-  await rejectsBeforeQuery(() => controller.import({} as never, 'true', '2', undefined, undefined, undefined, undefined, {} as never));
+  await rejectsBeforeQuery(() => controller.import({} as never, 'true', '2', undefined, undefined, undefined, {} as never));
 }
 
 async function testValidYearReachesTheQuery() {

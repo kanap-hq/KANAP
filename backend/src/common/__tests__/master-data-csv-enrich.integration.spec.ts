@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { BadRequestException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { AuditLog } from '../../audit/audit.entity';
@@ -22,7 +21,7 @@ import { AnalyticsCategoriesService } from '../../analytics/analytics-categories
 import { AnalyticsCategoriesCsvService } from '../../analytics/analytics-categories-csv.service';
 import { AnalyticsCategory } from '../../analytics/analytics-category.entity';
 import { realFreeze } from '../../spend/__tests__/round-inputs.fixtures';
-import { CsvImportMode, parseImportMode, ROUTE_IMPORT_MODE } from '../csv-sheet';
+import { CsvImportMode } from '../csv-sheet';
 
 // "Complete" and "replace" for the master-data imports that have their own `importCsv` (lot I4
 // of 26.11.9): suppliers, contacts, companies, departments, accounts and dimension values.
@@ -32,7 +31,8 @@ import { CsvImportMode, parseImportMode, ROUTE_IMPORT_MODE } from '../csv-sheet'
 //   columns a row finds or creates its record by;
 // - a new record still needs every required value;
 // - a row whose filled cells equal the stored record counts as unchanged;
-// - a service called without a mode replaces (Kad, the chart templates); a route without one completes.
+// - a service called without a mode replaces (Kad, the chart templates); every route completes, and
+//   reads `-` as a clear (master-data-csv-clear.integration.spec.ts).
 
 type Report = { ok: boolean; inserted: number; updated: number; unchanged?: number; errors: Array<{ row: number; column?: string; code?: string; message: string }> };
 
@@ -72,17 +72,6 @@ async function withTenant(tag: string, fn: (runner: QueryRunner, tenantId: strin
 
 function audit(runner: QueryRunner) {
   return new AuditService(runner.manager.getRepository(AuditLog));
-}
-
-function testModeSwitch() {
-  assert.equal(ROUTE_IMPORT_MODE, 'enrich');
-  assert.equal(parseImportMode(undefined), 'enrich');
-  assert.equal(parseImportMode(''), 'enrich');
-  assert.equal(parseImportMode('enrich'), 'enrich');
-  assert.equal(parseImportMode('replace'), 'replace');
-  for (const raw of ['merge', 'REPLACE', ['enrich', 'replace']]) {
-    assert.throws(() => parseImportMode(raw), (err: unknown) => err instanceof BadRequestException && err.getStatus() === 400, String(raw));
-  }
 }
 
 async function testSuppliers() {
@@ -318,7 +307,6 @@ async function testAnalyticsValues() {
 
 async function main() {
   try {
-    testModeSwitch();
     await dataSource.initialize();
     // Every family runs, so a failure in one does not hide the others.
     const failures: string[] = [];

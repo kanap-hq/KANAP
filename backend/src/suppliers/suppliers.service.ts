@@ -15,6 +15,10 @@ import { parseReferenceNumber } from '../common/parse-item-number';
 import { sortedFindQuery } from '../common/list-sort';
 import {
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
+  clearsCell,
   CsvDataRow,
   CsvDateOrder,
   CsvImportMode,
@@ -24,6 +28,7 @@ import {
   keepStoredEndOfValidity,
   ImportReportError,
   keepsStoredValue,
+  MasterDataImportResult,
   nameMatchedWarning,
   readMasterDataFile,
   referenceRenameWarning,
@@ -37,9 +42,20 @@ import { uploadedBytes } from '../common/upload';
 import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
 import { SUPPLIER_FILE_COLUMNS, SUPPLIER_CSV_HEADERS } from './supplier-csv-headers';
+import { SupplierContactsService } from './supplier-contacts.service';
 
 /** The contact columns of the file: one e-mail per contact type. */
 const CONTACT_COLUMNS = ['commercial_contact', 'technical_contact', 'support_contact'] as const;
+const CONTACT_ROLE_OF: Record<(typeof CONTACT_COLUMNS)[number], SupplierContactRole> = {
+  commercial_contact: SupplierContactRole.COMMERCIAL,
+  technical_contact: SupplierContactRole.TECHNICAL,
+  support_contact: SupplierContactRole.SUPPORT,
+};
+
+/** The values `-` cannot clear (D21 of 26.11.9): the keys, the status and its end of validity. */
+const UNCLEARABLE_CSV_HEADERS = ['reference', 'name', 'status', 'disabled_at'] as const;
+/** The values `-` clears on a stored supplier. */
+const CLEARABLE_FIELDS = ['erp_supplier_id', 'notes'] as const;
 
 /** The columns a row finds its supplier by: its reference, else its name. A file may leave out any other. */
 const KEY_CSV_HEADERS = [['reference'], ['name']] as const;
@@ -350,7 +366,7 @@ export class SuppliersService {
       mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager },
-  ) {
+  ): Promise<MasterDataImportResult> {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders();
@@ -388,6 +404,8 @@ export class SuppliersService {
       commercial_email: string | null;
       technical_email: string | null;
       support_email: string | null;
+      /** The contact roles whose cell holds `-`: their links are removed (T-I4e of 26.11.9). */
+      clearedRoles: SupplierContactRole[];
     }> = [];
     // An absent `disabled_at` column is not a blank cell: the file then sets the lifecycle through `status` alone.
     const hasDisabledAt = read.present.includes('disabled_at');
@@ -400,6 +418,11 @@ export class SuppliersService {
       const problems = rowProblemErrors(row, ['disabled_at']);
       if (problems.length > 0) {
         errors.push(...problems);
+        return;
+      }
+      const refusals = clearRefusals(row, UNCLEARABLE_CSV_HEADERS, mode);
+      if (refusals.length > 0) {
+        errors.push(...refusals);
         return;
       }
       const name = cellOf(row, 'name');
@@ -451,15 +474,15 @@ export class SuppliersService {
       }
       const body: SupplierUpsertDto = {
         name,
-        erp_supplier_id: cellOf(row, 'erp_supplier_id') || null,
-        notes: cellOf(row, 'notes') || null,
+        erp_supplier_id: cellText(row, 'erp_supplier_id', mode) || null,
+        notes: cellText(row, 'notes', mode) || null,
         // A date given decides the status (`resolveLifecycleState`); a blank status otherwise enables, as it always has.
         ...(disabledAt ? { status: status ?? undefined, disabled_at: disabledAt.toISOString() } : { status: status ?? StatusState.ENABLED }),
       };
       const emails: Record<string, string | null> = {};
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       for (const column of CONTACT_COLUMNS) {
-        const email = cellOf(row, column).toLowerCase() || null;
+        const email = cellText(row, column, mode).toLowerCase() || null;
         emails[column] = email;
         if (!email) continue;
         if (!emailRegex.test(email)) {
@@ -474,6 +497,7 @@ export class SuppliersService {
         commercial_email: emails.commercial_contact,
         technical_email: emails.technical_contact,
         support_email: emails.support_contact,
+        clearedRoles: CONTACT_COLUMNS.filter((column) => clearsCell(row, column, mode)).map((column) => CONTACT_ROLE_OF[column]),
       });
     });
     // A contact must exist already: the import links contacts, it does not create them.
@@ -580,8 +604,10 @@ export class SuppliersService {
       errors.sort((a, b) => a.row - b.row);
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
-    // The contact links of the matched suppliers, as `${supplierId}:${role}:${email}`: the import only adds links.
+    // The contact links of the matched suppliers, as `${supplierId}:${role}:${email}`: a filled
+    // cell adds one, `-` removes those of its role (`linksOfRole`), a blank cell keeps them.
     const storedLinks = new Set<string>();
+    const linksOfRole = new Map<string, SupplierContactLink[]>();
     const existingIds = unique.flatMap((item) => (item.target ? [item.target.id] : []));
     if (existingIds.length > 0) {
       const links = await linkRepo.find({ where: { supplier_id: In(existingIds) } });
@@ -590,18 +616,28 @@ export class SuppliersService {
         (contactIds.length > 0 ? await contactRepo.find({ where: { id: In(contactIds) } }) : [])
           .map((contact) => [contact.id, contact.email]),
       );
-      for (const link of links) storedLinks.add(`${link.supplier_id}:${link.role}:${emails.get(link.contact_id)}`);
+      for (const link of links) {
+        storedLinks.add(`${link.supplier_id}:${link.role}:${emails.get(link.contact_id)}`);
+        const key = `${link.supplier_id}:${link.role}`;
+        linksOfRole.set(key, [...(linksOfRole.get(key) ?? []), link]);
+      }
     }
     const linked = (supplierId: string, email: string | null, role: SupplierContactRole) =>
       !email || storedLinks.has(`${supplierId}:${role}:${email}`);
     let unchanged = 0;
+    let cleared = 0;
+    const removedLinks = (supplierId: string, roles: SupplierContactRole[]) =>
+      roles.flatMap((role) => linksOfRole.get(`${supplierId}:${role}`) ?? []);
     const toWrite: typeof unique = [];
     for (const item of unique) {
       const existing = item.target;
       const { status, ...values } = item.body;
+      const removed = existing ? removedLinks(existing.id, item.clearedRoles).length : 0;
+      cleared += clearedValueCount(existing, item.row, mode, CLEARABLE_FIELDS) + removed;
       if (!existing) inserted += 1;
       else if (
-        sameStoredValues(existing as any, values as Record<string, unknown>)
+        removed === 0
+        && sameStoredValues(existing as any, values as Record<string, unknown>)
         && sameStoredLifecycle(existing, { status, disabled_at: values.disabled_at })
         && linked(existing.id, item.commercial_email, SupplierContactRole.COMMERCIAL)
         && linked(existing.id, item.technical_email, SupplierContactRole.TECHNICAL)
@@ -613,7 +649,7 @@ export class SuppliersService {
       toWrite.push(item);
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit changes
     let processed = 0;
@@ -624,9 +660,15 @@ export class SuppliersService {
       const dup = await linkRepo.findOne({ where: { supplier_id: supplierId, contact_id: contactId, role } });
       if (!dup) await linkRepo.save(linkRepo.create({ supplier_id: supplierId, contact_id: contactId, role, is_primary: false }));
     };
+    // A link `-` removes goes as on the supplier's page: audited, with the contact taken off the
+    // supplier's budget lines and contracts where the supplier put it.
+    const contactLinks = new SupplierContactsService(linkRepo, this.audit);
     for (const item of toWrite) {
       const existing = item.target;
       if (existing) {
+        for (const link of removedLinks(existing.id, item.clearedRoles)) {
+          await contactLinks.detach(existing.id, link.id, { manager: mg, tenantId: existing.tenant_id, userId: userId ?? null });
+        }
         const saved = await this.update(existing.id, item.body, userId ?? undefined, { manager: opts?.manager });
         await attachByEmail(saved.id, item.commercial_email, SupplierContactRole.COMMERCIAL);
         await attachByEmail(saved.id, item.technical_email, SupplierContactRole.TECHNICAL);
@@ -640,7 +682,7 @@ export class SuppliersService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 
   /** The tenant's contacts among these e-mails (lowercase), by e-mail. */

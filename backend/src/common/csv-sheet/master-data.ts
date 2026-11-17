@@ -59,6 +59,30 @@ export interface ImportReportError {
   params?: Record<string, string | number>;
 }
 
+/**
+ * What the import of a master-data file answers, at the check (`dryRun`) and at the load, with
+ * the same counts. `cleared`: the stored values the rows clear with `-` (D21 of 26.11.9), the
+ * supplier contact links a `-` removes included; a `-` on a value already empty is not counted.
+ * Set on a file that imports; the check says it before anything is written.
+ */
+export interface MasterDataImportResult {
+  ok: boolean;
+  dryRun: boolean;
+  total: number;
+  inserted: number;
+  updated: number;
+  unchanged?: number;
+  cleared?: number;
+  /** The rows written, at the load. */
+  processed?: number;
+  errors: ImportReportError[];
+  /** Rows that import, with a note (a name matched in another case, a rename, a move). */
+  warnings?: ImportReportError[];
+  /** The unknown headers the file carried, and what the shared layer noticed. */
+  ignoredColumns: string[];
+  notices: MasterDataFileRead['notices'];
+}
+
 export interface MasterDataFileRead {
   /** Set when the file is refused for its headers (row 0). `rows` is then empty. */
   headerError: ImportReportError | null;

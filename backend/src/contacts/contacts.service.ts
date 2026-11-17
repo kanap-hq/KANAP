@@ -14,6 +14,9 @@ import {
   formatCsvBoolean,
   parseCsvBoolean,
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
   CsvDataRow,
   CsvDateOrder,
   CsvImportMode,
@@ -21,6 +24,7 @@ import {
   DecimalMark,
   ImportReportError,
   keepsStoredValue,
+  MasterDataImportResult,
   readMasterDataFile,
   referenceEmailWarning,
   referenceRenameWarning,
@@ -101,6 +105,9 @@ const CONTACT_SORT_FIELDS = [
 type TenantOpts = { manager?: EntityManager; tenantId: string };
 /** A write also names the user and the audit source. */
 type WriteOpts = TenantOpts & { userId?: string | null; audit?: AuditSourceOptions };
+
+/** The values `-` clears on a stored contact (D21 of 26.11.9); the keys and `active` refuse it. */
+const CLEARABLE_CONTACT_FIELDS = ['first_name', 'last_name', 'job_title', 'phone', 'mobile', 'country', 'notes'] as const;
 
 @Injectable()
 export class ContactsService {
@@ -501,7 +508,7 @@ export class ContactsService {
       mode?: CsvImportMode;
     },
     opts: TenantOpts,
-  ) {
+  ): Promise<MasterDataImportResult> {
     const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
       file: buf as Buffer,
@@ -533,6 +540,12 @@ export class ContactsService {
         errors.push(...problems);
         continue;
       }
+      // `-` cannot clear the keys or the status (D21 of 26.11.9).
+      const refusals = clearRefusals(row, ['reference', 'email', 'active'], mode);
+      if (refusals.length > 0) {
+        errors.push(...refusals);
+        continue;
+      }
       const email = cellOf(row, 'email').toLowerCase();
       // A row with a reference may leave the e-mail to the stored one (`enrich`): decided once matched.
       if (!email && (!cellOf(row, 'reference') || !keepsStoredValue(row, read.present, 'email', mode))) { errors.push(rowError(line, 'email', 'CSV_VALUE_REQUIRED', 'email is required')); continue; }
@@ -540,7 +553,7 @@ export class ContactsService {
       const activeCell = parseCsvBoolean(cellOf(row, 'active'));
       if (activeCell === undefined) { errors.push(rowError(line, 'active', 'CSV_BOOLEAN_INVALID', 'invalid active value', { value: cellOf(row, 'active') })); continue; }
       const active = activeCell ?? undefined;
-      const country = cellOf(row, 'country');
+      const country = cellText(row, 'country', mode);
       if (country && country.length !== 2) { errors.push(rowError(line, 'country', 'CSV_COUNTRY_INVALID', 'country must be 2-letter ISO code', { value: country })); continue; }
       normalized.push({
         line,
@@ -548,13 +561,13 @@ export class ContactsService {
         reference: cellOf(row, 'reference') || null,
         item: {
           email,
-          first_name: cellOf(row, 'first_name') || null,
-          last_name: cellOf(row, 'last_name') || null,
-          job_title: cellOf(row, 'job_title') || null,
-          phone: cellOf(row, 'phone') || null,
-          mobile: cellOf(row, 'mobile') || null,
+          first_name: cellText(row, 'first_name', mode) || null,
+          last_name: cellText(row, 'last_name', mode) || null,
+          job_title: cellText(row, 'job_title', mode) || null,
+          phone: cellText(row, 'phone', mode) || null,
+          mobile: cellText(row, 'mobile', mode) || null,
           country: country || null,
-          notes: cellOf(row, 'notes') || null,
+          notes: cellText(row, 'notes', mode) || null,
           active: active ?? true,
         },
       });
@@ -597,6 +610,8 @@ export class ContactsService {
     const firstLineById = new Map<string, number>();
     const firstLineByEmail = new Map<string, number>();
     const toCompare: Array<{ item: Norm; existing: ExternalContact | undefined }> = [];
+    // The stored values the rows clear with `-` (a `-` on an empty value is not counted).
+    let cleared = 0;
     // A file from another workspace names unrelated contacts by the same references: the check says
     // each name and each e-mail address a reference changes (D12). It blocks nothing.
     const warnings: ImportReportError[] = [];
@@ -641,6 +656,7 @@ export class ContactsService {
         const readdressed = item.email ? referenceEmailWarning(row.line, { reference, name: stored || target.email, stored: target.email, next: item.email }) : null;
         if (readdressed) warnings.push(readdressed);
       }
+      cleared += clearedValueCount(existing, row.row, mode, CLEARABLE_CONTACT_FIELDS);
       toCompare.push({ item, existing });
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
@@ -655,7 +671,7 @@ export class ContactsService {
       else updated += 1;
       toWrite.push({ item, existing });
     }
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...report };
 
     for (const { item, existing } of toWrite) {
       if (existing) {
@@ -666,6 +682,6 @@ export class ContactsService {
         await repo.save(created);
       }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...report };
   }
 }

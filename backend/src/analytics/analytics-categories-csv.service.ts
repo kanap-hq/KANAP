@@ -2,6 +2,9 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { resolveLifecycleState, StatusState } from '../common/status';
 import {
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
   CsvDateOrder,
   CsvImportMode,
   CsvLanguage,
@@ -11,6 +14,7 @@ import {
   ImportReportError,
   keepsStoredValue,
   MasterDataFileRead,
+  MasterDataImportResult,
   nameMatchedWarning,
   readMasterDataFile,
   rowError,
@@ -50,19 +54,9 @@ function csvAppliesTo(raw: string): AxisAppliesTo | null | undefined {
   return (AXIS_APPLIES_TO as readonly string[]).includes(text) ? (text as AxisAppliesTo) : undefined;
 }
 
-export interface AnalyticsValueImportResult {
-  ok: boolean;
-  dryRun: boolean;
-  total: number;
-  inserted: number;
-  updated: number;
+/** The import's answer (`MasterDataImportResult`), which always counts the unchanged rows. */
+export interface AnalyticsValueImportResult extends MasterDataImportResult {
   unchanged: number;
-  errors: ImportReportError[];
-  /** Rows that import, with a note: a name matched a stored value written in another case. */
-  warnings?: ImportReportError[];
-  /** The unknown headers the file carried, and what the shared layer noticed. */
-  ignoredColumns: string[];
-  notices: { dates: string | null; amounts: string | null };
 }
 
 interface ParsedRow {
@@ -182,6 +176,8 @@ export class AnalyticsCategoriesCsvService {
 
     const errors: AnalyticsValueImportResult['errors'] = [];
     const parsedRows: ParsedRow[] = [];
+    // The stored values the rows clear with `-` (a `-` on an empty value is not counted).
+    let cleared = 0;
     // Rows whose name matched a stored value written in another case.
     const warnings: ImportReportError[] = [];
     const lineByKey = new Map<string, number>();
@@ -189,6 +185,12 @@ export class AnalyticsCategoriesCsvService {
       // The physical line Excel shows, blank lines included.
       const line = raw.line;
       const rowErrors: ImportReportError[] = rowProblemErrors(raw, ['disabled_at']);
+      // `-` cannot clear the keys, the status or its end of validity (D21 of 26.11.9).
+      const refusals = clearRefusals(raw, ['axis_code', 'name', 'status', 'disabled_at'], mode);
+      if (refusals.length > 0) {
+        errors.push(...rowErrors, ...refusals);
+        return;
+      }
 
       const code = has('axis_code') ? cellOf(raw, 'axis_code') : '';
       let axisId: string | null = null;
@@ -246,7 +248,7 @@ export class AnalyticsCategoriesCsvService {
       // An absent column keeps what is stored (null for a new value); a blank cell clears it, or
       // keeps it when the row completes the stored value.
       const keeps = (column: string) => !has(column) || (!!existing && keepsStoredValue(raw, read.present, column, mode));
-      const appliesToRaw = has('applies_to') ? cellOf(raw, 'applies_to') : '';
+      const appliesToRaw = has('applies_to') ? cellText(raw, 'applies_to', mode) : '';
       const appliesTo = keeps('applies_to') ? existing?.applies_to ?? null : csvAppliesTo(appliesToRaw);
       if (appliesTo === undefined) {
         rowErrors.push(rowError(line, 'applies_to', 'CSV_ENUM_INVALID', `Invalid applies_to '${appliesToRaw}'. Use 'opex', 'capex' or leave it empty.`, { value: appliesToRaw, allowed: 'opex, capex' }));
@@ -272,7 +274,7 @@ export class AnalyticsCategoriesCsvService {
         name: existing?.name ?? name,
         description: keeps('description')
           ? existing?.description ?? null
-          : normalizeAnalyticsDescription(cellOf(raw, 'description')),
+          : normalizeAnalyticsDescription(cellText(raw, 'description', mode)),
         applies_to: appliesTo ?? null,
         status: lifecycle.status,
         disabled_at: lifecycle.disabled_at,
@@ -284,6 +286,7 @@ export class AnalyticsCategoriesCsvService {
       }
       const matched = existing && name ? nameMatchedWarning(line, 'name', name, existing.name) : null;
       if (matched) warnings.push(matched);
+      cleared += clearedValueCount(existing, raw, mode, ['description', 'applies_to']);
       parsedRows.push({ line, existing, axisName, values });
     });
     if (errors.length > 0) return failed([...errors].sort((a, b) => a.row - b.row), rows.length);
@@ -317,7 +320,7 @@ export class AnalyticsCategoriesCsvService {
         await this.categories.persist(ctx, row.existing, row.values, { name: row.axisName });
       }
     }
-    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 
   private parseFile(

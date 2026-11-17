@@ -27,6 +27,9 @@ import { DepartmentUpsertDto } from './dto/department.dto';
 import { duplicateNameException } from '../common/duplicate-name';
 import {
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
   CsvDataRow,
   CsvDateOrder,
   CsvImportMode,
@@ -36,6 +39,7 @@ import {
   keepStoredEndOfValidity,
   ImportReportError,
   keepsStoredValue,
+  MasterDataImportResult,
   nameMatchedWarning,
   referenceMoveWarning,
   referenceRenameWarning,
@@ -592,7 +596,7 @@ export class DepartmentsService {
       mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager },
-  ) {
+  ): Promise<MasterDataImportResult> {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders();
@@ -647,6 +651,12 @@ export class DepartmentsService {
       const problems = rowProblemErrors(row, ['disabled_at']);
       if (problems.length > 0) {
         errors.push(...problems);
+        continue;
+      }
+      // `-` cannot clear the keys, the status or its end of validity (D21 of 26.11.9): only the description.
+      const refusals = clearRefusals(row, ['reference', 'company_name', 'name', 'status', 'disabled_at'], mode);
+      if (refusals.length > 0) {
+        errors.push(...refusals);
         continue;
       }
       const referenceRaw = cellOf(row, 'reference');
@@ -706,7 +716,7 @@ export class DepartmentsService {
       const item = {
         company_id: companyId,
         name,
-        description: cellOf(row, 'description') || null,
+        description: cellText(row, 'description', mode) || null,
         lifecycle: { status: statusValue, disabled_at: disabled_at_iso },
       };
       normalized.push(item);
@@ -735,6 +745,8 @@ export class DepartmentsService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    // The stored descriptions the rows clear with `-` (a `-` on an empty one is not counted).
+    let cleared = 0;
     const toWrite: Array<{ item: Partial<(typeof unique)[number]> & Pick<(typeof unique)[number], 'lifecycle'>; existing: Department | null }> = [];
     // Otherwise a row matches the company's department of the same name whatever its case
     // ("FINANCE" updates "Finance"): the stored spelling stays, and the report says which
@@ -822,6 +834,7 @@ export class DepartmentsService {
         }
         : fileItem;
       const { lifecycle, ...values } = item;
+      cleared += clearedValueCount(existing, row, mode, ['description']);
       if (!existing) inserted += 1;
       else if (
         sameStoredValues(existing as any, values)
@@ -836,7 +849,7 @@ export class DepartmentsService {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -852,6 +865,6 @@ export class DepartmentsService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

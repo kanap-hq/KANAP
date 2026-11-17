@@ -12,6 +12,9 @@ import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AccountUpsertDto } from './dto/account.dto';
 import {
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
   CsvDataRow,
   CsvDateOrder,
   CsvImportMode,
@@ -19,6 +22,7 @@ import {
   DecimalMark,
   ImportReportError,
   keepsStoredValue,
+  MasterDataImportResult,
   readMasterDataFile,
   rowProblemErrors,
   storedRecordValues,
@@ -144,6 +148,18 @@ function withNatureBlanks(filters: any) {
 }
 
 /** A CSV `nature` cell: '' is null (OPEX and CAPEX), undefined an invalid value. */
+/** The values `-` cannot clear (D21 of 26.11.9): the keys, the required name, the status. */
+const UNCLEARABLE_ACCOUNT_CELLS = ['coa_code', 'account_number', 'account_name', 'status'] as const;
+/** The values `-` clears on a stored account. */
+const CLEARABLE_ACCOUNT_FIELDS = [
+  'native_name',
+  'description',
+  'consolidation_account_number',
+  'consolidation_account_name',
+  'consolidation_account_description',
+  'nature',
+] as const;
+
 function csvNature(raw: string): AccountNature | null | undefined {
   const text = raw.trim().toLowerCase();
   if (text === '') return null;
@@ -824,7 +840,7 @@ export class AccountsService {
       mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager; targetCoaId?: string | undefined; allowCoaCodeColumn?: boolean; updateExisting?: boolean },
-  ) {
+  ): Promise<MasterDataImportResult> {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders(!!opts?.allowCoaCodeColumn);
@@ -863,6 +879,11 @@ export class AccountsService {
         errors.push(...problems);
         return;
       }
+      const refusals = clearRefusals(row, UNCLEARABLE_ACCOUNT_CELLS, mode);
+      if (refusals.length > 0) {
+        errors.push(...refusals);
+        return;
+      }
       if (opts?.allowCoaCodeColumn) {
         const code = cellOf(row, 'coa_code');
         if (!opts?.targetCoaId && !code) errors.push({ row: line, message: 'coa_code is required when not importing into a specific CoA', code: 'CSV_ACCOUNT_COA_CODE_REQUIRED' });
@@ -871,7 +892,7 @@ export class AccountsService {
       const numRaw = cellOf(row, 'account_number');
       const name = cellOf(row, 'account_name');
       const statusRaw = cellOf(row, 'status').toLowerCase();
-      const consolNumRaw = cellOf(row, 'consolidation_account_number');
+      const consolNumRaw = cellText(row, 'consolidation_account_number', mode);
       const numberCell = csvAccountNumber(numRaw, 'account_number', line);
       const account_number = numberCell.value;
       if (numberCell.tooLong) errors.push(numberCell.tooLong);
@@ -903,7 +924,7 @@ export class AccountsService {
         });
       }
       if (consolidationCell.leadingZeros) warnings.push(consolidationCell.leadingZeros);
-      const natureRaw = cellOf(row, 'nature');
+      const natureRaw = cellText(row, 'nature', mode);
       const nature = has('nature') ? csvNature(natureRaw) : undefined;
       if (has('nature') && nature === undefined) {
         errors.push({
@@ -914,7 +935,7 @@ export class AccountsService {
         });
       }
       // An absent column stays undefined: an update keeps the stored value, a new account takes the default.
-      const text = (column: string) => (has(column) ? cellOf(row, column) || null : undefined);
+      const text = (column: string) => (has(column) ? cellText(row, column, mode) || null : undefined);
       const item = {
         account_number: String(account_number ?? ''),
         account_name: name,
@@ -978,9 +999,12 @@ export class AccountsService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    // The stored values the rows clear with `-` (a `-` on an empty value is not counted).
+    let cleared = 0;
     const toWrite: AccountUpsertDto[] = [];
     for (const fileItem of unique) {
       const existing = existingByNumber.get(fileItem.account_number as string);
+      cleared += clearedValueCount(existing, rowOf.get(fileItem)!, mode, CLEARABLE_ACCOUNT_FIELDS);
       const item = existing ? storedRecordValues(fileItem, rowOf.get(fileItem)!, read.present, mode) : fileItem;
       if (!existing) inserted += 1;
       else if (importRowUnchanged(existing, item)) {
@@ -990,7 +1014,7 @@ export class AccountsService {
       toWrite.push(item);
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit. The consolidation accounts the file refers to are read once, the audit lines of
     // the rows written in one statement at the end.
@@ -1021,6 +1045,6 @@ export class AccountsService {
     if (chartId && targetCoaId === chartId) {
       await resyncFromChart(mg, chartId, { userId });
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

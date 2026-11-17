@@ -1,7 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { DecimalMark } from './amount';
-import { CsvImportMode } from './import-mode';
 import { knownTimeZone } from './date';
 import { csvLanguage } from './language';
 import { CsvDateOrder, CsvLanguage } from './types';
@@ -61,22 +60,6 @@ export function parseDateOrder(raw: unknown): CsvDateOrder | undefined {
   if (raw == null || raw === '') return undefined;
   if (raw === 'day-first' || raw === 'month-first') return raw;
   throw new BadRequestException('dateOrder must be day-first or month-first.');
-}
-
-/**
- * The mode of an import route that names none (`mode` absent or empty). One line to change: the
- * default the screen offers waits on a product decision (D21 of 26.11.9).
- */
-export const ROUTE_IMPORT_MODE: CsvImportMode = 'enrich';
-
-/**
- * The `mode` switch of an import route (`CsvImportMode`): `enrich` or `replace`, else the route
- * default. Any other value is refused before the file is read.
- */
-export function parseImportMode(raw: unknown): CsvImportMode {
-  if (raw == null || raw === '') return ROUTE_IMPORT_MODE;
-  if (raw === 'enrich' || raw === 'replace') return raw;
-  throw new BadRequestException('mode must be enrich or replace.');
 }
 
 /** The decimal mark switch, used only when no amount cell settles it. */

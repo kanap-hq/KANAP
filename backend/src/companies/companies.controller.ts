@@ -8,7 +8,7 @@ import { Response } from 'express';
 import { EntityManager } from 'typeorm';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
-import { languageOf, parseDateOrder, parseDecimalMark, parseImportMode } from '../common/csv-sheet';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { ORGANISATION_LOOKUP_READERS } from '../common/lookup/lookup-requirements';
@@ -139,18 +139,16 @@ export class CompaniesController {
     @Query('language') languageRaw: string | undefined,
     @Query('dateOrder') dateOrderRaw: string | undefined,
     @Query('decimalMark') decimalMarkRaw: string | undefined,
-    @Query('mode') modeRaw: string | undefined,
     @Tenant() ctx: TenantRequest,
   ) {
-    // Refused before any work: an unknown mode is a 400.
-    const mode = parseImportMode(modeRaw);
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
     const year = parseCompanyYear(yearRaw);
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
     const dateOrder = parseDateOrder(dateOrderRaw);
     const decimalMark = parseDecimalMark(decimalMarkRaw);
     return this.svc.importCsv(
-      { file, dryRun, userId: ctx.userId || null, year, language, dateOrder, decimalMark, mode },
+      // The clearing rule of every import (D21 of 26.11.9): a blank cell keeps, `-` clears.
+      { file, dryRun, userId: ctx.userId || null, year, language, dateOrder, decimalMark, mode: 'enrich' },
       { manager: ctx.manager },
     );
   }

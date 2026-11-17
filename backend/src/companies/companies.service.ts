@@ -38,6 +38,10 @@ import { createCompanyStandardCalendar } from '../working-day-profiles/company-s
 import { duplicateNameException } from '../common/duplicate-name';
 import {
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
+  clearsCell,
   CsvDataRow,
   CsvDateOrder,
   CsvImportMode,
@@ -48,6 +52,7 @@ import {
   formatCsvAmount,
   ImportReportError,
   keepsStoredValue,
+  MasterDataImportResult,
   nameMatchedWarning,
   referenceRenameWarning,
   readMasterDataFile,
@@ -85,6 +90,15 @@ const REQUIRED_COMPANY_CELLS: ReadonlyArray<readonly [string, string]> = [
   ['country_iso', 'country_iso is required and must be 2 letters'],
   ['base_currency', 'base_currency is required and must be 3 letters'],
 ];
+
+/**
+ * The values `-` cannot clear (D21 of 26.11.9): the keys, the required values, the status and its
+ * end of validity. Each year's headcount (required by its metrics) and turnover (an amount: 0
+ * writes zero) refuse it too.
+ */
+const UNCLEARABLE_COMPANY_CELLS = ['reference', ...REQUIRED_COMPANY_CELLS.map(([column]) => column), 'status', 'disabled_at'];
+/** The values `-` clears on a stored company; a year's IT users are cleared with its metrics. */
+const CLEARABLE_COMPANY_FIELDS = ['address1', 'address2', 'postal_code', 'state', 'reg_number', 'vat_number', 'notes'] as const;
 
 @Injectable()
 export class CompaniesService {
@@ -1029,7 +1043,7 @@ export class CompaniesService {
       mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager },
-  ) {
+  ): Promise<MasterDataImportResult> {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const baseYear = this.normalizeYear(year);
@@ -1077,7 +1091,15 @@ export class CompaniesService {
      * A year's metrics as the row sets them. Undefined keeps the stored value: an absent column, or
      * a blank cell when completing. A blank cell otherwise clears it (the headcount cannot be empty).
      */
-    type RowMetric = { headcount: number | null | undefined; it_users: number | null | undefined; turnover: string | null | undefined };
+    type RowMetric = {
+      headcount: number | null | undefined;
+      it_users: number | null | undefined;
+      turnover: string | null | undefined;
+      /** The year's cells hold `-` and no value: they clear a stored metric, and create none. */
+      clearsOnly: boolean;
+      /** The IT users cell holds `-`. */
+      clearsItUsers: boolean;
+    };
     type Metric = { headcount: number; it_users: number | null; turnover: string | null };
     // `reference`: the number of the company the row names in the reference column (`COMP-12` or
     // `12`), null when the cell is empty: the row then matches by name.
@@ -1092,6 +1114,14 @@ export class CompaniesService {
         errors.push(...problems);
         return;
       }
+      const refusals = clearRefusals(row, [
+        ...UNCLEARABLE_COMPANY_CELLS,
+        ...yearsInFile.flatMap((fy) => [`headcount_${fy}`, `turnover_${fy}`]),
+      ], mode);
+      if (refusals.length > 0) {
+        errors.push(...refusals);
+        return;
+      }
       const referenceRaw = cellOf(row, 'reference');
       const reference = referenceRaw ? parseReferenceNumber(referenceRaw, 'COMP') : null;
       if (referenceRaw && reference === null) {
@@ -1103,11 +1133,11 @@ export class CompaniesService {
       }
       const name = cellOf(row, 'name');
       const country_iso = cellOf(row, 'country_iso');
-      const address1 = cellOf(row, 'address1');
-      const address2 = cellOf(row, 'address2');
-      const postal_code = cellOf(row, 'postal_code');
+      const address1 = cellText(row, 'address1', mode);
+      const address2 = cellText(row, 'address2', mode);
+      const postal_code = cellText(row, 'postal_code', mode);
       const city = cellOf(row, 'city');
-      const state = cellOf(row, 'state');
+      const state = cellText(row, 'state', mode);
       // Blank: enabled for a new company, the stored status on an update (`csvItemLifecycle`).
       const statusRaw = cellOf(row, 'status').toLowerCase();
       const statusValue: StatusState | null = statusRaw
@@ -1168,10 +1198,11 @@ export class CompaniesService {
         const itUsersKey = `it_users_${fy}`;
         const turnoverKey = `turnover_${fy}`;
         const headcountRaw = cellOf(row, headcountKey);
-        const itUsersRaw = cellOf(row, itUsersKey);
+        const clearsItUsers = clearsCell(row, itUsersKey, mode);
+        const itUsersRaw = clearsItUsers ? '' : cellOf(row, itUsersKey);
         const turnoverRaw = cellOf(row, turnoverKey);
         const hasAny = headcountRaw !== '' || itUsersRaw !== '' || turnoverRaw !== '';
-        if (!hasAny) continue;
+        if (!hasAny && !clearsItUsers) continue;
         if (frozenYears.has(fy)) {
           errors.push({
             row: line,
@@ -1187,7 +1218,7 @@ export class CompaniesService {
           errors.push(rowError(line, headcountKey, 'CSV_WHOLE_NUMBER_INVALID', `${headcountKey} must be a non-negative integer`, { value: headcountRaw }));
           continue;
         }
-        let itUsersVal: number | null | undefined = blank(itUsersKey);
+        let itUsersVal: number | null | undefined = clearsItUsers ? null : blank(itUsersKey);
         if (itUsersRaw !== '') {
           const parsed = Number(itUsersRaw);
           if (!Number.isInteger(parsed) || parsed < 0) {
@@ -1213,7 +1244,7 @@ export class CompaniesService {
             }
           }
         }
-        rowMetrics.set(fy, { headcount: headcountVal, it_users: itUsersVal, turnover: turnoverVal });
+        rowMetrics.set(fy, { headcount: headcountVal, it_users: itUsersVal, turnover: turnoverVal, clearsOnly: !hasAny, clearsItUsers });
       }
       normalized.push({
         line,
@@ -1227,10 +1258,10 @@ export class CompaniesService {
           postal_code: postal_code || null,
           city: city || null,
           state: state || null,
-          reg_number: cellOf(row, 'reg_number') || null,
-          vat_number: cellOf(row, 'vat_number') || null,
+          reg_number: cellText(row, 'reg_number', mode) || null,
+          vat_number: cellText(row, 'vat_number', mode) || null,
           base_currency: base_currency.toUpperCase(),
-          notes: cellOf(row, 'notes') || null,
+          notes: cellText(row, 'notes', mode) || null,
         },
         rowMetrics,
         metrics: new Map(),
@@ -1256,6 +1287,8 @@ export class CompaniesService {
     // Otherwise a row matches the company of the same name whatever its case ("acme" updates "Acme").
     // The stored spelling stays, and the report says which company the row matched.
     const existingOf = new Map<(typeof normalized)[number], Company>();
+    // The stored values the rows clear with `-`, a year's IT users included (a `-` on an empty value is not counted).
+    let cleared = 0;
     const firstLineOfCompany = new Map<string, number>();
     const warnings: ImportReportError[] = [];
     for (const item of normalized) {
@@ -1301,6 +1334,7 @@ export class CompaniesService {
       // A stored company takes only the values the row writes: an absent column, or a blank cell
       // when completing, keeps the stored value. The stored end of validity's day keeps its time
       // of day: the export writes the day only.
+      cleared += clearedValueCount(existing, item.row, mode, CLEARABLE_COMPANY_FIELDS);
       item.company = storedRecordValues(item.company, item.row, read.present, mode);
       item.lifecycle = { ...item.lifecycle, disabled_at: keepStoredEndOfValidity(existing.disabled_at, item.lifecycle.disabled_at) };
       existingOf.set(item, existing);
@@ -1321,6 +1355,9 @@ export class CompaniesService {
       const existing = existingOf.get(item);
       for (const [fy, metric] of item.rowMetrics) {
         const stored = existing ? storedMetrics.get(`${existing.id}:${fy}`) : undefined;
+        // `-` alone creates no metric: on a new company or a year without metrics, it is a blank cell.
+        if (!stored && metric.clearsOnly) continue;
+        if (stored && metric.clearsItUsers && stored.it_users != null) cleared += 1;
         const headcount = metric.headcount === undefined ? stored?.headcount : metric.headcount;
         if (headcount == null) {
           errors.push(rowError(item.line, `headcount_${fy}`, 'CSV_VALUE_REQUIRED', `headcount_${fy} is required when providing metrics`));
@@ -1362,7 +1399,7 @@ export class CompaniesService {
       toWrite.push({ item, existing });
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total, inserted, updated, unchanged, errors: [], warnings, ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -1383,6 +1420,6 @@ export class CompaniesService {
         }
       }
     }
-    return { ok: true, dryRun: false, total, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns, notices: read.notices };
   }
 }
