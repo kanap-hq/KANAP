@@ -71,7 +71,7 @@ describe('CsvImportDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
     const preflight = await screen.findByRole('alert');
     expect(preflight).toHaveTextContent('csv.rowsUnchanged:2');
-    expect(preflight).toHaveTextContent('csv.valuesWillBeCleared:3');
+    expect(preflight).toHaveTextContent('csv.valuesWillBeClearedSentence:3');
 
     post.mockResolvedValueOnce({ data: report({ dryRun: false, processed: 14, unchanged: 2, cleared: 3 }) });
     fireEvent.click(screen.getByRole('button', { name: 'csv.load' }));

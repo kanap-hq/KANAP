@@ -186,7 +186,7 @@ describe('CsvImportDialog messages', () => {
 
   it('says in French how many stored values the check will clear', async () => {
     check([], { ok: true, total: 4, inserted: 0, updated: 2, unchanged: 2, cleared: 3 });
-    expect(await screen.findByText('3 valeurs seront effacées')).toBeInTheDocument();
+    expect(await screen.findByText('3 valeurs seront effacées.')).toBeInTheDocument();
     expect(screen.getByText('2 lignes inchangées.')).toBeInTheDocument();
   });
 

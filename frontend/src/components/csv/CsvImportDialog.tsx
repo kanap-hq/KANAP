@@ -387,7 +387,7 @@ export default function CsvImportDialog({
                   <Box component="span" sx={{ display: 'block' }}>{t('csv.rowsUnchanged', { count: report.unchanged })}</Box>
                 )}
                 {report.dryRun && (report.cleared ?? 0) > 0 && (
-                  <Box component="span" sx={{ display: 'block' }}>{t('csv.valuesWillBeCleared', { count: report.cleared })}</Box>
+                  <Box component="span" sx={{ display: 'block' }}>{t('csv.valuesWillBeClearedSentence', { count: report.cleared })}</Box>
                 )}
               </Alert>
             ) : (

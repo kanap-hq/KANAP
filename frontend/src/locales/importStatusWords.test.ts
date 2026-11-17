@@ -17,3 +17,16 @@ describe('the status in an import message', () => {
     }
   });
 });
+
+// The import dialog's line of the clears ends with a period, as the lines above it; Kad's card keeps
+// its own line, without one.
+describe('the line of the clears in the import dialog', () => {
+  it('is the card line with a period, in every language', () => {
+    for (const [path, { default: texts }] of Object.entries(common)) {
+      const csv = (texts as unknown as { csv: Record<string, string> }).csv;
+      for (const form of ['one', 'other']) {
+        expect(csv[`valuesWillBeClearedSentence_${form}`], `${path} ${form}`).toBe(`${csv[`valuesWillBeCleared_${form}`]}.`);
+      }
+    }
+  });
+});
