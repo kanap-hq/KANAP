@@ -509,6 +509,8 @@ export class ContractsController {
         decimalMark: parseDecimalMark(decimalMarkRaw),
         unmatched: csvUnmatched(unmatchedRaw),
         access: csvCallerAccess(req),
+        // The clearing rule of every import (D21 of 26.11.9): a blank cell keeps, `-` clears.
+        mode: 'enrich',
       },
       { manager: req?.queryRunner?.manager },
     );
