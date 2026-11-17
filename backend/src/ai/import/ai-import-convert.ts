@@ -121,11 +121,14 @@ export function columnReader(
 ): AiImportColumnReader {
   const map = valueMap(hints.values, rule.asWritten);
   // `-` reaches an import that reads it as written; the column's other cells settle its reading.
+  // The mark never goes through the value map: a `-` of the file stays one whatever the map says
+  // of it, and a value the map turns into `-` clears.
   const clears = (cell: SheetCell | undefined) => hints.clearMark === true && cell?.kind === 'text' && readImportCell(cellText(cell)).kind === 'clear';
-  const reader = cellReader(rule, cells.map((cell) => mappedCell(cell, map)).map((cell) => (clears(cell) ? undefined : cell)), hints, language, map);
+  const clearsOrMapped = (cell: SheetCell | undefined) => clears(cell) || clears(mappedCell(cell, map));
+  const reader = cellReader(rule, cells.map((cell) => (clearsOrMapped(cell) ? undefined : mappedCell(cell, map))), hints, language, map);
   const read = (cell: SheetCell | undefined): AiImportCellResult => {
+    if (clearsOrMapped(cell)) return { status: 'converted', value: CLEAR_MARK };
     const mapped = mappedCell(cell, map);
-    if (clears(mapped)) return { status: 'converted', value: CLEAR_MARK };
     if (map.size === 0) return reader.read(cell);
     const result = reader.read(mapped);
     return result.status === 'unread' ? { status: 'unread', raw: cellText(cell) } : result;

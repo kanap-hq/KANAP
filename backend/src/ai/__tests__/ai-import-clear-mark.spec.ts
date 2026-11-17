@@ -65,6 +65,50 @@ function testTheMappingSetsTheMarkByImport() {
   assert.deepEqual(applications.file.rows, [['Lactalis', { unread: '-' }]]);
 }
 
+// The mark never goes through the model's value map: a `-` of the file reaches the import as it is,
+// whatever the map says of it, and a value the map turns into `-` is a clearing, on a column the
+// import matches by name too (never a record named "-" to propose).
+function testTheValueMapNeverMovesTheMark() {
+  for (const rule of [{ kind: 'text' as const }, { kind: 'date' as const }, { kind: 'codes' as const, codes: ['enabled', 'disabled'] }]) {
+    for (const values of [{ '-': '' }, { '-': 'enabled' }, { '__clear__': '' }] as Array<Record<string, string>>) {
+      const reader = columnReader(rule, [text('-'), text('__CLEAR__')], { clearMark: true, values }, 'en');
+      assert.deepEqual(reader.read(text('-')), { status: 'converted', value: '-' }, `${rule.kind} ${JSON.stringify(values)}`);
+      assert.deepEqual(reader.read(text('__CLEAR__')), { status: 'converted', value: '-' }, `${rule.kind} ${JSON.stringify(values)}`);
+    }
+  }
+  const grid: TableGrid = {
+    format: 'csv', sheetName: null, sheetCount: 1,
+    header: [text('Email'), text('Fournisseur'), text('Notes')], headerLine: 1,
+    rows: [[text('a@x.com'), text('aucun'), text('n/a')], [text('b@x.com'), text('-'), text('-')]], lines: [2, 3],
+  } as TableGrid;
+  const matched: Array<[string, string]> = [
+    ['contacts', 'supplier_name'],
+    ['contracts', 'cost_center'],
+    ['cost_centers', 'company_name'],
+    ['business_processes', 'parent_name'],
+  ];
+  for (const [importKey, column] of matched) {
+    const template: AiImportTemplateColumn[] = [
+      { column: 'email', title: 'Email', required: true, kind: 'text' },
+      { column, title: 'Matched', required: false, kind: 'text' },
+      { column: 'notes', title: 'Notes', required: false, kind: 'text' },
+    ];
+    const result = buildImportMapping(grid, template, {
+      importKey: importKey as any,
+      filename: 'f.csv',
+      assumptions: [],
+      columns: [
+        { column: 'email', source: 1, confidence: 'high' as const },
+        { column, source: 2, confidence: 'high' as const, values: { aucun: '-', '-': '' } },
+        { column: 'notes', source: 3, confidence: 'high' as const, values: { 'n/a': '-', '-': '' } },
+      ],
+    }, 'fr');
+    assert.deepEqual(result.file.rows, [['a@x.com', '-', '-'], ['b@x.com', '-', '-']], importKey);
+    assert.equal(result.file.proposals, undefined, `${importKey}: "-" is never a record to propose`);
+  }
+}
+
 testEveryKindCarriesTheMark();
 testTheMappingSetsTheMarkByImport();
+testTheValueMapNeverMovesTheMark();
 console.log('ai-import-clear-mark.spec: ok');

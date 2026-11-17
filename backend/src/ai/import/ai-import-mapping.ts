@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../../common/csv-sheet';
+import { readImportCell } from '../../common/csv-sheet/clear';
 import { sheetCellText } from '../../common/csv-sheet/read';
 import type { AiImportMappingPreviewDto } from '../ai.types';
 import { clip, isBlank, TABLE_SUMMARY_MAX_COLUMNS, TableGrid } from '../attachments/table-attachment';
@@ -160,15 +161,18 @@ export function buildImportMapping(
     const entry = entries.get(column.column)!;
     // A name of a record the model proposes (a budget file's supplier or dimension value, an
     // application's supplier...): the import matches it to an existing record, or refuses the
-    // proposal; the cell keeps the person's text. "" still leaves the cell blank. A fixed list, a
-    // catalog, a code or an e-mail reads the model's values as before.
+    // proposal; the cell keeps the person's text. "" still leaves the cell blank, and, under the
+    // clearing rule, `-` clears (never a record named "-" to propose). A fixed list, a catalog, a
+    // code or an e-mail reads the model's values as before.
+    const clearMark = AI_IMPORT_CLEARING_RULE.has(request.importKey as AiImportKey);
+    const staysInCell = (to: string) => String(to).trim() === '' || (clearMark && readImportCell(String(to)).kind === 'clear');
     let values = entry.values;
     if (entry.source != null && values && isImportMatchedColumn(request.importKey, column.column)) {
-      const proposed = Object.entries(values).filter(([, to]) => String(to).trim() !== '');
+      const proposed = Object.entries(values).filter(([, to]) => !staysInCell(to));
       if (proposed.length > 0) proposals[column.column] = Object.fromEntries(proposed);
-      values = Object.fromEntries(Object.entries(values).filter(([, to]) => String(to).trim() === ''));
+      values = Object.fromEntries(Object.entries(values).filter(([, to]) => staysInCell(to)));
     }
-    const hints = { dateOrder: entry.date_order, decimalMark: entry.decimal_mark, values, clearMark: AI_IMPORT_CLEARING_RULE.has(request.importKey as AiImportKey) };
+    const hints = { dateOrder: entry.date_order, decimalMark: entry.decimal_mark, values, clearMark };
     const note = entry.note ? oneLine(entry.note) || null : null;
 
     if (entry.source === undefined || entry.source === null) {
