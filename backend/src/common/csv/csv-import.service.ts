@@ -1478,11 +1478,13 @@ export class CsvImportService {
 
   /**
    * The load works from records nobody changes before it commits (lot I6 of 26.11.9, passes F and G):
-   * the records the file finds are locked `FOR UPDATE` and read again, in one statement in the
+   * the records the file finds are locked `FOR NO KEY UPDATE` and read again, in one statement in the
    * order of their ids (two loads that cross the same records wait for each other, never deadlock), in
    * the load's transaction. Every value the import keeps or derives (a blank cell, a column the file
    * leaves out, a hook's rule) then comes from the record as it is when written, and a change or a
-   * delete saved on the screen during the load waits for it, then applies. A record deleted since the first read is
+   * delete saved on the screen during the load waits for it, then applies. The lock leaves the
+   * record's key alone, as the update itself does: rows that reference the record (time entries,
+   * attachments, activities) are saved without waiting. A record deleted since the first read is
    * returned in `deleted`: its row is refused (`CSV_RECORD_DELETED`), never inserted again. The check
    * (`dryRun`) locks nothing.
    */
@@ -1490,7 +1492,7 @@ export class CsvImportService {
     const ids = [...new Set([...entities.values()].map((entity) => String(entity.id)))].sort();
     if (ids.length === 0) return new Set();
     const locked: any[] = await context.manager.query(
-      `SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE`,
+      `SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
       [context.tenantId, ids],
     );
     const fresh = new Map(locked.map((entity) => [String(entity.id), entity]));

@@ -9,12 +9,13 @@ import { assert, assertSucceeded, progress, Race, runRaceSpecs, settle, sql, wit
 import { TasksCsvService } from '../tasks-csv.service';
 
 // The load of the shared CSV import (lot I6 of 26.11.9, passes F and G): it works from the records it
-// finds, locked `FOR UPDATE` and read again in its transaction, in the order of their ids. A
+// finds, locked `FOR NO KEY UPDATE` and read again in its transaction, in the order of their ids. A
 // column the file leaves out keeps the record as it is when written: a move saved on the screen during
 // the load is kept, whether it lands before the lock (read again) or after (it waits, then applies).
 // Two loads that cross the same records wait for each other and never deadlock. A record deleted
-// before the lock refuses its row and is not inserted again. The path is the same for the six imports
-// of the shared import; the tasks show it.
+// before the lock refuses its row and is not inserted again; a row that references a locked record (a
+// time entry) does not wait. The path is the same for the six imports of the shared import; the tasks
+// show it.
 
 function importTasks(manager: EntityManager, tenantId: string, csv: string) {
   const resolver = new CsvResolverService();
@@ -144,9 +145,31 @@ async function deletedBeforeTheLockIsRefused() {
   });
 }
 
+/** A time entry on a task the load locked is saved at once: the lock leaves the task's key alone. */
+async function aTimeEntryDoesNotWait() {
+  await withRace('csv-load-child', async (race) => {
+    const seeded = await seedTasks(race, 1);
+    const [taskId] = seeded.tasks;
+    const importer = await race.open('task import');
+    const screen = await race.open('the screen');
+    const locked = race.gate(importer, { label: 'the task locked', when: 'after', match: sql.lockOn('tasks') });
+    const work = race.start(importer, (manager) => importTasks(manager, race.tenantId, `id;title\n${taskId};Renamed`));
+    assert.equal(await progress(work, { party: importer, gate: locked }), 'gated', 'the load locks the task it found');
+    const entry = race.start(screen, (manager) => manager.query(
+      `INSERT INTO task_time_entries (tenant_id, task_id, hours, logged_at) VALUES ($1, $2, 1, now())`, [race.tenantId, taskId],
+    ));
+    assert.equal(await progress(entry, { party: screen }), 'settled', 'the time entry does not wait for the import');
+    assertSucceeded(await settle(entry), 'the time entry');
+    locked.release();
+    assertSucceeded(await settle(work), 'the import');
+    assert.deepEqual(await stateOf(race, seeded, taskId), { title: 'Renamed', on_p2: false, in_run: false }, 'the import wrote');
+  });
+}
+
 void runRaceSpecs('Shared CSV import load lock', [
   ['a move saved before the load locks the task is kept', moveBeforeTheLockIsKept],
   ['a move saved once the load locked the task waits, then applies', moveAfterTheLockWaits],
   ['two loads crossing the same tasks wait for each other, no deadlock', crossedLoadsDoNotDeadlock],
   ['a task deleted before the lock refuses its row, not inserted again', deletedBeforeTheLockIsRefused],
+  ['a time entry on a locked task does not wait', aTimeEntryDoesNotWait],
 ]);
