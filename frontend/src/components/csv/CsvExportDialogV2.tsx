@@ -150,6 +150,8 @@ export default function CsvExportDialogV2({
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+      // The browser shows the download: the dialog has nothing left to say.
+      onClose();
     } catch (e) {
       console.error('Export failed', e);
       setError(await csvRequestErrorMessage(e, t, t('messages.exportFailed')));

@@ -41,6 +41,31 @@ describe('CsvExportDialogV2', () => {
     return store;
   };
 
+  it('downloads the file and closes', async () => {
+    const onClose = vi.fn();
+    render(<CsvExportDialogV2 open onClose={onClose} endpoint="/assets" />);
+    expect(await screen.findByText('csv.csvFileNoteFlexible')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays open with the error when the export fails', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url.endsWith('/csv-fields')) {
+        return { data: { fields: [{ csvColumn: 'name', exportable: true, importable: true }], presets: [] } };
+      }
+      throw { response: { status: 500, data: { message: 'Boom' } } };
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const onClose = vi.fn();
+    render(<CsvExportDialogV2 open onClose={onClose} endpoint="/assets" />);
+    expect(await screen.findByText('csv.csvFileNoteFlexible')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
+    expect(await screen.findByText('Boom')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('writes the file in the screen language, and says so', async () => {
     render(<CsvExportDialogV2 open onClose={() => undefined} endpoint="/assets" />);
     expect(await screen.findByText('csv.csvFileNoteFlexible')).toBeInTheDocument();
