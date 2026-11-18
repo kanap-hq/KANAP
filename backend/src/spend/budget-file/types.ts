@@ -313,6 +313,11 @@ export interface BudgetFileReport {
     created: number;
     updated: number;
     unchanged: number;
+    /**
+     * The stored values the `-` cells of the updated lines clear (D21 of 26.11.9): the dialog and Kad's
+     * card say "N values will be cleared". A `-` on an empty value counts nothing. The load repeats it.
+     */
+    cleared: number;
     createdLines: Array<{ line: number; name: string }>;
     updatedLines: Array<{ line: number; itemNumber: string; fields: string[] }>;
     /** The lines created and updated, by nature: what Kad announces on the approval (lot I1 of 26.11.9). */

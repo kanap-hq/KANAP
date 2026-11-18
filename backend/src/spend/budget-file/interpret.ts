@@ -1,4 +1,5 @@
 import { CENTS_LIMIT } from '../../common/amount';
+import { readImportCell } from '../../common/csv-sheet/clear';
 import { CsvDateOrder, CsvLanguage, CsvParsedDate, CsvReadResult, DecimalMark, readCsv, readSheet, SheetReadResult } from '../../common/csv-sheet';
 import { AmountMeasure } from '../amounts-write.util';
 import { LEGACY_PREFIX, type BudgetNature } from '../budget-nature';
@@ -196,11 +197,13 @@ export function interpretBudgetFile(read: CsvReadResult, scope: BudgetNature): I
   });
 }
 
+/**
+ * A cell by the clearing rule of every import (`readImportCell`, D21 of 26.11.9): blank keeps, `-`
+ * (or `__CLEAR__`) clears, `'-` (the export's guard on a stored "-", kept by `keepsGuardedDash`) is
+ * the text "-".
+ */
 function fieldCell(raw: string): FieldCell {
-  const text = raw.trim();
-  if (text === '') return { kind: 'blank' };
-  if (text === '-') return { kind: 'clear' };
-  return { kind: 'value', text };
+  return readImportCell(raw);
 }
 
 /** `opex` or `capex`, any case. */

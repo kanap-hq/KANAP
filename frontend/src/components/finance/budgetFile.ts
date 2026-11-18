@@ -185,6 +185,8 @@ export type BudgetFileReport = {
     created: number;
     updated: number;
     unchanged: number;
+    /** The stored values the file's `-` cells clear. */
+    cleared?: number;
     createdLines: Array<{ line: number; name: string }>;
     updatedLines: Array<{ line: number; itemNumber: string; fields: string[] }>;
   };
