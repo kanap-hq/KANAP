@@ -8,12 +8,13 @@ import { CsvResolverService } from '../../common/csv/csv-resolver.service';
 import { assert, assertSucceeded, progress, Race, runRaceSpecs, settle, sql, withRace } from '../../spend/__tests__/race-harness';
 import { TasksCsvService } from '../tasks-csv.service';
 
-// The load of the shared CSV import (lot I6 of 26.11.9, pass F): it works from the records it finds,
-// locked `FOR UPDATE` and read again in its transaction, in the order of their ids. A column the file
-// leaves out keeps the record as it is when written: a move saved on the screen during the load is
-// kept, whether it lands before the lock (read again) or after (it waits, then applies). Two loads
-// that cross the same records wait for each other and never deadlock. The path is the same for the
-// six imports of the shared import; the tasks show it.
+// The load of the shared CSV import (lot I6 of 26.11.9, passes F and G): it works from the records it
+// finds, locked `FOR UPDATE` and read again in its transaction, in the order of their ids. A
+// column the file leaves out keeps the record as it is when written: a move saved on the screen during
+// the load is kept, whether it lands before the lock (read again) or after (it waits, then applies).
+// Two loads that cross the same records wait for each other and never deadlock. A record deleted
+// before the lock refuses its row and is not inserted again. The path is the same for the six imports
+// of the shared import; the tasks show it.
 
 function importTasks(manager: EntityManager, tenantId: string, csv: string) {
   const resolver = new CsvResolverService();
@@ -44,6 +45,9 @@ async function seedTasks(race: Race, count: number): Promise<Seeded> {
   });
 }
 
+/** The import's first read of the tasks it names, before the lock. */
+const firstRead = (text: string) => /^\s*SELECT \* FROM tasks WHERE tenant_id = \$1 AND id = ANY/.test(text) && !/\bFOR\s+(NO\s+KEY\s+)?UPDATE\b/i.test(text);
+
 /** The screen moves the task to P2, phase Run, and saves. */
 function moveToP2(manager: EntityManager, seeded: Seeded, taskId: string) {
   return manager.query(`UPDATE tasks SET related_object_id = $2, phase_id = $3 WHERE id = $1`, [taskId, seeded.p2, seeded.run]);
@@ -63,7 +67,7 @@ async function moveBeforeTheLockIsKept() {
     const [taskId] = seeded.tasks;
     const importer = await race.open('task import');
     const screen = await race.open('the screen');
-    const found = race.gate(importer, { label: 'the task found', when: 'after', match: (text) => /^\s*SELECT \* FROM tasks WHERE tenant_id = \$1 AND id = ANY/.test(text) && !/FOR UPDATE/.test(text) });
+    const found = race.gate(importer, { label: 'the task found', when: 'after', match: firstRead });
     const work = race.start(importer, (manager) => importTasks(manager, race.tenantId, `id;title\n${taskId};Renamed`));
     assert.equal(await progress(work, { party: importer, gate: found }), 'gated', 'harness: the import pauses once it found the task');
     const move = race.start(screen, (manager) => moveToP2(manager, seeded, taskId));
@@ -116,8 +120,33 @@ async function crossedLoadsDoNotDeadlock() {
   });
 }
 
+/** The task is deleted after the import found it, before the lock: its row is refused, nothing is inserted again. */
+async function deletedBeforeTheLockIsRefused() {
+  await withRace('csv-load-deleted', async (race) => {
+    const seeded = await seedTasks(race, 1);
+    const [taskId] = seeded.tasks;
+    const importer = await race.open('task import');
+    const screen = await race.open('the screen');
+    const found = race.gate(importer, { label: 'the task found', when: 'after', match: firstRead });
+    const work = race.start(importer, (manager) => importTasks(manager, race.tenantId, `id;title\n${taskId};Renamed`));
+    assert.equal(await progress(work, { party: importer, gate: found }), 'gated', 'harness: the import pauses once it found the task');
+    const remove = race.start(screen, (manager) => manager.query(`DELETE FROM tasks WHERE id = $1`, [taskId]));
+    assert.equal(await progress(remove, { party: screen }), 'settled', 'the delete is saved while the import pauses');
+    assertSucceeded(await settle(remove), 'the delete');
+    found.release();
+    const result = await settle(work);
+    assertSucceeded(result, 'the import');
+    const report = (result as any).value;
+    assert.equal(report.ok, false, 'the load is refused');
+    assert.deepEqual(report.errors.map((error: any) => [error.row, error.code]), [[2, 'CSV_RECORD_DELETED']], JSON.stringify(report.errors));
+    assert.equal(report.updated, 0, 'nothing announced as updated');
+    assert.deepEqual(await race.read(`SELECT id FROM tasks WHERE id = $1`, [taskId]), [], 'the deleted task is not inserted again');
+  });
+}
+
 void runRaceSpecs('Shared CSV import load lock', [
   ['a move saved before the load locks the task is kept', moveBeforeTheLockIsKept],
   ['a move saved once the load locked the task waits, then applies', moveAfterTheLockWaits],
   ['two loads crossing the same tasks wait for each other, no deadlock', crossedLoadsDoNotDeadlock],
+  ['a task deleted before the lock refuses its row, not inserted again', deletedBeforeTheLockIsRefused],
 ]);
