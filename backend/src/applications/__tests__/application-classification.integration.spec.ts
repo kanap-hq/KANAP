@@ -122,8 +122,11 @@ async function main() {
     const empty=await list.classificationSummary({filters:JSON.stringify({name:{filterType:'text',type:'equals',filter:'nobody'}})},{manager,tenantId:tenantA}); assert.deepEqual([empty.total,empty.reviewed,empty.stale,empty.incomplete,empty.attention],[0,0,0,0,{critical_without_recent_test:0,critical_without_wave:0,restricted_data_low_cyber:0}]);
     const copied=await crud.copyApplication(app.id,'Copy',userId,{manager}); assert.equal(copied.criticality,'high'); assert.equal(copied.classification_review,null); assert.equal(copied.last_dr_test,null);
     const context:any={manager,tenantId:tenantA,params:{dryRun:true,operation:'upsert'},itOpsSettings:await settings.getSettings(tenantA,{manager})};
-    const csvRows:any[]=[{rowNumber:2,raw:{criticality:'__CLEAR__',cyber_criticality:''},parsed:{},existingEntity:updated,errors:[]}];
-    await applicationCsvConfig.afterValidate!(csvRows,context); assert.deepEqual(csvRows[0].errors,[]); assert.equal(csvRows[0].parsed.criticality,null); assert.equal(csvRows[0].parsed.cyber_criticality,undefined);
+    // The clearing rule (D21): `-` clears, `__CLEAR__` reads as `-`, a blank cell keeps; a yes or no that cannot be empty refuses `-`.
+    const csvRows:any[]=[{rowNumber:2,raw:{criticality:'-',cyber_criticality:'',recovery_wave:'__CLEAR__'},parsed:{},existingEntity:updated,errors:[]}];
+    await applicationCsvConfig.afterValidate!(csvRows,context); assert.deepEqual(csvRows[0].errors,[]); assert.equal(csvRows[0].parsed.criticality,null); assert.equal(csvRows[0].parsed.recovery_wave,null); assert.equal(csvRows[0].parsed.cyber_criticality,undefined);
+    const piiRows:any[]=[{rowNumber:2,raw:{contains_pii:'-'},parsed:{},existingEntity:updated,errors:[]}];
+    await applicationCsvConfig.afterValidate!(piiRows,context); assert.deepEqual(piiRows[0].errors.map((e:any)=>[e.column,e.code]),[['contains_pii','CSV_VALUE_CANNOT_BE_CLEARED']]);
     const byNameRows:any[]=[{rowNumber:3,raw:{criticality:'Elevée'},parsed:{},existingEntity:updated,errors:[]}]; await applicationCsvConfig.afterValidate!(byNameRows,context); assert.deepEqual(byNameRows[0].errors,[]); assert.equal(byNameRows[0].parsed.criticality,'high');
     const badRows:any[]=[{rowNumber:4,raw:{criticality:'no_such_level'},parsed:{},existingEntity:updated,errors:[]}]; await applicationCsvConfig.afterValidate!(badRows,context); assert.match(badRows[0].errors[0].message,/Unknown or ambiguous/);
     const resolver = new CsvResolverService();

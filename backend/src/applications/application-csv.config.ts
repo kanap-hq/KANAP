@@ -12,6 +12,7 @@ import {
   CsvImportContext,
   CsvImportRow,
 } from '../common/csv';
+import { importCell, noteCleared, refuseClear, removedEntries } from '../common/csv/csv-import-cells';
 import { VULNERABILITY_CSV_HEADERS, vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { richTextCell } from '../common/csv/rich-text-cell';
 import { sameStoredValue, sameStoredValues } from '../common/csv-sheet/unchanged';
@@ -35,35 +36,44 @@ export function resolveApplicationCatalogs(entity: any, settings: ItOpsSettings)
 
 const OWNER_TYPES = ['business', 'it'] as const;
 
-/** The non-empty owner cells of a row, by owner type; a type whose columns are all absent is left out. */
-function ownerCells(raw: Record<string, string>): Map<'business' | 'it', string[]> {
-  const cells = new Map<'business' | 'it', string[]>();
+/**
+ * The owner cells of a row, by owner type (a type whose columns are all absent is left out): the
+ * emails its cells name, and whether one of them is `-`.
+ */
+function ownerCells(raw: Record<string, string>): Map<'business' | 'it', { emails: string[]; clear: boolean }> {
+  const cells = new Map<'business' | 'it', { emails: string[]; clear: boolean }>();
   for (const ownerType of OWNER_TYPES) {
     const columns = [1, 2, 3, 4].map((i) => `${ownerType}_owner_email_${i}`).filter((column) => column in raw);
-    if (columns.length) cells.set(ownerType, columns.map((column) => (raw[column] || '').trim().toLowerCase()).filter(Boolean));
+    if (columns.length === 0) continue;
+    const read = columns.map((column) => importCell(raw, column));
+    cells.set(ownerType, {
+      emails: read.flatMap((cell) => (cell.kind === 'value' ? [cell.text.toLowerCase()] : [])),
+      clear: read.some((cell) => cell.kind === 'clear'),
+    });
   }
   return cells;
 }
 
 /**
- * The owners a row leaves on an application, as `owner_type:user_id`. Per owner type, the emails
- * the columns name; when every cell of a type is empty, the stored owners of that type stay, except
- * in replace mode where they go. Unknown emails are refused before (`owner_email_unknown`).
+ * The owners a row leaves on an application, as `owner_type:user_id`, by the clearing rule, per owner
+ * type: the emails its cells name are the whole list (a `-` among them adds nothing); `-` with no email
+ * empties it; blank cells, or no column of the type, keep the stored owners. Unknown emails are refused
+ * before (`owner_email_unknown`).
  */
 export function csvOwnerKeys(
   raw: Record<string, string>,
   userByEmail: Map<string, string>,
   stored: string[] = [],
-  mode: 'replace' | 'enrich' = 'enrich',
 ): string[] {
   const cells = ownerCells(raw);
   const keys: string[] = [];
   for (const ownerType of OWNER_TYPES) {
-    const emails = cells.get(ownerType);
-    if (!emails || (emails.length === 0 && mode !== 'replace')) {
+    const cell = cells.get(ownerType);
+    if (!cell || (cell.emails.length === 0 && !cell.clear)) {
       keys.push(...stored.filter((key) => key.startsWith(`${ownerType}:`)));
       continue;
     }
+    const emails = cell.emails;
     for (const email of emails) {
       const userId = userByEmail.get(email);
       if (userId && !keys.includes(`${ownerType}:${userId}`)) keys.push(`${ownerType}:${userId}`);
@@ -87,7 +97,11 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
   const fail = (row: CsvImportRow, code: string, message: string, params?: Record<string, string | number>, column?: string) =>
     row.errors.push({ row: row.rowNumber, ...(column ? { column } : {}), message, code, ...(params ? { params } : {}) });
   const userByEmail = await usersByEmail(context.manager, context.tenantId);
-  const keys = [...new Set(rows.map((row) => applicationNameKey(row.raw.name)).filter(Boolean))];
+  const cellText = (row: CsvImportRow, column: string) => {
+    const cell = importCell(row.raw, column);
+    return cell.kind === 'value' ? cell.text : '';
+  };
+  const keys = [...new Set(rows.map((row) => applicationNameKey(cellText(row, 'name'))).filter(Boolean))];
   const holders: Array<{ id: string; name: string; sequential_id: string | null; key: string }> = keys.length === 0 ? [] : await context.manager.query(
     `SELECT id::text AS id, name, sequential_id, lower(btrim(name)) AS key
        FROM applications WHERE tenant_id = $1 AND lower(btrim(name)) = ANY($2)
@@ -108,7 +122,7 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
   };
 
   for (const row of rows) {
-    const name = String(row.raw.name ?? '').trim();
+    const name = cellText(row, 'name');
     const existing = row.existingEntity;
     const named = holdersByKey.get(applicationNameKey(name)) ?? [];
     if (name.length > APPLICATION_NAME_MAX) {
@@ -116,7 +130,7 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
     } else if (name && !existing && named.length) {
       fail(row, 'name_taken', `Another application is already named "${named[0].name}"`, { name: named[0].name, ref: named[0].sequential_id || named[0].name }, 'name');
     } else if (name && existing) {
-      const matchedById = String(row.raw.id ?? '').trim() === String(existing.id);
+      const matchedById = cellText(row, 'id') === String(existing.id);
       const others = named.filter((holder) => holder.id !== String(existing.id));
       if (!matchedById && named.length > 1) {
         fail(row, 'name_ambiguous', `${named.length} applications are named "${name}"; add the id column to choose one`, { name, count: named.length }, 'name');
@@ -126,7 +140,8 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
     }
 
     for (const [column, options, code] of [['lifecycle', settings.lifecycleStates, 'lifecycle_invalid'], ['category', settings.applicationCategories, 'category_invalid']] as const) {
-      const value = String(row.raw[column] ?? '').trim();
+      // A blank cell keeps the value; `-` on these values that cannot be empty is refused by the import.
+      const value = cellText(row, column);
       if (!value) continue;
       let found = null;
       try { found = findCatalogOption(value, options as any[]); } catch { found = null; }
@@ -137,7 +152,7 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
     }
 
     for (const ownerType of OWNER_TYPES) {
-      for (const email of ownerCells(row.raw).get(ownerType) ?? []) {
+      for (const email of ownerCells(row.raw).get(ownerType)?.emails ?? []) {
         if (!userByEmail.has(email)) fail(row, 'owner_email_unknown', `No user with the email ${email}`, { email });
       }
     }
@@ -175,16 +190,24 @@ export function changedApplicationColumns(row: CsvImportRow, settings: ItOpsSett
     if (!sameStoredValue(stored[property], next[property])) columns.add(field.csvColumn);
   }
   if (columns.size === 0) {
-    for (const [column, value] of Object.entries(row.raw)) {
-      if ((OWNER_COLUMN.test(column) || column === 'data_residency') && String(value ?? '').trim() !== '') columns.add(column);
+    for (const column of Object.keys(row.raw)) {
+      if ((OWNER_COLUMN.test(column) || column === 'data_residency') && importCell(row.raw, column).kind !== 'blank') columns.add(column);
     }
   }
   return [...columns];
 }
 
-/** The ISO country codes of a `data_residency` cell. */
-export function csvResidencyCodes(value: string | undefined): string[] {
-  return [...new Set((value || '').split(',').map((code) => code.trim().toUpperCase()).filter((code) => code.length === 2))];
+/**
+ * The countries a row's `data_residency` cell gives, by the clearing rule: the ISO codes it names (the
+ * whole list), none for `-`; undefined when the stored residency stays (a blank cell, a column the
+ * file leaves out, or a cell that names no two-letter code, as before).
+ */
+export function csvResidencyCodes(raw: Record<string, string>): string[] | undefined {
+  const cell = importCell(raw, 'data_residency');
+  if (cell.kind === 'clear') return [];
+  if (cell.kind === 'blank') return undefined;
+  const codes = [...new Set(cell.text.split(',').map((code) => code.trim().toUpperCase()).filter((code) => code.length === 2))];
+  return codes.length > 0 ? codes : undefined;
 }
 
 /** Same members, in any order. */
@@ -200,11 +223,11 @@ function groupKeys<T>(rows: T[], id: (row: T) => string, key: (row: T) => string
   return byId;
 }
 
-/** A classification field the import reads (`__CLEAR__` in a cell empties it). */
+/** A classification field the import reads (`-` in a cell empties it, as in every column). */
 function classificationField(field: string): CsvFieldDefinition {
   return {
     csvColumn: field, entityProperty: field, type: CsvFieldType.STRING, required: false, defaultExport: true,
-    label: field.endsWith('_minutes') ? `${field} (integer minutes; __CLEAR__ to clear)` : `${field} (__CLEAR__ to clear)`, group: 'Classification',
+    label: field.endsWith('_minutes') ? `${field} (integer minutes)` : field, group: 'Classification',
   };
 }
 
@@ -742,7 +765,7 @@ export const applicationCsvConfig: CsvEntityConfig = {
       type: CsvFieldType.STRING,
       required: false,
       defaultExport: true,
-      label: 'Business criticality (code or name; __CLEAR__ to clear)',
+      label: 'Business criticality (code or name)',
       group: 'Overview',
     },
     classificationField('cyber_criticality'),
@@ -885,18 +908,22 @@ export const applicationCsvConfig: CsvEntityConfig = {
       delete row.parsed._data_residency_csv;
       // The yes/no and the day as their typed columns read them, in the language of the file.
       const typed = { contains_pii: row.parsed.contains_pii, last_dr_test: row.parsed.last_dr_test };
-      // Empty and absent classification cells preserve values in BOTH modes, rows in error included.
+      // The classification goes through its patch (revision, catalog codes): blank and absent cells keep
+      // their values, rows in error included; `-` (`__CLEAR__` alike) clears a value that may be empty,
+      // and reads as a blank cell on a new application.
       for (const field of CLASSIFICATION_INPUT_FIELDS) delete row.parsed[field];
-      if (row.errors.length) continue;
       const input: Record<string, any> = {};
       for (const field of CLASSIFICATION_INPUT_FIELDS) {
-        const raw = row.raw[field];
-        if (raw === undefined || raw === null || String(raw).trim() === '') continue;
-        if (String(raw).trim() === '__CLEAR__') input[field] = null;
-        else if (field.endsWith('_minutes')) input[field] = Number(raw);
+        const cell = importCell(row.raw, field);
+        if (cell.kind === 'blank' || (cell.kind === 'clear' && row.isInsert)) continue;
+        // A yes or no that cannot be empty (T-I6c).
+        if (cell.kind === 'clear' && field === 'contains_pii') refuseClear(row, field);
+        else if (cell.kind === 'clear') input[field] = null;
+        else if (field.endsWith('_minutes')) input[field] = Number(cell.text);
         else if (field === 'contains_pii' || field === 'last_dr_test') input[field] = typed[field];
-        else input[field] = raw;
+        else input[field] = cell.text;
       }
+      if (row.errors.length) continue;
       try { Object.assign(row.parsed, classificationPatch(input, row.existingEntity ?? null, catalog)); }
       catch (error: any) { row.errors.push({ row: row.rowNumber, message: error.message, ...codedErrorOf(error) }); }
     }
@@ -925,14 +952,15 @@ export const applicationCsvConfig: CsvEntityConfig = {
 
     return rows.map((row) => {
       const stored = row.existingEntity;
-      if (Object.keys(row.raw).some((key) => OWNER_COLUMN.test(key))) {
-        const storedOwners = ownersById.get(stored.id) ?? [];
-        if (!sameKeys(storedOwners, csvOwnerKeys(row.raw, userByEmail, storedOwners))) return false;
-      }
-      // An empty residency cell keeps the stored countries.
-      const codes = csvResidencyCodes(row.raw.data_residency);
-      const residencyWritten = codes.length > 0;
-      if (residencyWritten && !sameKeys(residencyById.get(stored.id), codes)) return false;
+      // The owners and the countries the row removes, announced by the check (`cleared`): this hook
+      // runs at the check as at the load, on the rows that update an application.
+      const storedOwners = ownersById.get(stored.id) ?? [];
+      const owners = csvOwnerKeys(row.raw, userByEmail, storedOwners);
+      const storedCountries = residencyById.get(stored.id) ?? [];
+      const countries = csvResidencyCodes(row.raw);
+      noteCleared(row, removedEntries(storedOwners, owners) + (countries ? removedEntries(storedCountries, countries) : 0));
+      if (!sameKeys(storedOwners, owners)) return false;
+      if (countries && !sameKeys(storedCountries, countries)) return false;
 
       const next = { ...row.parsed };
       delete next._owners;
