@@ -8,7 +8,9 @@ import type { IntegratedDocumentSlotKey } from '../knowledge/integrated-document
  * that document's text, never the table's column of the same name, which the documents replaced and
  * nothing writes any more. The clearing rule then reads the documents: a blank cell, or a file without
  * the column, writes the document's own text back (no change); `-` empties it, and the check counts it
- * when it held a text. A record with no document reads as empty.
+ * when it held a text. A record with no document yet (older than the documents, never opened since)
+ * still holds its text in that column, which the screen turns into its document when opened: the
+ * import reads it there (pass G), and a load that writes the record puts it in the document.
  */
 export async function settleWithSlotBodies(
   rows: Array<{ found: any | null }>,
@@ -21,7 +23,9 @@ export async function settleWithSlotBodies(
   return rows.map((row) => {
     if (!row.found) return { entity: null };
     const entity = { ...row.found };
-    for (const [property, slot] of Object.entries(slots)) entity[property] = bodies.get(String(row.found.id))?.get(slot) ?? null;
+    for (const [property, slot] of Object.entries(slots)) {
+      entity[property] = bodies.get(String(row.found.id))?.get(slot) ?? row.found[property] ?? null;
+    }
     return { entity };
   });
 }

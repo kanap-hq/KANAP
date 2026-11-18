@@ -625,7 +625,7 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
   },
 
   /** The purpose lives in bound documents (the CSV service writes them there), the rest in columns. */
-  sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'projects', { purpose: 'purpose' }, normalizeCodes),
+  sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'projects', { purpose: 'purpose' }, normalizeCodes, { columnWithoutDocument: true }),
 
   /**
    * Hook to normalize status and origin values before commit.

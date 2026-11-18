@@ -355,7 +355,7 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
   afterValidate: (rows, context) => keepStoredSlotBodies(rows, context, 'requests', DOCUMENT_SLOTS),
 
   /** The purpose and the risks live in bound documents (the CSV service writes them there), the rest in columns. */
-  sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'requests', DOCUMENT_SLOTS, normalizeCodes),
+  sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'requests', DOCUMENT_SLOTS, normalizeCodes, { columnWithoutDocument: true }),
 
   /**
    * Hook to normalize status values before commit.
