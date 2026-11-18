@@ -129,10 +129,42 @@ async function testCriteriaValues() {
   });
 }
 
+/**
+ * The scoring of a project as on a request (lot I6 of 26.11.9, pass F): `-` on its criteria gives `{}`,
+ * counted once; `-` on its priority override is refused, as the screen cannot empty it. On a new
+ * project `-` reads as a blank cell.
+ */
+async function testProjectScoring() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'i6f-scoring');
+    const id = randomUUID();
+    await runner.query(
+      `INSERT INTO portfolio_projects (id, tenant_id, item_number, name, status, origin, execution_progress, priority_override, criteria_values)
+       VALUES ($1, $2, 100, 'Cloud move', 'in_progress', 'fast_track', 0, true, '{"a": "b"}'::jsonb)`,
+      [id, tenantId],
+    );
+    const check = await run(runner, tenantId, portfolioProjectCsvConfig, 'name;criteria_values\nCloud move;-', { dryRun: true });
+    assert.deepEqual([check.ok, check.updated, check.cleared], [true, 1, 1], JSON.stringify(check.errors));
+    const load = await run(runner, tenantId, portfolioProjectCsvConfig, 'name;criteria_values\nCloud move;-');
+    assert.deepEqual([load.ok, load.cleared], [true, 1], JSON.stringify(load.errors));
+    const [stored] = await runner.query(`SELECT criteria_values, priority_override FROM portfolio_projects WHERE id = $1`, [id]);
+    assert.deepEqual([stored.criteria_values, stored.priority_override], [{}, true]);
+    const again = await run(runner, tenantId, portfolioProjectCsvConfig, 'name;criteria_values\nCloud move;-', { dryRun: true });
+    assert.deepEqual([again.ok, again.cleared], [true, 0], 'empty criteria have nothing to clear');
+    for (const dryRun of [true, false]) {
+      const refused = await run(runner, tenantId, portfolioProjectCsvConfig, 'name;priority_override\nCloud move;-', { dryRun });
+      assert.deepEqual(codes(refused), [[2, 'priority_override', 'CSV_VALUE_CANNOT_BE_CLEARED']], 'the override cannot be cleared');
+    }
+    const created = await run(runner, tenantId, portfolioProjectCsvConfig, 'name;priority_override;criteria_values\nNew site;-;-');
+    assert.deepEqual([created.ok, created.inserted], [true, 1], JSON.stringify(created.errors));
+  });
+}
+
 runSpecs('portfolio-csv-clearing-rule.integration.spec', [
   ['project origin', testProjectOrigin],
   ['document slots', testDocumentSlots],
   ['criteria values', testCriteriaValues],
+  ['project scoring', testProjectScoring],
 ]).catch((error) => {
   console.error(error);
   process.exit(1);

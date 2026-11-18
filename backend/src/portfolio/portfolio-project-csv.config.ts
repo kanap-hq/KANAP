@@ -7,6 +7,7 @@ import {
   CsvImportParams,
   CsvImportRow,
 } from '../common/csv';
+import { importCell, noteCleared, refuseClear } from '../common/csv/csv-import-cells';
 import { richTextCell } from '../common/csv/rich-text-cell';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
@@ -67,6 +68,24 @@ const STANDARD_ORIGIN_MESSAGE =
   'A new project cannot have the origin Request. Convert a request, or use fast_track or legacy.';
 const LOCKED_ORIGIN_MESSAGE =
   'Only a fast-track or legacy project can change its origin, to fast-track or legacy.';
+
+/**
+ * The scoring of a stored project as on a request (lot I6 of 26.11.9, pass F): `-` on its criteria
+ * gives `{}`, counted when the project had some, and `-` on its priority override is refused, as the
+ * screen cannot empty it. Both columns accept null in the database, where the request's do not: the
+ * shared import alone would write null. On a new project `-` reads as a blank cell.
+ */
+function clearProjectScoring(rows: CsvImportRow[], operation: CsvImportParams['operation']): void {
+  for (const row of rows) {
+    // A stored project an insert-only import skips is neither checked nor written.
+    if (row.isInsert || operation === 'insert_only') continue;
+    if (importCell(row.raw, 'priority_override').kind === 'clear') refuseClear(row, 'priority_override');
+    if (importCell(row.raw, 'criteria_values').kind !== 'clear') continue;
+    const stored = row.existingEntity?.criteria_values;
+    row.parsed.criteria_values = {};
+    if (stored && typeof stored === 'object' && Object.keys(stored).length > 0) noteCleared(row, 1);
+  }
+}
 
 function refuseProjectOrigin(rows: CsvImportRow[], operation: CsvImportParams['operation']): void {
   for (const row of rows) {
@@ -601,6 +620,7 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
   /** A purpose cell that repeats its document is kept as stored, whatever tags it holds. */
   afterValidate: async (rows, context) => {
     refuseProjectOrigin(rows, context.params.operation);
+    clearProjectScoring(rows, context.params.operation);
     await keepStoredSlotBodies(rows, context, 'projects', { purpose: 'purpose' });
   },
 
