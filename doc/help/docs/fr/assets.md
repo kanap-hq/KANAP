@@ -432,9 +432,6 @@ L'export et le modèle titrent les colonnes dans la langue de votre écran. L'im
 1. **Préparez votre fichier** : un fichier CSV ou un classeur Excel (`.xlsx`). Enregistrez un fichier CSV en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV et Excel](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
-   - **Mode** :
-     - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes : ne mettez à jour que ce que vous spécifiez
-     - `Remplacer` : Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée. Une colonne absente du fichier garde ses valeurs. Certains champs ne peuvent pas être vidés : la **Vérification préalable** les signale.
    - **Opération** :
      - `Upsert` (par défaut) : Créer de nouveaux actifs ou mettre à jour les existants
      - `Mise à jour uniquement` : Ne modifier que les actifs existants, ignorer les nouveaux
@@ -507,17 +504,22 @@ Le système normalise automatiquement les valeurs lors de l'import, donc `Virtua
 
 **Appartenance aux clusters** : la colonne `cluster` nomme les clusters de l'actif, séparés par des virgules (`ESX-PROD, SQL-CLUSTER`). La casse ne compte pas, ni les accents si vous pouvez lire les serveurs. Voir [Noms des fiches](csv-files.md#names-of-records). L'export écrit les clusters dont l'actif est membre. À l'import :
 
-- En mode `Enrichir`, l'actif rejoint les clusters nommés dans la cellule et reste dans ses autres clusters.
-- En mode `Remplacer`, l'actif quitte aussi les clusters que sa cellule ne nomme pas.
-- Une cellule vide ne change rien, dans les deux modes.
+- Une cellule remplie est la liste entière : l'actif rejoint les clusters qu'elle nomme et quitte ceux qu'elle ne nomme pas.
+- `-` retire l'actif de tous ses clusters.
+- Une cellule vide garde les clusters de l'actif.
 
 **Vérification préalable** signale une erreur sur la ligne quand un nom ne correspond à aucun actif, correspond à plusieurs clusters ou désigne un actif qui n'est pas un cluster. Elle refuse aussi une ligne qui se nomme elle-même, une ligne qui est ou devient un cluster, et un cluster qui a un système d'exploitation : l'import n'en retire jamais. Les colonnes `is_cluster` et `operating_system` suivent les règles de [Clusters](#clusters).
 
 ### Correspondance et mises à jour
 
-Les actifs sont identifiés par **nom** (insensible à la casse). Lorsqu'une correspondance est trouvée :
-- En mode `Enrichir` : Seules les valeurs CSV non vides mettent à jour l'actif
-- En mode `Remplacer` : Les colonnes du fichier sont mises à jour, et une cellule vide efface la valeur enregistrée. Les colonnes absentes du fichier gardent leurs valeurs. Le nom, l'`id`, le statut et les champs obligatoires ne peuvent pas être vidés : la **Vérification préalable** signale une erreur sur la ligne. Pour les colonnes d'adresses IP, seules les sous-colonnes présentes dans le fichier sont appliquées. Un nouvel actif reçoit les valeurs par défaut.
+Les actifs sont identifiés par **nom** (insensible à la casse). Lorsqu'une correspondance est trouvée, une cellule vide garde la valeur enregistrée, et `-` l'efface. Les colonnes absentes du fichier gardent leurs valeurs.
+
+- `location_reference`, `kind` et `environment` ne sont obligatoires que pour un nouvel actif. Sur un actif enregistré, une cellule vide les garde.
+- `-` dans `operating_system` retire le système d'exploitation du serveur.
+- Pour les colonnes d'adresses IP, seules les sous-colonnes présentes dans le fichier sont appliquées. `-` dans un type ou un sous-réseau efface cette valeur. `-` dans une adresse retire toute l'entrée, avec son type et son sous-réseau.
+- Le nom, l'`id`, le statut, le type, `is_cluster` et les autres champs obligatoires ne peuvent pas être effacés : `-` y fait refuser la ligne, et le message nomme la colonne.
+
+Un nouvel actif reçoit les valeurs par défaut.
 
 Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur le nom.
 

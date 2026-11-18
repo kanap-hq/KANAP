@@ -95,7 +95,8 @@ These are the standard names. Your organisation can rename the five columns in [
 ## What a cell means
 
 - An empty cell keeps the stored value. An empty `nature` cell keeps the kind of an existing line.
-- `-` clears a line detail: description, notes, supplier name and ERP supplier ID, cost center, run or build, a dimension value, an owner, the project, the end of validity. On a column a new line must fill, and on `nature`, `-` is a row error. On a required dimension, `-` is a row error when the line holds a value.
+- `-` clears a line detail: description, notes, supplier name and ERP supplier ID, cost center, run or build, a dimension value, an owner, the project, the end of validity. On a column a new line must fill, and on `nature`, `-` is a row error. On a required dimension, `-` is a row error when the line holds a value. The check counts the values the load will clear, for example "3 values will be cleared".
+- `'-` is the text `-`. The export writes a stored `-` this way, so an exported file imported again changes nothing.
 - `0` writes zero.
 - A yearly total equal to the stored total writes nothing. A different one is spread over the column's period, exactly as when you type the total in the **Budget** tab.
 - A month cell writes that month, and marks the column as edited by hand, as a month typed in the **Budget** tab does.

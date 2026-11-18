@@ -30,17 +30,21 @@ The contracts file starts with the same optional `reference` column (`CTR-12`). 
 
 ## Empty cells and `-` { #empty-cells-and-clearing }
 
-The imports of suppliers, contacts, companies, departments, contracts, cost centers, accounts, analytics dimension values, business processes, working-day calendars and technology links read each cell as the budget file does:
+Every import reads its cells by the same rule, from the list's **Import** or through Kad. The budget file and the user list in **Administration** follow it too:
 
 - **An empty cell keeps the stored value.** An empty `status` keeps the stored status: it does not enable a disabled record.
 - **`-` clears the stored value.** A cell holding only `-` is a clear. A text such as `Jean-Pierre` or a number such as `-5` is a value. The export writes a stored `-` as `'-`, which the import reads as the text `-`: an exported file imported again changes nothing. To keep a dash as a value, write `'-`. A spreadsheet that saves as CSV can drop the apostrophe: the check then counts that dash among the values cleared.
+- **A cell with several values is the whole list.** It replaces the stored list, for example the owners of an application or the clusters of a server. `-` alone empties the list.
 - **A column the file leaves out is never written.** A file can hold only the columns that find each record, such as its reference, its name or its code, and the columns to change.
-- **Some values cannot be cleared**: a reference, a name or another column that finds the record, a required value and a status. `-` in such a cell refuses the row, and the message names the column. On a number that cannot be empty, such as a company's headcount or a contract's yearly amount, the message says to write `0`.
+- **Some values cannot be cleared**: a reference, a name or another column that finds the record, a required value, a status and a yes or no. `-` in such a cell refuses the row, and the message names the column. On a number that cannot be empty, such as a company's headcount or a contract's yearly amount, the message says to write `0`.
 - **End of validity.** `-` in `disabled_at` clears the date, and the record is active again. A row with `disabled` in `status` and `-` in `disabled_at` is refused: keep one or the other.
 - **New records.** An empty required cell refuses the row. `-` on an optional value leaves it empty. The defaults of a new record, such as a contract's duration, apply on creation only.
-- **The preflight check counts the clears**, for example "3 values will be cleared". A `-` on a value that is already empty is not counted.
+- **The preflight check counts the clears**, for example "3 values will be cleared". The count holds the values `-` clears and the entries a filled list takes out. A `-` on a value that is already empty is not counted. An icon next to the title of the import dialog recalls the rule.
+- **Long lists.** A list written in numbered columns, such as `owner_email_1` to `owner_email_4`, takes as many columns as the longest list of the export, four at least. The import reads all of them.
 
-Each page lists the columns of its file and what `-` does there. The imports of applications, assets, projects, requests, tasks and incidents have their own choice for empty cells, described on their pages. The budget file follows the same rule: see [What a cell means](budget-file.md#what-a-cell-means). So do Kad's imports of these lists: see [Importing a spreadsheet](ai-assistant.md#importing-a-spreadsheet).
+Each page lists the columns of its file and what `-` does there. For the budget file, see [What a cell means](budget-file.md#what-a-cell-means). For Kad, see [Importing a spreadsheet](ai-assistant.md#importing-a-spreadsheet).
+
+In the import dialog of applications, assets, projects, requests, tasks and incidents, the three presets choose whether the file creates records, updates them, or both.
 
 ## Names of records { #names-of-records }
 
@@ -54,7 +58,7 @@ The third step applies only to records found by their name, in a list you can re
 
 **Matches.** The preflight check lists the names found at the third step under **N values matched**, folded. Unfold the line to see each match, for example `Supplier: Fromagerie Leger → Fromagerie Léger`. The list also holds the versions found by their catalog label (see [Version labels](technologies.md#version-labels)). **Undo** checks the file again without that match: the name is then read as one Kadratis does not know, and the load keeps that choice. The undone match stays listed with **Match again**, which checks the file with it again. The imports of applications, assets, projects, requests, tasks, incidents, contracts, contacts, cost centers, business processes, technology links and the budget file show this list.
 
-**A name nothing finds.** The imports of applications, assets, projects, requests, tasks and incidents keep the current values for empty cells, unless you choose **Full replace**. With these choices, a row that updates a record also keeps the current value when a cell names a record Kadratis does not find. The check warns: "\"X\" was not found: the current value is kept." A value that belongs to another column is kept only while the row leaves that column as stored: a task's phase with its project, a stream with its category, a department with its company. Otherwise the field stays empty, and the check warns. A task keeps its viewers, or its owners, when one of their cells names an unknown email. On a new record, and with **Full replace**, the field stays empty and the check warns. A column that needs a known record refuses the row, as its page says.
+**A name nothing finds.** In the imports of applications, assets, projects, requests, tasks and incidents, a row that updates a record keeps the current value when a cell names a record Kadratis does not find. The check warns: "\"X\" was not found: the current value is kept." A value that belongs to another column is kept only while the row leaves that column as stored: a task's phase with its project, a stream with its category, a department with its company. Otherwise the field stays empty, and the check warns. A task keeps its viewers, or its owners, when one of their cells names an unknown email. On a new record, the field stays empty and the check warns. A column that needs a known record refuses the row, as its page says.
 
 Kad's imports follow the same rules and show the matches on their preview. See [Importing a spreadsheet](ai-assistant.md#importing-a-spreadsheet).
 

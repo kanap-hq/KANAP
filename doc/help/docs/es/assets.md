@@ -432,13 +432,12 @@ La exportación y la plantilla titulan las columnas en el idioma de su pantalla.
 1. **Prepare su archivo**: un archivo CSV o un libro de Excel (`.xlsx`). Guarde un archivo CSV en UTF-8. Las comas y los puntos y coma funcionan, y también un archivo que Excel guardó como CSV simple (Windows-1252). Descargue una plantilla para asegurar los encabezados correctos. El separador, los importes, las fechas y los sí o no de cada idioma están en [Archivos CSV y Excel](csv-files.md).
 
 2. **Elija la configuración de importación**:
-   - **Modo**:
-     - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes: solo actualiza lo que especifique
-     - `Reemplazar`: Reemplaza los valores de las columnas del archivo. Una celda vacía borra el valor guardado. Una columna que falta en el archivo conserva sus valores. Algunos campos no se pueden vaciar: la **Verificación previa** los señala.
    - **Operación**:
      - `Upsert` (predeterminado): Crear nuevos activos o actualizar existentes
      - `Solo actualizar`: Solo modificar activos existentes, omitir nuevos
      - `Solo insertar`: Solo crear nuevos activos, omitir existentes
+
+   Una celda vacía conserva el valor guardado, y `-` lo borra. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing) y [Coincidencia y actualizaciones](#coincidencia-y-actualizaciones).
 
 3. **Validar primero**: Haga clic en **Verificación previa** para validar su archivo sin hacer cambios. Revise errores y advertencias.
 
@@ -507,17 +506,22 @@ El sistema normaliza automáticamente los valores durante la importación, por l
 
 **Pertenencia a clústeres**: la columna `cluster` nombra los clústeres del activo, separados por comas (`ESX-PROD, SQL-CLUSTER`). No distingue mayúsculas de minúsculas, ni acentos si usted puede leer los servidores. Vea [Nombres de registros](csv-files.md#names-of-records). La exportación escribe los clústeres de los que el activo es miembro. En la importación:
 
-- Con el modo `Enriquecer`, el activo se une a los clústeres nombrados en la celda y sigue en sus otros clústeres.
-- Con el modo `Reemplazar`, el activo además abandona los clústeres que su celda no nombra.
-- Una celda vacía no cambia nada, en ambos modos.
+- Una celda rellenada es la lista completa: el activo se une a los clústeres que nombra y abandona los clústeres que no nombra.
+- `-` saca el activo de todos los clústeres.
+- Una celda vacía conserva los clústeres del activo.
 
 **Verificación previa** señala un error en la fila cuando un nombre no corresponde a ningún activo, corresponde a varios clústeres o designa un activo que no es un clúster. También rechaza una fila que se nombra a sí misma, una fila que es o pasa a ser un clúster, y un clúster que tiene sistema operativo: la importación nunca quita uno. Las columnas `is_cluster` y `operating_system` siguen las reglas de [Clústeres](#clusteres).
 
 ### Coincidencia y actualizaciones
 
-Los activos se emparejan por **nombre** (sin distinguir mayúsculas). Cuando se encuentra una coincidencia:
-- Con modo `Enriquecer`: Solo los valores CSV no vacíos actualizan el activo
-- Con modo `Reemplazar`: Las columnas del archivo se actualizan, y una celda vacía borra el valor guardado. Las columnas que faltan en el archivo conservan sus valores. El nombre, el `id`, el estado y los campos obligatorios no se pueden vaciar: la **Verificación previa** señala un error en la fila. En las columnas de direcciones IP, solo se aplican las subcolumnas presentes en el archivo. Un activo nuevo recibe los valores predeterminados.
+Los activos se emparejan por **nombre** (sin distinguir mayúsculas). Cuando se encuentra una coincidencia, una celda vacía conserva el valor guardado, y `-` lo borra. Las columnas que faltan en el archivo conservan sus valores.
+
+- `location_reference`, `kind` y `environment` solo son obligatorias para un activo nuevo. En un activo guardado, una celda vacía los conserva.
+- `-` en `operating_system` quita el sistema operativo del servidor.
+- En las columnas de direcciones IP, solo se aplican las subcolumnas presentes en el archivo. `-` en un tipo o una subred borra ese valor. `-` en una dirección quita la entrada completa, con su tipo y su subred.
+- El nombre, el `id`, el estado, el tipo, `is_cluster` y los demás campos obligatorios no se pueden borrar: `-` en ellos rechaza la fila, y el mensaje nombra la columna.
+
+Un activo nuevo recibe los valores predeterminados.
 
 Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el ID, luego el nombre como respaldo.
 

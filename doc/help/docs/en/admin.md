@@ -223,10 +223,12 @@ The columns:
 |---|---|
 | `email` | Required. Rows are matched on it, so write the address as the workspace holds it |
 | `first_name`, `last_name` | The person's name |
-| `role` | The role to give. A blank cell gives the **Contact** role |
+| `role` | The role to give. A new person without one gets the **Contact** role |
 | `company_name` | The company, by name. Optional |
-| `department_name` | The department, by name. It needs a `company_name` |
-| `status` | `contact`, `invited`, `enabled` or `disabled`. A blank cell gives `contact` |
+| `department_name` | The department, by name, in the company of the row. A row that changes the company clears the department, unless it names one |
+| `status` | `contact`, `invited`, `enabled` or `disabled`. A new person without one gets `contact` |
+
+Only `email` is required, and a column the file leaves out is never written. On a person the workspace already holds, an empty cell keeps the stored value, the role and the status included: a row without them changes no one's access. `-` clears the first name, the last name, the company and the department. `-` cannot clear the email, the role or the status: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing).
 
 A role the file names and your workspace does not have is created by the load, with a default description. The check lists it and creates nothing, so a file you only check changes no role. A name that appears twice in the file is kept once, the first row winning. A name the page shows for a system or built-in role, in any of its languages, is refused for that row.
 

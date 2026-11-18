@@ -164,6 +164,7 @@ claire.dubois@example.com;all;;read
 ```
 
 - Una persona presente en el archivo recibe exactamente los nodos listados para ella, en **Limitado a**. Una persona ausente del archivo no cambia.
+- Cada fila describe un nodo, así que este archivo no tiene ningún valor que conservar o borrar: la regla de [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing) no se aplica aquí.
 - Una importación siempre limita. Para devolver todos los datos a alguien, use la ventana del usuario.
 - La comprobación va primero y no escribe nada. Indica cada fila rechazada: persona desconocida, empresa o centro de coste desconocido, tipo o acceso no válido, un nodo listado dos veces para una misma persona, un Administrador, su propia cuenta. Un archivo con un error no carga nada.
 - La exportación escribe el mismo formato, para las personas limitadas. Una persona limitada sin nodos no tiene fila, de modo que volver a importar el archivo la deja como está.
