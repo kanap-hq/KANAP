@@ -34,7 +34,7 @@ function file(content: string): Express.Multer.File {
 }
 
 async function importCsv(runner: QueryRunner, tenantId: string, csv: string, params: Partial<CsvImportParams>): Promise<CsvImportResult> {
-  return service.import(file(csv), { dryRun: false, mode: 'enrich', operation: 'upsert', ...params }, {
+  return service.import(file(csv), { dryRun: false, operation: 'upsert', ...params }, {
     manager: runner.manager,
     tenantId,
     userId: null,
@@ -87,9 +87,9 @@ async function testHiddenObjectsAreKept() {
           `${lineTask},Task of the hidden line,spend_item,,`,
         ].join('\n');
         const what = `${mode}, ${language}`;
-        const dry = await importCsv(runner, tenantId, csv, { mode, dryRun: true });
+        const dry = await importCsv(runner, tenantId, csv, { dryRun: true });
         assert.equal(dry.ok, true, `${what}: preflight ${JSON.stringify(dry.errors)}`);
-        const load = await importCsv(runner, tenantId, csv, { mode });
+        const load = await importCsv(runner, tenantId, csv, {});
         assert.equal(load.ok, true, `${what}: load ${JSON.stringify(load.errors)}`);
         assert.deepEqual([load.updated, load.unchanged], [dry.updated, dry.unchanged], `${what}: the preflight counts what the load does`);
         assert.deepEqual(await link(runner, contractTask), ['contract', hidden], `${what}: the task keeps its contract`);
@@ -107,7 +107,7 @@ async function testLabelNamesNoContract() {
       const csv = [HEADER, `,New task,contract,,${CONTRACT_OUTSIDE_ACCESS.fr}`].join('\n');
       for (const dryRun of [true, false]) {
         const what = `${mode}, ${dryRun ? 'preflight' : 'load'}`;
-        const result = await importCsv(runner, tenantId, csv, { mode, dryRun });
+        const result = await importCsv(runner, tenantId, csv, { dryRun });
         assert.equal(result.ok, false, `${what}: refused`);
         assert.deepEqual(
           result.errors.map((error) => [error.row, error.column]),

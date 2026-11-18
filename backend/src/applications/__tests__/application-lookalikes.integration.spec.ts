@@ -80,7 +80,7 @@ async function importCsv(
 ): Promise<CsvImportResult> {
   return ctx.csv.import(
     { buffer: Buffer.from(lines.join('\n') + '\n', encoding), originalname: 'apps.csv' } as Express.Multer.File,
-    { dryRun: false, mode: 'enrich', operation: 'upsert', ...params },
+    { dryRun: false, operation: 'upsert', ...params },
     { manager: ctx.runner.manager, tenantId: ctx.tenantId, access },
   );
 }
@@ -163,7 +163,7 @@ async function testChoices() {
     assert.deepEqual(await stored(ctx, compta.id), { name: 'Comptabilité', description: 'Ledger', supplier_id: null, editor: 'Cegid' });
 
     // Full replace: the blank description is cleared.
-    result = await importCsv(ctx, file, { mode: 'replace', lookalikes: [{ kind: 'lookalike', line: 2, action: 'update', id: compta.id }] });
+    result = await importCsv(ctx, file, { lookalikes: [{ kind: 'lookalike', line: 2, action: 'update', id: compta.id }] });
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.equal((await stored(ctx, compta.id)).description, null);
 
@@ -255,7 +255,7 @@ async function testPublisherProposesTheSupplier() {
     result = await importCsv(ctx, ['name;supplier_name;editor', 'Lyra;;Cegid']);
     assert.equal((await stored(ctx, (await ctx.runner.query(`SELECT id::text AS id FROM applications WHERE tenant_id = $1 AND name = 'Lyra'`, [ctx.tenantId]))[0].id)).supplier_id, sage);
     assert.equal(result.matches, undefined);
-    result = await importCsv(ctx, ['name;supplier_name;editor', 'Lyra;;Cegid'], { mode: 'replace' });
+    result = await importCsv(ctx, ['name;supplier_name;editor', 'Lyra;;Cegid'], {});
     const [after] = await ctx.runner.query(`SELECT supplier_id::text AS supplier_id FROM applications WHERE tenant_id = $1 AND name = 'Lyra'`, [ctx.tenantId]);
     assert.equal(after.supplier_id, cegid);
 

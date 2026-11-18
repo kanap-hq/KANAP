@@ -39,7 +39,7 @@ async function importCsv(
   params: Partial<CsvImportParams>,
   access: CsvCallerAccess = ADMIN,
 ): Promise<CsvImportResult> {
-  return service.import(file(csv), { dryRun: true, mode: 'enrich', operation: 'upsert', ...params }, {
+  return service.import(file(csv), { dryRun: true, operation: 'upsert', ...params }, {
     manager,
     tenantId,
     userId: null,

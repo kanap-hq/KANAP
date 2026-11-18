@@ -285,7 +285,7 @@ function sameClusters(row: ImportRow, current: ReadonlyArray<{ id: string }>, co
   const stored = new Set(current.map((c) => c.id));
   const wanted = new Set(resolved as string[]);
   if (![...wanted].every((id) => stored.has(id))) return false;
-  return context.params.mode !== 'replace' || wanted.size === stored.size;
+  return true;
 }
 
 /**
@@ -326,9 +326,6 @@ async function writeClusterMemberships(entities: any[], context: CsvImportContex
     }
     const stored = new Set((current.get(entry.id) ?? []).map((c) => c.id));
     for (const clusterId of wanted) if (!stored.has(clusterId)) add(joins, clusterId, entry.id);
-    if (context.params.mode === 'replace') {
-      for (const clusterId of stored) if (!wanted.has(clusterId)) add(leaves, clusterId, entry.id);
-    }
   }
   const touched = Array.from(new Set([...joins.keys(), ...leaves.keys()])).sort();
   if (touched.length === 0) return;

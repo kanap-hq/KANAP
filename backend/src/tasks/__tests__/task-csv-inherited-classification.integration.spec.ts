@@ -65,7 +65,7 @@ async function exportCsv(runner: QueryRunner, tenantId: string): Promise<string>
 }
 
 async function importCsv(runner: QueryRunner, tenantId: string, csv: string, params: Partial<CsvImportParams>): Promise<CsvImportResult> {
-  return service.import(file(csv), { dryRun: false, mode: 'enrich', operation: 'upsert', ...params }, {
+  return service.import(file(csv), { dryRun: false, operation: 'upsert', ...params }, {
     manager: runner.manager,
     tenantId,
     userId: null,
@@ -104,11 +104,11 @@ async function testUnchangedExportKeepsTheTaskFollowingItsProject() {
     await inRolledBackTransaction(async (runner) => {
       const { tenantId, ids } = await seed(runner);
       const csv = await exportCsv(runner, tenantId);
-      const preflight = await importCsv(runner, tenantId, csv, { mode, dryRun: true });
+      const preflight = await importCsv(runner, tenantId, csv, { dryRun: true });
       assert.deepEqual(preflight.errors, [], `${mode}: preflight`);
       assert.equal(preflight.unchanged, 1, `${mode}: the exported task is unchanged`);
       assert.equal(preflight.updated, 0, `${mode}: nothing to update`);
-      const result = await importCsv(runner, tenantId, csv, { mode });
+      const result = await importCsv(runner, tenantId, csv, {});
       assert.equal(result.ok, true, `${mode}: ${JSON.stringify(result.errors)}`);
       assert.equal(result.unchanged, 1, `${mode}: unchanged at the load`);
       assert.deepEqual(

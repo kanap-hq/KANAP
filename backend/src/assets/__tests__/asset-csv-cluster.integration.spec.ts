@@ -46,7 +46,7 @@ function csvFile(content: string): Express.Multer.File {
 const header = 'name;location_reference;kind;environment;is_cluster;cluster';
 
 function importCsv(runner: QueryRunner, tenantId: string, rows: string[], params: Partial<CsvImportParams>, head = header): Promise<CsvImportResult> {
-  return importer.import(assetCsvConfig, csvFile([head, ...rows].join('\n')), { dryRun: false, mode: 'enrich', operation: 'upsert', ...params }, {
+  return importer.import(assetCsvConfig, csvFile([head, ...rows].join('\n')), { dryRun: false, operation: 'upsert', ...params }, {
     manager: runner.manager, tenantId, userId: null, isAdmin: true, itOpsSettings: csvSettings,
   });
 }
@@ -133,12 +133,12 @@ async function testImport() {
     assert.deepEqual([result.unchanged, result.updated], [1, 0]);
 
     // Replace: the asset leaves the clusters its cell does not name.
-    result = await importCsv(runner, tenantId, ['node-1;LOC-1;vm;prod;no;cl-b'], { mode: 'replace', dryRun: true });
+    result = await importCsv(runner, tenantId, ['node-1;LOC-1;vm;prod;no;cl-b'], { dryRun: true });
     assert.deepEqual([result.ok, result.unchanged, result.updated], [true, 0, 1]);
-    result = await importCsv(runner, tenantId, ['node-1;LOC-1;vm;prod;no;cl-b'], { mode: 'replace' });
+    result = await importCsv(runner, tenantId, ['node-1;LOC-1;vm;prod;no;cl-b'], {});
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.deepEqual(await memberships(runner, tenantId), ['cl-b>node-1']);
-    result = await importCsv(runner, tenantId, ['node-1;LOC-1;vm;prod;no;cl-b'], { mode: 'replace', dryRun: true });
+    result = await importCsv(runner, tenantId, ['node-1;LOC-1;vm;prod;no;cl-b'], { dryRun: true });
     assert.deepEqual([result.unchanged, result.updated], [1, 0]);
 
     // A new asset joins; a cluster the file creates is named by another row.
@@ -190,14 +190,14 @@ async function testErrors() {
       const withOs = await importCsv(runner, tenantId, ['cl-b;LOC-1;vm;prod;yes;;Debian 12', 'node-2;LOC-1;vm;prod;no;cl-b;'], { dryRun }, `${header};operating_system`);
       assert.deepEqual(withOs.errors.map((e) => [e.row, e.column, e.code]), [[3, 'cluster', 'cluster_os_with_members']]);
       // A cluster whose operating system the same file clears (full replace) accepts the member.
-      const cleared = await importCsv(runner, tenantId, ['cl-os;LOC-1;vm;prod;yes;;', 'node-2;LOC-1;vm;prod;no;cl-os;'], { dryRun: true, mode: 'replace' }, `${header};operating_system`);
+      const cleared = await importCsv(runner, tenantId, ['cl-os;LOC-1;vm;prod;yes;;', 'node-2;LOC-1;vm;prod;no;cl-os;'], { dryRun: true }, `${header};operating_system`);
       assert.equal(cleared.ok, true, JSON.stringify(cleared.errors));
     }
     assert.deepEqual(await memberships(runner, tenantId), ['cl-a>node-1']);
     assert.equal((await runner.query(`SELECT count(*)::int AS count FROM assets WHERE tenant_id = $1 AND name = 'node-new'`, [tenantId]))[0].count, 0);
 
     // At the load, the cleared operating system goes first, then the member joins.
-    const loaded = await importCsv(runner, tenantId, ['cl-os;LOC-1;vm;prod;yes;;', 'node-2;LOC-1;vm;prod;no;cl-os;'], { mode: 'replace' }, `${header};operating_system`);
+    const loaded = await importCsv(runner, tenantId, ['cl-os;LOC-1;vm;prod;yes;;', 'node-2;LOC-1;vm;prod;no;cl-os;'], {}, `${header};operating_system`);
     assert.equal(loaded.ok, true, JSON.stringify(loaded.errors));
     assert.deepEqual(await memberships(runner, tenantId), ['cl-a>node-1', 'cl-os>node-2']);
     assert.equal(await operatingSystems.labelOf(runner.manager, tenantId, clOs), null);
@@ -206,7 +206,7 @@ async function testErrors() {
     // and stops the import before anything is written (the check is skipped here to stand for it).
     const late = { ...assetCsvConfig, afterValidate: undefined };
     const lateImport = (rows: string[], head = header) => importer.import(late, csvFile([head, ...rows].join('\n')),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       { manager: runner.manager, tenantId, userId: null, isAdmin: true, itOpsSettings: csvSettings });
     const switched = await lateImport(['cl-a;LOC-1;vm;prod;no;']);
     assert.deepEqual(switched.errors.map((e) => [e.code, (e.params as any)?.reason]), [

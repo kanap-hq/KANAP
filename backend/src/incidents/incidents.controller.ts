@@ -213,7 +213,6 @@ export class IncidentsController {
   async importCsv(
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRun: string = 'true',
-    @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
     @Query('language') languageRaw: string | undefined,
     @Body('unmatched') unmatchedRaw: unknown,
@@ -224,7 +223,7 @@ export class IncidentsController {
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
     return this.csvSvc.import(
       file,
-      { dryRun: dryRun !== 'false', mode, operation, unmatched: csvUnmatched(unmatchedRaw) },
+      { dryRun: dryRun !== 'false', operation, unmatched: csvUnmatched(unmatchedRaw) },
       {
         manager: ctx.manager as EntityManager,
         tenantId: ctx.tenantId,

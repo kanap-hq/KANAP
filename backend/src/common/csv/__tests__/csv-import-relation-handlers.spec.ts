@@ -45,7 +45,7 @@ function setup(stored: any[]) {
   };
   const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
   const run = (csv: string, params: Partial<CsvImportParams>) => service.import(config, file(csv), {
-    dryRun: false, mode: 'enrich', operation: 'upsert', ...params,
+    dryRun: false, operation: 'upsert', ...params,
   }, { manager, tenantId: T });
   return { calls, run };
 }

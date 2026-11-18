@@ -80,9 +80,9 @@ export interface CsvFieldDefinition {
   fkRequired?: boolean;
   /**
    * The properties of the record a reference belongs to (a task's phase to its project, a stream to
-   * its category, a department to its company). In merge mode, the stored reference is kept for a name
-   * nothing finds only while the row leaves them as stored; a row that changes one clears it, as full
-   * replace does (lot I3 of 26.11.9, review fixes).
+   * its category, a department to its company). On a record the row updates, the stored reference is
+   * kept for a name nothing finds only while the row leaves them as stored; a row that changes one
+   * clears it (lot I3 of 26.11.9, review fixes).
    */
   keptWith?: readonly string[];
   /** Name of JSON validator function for JSON fields */
@@ -207,8 +207,6 @@ export interface CsvRelationHandler {
 export interface CsvImportParams {
   /** Whether to validate without committing changes */
   dryRun: boolean;
-  /** Import mode: 'replace' clears empty values, 'enrich' preserves existing */
-  mode: 'replace' | 'enrich';
   /** Operation type */
   operation: 'upsert' | 'update_only' | 'insert_only';
   /**
@@ -280,6 +278,11 @@ export interface CsvImportResult {
   skipped: number;
   /** Number of matched rows identical to what is stored: not written */
   unchanged: number;
+  /**
+   * Stored values the import clears (`-`, and the entries a filled list removes), the same at the
+   * preflight and at the load (`csv-import-cells.ts`). Values already empty count nothing.
+   */
+  cleared: number;
   /** Validation and processing errors */
   errors: CsvImportError[];
   /** Non-fatal warnings */
@@ -404,6 +407,8 @@ export interface CsvImportRow {
   isInsert: boolean;
   /** A matched row whose values all equal the stored entity: counted, not written */
   unchanged?: boolean;
+  /** Stored values the config's hooks clear on this row (`noteCleared`), counted in the result's `cleared`. */
+  clearedByConfig?: number;
   /**
    * A row the config left out (`settleRows`, a row that looks like a stored record): not read, not
    * written, no error of its own; counted as skipped. It carries only the config's own warnings, and

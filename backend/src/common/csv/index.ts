@@ -8,6 +8,7 @@ export { CsvImportService, CsvImportOptions, csvColumnOfHeader } from './csv-imp
 export { CsvJsonValidators, CsvValidationProblem } from './csv-json-validators';
 export { csvUnmatched } from './csv-unmatched';
 export * from './csv-lookalikes';
+export { importCell, markGuardedDash, noteCleared, refuseClear, removedEntries } from './csv-import-cells';
 
 // Module
 export { CsvModule } from './csv.module';

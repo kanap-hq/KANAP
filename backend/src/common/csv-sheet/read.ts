@@ -163,12 +163,12 @@ export interface ImportFileText {
  * is decoded as `decodeCsv` does, with its refusals (`CsvDecodeError`). An .xlsx workbook, while the
  * imports read them, becomes the CSV text of its first worksheet, one line per spreadsheet row and
  * `;` between cells: a text cell as it is (the importer trims it and undoes the formula guard, as for
- * a CSV file), a number in plain decimal notation with a point, a date as its ISO day, followed by its
+ * a CSV file; with `keepsGuardedDash`, a "-" typed `'-` is written `'-`), a number in plain decimal notation with a point, a date as its ISO day, followed by its
  * time (`2026-06-02 07:52:00`) when the cell has one: the time Excel shows, with no zone, which the
  * importer reads as it reads the same text in a CSV file. Its refusals
  * are 400s with their `XLSX_*` code; a sheet past the import's row cap gets the CSV row-cap sentence.
  */
-export async function readImportText(input: Buffer): Promise<ImportFileText> {
+export async function readImportText(input: Buffer, options: { keepsGuardedDash?: boolean } = {}): Promise<ImportFileText> {
   if (!isWorkbookBytes(input)) return { text: decodeCsv(input).text, format: 'csv' };
   let grid: XlsxGrid;
   try {
@@ -178,12 +178,18 @@ export async function readImportText(input: Buffer): Promise<ImportFileText> {
     if (error.limit === 'maxValueRows') throw new BadRequestException(rowCapMessage());
     throw new BadRequestException({ message: error.message, code: error.code });
   }
-  const text = grid.rows.map((row) => row.map((cell) => csvTextCell(importCellText(cell))).join(';')).join('\n');
+  const keepsGuardedDash = options.keepsGuardedDash === true;
+  const text = grid.rows.map((row) => row.map((cell) => csvTextCell(importCellText(cell, keepsGuardedDash))).join(';')).join('\n');
   return { text, format: 'xlsx', sheetName: grid.sheetName, sheetCount: grid.sheetCount };
 }
 
-/** The text of a cell for the import text: `sheetCellText`, with the time of a date-time cell. */
-function importCellText(cell: SheetCell): string {
+/**
+ * The text of a cell for the import text: `sheetCellText`, with the time of a date-time cell. With
+ * `keepsGuardedDash`, a "-" typed `'-` in Excel (`quotePrefix`) is written `'-` (`GUARDED_DASH`), as a
+ * CSV file holds it, for the importer to read it as the text "-" where a typed `-` clears.
+ */
+function importCellText(cell: SheetCell, keepsGuardedDash: boolean): string {
+  if (keepsGuardedDash && cell.kind === 'text') return quotePrefixedText(cell);
   return cell.kind === 'date' && cell.time ? `${cell.iso} ${cell.time}` : sheetCellText(cell);
 }
 

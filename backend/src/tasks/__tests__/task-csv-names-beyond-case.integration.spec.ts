@@ -38,7 +38,7 @@ async function importCsv(
   params: Partial<CsvImportParams>,
   access: CsvCallerAccess = ADMIN,
 ): Promise<CsvImportResult> {
-  return service.import(file(csv), { dryRun: true, mode: 'enrich', operation: 'upsert', ...params }, {
+  return service.import(file(csv), { dryRun: true, operation: 'upsert', ...params }, {
     manager: runner.manager,
     tenantId,
     userId: null,
@@ -192,7 +192,7 @@ async function testViewersOfAnUnknownEmail() {
     assert.deepEqual(now.get('New task'), [ada], 'a new task takes the viewers found');
 
     // Replace: the unknown e-mail is skipped, and said.
-    const replaced = await importCsv(runner, tenantId, csv.split('\n').slice(0, 2).join('\n'), { dryRun: false, mode: 'replace' });
+    const replaced = await importCsv(runner, tenantId, csv.split('\n').slice(0, 2).join('\n'), { dryRun: false });
     assert.equal(replaced.ok, true, JSON.stringify(replaced.errors));
     assert.deepEqual(warned(replaced), [[2, 'viewer_email_2', 'CSV_REFERENCE_NOT_FOUND_SKIPPED', { value: 'ghost@example.test' }]]);
     now = await viewers();

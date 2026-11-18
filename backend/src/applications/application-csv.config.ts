@@ -927,11 +927,11 @@ export const applicationCsvConfig: CsvEntityConfig = {
       const stored = row.existingEntity;
       if (Object.keys(row.raw).some((key) => OWNER_COLUMN.test(key))) {
         const storedOwners = ownersById.get(stored.id) ?? [];
-        if (!sameKeys(storedOwners, csvOwnerKeys(row.raw, userByEmail, storedOwners, context.params.mode))) return false;
+        if (!sameKeys(storedOwners, csvOwnerKeys(row.raw, userByEmail, storedOwners))) return false;
       }
-      // An empty residency cell keeps the stored countries, except in replace mode, where it clears them.
+      // An empty residency cell keeps the stored countries.
       const codes = csvResidencyCodes(row.raw.data_residency);
-      const residencyWritten = codes.length > 0 || (row.raw.data_residency !== undefined && context.params.mode === 'replace');
+      const residencyWritten = codes.length > 0;
       if (residencyWritten && !sameKeys(residencyById.get(stored.id), codes)) return false;
 
       const next = { ...row.parsed };

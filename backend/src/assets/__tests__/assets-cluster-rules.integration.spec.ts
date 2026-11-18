@@ -317,7 +317,7 @@ function csvFile(content: string): Express.Multer.File {
 }
 
 function importCsv(runner: QueryRunner, tenantId: string, csv: string, params: Partial<CsvImportParams>): Promise<CsvImportResult> {
-  return importer.import(assetCsvConfig, csvFile(csv), { dryRun: true, mode: 'enrich', operation: 'upsert', ...params }, {
+  return importer.import(assetCsvConfig, csvFile(csv), { dryRun: true, operation: 'upsert', ...params }, {
     manager: runner.manager, tenantId, userId: null, isAdmin: true, itOpsSettings: csvSettings,
   });
 }

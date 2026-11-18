@@ -29,7 +29,7 @@ function createMockFile(content: string): Express.Multer.File {
   } as Express.Multer.File;
 }
 
-/** The columns full replace reads: those of the stored rows, nullable, and the id. */
+/** The columns `-` reads: those of the stored rows, nullable, and the id. */
 function storedColumns(rows: any[] = []) {
   const names = new Set<string>(['id', ...rows.flatMap((row) => Object.keys(row))]);
   return [...names].map((name) => ({
@@ -91,7 +91,6 @@ function createTestConfig(): CsvEntityConfig {
  */
 const defaultParams: CsvImportParams = {
   dryRun: true,
-  mode: 'replace',
   operation: 'upsert',
 };
 
@@ -329,22 +328,20 @@ async function testIdenticalRowIsUnchanged() {
 a;Same;;open;2026-09-02;3
 b;Other;Now described;open;2026-09-02;3`;
 
-  for (const mode of ['replace', 'enrich'] as const) {
-    const check = await service.import(createTestConfig(), createMockFile(csv), { ...defaultParams, mode }, {
-      manager: createMockManager({ tasks: [stored('a', 'Same'), stored('b', 'Other')] }),
-      tenantId: 't1',
-    });
-    assert.equal(check.ok, true, JSON.stringify(check.errors));
-    assert.deepEqual([check.inserted, check.updated, check.unchanged], [0, 1, 1], `${mode}: ${JSON.stringify(check)}`);
+  const check = await service.import(createTestConfig(), createMockFile(csv), { ...defaultParams }, {
+    manager: createMockManager({ tasks: [stored('a', 'Same'), stored('b', 'Other')] }),
+    tenantId: 't1',
+  });
+  assert.equal(check.ok, true, JSON.stringify(check.errors));
+  assert.deepEqual([check.inserted, check.updated, check.unchanged], [0, 1, 1], JSON.stringify(check));
 
-    const manager = createMockManager({ tasks: [stored('a', 'Same'), stored('b', 'Other')] });
-    const load = await service.import(createTestConfig(), createMockFile(csv), { ...defaultParams, mode, dryRun: false }, {
-      manager,
-      tenantId: 't1',
-    });
-    assert.deepEqual([load.inserted, load.updated, load.unchanged], [0, 1, 1], mode);
-    assert.deepEqual(manager.getSaved().map((entity: any) => entity.id), ['b'], `${mode}: only the changed row is saved`);
-  }
+  const manager = createMockManager({ tasks: [stored('a', 'Same'), stored('b', 'Other')] });
+  const load = await service.import(createTestConfig(), createMockFile(csv), { ...defaultParams, dryRun: false }, {
+    manager,
+    tenantId: 't1',
+  });
+  assert.deepEqual([load.inserted, load.updated, load.unchanged], [0, 1, 1]);
+  assert.deepEqual(manager.getSaved().map((entity: any) => entity.id), ['b'], 'only the changed row is saved');
 }
 
 async function testDuplicateKeysInFileError() {
@@ -383,7 +380,7 @@ task-1;Task;;done;;`;
   const result = await service.import(
     config,
     createMockFile(csv),
-    { ...defaultParams, mode: 'enrich' },
+    { ...defaultParams },
     {
       manager: createMockManager({ tasks: existingTasks }),
       tenantId: 't1',
@@ -404,14 +401,14 @@ async function testReplaceModeNullifiesEmpty() {
     { id: 'task-1', title: 'Task', description: 'Original description', status: 'open', tenant_id: 't1' },
   ];
 
-  // Empty description should become null in replace mode
+  // An empty description keeps the stored one; the status changes.
   const csv = `id;title;description;status;due_date;priority
 task-1;Task;;done;;`;
 
   const result = await service.import(
     config,
     createMockFile(csv),
-    { ...defaultParams, mode: 'replace' },
+    { ...defaultParams },
     {
       manager: createMockManager({ tasks: existingTasks }),
       tenantId: 't1',
@@ -422,12 +419,13 @@ task-1;Task;;done;;`;
   assert.equal(result.updated, 1);
 }
 
-async function testReplaceWithoutStoredColumnsIsRefused() {
+/** `-` needs the stored columns of the table: a table it cannot read stops the import. */
+async function testClearWithoutStoredColumnsIsRefused() {
   const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
   const manager = { ...createMockManager({}), query: async () => [] };
   await assert.rejects(
-    service.import(createTestConfig(), createMockFile('id;title\n;Task'), { ...defaultParams, mode: 'replace' }, { manager, tenantId: 't1' }),
-    /Full replace cannot read the columns of the table "tasks"/,
+    service.import(createTestConfig(), createMockFile('id;title;description\n;Task;-'), { ...defaultParams }, { manager, tenantId: 't1' }),
+    /The import cannot read the columns of the table "tasks"/,
   );
 }
 
@@ -497,9 +495,9 @@ async function testMissingHeaderError() {
   const service = new CsvImportService(resolver, validators);
   const config = createTestConfig();
 
-  // Missing required 'title' column
-  const csv = `id;description;status
-;A description;open`;
+  // Missing required 'title' column, the matching key: the file cannot find its records.
+  const csv = `description;status
+A description;open`;
 
   const result = await service.import(config, createMockFile(csv), defaultParams, {
     manager: createMockManager({ tasks: [] }),
@@ -512,6 +510,14 @@ async function testMissingHeaderError() {
     result.errors.map((e) => ({ row: e.row, code: e.code, params: e.params })),
     [{ row: 0, code: 'CSV_HEADER_MISSING_COLUMNS', params: { missing: 'title' } }],
   );
+
+  // With the identity column, the key column is not required (T-I6i of 26.11.9): a row that finds
+  // its record updates it, a row that would create one needs its title.
+  const byId = await service.import(config, createMockFile('id;description\nt-1;Changed\n;New one'), defaultParams, {
+    manager: createMockManager({ tasks: [{ id: 't-1', tenant_id: 't1', title: 'Kept', description: 'Old' }] }),
+    tenantId: 't1',
+  });
+  assert.deepEqual([byId.updated, byId.errors.map((e) => [e.row, e.column, e.code])], [1, [[3, 'title', 'CSV_VALUE_REQUIRED']]]);
 }
 
 /** The columns the import does not know are left out of it: a warning, not a refusal. */
@@ -667,7 +673,7 @@ Juno;Cegid
 Kairos;societe generale`;
   for (const dryRun of [true, false]) {
     const manager = createMockManager(data);
-    const result = await service.import(config, createMockFile(csv), { dryRun, mode: 'enrich', operation: 'upsert' }, { manager, tenantId: 't1', access: ADMIN });
+    const result = await service.import(config, createMockFile(csv), { dryRun, operation: 'upsert' }, { manager, tenantId: 't1', access: ADMIN });
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.deepEqual(result.warnings, []);
     assert.deepEqual(result.matches, [{
@@ -686,7 +692,7 @@ async function testNoMatchBeyondCaseWithoutReading() {
   const csv = `name;supplier_name
 Hermes;Societe Generale`;
   for (const access of [{ permissions: { applications: 'admin' } }, undefined]) {
-    const result = await service.import(config, createMockFile(csv), { dryRun: true, mode: 'enrich', operation: 'upsert' }, { manager: createMockManager(data), tenantId: 't1', access });
+    const result = await service.import(config, createMockFile(csv), { dryRun: true, operation: 'upsert' }, { manager: createMockManager(data), tenantId: 't1', access });
     assert.equal(result.matches, undefined);
     assert.equal(result.matchesTotal, undefined);
     assert.deepEqual(brief(result.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Societe Generale' } }]);
@@ -700,7 +706,7 @@ async function testAmbiguousNameRefusesTheRow() {
   const csv = `name;supplier_name;contributor_1
 Hermes;cafe;
 Iris;Café;`;
-  const result = await service.import(config, createMockFile(csv), { dryRun: true, mode: 'enrich', operation: 'upsert' }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
+  const result = await service.import(config, createMockFile(csv), { dryRun: true, operation: 'upsert' }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
   assert.equal(result.ok, false);
   assert.deepEqual(result.errors.map((error) => ({ row: error.row, ...brief([error])[0] })), [
     { row: 2, column: 'supplier_name', code: 'CSV_NAME_AMBIGUOUS_AMONG', params: { value: 'cafe', names: 'SUP-7, SUP-8' } },
@@ -713,15 +719,15 @@ Iris;Café;`;
 async function testUndoneMatchReadsAsNotFound() {
   const { config, data, service } = referencesFixture();
   const unmatched = [{ column: 'supplier_name', value: 'societe generale' }];
-  const created = await service.import(config, createMockFile('name;supplier_name\nHermes;Societe Generale'), { dryRun: true, mode: 'enrich', operation: 'upsert', unmatched }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
+  const created = await service.import(config, createMockFile('name;supplier_name\nHermes;Societe Generale'), { dryRun: true, operation: 'upsert', unmatched }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
   assert.equal(created.matches, undefined);
   assert.deepEqual(brief(created.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Societe Generale' } }]);
   // Another column, or another value, is not undone.
-  const other = await service.import(config, createMockFile('name;supplier_name\nHermes;Societe Generale'), { dryRun: true, mode: 'enrich', operation: 'upsert', unmatched: [{ column: 'company_name', value: 'Societe Generale' }] }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
+  const other = await service.import(config, createMockFile('name;supplier_name\nHermes;Societe Generale'), { dryRun: true, operation: 'upsert', unmatched: [{ column: 'company_name', value: 'Societe Generale' }] }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
   assert.equal(other.matchesTotal, 1);
 
   const manager = createMockManager(data);
-  const updated = await service.import(config, createMockFile('name;supplier_name\nAtlas;Societe Generale'), { dryRun: false, mode: 'enrich', operation: 'upsert', unmatched }, { manager, tenantId: 't1', access: ADMIN });
+  const updated = await service.import(config, createMockFile('name;supplier_name\nAtlas;Societe Generale'), { dryRun: false, operation: 'upsert', unmatched }, { manager, tenantId: 't1', access: ADMIN });
   assert.deepEqual(brief(updated.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_KEPT', params: { value: 'Societe Generale' } }]);
   assert.equal(updated.updated + updated.unchanged, 1);
   assert.ok(manager.getSaved().every((app: any) => app.supplier_id === 's-cegid'), 'the stored supplier stays');
@@ -729,36 +735,37 @@ async function testUndoneMatchReadsAsNotFound() {
 }
 
 /**
- * Merge mode, an update: a supplier nothing finds keeps the stored one ("Atlas" keeps Cegid). Full
- * replace and a new record empty it, as before.
+ * An update: a supplier nothing finds keeps the stored one ("Atlas" keeps Cegid);
+ * `-` and a new record empty it.
  */
 async function testUnknownReferenceKeepsTheStoredValueOnMerge() {
   const { config, data, service } = referencesFixture();
   const csv = 'name;supplier_name\nAtlas;Banque Inconnue';
   const kept = createMockManager(data);
-  const merge = await service.import(config, createMockFile(csv), { dryRun: false, mode: 'enrich', operation: 'upsert' }, { manager: kept, tenantId: 't1', access: ADMIN });
+  const merge = await service.import(config, createMockFile(csv), { dryRun: false, operation: 'upsert' }, { manager: kept, tenantId: 't1', access: ADMIN });
   assert.deepEqual(brief(merge.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_KEPT', params: { value: 'Banque Inconnue' } }]);
   assert.equal(merge.warnings[0].message, 'suppliers not found: "Banque Inconnue" (kept)');
   assert.equal(merge.unchanged, 1, 'nothing else changes: the row is unchanged');
   assert.deepEqual(kept.getSaved(), []);
 
+  // `-` clears the link: one value cleared, no warning.
   const emptied = createMockManager(data);
-  const replace = await service.import(config, createMockFile(csv), { dryRun: false, mode: 'replace', operation: 'upsert' }, { manager: emptied, tenantId: 't1', access: ADMIN });
-  assert.deepEqual(brief(replace.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Banque Inconnue' } }]);
+  const cleared = await service.import(config, createMockFile('name;supplier_name\nAtlas;-'), { dryRun: false, operation: 'upsert' }, { manager: emptied, tenantId: 't1', access: ADMIN });
+  assert.deepEqual([cleared.ok, cleared.updated, cleared.cleared, brief(cleared.warnings)], [true, 1, 1, []]);
   assert.equal(emptied.getSaved()[0].supplier_id, null);
 
   const fresh = createMockManager(data);
-  const created = await service.import(config, createMockFile('name;supplier_name\nZephyr;Banque Inconnue'), { dryRun: false, mode: 'enrich', operation: 'upsert' }, { manager: fresh, tenantId: 't1', access: ADMIN });
+  const created = await service.import(config, createMockFile('name;supplier_name\nZephyr;Banque Inconnue'), { dryRun: false, operation: 'upsert' }, { manager: fresh, tenantId: 't1', access: ADMIN });
   assert.deepEqual(brief(created.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Banque Inconnue' } }]);
   assert.equal(created.inserted, 1);
   assert.equal(fresh.getSaved()[0].supplier_id, null);
-  console.log('  merge mode keeps a stored reference nothing replaces; replace and creation empty it: OK');
+  console.log('  an update keeps a stored reference nothing replaces; `-` and creation empty it: OK');
 }
 
 /**
  * Merge mode, an update: a reference that belongs to another property of the record (`keptWith`) is
  * kept for a name nothing finds only while the row leaves that property as stored; a row that changes
- * it clears the reference, said as in full replace (a task's phase and its project, lot I3 review).
+ * it clears the reference, and says so (a task's phase and its project, lot I3 review).
  */
 async function testKeptReferenceFollowsWhatItBelongsTo() {
   const { config, data, service } = referencesFixture();
@@ -768,12 +775,12 @@ async function testKeptReferenceFollowsWhatItBelongsTo() {
   };
   const stored = { ...data, apps: [{ ...data.apps[0], owner_id: 'u1' }] };
   const kept = createMockManager(stored);
-  const same = await service.import(dependent, createMockFile('name;supplier_name;owner_email\nAtlas;Banque Inconnue;ana@example.com'), { dryRun: false, mode: 'enrich', operation: 'upsert' }, { manager: kept, tenantId: 't1', access: ADMIN });
+  const same = await service.import(dependent, createMockFile('name;supplier_name;owner_email\nAtlas;Banque Inconnue;ana@example.com'), { dryRun: false, operation: 'upsert' }, { manager: kept, tenantId: 't1', access: ADMIN });
   assert.deepEqual(brief(same.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_KEPT', params: { value: 'Banque Inconnue' } }]);
   assert.equal(same.unchanged, 1);
 
   const cleared = createMockManager(stored);
-  const moved = await service.import(dependent, createMockFile('name;supplier_name;owner_email\nAtlas;Banque Inconnue;ben@example.com'), { dryRun: false, mode: 'enrich', operation: 'upsert' }, { manager: cleared, tenantId: 't1', access: ADMIN });
+  const moved = await service.import(dependent, createMockFile('name;supplier_name;owner_email\nAtlas;Banque Inconnue;ben@example.com'), { dryRun: false, operation: 'upsert' }, { manager: cleared, tenantId: 't1', access: ADMIN });
   assert.deepEqual(brief(moved.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Banque Inconnue' } }]);
   assert.equal(moved.warnings[0].message, 'suppliers not found: "Banque Inconnue" (set to null)');
   assert.deepEqual([cleared.getSaved()[0].supplier_id, cleared.getSaved()[0].owner_id], [null, 'u2']);
@@ -785,16 +792,22 @@ async function testUnknownCellKeepsTheStoredList() {
   const { config, data, service } = referencesFixture();
   const csv = 'name;contributor_1;contributor_2\nAtlas;ben@example.com;ghost@example.com';
   const manager = createMockManager(data);
-  const merge = await service.import(config, createMockFile(csv), { dryRun: false, mode: 'enrich', operation: 'upsert' }, { manager, tenantId: 't1', access: ADMIN });
+  const merge = await service.import(config, createMockFile(csv), { dryRun: false, operation: 'upsert' }, { manager, tenantId: 't1', access: ADMIN });
   assert.deepEqual(brief(merge.warnings), [{ column: 'contributor_2', code: 'CSV_REFERENCE_NOT_FOUND_KEPT', params: { value: 'ghost@example.com' } }]);
   assert.equal(merge.unchanged, 1, 'the stored list ["u1", "u2"] stays whole');
   assert.deepEqual(manager.getSaved(), []);
 
+  // `-` with no value clears the list, its two entries counted; blank cells keep it.
   const replaced = createMockManager(data);
-  const replace = await service.import(config, createMockFile(csv), { dryRun: false, mode: 'replace', operation: 'upsert' }, { manager: replaced, tenantId: 't1', access: ADMIN });
-  assert.deepEqual(brief(replace.warnings), [{ column: 'contributor_2', code: 'CSV_REFERENCE_NOT_FOUND_SKIPPED', params: { value: 'ghost@example.com' } }]);
-  assert.deepEqual(replaced.getSaved()[0].contributor_ids, ['u2']);
-  console.log('  merge mode keeps a stored list with a cell nothing finds: OK');
+  const cleared = await service.import(config, createMockFile('name;contributor_1;contributor_2\nAtlas;-;'), { dryRun: false, operation: 'upsert' }, { manager: replaced, tenantId: 't1', access: ADMIN });
+  assert.deepEqual([cleared.ok, cleared.cleared, brief(cleared.warnings)], [true, 2, []], JSON.stringify(cleared.errors));
+  assert.equal(replaced.getSaved()[0].contributor_ids, null);
+  const blank = await service.import(config, createMockFile('name;contributor_1;contributor_2\nAtlas;;'), { dryRun: true, operation: 'upsert' }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
+  assert.deepEqual([blank.unchanged, blank.cleared], [1, 0]);
+  // A filled list replaces the stored one: the entry it drops is counted.
+  const shorter = await service.import(config, createMockFile('name;contributor_1;contributor_2\nAtlas;ben@example.com;'), { dryRun: true, operation: 'upsert' }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
+  assert.deepEqual([shorter.updated, shorter.cleared], [1, 1]);
+  console.log('  an update keeps a stored list with a cell nothing finds; `-` clears it: OK');
 }
 
 async function testCaseInsensitiveEnumMatching() {
@@ -1108,6 +1121,8 @@ async function testMissingColumnsAreNamedInTheScreenLanguage() {
   const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
   const config: CsvEntityConfig = {
     ...createTestConfig(),
+    // Only the columns of the matching key are required in the header (T-I6i of 26.11.9).
+    upsertKey: ['title', 'code'],
     fields: [
       { csvColumn: 'title', entityProperty: 'title', type: CsvFieldType.STRING, required: true },
       { csvColumn: 'code', entityProperty: 'code', type: CsvFieldType.STRING, required: true },
@@ -1245,7 +1260,7 @@ async function testTimeZoneColumnsAreNamedInTheScreenLanguage() {
   await testAccentedWindows1252FileStillImports();
   await testFilesOfEveryLanguageLoad();
   await testImportContextCarriesTheFileLanguage();
-  await testReplaceWithoutStoredColumnsIsRefused();
+  await testClearWithoutStoredColumnsIsRefused();
   await testTranslatedTitlesAreRead();
 
   console.log('CSV import service tests passed.');

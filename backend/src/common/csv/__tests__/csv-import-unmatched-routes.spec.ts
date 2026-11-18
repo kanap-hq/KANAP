@@ -43,7 +43,7 @@ function declarative(name: string, type: any, viaReq: boolean): Route {
       const seen: unknown[][] = [];
       const controller = probe(type, 'csvSvc', 'import', seen);
       const handler = typeof controller.import === 'function' ? 'import' : 'importCsv';
-      await controller[handler](FILE, 'true', 'enrich', 'upsert', 'en', unmatched, viaReq ? req : ctx);
+      await controller[handler](FILE, 'true', 'upsert', 'en', unmatched, viaReq ? req : ctx);
       return (seen[0][1] as { unmatched?: unknown }).unmatched;
     },
   };

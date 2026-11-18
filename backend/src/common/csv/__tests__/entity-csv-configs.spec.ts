@@ -184,7 +184,7 @@ async function testIncidentRefAndValueParsing() {
   await incidentCsvConfig.beforeValidate!(rows as any, {
     tenantId: 'tenant-1',
     manager: { query: async () => [] },
-    params: { dryRun: true, mode: 'replace', operation: 'upsert' },
+    params: { dryRun: true, operation: 'upsert' },
     resolverCache: new Map(),
     userId: null,
     isAdmin: false,
@@ -275,7 +275,7 @@ async function testIncidentReviewIsVirtual() {
   const context = {
     tenantId: 't1',
     manager,
-    params: { dryRun: false, mode: 'replace', operation: 'upsert' },
+    params: { dryRun: false, operation: 'upsert' },
     resolverCache: new Map(),
     userId: 'u1',
     itOpsSettings: { incidentCategories: [] },
@@ -308,7 +308,7 @@ async function testIncidentImportHooks() {
   const context = {
     tenantId: 't1',
     manager,
-    params: { dryRun: false, mode: 'replace', operation: 'upsert' },
+    params: { dryRun: false, operation: 'upsert' },
     resolverCache: new Map(),
     userId: 'u1',
     itOpsSettings: { incidentCategories: [{ code: 'security', label: 'Security' }] },

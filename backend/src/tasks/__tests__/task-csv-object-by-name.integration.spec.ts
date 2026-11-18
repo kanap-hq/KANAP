@@ -41,7 +41,7 @@ async function importCsv(
   access: CsvCallerAccess = ADMIN,
   viewer?: IncidentViewer,
 ): Promise<CsvImportResult> {
-  return service.import(file(csv), { dryRun: true, mode: 'enrich', operation: 'upsert', ...params }, {
+  return service.import(file(csv), { dryRun: true, operation: 'upsert', ...params }, {
     manager,
     tenantId,
     userId: viewer?.userId ?? null,
@@ -99,7 +99,7 @@ async function testExistingTaskObjectByName() {
     const dry = await importCsv(runner.manager, tenantId, valid, {});
     assert.deepEqual([dry.updated, dry.unchanged], [1, 2], 'T dix moves; T onze and T treize are unchanged');
     // In full replace the blank id cell reads the name the same way.
-    const replace = await importCsv(runner.manager, tenantId, valid, { mode: 'replace' });
+    const replace = await importCsv(runner.manager, tenantId, valid, {});
     assert.deepEqual(codes(replace), []);
     assert.deepEqual([replace.updated, replace.unchanged], [1, 2]);
 
@@ -314,10 +314,10 @@ async function testTaskOutsideAProject() {
     // Moved out of its project to none (full replace, the columns left out): the phase only.
     const q2 = await classified(32, 'Q deux');
     const toNone = ['id;title;related_object_type;related_object_id;related_object_name', `${q2};Q deux;;;`].join('\n');
-    const check2 = await importCsv(runner.manager, tenantId, toNone, { mode: 'replace' });
+    const check2 = await importCsv(runner.manager, tenantId, toNone, {});
     assert.deepEqual(codes(check2), []);
     assert.deepEqual(warned(check2), [[2, 'phase_name', 'CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT']]);
-    const load2 = await importCsv(runner.manager, tenantId, toNone, { mode: 'replace', dryRun: false });
+    const load2 = await importCsv(runner.manager, tenantId, toNone, { dryRun: false });
     assert.equal(load2.ok, true, JSON.stringify(load2.errors));
     assert.deepEqual(await fields(q2), [null, source.id, category.id, stream.id, company.id]);
 
@@ -333,7 +333,7 @@ async function testTaskOutsideAProject() {
       `${q3};Q trois;incident;${incident.id};;Build;Audit;Infra;Réseau;Fromage SA`,
     ].join('\n');
     for (const mode of ['enrich', 'replace'] as const) {
-      const check3 = await importCsv(runner.manager, tenantId, given, { mode });
+      const check3 = await importCsv(runner.manager, tenantId, given, {});
       assert.deepEqual(codes(check3), [], mode);
       assert.deepEqual(warned(check3), [
         [2, 'phase_name', 'CSV_TASK_PHASE_OUTSIDE_PROJECT'],

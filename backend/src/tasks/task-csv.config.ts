@@ -600,7 +600,7 @@ async function importPeople(rows: CsvImportRow[], context: CsvImportContext): Pr
   const userByEmail = new Map(known.map((user) => [user.email, user.id]));
   for (const { row, column, value } of cells) {
     if (userByEmail.has(value.toLowerCase())) continue;
-    const keep = context.params.mode === 'enrich' && !row.isInsert;
+    const keep = !row.isInsert;
     row.warnings.push({
       row: row.rowNumber,
       column,

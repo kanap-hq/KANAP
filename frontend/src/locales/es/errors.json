@@ -126,7 +126,6 @@
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Horas sin zona horaria, leídas en UTC: {{columns}}. Indique la zona después de la columna, por ejemplo {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Se requiere un valor.",
   "CSV_VALUE_ONE_REQUIRED": "Rellene al menos una columna {{column}}.",
-  "CSV_VALUE_CANNOT_BE_EMPTIED": "Este campo no se puede vaciar. Quite la columna del archivo para conservar el valor guardado.",
   "CSV_VALUE_CANNOT_BE_CLEARED": "Este valor no se puede vaciar.",
   "CSV_NUMBER_CANNOT_BE_CLEARED": "Este número no se puede vaciar. Escriba 0 para ponerlo a cero o deje la celda vacía para conservar el valor guardado.",
   "CSV_NUMBER_INVALID": "«{{value}}» no es un número.",

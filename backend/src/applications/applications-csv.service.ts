@@ -345,8 +345,8 @@ export class ApplicationsCsvService {
 
     // If successful and not dry run, handle owners and data residency
     if (result.ok && !params.dryRun) {
-      await this.handleOwnerImport(written, params.mode, opts);
-      await this.handleDataResidencyImport(written, params.mode, opts);
+      await this.handleOwnerImport(written, 'enrich', opts);
+      await this.handleDataResidencyImport(written, 'enrich', opts);
       await this.syncRenamedDocumentTitles(namesBefore, new Set(written.map((row) => row.id)), opts);
     }
 
@@ -473,7 +473,7 @@ export class ApplicationsCsvService {
       const editor = String(row.raw.editor ?? '').trim();
       const existing = row.existingEntity;
       if (!editor) continue;
-      if (existing?.supplier_id && (context.params.mode === 'enrich' || !('supplier_name' in row.raw))) continue;
+      if (existing?.supplier_id) continue;
       const supplier = this.editorSupplier(editor, context);
       if (!supplier) continue;
       row.parsed.supplier_id = supplier.id;
@@ -515,7 +515,7 @@ export class ApplicationsCsvService {
    */
   private async handleOwnerImport(
     written: readonly WrittenRow[],
-    mode: CsvImportParams['mode'],
+    mode: 'replace' | 'enrich',
     opts: { manager: EntityManager; tenantId: string; userId?: string | null },
   ) {
     const { manager, tenantId, userId } = opts;
@@ -577,7 +577,7 @@ export class ApplicationsCsvService {
    */
   private async handleDataResidencyImport(
     written: readonly WrittenRow[],
-    mode: CsvImportParams['mode'],
+    mode: 'replace' | 'enrich',
     opts: { manager: EntityManager; tenantId: string; userId?: string | null },
   ) {
     const { manager, tenantId, userId } = opts;

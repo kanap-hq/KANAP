@@ -126,7 +126,6 @@
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Times without a time zone, read as UTC: {{columns}}. Name the zone after the column, for example {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "A value is required.",
   "CSV_VALUE_ONE_REQUIRED": "Fill in at least one {{column}} column.",
-  "CSV_VALUE_CANNOT_BE_EMPTIED": "This field cannot be emptied. Leave the column out of the file to keep the stored value.",
   "CSV_VALUE_CANNOT_BE_CLEARED": "This value cannot be cleared.",
   "CSV_NUMBER_CANNOT_BE_CLEARED": "This number cannot be cleared. Use 0 to set it to zero, or leave the cell empty to keep the stored value.",
   "CSV_NUMBER_INVALID": "\"{{value}}\" is not a number.",

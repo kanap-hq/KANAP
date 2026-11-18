@@ -44,7 +44,7 @@ function file(content: string): Express.Multer.File {
   return { buffer: Buffer.from(text, 'utf8'), originalname: 'export.csv', mimetype: 'text/csv', size: text.length } as Express.Multer.File;
 }
 
-/** The columns full replace reads: those of the stored rows, nullable, and the id. */
+/** The columns `-` reads: those of the stored rows, nullable, and the id. */
 function storedColumns(rows: any[] = []) {
   const names = new Set<string>(['id', ...rows.flatMap((row) => Object.keys(row))]);
   return [...names].map((name) => ({
@@ -95,8 +95,8 @@ function stored(config: CsvEntityConfig, values: Record<string, any>) {
 
 const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
 
-async function counts(config: CsvEntityConfig, csv: string, data: Record<string, any[]>, mode: CsvImportParams['mode']) {
-  const result = await service.import(config, file(csv), { dryRun: true, mode, operation: 'upsert' }, {
+async function counts(config: CsvEntityConfig, csv: string, data: Record<string, any[]>) {
+  const result = await service.import(config, file(csv), { dryRun: true, operation: 'upsert' }, {
     manager: manager({ users, ...data }),
     tenantId: T,
     userId: U1,
@@ -107,13 +107,11 @@ async function counts(config: CsvEntityConfig, csv: string, data: Record<string,
   return { updated: result.updated, unchanged: result.unchanged };
 }
 
-/** The exported line is unchanged; each variant line is an update, in both modes. */
+/** The exported line is unchanged; each variant line is an update. */
 async function check(name: string, config: CsvEntityConfig, header: string, line: string, variants: Record<string, string>, data: Record<string, any[]>) {
-  for (const mode of ['enrich', 'replace'] as const) {
-    assert.deepEqual(await counts(config, `${header}\n${line}`, data, mode), { updated: 0, unchanged: 1 }, `${name} ${mode}: exported row`);
-    for (const [label, variant] of Object.entries(variants)) {
-      assert.deepEqual(await counts(config, `${header}\n${variant}`, data, mode), { updated: 1, unchanged: 0 }, `${name} ${mode}: ${label}`);
-    }
+  assert.deepEqual(await counts(config, `${header}\n${line}`, data), { updated: 0, unchanged: 1 }, `${name}: exported row`);
+  for (const [label, variant] of Object.entries(variants)) {
+    assert.deepEqual(await counts(config, `${header}\n${variant}`, data), { updated: 1, unchanged: 0 }, `${name}: ${label}`);
   }
 }
 
@@ -165,8 +163,8 @@ async function testApplications() {
 
 /**
  * Lot I3 of 26.11.9, an application with its supplier: the supplier written without its accents is
- * the stored one (unchanged, listed as a match); one nothing finds keeps the stored supplier in merge
- * mode (unchanged), and empties it in full replace (an update), as before.
+ * the stored one (unchanged, listed as a match); one nothing finds keeps the stored supplier
+ * (unchanged).
  */
 async function testApplicationSupplierNames() {
   const app = stored(applicationCsvConfig, {
@@ -186,19 +184,16 @@ async function testApplicationSupplierNames() {
   };
   const header = 'id;name;description;category;lifecycle;is_suite;external_facing;etl_enabled;access_methods;criticality;cyber_criticality;data_class;recovery_wave;rto_minutes;rpo_minutes;classification_justification;contains_pii;last_dr_test;status;supplier_name';
   const line = (supplier: string) => `${header}\np1;Ledger;Books;Enterprise planning;Active;false;false;false;Web browser;High;Moderate;Internal;V2 — Priority activities;240;60;Finance;false;2026-03-01;enabled;${supplier}`;
-  const run = (supplier: string, mode: CsvImportParams['mode']) => service.import(applicationCsvConfig, file(line(supplier)), { dryRun: true, mode, operation: 'upsert' }, {
+  const run = (supplier: string) => service.import(applicationCsvConfig, file(line(supplier)), { dryRun: true, operation: 'upsert' }, {
     manager: manager({ users, ...data }), tenantId: T, userId: U1, itOpsSettings, access: { permissions: { applications: 'admin', suppliers: 'reader' } },
   });
-  for (const mode of ['enrich', 'replace'] as const) {
-    const exact = await run('Société Générale', mode);
-    assert.deepEqual([exact.ok, exact.updated, exact.unchanged, exact.matches], [true, 0, 1, undefined], `${mode}: the stored name`);
-    const same = await run('Societe Generale', mode);
-    assert.deepEqual([same.ok, same.updated, same.unchanged, same.matches?.map((match) => [match.value, match.target, match.ref])], [true, 0, 1, [['Societe Generale', 'Société Générale', 'SUP-4']]], `${mode}: without accents`);
-  }
-  const kept = await run('Banque Inconnue', 'enrich');
+  const exact = await run('Société Générale');
+  assert.deepEqual([exact.ok, exact.updated, exact.unchanged, exact.matches], [true, 0, 1, undefined], 'the stored name');
+  const same = await run('Societe Generale');
+  assert.deepEqual([same.ok, same.updated, same.unchanged, same.matches?.map((match) => [match.value, match.target, match.ref])], [true, 0, 1, [['Societe Generale', 'Société Générale', 'SUP-4']]], 'without accents');
+  // A name nothing finds keeps the stored supplier; `-` clears it.
+  const kept = await run('Banque Inconnue');
   assert.deepEqual([kept.updated, kept.unchanged, kept.warnings.filter((warning) => warning.row > 0).map((warning) => warning.code)], [0, 1, ['CSV_REFERENCE_NOT_FOUND_KEPT']]);
-  const emptied = await run('Banque Inconnue', 'replace');
-  assert.deepEqual([emptied.updated, emptied.unchanged, emptied.warnings.filter((warning) => warning.row > 0).map((warning) => warning.code)], [1, 0, ['CSV_REFERENCE_NOT_FOUND_CLEARED']]);
 }
 
 async function testTasks() {

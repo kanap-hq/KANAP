@@ -30,7 +30,7 @@ function importAssets(manager: EntityManager, tenantId: string) {
   );
   const text = '﻿name;kind;environment\nRace asset;vm;prod';
   const file = { buffer: Buffer.from(text, 'utf8'), originalname: 'assets.csv', mimetype: 'text/csv', size: text.length } as Express.Multer.File;
-  return csv.import(file, { dryRun: true, mode: 'enrich', operation: 'upsert' }, { manager, tenantId, userId: null });
+  return csv.import(file, { dryRun: true, operation: 'upsert' }, { manager, tenantId, userId: null });
 }
 
 async function tenantInsertsDoNotWaitForAnImport() {

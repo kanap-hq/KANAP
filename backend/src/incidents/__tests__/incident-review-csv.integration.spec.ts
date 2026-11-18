@@ -357,7 +357,7 @@ async function testExportImportRoundTrip() {
     for (const mode of ['enrich', 'replace'] as const) {
       const dry = await services.csv.import(
         csvFile(exportedFile),
-        { dryRun: true, mode, operation: 'upsert' },
+        { dryRun: true, operation: 'upsert' },
         importOpts(runner, f, f.users.admin),
       );
       assert.deepEqual(dry.errors, []);
@@ -367,7 +367,7 @@ async function testExportImportRoundTrip() {
     // An edited review is an update.
     const edited = await services.csv.import(
       csvFile(exportedFile.replace('- 300 mailboxes', '- 400 mailboxes')),
-      { dryRun: true, mode: 'enrich', operation: 'upsert' },
+      { dryRun: true, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual([edited.updated, edited.unchanged], [1, 0], 'an edited review is an update');
@@ -375,7 +375,7 @@ async function testExportImportRoundTrip() {
     const before = await readReview(runner, f, incident.id);
     const result = await services.csv.import(
       csvFile(exportedFile),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(result.errors, []);
@@ -431,7 +431,7 @@ async function testFrenchCategoryRoundTrip() {
 
     const result = await services.csv.import(
       csvFile(french.content),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.equal(result.ok, true, JSON.stringify(result.errors));
@@ -621,7 +621,7 @@ async function testDateTimesInTheExportersZone() {
     for (const mode of ['enrich', 'replace'] as const) {
       const dry = await services.csv.import(
         csvFile(file),
-        { dryRun: true, mode, operation: 'upsert' },
+        { dryRun: true, operation: 'upsert' },
         importOpts(runner, f, f.users.admin),
       );
       assert.deepEqual(dry.errors, []);
@@ -630,14 +630,14 @@ async function testDateTimesInTheExportersZone() {
     const edited = file.replace('16/10/2026 10:38', '16/10/2026 10:45');
     const applied = await services.csv.import(
       csvFile(edited),
-      { dryRun: false, mode: 'replace', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(applied.errors, []);
     assert.deepEqual(await instants(), [original[0], '2026-10-16T08:45:00.000Z', original[2]], 'read in Paris time');
     await services.csv.import(
       csvFile(file),
-      { dryRun: false, mode: 'replace', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(await instants(), original, 'the export restores the same instants');
@@ -646,7 +646,7 @@ async function testDateTimesInTheExportersZone() {
     const plain = file.replace(/ \(Europe\/Paris\)/g, '');
     const utc = await services.csv.import(
       csvFile(plain),
-      { dryRun: false, mode: 'replace', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(utc.errors, []);
@@ -661,7 +661,7 @@ async function testDateTimesInTheExportersZone() {
     // A zone nobody knows is refused, with the coded error the screen translates.
     const unknown = await services.csv.import(
       csvFile(file.replace('Détecté (Europe/Paris)', 'Détecté (Mars/Olympus)')),
-      { dryRun: true, mode: 'enrich', operation: 'upsert' },
+      { dryRun: true, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.equal(unknown.ok, false);
@@ -705,7 +705,7 @@ async function testEmptyCellAndDryRun() {
     const empty = `${REVIEW_HEADERS}\nINC-${incident.item_number};Renamed;major;open;2026-03-10T08:00:00Z;false;short;`;
     const emptyResult = await services.csv.import(
       csvFile(empty),
-      { dryRun: false, mode: 'replace', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(emptyResult.errors, []);
@@ -720,7 +720,7 @@ async function testEmptyCellAndDryRun() {
     const dry = `${REVIEW_HEADERS}\nINC-${incident.item_number};Renamed;major;open;2026-03-10T08:00:00Z;false;short;${cell('## Impact\n\nnew body')}\n;Brand new;minor;open;2026-03-10T08:00:00Z;false;short;${cell('## Impact\n\nanother')}`;
     const dryResult = await services.csv.import(
       csvFile(dry),
-      { dryRun: true, mode: 'enrich', operation: 'upsert' },
+      { dryRun: true, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.equal(dryResult.dryRun, true);
@@ -737,7 +737,7 @@ async function testEmptyCellAndDryRun() {
     const bad = `${REVIEW_HEADERS}\nINC-${incident.item_number};Renamed;major;open;2026-03-10T08:00:00Z;false;short;${cell('<script>alert(1)</script>')}`;
     const badResult = await services.csv.import(
       csvFile(bad),
-      { dryRun: true, mode: 'enrich', operation: 'upsert' },
+      { dryRun: true, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.equal(badResult.ok, false);
@@ -793,7 +793,7 @@ async function testInsertedRowsAreProvisioned() {
 
     const result = await services.csv.import(
       csvFile(csv),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(result.errors, []);
@@ -866,7 +866,7 @@ async function testClosedIncidentImportIsAllowedAndVersioned() {
     const csv = `${REVIEW_HEADERS}\nINC-${incident.item_number};${incident.title};major;closed;2026-03-10T08:00:00Z;false;short;${cell('## Impact\n\ncorrected after closure')}`;
     const result = await services.csv.import(
       csvFile(csv),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(result.errors, []);
@@ -926,7 +926,7 @@ async function testImportLifecycleGuardAndAdminJournal() {
     for (const target of ['open', 'cancelled']) {
       const result = await services.csv.import(
         csvFile(statusImportRow(closed, target)),
-        { dryRun: false, mode: 'enrich', operation: 'upsert' },
+        { dryRun: false, operation: 'upsert' },
         contributor,
       );
       assert.equal(result.ok, false, `${target}: a contributor import is refused`);
@@ -955,7 +955,7 @@ async function testImportLifecycleGuardAndAdminJournal() {
     const reviewCsv = `${REVIEW_HEADERS}\nINC-${closed.item_number};${closed.title};major;closed;2026-03-10T08:00:00Z;false;short;${cell('## Impact\n\ncorrected by contributor')}`;
     const reviewResult = await services.csv.import(
       csvFile(reviewCsv),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       contributor,
     );
     assert.deepEqual(reviewResult.errors, []);
@@ -965,7 +965,7 @@ async function testImportLifecycleGuardAndAdminJournal() {
     // An administrator reopens it: a Reopen-shaped entry, with the import reason.
     const reopened = await services.csv.import(
       csvFile(statusImportRow(closed, 'open')),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       admin,
     );
     assert.deepEqual(reopened.errors, []);
@@ -981,7 +981,7 @@ async function testImportLifecycleGuardAndAdminJournal() {
     await services.incidents.update(toCancel.id, { status: 'closed' }, f.users.admin, adminOpts);
     const cancelled = await services.csv.import(
       csvFile(statusImportRow(toCancel, 'cancelled')),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       admin,
     );
     assert.deepEqual(cancelled.errors, []);
@@ -997,14 +997,14 @@ async function testImportLifecycleGuardAndAdminJournal() {
     const open = await createIncident(runner, f, services, { title: 'Open then cancelled' });
     const refused = await services.csv.import(
       csvFile(statusImportRow(open, 'cancelled')),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       contributor,
     );
     assert.equal(refused.ok, false, 'a contributor cannot cancel an open incident by file');
     assert.equal(await readStatus(runner, open.id), 'open');
     const cancelledOpen = await services.csv.import(
       csvFile(statusImportRow(open, 'cancelled')),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       admin,
     );
     assert.deepEqual(cancelledOpen.errors, []);
@@ -1018,7 +1018,7 @@ async function testImportLifecycleGuardAndAdminJournal() {
     const forward = await createIncident(runner, f, services, { title: 'Forward to closed' });
     const closedForward = await services.csv.import(
       csvFile(statusImportRow(forward, 'closed')),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       contributor,
     );
     assert.deepEqual(closedForward.errors, [], 'a contributor may still close an incident by file');
@@ -1045,7 +1045,7 @@ async function testInvisibleIncidentRefused() {
     const csv = `${REVIEW_HEADERS}\nINC-${incident.item_number};Hijacked;major;open;2026-03-10T08:00:00Z;true;short;${cell('## Impact\n\nleak')}`;
     const result = await services.csv.import(
       csvFile(csv),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.other, false),
     );
     assert.equal(result.ok, false);
@@ -1074,7 +1074,7 @@ async function testLockConflictRollsBackTheUpsert() {
     const csv = `${REVIEW_HEADERS}\nINC-${incident.item_number};Renamed by import;major;open;2026-03-10T08:00:00Z;false;imported description;${cell('## Impact\n\nfrom csv')}`;
     const result = await services.csv.import(
       csvFile(csv),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.equal(result.ok, false, 'a foreign edit lock refuses the review write');
@@ -1093,7 +1093,7 @@ async function testLockConflictRollsBackTheUpsert() {
     const closing = `${REVIEW_HEADERS}\nINC-${incident.item_number};Closed by import;major;closed;2026-03-10T08:00:00Z;false;imported description;`;
     const closingResult = await services.csv.import(
       csvFile(closing),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.equal(closingResult.ok, false, 'a foreign edit lock refuses the closure snapshot');
@@ -1269,7 +1269,7 @@ async function testReviewTitleFollowsCsvRename() {
     ].join('\n');
     const result = await services.csv.import(
       csvFile(csv),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(result.errors, []);
@@ -1473,7 +1473,7 @@ async function testXlsxDateTimeAsItsCsvText() {
 
     const fromXlsx = await services.csv.import(
       xlsxFile,
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(fromXlsx.errors, []);
@@ -1482,7 +1482,7 @@ async function testXlsxDateTimeAsItsCsvText() {
     await reset();
     const fromCsv = await services.csv.import(
       csvFile(`${headers.join(';')}\n${[...values, '2026-10-16 10:45:00'].join(';')}`),
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(fromCsv.errors, []);

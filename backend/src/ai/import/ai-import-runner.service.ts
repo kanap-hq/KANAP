@@ -187,7 +187,7 @@ export class AiImportRunnerService {
     // The clearing rule of every import route (D21 of 26.11.9): a blank cell keeps, `-` clears.
     const read = { language, decimalMark: '.' as const, mode: 'enrich' as const };
     // The screen's recommended preset: add the new records, update the matched ones, keep what a blank cell does not say.
-    const merge = { dryRun, mode: 'enrich' as const, operation: 'upsert' as const, ...names };
+    const merge = { dryRun, operation: 'upsert' as const, ...names };
     const caller = { manager, tenantId, userId: userId || null };
     // The person's rights, read once: a name is found beyond case in the families they read, as on the screen.
     const rights = () => this.policy.effectiveAccess(context, manager);

@@ -126,7 +126,6 @@
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Heures sans fuseau lues en UTC : {{columns}}. Nommez le fuseau après la colonne, par exemple {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Une valeur est obligatoire.",
   "CSV_VALUE_ONE_REQUIRED": "Renseignez au moins une colonne {{column}}.",
-  "CSV_VALUE_CANNOT_BE_EMPTIED": "Ce champ ne peut pas être vidé. Retirez la colonne du fichier pour garder la valeur enregistrée.",
   "CSV_VALUE_CANNOT_BE_CLEARED": "Cette valeur ne peut pas être vidée.",
   "CSV_NUMBER_CANNOT_BE_CLEARED": "Ce nombre ne peut pas être vidé. Écrivez 0 pour le mettre à zéro, ou laissez la cellule vide pour garder la valeur enregistrée.",
   "CSV_NUMBER_INVALID": "« {{value}} » n'est pas un nombre.",

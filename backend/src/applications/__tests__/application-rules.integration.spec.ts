@@ -80,7 +80,7 @@ async function seedApp(ctx: Ctx, name: string, extra: Record<string, unknown> = 
 async function importCsv(ctx: Ctx, lines: string[], params: Partial<CsvImportParams> = {}): Promise<CsvImportResult> {
   return ctx.csv.import(
     { buffer: Buffer.from(lines.join('\n') + '\n'), originalname: 'apps.csv' } as Express.Multer.File,
-    { dryRun: false, mode: 'enrich', operation: 'upsert', ...params },
+    { dryRun: false, operation: 'upsert', ...params },
     { manager: ctx.runner.manager, tenantId: ctx.tenantId },
   ).catch((error) => {
     throw new Error(`import refused: ${JSON.stringify(error.getResponse?.() ?? error.message)}`);
@@ -279,7 +279,7 @@ async function testFrenchExportImportsBack() {
     assert.equal(cellOf('classification_review_state'), 'À compléter', 'the review state is named as the screen names it in French');
     const result = await ctx.csv.import(
       { buffer: Buffer.from(exported.content), originalname: 'export.csv' } as Express.Multer.File,
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       { manager: ctx.runner.manager, tenantId: ctx.tenantId },
     );
     assert.deepEqual(result.errors, [], 'the French export imports back without an error');
@@ -378,10 +378,10 @@ async function testEmptyResidencyCell() {
     const column = header.indexOf('Résidence des données (codes pays)');
     assert.ok(column >= 0, 'the export has the residency');
     const without = (cells: string[]) => cells.filter((_, index) => index !== column).join(';');
-    result = await importCsv(ctx, [without(header), without(line)], { mode: 'replace' });
+    result = await importCsv(ctx, [without(header), without(line)], {});
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.deepEqual(await residencyOf(), ['DE', 'FR'], 'a file without the column leaves it alone, even in replace mode');
-    result = await importCsv(ctx, [header.join(';'), line.map((cell, index) => (index === column ? '' : cell)).join(';')], { mode: 'replace' });
+    result = await importCsv(ctx, [header.join(';'), line.map((cell, index) => (index === column ? '' : cell)).join(';')], {});
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.deepEqual(await residencyOf(), [], 'an empty cell clears it in replace mode');
   });
@@ -404,7 +404,7 @@ async function testImportRenameSyncsDocumentTitle() {
     );
     const run = (lines: string[], dryRun = false) => csv.import(
       { buffer: Buffer.from(lines.join('\n') + '\n'), originalname: 'apps.csv' } as Express.Multer.File,
-      { dryRun, mode: 'enrich', operation: 'upsert' },
+      { dryRun, operation: 'upsert' },
       { manager, tenantId: ctx.tenantId },
     );
     let result = await run(['id;name', `${atlas};Atlas Prime`], true);

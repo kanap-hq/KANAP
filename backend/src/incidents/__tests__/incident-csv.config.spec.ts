@@ -62,7 +62,7 @@ function mockContext(
         return [];
       },
     },
-    params: { dryRun: true, mode: 'replace', operation: 'upsert' },
+    params: { dryRun: true, operation: 'upsert' },
     resolverCache: new Map(),
     userId: READER,
     isAdmin: viewer?.isAdmin ?? false,
