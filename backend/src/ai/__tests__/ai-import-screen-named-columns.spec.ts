@@ -6,7 +6,8 @@ import { AI_IMPORT_TARGETS, importColumnTitle } from '../import/ai-import-target
 // Lot I4 of 26.11.9 (D21): in the imports that follow the clearing rule, a column of the file that the
 // screen's import reads is read by Kad too: a header that names a template column (its key or one of its
 // titles, as the screen's import recognises them) and that the model left unmapped is added to the
-// mapping, unless the person asked to leave it aside (`left_aside`). The other imports are unchanged.
+// mapping, unless the person asked to leave it aside (`left_aside`). Every row import follows the rule
+// since lot I6; the budget file maps only what the model maps.
 
 const text = (value: string) => ({ kind: 'text' as const, value });
 
@@ -97,12 +98,27 @@ function testTheModelsMappingWins() {
   assert.deepEqual(valued.preview.columns.map((column) => [column.column, column.source?.position ?? null]), [['name', 1], ['status', null]]);
 }
 
-function testOtherImportsUnchanged() {
+// The six imports of the shared import read a column the screen reads since lot I6 of 26.11.9.
+function testTheSharedImportsReadNamedColumns() {
   const template: AiImportTemplateColumn[] = [
     { column: 'name', title: 'Nom', required: true, kind: 'text' },
     { column: 'description', title: 'Description', required: false, kind: 'text' },
   ];
-  const mapped = buildImportMapping(grid(['name', 'description'], [['Kadratis', '-']]), template, request('applications', nameOnly), 'fr');
+  for (const key of ['applications', 'assets', 'portfolio_projects', 'portfolio_requests', 'tasks', 'incidents']) {
+    const mapped = buildImportMapping(grid(['name', 'Description'], [['Kadratis', '-']]), template, request(key, nameOnly), 'fr');
+    assert.deepEqual(mapped.preview.columns.map((column) => column.column), ['name', 'description'], key);
+    assert.deepEqual(mapped.preview.unplaced, [], key);
+    assert.deepEqual(mapped.file.rows, [['Kadratis', '-']], `${key}: its \`-\` reaches the import`);
+  }
+}
+
+// The budget file maps only what the model maps.
+function testTheBudgetFileUnchanged() {
+  const template: AiImportTemplateColumn[] = [
+    { column: 'name', title: 'Nom', required: true, kind: 'text' },
+    { column: 'description', title: 'Description', required: false, kind: 'text' },
+  ];
+  const mapped = buildImportMapping(grid(['name', 'description'], [['Kadratis', '-']]), template, request('budget_lines', nameOnly), 'fr');
   assert.deepEqual(mapped.preview.columns.map((column) => column.column), ['name']);
   assert.deepEqual(mapped.preview.unplaced, [{ position: 2, header: 'description' }]);
 }
@@ -111,5 +127,6 @@ testANamedColumnIsAdded();
 testLeftAsideStaysOut();
 testTranslatedTitlesAsTheScreen();
 testTheModelsMappingWins();
-testOtherImportsUnchanged();
+testTheSharedImportsReadNamedColumns();
+testTheBudgetFileUnchanged();
 console.log('ai-import-screen-named-columns.spec: ok');

@@ -46,12 +46,14 @@ export const AI_IMPORT_ACCESS: Readonly<Record<AiImportKey, AiImportAccess>> = {
 };
 
 /**
- * The imports that follow the clearing rule of every import route (D21 of 26.11.9, lot I4), which Kad
- * calls with it (`mode: 'enrich'`, `ai-import-runner.service.ts`): on a stored record a blank cell
- * keeps the value and `-` clears it. Kad's file writes the person's `-` in every kind of column for
- * them (`AiImportColumnHints.clearMark`). Lot I6 brings the other imports to the rule.
+ * The row imports, which follow the clearing rule of every import (D21 of 26.11.9): on a stored record a
+ * blank cell keeps the value and `-` clears it. The imports of lot I4 take it as `mode: 'enrich'`, the six
+ * of the shared import (lot I6) as their only rule (`ai-import-runner.service.ts`). Kad's file writes the
+ * person's `-` in every kind of column for them (`AiImportColumnHints.clearMark`) and reads a file column
+ * named like a template column as the screen does. The budget file reads `-` by its own reader.
  */
 export const AI_IMPORT_CLEARING_RULE: ReadonlySet<AiImportKey> = new Set<AiImportKey>([
+  'applications', 'assets', 'portfolio_projects', 'portfolio_requests', 'tasks', 'incidents',
   'contracts', 'suppliers', 'contacts', 'companies', 'departments', 'cost_centers', 'accounts',
   'analytics_categories', 'business_processes', 'working_day_calendars',
   'technology_asset_links', 'technology_application_links',

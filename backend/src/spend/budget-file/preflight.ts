@@ -99,6 +99,19 @@ interface LineDraft {
   calculationLines: Map<string, Omit<CalculationLinesWarning, 'line'>>;
 }
 
+/**
+ * How many stored values an update's `-` cells clear (D21 of 26.11.9, the count of the check's
+ * "N values will be cleared"): the values the draft sets to empty. On a stored line a resolver writes
+ * null only where `-` meets a value the line holds (cost center, supplier, description, notes,
+ * run/build, owners, project, end of validity) and writes an empty dimension value only for `-` on a
+ * dimension the line holds; a `-` on an empty value writes nothing. A value the row changes is never null.
+ */
+function clearedValues(draft: LineDraft): number {
+  const fields = Object.values(draft.body).filter((value) => value === null).length;
+  const dimensions = draft.analytics.filter((change) => change.categoryId === null && change.createName === null).length;
+  return fields + dimensions;
+}
+
 function emptyDraft(): LineDraft {
   return { body: {}, analytics: [], amounts: [], grains: new Map(), newSupplier: null, calculationLines: new Map() };
 }
@@ -251,6 +264,8 @@ interface Bag {
   updated: Array<{ line: number; itemNumber: string; fields: string[] }>;
   byNature: BudgetFileNatureCounts;
   unchanged: number;
+  /** The stored values the updated lines' `-` cells clear (`clearedValues`). */
+  cleared: number;
   plans: BudgetFileLinePlan[];
 }
 
@@ -736,6 +751,7 @@ function resolveRow(
   if (changes.length > 0 && live) {
     bag.updated.push({ line: row.line, itemNumber: lineRef(live.itemNumber), fields: changes });
     bag.byNature.updated[nature] += 1;
+    bag.cleared += clearedValues(draft);
     return;
   }
   bag.unchanged += 1;
@@ -1887,6 +1903,7 @@ function emptyBag(input: PreflightInput): Bag {
     updated: [],
     byNature: { created: { opex: 0, capex: 0 }, updated: { opex: 0, capex: 0 } },
     unchanged: 0,
+    cleared: 0,
     plans: [],
   };
 }
@@ -1927,6 +1944,7 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       created: bag.created.length,
       updated: bag.updated.length,
       unchanged: bag.unchanged,
+      cleared: bag.cleared,
       createdLines: bag.created.slice(0, PREFLIGHT_LIST_LIMIT),
       updatedLines: bag.updated.slice(0, PREFLIGHT_LIST_LIMIT),
       byNature: bag.byNature,

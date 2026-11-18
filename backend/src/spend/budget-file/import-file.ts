@@ -62,6 +62,8 @@ export interface BudgetFileImportOk {
   updated: number;
   /** The rows left out because they look like a stored line (lot I2 of 26.11.9). */
   skipped: number;
+  /** The stored values the `-` cells cleared: the count of the plan it wrote, the check's. */
+  cleared: number;
   createdSuppliers: boolean;
   createdDimensionValues: boolean;
 }
@@ -211,6 +213,7 @@ export async function importBudgetFile(input: {
     inserted: written.inserted,
     updated: written.updated,
     skipped: second.report.lookalikes?.ignored ?? 0,
+    cleared: second.report.changes.cleared,
     createdSuppliers: written.createdSuppliers,
     createdDimensionValues: written.createdDimensionValues,
   };

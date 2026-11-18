@@ -133,6 +133,8 @@ export function budgetFileSchema(
     language,
     dateOrder,
     decimalMark,
+    // `'-`, the export's guard on a stored "-", stays the text "-" where a typed `-` clears (`fieldCell`).
+    keepsGuardedDash: true,
     conventionHint: {
       field: 'kanap_token',
       languageOf: (cell) => {

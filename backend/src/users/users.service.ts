@@ -46,13 +46,16 @@ import * as jwt from 'jsonwebtoken';
 import type { CommitThenRunFn } from '../common/import-connection';
 import { appUrlNotConfigured } from '../common/url';
 import {
-  cellOf,
+  cellText,
+  clearRefusals,
   CsvDateOrder,
   CsvLanguage,
   DecimalMark,
+  keepsStoredValue,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
+  storedRecordValues,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { uploadedBytes } from '../common/upload';
@@ -1026,6 +1029,8 @@ export class UsersService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
+      // A row finds its person by the address: any other column may be absent, and is then never written.
+      keys: [['email']],
       language: readLanguage,
       dateOrder,
       decimalMark,
@@ -1078,13 +1083,28 @@ export class UsersService {
       return d ?? null;
     };
 
-    // Validate and normalize rows
-    type Normalized = Omit<Partial<User>, 'role_id' | 'role'> & {
+    // The rows of the people the file names are locked before they are read (see lockPeople).
+    const fileEmails = [...new Set(read.rows.map((row) => cellText(row, 'email', 'enrich')).filter((email) => email !== ''))];
+    const named: Array<{ id: string }> = fileEmails.length > 0
+      ? await (opts?.manager ?? repo.manager).query(
+        `SELECT id FROM users WHERE tenant_id = app_current_tenant() AND email = ANY($1::text[])`,
+        [fileEmails],
+      )
+      : [];
+    await lockPeople(opts?.manager ?? repo.manager, named.map((row) => row.id));
+
+    // The clearing rule of every import (D21 of 26.11.9, T-I6g): on a stored person a blank cell keeps
+    // the value, role and status included, and `-` clears the first name, the last name, the company
+    // and the department; `-` on the address, the role or the status refuses the row. A new person
+    // takes the row's cells and the defaults (role Contact, status contact); `-` is a blank cell there.
+    type UserValues = Pick<User, 'first_name' | 'last_name' | 'company_id' | 'department_id' | 'status'>;
+    type Normalized = {
       email: string;
-      /** The row's role, its id filled once the load has created it. */
-      role: FileRole;
-      company_id: string | null;
-      department_id: string | null;
+      existing: User | null;
+      /** The row's role, its id filled once the load has created it; null when the row keeps the stored one. */
+      role: FileRole | null;
+      /** What the row writes: every value for a new person, the values it does not keep for a stored one. */
+      values: Partial<UserValues>;
     };
     const normalized: Normalized[] = [];
     /** The file line of each row, for the errors found once the rows are read. */
@@ -1096,23 +1116,30 @@ export class UsersService {
         errors.push(...problems);
         continue;
       }
-      const email = cellOf(row, 'email');
-      const first_name = cellOf(row, 'first_name') || null;
-      const last_name = cellOf(row, 'last_name') || null;
-      let roleName = cellOf(row, 'role');
-      const companyName = cellOf(row, 'company_name');
-      const departmentName = cellOf(row, 'department_name');
-      const statusRaw = cellOf(row, 'status').toLowerCase();
+      const refusals = clearRefusals(row, ['email', 'role', 'status'], 'enrich');
+      if (refusals.length > 0) {
+        errors.push(...refusals);
+        continue;
+      }
+      const text = (column: string) => cellText(row, column, 'enrich');
+      const email = text('email');
+      const first_name = text('first_name') || null;
+      const last_name = text('last_name') || null;
+      let roleName = text('role');
+      const companyName = text('company_name');
+      const departmentName = text('department_name');
+      const statusRaw = text('status').toLowerCase();
 
       if (!email) errors.push(rowError(line, 'email', 'CSV_VALUE_REQUIRED', 'email is required'));
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push(rowError(line, 'email', 'CSV_EMAIL_INVALID', 'email must be valid', { value: email }));
       if (statusRaw && !['enabled','disabled','contact','invited'].includes(statusRaw)) {
         errors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${statusRaw}'. Use 'contact', 'invited', 'enabled' or 'disabled'.`, { value: statusRaw, allowed: 'contact, invited, enabled, disabled' }));
       }
+      const existing = email ? await repo.findOne({ where: { email } }) : null;
 
-      let role: FileRole | null = null;
-      if (!roleName) roleName = 'Contact';
-      if (roleName) role = await resolveRole(roleName);
+      // A new person without a role gets Contact; a stored one keeps their role.
+      if (!roleName && !existing) roleName = 'Contact';
+      const role: FileRole | null = roleName ? await resolveRole(roleName) : null;
       // A role the file would create keeps clear of the names of the system and built-in roles (a
       // system role the workspace lacks is created as that role).
       if (role && !role.id && isReservedRoleName(roleName) && !isSystemRoleName(roleName)) {
@@ -1124,30 +1151,38 @@ export class UsersService {
         company = await getCompanyByName(companyName);
         if (!company) errors.push(rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown company '${companyName}'`, { value: companyName }));
       }
+      // A stored person whose row keeps the company finds the department in the stored company.
+      const keepsCompany = !!existing && keepsStoredValue(row, read.present, 'company_name', 'enrich');
+      const departmentCompany = company
+        ?? (keepsCompany && existing!.company_id ? await companiesRepo.findOne({ where: { id: existing!.company_id } }) : null);
 
       let department: Department | null = null;
       if (departmentName) {
-        if (!company) {
+        if (!departmentCompany) {
           errors.push(rowError(line, 'department_name', 'CSV_DEPARTMENT_COMPANY_REQUIRED', 'department_name provided but company_name is missing or invalid'));
         } else {
-          department = await getDepartmentByName(company.id, departmentName);
-          if (!department) errors.push(rowError(line, 'department_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown department '${departmentName}' for company '${company.name}'`, { value: departmentName }));
+          department = await getDepartmentByName(departmentCompany.id, departmentName);
+          if (!department) errors.push(rowError(line, 'department_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown department '${departmentName}' for company '${departmentCompany.name}'`, { value: departmentName }));
         }
       }
 
-      if (role) {
-        const item: Normalized = {
-          email,
-          first_name,
-          last_name,
-          role,
-          company_id: company ? company.id : null,
-          department_id: department ? department.id : null,
-          status: (['enabled','disabled','contact','invited'].includes(statusRaw) ? (statusRaw as any) : 'contact'),
-        };
-        normalized.push(item);
-        lineOf.set(item, line);
+      const fileValues: UserValues = {
+        first_name,
+        last_name,
+        company_id: company ? company.id : null,
+        department_id: department ? department.id : null,
+        status: (['enabled','disabled','contact','invited'].includes(statusRaw) ? (statusRaw as any) : 'contact'),
+      };
+      const values: Partial<UserValues> = existing
+        ? storedRecordValues(fileValues, row, read.present, 'enrich', { company_id: 'company_name', department_id: 'department_name' })
+        : fileValues;
+      // A department belongs to its company: another company drops the stored department the row keeps.
+      if (existing && 'company_id' in values && values.company_id !== existing.company_id && !('department_id' in values) && existing.department_id) {
+        values.department_id = null;
       }
+      const item: Normalized = { email, existing, role, values };
+      normalized.push(item);
+      lineOf.set(item, line);
     }
 
     if (errors.length > 0) {
@@ -1186,20 +1221,14 @@ export class UsersService {
     // unchanged and is not written: no save, no audit line. The import writes only
     // columns of `users` (the role as `role_id`), so those columns are all it compares.
     // A role the load still has to create has no id yet: the row is an update.
+    // `cleared` counts the stored values the rows empty (`-`, and the department another company drops).
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
-    const toWrite: Array<{ item: Normalized; existing: User | null }> = [];
-    // The rows of the people the file names are locked before they are read (see lockPeople).
-    const named: Array<{ id: string }> = unique.length > 0
-      ? await (opts?.manager ?? repo.manager).query(
-        `SELECT id FROM users WHERE tenant_id = app_current_tenant() AND email = ANY($1::text[])`,
-        [unique.map((item) => item.email)],
-      )
-      : [];
-    await lockPeople(opts?.manager ?? repo.manager, named.map((row) => row.id));
+    let cleared = 0;
+    const toWrite: Normalized[] = [];
     for (const item of unique) {
-      const existing = await repo.findOne({ where: { email: item.email } });
+      const existing = item.existing;
       if (!existing) {
         inserted += 1;
       } else if (this.importRowUnchanged(existing, item)) {
@@ -1207,30 +1236,35 @@ export class UsersService {
         continue;
       } else {
         updated += 1;
+        cleared += (Object.entries(item.values) as Array<[keyof UserValues, unknown]>)
+          .filter(([key, value]) => value === null && existing[key] != null && existing[key] !== '').length;
       }
-      toWrite.push({ item, existing });
+      toWrite.push(item);
     }
+    // The status and main role a row leaves a stored person with: the row's, else the stored ones.
+    const mergedStatus = (item: Normalized) => item.values.status ?? item.existing?.status ?? null;
+    const mergedRoleId = (item: Normalized) => (item.role ? item.role.id : item.existing?.role_id ?? null);
     // A row changes no person who has more rights than the one importing, and leaves an enabled
     // Administrator: the row is refused.
     if (roleGrant) {
       const refused: { row: number; message: string }[] = [];
-      for (const { item, existing } of toWrite) {
-        if (existing && await personAboveActorRights(opts?.manager ?? repo.manager, roleGrant, existing.id)) {
+      for (const item of toWrite) {
+        if (item.existing && await personAboveActorRights(opts?.manager ?? repo.manager, roleGrant, item.existing.id)) {
           refused.push(rowError(lineOf.get(item) ?? 0, 'email', 'PERSON_ABOVE_OWN_RIGHTS', PERSON_ABOVE_OWN_RIGHTS_MESSAGE));
         }
       }
       // The workspace keeps an enabled Administrator: a row that disables the last ones or takes
-      // their role away is refused.
+      // their role away is refused. A row that names neither the role nor the status keeps them.
       const leaving = new Set(await lastActiveAdministratorsLeaving(
         opts?.manager ?? repo.manager,
-        toWrite.filter(({ existing }) => !!existing).map(({ item, existing }) => ({
-          userId: existing!.id,
-          status: item.status as string,
-          mainRoleId: item.role.id,
+        toWrite.filter((item) => !!item.existing).map((item) => ({
+          userId: item.existing!.id,
+          status: mergedStatus(item),
+          mainRoleId: mergedRoleId(item),
         })),
       ));
-      for (const { item, existing } of toWrite) {
-        if (existing && leaving.has(existing.id)) {
+      for (const item of toWrite) {
+        if (item.existing && leaving.has(item.existing.id)) {
           refused.push(rowError(lineOf.get(item) ?? 0, 'email', 'LAST_ADMINISTRATOR', LAST_ADMINISTRATOR_MESSAGE));
         }
       }
@@ -1245,25 +1279,25 @@ export class UsersService {
     // the person importing, unless the person already holds it. A role the load creates gives no
     // right yet.
     if (roleGrant) {
-      for (const { item, existing } of toWrite) {
-        if (!item.role.id || item.role.id === existing?.role_id) continue;
-        await assertRoleGrantWithinActorRights(opts?.manager ?? repo.manager, roleGrant, existing?.id ?? null, [item.role.id]);
+      for (const item of toWrite) {
+        if (!item.role?.id || item.role.id === item.existing?.role_id) continue;
+        await assertRoleGrantWithinActorRights(opts?.manager ?? repo.manager, roleGrant, item.existing?.id ?? null, [item.role.id]);
       }
     }
     if (dryRun) {
       return {
-        ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [],
+        ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [],
         rolesToCreate, ignoredColumns: read.ignoredColumns, notices: read.notices,
       };
     }
 
     // Commit: upsert by email
     let processed = 0;
-    for (const { item, existing } of toWrite) {
+    for (const item of toWrite) {
+      const { existing } = item;
       // The role is a lookup of this import, not a column: only its id is written.
       // A check leaves an id unset and writes nothing; a load resolved them all above.
-      const { role, ...rest } = item;
-      const body = { ...rest, role_id: role.id ?? undefined };
+      const body = { ...item.values, ...(item.role ? { role_id: item.role.id ?? undefined } : {}) };
       if (existing) {
         const before = { ...existing };
         const next = { ...existing, ...body } as User;
@@ -1283,7 +1317,7 @@ export class UsersService {
           );
         }
       } else {
-        const created = repo.create({ ...body, password_hash: null, mfa_enabled: false });
+        const created = repo.create({ email: item.email, ...body, password_hash: null, mfa_enabled: false });
         const saved = await repo.save(created);
         processed += 1;
         if (this.audit) {
@@ -1302,7 +1336,7 @@ export class UsersService {
       }
     }
     return {
-      ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [],
+      ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [],
       rolesToCreate, ignoredColumns: read.ignoredColumns, notices: read.notices,
     };
   }
@@ -1310,11 +1344,13 @@ export class UsersService {
   /** Whether a CSV row sets only what the stored user already holds, its resolved role included. */
   private importRowUnchanged(
     existing: User,
-    item: { role: { id: string | null }; [key: string]: unknown },
+    item: { role: { id: string | null } | null; values: Record<string, unknown> },
   ): boolean {
-    const { role, ...rest } = item;
-    if (!role.id) return false;
-    return sameStoredValues(existing as unknown as Record<string, unknown>, { ...rest, role_id: role.id });
+    if (item.role && !item.role.id) return false;
+    return sameStoredValues(existing as unknown as Record<string, unknown>, {
+      ...item.values,
+      ...(item.role ? { role_id: item.role.id } : {}),
+    });
   }
 
   async enableUser(id: string, actorId?: string | null, opts?: { manager?: EntityManager; roleGrant?: RoleGrantActor }) {

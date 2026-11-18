@@ -11,6 +11,7 @@ import type { BudgetFileAccess } from '../preflight';
 import type { BudgetFileChoice } from '../types';
 import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, MISSING_BUDGET_HEADER_MESSAGE, OLD_BUDGET_FILE_MESSAGE } from '../columns';
 import { writeXlsx } from '../../../common/xlsx';
+import { si, workbookParts, zipOf } from '../../../common/xlsx/__tests__/fixtures/handmade';
 import { natureChangeMessage } from '../preflight';
 import type { BudgetNature } from '../../budget-nature';
 import { formatToken, parseToken, tokenError } from '../token';
@@ -1353,12 +1354,103 @@ async function testRefusedNewDimensionValue() {
   );
 }
 
+/**
+ * The clearing rule of every import (D21 of 26.11.9, lot I6): the budget file reads its cells by
+ * `readImportCell`. `-` and `__CLEAR__` clear a stored value, a blank cell keeps it, `'-` (the
+ * export's guard on a stored "-", in CSV or as an Excel cell typed after an apostrophe) is the text
+ * "-". The check counts the stored values its `-` cells clear (`changes.cleared`); a `-` on an empty
+ * value counts nothing; the refusals stay (an amount, a dimension a line must hold).
+ */
+async function testClearRule() {
+  const dimension = { code: 'nature', name: 'Nature', required: false, axisName: 'Nature', values: [{ id: 'v1', name: 'Licences', disabledAt: null }] };
+  const cat = catalog({ dimensions: [dimension] });
+  const options = { cat, dimensions: ['nature'] };
+  const full = line({
+    itemNumber: 3,
+    costCenterId: 'cc1', costCenterCode: 'IT-100',
+    supplierId: 's1', supplierName: 'Lactalis',
+    description: 'Contrat annuel', notes: 'A revoir', runBuild: 'run',
+    ownerItEmail: 'it@example.test', ownerBusinessEmail: 'biz@example.test',
+    projectNumber: 4, endOfValidity: '2027-03-01T12:00:00.000Z',
+    analytics: { nature: 'Licences' },
+  });
+  const header = 'item_number,cost_center_code,supplier_name,description,notes,run_build,owner_it_email,owner_business_email,project,end_of_validity,analytics:nature\n';
+  // Every clearable value of a stored line, cleared by `-` (and `__CLEAR__`, the older mark): ten values.
+  const cleared = await preflight('opex', `${header}BL-3,-,-,-,__CLEAR__,-,-,-,-,-,-\n`, [full], options);
+  assert.equal(cleared.ok, true, JSON.stringify(cleared.errors));
+  assert.deepEqual([cleared.changes.updated, cleared.changes.unchanged, cleared.changes.cleared], [1, 0, 10]);
+  const { plans } = planBudgetFile({
+    scope: 'opex', read: await readBudgetCsv(`${header}BL-3,-,-,-,__CLEAR__,-,-,-,-,-,-\n`, { language: 'en', dimensionCodes: ['nature'] }),
+    catalog: cat, stored: [full], names: [], createSuppliers: false, canCreateSuppliers: false, currentYear: YEAR, labels: { budget: 'Budget' },
+  });
+  assert.deepEqual(plans[0].body, {
+    cost_center_id: null, supplier_id: null, description: null, notes: null, run_build: null,
+    owner_it_id: null, owner_business_id: null, project_id: null, disabled_at: null,
+  });
+  assert.deepEqual(plans[0].analytics, [{ code: 'nature', categoryId: null, createName: null }]);
+  // The same file on a line that holds none of these values: nothing to clear, nothing counted.
+  const empty = await preflight('opex', `${header}BL-3,-,-,-,-,-,-,-,-,-,-\n`, [line({ itemNumber: 3 })], options);
+  assert.equal(empty.ok, true, JSON.stringify(empty.errors));
+  assert.deepEqual([empty.changes.updated, empty.changes.unchanged, empty.changes.cleared], [0, 1, 0]);
+  // A blank cell keeps every value.
+  const kept = await preflight('opex', `${header}BL-3,,,,,,,,,,\n`, [full], options);
+  assert.deepEqual([kept.ok, kept.changes.unchanged, kept.changes.cleared], [true, 1, 0]);
+  // `'-` writes the text "-": a change, no value cleared.
+  const dash = await preflight('opex', "item_number,description\nBL-3,'-\n", [full], options);
+  assert.deepEqual([dash.ok, dash.changes.updated, dash.changes.cleared], [true, 1, 0]);
+  const dashPlan = planBudgetFile({
+    scope: 'opex', read: await readBudgetCsv("item_number,description\nBL-3,'-\n", { language: 'en', dimensionCodes: [] }),
+    catalog: cat, stored: [full], names: [], createSuppliers: false, canCreateSuppliers: false, currentYear: YEAR, labels: { budget: 'Budget' },
+  });
+  assert.deepEqual(dashPlan.plans[0].body, { description: '-' });
+  // A row that fails clears nothing, and a new line counts nothing.
+  const failing = await preflight('opex', 'item_number,description,budget_2026\nBL-3,-,-\n', [full], options);
+  assert.equal(failing.ok, false);
+  assert.deepEqual(failing.errors.map((error) => error.code), ['BUDGET_FILE_AMOUNT_CANNOT_BE_CLEARED'], 'an amount is still refused');
+  assert.equal(failing.changes.cleared, 0);
+  const required = catalog({ dimensions: [{ ...dimension, required: true }] });
+  const held = await preflight('opex', 'item_number,analytics:nature\nBL-3,-\n', [full], { cat: required, dimensions: ['nature'] });
+  assert.deepEqual(held.errors.map((error) => error.code), ['BUDGET_FILE_DIMENSION_REQUIRED'], 'a dimension a line must hold is still refused');
+  assert.equal(held.changes.cleared, 0);
+
+  // `'-` typed in Excel: "-" in a cell whose style carries the apostrophe (`quotePrefix`) is the text "-";
+  // a "-" typed alone clears.
+  const parts = workbookParts({
+    sharedStrings: [si('item_number'), si('description'), si('BL-3'), si('-')],
+    cellXfs: [0, 0],
+    sheetData: '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>'
+      + '<row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2" t="s" s="1"><v>3</v></c></row>',
+  });
+  parts['xl/styles.xml'] = String(parts['xl/styles.xml']).replace(/(<cellXfs><xf [^>]*)\/>(<xf [^>]*)\/>/, '$1/>$2 quotePrefix="1"/>');
+  const typed = await preflight('opex', zipOf(parts), [full], options);
+  assert.deepEqual([typed.ok, typed.changes.updated, typed.changes.cleared], [true, 1, 0], JSON.stringify(typed.errors));
+  const plain = zipOf(workbookParts({
+    sharedStrings: [si('item_number'), si('description'), si('BL-3'), si('-')],
+    sheetData: '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>'
+      + '<row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2" t="s"><v>3</v></c></row>',
+  }));
+  const typedClear = await preflight('opex', plain, [full], options);
+  assert.deepEqual([typedClear.ok, typedClear.changes.cleared], [true, 1], JSON.stringify(typedClear.errors));
+
+  // An export of a line whose texts are "-" writes `'-`: read back as it is, it changes nothing.
+  const dashes = line({ itemNumber: 3, versions: withJanuary(10000n), description: '-', notes: '-', name: '-' });
+  const built = buildBudgetExport({ language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', lines: [dashes], dimensions: [] });
+  const csv = writeCsv({ language: 'en', headers: built.headers, rows: budgetCsvRows(built.rows, 'en') });
+  assert.ok(csv.includes("'-"), 'the export guards a stored "-"');
+  const back = await preflight('opex', csv, [dashes]);
+  assert.deepEqual([back.ok, back.changes.unchanged, back.changes.updated, back.changes.cleared], [true, 1, 0, 0], JSON.stringify(back.errors));
+  const workbook = writeXlsx({ language: 'en', sheets: [{ name: 'budget', headers: built.headers, rows: built.rows, header: 'styled' }] });
+  const backXlsx = await preflight('opex', workbook, [dashes]);
+  assert.deepEqual([backXlsx.ok, backXlsx.changes.unchanged, backXlsx.changes.cleared], [true, 1, 0], JSON.stringify(backXlsx.errors));
+}
+
 async function main() {
   await testTokenLanguages();
   await testDecimalMarkParameter();
   await testOldFiles();
   await testMissingHeader();
   await testRoundTrip();
+  await testClearRule();
   await testAmounts();
   await testIdentity();
   await testSuppliersAndDuplicates();

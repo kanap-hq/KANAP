@@ -9,7 +9,7 @@ import { AiConversationsController } from '../ai-conversations.controller';
 import { PrepareImportMappingAiMutationOperation } from '../mutation/operations/prepare-import-mapping.ai-mutation-operation';
 import { IMPORT_LOAD_REFUSALS, importRefusalText } from '../ai-write-texts';
 import { AI_IMPORT_TARGETS, importColumnTitle } from '../import/ai-import-targets';
-import { BY_EDITOR } from '../import/ai-import-runner.service';
+import { BY_EDITOR, budgetBilan, rowsBilan } from '../import/ai-import-runner.service';
 
 /**
  * The texts of Kad's import card (lot Q4 of 26.11.8). No cell of the file reaches the model
@@ -147,6 +147,49 @@ function instructionsLeaveAsideOnlyOnRequest() {
   console.log('  left_aside only on the person\'s request; no creation or update announced before the check: OK');
 }
 
+/**
+ * Lot I6 of 26.11.9 (D21): `-` clears in every import, the budget file included. The instructions say
+ * so in one rule, with no list of imports, and `left_aside` no longer names "the imports where `-` clears".
+ */
+function instructionsDashClearsInEveryImport() {
+  const operation = new PrepareImportMappingAiMutationOperation({} as any);
+  const hint = operation.writePreview.prompt_hint;
+  const field = (operation.inputSchema.shape.left_aside as any).description as string;
+  assert.match(hint, /in every import, the budget file included, a cell holding `-` clears it/);
+  assert.doesNotMatch(hint, /imports of master data, contracts, calendars and technology links/);
+  assert.doesNotMatch(field, /in the imports where `-` clears/);
+  console.log('  `-` clears in every import, the budget file included: OK');
+}
+
+/**
+ * The card of a budget file counts the stored values its `-` cells clear, and its approval sentence
+ * says them, as a row import's (lot I6 of 26.11.9); the card of a shared import counts them too.
+ */
+function budgetFileCardSaysTheClearedValues() {
+  const matching = {
+    matches: [], refusedProposals: [], candidates: [], choices: [], createSuppliers: true,
+    totals: { matches: 0, refusedProposals: 0, candidates: 0 },
+  } as any;
+  const answer = (cleared: number) => ({
+    ok: true, matching, creates: { supplierCount: 0, dimensionValueCount: 0 },
+    changes: { created: 0, updated: 2, unchanged: 1, cleared },
+  });
+  const two = budgetBilan(answer(2), true, [2, 3, 4]);
+  assert.equal(two.cleared, 2);
+  assert.match(two.on_approval ?? '', /; 2 stored values cleared \(cells holding "-"\)/);
+  const one = budgetBilan(answer(1), true, [2, 3, 4]);
+  assert.match(one.on_approval ?? '', /; 1 stored value cleared \(cells holding "-"\)/);
+  const none = budgetBilan(answer(0), true, [2, 3, 4]);
+  assert.equal(none.cleared, 0);
+  assert.doesNotMatch(none.on_approval ?? '', /cleared/);
+  // The load answers with the count of the plan it wrote.
+  const load = budgetBilan({ ok: true, inserted: 0, updated: 2, skipped: 0, cleared: 2 } as any, false, [2, 3]);
+  assert.equal(load.cleared, 2);
+  // A shared import's card (applications) shows the count its service gives.
+  assert.equal(rowsBilan({ ok: true, inserted: 0, updated: 1, unchanged: 0, cleared: 3 }, true, [2]).cleared, 3);
+  console.log('  the budget file\'s card counts and says the values cleared: OK');
+}
+
 async function screenLanguageWhenTheProfileHasNone() {
   const req = { tenant: { id: 'tenant-1' }, user: { sub: 'user-1' }, headers: { 'accept-language': 'fr-FR,fr;q=0.9,en;q=0.8' } };
   const chat = new AiChatController({} as any, {} as any, {} as any, {} as any);
@@ -231,6 +274,8 @@ async function main() {
   instructionsProposeExistingRecordsOnly();
   instructionsPublisherLinksTheSupplier();
   instructionsLeaveAsideOnlyOnRequest();
+  instructionsDashClearsInEveryImport();
+  budgetFileCardSaysTheClearedValues();
   await screenLanguageWhenTheProfileHasNone();
   console.log('ai-import-card-texts.spec: ok');
 }

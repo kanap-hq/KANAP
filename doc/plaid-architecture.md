@@ -1146,7 +1146,7 @@ row per data row of the person's file, the converted value of each cell (a day
 as a date cell, a number as a number cell), or the person's own text when the
 mapping did not read it, which the import then refuses with its own message.
 `AiImportRunnerService` hands it to the import service of the screen, called as
-its route calls it (the "merge" mode of the V2 imports, the person's language,
+its route calls it (the "merge" preset of the V2 imports, the person's language,
 a decimal point; the budget file's preflight), in
 the transaction of the call, which carries the person's data access: that check
 (the dry run) is stored on the card as `import_mapping.validation`. Approving
@@ -1157,15 +1157,18 @@ and the approval's savepoint undoes any write. The card keeps
 `import_mapping.result`, and one audit row records the import (`table_name =
 'import'`, `source = 'ai_chat'`, the preview in `source_ref`, `after_json` with
 the list, the file name and the counts); the records keep the audit rows of
-their import. The imports of master data, contracts, calendars and technology
-links (`AI_IMPORT_CLEARING_RULE`) are called with the clearing rule of their
-routes (`mode: 'enrich'`): on a record the file updates, a blank cell and a
-column the mapping leaves out keep the stored value, and `-` clears it. Kad's
-file writes the person's `-` (a cell, or the model's value) as `-` in every kind
-of column for them; the check's `cleared` count is on the card ("3 values will
-be cleared") and in the sentence of the approval. The calendars and the
-technology links read a fixed header (`AI_IMPORT_EVERY_COLUMN`): their file gets
-every template column, blank when the mapping leaves it out. The messages of a
+their import. Every import follows the clearing rule (D21 of 26.11.9): on a
+record the file updates, a blank cell and a column the mapping leaves out keep
+the stored value, and `-` clears it. The imports of master data, contracts,
+calendars and technology links take it as `mode: 'enrich'`; the six V2 imports
+have no mode, the rule is theirs; the budget file reads `-` by its own reader.
+For the row imports (`AI_IMPORT_CLEARING_RULE`, every import but the budget
+file), Kad's file writes the person's `-` (a cell, or the model's value) as `-`
+in every kind of column, and a file column named like a template column is read
+as the screen reads it, mapped or not, unless the person asks to leave it aside
+(`left_aside`). The check's `cleared` count, the budget file's included
+(`changes.cleared`), is on the card ("3 values will be cleared") and in the
+sentence of the approval. The messages of a
 check or an import carry the line of the person's file (the grid's `lines`,
 title and blank rows put back). The card shows the first rows, the values not
 read and the import's messages; the model reads the same first rows and values

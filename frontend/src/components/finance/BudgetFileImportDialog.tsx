@@ -577,6 +577,9 @@ export function ReportView({
             t(`${K}unchanged`, { count: report.changes.unchanged }),
           ].join(' · ')}
           />
+          {(report.changes.cleared ?? 0) > 0 && (
+            <Line text={t('common:csv.valuesWillBeClearedSentence', { count: report.changes.cleared })} />
+          )}
           {report.changes.createdLines.map((line) => (
             <Line key={`c-${line.line}`} muted text={t(`${K}createdLine`, { line: line.line, name: line.name })} />
           ))}
