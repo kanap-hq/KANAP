@@ -13,6 +13,7 @@ import {
   clearCreation,
   creationKey,
   getCreation,
+  markRecordDeleted,
   scheduleCreationClear,
   setCreation,
   subscribeCreations,
@@ -175,6 +176,9 @@ export default function useRecordCreation({
         if (!confirmed) return false;
       }
       await api.delete(`${apiBase}/${recordId}/creation`, { data: { token: current.token } });
+      // The description editor releases its lock as the page leaves. The record is already gone,
+      // so the release would answer 404. Marked first, while the editor's address is still known.
+      markRecordDeleted(recordId);
       clearCreation(key);
       if (options?.leave !== false) navigate(current.returnTo || listPath, { replace: true });
       // Marked stale, read again where shown: the page that showed the record has left it.

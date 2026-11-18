@@ -27,6 +27,7 @@ import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormali
 import { getApiErrorMessage, getDocumentSaveErrorMessage } from '../utils/apiErrorMessage';
 import { AUTOSAVE_RETRY_DELAYS_MS, autosaveRetryDelayMs, isRetriableAutosaveFailure, type AutosaveStatus } from '../hooks/useAutosave';
 import { releaseLockKeepalive } from '../lib/releaseLockKeepalive';
+import { isRecordDeleted, noteCreationAddress } from './workspace/creation/creationStore';
 
 const MarkdownEditor = React.lazy(() => import('./MarkdownEditor'));
 
@@ -292,6 +293,12 @@ const DocumentEditorForOneSlot = React.forwardRef<
     // reset) finds nothing left to release.
     const heldToken = lockTokenRef.current;
     if (isDraftMode || !entityId || !heldToken) return;
+    // Cancel deleted the record: the lock went with it. Releasing now answers 404.
+    if (isRecordDeleted(entityId)) {
+      lockTokenRef.current = null;
+      releaseInFlightTokenRef.current = null;
+      return;
+    }
     lockTokenRef.current = null;
     releaseInFlightTokenRef.current = heldToken;
     try {
@@ -548,6 +555,13 @@ const DocumentEditorForOneSlot = React.forwardRef<
     saveMutation,
   ]);
 
+  // A project or a request created from its title is opened by its reference, while Cancel knows
+  // the uuid. Remember this address so the mark covers the id the release below would call.
+  React.useEffect(() => {
+    if (!entityId) return;
+    noteCreationAddress(entityType, entityId);
+  }, [entityId, entityType]);
+
   React.useEffect(() => {
     return () => {
       void releaseLock();
@@ -562,6 +576,11 @@ const DocumentEditorForOneSlot = React.forwardRef<
   React.useEffect(() => {
     if (isDraftMode || !entityId) return;
     const onPageHide = () => {
+      if (isRecordDeleted(entityId)) {
+        lockTokenRef.current = null;
+        releaseInFlightTokenRef.current = null;
+        return;
+      }
       const heldToken = lockTokenRef.current ?? releaseInFlightTokenRef.current;
       if (!heldToken) return;
       lockTokenRef.current = null;
