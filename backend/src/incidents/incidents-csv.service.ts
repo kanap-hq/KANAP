@@ -213,8 +213,8 @@ export class IncidentsCsvService {
 
   /**
    * Writes one row's `review` cell, once (the pending value is consumed).
-   * A blank or missing cell leaves the review untouched, in both enrich and
-   * replace mode.
+   * A blank or missing cell leaves the review untouched; `-` was refused at the
+   * check (`incidentCsvConfig.afterValidate`), so no empty version is written.
    */
   private async writeReviewForRow(entity: any, context: CsvImportContext): Promise<void> {
     if (!hasPendingIncidentReview(entity)) return;

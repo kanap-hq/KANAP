@@ -336,6 +336,8 @@ async function testExportImportRoundTrip() {
     await services.integrated.writeIncidentReviewForImport(incident.id, MULTILINE_REVIEW, f.users.admin, {
       manager: runner.manager,
     });
+    // A stored text "-" is written `'-` and read back as that text, never as the `-` that clears.
+    await runner.manager.query(`UPDATE incidents SET source_ref = '-' WHERE tenant_id = $1 AND id = $2`, [f.tenantId, incident.id]);
 
     const exported = await services.csv.export({
       manager: runner.manager,
@@ -352,18 +354,17 @@ async function testExportImportRoundTrip() {
     assert.ok(exported.content.includes(`${frenchDay} ${pad(detected.getUTCHours())}:${pad(detected.getUTCMinutes())}`), exported.content);
     assert.ok(!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(exported.content), 'no ISO timestamp left in the file');
 
-    // Re-importing the export changes nothing: every row counts as unchanged, in both modes.
+    // Re-importing the export changes nothing: every row counts as unchanged, nothing cleared.
     const exportedFile = exported.content.replace(/^﻿/, '');
-    for (const mode of ['enrich', 'replace'] as const) {
-      const dry = await services.csv.import(
-        csvFile(exportedFile),
-        { dryRun: true, operation: 'upsert' },
-        importOpts(runner, f, f.users.admin),
-      );
-      assert.deepEqual(dry.errors, []);
-      assert.deepEqual([dry.updated, dry.unchanged], [0, 1], `${mode}: the exported row is unchanged`);
-      assert.deepEqual(dry.warnings, [], `${mode}: every date-time names its zone`);
-    }
+    assert.ok(exportedFile.includes("'-"), 'the stored "-" is written guarded');
+    const dry = await services.csv.import(
+      csvFile(exportedFile),
+      { dryRun: true, operation: 'upsert' },
+      importOpts(runner, f, f.users.admin),
+    );
+    assert.deepEqual(dry.errors, []);
+    assert.deepEqual([dry.updated, dry.unchanged, dry.cleared], [0, 1, 0], 'the exported row is unchanged');
+    assert.deepEqual(dry.warnings, [], 'every date-time names its zone');
     // An edited review is an update.
     const edited = await services.csv.import(
       csvFile(exportedFile.replace('- 300 mailboxes', '- 400 mailboxes')),
@@ -384,6 +385,8 @@ async function testExportImportRoundTrip() {
     const after = await readReview(runner, f, incident.id);
     assert.equal(after.content_markdown, MULTILINE_REVIEW, 'the Markdown round-trips unchanged');
     assert.equal(after.versions, before.versions, 'an identical body creates no version');
+    const [stored] = await runner.manager.query(`SELECT source_ref FROM incidents WHERE id = $1`, [incident.id]);
+    assert.equal(stored.source_ref, '-');
   });
 }
 
@@ -701,7 +704,7 @@ async function testEmptyCellAndDryRun() {
     });
     const before = await readReview(runner, f, incident.id);
 
-    // Empty cell: unchanged, in replace mode too.
+    // Empty cell: unchanged.
     const empty = `${REVIEW_HEADERS}\nINC-${incident.item_number};Renamed;major;open;2026-03-10T08:00:00Z;false;short;`;
     const emptyResult = await services.csv.import(
       csvFile(empty),
@@ -742,6 +745,53 @@ async function testEmptyCellAndDryRun() {
     );
     assert.equal(badResult.ok, false);
     assert.match(badResult.errors[0].message, /must be Markdown/);
+  });
+}
+
+/**
+ * The clearing rule (D21 of 26.11.9, T-I6f): a blank yes/no cell keeps the stored value (a new
+ * incident gets no); `-` is refused on the yes/no columns, the status, the detection time and the
+ * review, each named, and no review version is written.
+ */
+async function testClearingRule() {
+  await withFixture(async (runner, f) => {
+    const services = createServices(runner.manager);
+    const incident = await createIncident(runner, f, services, { personal_data_affected: true, authority_notification_required: true });
+    await runner.manager.query(`UPDATE incidents SET confidential = true WHERE tenant_id = $1 AND id = $2`, [f.tenantId, incident.id]);
+    const before = await readReview(runner, f, incident.id);
+    const head = 'ref;title;severity;personal_data_affected;authority_notification_required;confidential;status;detected_at;review';
+    const flags = async () => {
+      const [row] = await runner.manager.query(
+        `SELECT personal_data_affected, authority_notification_required, confidential, status FROM incidents WHERE id = $1`, [incident.id],
+      );
+      return [row.personal_data_affected, row.authority_notification_required, row.confidential, row.status];
+    };
+
+    const blank = `${head}\nINC-${incident.item_number};;;;;;;;\n;Nouveau;minor;;;;;2026-03-10T08:00:00Z;`;
+    for (const dryRun of [true, false]) {
+      const result = await services.csv.import(csvFile(blank), { dryRun, operation: 'upsert' }, importOpts(runner, f, f.users.admin));
+      assert.deepEqual(result.errors, []);
+      assert.deepEqual([result.unchanged, result.inserted, result.cleared], [1, 1, 0]);
+    }
+    assert.deepEqual(await flags(), [true, true, true, 'open'], 'blank cells keep the stored values');
+    const [created] = await runner.manager.query(
+      `SELECT personal_data_affected, authority_notification_required, confidential FROM incidents WHERE tenant_id = $1 AND title = 'Nouveau'`, [f.tenantId],
+    );
+    assert.deepEqual(Object.values(created), [false, false, false], 'a new incident gets no');
+
+    const dash = `${head}\nINC-${incident.item_number};;;-;-;-;-;-;-`;
+    for (const dryRun of [true, false]) {
+      const result = await services.csv.import(csvFile(dash), { dryRun, operation: 'upsert' }, importOpts(runner, f, f.users.admin));
+      assert.equal(result.ok, false);
+      assert.deepEqual(
+        result.errors.map((error) => [error.column, error.code]).sort(),
+        ['authority_notification_required', 'confidential', 'detected_at', 'personal_data_affected', 'review', 'status']
+          .map((column) => [column, 'CSV_VALUE_CANNOT_BE_CLEARED']),
+      );
+    }
+    assert.deepEqual(await flags(), [true, true, true, 'open']);
+    const after = await readReview(runner, f, incident.id);
+    assert.deepEqual([after.content_markdown, after.versions], [before.content_markdown, before.versions], 'no review version');
   });
 }
 
@@ -1503,6 +1553,7 @@ async function run() {
     await testXlsxDateTimeAsItsCsvText();
     await testExportTimeZoneSource();
     await testEmptyCellAndDryRun();
+    await testClearingRule();
     await testReviewTemplateFollowsTheCreatorLanguage();
   await testInsertedRowsAreProvisioned();
     await testClosedIncidentImportIsAllowedAndVersioned();
