@@ -734,7 +734,7 @@ La vérification liste ces lignes sous **Ressemble à une application existante*
 
 - **Écarter** : la ligne n'est pas importée. C'est le choix par défaut.
 - **Créer quand même** : la ligne devient une nouvelle application.
-- **Mettre à jour APP-12** : la ligne met à jour l'application à laquelle elle ressemble, dans le mode de l'import, responsables et résidence des données compris. L'application garde son nom. Pointez la ligne pour voir les colonnes qui changent. « Rien ne change sur APP-12 » signifie que le fichier ne change aucune de ses valeurs.
+- **Mettre à jour APP-12** : la ligne met à jour l'application à laquelle elle ressemble, responsables et résidence des données compris. L'application garde son nom. Pointez la ligne pour voir les colonnes qui changent. « Rien ne change sur APP-12 » signifie que le fichier ne change aucune de ses valeurs.
 
 **Tout créer quand même**, **Tout mettre à jour** et **Tout écarter**, au-dessus de la liste, valent pour toutes les lignes. Un choix fait ensuite sur une ligne ne change que cette ligne. Chaque choix vérifie à nouveau le fichier. Avec **Ajouter les nouveaux uniquement** (l'opération `Insertion uniquement`), la mise à jour n'est pas proposée.
 

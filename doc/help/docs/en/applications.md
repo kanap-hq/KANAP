@@ -734,7 +734,7 @@ The check lists these rows under **Looks like an existing application**, with th
 
 - **Leave out**: the row is not imported. This is the default.
 - **Create anyway**: the row becomes a new application.
-- **Update APP-12**: the row updates the application it looks like, in the mode of the import, owners and data residency included. The application keeps its name. Point at the row to see which columns change. "Nothing changes on APP-12" means the file changes none of its values.
+- **Update APP-12**: the row updates the application it looks like, owners and data residency included. The application keeps its name. Point at the row to see which columns change. "Nothing changes on APP-12" means the file changes none of its values.
 
 **Create all anyway**, **Update all** and **Leave all out**, above the list, apply to every row. A choice made on a row afterwards changes that row only. Each choice checks the file again. With **Add new only** (the `Insert only` operation), the update is not offered.
 

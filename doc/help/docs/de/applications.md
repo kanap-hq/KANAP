@@ -734,7 +734,7 @@ Die Prüfung listet diese Zeilen unter **Ähnelt einer bestehenden Anwendung** a
 
 - **Auslassen**: Die Zeile wird nicht importiert. Das ist die Voreinstellung.
 - **Trotzdem anlegen**: Die Zeile wird zu einer neuen Anwendung.
-- **APP-12 aktualisieren**: Die Zeile aktualisiert die Anwendung, der sie ähnelt, im Modus des Imports, einschließlich Verantwortlichen und Datenresidenz. Die Anwendung behält ihren Namen. Zeigen Sie auf die Zeile, um die Spalten zu sehen, die sich ändern. „An APP-12 ändert sich nichts“ bedeutet, dass die Datei keinen ihrer Werte ändert.
+- **APP-12 aktualisieren**: Die Zeile aktualisiert die Anwendung, der sie ähnelt, einschließlich Verantwortlichen und Datenresidenz. Die Anwendung behält ihren Namen. Zeigen Sie auf die Zeile, um die Spalten zu sehen, die sich ändern. „An APP-12 ändert sich nichts“ bedeutet, dass die Datei keinen ihrer Werte ändert.
 
 **Alle trotzdem anlegen**, **Alle aktualisieren** und **Alle auslassen** über der Liste gelten für alle Zeilen. Eine danach für eine Zeile getroffene Wahl ändert nur diese Zeile. Jede Wahl prüft die Datei erneut. Mit **Nur neue hinzufügen** (der Vorgang `Nur einfügen`) wird die Aktualisierung nicht angeboten.
 

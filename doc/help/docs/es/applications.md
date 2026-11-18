@@ -734,7 +734,7 @@ La comprobación lista estas filas en **Se parece a una aplicación existente**,
 
 - **Descartar**: la fila no se importa. Es la opción por defecto.
 - **Crear de todos modos**: la fila se convierte en una nueva aplicación.
-- **Actualizar APP-12**: la fila actualiza la aplicación a la que se parece, en el modo de la importación, responsables y residencia de datos incluidos. La aplicación conserva su nombre. Señale la fila para ver las columnas que cambian. «Nada cambia en APP-12» significa que el archivo no cambia ninguno de sus valores.
+- **Actualizar APP-12**: la fila actualiza la aplicación a la que se parece, responsables y residencia de datos incluidos. La aplicación conserva su nombre. Señale la fila para ver las columnas que cambian. «Nada cambia en APP-12» significa que el archivo no cambia ninguno de sus valores.
 
 **Crear todas de todos modos**, **Actualizar todas** y **Descartar todas**, encima de la lista, se aplican a todas las filas. Una elección hecha después en una fila solo cambia esa fila. Cada elección vuelve a comprobar el archivo. Con **Solo añadir los nuevos** (la operación `Solo insertar`), la actualización no se ofrece.
 
