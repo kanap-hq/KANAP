@@ -238,6 +238,8 @@ describe('CsvImportDialogV2, the rows that look like an existing application', (
       lookalikes([{ ...accents, target: { id: ID_4, ref: '', name: '', state: '' } }])],
     // Correctifs K (review 4, C6): another row looks like an application created since the check.
     ['another row looks like an application since the check', 'CSV_LOOKALIKE_NEW', 'The row looks like APP-9 since the check.', lookalikes([accents])],
+    // Lot I6 (pass G): the record a row updates was deleted between the check and the load's lock.
+    ['its record was deleted since the check', 'CSV_RECORD_DELETED', 'The record was deleted after the check.', undefined],
   ])('checks again without the choice of a row refused at the load because %s', async (_case, code, message, after) => {
     const update: ImportLookalikeChoice = { kind: 'lookalike', line: 3, action: 'update', id: ID_4, state: '0123456789abcdef' };
     const checked = lookalikes([{ ...accents, outcome: 'updated', fields: [] }], [update]);

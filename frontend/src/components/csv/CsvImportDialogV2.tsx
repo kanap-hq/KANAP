@@ -31,7 +31,7 @@ import { importFollowsClearingRule } from './clearingRule';
 import InfoHint from '../workspace/InfoHint';
 
 /** A load refused for a row whose situation changed since the check: nothing was written (T-I3l). */
-const LOAD_REFUSALS = new Set(['CSV_LOOKALIKE_CHANGED', 'CSV_LOOKALIKE_GONE', 'CSV_LOOKALIKE_NAME_FOUND', 'CSV_LOOKALIKE_NEW']);
+const LOAD_REFUSALS = new Set(['CSV_LOOKALIKE_CHANGED', 'CSV_LOOKALIKE_GONE', 'CSV_LOOKALIKE_NAME_FOUND', 'CSV_LOOKALIKE_NEW', 'CSV_RECORD_DELETED']);
 
 interface CsvImportDialogV2Props {
   open: boolean;
