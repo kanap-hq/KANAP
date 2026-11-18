@@ -223,10 +223,12 @@ Las columnas:
 |---|---|
 | `email` | Obligatoria. Las filas se emparejan por esta dirección, así que escríbala tal como la tiene el espacio de trabajo |
 | `first_name`, `last_name` | El nombre de la persona |
-| `role` | El rol que se asignará. Una celda vacía da el rol **Contact** |
+| `role` | El rol que se asignará. Una persona nueva sin rol recibe el rol **Contact** |
 | `company_name` | La empresa, por su nombre. Opcional |
-| `department_name` | El departamento, por su nombre. Necesita un `company_name` |
-| `status` | `contact`, `invited`, `enabled` o `disabled`. Una celda vacía da `contact` |
+| `department_name` | El departamento, por su nombre, en la empresa de la fila. Una fila que cambia la empresa borra el departamento, salvo si nombra uno |
+| `status` | `contact`, `invited`, `enabled` o `disabled`. Una persona nueva sin estado recibe `contact` |
+
+Solo `email` es obligatoria, y una columna que el archivo omite nunca se escribe. En una persona que el espacio de trabajo ya tiene, una celda vacía conserva el valor guardado, incluidos el rol y el estado: una fila sin ellos no cambia el acceso de nadie. `-` borra el nombre, los apellidos, la empresa y el departamento. `-` no puede borrar el correo, el rol ni el estado: la fila se rechaza. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing).
 
 La carga crea un rol que el archivo nombra y que su espacio de trabajo no tiene, con una descripción por defecto. La verificación lo lista y no crea nada: un archivo que solo comprueba no cambia ningún rol. Un nombre que aparece dos veces en el archivo se conserva una vez, gana la primera fila. Un nombre que la página muestra para un rol del sistema o integrado, en cualquiera de sus idiomas, se rechaza para esa fila.
 

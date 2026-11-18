@@ -506,13 +506,12 @@ Hay tres modos de exportación disponibles:
 1. **Prepare su archivo**: un archivo CSV o un libro de Excel (`.xlsx`). Guarde un archivo CSV en UTF-8. Las comas y los puntos y coma funcionan, y también un archivo que Excel guardó como CSV simple (Windows-1252). Descargue una plantilla para asegurar los encabezados correctos. El separador, los importes, las fechas y los sí o no de cada idioma están en [Archivos CSV y Excel](csv-files.md).
 
 2. **Elija la configuración de importación**:
-   - **Modo**:
-     - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes: solo actualiza lo que especifique
-     - `Reemplazar`: Reemplaza los valores de las columnas del archivo. Una celda vacía borra el valor guardado. Una columna que falta en el archivo conserva sus valores. Algunos campos no se pueden vaciar: la **Verificación previa** los señala.
    - **Operación**:
      - `Upsert` (predeterminado): Crear nuevas tareas o actualizar existentes
      - `Solo actualizar`: Solo modificar tareas existentes, omitir nuevas
      - `Solo insertar`: Solo crear nuevas tareas, omitir existentes
+
+   Una celda vacía conserva el valor guardado, y `-` lo borra. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing) y [Coincidencia y actualizaciones](#coincidencia-y-actualizaciones).
 
 3. **Valide primero**: Haga clic en **Verificación previa** para validar su archivo sin hacer cambios. Revise errores y advertencias.
 
@@ -560,10 +559,10 @@ Hay tres modos de exportación disponibles:
 |-------------|-------------|-------|
 | `assignee_email` | Persona responsable | Debe coincidir con un correo de usuario existente |
 | `creator_email` | Correo del solicitante | Solo exportación (mostrado como **Correo del solicitante** en metadatos de campo) |
-| `viewer_email_1` a `_4` | Observadores | Correos de usuarios existentes. Un correo desconocido se omite, con un aviso |
-| `owner_email_1` a `_4` | Responsables | Correos de usuarios existentes. Un correo desconocido se omite, con un aviso |
+| `viewer_email_1`, `viewer_email_2`, ... | Observadores | Correos de usuarios existentes. Un correo desconocido se omite, con un aviso |
+| `owner_email_1`, `owner_email_2`, ... | Responsables | Correos de usuarios existentes. Un correo desconocido se omite, con un aviso |
 
-En modo `Enriquecer`, una fila que actualiza una tarea conserva sus observadores cuando una celda de observador nombra un correo desconocido, y sus responsables del mismo modo.
+Los observadores y los responsables siguen cada uno sus propias celdas. Cuando todas están vacías, la tarea conserva la lista guardada. Los correos de las celdas son la lista completa y reemplazan la guardada. `-` solo vacía la lista, y un `-` junto a correos no añade nada. Una fila que actualiza una tarea conserva sus observadores cuando una celda de observador nombra un correo desconocido, y sus responsables del mismo modo.
 
 **Otros campos**:
 
@@ -610,9 +609,13 @@ El sistema normaliza automáticamente los valores durante la importación. Un es
 
 ### Coincidencia y actualizaciones
 
-Las tareas se emparejan por **título + related_object_id** (sin distinción de mayúsculas). Cuando se encuentra una coincidencia:
-  - Con modo `Enriquecer`: Solo los valores CSV no vacíos actualizan la tarea
-  - Con modo `Reemplazar`: Las columnas del archivo se actualizan, y una celda vacía borra el valor guardado. Las columnas que faltan en el archivo conservan sus valores. El título, el `id`, el estado y los campos obligatorios no se pueden vaciar: la **Verificación previa** señala un error en la fila. Una tarea nueva recibe los valores predeterminados.
+Las tareas se emparejan por **título + related_object_id** (sin distinción de mayúsculas). Cuando se encuentra una coincidencia, una celda vacía conserva el valor guardado, y `-` lo borra. Las columnas que faltan en el archivo conservan sus valores.
+
+- `-` borra la fase, el origen, la categoría, el flujo, la empresa, el asignado y las etiquetas.
+- `-` en las columnas del objeto relacionado desvincula la tarea, como al elegir **Independiente** en **Relacionado con** en la pantalla.
+- El título, el `id`, el estado y la prioridad no se pueden borrar: `-` en ellos rechaza la fila, y el mensaje nombra la columna.
+
+Una tarea nueva recibe los valores predeterminados.
 
 Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el ID, luego recurre a título + objeto relacionado.
 
@@ -630,7 +633,7 @@ Estos campos se incluyen en la **Exportación completa** para fines de informes 
 
 ### Limitaciones
 
-  - **Máximo 4 observadores/responsables**: Las tareas admiten hasta 4 correos de observadores y 4 correos de responsables en un archivo
+  - **Observadores y responsables**: la exportación escribe tantas columnas `viewer_email_N` y `owner_email_N` como la lista más larga, cuatro como mínimo. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing)
   - **Clasificación solo para tareas independientes y de proyecto**: Origen, Categoría, Flujo y Empresa solo pueden establecerse en tareas independientes y de proyecto (no en tareas OPEX, Contrato o CAPEX)
   - **La fase requiere proyecto**: La asignación de fase solo funciona para tareas de proyecto
   - **Enlaces de aplicación/activo no en CSV**: Use el panel de Propiedades del espacio de trabajo para vincular tareas a aplicaciones y activos

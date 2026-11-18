@@ -359,6 +359,8 @@ La exportación contiene las solicitudes que muestra la lista, con sus filtros, 
 
 **Columnas**: el archivo empieza por `id` y `reference` (`REQ-12`), y después las columnas siguen el espacio de trabajo, pestaña por pestaña. La importación ignora `reference`.
 
+**Celdas vacías y `-`**: en una solicitud que el archivo actualiza, una celda vacía conserva el valor guardado, y `-` lo borra, incluidos el `purpose` y los `risks`. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing).
+
 Use exportar cuando necesite informes del portafolio o enriquecimiento sin conexión. Use importar cuando necesite crear o actualizar solicitudes en masa. Debido a que la importación puede alterar registros de recepción a escala, está intencionadamente reservada para administradores.
 
 ## Consejos
