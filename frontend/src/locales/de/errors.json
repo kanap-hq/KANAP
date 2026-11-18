@@ -148,7 +148,6 @@
   "CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT": "„{{value}}“ wird entfernt: Nur eine Projektaufgabe hat eine Phase.",
   "CSV_TASK_CLASSIFICATION_CLEARED": "„{{value}}“ wird entfernt: Nur eine eigenständige Aufgabe oder eine Projektaufgabe hat eine Klassifizierung.",
   "CSV_TASK_DETACH_CONFLICT": "„-“ in {{column}} macht die Aufgabe eigenständig, während {{other}} ihr Objekt nennt. Schreiben Sie „-“ in beide oder lassen Sie eine der beiden Zellen leer.",
-  "CSV_TASK_READ_ONLY": "Diese Aufgabe ist in Ihrem Zugriff schreibgeschützt.",
   "CSV_JSON_INVALID": "Diese Zelle enthält kein gültiges JSON.",
   "CSV_JSON_OBJECT_REQUIRED": "Diese Zelle muss ein JSON-Objekt enthalten.",
   "CSV_JSON_ARRAY_REQUIRED": "Diese Zelle muss eine JSON-Liste enthalten.",

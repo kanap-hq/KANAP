@@ -21,8 +21,6 @@ import type { CsvCallerAccess, CsvImportParams } from '../common/csv';
 import { hasLevel } from '../common/relations/relations-access';
 import { findRecordByName, noteNameMatch, noteRefusedProposal, proposalFor, takeProposal, undoneMatch, type MatchHow } from '../common/name-matching';
 import { budgetLineReference } from '../spend/budget-nature';
-import { isLimitedTransaction } from '../data-access/line-write-checks';
-import { DATA_ACCESS_READ_ONLY_TASK_MESSAGE } from './task-data-access';
 
 /** The label of a contract outside the person's access, as the tasks list writes it (`ops:contracts.outsideYourAccess`). */
 export const CONTRACT_OUTSIDE_ACCESS: Record<CsvLanguage, string> = {
@@ -127,10 +125,10 @@ const RELATED_OBJECT_COLUMNS = ['related_object_type', 'related_object_id', 'rel
  * the type or the id; a stored type or id no `-` cell names (a blank cell, or no column) is counted
  * here. A `-` beside an object column that holds a value is a row error naming both columns
  * (`CSV_TASK_DETACH_CONFLICT`). A standalone task is left as it is; a new task reads `-` as blank; a
- * matched row an insert-only import skips is not checked. The rows it detaches, for `refuseReadOnlyDetaches`.
+ * matched row an insert-only import skips is not checked. The import is reserved to people with access
+ * to all data, on the screen as by Kad: every task is one they may modify.
  */
-function detachTasks(rows: CsvImportRow[], operation: string): Set<CsvImportRow> {
-  const detached = new Set<CsvImportRow>();
+function detachTasks(rows: CsvImportRow[], operation: string): void {
   for (const row of rows) {
     if (row.isInsert || skippedByOperation(row, operation)) continue;
     const cells = RELATED_OBJECT_COLUMNS.map((column) => ({ column, cell: importCell(row.raw, column) }));
@@ -152,28 +150,6 @@ function detachTasks(rows: CsvImportRow[], operation: string): Set<CsvImportRow>
       row.parsed[key] = null;
     }
     delete row.parsed._related_object_name;
-    detached.add(row);
-  }
-  return detached;
-}
-
-/**
- * A person with limited data access detaches a task of a line or a contract as on the screen
- * (`prepareTaskWrite`): only a task they may modify (`data_access_task_modifiable`: its object
- * modifiable, or they are its assignee or owner). Another one is a row error (`CSV_TASK_READ_ONLY`),
- * at the check as at the load; the database would otherwise skip its update without a word.
- */
-async function refuseReadOnlyDetaches(rows: Set<CsvImportRow>, context: CsvImportContext): Promise<void> {
-  const scoped = [...rows].filter((row) => ['spend_item', 'capex_item', 'contract'].includes(String(row.existingEntity?.related_object_type ?? '')));
-  if (scoped.length === 0 || !(await isLimitedTransaction(context.manager))) return;
-  const readOnly: Array<{ id: string }> = await context.manager.query(
-    `SELECT t.id::text AS id FROM unnest($1::uuid[]) AS t(id) WHERE data_access_task_modifiable(t.id) IS NOT TRUE`,
-    [scoped.map((row) => row.existingEntity.id)],
-  );
-  const refused = new Set(readOnly.map((row) => row.id.toLowerCase()));
-  for (const row of scoped) {
-    if (!refused.has(String(row.existingEntity.id).toLowerCase())) continue;
-    row.errors.push({ row: row.rowNumber, column: 'id', message: DATA_ACCESS_READ_ONLY_TASK_MESSAGE, code: 'CSV_TASK_READ_ONLY' });
   }
 }
 
@@ -1069,15 +1045,14 @@ export const taskCsvConfig: CsvEntityConfig = {
   },
 
   /**
-   * `-` on the related object makes the task standalone (`detachTasks`), a task the person may modify
-   * only (`refuseReadOnlyDetaches`).
+   * `-` on the related object makes the task standalone (`detachTasks`).
    * The object a limited person's export leaves out stays the task's (`keepObjectsOutsideAccess`).
    * The export writes the classification a project task inherits (TASK_INHERITED_CLASSIFICATION). Read
    * back, a cell equal to the project's value on a task that has no value of its own is the inherited
    * value, left as it is: the task keeps following its project. Any other value is the task's own.
    */
   afterValidate: async (rows, context) => {
-    await refuseReadOnlyDetaches(detachTasks(rows, context.params.operation), context);
+    detachTasks(rows, context.params.operation);
     keepObjectsOutsideAccess(rows, context.params.operation);
     await checkIncidentIds(rows, context);
     await resolveRelatedObjects(rows, context);

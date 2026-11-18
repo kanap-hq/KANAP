@@ -7,8 +7,7 @@ import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
 import type { CsvCallerAccess, CsvImportParams, CsvImportResult } from '../../common/csv/csv-field.types';
 import { TasksCsvService } from '../tasks-csv.service';
-import { seedCompany, seedUser } from '../../spend/__tests__/cost-center.fixtures';
-import { applyDataAccess } from '../../data-access/data-access';
+import { seedUser } from '../../spend/__tests__/cost-center.fixtures';
 import { inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
 
 // The clearing rule of the tasks import (D21 of 26.11.9, lot I6): a blank cell keeps the stored value,
@@ -217,54 +216,9 @@ async function testDashDetaches() {
   });
 }
 
-/**
- * A person with limited data access detaches a task as on the screen: a task of a line they may modify
- * becomes standalone; a task of a line they only read is refused (the screen's 403), and stays.
- */
-async function testLimitedPersonDetaches() {
-  await inRolledBackTransaction(async (runner) => {
-    const tenantId = await seedTenant(runner, 'task-csv-clear-limited');
-    const limited = await seedUser(runner, tenantId, `limited-${tenantId.slice(0, 8)}@example.test`);
-    const editable = await seedCompany(runner, tenantId, 'Editable company');
-    const readable = await seedCompany(runner, tenantId, 'Readable company');
-    await runner.query(`UPDATE users SET data_access_mode = 'limited' WHERE tenant_id = $1 AND id = $2`, [tenantId, limited]);
-    await runner.query(
-      `INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, cost_center_id, access)
-       VALUES ($1, $2, 'company', $3, NULL, 'edit'), ($1, $2, 'company', $4, NULL, 'read')`,
-      [tenantId, limited, editable.companyId, readable.companyId],
-    );
-    const lines = await runner.query(
-      `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, paying_company_id)
-       VALUES ($1, 'Editable line', 'EUR', '2020-01-01', 1, $2), ($1, 'Readable line', 'EUR', '2020-01-01', 2, $3) RETURNING id`,
-      [tenantId, editable.companyId, readable.companyId],
-    );
-    const [mine, theirs] = await runner.query(
-      `INSERT INTO tasks (tenant_id, item_number, title, status, related_object_type, related_object_id, labels, viewer_ids, owner_ids)
-       VALUES ($1, 1, 'Mine', 'open', 'spend_item', $2, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb),
-              ($1, 2, 'Theirs', 'open', 'spend_item', $3, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb) RETURNING id`,
-      [tenantId, lines[0].id, lines[1].id],
-    );
-    assert.equal(await applyDataAccess(runner.manager, limited), 'limited');
-    const asLimited = (csv: string, dryRun: boolean) => service.import(file(csv), { dryRun, operation: 'upsert' }, {
-      manager: runner.manager, tenantId, userId: limited, isAdmin: false, access: { isAdmin: false, permissions: { tasks: 'member', budget: 'member' } } as CsvCallerAccess,
-    });
-    const refused = `id;related_object_type;related_object_id\n${theirs.id};-;-`;
-    for (const dryRun of [true, false]) {
-      const result = await asLimited(refused, dryRun);
-      assert.equal(result.ok, false, JSON.stringify(result));
-      assert.deepEqual(codes(result), [[2, 'id', 'CSV_TASK_READ_ONLY']]);
-    }
-    const detached = await asLimited(`id;related_object_type;related_object_id\n${mine.id};-;-`, false);
-    assert.deepEqual(counts(detached), [true, 1, 0, 2], JSON.stringify(detached.errors));
-    const rows = await runner.query(`SELECT title, related_object_type FROM tasks WHERE tenant_id = $1 ORDER BY item_number`, [tenantId]);
-    assert.deepEqual(rows.map((row: any) => [row.title, row.related_object_type]), [['Mine', null], ['Theirs', 'spend_item']]);
-  });
-}
-
 void runSpecs('task-csv-clearing-rule.integration.spec', [
   ['testDashClearsAndCounts', testDashClearsAndCounts],
   ['testDashRefused', testDashRefused],
   ['testRoundTrip', testRoundTrip],
   ['testDashDetaches', testDashDetaches],
-  ['testLimitedPersonDetaches', testLimitedPersonDetaches],
 ]);
