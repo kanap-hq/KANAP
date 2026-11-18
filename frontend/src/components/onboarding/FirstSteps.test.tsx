@@ -13,6 +13,18 @@ import StepHint, { STEP_OBJECT_POLL_MS } from './StepHint';
 import { writeActiveStep } from './activeStep';
 import { ONBOARDING_QUERY_KEY } from './useOnboarding';
 import { AGENT_NAME } from '../../config/product';
+import enCommon from '../../locales/en/common.json';
+import frCommon from '../../locales/fr/common.json';
+import deCommon from '../../locales/de/common.json';
+import esCommon from '../../locales/es/common.json';
+import enIt from '../../locales/en/it.json';
+import frIt from '../../locales/fr/it.json';
+import deIt from '../../locales/de/it.json';
+import esIt from '../../locales/es/it.json';
+import enOps from '../../locales/en/ops.json';
+import frOps from '../../locales/fr/ops.json';
+import deOps from '../../locales/de/ops.json';
+import esOps from '../../locales/es/ops.json';
 
 const env = vi.hoisted(() => ({
   summary: (() => Promise.resolve({ data: { items: [] } })) as (config?: unknown, url?: string) => Promise<unknown>,
@@ -579,4 +591,36 @@ describe('StepHint', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'The project born from the request' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/portfolio/projects/PRJ-4/summary?step=portfolio_project'));
   });
+});
+
+describe('own data hints that point to another screen', () => {
+  const locales = {
+    en: { common: enCommon, it: enIt, ops: enOps },
+    fr: { common: frCommon, it: frIt, ops: frOps },
+    de: { common: deCommon, it: deIt, ops: deOps },
+    es: { common: esCommon, it: esIt, ops: esOps },
+  };
+  // Length of each hint before it named its screens: the new one may not be longer.
+  const previousLength: Record<string, { own_technologies: number; own_contract: number }> = {
+    en: { own_technologies: 92, own_contract: 92 },
+    fr: { own_technologies: 87, own_contract: 102 },
+    de: { own_technologies: 111, own_contract: 123 },
+    es: { own_technologies: 85, own_contract: 94 },
+  };
+  const oneSentence = (text: string) => expect(text.match(/[.!?](\s|$)/g)).toHaveLength(1);
+
+  for (const [lng, files] of Object.entries(locales)) {
+    it(`names New technology, the application's Operations tab and the contract's Budget tab in ${lng}`, () => {
+      const steps = files.common.onboarding.firstSteps.steps;
+      const technologies = steps.own_technologies.hint;
+      const contract = steps.own_contract.hint;
+      expect(technologies).toContain(files.it.pages.technologies.newTechnology);
+      expect(technologies).toContain(files.it.workspace.application.tabs.operations);
+      expect(contract).toContain(files.ops.contracts.tabs.budget);
+      oneSentence(technologies);
+      oneSentence(contract);
+      expect(technologies.length).toBeLessThanOrEqual(previousLength[lng].own_technologies);
+      expect(contract.length).toBeLessThanOrEqual(previousLength[lng].own_contract);
+    });
+  }
 });
