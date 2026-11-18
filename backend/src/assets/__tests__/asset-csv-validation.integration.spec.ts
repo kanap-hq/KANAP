@@ -11,9 +11,11 @@ import { assetCsvConfig } from '../asset-csv.config';
 // The asset CSV dry run refuses a bad host name, a malformed IP, an unknown catalog value and an
 // impossible date, each as a coded row error. Loading that date returns the same error and leaves
 // the transaction usable: PostgreSQL used to abort it and the API answered 500.
-// A row without a site is a row error (CSV_VALUE_REQUIRED) and a file without the site column is refused.
-// An ip_2 address with an empty ip_1 cell is a row error (asset_ip_gap). A file that simply has no
-// ip_1 column is left alone.
+// A row without a site is a row error (CSV_VALUE_REQUIRED), and so is a new asset in a file without the
+// site column (T-I6i: only the columns that find the record are required in the header). An ip_2 address
+// with an empty ip_1 cell on a new asset is a row error (asset_ip_gap). A file that simply has no ip_1
+// column is left alone. On a stored asset, the clearing rule (D21 of 26.11.9): a blank cell keeps, `-`
+// clears without a check of its own, and is refused once on a value that cannot be empty.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
 const itOpsSettings: any = {
@@ -53,7 +55,7 @@ async function run() {
         [randomUUID(), tenantId],
       );
       const context = { manager: runner.manager, tenantId, userId: null, itOpsSettings };
-      const params = { dryRun: true, mode: 'enrich' as const, operation: 'upsert' as const };
+      const params = { dryRun: true, operation: 'upsert' as const };
 
       const csv = [
         COLUMNS.join(';'),
@@ -113,11 +115,11 @@ async function run() {
       const [none] = await runner.query(`SELECT count(*)::int AS n FROM assets WHERE tenant_id = $1`, [tenantId]);
       assert.equal(none.n, 0);
 
-      // Every asset has a site: a file without the column is refused as a whole.
+      // Every asset has a site: a new asset in a file without the column is a row error.
       const noColumn = await importer.import(assetCsvConfig, file('name;kind;environment\nNo column;vm;prod'), params, context);
       assert.equal(noColumn.ok, false);
-      assert.deepEqual(noColumn.errors.map((error) => [error.row, error.code, error.params?.missing]), [
-        [0, 'CSV_HEADER_MISSING_COLUMNS', 'location_reference'],
+      assert.deepEqual(noColumn.errors.map((error) => [error.row, error.column, error.code]), [
+        [2, 'location_reference', 'CSV_VALUE_REQUIRED'],
       ]);
 
       const secondOnly = await importer.import(
@@ -192,10 +194,60 @@ async function run() {
         [4, 'hostname', 'asset_hostname_invalid'],
         [4, 'ip_1_address', 'asset_ip_invalid'],
       ]);
+
+      await testClearingRule(runner, tenantId, params, context);
     });
   } finally {
     await dataSource.destroy();
   }
+}
+
+/**
+ * The clearing rule on a stored asset (D21 of 26.11.9): `-` clears a host name, a domain, an
+ * administration zone and an IP sub-value, without a check of its own; `-` on the type or the lifecycle
+ * is refused once, naming the column. A blank IP cell keeps its sub-value, so an earlier address it keeps
+ * is no gap; an earlier address `-` clears is one. `-` on the address of an entry takes the entry out,
+ * its type and subnet with it, each value counted.
+ */
+async function testClearingRule(runner: any, tenantId: string, params: { dryRun: boolean; operation: 'upsert' }, context: any) {
+  await runner.query(
+    `INSERT INTO assets (tenant_id, name, kind, environment, location_id, provider, hostname, domain, admin_zone, ip_addresses)
+     SELECT $1, 'Stored', 'vm', 'prod', id, 'on_prem', 'srv09', 'corp', 'tier_0', $2::jsonb FROM locations WHERE tenant_id = $1`,
+    [tenantId, JSON.stringify([{ type: 'host', ip: '10.1.1.1', subnet_cidr: '10.1.1.0/24' }, { type: 'host', ip: '10.1.1.2', subnet_cidr: null }])],
+  );
+  const stored = async () => (await runner.query(
+    `SELECT hostname, domain, admin_zone, fqdn, ip_addresses FROM assets WHERE tenant_id = $1 AND name = 'Stored'`, [tenantId],
+  ))[0];
+  const HEAD = 'name;hostname;domain;admin_zone;status;kind;ip_1_type;ip_1_address;ip_1_subnet_cidr;ip_2_type;ip_2_address;ip_2_subnet_cidr';
+  const run = (line: string, dryRun = true) => importer.import(assetCsvConfig, file(`${HEAD}\n${line}`), { ...params, dryRun }, context);
+  const counts = (result: any) => [result.ok, result.updated, result.unchanged, result.cleared];
+  const codes = (result: any) => result.errors.map((error: any) => [error.column, error.code]).sort();
+
+  // Blank cells keep everything.
+  assert.deepEqual(counts(await run('Stored;;;;;;;;;;;')), [true, 0, 1, 0]);
+  // A blank ip_1 address keeps the stored one: a new ip_2 address leaves no gap.
+  const kept = await run('Stored;;;;;;;;;;10.1.1.3;');
+  assert.deepEqual(codes(kept), []);
+  assert.deepEqual(counts(kept), [true, 1, 0, 0]);
+  // `-` on the type or the lifecycle: one refusal each, no catalog error.
+  const refused = await run('Stored;;;;-;-;;;;;;');
+  assert.deepEqual(codes(refused), [['kind', 'CSV_VALUE_CANNOT_BE_CLEARED'], ['status', 'CSV_VALUE_CANNOT_BE_CLEARED']]);
+  // `-` clears the host name, the domain, the zone and a subnet: four values, no host or catalog check.
+  const cleared = 'Stored;-;-;-;;;;;-;;;';
+  assert.deepEqual(codes(await run(cleared)), []);
+  assert.deepEqual(counts(await run(cleared)), [true, 1, 0, 4]);
+  assert.deepEqual(counts(await run(cleared, false)), [true, 1, 0, 4]);
+  let now = await stored();
+  assert.deepEqual([now.hostname, now.domain, now.admin_zone, now.fqdn], [null, null, null, null]);
+  assert.deepEqual(now.ip_addresses, [{ type: 'host', ip: '10.1.1.1', subnet_cidr: null }, { type: 'host', ip: '10.1.1.2', subnet_cidr: null }]);
+  // `-` on an address whose type the row keeps: the entry goes, its type with it (two values).
+  const address = 'Stored;;;;;;;;;;-;';
+  assert.deepEqual(counts(await run(address)), [true, 1, 0, 2]);
+  assert.deepEqual(counts(await run(address, false)), [true, 1, 0, 2]);
+  now = await stored();
+  assert.deepEqual(now.ip_addresses, [{ type: 'host', ip: '10.1.1.1', subnet_cidr: null }]);
+  // An earlier address `-` clears while a later one is set: a gap, as an empty cell on a new asset.
+  assert.deepEqual(codes(await run('Stored;;;;;;;-;;host;10.1.1.9;')), [['ip_2_address', 'asset_ip_gap']]);
 }
 
 run()

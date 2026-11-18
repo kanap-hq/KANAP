@@ -15,8 +15,8 @@ import { seedPerson } from '../../audit/__tests__/record-history.fixtures';
 // aside, as before, then accents aside for a person who reads the object's module, at the check as at
 // the load; the match is listed and may be undone, and a name nothing finds is refused at the check.
 // A person limited by data access never finds, nor sees named, a contract outside their access. A
-// phase is found in its project the same way. In merge mode, an e-mail nothing finds keeps the stored
-// viewers (or owners) of a task the row updates; elsewhere it is skipped, and said.
+// phase is found in its project the same way. An e-mail nothing finds keeps the stored viewers (or
+// owners) of a task the row updates; on a new task it is skipped, and said.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
 const resolver = new CsvResolverService();
@@ -178,7 +178,7 @@ async function testViewersOfAnUnknownEmail() {
     )).map((row: any) => [row.title, row.viewer_ids]));
     const warned = (result: CsvImportResult) => result.warnings.map((warning) => [warning.row, warning.column, warning.code, warning.params]);
 
-    // Merge: the task the row updates keeps its viewers; the new task takes the known one. Said at the check.
+    // The task the row updates keeps its viewers; the new task takes the known one. Said at the check.
     const check = await importCsv(runner, tenantId, csv, {});
     assert.equal(check.ok, true, JSON.stringify(check.errors));
     assert.deepEqual(warned(check), [
@@ -191,12 +191,13 @@ async function testViewersOfAnUnknownEmail() {
     assert.deepEqual(now.get('Kept'), [ada], 'the stored viewers are kept whole');
     assert.deepEqual(now.get('New task'), [ada], 'a new task takes the viewers found');
 
-    // Replace: the unknown e-mail is skipped, and said.
-    const replaced = await importCsv(runner, tenantId, csv.split('\n').slice(0, 2).join('\n'), { dryRun: false });
-    assert.equal(replaced.ok, true, JSON.stringify(replaced.errors));
-    assert.deepEqual(warned(replaced), [[2, 'viewer_email_2', 'CSV_REFERENCE_NOT_FOUND_SKIPPED', { value: 'ghost@example.test' }]]);
+    // The same file again: an e-mail nothing finds always keeps the stored list of a task the row updates.
+    const again = await importCsv(runner, tenantId, csv.split('\n').slice(0, 2).join('\n'), { dryRun: false });
+    assert.equal(again.ok, true, JSON.stringify(again.errors));
+    assert.deepEqual(warned(again), [[2, 'viewer_email_2', 'CSV_REFERENCE_NOT_FOUND_KEPT', { value: 'ghost@example.test' }]]);
+    assert.equal(again.cleared, 0);
     now = await viewers();
-    assert.deepEqual(now.get('Kept'), [bob], 'replace writes the viewers found');
+    assert.deepEqual(now.get('Kept'), [ada], 'the stored viewers are kept whole');
   });
 }
 

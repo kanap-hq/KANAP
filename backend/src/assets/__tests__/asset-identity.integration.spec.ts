@@ -126,7 +126,7 @@ async function run() {
         `INSERT INTO locations (id, tenant_id, location_reference, name, hosting_type) VALUES ($1, $2, 'LOC-1', 'Paris', 'on_prem')`,
         [randomUUID(), tenantId],
       );
-      const params = { dryRun: true, mode: 'enrich' as const, operation: 'upsert' as const };
+      const params = { dryRun: true, operation: 'upsert' as const };
       const duplicateHost = await csv.import(
         file('name;location_reference;kind;environment;hostname;domain\nBrand new;LOC-1;vm;prod;nyc-sw-01;corp'),
         params,
