@@ -506,13 +506,12 @@ Trois modes d'export sont disponibles :
 1. **Préparez votre fichier** : un fichier CSV ou un classeur Excel (`.xlsx`). Enregistrez un fichier CSV en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV et Excel](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
-   - **Mode** :
-     - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes : ne mettez à jour que ce que vous spécifiez
-     - `Remplacer` : Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée. Une colonne absente du fichier garde ses valeurs. Certains champs ne peuvent pas être vidés : la **Vérification préalable** les signale.
    - **Opération** :
      - `Upsert` (par défaut) : Créer de nouvelles tâches ou mettre à jour les existantes
      - `Mise à jour uniquement` : Ne modifier que les tâches existantes, ignorer les nouvelles
      - `Insertion uniquement` : Ne créer que de nouvelles tâches, ignorer les existantes
+
+   Une cellule vide garde la valeur enregistrée, et `-` l'efface. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing) et [Correspondance et mises à jour](#correspondance-et-mises-a-jour).
 
 3. **Validez d'abord** : Cliquez sur **Vérification préalable** pour valider votre fichier sans apporter de modifications. Examinez les erreurs et avertissements.
 
@@ -560,10 +559,10 @@ Trois modes d'export sont disponibles :
 |-------------|-------------|-------|
 | `assignee_email` | Personne responsable | Doit correspondre à l'e-mail d'un utilisateur existant |
 | `creator_email` | E-mail du demandeur | Export uniquement (affiché comme **Requestor Email** dans les métadonnées de champ) |
-| `viewer_email_1` à `_4` | Observateurs | E-mails d'utilisateurs existants. Un e-mail inconnu est laissé de côté, avec un avertissement |
-| `owner_email_1` à `_4` | Responsables | E-mails d'utilisateurs existants. Un e-mail inconnu est laissé de côté, avec un avertissement |
+| `viewer_email_1`, `viewer_email_2`, ... | Observateurs | E-mails d'utilisateurs existants. Un e-mail inconnu est laissé de côté, avec un avertissement |
+| `owner_email_1`, `owner_email_2`, ... | Responsables | E-mails d'utilisateurs existants. Un e-mail inconnu est laissé de côté, avec un avertissement |
 
-En mode `Enrichir`, une ligne qui met à jour une tâche garde ses observateurs quand une cellule d'observateur nomme un e-mail inconnu, et ses responsables de la même façon.
+Les observateurs et les responsables suivent chacun leurs propres cellules. Quand elles sont toutes vides, la tâche garde la liste enregistrée. Les e-mails des cellules forment la liste entière et remplacent la liste enregistrée. `-` seul vide la liste, et un `-` à côté d'e-mails n'ajoute rien. Une ligne qui met à jour une tâche garde ses observateurs quand une cellule d'observateur nomme un e-mail inconnu, et ses responsables de la même façon.
 
 **Autres champs** :
 
@@ -610,9 +609,13 @@ Le système normalise les valeurs automatiquement lors de l'import. Un statut ou
 
 ### Correspondance et mises à jour
 
-Les tâches sont identifiées par **titre + related_object_id** (insensible à la casse). Lorsqu'une correspondance est trouvée :
-  - En mode `Enrichir` : Seules les valeurs CSV non vides mettent à jour la tâche
-  - En mode `Remplacer` : Les colonnes du fichier sont mises à jour, et une cellule vide efface la valeur enregistrée. Les colonnes absentes du fichier gardent leurs valeurs. Le titre, l'`id`, le statut et les champs obligatoires ne peuvent pas être vidés : la **Vérification préalable** signale une erreur sur la ligne. Une nouvelle tâche reçoit les valeurs par défaut.
+Les tâches sont identifiées par **titre + related_object_id** (insensible à la casse). Lorsqu'une correspondance est trouvée, une cellule vide garde la valeur enregistrée, et `-` l'efface. Les colonnes absentes du fichier gardent leurs valeurs.
+
+- `-` efface la phase, la source, la catégorie, le stream, la société, le responsable (`assignee_email`) et les étiquettes.
+- `-` dans les colonnes de l'objet lié détache la tâche, comme le fait **Autonome** dans **Lié à** à l'écran.
+- Le titre, l'`id`, le statut et la priorité ne peuvent pas être effacés : `-` y fait refuser la ligne, et le message nomme la colonne.
+
+Une nouvelle tâche reçoit les valeurs par défaut.
 
 Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur titre + objet lié.
 
@@ -630,7 +633,7 @@ Ces champs sont inclus dans **Export complet** à des fins de reporting mais exc
 
 ### Limitations
 
-  - **Maximum 4 observateurs/responsables** : Les tâches prennent en charge jusqu'à 4 e-mails d'observateurs et 4 e-mails de responsables dans un fichier
+  - **Observateurs et responsables** : l'export écrit autant de colonnes `viewer_email_N` et `owner_email_N` que la plus longue liste, quatre au moins. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
   - **Classification pour tâches autonomes et de projet uniquement** : Source, Catégorie, Stream et Société peuvent être définis sur les tâches autonomes et de projet (pas sur les tâches OPEX, Contrat ou CAPEX)
   - **Phase nécessite un projet** : L'assignation de phase ne fonctionne que pour les tâches de projet
   - **Liens Application/Actif non dans CSV** : Utilisez le tiroir Propriétés de l'espace de travail pour lier les tâches aux applications et actifs

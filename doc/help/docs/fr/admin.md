@@ -223,10 +223,12 @@ Les colonnes :
 |---|---|
 | `email` | Obligatoire. Les lignes sont rapprochées par cette adresse, écrivez-la donc telle que l'espace de travail la contient |
 | `first_name`, `last_name` | Le nom de la personne |
-| `role` | Le rôle à attribuer. Une cellule vide donne le rôle **Contact** |
+| `role` | Le rôle à attribuer. Une nouvelle personne sans rôle reçoit le rôle **Contact** |
 | `company_name` | La société, par son nom. Facultatif |
-| `department_name` | Le département, par son nom. Il nécessite un `company_name` |
-| `status` | `contact`, `invited`, `enabled` ou `disabled`. Une cellule vide donne `contact` |
+| `department_name` | Le département, par son nom, dans la société de la ligne. Une ligne qui change la société efface le département, sauf si elle en nomme un |
+| `status` | `contact`, `invited`, `enabled` ou `disabled`. Une nouvelle personne sans statut reçoit `contact` |
+
+Seul `email` est obligatoire, et une colonne absente du fichier n'est jamais écrite. Sur une personne que l'espace de travail connaît déjà, une cellule vide garde la valeur enregistrée, rôle et statut compris : une ligne sans eux ne change l'accès de personne. `-` efface le prénom, le nom, la société et le département. `-` ne peut pas effacer l'e-mail, le rôle ni le statut : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing).
 
 Un rôle nommé par le fichier et absent de votre espace de travail est créé par le chargement, avec une description par défaut. La vérification le liste et ne crée rien : un fichier que vous vous contentez de vérifier ne change aucun rôle. Un nom présent deux fois dans le fichier n'est gardé qu'une fois, la première ligne l'emportant. Un nom que la page affiche pour un rôle système ou intégré, dans l'une de ses langues, est refusé pour cette ligne.
 

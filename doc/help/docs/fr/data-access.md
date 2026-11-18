@@ -164,6 +164,7 @@ claire.dubois@example.com;all;;read
 ```
 
 - Une personne présente dans le fichier reçoit exactement les nœuds listés pour elle, en **Limité à**. Une personne absente du fichier ne change pas.
+- Chaque ligne décrit un nœud : ce fichier n'a donc aucune valeur à garder ou à effacer. La règle de [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing) ne s'applique pas ici.
 - Un import limite toujours. Pour redonner toutes les données à quelqu'un, passez par la fenêtre de l'utilisateur.
 - La vérification vient d'abord et n'écrit rien. Elle signale chaque ligne refusée : personne inconnue, société ou centre de coûts inconnu, type ou accès invalide, nœud listé deux fois pour une même personne, Administrateur, votre propre compte. Un fichier avec une erreur ne charge rien.
 - L'export écrit le même format, pour les personnes limitées. Une personne limitée sans nœud n'a pas de ligne : réimporter le fichier la laisse telle quelle.
