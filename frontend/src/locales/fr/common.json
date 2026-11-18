@@ -1653,7 +1653,7 @@
         },
         "own_contract": {
           "title": "Un contrat lié",
-          "hint": "Créez votre premier contrat et, le cas échéant, liez-le à la ligne budgétaire que vous venez de créer."
+          "hint": "Créez votre premier contrat, puis liez-le à votre ligne budgétaire dans l'onglet Budget du contrat."
         },
         "own_report": {
           "title": "Votre premier rapport",
@@ -1690,7 +1690,7 @@
         },
         "own_technologies": {
           "title": "Vos technologies",
-          "hint": "Activez des technologies et liez-les à vos applications. {{product}} s'occupe du reste."
+          "hint": "Ajoutez-en avec Nouvelle technologie et liez-les à vos applications, onglet Relations."
         },
         "own_assets": {
           "title": "Vos actifs",
