@@ -948,10 +948,14 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
 
   // Labels of the line's references, from the detail: the pickers and the owners show them without any request.
   const references = React.useMemo(() => itemReferences(data), [data]);
-  // The cost center shown with that reference, read from the same line: on a line switch the detail
-  // is the new line's one render before the form follows, and the old line's id would not match the
-  // new reference (the pickers would then load the tree to name it).
-  const shownCostCenterId = data?.id && form.id !== data.id ? (data.cost_center_id || '') : form.cost_center_id;
+  // The cost center and the owners shown with the detail's labels, read from the same line.
+  // On a line switch the detail is the new line's one render before the form follows, and the
+  // old line's ids would not match the new labels (the cost center would load the tree, and
+  // each owner picker would look the previous person up).
+  const shownFromDetail = !!(data?.id && form.id !== data.id);
+  const shownCostCenterId = shownFromDetail ? (data.cost_center_id || '') : form.cost_center_id;
+  const shownOwnerItId = shownFromDetail ? (data.owner_it_id || '') : form.owner_it_id;
+  const shownOwnerBusinessId = shownFromDetail ? (data.owner_business_id || '') : form.owner_business_id;
   const analyticsOptions = React.useMemo(() => analyticsValueOptions(data), [data]);
   // The chosen cost center's company: a new paying company drops a cost center of another company.
   const chosenCostCenterId = isCreate ? placementDraft.cost_center_id : shownCostCenterId;
@@ -1216,11 +1220,11 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
           </CreationPreview>
         ) : (
           <BudgetMetadataBar
-            ownerItName={ownerName(references.owner_it, form.owner_it_id)}
-            ownerBizName={ownerName(references.owner_business, form.owner_business_id)}
+            ownerItName={ownerName(references.owner_it, shownOwnerItId)}
+            ownerBizName={ownerName(references.owner_business, shownOwnerBusinessId)}
             status={form.status}
-            ownerItId={form.owner_it_id || null}
-            ownerBizId={form.owner_business_id || null}
+            ownerItId={shownOwnerItId || null}
+            ownerBizId={shownOwnerBusinessId || null}
             costCenterId={shownCostCenterId || null}
             costCenter={matching(references.cost_center, shownCostCenterId)}
             lineRef={uuid || null}
