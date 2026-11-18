@@ -17,6 +17,7 @@ import type { ExportFileFormat } from '../common/xlsx';
 import { portfolioProjectCsvConfig } from './portfolio-project-csv.config';
 import { inIdOrder } from '../common/pagination';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
+import { repairBeforeSlotWrite } from './portfolio-csv-document-slots';
 
 /**
  * Service for importing and exporting Portfolio Projects via CSV
@@ -45,7 +46,8 @@ export class PortfolioProjectsCsvService {
           }
         }
       },
-      afterCommit: async (entities: any[], context) => {
+      afterCommit: async (entities: any[], context, written) => {
+        const rowOf = new Map((written ?? []).map(({ row, entity }) => [entity, row]));
         for (const entity of entities) {
           const source = {
             id: entity.id,
@@ -53,6 +55,16 @@ export class PortfolioProjectsCsvService {
             item_number: entity.item_number ?? null,
             name: entity.name || '',
           };
+
+          // A project with no purpose document yet gets it as its screen makes it, first.
+          const row = rowOf.get(entity);
+          let writePurpose = Object.prototype.hasOwnProperty.call(entity, '__csv_managed_purpose');
+          if (writePurpose && row && !row.isInsert) {
+            writePurpose = await repairBeforeSlotWrite(
+              this.integratedDocs, 'projects', String(entity.id), 'purpose',
+              (entity as any).__csv_managed_purpose, row.existingEntity?.purpose, context,
+            );
+          }
 
           await this.integratedDocs.provisionForProject(
             source,
@@ -63,7 +75,7 @@ export class PortfolioProjectsCsvService {
             { manager: context.manager },
           );
 
-          if (Object.prototype.hasOwnProperty.call(entity, '__csv_managed_purpose')) {
+          if (writePurpose) {
             await this.integratedDocs.writeSourceSlotContent(
               'projects',
               source,

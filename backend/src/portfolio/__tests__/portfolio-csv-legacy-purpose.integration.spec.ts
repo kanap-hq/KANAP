@@ -10,6 +10,7 @@ import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
 import type { CsvImportResult } from '../../common/csv';
 import dataSource from '../../data-source';
+import { prepareRecoveredContent } from '../../common/markdown-worker';
 import {
   boundDocuments,
   inRolledBackTransaction,
@@ -128,10 +129,113 @@ async function testRequests() {
   });
 }
 
+// Pass H: that column may hold HTML (a text saved before the Markdown documents). The screen turns it
+// into Markdown when it opens the record (`repairSourceSlot`), images migrated. The import compares
+// with that Markdown, and a load that writes the record first repairs it as the screen does: the
+// document gets the converted text, and the load no longer fails on the HTML.
+const HTML_GOAL = '<p>Old <strong>goal</strong></p>';
+const MARKDOWN_GOAL = 'Old **goal**';
+const PIXEL = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+const HTML_WITH_IMAGE = `<p>Goal <img src="data:image/png;base64,${PIXEL}"></p>`;
+
+/** The record's managed document of `slot`, read in the table (no repair). */
+async function storedDocument(runner: QueryRunner, tenantId: string, type: string, id: string, slot: string) {
+  const rows = await runner.query(
+    `SELECT d.id, d.content_markdown FROM integrated_document_bindings b
+       JOIN documents d ON d.id = b.document_id AND d.tenant_id = b.tenant_id
+      WHERE b.tenant_id = $1 AND b.source_entity_type = $2 AND b.source_entity_id = $3 AND b.slot_key = $4`,
+    [tenantId, type, id, slot],
+  );
+  return rows[0] as { id: string; content_markdown: string } | undefined;
+}
+
+/** An export of these records, as the list's export button gives it, the text of the file. */
+async function exported(service: Service, manager: EntityManager, tenantId: string, ids: string[]) {
+  const result = await service.export({ manager, tenantId, language: 'en', ids });
+  return String(result.content).replace(/^﻿/, '');
+}
+
+async function testHtmlProjects() {
+  await inRolledBackTransaction(async (runner) => {
+    const seed = await seedCreationTenant(runner, { portfolio_projects: 'admin', portfolio_requests: 'admin', knowledge: 'member' });
+    const { tenantId, creatorId: userId } = seed;
+    const { documents, projects } = servicesFor(runner.manager);
+    const project = async (n: number, purpose: string) => {
+      const id = randomUUID();
+      await runner.query(
+        `INSERT INTO portfolio_projects (id, tenant_id, item_number, name, status, origin, execution_progress, purpose)
+         VALUES ($1, $2, $3, $4, 'in_progress', 'legacy', 0, $5)`,
+        [id, tenantId, n, `Html project ${n}`, purpose],
+      );
+      return id;
+    };
+    // The image goes into the document's attachments as the person who imports, as when that person
+    // opens the project: writing in the documents' library is needed (`knowledge`), at the screen too.
+    const [renamed, left, blank, roundTrip, pictured] = [
+      await project(1, HTML_GOAL), await project(2, HTML_GOAL), await project(3, HTML_GOAL),
+      await project(4, HTML_GOAL), await project(5, HTML_WITH_IMAGE),
+    ];
+
+    assert.deepEqual(await checkAndLoad(projects, runner, tenantId, userId, `id;name\n${renamed};Renamed project`), { updated: 1, unchanged: 0, cleared: 0 }, 'a file that renames the project');
+    assert.equal((await storedDocument(runner, tenantId, 'projects', renamed, 'purpose'))?.content_markdown, MARKDOWN_GOAL, 'the document holds the converted text');
+    assert.equal(await shown(documents, runner, 'projects', renamed, 'purpose', userId), MARKDOWN_GOAL, 'the screen reads it');
+
+    assert.deepEqual(await checkAndLoad(projects, runner, tenantId, userId, `id;name\n${left};Html project 2`), { updated: 0, unchanged: 1, cleared: 0 }, 'a file without the column');
+    assert.deepEqual(await checkAndLoad(projects, runner, tenantId, userId, `id;name;purpose\n${blank};Html project 3;`), { updated: 0, unchanged: 1, cleared: 0 }, 'a blank cell');
+
+    const file = await exported(projects, runner.manager, tenantId, [roundTrip]);
+    assert.deepEqual(await checkAndLoad(projects, runner, tenantId, userId, file), { updated: 0, unchanged: 1, cleared: 0 }, 'an export imported as it is');
+    assert.equal(await boundDocuments(runner, tenantId, 'projects', roundTrip), 0, 'nothing written: no document');
+
+    assert.deepEqual(await checkAndLoad(projects, runner, tenantId, userId, `id;name\n${pictured};Pictured project`), { updated: 1, unchanged: 0, cleared: 0 }, 'a renamed project with an inline image');
+    const document = await storedDocument(runner, tenantId, 'projects', pictured, 'purpose');
+    assert.ok(document, 'the document exists');
+    assert.doesNotMatch(document!.content_markdown, /data:image/, 'the inline image is migrated');
+    const attachments = await runner.query(`SELECT id FROM document_attachments WHERE tenant_id = $1 AND document_id = $2`, [tenantId, document!.id]);
+    assert.equal(attachments.length, 1, 'the image is an attachment of the document');
+    assert.match(document!.content_markdown, new RegExp(`^Goal !\\[\\]\\(/api/knowledge/inline/[^/]+/${attachments[0].id}\\)$`), 'the text points at it');
+  });
+}
+
+async function testHtmlRequests() {
+  await inRolledBackTransaction(async (runner) => {
+    const seed = await seedCreationTenant(runner, { portfolio_projects: 'admin', portfolio_requests: 'admin' });
+    const { tenantId, creatorId: userId } = seed;
+    const { documents, requests } = servicesFor(runner.manager);
+    const request = async (n: number) => {
+      const id = randomUUID();
+      await runner.query(
+        `INSERT INTO portfolio_requests (id, tenant_id, item_number, name, status, purpose, risks)
+         VALUES ($1, $2, $3, $4, 'pending_review', $5, '<ul><li>Old risk</li></ul>')`,
+        [id, tenantId, n, `Html request ${n}`, HTML_GOAL],
+      );
+      return id;
+    };
+    const [renamed, left, blank, roundTrip] = [await request(1), await request(2), await request(3), await request(4)];
+    const risks = (await prepareRecoveredContent('<ul><li>Old risk</li></ul>'))!;
+    assert.doesNotMatch(risks, /</, 'the risks convert to Markdown');
+
+    assert.deepEqual(await checkAndLoad(requests, runner, tenantId, userId, `id;name\n${renamed};Renamed request`), { updated: 1, unchanged: 0, cleared: 0 }, 'a file that renames the request');
+    assert.equal((await storedDocument(runner, tenantId, 'requests', renamed, 'purpose'))?.content_markdown, MARKDOWN_GOAL, 'the purpose document holds the converted text');
+    assert.equal((await storedDocument(runner, tenantId, 'requests', renamed, 'risks_mitigations'))?.content_markdown, risks, 'the risks document holds the converted text');
+    assert.equal(await shown(documents, runner, 'requests', renamed, 'purpose', userId), MARKDOWN_GOAL, 'the screen reads the purpose');
+    assert.equal(await shown(documents, runner, 'requests', renamed, 'risks_mitigations', userId), risks, 'the screen reads the risks');
+
+    assert.deepEqual(await checkAndLoad(requests, runner, tenantId, userId, `id;name\n${left};Html request 2`), { updated: 0, unchanged: 1, cleared: 0 }, 'a file without the columns');
+    assert.deepEqual(await checkAndLoad(requests, runner, tenantId, userId, `id;name;purpose;risks\n${blank};Html request 3;;`), { updated: 0, unchanged: 1, cleared: 0 }, 'blank cells');
+
+    const file = await exported(requests, runner.manager, tenantId, [roundTrip]);
+    assert.deepEqual(await checkAndLoad(requests, runner, tenantId, userId, file), { updated: 0, unchanged: 1, cleared: 0 }, 'an export imported as it is');
+    assert.equal(await boundDocuments(runner, tenantId, 'requests', roundTrip), 0, 'nothing written: no document');
+  });
+}
+
 async function main() {
   const specs: Array<[string, () => Promise<void>]> = [
     ['a project without a purpose document keeps its text', testProjects],
     ['a request without purpose and risks documents keeps its texts', testRequests],
+    ['a project whose purpose column holds HTML is repaired as the screen does', testHtmlProjects],
+    ['a request whose columns hold HTML is repaired as the screen does', testHtmlRequests],
   ];
   await dataSource.initialize();
   let failed = 0;
