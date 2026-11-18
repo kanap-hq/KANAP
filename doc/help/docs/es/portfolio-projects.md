@@ -401,7 +401,8 @@ Las importaciones están diseñadas para cambios masivos controlados:
 
 - descargue primero una plantilla cuando necesite la estructura correcta, o un ejemplo para ver proyectos de ejemplo y los valores que admite cada columna ([Archivos de ejemplo](csv-files.md#example-files))
 - valide antes de importar
-- use opciones avanzadas para elegir el comportamiento de enriquecimiento vs reemplazo y las reglas de inserción/actualización
+- elija si el archivo crea proyectos, los actualiza o ambas cosas
+- en un proyecto que el archivo actualiza, una celda vacía conserva el valor guardado, y `-` lo borra, incluido el `purpose`. `-` no puede borrar el origen: la fila se rechaza. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing)
 - una fila nueva sin procedencia se guarda como Histórico. Una fila nueva cuya procedencia es `standard` se rechaza: la procedencia Solicitud proviene de la conversión de una solicitud. Un proyecto que ya tiene esa procedencia la conserva cuando el archivo actualiza la fila
 
 La importación masiva es útil para mantenimiento del portafolio a gran escala, pero no es un atajo a la gobernanza del proyecto. La planificación de fases, las tareas, el conocimiento y el control continuo de entrega siguen perteneciendo al espacio de trabajo.
