@@ -10,6 +10,7 @@ import {
 import { richTextCell } from '../common/csv/rich-text-cell';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
+import { settleWithSlotBodies } from './portfolio-csv-document-slots';
 
 // Status label to code mapping
 const statusLookup = new Map<string, string>([
@@ -593,6 +594,9 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
       ],
     },
   ],
+
+  /** The purpose of the project a row updates is its document's text (lot I6 of 26.11.9). */
+  settleRows: (rows, context) => settleWithSlotBodies(rows, context, 'projects', { purpose: 'purpose' }),
 
   /** A purpose cell that repeats its document is kept as stored, whatever tags it holds. */
   afterValidate: async (rows, context) => {
