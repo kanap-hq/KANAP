@@ -4866,6 +4866,82 @@ async function testToolOutputApprovalMarkerDoesNotCreateDurableApproval() {
   assert.equal(approvalCalls.reject, 0);
 }
 
+/**
+ * A failed approval states its error once (issue #1700). When the card's summary already is the
+ * error, the message is that sentence alone. An import whose summary lists the refused rows keeps
+ * the summary and the error line. A failure with no summary keeps the fixed sentence and the error.
+ */
+async function testFailedApprovalStatesTheErrorOnce() {
+  const orchestrator = createOrchestrator().orchestrator;
+  const manager = { query: async () => [] };
+  const say = (preview: Record<string, unknown>, language: string) =>
+    (orchestrator as any).buildPreviewResultsAssistantText(manager, [preview], [], language);
+
+  const english = await say({
+    target: { entity_type: 'tasks', entity_id: 'task-1', ref: 'T-4' },
+    status: 'failed',
+    summary: 'Task not found. ',
+    error_message: 'Task not found.',
+  }, 'en');
+  assert.equal(english, 'Task not found.');
+
+  const french = await say({
+    target: { entity_type: 'tasks', entity_id: 'task-1', ref: 'T-4' },
+    status: 'failed',
+    summary: 'Tâche introuvable.',
+    error_message: 'Tâche introuvable.',
+  }, 'fr');
+  assert.equal(french, 'Tâche introuvable.');
+
+  // The summary's references become links before it is shown. The comparison uses the text
+  // before that rewrite, so the error line does not come back beside the linked sentence.
+  const linked = await say({
+    target: { entity_type: 'tasks', entity_id: 'task-1', ref: 'T-4' },
+    status: 'failed',
+    summary: 'Task "T-4" not found.',
+    error_message: 'Task "T-4" not found.',
+  }, 'en');
+  assert.equal(linked, 'Task "[T-4](/portfolio/tasks/task-1)" not found.');
+
+  const imported = await say({
+    target: { entity_type: 'imports', entity_id: null, ref: null, title: 'budget.xlsx' },
+    status: 'failed',
+    summary: 'Import of "budget.xlsx" failed. Line 5: BL-67 changed since the check.',
+    error_message: 'The check of this file found errors, so nothing was imported.',
+  }, 'en');
+  assert.equal(
+    imported,
+    'Import of "budget.xlsx" failed. Line 5: BL-67 changed since the check.\n\nError: The check of this file found errors, so nothing was imported.',
+  );
+
+  const importedFr = await say({
+    target: { entity_type: 'imports', entity_id: null, ref: null, title: 'budget.xlsx' },
+    status: 'failed',
+    summary: "L'import de « budget.xlsx » a échoué. Ligne 5 : BL-67 a changé depuis la vérification.",
+    error_message: "La vérification de ce fichier a trouvé des erreurs : rien n'a été importé.",
+  }, 'fr');
+  assert.equal(
+    importedFr,
+    "L'import de « budget.xlsx » a échoué. Ligne 5 : BL-67 a changé depuis la vérification.\n\nErreur : La vérification de ce fichier a trouvé des erreurs : rien n'a été importé.",
+  );
+
+  const bare = await say({
+    target: { entity_type: 'tasks', entity_id: 'task-1', ref: 'T-4' },
+    status: 'failed',
+    summary: '',
+    error_message: 'Task not found.',
+  }, 'en');
+  assert.equal(bare, 'The approved change failed. Error: Task not found.');
+
+  const bareFr = await say({
+    target: { entity_type: 'tasks', entity_id: 'task-1', ref: 'T-4' },
+    status: 'failed',
+    summary: '',
+    error_message: 'Tâche introuvable.',
+  }, 'fr');
+  assert.equal(bareFr, "La modification approuvée n'a pas pu être appliquée. Erreur : Tâche introuvable.");
+}
+
 async function run() {
   const reads: Array<{ sql: string; refs: string[] }> = [];
   const manager = { query: async (sql: string, [refs]: [string[]]) => {
@@ -4922,6 +4998,7 @@ async function run() {
     germanFollowUp,
     'Die genehmigte Änderung ist fehlgeschlagen. Fehler: Task changed.\n\nAbhängige Vorschauen bereit, die auf Ihre Genehmigung warten: 1.\n- T-7',
   );
+  await testFailedApprovalStatesTheErrorOnce();
   await testSimpleTextResponse();
   await testToolCallFlow();
   await testAssistantMessagesRecordTheirModelPricesAndCost();
