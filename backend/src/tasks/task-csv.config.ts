@@ -5,6 +5,10 @@ import {
   CsvFieldType,
   CsvImportContext,
   CsvImportRow,
+  importCell,
+  noteCleared,
+  refuseClear,
+  removedEntries,
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { richTextCell } from '../common/csv/rich-text-cell';
@@ -91,14 +95,39 @@ function normalizeTaskCodes(entity: any): void {
   }
 }
 
-/** The users a row's numbered email columns name, in order; null when none. */
-function csvUserIds(raw: Record<string, string>, prefix: string, userByEmail: Map<string, string>): string[] | null {
-  const ids: string[] = [];
-  for (let i = 1; i <= 4; i++) {
-    const id = userByEmail.get((raw[`${prefix}_${i}`] || '').trim().toLowerCase());
-    if (id) ids.push(id);
+/** The addresses a row's numbered email columns give, in order (a `-` among them adds nothing). */
+function csvEmails(raw: Record<string, string>, prefix: string): string[] {
+  return [1, 2, 3, 4].flatMap((i) => {
+    const cell = importCell(raw, `${prefix}_${i}`);
+    return cell.kind === 'value' ? [cell.text] : [];
+  });
+}
+
+/** Whether a row's numbered email columns clear the list: a `-`, and no address. */
+function clearsPeople(raw: Record<string, string>, prefix: string): boolean {
+  return csvEmails(raw, prefix).length === 0 && [1, 2, 3, 4].some((i) => importCell(raw, `${prefix}_${i}`).kind === 'clear');
+}
+
+/** A cell's text, by the clearing rule: '' for a blank cell, a `-` or a column the file leaves out. */
+function cellText(row: CsvImportRow, column: string): string {
+  const cell = importCell(row.raw, column);
+  return cell.kind === 'value' ? cell.text : '';
+}
+
+/** The columns of a task's related object: `-` on them is refused, the task keeps its object. */
+const RELATED_OBJECT_COLUMNS = ['related_object_type', 'related_object_id', 'related_object_name'] as const;
+
+/**
+ * `-` on a related object column of a stored task: a row error naming it (a new task reads it as
+ * blank; a matched row an insert-only import skips is not checked).
+ */
+function refuseObjectClears(rows: CsvImportRow[], operation: string): void {
+  for (const row of rows) {
+    if (row.isInsert || skippedByOperation(row, operation)) continue;
+    for (const column of RELATED_OBJECT_COLUMNS) {
+      if (importCell(row.raw, column).kind === 'clear') refuseClear(row, column);
+    }
   }
-  return ids.length > 0 ? ids : null;
 }
 
 const hasColumns = (raw: Record<string, string>, prefix: string) => [1, 2, 3, 4].some((i) => `${prefix}_${i}` in raw);
@@ -248,14 +277,14 @@ export function isContractOutsideAccessLabel(name: unknown): boolean {
 /**
  * A limited person's tasks export leaves out the object they cannot read (`TasksCsvService.export`):
  * a contract by the list's label and an empty id, a budget line by an empty id and name. Read back
- * on a task of that type, the row keeps the task's stored object, in full replace as in enrich mode.
+ * on a task of that type, the row keeps the task's stored object, in all cases.
  * The label never names a contract: a labelled row without a stored contract to keep is refused.
  */
 function keepObjectsOutsideAccess(rows: CsvImportRow[], operation: string): void {
   for (const row of rows) {
-    if (row.errors.length > 0 || String(row.raw.related_object_id ?? '').trim()) continue;
-    const type = objectTypeLookup.get(String(row.raw.related_object_type ?? '').trim().toLowerCase());
-    const name = String(row.raw.related_object_name ?? '').trim();
+    if (row.errors.length > 0 || cellText(row, 'related_object_id')) continue;
+    const type = objectTypeLookup.get(cellText(row, 'related_object_type').toLowerCase());
+    const name = cellText(row, 'related_object_name');
     const labelled = type === 'contract' && isContractOutsideAccessLabel(name);
     const hiddenLine = (type === 'spend_item' || type === 'capex_item') && !name;
     if (!labelled && !hiddenLine) continue;
@@ -287,9 +316,9 @@ function importedValue(row: CsvImportRow, key: string): any {
   return Object.prototype.hasOwnProperty.call(row.parsed, key) ? row.parsed[key] : row.existingEntity?.[key];
 }
 
-/** Whether the row's own cell gives the related object's id (merge mode copies the stored id into a blank one). */
+/** Whether the row's own cell gives the related object's id (a blank cell keeps the stored id in `parsed`). */
 function givesRelatedObjectId(row: CsvImportRow): boolean {
-  return String(row.raw.related_object_id ?? '').trim() !== '';
+  return cellText(row, 'related_object_id') !== '';
 }
 
 /**
@@ -383,7 +412,7 @@ async function checkIncidentIds(rows: CsvImportRow[], context: CsvImportContext)
   const giving = rows.filter((row) => row.errors.length === 0 && !skippedByOperation(row, context.params.operation)
     && givesRelatedObjectId(row) && importedObjectType(row) === 'incident');
   if (giving.length === 0) return;
-  const idOf = (row: CsvImportRow) => String(row.raw.related_object_id).trim();
+  const idOf = (row: CsvImportRow) => cellText(row, 'related_object_id');
   const ids = [...new Set(giving.map(idOf).filter((id) => TASK_UUID_RE.test(id)).map((id) => id.toLowerCase()))];
   const params: unknown[] = [context.tenantId, ids];
   const visible = incidentVisibilitySql('i', incidentViewerForSql(context.viewer), params);
@@ -407,8 +436,9 @@ async function checkIncidentIds(rows: CsvImportRow[], context: CsvImportContext)
  * that phase is the project's; else the project's phase of that name case aside, then accents aside
  * for a person who reads the projects and has not undone that match (a match, listed). Several: the
  * row is refused. None: refused when the workspace has the name elsewhere; otherwise the lookup's
- * warning stands (the phase is cleared, or kept on an update in merge mode), as before. A phase on a
+ * warning stands (the phase is kept on an update, cleared on a new task), as before. A phase on a
  * task outside a project is not imported (`followTaskObjects`), and Kad's proposal for it is refused.
+ * A `-` names no phase: the shared import clears it.
  */
 async function anchorPhases(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const { params } = context;
@@ -416,7 +446,7 @@ async function anchorPhases(rows: CsvImportRow[], context: CsvImportContext): Pr
   const reads = !!context.access && hasLevel(context.access, 'portfolio_projects', 'reader');
   const naming = rows
     .filter((row) => row.errors.length === 0 && !skippedByOperation(row, params.operation))
-    .filter((row) => String(row.raw.phase_name ?? '').trim())
+    .filter((row) => cellText(row, 'phase_name'))
     .map((row) => {
       const type = String(importedValue(row, 'related_object_type') ?? '').trim().toLowerCase();
       const id = importedValue(row, 'related_object_id');
@@ -425,7 +455,7 @@ async function anchorPhases(rows: CsvImportRow[], context: CsvImportContext): Pr
     });
   for (const { row, projectId } of naming) {
     if (projectId) continue;
-    const cell = String(row.raw.phase_name).trim();
+    const cell = cellText(row, 'phase_name');
     const proposal = undoneMatch(params.unmatched, 'phase_name', cell) ? undefined : proposalFor(params.proposals, 'phase_name', cell);
     if (proposal !== undefined) noteRefusedProposal(state.refused, { column: 'phase_name', name: null, value: cell, target: proposal, reason: 'missing' }, row.rowNumber);
   }
@@ -440,7 +470,7 @@ async function anchorPhases(rows: CsvImportRow[], context: CsvImportContext): Pr
   const phaseById = new Map(phases.map((phase) => [phase.id.toLowerCase(), phase]));
   const MISSING = new Set(['CSV_REFERENCE_NOT_FOUND_CLEARED', 'CSV_REFERENCE_NOT_FOUND_KEPT']);
   for (const { row, projectId } of candidates) {
-    const cell = String(row.raw.phase_name).trim();
+    const cell = cellText(row, 'phase_name');
     const own = phases.filter((phase) => phase.project_id.toLowerCase() === projectId);
     const missing = row.warnings.find((warning) => warning.column === 'phase_name' && MISSING.has(String(warning.code)));
     const take = (phase: { id: string }) => {
@@ -494,13 +524,14 @@ const LOOKUP_MISSES = new Set(['CSV_REFERENCE_NOT_FOUND_CLEARED', 'CSV_REFERENCE
  * incident has no source, category, stream or company. A row whose task cannot have a field it fills
  * has that cell left out, and said on it (`CSV_TASK_PHASE_OUTSIDE_PROJECT`,
  * `CSV_TASK_CLASSIFICATION_NOT_ALLOWED`); the row is not refused. A task the row moves to another
- * object without that cell (a blank cell in merge mode, or no column) loses what its new object does
+ * object without that cell (a blank cell, or no column) loses what its new object does
  * not allow, cleared and said removed by the stored name (`CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT`,
  * `CSV_TASK_CLASSIFICATION_CLEARED`; correctifs G); a task that keeps its object keeps what it has, as
  * on the screen. Moved to another project, the phase of the same name there, case aside, is taken, as
  * the commit always did; otherwise it is cleared and said not found in that project
  * (`CSV_REFERENCE_NOT_FOUND_CLEARED`, the rule of `clearKeptReferencesOfChangedOwners`). The load no
- * longer fails on it.
+ * longer fails on it. Each stored value a move clears is counted (`noteCleared`); a `-` cell is the
+ * shared import's clear, never a value given.
  */
 async function followTaskObjects(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const clears: Array<{ row: CsvImportRow; key: string; column: string; projectId: string | null }> = [];
@@ -511,17 +542,20 @@ async function followTaskObjects(rows: CsvImportRow[], context: CsvImportContext
     const moved = !!stored && String(stored.related_object_id ?? '').toLowerCase() !== String(importedValue(row, 'related_object_id') ?? '').trim().toLowerCase();
     for (const { key, column } of TASK_OBJECT_FIELDS) {
       const allowed = key === 'phase_id' ? type === 'project' : type === '' || type === 'project';
-      const cell = String(row.raw[column] ?? '').trim();
+      const given = importCell(row.raw, column);
+      const cell = given.kind === 'value' ? given.text : '';
       if (!allowed && cell) {
         row.warnings = row.warnings.filter((warning) => warning.column !== column || !LOOKUP_MISSES.has(String(warning.code)));
         row.warnings.push(key === 'phase_id'
           ? { row: row.rowNumber, column, message: `"${cell}" is not imported: only a project task has a phase.`, code: 'CSV_TASK_PHASE_OUTSIDE_PROJECT', params: { value: cell } }
           : { row: row.rowNumber, column, message: `"${cell}" is not imported: only a standalone or project task has a classification.`, code: 'CSV_TASK_CLASSIFICATION_NOT_ALLOWED', params: { value: cell } });
-        if (moved) row.parsed[key] = null;
-        else delete row.parsed[key];
+        if (moved) {
+          row.parsed[key] = null;
+          if (stored[key]) noteCleared(row, 1);
+        } else delete row.parsed[key];
         continue;
       }
-      if (!moved || !stored[key] || cell || String(importedValue(row, key) ?? '') !== String(stored[key])) continue;
+      if (!moved || !stored[key] || given.kind !== 'blank' || String(importedValue(row, key) ?? '') !== String(stored[key])) continue;
       if (!allowed) clears.push({ row, key, column, projectId: null });
       else if (key === 'phase_id') {
         const projectId = importedProjectId(row);
@@ -554,6 +588,7 @@ async function followTaskObjects(rows: CsvImportRow[], context: CsvImportContext
       }
     }
     row.parsed[key] = null;
+    noteCleared(row, 1);
     if (!storedRecord) continue;
     const value = storedRecord.name;
     row.warnings.push(projectId
@@ -582,16 +617,18 @@ function keepsStoredPeople(warnings: ReadonlyArray<{ row: number; column?: strin
 /**
  * Viewers and owners: the row's lists, written with the task the import writes (lot I3 of 26.11.9,
  * review fixes: the task whose related object the import found, Kad's proposal and an undone match
- * included). A list the file leaves out (none of its numbered columns) is not touched; a list that
- * names the people the task has, in any order, is left as it is. An e-mail nothing finds is said at
- * the check as at the load: in merge mode, on a row that updates a task, the stored list is kept whole
- * (`CSV_REFERENCE_NOT_FOUND_KEPT`); elsewhere the e-mail is skipped (`CSV_REFERENCE_NOT_FOUND_SKIPPED`).
- * The people are read once, by the file's e-mails.
+ * included), by the clearing rule (D21 of 26.11.9, T-I6e): a list the file leaves out (none of its
+ * numbered columns) or whose four cells are blank is not touched; `-` with no address empties it; the
+ * addresses given are the whole list (a `-` among them adds nothing). A list that names the people the
+ * task has, in any order, is left as it is; each person a list loses is counted (`noteCleared`). An
+ * e-mail nothing finds is said at the check as at the load: on a row that updates a task, the stored
+ * list is kept whole (`CSV_REFERENCE_NOT_FOUND_KEPT`); on a new task the e-mail is skipped
+ * (`CSV_REFERENCE_NOT_FOUND_SKIPPED`). The people are read once, by the file's e-mails.
  */
 async function importPeople(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const checked = rows.filter((row) => row.errors.length === 0 && !skippedByOperation(row, context.params.operation));
   const cells = checked.flatMap((row) => PEOPLE_LISTS.flatMap(({ prefix }) => [1, 2, 3, 4]
-    .map((i) => ({ row, column: `${prefix}_${i}`, value: String(row.raw[`${prefix}_${i}`] ?? '').trim() }))
+    .map((i) => ({ row, column: `${prefix}_${i}`, value: cellText(row, `${prefix}_${i}`) }))
     .filter((cell) => cell.value)));
   const known: Array<{ id: string; email: string }> = cells.length === 0 ? [] : await context.manager.query(
     `SELECT id::text AS id, lower(email) AS email FROM users WHERE tenant_id = $1 AND lower(email) = ANY($2::text[])`,
@@ -612,8 +649,15 @@ async function importPeople(rows: CsvImportRow[], context: CsvImportContext): Pr
   for (const row of checked) {
     for (const { prefix, key } of PEOPLE_LISTS) {
       if (!hasColumns(row.raw, prefix) || keepsStoredPeople(row.warnings, row.rowNumber, prefix)) continue;
-      const ids = csvUserIds(row.raw, prefix, userByEmail) ?? [];
-      if (row.isInsert || !samePeople(row.existingEntity?.[key], ids)) row.parsed[key] = ids;
+      const emails = csvEmails(row.raw, prefix);
+      if (emails.length === 0 && (row.isInsert || !clearsPeople(row.raw, prefix))) continue;
+      const ids = emails.flatMap((email) => {
+        const id = userByEmail.get(email.toLowerCase());
+        return id ? [id] : [];
+      });
+      if (!row.isInsert && samePeople(row.existingEntity?.[key], ids)) continue;
+      row.parsed[key] = ids;
+      if (!row.isInsert) noteCleared(row, removedEntries(row.existingEntity?.[key], ids));
     }
   }
 }
@@ -1096,7 +1140,7 @@ export const taskCsvConfig: CsvEntityConfig = {
     const viewer = context.viewer;
     if (!viewer || viewer.isAdmin) return;
     const ids = Array.from(new Set(rows
-      .map((row) => String(row.raw.id ?? '').trim())
+      .map((row) => cellText(row, 'id'))
       .filter((id) => TASK_UUID_RE.test(id))));
     if (ids.length === 0) return;
     const params: unknown[] = [context.tenantId, ids];
@@ -1113,7 +1157,7 @@ export const taskCsvConfig: CsvEntityConfig = {
     if (hiddenRows.length === 0) return;
     const hidden = new Set(hiddenRows.map((row) => row.id.toLowerCase()));
     for (const row of rows) {
-      const id = String(row.raw.id ?? '').trim().toLowerCase();
+      const id = cellText(row, 'id').toLowerCase();
       if (hidden.has(id)) {
         row.errors.push({ row: row.rowNumber, column: 'id', message: 'Task not found' });
       }
@@ -1121,12 +1165,14 @@ export const taskCsvConfig: CsvEntityConfig = {
   },
 
   /**
+   * `-` on the related object is refused: the task keeps its object (`refuseObjectClears`).
    * The object a limited person's export leaves out stays the task's (`keepObjectsOutsideAccess`).
    * The export writes the classification a project task inherits (TASK_INHERITED_CLASSIFICATION). Read
    * back, a cell equal to the project's value on a task that has no value of its own is the inherited
    * value, left as it is: the task keeps following its project. Any other value is the task's own.
    */
   afterValidate: async (rows, context) => {
+    refuseObjectClears(rows, context.params.operation);
     keepObjectsOutsideAccess(rows, context.params.operation);
     await checkIncidentIds(rows, context);
     await resolveRelatedObjects(rows, context);
