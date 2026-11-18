@@ -506,13 +506,12 @@ Three export modes are available:
 1. **Prepare your file**: a CSV file or an Excel workbook (`.xlsx`). Save a CSV file as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV and Excel files](csv-files.md).
 
 2. **Choose import settings**:
-   - **Mode**:
-     - `Enrich` (default): Empty cells preserve existing values: only update what you specify
-     - `Replace`: Replaces the values of the columns in the file. An empty cell clears the stored value. A column left out of the file keeps its values. Some fields cannot be cleared: **Preflight** points them out.
    - **Operation**:
      - `Upsert` (default): Create new tasks or update existing ones
      - `Update only`: Only modify existing tasks, skip new ones
      - `Insert only`: Only create new tasks, skip existing ones
+
+   An empty cell keeps the stored value, and `-` clears it. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing) and [Matching and updates](#matching-and-updates).
 
 3. **Validate first**: Click **Preflight** to validate your file without making changes. Review errors and warnings.
 
@@ -560,10 +559,10 @@ Three export modes are available:
 |------------|-------------|-------|
 | `assignee_email` | Responsible person | Must match existing user email |
 | `creator_email` | Requestor email | Export only (shown as **Requestor Email** in field metadata) |
-| `viewer_email_1` through `_4` | Viewers | Existing user emails. An unknown email is left out, with a warning |
-| `owner_email_1` through `_4` | Owners | Existing user emails. An unknown email is left out, with a warning |
+| `viewer_email_1`, `viewer_email_2`, ... | Viewers | Existing user emails. An unknown email is left out, with a warning |
+| `owner_email_1`, `owner_email_2`, ... | Owners | Existing user emails. An unknown email is left out, with a warning |
 
-In `Enrich` mode, a row that updates a task keeps its viewers when one viewer cell names an unknown email, and its owners in the same way.
+Viewers and owners each follow their own cells. When all of them are empty, the task keeps the stored list. Emails in the cells are the whole list and replace the stored one. `-` alone empties the list, and a `-` next to emails adds nothing. A row that updates a task keeps its viewers when one viewer cell names an unknown email, and its owners in the same way.
 
 **Other fields**:
 
@@ -610,9 +609,13 @@ The system normalizes values automatically during import. A status or a priority
 
 ### Matching and updates
 
-Tasks are matched by **title + related_object_id** (case-insensitive). When a match is found:
-  - With `Enrich` mode: Only non-empty CSV values update the task
-  - With `Replace` mode: The columns in the file are updated, and an empty cell clears the stored value. Columns left out of the file keep their values. The title, the `id`, the status and required fields cannot be cleared: **Preflight** reports an error on the row. A new task gets the default values.
+Tasks are matched by **title + related_object_id** (case-insensitive). When a match is found, an empty cell keeps the stored value, and `-` clears it. Columns left out of the file keep their values.
+
+- `-` clears the phase, the source, the category, the stream, the company, the assignee and the labels.
+- `-` in the related object columns detaches the task, as choosing **Standalone** in **Related to** does on screen.
+- The title, the `id`, the status and the priority cannot be cleared: `-` there refuses the row, and the message names the column.
+
+A new task gets the default values.
 
 If you include the `id` column with a valid UUID, matching uses ID first, then falls back to title + related object.
 
@@ -630,7 +633,7 @@ These fields are included in **Full Export** for reporting purposes but excluded
 
 ### Limitations
 
-  - **Maximum 4 viewers/owners**: Tasks support up to 4 viewer emails and 4 owner emails in a file
+  - **Viewers and owners**: the export writes as many `viewer_email_N` and `owner_email_N` columns as the longest list, four at least. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
   - **Classification for standalone and project tasks only**: Source, Category, Stream, and Company can be set on standalone and project tasks (not on OPEX, Contract, or CAPEX tasks)
   - **Phase requires project**: Phase assignment only works for project tasks
   - **Application/Asset links not in CSV**: Use the workspace Properties drawer to link tasks to applications and assets

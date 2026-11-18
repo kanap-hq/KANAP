@@ -592,15 +592,14 @@ From the Applications list:
 1. **Prepare your file**: a CSV file or an Excel workbook (`.xlsx`). Save a CSV file as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV and Excel files](csv-files.md).
 
 2. **Choose import settings**:
-   - **Mode**:
-     - `Enrich` (default): Empty cells preserve existing values: only update what you specify
-     - `Replace`: Replaces the values of the columns in the file. An empty cell clears the stored value, except in the classification columns (use `__CLEAR__` there). A column left out of the file keeps its values. Some fields cannot be cleared: **Preflight** points them out.
    - **Operation**:
      - `Upsert` (default): Create new applications or update existing ones
      - `Update only`: Only modify existing applications, skip new ones
      - `Insert only`: Only create new applications, skip existing ones
 
      The operation applies to the owners and the data residency too: a row the operation skips leaves them as they are.
+
+   An empty cell keeps the stored value, and `-` clears it. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing) and [Matching and updates](#matching-and-updates).
 
 3. **Validate first**: Click **Preflight** to validate your file without making changes. Review errors and warnings.
 
@@ -631,7 +630,7 @@ A file with one refused row loads nothing. See [CSV and Excel files](csv-files.m
 | `category` | Primary purpose | No | Accepts code or label from Settings. An unknown value refuses the row |
 | `supplier_name` | Vendor name | No | Must match existing supplier |
 | `editor` | Software publisher | No | Free text (e.g., Microsoft, SAP) |
-| `criticality` | Business criticality | No | Accepts code or label from Settings; `__CLEAR__` clears it |
+| `criticality` | Business criticality | No | Accepts code or label from Settings; `-` clears it |
 | `lifecycle` | Current status | No | Accepts code or label from Settings. An unknown value refuses the row |
 | `is_suite` | Can have child apps | No | `yes` or `no` |
 
@@ -662,7 +661,7 @@ A file with one refused row loads nothing. See [CSV and Excel files](csv-files.m
 | `data_class` | Data classification | Accepts code or label from Settings |
 | `last_dr_test` | Last DR test date | Date format: YYYY-MM-DD |
 | `contains_pii` | Stores personal data | `yes` or `no` |
-| `data_residency` | Data storage countries | ISO country codes, comma-separated (e.g., `FR,DE`). In `Enrich` mode an empty cell keeps the countries |
+| `data_residency` | Data storage countries | ISO country codes, comma-separated (e.g., `FR,DE`). A filled cell replaces the stored countries, and `-` clears them |
 
 **Classification fields**:
 
@@ -674,16 +673,16 @@ A file with one refused row loads nothing. See [CSV and Excel files](csv-files.m
 | `rto_minutes` / `rpo_minutes` | Recovery objectives | Whole minutes; RPO may be zero |
 | `classification_justification` | Classification reasoning | Free text |
 
-A blank classification cell preserves the existing value in both Enrich and Replace modes; use the literal `__CLEAR__` to clear a classification.
+`-` clears the criticality, the cyber criticality, the data class, the recovery wave, the RTO, the RPO, the justification and the last DR test. `contains_pii` cannot be cleared: `-` there refuses the row. A file that still uses `__CLEAR__` works: it reads as `-`.
 
 **Owner fields**:
 
 | CSV Column | Description | Notes |
 |------------|-------------|-------|
-| `business_owner_email_1` through `_4` | Business owner emails | Must match an existing user's email. An unknown email refuses the row |
-| `it_owner_email_1` through `_4` | IT owner emails | Must match an existing user's email. An unknown email refuses the row |
+| `business_owner_email_1`, `business_owner_email_2`, ... | Business owner emails | Must match an existing user's email. An unknown email refuses the row |
+| `it_owner_email_1`, `it_owner_email_2`, ... | IT owner emails | Must match an existing user's email. An unknown email refuses the row |
 
-In `Enrich` mode, when all the owner cells of a type are empty, the application keeps its owners of that type.
+The owners of each type follow their own cells. When all the cells of a type are empty, the application keeps its owners of that type. Emails in the cells are the whole list of that type and replace the stored owners. `-` alone empties the type. A `-` next to emails adds nothing.
 
 **Export-only fields** (included in Full Export but not importable):
 
@@ -714,15 +713,13 @@ The system automatically normalizes values during import, so `Line-of-business`,
 
 ### Matching and updates
 
-Applications are matched by **name**, ignoring upper and lower case and the spaces at the start and end. When a match is found:
-- With `Enrich` mode: Only non-empty CSV values update the application
-- With `Replace` mode: The columns in the file are updated, and an empty cell clears the stored value. Columns left out of the file keep their values. A blank classification cell keeps its value, and `__CLEAR__` clears it. The name, the `id`, the lifecycle and required fields cannot be cleared: **Preflight** reports an error on the row. A new application gets the default values.
+Applications are matched by **name**, ignoring upper and lower case and the spaces at the start and end. When a match is found, an empty cell keeps the stored value, and `-` clears it. Columns left out of the file keep their values. The name, the `id`, the lifecycle, the category, `is_suite`, `external_facing`, `etl_enabled`, `contains_pii` and other required fields cannot be cleared: `-` there refuses the row, and the message names the column. A new application gets the default values.
 
 If you include the `id` column with a valid UUID, matching uses ID first, then falls back to name. When two existing applications share the name of a row, the row is refused: add the `id` column to choose one.
 
 A row matched by `id` with a different name renames the application. The new name must be free. The title of the application's description document follows the new name.
 
-**Publisher and supplier**: a row with a publisher (`editor`) and no supplier is linked to the supplier of that name, when there is one. The check lists this match with the other matched values, and **Undo** removes it. In `Enrich` mode, an application that already has a supplier keeps it. The publisher stays as written. Without the right to read suppliers, the publisher links no supplier.
+**Publisher and supplier**: a row with a publisher (`editor`) and no supplier is linked to the supplier of that name, when there is one. The check lists this match with the other matched values, and **Undo** removes it. An application that already has a supplier keeps it. `-` in `supplier_name` removes the supplier, and the publisher then links none. The publisher stays as written. Without the right to read suppliers, the publisher links no supplier.
 
 ### Rows like an existing application { #lookalike-applications }
 

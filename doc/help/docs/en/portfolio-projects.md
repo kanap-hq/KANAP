@@ -401,7 +401,8 @@ Imports are designed for controlled bulk changes:
 
 - download a template first when you need the correct structure, or an example to see sample projects and the values each column takes ([Example files](csv-files.md#example-files))
 - validate before importing
-- use advanced options to choose enrichment vs replacement behavior and insert/update rules
+- choose whether the file creates projects, updates them, or both
+- on a project the file updates, an empty cell keeps the stored value, and `-` clears it, the `purpose` included. `-` cannot clear the origin: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
 - a new row with no origin is stored as Legacy. A new row whose origin is `standard` is refused: the origin Request comes from converting a request. A project that already has that origin keeps it when the file updates the row
 
 Bulk import is useful for large portfolio maintenance, but it is not a shortcut around project governance. Phase planning, tasks, knowledge, and ongoing delivery control still belong in the workspace.

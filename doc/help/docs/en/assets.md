@@ -432,13 +432,12 @@ The export and the template title the columns in the language of your screen. Th
 1. **Prepare your file**: a CSV file or an Excel workbook (`.xlsx`). Save a CSV file as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV and Excel files](csv-files.md).
 
 2. **Choose import settings**:
-   - **Mode**:
-     - `Enrich` (default): Empty cells preserve existing values: only update what you specify
-     - `Replace`: Replaces the values of the columns in the file. An empty cell clears the stored value. A column left out of the file keeps its values. Some fields cannot be cleared: **Preflight** points them out.
    - **Operation**:
      - `Upsert` (default): Create new assets or update existing ones
      - `Update only`: Only modify existing assets, skip new ones
      - `Insert only`: Only create new assets, skip existing ones
+
+   An empty cell keeps the stored value, and `-` clears it. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing) and [Matching and updates](#matching-and-updates).
 
 3. **Validate first**: Click **Preflight** to validate your file without making changes. Review errors and warnings.
 
@@ -507,17 +506,22 @@ The system automatically normalizes values during import, so `Virtual Machine`, 
 
 **Cluster Membership**: the `cluster` column names the clusters of the asset, separated by commas (`ESX-PROD, SQL-CLUSTER`). Case does not matter, and neither do accents when you can read the servers. See [Names of records](csv-files.md#names-of-records). The export writes the clusters the asset is a member of. On import:
 
-- With `Enrich`, the asset joins the clusters named in the cell and stays in its other clusters.
-- With `Replace`, the asset also leaves the clusters its cell does not name.
-- An empty cell changes nothing, in both modes.
+- A filled cell is the whole list: the asset joins the clusters it names and leaves the clusters it does not name.
+- `-` takes the asset out of every cluster.
+- An empty cell keeps the clusters of the asset.
 
 **Preflight** reports an error on the row when a name matches no asset, matches several clusters, or names an asset that is not a cluster. It also refuses a row that names itself, a row that is or becomes a cluster, and a cluster that has an operating system: the import never removes one. The `is_cluster` and `operating_system` columns follow the rules of [Clusters](#clusters).
 
 ### Matching and updates
 
-Assets are matched by **name** (case-insensitive). When a match is found:
-- With `Enrich` mode: Only non-empty CSV values update the asset
-- With `Replace` mode: The columns in the file are updated, and an empty cell clears the stored value. Columns left out of the file keep their values. The name, the `id`, the status and required fields cannot be cleared: **Preflight** reports an error on the row. For the IP address columns, only the sub-columns in the file are applied. A new asset gets the default values.
+Assets are matched by **name** (case-insensitive). When a match is found, an empty cell keeps the stored value, and `-` clears it. Columns left out of the file keep their values.
+
+- `location_reference`, `kind` and `environment` are required for a new asset only. On a stored asset, an empty cell keeps them.
+- `-` in `operating_system` removes the operating system of the server.
+- For the IP address columns, only the sub-columns in the file are applied. `-` in a type or a subnet clears that value. `-` in an address takes the whole entry out, with its type and its subnet.
+- The name, the `id`, the status, the type, `is_cluster` and the other required fields cannot be cleared: `-` there refuses the row, and the message names the column.
+
+A new asset gets the default values.
 
 If you include the `id` column with a valid UUID, matching uses ID first, then falls back to name.
 
