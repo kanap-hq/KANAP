@@ -784,7 +784,25 @@ async function testKeptReferenceFollowsWhatItBelongsTo() {
   assert.deepEqual(brief(moved.warnings), [{ column: 'supplier_name', code: 'CSV_REFERENCE_NOT_FOUND_CLEARED', params: { value: 'Banque Inconnue' } }]);
   assert.equal(moved.warnings[0].message, 'suppliers not found: "Banque Inconnue" (set to null)');
   assert.deepEqual([cleared.getSaved()[0].supplier_id, cleared.getSaved()[0].owner_id], [null, 'u2']);
+  // The stored supplier it clears is counted, and the check announces what the load clears (pass E).
+  const check = await service.import(dependent, createMockFile('name;supplier_name;owner_email\nAtlas;Banque Inconnue;ben@example.com'), { dryRun: true, operation: 'upsert' }, { manager: createMockManager(stored), tenantId: 't1', access: ADMIN });
+  assert.deepEqual([check.updated, check.cleared, moved.updated, moved.cleared], [1, 1, 1, 1]);
+  // Nothing stored: nothing counted.
+  const empty = { ...data, apps: [{ ...data.apps[0], owner_id: 'u1', supplier_id: null }] };
+  const none = await service.import(dependent, createMockFile('name;supplier_name;owner_email\nAtlas;Banque Inconnue;ben@example.com'), { dryRun: true, operation: 'upsert' }, { manager: createMockManager(empty), tenantId: 't1', access: ADMIN });
+  assert.deepEqual([none.updated, none.cleared], [1, 0]);
   console.log('  a kept reference is cleared when the row changes what it belongs to: OK');
+}
+
+/** A numbered list is read in every numbered column the file holds, beyond its declared ones (pass E). */
+async function testNumberedColumnsBeyondDeclared() {
+  const { config, data, service } = referencesFixture();
+  const result = await service.import(config, createMockFile('name;contributor_3\nAtlas;ana@example.com'), { dryRun: true, operation: 'upsert' }, { manager: createMockManager(data), tenantId: 't1', access: ADMIN });
+  assert.deepEqual([result.ok, result.updated, result.cleared, result.warnings], [true, 1, 1, []], JSON.stringify(result));
+  const manager = createMockManager(data);
+  await service.import(config, createMockFile('name;contributor_1;contributor_2;contributor_3\nAtlas;;ben@example.com;ana@example.com'), { dryRun: false, operation: 'upsert' }, { manager, tenantId: 't1', access: ADMIN });
+  assert.deepEqual(manager.getSaved()[0].contributor_ids, ['u2', 'u1']);
+  console.log('  a numbered list is read beyond its declared columns: OK');
 }
 
 /** Merge mode, an update: a numbered list with a cell nothing finds keeps the stored list whole. */
@@ -1250,6 +1268,7 @@ async function testTimeZoneColumnsAreNamedInTheScreenLanguage() {
   await testUnknownReferenceKeepsTheStoredValueOnMerge();
   await testUnknownCellKeepsTheStoredList();
   await testKeptReferenceFollowsWhatItBelongsTo();
+  await testNumberedColumnsBeyondDeclared();
   await testCaseInsensitiveEnumMatching();
   await testFormulaApostropheIsStrippedOnImport();
   await testBeforeValidateErrorsSurviveDryRun();

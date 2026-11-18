@@ -10,7 +10,8 @@ import { looseKey } from '../csv-sheet/text';
 import { labelsForEnum } from '../../ai/import/ai-import-code-labels';
 import { sameStoredValue, sameStoredValues } from '../csv-sheet/unchanged';
 import { GUARDED_DASH } from '../csv-sheet/clear';
-import { importCell, markGuardedDash, refuseClear, removedEntries } from './csv-import-cells';
+import { importCell, markGuardedDash, noteCleared, refuseClear, removedEntries } from './csv-import-cells';
+import { isNumberedColumn, numberedColumns, numberedListColumnOf } from './csv-numbered-lists';
 import { AuditLog } from '../../audit/audit.entity';
 import { omitAuditSecrets } from '../../audit/audit.service';
 import {
@@ -414,6 +415,9 @@ export class CsvImportService {
       const named = readTimeZoneHeader(header);
       const column = headerAliases.get(headerKey(named ? named.column : header));
       if (!column) {
+        // A numbered column beyond the declared ones (`business_owner_email_5`), by its name or a title.
+        const listed = named ? undefined : numberedListColumnOf(config, header);
+        if (listed) return listed;
         // Not a column of this config: keep it as it came, so the ignored-column warning names it.
         if (zonedColumns.has(header)) zoneless.push(header);
         return header;
@@ -459,7 +463,7 @@ export class CsvImportService {
             ? []
             : expectedHeaders.required.filter((header) => !headers.includes(header)).map(columnTitle);
           const extra = headers.filter(
-            (h) => !expectedHeaders.all.has(h) && !h.startsWith('_'),
+            (h) => !expectedHeaders.all.has(h) && !h.startsWith('_') && !numberedListColumnOf(config, h),
           );
 
           if (missing.length > 0) {
@@ -667,11 +671,9 @@ export class CsvImportService {
       if (!field.fkEntity || !(field.entityProperty in existingEntity)) continue;
       const numbered = field.type === CsvFieldType.ARRAY && field.arrayStrategy === ArrayStrategy.NUMBERED_COLUMNS;
       const baseName = field.csvColumn.replace(/_\d+$/, '');
-      const columns = numbered
-        ? new Set(Array.from({ length: field.maxItems ?? this.DEFAULT_MAX_ITEMS }, (_, i) => `${baseName}_${i + 1}`))
-        : new Set([field.csvColumn]);
+      const inField = (column: string) => (numbered ? isNumberedColumn(column, baseName) : column === field.csvColumn);
       const code = numbered ? 'CSV_REFERENCE_NOT_FOUND_SKIPPED' : 'CSV_REFERENCE_NOT_FOUND_CLEARED';
-      const missing = row.warnings.filter((warning) => warning.code === code && warning.column !== undefined && columns.has(warning.column));
+      const missing = row.warnings.filter((warning) => warning.code === code && warning.column !== undefined && inField(warning.column));
       if (missing.length === 0) continue;
       row.parsed[field.entityProperty] = existingEntity[field.entityProperty];
       for (const warning of missing) {
@@ -685,7 +687,8 @@ export class CsvImportService {
    * Once the hooks ran: a stored reference kept for a name nothing finds (`keepStoredReferences`)
    * must still hold for the record as the row leaves it. A reference that belongs to other
    * properties of the record (`keptWith`) is not kept when the row changes one of them: it is
-   * cleared, and said (`CSV_REFERENCE_NOT_FOUND_CLEARED`).
+   * cleared, and said (`CSV_REFERENCE_NOT_FOUND_CLEARED`). A stored value it clears counts in
+   * `cleared` (`noteCleared`): this runs at the check as at the load.
    */
   private clearKeptReferencesOfChangedOwners(rows: CsvImportRow[], fields: CsvFieldDefinition[]): void {
     const dependent = fields.filter((field) => field.fkEntity && field.keptWith?.length);
@@ -697,9 +700,12 @@ export class CsvImportService {
       for (const field of dependent) {
         const changed = field.keptWith!.some((property) => Object.prototype.hasOwnProperty.call(row.parsed, property) && !same(row.parsed[property], stored[property]));
         if (!changed) continue;
-        for (const warning of row.warnings) {
-          if (warning.column !== field.csvColumn || warning.code !== 'CSV_REFERENCE_NOT_FOUND_KEPT') continue;
-          row.parsed[field.entityProperty] = null;
+        const kept = row.warnings.filter((warning) => warning.column === field.csvColumn && warning.code === 'CSV_REFERENCE_NOT_FOUND_KEPT');
+        if (kept.length === 0) continue;
+        row.parsed[field.entityProperty] = null;
+        // A stored value cleared, counted at the check as at the load (this runs before both).
+        if (stored[field.entityProperty] != null) noteCleared(row, 1);
+        for (const warning of kept) {
           warning.code = 'CSV_REFERENCE_NOT_FOUND_CLEARED';
           warning.message = `${field.fkEntity} not found: "${warning.params?.value ?? ''}" (set to null)`;
         }
@@ -859,9 +865,10 @@ export class CsvImportService {
   }
 
   /**
-   * Parse a numbered array field (e.g., owner_email_1..4): the cells that hold values are the whole
-   * list. Every cell blank keeps the stored list; `-` with no value clears it (a `-` among values adds
-   * nothing to them). A required list refuses only a new record without a value.
+   * Parse a numbered array field (e.g., owner_email_1..4, and every further `owner_email_<n>` the file
+   * holds): the cells that hold values are the whole list. Every cell blank keeps the stored list; `-`
+   * with no value clears it (a `-` among values adds nothing to them). A required list refuses only a
+   * new record without a value.
    */
   private parseNumberedArrayField(
     field: CsvFieldDefinition,
@@ -871,12 +878,11 @@ export class CsvImportService {
     rules: ClearRules | null,
   ): void {
     const baseName = field.csvColumn.replace(/_\d+$/, '');
-    const maxItems = field.maxItems ?? this.DEFAULT_MAX_ITEMS;
     const values: any[] = [];
 
     // A list the file leaves out (none of its numbered columns) is never touched.
-    const columns = Array.from({ length: maxItems }, (_, i) => `${baseName}_${i + 1}`);
-    if (!columns.some((colName) => this.hasColumn(raw, colName))) {
+    const columns = numberedColumns(raw, baseName);
+    if (columns.length === 0) {
       return;
     }
     const cells = columns.map((colName) => importCell(raw, colName));
@@ -901,7 +907,7 @@ export class CsvImportService {
       return;
     }
 
-    for (let i = 0; i < maxItems; i++) {
+    for (let i = 0; i < columns.length; i++) {
       const colName = columns[i];
       const cell = cells[i];
       if (cell.kind !== 'value') continue;

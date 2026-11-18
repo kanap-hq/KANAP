@@ -50,7 +50,7 @@ import {
  * Service for importing and exporting Applications via CSV (V2)
  *
  * Uses the standardized CSV infrastructure with:
- * - Numbered owner columns (business_owner_email_1..4, it_owner_email_1..4)
+ * - Numbered owner columns (business_owner_email_1, _2, ..., it_owner_email_1, ...: four at least)
  * - Proper FK resolution
  * - Two-phase import with validation
  */

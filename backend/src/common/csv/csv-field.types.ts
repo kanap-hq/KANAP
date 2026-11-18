@@ -141,6 +141,13 @@ export interface CsvEntityConfig {
    * keeps the technical header.
    */
   headerLabels?: Record<string, Partial<Record<CsvLanguage, string>>>;
+  /**
+   * Lists the config writes in numbered columns of its own (`business_owner_email_1` to `_4`, declared
+   * in `fields` with their `exportFn`): `base` names the columns, `values` gives an entity's list in
+   * order. The export writes as many columns as the longest list of its rows, the declared ones at
+   * least; the import reads every `<base>_<n>` the file holds (`csv-numbered-lists.ts`).
+   */
+  numberedLists?: ReadonlyArray<{ base: string; values: (entity: any, context: CsvExportContext) => string[] }>;
   /** The name of the list in each language: the sheet of an xlsx export. `displayName` when a language has none. */
   sheetNames?: Partial<Record<CsvLanguage, string>>;
   /** Export presets (e.g., 'basic', 'full') */

@@ -9,6 +9,7 @@ export { CsvJsonValidators, CsvValidationProblem } from './csv-json-validators';
 export { csvUnmatched } from './csv-unmatched';
 export * from './csv-lookalikes';
 export { importCell, markGuardedDash, noteCleared, refuseClear, removedEntries } from './csv-import-cells';
+export { isNumberedColumn, numberedColumns, numberedListBases, numberedListColumnOf, numberedListHeader } from './csv-numbered-lists';
 
 // Module
 export { CsvModule } from './csv.module';

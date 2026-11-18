@@ -13,6 +13,7 @@ import {
   CsvImportRow,
 } from '../common/csv';
 import { importCell, noteCleared, refuseClear, removedEntries } from '../common/csv/csv-import-cells';
+import { numberedColumns } from '../common/csv/csv-numbered-lists';
 import { VULNERABILITY_CSV_HEADERS, vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { richTextCell } from '../common/csv/rich-text-cell';
 import { sameStoredValue, sameStoredValues } from '../common/csv-sheet/unchanged';
@@ -36,14 +37,19 @@ export function resolveApplicationCatalogs(entity: any, settings: ItOpsSettings)
 
 const OWNER_TYPES = ['business', 'it'] as const;
 
+/** The emails of an application's owners of a type, in their stored order (the export loads `_owners`). */
+function ownerEmails(entity: any, ownerType: 'business' | 'it'): string[] {
+  return (entity._owners || []).filter((owner: any) => owner.owner_type === ownerType).map((owner: any) => owner.user?.email || '');
+}
+
 /**
  * The owner cells of a row, by owner type (a type whose columns are all absent is left out): the
- * emails its cells name, and whether one of them is `-`.
+ * emails its cells name, in every numbered column the file holds, and whether one of them is `-`.
  */
 function ownerCells(raw: Record<string, string>): Map<'business' | 'it', { emails: string[]; clear: boolean }> {
   const cells = new Map<'business' | 'it', { emails: string[]; clear: boolean }>();
   for (const ownerType of OWNER_TYPES) {
-    const columns = [1, 2, 3, 4].map((i) => `${ownerType}_owner_email_${i}`).filter((column) => column in raw);
+    const columns = numberedColumns(raw, `${ownerType}_owner_email`);
     if (columns.length === 0) continue;
     const read = columns.map((column) => importCell(raw, column));
     cells.set(ownerType, {
@@ -242,7 +248,7 @@ function classificationReviewField(field: string): CsvFieldDefinition {
  * CSV configuration for Applications entity (V2)
  *
  * Changes from V1:
- * - Owner emails use numbered columns (business_owner_email_1..4, it_owner_email_1..4)
+ * - Owner emails use numbered columns (business_owner_email_1, _2, ..., it_owner_email_1, ...: four at least, as many as the longest list)
  * - Removed deprecated fields: hosting_model, sso_enabled, mfa_supported, environment (use AppInstance)
  *
  * Column order: id, reference (APP-n, export only), name, then ApplicationWorkspacePage.tsx tab by tab:
@@ -422,6 +428,8 @@ export const applicationCsvConfig: CsvEntityConfig = {
   tableName: 'applications',
   displayName: 'Applications',
   headerLabels: APPLICATION_CSV_HEADERS,
+  // An application may have more than four owners of a type: the export writes them all.
+  numberedLists: OWNER_TYPES.map((ownerType) => ({ base: `${ownerType}_owner_email`, values: (entity: any) => ownerEmails(entity, ownerType) })),
   upsertKey: ['name'],
   // Same rule as the unique names: `lower(btrim(name))`.
   upsertKeyIgnoresOuterSpaces: true,
@@ -548,135 +556,20 @@ export const applicationCsvConfig: CsvEntityConfig = {
       group: 'Version',
     },
     // These fields use COMPUTED for export (reading from _owners) but are importable
-    // Import is handled by handleOwnerImport in the service
-    {
-      csvColumn: 'business_owner_email_1',
+    // Import is handled by handleOwnerImport in the service; a longer list gets further columns
+    // (`numberedLists` below).
+    ...OWNER_TYPES.flatMap((ownerType) => [1, 2, 3, 4].map((n): CsvFieldDefinition => ({
+      csvColumn: `${ownerType}_owner_email_${n}`,
       entityProperty: '_owners',
       type: CsvFieldType.COMPUTED,
       exportable: true,
       importable: true,
       required: false,
       defaultExport: true,
-      label: 'Business Owner 1 Email',
+      label: `${ownerType === 'it' ? 'IT' : 'Business'} Owner ${n} Email`,
       group: 'Owners',
-      exportFn: (entity: any) => {
-        const owners = entity._owners || [];
-        const business = owners.filter((o: any) => o.owner_type === 'business');
-        return business[0]?.user?.email || '';
-      },
-    },
-    {
-      csvColumn: 'business_owner_email_2',
-      entityProperty: '_owners',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: true,
-      label: 'Business Owner 2 Email',
-      group: 'Owners',
-      exportFn: (entity: any) => {
-        const owners = entity._owners || [];
-        const business = owners.filter((o: any) => o.owner_type === 'business');
-        return business[1]?.user?.email || '';
-      },
-    },
-    {
-      csvColumn: 'business_owner_email_3',
-      entityProperty: '_owners',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: true,
-      label: 'Business Owner 3 Email',
-      group: 'Owners',
-      exportFn: (entity: any) => {
-        const owners = entity._owners || [];
-        const business = owners.filter((o: any) => o.owner_type === 'business');
-        return business[2]?.user?.email || '';
-      },
-    },
-    {
-      csvColumn: 'business_owner_email_4',
-      entityProperty: '_owners',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: true,
-      label: 'Business Owner 4 Email',
-      group: 'Owners',
-      exportFn: (entity: any) => {
-        const owners = entity._owners || [];
-        const business = owners.filter((o: any) => o.owner_type === 'business');
-        return business[3]?.user?.email || '';
-      },
-    },
-    {
-      csvColumn: 'it_owner_email_1',
-      entityProperty: '_owners',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: true,
-      label: 'IT Owner 1 Email',
-      group: 'Owners',
-      exportFn: (entity: any) => {
-        const owners = entity._owners || [];
-        const it = owners.filter((o: any) => o.owner_type === 'it');
-        return it[0]?.user?.email || '';
-      },
-    },
-    {
-      csvColumn: 'it_owner_email_2',
-      entityProperty: '_owners',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: true,
-      label: 'IT Owner 2 Email',
-      group: 'Owners',
-      exportFn: (entity: any) => {
-        const owners = entity._owners || [];
-        const it = owners.filter((o: any) => o.owner_type === 'it');
-        return it[1]?.user?.email || '';
-      },
-    },
-    {
-      csvColumn: 'it_owner_email_3',
-      entityProperty: '_owners',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: true,
-      label: 'IT Owner 3 Email',
-      group: 'Owners',
-      exportFn: (entity: any) => {
-        const owners = entity._owners || [];
-        const it = owners.filter((o: any) => o.owner_type === 'it');
-        return it[2]?.user?.email || '';
-      },
-    },
-    {
-      csvColumn: 'it_owner_email_4',
-      entityProperty: '_owners',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: true,
-      label: 'IT Owner 4 Email',
-      group: 'Owners',
-      exportFn: (entity: any) => {
-        const owners = entity._owners || [];
-        const it = owners.filter((o: any) => o.owner_type === 'it');
-        return it[3]?.user?.email || '';
-      },
-    },
+      exportFn: (entity: any) => ownerEmails(entity, ownerType)[n - 1] ?? '',
+    }))),
     {
       csvColumn: 'users_mode',
       entityProperty: 'users_mode',

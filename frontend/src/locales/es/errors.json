@@ -147,6 +147,8 @@
   "CSV_TASK_CLASSIFICATION_NOT_ALLOWED": "«{{value}}» no se importa: solo una tarea independiente o de proyecto tiene clasificación.",
   "CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT": "«{{value}}» se retira: solo una tarea de proyecto tiene fase.",
   "CSV_TASK_CLASSIFICATION_CLEARED": "«{{value}}» se retira: solo una tarea independiente o de proyecto tiene clasificación.",
+  "CSV_TASK_DETACH_CONFLICT": "«-» en {{column}} deja la tarea independiente, mientras que {{other}} nombra su objeto. Escriba «-» en las dos o deje una de ellas vacía.",
+  "CSV_TASK_READ_ONLY": "Esta tarea es de solo lectura en su acceso.",
   "CSV_JSON_INVALID": "Esta celda no contiene un JSON válido.",
   "CSV_JSON_OBJECT_REQUIRED": "Esta celda debe contener un objeto JSON.",
   "CSV_JSON_ARRAY_REQUIRED": "Esta celda debe contener una lista JSON.",

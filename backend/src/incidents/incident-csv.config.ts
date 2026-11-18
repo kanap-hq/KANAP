@@ -701,12 +701,8 @@ export const incidentCsvConfig: CsvEntityConfig = {
 
       if (entity.id) {
         // A stored incident keeps what a blank cell leaves; `-` on a value that cannot be empty
-        // (the yes/no columns, the status, the detection time) was refused at the check. Should one
-        // still come empty, the import stops rather than rewrite the record.
+        // (the yes/no columns, the status, the detection time) is refused by the shared import.
         entity.updated_by = context.userId ?? null;
-        for (const column of ['status', 'detected_at'] as const) {
-          if (entity[column] == null) throw new Error(`${incidentLabel(entity)}: "${column}" cannot be cleared.`);
-        }
       } else {
         // A new incident: the yes/no columns a blank cell leaves are no.
         entity.personal_data_affected = entity.personal_data_affected ?? false;

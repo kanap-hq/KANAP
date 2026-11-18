@@ -7,14 +7,15 @@ import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
 import type { CsvCallerAccess, CsvImportParams, CsvImportResult } from '../../common/csv/csv-field.types';
 import { TasksCsvService } from '../tasks-csv.service';
-import { seedUser } from '../../spend/__tests__/cost-center.fixtures';
+import { seedCompany, seedUser } from '../../spend/__tests__/cost-center.fixtures';
+import { applyDataAccess } from '../../data-access/data-access';
 import { inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
 
 // The clearing rule of the tasks import (D21 of 26.11.9, lot I6): a blank cell keeps the stored value,
 // `-` clears a phase, a classification, the assignee and the labels, each value counted at the check
-// as at the load; `-` is refused on the title, the status, the priority and the related object, and the
-// task keeps them. An export read back changes nothing, a stored text "-" included; a list of more
-// people than the file's four columns loses the others, said by the count at the check.
+// as at the load; `-` is refused on the title, the status and the priority. `-` on the related object
+// makes the task standalone, as "Make standalone" on the screen (pass E). An export read back changes
+// nothing, a stored text "-" and a list of more than four people included (pass E).
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
 const resolver = new CsvResolverService();
@@ -97,14 +98,13 @@ async function testDashRefused() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'task-csv-clear-refused');
     const seeded = await seedClassifiedTask(runner, tenantId);
-    const csv = `id;title;status;priority_level;related_object_type;related_object_id;related_object_name\n${seeded.task};-;-;-;-;-;-`;
+    const csv = `id;title;status;priority_level\n${seeded.task};-;-;-`;
     for (const dryRun of [true, false]) {
       const result = await importCsv(runner, tenantId, csv, { dryRun });
       assert.equal(result.ok, false);
       assert.deepEqual(
         codes(result).map(([, column, code]) => [column, code]).sort(),
-        ['priority_level', 'related_object_id', 'related_object_name', 'related_object_type', 'status', 'title']
-          .map((column) => [column, 'CSV_VALUE_CANNOT_BE_CLEARED']),
+        ['priority_level', 'status', 'title'].map((column) => [column, 'CSV_VALUE_CANNOT_BE_CLEARED']),
       );
     }
     const after = await storedValues(runner, seeded.task);
@@ -117,10 +117,9 @@ async function testDashRefused() {
 }
 
 /**
- * An export read back changes nothing: a title and a label "-" (written `'-`) are values. A task with
- * five viewers is written with four, the file's columns: read back, the fifth is removed, and the
- * check says so (one value cleared). The same happened before the clearing rule: filled cells always
- * replaced the list.
+ * An export read back changes nothing: a title and a label "-" (written `'-`) are values, and a task with
+ * five viewers is written with five columns (pass E), in CSV and in .xlsx. A template keeps four columns,
+ * and a file written by hand with `owner_email_5` is read.
  */
 async function testRoundTrip() {
   await inRolledBackTransaction(async (runner) => {
@@ -131,26 +130,134 @@ async function testRoundTrip() {
       `INSERT INTO tasks (tenant_id, item_number, title, status, labels, viewer_ids, owner_ids)
        VALUES ($1, 1, '-', 'open', '["-"]'::jsonb, '[]'::jsonb, $2::jsonb),
               ($1, 2, 'Four', 'open', '[]'::jsonb, $3::jsonb, '[]'::jsonb),
-              ($1, 3, 'Five', 'open', '[]'::jsonb, $2::jsonb, '[]'::jsonb)`,
-      [tenantId, JSON.stringify(people.slice(0, 2)), JSON.stringify(people.slice(0, 4))],
+              ($1, 3, 'Five', 'open', '[]'::jsonb, $4::jsonb, '[]'::jsonb)`,
+      [tenantId, JSON.stringify(people.slice(0, 2)), JSON.stringify(people.slice(0, 4)), JSON.stringify(people)],
     );
-    const exported = (await service.export({ manager: runner.manager, tenantId, language: 'en', preset: 'enrichment' })).content.replace(/^﻿/, '');
+    const exported = (await service.export({ manager: runner.manager, tenantId, language: 'en', preset: 'enrichment' })).content.replace(/^\uFEFF/, '');
     assert.ok(exported.includes("'-"), exported);
-    const four = await importCsv(runner, tenantId, exported.split(/\r?\n/).filter((line) => !line.includes('Five')).join('\n'));
-    assert.deepEqual(codes(four), []);
-    assert.deepEqual(counts(four), [true, 0, 2, 0]);
-
-    await runner.query(`UPDATE tasks SET viewer_ids = $2::jsonb WHERE tenant_id = $1 AND title = 'Five'`, [tenantId, JSON.stringify(people)]);
-    const five = (await service.export({ manager: runner.manager, tenantId, language: 'en', preset: 'enrichment' })).content.replace(/^﻿/, '');
-    const check = await importCsv(runner, tenantId, five);
-    assert.deepEqual(codes(check), []);
-    assert.deepEqual(counts(check), [true, 1, 2, 1]);
-    const load = await importCsv(runner, tenantId, five, { dryRun: false });
-    assert.deepEqual(counts(load), [true, 1, 2, 1]);
-    const [stored] = await runner.query(`SELECT viewer_ids FROM tasks WHERE tenant_id = $1 AND title = 'Five'`, [tenantId]);
-    assert.deepEqual(stored.viewer_ids, people.slice(0, 4));
+    const header = exported.split(/\r?\n/)[0];
+    assert.ok(header.includes('viewer_email_5') && !header.includes('viewer_email_6'), header);
+    assert.ok(header.includes('owner_email_4') && !header.includes('owner_email_5'), 'the owners keep four columns');
+    for (const [name, content] of [
+      ['tasks.csv', exported],
+      ['tasks.xlsx', (await service.export({ manager: runner.manager, tenantId, language: 'fr', preset: 'enrichment', format: 'xlsx' } as any)).content],
+    ] as const) {
+      const read = (dryRun: boolean) => service.import(
+        { buffer: Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf8'), originalname: name } as Express.Multer.File,
+        { dryRun, operation: 'upsert' },
+        { manager: runner.manager, tenantId, userId: null, isAdmin: true, access: ADMIN },
+      );
+      for (const dryRun of [true, false]) {
+        const result = await read(dryRun);
+        assert.deepEqual([codes(result), result.warnings], [[], []], name);
+        assert.deepEqual(counts(result), [true, 0, 3, 0], `${name}: five viewers read back change nothing`);
+      }
+    }
+    const [stored] = await runner.query(`SELECT id, viewer_ids FROM tasks WHERE tenant_id = $1 AND title = 'Five'`, [tenantId]);
+    assert.deepEqual(stored.viewer_ids, people);
     const [dash] = await runner.query(`SELECT title, labels FROM tasks WHERE tenant_id = $1 AND item_number = 1`, [tenantId]);
     assert.deepEqual([dash.title, dash.labels], ['-', ['-']]);
+
+    const template = (await service.export({ manager: runner.manager, tenantId, language: 'en', scope: 'template' } as any)).content;
+    assert.ok(template.includes('viewer_email_4') && !template.includes('viewer_email_5'), template);
+
+    // By hand: `owner_email_5` alone is the whole list of owners.
+    const p5 = `p5-${tenantId.slice(0, 8)}@example.test`;
+    const hand = `id;owner_email_1;owner_email_5\n${stored.id};;${p5}`;
+    const check = await importCsv(runner, tenantId, hand);
+    assert.deepEqual([codes(check), check.warnings], [[], []]);
+    assert.deepEqual(counts(check), [true, 1, 0, 0]);
+    await importCsv(runner, tenantId, hand, { dryRun: false });
+    const [owned] = await runner.query(`SELECT owner_ids FROM tasks WHERE id = $1`, [stored.id]);
+    assert.deepEqual(owned.owner_ids, [people[4]]);
+  });
+}
+
+/**
+ * `-` on the related object makes a stored task standalone, as "Make standalone" on the screen
+ * (`PATCH /tasks/:id/move`): the object and the phase go, the classification stays. Each stored value
+ * removed is counted, the type and the id of the object and the phase, at the check as at the load. A
+ * standalone task is left as it is. A `-` beside a filled object column is a row error.
+ */
+async function testDashDetaches() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'task-csv-clear-detach');
+    const seeded = await seedClassifiedTask(runner, tenantId);
+    const [phase, source, category, stream, company, assignee] = seeded.values;
+    const csv = `id;title;related_object_type;related_object_id;related_object_name\n${seeded.task};Migrer;-;-;-`;
+    const check = await importCsv(runner, tenantId, csv);
+    assert.deepEqual(codes(check), []);
+    assert.deepEqual(counts(check), [true, 1, 0, 3]);
+    assert.deepEqual(check.warnings.map((warning) => [warning.column, warning.code]), [['phase_name', 'CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT']]);
+    const load = await importCsv(runner, tenantId, csv, { dryRun: false });
+    assert.deepEqual(counts(load), [true, 1, 0, 3]);
+    const [after] = await runner.query(`SELECT related_object_type, related_object_id FROM tasks WHERE id = $1`, [seeded.task]);
+    const values = await storedValues(runner, seeded.task);
+    assert.deepEqual(
+      [after.related_object_type, after.related_object_id, values.phase_id, values.source_id, values.category_id, values.stream_id, values.company_id, values.assignee_user_id],
+      [null, null, null, source, category, stream, company, assignee],
+    );
+    // A standalone task: `-` changes nothing and counts nothing.
+    assert.deepEqual(counts(await importCsv(runner, tenantId, csv)), [true, 0, 1, 0]);
+
+    // The type column alone: the same detach, the same count.
+    await runner.query(`UPDATE tasks SET related_object_type = 'project', related_object_id = $2, phase_id = $3 WHERE id = $1`, [seeded.task, seeded.project, phase]);
+    const typeOnly = `id;related_object_type\n${seeded.task};-`;
+    assert.deepEqual(counts(await importCsv(runner, tenantId, typeOnly)), [true, 1, 0, 3]);
+
+    // `-` beside a filled object column: a row error naming the column, nothing written.
+    const conflict = `id;related_object_type;related_object_id\n${seeded.task};-;${seeded.project}`;
+    for (const dryRun of [true, false]) {
+      const result = await importCsv(runner, tenantId, conflict, { dryRun });
+      assert.deepEqual(codes(result), [[2, 'related_object_type', 'CSV_TASK_DETACH_CONFLICT']]);
+      assert.deepEqual(result.errors[0].params, { column: 'related_object_type', other: 'related_object_id' });
+    }
+    const [kept] = await runner.query(`SELECT related_object_type, related_object_id, phase_id FROM tasks WHERE id = $1`, [seeded.task]);
+    assert.deepEqual([kept.related_object_type, kept.related_object_id, kept.phase_id], ['project', seeded.project, phase]);
+  });
+}
+
+/**
+ * A person with limited data access detaches a task as on the screen: a task of a line they may modify
+ * becomes standalone; a task of a line they only read is refused (the screen's 403), and stays.
+ */
+async function testLimitedPersonDetaches() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'task-csv-clear-limited');
+    const limited = await seedUser(runner, tenantId, `limited-${tenantId.slice(0, 8)}@example.test`);
+    const editable = await seedCompany(runner, tenantId, 'Editable company');
+    const readable = await seedCompany(runner, tenantId, 'Readable company');
+    await runner.query(`UPDATE users SET data_access_mode = 'limited' WHERE tenant_id = $1 AND id = $2`, [tenantId, limited]);
+    await runner.query(
+      `INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, cost_center_id, access)
+       VALUES ($1, $2, 'company', $3, NULL, 'edit'), ($1, $2, 'company', $4, NULL, 'read')`,
+      [tenantId, limited, editable.companyId, readable.companyId],
+    );
+    const lines = await runner.query(
+      `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, paying_company_id)
+       VALUES ($1, 'Editable line', 'EUR', '2020-01-01', 1, $2), ($1, 'Readable line', 'EUR', '2020-01-01', 2, $3) RETURNING id`,
+      [tenantId, editable.companyId, readable.companyId],
+    );
+    const [mine, theirs] = await runner.query(
+      `INSERT INTO tasks (tenant_id, item_number, title, status, related_object_type, related_object_id, labels, viewer_ids, owner_ids)
+       VALUES ($1, 1, 'Mine', 'open', 'spend_item', $2, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb),
+              ($1, 2, 'Theirs', 'open', 'spend_item', $3, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb) RETURNING id`,
+      [tenantId, lines[0].id, lines[1].id],
+    );
+    assert.equal(await applyDataAccess(runner.manager, limited), 'limited');
+    const asLimited = (csv: string, dryRun: boolean) => service.import(file(csv), { dryRun, operation: 'upsert' }, {
+      manager: runner.manager, tenantId, userId: limited, isAdmin: false, access: { isAdmin: false, permissions: { tasks: 'member', budget: 'member' } } as CsvCallerAccess,
+    });
+    const refused = `id;related_object_type;related_object_id\n${theirs.id};-;-`;
+    for (const dryRun of [true, false]) {
+      const result = await asLimited(refused, dryRun);
+      assert.equal(result.ok, false, JSON.stringify(result));
+      assert.deepEqual(codes(result), [[2, 'id', 'CSV_TASK_READ_ONLY']]);
+    }
+    const detached = await asLimited(`id;related_object_type;related_object_id\n${mine.id};-;-`, false);
+    assert.deepEqual(counts(detached), [true, 1, 0, 2], JSON.stringify(detached.errors));
+    const rows = await runner.query(`SELECT title, related_object_type FROM tasks WHERE tenant_id = $1 ORDER BY item_number`, [tenantId]);
+    assert.deepEqual(rows.map((row: any) => [row.title, row.related_object_type]), [['Mine', null], ['Theirs', 'spend_item']]);
   });
 }
 
@@ -158,4 +265,6 @@ void runSpecs('task-csv-clearing-rule.integration.spec', [
   ['testDashClearsAndCounts', testDashClearsAndCounts],
   ['testDashRefused', testDashRefused],
   ['testRoundTrip', testRoundTrip],
+  ['testDashDetaches', testDashDetaches],
+  ['testLimitedPersonDetaches', testLimitedPersonDetaches],
 ]);

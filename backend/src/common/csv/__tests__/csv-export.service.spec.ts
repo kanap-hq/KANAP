@@ -156,7 +156,8 @@ async function testArrayTruncationWarning() {
   const config = createConfigWithArrays();
 
   const entities = [
-    { id: '1', title: 'Task', owner_ids: ['u1', 'u2', 'u3', 'u4', 'u5'] }, // 5 items, max is 3
+    { id: '1', title: 'Task', owner_ids: ['u1', 'u2', 'u3', 'u4', 'u5'] }, // 5 items, 3 declared
+    { id: '2', title: 'Other', owner_ids: ['u6'] },
   ];
 
   const result = await service.export(config, entities, {
@@ -165,8 +166,12 @@ async function testArrayTruncationWarning() {
     language: 'fr',
   });
 
-  assert.equal(result.warnings.length, 1);
-  assert.ok(result.warnings[0].includes('truncated'));
+  // The whole list: as many columns as the longest list (pass E of lot I6), nothing truncated.
+  assert.deepEqual(result.warnings, []);
+  const [header, first, second] = result.content.replace(/^\uFEFF/, '').split(/\r?\n/);
+  assert.ok(header.endsWith('owner_id_1;owner_id_2;owner_id_3;owner_id_4;owner_id_5'), header);
+  assert.ok(first.endsWith('u1;u2;u3;u4;u5'), first);
+  assert.ok(second.endsWith('u6;;;;'), second);
 }
 
 async function testCommaSeparatedArrays() {

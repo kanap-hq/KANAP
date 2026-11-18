@@ -1,13 +1,14 @@
 import {
   ArrayStrategy,
   CsvEntityConfig,
+  CsvFieldDefinition,
   CsvExportContext,
   CsvFieldType,
   CsvImportContext,
   CsvImportRow,
   importCell,
   noteCleared,
-  refuseClear,
+  numberedColumns,
   removedEntries,
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
@@ -20,6 +21,8 @@ import type { CsvCallerAccess, CsvImportParams } from '../common/csv';
 import { hasLevel } from '../common/relations/relations-access';
 import { findRecordByName, noteNameMatch, noteRefusedProposal, proposalFor, takeProposal, undoneMatch, type MatchHow } from '../common/name-matching';
 import { budgetLineReference } from '../spend/budget-nature';
+import { isLimitedTransaction } from '../data-access/line-write-checks';
+import { DATA_ACCESS_READ_ONLY_TASK_MESSAGE } from './task-data-access';
 
 /** The label of a contract outside the person's access, as the tasks list writes it (`ops:contracts.outsideYourAccess`). */
 export const CONTRACT_OUTSIDE_ACCESS: Record<CsvLanguage, string> = {
@@ -95,17 +98,17 @@ function normalizeTaskCodes(entity: any): void {
   }
 }
 
-/** The addresses a row's numbered email columns give, in order (a `-` among them adds nothing). */
+/** The addresses a row's numbered email columns give, in order, in every one the file holds (a `-` among them adds nothing). */
 function csvEmails(raw: Record<string, string>, prefix: string): string[] {
-  return [1, 2, 3, 4].flatMap((i) => {
-    const cell = importCell(raw, `${prefix}_${i}`);
+  return numberedColumns(raw, prefix).flatMap((column) => {
+    const cell = importCell(raw, column);
     return cell.kind === 'value' ? [cell.text] : [];
   });
 }
 
 /** Whether a row's numbered email columns clear the list: a `-`, and no address. */
 function clearsPeople(raw: Record<string, string>, prefix: string): boolean {
-  return csvEmails(raw, prefix).length === 0 && [1, 2, 3, 4].some((i) => importCell(raw, `${prefix}_${i}`).kind === 'clear');
+  return csvEmails(raw, prefix).length === 0 && numberedColumns(raw, prefix).some((column) => importCell(raw, column).kind === 'clear');
 }
 
 /** A cell's text, by the clearing rule: '' for a blank cell, a `-` or a column the file leaves out. */
@@ -114,23 +117,79 @@ function cellText(row: CsvImportRow, column: string): string {
   return cell.kind === 'value' ? cell.text : '';
 }
 
-/** The columns of a task's related object: `-` on them is refused, the task keeps its object. */
+/** The columns of a task's related object: `-` on them makes the task standalone (`detachTasks`). */
 const RELATED_OBJECT_COLUMNS = ['related_object_type', 'related_object_id', 'related_object_name'] as const;
 
 /**
- * `-` on a related object column of a stored task: a row error naming it (a new task reads it as
- * blank; a matched row an insert-only import skips is not checked).
+ * `-` on the related object of a stored task makes it standalone, as "Make standalone" on the screen
+ * (`PATCH /tasks/:id/move`): its type and id are cleared, its phase goes with them
+ * (`followTaskObjects`), its classification stays. The shared import clears and counts a `-` cell of
+ * the type or the id; a stored type or id no `-` cell names (a blank cell, or no column) is counted
+ * here. A `-` beside an object column that holds a value is a row error naming both columns
+ * (`CSV_TASK_DETACH_CONFLICT`). A standalone task is left as it is; a new task reads `-` as blank; a
+ * matched row an insert-only import skips is not checked. The rows it detaches, for `refuseReadOnlyDetaches`.
  */
-function refuseObjectClears(rows: CsvImportRow[], operation: string): void {
+function detachTasks(rows: CsvImportRow[], operation: string): Set<CsvImportRow> {
+  const detached = new Set<CsvImportRow>();
   for (const row of rows) {
     if (row.isInsert || skippedByOperation(row, operation)) continue;
-    for (const column of RELATED_OBJECT_COLUMNS) {
-      if (importCell(row.raw, column).kind === 'clear') refuseClear(row, column);
+    const cells = RELATED_OBJECT_COLUMNS.map((column) => ({ column, cell: importCell(row.raw, column) }));
+    const dash = cells.find(({ cell }) => cell.kind === 'clear');
+    if (!dash) continue;
+    const named = cells.find(({ cell }) => cell.kind === 'value');
+    if (named) {
+      row.errors.push({
+        row: row.rowNumber,
+        column: dash.column,
+        message: `"-" in ${dash.column} makes the task standalone, while ${named.column} names its object.`,
+        code: 'CSV_TASK_DETACH_CONFLICT',
+        params: { column: dash.column, other: named.column },
+      });
+      continue;
     }
+    for (const key of ['related_object_type', 'related_object_id'] as const) {
+      if (importCell(row.raw, key).kind !== 'clear' && row.existingEntity?.[key] != null) noteCleared(row, 1);
+      row.parsed[key] = null;
+    }
+    delete row.parsed._related_object_name;
+    detached.add(row);
+  }
+  return detached;
+}
+
+/**
+ * A person with limited data access detaches a task of a line or a contract as on the screen
+ * (`prepareTaskWrite`): only a task they may modify (`data_access_task_modifiable`: its object
+ * modifiable, or they are its assignee or owner). Another one is a row error (`CSV_TASK_READ_ONLY`),
+ * at the check as at the load; the database would otherwise skip its update without a word.
+ */
+async function refuseReadOnlyDetaches(rows: Set<CsvImportRow>, context: CsvImportContext): Promise<void> {
+  const scoped = [...rows].filter((row) => ['spend_item', 'capex_item', 'contract'].includes(String(row.existingEntity?.related_object_type ?? '')));
+  if (scoped.length === 0 || !(await isLimitedTransaction(context.manager))) return;
+  const readOnly: Array<{ id: string }> = await context.manager.query(
+    `SELECT t.id::text AS id FROM unnest($1::uuid[]) AS t(id) WHERE data_access_task_modifiable(t.id) IS NOT TRUE`,
+    [scoped.map((row) => row.existingEntity.id)],
+  );
+  const refused = new Set(readOnly.map((row) => row.id.toLowerCase()));
+  for (const row of scoped) {
+    if (!refused.has(String(row.existingEntity.id).toLowerCase())) continue;
+    row.errors.push({ row: row.rowNumber, column: 'id', message: DATA_ACCESS_READ_ONLY_TASK_MESSAGE, code: 'CSV_TASK_READ_ONLY' });
   }
 }
 
-const hasColumns = (raw: Record<string, string>, prefix: string) => [1, 2, 3, 4].some((i) => `${prefix}_${i}` in raw);
+/** The numbered e-mail columns of a task's people lists, and the stored list each one writes. */
+const PEOPLE_LISTS = [{ prefix: 'viewer_email', key: 'viewer_ids' }, { prefix: 'owner_email', key: 'owner_ids' }] as const;
+
+/** The e-mails of a task's stored list of people, in order ('' for a person the export did not load). */
+function peopleEmails(ids: unknown, context: CsvExportContext): string[] {
+  if (!Array.isArray(ids)) return [];
+  const lookup = context.resolverCache.get('users');
+  const emailById = new Map<string, string>();
+  for (const [, user] of lookup?.entries() ?? []) emailById.set(user.id, user._originalLookupValue ?? '');
+  return ids.map((id) => (id ? emailById.get(id) ?? '' : ''));
+}
+
+const hasColumns = (raw: Record<string, string>, prefix: string) => numberedColumns(raw, prefix).length > 0;
 
 /**
  * The classification a task of a project takes from its project when it has none of its own: the
@@ -599,8 +658,6 @@ async function followTaskObjects(rows: CsvImportRow[], context: CsvImportContext
   }
 }
 
-/** The numbered e-mail columns of a task's people lists, and the stored list each one writes. */
-const PEOPLE_LISTS = [{ prefix: 'viewer_email', key: 'viewer_ids' }, { prefix: 'owner_email', key: 'owner_ids' }] as const;
 
 /** A task's stored list of people (jsonb) names the same people as the file, in any order. */
 function samePeople(stored: unknown, next: string[]): boolean {
@@ -618,7 +675,7 @@ function keepsStoredPeople(warnings: ReadonlyArray<{ row: number; column?: strin
  * Viewers and owners: the row's lists, written with the task the import writes (lot I3 of 26.11.9,
  * review fixes: the task whose related object the import found, Kad's proposal and an undone match
  * included), by the clearing rule (D21 of 26.11.9, T-I6e): a list the file leaves out (none of its
- * numbered columns) or whose four cells are blank is not touched; `-` with no address empties it; the
+ * numbered columns) or whose cells are all blank is not touched; `-` with no address empties it; the
  * addresses given are the whole list (a `-` among them adds nothing). A list that names the people the
  * task has, in any order, is left as it is; each person a list loses is counted (`noteCleared`). An
  * e-mail nothing finds is said at the check as at the load: on a row that updates a task, the stored
@@ -627,8 +684,8 @@ function keepsStoredPeople(warnings: ReadonlyArray<{ row: number; column?: strin
  */
 async function importPeople(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const checked = rows.filter((row) => row.errors.length === 0 && !skippedByOperation(row, context.params.operation));
-  const cells = checked.flatMap((row) => PEOPLE_LISTS.flatMap(({ prefix }) => [1, 2, 3, 4]
-    .map((i) => ({ row, column: `${prefix}_${i}`, value: cellText(row, `${prefix}_${i}`) }))
+  const cells = checked.flatMap((row) => PEOPLE_LISTS.flatMap(({ prefix }) => numberedColumns(row.raw, prefix)
+    .map((column) => ({ row, column, value: cellText(row, column) }))
     .filter((cell) => cell.value)));
   const known: Array<{ id: string; email: string }> = cells.length === 0 ? [] : await context.manager.query(
     `SELECT id::text AS id, lower(email) AS email FROM users WHERE tenant_id = $1 AND lower(email) = ANY($2::text[])`,
@@ -691,6 +748,8 @@ export const taskCsvConfig: CsvEntityConfig = {
   displayName: 'Tasks',
   // For linked tasks: title + related_object_id. For standalone: title alone (matched via id).
   upsertKey: ['title'],
+  // A task may have more than four viewers or owners: the export writes them all.
+  numberedLists: PEOPLE_LISTS.map(({ prefix, key }) => ({ base: prefix, values: (entity: any, context: CsvExportContext) => peopleEmails(entity[key], context) })),
   fields: [
     // === IDENTITY ===
     {
@@ -910,174 +969,19 @@ export const taskCsvConfig: CsvEntityConfig = {
       label: 'Assignee Email',
       group: 'People',
     },
-    {
-      csvColumn: 'viewer_email_1',
-      entityProperty: '_viewer_emails',
+    // Viewers then owners, four columns each, and further ones for a longer list (`numberedLists`).
+    ...PEOPLE_LISTS.flatMap(({ prefix, key }) => [1, 2, 3, 4].map((n): CsvFieldDefinition => ({
+      csvColumn: `${prefix}_${n}`,
+      entityProperty: prefix === 'viewer_email' ? '_viewer_emails' : '_owner_emails',
       type: CsvFieldType.COMPUTED,
       exportable: true,
       importable: true,
       required: false,
-      defaultExport: true,
-      label: 'Viewer Email 1',
+      defaultExport: prefix === 'viewer_email',
+      label: `${prefix === 'viewer_email' ? 'Viewer' : 'Owner'} Email ${n}`,
       group: 'People',
-      exportFn: (entity: any, context: CsvExportContext) => {
-        const ids = entity.viewer_ids;
-        if (!Array.isArray(ids) || !ids[0]) return '';
-        const lookup = context.resolverCache.get('users');
-        if (!lookup) return '';
-        for (const [, user] of lookup.entries()) {
-          if (user.id === ids[0]) return user._originalLookupValue ?? '';
-        }
-        return '';
-      },
-    },
-    {
-      csvColumn: 'viewer_email_2',
-      entityProperty: '_viewer_emails',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: true,
-      label: 'Viewer Email 2',
-      group: 'People',
-      exportFn: (entity: any, context: CsvExportContext) => {
-        const ids = entity.viewer_ids;
-        if (!Array.isArray(ids) || !ids[1]) return '';
-        const lookup = context.resolverCache.get('users');
-        if (!lookup) return '';
-        for (const [, user] of lookup.entries()) {
-          if (user.id === ids[1]) return user._originalLookupValue ?? '';
-        }
-        return '';
-      },
-    },
-    {
-      csvColumn: 'viewer_email_3',
-      entityProperty: '_viewer_emails',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: true,
-      label: 'Viewer Email 3',
-      group: 'People',
-      exportFn: (entity: any, context: CsvExportContext) => {
-        const ids = entity.viewer_ids;
-        if (!Array.isArray(ids) || !ids[2]) return '';
-        const lookup = context.resolverCache.get('users');
-        if (!lookup) return '';
-        for (const [, user] of lookup.entries()) {
-          if (user.id === ids[2]) return user._originalLookupValue ?? '';
-        }
-        return '';
-      },
-    },
-    {
-      csvColumn: 'viewer_email_4',
-      entityProperty: '_viewer_emails',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: true,
-      label: 'Viewer Email 4',
-      group: 'People',
-      exportFn: (entity: any, context: CsvExportContext) => {
-        const ids = entity.viewer_ids;
-        if (!Array.isArray(ids) || !ids[3]) return '';
-        const lookup = context.resolverCache.get('users');
-        if (!lookup) return '';
-        for (const [, user] of lookup.entries()) {
-          if (user.id === ids[3]) return user._originalLookupValue ?? '';
-        }
-        return '';
-      },
-    },
-    {
-      csvColumn: 'owner_email_1',
-      entityProperty: '_owner_emails',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: false,
-      label: 'Owner Email 1',
-      group: 'People',
-      exportFn: (entity: any, context: CsvExportContext) => {
-        const ids = entity.owner_ids;
-        if (!Array.isArray(ids) || !ids[0]) return '';
-        const lookup = context.resolverCache.get('users');
-        if (!lookup) return '';
-        for (const [, user] of lookup.entries()) {
-          if (user.id === ids[0]) return user._originalLookupValue ?? '';
-        }
-        return '';
-      },
-    },
-    {
-      csvColumn: 'owner_email_2',
-      entityProperty: '_owner_emails',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: false,
-      label: 'Owner Email 2',
-      group: 'People',
-      exportFn: (entity: any, context: CsvExportContext) => {
-        const ids = entity.owner_ids;
-        if (!Array.isArray(ids) || !ids[1]) return '';
-        const lookup = context.resolverCache.get('users');
-        if (!lookup) return '';
-        for (const [, user] of lookup.entries()) {
-          if (user.id === ids[1]) return user._originalLookupValue ?? '';
-        }
-        return '';
-      },
-    },
-    {
-      csvColumn: 'owner_email_3',
-      entityProperty: '_owner_emails',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: false,
-      label: 'Owner Email 3',
-      group: 'People',
-      exportFn: (entity: any, context: CsvExportContext) => {
-        const ids = entity.owner_ids;
-        if (!Array.isArray(ids) || !ids[2]) return '';
-        const lookup = context.resolverCache.get('users');
-        if (!lookup) return '';
-        for (const [, user] of lookup.entries()) {
-          if (user.id === ids[2]) return user._originalLookupValue ?? '';
-        }
-        return '';
-      },
-    },
-    {
-      csvColumn: 'owner_email_4',
-      entityProperty: '_owner_emails',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      required: false,
-      defaultExport: false,
-      label: 'Owner Email 4',
-      group: 'People',
-      exportFn: (entity: any, context: CsvExportContext) => {
-        const ids = entity.owner_ids;
-        if (!Array.isArray(ids) || !ids[3]) return '';
-        const lookup = context.resolverCache.get('users');
-        if (!lookup) return '';
-        for (const [, user] of lookup.entries()) {
-          if (user.id === ids[3]) return user._originalLookupValue ?? '';
-        }
-        return '';
-      },
-    },
+      exportFn: (entity: any, context: CsvExportContext) => peopleEmails(entity[key], context)[n - 1] ?? '',
+    }))),
 
     // === SIDEBAR: DATES ===
     {
@@ -1165,14 +1069,15 @@ export const taskCsvConfig: CsvEntityConfig = {
   },
 
   /**
-   * `-` on the related object is refused: the task keeps its object (`refuseObjectClears`).
+   * `-` on the related object makes the task standalone (`detachTasks`), a task the person may modify
+   * only (`refuseReadOnlyDetaches`).
    * The object a limited person's export leaves out stays the task's (`keepObjectsOutsideAccess`).
    * The export writes the classification a project task inherits (TASK_INHERITED_CLASSIFICATION). Read
    * back, a cell equal to the project's value on a task that has no value of its own is the inherited
    * value, left as it is: the task keeps following its project. Any other value is the task's own.
    */
   afterValidate: async (rows, context) => {
-    refuseObjectClears(rows, context.params.operation);
+    await refuseReadOnlyDetaches(detachTasks(rows, context.params.operation), context);
     keepObjectsOutsideAccess(rows, context.params.operation);
     await checkIncidentIds(rows, context);
     await resolveRelatedObjects(rows, context);

@@ -243,8 +243,9 @@ async function testClassification() {
 }
 
 /**
- * An export imported back as it is changes nothing: five business owners (the file has four columns
- * per type), a residency `FR,DE`, and a stored text "-" (written `'-`, read as the text).
+ * An export imported back as it is changes nothing: four business owners, then six (the export writes as
+ * many columns as the longest list), a residency `FR,DE`, and a stored text "-" (written `'-`, read as
+ * the text).
  */
 async function testRoundTrip() {
   await inTenant(async (ctx) => {
@@ -270,15 +271,30 @@ async function testRoundTrip() {
       assert.deepEqual([after.notes, after.version, after.classification_revision], ['-', '-', before.row.classification_revision], `${language}: the text "-" stays`);
     }
 
-    // A fifth owner of a type: the export writes four of them, and the check announces the fifth goes.
-    await addOwners(ctx, atlas, 'business', ['finn']);
-    const exported = await ctx.csv.export({ manager: ctx.runner.manager, tenantId: ctx.tenantId, language: 'en', scope: 'data' });
-    const check = await ctx.csv.import(
-      { buffer: Buffer.from(exported.content), originalname: 'export.csv' } as Express.Multer.File,
-      { dryRun: true, operation: 'upsert' },
-      { manager: ctx.runner.manager, tenantId: ctx.tenantId },
-    );
-    assert.deepEqual([check.updated, check.cleared], [1, 1], 'beyond four owners of a type, the check says one value will be cleared');
+    // Six owners of a type (lot I6, pass E): the export writes six columns for that type, in CSV and in
+    // .xlsx, each language naming its fifth and sixth columns as the first four; read back, nothing changes.
+    await addOwners(ctx, atlas, 'business', ['eva', 'finn']);
+    const six = await ownersOf(ctx, atlas);
+    assert.equal(six.filter((owner) => owner.startsWith('business:')).length, 6);
+    for (const [language, format] of [['en', 'csv'], ['fr', 'csv'], ['de', 'xlsx']] as const) {
+      const exported = await ctx.csv.export({ manager: ctx.runner.manager, tenantId: ctx.tenantId, language, scope: 'data', format });
+      const content = exported.content as string | Buffer;
+      if (format === 'csv') {
+        const header = String(content).replace(/^\uFEFF/, '').split(/\r?\n/)[0];
+        assert.ok(header.includes(language === 'fr' ? 'E-mail du responsable métier 6' : 'Business owner 6 email'), header);
+        assert.ok(!header.includes('owner 7') && !header.includes('métier 7'), header);
+        assert.ok(header.includes(language === 'fr' ? 'E-mail du responsable IT 4' : 'IT owner 4 email'), 'the other type keeps its four columns');
+      }
+      const file = { buffer: Buffer.isBuffer(content) ? content : Buffer.from(content), originalname: `export.${format}` } as Express.Multer.File;
+      const run = (dryRun: boolean) => ctx.csv.import(file, { dryRun, operation: 'upsert' }, { manager: ctx.runner.manager, tenantId: ctx.tenantId });
+      const check = await run(true);
+      assert.deepEqual(check.errors, [], `${language} ${format}: the export imports back without an error`);
+      assert.ok(!JSON.stringify(check.warnings).match(/owner|responsable|verantwortlich/i), `${language} ${format}: every owner column is read: ${JSON.stringify(check.warnings)}`);
+      assert.deepEqual([check.updated, check.unchanged, check.cleared], [0, 1, 0], `${language} ${format}: six owners read back change nothing`);
+      const load = await run(false);
+      assert.deepEqual([load.updated, load.unchanged, load.cleared], [0, 1, 0]);
+      assert.deepEqual(await ownersOf(ctx, atlas), six, `${language} ${format}: the six owners stay`);
+    }
   });
 }
 
