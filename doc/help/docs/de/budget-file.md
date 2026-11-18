@@ -95,7 +95,8 @@ Das sind die Standardnamen. Ihre Organisation kann die fünf Spalten in [Budgets
 ## Was eine Zelle bedeutet
 
 - Eine leere Zelle behält den gespeicherten Wert. Eine leere Zelle `nature` behält die Art einer bestehenden Budgetzeile.
-- `-` löscht ein Detail der Budgetzeile: Beschreibung, Notizen, Name und ERP-ID des Lieferanten, Kostenstelle, Run oder Build, einen Dimensionswert, einen Verantwortlichen, das Projekt, das Ende der Gültigkeit. In einer Spalte, die eine neue Budgetzeile füllen muss, und in `nature` ist `-` ein Zeilenfehler. In einer erforderlichen Dimension ist `-` ein Zeilenfehler, wenn die Zeile einen Wert hat.
+- `-` löscht ein Detail der Budgetzeile: Beschreibung, Notizen, Name und ERP-ID des Lieferanten, Kostenstelle, Run oder Build, einen Dimensionswert, einen Verantwortlichen, das Projekt, das Ende der Gültigkeit. In einer Spalte, die eine neue Budgetzeile füllen muss, und in `nature` ist `-` ein Zeilenfehler. In einer erforderlichen Dimension ist `-` ein Zeilenfehler, wenn die Zeile einen Wert hat. Die Prüfung zählt die Werte, die das Laden leert, zum Beispiel „3 Werte werden geleert“.
+- `'-` ist der Text `-`. Der Export schreibt ein gespeichertes `-` auf diese Weise, sodass eine exportierte und erneut importierte Datei nichts ändert.
 - `0` schreibt null.
 - Eine Jahressumme, die der gespeicherten Summe entspricht, schreibt nichts. Eine abweichende Summe wird über den Zeitraum der Spalte verteilt, genau wie bei der Eingabe der Summe im **Budget-Tab**.
 - Eine Monatszelle schreibt diesen Monat und markiert die Spalte als manuell bearbeitet, wie ein im **Budget-Tab** eingegebener Monat.

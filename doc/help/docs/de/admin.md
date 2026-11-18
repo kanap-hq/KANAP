@@ -223,10 +223,12 @@ Die Spalten:
 |---|---|
 | `email` | Pflicht. Zeilen werden über diese Adresse zugeordnet, schreiben Sie sie also so, wie der Arbeitsbereich sie führt |
 | `first_name`, `last_name` | Der Name der Person |
-| `role` | Die zuzuweisende Rolle. Eine leere Zelle ergibt die Rolle **Contact** |
+| `role` | Die zuzuweisende Rolle. Eine neue Person ohne Rolle erhält die Rolle **Contact** |
 | `company_name` | Das Unternehmen, über seinen Namen. Optional |
-| `department_name` | Die Abteilung, über ihren Namen. Sie benötigt einen `company_name` |
-| `status` | `contact`, `invited`, `enabled` oder `disabled`. Eine leere Zelle ergibt `contact` |
+| `department_name` | Die Abteilung, über ihren Namen, im Unternehmen der Zeile. Eine Zeile, die das Unternehmen ändert, leert die Abteilung, außer sie nennt eine |
+| `status` | `contact`, `invited`, `enabled` oder `disabled`. Eine neue Person ohne Status erhält `contact` |
+
+Nur `email` ist Pflicht, und eine Spalte, die die Datei weglässt, wird nie geschrieben. Bei einer Person, die der Arbeitsbereich bereits führt, behält eine leere Zelle den gespeicherten Wert, auch die Rolle und den Status: Eine Zeile ohne sie ändert niemandes Zugriff. `-` leert den Vornamen, den Nachnamen, das Unternehmen und die Abteilung. `-` kann die E-Mail-Adresse, die Rolle und den Status nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing).
 
 Eine Rolle, die die Datei nennt und die Ihr Arbeitsbereich nicht hat, wird beim Laden angelegt, mit einer Standardbeschreibung. Die Prüfung listet sie auf und legt nichts an: Eine Datei, die Sie nur prüfen, ändert keine Rolle. Ein Name, der zweimal in der Datei steht, wird einmal behalten, die erste Zeile gewinnt. Ein Name, den die Seite für eine System- oder integrierte Rolle anzeigt, in einer ihrer Sprachen, wird für diese Zeile abgelehnt.
 

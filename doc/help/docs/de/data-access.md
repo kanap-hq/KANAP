@@ -164,6 +164,7 @@ claire.dubois@example.com;all;;read
 ```
 
 - Eine Person in der Datei erhält genau die für sie aufgeführten Knoten, mit **Begrenzt auf**. Eine Person, die nicht in der Datei steht, bleibt unverändert.
+- Jede Zeile beschreibt einen Knoten, daher hat diese Datei keinen Wert, der behalten oder geleert wird: Die Regel aus [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing) gilt hier nicht.
 - Ein Import begrenzt immer. Um jemandem wieder alle Daten zu geben, verwenden Sie das Benutzerfenster.
 - Die Prüfung kommt zuerst und schreibt nichts. Sie meldet jede abgelehnte Zeile: unbekannte Person, unbekanntes Unternehmen oder unbekannte Kostenstelle, ungültiger Typ oder Zugriff, ein Knoten zweimal für dieselbe Person, ein Administrator, Ihr eigenes Konto. Eine Datei mit einem Fehler lädt nichts.
 - Der Export schreibt dasselbe Format, für die begrenzten Personen. Eine begrenzte Person ohne Knoten hat keine Zeile, daher lässt ein erneuter Import der Datei sie unverändert.
