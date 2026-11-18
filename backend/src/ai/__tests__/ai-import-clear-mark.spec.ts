@@ -7,8 +7,8 @@ import { buildImportMapping, type AiImportTemplateColumn } from '../import/ai-im
 // Lot I4 of 26.11.9 (D21): Kad's file carries the person's `-` to the imports that read it as the
 // clearing mark, in every kind of column (a day, a fixed list, an e-mail), as the screen's file
 // does: the import then clears the value or refuses the row. A blank cell stays blank (it keeps the
-// stored value), and the model's value map turns a value into `-` only when it says so. The imports
-// that do not follow the rule yet read `-` as before.
+// stored value), and the model's value map turns a value into `-` only when it says so. The six
+// imports of the shared import follow it since lot I6; the budget file reads `-` by its own reader.
 
 const text = (value: string) => ({ kind: 'text' as const, value });
 
@@ -59,12 +59,18 @@ function testTheMappingSetsTheMarkByImport() {
     ],
     assumptions: [],
   });
-  const suppliers = buildImportMapping(grid, template, request('suppliers'), 'fr');
-  assert.deepEqual(suppliers.file.rows, [['Lactalis', '-']], 'the suppliers import reads `-`');
-  // Applications follow the rule with lot I6: `-` stays a value the day column does not read.
-  const applications = buildImportMapping(grid, template, request('applications'), 'fr');
-  assert.deepEqual(applications.file.rows, [['Lactalis', { unread: '-' }]]);
+  // The imports of lot I4 and, since lot I6, the six of the shared import read `-`.
+  for (const key of ['suppliers', ...SHARED_IMPORTS]) {
+    const mapped = buildImportMapping(grid, template, request(key), 'fr');
+    assert.deepEqual(mapped.file.rows, [['Lactalis', '-']], `the ${key} import reads \`-\``);
+  }
+  // The budget file reads its cells by its own reader: `-` stays a value the day column does not read.
+  const budget = buildImportMapping(grid, template, request('budget_lines'), 'fr');
+  assert.deepEqual(budget.file.rows, [['Lactalis', { unread: '-' }]]);
 }
+
+/** The six imports of the shared import, under the clearing rule since lot I6 of 26.11.9. */
+const SHARED_IMPORTS = ['applications', 'assets', 'portfolio_projects', 'portfolio_requests', 'tasks', 'incidents'];
 
 // The mark never goes through the model's value map: a `-` of the file reaches the import as it is,
 // whatever the map says of it, and a value the map turns into `-` is a clearing, on a column the
@@ -87,6 +93,12 @@ function testTheValueMapNeverMovesTheMark() {
     ['contracts', 'cost_center'],
     ['cost_centers', 'company_name'],
     ['business_processes', 'parent_name'],
+    ['applications', 'supplier_name'],
+    ['assets', 'cluster'],
+    ['tasks', 'company_name'],
+    ['incidents', 'owner'],
+    ['portfolio_projects', 'company_name'],
+    ['portfolio_requests', 'category_name'],
   ];
   for (const [importKey, column] of matched) {
     const template: AiImportTemplateColumn[] = [

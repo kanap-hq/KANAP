@@ -54,7 +54,7 @@ type RowsReport = {
   inserted?: number;
   updated?: number;
   unchanged?: number;
-  /** The stored values the rows clear with `-` (D21 of 26.11.9): the imports of lot I4 count them. */
+  /** The stored values the rows clear with `-` (D21 of 26.11.9): every row import counts them. */
   cleared?: number;
   skipped?: number;
   errors?: AiImportReportMessage[];
@@ -91,7 +91,9 @@ type BudgetFileAnswer = {
   creates?: { supplierCount?: number; dimensionValueCount?: number };
   supplierMessage?: string | null;
   matching?: BudgetFileMatching;
-  changes?: { created: number; updated: number; unchanged: number; byNature?: BudgetFileNatureCounts };
+  changes?: { created: number; updated: number; unchanged: number; cleared?: number; byNature?: BudgetFileNatureCounts };
+  /** The load: the stored values its `-` cells cleared, as its check counted them. */
+  cleared?: number;
   warnings?: Record<string, unknown>;
   lookalikes?: BudgetFileLookalikes;
 };
@@ -108,8 +110,8 @@ type ImportCall = {
 
 /**
  * The imports of the screens, called as their routes call them (lot I3 of the Plaid import): the same
- * services, the same options (the screen's "merge" mode, the clearing rule of every import route for
- * the imports that follow it, the person's language, the decimal point the file is written with), in the transaction of the person's call, which carries their data access.
+ * services, the same options (the screen's "merge" mode, the clearing rule of every import (D21 of
+ * 26.11.9), the person's language, the decimal point the file is written with), in the transaction of the person's call, which carries their data access.
  * Plaid writes nothing itself. The answers become one bilan, whose row numbers are the lines of the
  * person's own file.
  */
@@ -184,7 +186,8 @@ export class AiImportRunnerService {
       ...(matching?.proposals ? { proposals: matching.proposals } : {}),
     };
     // The file holds numbers as number cells and days as date cells, written with a decimal point.
-    // The clearing rule of every import route (D21 of 26.11.9): a blank cell keeps, `-` clears.
+    // The clearing rule of every import (D21 of 26.11.9), which the imports of lot I4 take as a mode:
+    // a blank cell keeps, `-` clears. The six of the shared import (`merge`) have no other rule.
     const read = { language, decimalMark: '.' as const, mode: 'enrich' as const };
     // The screen's recommended preset: add the new records, update the matched ones, keep what a blank cell does not say.
     const merge = { dryRun, operation: 'upsert' as const, ...names };
@@ -721,8 +724,8 @@ function byNature(total: number, counts: Record<BudgetNature, number> | undefine
 
 /**
  * What the approval of a budget file's check does, in one sentence, from the check itself: the lines,
- * the suppliers and dimension values it creates (named), and the values of the file it matched to
- * existing ones. The model announces this and nothing else (a small model does not count from the lists).
+ * the stored values its `-` cells clear (lot I6 of 26.11.9, when there are some), the suppliers and
+ * dimension values it creates (named), and the values of the file it matched to existing ones. The model announces this and nothing else (a small model does not count from the lists).
  */
 export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatching): string {
   if (answer.ok !== true) return CANNOT_BE_APPROVED;
@@ -750,7 +753,7 @@ export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatc
         : 'The card cannot be approved.');
   }
   return `On approval: ${changes.created} lines created${byNature(changes.created, split?.created)}, `
-    + `${changes.updated} updated${byNature(changes.updated, split?.updated)}; `
+    + `${changes.updated} updated${byNature(changes.updated, split?.updated)}${clearedNote(changes.cleared ?? 0)}; `
     + `${suppliers} suppliers created${listed(supplierNames, suppliers)}; `
     + `${values} dimension values created${listed(valueNames, values)}; `
     + `${matching.totals.matches} values of the file matched to existing ones${listed(matchNames, matching.totals.matches)}`
@@ -804,6 +807,8 @@ export function budgetBilan(
     inserted: isCheck ? answer.changes!.created : answer.inserted ?? 0,
     updated: isCheck ? answer.changes!.updated : answer.updated ?? 0,
     unchanged: isCheck ? answer.changes!.unchanged : 0,
+    // The stored values the `-` cells clear, as the check counts them; the load repeats its check's count.
+    cleared: isCheck ? answer.changes!.cleared ?? 0 : answer.cleared ?? 0,
     // The rows left out because they look like a stored line.
     skipped: isCheck ? answer.lookalikes?.ignored ?? 0 : answer.skipped ?? 0,
     error_count: errorCount,
