@@ -819,6 +819,16 @@ export const applicationCsvConfig: CsvEntityConfig = {
       if (row.errors.length) continue;
       try { Object.assign(row.parsed, classificationPatch(input, row.existingEntity ?? null, catalog)); }
       catch (error: any) { row.errors.push({ row: row.rowNumber, message: error.message, ...codedErrorOf(error) }); }
+      // The catalog values by their codes, as the load stores them: the check compares the access
+      // methods a file names (the export writes them by name) with the stored codes, for `cleared`.
+      // A value the resolution leaves as it is stays the same object (the empty list `-` gave).
+      if (!row.errors.length) {
+        const resolved = { ...row.parsed };
+        try { resolveApplicationCatalogs(resolved, settings); } catch { /* refused by the validation above */ }
+        for (const key of ['category', 'lifecycle', 'access_methods']) {
+          if (JSON.stringify(resolved[key]) !== JSON.stringify(row.parsed[key])) row.parsed[key] = resolved[key];
+        }
+      }
     }
   },
 

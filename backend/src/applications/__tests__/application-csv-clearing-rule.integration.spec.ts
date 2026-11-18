@@ -298,12 +298,35 @@ async function testRoundTrip() {
   });
 }
 
+/**
+ * Access methods as the export writes them, by their names (lot I6 of 26.11.9, pass F): the check
+ * compares them as the load stores them, by their codes. A row that changes another column clears
+ * nothing; a list that drops one method counts it.
+ */
+async function testAccessMethodsByName() {
+  await inTenant(async (ctx) => {
+    const id = await seedApp(ctx, 'Alpha');
+    await ctx.runner.query(`UPDATE applications SET access_methods = '{local,web}' WHERE id = $1`, [id]);
+    const lines = ['id;description;access_methods', `${id};Changed;Locally installed application, Web`];
+    const { check, load } = await checkThenLoad(ctx, lines);
+    assert.deepEqual([check.updated, check.cleared], [1, 0], 'the names of the stored methods clear nothing');
+    assert.deepEqual([load.updated, load.cleared], [1, 0]);
+    assert.deepEqual((await appRow(ctx, id)).access_methods, ['local', 'web']);
+    const same = await importCsv(ctx, ['id;access_methods', `${id};Locally installed application, Web`], { dryRun: true });
+    assert.deepEqual([same.updated, same.unchanged, same.cleared], [0, 1, 0]);
+    const dropped = await checkThenLoad(ctx, ['id;access_methods', `${id};Web`]);
+    assert.deepEqual([dropped.check.updated, dropped.check.cleared, dropped.load.cleared], [1, 1, 1], 'a method dropped is counted');
+    assert.deepEqual((await appRow(ctx, id)).access_methods, ['web']);
+  });
+}
+
 runSpecs('application-csv-clearing-rule.integration.spec', [
   ['owners', testOwners],
   ['data residency', testResidency],
   ['supplier and publisher', testSupplierAndPublisher],
   ['classification', testClassification],
   ['round trip', testRoundTrip],
+  ['access methods by name', testAccessMethodsByName],
 ]).catch((error) => {
   console.error(error);
   process.exit(1);
