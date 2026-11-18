@@ -1690,7 +1690,7 @@
         },
         "own_technologies": {
           "title": "Your technologies",
-          "hint": "Add a technology with New technology, then link it to an application in its Relations tab."
+          "hint": "Add a technology with New technology, then link it to an application in its Operations tab."
         },
         "own_assets": {
           "title": "Your assets",

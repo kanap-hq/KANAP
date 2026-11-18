@@ -1690,7 +1690,7 @@
         },
         "own_technologies": {
           "title": "Sus tecnologías",
-          "hint": "Añádalas con Nueva tecnología y vincúlelas a una aplicación en su pestaña Relaciones."
+          "hint": "Añádalas con Nueva tecnología y vincúlelas a una aplicación, pestaña Operaciones."
         },
         "own_assets": {
           "title": "Sus activos",

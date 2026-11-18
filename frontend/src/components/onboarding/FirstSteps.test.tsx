@@ -610,12 +610,12 @@ describe('own data hints that point to another screen', () => {
   const oneSentence = (text: string) => expect(text.match(/[.!?](\s|$)/g)).toHaveLength(1);
 
   for (const [lng, files] of Object.entries(locales)) {
-    it(`names New technology, the Relations tab and the contract's Budget tab in ${lng}`, () => {
+    it(`names New technology, the application's Operations tab and the contract's Budget tab in ${lng}`, () => {
       const steps = files.common.onboarding.firstSteps.steps;
       const technologies = steps.own_technologies.hint;
       const contract = steps.own_contract.hint;
       expect(technologies).toContain(files.it.pages.technologies.newTechnology);
-      expect(technologies).toContain(files.it.workspace.application.tabs.relations);
+      expect(technologies).toContain(files.it.workspace.application.tabs.operations);
       expect(contract).toContain(files.ops.contracts.tabs.budget);
       oneSentence(technologies);
       oneSentence(contract);

@@ -1690,7 +1690,7 @@
         },
         "own_technologies": {
           "title": "Vos technologies",
-          "hint": "Ajoutez-en avec Nouvelle technologie et liez-les à vos applications, onglet Relations."
+          "hint": "Ajoutez-en par Nouvelle technologie et liez-les à une application, onglet Exploitation."
         },
         "own_assets": {
           "title": "Vos actifs",
