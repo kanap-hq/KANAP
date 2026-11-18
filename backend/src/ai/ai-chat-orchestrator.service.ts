@@ -1707,14 +1707,18 @@ export class AiChatOrchestratorService {
   /**
    * The message written after an approval or a rejection: the preview's summary, already in the
    * person's language (`AiMutationPreviewService`), or a fixed sentence in that language.
+   * A failure whose summary is already the error states that sentence once. The comparison uses
+   * the summary before its references are turned into links.
    */
   private buildPreviewResultAssistantText(
     preview: AiMutationPreviewDto,
     budgetReference?: string,
     language: AiWriteLanguage = 'en',
   ): string {
-    const summary = this.linkifyPreviewSummary(preview, String(preview.summary || '').trim(), budgetReference);
+    const rawSummary = String(preview.summary || '').trim();
+    const summary = this.linkifyPreviewSummary(preview, rawSummary, budgetReference);
     const errorMessage = String(preview.error_message || '').trim();
+    const summaryIsError = rawSummary.length > 0 && rawSummary === errorMessage;
 
     switch (preview.status) {
       case 'executed':
@@ -1722,7 +1726,7 @@ export class AiChatOrchestratorService {
       case 'rejected':
         return summary || previewResultFallbackText(language, 'rejected');
       case 'failed':
-        if (errorMessage) {
+        if (errorMessage && !summaryIsError) {
           return summary
             ? `${summary}\n\n${previewErrorLine(language, errorMessage)}`
             : `${previewResultFallbackText(language, 'failed')} ${previewErrorLine(language, errorMessage)}`;
@@ -1731,7 +1735,7 @@ export class AiChatOrchestratorService {
       case 'expired':
         return summary || previewResultFallbackText(language, 'expired');
       default:
-        if (errorMessage) {
+        if (errorMessage && !summaryIsError) {
           return summary ? `${summary}\n\n${previewErrorLine(language, errorMessage)}` : errorMessage;
         }
         return summary || previewResultFallbackText(language, 'other');
