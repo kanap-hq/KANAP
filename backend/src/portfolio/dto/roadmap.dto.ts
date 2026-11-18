@@ -181,7 +181,8 @@ export const RoadmapApplySchema = z.object({
     .superRefine((projects, ctx) => {
       const seen = new Set<string>();
       projects.forEach((project, index) => {
-        if (seen.has(project.projectId)) {
+        const projectId = project.projectId.toLowerCase();
+        if (seen.has(projectId)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: `Duplicate projectId '${project.projectId}'`,
@@ -189,7 +190,7 @@ export const RoadmapApplySchema = z.object({
           });
           return;
         }
-        seen.add(project.projectId);
+        seen.add(projectId);
       });
     }),
 });
