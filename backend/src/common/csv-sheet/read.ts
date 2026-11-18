@@ -3,6 +3,7 @@ import { parse } from 'csv-parse';
 import { Features } from '../../config/features';
 import { denormalizeCsvFormulaValue } from '../csv/csv-export.service';
 import { Decimal } from '../decimal';
+import { GUARDED_DASH, quotePrefixedText } from './clear';
 import {
   hasOldExcelSignature,
   hasZipSignature,
@@ -94,7 +95,7 @@ export async function readCsv(input: Buffer | string, schema: CsvReadSchema): Pr
   const separator = chooseSeparator(opened.record);
   if (!separator) return baseResult(decoded.encoding, null, ['The separator could not be read from the header.']);
 
-  const parsed = await parseRecords(text, separator);
+  const parsed = await parseRecords(text, separator, schema.keepsGuardedDash === true);
   if (parsed.capped) {
     return baseResult(decoded.encoding, separator, [rowCapMessage()]);
   }
@@ -127,7 +128,10 @@ export async function readSheet(input: Buffer, schema: CsvReadSchema): Promise<S
   const rows: GridRow[] = [];
   let dataRows = 0;
   for (let index = 0; index < grid.rows.length; index += 1) {
-    const cells = grid.rows[index].map((cell) => (cell.kind === 'text' ? textCell(cleanCell(cell.value)) : cell));
+    const keepsGuardedDash = schema.keepsGuardedDash === true;
+    const cells = grid.rows[index].map((cell) => (cell.kind === 'text'
+      ? textCell(cleanCell(keepsGuardedDash ? quotePrefixedText(cell) : cell.value, keepsGuardedDash))
+      : cell));
     if (cells.every(isBlank)) continue;
     if (rows.length > 0) {
       dataRows += 1;
@@ -345,8 +349,10 @@ function baseResult(
   };
 }
 
-function cleanCell(value: string): string {
-  return denormalizeCsvFormulaValue(value.trim().replace(/^\uFEFF/, ''));
+/** A cell trimmed, formula guard undone; `'-` kept as it is when the schema says so (`keepsGuardedDash`). */
+function cleanCell(value: string, keepsGuardedDash = false): string {
+  const text = value.trim().replace(/^\uFEFF/, '');
+  return keepsGuardedDash && text === GUARDED_DASH ? text : denormalizeCsvFormulaValue(text);
 }
 
 function firstRecord(text: string): { record: string | null; error: string | null } {
@@ -443,6 +449,7 @@ function chooseSeparator(record: string): CsvSeparator | null {
 function parseRecords(
   text: string,
   separator: CsvSeparator,
+  keepsGuardedDash: boolean,
 ): Promise<{ rows: RawRow[]; error: string | null; capped: boolean }> {
   return new Promise((resolve) => {
     const rows: RawRow[] = [];
@@ -460,7 +467,7 @@ function parseRecords(
       if (settled) return;
       const start = previousLines + 1;
       previousLines = row.info.lines;
-      const cells = row.record.map((value) => cleanCell(String(value ?? '')));
+      const cells = row.record.map((value) => cleanCell(String(value ?? ''), keepsGuardedDash));
       if (cells.every((cell) => cell === '')) return;
       if (rows.length > 0) {
         dataRows += 1;

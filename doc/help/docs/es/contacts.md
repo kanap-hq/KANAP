@@ -138,15 +138,24 @@ Gestione contactos de forma masiva usando archivos CSV o libros de Excel.
 **Importar**:
 - Utilice la **Verificación previa** para validar antes de aplicar
 - Puede crear nuevos contactos o actualizar los existentes
-- **Emparejamiento por referencia**: una `reference` rellenada (`CTCT-4` o `4`) designa el contacto que la fila actualiza, aunque su correo electrónico haya cambiado. El contacto toma el nombre y el correo electrónico de la fila. La verificación previa señala cada contacto que cambiará de nombre o de dirección de correo electrónico
+- **Emparejamiento por referencia**: una `reference` rellenada (`CTCT-4` o `4`) designa el contacto que la fila actualiza, aunque su correo electrónico haya cambiado. El contacto toma el nombre y el correo electrónico que da la fila. La verificación previa señala cada contacto que cambiará de nombre o de dirección de correo electrónico
 - **Emparejamiento por correo electrónico**: cuando `reference` está vacía, o el archivo no tiene esa columna, la fila se empareja por la dirección de correo electrónico
 - **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“CTCT-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
 - **Cambio de correo electrónico**: un correo electrónico que ya tiene otro contacto se rechaza, y el mensaje da la referencia de ese contacto: «“ana@acme.example” ya pertenece a CTCT-7.»
 - **Una fila por contacto**: dos filas que actualizan el mismo contacto se rechazan: «Esta fila actualiza CTCT-7, como la fila 3. Deje una sola fila por registro.» Dos filas que crean el mismo contacto (mismo correo electrónico, sin distinguir mayúsculas y minúsculas) también se rechazan: «Mismos valores en email que en la fila 3.»
 
-**Campos obligatorios**: Correo electrónico
+- **Celdas vacías y `-`**: en un contacto que el archivo actualiza, una celda vacía conserva el valor guardado y `-` lo borra. `-` borra los nombres, `job_title`, `phone`, `mobile`, `country` y `notes`. No puede borrar `reference`, `email` ni `active`: la fila se rechaza. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing)
 
-**Campos opcionales**: `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
+**Columnas de proveedor**:
+- `supplier_name` define el proveedor del contacto, por su referencia (`SUP-12`) o su nombre. Los nombres se encuentran como se describe en [Nombres de registros](csv-files.md#names-of-records): un nombre encontrado con otros acentos aparece en la verificación, y puede deshacer la asociación. Un nombre que no corresponde a ningún proveedor, o a varios, rechaza la fila. La importación nunca crea un proveedor
+- `supplier_role` es el tipo de contacto para ese proveedor: `commercial`, `technical`, `support` u `other`, o la palabra que muestra la página del contacto, en cualquiera de los cuatro idiomas. Si se deja vacía, el contacto conserva su tipo, y un contacto sin tipo recibe **Comercial**, como en la página del contacto
+- Un `supplier_name` vacío conserva el proveedor. `-` quita el proveedor y su tipo de contacto. `-` solo en `supplier_role` se rechaza, y también un tipo en un contacto sin proveedor
+- Un cambio de proveedor hace lo mismo que elegir el proveedor en la página del contacto
+- La exportación y la plantilla incluyen ambas columnas
+
+**Campos obligatorios**: `email`, en un contacto nuevo
+
+**Campos opcionales**: `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `supplier_name`, `supplier_role`, `notes`, `active`
 
 **Notas**:
 - Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador y los dos pasos de importación

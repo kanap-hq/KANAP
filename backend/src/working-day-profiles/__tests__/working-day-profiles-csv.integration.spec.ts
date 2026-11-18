@@ -196,7 +196,8 @@ async function testRowErrors() {
     const badHeader = await csv.importCsv({ file: file(['x'], 'code;name;year;jan'), dryRun: true }, ctx);
     assert.equal(badHeader.ok, false);
     assert.equal(badHeader.errors[0].row, 0);
-    assert.match(badHeader.errors[0].message, /^Header mismatch\. Missing: description, status, feb/);
+    // Only the code is required; the year and the twelve months come together (lot I4 of 26.11.9).
+    assert.match(badHeader.errors[0].message, /^Header mismatch\. Missing: feb, mar/);
   });
 }
 

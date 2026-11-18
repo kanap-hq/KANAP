@@ -615,6 +615,11 @@
     "unchanged_other": "{{count}} unverändert",
     "skipped_one": "{{count}} übersprungen",
     "skipped_other": "{{count}} übersprungen",
+    "valuesWillBeCleared_one": "{{count}} Wert wird geleert",
+    "valuesWillBeCleared_other": "{{count}} Werte werden geleert",
+    "valuesWillBeClearedSentence_one": "{{count}} Wert wird geleert.",
+    "valuesWillBeClearedSentence_other": "{{count}} Werte werden geleert.",
+    "clearingRule": "Eine leere Zelle behält den gespeicherten Wert. Ein Bindestrich (-) leert ihn.",
     "errors": "Fehler ({{count}})",
     "warnings": "Warnungen ({{count}})",
     "andMoreErrors2_one": "…und {{count}} weiterer Fehler",
@@ -939,6 +944,9 @@
         "company_name": "Unternehmen",
         "supplier_name": "Lieferant",
         "cost_center": "Kostenstelle"
+      },
+      "contacts": {
+        "supplier_name": "Lieferant"
       },
       "cost-centers": {
         "company_name": "Unternehmen"

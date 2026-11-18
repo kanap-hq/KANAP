@@ -91,13 +91,19 @@ import {
   formatCsvBoolean,
   parseCsvBoolean,
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
   fieldAmounts,
+  keepsStoredValue,
   readMasterDataFile,
   referenceMoveWarning,
   referenceRenameWarning,
   rowError,
   rowProblemErrors,
+  type CsvDataRow,
   type CsvDateOrder,
+  type CsvImportMode,
   type CsvLanguage,
   type DecimalMark,
   type ImportReportError,
@@ -116,7 +122,7 @@ import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-w
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { amountCell, dayCell, ListExportCell, ListExportFile, numberCell, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
-import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS, CONTRACT_CSV_OPTIONAL } from './contract-csv-headers';
+import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS, CONTRACT_CSV_KEYS } from './contract-csv-headers';
 import { contractReference, contractReferenceFilter, contractReferenceNumber } from './contract-reference';
 
 /**
@@ -1421,6 +1427,13 @@ export class ContractsService {
    * match (`unmatched`). Two names case aside, or accents aside, refuse the row; each match beyond
    * case is listed (`matches`). Kad's proposal for a value (`proposals`) comes first: accepted when it
    * names a record the person reads, exactly or case aside; refused (`refusedProposals`) otherwise.
+   *
+   * Under the clearing rule of the import route (`mode: 'enrich'`, D21 of 26.11.9) a blank cell
+   * keeps the stored value and `-` clears the cost center, the owner or the notes; `-` on any other
+   * column refuses the row (a number with `CSV_NUMBER_CANNOT_BE_CLEARED`). The company, the
+   * supplier and the start date are required of a new contract only, and the defaults (12 and 1
+   * months, amount 0, EUR, annual, no renewal) apply to a new contract only. Any column but the
+   * keys (`reference`, or `name` and `supplier_name`) may be absent: it is then never written.
    */
   async importCsv(
     {
@@ -1433,6 +1446,7 @@ export class ContractsService {
       access,
       unmatched,
       proposals,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -1446,6 +1460,8 @@ export class ContractsService {
       unmatched?: Array<{ column: string; value: string }>;
       /** Kad's proposals, by file column: a value of the file and the name of the record it stands for. */
       proposals?: ImportProposals;
+      /** What a row does to a contract it updates (`CsvImportMode`); without it, `replace`. */
+      mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager },
   ) {
@@ -1458,8 +1474,8 @@ export class ContractsService {
       fields: this.csvHeaders(),
       fieldLabels: CONTRACT_CSV_HEADERS,
       dateFields: ['start_date'],
-      // Older files have no reference and no place column: a row without the place keeps the stored one.
-      optional: CONTRACT_CSV_OPTIONAL,
+      // A row finds its contract by its reference, else its name and supplier: any other column may be absent.
+      keys: CONTRACT_CSV_KEYS,
       language: readLanguage,
       dateOrder,
       decimalMark,
@@ -1514,7 +1530,6 @@ export class ContractsService {
         : rowError(line, column, 'CSV_REFERENCE_NOT_FOUND', `${family.label} '${value}' not found`, { value }));
       return null;
     };
-    const hasPlaceColumn = read.present.includes('cost_center');
     // The contracts the file names by reference, read at once (a number of no contract is refused below).
     const referenced = Array.from(new Set(rows
       .map((r) => contractReferenceNumber(cellOf(r, 'reference'), { bare: true }))
@@ -1524,12 +1539,34 @@ export class ContractsService {
         .map((row) => [Number(row.item_number), row]),
     );
 
-    const norm: Array<ContractUpsertDto & { line: number; supplier: Named; company: Named; owner_email?: string | null; cost_center_name?: string | null; costCenterId: string | null; target?: Contract }> = [];
+    // A row's values. A link the row leaves blank or clears with `-` is null: `keepsStoredValue`
+    // tells a kept value from a cleared one on a stored contract.
+    type ContractRow = {
+      line: number; row: CsvDataRow; target?: Contract;
+      name: string; company: Named | null; supplier: Named | null; costCenterId: string | null; owner_email: string | null;
+      start_date: string; duration_months: number; auto_renewal: boolean; notice_period_months: number;
+      yearly_amount_at_signature: number; currency: string; billing_frequency: string; status: string | null; notes: string | null;
+    };
+    const norm: ContractRow[] = [];
+    // Whether the row leaves the stored value of this column as it is, on a contract it updates.
+    const keeps = (r: CsvDataRow, column: string) => keepsStoredValue(r, read.present, column, mode);
     for (const r of rows) {
       const line = r.line;
       const problems = rowProblemErrors(r);
       if (problems.length > 0) {
         errors.push(...problems);
+        continue;
+      }
+      // `-` clears the cost center, the owner and the notes only (D21 of 26.11.9); on a number it
+      // says to write one.
+      const refusals = clearRefusals(
+        r,
+        ['reference', 'name', 'company_name', 'supplier_name', 'start_date', 'auto_renewal', 'currency', 'billing_frequency', 'status'],
+        mode,
+        ['duration_months', 'notice_period_months', 'yearly_amount_at_signature'],
+      );
+      if (refusals.length > 0) {
+        errors.push(...refusals);
         continue;
       }
       const referenceRaw = cellOf(r, 'reference');
@@ -1575,23 +1612,28 @@ export class ContractsService {
       // Blank: enabled for a new contract, the current status on an update.
       const statusRaw = cellOf(r, 'status').toLowerCase();
       const status = statusRaw === 'disabled' ? 'disabled' : statusRaw ? 'enabled' : null;
-      const owner_email = cellOf(r, 'owner_email') || null;
-      const notes = cellOf(r, 'notes') || null;
-      const cost_center_name = cellOf(r, 'cost_center') || null;
-      // Coded on their column (`errors:CSV_*`): the dialog words them in the interface language.
-      if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
-      if (!company_name) errors.push(rowError(line, 'company_name', 'CSV_VALUE_REQUIRED', 'company_name is required'));
+      const owner_email = cellText(r, 'owner_email', mode) || null;
+      const notes = cellText(r, 'notes', mode) || null;
+      const cost_center_name = cellText(r, 'cost_center', mode) || null;
+      // Coded on their column (`errors:CSV_*`): the dialog words them in the interface language. A
+      // contract the reference names may keep its name and supplier; the company and the start date
+      // a row may keep are required once the row is known to create a contract (below).
+      if (!name && !(target && keeps(r, 'name'))) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
+      if (!company_name && !keeps(r, 'company_name')) errors.push(rowError(line, 'company_name', 'CSV_VALUE_REQUIRED', 'company_name is required'));
       const company = company_name ? recordOf('company_name', company_name, line) : null;
-      if (!supplier_name) errors.push(rowError(line, 'supplier_name', 'CSV_VALUE_REQUIRED', 'supplier_name is required'));
+      if (!supplier_name && !(target && keeps(r, 'supplier_name'))) errors.push(rowError(line, 'supplier_name', 'CSV_VALUE_REQUIRED', 'supplier_name is required'));
       const supplier = supplier_name ? recordOf('supplier_name', supplier_name, line) : null;
       if (owner_email && !uByEmail.has(owner_email.toLowerCase())) errors.push(rowError(line, 'owner_email', 'CSV_REFERENCE_NOT_FOUND', `user '${owner_email}' not found`, { value: owner_email }));
       const costCenter = cost_center_name ? recordOf('cost_center', cost_center_name, line) : null;
-      if (!start_date) errors.push(rowError(line, 'start_date', 'CSV_VALUE_REQUIRED', 'start_date is required'));
+      if (!start_date && !keeps(r, 'start_date')) errors.push(rowError(line, 'start_date', 'CSV_VALUE_REQUIRED', 'start_date is required'));
       if (currency && currency.length !== 3) errors.push(rowError(line, 'currency', 'CSV_CURRENCY_INVALID', 'currency must be 3 letters', { value: currency }));
       if (!BILLING_FREQUENCIES.includes(billing_frequency)) {
         errors.push(rowError(line, 'billing_frequency', 'CSV_ENUM_INVALID', 'billing_frequency invalid', { value: billing_frequency, allowed: BILLING_FREQUENCIES.join(', ') }));
       }
-      norm.push({ line, target, name, company: company!, supplier: supplier!, cost_center_name, costCenterId: costCenter?.id ?? null, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
+      norm.push({
+        line, row: r, target, name, company, supplier, costCenterId: costCenter?.id ?? null, owner_email,
+        start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, notes,
+      });
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
 
@@ -1613,22 +1655,27 @@ export class ContractsService {
     const markdownBudget = markdownWorkBudget();
     const now = new Date();
     const today = utcDateYmd(now);
+    // The values each row writes: on a stored contract, only the columns it fills or clears.
+    const valuesOf = new Map<ContractRow, Partial<Record<keyof Contract, unknown>>>();
+    // The stored values the rows clear with `-` (a `-` on an empty one is not counted).
+    let cleared = 0;
     for (const item of unique) {
-      const s = item.supplier;
+      // A row without a reference names its supplier: it is the key.
+      const supplierId = item.supplier?.id ?? item.target!.supplier_id;
       const exists = item.target
-        ?? await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: s.id as any } });
+        ?? await repo.findOne({ where: { tenant_id: sessionTenant(), name: item.name as any, supplier_id: supplierId as any } });
       if (exists && item.target) {
         const reference = contractReference(exists.item_number) ?? '';
-        const renamed = referenceRenameWarning(item.line, { family: 'contract', reference, stored: exists.name, next: String(item.name ?? '') });
+        const renamed = referenceRenameWarning(item.line, { family: 'contract', reference, stored: exists.name, next: item.name || exists.name });
         if (renamed) warnings.push(renamed);
         const moved = referenceMoveWarning(item.line, {
           parent: 'supplier',
           reference,
           name: exists.name,
           storedParentId: exists.supplier_id ?? null,
-          nextParentId: s.id,
+          nextParentId: supplierId,
           from: supplierNameOf.get(exists.supplier_id as string) ?? '',
-          to: s.name,
+          to: supplierNameOf.get(supplierId) ?? '',
         });
         if (moved) warnings.push(moved);
       }
@@ -1642,8 +1689,14 @@ export class ContractsService {
         }
         firstLineOfContract.set(exists.id, item.line);
       } else {
+        // A new contract needs its company and start date, whichever columns the file carries.
+        const missing = (['company_name', 'start_date'] as const).filter((column) => (column === 'company_name' ? !item.company : !item.start_date));
+        if (missing.length > 0) {
+          for (const column of missing) errors.push(rowError(item.line, column, 'CSV_VALUE_REQUIRED', `${column} is required`));
+          continue;
+        }
         // A new contract takes one row: its name and supplier again, whatever the case, are refused.
-        const key = `${String(item.name).toLowerCase()}||${s.id}`;
+        const key = `${String(item.name).toLowerCase()}||${supplierId}`;
         const firstRow = firstLineOfNewContract.get(key);
         if (firstRow !== undefined) {
           errors.push(rowError(item.line, 'name', 'CSV_DUPLICATE_KEY', `Same name and supplier as row ${firstRow}.`, { columns: 'name, supplier_name', firstRow }));
@@ -1652,79 +1705,69 @@ export class ContractsService {
         firstLineOfNewContract.set(key, item.line);
       }
       existingOf.set(item, exists);
+      // A new contract takes every value, the defaults included; a stored one only the columns the
+      // row writes (`keepsStoredValue`): a row matched by its reference may rename the contract or
+      // change its supplier.
+      const writes = (column: string) => !exists || !keepsStoredValue(item.row, read.present, column, mode);
+      const owner = item.owner_email ? uByEmail.get(item.owner_email.toLowerCase()) : null;
+      const values: Partial<Record<keyof Contract, unknown>> = {
+        ...(writes('name') ? { name: item.name } : {}),
+        ...(writes('company_name') ? { company_id: item.company!.id } : {}),
+        ...(writes('supplier_name') ? { supplier_id: supplierId } : {}),
+        // No place on either side writes nothing.
+        ...(writes('cost_center') && (item.costCenterId || (exists?.cost_center_id ?? null) !== null) ? { cost_center_id: item.costCenterId } : {}),
+        ...(writes('owner_email') ? { owner_user_id: owner?.id ?? null } : {}),
+        ...(writes('start_date') ? { start_date: item.start_date } : {}),
+        ...(writes('duration_months') ? { duration_months: item.duration_months } : {}),
+        ...(writes('auto_renewal') ? { auto_renewal: item.auto_renewal } : {}),
+        ...(writes('notice_period_months') ? { notice_period_months: item.notice_period_months } : {}),
+        ...(writes('yearly_amount_at_signature') ? { yearly_amount_at_signature: item.yearly_amount_at_signature } : {}),
+        ...(writes('currency') ? { currency: item.currency } : {}),
+        ...(writes('billing_frequency') ? { billing_frequency: item.billing_frequency } : {}),
+        ...(writes('notes') ? { notes: item.notes } : {}),
+      };
+      valuesOf.set(item, values);
+      cleared += clearedValueCount(exists, item.row, mode, ['cost_center_id', 'owner_user_id', 'notes'], { cost_center_id: 'cost_center', owner_user_id: 'owner_email' });
       if (!exists) inserted += 1;
-      else if (importRowUnchanged(exists, {
-        // A row matched by its reference may rename the contract or change its supplier.
-        ...(item.target ? { name: item.name, supplier_id: s.id } : {}),
-        company_id: item.company.id,
-        ...(hasPlaceColumn && (item.cost_center_name || (exists.cost_center_id ?? null) !== null)
-          ? { cost_center_id: item.costCenterId }
-          : {}),
-        owner_user_id: item.owner_email ? uByEmail.get(item.owner_email.toLowerCase())?.id : null,
-        start_date: item.start_date,
-        duration_months: item.duration_months,
-        auto_renewal: item.auto_renewal,
-        notice_period_months: item.notice_period_months,
-        yearly_amount_at_signature: item.yearly_amount_at_signature,
-        currency: item.currency,
-        billing_frequency: item.billing_frequency,
-        notes: item.notes ?? null,
-      }, item.status ?? null, now)) {
+      else if (importRowUnchanged(exists, values, item.status ?? null, now)) {
         unchanged += 1;
         continue;
       } else updated += 1;
       toWrite.push(item);
       // Notes the write would refuse (`create`, `update`): said for the row, dry run included.
-      try {
-        await normalizeMarkdownRichText(item.notes, { fieldName: 'notes', storedValue: exists?.notes, budget: markdownBudget });
-      } catch (error) {
-        if (!(error instanceof HttpException) || error.getStatus() !== 400) throw error;
-        const code = (error.getResponse() as { code?: unknown })?.code;
-        errors.push(typeof code === 'string'
-          ? rowError(item.line, 'notes', code, error.message)
-          : { row: item.line, message: error.message });
+      if (values.notes !== undefined) {
+        try {
+          await normalizeMarkdownRichText(item.notes, { fieldName: 'notes', storedValue: exists?.notes, budget: markdownBudget });
+        } catch (error) {
+          if (!(error instanceof HttpException) || error.getStatus() !== 400) throw error;
+          const code = (error.getResponse() as { code?: unknown })?.code;
+          errors.push(typeof code === 'string'
+            ? rowError(item.line, 'notes', code, error.message)
+            : { row: item.line, message: error.message });
+        }
       }
       // The update would be refused (`update`): said for the row, dry run included.
-      if (exists && turnsOffRenewalOfRenewedContract(exists, { ...exists, start_date: item.start_date as any, duration_months: item.duration_months, auto_renewal: item.auto_renewal }, today)) {
+      if (exists && turnsOffRenewalOfRenewedContract(exists, { ...exists, ...values } as Contract, today)) {
         errors.push({ row: item.line, message: `auto_renewal: ${RENEWED_CONTRACT_RENEWAL_OFF}` });
       }
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
 
     // Commit
     let processed = 0;
     for (const item of toWrite) {
-      const { company, supplier } = item;
-      const owner = item.owner_email ? uByEmail.get(item.owner_email.toLowerCase()) : null;
       const exists = existingOf.get(item) ?? null;
       // The file has no end of validity: a status equal to the current one (read from the date)
       // or blank keeps the stored date; a new contract is enabled unless the row says disabled.
       const status = exists
         ? (item.status && item.status !== deriveStatusFromDisabledAt(exists.disabled_at) ? item.status : undefined)
         : (item.status ?? 'enabled');
-      const payload: ContractUpsertDto = {
-        name: item.name as any,
-        company_id: company.id,
-        supplier_id: supplier.id,
-        ...(hasPlaceColumn && (item.cost_center_name || (exists?.cost_center_id ?? null) !== null)
-          ? { cost_center_id: item.costCenterId }
-          : {}),
-        owner_user_id: owner?.id ?? null,
-        start_date: item.start_date as any,
-        duration_months: item.duration_months as any,
-        auto_renewal: item.auto_renewal as any,
-        notice_period_months: item.notice_period_months as any,
-        yearly_amount_at_signature: item.yearly_amount_at_signature as any,
-        currency: item.currency as any,
-        billing_frequency: item.billing_frequency as any,
-        ...(status ? { status: status as any } : {}),
-        notes: (item.notes as any) ?? null,
-      };
+      const payload = { ...valuesOf.get(item), ...(status ? { status } : {}) } as ContractUpsertDto;
       if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg }); processed += 1; }
       else { await this.create(payload, userId ?? undefined, { manager: mg }); processed += 1; }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
   }
 
   // Symmetric linking from OPEX side

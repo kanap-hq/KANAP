@@ -128,7 +128,7 @@ El archivo titula las columnas en el idioma de su pantalla. La tabla da sus nomb
 | `reference` | Opcional. La referencia del proveedor (`SUP-12`). La exportación la escribe |
 | `name` | Obligatoria. El nombre del proveedor |
 | `erp_supplier_id` | El ID del proveedor en su ERP. La importación lo lee como un ID ERP, aunque parezca una referencia (`SUP-12`) |
-| `commercial_contact` | El correo de un contacto existente. La carga vincula el proveedor con él |
+| `commercial_contact` | El correo de un contacto existente. La carga vincula el proveedor con él, y conserva los vínculos ya existentes. `-` quita del proveedor todos los contactos de ese rol |
 | `technical_contact` | El correo de un contacto, como arriba |
 | `support_contact` | El correo de un contacto, como arriba |
 | `notes` | Texto libre |
@@ -138,11 +138,12 @@ El archivo titula las columnas en el idioma de su pantalla. La tabla da sus nomb
 **Importación**:
 
 - Use la **Verificación previa** para validar el archivo antes de aplicarlo y después **Cargar**
-- **Emparejamiento por referencia**: una `reference` rellenada (`SUP-12` o `12`) designa el proveedor que la fila actualiza, aunque su nombre haya cambiado. El proveedor toma entonces el nombre de la fila, y la verificación previa señala cada proveedor que cambiará de nombre
+- **Emparejamiento por referencia**: una `reference` rellenada (`SUP-12` o `12`) designa el proveedor que la fila actualiza, aunque su nombre haya cambiado. El proveedor toma entonces el nombre que da la fila, y la verificación previa señala cada proveedor que cambiará de nombre
 - **Emparejamiento por nombre**: cuando `reference` está vacía, o el archivo no tiene esa columna, las filas se emparejan por `name`, sin distinguir mayúsculas y minúsculas: una fila actualiza el proveedor que nombra, cualquier otra fila crea uno. La grafía guardada se mantiene: una fila `sap` actualiza `SAP`, y la verificación previa indica «sap» se ha asociado a «SAP»
 - **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“SUP-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
 - **Cambio de nombre**: un nombre nuevo que ya tiene otro proveedor se rechaza, y el mensaje da la referencia de ese proveedor: «“SAP” ya pertenece a SUP-4.»
-- `name` es obligatorio. Cualquier otra celda es opcional
+- `name` es obligatorio en un proveedor nuevo. Cualquier otra columna es opcional. En un proveedor que el archivo actualiza, una celda vacía conserva el valor guardado y `-` lo borra: vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing)
+- `-` borra `erp_supplier_id`, `notes` y `disabled_at`. No puede borrar `reference`, `name` ni `status`: la fila se rechaza
 - Cada proveedor ocupa una fila. Dos filas con el mismo nombre, aunque cambien mayúsculas y minúsculas, se rechazan en la verificación previa, con los dos números de fila. Dos filas que actualizan el mismo proveedor también se rechazan: «Esta fila actualiza SUP-4, como la fila 3. Deje una sola fila por registro.»
 - El correo de un contacto debe pertenecer a un contacto que ya existe en **Contactos**. Si no, la fila se rechaza en la verificación previa: cree primero el contacto
 - `disabled_at` fija el fin de validez, y el estado se deduce de él. Un estado que contradice la fecha se rechaza. Un archivo sin la columna `disabled_at` se sigue importando: el estado solo fija entonces el ciclo de vida

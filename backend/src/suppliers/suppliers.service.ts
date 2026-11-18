@@ -15,17 +15,29 @@ import { parseReferenceNumber } from '../common/parse-item-number';
 import { sortedFindQuery } from '../common/list-sort';
 import {
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
+  clearsCell,
+  clearsEndOfValidity,
+  endOfValidityToCheck,
+  lifecycleConflictError,
+  CsvDataRow,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   endOfValidityOf,
   keepStoredEndOfValidity,
   ImportReportError,
+  keepsStoredValue,
+  MasterDataImportResult,
   nameMatchedWarning,
   readMasterDataFile,
   referenceRenameWarning,
   rowError,
   rowProblemErrors,
+  storedRecordValues,
 } from '../common/csv-sheet';
 import { csvLifecycleConflict } from '../spend/item-write.util';
 import { duplicateNameException } from '../common/duplicate-name';
@@ -33,12 +45,23 @@ import { uploadedBytes } from '../common/upload';
 import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
 import { SUPPLIER_FILE_COLUMNS, SUPPLIER_CSV_HEADERS } from './supplier-csv-headers';
+import { SupplierContactsService } from './supplier-contacts.service';
 
 /** The contact columns of the file: one e-mail per contact type. */
 const CONTACT_COLUMNS = ['commercial_contact', 'technical_contact', 'support_contact'] as const;
+const CONTACT_ROLE_OF: Record<(typeof CONTACT_COLUMNS)[number], SupplierContactRole> = {
+  commercial_contact: SupplierContactRole.COMMERCIAL,
+  technical_contact: SupplierContactRole.TECHNICAL,
+  support_contact: SupplierContactRole.SUPPORT,
+};
 
-/** Columns a file may leave out: `disabled_at` and `reference` came after the first exports. */
-const OPTIONAL_CSV_HEADERS = ['reference', 'disabled_at'];
+/** The values `-` cannot clear (D21 of 26.11.9): the keys and the status. */
+const UNCLEARABLE_CSV_HEADERS = ['reference', 'name', 'status'] as const;
+/** The values `-` clears on a stored supplier, the end of validity included (the supplier is active again). */
+const CLEARABLE_FIELDS = ['erp_supplier_id', 'notes', 'disabled_at'] as const;
+
+/** The columns a row finds its supplier by: its reference, else its name. A file may leave out any other. */
+const KEY_CSV_HEADERS = [['reference'], ['name']] as const;
 
 const SORT_ALIAS = 'supplier';
 
@@ -334,6 +357,7 @@ export class SuppliersService {
       language,
       dateOrder,
       decimalMark,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -341,9 +365,11 @@ export class SuppliersService {
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /** What a row does to a supplier it updates (`CsvImportMode`); without it, `replace`. */
+      mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager },
-  ) {
+  ): Promise<MasterDataImportResult> {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders();
@@ -353,7 +379,7 @@ export class SuppliersService {
       fields: expectedHeaders,
       fieldLabels: SUPPLIER_CSV_HEADERS,
       dateFields: ['disabled_at'],
-      optional: OPTIONAL_CSV_HEADERS,
+      keys: KEY_CSV_HEADERS,
       language: readLanguage,
       dateOrder,
       decimalMark,
@@ -371,6 +397,8 @@ export class SuppliersService {
     let updated = 0;
     const normalized: Array<{
       line: number;
+      row: CsvDataRow;
+      /** The row's values for a new supplier; a stored one takes those `storedRecordValues` keeps. */
       body: SupplierUpsertDto;
       /** The reference cell, when filled: the supplier the row updates. */
       reference: string | null;
@@ -379,6 +407,8 @@ export class SuppliersService {
       commercial_email: string | null;
       technical_email: string | null;
       support_email: string | null;
+      /** The contact roles whose cell holds `-`: their links are removed (T-I4e of 26.11.9). */
+      clearedRoles: SupplierContactRole[];
     }> = [];
     // An absent `disabled_at` column is not a blank cell: the file then sets the lifecycle through `status` alone.
     const hasDisabledAt = read.present.includes('disabled_at');
@@ -393,10 +423,20 @@ export class SuppliersService {
         errors.push(...problems);
         return;
       }
+      const refusals = clearRefusals(row, UNCLEARABLE_CSV_HEADERS, mode);
+      if (refusals.length > 0) {
+        errors.push(...refusals);
+        return;
+      }
+      const clearsEnd = clearsEndOfValidity(row, mode);
       const name = cellOf(row, 'name');
       const statusRaw = cellOf(row, 'status').toLowerCase();
-      if (!name) errors.push({ row: line, column: 'name', message: 'Name is required', code: 'CSV_VALUE_REQUIRED' });
-      else {
+      // A row with a reference may leave the name to the stored one (`enrich`): decided once matched.
+      if (!name) {
+        if (!cellOf(row, 'reference') || !keepsStoredValue(row, read.present, 'name', mode)) {
+          errors.push({ row: line, column: 'name', message: 'Name is required', code: 'CSV_VALUE_REQUIRED' });
+        }
+      } else {
         const firstRow = firstLineByName.get(name.toLowerCase());
         if (firstRow === undefined) firstLineByName.set(name.toLowerCase(), line);
         else {
@@ -421,32 +461,28 @@ export class SuppliersService {
       }
       const disabledAtRaw = hasDisabledAt ? cellOf(row, 'disabled_at') : '';
       let disabledAt: Date | null = null;
-      if (disabledAtRaw) {
+      if (disabledAtRaw && !clearsEnd) {
         const end = endOfValidityOf(row, 'disabled_at');
         if (end.error) {
           errors.push({ row: line, column: 'disabled_at', message: end.error, code: 'CSV_DATE_INVALID', params: { value: disabledAtRaw } });
         } else disabledAt = end.value;
       }
-      const conflict = csvLifecycleConflict(status, disabledAt);
-      if (conflict) {
-        errors.push({
-          row: line,
-          column: 'status',
-          message: conflict,
-          code: status === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE',
-        });
-      }
+      const conflict = lifecycleConflictError(line, status, csvLifecycleConflict(status, endOfValidityToCheck(disabledAt, clearsEnd)), clearsEnd);
+      if (conflict) errors.push(conflict);
       const body: SupplierUpsertDto = {
         name,
-        erp_supplier_id: cellOf(row, 'erp_supplier_id') || null,
-        notes: cellOf(row, 'notes') || null,
+        erp_supplier_id: cellText(row, 'erp_supplier_id', mode) || null,
+        notes: cellText(row, 'notes', mode) || null,
         // A date given decides the status (`resolveLifecycleState`); a blank status otherwise enables, as it always has.
-        ...(disabledAt ? { status: status ?? undefined, disabled_at: disabledAt.toISOString() } : { status: status ?? StatusState.ENABLED }),
+        // `-` clears a stored end of validity (`clearsEndOfValidity`).
+        ...(disabledAt
+          ? { status: status ?? undefined, disabled_at: disabledAt.toISOString() }
+          : { status: status ?? StatusState.ENABLED, ...(clearsEnd ? { disabled_at: null } : {}) }),
       };
       const emails: Record<string, string | null> = {};
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       for (const column of CONTACT_COLUMNS) {
-        const email = cellOf(row, column).toLowerCase() || null;
+        const email = cellText(row, column, mode).toLowerCase() || null;
         emails[column] = email;
         if (!email) continue;
         if (!emailRegex.test(email)) {
@@ -455,11 +491,13 @@ export class SuppliersService {
       }
       normalized.push({
         line,
+        row,
         body,
         reference: cellOf(row, 'reference') || null,
         commercial_email: emails.commercial_contact,
         technical_email: emails.technical_contact,
         support_email: emails.support_contact,
+        clearedRoles: CONTACT_COLUMNS.filter((column) => clearsCell(row, column, mode)).map((column) => CONTACT_ROLE_OF[column]),
       });
     });
     // A contact must exist already: the import links contacts, it does not create them.
@@ -516,9 +554,11 @@ export class SuppliersService {
     const firstLineById = new Map<string, number>();
     for (const item of unique) {
       const name = item.body.name as string;
-      const sameName = await repo.createQueryBuilder(SORT_ALIAS)
-        .where(`${SORT_ALIAS}.tenant_id = app_current_tenant() AND lower(${SORT_ALIAS}.name) = lower(:name)`, { name })
-        .getOne();
+      const sameName = name
+        ? await repo.createQueryBuilder(SORT_ALIAS)
+          .where(`${SORT_ALIAS}.tenant_id = app_current_tenant() AND lower(${SORT_ALIAS}.name) = lower(:name)`, { name })
+          .getOne()
+        : null;
       if (item.target && sameName && sameName.id !== item.target.id) {
         errors.push(rowError(item.line, 'name', 'CSV_VALUE_TAKEN', `'${name}' is already the name of ${supplierReference(sameName.item_number)}.`,
           { value: name, reference: supplierReference(sameName.item_number) }));
@@ -539,25 +579,35 @@ export class SuppliersService {
         continue;
       }
       firstLineById.set(existing.id, item.line);
+      // The name cannot be emptied: a blank name keeps the stored one only when the row completes.
+      if (!name && !keepsStoredValue(item.row, read.present, 'name', mode)) {
+        errors.push({ row: item.line, column: 'name', message: 'Name is required', code: 'CSV_VALUE_REQUIRED' });
+        continue;
+      }
       // A file from another workspace names unrelated suppliers by the same references: the check
       // says each name a reference changes (D12).
-      if (item.reference) {
+      if (item.reference && name) {
         const renamed = referenceRenameWarning(item.line, { family: 'supplier', reference: supplierReference(existing.item_number), stored: existing.name, next: name });
         if (renamed) warnings.push(renamed);
       }
-      // The stored end of validity's day keeps its time of day: the export writes the day only.
+      // A stored supplier takes only the values the row writes: an absent column, or a blank cell
+      // when completing, keeps the stored value, the status included. The stored end of
+      // validity's day keeps its time of day: the export writes the day only.
+      const written = storedRecordValues(item.body, item.row, read.present, mode);
       item.body = {
-        ...item.body,
-        name: item.reference ? name : existing.name,
-        disabled_at: keepStoredEndOfValidity(existing.disabled_at, item.body.disabled_at),
+        ...written,
+        ...(written.name !== undefined ? { name: item.reference ? name : existing.name } : {}),
+        ...(written.disabled_at !== undefined ? { disabled_at: keepStoredEndOfValidity(existing.disabled_at, written.disabled_at) } : {}),
       };
     }
     if (errors.length > 0) {
       errors.sort((a, b) => a.row - b.row);
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
-    // The contact links of the matched suppliers, as `${supplierId}:${role}:${email}`: the import only adds links.
+    // The contact links of the matched suppliers, as `${supplierId}:${role}:${email}`: a filled
+    // cell adds one, `-` removes those of its role (`linksOfRole`), a blank cell keeps them.
     const storedLinks = new Set<string>();
+    const linksOfRole = new Map<string, SupplierContactLink[]>();
     const existingIds = unique.flatMap((item) => (item.target ? [item.target.id] : []));
     if (existingIds.length > 0) {
       const links = await linkRepo.find({ where: { supplier_id: In(existingIds) } });
@@ -566,18 +616,28 @@ export class SuppliersService {
         (contactIds.length > 0 ? await contactRepo.find({ where: { id: In(contactIds) } }) : [])
           .map((contact) => [contact.id, contact.email]),
       );
-      for (const link of links) storedLinks.add(`${link.supplier_id}:${link.role}:${emails.get(link.contact_id)}`);
+      for (const link of links) {
+        storedLinks.add(`${link.supplier_id}:${link.role}:${emails.get(link.contact_id)}`);
+        const key = `${link.supplier_id}:${link.role}`;
+        linksOfRole.set(key, [...(linksOfRole.get(key) ?? []), link]);
+      }
     }
     const linked = (supplierId: string, email: string | null, role: SupplierContactRole) =>
       !email || storedLinks.has(`${supplierId}:${role}:${email}`);
     let unchanged = 0;
+    let cleared = 0;
+    const removedLinks = (supplierId: string, roles: SupplierContactRole[]) =>
+      roles.flatMap((role) => linksOfRole.get(`${supplierId}:${role}`) ?? []);
     const toWrite: typeof unique = [];
     for (const item of unique) {
       const existing = item.target;
       const { status, ...values } = item.body;
+      const removed = existing ? removedLinks(existing.id, item.clearedRoles).length : 0;
+      cleared += clearedValueCount(existing, item.row, mode, CLEARABLE_FIELDS) + removed;
       if (!existing) inserted += 1;
       else if (
-        sameStoredValues(existing as any, values as Record<string, unknown>)
+        removed === 0
+        && sameStoredValues(existing as any, values as Record<string, unknown>)
         && sameStoredLifecycle(existing, { status, disabled_at: values.disabled_at })
         && linked(existing.id, item.commercial_email, SupplierContactRole.COMMERCIAL)
         && linked(existing.id, item.technical_email, SupplierContactRole.TECHNICAL)
@@ -589,7 +649,7 @@ export class SuppliersService {
       toWrite.push(item);
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit changes
     let processed = 0;
@@ -600,9 +660,15 @@ export class SuppliersService {
       const dup = await linkRepo.findOne({ where: { supplier_id: supplierId, contact_id: contactId, role } });
       if (!dup) await linkRepo.save(linkRepo.create({ supplier_id: supplierId, contact_id: contactId, role, is_primary: false }));
     };
+    // A link `-` removes goes as on the supplier's page: audited, with the contact taken off the
+    // supplier's budget lines and contracts where the supplier put it.
+    const contactLinks = new SupplierContactsService(linkRepo, this.audit);
     for (const item of toWrite) {
       const existing = item.target;
       if (existing) {
+        for (const link of removedLinks(existing.id, item.clearedRoles)) {
+          await contactLinks.detach(existing.id, link.id, { manager: mg, tenantId: existing.tenant_id, userId: userId ?? null });
+        }
         const saved = await this.update(existing.id, item.body, userId ?? undefined, { manager: opts?.manager });
         await attachByEmail(saved.id, item.commercial_email, SupplierContactRole.COMMERCIAL);
         await attachByEmail(saved.id, item.technical_email, SupplierContactRole.TECHNICAL);
@@ -616,7 +682,7 @@ export class SuppliersService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 
   /** The tenant's contacts among these e-mails (lowercase), by e-mail. */

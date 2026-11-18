@@ -226,26 +226,26 @@ The columns, in this order. The metric columns follow the year selected in the l
 | `status` | `enabled` or `disabled` |
 | `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity |
 | `notes` | Free text |
-| `headcount_<year>` | A whole number. Required when the row carries any metric for that year |
+| `headcount_<year>` | A whole number. Required when the row gives a metric for a year the company has no metrics for yet |
 | `it_users_<year>` | A whole number |
 | `turnover_<year>` | Up to 3 decimals, in millions of the company's base currency |
 
 **Import**:
 
 - Start with **Preflight check**. It validates the headers, the encoding, the required fields, the duplicates and the metrics. If the check is clean, **Load** applies the inserts and the updates. Then the dialog counts the companies created, updated and unchanged, for example "2 created, 5 updated, 30 unchanged"
-- **Matching by reference**: a filled `reference` (`COMP-12` or `12`) names the company the row updates, even when the name has changed. The company then takes the name of the row, and the preflight check lists each company that will be renamed
+- **Matching by reference**: a filled `reference` (`COMP-12` or `12`) names the company the row updates, even when the name has changed. The company then takes the name the row gives, and the preflight check lists each company that will be renamed
 - **Matching by name**: when `reference` is empty, or the file has no such column, the row is matched by company `name`, whatever the case. The stored spelling stays: a row `ACME` updates `Acme`, and the preflight check says "ACME" was matched to "Acme". Every row of a file without the `reference` column is matched this way
 - **Unknown reference**: a reference your workspace does not know refuses the row: "\"COMP-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
 - **Renaming**: a new name that another company already has is refused, and the message names that company's reference: "\"Acme\" already belongs to COMP-4."
 - **One row per company**: two rows that update the same company are refused: "This row updates COMP-4, as row 3 does. Keep one row per record."
 - A name that appears twice in the file, whatever the case, is refused at the check: "\"Acme\" is already on row 4. Keep one row per company."
-- **Required fields**: `name`, `country_iso`, `city` and `base_currency`. An empty city is refused at the check, for a new company and for an update
+- **Required fields**: `name`, `country_iso`, `city` and `base_currency`, for a new company. On a company the file updates, an empty cell keeps the stored value
+- **Empty cells and `-`**: an empty cell keeps the stored value, and `-` clears it: the address lines, `postal_code`, `state`, `reg_number`, `vat_number`, `notes`, `disabled_at` and a year's `it_users`. `-` cannot clear `reference`, `name`, `country_iso`, `city`, `base_currency` or `status`. On a year's `headcount` or `turnover`, the message says to write `0`. The row is refused in both cases. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
 - **Status and end of validity**: the export writes the status read from the end of validity. A new company is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the company today
-- A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
+- A row whose status contradicts its date is refused with a row error: "The status is "Enabled", but the end of validity has passed. Write "-" in the end of validity, or "disabled" in the status. If the file comes from an older export, export the data again." or "The status is "Disabled", but the end of validity is still to come. Write "enabled" in the status, or a date that has passed in the end of validity."
 - **Years read**: the dialog names the years it reads, for example "Metrics read: 2025, 2026, 2027, from the year of the list. Each year is optional."
-- **Each year is optional**: a year is a block of three columns, `headcount_<year>`, `it_users_<year>` and `turnover_<year>`. Leave a whole block out and the stored metrics of that year stay as they are. A column of a year outside the three years read is ignored, and the check lists it with the ignored columns
-- **A year comes whole**: a file with one or two columns of a year, without the others, is refused on the **Header** line, which names the missing columns
-- **Metrics**: if a row carries any metric for a year, `headcount_<year>` is required for that year. `it_users_<year>` and `turnover_<year>` can be empty
+- **Each year is optional**: a year has three columns, `headcount_<year>`, `it_users_<year>` and `turnover_<year>`. Each can be left out, and the stored value of a column left out stays as it is. A column of a year outside the three years read is ignored, and the check lists it with the ignored columns
+- **Metrics**: a row that gives a metric for a year the company has no metrics for needs `headcount_<year>` for that year. `it_users_<year>` and `turnover_<year>` can be empty. A row with only `-` in a year creates no metrics
 - **Frozen years**: a row that carries metrics for a year whose company metrics are frozen is refused at the check: "Metrics for 2025 are frozen. A budget administrator can unfreeze them." Leave that year's columns out, or unfreeze the year first (see [Freeze master data](master-data-operations.md))
 
 **Notes**:

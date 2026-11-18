@@ -351,6 +351,8 @@ Cliquez sur **Importer les liens** ou **Exporter les liens** dans la barre d'out
 | `notes` | Texte libre sur le lien |
 | `source` | L'origine du lien : saisie manuelle, import, assistant, agent ou Netbox. L'export l'écrit ; l'import l'ignore |
 
+Un fichier n'a besoin que du serveur ou de l'application et de la technologie, chacun par sa référence ou son nom. Une colonne que le fichier omet n'est jamais écrite.
+
 La colonne `operating_system` prend trois valeurs :
 
 - **oui** : le lien devient le système d'exploitation du serveur. L'import refuse la ligne quand la technologie n'est pas de la famille **Système d'exploitation**, quand le serveur est un cluster qui a des membres, ou quand le serveur a déjà un autre système d'exploitation.
@@ -365,7 +367,7 @@ L'import ne retire jamais la marque de système d'exploitation d'un lien.
 
 - Un lien, c'est un serveur ou une application, une technologie et une version : une ligne avec une autre version ajoute un second lien. Le même lien deux fois dans un fichier est une erreur.
 - Chaque ligne ajoute un lien ou met à jour un lien existant. Les liens absents du fichier restent tels quels : l'import ne supprime jamais de lien.
-- Un lien existant garde son origine. Ses notes changent quand la cellule `notes` contient un texte différent, et une cellule vide les laisse telles quelles.
+- Un lien existant garde son origine. Ses notes changent quand la cellule `notes` contient un texte différent, une cellule vide les laisse telles quelles, et `-` les efface. `-` dans toute autre colonne refuse la ligne. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing).
 - Un nouveau lien est marqué comme issu d'un import, avec le nom du fichier.
 - La technologie doit déjà figurer dans votre liste. Adoptez-la depuis le catalogue ou créez-la d'abord.
 - Le serveur, l'application et la technologie sont retrouvés par leur nom comme le décrit [Noms des fiches](csv-files.md#names-of-records). Un nom que plusieurs fiches partagent est une erreur.

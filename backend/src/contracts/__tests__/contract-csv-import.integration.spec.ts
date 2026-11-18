@@ -115,7 +115,7 @@ async function testEveryErrorOfARowIsReportedAndNothingIsWritten() {
       'Short;Fromage Co;Dell;2024-01-01;soon;no;1;0;EUR;annual;enabled;;',
     ]);
     for (const dryRun of [true, false]) {
-      const result: any = await svc.importCsv({ file: upload, dryRun }, opts);
+      const result: any = await svc.importCsv({ file: upload, dryRun, mode: 'enrich' }, opts);
       assert.equal(result.ok, false, JSON.stringify(result.errors));
       assert.deepEqual(errorsByColumn(result, 2), {
         auto_renewal: { code: 'CSV_BOOLEAN_INVALID', params: { value: 'maybe' } },
@@ -136,22 +136,26 @@ async function testEveryErrorOfARowIsReportedAndNothingIsWritten() {
     );
     assert.equal(kept[0].kept, true, 'the valid contract keeps its updated_at');
 
-    // A clean file still loads. Blank month cells keep 12 and 1; a written 0 stays 0.
+    // A clean file still loads under the route's rule (D21 of 26.11.9). On a new contract blank
+    // month cells take 12 and 1 and a blank renewal is no; a written 0 stays 0. On a stored
+    // contract blank cells keep its 36 and 3 months and its renewal.
     const clean = file([
       HEADER,
       'Zero;Fromage Co;Dell;2024-02-01;0;no;0;0;EUR;annual;enabled;;',
       'Blank;Fromage Co;Dell;2024-03-01;;;;0;EUR;annual;enabled;;',
+      'Kept Deal;Fromage Co;Dell;2024-01-15;;;;12500;EUR;annual;enabled;;',
     ]);
-    const loaded: any = await svc.importCsv({ file: clean, dryRun: false }, opts);
+    const loaded: any = await svc.importCsv({ file: clean, dryRun: false, mode: 'enrich' }, opts);
     assert.equal(loaded.ok, true, JSON.stringify(loaded.errors));
-    assert.equal(loaded.inserted, 2);
+    assert.deepEqual([loaded.inserted, loaded.updated], [2, 1]);
     const stored = await runner.query(
       `SELECT name, duration_months, notice_period_months, auto_renewal
          FROM contracts WHERE tenant_id = $1 AND name = ANY($2) ORDER BY name`,
-      [tenantId, ['Blank', 'Zero']],
+      [tenantId, ['Blank', 'Kept Deal', 'Zero']],
     );
     assert.deepEqual(stored, [
       { name: 'Blank', duration_months: 12, notice_period_months: 1, auto_renewal: false },
+      { name: 'Kept Deal', duration_months: 36, notice_period_months: 3, auto_renewal: true },
       { name: 'Zero', duration_months: 0, notice_period_months: 0, auto_renewal: false },
     ]);
   });
@@ -168,13 +172,18 @@ async function testChangedOwnerIsUpdate() {
       name: 'ESX Support', owner_user_id: ownerId, start_date: '2024-01-15', duration_months: 36,
       auto_renewal: true, notice_period_months: 3, yearly_amount_at_signature: 12000,
     });
-    // A blank owner clears the stored one: an update.
-    const result: any = await contracts().importCsv(
-      { file: file([HEADER, 'ESX Support;Fromage Co;Dell;2024-01-15;36;yes;3;12000;EUR;annual;enabled;;']), dryRun: true },
+    // Under the route's rule (D21 of 26.11.9) a blank owner keeps the stored one: unchanged. `-`
+    // clears it: an update, counted as one cleared value.
+    const run = async (owner: string) => contracts().importCsv(
+      { file: file([HEADER, `ESX Support;Fromage Co;Dell;2024-01-15;36;yes;3;12000;EUR;annual;enabled;${owner};`]), dryRun: true, mode: 'enrich' },
       { manager: runner.manager },
-    );
-    assert.equal(result.ok, true, JSON.stringify(result.errors));
-    assert.deepEqual([result.inserted, result.updated, result.unchanged], [0, 1, 0]);
+    ) as any;
+    const blank = await run('');
+    assert.equal(blank.ok, true, JSON.stringify(blank.errors));
+    assert.deepEqual([blank.inserted, blank.updated, blank.unchanged, blank.cleared], [0, 0, 1, 0]);
+    const cleared = await run('-');
+    assert.equal(cleared.ok, true, JSON.stringify(cleared.errors));
+    assert.deepEqual([cleared.inserted, cleared.updated, cleared.unchanged, cleared.cleared], [0, 1, 0, 1]);
   });
 }
 

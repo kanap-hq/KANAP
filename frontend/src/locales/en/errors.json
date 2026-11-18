@@ -127,6 +127,8 @@
   "CSV_VALUE_REQUIRED": "A value is required.",
   "CSV_VALUE_ONE_REQUIRED": "Fill in at least one {{column}} column.",
   "CSV_VALUE_CANNOT_BE_EMPTIED": "This field cannot be emptied. Leave the column out of the file to keep the stored value.",
+  "CSV_VALUE_CANNOT_BE_CLEARED": "This value cannot be cleared.",
+  "CSV_NUMBER_CANNOT_BE_CLEARED": "This number cannot be cleared. Use 0 to set it to zero, or leave the cell empty to keep the stored value.",
   "CSV_NUMBER_INVALID": "\"{{value}}\" is not a number.",
   "CSV_DATE_INVALID": "\"{{value}}\" is not a date. Use 2026-09-02 or 02/09/2026.",
   "CSV_BOOLEAN_INVALID": "\"{{value}}\" is not valid. Use yes or no.",
@@ -167,8 +169,9 @@
   "CSV_COMPANY_METRICS_FROZEN": "Metrics for {{year}} are frozen. A budget administrator can unfreeze them.",
   "CSV_CONTACT_NOT_FOUND": "Contact not found: {{email}}. Create it in Contacts first.",
   "CSV_EMAIL_INVALID": "\"{{value}}\" is not a valid e-mail address.",
-  "CSV_STATUS_DATE_PASSED": "The status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.",
-  "CSV_STATUS_DATE_FUTURE": "The status is disabled but the end of validity is still to come. Set the status to enabled or enter a date that has passed.",
+  "CSV_STATUS_DATE_PASSED": "The status is \"Enabled\", but the end of validity has passed. Write \"-\" in the end of validity, or \"disabled\" in the status. If the file comes from an older export, export the data again.",
+  "CSV_STATUS_DATE_FUTURE": "The status is \"Disabled\", but the end of validity is still to come. Write \"enabled\" in the status, or a date that has passed in the end of validity.",
+  "CSV_STATUS_DISABLED_DATE_CLEARED": "The status is \"Disabled\", but \"-\" clears the end of validity. Keep one or the other.",
   "CSV_IMPORT_FAILED": "The import failed: {{reason}}",
   "CSV_PROJECT_ORIGIN_STANDARD": "A new project cannot have the origin Request. Convert a request, or use fast_track or legacy.",
   "CSV_PROJECT_ORIGIN_LOCKED": "Only a fast-track or legacy project can change its origin, to fast-track or legacy.",
@@ -551,7 +554,5 @@
     "connections": "connections",
     "incidents": "incidents"
   },
-  "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} row updates an existing record, and this import replaces all its values: the file has no column for {{columns}}, whose values would be cleared. Map those columns, or keep only new records in the file.",
-  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} rows update existing records, and this import replaces all their values: the file has no column for {{columns}}, whose values would be cleared. Map those columns, or keep only new records in the file.",
   "INVOICE_PAYMENT_IN_PROGRESS": "A payment is already in progress."
 }

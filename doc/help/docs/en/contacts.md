@@ -138,15 +138,24 @@ Manage contacts in bulk using CSV files or Excel workbooks.
 **Import**:
 - Use **Preflight check** to validate before applying
 - Can create new contacts or update existing ones
-- **Matching by reference**: a filled `reference` (`CTCT-4` or `4`) names the contact the row updates, even when its email has changed. The contact takes the name and the email of the row. The preflight check lists each contact that will be renamed or change its email address
+- **Matching by reference**: a filled `reference` (`CTCT-4` or `4`) names the contact the row updates, even when its email has changed. The contact takes the name and the email the row gives. The preflight check lists each contact that will be renamed or change its email address
 - **Matching by email**: when `reference` is empty, or the file has no such column, the row is matched by email address
 - **Unknown reference**: a reference your workspace does not know refuses the row: "\"CTCT-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
 - **Changing the email**: an email that another contact already has is refused, and the message names that contact's reference: "\"ana@acme.example\" already belongs to CTCT-7."
 - **One row per contact**: two rows that update the same contact are refused: "This row updates CTCT-7, as row 3 does. Keep one row per record." Two rows that create the same contact (same email, whatever the case) are refused too: "Same values in email as row 3."
 
-**Required fields**: Email
+- **Empty cells and `-`**: on a contact the file updates, an empty cell keeps the stored value and `-` clears it. `-` clears the names, `job_title`, `phone`, `mobile`, `country` and `notes`. It cannot clear `reference`, `email` or `active`: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
 
-**Optional fields**: `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
+**Supplier columns**:
+- `supplier_name` sets the contact's supplier, by its reference (`SUP-12`) or its name. Names are found as described in [Names of records](csv-files.md#names-of-records): a name found with other accents is listed at the check, and you can undo the match. A name that matches no supplier, or several, refuses the row. The import never creates a supplier
+- `supplier_role` is the contact type for that supplier: `commercial`, `technical`, `support` or `other`, or the word the contact page shows, in any of the four languages. Left empty, the contact keeps its type, and a contact without one gets **Commercial**, as on the contact page
+- An empty `supplier_name` keeps the supplier. `-` removes the supplier and its contact type. `-` in `supplier_role` alone is refused, and so is a type on a contact without a supplier
+- A change of supplier does what choosing the supplier on the contact page does
+- The export and the template include both columns
+
+**Required fields**: `email`, on a new contact
+
+**Optional fields**: `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `supplier_name`, `supplier_role`, `notes`, `active`
 
 **Notes**:
 - See [CSV and Excel files](csv-files.md) for the encoding, the separator and the two import steps

@@ -45,18 +45,19 @@ export const AI_IMPORT_ACCESS: Readonly<Record<AiImportKey, AiImportAccess>> = {
   technology_application_links: { resource: 'infrastructure', level: 'member', alsoReads: 'applications', reservedToUnscoped: false },
 };
 
-/** The rights of an import named by its key, null for an unknown one. */
 /**
- * The imports that replace every value of a record they update, a blank cell clearing it, and read
- * every column of their template: the master data imports and the technology links. The other imports
- * run in the screen's "merge" mode, where a blank cell keeps the stored value.
+ * The imports that follow the clearing rule of every import route (D21 of 26.11.9, lot I4), which Kad
+ * calls with it (`mode: 'enrich'`, `ai-import-runner.service.ts`): on a stored record a blank cell
+ * keeps the value and `-` clears it. Kad's file writes the person's `-` in every kind of column for
+ * them (`AiImportColumnHints.clearMark`). Lot I6 brings the other imports to the rule.
  */
-export const AI_IMPORT_WHOLE_ROWS: ReadonlySet<AiImportKey> = new Set<AiImportKey>([
+export const AI_IMPORT_CLEARING_RULE: ReadonlySet<AiImportKey> = new Set<AiImportKey>([
   'contracts', 'suppliers', 'contacts', 'companies', 'departments', 'cost_centers', 'accounts',
   'analytics_categories', 'business_processes', 'working_day_calendars',
   'technology_asset_links', 'technology_application_links',
 ]);
 
+/** The rights of an import named by its key, null for an unknown one. */
 export function aiImportAccess(key: unknown): AiImportAccess | null {
   const normalized = String(key ?? '').trim();
   return Object.prototype.hasOwnProperty.call(AI_IMPORT_ACCESS, normalized) ? AI_IMPORT_ACCESS[normalized as AiImportKey] : null;

@@ -183,7 +183,7 @@ Load or update calendars and their working days from a file.
 - The export writes the separator of the screen language. See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
 - One row per calendar and year. A calendar with three years takes three rows. A calendar without any year is exported as one row with the year and the months empty
 - A standard calendar exports the years you edited only. The other years follow the public holidays and need no row
-- The `country`, `region` and `disabled_at` columns are optional on import. A file without `country` and `region` creates custom calendars
+- Only `code` is required on import: a column the file leaves out is never written. `year` and the twelve months come together. A file without `country` and `region` creates custom calendars
 
 | Column | Content |
 |---|---|
@@ -192,7 +192,7 @@ Load or update calendars and their working days from a file.
 | `description` | Free text |
 | `country` | Optional. The two-letter country code of a standard calendar, for example `FR`. Empty for a custom calendar |
 | `region` | Optional. The region code, for example `57` for Moselle or `BY` for Bavaria. Needs a country. Empty for the whole country |
-| `status` | `enabled` or `disabled`. Empty means `enabled` |
+| `status` | `enabled` or `disabled`. Empty means `enabled` for a new calendar and keeps the stored status on an update |
 | `disabled_at` | Optional column. The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity. Empty if there is no end |
 | `year` | Four digits, from 2000 to 2100. Empty on a row that only sets the calendar's fields |
 | `jan` to `dec` | The working days of each month, with a dot as decimal separator (a comma is accepted too). Required on a row with a year |
@@ -211,6 +211,7 @@ Load or update calendars and their working days from a file.
 - **The country and region apply when the file creates a calendar.** On an existing calendar, leave them empty or give the calendar's own values. A different value is refused.
 - **Years of a standard calendar become edited years.** The other years keep following the public holidays.
 - **Months follow the rules of the workspace**: all twelve months, each at most the month's calendar days, up to 6 decimals.
+- **Empty cells and `-`**: on a stored calendar, an empty name, description, status or end of validity keeps the stored value. `-` clears the description and the end of validity. `-` cannot clear the code, the name, the status, the country, the region, the year or a month: the row is refused, and for a month the message says to write `0`. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing).
 - **Years missing from the file are kept.** An import adds or replaces years. It never removes one. To remove a year, use its **Remove** link in the workspace, or **Reset to standard** on a standard calendar.
 - **Counts**: a new calendar or a new year counts as an insert. A changed year, or a change of name, description or lifecycle, counts as an update. A row identical to what is stored counts as unchanged. Exporting and importing the same file reports every row as unchanged.
 - **Calendars missing from the file** are left as they are. The import never deletes.

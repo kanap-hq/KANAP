@@ -127,6 +127,8 @@
   "CSV_VALUE_REQUIRED": "Se requiere un valor.",
   "CSV_VALUE_ONE_REQUIRED": "Rellene al menos una columna {{column}}.",
   "CSV_VALUE_CANNOT_BE_EMPTIED": "Este campo no se puede vaciar. Quite la columna del archivo para conservar el valor guardado.",
+  "CSV_VALUE_CANNOT_BE_CLEARED": "Este valor no se puede vaciar.",
+  "CSV_NUMBER_CANNOT_BE_CLEARED": "Este número no se puede vaciar. Escriba 0 para ponerlo a cero o deje la celda vacía para conservar el valor guardado.",
   "CSV_NUMBER_INVALID": "«{{value}}» no es un número.",
   "CSV_DATE_INVALID": "«{{value}}» no es una fecha. Use 2026-09-02 o 02/09/2026.",
   "CSV_BOOLEAN_INVALID": "«{{value}}» no es válido. Use sí o no.",
@@ -167,8 +169,9 @@
   "CSV_COMPANY_METRICS_FROZEN": "Los indicadores de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos.",
   "CSV_CONTACT_NOT_FOUND": "Contacto no encontrado: {{email}}. Créelo primero en Contactos.",
   "CSV_EMAIL_INVALID": "«{{value}}» no es una dirección de correo electrónico válida.",
-  "CSV_STATUS_DATE_PASSED": "El estado es enabled pero el fin de validez ya pasó. Borre la fecha o cambie el estado a disabled. Si el archivo viene de una exportación anterior, exporte los datos de nuevo.",
-  "CSV_STATUS_DATE_FUTURE": "El estado es disabled pero el fin de validez aún no ha llegado. Cambie el estado a enabled o indique una fecha pasada.",
+  "CSV_STATUS_DATE_PASSED": "El estado es «Activado», pero el fin de validez ya pasó. Escriba «-» en el fin de validez o «disabled» en el estado. Si el archivo viene de una exportación anterior, exporte los datos de nuevo.",
+  "CSV_STATUS_DATE_FUTURE": "El estado es «Desactivado», pero el fin de validez aún no ha llegado. Escriba «enabled» en el estado o una fecha pasada en el fin de validez.",
+  "CSV_STATUS_DISABLED_DATE_CLEARED": "El estado es «Desactivado», pero «-» vacía el fin de validez. Conserve uno u otro.",
   "CSV_IMPORT_FAILED": "La importación falló: {{reason}}",
   "CSV_PROJECT_ORIGIN_STANDARD": "Un proyecto nuevo no puede tener la procedencia Solicitud. Convierta una solicitud, o utilice fast_track o legacy.",
   "CSV_PROJECT_ORIGIN_LOCKED": "Solo un proyecto Fast-track o Histórico puede cambiar de procedencia, a Fast-track o Histórico.",
@@ -551,7 +554,5 @@
     "connections": "conexiones",
     "incidents": "incidentes"
   },
-  "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} fila actualiza un registro existente, y esta importación sustituye todos sus valores: el archivo no tiene columna para {{columns}}, cuyos valores se borrarían. Asigne esas columnas o deje solo los registros nuevos en el archivo.",
-  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} filas actualizan registros existentes, y esta importación sustituye todos sus valores: el archivo no tiene columna para {{columns}}, cuyos valores se borrarían. Asigne esas columnas o deje solo los registros nuevos en el archivo.",
   "INVOICE_PAYMENT_IN_PROGRESS": "Ya hay un pago en curso."
 }

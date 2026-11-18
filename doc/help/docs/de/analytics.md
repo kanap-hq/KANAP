@@ -395,7 +395,7 @@ Um Werte auf Budgetzeilen aus einer Datei zu setzen, verwenden Sie die Budgetdat
 | `description` | Freitext |
 | `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` für einen neuen Wert und behält bei einer Aktualisierung den gespeicherten Status |
 | `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende. Leer, wenn es kein Ende gibt. Bei einer Aktualisierung behalten ein leerer `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum und beendet den Wert sonst heute |
-| `applies_to` | Die Einstellung **Verwendet für**, immer die letzte Spalte. `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle setzt **OPEX und CAPEX** |
+| `applies_to` | Die Einstellung **Verwendet für**, immer die letzte Spalte. `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle behält die Einstellung eines gespeicherten Werts, und `-` setzt **OPEX und CAPEX**. Ein neuer Wert mit einer leeren Zelle gilt für **OPEX und CAPEX** |
 
 Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `disabled_at` oder `applies_to`, behalten bestehende Werte, was dafür gespeichert ist, und neue Werte sind aktiviert und ohne Beschreibung. Eine Datei ohne `axis_code` legt jede Zeile in die Standarddimension.
 
@@ -409,7 +409,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 **So funktioniert der Import**:
 
 - **Die gesamte Datei wird geprüft, bevor etwas geschrieben wird.** Eine Datei mit einem Fehler lädt nichts: Korrigieren Sie die Zeilen und führen Sie die Vorabprüfung erneut aus. Jeder Fehler nennt seine Zeile mit der Zeilennummer der Datei, wie ein Texteditor sie anzeigt, einschließlich Leerzeilen und Zellen über mehrere Zeilen.
-- **Zuordnung über Dimension und Name**: Eine Zeile, deren Name in ihrer Dimension existiert, aktualisiert diesen Wert; jede andere Zeile erstellt einen. Jede Zelle ersetzt den gespeicherten Inhalt, sodass eine leere `description` ihn löscht. Ein Name in anderer Groß- und Kleinschreibung findet den gespeicherten Wert und benennt ihn nicht um. Um einen Wert umzubenennen, benennen Sie ihn auf der Seite um.
+- **Zuordnung über Dimension und Name**: Eine Zeile, deren Name in ihrer Dimension existiert, aktualisiert diesen Wert; jede andere Zeile erstellt einen. Bei einem gespeicherten Wert behält eine leere Zelle, was gespeichert ist, und `-` leert `description`, `disabled_at` oder `applies_to`. Ein leerer `axis_code` bezeichnet weiterhin die Standarddimension. `-` kann `axis_code`, `name` oder `status` nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing). Ein Name in anderer Groß- und Kleinschreibung findet den gespeicherten Wert und benennt ihn nicht um. Um einen Wert umzubenennen, benennen Sie ihn auf der Seite um.
 - **Unveränderte Zeilen**: Eine Zeile, die dem gespeicherten Wert entspricht, ändert nichts. Wenn Sie dieselbe Datei exportieren und importieren, werden alle Zeilen als unverändert gemeldet.
 - **Deaktivierte Dimensionen**: Eine Zeile einer deaktivierten Dimension wird akzeptiert, wenn sie nichts ändert, sodass eine exportierte Datei unverändert importiert wird. Eine Zeile, die dort einen Wert erstellen oder ändern würde, wird abgelehnt.
 - **In der Datei fehlende Werte** bleiben unverändert. Der Import löscht nie.
@@ -423,8 +423,8 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 - **„Invalid status '...'. Use 'enabled' or 'disabled'.“**: Korrigieren Sie die Zelle `status`.
 - **„Invalid applies_to '...'. Use 'opex', 'capex' or leave it empty.“**: Korrigieren Sie die Zelle `applies_to`.
 - **„The ... dimension is for OPEX lines only.“** (oder CAPEX): Die Zeile beschränkt einen Wert auf die Zeilenart, die seine Dimension ausschließt. Korrigieren Sie die Zelle `applies_to` oder ändern Sie **Verwendet für** der Dimension.
-- **„Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“**: Die Zeile ist aktiviert, aber ihr Datum ist bereits vorbei. Eine vor diesem Datum exportierte Datei enthält noch `enabled`: Exportieren Sie erneut oder korrigieren Sie die Zelle.
-- **„Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“**: Die Zeile ist deaktiviert, aber ihr Datum liegt noch in der Zukunft. Korrigieren Sie die Zelle `status` oder `disabled_at`.
+- **„Der Status ist „Aktiviert“, aber das Gültigkeitsende ist überschritten. Schreiben Sie „-“ in das Gültigkeitsende oder „disabled“ in den Status. Stammt die Datei aus einem älteren Export, exportieren Sie die Daten erneut.“**: Die Zeile ist aktiviert, aber ihr Datum ist bereits vorbei. Eine vor diesem Datum exportierte Datei enthält noch `enabled`: Exportieren Sie erneut oder korrigieren Sie die Zelle.
+- **„Der Status ist „Deaktiviert“, aber das Gültigkeitsende liegt noch in der Zukunft. Schreiben Sie „enabled“ in den Status oder ein vergangenes Datum in das Gültigkeitsende.“**: Die Zeile ist deaktiviert, aber ihr Datum liegt noch in der Zukunft. Korrigieren Sie die Zelle `status` oder `disabled_at`.
 - **„Kopfzeile: Fehlende Spalten: ...“** oder **„Kopfzeile: Unbekannte Spalten: ...“**: Laden Sie eine neue Vorlage herunter.
 
 ---

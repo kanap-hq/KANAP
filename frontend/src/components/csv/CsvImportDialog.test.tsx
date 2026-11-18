@@ -65,6 +65,47 @@ describe('CsvImportDialog', () => {
     expect(screen.getByRole('alert')).not.toHaveTextContent('csv.rowsUnchanged');
   });
 
+  it('says how many stored values the check will clear, and not after the load', async () => {
+    post.mockResolvedValueOnce({ data: report({ unchanged: 2, cleared: 3 }) });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+    const preflight = await screen.findByRole('alert');
+    expect(preflight).toHaveTextContent('csv.rowsUnchanged:2');
+    expect(preflight).toHaveTextContent('csv.valuesWillBeClearedSentence:3');
+
+    post.mockResolvedValueOnce({ data: report({ dryRun: false, processed: 14, unchanged: 2, cleared: 3 }) });
+    fireEvent.click(screen.getByRole('button', { name: 'csv.load' }));
+    expect(await screen.findByText('csv.loadedCreated:1, csv.loadedUpdated:1, csv.loadedUnchanged:2')).toBeInTheDocument();
+    expect(screen.queryByText(/csv\.valuesWillBeCleared/)).not.toBeInTheDocument();
+  });
+
+  it('says nothing of clearing when the check clears no value', async () => {
+    post.mockResolvedValueOnce({ data: report({ cleared: 0 }) });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/^csv\.preflightOk:14$/);
+    expect(screen.queryByText(/csv\.valuesWillBeCleared/)).not.toBeInTheDocument();
+  });
+
+  // D21 of 26.11.9: the twelve imports that read a blank cell as "keep" and `-` as "clear" say so beside the title.
+  it.each([
+    '/suppliers', '/contacts', '/companies', '/departments', '/contracts', '/cost-centers', '/accounts',
+    '/chart-of-accounts/0b0e6f3c-2a54-4c1b-9d55-6f4b1e7a9c10/accounts', '/analytics-categories', '/business-processes',
+    '/working-day-profiles', '/technologies/asset-links', '/technologies/application-links',
+  ])('states the clearing rule in a tooltip beside the title of the %s import', (endpoint) => {
+    render(<CsvImportDialog open onClose={() => undefined} endpoint={endpoint} flexibleFormat />);
+    const hint = screen.getByRole('img', { name: 'csv.clearingRule' });
+    expect(hint.closest('h2')).toHaveTextContent('csv.importTitle');
+  });
+
+  it.each(['/users', '/data-access', '/admin/coa-templates/0b0e6f3c-2a54-4c1b-9d55-6f4b1e7a9c10'])(
+    'states no clearing rule for the %s import, which does not follow it yet',
+    (endpoint) => {
+      render(<CsvImportDialog open onClose={() => undefined} endpoint={endpoint} flexibleFormat />);
+      expect(screen.queryByRole('img', { name: 'csv.clearingRule' })).not.toBeInTheDocument();
+    },
+  );
+
   it('heads row errors with validation failed: a frozen column refused on a row', async () => {
     post.mockResolvedValueOnce({
       data: report({ ok: false, errors: [{ row: 3, message: 'Budget for 2026 is frozen for OPEX. Unfreeze it first.' }] }),

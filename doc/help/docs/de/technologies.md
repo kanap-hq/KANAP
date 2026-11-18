@@ -351,6 +351,8 @@ Klicken Sie in der Symbolleiste auf **Verknüpfungen importieren** oder **Verkn�
 | `notes` | Freitext zur Verknüpfung |
 | `source` | Woher die Verknüpfung stammt: manuelle Eingabe, Import, Assistent, Agent oder Netbox. Der Export schreibt sie; der Import ignoriert sie |
 
+Eine Datei braucht nur den Server oder die Anwendung und die Technologie, jeweils über die Referenz oder den Namen. Eine Spalte, die die Datei weglässt, wird nie geschrieben.
+
 Die Spalte `operating_system` kennt drei Werte:
 
 - **Ja**: Die Verknüpfung wird zum Betriebssystem des Servers. Der Import lehnt die Zeile ab, wenn die Technologie nicht zur Familie **Betriebssystem** gehört, wenn der Server ein Cluster mit Mitgliedern ist oder wenn der Server bereits ein anderes Betriebssystem hat.
@@ -365,7 +367,7 @@ Der Import entfernt die Betriebssystem-Markierung nie von einer Verknüpfung.
 
 - Eine Verknüpfung besteht aus einem Server oder einer Anwendung, einer Technologie und einer Version: Eine Zeile mit einer anderen Version fügt eine zweite Verknüpfung hinzu. Dieselbe Verknüpfung zweimal in einer Datei ist ein Fehler.
 - Jede Zeile fügt eine Verknüpfung hinzu oder aktualisiert eine vorhandene. Verknüpfungen, die in der Datei fehlen, bleiben, wie sie sind: Der Import löscht nie eine Verknüpfung.
-- Eine vorhandene Verknüpfung behält ihre Herkunft. Ihre Notizen ändern sich, wenn die Zelle `notes` einen anderen Text enthält; eine leere Zelle lässt sie unverändert.
+- Eine vorhandene Verknüpfung behält ihre Herkunft. Ihre Notizen ändern sich, wenn die Zelle `notes` einen anderen Text enthält, eine leere Zelle lässt sie unverändert, und `-` leert sie. `-` in jeder anderen Spalte lehnt die Zeile ab. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing).
 - Eine neue Verknüpfung wird als aus einem Import stammend gekennzeichnet, mit dem Dateinamen.
 - Die Technologie muss bereits in Ihrer Liste stehen. Übernehmen Sie sie zuerst aus dem Katalog oder legen Sie sie an.
 - Server, Anwendung und Technologie werden über ihre Namen gefunden, wie unter [Namen von Datensätzen](csv-files.md#names-of-records) beschrieben. Ein Name, den mehrere Datensätze teilen, ist ein Fehler.

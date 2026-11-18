@@ -1410,6 +1410,7 @@ export class AiMutationPreviewService {
       attachment_id: input.attachment_id,
       columns: input.columns,
       assumptions: input.assumptions ?? [],
+      ...(Array.isArray(input.left_aside) && input.left_aside.length > 0 ? { left_aside: input.left_aside } : {}),
       choices,
     });
     if (created.status !== 'pending' || created.preview_id === preview.id) {

@@ -1,4 +1,4 @@
-﻿reference;first_name;last_name;job_title;email;phone;mobile;country;notes;active
-CTCT-2;Dan;Ng;;dan@acme.example;;;;;non
-CTCT-1;Carla;Ruiz;Sales;carla@acme.example;'+33 1 23;0612;FR;"Line; ""quoted""
+﻿reference;first_name;last_name;job_title;email;phone;mobile;country;supplier_name;supplier_role;notes;active
+CTCT-2;Dan;Ng;;dan@acme.example;;;;;;;non
+CTCT-1;Carla;Ruiz;Sales;carla@acme.example;'+33 1 23;0612;FR;;;"Line; ""quoted""
 second, line";oui

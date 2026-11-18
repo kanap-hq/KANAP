@@ -3,17 +3,27 @@ import { randomUUID } from 'node:crypto';
 import { isActiveAt, resolveLifecycleState, StatusState } from '../common/status';
 import {
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
+  clearsEndOfValidity,
+  CsvDataRow,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   endOfValidityOf,
+  endOfValidityToCheck,
   keepStoredEndOfValidity,
+  keepsStoredValue,
+  lifecycleConflictError,
   MasterDataFileRead,
   readMasterDataFile,
   ImportReportError,
   rowError,
   rowProblemErrors,
   textCellError,
+  withClearedEndOfValidity,
 } from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CostCenterKind } from './cost-center.entity';
@@ -43,8 +53,6 @@ import { findRecordByName, ImportMatchState, ImportNameMatch, ImportProposals, I
 export const COST_CENTER_CSV_HEADERS = [
   'code', 'kind', 'name', 'parent_code', 'company_name', 'owner_email', 'description', 'status', 'disabled_at',
 ] as const;
-/** Accepted when absent (the file then sets the lifecycle through `status` alone). */
-const OPTIONAL_HEADERS = ['disabled_at'] as const;
 
 export interface CostCenterImportResult {
   ok: boolean;
@@ -53,6 +61,8 @@ export interface CostCenterImportResult {
   inserted: number;
   updated: number;
   unchanged: number;
+  /** The stored values the rows clear with `-` (D21 of 26.11.9), the same at the check and at the load. */
+  cleared?: number;
   errors: ImportReportError[];
   /** The unknown headers the file carried, and what the shared layer noticed. */
   ignoredColumns: string[];
@@ -67,9 +77,12 @@ export interface CostCenterImportResult {
 
 interface ParsedRow {
   line: number;
+  raw: CsvDataRow;
   id: string;
   existing: StoredCostCenter | null;
   parentCode: string;
+  /** The row leaves the stored node's parent as it is (`keepsStoredValue`). */
+  keepsParent: boolean;
   values: CostCenterValues;
 }
 
@@ -132,6 +145,12 @@ export class CostCentersCsvService {
    * and the whole resulting tree is checked with the same rules as a single
    * write. Nothing is written unless the file is clean; a row identical to
    * the stored node is counted unchanged and writes nothing.
+   *
+   * Under the clearing rule of the import route (`mode: 'enrich'`, D21 of 26.11.9) a blank cell
+   * keeps the stored value, the parent included, and `-` clears it: `-` in the parent moves the
+   * node to the top, `-` in the end of validity makes it active again. `-` on the code, the kind,
+   * the name or the status refuses the row. Any column but the code may be absent and is then
+   * never written. The tree is checked on the merged nodes. Without a mode, `replace`.
    */
   async importCsv(
     {
@@ -143,6 +162,7 @@ export class CostCentersCsvService {
       access,
       unmatched,
       proposals,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -155,6 +175,8 @@ export class CostCentersCsvService {
       unmatched?: Array<{ column: string; value: string }>;
       /** Kad's proposals, by file column: accepted for a company the person reads, exactly or case aside. */
       proposals?: ImportProposals;
+      /** What a row does to a node it updates (`CsvImportMode`); without it, `replace`. */
+      mode?: CsvImportMode;
     },
     ctx: CostCenterContext,
   ): Promise<CostCenterImportResult> {
@@ -198,7 +220,12 @@ export class CostCentersCsvService {
       // The physical line Excel shows, blank lines included.
       const line = raw.line;
       const rowErrors: ImportReportError[] = rowProblemErrors(raw, ['disabled_at']);
-      parentCodes.push({ line, parentCode: cellOf(raw, 'parent_code') });
+      // `-` cannot clear the code, the kind, the name or the status (D21 of 26.11.9).
+      const refusals = clearRefusals(raw, ['code', 'kind', 'name', 'status'], mode);
+      if (refusals.length > 0) {
+        errors.push(...rowErrors, ...refusals);
+        return;
+      }
       const attempt = <T>(column: string, fn: (cell: string) => T, coded: (cell: string, message: string) => ImportReportError): T | undefined => {
         const cell = cellOf(raw, column);
         try {
@@ -209,19 +236,25 @@ export class CostCentersCsvService {
         }
       };
       const code = attempt('code', normalizeCostCenterCode, (cell, message) => textCellError(line, 'code', cell, COST_CENTER_CODE_MAX, message));
-      const kind = attempt('kind', normalizeCostCenterKind, (cell, message) => cell.trim()
+      const existing = code ? storedByCode.get(code.toLowerCase()) ?? null : null;
+      // Whether the row leaves this column of the stored node as it is: a blank cell under the
+      // rule, or a column the file does not carry.
+      const keeps = (column: string) => !!existing && keepsStoredValue(raw, read.present, column, mode);
+      const keepsParent = keeps('parent_code');
+      const parentCode = keepsParent ? '' : cellText(raw, 'parent_code', mode);
+      parentCodes.push({ line, parentCode });
+      const kind = keeps('kind') ? existing!.kind : attempt('kind', normalizeCostCenterKind, (cell, message) => cell.trim()
         ? rowError(line, 'kind', 'CSV_ENUM_INVALID', message, { value: cell, allowed: 'group, cost_center' })
         : rowError(line, 'kind', 'CSV_VALUE_REQUIRED', message));
-      const name = attempt('name', normalizeCostCenterName, (cell, message) => textCellError(line, 'name', cell, COST_CENTER_NAME_MAX, message));
-      const existing = code ? storedByCode.get(code.toLowerCase()) ?? null : null;
+      const name = keeps('name') ? existing!.name : attempt('name', normalizeCostCenterName, (cell, message) => textCellError(line, 'name', cell, COST_CENTER_NAME_MAX, message));
       if (code) {
         const firstLine = lineByCode.get(code.toLowerCase());
         if (firstLine) rowErrors.push(rowError(line, 'code', 'CSV_DUPLICATE_KEY', `Code ${code} is already used on row ${firstLine}.`, { columns: 'code', firstRow: firstLine }));
         else lineByCode.set(code.toLowerCase(), line);
       }
 
-      let companyId: string | null = null;
-      const companyName = cellOf(raw, 'company_name');
+      let companyId: string | null = keeps('company_name') ? existing!.company_id : null;
+      const companyName = keeps('company_name') ? '' : cellText(raw, 'company_name', mode);
       if (companyName) {
         // Kad's proposal first, for a person who reads the companies. Then exactly, else case aside when
         // one name answers (two refuse the row, as before), else accents aside for a person who reads the
@@ -255,8 +288,8 @@ export class CostCentersCsvService {
         }
       }
 
-      let ownerId: string | null = null;
-      const ownerEmail = cellOf(raw, 'owner_email');
+      let ownerId: string | null = keeps('owner_email') ? existing!.owner_user_id : null;
+      const ownerEmail = keeps('owner_email') ? '' : cellText(raw, 'owner_email', mode);
       if (ownerEmail) {
         const user = usersByEmail.get(ownerEmail.toLowerCase());
         if (!user) rowErrors.push(rowError(line, 'owner_email', 'CSV_REFERENCE_NOT_FOUND', `Unknown budget holder email '${ownerEmail}'.`, { value: ownerEmail }));
@@ -270,7 +303,9 @@ export class CostCentersCsvService {
         rowErrors.push(rowError(line, 'status', 'CSV_ENUM_INVALID', `Invalid status '${cellOf(raw, 'status')}'. Use 'enabled' or 'disabled'.`, { value: cellOf(raw, 'status'), allowed: 'enabled, disabled' }));
       }
       const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? statusRaw : null;
-      const disabledAtRaw = hasDisabledAt ? cellOf(raw, 'disabled_at') : '';
+      // `-` clears a stored end of validity, as the screen empties it: the node is active again.
+      const clearsEnd = clearsEndOfValidity(raw, mode);
+      const disabledAtRaw = hasDisabledAt && !clearsEnd ? cellOf(raw, 'disabled_at') : '';
       let disabledAt: Date | null = null;
       if (disabledAtRaw) {
         // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
@@ -279,15 +314,15 @@ export class CostCentersCsvService {
         if (end.error) rowErrors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
         else disabledAt = keepStoredEndOfValidity(existing?.disabled_at, end.value);
       }
-      const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
-      if (lifecycleConflict) rowErrors.push(rowError(line, 'status', status === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
+      const lifecycleConflict = lifecycleConflictError(line, status, csvLifecycleConflict(status, endOfValidityToCheck(disabledAt, clearsEnd)), clearsEnd);
+      if (lifecycleConflict) rowErrors.push(lifecycleConflict);
 
       if (rowErrors.length > 0 || !code || !kind || !name) {
         errors.push(...rowErrors);
         return;
       }
       // Blank status or date: enabled for a new node, the stored value on an update (`csvItemLifecycle`).
-      const next = csvItemLifecycle(status, disabledAt, !!existing);
+      const next = withClearedEndOfValidity(csvItemLifecycle(status, disabledAt, !!existing), !!existing && clearsEnd);
       const lifecycle = resolveLifecycleState({
         currentDisabledAt: existing?.disabled_at ?? null,
         nextStatus: next.status,
@@ -295,14 +330,16 @@ export class CostCentersCsvService {
       });
       parsedRows.push({
         line,
+        raw,
         id: existing?.id ?? randomUUID(),
         existing,
-        parentCode: cellOf(raw, 'parent_code'),
+        parentCode,
+        keepsParent,
         values: {
           code,
           kind: kind as CostCenterKind,
           name,
-          description: cellOf(raw, 'description') || null,
+          description: keeps('description') ? existing!.description ?? null : cellText(raw, 'description', mode) || null,
           parent_id: null,
           company_id: companyId,
           owner_user_id: ownerId,
@@ -324,10 +361,12 @@ export class CostCentersCsvService {
     const fileIdByCode = new Map(parsedRows.map((row) => [row.values.code.toLowerCase(), row.id]));
     for (const row of parsedRows) {
       const key = row.parentCode.toLowerCase();
-      row.values.parent_id = row.parentCode ? fileIdByCode.get(key) ?? storedByCode.get(key)?.id ?? null : null;
+      row.values.parent_id = row.keepsParent
+        ? row.existing!.parent_id ?? null
+        : row.parentCode ? fileIdByCode.get(key) ?? storedByCode.get(key)?.id ?? null : null;
     }
 
-    // The whole resulting tree, with the same rules as a single write.
+    // The whole resulting tree, kept parents included, with the same rules as a single write.
     const before = new Map<string, CostCenterGraphNode>(stored.map((row) => [row.id, graphNode(row.id, row)]));
     const after = new Map(before);
     for (const row of parsedRows) after.set(row.id, graphNode(row.id, row.values));
@@ -345,8 +384,13 @@ export class CostCentersCsvService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    // The stored values the rows clear with `-` (a `-` on an empty one is not counted).
+    let cleared = 0;
     const toWrite: ParsedRow[] = [];
     for (const row of parsedRows) {
+      cleared += clearedValueCount(row.existing, row.raw, mode, ['parent_id', 'company_id', 'owner_user_id', 'description', 'disabled_at'], {
+        parent_id: 'parent_code', company_id: 'company_name', owner_user_id: 'owner_email',
+      });
       if (!row.existing) inserted += 1;
       else if (costCenterValuesEqual(row.existing, row.values)) {
         unchanged += 1;
@@ -363,7 +407,7 @@ export class CostCentersCsvService {
       }
     }
     return {
-      ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [],
+      ok: true, dryRun, total: rows.length, inserted, updated, unchanged, cleared, errors: [],
       ignoredColumns: read.ignoredColumns, notices: read.notices, ...listed(),
     };
   }
@@ -379,7 +423,8 @@ export class CostCentersCsvService {
       file: buf as Buffer,
       fields: COST_CENTER_CSV_HEADERS,
       dateFields: ['disabled_at'],
-      optional: OPTIONAL_HEADERS,
+      // A row finds its node by its code: any other column may be absent, and is then never written.
+      keys: [['code']],
       language,
       dateOrder,
       decimalMark,

@@ -118,19 +118,21 @@ The columns, in this order:
 **Import**:
 
 - Use **Preflight check** to validate the file before applying it, then **Load**
-- **Matching by reference**: a filled `reference` (`DEPT-12` or `12`) names the department the row updates, even when the name has changed. The department takes the name and the company of the row: a different company moves it to that company. The preflight check lists each department that will be renamed or move to another company
+- **Matching by reference**: a filled `reference` (`DEPT-12` or `12`) names the department the row updates, even when the name has changed. The department takes the name and the company the row gives: a different company moves it to that company. The preflight check lists each department that will be renamed or move to another company
 - **Matching by name**: when `reference` is empty, or the file has no such column, a row is matched by department name and company name. It updates the department it names, and any other row creates one
 - **Unknown reference**: a reference your workspace does not know refuses the row: "\"DEPT-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
 - **Renaming or moving**: a name that another department of the row's company already has is refused, and the message names that department's reference: "\"Finance\" already belongs to DEPT-7."
 - **One row per department**: two rows that update the same department are refused: "This row updates DEPT-7, as row 3 does. Keep one row per record." Two rows that create the same department (same company and name, whatever the case) are refused too: "Same values in company_name, name as row 3."
 
-**Required cells**: `name` and `company_name`, an existing company
+**Required cells**: `name` and `company_name`, an existing company. A row with a `reference` can leave them empty: the department keeps its name and company
+
+**Empty cells and `-`**: on a department the file updates, an empty cell keeps the stored value, and `-` clears `description` or `disabled_at`. `-` cannot clear `reference`, `company_name`, `name` or `status`: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
 
 **Optional cells**: `reference`, `description`, `status`, `disabled_at`
 
 **Lifecycle columns**:
 - `status` is `enabled` or `disabled`, and `disabled_at` is the end of validity, a date (`2026-12-31`) or a full date and time. The export writes the status read from the end of validity. A new department is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the department today
-- A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
+- A row whose status contradicts its date is refused with a row error: "The status is "Enabled", but the end of validity has passed. Write "-" in the end of validity, or "disabled" in the status. If the file comes from an older export, export the data again." or "The status is "Disabled", but the end of validity is still to come. Write "enabled" in the status, or a date that has passed in the end of validity."
 
 **Notes**:
 - See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date forms and the two import steps

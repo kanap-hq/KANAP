@@ -174,6 +174,8 @@ export class AnalyticsCategoriesController {
         language,
         dateOrder: parseDateOrder(dateOrderRaw),
         decimalMark: parseDecimalMark(decimalMarkRaw),
+        // The clearing rule of every import (D21 of 26.11.9): a blank cell keeps, `-` clears.
+        mode: 'enrich',
       },
       caller,
     );

@@ -148,7 +148,8 @@ async function testRowErrors() {
 
     const header = await csv.importCsv({ file: file(['X;group;X;;'], 'code;kind;name;parent;company_name'), dryRun: true }, ctx);
     assert.equal(header.ok, false);
-    assert.match(header.errors[0].message, /Header mismatch\. Missing: parent_code, owner_email, description, status, Extra: parent/);
+    // Only the code is required of a file (D21 of 26.11.9): an unknown column still refuses it.
+    assert.match(header.errors[0].message, /^Header mismatch\. Extra: parent$/);
   });
 }
 

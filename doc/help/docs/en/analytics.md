@@ -395,7 +395,7 @@ To set values on budget lines from a file, use the budget file. In it, one `anal
 | `description` | Free text |
 | `status` | `enabled` or `disabled`. Empty means `enabled` for a new value and keeps the stored status on an update |
 | `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity. Empty if there is no end. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the value today |
-| `applies_to` | The **Used for** setting, always the last column. `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings as they are. An empty cell sets **OPEX and CAPEX** |
+| `applies_to` | The **Used for** setting, always the last column. `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings as they are. An empty cell keeps the setting of a stored value, and `-` sets **OPEX and CAPEX**. A new value with an empty cell is for **OPEX and CAPEX** |
 
 Only `name` is a required column. When the `description`, `status`, `disabled_at` or `applies_to` column is missing, existing values keep what is stored for it, and new values are enabled with no description. A file without `axis_code` puts every row in the default dimension.
 
@@ -409,7 +409,7 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 **How the import works**:
 
 - **The whole file is checked before anything is written.** A file with any error loads nothing: fix the rows and run the preflight again. Each error names its row by the line of the file as a text editor shows it, blank lines and cells that span several lines included.
-- **Matching by dimension and name**: a row whose name exists in its dimension updates that value; any other row creates one. Each cell replaces the stored value, so an empty `description` clears it. A name written with another case finds the stored value and does not rename it. To rename a value, rename it on the page.
+- **Matching by dimension and name**: a row whose name exists in its dimension updates that value; any other row creates one. On a stored value, an empty cell keeps what is stored, and `-` clears `description`, `disabled_at` or `applies_to`. An empty `axis_code` still names the default dimension. `-` cannot clear `axis_code`, `name` or `status`: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing). A name written with another case finds the stored value and does not rename it. To rename a value, rename it on the page.
 - **Unchanged rows**: a row identical to the stored value changes nothing. Exporting and importing the same file reports every row as unchanged.
 - **Disabled dimensions**: a row of a disabled dimension is accepted when it changes nothing, so an exported file imports as it is. A row that would create or change a value there is refused.
 - **Values missing from the file** are left as they are. The import never deletes.
@@ -423,8 +423,8 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 - **"Invalid status '...'. Use 'enabled' or 'disabled'."**: fix the `status` cell.
 - **"Invalid applies_to '...'. Use 'opex', 'capex' or leave it empty."**: fix the `applies_to` cell.
 - **"The ... dimension is for OPEX lines only."** (or CAPEX): the row limits a value to the kind of line its dimension excludes. Fix the `applies_to` cell, or change the dimension's **Used for**.
-- **"Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again."**: the row is enabled with a date that has passed. A file exported before the date passed still says `enabled`: export it again, or fix the cell.
-- **"Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."**: the row is disabled with a date still to come. Fix the `status` or the `disabled_at` cell.
+- **"The status is "Enabled", but the end of validity has passed. Write "-" in the end of validity, or "disabled" in the status. If the file comes from an older export, export the data again."**: the row is enabled with a date that has passed. A file exported before the date passed still says `enabled`: export it again, or fix the cell.
+- **"The status is "Disabled", but the end of validity is still to come. Write "enabled" in the status, or a date that has passed in the end of validity."**: the row is disabled with a date still to come. Fix the `status` or the `disabled_at` cell.
 - **"Header: Missing columns: ..."** or **"Header: Unknown columns: ..."**: download a fresh template.
 
 ---

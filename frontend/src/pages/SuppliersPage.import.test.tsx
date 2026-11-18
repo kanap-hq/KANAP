@@ -78,22 +78,22 @@ describe('suppliers CSV import dialog', () => {
 
   it('keeps the accepted values and the contact sentence in each language', () => {
     expect(hints.en).toBe(
-      'Accepted values for Status: enabled or disabled. Disabled on holds the end of validity, or stays empty. The contact columns take the e-mail of a contact that already exists in Contacts.',
+      'Accepted values for Status: enabled or disabled. The “Disabled on” column takes the end of validity. The contact columns take the e-mail of a contact that already exists in Contacts.',
     );
     expect(hints.fr).toBe(
-      "Valeurs acceptées pour Statut : enabled ou disabled. Désactivé le contient la fin de validité, ou reste vide. Les colonnes de contact prennent l'e-mail d'un contact qui existe déjà dans Contacts.",
+      "Valeurs acceptées pour Statut : enabled ou disabled. La colonne « Désactivé le » prend la fin de validité. Les colonnes de contact prennent l'e-mail d'un contact qui existe déjà dans Contacts.",
     );
     expect(hints.de).toBe(
-      'Zulässige Werte für Status: enabled oder disabled. Deaktiviert am enthält das Gültigkeitsende oder bleibt leer. Die Kontaktspalten enthalten die E-Mail-Adresse eines Kontakts, der unter Kontakte bereits existiert.',
+      'Zulässige Werte für Status: enabled oder disabled. Die Spalte „Deaktiviert am“ enthält das Gültigkeitsende. Die Kontaktspalten enthalten die E-Mail-Adresse eines Kontakts, der unter Kontakte bereits existiert.',
     );
     expect(hints.es).toBe(
-      'Valores aceptados para Estado: enabled o disabled. Desactivado el contiene el fin de validez o queda vacío. Las columnas de contacto llevan el correo electrónico de un contacto que ya existe en Contactos.',
+      'Valores aceptados para Estado: enabled o disabled. La columna «Desactivado el» contiene el fin de validez. Las columnas de contacto llevan el correo electrónico de un contacto que ya existe en Contactos.',
     );
   });
 
   it('puts a no-break space before the French colon', () => {
     const shown = frenchSpacing(hints.fr);
-    expect(shown).toBe(hints.fr.replace('Statut :', 'Statut\u00a0:'));
+    expect(shown).toBe(hints.fr.replace('Statut :', 'Statut\u00a0:').replace('« Désactivé le »', '«\u00a0Désactivé le\u00a0»'));
     expect(shown.includes('Statut\u00a0:')).toBe(true);
   });
 });

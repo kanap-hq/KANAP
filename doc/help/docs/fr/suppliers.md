@@ -128,7 +128,7 @@ Le fichier titre les colonnes dans la langue de votre écran. Le tableau donne l
 | `reference` | Facultative. La référence du fournisseur (`SUP-12`). L'export l'écrit |
 | `name` | Obligatoire. Le nom du fournisseur |
 | `erp_supplier_id` | L'ID du fournisseur dans votre ERP. L'import le lit comme un ID ERP, même quand il ressemble à une référence (`SUP-12`) |
-| `commercial_contact` | L'e-mail d'un contact existant. Le chargement y rattache le fournisseur |
+| `commercial_contact` | L'e-mail d'un contact existant. Le chargement y rattache le fournisseur, et garde les liens déjà présents. `-` retire du fournisseur tous les contacts de ce rôle |
 | `technical_contact` | L'e-mail d'un contact, comme ci-dessus |
 | `support_contact` | L'e-mail d'un contact, comme ci-dessus |
 | `notes` | Texte libre |
@@ -138,11 +138,12 @@ Le fichier titre les colonnes dans la langue de votre écran. Le tableau donne l
 **Import** :
 
 - Utilisez la **Vérification préalable** pour valider le fichier avant de l'appliquer, puis **Charger**
-- **Correspondance par référence** : une `reference` remplie (`SUP-12` ou `12`) désigne le fournisseur que la ligne met à jour, même si son nom a changé. Le fournisseur prend alors le nom de la ligne, et la vérification préalable signale chaque fournisseur qui sera renommé
+- **Correspondance par référence** : une `reference` remplie (`SUP-12` ou `12`) désigne le fournisseur que la ligne met à jour, même si son nom a changé. Le fournisseur prend alors le nom que donne la ligne, et la vérification préalable signale chaque fournisseur qui sera renommé
 - **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, les lignes sont rapprochées par `name`, quelle que soit la casse : une ligne met à jour le fournisseur qu'elle nomme, toute autre ligne en crée un. Le nom enregistré ne change pas : une ligne `sap` met à jour `SAP`, et la vérification préalable indique « sap » a été rapproché de « SAP »
 - **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « SUP-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
 - **Renommage** : un nouveau nom qu'un autre fournisseur porte déjà est refusé, et le message donne la référence de ce fournisseur : « « SAP » appartient déjà à SUP-4. »
-- `name` est obligatoire. Toute autre cellule est facultative
+- `name` est obligatoire pour un nouveau fournisseur. Toute autre colonne est facultative. Sur un fournisseur que le fichier met à jour, une cellule vide garde la valeur enregistrée et `-` l'efface : voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
+- `-` efface `erp_supplier_id`, `notes` et `disabled_at`. Il ne peut pas effacer `reference`, `name` ni `status` : la ligne est refusée
 - Chaque fournisseur occupe une ligne. Deux lignes portant le même nom, même avec une casse différente, sont refusées à la vérification préalable, avec les deux numéros de ligne. Deux lignes qui mettent à jour le même fournisseur sont refusées aussi : « Cette ligne met à jour SUP-4, comme la ligne 3. Gardez une seule ligne par fiche. »
 - L'e-mail d'un contact doit appartenir à un contact qui existe déjà dans **Contacts**. Sinon, la ligne est refusée à la vérification préalable : créez d'abord le contact
 - `disabled_at` fixe la fin de validité, et le statut en découle. Un statut qui contredit la date est refusé. Un fichier sans la colonne `disabled_at` s'importe toujours : le statut seul fixe alors le cycle de vie

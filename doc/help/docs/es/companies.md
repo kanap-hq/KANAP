@@ -226,26 +226,26 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 | `status` | `enabled` o `disabled` |
 | `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y una hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado |
 | `notes` | Texto libre |
-| `headcount_<año>` | Un número entero. Obligatoria cuando la fila lleva alguna métrica de ese año |
+| `headcount_<año>` | Un número entero. Obligatoria cuando la fila da una métrica de un año para el que la empresa aún no tiene métricas |
 | `it_users_<año>` | Un número entero |
 | `turnover_<año>` | Hasta 3 decimales, en millones de la moneda base de la empresa |
 
 **Importación**:
 
 - Empiece por la **Verificación previa**. Valida los encabezados, la codificación, los campos obligatorios, los duplicados y las métricas. Si la comprobación es correcta, **Cargar** aplica las inserciones y las actualizaciones. Después, el diálogo cuenta las empresas creadas, actualizadas y sin cambios, por ejemplo «2 creadas, 5 actualizadas, 30 sin cambios»
-- **Emparejamiento por referencia**: una `reference` rellenada (`COMP-12` o `12`) designa la empresa que la fila actualiza, aunque su nombre haya cambiado. La empresa toma entonces el nombre de la fila, y la verificación previa señala cada empresa que cambiará de nombre
+- **Emparejamiento por referencia**: una `reference` rellenada (`COMP-12` o `12`) designa la empresa que la fila actualiza, aunque su nombre haya cambiado. La empresa toma entonces el nombre que da la fila, y la verificación previa señala cada empresa que cambiará de nombre
 - **Emparejamiento por nombre**: cuando `reference` está vacía, o el archivo no tiene esa columna, la fila se empareja por el `name` de la empresa, sin distinguir mayúsculas y minúsculas. La grafía guardada se mantiene: una fila `ACME` actualiza `Acme`, y la verificación previa indica «ACME» se ha asociado a «Acme». Todas las filas de un archivo sin columna `reference` se emparejan así
 - **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“COMP-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
 - **Cambio de nombre**: un nombre nuevo que ya tiene otra empresa se rechaza, y el mensaje da la referencia de esa empresa: «“Acme” ya pertenece a COMP-4.»
 - **Una fila por empresa**: dos filas que actualizan la misma empresa se rechazan: «Esta fila actualiza COMP-4, como la fila 3. Deje una sola fila por registro.»
 - Un nombre que aparece dos veces en el archivo, sin distinguir mayúsculas y minúsculas, se rechaza ya en la verificación: «“Acme” ya figura en la fila 4. Deje una sola fila por empresa.»
-- **Campos obligatorios**: `name`, `country_iso`, `city` y `base_currency`. Una ciudad vacía se rechaza ya en la verificación, tanto para una empresa nueva como para una actualización
+- **Campos obligatorios**: `name`, `country_iso`, `city` y `base_currency`, para una empresa nueva. En una empresa que el archivo actualiza, una celda vacía conserva el valor guardado
+- **Celdas vacías y `-`**: una celda vacía conserva el valor guardado, y `-` lo borra: las líneas de dirección, `postal_code`, `state`, `reg_number`, `vat_number`, `notes`, `disabled_at` y el `it_users` de un año. `-` no puede borrar `reference`, `name`, `country_iso`, `city`, `base_currency` ni `status`. En el `headcount` o el `turnover` de un año, el mensaje indica escribir `0`. La fila se rechaza en ambos casos. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing)
 - **Estado y fin de validez**: la exportación escribe el estado deducido del fin de validez. Una empresa nueva se activa salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, finaliza la empresa hoy
-- Una fila cuyo estado contradice su fecha se rechaza con un error de fila: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." o "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
+- Una fila cuyo estado contradice su fecha se rechaza con un error de fila: "El estado es «Activado», pero el fin de validez ya pasó. Escriba «-» en el fin de validez o «disabled» en el estado. Si el archivo viene de una exportación anterior, exporte los datos de nuevo." o "El estado es «Desactivado», pero el fin de validez aún no ha llegado. Escriba «enabled» en el estado o una fecha pasada en el fin de validez."
 - **Años leídos**: el diálogo nombra los años que lee, por ejemplo «Indicadores leídos: 2025, 2026, 2027, según el año de la lista. Cada año es opcional.»
-- **Cada año es opcional**: un año es un bloque de tres columnas, `headcount_<año>`, `it_users_<año>` y `turnover_<año>`. Si omite el bloque entero, las métricas guardadas de ese año no cambian. Una columna de un año fuera de los tres años leídos se ignora, y la verificación la lista con las columnas ignoradas
-- **Un año va completo**: un archivo con una o dos columnas de un año sin las demás se rechaza en la línea **Encabezado**, que nombra las columnas que faltan
-- **Métricas**: si una fila lleva alguna métrica de un año, `headcount_<año>` es obligatoria para ese año. `it_users_<año>` y `turnover_<año>` pueden quedar vacías
+- **Cada año es opcional**: un año tiene tres columnas, `headcount_<año>`, `it_users_<año>` y `turnover_<año>`. Cada una puede omitirse, y el valor guardado de una columna omitida no cambia. Una columna de un año fuera de los tres años leídos se ignora, y la verificación la lista con las columnas ignoradas
+- **Métricas**: una fila que da una métrica de un año para el que la empresa aún no tiene métricas necesita `headcount_<año>` para ese año. `it_users_<año>` y `turnover_<año>` pueden quedar vacías. Una fila con solo `-` en un año no crea métricas
 - **Años congelados**: una fila con métricas de un año cuyas métricas de empresas están congeladas se rechaza ya en la verificación: «Los indicadores de 2025 están congelados. Un administrador de presupuesto puede descongelarlos.» Omita las columnas de ese año, o descongele antes el año (consulte [Congelar datos maestros](master-data-operations.md))
 
 **Notas**:

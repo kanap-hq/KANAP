@@ -134,6 +134,8 @@ export type AiImportRun = {
   inserted: number;
   updated: number;
   unchanged: number;
+  /** A row import's check: the stored values its rows clear with `-` (the card says it when there are some). */
+  cleared?: number;
   skipped: number;
   error_count: number;
   warning_count: number;

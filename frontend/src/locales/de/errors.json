@@ -127,6 +127,8 @@
   "CSV_VALUE_REQUIRED": "Ein Wert ist erforderlich.",
   "CSV_VALUE_ONE_REQUIRED": "Füllen Sie mindestens eine Spalte {{column}} aus.",
   "CSV_VALUE_CANNOT_BE_EMPTIED": "Dieses Feld darf nicht geleert werden. Entfernen Sie die Spalte aus der Datei, um den gespeicherten Wert zu behalten.",
+  "CSV_VALUE_CANNOT_BE_CLEARED": "Dieser Wert kann nicht geleert werden.",
+  "CSV_NUMBER_CANNOT_BE_CLEARED": "Diese Zahl kann nicht geleert werden. Schreiben Sie 0, um sie auf null zu setzen, oder lassen Sie die Zelle leer, um den gespeicherten Wert zu behalten.",
   "CSV_NUMBER_INVALID": "„{{value}}“ ist keine Zahl.",
   "CSV_DATE_INVALID": "„{{value}}“ ist kein Datum. Verwenden Sie 2026-09-02 oder 02.09.2026.",
   "CSV_BOOLEAN_INVALID": "„{{value}}“ ist ungültig. Verwenden Sie ja oder nein.",
@@ -167,8 +169,9 @@
   "CSV_COMPANY_METRICS_FROZEN": "Die Kennzahlen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.",
   "CSV_CONTACT_NOT_FOUND": "Kontakt nicht gefunden: {{email}}. Legen Sie ihn zuerst unter Kontakte an.",
   "CSV_EMAIL_INVALID": "„{{value}}“ ist keine gültige E-Mail-Adresse.",
-  "CSV_STATUS_DATE_PASSED": "Der Status ist enabled, aber das Gültigkeitsende ist überschritten. Leeren Sie das Datum oder setzen Sie den Status auf disabled. Stammt die Datei aus einem älteren Export, exportieren Sie die Daten erneut.",
-  "CSV_STATUS_DATE_FUTURE": "Der Status ist disabled, aber das Gültigkeitsende liegt noch in der Zukunft. Setzen Sie den Status auf enabled oder geben Sie ein vergangenes Datum ein.",
+  "CSV_STATUS_DATE_PASSED": "Der Status ist „Aktiviert“, aber das Gültigkeitsende ist überschritten. Schreiben Sie „-“ in das Gültigkeitsende oder „disabled“ in den Status. Stammt die Datei aus einem älteren Export, exportieren Sie die Daten erneut.",
+  "CSV_STATUS_DATE_FUTURE": "Der Status ist „Deaktiviert“, aber das Gültigkeitsende liegt noch in der Zukunft. Schreiben Sie „enabled“ in den Status oder ein vergangenes Datum in das Gültigkeitsende.",
+  "CSV_STATUS_DISABLED_DATE_CLEARED": "Der Status ist „Deaktiviert“, aber „-“ leert das Gültigkeitsende. Behalten Sie das eine oder das andere.",
   "CSV_IMPORT_FAILED": "Der Import ist fehlgeschlagen: {{reason}}",
   "CSV_PROJECT_ORIGIN_STANDARD": "Ein neues Projekt kann nicht die Herkunft Anfrage haben. Wandeln Sie eine Anfrage um, oder verwenden Sie fast_track oder legacy.",
   "CSV_PROJECT_ORIGIN_LOCKED": "Nur ein Projekt mit der Herkunft Fast-track oder Altbestand kann seine Herkunft ändern, und nur zu Fast-track oder Altbestand.",
@@ -551,7 +554,5 @@
     "connections": "Verbindungen",
     "incidents": "Vorfälle"
   },
-  "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} Zeile aktualisiert einen bestehenden Datensatz, und dieser Import ersetzt alle seine Werte: Die Datei hat keine Spalte für {{columns}}, deren Werte gelöscht würden. Ordnen Sie diese Spalten zu oder behalten Sie nur neue Datensätze in der Datei.",
-  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} Zeilen aktualisieren bestehende Datensätze, und dieser Import ersetzt alle ihre Werte: Die Datei hat keine Spalte für {{columns}}, deren Werte gelöscht würden. Ordnen Sie diese Spalten zu oder behalten Sie nur neue Datensätze in der Datei.",
   "INVOICE_PAYMENT_IN_PROGRESS": "Eine Zahlung ist bereits in Bearbeitung."
 }

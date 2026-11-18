@@ -128,7 +128,7 @@ Die Datei benennt die Spalten in der Sprache Ihrer Oberfläche. Die Tabelle nenn
 | `reference` | Optional. Die Referenz des Lieferanten (`SUP-12`). Der Export schreibt sie |
 | `name` | Pflicht. Der Name des Lieferanten |
 | `erp_supplier_id` | Die ID des Lieferanten in Ihrem ERP. Der Import liest sie als ERP-ID, auch wenn sie wie eine Referenz aussieht (`SUP-12`) |
-| `commercial_contact` | Die E-Mail-Adresse eines bestehenden Kontakts. Das Laden verknüpft den Lieferanten mit ihm |
+| `commercial_contact` | Die E-Mail-Adresse eines bestehenden Kontakts. Das Laden verknüpft den Lieferanten mit ihm und behält die bestehenden Verknüpfungen. `-` entfernt jeden Kontakt dieser Rolle vom Lieferanten |
 | `technical_contact` | Die E-Mail-Adresse eines Kontakts, wie oben |
 | `support_contact` | Die E-Mail-Adresse eines Kontakts, wie oben |
 | `notes` | Freier Text |
@@ -138,11 +138,12 @@ Die Datei benennt die Spalten in der Sprache Ihrer Oberfläche. Die Tabelle nenn
 **Import**:
 
 - Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
-- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`SUP-12` oder `12`) bezeichnet den Lieferanten, den die Zeile aktualisiert, auch wenn sich sein Name geändert hat. Der Lieferant erhält dann den Namen der Zeile, und die Vorabprüfung meldet jeden Lieferanten, der umbenannt wird
+- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`SUP-12` oder `12`) bezeichnet den Lieferanten, den die Zeile aktualisiert, auch wenn sich sein Name geändert hat. Der Lieferant erhält dann den Namen, den die Zeile angibt, und die Vorabprüfung meldet jeden Lieferanten, der umbenannt wird
 - **Zuordnung über den Namen**: Ist `reference` leer oder fehlt die Spalte in der Datei, werden Zeilen über `name` zugeordnet, unabhängig von Groß- und Kleinschreibung: Eine Zeile aktualisiert den Lieferanten, den sie nennt, jede andere Zeile legt einen an. Die gespeicherte Schreibweise bleibt: Eine Zeile `sap` aktualisiert `SAP`, und die Vorabprüfung meldet „sap“ wurde „SAP“ zugeordnet
 - **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„SUP-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
 - **Umbenennen**: Ein neuer Name, den bereits ein anderer Lieferant trägt, wird abgelehnt, und die Meldung nennt dessen Referenz: „„SAP“ gehört bereits zu SUP-4.“
-- `name` ist Pflicht. Jede andere Zelle ist optional
+- `name` ist bei einem neuen Lieferanten Pflicht. Jede andere Spalte ist optional. Bei einem Lieferanten, den die Datei aktualisiert, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn: siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing)
+- `-` leert `erp_supplier_id`, `notes` und `disabled_at`. Es kann `reference`, `name` oder `status` nicht leeren: Die Zeile wird abgelehnt
 - Jeder Lieferant belegt eine Zeile. Zwei Zeilen mit demselben Namen, auch in anderer Groß- und Kleinschreibung, werden bei der Vorabprüfung abgelehnt, mit beiden Zeilennummern. Zwei Zeilen, die denselben Lieferanten aktualisieren, werden ebenfalls abgelehnt: „Diese Zeile aktualisiert SUP-4, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“
 - Die E-Mail-Adresse eines Kontakts muss zu einem Kontakt gehören, der unter **Kontakte** bereits existiert. Sonst wird die Zeile bei der Vorabprüfung abgelehnt: Legen Sie den Kontakt zuerst an
 - `disabled_at` setzt das Gültigkeitsende, der Status ergibt sich daraus. Ein Status, der dem Datum widerspricht, wird abgelehnt. Eine Datei ohne die Spalte `disabled_at` lässt sich weiterhin importieren: Dann bestimmt der Status allein den Lebenszyklus

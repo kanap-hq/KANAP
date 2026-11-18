@@ -18,6 +18,8 @@ import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { cancelCreation, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 import { resolveToUuid } from '../common/resolve-item-id';
+import { csvCallerAccess } from '../common/csv/csv-field.types';
+import { csvUnmatched } from '../common/csv/csv-unmatched';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contacts')
@@ -118,13 +120,25 @@ export class ContactsController {
     @Query('language') languageRaw: string | undefined,
     @Query('dateOrder') dateOrderRaw: string | undefined,
     @Query('decimalMark') decimalMarkRaw: string | undefined,
+    @Body('unmatched') unmatchedRaw: unknown,
     @Req() req: any,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
     const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
     return this.svc.importCsv(
-      { file, dryRun, language, dateOrder: parseDateOrder(dateOrderRaw), decimalMark: parseDecimalMark(decimalMarkRaw) },
-      { manager: req?.queryRunner?.manager, tenantId: req.tenant.id },
+      {
+        file,
+        dryRun,
+        language,
+        dateOrder: parseDateOrder(dateOrderRaw),
+        decimalMark: parseDecimalMark(decimalMarkRaw),
+        // The person's rights find a supplier's name beyond case; the matches they undid are not made again.
+        access: csvCallerAccess(req),
+        unmatched: csvUnmatched(unmatchedRaw),
+        // The clearing rule of every import (D21 of 26.11.9): a blank cell keeps, `-` clears.
+        mode: 'enrich',
+      },
+      { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null },
     );
   }
 }

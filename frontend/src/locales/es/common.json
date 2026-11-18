@@ -615,6 +615,11 @@
     "unchanged_other": "{{count}} sin cambios",
     "skipped_one": "{{count}} omitida",
     "skipped_other": "{{count}} omitidas",
+    "valuesWillBeCleared_one": "Se borrará {{count}} valor",
+    "valuesWillBeCleared_other": "Se borrarán {{count}} valores",
+    "valuesWillBeClearedSentence_one": "Se borrará {{count}} valor.",
+    "valuesWillBeClearedSentence_other": "Se borrarán {{count}} valores.",
+    "clearingRule": "Una celda vacía conserva el valor guardado. Un guion (-) lo borra.",
     "errors": "Errores ({{count}})",
     "warnings": "Advertencias ({{count}})",
     "andMoreErrors2_one": "…y {{count}} error más",
@@ -939,6 +944,9 @@
         "company_name": "Empresa",
         "supplier_name": "Proveedor",
         "cost_center": "Centro de coste"
+      },
+      "contacts": {
+        "supplier_name": "Proveedor"
       },
       "cost-centers": {
         "company_name": "Empresa"

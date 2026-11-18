@@ -30,7 +30,11 @@ export type LinkOpts = {
  * `keepExistingProvenance`: an existing link keeps its source, reference and observation date.
  * The link-file import sets it. The screens omit it, so rewriting a link there still makes it manual.
  */
-export type LinkWriteOptions = { keepExistingProvenance?: boolean };
+/**
+ * `clearNotes`: the existing link's notes are cleared (an import's `-`, D21 of 26.11.9), the notes
+ * given being none.
+ */
+export type LinkWriteOptions = { keepExistingProvenance?: boolean; clearNotes?: boolean };
 
 /**
  * What a caller may see of the applications: none (`null`: no `applications` read right), or all
@@ -771,13 +775,15 @@ export class TechnologyLinksService {
       [tenantId, subjectId, technologyId, versionId],
     );
     const keep = write.keepExistingProvenance === true;
-    if (before && keep && (notes === null || notes === before.notes)) {
+    const clear = write.clearNotes === true;
+    if (before && keep && (clear ? before.notes === null : notes === null || notes === before.notes)) {
       return { ok: true, link_id: before.id, created: false, changed: false };
     }
     // INSERT … ON CONFLICT returns rows directly. A bare UPDATE would come back as [rows, count].
+    const notesSet = clear ? 'notes = NULL' : `notes = COALESCE(EXCLUDED.notes, ${table}.notes)`;
     const assignments = keep
-      ? `notes = COALESCE(EXCLUDED.notes, ${table}.notes), updated_at = now()`
-      : `notes = COALESCE(EXCLUDED.notes, ${table}.notes), source = EXCLUDED.source, source_ref = EXCLUDED.source_ref, observed_at = EXCLUDED.observed_at, updated_at = now()`;
+      ? `${notesSet}, updated_at = now()`
+      : `${notesSet}, source = EXCLUDED.source, source_ref = EXCLUDED.source_ref, observed_at = EXCLUDED.observed_at, updated_at = now()`;
     const [row]: Array<{ id: string; notes: string | null; source: string; source_ref: string | null }> = await mg.query(
       `INSERT INTO ${table} (tenant_id, ${side}_id, technology_id, technology_version_id, notes, source, source_ref, observed_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)

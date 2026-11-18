@@ -615,6 +615,11 @@
     "unchanged_other": "{{count}} unchanged",
     "skipped_one": "{{count}} skipped",
     "skipped_other": "{{count}} skipped",
+    "valuesWillBeCleared_one": "{{count}} value will be cleared",
+    "valuesWillBeCleared_other": "{{count}} values will be cleared",
+    "valuesWillBeClearedSentence_one": "{{count}} value will be cleared.",
+    "valuesWillBeClearedSentence_other": "{{count}} values will be cleared.",
+    "clearingRule": "An empty cell keeps the stored value. A dash (-) clears it.",
     "errors": "Errors ({{count}})",
     "warnings": "Warnings ({{count}})",
     "andMoreErrors2_one": "…and {{count}} more error",
@@ -939,6 +944,9 @@
         "company_name": "Company",
         "supplier_name": "Supplier",
         "cost_center": "Cost center"
+      },
+      "contacts": {
+        "supplier_name": "Supplier"
       },
       "cost-centers": {
         "company_name": "Company"

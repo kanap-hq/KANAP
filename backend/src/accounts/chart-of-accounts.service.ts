@@ -12,7 +12,7 @@ import { Account } from './account.entity';
 import { AccountsService } from './accounts.service';
 import { parseString } from '@fast-csv/parse';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
-import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../common/csv-sheet';
+import type { CsvDateOrder, CsvImportMode, CsvLanguage, DecimalMark } from '../common/csv-sheet';
 import { CURRENT_TENANT, lockTenantCharts, resyncFromChart } from './consolidation';
 import type { ExportFileFormat } from '../common/xlsx/format';
 
@@ -500,11 +500,11 @@ export class ChartOfAccountsService {
     file: Express.Multer.File,
     dryRun: boolean,
     userId?: string | null,
-    opts?: { manager?: EntityManager; language?: CsvLanguage; dateOrder?: CsvDateOrder; decimalMark?: DecimalMark },
+    opts?: { manager?: EntityManager; language?: CsvLanguage; dateOrder?: CsvDateOrder; decimalMark?: DecimalMark; mode?: CsvImportMode },
   ) {
     await this.findOrFail(coaId, opts?.manager ?? this.repo.manager);
     return this.accountsSvc.importCsv(
-      { file, dryRun, userId: userId ?? null, language: opts?.language, dateOrder: opts?.dateOrder, decimalMark: opts?.decimalMark },
+      { file, dryRun, userId: userId ?? null, language: opts?.language, dateOrder: opts?.dateOrder, decimalMark: opts?.decimalMark, mode: opts?.mode },
       { manager: opts?.manager, targetCoaId: coaId, allowCoaCodeColumn: false },
     );
   }

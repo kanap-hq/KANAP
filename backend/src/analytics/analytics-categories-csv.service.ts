@@ -2,13 +2,22 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { resolveLifecycleState, StatusState } from '../common/status';
 import {
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
+  clearsEndOfValidity,
+  endOfValidityToCheck,
+  lifecycleConflictError,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   endOfValidityOf,
   keepStoredEndOfValidity,
   ImportReportError,
+  keepsStoredValue,
   MasterDataFileRead,
+  MasterDataImportResult,
   nameMatchedWarning,
   readMasterDataFile,
   rowError,
@@ -38,7 +47,8 @@ import type { ExportFileFormat } from '../common/xlsx/format';
 
 export const ANALYTICS_VALUE_CSV_HEADERS = ['axis_code', 'name', 'description', 'status', 'disabled_at', 'applies_to'] as const;
 /** Only the name is required; an absent column keeps what is stored (a new value gets the default). */
-const OPTIONAL_HEADERS = ['axis_code', 'description', 'status', 'disabled_at', 'applies_to'] as const;
+/** A row finds its value by its name, in the dimension of `axis_code` (blank or absent: the default one). */
+const KEY_HEADERS = [['name']] as const;
 
 /** An `applies_to` cell: '' is null (OPEX and CAPEX lines), undefined an invalid value. */
 function csvAppliesTo(raw: string): AxisAppliesTo | null | undefined {
@@ -47,19 +57,9 @@ function csvAppliesTo(raw: string): AxisAppliesTo | null | undefined {
   return (AXIS_APPLIES_TO as readonly string[]).includes(text) ? (text as AxisAppliesTo) : undefined;
 }
 
-export interface AnalyticsValueImportResult {
-  ok: boolean;
-  dryRun: boolean;
-  total: number;
-  inserted: number;
-  updated: number;
+/** The import's answer (`MasterDataImportResult`), which always counts the unchanged rows. */
+export interface AnalyticsValueImportResult extends MasterDataImportResult {
   unchanged: number;
-  errors: ImportReportError[];
-  /** Rows that import, with a note: a name matched a stored value written in another case. */
-  warnings?: ImportReportError[];
-  /** The unknown headers the file carried, and what the shared layer noticed. */
-  ignoredColumns: string[];
-  notices: { dates: string | null; amounts: string | null };
 }
 
 interface ParsedRow {
@@ -138,12 +138,18 @@ export class AnalyticsCategoriesCsvService {
       language,
       dateOrder,
       decimalMark,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /**
+       * What a row does to a value it updates (`CsvImportMode`); without it, `replace`. The
+       * dimension code is part of the key: blank, it names the default dimension in both modes.
+       */
+      mode?: CsvImportMode;
     },
     ctx: AnalyticsContext,
   ): Promise<AnalyticsValueImportResult> {
@@ -173,6 +179,8 @@ export class AnalyticsCategoriesCsvService {
 
     const errors: AnalyticsValueImportResult['errors'] = [];
     const parsedRows: ParsedRow[] = [];
+    // The stored values the rows clear with `-` (a `-` on an empty value is not counted).
+    let cleared = 0;
     // Rows whose name matched a stored value written in another case.
     const warnings: ImportReportError[] = [];
     const lineByKey = new Map<string, number>();
@@ -180,6 +188,13 @@ export class AnalyticsCategoriesCsvService {
       // The physical line Excel shows, blank lines included.
       const line = raw.line;
       const rowErrors: ImportReportError[] = rowProblemErrors(raw, ['disabled_at']);
+      // `-` cannot clear the keys or the status (D21 of 26.11.9). It clears the end of validity: the
+      // value is active again.
+      const refusals = clearRefusals(raw, ['axis_code', 'name', 'status'], mode);
+      if (refusals.length > 0) {
+        errors.push(...rowErrors, ...refusals);
+        return;
+      }
 
       const code = has('axis_code') ? cellOf(raw, 'axis_code') : '';
       let axisId: string | null = null;
@@ -224,19 +239,22 @@ export class AnalyticsCategoriesCsvService {
       }
       const status = statusRaw === StatusState.ENABLED || statusRaw === StatusState.DISABLED ? statusRaw : null;
       const disabledAtRaw = has('disabled_at') ? cellOf(raw, 'disabled_at') : '';
+      const clearsEnd = clearsEndOfValidity(raw, mode);
       let disabledAt: Date | null = null;
-      if (disabledAtRaw) {
+      if (disabledAtRaw && !clearsEnd) {
         // A bare day at noon UTC, a full ISO timestamp kept; an unreadable cell is a row error.
         // The stored end of validity's day keeps its time of day: the export writes the day only.
         const end = endOfValidityOf(raw, 'disabled_at');
         if (end.error) rowErrors.push(rowError(line, 'disabled_at', 'CSV_DATE_INVALID', end.error, { value: disabledAtRaw }));
         else disabledAt = keepStoredEndOfValidity(existing?.disabled_at, end.value);
       }
-      const lifecycleConflict = csvLifecycleConflict(status, disabledAt);
-      if (lifecycleConflict) rowErrors.push(rowError(line, 'status', status === StatusState.ENABLED ? 'CSV_STATUS_DATE_PASSED' : 'CSV_STATUS_DATE_FUTURE', lifecycleConflict));
-      // An absent column keeps what is stored (null for a new value); a blank cell clears it.
-      const appliesToRaw = has('applies_to') ? cellOf(raw, 'applies_to') : '';
-      const appliesTo = has('applies_to') ? csvAppliesTo(appliesToRaw) : existing?.applies_to ?? null;
+      const lifecycleConflict = lifecycleConflictError(line, status, csvLifecycleConflict(status, endOfValidityToCheck(disabledAt, clearsEnd)), clearsEnd);
+      if (lifecycleConflict) rowErrors.push(lifecycleConflict);
+      // An absent column keeps what is stored (null for a new value); a blank cell clears it, or
+      // keeps it when the row completes the stored value.
+      const keeps = (column: string) => !has(column) || (!!existing && keepsStoredValue(raw, read.present, column, mode));
+      const appliesToRaw = has('applies_to') ? cellText(raw, 'applies_to', mode) : '';
+      const appliesTo = keeps('applies_to') ? existing?.applies_to ?? null : csvAppliesTo(appliesToRaw);
       if (appliesTo === undefined) {
         rowErrors.push(rowError(line, 'applies_to', 'CSV_ENUM_INVALID', `Invalid applies_to '${appliesToRaw}'. Use 'opex', 'capex' or leave it empty.`, { value: appliesToRaw, allowed: 'opex, capex' }));
       } else {
@@ -253,15 +271,16 @@ export class AnalyticsCategoriesCsvService {
       const lifecycle = resolveLifecycleState({
         currentDisabledAt: existing?.disabled_at ?? null,
         nextStatus: next.status,
-        nextDisabledAt: next.disabled_at,
+        // `-` clears a stored end of validity.
+        nextDisabledAt: existing && clearsEnd ? null : next.disabled_at,
       });
       const values: AnalyticsCategoryValues = {
         axis_id: axisId ?? '',
         // The name is the match key: a different case in the file refers to the stored value, it does not rename it.
         name: existing?.name ?? name,
-        description: has('description')
-          ? normalizeAnalyticsDescription(cellOf(raw, 'description'))
-          : existing?.description ?? null,
+        description: keeps('description')
+          ? existing?.description ?? null
+          : normalizeAnalyticsDescription(cellText(raw, 'description', mode)),
         applies_to: appliesTo ?? null,
         status: lifecycle.status,
         disabled_at: lifecycle.disabled_at,
@@ -273,6 +292,7 @@ export class AnalyticsCategoriesCsvService {
       }
       const matched = existing && name ? nameMatchedWarning(line, 'name', name, existing.name) : null;
       if (matched) warnings.push(matched);
+      cleared += clearedValueCount(existing, raw, mode, ['description', 'applies_to', 'disabled_at']);
       parsedRows.push({ line, existing, axisName, values });
     });
     if (errors.length > 0) return failed([...errors].sort((a, b) => a.row - b.row), rows.length);
@@ -306,7 +326,7 @@ export class AnalyticsCategoriesCsvService {
         await this.categories.persist(ctx, row.existing, row.values, { name: row.axisName });
       }
     }
-    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 
   private parseFile(
@@ -320,7 +340,7 @@ export class AnalyticsCategoriesCsvService {
       file: buf as Buffer,
       fields: ANALYTICS_VALUE_CSV_HEADERS,
       dateFields: ['disabled_at'],
-      optional: OPTIONAL_HEADERS,
+      keys: KEY_HEADERS,
       language,
       dateOrder,
       decimalMark,

@@ -8,8 +8,9 @@ import { AccountsService } from '../accounts.service';
 
 // The account CSV import, against a real database, each test in a transaction
 // that is rolled back:
-// - only `account_number` and `account_name` are required in the header; an
-//   absent column keeps what is stored on update and takes the default on create;
+// - only `account_number` is required in the header (lot I4 of 26.11.9); an absent
+//   column keeps what is stored on update and takes the default on create, and a new
+//   account still needs its name;
 // - a header refusal names only the parts that apply and carries a code the
 //   interface translates;
 // - the row refusals carry codes too, with the value they are about;
@@ -98,9 +99,9 @@ async function testOptionalColumns() {
       },
     ], 'absent columns keep the stored values and give a new account the defaults');
 
-    // A present column still writes its cells, blanks included.
+    // A present column still writes its cells, blanks included, when the file replaces.
     const blank: any = await accounts.importCsv(
-      { file: file(['account_number;account_name;description', '6156100;Maintenance renamed;']), dryRun: false, language: 'en' },
+      { file: file(['account_number;account_name;description', '6156100;Maintenance renamed;']), dryRun: false, language: 'en', mode: 'replace' },
       opts,
     );
     assert.equal(blank.ok, true, JSON.stringify(blank.errors));
@@ -118,20 +119,20 @@ async function testHeaderRefusal() {
     const accounts = service();
     const opts = { manager: runner.manager, targetCoaId: chartId };
 
-    const missing: any = await accounts.importCsv({ file: file(['account_number;description', '6156100;x']), dryRun: true, language: 'en' }, opts);
+    const missing: any = await accounts.importCsv({ file: file(['account_name;description', 'Maintenance;x']), dryRun: true, language: 'en' }, opts);
     assert.deepEqual(missing.errors, [{
       row: 0,
-      message: 'Header mismatch. Missing: account_name',
+      message: 'Header mismatch. Missing: account_number',
       code: 'CSV_HEADER_MISSING_COLUMNS',
-      params: { missing: 'account_name', extra: '' },
+      params: { missing: 'account_number', extra: '' },
     }]);
 
-    const both: any = await accounts.importCsv({ file: file(['account_number;label', '6156100;x']), dryRun: true, language: 'en' }, opts);
+    const both: any = await accounts.importCsv({ file: file(['account_name;label', 'Maintenance;x']), dryRun: true, language: 'en' }, opts);
     assert.deepEqual(both.errors, [{
       row: 0,
-      message: 'Header mismatch. Missing: account_name, Extra: label',
+      message: 'Header mismatch. Missing: account_number, Extra: label',
       code: 'CSV_HEADER_MISMATCH',
-      params: { missing: 'account_name', extra: 'label' },
+      params: { missing: 'account_number', extra: 'label' },
     }]);
   });
 }

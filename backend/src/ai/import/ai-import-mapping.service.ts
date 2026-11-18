@@ -8,7 +8,7 @@ import { AiAttachmentService } from '../ai-attachment.service';
 import { AiPolicyService } from '../ai-policy.service';
 import type { AiExecutionContextWithManager, AiImportMappingPreviewDto, AiImportRunDto } from '../ai.types';
 import { readTableAttachment, TABLE_ATTACHMENT_KIND } from '../attachments/table-attachment';
-import { AI_IMPORT_KEYS, AI_IMPORT_WHOLE_ROWS, aiImportAccess, type AiImportKey } from './ai-import-access';
+import { AI_IMPORT_KEYS, aiImportAccess, type AiImportKey } from './ai-import-access';
 import { DESCRIBED_CATALOG_ENTRIES, enabledDimensionValues } from './ai-import-dimension-values';
 import { buildImportFile } from './ai-import-file';
 import { hostingWords, serverHosting } from './ai-import-hosting';
@@ -23,6 +23,8 @@ export type PrepareImportMappingInput = {
   entity_type: AiImportKey;
   columns: AiImportColumnMappingInput[];
   assumptions?: string[];
+  /** The file's columns the person asked to leave aside, by header (`AiImportMappingRequest.leftAside`). */
+  left_aside?: string[];
   /**
    * The person's choices on the card (a budget file: matches undone, "Create missing suppliers"),
    * set by the server, never by the model: the tool's input schema has no such field.
@@ -45,9 +47,6 @@ export type AiImportTemplateColumnDto = {
   values?: string[];
 };
 
-/** The code of a file refused because its import would clear columns of the records it updates. */
-export const AI_IMPORT_CLEARS_COLUMNS = 'AI_IMPORT_CLEARS_COLUMNS';
-
 /** An import named by its key, or a refusal that lists the imports. */
 export function aiImportTarget(key: unknown): AiImportTarget {
   if (!aiImportAccess(key)) {
@@ -60,6 +59,7 @@ function templateColumn(spec: AiImportColumnSpec, settings: ItOpsSettings | null
   const base = {
     column: spec.column,
     title: importColumnTitle(spec, language),
+    ...(spec.titles ? { titles: spec.titles } : {}),
     required: spec.required === true,
     kind: spec.kind,
     multi: spec.multi === true,
@@ -183,13 +183,12 @@ export class AiImportMappingService {
     language: CsvLanguage,
   ): Promise<{ target: AiImportTarget; mapping: AiImportMappingPreviewDto }> {
     const target = aiImportTarget(input.entity_type);
-    const { converted, lines, left } = await this.convert(context, target, input, language);
+    const { converted, lines } = await this.convert(context, target, input, language);
     const validation = await this.withHosting(context, target, converted, language, await this.runner.run(target.key, buildImportFile(converted.file, language), {
       dryRun: true, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
     }, context));
-    // The facts of the approval lead the card the model reads: the budget file's, or the counts of a
-    // row import, once a file that would clear columns is refused.
-    const { on_approval: budgetFacts, ...checked } = refuseClearedColumns(validation, left);
+    // The facts of the approval lead the card the model reads: the budget file's, or the counts of a row import.
+    const { on_approval: budgetFacts, ...checked } = validation;
     // A row import's matches are named by the titles the card shows: the columns the mapping fills, and those the import matches without it.
     const titles = new Map([
       ...Object.entries(converted.preview.matched_titles ?? {}),
@@ -237,12 +236,11 @@ export class AiImportMappingService {
     language: CsvLanguage,
   ): Promise<AiImportRunDto> {
     const target = aiImportTarget(input.entity_type);
-    const { converted, lines, left } = await this.convert(context, target, input, language);
-    // Refused after the load as well: the approval's savepoint undoes it, and the card says why.
+    const { converted, lines } = await this.convert(context, target, input, language);
     const result = await this.runner.run(target.key, buildImportFile(converted.file, language), {
       dryRun: false, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
     }, context);
-    return refuseClearedColumns(await this.withHosting(context, target, converted, language, result), left);
+    return this.withHosting(context, target, converted, language, result);
   }
 
   /**
@@ -269,7 +267,7 @@ export class AiImportMappingService {
     target: AiImportTarget,
     input: PrepareImportMappingInput,
     language: CsvLanguage,
-  ): Promise<{ converted: AiImportMappingResult; lines: number[]; left: AiImportTemplateColumn[] }> {
+  ): Promise<{ converted: AiImportMappingResult; lines: number[] }> {
     const attachment = await this.assertTableAttachment(context, input.attachment_id);
     const { buffer } = await this.attachments.loadAttachmentBuffer(attachment.id, context.tenantId, context.manager);
     const grid = await readTableAttachment(buffer);
@@ -279,15 +277,10 @@ export class AiImportMappingService {
       filename: attachment.original_filename,
       columns: input.columns,
       assumptions: input.assumptions ?? [],
+      leftAside: input.left_aside ?? [],
     }, language);
-    // An import that reads every column of its template gets them all: the ones the mapping leaves out, blank.
-    const mapped = new Set(converted.file.columns.map((column) => column.column));
-    const left = AI_IMPORT_WHOLE_ROWS.has(target.key) ? columns.filter((column) => !mapped.has(column.column)) : [];
-    for (const column of left) {
-      converted.file.columns.push({ column: column.column, kind: column.kind });
-      for (const row of converted.file.rows) row.push('');
-    }
-    return { converted, lines: grid.lines, left };
+    // No import touches a column the file leaves out.
+    return { converted, lines: grid.lines };
   }
 
   /** The spreadsheet of this conversation the person attached, or a refusal. */
@@ -334,33 +327,4 @@ function writeMatches(file: AiImportMappingResult['file'], matches: readonly Bud
     }
   });
   delete file.proposals;
-}
-
-/**
- * An import that replaces every value of a record it updates clears the template's columns the file
- * lacks: a file without some of them is refused when it would update existing records, whose values in
- * those columns would be lost. A file of new records only, or of every column, imports as on the screen.
- * The family's own reference column (`COMP-n`) is a key, not a value: a file without it updates by
- * name and clears nothing.
- */
-export function refuseClearedColumns(run: AiImportRunDto, left: readonly AiImportTemplateColumn[]): AiImportRunDto {
-  const cleared = left.filter((column) => !(column.kind === 'reference' && column.prefix));
-  if (cleared.length === 0 || run.updated === 0 || run.report.kind !== 'rows') return run;
-  const columns = cleared.map((column) => column.title).join(', ');
-  const error = {
-    row: 0,
-    message: (run.updated === 1
-      ? '1 row updates an existing record, and this import replaces all its values'
-      : `${run.updated} rows update existing records, and this import replaces all their values`)
-      + `: the file has no column for ${columns}, whose values would be cleared. Map those columns, or keep only new records in the file.`,
-    code: AI_IMPORT_CLEARS_COLUMNS,
-    params: { count: run.updated, columns },
-  };
-  return {
-    ...run,
-    ok: false,
-    error_count: run.error_count + 1,
-    issues: [{ level: 'error', code: AI_IMPORT_CLEARS_COLUMNS, column: null, count: run.updated }, ...run.issues],
-    report: { ...run.report, errors: [error, ...run.report.errors] },
-  };
 }

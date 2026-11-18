@@ -12,12 +12,20 @@ import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { AccountUpsertDto } from './dto/account.dto';
 import {
   cellOf,
+  cellText,
+  clearedValueCount,
+  clearRefusals,
+  CsvDataRow,
   CsvDateOrder,
+  CsvImportMode,
   CsvLanguage,
   DecimalMark,
   ImportReportError,
+  keepsStoredValue,
+  MasterDataImportResult,
   readMasterDataFile,
   rowProblemErrors,
+  storedRecordValues,
 } from '../common/csv-sheet';
 import {
   AccountAuditRow,
@@ -43,18 +51,6 @@ import type { ExportFileFormat } from '../common/xlsx/format';
 const ACCOUNTS_SHEET = { en: 'Accounts', fr: 'Comptes', de: 'Konten', es: 'Cuentas' };
 
 const ACCOUNT_NUMBER_TOKEN = '__account_number__';
-
-/** The columns an account file may leave out: an absent column keeps what is stored (a new account takes the defaults). */
-const OPTIONAL_CSV_HEADERS = [
-  'native_name',
-  'description',
-  'consolidation_account_number',
-  'consolidation_account_name',
-  'consolidation_account_description',
-  'status',
-  // Older files have no `nature` column either.
-  'nature',
-];
 
 /**
  * `where.account_number` for a grid filter on it: the column is an integer, so
@@ -152,6 +148,18 @@ function withNatureBlanks(filters: any) {
 }
 
 /** A CSV `nature` cell: '' is null (OPEX and CAPEX), undefined an invalid value. */
+/** The values `-` cannot clear (D21 of 26.11.9): the keys, the required name, the status. */
+const UNCLEARABLE_ACCOUNT_CELLS = ['coa_code', 'account_number', 'account_name', 'status'] as const;
+/** The values `-` clears on a stored account. */
+const CLEARABLE_ACCOUNT_FIELDS = [
+  'native_name',
+  'description',
+  'consolidation_account_number',
+  'consolidation_account_name',
+  'consolidation_account_description',
+  'nature',
+] as const;
+
 function csvNature(raw: string): AccountNature | null | undefined {
   const text = raw.trim().toLowerCase();
   if (text === '') return null;
@@ -817,6 +825,7 @@ export class AccountsService {
       language,
       dateOrder,
       decimalMark,
+      mode = 'replace',
     }: {
       file: Express.Multer.File;
       dryRun: boolean;
@@ -824,9 +833,14 @@ export class AccountsService {
       language?: CsvLanguage;
       dateOrder?: CsvDateOrder;
       decimalMark?: DecimalMark;
+      /**
+       * What a row does to an account it updates (`CsvImportMode`); without it, `replace`, as the
+       * chart templates load.
+       */
+      mode?: CsvImportMode;
     },
     opts?: { manager?: EntityManager; targetCoaId?: string | undefined; allowCoaCodeColumn?: boolean; updateExisting?: boolean },
-  ) {
+  ): Promise<MasterDataImportResult> {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
     const expectedHeaders = this.csvHeaders(!!opts?.allowCoaCodeColumn);
@@ -834,7 +848,9 @@ export class AccountsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
-      optional: OPTIONAL_CSV_HEADERS,
+      // A row finds its account by its number (and its chart's code, in a file of several charts):
+      // any other column may be absent, and is then never written.
+      keys: [opts?.allowCoaCodeColumn ? ['coa_code', 'account_number'] : ['account_number']],
       language: readLanguage,
       dateOrder,
       decimalMark,
@@ -853,12 +869,19 @@ export class AccountsService {
     // Validate and normalize
     const repo = this.getRepo(opts?.manager);
     const normalized: (AccountUpsertDto & { account_number: string })[] = [];
+    // Each row, with its line, for the values a stored account keeps (`storedRecordValues`).
+    const rowOf = new Map<object, CsvDataRow>();
     const coaCodes: Set<string> = new Set();
     read.rows.forEach((row) => {
       const line = row.line;
       const problems = rowProblemErrors(row);
       if (problems.length > 0) {
         errors.push(...problems);
+        return;
+      }
+      const refusals = clearRefusals(row, UNCLEARABLE_ACCOUNT_CELLS, mode);
+      if (refusals.length > 0) {
+        errors.push(...refusals);
         return;
       }
       if (opts?.allowCoaCodeColumn) {
@@ -869,7 +892,7 @@ export class AccountsService {
       const numRaw = cellOf(row, 'account_number');
       const name = cellOf(row, 'account_name');
       const statusRaw = cellOf(row, 'status').toLowerCase();
-      const consolNumRaw = cellOf(row, 'consolidation_account_number');
+      const consolNumRaw = cellText(row, 'consolidation_account_number', mode);
       const numberCell = csvAccountNumber(numRaw, 'account_number', line);
       const account_number = numberCell.value;
       if (numberCell.tooLong) errors.push(numberCell.tooLong);
@@ -877,7 +900,11 @@ export class AccountsService {
         errors.push({ row: line, message: 'account_number is required and must be an integer', code: 'CSV_ACCOUNT_NUMBER_REQUIRED' });
       }
       if (numberCell.leadingZeros) warnings.push(numberCell.leadingZeros);
-      if (!name) errors.push({ row: line, message: 'account_name is required', code: 'CSV_ACCOUNT_NAME_REQUIRED' });
+      // A blank name the row would write is refused here; one a stored account may keep (`enrich`,
+      // or the column absent) once the row is matched.
+      if (!name && !keepsStoredValue(row, read.present, 'account_name', mode)) {
+        errors.push({ row: line, message: 'account_name is required', code: 'CSV_ACCOUNT_NAME_REQUIRED' });
+      }
       if (statusRaw && statusRaw !== 'enabled' && statusRaw !== 'disabled') {
         errors.push({
           row: line,
@@ -897,7 +924,7 @@ export class AccountsService {
         });
       }
       if (consolidationCell.leadingZeros) warnings.push(consolidationCell.leadingZeros);
-      const natureRaw = cellOf(row, 'nature');
+      const natureRaw = cellText(row, 'nature', mode);
       const nature = has('nature') ? csvNature(natureRaw) : undefined;
       if (has('nature') && nature === undefined) {
         errors.push({
@@ -908,8 +935,8 @@ export class AccountsService {
         });
       }
       // An absent column stays undefined: an update keeps the stored value, a new account takes the default.
-      const text = (column: string) => (has(column) ? cellOf(row, column) || null : undefined);
-      normalized.push({
+      const text = (column: string) => (has(column) ? cellText(row, column, mode) || null : undefined);
+      const item = {
         account_number: String(account_number ?? ''),
         account_name: name,
         native_name: text('native_name'),
@@ -919,7 +946,9 @@ export class AccountsService {
         consolidation_account_description: text('consolidation_account_description'),
         ...(has('status') ? { status: statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED } : {}),
         ...(has('nature') ? { nature: nature ?? null } : {}),
-      });
+      };
+      normalized.push(item);
+      rowOf.set(item, row);
     });
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
@@ -956,13 +985,27 @@ export class AccountsService {
     const existingByNumber = new Map(
       (await repo.find({ where: { coa_id: targetCoaId } as any })).map((account) => [String(account.account_number), account]),
     );
+    // The name cannot be empty: a new account needs one, a stored account keeps its own.
+    for (const item of normalized) {
+      if (item.account_name || existingByNumber.has(item.account_number)) continue;
+      errors.push({ row: rowOf.get(item)!.line, message: 'account_name is required', code: 'CSV_ACCOUNT_NAME_REQUIRED' });
+    }
+    if (errors.length > 0) {
+      return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    }
     // Count inserts, updates and the rows identical to the stored account, which are not written.
+    // A stored account takes only the values the row writes: an absent column, or a blank cell when
+    // completing, keeps the stored value, the status included.
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    // The stored values the rows clear with `-` (a `-` on an empty value is not counted).
+    let cleared = 0;
     const toWrite: AccountUpsertDto[] = [];
-    for (const item of unique) {
-      const existing = existingByNumber.get(item.account_number as string);
+    for (const fileItem of unique) {
+      const existing = existingByNumber.get(fileItem.account_number as string);
+      cleared += clearedValueCount(existing, rowOf.get(fileItem)!, mode, CLEARABLE_ACCOUNT_FIELDS);
+      const item = existing ? storedRecordValues(fileItem, rowOf.get(fileItem)!, read.present, mode) : fileItem;
       if (!existing) inserted += 1;
       else if (importRowUnchanged(existing, item)) {
         unchanged += 1;
@@ -971,7 +1014,7 @@ export class AccountsService {
       toWrite.push(item);
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit. The consolidation accounts the file refers to are read once, the audit lines of
     // the rows written in one statement at the end.
@@ -1002,6 +1045,6 @@ export class AccountsService {
     if (chartId && targetCoaId === chartId) {
       await resyncFromChart(mg, chartId, { userId });
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

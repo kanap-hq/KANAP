@@ -395,7 +395,7 @@ Pour renseigner des valeurs sur les lignes budgétaires depuis un fichier, utili
 | `description` | Texte libre |
 | `status` | `enabled` ou `disabled`. Vide signifie `enabled` pour une nouvelle valeur et conserve le statut enregistré lors d'une mise à jour |
 | `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée. Vide s'il n'y a pas de fin. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la valeur aujourd'hui |
-| `applies_to` | Le réglage **Utilisé pour**, toujours la dernière colonne. `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages tels quels. Une cellule vide règle sur **OPEX et CAPEX** |
+| `applies_to` | Le réglage **Utilisé pour**, toujours la dernière colonne. `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages tels quels. Une cellule vide garde le réglage d'une valeur enregistrée, et `-` règle sur **OPEX et CAPEX**. Une nouvelle valeur avec une cellule vide est pour **OPEX et CAPEX** |
 
 Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `status`, `disabled_at` ou `applies_to` manque, les valeurs existantes conservent ce qui est enregistré, et les nouvelles valeurs sont activées, sans description. Un fichier sans `axis_code` place toutes les lignes dans la dimension par défaut.
 
@@ -409,7 +409,7 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 **Fonctionnement de l'import** :
 
 - **Le fichier entier est vérifié avant toute écriture.** Un fichier comportant une erreur ne charge rien : corrigez les lignes et relancez la vérification préalable. Chaque erreur désigne sa ligne par le numéro de ligne du fichier tel qu'un éditeur de texte l'affiche, lignes vides et cellules sur plusieurs lignes comprises.
-- **Rapprochement par dimension et par nom** : une ligne dont le nom existe dans sa dimension met à jour cette valeur ; toute autre ligne en crée une. Chaque cellule remplace la valeur enregistrée : une `description` vide l'efface donc. Un nom écrit avec une autre casse trouve la valeur enregistrée et ne la renomme pas. Pour renommer une valeur, renommez-la sur la page.
+- **Rapprochement par dimension et par nom** : une ligne dont le nom existe dans sa dimension met à jour cette valeur ; toute autre ligne en crée une. Sur une valeur enregistrée, une cellule vide garde ce qui est enregistré, et `-` efface `description`, `disabled_at` ou `applies_to`. Un `axis_code` vide désigne toujours la dimension par défaut. `-` ne peut pas effacer `axis_code`, `name` ni `status` : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing). Un nom écrit avec une autre casse trouve la valeur enregistrée et ne la renomme pas. Pour renommer une valeur, renommez-la sur la page.
 - **Lignes inchangées** : une ligne identique à la valeur enregistrée ne change rien. Exporter puis importer le même fichier signale toutes les lignes comme inchangées.
 - **Dimensions désactivées** : une ligne d'une dimension désactivée est acceptée si elle ne change rien. Un fichier exporté s'importe donc tel quel. Une ligne qui créerait ou modifierait une valeur dans cette dimension est refusée.
 - **Les valeurs absentes du fichier** restent telles quelles. L'import ne supprime jamais rien.
@@ -423,8 +423,8 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 - **« Invalid status '...'. Use 'enabled' or 'disabled'. »** : corrigez la cellule `status`.
 - **« Invalid applies_to '...'. Use 'opex', 'capex' or leave it empty. »** : corrigez la cellule `applies_to`.
 - **« The ... dimension is for OPEX lines only. »** (ou CAPEX) : la ligne réserve une valeur au type de ligne que sa dimension exclut. Corrigez la cellule `applies_to`, ou changez le réglage **Utilisé pour** de la dimension.
-- **« Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. »** : la ligne est activée avec une date déjà passée. Un fichier exporté avant cette date indique encore `enabled` : exportez à nouveau, ou corrigez la cellule.
-- **« Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »** : la ligne est désactivée avec une date encore à venir. Corrigez la cellule `status` ou `disabled_at`.
+- **« Le statut est « Activé », mais la fin de validité est passée. Écrivez « - » dans la fin de validité, ou « disabled » dans le statut. Si le fichier vient d'un ancien export, exportez à nouveau les données. »** : la ligne est activée avec une date déjà passée. Un fichier exporté avant cette date indique encore `enabled` : exportez à nouveau, ou corrigez la cellule.
+- **« Le statut est « Désactivé », mais la fin de validité est encore à venir. Écrivez « enabled » dans le statut, ou une date passée dans la fin de validité. »** : la ligne est désactivée avec une date encore à venir. Corrigez la cellule `status` ou `disabled_at`.
 - **« En-tête : Colonnes manquantes : ... »** ou **« En-tête : Colonnes inconnues : ... »** : téléchargez un nouveau modèle.
 
 ---

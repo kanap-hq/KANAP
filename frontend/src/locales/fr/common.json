@@ -615,6 +615,11 @@
     "unchanged_other": "{{count}} inchangées",
     "skipped_one": "{{count}} ignorée",
     "skipped_other": "{{count}} ignorées",
+    "valuesWillBeCleared_one": "{{count}} valeur sera effacée",
+    "valuesWillBeCleared_other": "{{count}} valeurs seront effacées",
+    "valuesWillBeClearedSentence_one": "{{count}} valeur sera effacée.",
+    "valuesWillBeClearedSentence_other": "{{count}} valeurs seront effacées.",
+    "clearingRule": "Une cellule vide garde la valeur enregistrée. Un tiret (-) l'efface.",
     "errors": "Erreurs ({{count}})",
     "warnings": "Avertissements ({{count}})",
     "andMoreErrors2_one": "…et {{count}} erreur supplémentaire",
@@ -939,6 +944,9 @@
         "company_name": "Société",
         "supplier_name": "Fournisseur",
         "cost_center": "Centre de coûts"
+      },
+      "contacts": {
+        "supplier_name": "Fournisseur"
       },
       "cost-centers": {
         "company_name": "Société"

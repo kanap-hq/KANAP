@@ -121,6 +121,14 @@ export const BILLING_FREQUENCY_LABELS = codeLabels({
   other: ['Other', 'Autre', 'Sonstige', 'Otra'],
 });
 
+/** A contact's type for its main supplier, as the contact's page names it (`contacts.roles`). */
+export const SUPPLIER_CONTACT_ROLE_LABELS = codeLabels({
+  commercial: ['Commercial', 'Commercial', 'Vertrieb', 'Comercial'],
+  technical: ['Technical', 'Technique', 'Technik', 'Técnico'],
+  support: ['Support', 'Support', 'Support', 'Soporte'],
+  other: ['Other', 'Autre', 'Sonstige', 'Otro'],
+});
+
 export const RUN_BUILD_LABELS = codeLabels({
   run: ['Run', 'Run', 'Run', 'Run'],
   build: ['Build', 'Build', 'Build', 'Build'],
@@ -147,6 +155,7 @@ export const AI_IMPORT_CODE_LISTS: ReadonlyArray<{
   { namespace: 'it', path: 'enums.incidentStatus', labels: INCIDENT_STATUS_LABELS },
   { namespace: 'ops', path: 'contracts.billing', labels: BILLING_FREQUENCY_LABELS },
   { namespace: 'ops', path: 'opex.runBuild', labels: RUN_BUILD_LABELS },
+  { namespace: 'master-data', path: 'contacts.roles', labels: SUPPLIER_CONTACT_ROLE_LABELS },
 ];
 
 /** The CSV enums. A budget nature and an account nature share their codes and stay hand-written. */

@@ -18,10 +18,11 @@ import { ArchiveLimitError, BoundedArchive, openBoundedArchive } from '../archiv
  * One cell. `number` keeps the text of `<v>` exactly as the file holds it, and `percent` when its format
  * shows it as a percentage (0.45 shown as 45%). A date is a calendar day (`iso`, `YYYY-MM-DD`), plus
  * `time` (`HH:MM:SS`, rounded to the second, no time zone: the wall-clock time Excel shows) when its
- * format shows a time or its serial has a time of day.
+ * format shows a time or its serial has a time of day. `quotePrefix` marks a text cell whose style
+ * carries the apostrophe typed before it (`'-` in Excel holds "-", the apostrophe is in the format).
  */
 export type XlsxReadCell =
-  | { kind: 'text'; value: string }
+  | { kind: 'text'; value: string; quotePrefix?: true }
   | { kind: 'number'; value: string; percent?: true }
   | { kind: 'date'; iso: string; time?: string }
   | { kind: 'empty' };
@@ -597,10 +598,18 @@ function isPercentFormatCode(code: string): boolean {
   return plainFormatText(code)?.includes('%') === true;
 }
 
-/** For each `cellXfs` entry (the `s` of a cell), whether its number format shows a date, and a time, or a percentage. */
-function parseStyles(data: Buffer, limits: XlsxReadLimits): DateStyle[] {
+/** What the reader takes from the `cellXfs` entries (the `s` of a cell). */
+interface CellStyles {
+  /** For each entry, whether its number format shows a date, and a time, or a percentage. */
+  dateStyles: DateStyle[];
+  /** The entries with `quotePrefix`: the text was typed after an apostrophe. */
+  quotePrefixed: Set<number>;
+}
+
+function parseStyles(data: Buffer, limits: XlsxReadLimits): CellStyles {
   const customFormats = new Map<number, string>();
   const formatOfStyle: number[] = [];
+  const quotePrefixed = new Set<number>();
   let inCellXfs = false;
   let depth = 0;
   parsePart(data, {
@@ -614,6 +623,8 @@ function parseStyles(data: Buffer, limits: XlsxReadLimits): DateStyle[] {
       } else if (inCellXfs) {
         if (name === 'xf' && depth === 0) {
           const id = Number(attribute(attributes, 'numFmtId') ?? '0');
+          const quoted = attribute(attributes, 'quotePrefix');
+          if (quoted === '1' || quoted === 'true') quotePrefixed.add(formatOfStyle.length);
           formatOfStyle.push(Number.isInteger(id) ? id : 0);
         }
         depth += 1;
@@ -626,14 +637,17 @@ function parseStyles(data: Buffer, limits: XlsxReadLimits): DateStyle[] {
     },
     text() {},
   }, limits);
-  return formatOfStyle.map((id): DateStyle => {
+  const dateStyles = formatOfStyle.map((id): DateStyle => {
     const custom = customFormats.get(id);
     if (custom !== undefined) {
       return isDateTimeFormatCode(custom) ? 'dateTime' : isDateFormatCode(custom) ? 'date' : isPercentFormatCode(custom) ? 'percent' : 'none';
     }
     return BUILTIN_TIME_FORMATS.has(id) ? 'dateTime' : BUILTIN_DATE_FORMATS.has(id) ? 'date' : BUILTIN_PERCENT_FORMATS.has(id) ? 'percent' : 'none';
   });
+  return { dateStyles, quotePrefixed };
 }
+
+const NO_CELL_STYLES: CellStyles = { dateStyles: [], quotePrefixed: new Set() };
 
 /**
  * The shared string table. Rich text runs are concatenated; phonetic runs (`<rPh>`) are left out.
@@ -725,16 +739,15 @@ function isoDayOf(text: string): string | null {
   return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === iso ? iso : null;
 }
 
-interface SheetContext {
+interface SheetContext extends CellStyles {
   sharedStrings: readonly string[];
-  dateStyles: readonly DateStyle[];
   date1904: boolean;
   limits: XlsxReadLimits;
 }
 
 /** The handlers that build the grid of a worksheet, and the grid once the part has been parsed. */
 function sheetHandlers(context: SheetContext): { handlers: TagHandlers; rows: () => XlsxReadCell[][] } {
-  const { sharedStrings, dateStyles, date1904, limits } = context;
+  const { sharedStrings, dateStyles, quotePrefixed, date1904, limits } = context;
   const rows: XlsxReadCell[][] = [];
   const valueText = new TextBuffer(limits);
   const inlineText = new TextBuffer(limits);
@@ -776,6 +789,10 @@ function sheetHandlers(context: SheetContext): { handlers: TagHandlers; rows: ()
     target.push(cell);
   };
 
+  /** A text cell, flagged when its style carries the apostrophe typed before it. */
+  const textCell = (value: string): XlsxReadCell =>
+    (quotePrefixed.has(cellStyle) ? { kind: 'text', value, quotePrefix: true } : { kind: 'text', value });
+
   const finishCell = (): XlsxReadCell => {
     const value = hasValue ? valueText.take() : null;
     switch (cellType) {
@@ -784,13 +801,14 @@ function sheetHandlers(context: SheetContext): { handlers: TagHandlers; rows: ()
         const index = value.trim();
         if (!/^\d+$/.test(index) || Number(index) >= sharedStrings.length) throw invalid();
         const text = sharedStrings[Number(index)];
-        return text === '' ? { kind: 'empty' } : { kind: 'text', value: text };
+        return text === '' ? { kind: 'empty' } : textCell(text);
       }
       case 'inlineStr': {
         const text = hasInline ? inlineText.take() : value;
-        return text === null || text === '' ? { kind: 'empty' } : { kind: 'text', value: text };
+        return text === null || text === '' ? { kind: 'empty' } : textCell(text);
       }
       case 'str':
+        return value === null || value === '' ? { kind: 'empty' } : textCell(value);
       case 'e':
         return value === null || value === '' ? { kind: 'empty' } : { kind: 'text', value };
       case 'b': {
@@ -969,11 +987,11 @@ function locateParts(archive: BoundedArchive, limits: XlsxReadLimits): WorkbookP
 function readWorkbook(buffer: Buffer, limits: XlsxReadLimits): XlsxGrid {
   const archive = openArchive(buffer, limits);
   const parts = locateParts(archive, limits);
-  const dateStyles = parts.stylesEntry ? parseStyles(readPart(archive, parts.stylesEntry, limits), limits) : [];
+  const styles = parts.stylesEntry ? parseStyles(readPart(archive, parts.stylesEntry, limits), limits) : NO_CELL_STYLES;
   const sharedStrings = parts.sharedStringsEntry ? parseSharedStrings(readPart(archive, parts.sharedStringsEntry, limits), limits) : [];
   const rows = parseSheet(readPart(archive, parts.sheetEntry, limits), {
     sharedStrings,
-    dateStyles,
+    ...styles,
     date1904: parts.workbook.date1904,
     limits,
   });
@@ -992,11 +1010,11 @@ async function readWorkbookAsync(buffer: Buffer, limits: XlsxReadLimits): Promis
   try {
     const archive = openArchive(buffer, limits);
     const parts = locateParts(archive, limits);
-    const dateStyles = parts.stylesEntry ? parseStyles(readPart(archive, parts.stylesEntry, limits), limits) : [];
+    const styles = parts.stylesEntry ? parseStyles(readPart(archive, parts.stylesEntry, limits), limits) : NO_CELL_STYLES;
     const sharedStrings = parts.sharedStringsEntry ? parseSharedStrings(readPart(archive, parts.sharedStringsEntry, limits), limits) : [];
     const sheet = sheetHandlers({
       sharedStrings,
-      dateStyles,
+      ...styles,
       date1904: parts.workbook.date1904,
       limits,
     });

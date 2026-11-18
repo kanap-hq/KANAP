@@ -127,6 +127,8 @@
   "CSV_VALUE_REQUIRED": "Une valeur est obligatoire.",
   "CSV_VALUE_ONE_REQUIRED": "Renseignez au moins une colonne {{column}}.",
   "CSV_VALUE_CANNOT_BE_EMPTIED": "Ce champ ne peut pas être vidé. Retirez la colonne du fichier pour garder la valeur enregistrée.",
+  "CSV_VALUE_CANNOT_BE_CLEARED": "Cette valeur ne peut pas être vidée.",
+  "CSV_NUMBER_CANNOT_BE_CLEARED": "Ce nombre ne peut pas être vidé. Écrivez 0 pour le mettre à zéro, ou laissez la cellule vide pour garder la valeur enregistrée.",
   "CSV_NUMBER_INVALID": "« {{value}} » n'est pas un nombre.",
   "CSV_DATE_INVALID": "« {{value}} » n'est pas une date. Utilisez 2026-09-02 ou 02/09/2026.",
   "CSV_BOOLEAN_INVALID": "« {{value}} » n'est pas valide. Utilisez oui ou non.",
@@ -167,8 +169,9 @@
   "CSV_COMPANY_METRICS_FROZEN": "Les indicateurs pour {{year}} sont gelés. Un administrateur budgétaire peut les dégeler.",
   "CSV_CONTACT_NOT_FOUND": "Contact introuvable : {{email}}. Créez-le d'abord dans Contacts.",
   "CSV_EMAIL_INVALID": "« {{value}} » n'est pas une adresse e-mail valide.",
-  "CSV_STATUS_DATE_PASSED": "Le statut est enabled mais la fin de validité est passée. Videz la date ou passez le statut à disabled. Si le fichier vient d'un ancien export, exportez à nouveau les données.",
-  "CSV_STATUS_DATE_FUTURE": "Le statut est disabled mais la fin de validité est encore à venir. Passez le statut à enabled ou indiquez une date passée.",
+  "CSV_STATUS_DATE_PASSED": "Le statut est « Activé », mais la fin de validité est passée. Écrivez « - » dans la fin de validité, ou « disabled » dans le statut. Si le fichier vient d'un ancien export, exportez à nouveau les données.",
+  "CSV_STATUS_DATE_FUTURE": "Le statut est « Désactivé », mais la fin de validité est encore à venir. Écrivez « enabled » dans le statut, ou une date passée dans la fin de validité.",
+  "CSV_STATUS_DISABLED_DATE_CLEARED": "Le statut est « Désactivé », mais « - » efface la fin de validité. Gardez l'un ou l'autre.",
   "CSV_IMPORT_FAILED": "L'import a échoué : {{reason}}",
   "CSV_PROJECT_ORIGIN_STANDARD": "Un nouveau projet ne peut pas avoir l'origine Demande. Convertissez une demande, ou utilisez fast_track ou legacy.",
   "CSV_PROJECT_ORIGIN_LOCKED": "Seul un projet Fast-track ou Historique peut changer d'origine, vers Fast-track ou Historique.",
@@ -551,7 +554,5 @@
     "connections": "connexions",
     "incidents": "incidents"
   },
-  "AI_IMPORT_CLEARS_COLUMNS_one": "{{count}} ligne met à jour une fiche existante, et cet import remplace toutes ses valeurs : le fichier n'a pas de colonne pour {{columns}}, dont les valeurs seraient effacées. Faites correspondre ces colonnes, ou ne gardez que les nouvelles fiches dans le fichier.",
-  "AI_IMPORT_CLEARS_COLUMNS_other": "{{count}} lignes mettent à jour des fiches existantes, et cet import remplace toutes leurs valeurs : le fichier n'a pas de colonne pour {{columns}}, dont les valeurs seraient effacées. Faites correspondre ces colonnes, ou ne gardez que les nouvelles fiches dans le fichier.",
   "INVOICE_PAYMENT_IN_PROGRESS": "Un paiement est déjà en cours."
 }

@@ -54,6 +54,8 @@ type RowsReport = {
   inserted?: number;
   updated?: number;
   unchanged?: number;
+  /** The stored values the rows clear with `-` (D21 of 26.11.9): the imports of lot I4 count them. */
+  cleared?: number;
   skipped?: number;
   errors?: AiImportReportMessage[];
   warnings?: AiImportReportMessage[];
@@ -106,8 +108,8 @@ type ImportCall = {
 
 /**
  * The imports of the screens, called as their routes call them (lot I3 of the Plaid import): the same
- * services, the same options (the screen's "merge" mode, the person's language, the decimal point the
- * file is written with), in the transaction of the person's call, which carries their data access.
+ * services, the same options (the screen's "merge" mode, the clearing rule of every import route for
+ * the imports that follow it, the person's language, the decimal point the file is written with), in the transaction of the person's call, which carries their data access.
  * Plaid writes nothing itself. The answers become one bilan, whose row numbers are the lines of the
  * person's own file.
  */
@@ -182,7 +184,8 @@ export class AiImportRunnerService {
       ...(matching?.proposals ? { proposals: matching.proposals } : {}),
     };
     // The file holds numbers as number cells and days as date cells, written with a decimal point.
-    const read = { language, decimalMark: '.' as const };
+    // The clearing rule of every import route (D21 of 26.11.9): a blank cell keeps, `-` clears.
+    const read = { language, decimalMark: '.' as const, mode: 'enrich' as const };
     // The screen's recommended preset: add the new records, update the matched ones, keep what a blank cell does not say.
     const merge = { dryRun, mode: 'enrich' as const, operation: 'upsert' as const, ...names };
     const caller = { manager, tenantId, userId: userId || null };
@@ -212,7 +215,7 @@ export class AiImportRunnerService {
       case 'suppliers':
         return this.suppliers.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
       case 'contacts':
-        return this.contacts.importCsv({ file, dryRun, ...read }, { manager, tenantId });
+        return this.contacts.importCsv({ file, dryRun, ...read, access: await rights(), ...names }, caller);
       case 'contracts':
         return this.contracts.importCsv({ file, dryRun, userId: userId || null, ...read, access: await rights(), ...names }, { manager });
       case 'companies':
@@ -231,12 +234,12 @@ export class AiImportRunnerService {
       case 'working_day_calendars':
         return this.calendars.importCsv({ file, dryRun, ...read }, caller);
       case 'technology_asset_links':
-        return this.technologyLinks.importAssetLinks({ file, dryRun, language, access: await rights(), ...names }, caller);
+        return this.technologyLinks.importAssetLinks({ file, dryRun, language, mode: 'enrich', access: await rights(), ...names }, caller);
       case 'technology_application_links': {
         // The applications the person reads: all of them, or a Business Contributor's own, as the route.
         const access = await rights();
         const scope = await resolveBusinessContributorScopeForUser({ manager, userId, tenantId, isAdmin: access.isAdmin }, 'applications', 'reader');
-        return this.technologyLinks.importApplicationLinks({ file, dryRun, language, access, ...names }, caller, { scope });
+        return this.technologyLinks.importApplicationLinks({ file, dryRun, language, mode: 'enrich', access, ...names }, caller, { scope });
       }
     }
   }
@@ -406,6 +409,7 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
     inserted,
     updated,
     unchanged: result.unchanged ?? 0,
+    cleared: result.cleared ?? 0,
     skipped: result.skipped ?? 0,
     error_count: errors.length,
     warning_count: warnings.length,
@@ -450,6 +454,12 @@ function unchangedNote(count: number, what: string): string {
   return count > 0 ? ` (${count} ${what} unchanged)` : '';
 }
 
+/** The stored values the approval clears with `-` (D21 of 26.11.9), as the card counts them; nothing when none. */
+function clearedNote(count: number): string {
+  if (count <= 0) return '';
+  return `; ${count} stored ${count === 1 ? 'value' : 'values'} cleared (cells holding "-")`;
+}
+
 /** Matches the approval's sentence names; the others are counted ("and N more"). */
 const APPROVAL_FACT_MATCHES = 3;
 
@@ -487,11 +497,11 @@ function rowsMatchFacts(report: AiImportRunDto['report'] | undefined, titles: Re
 
 /**
  * What the approval of a row import's check does, in one sentence (lot I2 of 26.11.9): the records it
- * creates, updates and leaves unchanged, or that there is nothing to import; then the values the check
- * matched to existing records, as the card names them (`titles`: the card's column titles, by column).
+ * creates, updates and leaves unchanged, or that there is nothing to import; the stored values it
+ * clears with `-` (D21 of 26.11.9, when there are some); then the values the check matched to existing records, as the card names them (`titles`: the card's column titles, by column).
  */
 export function rowsApprovalFacts(
-  run: Pick<AiImportRunDto, 'ok' | 'inserted' | 'updated' | 'unchanged'> & { report?: AiImportRunDto['report'] },
+  run: Pick<AiImportRunDto, 'ok' | 'inserted' | 'updated' | 'unchanged' | 'cleared'> & { report?: AiImportRunDto['report'] },
   card: { titles?: ReadonlyMap<string, string>; language?: CsvLanguage } = {},
 ): string {
   if (!run.ok) return CANNOT_BE_APPROVED;
@@ -509,7 +519,7 @@ export function rowsApprovalFacts(
         : 'The card cannot be approved.');
   }
   const matches = rowsMatchFacts(run.report, card.titles ?? new Map(), card.language ?? 'en');
-  return `On approval: ${run.inserted} records created, ${run.updated} updated, ${run.unchanged} unchanged${matches}${lookalikes}.`;
+  return `On approval: ${run.inserted} records created, ${run.updated} updated, ${run.unchanged} unchanged${clearedNote(run.cleared ?? 0)}${matches}${lookalikes}.`;
 }
 
 /**

@@ -14,7 +14,7 @@ Every master data page has **Export** and **Import** in its toolbar, and documen
 
 **Check, then load.** An import has two steps. **Preflight check** reads the file and reports what a load would change: the rows to create, the rows to update and the rows that change nothing. **Load** writes it, then the dialog counts the rows created, updated and unchanged, for example "2 created, 5 updated, 30 unchanged". A count of zero is left out. Nothing is written before the load, and a file with one error loads nothing. Errors name the line of the file as a text editor shows it, blank lines and cells that span several lines included.
 
-**Columns are matched by name**, in any order, whatever the case, the spaces and the underscores. These files are strict: a column Kadratis does not know refuses the whole file, and the message, on a **Header** line, names the unknown and the missing ones. The budget file is the one that ignores the columns it does not know. See [Load a budget from a spreadsheet](budget-file.md).
+**Columns are matched by name**, in any order, whatever the case, the spaces and the underscores. A column Kadratis does not know refuses the whole file, and the message, on a **Header** line, names it. The budget file is the one that ignores the columns it does not know. See [Load a budget from a spreadsheet](budget-file.md).
 
 **References.** The companies, departments, suppliers and contacts files start with an optional `reference` column, which the export fills (`COMP-12`, `DEPT-4`, `SUP-12`, `CTCT-4`). A filled reference names the record the row updates, even when its name, or a contact's email, has changed. The preflight check lists each record that will be renamed or move to another company, and each contact whose email address will change. Left empty, the row is matched by its name, or a contact by its email. A reference your workspace does not know refuses the row, as happens with a file exported from another workspace: empty the cell to import the row as a new record or by its name. See [Companies](companies.md#csv-importexport), [Departments](departments.md#csv-importexport), [Suppliers](suppliers.md#csv-importexport) and [Contacts](contacts.md#csv-importexport).
 
@@ -28,6 +28,20 @@ The contracts file starts with the same optional `reference` column (`CTR-12`). 
 
 **Other files.** An OpenDocument spreadsheet (`.ods`) is refused before any column is read, with a message that says how to save it as CSV. In LibreOffice Calc: **File › Save As › Text CSV**, or **Excel 2007-365 (.xlsx)**. Any other file that is not text is refused the same way.
 
+## Empty cells and `-` { #empty-cells-and-clearing }
+
+The imports of suppliers, contacts, companies, departments, contracts, cost centers, accounts, analytics dimension values, business processes, working-day calendars and technology links read each cell as the budget file does:
+
+- **An empty cell keeps the stored value.** An empty `status` keeps the stored status: it does not enable a disabled record.
+- **`-` clears the stored value.** A cell holding only `-` is a clear. A text such as `Jean-Pierre` or a number such as `-5` is a value. The export writes a stored `-` as `'-`, which the import reads as the text `-`: an exported file imported again changes nothing. To keep a dash as a value, write `'-`. A spreadsheet that saves as CSV can drop the apostrophe: the check then counts that dash among the values cleared.
+- **A column the file leaves out is never written.** A file can hold only the columns that find each record, such as its reference, its name or its code, and the columns to change.
+- **Some values cannot be cleared**: a reference, a name or another column that finds the record, a required value and a status. `-` in such a cell refuses the row, and the message names the column. On a number that cannot be empty, such as a company's headcount or a contract's yearly amount, the message says to write `0`.
+- **End of validity.** `-` in `disabled_at` clears the date, and the record is active again. A row with `disabled` in `status` and `-` in `disabled_at` is refused: keep one or the other.
+- **New records.** An empty required cell refuses the row. `-` on an optional value leaves it empty. The defaults of a new record, such as a contract's duration, apply on creation only.
+- **The preflight check counts the clears**, for example "3 values will be cleared". A `-` on a value that is already empty is not counted.
+
+Each page lists the columns of its file and what `-` does there. The imports of applications, assets, projects, requests, tasks and incidents have their own choice for empty cells, described on their pages. The budget file follows the same rule: see [What a cell means](budget-file.md#what-a-cell-means). So do Kad's imports of these lists: see [Importing a spreadsheet](ai-assistant.md#importing-a-spreadsheet).
+
 ## Names of records { #names-of-records }
 
 A cell that names another record, such as a supplier, a company or a project, finds it in three steps:
@@ -38,7 +52,7 @@ A cell that names another record, such as a supplier, a company or a project, fi
 
 The third step applies only to records found by their name, in a list you can read. An email, a location reference such as `LOC-4` or a code takes the first two steps. When several records answer the third step, the row is refused and the message names them: write the name as it is stored.
 
-**Matches.** The preflight check lists the names found at the third step under **N values matched**, folded. Unfold the line to see each match, for example `Supplier: Fromagerie Leger → Fromagerie Léger`. The list also holds the versions found by their catalog label (see [Version labels](technologies.md#version-labels)). **Undo** checks the file again without that match: the name is then read as one Kadratis does not know, and the load keeps that choice. The undone match stays listed with **Match again**, which checks the file with it again. The imports of applications, assets, projects, requests, tasks, incidents, contracts, cost centers, business processes, technology links and the budget file show this list.
+**Matches.** The preflight check lists the names found at the third step under **N values matched**, folded. Unfold the line to see each match, for example `Supplier: Fromagerie Leger → Fromagerie Léger`. The list also holds the versions found by their catalog label (see [Version labels](technologies.md#version-labels)). **Undo** checks the file again without that match: the name is then read as one Kadratis does not know, and the load keeps that choice. The undone match stays listed with **Match again**, which checks the file with it again. The imports of applications, assets, projects, requests, tasks, incidents, contracts, contacts, cost centers, business processes, technology links and the budget file show this list.
 
 **A name nothing finds.** The imports of applications, assets, projects, requests, tasks and incidents keep the current values for empty cells, unless you choose **Full replace**. With these choices, a row that updates a record also keeps the current value when a cell names a record Kadratis does not find. The check warns: "\"X\" was not found: the current value is kept." A value that belongs to another column is kept only while the row leaves that column as stored: a task's phase with its project, a stream with its category, a department with its company. Otherwise the field stays empty, and the check warns. A task keeps its viewers, or its owners, when one of their cells names an unknown email. On a new record, and with **Full replace**, the field stays empty and the check warns. A column that needs a known record refuses the row, as its page says.
 

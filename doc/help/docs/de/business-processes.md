@@ -125,7 +125,7 @@ Das Trennzeichen folgt der Sprache Ihres Bildschirms. Siehe [CSV- und Excel-Date
 **Spalten**: `name`, `process_type`, `parent_name`, `description`, `notes`, `status`.
 
 - `process_type`: `management`, `core` oder `support`, oder leer.
-- `parent_name`: der Name des übergeordneten Prozesses, oder leer für die oberste Ebene.
+- `parent_name`: der Name des übergeordneten Prozesses. Eine leere Zelle behält den übergeordneten Prozess eines gespeicherten Prozesses und legt einen neuen Prozess auf die oberste Ebene. `-` verschiebt den Prozess auf die oberste Ebene.
 
 ### Importieren
 
@@ -140,6 +140,7 @@ Klicken Sie auf der Listenseite auf **Importieren**, dann:
 - Zeilen werden anhand des **Namens** zugeordnet, unabhängig von Groß- und Kleinschreibung. Ein übereinstimmender Name aktualisiert den bestehenden Prozess und behält die gespeicherte Schreibweise (die Vorabprüfung meldet, welchem Prozess die Zeile zugeordnet wurde); ein neuer Name erstellt einen neuen Prozess.
 - `parent_name` wird anhand des Namens zugeordnet, unabhängig von Groß- und Kleinschreibung: ein Prozess derselben Datei oder ein Prozess, der bereits in Kadratis besteht. Gibt es beide, hat die Datei Vorrang. Die Zeilen können in beliebiger Reihenfolge stehen: Übergeordnete Prozesse werden vor ihren Teilprozessen erstellt.
 - Ein unbekannter übergeordneter Name, ein Prozess unter sich selbst oder eine Schleife werden mit der Zeilennummer abgelehnt.
+- Bei einem gespeicherten Prozess behält eine leere Zelle den gespeicherten Wert, und `-` leert `process_type`, `description` oder `notes`. `-` kann `name` oder `status` nicht leeren: Die Zeile wird abgelehnt. Eine Spalte, die in der Datei fehlt, behält ihre Werte. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing).
 - Die Datei hat keine Spalte für das Gültigkeitsende. Bei einer Aktualisierung behält ein leerer `status` oder einer, der dem aktuellen Status des Prozesses entspricht, dessen Gültigkeitsende. Ein anderer Status wird angewendet: `enabled` löscht das Gültigkeitsende, und `disabled` beendet den Prozess heute, sofern sein Gültigkeitsende nicht bereits vergangen ist. Ein neuer Prozess ist aktiviert, sofern die Zeile nicht `disabled` angibt.
 
 **Tipp**: Exportieren Sie zuerst Ihre aktuellen Daten, ändern Sie die Datei und importieren Sie erneut. Dies vermeidet versehentliche Duplikate und stellt sicher, dass Sie mit dem aktuellsten Stand arbeiten.

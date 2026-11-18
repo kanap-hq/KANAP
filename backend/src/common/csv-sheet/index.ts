@@ -36,6 +36,22 @@ export {
 } from './master-data';
 export { csvSeparatorOf, readCsv, readImportText, readSheet, sheetCellText } from './read';
 export type { ImportFileText, SheetCell, SheetReadResult } from './read';
+export { CANNOT_BE_CLEARED, CLEAR_MARK, NUMBER_CANNOT_BE_CLEARED, readImportCell } from './clear';
+export type { ImportCell } from './clear';
+export {
+  cellText,
+  clearedValueCount,
+  clearRefusals,
+  clearsCell,
+  clearsEndOfValidity,
+  endOfValidityToCheck,
+  keepsStoredValue,
+  lifecycleConflictError,
+  STATUS_DISABLED_DATE_CLEARED,
+  storedRecordValues,
+  withClearedEndOfValidity,
+} from './import-mode';
+export type { CsvImportMode } from './import-mode';
 export { languageOf, parseDateOrder, parseDecimalMark, timeZoneOf } from './request-options';
 export { writeCsv, writeCsvHeader, writeCsvLine, writeCsvRows } from './write';
 export {
@@ -68,4 +84,4 @@ export type {
 export type { AmountConventionDecision, DecimalMark } from './amount';
 export type { CsvWriteRequest } from './write';
 export type { CsvProfile } from './language';
-export type { ImportReportError, MasterDataFileRead, MasterDataFileRequest, ReferenceFamily, ReferenceParent } from './master-data';
+export type { ImportReportError, MasterDataFileRead, MasterDataImportResult, MasterDataFileRequest, ReferenceFamily, ReferenceParent } from './master-data';

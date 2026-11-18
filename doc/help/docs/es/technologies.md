@@ -351,6 +351,8 @@ Haga clic en **Importar vínculos** o **Exportar vínculos** en la barra de herr
 | `notes` | Texto libre sobre el vínculo |
 | `source` | De dónde viene el vínculo: entrada manual, importación, asistente, agente o Netbox. La exportación la escribe; la importación la ignora |
 
+Un archivo solo necesita el servidor o la aplicación y la tecnología, cada uno por su referencia o su nombre. Una columna que el archivo omite nunca se escribe.
+
 La columna `operating_system` admite tres valores:
 
 - **sí**: el vínculo pasa a ser el sistema operativo del servidor. La importación rechaza la fila cuando la tecnología no es de la familia **Sistema operativo**, cuando el servidor es un clúster que tiene miembros o cuando el servidor ya tiene otro sistema operativo.
@@ -365,7 +367,7 @@ La importación nunca quita la marca de sistema operativo de un vínculo.
 
 - Un vínculo es un servidor o una aplicación, una tecnología y una versión: una fila con otra versión añade un segundo vínculo. El mismo vínculo dos veces en un archivo es un error.
 - Cada fila añade un vínculo o actualiza uno existente. Los vínculos que faltan en el archivo se quedan como están: la importación nunca elimina un vínculo.
-- Un vínculo existente conserva su origen. Sus notas cambian cuando la celda `notes` contiene un texto distinto, y una celda vacía las deja como están.
+- Un vínculo existente conserva su origen. Sus notas cambian cuando la celda `notes` contiene un texto distinto, una celda vacía las deja como están, y `-` las borra. `-` en cualquier otra columna rechaza la fila. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing).
 - Un vínculo nuevo se marca como procedente de una importación, con el nombre del archivo.
 - La tecnología debe figurar ya en su lista. Adóptela desde el catálogo o créela primero.
 - El servidor, la aplicación y la tecnología se encuentran por su nombre como describe [Nombres de registros](csv-files.md#names-of-records). Un nombre que comparten varios registros es un error.

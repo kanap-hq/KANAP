@@ -395,7 +395,7 @@ Para definir valores en las líneas de presupuesto desde un archivo, use el arch
 | `description` | Texto libre |
 | `status` | `enabled` o `disabled`. Vacía significa `enabled` para un valor nuevo y conserva el estado guardado en una actualización |
 | `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado. Vacía si no hay fin. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina el valor hoy |
-| `applies_to` | El ajuste **Usada para**, siempre la última columna. `opex`, `capex`, o vacía para **OPEX y CAPEX**. Un archivo sin esta columna deja los ajustes como están. Una celda vacía establece **OPEX y CAPEX** |
+| `applies_to` | El ajuste **Usada para**, siempre la última columna. `opex`, `capex`, o vacía para **OPEX y CAPEX**. Un archivo sin esta columna deja los ajustes como están. Una celda vacía conserva el ajuste de un valor guardado, y `-` establece **OPEX y CAPEX**. Un valor nuevo con una celda vacía es para **OPEX y CAPEX** |
 
 Solo `name` es una columna obligatoria. Cuando falta la columna `description`, `status`, `disabled_at` o `applies_to`, los valores existentes conservan lo que tienen almacenado para ella, y los valores nuevos quedan activados y sin descripción. Un archivo sin `axis_code` coloca todas las filas en la dimensión por defecto.
 
@@ -409,7 +409,7 @@ Solo `name` es una columna obligatoria. Cuando falta la columna `description`, `
 **Cómo funciona la importación**:
 
 - **Todo el archivo se comprueba antes de escribir nada.** Un archivo con cualquier error no carga nada: corrija las filas y vuelva a ejecutar la verificación previa. Cada error indica su fila con el número de línea del archivo tal como lo muestra un editor de texto, incluidas las líneas vacías y las celdas que ocupan varias líneas.
-- **Emparejamiento por dimensión y nombre**: una fila cuyo nombre existe en su dimensión actualiza ese valor; cualquier otra fila crea uno. Cada celda sustituye el valor almacenado, de modo que una `description` vacía lo borra. Un nombre escrito con otras mayúsculas encuentra el valor almacenado y no le cambia el nombre. Para cambiar el nombre de un valor, hágalo en la página.
+- **Emparejamiento por dimensión y nombre**: una fila cuyo nombre existe en su dimensión actualiza ese valor; cualquier otra fila crea uno. En un valor almacenado, una celda vacía conserva lo almacenado, y `-` borra `description`, `disabled_at` o `applies_to`. Un `axis_code` vacío sigue designando la dimensión por defecto. `-` no puede borrar `axis_code`, `name` ni `status`: la fila se rechaza. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing). Un nombre escrito con otras mayúsculas encuentra el valor almacenado y no le cambia el nombre. Para cambiar el nombre de un valor, hágalo en la página.
 - **Filas sin cambios**: una fila idéntica al valor almacenado no cambia nada. Exportar e importar el mismo archivo indica todas las filas como sin cambios.
 - **Dimensiones desactivadas**: una fila de una dimensión desactivada se acepta cuando no cambia nada, de modo que un archivo exportado se importa tal cual. Una fila que crearía o cambiaría un valor en ella se rechaza.
 - **Los valores que faltan en el archivo** se dejan como están. La importación nunca elimina.
@@ -423,8 +423,8 @@ Solo `name` es una columna obligatoria. Cuando falta la columna `description`, `
 - **"Invalid status '...'. Use 'enabled' or 'disabled'."**: corrija la celda `status`.
 - **"Invalid applies_to '...'. Use 'opex', 'capex' or leave it empty."**: corrija la celda `applies_to`.
 - **"The ... dimension is for OPEX lines only."** (o CAPEX): la fila limita un valor al tipo de línea que su dimensión excluye. Corrija la celda `applies_to` o cambie el ajuste **Usada para** de la dimensión.
-- **"Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again."**: la fila está activada con una fecha ya pasada. Un archivo exportado antes de esa fecha todavía indica `enabled`: vuelva a exportar o corrija la celda.
-- **"Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."**: la fila está desactivada con una fecha aún por llegar. Corrija la celda `status` o `disabled_at`.
+- **"El estado es «Activado», pero el fin de validez ya pasó. Escriba «-» en el fin de validez o «disabled» en el estado. Si el archivo viene de una exportación anterior, exporte los datos de nuevo."**: la fila está activada con una fecha ya pasada. Un archivo exportado antes de esa fecha todavía indica `enabled`: vuelva a exportar o corrija la celda.
+- **"El estado es «Desactivado», pero el fin de validez aún no ha llegado. Escriba «enabled» en el estado o una fecha pasada en el fin de validez."**: la fila está desactivada con una fecha aún por llegar. Corrija la celda `status` o `disabled_at`.
 - **"Encabezado: Columnas que faltan: ..."** o **"Encabezado: Columnas desconocidas: ..."**: descargue una plantilla nueva.
 
 ---

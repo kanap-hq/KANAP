@@ -53,11 +53,11 @@ describe('CsvImportDialog messages', () => {
   it('labels a header problem as the header and translates it with its columns', async () => {
     check([{
       row: 0,
-      message: 'Header mismatch. Missing: account_name',
+      message: 'Header mismatch. Missing: account_number',
       code: 'CSV_HEADER_MISSING_COLUMNS',
-      params: { missing: 'account_name', extra: '' },
+      params: { missing: 'account_number', extra: '' },
     }]);
-    expect(await screen.findByText('En-tête : Colonnes manquantes : account_name.')).toBeInTheDocument();
+    expect(await screen.findByText('En-tête : Colonnes manquantes : account_number.')).toBeInTheDocument();
     expect(screen.queryByText(/Ligne 0/)).not.toBeInTheDocument();
   });
 
@@ -159,8 +159,8 @@ describe('CsvImportDialog messages', () => {
       { row: 2, column: 'status', message: 'Status is enabled but the end of validity has passed.', code: 'CSV_STATUS_DATE_PASSED' },
       { row: 3, column: 'status', message: 'Status is disabled but the end of validity is still to come.', code: 'CSV_STATUS_DATE_FUTURE' },
     ]);
-    expect(await screen.findByText(/^Ligne 2, status : Le statut est enabled mais la fin de validité est passée\./)).toBeInTheDocument();
-    expect(screen.getByText(/^Ligne 3, status : Le statut est disabled mais la fin de validité est encore à venir\./)).toBeInTheDocument();
+    expect(await screen.findByText(/^Ligne 2, status : Le statut est « Activé », mais la fin de validité est passée\. Écrivez « - » dans la fin de validité, ou « disabled » dans le statut\./)).toBeInTheDocument();
+    expect(screen.getByText(/^Ligne 3, status : Le statut est « Désactivé », mais la fin de validité est encore à venir\. Écrivez « enabled » dans le statut/)).toBeInTheDocument();
   });
 
   it('names an unknown column once when the header is refused for it', async () => {
@@ -182,5 +182,16 @@ describe('CsvImportDialog messages', () => {
     check([], { ok: true, total: 1, inserted: 1, updated: 0, unchanged: 0 });
     expect(await screen.findByText(/Vérification OK : 1 ligne\./)).toBeInTheDocument();
     expect(screen.getByText('0 ligne inchangée.')).toBeInTheDocument();
+  });
+
+  it('says in French how many stored values the check will clear', async () => {
+    check([], { ok: true, total: 4, inserted: 0, updated: 2, unchanged: 2, cleared: 3 });
+    expect(await screen.findByText('3 valeurs seront effacées.')).toBeInTheDocument();
+    expect(screen.getByText('2 lignes inchangées.')).toBeInTheDocument();
+  });
+
+  it('states the clearing rule in French beside the title', () => {
+    render(<CsvImportDialog open onClose={() => undefined} endpoint="/chart-of-accounts/fr/accounts" />);
+    expect(screen.getByRole('img', { name: "Une cellule vide garde la valeur enregistrée. Un tiret (-) l'efface." })).toBeInTheDocument();
   });
 });

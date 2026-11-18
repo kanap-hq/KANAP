@@ -351,6 +351,8 @@ Click **Import links** or **Export links** in the toolbar, then pick the file. T
 | `notes` | Free text about the link |
 | `source` | Where the link comes from: manual entry, import, assistant, agent or Netbox. The export writes it; the import ignores it |
 
+A file needs only the server or the application and the technology, each by its reference or its name. A column the file leaves out is never written.
+
 The `operating_system` column takes three values:
 
 - **yes**: the link becomes the server's operating system. The import refuses the row when the technology is not of the **Operating system** family, when the server is a cluster that has members, or when the server already has another operating system.
@@ -365,7 +367,7 @@ The import never removes the operating system mark from a link.
 
 - A link is a server or an application, a technology and a version: a row with another version adds a second link. The same link twice in one file is an error.
 - Each row adds a link or updates an existing one. Links missing from the file stay as they are: the import never deletes a link.
-- An existing link keeps where it comes from. Its notes change when the `notes` cell holds a different text, and an empty cell leaves them as they are.
+- An existing link keeps where it comes from. Its notes change when the `notes` cell holds a different text, an empty cell leaves them as they are, and `-` clears them. `-` in any other column refuses the row. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing).
 - A new link is marked as coming from an import, with the file name.
 - The technology must already be in your list. Adopt it from the catalog or create it first.
 - The server, the application and the technology are found by their names as described in [Names of records](csv-files.md#names-of-records). A name that several records share is an error.

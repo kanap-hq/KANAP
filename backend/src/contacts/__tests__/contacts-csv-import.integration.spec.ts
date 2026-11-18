@@ -108,10 +108,35 @@ async function testIdenticalRowsUnchanged() {
   });
 }
 
+// A contact attached to a supplier without a link (created by the API): a row that keeps the
+// supplier and leaves the type empty writes nothing, and the contact stays without a link.
+async function testSupplierKeptWithoutLinkUnchanged() {
+  await withTenant(async (runner, tenantId) => {
+    const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name, item_number) VALUES ($1, 'One', 1) RETURNING id`, [tenantId]);
+    await runner.query(
+      `INSERT INTO contacts (tenant_id, email, supplier_id, item_number) VALUES ($1, 'c@example.test', $2, 1)`,
+      [tenantId, supplier.id],
+    );
+    const contacts = contactsService(runner.manager);
+    const upload = { buffer: Buffer.from('email;supplier_name;supplier_role\nc@example.test;SUP-1;\n', 'utf8'), originalname: 'c.csv' } as Express.Multer.File;
+    for (const dryRun of [true, false]) {
+      const result: Result = await contacts.importCsv(
+        { file: upload, dryRun, mode: 'enrich', access: { isAdmin: true, levels: {} } } as any,
+        { manager: runner.manager, tenantId },
+      );
+      assert.equal(result.ok, true, JSON.stringify(result.errors));
+      assert.deepEqual({ updated: result.updated, unchanged: result.unchanged }, { updated: 0, unchanged: 1 }, `dryRun=${dryRun}`);
+    }
+    const links = await runner.query(`SELECT 1 FROM supplier_contacts WHERE tenant_id = $1`, [tenantId]);
+    assert.equal(links.length, 0, 'no link is created');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   const tests: Array<[string, () => Promise<void>]> = [
     ['testIdenticalRowsUnchanged', testIdenticalRowsUnchanged],
+    ['testSupplierKeptWithoutLinkUnchanged', testSupplierKeptWithoutLinkUnchanged],
   ];
   let failed = 0;
   try {

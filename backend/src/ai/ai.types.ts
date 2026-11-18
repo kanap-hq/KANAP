@@ -589,6 +589,11 @@ export type AiImportRunDto = {
   inserted: number;
   updated: number;
   unchanged: number;
+  /**
+   * A row import: the stored values the rows clear with `-` (D21 of 26.11.9), counted by the imports
+   * that follow the clearing rule, 0 for the others. The card says it when there are some.
+   */
+  cleared?: number;
   skipped: number;
   error_count: number;
   warning_count: number;

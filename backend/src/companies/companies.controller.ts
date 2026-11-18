@@ -147,7 +147,8 @@ export class CompaniesController {
     const dateOrder = parseDateOrder(dateOrderRaw);
     const decimalMark = parseDecimalMark(decimalMarkRaw);
     return this.svc.importCsv(
-      { file, dryRun, userId: ctx.userId || null, year, language, dateOrder, decimalMark },
+      // The clearing rule of every import (D21 of 26.11.9): a blank cell keeps, `-` clears.
+      { file, dryRun, userId: ctx.userId || null, year, language, dateOrder, decimalMark, mode: 'enrich' },
       { manager: ctx.manager },
     );
   }

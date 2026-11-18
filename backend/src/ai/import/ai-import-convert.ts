@@ -1,5 +1,7 @@
 import { Decimal } from '../../common/decimal';
-import { CsvDateOrder, CsvLanguage, DecimalMark, parseCsvAmount, parseCsvBoolean, parseCsvDateCell, resolveAmountConvention, resolveDateOrder } from '../../common/csv-sheet';
+import {
+  CLEAR_MARK, CsvDateOrder, CsvLanguage, DecimalMark, parseCsvAmount, parseCsvBoolean, parseCsvDateCell, readImportCell, resolveAmountConvention, resolveDateOrder,
+} from '../../common/csv-sheet';
 import { sheetCellText, SheetCell } from '../../common/csv-sheet/read';
 import { catalogAliases } from '../../it-ops-settings/catalog-codes';
 import { findCatalogOption, type CatalogOptionLike } from '../../it-ops-settings/catalog-resolve';
@@ -49,6 +51,12 @@ export interface AiImportColumnHints {
   decimalMark?: DecimalMark;
   /** A value of the file and the value it stands for (a code, a name, a number, an e-mail; blank for none). */
   values?: Record<string, string>;
+  /**
+   * The import reads `-` as the clearing mark (D21 of 26.11.9, `AI_IMPORT_CLEARING_RULE`): a cell that
+   * holds it, or that the value map turns into it, is written `-` whatever the column's kind, for the
+   * import to clear the value or refuse the row, as it does for the screen's file.
+   */
+  clearMark?: boolean;
 }
 
 export type AiImportCellResult =
@@ -112,15 +120,20 @@ export function columnReader(
   language: CsvLanguage,
 ): AiImportColumnReader {
   const map = valueMap(hints.values, rule.asWritten);
-  const reader = cellReader(rule, cells.map((cell) => mappedCell(cell, map)), hints, language, map);
-  if (map.size === 0) return reader;
-  return {
-    ...reader,
-    read: (cell) => {
-      const result = reader.read(mappedCell(cell, map));
-      return result.status === 'unread' ? { status: 'unread', raw: cellText(cell) } : result;
-    },
+  // `-` reaches an import that reads it as written; the column's other cells settle its reading.
+  // The mark never goes through the value map: a `-` of the file stays one whatever the map says
+  // of it, and a value the map turns into `-` clears.
+  const clears = (cell: SheetCell | undefined) => hints.clearMark === true && cell?.kind === 'text' && readImportCell(cellText(cell)).kind === 'clear';
+  const clearsOrMapped = (cell: SheetCell | undefined) => clears(cell) || clears(mappedCell(cell, map));
+  const reader = cellReader(rule, cells.map((cell) => (clearsOrMapped(cell) ? undefined : mappedCell(cell, map))), hints, language, map);
+  const read = (cell: SheetCell | undefined): AiImportCellResult => {
+    if (clearsOrMapped(cell)) return { status: 'converted', value: CLEAR_MARK };
+    const mapped = mappedCell(cell, map);
+    if (map.size === 0) return reader.read(cell);
+    const result = reader.read(mapped);
+    return result.status === 'unread' ? { status: 'unread', raw: cellText(cell) } : result;
   };
+  return { ...reader, read };
 }
 
 /** A day and time as the imports read it: `YYYY-MM-DD HH:MM`, the seconds when there are some. */

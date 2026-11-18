@@ -183,7 +183,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 - Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 - Eine Zeile pro Kalender und Jahr. Ein Kalender mit drei Jahren belegt drei Zeilen. Ein Kalender ohne Jahr wird als eine Zeile mit leerem Jahr und leeren Monaten exportiert
 - Ein Standardkalender exportiert nur die Jahre, die Sie geändert haben. Die anderen Jahre folgen den Feiertagen und brauchen keine Zeile
-- Die Spalten `country`, `region` und `disabled_at` sind beim Import optional. Eine Datei ohne `country` und `region` legt individuelle Kalender an
+- Beim Import ist nur die Spalte `code` Pflicht: Eine Spalte, die die Datei weglässt, wird nie geschrieben. `year` und die zwölf Monate gehören zusammen. Eine Datei ohne `country` und `region` legt individuelle Kalender an
 
 | Spalte | Inhalt |
 |---|---|
@@ -192,7 +192,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 | `description` | Freitext |
 | `country` | Optional. Der zweistellige Ländercode eines Standardkalenders, zum Beispiel `FR`. Leer bei einem individuellen Kalender |
 | `region` | Optional. Der Regionscode, zum Beispiel `57` für Moselle oder `BY` für Bayern. Erfordert ein Land. Leer für das ganze Land |
-| `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` |
+| `status` | `enabled` oder `disabled`. Leer bedeutet `enabled` für einen neuen Kalender und behält bei einer Aktualisierung den gespeicherten Status |
 | `disabled_at` | Optionale Spalte. Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende. Leer, wenn es kein Ende gibt |
 | `year` | Vier Ziffern, von 2000 bis 2100. Leer bei einer Zeile, die nur die Felder des Kalenders setzt |
 | `jan` bis `dec` | Die Arbeitstage jedes Monats, mit einem Punkt als Dezimaltrennzeichen (ein Komma wird auch akzeptiert). Pflicht bei einer Zeile mit Jahr |
@@ -211,6 +211,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 - **Land und Region gelten, wenn die Datei einen Kalender anlegt.** Bei einem bestehenden Kalender lassen Sie sie leer oder geben die Werte des Kalenders an. Ein abweichender Wert wird abgelehnt.
 - **Jahre eines Standardkalenders werden zu geänderten Jahren.** Die anderen Jahre folgen weiterhin den Feiertagen.
 - **Monate folgen den Regeln des Arbeitsbereichs**: alle zwölf Monate, jeder höchstens mit den Kalendertagen des Monats, bis zu 6 Dezimalstellen.
+- **Leere Zellen und `-`**: Bei einem gespeicherten Kalender behält ein leerer Name, eine leere Beschreibung, ein leerer Status oder ein leeres Ende der Gültigkeit den gespeicherten Wert. `-` leert die Beschreibung und das Ende der Gültigkeit. `-` kann den Code, den Namen, den Status, das Land, die Region, das Jahr oder einen Monat nicht leeren: Die Zeile wird abgelehnt, und bei einem Monat fordert die Meldung auf, `0` zu schreiben. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing).
 - **In der Datei fehlende Jahre bleiben erhalten.** Ein Import fügt Jahre hinzu oder ersetzt sie. Er entfernt nie eines. Um ein Jahr zu entfernen, verwenden Sie seinen Link **... entfernen** im Arbeitsbereich oder bei einem Standardkalender **Auf Standardwerte zurücksetzen**.
 - **Zählung**: Ein neuer Kalender oder ein neues Jahr zählt als Einfügung. Ein geändertes Jahr oder eine Änderung von Name, Beschreibung oder Lebenszyklus zählt als Aktualisierung. Eine Zeile, die dem gespeicherten Stand entspricht, gilt als unverändert. Wenn Sie dieselbe Datei exportieren und importieren, werden alle Zeilen als unverändert gemeldet.
 - **In der Datei fehlende Kalender** bleiben unverändert. Der Import löscht nie.

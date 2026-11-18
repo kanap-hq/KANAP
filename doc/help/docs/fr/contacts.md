@@ -138,15 +138,24 @@ Gérez les contacts en masse avec des fichiers CSV ou des classeurs Excel.
 **Import** :
 - Utilisez la **Vérification préalable** pour valider avant d'appliquer
 - Peut créer de nouveaux contacts ou mettre à jour les existants
-- **Correspondance par référence** : une `reference` remplie (`CTCT-4` ou `4`) désigne le contact que la ligne met à jour, même si son e-mail a changé. Le contact prend le nom et l'e-mail de la ligne. La vérification préalable signale chaque contact qui sera renommé ou changera d'adresse e-mail
+- **Correspondance par référence** : une `reference` remplie (`CTCT-4` ou `4`) désigne le contact que la ligne met à jour, même si son e-mail a changé. Le contact prend le nom et l'e-mail que donne la ligne. La vérification préalable signale chaque contact qui sera renommé ou changera d'adresse e-mail
 - **Correspondance par e-mail** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, la ligne est rapprochée par l'adresse e-mail
 - **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « CTCT-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
 - **Changement d'e-mail** : un e-mail qu'un autre contact a déjà est refusé, et le message donne la référence de ce contact : « « ana@acme.example » appartient déjà à CTCT-7. »
 - **Une ligne par contact** : deux lignes qui mettent à jour le même contact sont refusées : « Cette ligne met à jour CTCT-7, comme la ligne 3. Gardez une seule ligne par fiche. » Deux lignes qui créent le même contact (même e-mail, quelle que soit la casse) sont refusées aussi : « Mêmes valeurs dans email qu'à la ligne 3. »
 
-**Champs obligatoires** : Email
+- **Cellules vides et `-`** : sur un contact que le fichier met à jour, une cellule vide garde la valeur enregistrée et `-` l'efface. `-` efface les noms, `job_title`, `phone`, `mobile`, `country` et `notes`. Il ne peut pas effacer `reference`, `email` ni `active` : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
 
-**Champs optionnels** : `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
+**Colonnes du fournisseur** :
+- `supplier_name` définit le fournisseur du contact, par sa référence (`SUP-12`) ou son nom. Les noms sont retrouvés comme le décrit [Noms des fiches](csv-files.md#names-of-records) : un nom retrouvé avec d'autres accents est listé à la vérification, et vous pouvez défaire le rapprochement. Un nom qui ne correspond à aucun fournisseur, ou à plusieurs, refuse la ligne. L'import ne crée jamais de fournisseur
+- `supplier_role` est le type de contact pour ce fournisseur : `commercial`, `technical`, `support` ou `other`, ou le mot qu'affiche la page du contact, dans l'une des quatre langues. Vide, le contact garde son type, et un contact qui n'en a pas reçoit **Commercial**, comme sur la page du contact
+- Un `supplier_name` vide garde le fournisseur. `-` retire le fournisseur et son type de contact. `-` dans `supplier_role` seul est refusé, de même qu'un type sur un contact sans fournisseur
+- Un changement de fournisseur fait ce que fait le choix du fournisseur sur la page du contact
+- L'export et le modèle contiennent les deux colonnes
+
+**Champs obligatoires** : `email`, pour un nouveau contact
+
+**Champs optionnels** : `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `supplier_name`, `supplier_role`, `notes`, `active`
 
 **Notes** :
 - Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import

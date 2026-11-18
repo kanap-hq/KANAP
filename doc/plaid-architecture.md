@@ -1157,11 +1157,15 @@ and the approval's savepoint undoes any write. The card keeps
 `import_mapping.result`, and one audit row records the import (`table_name =
 'import'`, `source = 'ai_chat'`, the preview in `source_ref`, `after_json` with
 the list, the file name and the counts); the records keep the audit rows of
-their import. The imports that replace every value of a record they update (the
-master data imports and the technology links, `AI_IMPORT_WHOLE_ROWS`) get every
-template column, blank when the mapping leaves it out, and a file that would
-update existing records without some of those columns is refused
-(`AI_IMPORT_CLEARS_COLUMNS`): their values would be cleared. The messages of a
+their import. The imports of master data, contracts, calendars and technology
+links (`AI_IMPORT_CLEARING_RULE`) are called with the clearing rule of their
+routes (`mode: 'enrich'`): on a record the file updates, a blank cell and a
+column the mapping leaves out keep the stored value, and `-` clears it. Kad's
+file writes the person's `-` (a cell, or the model's value) as `-` in every kind
+of column for them; the check's `cleared` count is on the card ("3 values will
+be cleared") and in the sentence of the approval. The calendars and the
+technology links read a fixed header (`AI_IMPORT_EVERY_COLUMN`): their file gets
+every template column, blank when the mapping leaves it out. The messages of a
 check or an import carry the line of the person's file (the grid's `lines`,
 title and blank rows put back). The card shows the first rows, the values not
 read and the import's messages; the model reads the same first rows and values

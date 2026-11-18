@@ -345,6 +345,24 @@ async function testBudgetFile(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  budget file: a missing account refused, the lines created: OK');
 }
 
+/**
+ * The file a card builds, checked by the screen's import route: the same counts as the card's check
+ * (lot I4 of 26.11.9, the clearing rule of every import route).
+ */
+async function assertSameAsTheRoute(h: Harness, runner: QueryRunner, s: Seed, input: any, check: any) {
+  const { SuppliersController } = require('../../suppliers/suppliers.controller');
+  const prepared = await h.mapping.preparedFile(ctx(runner, s, 'admin'), input, 'en');
+  const file = { buffer: prepared.content, originalname: 'suppliers.xlsx', size: prepared.content.length } as Express.Multer.File;
+  const route = await h.app.get(SuppliersController).import(file, 'true', 'en', undefined, undefined, {
+    queryRunner: { manager: runner.manager }, tenant: { id: s.tenantId }, user: { sub: s.users.admin },
+  });
+  assert.deepEqual(
+    [route.ok, route.inserted, route.updated, route.unchanged ?? 0, route.cleared ?? 0],
+    [check.ok, check.inserted, check.updated, check.unchanged, check.cleared],
+    'the route counts as the card',
+  );
+}
+
 async function testSuppliers(h: Harness, runner: QueryRunner, s: Seed) {
   const admin = ctx(runner, s, 'admin');
   const columns = [{ column: 'name', source: 1, confidence: 'high' }, { column: 'erp_supplier_id', source: 2, confidence: 'high' }];
@@ -356,27 +374,67 @@ async function testSuppliers(h: Harness, runner: QueryRunner, s: Seed) {
   const suppliers = await runner.query(`SELECT name, erp_supplier_id FROM suppliers WHERE tenant_id = $1 ORDER BY name`, [s.tenantId]);
   assert.deepEqual(suppliers.map((row: any) => [row.name, row.erp_supplier_id]), [['Lactalis', 'F-001'], ['Savencia', 'F-002']]);
 
-  // The supplier import replaces every value of a supplier it updates: a file without the notes
-  // column would clear the notes of Lactalis. Refused, at the card and at the approval.
+  // The clearing rule of every import (D21 of 26.11.9), as on the screen: a file of two columns updates
+  // Lactalis without touching the notes it does not carry, and the card announces no value cleared.
   await runner.query(`UPDATE suppliers SET notes = 'Contrat cadre 2026' WHERE tenant_id = $1 AND name = 'Lactalis'`, [s.tenantId]);
   const update = attach(h, 'fournisseurs v2.csv', 'Fournisseur;Identifiant ERP\nLactalis;F-101\nFromagerie Alpine;F-003\n');
-  const refused = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: update, entity_type: 'suppliers', columns });
-  const check = refused.import_mapping.validation;
-  assert.equal(check.ok, false);
-  assert.equal(check.report.errors[0].code, 'AI_IMPORT_CLEARS_COLUMNS');
-  assert.equal(check.report.errors[0].params.count, 1);
-  assert.match(check.report.errors[0].params.columns, /Notes/);
-  assert.deepEqual(check.issues[0], { level: 'error', code: 'AI_IMPORT_CLEARS_COLUMNS', column: null, count: 1 });
-  assert.equal((await h.previews.executePreview(admin, refused.preview_id)).status, 'failed');
-  const [notes] = await runner.query(`SELECT notes, erp_supplier_id FROM suppliers WHERE tenant_id = $1 AND name = 'Lactalis'`, [s.tenantId]);
-  assert.deepEqual(notes, { notes: 'Contrat cadre 2026', erp_supplier_id: 'F-001' });
-  // New suppliers only: imported.
-  const fresh = attach(h, 'nouveaux fournisseurs.csv', 'Fournisseur;Identifiant ERP\nFromagerie Alpine;F-003\n');
-  const added = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: fresh, entity_type: 'suppliers', columns });
-  assert.equal((await h.previews.executePreview(admin, added.preview_id)).status, 'executed');
+  const updating = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: update, entity_type: 'suppliers', columns });
+  const check = updating.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual([check.inserted, check.updated, check.cleared], [1, 1, 0]);
+  assert.equal(updating.import_mapping.on_approval, 'On approval: 1 records created, 1 updated, 0 unchanged.');
+  await assertSameAsTheRoute(h, runner, s, { attachment_id: update, entity_type: 'suppliers', columns }, check);
+  const updated = await h.previews.executePreview(admin, updating.preview_id);
+  assert.equal(updated.status, 'executed', updated.error_message ?? '');
+  assert.deepEqual([updated.import_mapping.result.updated, updated.import_mapping.result.cleared], [1, 0]);
+  const [kept] = await runner.query(`SELECT notes, erp_supplier_id FROM suppliers WHERE tenant_id = $1 AND name = 'Lactalis'`, [s.tenantId]);
+  assert.deepEqual(kept, { notes: 'Contrat cadre 2026', erp_supplier_id: 'F-101' });
+
+  // `-` in a cell clears the value: the card counts it and its approval sentence says it; a blank
+  // cell keeps the notes of Savencia.
+  await runner.query(`UPDATE suppliers SET notes = 'Affineur' WHERE tenant_id = $1 AND name = 'Savencia'`, [s.tenantId]);
+  const notesColumns = [{ column: 'name', source: 1, confidence: 'high' }, { column: 'notes', source: 2, confidence: 'high' }];
+  const dash = attach(h, 'fournisseurs v3.csv', 'Fournisseur;Notes\nLactalis;-\nSavencia;\n');
+  const clearing = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: dash, entity_type: 'suppliers', columns: notesColumns });
+  const clears = clearing.import_mapping.validation;
+  assert.equal(clears.ok, true, JSON.stringify(clears));
+  assert.deepEqual([clears.updated, clears.unchanged, clears.cleared], [1, 1, 1]);
+  assert.equal(clearing.import_mapping.on_approval, 'On approval: 0 records created, 1 updated, 1 unchanged; 1 stored value cleared (cells holding "-").');
+  await assertSameAsTheRoute(h, runner, s, { attachment_id: dash, entity_type: 'suppliers', columns: notesColumns }, clears);
+  const cleared = await h.previews.executePreview(admin, clearing.preview_id);
+  assert.equal(cleared.status, 'executed', cleared.error_message ?? '');
+  assert.equal(cleared.import_mapping.result.cleared, 1);
+  const notes = await runner.query(`SELECT name, notes FROM suppliers WHERE tenant_id = $1 AND name IN ('Lactalis', 'Savencia') ORDER BY name`, [s.tenantId]);
+  assert.deepEqual(notes.map((row: any) => [row.name, row.notes]), [['Lactalis', null], ['Savencia', 'Affineur']]);
   const [count] = await runner.query(`SELECT count(*)::int AS n FROM suppliers WHERE tenant_id = $1`, [s.tenantId]);
   assert.equal(count.n, 3);
-  console.log('  suppliers: imported; an update that would clear a column refused: OK');
+
+  // A column the model leaves out is still read when its header names a template column, as the screen
+  // reads it (here the German title of the notes): its `-` clears. Unless the person asked to leave it
+  // aside (`left_aside`), which the card keeps for its approval.
+  const named = attach(h, 'fournisseurs v4.csv', 'Fournisseur;Notizen\nSavencia;-\n');
+  const nameColumn = [{ column: 'name', source: 1, confidence: 'high' }];
+  const aside = await h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: named, entity_type: 'suppliers', columns: nameColumn, left_aside: ['Notizen'],
+  });
+  assert.deepEqual(aside.import_mapping.columns.map((column: any) => column.column), ['name']);
+  assert.deepEqual([aside.import_mapping.validation.unchanged, aside.import_mapping.validation.cleared], [1, 0]);
+  const [stored] = await runner.query(
+    `SELECT mutation_input->'left_aside' AS aside FROM ai_mutation_previews WHERE tenant_id = $1 AND id = $2`,
+    [s.tenantId, aside.preview_id],
+  );
+  assert.deepEqual(stored.aside, ['Notizen']);
+  const reading = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: named, entity_type: 'suppliers', columns: nameColumn });
+  const read = reading.import_mapping.columns.find((column: any) => column.column === 'notes');
+  assert.deepEqual([read?.source, read?.confidence], [{ position: 2, header: 'Notizen' }, 'high']);
+  const readCheck = reading.import_mapping.validation;
+  assert.deepEqual([readCheck.ok, readCheck.updated, readCheck.cleared], [true, 1, 1], JSON.stringify(readCheck));
+  await assertSameAsTheRoute(h, runner, s, { attachment_id: named, entity_type: 'suppliers', columns: nameColumn }, readCheck);
+  const readDone = await h.previews.executePreview(admin, reading.preview_id);
+  assert.equal(readDone.status, 'executed', readDone.error_message ?? '');
+  const [savencia] = await runner.query(`SELECT notes FROM suppliers WHERE tenant_id = $1 AND name = 'Savencia'`, [s.tenantId]);
+  assert.equal(savencia.notes, null);
+  console.log('  suppliers: imported; a blank cell or an absent column keeps, `-` clears, as the route: OK');
 }
 
 // Imports that write beyond their record's columns (owners, data residency, viewers): their check
@@ -515,7 +573,12 @@ async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
   for (const key of AI_IMPORT_KEYS as string[]) {
     const template = await h.mapping.describeTemplate(admin, key, 'en');
     const required = template.columns.filter((column: any) => column.required).map((column: any) => column.column);
-    const columns = required.length > 0 ? required : [template.columns[0].column];
+    // A link file needs its subject and its technology, each by reference or by name (lot I4 of 26.11.9).
+    const linkKeys: Record<string, string[]> = {
+      technology_asset_links: ['asset_name', 'technology_name'],
+      technology_application_links: ['application_name', 'technology_name'],
+    };
+    const columns = required.length > 0 ? required : linkKeys[key] ?? [template.columns[0].column];
     const file = attach(h, `${key}.csv`, `${columns.map((_: string, index: number) => `Colonne ${index + 1}`).join(';')}\n${columns.map(() => 'Plaid check').join(';')}\n`);
     const card = await h.previews.createPreview(admin, 'prepare_import_mapping', {
       attachment_id: file,
@@ -527,7 +590,7 @@ async function testEveryImportChecks(h: Harness, runner: QueryRunner, s: Seed) {
     assert.equal(check.dry_run, true, key);
     assert.equal(typeof check.ok, 'boolean', key);
     assert.equal(check.report.kind, key === 'budget_lines' ? 'budget_file' : 'rows', key);
-    // Every import reads the file Plaid builds: an import that needs every column of its template gets them.
+    // Every import reads the file Plaid builds, with the columns the mapping fills only.
     assert.ok(!check.issues.some((issue: any) => /HEADER/.test(String(issue.code))), `${key}: ${JSON.stringify(check.issues)}`);
     // A value nothing names beyond case: no match listed.
     if (check.report.kind === 'rows') assert.equal(check.report.matches, undefined, key);

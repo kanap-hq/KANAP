@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { endOfValidityFromDate } from '../status';
 import { DecimalMark, ParsedAmount, parseCsvAmount, resolveAmountConvention } from './amount';
+import { CLEAR_MARK, GUARDED_DASH } from './clear';
 import { formatCsvDate, formatCsvEndOfValidity } from './date';
 import { csvDecodeErrorCode } from './decode';
 import { CSV_FILE_EMPTY_MESSAGE, readSheet } from './read';
@@ -30,6 +31,13 @@ export interface MasterDataFileRequest {
   /** Columns accepted when absent. Every other column, and every unknown one, is refused. */
   optional?: readonly string[];
   /**
+   * The columns a row finds its record by, or creates one by: each entry is one way (`[['reference'],
+   * ['name']]`). When set, the file must carry every column of one entry at least, and may leave out
+   * any other column of `fields`, which the import then never writes; `optional` is not read. An
+   * unknown column is refused as before. A file that carries none names the columns of the last entry.
+   */
+  keys?: readonly (readonly string[])[];
+  /**
    * An unknown header that stays in `ignoredColumns` and does not refuse the file.
    * Any other unknown header still does.
    */
@@ -50,6 +58,30 @@ export interface ImportReportError {
   column?: string;
   code?: string;
   params?: Record<string, string | number>;
+}
+
+/**
+ * What the import of a master-data file answers, at the check (`dryRun`) and at the load, with
+ * the same counts. `cleared`: the stored values the rows clear with `-` (D21 of 26.11.9), the
+ * supplier contact links a `-` removes included; a `-` on a value already empty is not counted.
+ * Set on a file that imports; the check says it before anything is written.
+ */
+export interface MasterDataImportResult {
+  ok: boolean;
+  dryRun: boolean;
+  total: number;
+  inserted: number;
+  updated: number;
+  unchanged?: number;
+  cleared?: number;
+  /** The rows written, at the load. */
+  processed?: number;
+  errors: ImportReportError[];
+  /** Rows that import, with a note (a name matched in another case, a rename, a move). */
+  warnings?: ImportReportError[];
+  /** The unknown headers the file carried, and what the shared layer noticed. */
+  ignoredColumns: string[];
+  notices: MasterDataFileRead['notices'];
 }
 
 export interface MasterDataFileRead {
@@ -78,6 +110,7 @@ export async function readMasterDataFile(request: MasterDataFileRequest): Promis
     dateOrder: request.dateOrder,
     decimalMark: request.decimalMark,
     typedNumbersInLanguage: true,
+    keepsGuardedDash: true,
   });
   if (read.fileErrors.length > 0) {
     const code = read.fileErrorCode
@@ -97,8 +130,8 @@ export async function readMasterDataFile(request: MasterDataFileRequest): Promis
   };
 }
 
-/** The titles of each column, every language, for the reader. */
-function labelLists(labels: NonNullable<MasterDataFileRequest['fieldLabels']>): Record<string, string[]> {
+/** The titles of each column, every language, for the reader (`CsvReadSchema.fieldLabels`). */
+export function labelLists(labels: NonNullable<MasterDataFileRequest['fieldLabels']>): Record<string, string[]> {
   const lists: Record<string, string[]> = {};
   for (const [field, byLanguage] of Object.entries(labels)) {
     lists[field] = Object.values(byLanguage).filter((label): label is string => !!label);
@@ -114,8 +147,12 @@ function headerProblem(
   if (read.headerErrors.length > 0) return { row: 0, message: read.headerErrors.join(' ') };
   const optional = new Set(request.optional ?? []);
   const present = new Set(read.columns.map((column) => column.id));
-  const missing = request.fields
-    .filter((field) => !optional.has(field) && !present.has(field))
+  const keys = request.keys;
+  const wanted = keys
+    ? (keys.some((entry) => entry.every((field) => present.has(field))) ? [] : keys[keys.length - 1] ?? [])
+    : request.fields.filter((field) => !optional.has(field));
+  const missing = wanted
+    .filter((field) => !present.has(field))
     .map((field) => request.fieldLabels?.[field]?.[request.language] ?? field);
   const notice = request.noticeUnknown;
   const extras = notice ? read.ignoredColumns.filter((header) => !notice(header)) : read.ignoredColumns;
@@ -143,9 +180,13 @@ export function headerMismatchError(missing: readonly string[], extras: readonly
   };
 }
 
-/** A trimmed cell. A column the file does not carry, or an empty cell, is ''. */
+/**
+ * A trimmed cell. A column the file does not carry, or an empty cell, is ''. `'-`, which these
+ * files keep as written (`keepsGuardedDash`), is the text "-".
+ */
 export function cellOf(row: CsvDataRow, field: string): string {
-  return (row.cells[field] ?? '').trim();
+  const text = (row.cells[field] ?? '').trim();
+  return text === GUARDED_DASH ? CLEAR_MARK : text;
 }
 
 /**

@@ -361,7 +361,7 @@ UK-GAAP;5200;Postage and courier;6200;IT Services and Software;
 DE-HGB;4920;Portokosten;6200;IT Services and Software;
 ```
 
-Nur die Konsolidierungs-Kontonummer zählt, wenn der Konsolidierungskontenplan sie enthält: Der Import ersetzt die Spalten für Name und Beschreibung durch die des Konsolidierungskontenplans. Steht die Nummer nicht im Konsolidierungskontenplan, bleiben Name und Beschreibung aus der Datei erhalten, und das Konto wird als außerhalb des Konsolidierungskontenplans markiert. Eine leere Nummer entfernt die Zuordnung, den Namen und die Beschreibung.
+Nur die Konsolidierungs-Kontonummer zählt, wenn der Konsolidierungskontenplan sie enthält: Der Import ersetzt die Spalten für Name und Beschreibung durch die des Konsolidierungskontenplans. Steht die Nummer nicht im Konsolidierungskontenplan, bleiben Name und Beschreibung aus der Datei erhalten, und das Konto wird als außerhalb des Konsolidierungskontenplans markiert. `-` in der Nummer entfernt die Zuordnung, den Namen und die Beschreibung. Eine leere Nummer behält sie.
 
 **Option 3: Manuelle Eingabe**
 Öffnen Sie ein Konto und wählen Sie sein **Konsolidierungskonto** im Konten-Arbeitsbereich.
@@ -475,8 +475,8 @@ Die globale `/accounts`-Datei enthält eine `coa_code`-Spalte, um zu identifizie
   - **Exportieren**: die Konten der Liste (oder, auf Wunsch im Dialog, alle Konten) mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen, Status und **Verwendet für**
   - **Importieren**: **Vorlage herunterladen** im Dialog liefert eine Datei nur mit den Kopfzeilen. Beginnen Sie mit der **Vorabprüfung**, um Struktur, Kodierung, Pflichtfelder und Duplikate zu prüfen, und dann **Laden**, um die Einfügungen und Aktualisierungen anzuwenden
   - **Zuordnung**: nach `(coa_code, account_number)` innerhalb Ihres Arbeitsbereichs
-  - **Pflichtspalten**: `coa_code`, `account_number`, `account_name`. Alle Zeilen einer Datei müssen denselben `coa_code` tragen
-  - **Optionale Spalten**: `native_name`, `description`, die Konsolidierungsspalten, `status`, `nature`. Eine Datei kann sie weglassen: Die Konten, die sie aktualisiert, behalten ihre gespeicherten Werte, und neue Konten erhalten die Standardwerte (leer, enabled, **OPEX und CAPEX**). Eine Spalte, die in der Datei vorhanden ist, übernimmt ihre Zellen, auch leere
+  - **Pflichtspalten**: `coa_code` und `account_number`, dazu `account_name` für ein neues Konto. Alle Zeilen einer Datei müssen denselben `coa_code` tragen
+  - **Optionale Spalten**: `native_name`, `description`, die Konsolidierungsspalten, `status`, `nature`. Eine Datei kann sie weglassen: Die Konten, die sie aktualisiert, behalten ihre gespeicherten Werte, und neue Konten erhalten die Standardwerte (leer, enabled, **OPEX und CAPEX**). Bei einem Konto, das die Datei aktualisiert, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn. `-` kann `coa_code`, `account_number`, `account_name` oder `status` nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing)
   - Duplikate in der Datei (gleicher coa_code + account_number) werden dedupliziert; erstes Vorkommen gewinnt
 
 **CSV-Schema** (der Export schreibt das Trennzeichen der Sprache der Oberfläche; hier mit Semikolons dargestellt):
@@ -490,7 +490,7 @@ Von der Kontenpläne-Seite aus sind **Importieren** und **Exportieren** automati
 
   - **Exportieren**: Konten aus diesem Kontenplan (keine `coa_code`-Spalte nötig)
   - **Importieren**: Konten werden automatisch in diesen Kontenplan eingefügt oder aktualisiert. Der Titel des Dialogs nennt den Kontenplan, zum Beispiel **Konten in FR-PCG importieren**
-  - Nur `account_number` und `account_name` sind Pflicht. Die anderen Spalten sind optional, wie in der globalen Datei
+  - Nur `account_number` ist Pflicht, dazu `account_name` für ein neues Konto. Die anderen Spalten sind optional, wie in der globalen Datei
 
 **CSV-Schema** (Kontenplan-bezogen; hier mit Semikolons dargestellt):
 ```
@@ -503,8 +503,8 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Kontonummern sollten innerhalb eines Kontenplans eindeutig sein
   - `account_number` und `consolidation_account_number`: ganze Zahlen mit höchstens 15 Ziffern. Eine längere Nummer wird für diese Zeile abgelehnt. Führende Nullen entfallen (`06156` wird als `6156` gespeichert): die **Vorabprüfung** führt diese Zeilen als Warnungen auf, und die Datei wird trotzdem geladen
   - Statuswerte: `enabled` oder `disabled` (Standard ist enabled)
-  - `nature` ist die Einstellung **Verwendet für**, immer die letzte Spalte. Werte: `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle setzt **OPEX und CAPEX**. Jeder andere Wert wird für diese Zeile abgelehnt
-  - Konsolidierungsspalten: Existiert `consolidation_account_number` in Ihrem Konsolidierungskontenplan, ersetzen dessen Name und Beschreibung die Zellen `consolidation_account_name` und `consolidation_account_description`. Eine leere Nummer löscht alle drei. Siehe [Konsolidierungszuordnungen einrichten](#konsolidierungszuordnungen-einrichten)
+  - `nature` ist die Einstellung **Verwendet für**, immer die letzte Spalte. Werte: `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle behält die Einstellung eines gespeicherten Kontos, und ein neues Konto gilt für **OPEX und CAPEX**. `-` setzt **OPEX und CAPEX**. Jeder andere Wert wird für diese Zeile abgelehnt
+  - Konsolidierungsspalten: Existiert `consolidation_account_number` in Ihrem Konsolidierungskontenplan, ersetzen dessen Name und Beschreibung die Zellen `consolidation_account_name` und `consolidation_account_description`. `-` in der Nummer leert alle drei, und eine leere Nummer behält sie. Siehe [Konsolidierungszuordnungen einrichten](#konsolidierungszuordnungen-einrichten)
 
 ## Tipps
 

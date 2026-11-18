@@ -118,19 +118,21 @@ Les colonnes, dans cet ordre :
 **Import** :
 
 - Utilisez la **Vérification préalable** pour valider le fichier avant de l'appliquer, puis **Charger**
-- **Correspondance par référence** : une `reference` remplie (`DEPT-12` ou `12`) désigne le département que la ligne met à jour, même si son nom a changé. Le département prend le nom et la société de la ligne : une autre société l'y déplace. La vérification préalable signale chaque département qui sera renommé ou changera de société
+- **Correspondance par référence** : une `reference` remplie (`DEPT-12` ou `12`) désigne le département que la ligne met à jour, même si son nom a changé. Le département prend le nom et la société que donne la ligne : une autre société l'y déplace. La vérification préalable signale chaque département qui sera renommé ou changera de société
 - **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, une ligne est rapprochée par nom de département et nom de société. Elle met à jour le département qu'elle nomme, et toute autre ligne en crée un
 - **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « DEPT-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
 - **Renommage ou déplacement** : un nom qu'un autre département de la société de la ligne porte déjà est refusé, et le message donne la référence de ce département : « « Finance » appartient déjà à DEPT-7. »
 - **Une ligne par département** : deux lignes qui mettent à jour le même département sont refusées : « Cette ligne met à jour DEPT-7, comme la ligne 3. Gardez une seule ligne par fiche. » Deux lignes qui créent le même département (même société et même nom, quelle que soit la casse) sont refusées aussi : « Mêmes valeurs dans company_name, name qu'à la ligne 3. »
 
-**Cellules obligatoires** : `name` et `company_name`, une société existante
+**Cellules obligatoires** : `name` et `company_name`, une société existante. Une ligne avec une `reference` peut les laisser vides : le département garde son nom et sa société
+
+**Cellules vides et `-`** : sur un département que le fichier met à jour, une cellule vide garde la valeur enregistrée, et `-` efface `description` ou `disabled_at`. `-` ne peut pas effacer `reference`, `company_name`, `name` ni `status` : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
 
 **Cellules facultatives** : `reference`, `description`, `status`, `disabled_at`
 
 **Colonnes de cycle de vie** :
 - `status` vaut `enabled` ou `disabled`, et `disabled_at` est la fin de validité, une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit le statut déduit de la fin de validité. Un nouveau département est activé sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine le département aujourd'hui
-- Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »
+- Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Le statut est « Activé », mais la fin de validité est passée. Écrivez « - » dans la fin de validité, ou « disabled » dans le statut. Si le fichier vient d'un ancien export, exportez à nouveau les données. » ou « Le statut est « Désactivé », mais la fin de validité est encore à venir. Écrivez « enabled » dans le statut, ou une date passée dans la fin de validité. »
 
 **Notes** :
 - Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import

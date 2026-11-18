@@ -138,15 +138,24 @@ Verwalten Sie Kontakte in großen Mengen mit CSV-Dateien oder Excel-Arbeitsmappe
 **Import**:
 - Verwenden Sie die **Vorabprüfung** zum Validieren vor dem Anwenden
 - Kann neue Kontakte erstellen oder bestehende aktualisieren
-- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`CTCT-4` oder `4`) bezeichnet den Kontakt, den die Zeile aktualisiert, auch wenn sich seine E-Mail geändert hat. Der Kontakt erhält den Namen und die E-Mail der Zeile. Die Vorabprüfung meldet jeden Kontakt, der umbenannt wird oder seine E-Mail-Adresse ändert
+- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`CTCT-4` oder `4`) bezeichnet den Kontakt, den die Zeile aktualisiert, auch wenn sich seine E-Mail geändert hat. Der Kontakt erhält den Namen und die E-Mail, die die Zeile angibt. Die Vorabprüfung meldet jeden Kontakt, der umbenannt wird oder seine E-Mail-Adresse ändert
 - **Zuordnung über die E-Mail**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird die Zeile über die E-Mail-Adresse zugeordnet
 - **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„CTCT-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
 - **E-Mail ändern**: Eine E-Mail, die bereits ein anderer Kontakt hat, wird abgelehnt, und die Meldung nennt dessen Referenz: „„ana@acme.example“ gehört bereits zu CTCT-7.“
 - **Eine Zeile pro Kontakt**: Zwei Zeilen, die denselben Kontakt aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert CTCT-7, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“ Zwei Zeilen, die denselben Kontakt anlegen (gleiche E-Mail, unabhängig von der Groß- und Kleinschreibung), werden ebenfalls abgelehnt: „Gleiche Werte in email wie in Zeile 3.“
 
-**Pflichtfelder**: E-Mail
+- **Leere Zellen und `-`**: Bei einem Kontakt, den die Datei aktualisiert, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn. `-` leert die Namen, `job_title`, `phone`, `mobile`, `country` und `notes`. Es kann `reference`, `email` oder `active` nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing)
 
-**Optionale Felder**: `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
+**Lieferantenspalten**:
+- `supplier_name` legt den Lieferanten des Kontakts fest, über seine Referenz (`SUP-12`) oder seinen Namen. Namen werden gefunden, wie unter [Namen von Datensätzen](csv-files.md#names-of-records) beschrieben: Ein Name, der mit anderen Akzenten gefunden wird, wird bei der Prüfung aufgeführt, und Sie können die Zuordnung rückgängig machen. Ein Name, der zu keinem oder zu mehreren Lieferanten passt, lehnt die Zeile ab. Der Import legt nie einen Lieferanten an
+- `supplier_role` ist der Kontakttyp für diesen Lieferanten: `commercial`, `technical`, `support` oder `other`, oder das Wort, das die Kontaktseite zeigt, in einer der vier Sprachen. Bleibt die Zelle leer, behält der Kontakt seinen Typ, und ein Kontakt ohne Typ erhält **Vertrieb**, wie auf der Kontaktseite
+- Ein leerer `supplier_name` behält den Lieferanten. `-` entfernt den Lieferanten und seinen Kontakttyp. `-` nur in `supplier_role` wird abgelehnt, ebenso ein Typ bei einem Kontakt ohne Lieferanten
+- Ein Wechsel des Lieferanten bewirkt dasselbe wie die Wahl des Lieferanten auf der Kontaktseite
+- Der Export und die Vorlage enthalten beide Spalten
+
+**Pflichtfelder**: `email`, bei einem neuen Kontakt
+
+**Optionale Felder**: `reference`, `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `supplier_name`, `supplier_role`, `notes`, `active`
 
 **Hinweise**:
 - Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte

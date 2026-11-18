@@ -55,6 +55,10 @@ const PrepareImportMappingInputSchema = z.object({
     .describe('What the mapping supposes about the whole file, in the person\'s language (one row per server, the amounts are in euros). '
       + 'A row is named by its line of the file, as the summary numbers it (header counted). The card shows the rows and the values '
       + 'not read: do not describe them here.'),
+  left_aside: z.array(z.string().trim().min(1).max(200)).max(150).optional()
+    .describe('Only the file columns, by header, that the person\'s message asks to leave out: in the imports where `-` clears, '
+      + 'a column named like a template column is read even when you do not map it. Never a column that holds only `-`, '
+      + 'an empty column, or a column whose effect the message does not mention.'),
 });
 
 function stringOf(value: unknown): string {
@@ -91,6 +95,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     entity_type: `The import the file fills: ${AI_IMPORT_KEYS.join(', ')}.`,
     columns: 'One entry per template column the file fills: column, source (file column position) or value (for every row), confidence, and optionally date_order, decimal_mark, values (file value to the value it stands for) and note.',
     assumptions: 'What the mapping supposes about the whole file, in the user\'s language.',
+    left_aside: 'Optional: the file columns, by header, that the person\'s message asks to leave out.',
   };
   readonly businessResource = 'applications';
   readonly businessResources = AI_IMPORT_RESOURCES;
@@ -101,7 +106,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     prompt_hint: 'For a spreadsheet the user attached (an `<attached_table>` in their message) that they want imported, or that fits an import: '
       + 'call `describe_import_template` for the import it fits, then `prepare_import_mapping` with the attachment id and the mapping. '
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
-      + 'and name the file columns you leave out. When the card shows values not read, ask the user what they stand for and call again with `values`. '
+      + 'and name the file columns you leave out. In `note` and `assumptions`, never say that a row creates or updates a record, nor what a record '
+      + 'already holds: the check tells it, and the card shows it. When the card shows values not read, ask the user what they stand for and call again with `values`. '
       + 'The import checks the references to other records (a company, a supplier, a server, a person) when it runs. '
       + 'For a column that names a record by its name, `values` proposes only the name of an existing record (read in the template, '
       + 'else found by a search), never a case or accents variant: the check matches those itself, and refuses a proposal whose record '
@@ -137,9 +143,15 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say which columns and lines they are on, '
       + 'a column by its title and a row by its line of the file: the card writes each message in the person\'s language, so never write a code '
       + '(`BUDGET_FILE_...`, `CSV_...`), a template column key (`analytics:...`) or a cell. Help the user correct the mapping or the file, and call again. '
-      + 'The imports of master data and technology links replace every value of a record they update: when the check refuses the file '
-      + 'with AI_IMPORT_CLEARS_COLUMNS, rows of the file match existing records and the template columns it lacks would be cleared; '
-      + 'offer to map those columns or to keep only the new records. '
+      + 'On a record the file updates, a blank cell and a column the mapping leaves out keep the stored value; in the imports of master data, '
+      + 'contracts, calendars and technology links, a cell holding `-` clears it (the check counts them, `cleared`, and `on_approval` says it). '
+      + 'A `-` written in the file is the person asking to clear, as on the screen: map its column like any other and say what the card clears; '
+      + 'the person approves or refuses. That `-` reaches the import as it is: never map it in `values`. '
+      + 'Write `-` yourself (in `values` or as a value for every row) only when the person asks to clear that value; never turn a blank cell or a value into `-`. '
+      + 'In those imports, a file column named like a template column (its key or its title) is read as on the screen, mapped or not. '
+      + '`left_aside` is only for a column the person\'s message asks to leave out. Never list there a column that holds only `-`, '
+      + 'an empty column, or a column whose effect the message does not mention: a column of `-` is the clearing the file asks for, '
+      + 'it stays read and the card announces it. '
       + 'Approving the card runs the import, and its card then shows what was created and updated: until then nothing is imported, '
       + 'so never say it is.',
   };
@@ -186,6 +198,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         filename: mapping.filename,
         columns: input.columns,
         assumptions: input.assumptions ?? [],
+        // The file's columns the person left aside: the approval builds the same file.
+        ...(input.left_aside?.length ? { left_aside: input.left_aside } : {}),
         // The choices the check followed: an undone match the file no longer makes is dropped. A check
         // that refused the file before reading its rows followed none: the choices are kept as received.
         ...(budget ? { choices: mapping.validation?.matching ? mapping.validation.matching.choices : choices ?? [] } : {}),

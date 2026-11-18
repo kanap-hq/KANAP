@@ -183,7 +183,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 - La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 - Una fila por calendario y año. Un calendario con tres años ocupa tres filas. Un calendario sin ningún año se exporta como una fila con el año y los meses vacíos
 - Un calendario estándar solo exporta los años que usted modificó. Los demás años siguen los festivos y no necesitan fila
-- Las columnas `country`, `region` y `disabled_at` son opcionales al importar. Un archivo sin `country` ni `region` crea calendarios personalizados
+- Al importar, solo la columna `code` es obligatoria: una columna que el archivo omite nunca se escribe. `year` y los doce meses van juntos. Un archivo sin `country` ni `region` crea calendarios personalizados
 
 | Columna | Contenido |
 |---|---|
@@ -192,7 +192,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 | `description` | Texto libre |
 | `country` | Opcional. El código de país de dos letras de un calendario estándar, por ejemplo `FR`. Vacía para un calendario personalizado |
 | `region` | Opcional. El código de la región, por ejemplo `57` para Mosela o `BY` para Baviera. Necesita un país. Vacía para todo el país |
-| `status` | `enabled` o `disabled`. Vacía significa `enabled` |
+| `status` | `enabled` o `disabled`. Vacía significa `enabled` para un calendario nuevo y conserva el estado guardado en una actualización |
 | `disabled_at` | Columna opcional. El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado. Vacía si no hay fin |
 | `year` | Cuatro dígitos, de 2000 a 2100. Vacía en una fila que solo define los campos del calendario |
 | `jan` a `dec` | Los días laborables de cada mes, con un punto como separador decimal (también se acepta la coma). Obligatorias en una fila con año |
@@ -211,6 +211,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 - **El país y la región se aplican cuando el archivo crea un calendario.** En un calendario existente, déjelos vacíos o indique los valores del propio calendario. Un valor distinto se rechaza.
 - **Los años de un calendario estándar pasan a ser años modificados.** Los demás años siguen los festivos.
 - **Los meses siguen las reglas del espacio de trabajo**: los doce meses, cada uno como máximo con los días naturales del mes, hasta 6 decimales.
+- **Celdas vacías y `-`**: en un calendario guardado, un nombre, una descripción, un estado o un fin de validez vacíos conservan el valor guardado. `-` borra la descripción y el fin de validez. `-` no puede borrar el código, el nombre, el estado, el país, la región, el año ni un mes: la fila se rechaza, y para un mes el mensaje indica escribir `0`. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing).
 - **Los años que faltan en el archivo se conservan.** Una importación añade o sustituye años. Nunca quita ninguno. Para quitar un año, use su enlace **Quitar** en el espacio de trabajo, o **Volver a los valores estándar** en un calendario estándar.
 - **Recuentos**: un calendario nuevo o un año nuevo cuenta como una inserción. Un año modificado, o un cambio de nombre, descripción o ciclo de vida, cuenta como una actualización. Una fila idéntica a lo guardado cuenta como sin cambios. Exportar e importar el mismo archivo indica todas las filas como sin cambios.
 - **Los calendarios que faltan en el archivo** se dejan como están. La importación nunca elimina.
