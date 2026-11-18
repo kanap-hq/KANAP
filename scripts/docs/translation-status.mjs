@@ -8,8 +8,10 @@
 // A translated page is stale when its English page changed in a commit after the last commit
 // that touched the translated page, or has uncommitted changes while the translated page has
 // none. The repository squashes, so a pull request that updates an English page and its
-// translations leaves one commit: up to date. A translated page with uncommitted changes counts
-// as being written and is never stale.
+// translations leaves one commit: up to date. On a branch, a merge counts as that commit when
+// the merged text differs from every parent; when the merge keeps one side, the last commit is
+// that side's. A translated page with uncommitted changes counts as being written and is never
+// stale.
 //
 // Glossary and nav labels: a translated page is listed when a term of its language changed since
 // its last commit (glossary.json, or the language's nav.json) and the page still contains the
@@ -66,20 +68,27 @@ export function translationStatus(root) {
     throw new Error('This clone is shallow: the translation status needs the full history (git fetch --unshallow).');
   }
 
-  // Last commit that touched each file of the manual (git log lists the newest first).
+  // Last commit that changed one file. A single log of the whole manual is wrong once the
+  // history has a merge: git prints no names for it, and when the merged manual matches
+  // neither parent that log walks both sides, so the newer side dates a page whose text the
+  // merge took from the other side. One path at a time, git follows the side the merge kept.
+  // When the merged text differs from every parent, the merge itself is the last change.
   const last = new Map();
-  let commit = null;
-  for (const line of git('log', '--format=%x00%H', '--name-only', '--', DOCS).split('\n')) {
-    if (line.startsWith('\0')) commit = line.slice(1);
-    else if (line && !last.has(line)) last.set(line, commit);
-  }
+  const lastTouch = (path) => {
+    if (!last.has(path)) last.set(path, git('log', '-1', '--format=%H', '--', path).trim());
+    return last.get(path);
+  };
   const dirty = new Set(
     git('status', '--porcelain', '--untracked-files=all', '--no-renames', '--', DOCS, GLOSSARY, 'frontend/src/locales')
       .split('\n')
       .filter(Boolean)
       .map((line) => line.slice(3)),
   );
-  const changedSince = (from, path) => git('log', '--format=%h', `${from}..HEAD`, '--', path).split('\n').filter(Boolean);
+  // Same per-path history as lastTouch. A merge is listed when this file differs from every
+  // parent, and left out when the merge kept one side. --no-patch keeps the diff out of the
+  // count: the commit line is the change.
+  const changedSince = (from, path) =>
+    git('log', '--no-patch', '--format=%h', `${from}..HEAD`, '--', path).split('\n').filter(Boolean);
 
   // Terms of a language as they were at a commit, and as they are now on disk.
   const cache = new Map();
@@ -123,8 +132,9 @@ export function translationStatus(root) {
         status.missing.push({ locale, page });
         continue;
       }
-      if (dirty.has(target) || !last.has(target)) continue;
-      const from = last.get(target);
+      if (dirty.has(target)) continue;
+      const from = lastTouch(target);
+      if (!from) continue;
       const commits = changedSince(from, english);
       if (commits.length > 0 || dirty.has(english)) {
         status.stale.push({ locale, page, commits: dirty.has(english) ? ['uncommitted', ...commits] : commits });
