@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -144,5 +144,98 @@ describe('RoadmapGenerator', () => {
     expect(screen.getByText('Collaborative')).toBeInTheDocument();
     expect(api.post).not.toHaveBeenCalledWith('/portfolio/projects/planning/roadmap/apply', expect.anything());
     expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  // The schedule row the generator shows. Its id is a uuid so a case-only difference is meaningful.
+  const shownProjectId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+
+  function generatedFor(projectId: string) {
+    return {
+      ...generated,
+      schedule: [{ ...generated.schedule[0], projectId }],
+    };
+  }
+
+  function applyRefusal(details: Array<{ projectId?: string; error?: string }>) {
+    const error = new Error('Request failed with status code 400') as Error & { response?: unknown };
+    error.response = { status: 400, data: { details } };
+    return error;
+  }
+
+  async function generateAndConfirmApply(
+    projectId: string,
+    onApply: () => Promise<unknown>,
+  ) {
+    api.post.mockImplementation(async (url: string) => {
+      if (url === '/portfolio/projects/planning/roadmap/apply') return onApply();
+      return { data: generatedFor(projectId) };
+    });
+    await i18n.loadNamespaces(['portfolio', 'common']);
+    await i18n.changeLanguage('en');
+    renderGenerator();
+    fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
+    const openApply = await screen.findByRole('button', { name: 'Apply dates' });
+    expect(openApply).toBeEnabled();
+    fireEvent.click(openApply);
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply dates' }));
+  }
+
+  async function alertText() {
+    const alert = await screen.findByRole('alert', { hidden: true });
+    return (alert.textContent ?? '').replace(/\s+/g, ' ').trim();
+  }
+
+  it('applies the selected dates and confirms how many projects changed', async () => {
+    await generateAndConfirmApply(shownProjectId, async () => ({ data: { updated: 1 } }));
+    expect(await screen.findByText('Applied roadmap dates to 1 project.')).toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledWith('/portfolio/projects/planning/roadmap/apply', {
+      projects: [{
+        projectId: shownProjectId,
+        plannedStart: '2026-03-02',
+        plannedEnd: '2026-04-10',
+      }],
+    });
+  });
+
+  it('names a refused project by the name the generator shows', async () => {
+    await generateAndConfirmApply(shownProjectId, async () => {
+      throw applyRefusal([{ projectId: shownProjectId.toUpperCase(), error: 'Dates overlap a freeze' }]);
+    });
+    const text = await alertText();
+    expect(text).toBe('Cheese track: Dates overlap a freeze');
+    expect(text.toLowerCase()).not.toContain(shownProjectId);
+  });
+
+  it('shows the server error alone when the refusal is the whole request', async () => {
+    await generateAndConfirmApply(shownProjectId, async () => {
+      throw applyRefusal([{ projectId: 'request', error: 'Duplicate projectId' }]);
+    });
+    const text = await alertText();
+    expect(text).toBe('Duplicate projectId');
+    expect(text).not.toMatch(/request/i);
+    expect(text).not.toMatch(/Project:/);
+  });
+
+  it('shows the server error alone when the refusal names an id the generator does not show', async () => {
+    const unknownId = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
+    await generateAndConfirmApply(shownProjectId, async () => {
+      throw applyRefusal([{ projectId: unknownId, error: 'Outside the plan' }]);
+    });
+    const text = await alertText();
+    expect(text).toBe('Outside the plan');
+    expect(text).not.toContain(unknownId);
+    expect(text).not.toMatch(/Project:/);
+    expect(text).not.toContain('Cheese track');
+  });
+
+  it('shows the generic apply failure when a request refusal carries no error', async () => {
+    await generateAndConfirmApply(shownProjectId, async () => {
+      throw applyRefusal([{ projectId: 'request' }]);
+    });
+    const text = await alertText();
+    expect(text).toBe('Failed to apply roadmap dates');
+    expect(text).not.toMatch(/request/i);
+    expect(text).not.toMatch(/Project:/);
   });
 });
