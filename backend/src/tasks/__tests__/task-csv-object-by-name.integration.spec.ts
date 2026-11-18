@@ -317,13 +317,14 @@ async function testTaskOutsideAProject() {
     const toNone = ['id;title;related_object_type;related_object_id;related_object_name', `${q2};Q deux;;;`].join('\n');
     const check2 = await importCsv(runner.manager, tenantId, toNone, {});
     assert.deepEqual([codes(check2), warned(check2), check2.unchanged], [[], [], 1]);
-    // `-` on them is refused, each column named: the task keeps its object.
+    // `-` on them makes the task standalone, as "Make standalone" (pass E of lot I6): the phase goes,
+    // the classification stays; the type, the id and the phase are counted.
     const detach = ['id;title;related_object_type;related_object_id;related_object_name', `${q2};Q deux;-;-;-`].join('\n');
     for (const dryRun of [true, false]) {
-      const refused = await importCsv(runner.manager, tenantId, detach, { dryRun });
-      assert.deepEqual(codes(refused), ['related_object_type', 'related_object_id', 'related_object_name'].map((column) => [2, column, 'CSV_VALUE_CANNOT_BE_CLEARED']));
+      const detached = await importCsv(runner.manager, tenantId, detach, { dryRun });
+      assert.deepEqual([codes(detached), warned(detached), detached.cleared], [[], [[2, 'phase_name', 'CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT']], 3]);
     }
-    assert.deepEqual(await fields(q2), [build.id, source.id, category.id, stream.id, company.id]);
+    assert.deepEqual(await fields(q2), [null, source.id, category.id, stream.id, company.id]);
 
     // The file gives what the task cannot have: not imported, said on its cell, the row kept. A new
     // incident task, a new standalone task (its classification is imported), an incident task updated
