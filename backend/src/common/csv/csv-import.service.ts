@@ -1469,7 +1469,28 @@ export class CsvImportService {
       }
     }
 
+    if (!context.params.dryRun) await this.lockExistingEntities(config, entities, context);
     return entities;
+  }
+
+  /**
+   * The load works from records nobody changes before it commits (lot I6 of 26.11.9, pass F): the
+   * records the file finds are locked `FOR UPDATE` and read again, in one statement in the order of
+   * their ids (two loads that cross the same records wait for each other, never deadlock), in the
+   * load's transaction. Every value the import keeps or derives (a blank cell, a column the file
+   * leaves out, a hook's rule) then comes from the record as it is when written, and a change saved on
+   * the screen during the load waits for it, then applies. The check (`dryRun`) locks nothing.
+   */
+  private async lockExistingEntities(config: CsvEntityConfig, entities: Map<string, any>, context: CsvImportContext): Promise<void> {
+    const ids = [...new Set([...entities.values()].map((entity) => String(entity.id)))].sort();
+    if (ids.length === 0) return;
+    const locked: any[] = await context.manager.query(
+      `SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE`,
+      [context.tenantId, ids],
+    );
+    const fresh = new Map(locked.map((entity) => [String(entity.id), entity]));
+    // A record gone since the first read keeps that read, as before the lock.
+    for (const [key, entity] of entities) entities.set(key, fresh.get(String(entity.id)) ?? entity);
   }
 
   /**
