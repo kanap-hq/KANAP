@@ -8,7 +8,8 @@ import { buildImportMapping, type AiImportTemplateColumn } from '../import/ai-im
 // clearing mark, in every kind of column (a day, a fixed list, an e-mail), as the screen's file
 // does: the import then clears the value or refuses the row. A blank cell stays blank (it keeps the
 // stored value), and the model's value map turns a value into `-` only when it says so. The six
-// imports of the shared import follow it since lot I6; the budget file reads `-` by its own reader.
+// imports of the shared import follow it since lot I6, and the budget file, which reads `-` by its own
+// reader, since its pass F.
 
 const text = (value: string) => ({ kind: 'text' as const, value });
 
@@ -59,14 +60,12 @@ function testTheMappingSetsTheMarkByImport() {
     ],
     assumptions: [],
   });
-  // The imports of lot I4 and, since lot I6, the six of the shared import read `-`.
-  for (const key of ['suppliers', ...SHARED_IMPORTS]) {
+  // The imports of lot I4, the six of the shared import since lot I6, and the budget file since its
+  // pass F, which reads `-` by its own reader as its screen does: a `-` in a day column is the mark.
+  for (const key of ['suppliers', ...SHARED_IMPORTS, 'budget_lines']) {
     const mapped = buildImportMapping(grid, template, request(key), 'fr');
     assert.deepEqual(mapped.file.rows, [['Lactalis', '-']], `the ${key} import reads \`-\``);
   }
-  // The budget file reads its cells by its own reader: `-` stays a value the day column does not read.
-  const budget = buildImportMapping(grid, template, request('budget_lines'), 'fr');
-  assert.deepEqual(budget.file.rows, [['Lactalis', { unread: '-' }]]);
 }
 
 /** The six imports of the shared import, under the clearing rule since lot I6 of 26.11.9. */

@@ -50,7 +50,8 @@ export const AI_IMPORT_ACCESS: Readonly<Record<AiImportKey, AiImportAccess>> = {
  * blank cell keeps the value and `-` clears it. The imports of lot I4 take it as `mode: 'enrich'`, the six
  * of the shared import (lot I6) as their only rule (`ai-import-runner.service.ts`). Kad's file writes the
  * person's `-` in every kind of column for them (`AiImportColumnHints.clearMark`) and reads a file column
- * named like a template column as the screen does. The budget file reads `-` by its own reader.
+ * named like a template column as the screen does. The budget file reads `-` by its own reader: Kad's
+ * file carries the mark for it too (`buildImportMapping`), and reads only the columns the model maps.
  */
 export const AI_IMPORT_CLEARING_RULE: ReadonlySet<AiImportKey> = new Set<AiImportKey>([
   'applications', 'assets', 'portfolio_projects', 'portfolio_requests', 'tasks', 'incidents',

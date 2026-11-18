@@ -361,6 +361,27 @@ async function testBudgetFile(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(clearedDone.import_mapping.result.cleared, 1);
   const described = await runner.query(`SELECT product_name, description FROM spend_items WHERE tenant_id = $1 ORDER BY product_name`, [s.tenantId]);
   assert.deepEqual(described.map((line: any) => [line.product_name, line.description]), [['Licences', null], ['Serveurs', 'Contrat annuel']]);
+
+  // `-` in a day column of the person's file (« Fin de validité »), mapped by the model: read as the
+  // clearing mark, as the screen's budget file reads it (lot I6 of 26.11.9, pass F).
+  await runner.query(`UPDATE spend_items SET disabled_at = '2030-12-31T12:00:00Z' WHERE tenant_id = $1 AND product_name = 'Licences'`, [s.tenantId]);
+  const endDash = attach(h, 'budget fin.csv', ['Nature;Libellé;Société;Compte;Fin de validité', 'Fonctionnement;Licences;Fromagerie;6000;-'].join('\n'));
+  const endColumns = [...columns.slice(0, 4), { column: 'currency', value: 'EUR', confidence: 'high' }, { column: 'end_of_validity', source: 5, confidence: 'high' }];
+  const endCard = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: endDash, entity_type: 'budget_lines', columns: endColumns });
+  const endRead = endCard.import_mapping.columns.find((column: any) => column.column === 'end_of_validity');
+  assert.deepEqual([endRead?.filled, endRead?.unread], [1, 0], `the dash is read: ${JSON.stringify(endRead)}`);
+  const endTarget = endCard.import_mapping.validation.report.file.lookalikes.lines.find((entry: any) => entry.line === 2)?.target;
+  assert.ok(endTarget, JSON.stringify(endCard.import_mapping.validation.report.file.lookalikes));
+  const endClearing = await h.previews.replaceImportChoices(admin, endCard.preview_id, [{ kind: 'lookalike', line: 2, action: 'update', item: endTarget.item, state: endTarget.state }]);
+  const endClears = endClearing.import_mapping.validation;
+  assert.equal(endClears.ok, true, JSON.stringify(endClears.issues));
+  assert.deepEqual([endClears.updated, endClears.cleared], [1, 1]);
+  assert.match(endClearing.import_mapping.on_approval, /; 1 stored value cleared \(cells holding "-"\)/);
+  const endDone = await h.previews.executePreview(admin, endClearing.preview_id);
+  assert.equal(endDone.status, 'executed', endDone.error_message ?? '');
+  assert.equal(endDone.import_mapping.result.cleared, 1);
+  const [ended] = await runner.query(`SELECT disabled_at FROM spend_items WHERE tenant_id = $1 AND product_name = 'Licences'`, [s.tenantId]);
+  assert.equal(ended.disabled_at, null);
   console.log('  budget file: a missing account refused, the lines created, `-` clears and the card says it: OK');
 }
 
@@ -1020,6 +1041,45 @@ async function testPreparedFileKeepsEveryProposal(h: Harness, runner: QueryRunne
   console.log('  prepared file: every proposal the check took written, beyond 200 and in a cell of several names: OK');
 }
 
+/**
+ * Kad reads the numbered columns beyond the fourth as the screen does (lot I6 of 26.11.9, pass F): a
+ * file naming five business owners, by their titles, stores the five, and the check announces no
+ * value cleared. The model maps the name only; the owner columns are read by their headers.
+ */
+async function testFiveOwners(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const app = await insertId(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, 'Cinq responsables')`, [s.tenantId]);
+  const emails: string[] = [];
+  for (let n = 1; n <= 5; n += 1) {
+    const email = `owner-${n}-${s.tenantId.slice(0, 8)}@example.test`;
+    await runner.query(
+      `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status, locale) SELECT $1, $2, $3, 'Owner', role_id, 'enabled', 'en' FROM users WHERE id = $4`,
+      [s.tenantId, email, `Owner${n}`, s.users.admin],
+    );
+    emails.push(email);
+  }
+  const header = ['Name', ...emails.map((_, i) => `Business owner ${i + 1} email`)].join(';');
+  const file = attach(h, 'five owners.csv', `${header}\nCinq responsables;${emails.join(';')}\n`);
+  const card = await h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: file, entity_type: 'applications', columns: [{ column: 'name', source: 1, confidence: 'high' }],
+  });
+  const read = card.import_mapping.columns.map((column: any) => column.column);
+  assert.ok(read.includes('business_owner_email_5'), `the fifth owner column is read: ${JSON.stringify(read)}`);
+  assert.deepEqual(card.import_mapping.unplaced, [], 'every column of the file is placed');
+  const check = card.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check));
+  assert.deepEqual([check.updated, check.cleared], [1, 0], 'five owners, none cleared');
+  const done = await h.previews.executePreview(admin, card.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const stored = await runner.query(
+    `SELECT u.email FROM application_owners o JOIN users u ON u.tenant_id = o.tenant_id AND u.id = o.user_id
+      WHERE o.tenant_id = $1 AND o.application_id = $2 AND o.owner_type = 'business' ORDER BY u.email`,
+    [s.tenantId, app],
+  );
+  assert.deepEqual(stored.map((row: any) => row.email), [...emails].sort());
+  console.log('  applications: five owners by their titles, the five stored, none cleared: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -1036,6 +1096,7 @@ async function run() {
       await testIncidentRights(harness, runner, s);
       await testBudgetFile(harness, runner, s);
       await testApplicationsClear(harness, runner, s);
+      await testFiveOwners(harness, runner, s);
       await testSuppliers(harness, runner, s);
       await testSupplierNamesBeyondCase(harness, runner, s);
       await testContractNamesBeyondCase(harness, runner, s);
