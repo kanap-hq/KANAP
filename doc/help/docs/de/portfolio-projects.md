@@ -401,7 +401,8 @@ Importe sind für kontrollierte Massenänderungen ausgelegt:
 
 - laden Sie zuerst eine Vorlage herunter, wenn Sie die korrekte Struktur benötigen, oder ein Beispiel, um Beispielprojekte und die Werte jeder Spalte zu sehen ([Beispieldateien](csv-files.md#example-files))
 - validieren Sie vor dem Import
-- verwenden Sie erweiterte Optionen, um Anreicherungs- vs. Ersetzungsverhalten und Einfüge-/Aktualisierungsregeln zu wählen
+- wählen Sie, ob die Datei Projekte anlegt, sie aktualisiert oder beides
+- bei einem Projekt, das die Datei aktualisiert, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn, auch den `purpose`. `-` kann die Herkunft nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing)
 - eine neue Zeile ohne Herkunft wird als Altbestand gespeichert. Eine neue Zeile mit der Herkunft `standard` wird abgelehnt: Die Herkunft Anfrage entsteht durch die Umwandlung einer Anfrage. Ein Projekt, das diese Herkunft bereits hat, behält sie, wenn die Datei die Zeile aktualisiert
 
 Massenimport ist nützlich für die Pflege großer Portfolios, aber er ist keine Abkürzung um die Projekt-Governance herum. Phasenplanung, Aufgaben, Wissen und laufende Lieferkontrolle gehören weiterhin in den Arbeitsbereich.

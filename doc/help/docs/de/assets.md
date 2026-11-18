@@ -432,13 +432,12 @@ Der Export und die Vorlage benennen die Spalten in der Sprache Ihrer Oberfläche
 1. **Datei vorbereiten**: eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`). Speichern Sie eine CSV-Datei als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV- und Excel-Dateien](csv-files.md).
 
 2. **Importeinstellungen wählen**:
-   - **Modus**:
-     - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte: nur aktualisieren, was Sie angeben
-     - `Ersetzen`: Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert. Eine Spalte, die in der Datei fehlt, behält ihre Werte. Manche Felder können nicht geleert werden: **Preflight** zeigt sie an.
    - **Operation**:
      - `Upsert` (Standard): Neue Assets erstellen oder vorhandene aktualisieren
      - `Nur aktualisieren`: Nur vorhandene Assets ändern, neue überspringen
      - `Nur einfügen`: Nur neue Assets erstellen, vorhandene überspringen
+
+   Eine leere Zelle behält den gespeicherten Wert, und `-` leert ihn. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing) und [Abgleich und Updates](#abgleich-und-updates).
 
 3. **Zuerst validieren**: Klicken Sie auf **Preflight**, um Ihre Datei ohne Änderungen zu validieren. Überprüfen Sie Fehler und Warnungen.
 
@@ -507,17 +506,22 @@ Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`,
 
 **Cluster-Mitgliedschaft**: Die Spalte `cluster` nennt die Cluster des Assets, durch Kommas getrennt (`ESX-PROD, SQL-CLUSTER`). Groß- und Kleinschreibung spielen keine Rolle, Akzente ebenfalls nicht, wenn Sie die Server lesen dürfen. Siehe [Namen von Datensätzen](csv-files.md#names-of-records). Der Export schreibt die Cluster, in denen das Asset Mitglied ist. Beim Import:
 
-- Im Modus `Anreichern` tritt das Asset den in der Zelle genannten Clustern bei und bleibt in seinen anderen Clustern.
-- Im Modus `Ersetzen` verlässt das Asset außerdem die Cluster, die seine Zelle nicht nennt.
-- Eine leere Zelle ändert nichts, in beiden Modi.
+- Eine ausgefüllte Zelle ist die ganze Liste: Das Asset tritt den Clustern bei, die sie nennt, und verlässt die Cluster, die sie nicht nennt.
+- `-` nimmt das Asset aus jedem Cluster heraus.
+- Eine leere Zelle behält die Cluster des Assets.
 
 **Preflight** meldet einen Fehler in der Zeile, wenn ein Name zu keinem Asset passt, zu mehreren Clustern passt oder ein Asset nennt, das kein Cluster ist. Abgelehnt wird auch eine Zeile, die sich selbst nennt, eine Zeile, die ein Cluster ist oder wird, und ein Cluster mit Betriebssystem: Der Import entfernt nie eines. Die Spalten `is_cluster` und `operating_system` folgen den Regeln unter [Cluster](#cluster).
 
 ### Abgleich und Updates
 
-Assets werden nach **Name** (Groß-/Kleinschreibung ignorierend) abgeglichen. Wenn ein Treffer gefunden wird:
-- Mit `Anreichern`-Modus: Nur nicht-leere CSV-Werte aktualisieren das Asset
-- Mit `Ersetzen`-Modus: Die Spalten in der Datei werden aktualisiert, und eine leere Zelle löscht den gespeicherten Wert. Spalten, die in der Datei fehlen, behalten ihre Werte. Name, `id`, Status und Pflichtfelder können nicht geleert werden: **Preflight** meldet einen Fehler in der Zeile. Bei den IP-Adressspalten werden nur die Unterspalten in der Datei übernommen. Ein neues Asset erhält die Standardwerte.
+Assets werden nach **Name** (Groß-/Kleinschreibung ignorierend) abgeglichen. Wenn ein Treffer gefunden wird, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn. Spalten, die in der Datei fehlen, behalten ihre Werte.
+
+- `location_reference`, `kind` und `environment` sind nur für ein neues Asset Pflicht. Bei einem gespeicherten Asset behält eine leere Zelle sie.
+- `-` in `operating_system` entfernt das Betriebssystem des Servers.
+- Bei den IP-Adressspalten werden nur die Unterspalten in der Datei übernommen. `-` in einem Typ oder einem Subnetz leert diesen Wert. `-` in einer Adresse nimmt den ganzen Eintrag heraus, mit seinem Typ und seinem Subnetz.
+- Name, `id`, Status, Typ, `is_cluster` und die anderen Pflichtfelder können nicht geleert werden: `-` führt dort zur Ablehnung der Zeile, und die Meldung nennt die Spalte.
+
+Ein neues Asset erhält die Standardwerte.
 
 Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf den Namen zurück.
 

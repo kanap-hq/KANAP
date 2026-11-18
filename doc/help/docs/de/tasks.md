@@ -506,13 +506,12 @@ Drei Exportmodi sind verfügbar:
 1. **Datei vorbereiten**: eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`). Speichern Sie eine CSV-Datei als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV- und Excel-Dateien](csv-files.md).
 
 2. **Importeinstellungen wählen**:
-   - **Modus**:
-     - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte: nur aktualisieren, was Sie angeben
-     - `Ersetzen`: Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert. Eine Spalte, die in der Datei fehlt, behält ihre Werte. Manche Felder können nicht geleert werden: **Preflight** zeigt sie an.
    - **Operation**:
      - `Upsert` (Standard): Neue Aufgaben erstellen oder vorhandene aktualisieren
      - `Nur aktualisieren`: Nur vorhandene Aufgaben ändern, neue überspringen
      - `Nur einfügen`: Nur neue Aufgaben erstellen, vorhandene überspringen
+
+   Eine leere Zelle behält den gespeicherten Wert, und `-` leert ihn. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing) und [Abgleich und Updates](#abgleich-und-updates).
 
 3. **Zuerst validieren**: Klicken Sie auf **Preflight**, um Ihre Datei ohne Änderungen zu validieren. Überprüfen Sie Fehler und Warnungen.
 
@@ -560,10 +559,10 @@ Drei Exportmodi sind verfügbar:
 |------------|-------------|-------|
 | `assignee_email` | Verantwortliche Person | Muss mit vorhandener Benutzer-E-Mail übereinstimmen |
 | `creator_email` | Anforderer-E-Mail | Nur Export (in Feld-Metadaten als **Anforderer-E-Mail** angezeigt) |
-| `viewer_email_1` bis `_4` | Betrachter | Vorhandene Benutzer-E-Mails. Eine unbekannte E-Mail wird ausgelassen, mit einer Warnung |
-| `owner_email_1` bis `_4` | Verantwortliche | Vorhandene Benutzer-E-Mails. Eine unbekannte E-Mail wird ausgelassen, mit einer Warnung |
+| `viewer_email_1`, `viewer_email_2`, ... | Betrachter | Vorhandene Benutzer-E-Mails. Eine unbekannte E-Mail wird ausgelassen, mit einer Warnung |
+| `owner_email_1`, `owner_email_2`, ... | Verantwortliche | Vorhandene Benutzer-E-Mails. Eine unbekannte E-Mail wird ausgelassen, mit einer Warnung |
 
-Im Modus `Anreichern` behält eine Zeile, die eine Aufgabe aktualisiert, deren Betrachter, wenn eine Betrachter-Zelle eine unbekannte E-Mail nennt, und ebenso deren Verantwortliche.
+Betrachter und Verantwortliche folgen jeweils ihren eigenen Zellen. Wenn alle leer sind, behält die Aufgabe die gespeicherte Liste. Die E-Mail-Adressen in den Zellen sind die ganze Liste und ersetzen die gespeicherte. `-` allein leert die Liste, und ein `-` neben E-Mail-Adressen fügt nichts hinzu. Eine Zeile, die eine Aufgabe aktualisiert, behält deren Betrachter, wenn eine Betrachter-Zelle eine unbekannte E-Mail nennt, und ebenso deren Verantwortliche.
 
 **Andere Felder**:
 
@@ -610,9 +609,13 @@ Das System normalisiert Werte automatisch beim Import. Ein Status oder eine Prio
 
 ### Abgleich und Updates
 
-Aufgaben werden nach **Titel + related_object_id** (Groß-/Kleinschreibung ignorierend) abgeglichen. Wenn ein Treffer gefunden wird:
-  - Mit `Anreichern`-Modus: Nur nicht-leere CSV-Werte aktualisieren die Aufgabe
-  - Mit `Ersetzen`-Modus: Die Spalten in der Datei werden aktualisiert, und eine leere Zelle löscht den gespeicherten Wert. Spalten, die in der Datei fehlen, behalten ihre Werte. Titel, `id`, Status und Pflichtfelder können nicht geleert werden: **Preflight** meldet einen Fehler in der Zeile. Eine neue Aufgabe erhält die Standardwerte.
+Aufgaben werden nach **Titel + related_object_id** (Groß-/Kleinschreibung ignorierend) abgeglichen. Wenn ein Treffer gefunden wird, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn. Spalten, die in der Datei fehlen, behalten ihre Werte.
+
+- `-` leert die Phase, die Quelle, die Kategorie, den Stream, das Unternehmen, die zugewiesene Person und die Labels.
+- `-` in den Spalten des verknüpften Objekts löst die Aufgabe, so wie die Wahl von **Eigenständig** unter **Verknüpft mit** auf dem Bildschirm.
+- Titel, `id`, Status und Priorität können nicht geleert werden: `-` führt dort zur Ablehnung der Zeile, und die Meldung nennt die Spalte.
+
+Eine neue Aufgabe erhält die Standardwerte.
 
 Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf Titel + verwandtes Objekt zurück.
 
@@ -630,7 +633,7 @@ Diese Felder sind im **Vollständigen Export** für Berichtszwecke enthalten, ab
 
 ### Einschränkungen
 
-  - **Maximal 4 Betrachter/Verantwortliche**: Aufgaben unterstützen bis zu 4 Betrachter-E-Mails und 4 Verantwortlichen-E-Mails in einer Datei
+  - **Betrachter und Verantwortliche**: Der Export schreibt so viele Spalten `viewer_email_N` und `owner_email_N` wie die längste Liste, mindestens vier. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing)
   - **Klassifizierung nur für eigenständige und Projektaufgaben**: Quelle, Kategorie, Stream und Unternehmen können auf eigenständigen und Projektaufgaben festgelegt werden (nicht auf OPEX-, Vertrags- oder CAPEX-Aufgaben)
   - **Phase erfordert Projekt**: Phasenzuweisung funktioniert nur für Projektaufgaben
   - **Anwendungs-/Asset-Verknüpfungen nicht in CSV**: Verwenden Sie den Eigenschaftenbereich des Arbeitsbereichs, um Aufgaben mit Anwendungen und Assets zu verknüpfen
