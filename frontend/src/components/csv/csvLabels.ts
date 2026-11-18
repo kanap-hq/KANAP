@@ -16,10 +16,10 @@ function translated(t: TFunction, key: string, fallback: string): string {
 
 /**
  * The label of an export field in the screen language: `csv.fields.<entity>.<column>` in the
- * common namespace, else the server's label without its `(… __CLEAR__ …)` hint, else the column.
+ * common namespace, else the server's label, else the column.
  */
 export function csvFieldLabel(t: TFunction, entity: string, field: Pick<CsvFieldInfo, 'csvColumn' | 'label'>): string {
-  const plain = String(field.label ?? '').replace(/\s*\([^)]*__CLEAR__[^)]*\)/g, '').trim() || field.csvColumn;
+  const plain = String(field.label ?? '').trim() || field.csvColumn;
   return entity ? translated(t, `csv.fields.${entity}.${field.csvColumn}`, plain) : plain;
 }
 

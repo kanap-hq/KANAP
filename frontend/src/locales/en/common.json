@@ -589,15 +589,6 @@
     "andMoreErrors": "…and {{count}} more",
     "ignoredColumns": "Ignored columns: {{columns}}.",
     "importWorkflow": "What the import does",
-    "advancedOptions": "Advanced options",
-    "overridePresetNote": "These options replace the choice above.",
-    "emptyCellHandling": "Empty cell handling",
-    "preserveExisting": "Preserve existing",
-    "setToNull": "Clear the stored value",
-    "operation": "Operation",
-    "insertAndUpdate": "Insert & update",
-    "updateOnly": "Update only",
-    "insertOnly": "Insert only",
     "validationPassed_one": "Validation passed. Ready to import {{count}} row.",
     "validationPassed_other": "Validation passed. Ready to import {{count}} rows.",
     "nothingToImport": "Nothing to import.",
@@ -642,10 +633,6 @@
       "insertOnly": {
         "label": "Add new only",
         "description": "Add new records. Existing records are skipped."
-      },
-      "fullReplace": {
-        "label": "Full replace",
-        "description": "Replace the values of the columns in the file. An empty cell clears the stored value. A column left out of the file keeps its values. Some fields cannot be cleared: the check points them out."
       }
     },
     "exportRows": {

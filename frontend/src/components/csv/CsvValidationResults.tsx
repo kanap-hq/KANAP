@@ -73,6 +73,9 @@ export function CsvValidationResults({
         ) : (
           <>{t('csv.validationFailed')}</>
         )}
+        {result.ok && isValidation && (result.cleared ?? 0) > 0 && (
+          <Box component="span" sx={{ display: 'block' }}>{t('csv.valuesWillBeClearedSentence', { count: result.cleared })}</Box>
+        )}
       </Alert>
 
       {/* Counts */}

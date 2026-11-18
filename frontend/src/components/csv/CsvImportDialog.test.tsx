@@ -91,15 +91,16 @@ describe('CsvImportDialog', () => {
   it.each([
     '/suppliers', '/contacts', '/companies', '/departments', '/contracts', '/cost-centers', '/accounts',
     '/chart-of-accounts/0b0e6f3c-2a54-4c1b-9d55-6f4b1e7a9c10/accounts', '/analytics-categories', '/business-processes',
-    '/working-day-profiles', '/technologies/asset-links', '/technologies/application-links',
+    '/working-day-profiles', '/technologies/asset-links', '/technologies/application-links', '/users',
   ])('states the clearing rule in a tooltip beside the title of the %s import', (endpoint) => {
     render(<CsvImportDialog open onClose={() => undefined} endpoint={endpoint} flexibleFormat />);
     const hint = screen.getByRole('img', { name: 'csv.clearingRule' });
     expect(hint.closest('h2')).toHaveTextContent('csv.importTitle');
   });
 
-  it.each(['/users', '/data-access', '/admin/coa-templates/0b0e6f3c-2a54-4c1b-9d55-6f4b1e7a9c10'])(
-    'states no clearing rule for the %s import, which does not follow it yet',
+  // The data access import sets each person's whole list, and the chart of accounts templates replace: no cell to keep.
+  it.each(['/data-access', '/admin/coa-templates/0b0e6f3c-2a54-4c1b-9d55-6f4b1e7a9c10'])(
+    'states no clearing rule for the %s import, which has no cell to keep',
     (endpoint) => {
       render(<CsvImportDialog open onClose={() => undefined} endpoint={endpoint} flexibleFormat />);
       expect(screen.queryByRole('img', { name: 'csv.clearingRule' })).not.toBeInTheDocument();

@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import {
-  ImportMode,
   ImportOperation,
   ImportPhase,
   CsvImportResult,
@@ -17,17 +16,13 @@ export function useCsvImport() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [presetId, setPresetId] = useState('merge');
-  const [mode, setMode] = useState<ImportMode>('enrich');
   const [operation, setOperation] = useState<ImportOperation>('upsert');
 
-  // Update mode/operation when preset changes
+  // The preset sets the operation.
   const selectPreset = useCallback((id: string) => {
     setPresetId(id);
     const preset = WORKFLOW_PRESETS.find((p) => p.id === id);
-    if (preset) {
-      setMode(preset.mode);
-      setOperation(preset.operation);
-    }
+    if (preset) setOperation(preset.operation);
   }, []);
 
   // Reset state for new import
@@ -38,7 +33,6 @@ export function useCsvImport() {
     setLoading(false);
     setError(null);
     setPresetId('merge');
-    setMode('enrich');
     setOperation('upsert');
   }, []);
 
@@ -57,7 +51,6 @@ export function useCsvImport() {
     loading,
     error,
     presetId,
-    mode,
     operation,
 
     // Setters
@@ -66,8 +59,6 @@ export function useCsvImport() {
     setResult,
     setLoading,
     setError,
-    setMode,
-    setOperation,
 
     // Actions
     selectPreset,

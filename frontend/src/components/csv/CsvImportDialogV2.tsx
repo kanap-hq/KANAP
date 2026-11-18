@@ -10,11 +10,8 @@ import {
   Stack,
   Alert,
   LinearProgress,
-  Collapse,
   Divider,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
 import { csvEntityOf, csvFieldLabel } from './csvLabels';
@@ -23,7 +20,6 @@ import api from '../../api';
 import { useCsvImport } from './useCsvImport';
 import { csvRequestErrorMessage } from './csvRequestError';
 import { CsvImportWorkflowPresets } from './CsvImportWorkflowPresets';
-import { CsvImportAdvancedOptions } from './CsvImportAdvancedOptions';
 import { CsvValidationResults } from './CsvValidationResults';
 import type { CsvImportResult, ImportLookalike, ImportLookalikeChoice } from './csv.types';
 import { useImportFiles } from './importFiles';
@@ -31,6 +27,8 @@ import ImportExampleButton, { type ImportExampleKey } from './ImportExampleButto
 import ImportMatchesView, { type UndoneMatch } from './ImportMatchesView';
 import ImportLookalikesView, { applicationLookalikeReason, applicationUpdateChoice } from './ImportLookalikesView';
 import { buildEntityUrl } from '../../ai/utils/entityUrls';
+import { importFollowsClearingRule } from './clearingRule';
+import InfoHint from '../workspace/InfoHint';
 
 /** A load refused for a row whose situation changed since the check: nothing was written (T-I3l). */
 const LOAD_REFUSALS = new Set(['CSV_LOOKALIKE_CHANGED', 'CSV_LOOKALIKE_GONE', 'CSV_LOOKALIKE_NAME_FOUND', 'CSV_LOOKALIKE_NEW']);
@@ -42,8 +40,6 @@ interface CsvImportDialogV2Props {
   title?: string;
   onImported?: () => void;
   params?: Record<string, string | number | boolean | null | undefined>;
-  /** A short remark about this list's file, under the description (for example how to clear a value). */
-  note?: string;
   /** The import's example file, offered next to the template. */
   example?: ImportExampleKey;
 }
@@ -55,7 +51,6 @@ export default function CsvImportDialogV2({
   title: titleProp,
   onImported,
   params,
-  note,
   example,
 }: CsvImportDialogV2Props) {
   const { t, i18n } = useTranslation('common');
@@ -68,7 +63,6 @@ export default function CsvImportDialogV2({
     loading,
     error,
     presetId,
-    mode,
     operation,
     setFile,
     setPhase,
@@ -76,13 +70,10 @@ export default function CsvImportDialogV2({
     setLoading,
     setError,
     selectPreset,
-    setMode,
-    setOperation,
     reset,
     goBack,
   } = useCsvImport();
 
-  const [showAdvanced, setShowAdvanced] = React.useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [hover, setHover] = React.useState(false);
   // The matches the person undid on the check (lot I3 of 26.11.9): the next check and the load send them,
@@ -149,7 +140,7 @@ export default function CsvImportDialogV2({
       // In the form, never in the address: they hold values of the file.
       if (undone.length > 0) fd.append('unmatched', JSON.stringify(undone.map(({ column, value }) => ({ column, value }))));
       if (chosen.length > 0) fd.append('lookalikes', JSON.stringify(chosen));
-      const queryParams = { ...(params ?? {}), dryRun, mode, operation, language };
+      const queryParams = { ...(params ?? {}), dryRun, operation, language };
       const res = await api.post(`${endpoint}/import`, fd, { params: queryParams });
       const data = res.data as CsvImportResult;
       setResult(data);
@@ -225,18 +216,16 @@ export default function CsvImportDialogV2({
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-      <DialogTitle>{titleProp || t(workbook ? 'buttons.import' : 'csv.importTitle')}</DialogTitle>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        {titleProp || t(workbook ? 'buttons.import' : 'csv.importTitle')}
+        {importFollowsClearingRule(endpoint) && <InfoHint text={t('csv.clearingRule')} />}
+      </DialogTitle>
       <DialogContent>
         {phase === 'upload' && (
           <>
             <Typography variant="body2" sx={{ mb: 2 }}>
               {t(workbook ? 'csv.uploadDescriptionFlexibleWorkbook' : 'csv.uploadDescriptionFlexible')}
             </Typography>
-            {note && (
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                {note}
-              </Typography>
-            )}
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1, mb: 2 }}>
               <Button
@@ -272,30 +261,11 @@ export default function CsvImportDialogV2({
               <input type="file" ref={inputRef} onChange={onFileChange} hidden accept={accept} />
             </Box>
 
-            {/* Workflow presets */}
+            {/* Workflow presets: each sets the operation. */}
             <CsvImportWorkflowPresets
               selectedId={presetId}
               onSelect={selectPreset}
             />
-
-            {/* Advanced options toggle */}
-            <Button
-              size="small"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              endIcon={showAdvanced ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              sx={{ mt: 2, mb: 1 }}
-            >
-              {t('csv.advancedOptions')}
-            </Button>
-
-            <Collapse in={showAdvanced}>
-              <CsvImportAdvancedOptions
-                mode={mode}
-                operation={operation}
-                onModeChange={setMode}
-                onOperationChange={setOperation}
-              />
-            </Collapse>
           </>
         )}
 

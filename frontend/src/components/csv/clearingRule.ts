@@ -1,11 +1,13 @@
 /**
- * The imports of the V1 dialog that read a blank cell as "keep the stored value" and `-` as "clear it"
- * (D21 of 26.11.9, lot I4): the dialog says so beside its title. The users and data access imports
- * do not follow the rule yet (lot I6), nor do the chart of accounts templates, which replace.
+ * The imports that read a blank cell as "keep the stored value" and `-` as "clear it" (D21 of 26.11.9:
+ * lot I4 for the V1 dialog, lot I6 for the V2 dialog and the users): the dialog says so beside its
+ * title. The data access import sets each person's whole list and the chart of accounts templates
+ * replace: they have no cell to keep.
  */
 const CLEARING_RULE_ENDPOINT = new RegExp(
   '^/(?:suppliers|contacts|companies|departments|contracts|cost-centers|accounts|chart-of-accounts/[^/]+/accounts'
-    + '|analytics-categories|business-processes|working-day-profiles|technologies/(?:asset|application)-links)$',
+    + '|analytics-categories|business-processes|working-day-profiles|technologies/(?:asset|application)-links'
+    + '|applications|assets|tasks|incidents|portfolio/(?:projects|requests)|users)$',
 );
 
 /** Whether the import of `endpoint` (the list's endpoint, `/suppliers`) follows the clearing rule. */

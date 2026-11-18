@@ -138,7 +138,6 @@
       "exportScope_one": "{{count}} Anwendung, entsprechend den Filtern der Liste.",
       "exportScope_other": "{{count}} Anwendungen, entsprechend den Filtern der Liste.",
       "exportScopeAll": "Alle Anwendungen ({{count}}), ohne außer Betrieb genommene.",
-      "importNote": "Um einen Einstufungswert zu leeren, schreiben Sie __CLEAR__ in die Zelle.",
       "copySuffix": "(Kopie)",
       "copyFailed": "Die Anwendung konnte nicht kopiert werden.",
       "copyLinksFailed": "Die Kopie wurde erstellt, aber nicht alle ihre Verknüpfungen konnten kopiert werden.",

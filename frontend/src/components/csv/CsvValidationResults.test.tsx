@@ -69,6 +69,24 @@ describe('CsvValidationResults counters', () => {
     expect(screen.queryByText('1 to update')).not.toBeInTheDocument();
   });
 
+  it('says how many stored values the check clears, and nothing when none', async () => {
+    await instance.changeLanguage('en');
+    const view = show({ ...base, cleared: 3 });
+    expect(screen.getByText('3 values will be cleared.')).toBeInTheDocument();
+    view.unmount();
+    await instance.changeLanguage('fr');
+    const one = show({ ...base, cleared: 1 });
+    expect(screen.getByText('1 valeur sera effacée.')).toBeInTheDocument();
+    one.unmount();
+    await instance.changeLanguage('en');
+    const none = show({ ...base, cleared: 0 });
+    expect(screen.queryByText(/will be cleared/)).not.toBeInTheDocument();
+    none.unmount();
+    // The load reports what it did: the announce belongs to the check.
+    show({ ...base, dryRun: false, cleared: 3 });
+    expect(screen.queryByText(/will be cleared/)).not.toBeInTheDocument();
+  });
+
   it('pluralises both tenses', async () => {
     const cases: Array<[string, boolean, number, number, string, string]> = [
       ['fr', true, 2, 1, '2 à insérer', '1 à mettre à jour'],

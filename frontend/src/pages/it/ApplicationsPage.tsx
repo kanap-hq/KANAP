@@ -1247,7 +1247,6 @@ export default function ApplicationsPage() {
         endpoint="/applications"
         example="applications"
         title={t('pages.applications.importTitle')}
-        note={t('pages.applications.importNote')}
         onImported={() => setRefreshKey((k) => k + 1)}
       />
     </>

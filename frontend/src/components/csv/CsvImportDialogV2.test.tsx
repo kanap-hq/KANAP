@@ -68,8 +68,39 @@ describe('CsvImportDialogV2', () => {
     expect(post).toHaveBeenCalledWith(
       '/portfolio/projects/import',
       expect.any(FormData),
-      { params: expect.objectContaining({ language: 'en', dryRun: true }) },
+      { params: expect.objectContaining({ language: 'en', dryRun: true, operation: 'upsert' }) },
     );
+    // One clearing rule (D21 of 26.11.9): no mode to send.
+    expect(post.mock.calls[0][2].params).not.toHaveProperty('mode');
+  });
+
+  it('sends the operation of the preset chosen', async () => {
+    post.mockResolvedValueOnce({
+      data: { ok: true, dryRun: true, total: 0, inserted: 0, updated: 0, skipped: 0, errors: [], warnings: [] },
+    });
+    renderDialog();
+    fireEvent.click(screen.getByText('csv.workflowPresets.updateOnly.label'));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.validate' }));
+    expect(await screen.findByRole('button', { name: 'buttons.import' })).toBeInTheDocument();
+    expect(post.mock.calls[0][2].params).toEqual(expect.objectContaining({ operation: 'update_only' }));
+  });
+
+  it.each(['/applications', '/assets', '/tasks', '/incidents', '/portfolio/projects', '/portfolio/requests'])(
+    'states the clearing rule in a tooltip beside the title of the %s import',
+    (endpoint) => {
+      render(<CsvImportDialogV2 open onClose={() => undefined} endpoint={endpoint} />);
+      const hint = screen.getByRole('img', { name: 'csv.clearingRule' });
+      expect(hint.closest('h2')).toHaveTextContent('csv.importTitle');
+    },
+  );
+
+  it('says how many stored values the check clears', async () => {
+    post.mockResolvedValueOnce({
+      data: { ok: true, dryRun: true, total: 2, inserted: 0, updated: 2, skipped: 0, cleared: 3, errors: [], warnings: [] },
+    });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.validate' }));
+    expect(await screen.findByText('csv.valuesWillBeClearedSentence')).toBeInTheDocument();
   });
 
   it('names the workflow presets and the validate step buttons through i18n', async () => {
@@ -88,9 +119,10 @@ describe('CsvImportDialogV2', () => {
     renderDialog();
     expect(screen.getByText('csv.importWorkflow')).toBeInTheDocument();
     expect(screen.getByText('csv.workflowPresets.merge.label')).toBeInTheDocument();
-    expect(screen.getByText('csv.workflowPresets.fullReplace.description')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'csv.advancedOptions' }));
-    expect(screen.getByText('csv.overridePresetNote')).toBeInTheDocument();
+    expect(screen.getByText('csv.workflowPresets.insertOnly.label')).toBeInTheDocument();
+    // The full replace preset and the advanced options are gone (T-I6h).
+    expect(screen.queryByText('csv.workflowPresets.fullReplace.label')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'csv.advancedOptions' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'buttons.validate' }));
     expect(await screen.findByText('csv.validationFailed')).toBeInTheDocument();
