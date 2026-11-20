@@ -182,9 +182,11 @@ export interface ApplicationListItemResponse extends ApplicationResponse {
   owners_it?: string[];
   /** Data residency countries (when include=residency) */
   data_residency?: string[];
-  /** Related spend item count (when include=counts) */
+  /** Linked budget lines of both natures, the sum of spend_count and capex_count (when include=counts) */
+  budget_lines_count?: number;
+  /** Linked OPEX lines (when include=counts) */
   spend_count?: number;
-  /** First spend item name (when include=counts) */
+  /** First OPEX line name (when include=counts) */
   spend_first_name?: string | null;
   /** Related CAPEX item count (when include=counts) */
   capex_count?: number;

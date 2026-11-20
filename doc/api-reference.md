@@ -567,7 +567,7 @@ Validation/behavior:
   - Items include `derived_total_users` plus optional expansions driven by `include`:
     - `supplier` → adds `supplier_name`
     - `owners` → adds `owners_business`, `owners_it`
-    - `counts` → adds spend/capex/contracts counts + first-item tooltips
+    - `counts` → adds `budget_lines_count` (linked budget lines of both natures, the sum of `spend_count` and `capex_count`), `spend_count` (OPEX lines), `capex_count` (CAPEX lines), `contracts_count`, and the first-item names `spend_first_name`, `capex_first_description`, `contracts_first_name`
     - `residency` → adds `data_residency` ISO codes
     - `structure` → adds `suites_count`, `first_suite_name`, `components_count`, `first_component_name`
     - `instances` → adds `instances: AppInstanceSummary[]` (env, URLs, auth flags, status)
