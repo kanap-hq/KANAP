@@ -14,6 +14,7 @@ vi.mock('../../api', () => ({ default: { post: vi.fn(), get: vi.fn() } }));
 
 // Q1 of 26.11.9: the check of a row import names, under its counts, the records it updates (the line of
 // the person's file, the reference linked to the record's page, then the name), as the budget file does.
+// The address of the page comes from the server (`page_url`, pass E): without it, the reference is not a link.
 
 type RowsReport = Extract<AiImportRun['report'], { kind: 'rows' }>;
 
@@ -69,9 +70,9 @@ describe('PreviewCard, the records a row import updates', () => {
   });
   afterEach(() => cleanup());
 
-  it('lists each update under the counts: its line, the reference linked to the record, then the name', () => {
+  it('lists each update under the counts: its line, the reference linked to the address the server gives, then the name', () => {
     renderCard(card('portfolio_projects', { updated: 1, unchanged: 4 }, {
-      updates: [{ row: 6, ref: 'PRJ-4', name: 'Wi-Fi des entrepôts' }], updatesTotal: 1,
+      updates: [{ row: 6, ref: 'PRJ-4', name: 'Wi-Fi des entrepôts', page_url: '/portfolio/projects/PRJ-4' }], updatesTotal: 1,
     }));
     expect(screen.getByText(/1 to update · 4 unchanged/)).toBeInTheDocument();
     const line = screen.getByText((_, element) => element?.tagName === 'LI' && element.textContent === 'Row 6: PRJ-4 · Wi-Fi des entrepôts');
@@ -89,9 +90,19 @@ describe('PreviewCard, the records a row import updates', () => {
     expect(screen.queryByRole('link')).toBeNull();
   });
 
+  it('shows a reference the server gives no address for as plain text', () => {
+    renderCard(card('portfolio_projects', { updated: 1, unchanged: 0 }, {
+      updates: [{ row: 4, ref: 'PRJ-7', name: 'Archivage' }], updatesTotal: 1,
+    }));
+    expect(screen.getByText((_, element) => element?.tagName === 'LI' && element.textContent === 'Row 4: PRJ-7 · Archivage')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
   it('writes the line in the person\'s language', async () => {
     await i18n.changeLanguage('fr');
-    renderCard(card('suppliers', { updated: 1, unchanged: 1 }, { updates: [{ row: 3, ref: 'SUP-2', name: 'Savencia' }], updatesTotal: 1 }));
+    renderCard(card('suppliers', { updated: 1, unchanged: 1 }, {
+      updates: [{ row: 3, ref: 'SUP-2', name: 'Savencia', page_url: '/master-data/suppliers/SUP-2' }], updatesTotal: 1,
+    }));
     expect(screen.getByText((_, element) => element?.tagName === 'LI' && /^Ligne\s3\s: SUP-2 · Savencia$/.test(element.textContent ?? ''))).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'SUP-2' })).toHaveAttribute('href', '/master-data/suppliers/SUP-2');
   });

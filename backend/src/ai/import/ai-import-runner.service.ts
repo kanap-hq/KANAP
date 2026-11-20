@@ -391,9 +391,9 @@ function personLineLookalikes(lookalikes: ImportLookalikes, lines: readonly numb
 }
 
 /**
- * The page each import's records open on, by import, as the card's link of a record a row updates
- * (`RECORD_PAGES` of `frontend/src/ai/components/ImportRunReport.tsx`): by its business reference.
- * An import whose records the card links to no page (cost centers, accounts) is absent.
+ * The page each import's records open on, by import, as the card's link of a record a row updates:
+ * by its business reference. An import whose records the card links to no page (cost centers,
+ * accounts) is absent.
  */
 const IMPORT_RECORD_PAGES: Readonly<Partial<Record<AiImportKey, string>>> = {
   applications: 'applications',

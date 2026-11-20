@@ -172,8 +172,11 @@ export type AiImportRun = {
       hosting?: AiImportHostingSite[];
       /** An applications import: the rows that look like an existing application, absent when none. */
       lookalikes?: ImportLookalikes;
-      /** The rows that update a stored record, the first ones, and their total; absent when none. */
-      updates?: CsvImportUpdate[];
+      /**
+       * The rows that update a stored record, the first ones, and their total; absent when none. Each
+       * carries the address of the record's page (`page_url`), absent when the record has no page.
+       */
+      updates?: Array<CsvImportUpdate & { page_url?: string }>;
       updatesTotal?: number;
     }
     | { kind: 'budget_file'; file: BudgetFileReport | null };
