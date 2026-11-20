@@ -33,7 +33,7 @@ async function openConfirm() {
   fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
   const dialog = await screen.findByRole('dialog');
   expect(within(dialog).getByText('Delete Billing hub?')).toBeInTheDocument();
-  expect(within(dialog).getByText(/permanently deletes Billing hub, with 2 deployments and its links/)).toBeInTheDocument();
+  expect(within(dialog).getByText('Deleted with it: 2 deployments and its links to other records. This cannot be undone.')).toBeInTheDocument();
   return dialog;
 }
 
@@ -65,15 +65,24 @@ describe('ApplicationDeleteButton', () => {
     renderButton();
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/permanently deletes Billing hub, with its description, 2 deployments, 1 document,? and its links to other records\. This/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/^Deleted with it: its description, 2 deployments, 1 document,? and its links to other records\. This cannot be undone\.$/)).toBeInTheDocument();
   });
 
-  it('confirms without counts when the check fails, the delete still refusing what it must', async () => {
+  it('names only the links, as the list does, when the check answers that nothing else goes', async () => {
+    post.mockResolvedValue({ data: { refused: [], removes: [] } });
+    renderButton();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Delete Billing hub?')).toBeInTheDocument();
+    expect(within(dialog).getByText('Its links to other records are deleted with it. This cannot be undone.')).toBeInTheDocument();
+  });
+
+  it('names the deployments and the links, as the list does, when the check fails, the delete still refusing what it must', async () => {
     post.mockRejectedValue(new Error('offline'));
     renderButton();
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/permanently deletes Billing hub, with its links/)).toBeInTheDocument();
+    expect(within(dialog).getByText('Its deployments and its links to other records are deleted with it. This cannot be undone.')).toBeInTheDocument();
   });
 
   it('deletes the application after confirmation, refreshes the list and hands back', async () => {

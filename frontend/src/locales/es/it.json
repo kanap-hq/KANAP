@@ -2018,8 +2018,6 @@
       "meta": {
         "goLive": "Puesta en marcha"
       },
-      "deleteMessage": "Esto elimina definitivamente {{name}}, con sus vínculos con otros elementos. Esta acción no se puede deshacer.",
-      "deleteMessageWithRemoved": "Esto elimina definitivamente {{name}}, con {{removed}}. Esta acción no se puede deshacer.",
       "convert": {
         "action": "Convertir en tecnología",
         "title": "Convertir {{name}} en tecnología",

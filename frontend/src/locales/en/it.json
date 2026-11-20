@@ -2018,8 +2018,6 @@
       "meta": {
         "goLive": "Go live"
       },
-      "deleteMessage": "This permanently deletes {{name}}, with its links to other records. This cannot be undone.",
-      "deleteMessageWithRemoved": "This permanently deletes {{name}}, with {{removed}}. This cannot be undone.",
       "convert": {
         "action": "Convert to technology",
         "title": "Convert {{name}} to a technology",
