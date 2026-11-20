@@ -11,16 +11,16 @@ Both types live in one list and open in the same workspace, with year-by-year bu
 
 Navigate to **Budget management > Budget lines** to see the list. Click **New line** to create a line.
 
-The workspace opens on a new line, titled **New OPEX line** or **New CAPEX line**. Its type is the one the list is filtered on in its **Type** column, else **OPEX**. It cannot be changed while the line is being created. Type the line's name in the title at the top and press Enter. The line exists at once, with your workspace currency and today as its effective start, and every tab opens, **Budget** included. Fill in the **Properties** panel: each change saves at once.
+The workspace opens on a new line, titled **New OPEX line** or **New CAPEX line**. Its **Type** comes first in the **Properties** panel, beside the title: the type the list is filtered on in its **Type** column, else **OPEX**. Pick the other type there, before or after the title. Type the line's name in the title at the top and press Enter. The line exists at once, with your workspace currency and 1 January of the year you are viewing as its effective start, and every tab opens, **Budget** included. Fill in the **Properties** panel: each change saves at once. Until you click **Create**, **Type** stays a menu: the line changes type in place and keeps what you entered. An account that does not suit the new type stays on the line, its label in red, until you choose another one.
 
 If your data access is limited to one company, the paying company is filled with it. If you must choose, pick the paying company or the cost center before you type the title.
 
 While the line is being created, its header shows **Create** and **Cancel** in place of the close button:
 
-- **Create** checks the required fields below. When one is missing, a message lists them, they are marked in the **Properties** panel, and the cursor goes to the first one. Otherwise the line closes and you go back to where you started: the previous screen, else the list
+- **Create** checks the required fields below. When one is missing, its label turns red in the **Properties** panel and the cursor goes to the first one. A label turns back once its field has a value. Otherwise the line closes and you go back to where you started: the previous screen, else the list
 - **Cancel** deletes the line and everything entered on it, amounts included. If you entered more than the title, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete lines. A line with amounts in a frozen column cannot be cancelled
 
-Leaving the line another way while a required field is missing asks you to complete it or delete it. Reloading the page or closing the tab while the new line still lacks a required field asks your browser to confirm, and the line is deleted if you leave anyway. A line left without a paying company shows a warning that lists the missing fields, and asks again each time you leave it. Press Escape on the empty title to leave without creating anything.
+Leaving the line another way while a required field is missing asks you to complete it or delete it. Reloading the page or closing the tab while the new line still lacks a required field asks your browser to confirm, and the line is deleted if you leave anyway. A line left without a paying company opens with the **Properties** panel open and the labels of its missing fields in red, and asks again each time you leave it. Press Escape on the empty title to leave without creating anything.
 
 **Required fields**:
 
@@ -28,7 +28,7 @@ Leaving the line another way while a required field is missing asks you to compl
 - **Paying company**: Which company pays (required for accounting)
 - **Account**: The general ledger account. Only accounts from the paying company's chart of accounts appear, and only those that suit the line's type in [Chart of Accounts](chart-of-accounts.md#opex-or-capex-accounts): **OPEX and CAPEX**, or **OPEX only** for an OPEX line and **CAPEX only** for a CAPEX line. A line that already has an account for the other type keeps it and stays editable. Choosing such an account on a new line or when you change the account is refused
 - **Currency**: ISO code (e.g., USD, EUR). Defaults to your workspace currency; you can override it per line
-- **Effective start**: When this spend begins (DD/MM/YYYY). Defaults to the day you create the line
+- **Effective start**: When this spend begins (DD/MM/YYYY). Defaults to 1 January of the year you are viewing
 - **Required dimensions**: one field per dimension that is required for the line's type. A new workspace has no required dimension. See [Recommended dimensions](#recommended-dimensions)
 - **Cost center**, when your data access requires one
 
@@ -232,7 +232,7 @@ Click any row in the list to open the workspace. Its address names the line by i
 - **Header**: the line reference (e.g., `BL-12`) with a copy button, the line's title (click it to rename the line), **Prev** / **Next**, **Share**, **Delete** (trash icon, `budget:admin`, access to all data), and the close button. While the line is being created, **Create** and **Cancel** replace **Delete** and the close button
 - **Metadata bar** under the title: **Status**, **IT owner**, and **Business owner**, each editable in place. When the line's cost center has a budget holder, **Budget holder** follows them. It is read only and derived from the cost center, not stored on the line: hover it to see which cost center it comes from, and change it on the cost center (see [Cost centers](cost-centers.md#budget-holder-on-budget-lines))
 - **Five tabs**: **Overview**, **Budget**, **Allocations**, **Relations** (the Relations tab shows how many links the line has), and **History**
-- **Properties panel** on the right: the line's main fields, starting with **Type** (with **Change type...** next to it once the line is no longer being created, see [Changing the type](#changing-the-type)). Open or close it with the properties button; the workspace remembers your choice
+- **Properties panel** on the right: the line's main fields, starting with **Type** (a menu while the line is being created, then **Change type...** next to it, see [Changing the type](#changing-the-type)). Open or close it with the properties button; the workspace remembers your choice
 
 **Owner pickers**:
 
@@ -280,7 +280,7 @@ When the line replaces another one, or was replaced from a later year after a ty
 
 **Properties panel**:
 
-- **Type**: **OPEX** or **CAPEX**. Once the line is no longer being created, **Change type...** next to it opens the dialog described in [Changing the type](#changing-the-type)
+- **Type**: **OPEX** or **CAPEX**. While the line is being created, it is a menu and the line changes type in place. Once the line is created, **Change type...** next to it opens the dialog described in [Changing the type](#changing-the-type)
 - **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts and the line's type), **Currency** (only the currencies allowed in your workspace), one field per analytics dimension used for the line's type, **Run or build**, and **Effective start**
 - **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
 - **Created** and **Updated** dates (read only)
@@ -304,7 +304,7 @@ When the line replaces another one, or was replaced from a later year after a ty
 - Each field lists the enabled values of its dimension. A disabled value stays on the lines that already have it, and cannot be picked for another line
 - A value used for the other type only is not offered, and is refused as a new choice. A line that already has it keeps it and stays editable. See [OPEX or CAPEX values](analytics.md#opex-or-capex-values)
 - The field cannot create a value: create it in [Analytics dimensions](analytics.md), or let an import create it
-- A required dimension is marked with an asterisk. A line being created needs a value on it: **Create** lists it as missing until you pick one. On a line that holds a value, the field cannot be cleared, only changed. A line without a value stays editable. If you change such a line, leaving it asks first: "Cost pool is required. Choose a value before leaving." **Stay** puts the cursor in the missing field. **Leave anyway** leaves. See [Required dimensions](analytics.md#required-dimensions)
+- A required dimension is marked with an asterisk. A line being created needs a value on it: **Create** marks it as missing until you pick one. On a line that holds a value, the field cannot be cleared, only changed. A line without a value stays editable. If you change such a line, leaving it asks first: "Cost pool is required. Choose a value before leaving." **Stay** puts the cursor in the missing field. **Leave anyway** leaves. See [Required dimensions](analytics.md#required-dimensions)
 - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 
 **Tip**: An account outside the paying company's chart of accounts is refused when you choose it. An existing line whose account is outside its company's chart can still be edited: the chart is checked only when the company or the account changes, and when you click **Create** on a line being created.

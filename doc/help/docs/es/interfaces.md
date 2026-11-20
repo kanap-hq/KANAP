@@ -20,7 +20,7 @@ Puede rellenarlos en cualquier orden. No se guarda nada hasta que los cuatro est
 
 Mientras la interfaz se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la interfaz.
 
-- **Crear** conserva la interfaz y le devuelve al punto de partida. Si todavía falta algo, un mensaje lo indica, y el título o el primer campo que falta recibe el foco. Si el borrador está completo, Kadratis crea la interfaz y le devuelve al instante
+- **Crear** conserva la interfaz y le devuelve al punto de partida. Si todavía falta algo, un título vacío muestra su mensaje, la etiqueta de cada campo que falta se pone en rojo, y el título o el primer campo que falta recibe el foco. Si el borrador está completo, Kadratis crea la interfaz y le devuelve al instante
 - **Cancelar** elimina la interfaz. Si añadió algo después de su creación, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar interfaces
 
 Si sale de la interfaz de otra forma (el menú, la flecha de retroceso), se conserva: está completa.

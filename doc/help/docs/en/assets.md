@@ -36,7 +36,7 @@ Press Escape on the empty title to leave without creating anything. A refused na
 
 While the asset is being created, its header shows **Create** and **Cancel** in place of the close button. They stay until you leave the asset.
 
-- **Create** checks that the asset has a location. Without one, a message names the missing location and the **Location** field of the properties drawer gets the focus. The asset stays open. With a location, Kadratis keeps the asset and closes it. You go back to where you started
+- **Create** checks that the asset has a location. Without one, the **Location** label turns red in the properties drawer and the field gets the focus. The asset stays open. With a location, Kadratis keeps the asset and closes it. You go back to where you started
 - **Cancel** deletes the asset. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete assets
 
 Leaving the asset another way (the back arrow, the menu, another asset) while it has no location asks what to do. **Complete it** keeps you on the asset, on the **Location** field. **Delete it** deletes the asset. Reloading the page or closing the tab while the new asset has no location asks your browser to confirm. If you leave anyway, the asset is deleted.
