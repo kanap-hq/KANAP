@@ -368,7 +368,7 @@ export class SuppliersService {
       /** What a row does to a supplier it updates (`CsvImportMode`); without it, `replace`. */
       mode?: CsvImportMode;
     },
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ): Promise<MasterDataImportResult> {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
@@ -669,13 +669,13 @@ export class SuppliersService {
         for (const link of removedLinks(existing.id, item.clearedRoles)) {
           await contactLinks.detach(existing.id, link.id, { manager: mg, tenantId: existing.tenant_id, userId: userId ?? null });
         }
-        const saved = await this.update(existing.id, item.body, userId ?? undefined, { manager: opts?.manager });
+        const saved = await this.update(existing.id, item.body, userId ?? undefined, { manager: opts?.manager, audit: opts?.audit });
         await attachByEmail(saved.id, item.commercial_email, SupplierContactRole.COMMERCIAL);
         await attachByEmail(saved.id, item.technical_email, SupplierContactRole.TECHNICAL);
         await attachByEmail(saved.id, item.support_email, SupplierContactRole.SUPPORT);
         if (saved) processed += 1;
       } else {
-        const saved = await this.create(item.body, userId ?? undefined, { manager: opts?.manager });
+        const saved = await this.create(item.body, userId ?? undefined, { manager: opts?.manager, audit: opts?.audit });
         await attachByEmail(saved.id, item.commercial_email, SupplierContactRole.COMMERCIAL);
         await attachByEmail(saved.id, item.technical_email, SupplierContactRole.TECHNICAL);
         await attachByEmail(saved.id, item.support_email, SupplierContactRole.SUPPORT);

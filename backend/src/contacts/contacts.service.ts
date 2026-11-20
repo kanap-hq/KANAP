@@ -563,9 +563,10 @@ export class ContactsService {
    * a name (`proposals`) comes first. An unknown or ambiguous name refuses the row; no supplier is ever
    * created. `supplier_role` is the contact's type for it, by its code or the page's word in any
    * language; without one, the stored type, else the page's default. Under the clearing rule a blank
-   * cell keeps the supplier and `-` removes it (counted in `cleared`), with its type. The supplier is
-   * written by `update`, as on the contact's page: the main supplier link, its propagation to the
-   * supplier's lines and contracts, and the audit.
+   * cell keeps the supplier and `-` removes it (counted in `cleared`), with its type. Each contact is
+   * written by `create` or `update`, as on the contact's page: its values and its supplier (the main
+   * supplier link, its propagation to the supplier's lines and contracts) in one call, which writes
+   * the contact's history row with the caller's source (the person, or Kad's card).
    */
   async importCsv(
     {
@@ -841,18 +842,14 @@ export class ContactsService {
     }
     if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...report, ...named() };
 
+    // Each contact as its page writes it, in one call: `update` locks the row, then writes the columns
+    // the row gives and the supplier (its main link, propagated); one history row per contact, with
+    // the caller's source (the person, or Kad's card).
+    const write = { ...opts, manager: repo.manager };
     for (const { item, existing, supplier, valuesChange } of toWrite) {
-      let contactId = existing?.id;
-      if (existing) {
-        // Only the columns the row writes: `existing` was read before any lock, and its supplier is
-        // written by `update` below, which locks the row. Like `save` before it, no audit row here.
-        if (valuesChange) await repo.update({ tenant_id: opts.tenantId, id: existing.id }, item);
-      } else {
-        const created = repo.create({ ...item, tenant_id: opts.tenantId });
-        contactId = (await repo.save(created)).id;
-      }
-      // The supplier as the contact's page writes it: its main link, propagated, audited.
-      if (supplier && contactId) await this.update(contactId, supplier as Partial<ExternalContact>, { ...opts, manager: repo.manager });
+      const body = { ...(valuesChange ? item : {}), ...(supplier ?? {}) } as Partial<ExternalContact>;
+      if (existing) await this.update(existing.id, body, write);
+      else await this.create(body, write);
     }
     return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...report, ...named() };
   }

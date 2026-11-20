@@ -7,7 +7,7 @@ import { Contract } from './contract.entity';
 import { ContractSpendItem } from './contract-spend-item.entity';
 import { ContractLink } from './contract-link.entity';
 import { ContractAttachment } from './contract-attachment.entity';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { parseExportPagination, parsePagination, type Sort } from '../common/pagination';
 import { textSortKey } from '../common/list-sort';
 import * as path from 'path';
@@ -946,7 +946,7 @@ export class ContractsService {
     return input as ContractUpsertDto;
   }
 
-  async create(rawBody: ContractUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
+  async create(rawBody: ContractUpsertDto, userId?: string, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
     if (!rawBody?.name) throw new BadRequestException('name is required');
@@ -977,11 +977,11 @@ export class ContractsService {
     };
     const entity = repo.create(toCreate);
     const saved = await repo.save(entity);
-    await this.audit.log({ table: 'contracts', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
+    await this.audit.log({ table: 'contracts', recordId: saved.id, action: 'create', before: null, after: saved, userId, source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null }, { manager: mg });
     return { ...saved, ...(await contractEditableField(mg, saved.id)) };
   }
 
-  async update(id: string, rawBody: ContractUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
+  async update(id: string, rawBody: ContractUpsertDto, userId?: string, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
     const existing = await repo.findOne({ where: { id, tenant_id: sessionTenant() } });
@@ -1024,12 +1024,12 @@ export class ContractsService {
     const newSupplierId = existing.supplier_id;
 
     const saved = await repo.save(existing);
-    await this.audit.log({ table: 'contracts', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
+    await this.audit.log({ table: 'contracts', recordId: saved.id, action: 'update', before, after: saved, userId, source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null }, { manager: mg });
 
     // Sync contacts from supplier if supplier changed
     if (oldSupplierId !== newSupplierId) {
       await syncSupplierContactsWithinUpdate(mg, `contract ${saved.id}`, () =>
-        this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId: saved.tenant_id }));
+        this.itemContacts.syncFromSupplier(saved.id, newSupplierId, userId ?? null, { manager: mg, tenantId: saved.tenant_id, audit: opts?.audit }));
     }
 
     // Notify owner on status change
@@ -1463,7 +1463,7 @@ export class ContractsService {
       /** What a row does to a contract it updates (`CsvImportMode`); without it, `replace`. */
       mode?: CsvImportMode;
     },
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
@@ -1764,8 +1764,8 @@ export class ContractsService {
         ? (item.status && item.status !== deriveStatusFromDisabledAt(exists.disabled_at) ? item.status : undefined)
         : (item.status ?? 'enabled');
       const payload = { ...valuesOf.get(item), ...(status ? { status } : {}) } as ContractUpsertDto;
-      if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg }); processed += 1; }
-      else { await this.create(payload, userId ?? undefined, { manager: mg }); processed += 1; }
+      if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg, audit: opts?.audit }); processed += 1; }
+      else { await this.create(payload, userId ?? undefined, { manager: mg, audit: opts?.audit }); processed += 1; }
     }
     return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
   }

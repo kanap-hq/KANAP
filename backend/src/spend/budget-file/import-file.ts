@@ -89,13 +89,13 @@ export interface BudgetFileItems {
   create(
     body: Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; statusEmail?: boolean; source?: string; fields?: 'columns' },
+    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; statusEmail?: boolean; source?: string; audit?: BudgetFileSource; fields?: 'columns' },
   ): Promise<{ id: string }>;
   update(
     id: string,
     body: Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string; fields?: 'columns' },
+    opts?: { manager?: EntityManager; statusEmail?: boolean; source?: string; audit?: BudgetFileSource; fields?: 'columns' },
   ): Promise<unknown>;
 }
 
@@ -111,8 +111,15 @@ export interface BudgetFileAudit {
     after?: unknown;
     userId?: string | null;
     source?: string;
+    sourceRef?: string | null;
   }, opts?: { manager?: EntityManager }): Promise<void>;
 }
+
+/**
+ * The source of the history rows of a load made through Kad (its card): every row the load writes
+ * carries it. Without it, the screen's `budget_file` (actor "Import").
+ */
+export type BudgetFileSource = { source: string; sourceRef: string | null };
 
 export type BudgetFileFreeze = Pick<FreezeService, 'assertNotFrozen'>;
 
@@ -181,6 +188,8 @@ export async function importBudgetFile(input: {
   items: BudgetFileLineServices;
   audit: BudgetFileAudit;
   freeze: BudgetFileFreeze;
+  /** Kad's card: the source of every history row of the load (T-I5c). Absent on the screen. */
+  source?: BudgetFileSource;
 }): Promise<BudgetFileImportResult> {
   const first = await prepare(input);
   if (!first.report.ok) {
@@ -204,7 +213,7 @@ export async function importBudgetFile(input: {
 
   let written: Awaited<ReturnType<typeof applyPlans>>;
   try {
-    written = await applyPlans(input, second.plans, second.stored);
+    written = await applyPlans({ ...input, audit: fileAudit(input.audit, input.source) }, second.plans, second.stored);
   } catch (err) {
     if (isAccessRefusal(err)) throw new ConflictException(PREFLIGHT_STALE);
     throw err;
@@ -334,6 +343,7 @@ async function applyPlans(
     items: BudgetFileLineServices;
     audit: BudgetFileAudit;
     freeze: BudgetFileFreeze;
+    source?: BudgetFileSource;
   },
   plans: BudgetFileLinePlan[],
   stored: Prepared['stored'],
@@ -367,7 +377,7 @@ async function applyPlans(
     nextNumber += 1;
   }
   await writeFlatSpreads(input, flats, checkedFreeze, audits);
-  await insertAudits(input.manager, input.userId, audits);
+  await insertAudits(input.manager, input.userId, audits, input.source);
   return {
     inserted: creates.length,
     updated: updates.length,
@@ -406,6 +416,7 @@ async function applyLine(
     items: BudgetFileLineServices;
     audit: BudgetFileAudit;
     freeze: BudgetFileFreeze;
+    source?: BudgetFileSource;
   },
   plan: BudgetFileLinePlan,
   stored: Prepared['stored'][number] | undefined,
@@ -421,7 +432,8 @@ async function applyLine(
   const body = lineBody(plan, supplierIds, dimensionIds);
   // The service of the line's nature, the fields named as the columns (`product_name`, `description`).
   const items = input.items[plan.nature];
-  const file = { manager: input.manager, statusEmail: false as const, source: 'budget_file', fields: 'columns' as const };
+  // The line's values name the budget file (`source` in its row); the row's source is Kad's card through Kad.
+  const file = { manager: input.manager, statusEmail: false as const, source: 'budget_file', fields: 'columns' as const, ...(input.source ? { audit: input.source } : {}) };
   let itemId = plan.itemId;
   if (plan.creating) {
     const saved = await items.create(body, input.userId ?? undefined, { ...file, itemNumber, legacyNumber });
@@ -880,9 +892,16 @@ function lineDates(plan: BudgetFileLinePlan, stored: Prepared['stored'][number] 
   return { start: start ?? null, end };
 }
 
-function fileAudit(audit: BudgetFileAudit): BudgetFileAudit {
+/**
+ * The audit of the load: a row says `budget_file` unless it names its source, and every row takes
+ * Kad's card instead when the load is Kad's (`source`).
+ */
+function fileAudit(audit: BudgetFileAudit, source?: BudgetFileSource): BudgetFileAudit {
   return {
-    log: (entry, opts) => audit.log({ ...entry, source: entry.source ?? 'budget_file' }, opts),
+    log: (entry, opts) => audit.log(
+      source ? { ...entry, source: source.source, sourceRef: source.sourceRef } : { ...entry, source: entry.source ?? 'budget_file' },
+      opts,
+    ),
   };
 }
 
@@ -985,13 +1004,13 @@ async function createDimensionValues(
 }
 
 /** One statement for the operation rows and the rows this load created. */
-async function insertAudits(manager: EntityManager, userId: string | null, rows: AuditRow[]): Promise<void> {
+async function insertAudits(manager: EntityManager, userId: string | null, rows: AuditRow[], source?: BudgetFileSource): Promise<void> {
   if (rows.length === 0) return;
   await manager.query(
-    `INSERT INTO audit_log (table_name, record_id, action, before_json, after_json, user_id, source, parent_table, parent_id, created_at)
+    `INSERT INTO audit_log (table_name, record_id, action, before_json, after_json, user_id, source, source_ref, parent_table, parent_id, created_at)
      SELECT t.table_name, t.record_id, t.action,
             CASE WHEN t.before_json IS NULL THEN NULL ELSE t.before_json::jsonb END,
-            t.after_json::jsonb, $4, 'budget_file', t.parent_table, t.parent_id, clock_timestamp()
+            t.after_json::jsonb, $4, $9::text, $10::text, t.parent_table, t.parent_id, clock_timestamp()
        FROM unnest($1::text[], $2::uuid[], $3::text[], $5::text[], $6::text[], $7::text[], $8::uuid[])
          AS t(table_name, record_id, action, before_json, after_json, parent_table, parent_id)`,
     [
@@ -1003,6 +1022,8 @@ async function insertAudits(manager: EntityManager, userId: string | null, rows:
       rows.map((row) => JSON.stringify(row.after)),
       rows.map((row) => row.parent?.table ?? null),
       rows.map((row) => row.parent?.id ?? null),
+      source?.source ?? 'budget_file',
+      source?.sourceRef ?? null,
     ],
   );
 }

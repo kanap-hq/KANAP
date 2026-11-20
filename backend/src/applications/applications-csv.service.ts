@@ -23,7 +23,7 @@ import { Repository, EntityManager, In } from 'typeorm';
 import { Application } from './application.entity';
 import { ApplicationOwner } from './application-owner.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import {
   CsvExportService,
@@ -288,6 +288,8 @@ export class ApplicationsCsvService {
       manager: EntityManager;
       tenantId: string;
       userId?: string | null;
+      /** The source of each record's history row (Kad's card); without it, the person's. */
+      audit?: AuditSourceOptions;
       /** The screen language: a missing column is named by its title in this language. */
       language?: CsvLanguage;
       /** The person's rights: a name is found beyond case in the families they read. */
@@ -524,7 +526,7 @@ export class ApplicationsCsvService {
    */
   private async handleOwnerImport(
     written: readonly WrittenRow[],
-    opts: { manager: EntityManager; tenantId: string; userId?: string | null },
+    opts: { manager: EntityManager; tenantId: string; userId?: string | null; audit?: AuditSourceOptions },
   ) {
     const { manager, tenantId, userId } = opts;
     const rows = written.filter(({ raw }) => Object.keys(raw).some((key) => /^(business|it)_owner_email_/.test(key)));
@@ -572,6 +574,8 @@ export class ApplicationsCsvService {
             before: beforeRows.map((r) => ({ user_id: r.user_id, owner_type: r.owner_type })),
             after: afterRows.map((r) => ({ user_id: r.user_id, owner_type: r.owner_type })),
             userId: userId ?? null,
+            source: opts.audit?.source,
+            sourceRef: opts.audit?.sourceRef ?? null,
           },
           { manager },
         );
@@ -586,7 +590,7 @@ export class ApplicationsCsvService {
    */
   private async handleDataResidencyImport(
     written: readonly WrittenRow[],
-    opts: { manager: EntityManager; tenantId: string; userId?: string | null },
+    opts: { manager: EntityManager; tenantId: string; userId?: string | null; audit?: AuditSourceOptions },
   ) {
     const { manager, tenantId, userId } = opts;
 
@@ -623,6 +627,8 @@ export class ApplicationsCsvService {
             before: beforeRows.map((r) => ({ country_iso: r.country_iso })),
             after: afterRows.map((r) => ({ country_iso: r.country_iso })),
             userId: userId ?? null,
+            source: opts.audit?.source,
+            sourceRef: opts.audit?.sourceRef ?? null,
           },
           { manager },
         );

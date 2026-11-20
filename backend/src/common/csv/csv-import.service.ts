@@ -12,8 +12,7 @@ import { sameStoredValue, sameStoredValues } from '../csv-sheet/unchanged';
 import { GUARDED_DASH } from '../csv-sheet/clear';
 import { importCell, markGuardedDash, noteCleared, refuseClear, removedEntries } from './csv-import-cells';
 import { isNumberedColumn, numberedColumns, numberedListColumnOf } from './csv-numbered-lists';
-import { AuditLog } from '../../audit/audit.entity';
-import { omitAuditSecrets } from '../../audit/audit.service';
+import { writeAuditLogs, type AuditSourceOptions } from '../../audit/audit.service';
 import {
   ArrayStrategy,
   CsvCallerAccess,
@@ -70,6 +69,8 @@ export interface CsvImportOptions {
   language?: CsvLanguage;
   /** The person's rights: names found beyond case in the families they read. See CsvImportContext. */
   access?: CsvCallerAccess;
+  /** The source of each record's history row (Kad's card); without it, the person's. See CsvImportContext. */
+  audit?: AuditSourceOptions;
 }
 
 /** A reference cell nothing finds, or that may name several records: what parseFk and the lists do with it. */
@@ -126,6 +127,7 @@ export class CsvImportService {
     'applications',
     'portfolio_requests',
     'portfolio_projects',
+    'assets',
   ]);
 
   constructor(
@@ -200,6 +202,7 @@ export class CsvImportService {
       timeZones,
       language: opts.language,
       access: opts.access,
+      audit: opts.audit,
       nameMatches: new Map(),
       refusedProposals: new Map(),
     };
@@ -1678,31 +1681,22 @@ export class CsvImportService {
     if (!this.AUDITED_IMPORT_TABLES.has(tableName)) return;
     if (entities.length === 0 || persistedRows.length === 0) return;
 
-    const auditRepo = context.manager.getRepository(AuditLog);
-    const entries: AuditLog[] = [];
-
-    for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
+    // As a write on the record's page: the row names its parent record (a task, its project or
+    // contract), so that record's history shows it too; the source is Kad's card, else the person.
+    const entries = entities.flatMap((entity, i) => {
       const meta = persistedRows[i];
-      if (!entity || !meta) continue;
-      if (!entity.id) continue;
-
-      entries.push(
-        auditRepo.create({
-          tenant_id: context.tenantId,
-          table_name: tableName,
-          record_id: entity.id,
-          action: meta.action,
-          // Written without AuditService.log: the same keys are left out as there.
-          before_json: omitAuditSecrets(meta.before),
-          after_json: omitAuditSecrets(entity),
-          user_id: context.userId ?? null,
-        }),
-      );
-    }
-
-    if (entries.length > 0) {
-      await auditRepo.save(entries);
-    }
+      if (!entity?.id || !meta) return [];
+      return [{
+        table: tableName,
+        recordId: entity.id,
+        action: meta.action,
+        before: meta.before,
+        after: entity,
+        userId: context.userId ?? null,
+        source: context.audit?.source,
+        sourceRef: context.audit?.sourceRef ?? null,
+      }];
+    });
+    await writeAuditLogs(context.manager, entries);
   }
 }

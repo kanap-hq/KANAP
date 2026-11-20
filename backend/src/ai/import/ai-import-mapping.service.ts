@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { CsvLanguage } from '../../common/csv-sheet';
+import type { AuditSourceOptions } from '../../audit/audit.service';
 import { assertUnscopedDataAccess } from '../../data-access/reserved-operations';
 import type { CatalogOptionLike } from '../../it-ops-settings/catalog-resolve';
 import { shippedLabelIn, withShippedLabels } from '../../it-ops-settings/catalog-shipped-labels';
@@ -228,17 +229,19 @@ export class AiImportMappingService {
 
   /**
    * The import of an approved mapping: the file converted again with the same mapping, then loaded by
-   * the import, which checks it once more and writes nothing when it refuses a row.
+   * the import, which checks it once more and writes nothing when it refuses a row. `audit` is the
+   * source of the history row of each record it writes (Kad's card).
    */
   async runImport(
     context: AiExecutionContextWithManager,
     input: PrepareImportMappingInput,
     language: CsvLanguage,
+    audit?: AuditSourceOptions,
   ): Promise<AiImportRunDto> {
     const target = aiImportTarget(input.entity_type);
     const { converted, lines } = await this.convert(context, target, input, language);
     const result = await this.runner.run(target.key, buildImportFile(converted.file, language), {
-      dryRun: false, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
+      dryRun: false, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals }, audit,
     }, context);
     return this.withHosting(context, target, converted, language, result);
   }

@@ -1,4 +1,5 @@
 import type { CsvLanguage } from '../common/csv-sheet';
+import type { AuditSourceOptions } from '../audit/audit.service';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
@@ -229,6 +230,8 @@ export class PortfolioRequestsCsvService {
       manager: EntityManager;
       tenantId: string;
       userId?: string | null;
+      /** The source of each record's history row (Kad's card); without it, the person's. */
+      audit?: AuditSourceOptions;
       /** The screen language: a status the file names wrongly is refused with the names of this language. */
       language?: CsvLanguage;
       /** The person's rights: a name is found beyond case in the families they read. */

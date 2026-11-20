@@ -24,17 +24,6 @@ async function session(tenantId: string, beforeWrite?: () => Promise<void>) {
   await runner.startTransaction();
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
   const manager = runner.manager;
-  if (beforeWrite) {
-    // The import's writes of the contact wait here: the test commits another change meanwhile.
-    const repo = manager.getRepository(ExternalContact) as any;
-    for (const method of ['save', 'update'] as const) {
-      const original = repo[method].bind(repo);
-      repo[method] = async (...args: unknown[]) => {
-        await beforeWrite();
-        return original(...args);
-      };
-    }
-  }
   const audit = new AuditService(manager.getRepository(AuditLog));
   const contacts = new ContactsService(
     manager.getRepository(ExternalContact),
@@ -43,6 +32,18 @@ async function session(tenantId: string, beforeWrite?: () => Promise<void>) {
     new SupplierContactsService(manager.getRepository(SupplierContactLink), audit),
     audit,
   );
+  if (beforeWrite) {
+    // The import's write of each contact (`create` or `update`, which locks the row first) waits
+    // here, after the import read the contacts: the test commits another change meanwhile.
+    const service = contacts as any;
+    for (const method of ['create', 'update'] as const) {
+      const original = service[method].bind(service);
+      service[method] = async (...args: unknown[]) => {
+        await beforeWrite();
+        return original(...args);
+      };
+    }
+  }
   const run = (lines: string[]) => contacts.importCsv(
     { file: upload(lines), dryRun: false, language: 'en', mode: 'enrich', access: { isAdmin: true, levels: {} } } as any,
     { manager, tenantId, userId: null },

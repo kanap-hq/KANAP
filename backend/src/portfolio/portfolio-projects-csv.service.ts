@@ -1,4 +1,5 @@
 import type { CsvLanguage } from '../common/csv-sheet';
+import type { AuditSourceOptions } from '../audit/audit.service';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
@@ -200,6 +201,8 @@ export class PortfolioProjectsCsvService {
       manager: EntityManager;
       tenantId: string;
       userId?: string | null;
+      /** The source of each record's history row (Kad's card); without it, the person's. */
+      audit?: AuditSourceOptions;
       /** The screen language: a missing column is named by its title in this language. */
       language?: CsvLanguage;
       /** The person's rights: a name is found beyond case in the families they read. */

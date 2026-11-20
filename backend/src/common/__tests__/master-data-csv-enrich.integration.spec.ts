@@ -125,7 +125,8 @@ async function testContacts() {
       runner.manager.getRepository(SupplierContactLink),
       runner.manager.getRepository(Supplier),
       undefined as any,
-      undefined as any,
+      // Each contact the import writes has its history row.
+      new AuditService(runner.manager.getRepository(AuditLog)),
     );
     const run = (lines: string[], mode?: CsvImportMode, dryRun = false) =>
       svc.importCsv({ file: file(lines), dryRun, language: 'en', mode }, { manager: runner.manager, tenantId }) as Promise<Report>;

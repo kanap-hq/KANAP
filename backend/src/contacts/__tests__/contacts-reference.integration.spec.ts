@@ -10,6 +10,8 @@ import { ContactsService } from '../contacts.service';
 import { ExternalContact } from '../external-contact.entity';
 import { SupplierContactLink } from '../supplier-contact.entity';
 import { Supplier } from '../../suppliers/supplier.entity';
+import { AuditService } from '../../audit/audit.service';
+import { AuditLog } from '../../audit/audit.entity';
 
 // The contact's reference (`CTCT-12`) out of its page (lot R3):
 //
@@ -66,7 +68,8 @@ async function withTenant(tag: string, fn: (ctx: Ctx) => Promise<void>) {
       manager.getRepository(SupplierContactLink),
       manager.getRepository(Supplier),
       undefined as any,
-      undefined as any,
+      // Each contact the import writes has its history row.
+      new AuditService(manager.getRepository(AuditLog)),
     );
     await fn({ runner, tenantId, contacts });
   } finally {

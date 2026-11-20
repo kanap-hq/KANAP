@@ -331,10 +331,12 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     if (!mapping?.validation?.ok) throw new Error(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE);
     const input = preview.mutation_input as unknown as PrepareImportMappingInput;
     const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
+    // Each record the import writes carries the card in its history, as Kad's other writes do.
     const result = await this.mapping.runImport(
       { ...context, conversationId: context.conversationId ?? preview.conversation_id ?? null },
       input,
       language,
+      buildAiMutationAudit(preview),
     );
     // Refused by the load: the card keeps its check, which gives the reason of each row refused.
     if (!result.ok) throw new AiPreviewExecutionRefusal(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE, { import_mapping: { ...mapping, result } });
