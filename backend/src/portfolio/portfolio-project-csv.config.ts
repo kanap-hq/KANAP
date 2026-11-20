@@ -12,6 +12,7 @@ import { richTextCell } from '../common/csv/rich-text-cell';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
 import { settleWithSlotBodies } from './portfolio-csv-document-slots';
+import { numberedReference } from '../common/csv-sheet/master-data';
 
 // Status label to code mapping
 const statusLookup = new Map<string, string>([
@@ -229,6 +230,8 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
   displayName: 'Portfolio Projects',
   headerLabels: PORTFOLIO_PROJECT_CSV_HEADERS,
   upsertKey: ['name'],
+  // How the check names a record a row updates (Q1 of 26.11.9).
+  recordLabel: (entity) => ({ ref: numberedReference('PRJ', entity.item_number), name: String(entity.name ?? '') }),
   fields: [
     // === IDENTITY ===
     {

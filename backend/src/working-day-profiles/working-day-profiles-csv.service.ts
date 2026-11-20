@@ -23,6 +23,8 @@ import {
   rowError,
   rowProblemErrors,
   textCellError,
+  listedUpdates,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import {
   CALENDAR_YEAR_MAX,
@@ -77,6 +79,9 @@ export interface WorkingDayProfileImportResult {
   /** The stored values the rows clear with `-` (D21 of 26.11.9): descriptions and ends of validity. */
   cleared?: number;
   errors: ImportReportError[];
+  /** The rows that update a stored record, the first ones, and their total (Q1 of 26.11.9); absent when none. */
+  updates?: ImportUpdate[];
+  updatesTotal?: number;
   /** The unknown headers the file carried, and what the shared layer noticed. */
   ignoredColumns: string[];
   notices: { dates: string | null; amounts: string | null };
@@ -326,6 +331,7 @@ export class WorkingDayProfilesCsvService {
     let unchanged = 0;
     // The stored values the rows clear with `-` (a `-` on an empty one is not counted).
     let cleared = 0;
+    const updates: ImportUpdate[] = [];
     const toWrite: Array<{ existing: StoredWorkingDayProfile | null; values: WorkingDayProfileValues; line: number }> = [];
     for (const [key, group] of calendars) {
       const { existing, values } = results.get(key)!;
@@ -339,7 +345,10 @@ export class WorkingDayProfilesCsvService {
       for (const row of group.rows) {
         const storedDays = row.year ? existing.days_by_year?.[row.year] : undefined;
         if (row.year && !storedDays) inserted += 1;
-        else if ((row.year && !sameYear(storedDays!, row.days!)) || (row === group.first && fieldsChanged)) updated += 1;
+        else if ((row.year && !sameYear(storedDays!, row.days!)) || (row === group.first && fieldsChanged)) {
+          updated += 1;
+          updates.push({ row: row.line, ref: null, name: row.year ? `${existing.name} (${row.year})` : existing.name });
+        }
         else unchanged += 1;
       }
       if (!calendarValuesEqual(existing, values)) toWrite.push({ existing, values, line: group.first.line });
@@ -366,7 +375,7 @@ export class WorkingDayProfilesCsvService {
       }
     }
     return {
-      ok: true, dryRun, total: rows.length, inserted, updated, unchanged, cleared, errors: [],
+      ok: true, dryRun, total: rows.length, inserted, updated, unchanged, cleared, errors: [], ...listedUpdates(updates),
       ignoredColumns: read.ignoredColumns, notices: read.notices,
     };
   }

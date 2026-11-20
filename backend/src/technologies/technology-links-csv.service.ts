@@ -15,6 +15,8 @@ import {
   type CsvImportMode,
   type CsvLanguage,
   type ImportReportError,
+  listedUpdates,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import { linkProvenance, SOURCE_REF_MAX, type LinkProvenance, type LinkSource } from '../common/link-provenance';
 import { parseItemNumber } from '../common/parse-item-number';
@@ -95,6 +97,9 @@ export interface TechnologyLinksImportResult {
   /** The links' notes the rows clear with `-` (D21 of 26.11.9). */
   cleared?: number;
   errors: ImportReportError[];
+  /** The rows that update a stored record, the first ones, and their total (Q1 of 26.11.9); absent when none. */
+  updates?: ImportUpdate[];
+  updatesTotal?: number;
   warnings: ImportReportError[];
   ignoredColumns: string[];
   notices: { dates: string | null; amounts: string | null };
@@ -163,6 +168,9 @@ type PlannedLink = {
    */
   markOperatingSystem: boolean;
   outcome: 'inserted' | 'updated' | 'unchanged';
+  /** The row's line, and the technology of the link, which the check names when the row updates the link (Q1 of 26.11.9). */
+  line: number;
+  technology: { ref: string; name: string };
   /** The version the label finds (as written or by a prefix rule); null: created as written. */
   versionId: string | null;
 };
@@ -370,8 +378,8 @@ export class TechnologyLinksCsvService {
     const { file, dryRun, language } = request;
     const read = await readMasterDataFile({ file: uploadedBytes(file), fields: spec.headers, keys: keyColumns(spec.headers), language });
     const lookup: NameLookup = { request, state: { matches: new Map(), refused: new Map() } };
-    const report = (errors: ImportReportError[], warnings: ImportReportError[], counts = { inserted: 0, updated: 0, unchanged: 0, cleared: 0 }) => ({
-      ok: errors.length === 0, dryRun, total: read.rows.length, ...counts, errors, warnings,
+    const report = (errors: ImportReportError[], warnings: ImportReportError[], counts = { inserted: 0, updated: 0, unchanged: 0, cleared: 0 }, updates: ImportUpdate[] = []) => ({
+      ok: errors.length === 0, dryRun, total: read.rows.length, ...counts, errors, warnings, ...listedUpdates(updates),
       ignoredColumns: read.ignoredColumns, notices: read.notices,
       ...listedMatches(lookup.state.matches), ...listedRefusedProposals(lookup.state.refused),
     });
@@ -385,7 +393,9 @@ export class TechnologyLinksCsvService {
       if (row.clearNotes) counts.cleared += 1;
     }
     if (!dryRun) await this.write(spec.side, planned.rows, importProvenance(fixMulterFilename(file.originalname)), ctx);
-    return report([], planned.warnings, counts);
+    // The links a row updates, named by their technology (Q1 of 26.11.9).
+    const updates = planned.rows.flatMap((row): ImportUpdate[] => (row.outcome === 'updated' ? [{ row: row.line, ...row.technology }] : []));
+    return report([], planned.warnings, counts, updates);
   }
 
   /** Every row checked against the stored data, nothing written. Errors and warnings by physical line. */
@@ -514,6 +524,8 @@ export class TechnologyLinksCsvService {
         writeLink: !link || notesChange,
         markOperatingSystem,
         outcome: !link ? 'inserted' : notesChange || markOperatingSystem ? 'updated' : 'unchanged',
+        line,
+        technology: { ref: `TEC-${tech.item_number}`, name: tech.name },
         versionId,
       });
       if (autoCandidate) autoMark.set(subject.id, { index: planned.length - 1, line });

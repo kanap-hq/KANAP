@@ -431,6 +431,8 @@ export const applicationCsvConfig: CsvEntityConfig = {
   // An application may have more than four owners of a type: the export writes them all.
   numberedLists: OWNER_TYPES.map((ownerType) => ({ base: `${ownerType}_owner_email`, values: (entity: any) => ownerEmails(entity, ownerType) })),
   upsertKey: ['name'],
+  // How the check names a record a row updates (Q1 of 26.11.9).
+  recordLabel: (entity) => ({ ref: entity.sequential_id || null, name: String(entity.name ?? '') }),
   // Same rule as the unique names: `lower(btrim(name))`.
   upsertKeyIgnoresOuterSpaces: true,
   fields: [

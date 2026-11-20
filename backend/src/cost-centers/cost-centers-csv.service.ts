@@ -24,6 +24,8 @@ import {
   rowProblemErrors,
   textCellError,
   withClearedEndOfValidity,
+  listedUpdates,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CostCenterKind } from './cost-center.entity';
@@ -64,6 +66,9 @@ export interface CostCenterImportResult {
   /** The stored values the rows clear with `-` (D21 of 26.11.9), the same at the check and at the load. */
   cleared?: number;
   errors: ImportReportError[];
+  /** The rows that update a stored record, the first ones, and their total (Q1 of 26.11.9); absent when none. */
+  updates?: ImportUpdate[];
+  updatesTotal?: number;
   /** The unknown headers the file carried, and what the shared layer noticed. */
   ignoredColumns: string[];
   notices: { dates: string | null; amounts: string | null };
@@ -384,6 +389,7 @@ export class CostCentersCsvService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    const updates: ImportUpdate[] = [];
     // The stored values the rows clear with `-` (a `-` on an empty one is not counted).
     let cleared = 0;
     const toWrite: ParsedRow[] = [];
@@ -395,7 +401,10 @@ export class CostCentersCsvService {
       else if (costCenterValuesEqual(row.existing, row.values)) {
         unchanged += 1;
         continue;
-      } else updated += 1;
+      } else {
+        updated += 1;
+        updates.push({ row: row.line, ref: null, name: `${row.existing.code} ${row.existing.name}` });
+      }
       toWrite.push(row);
     }
     if (!dryRun) {
@@ -407,7 +416,7 @@ export class CostCentersCsvService {
       }
     }
     return {
-      ok: true, dryRun, total: rows.length, inserted, updated, unchanged, cleared, errors: [],
+      ok: true, dryRun, total: rows.length, inserted, updated, unchanged, cleared, errors: [], ...listedUpdates(updates),
       ignoredColumns: read.ignoredColumns, notices: read.notices, ...listed(),
     };
   }

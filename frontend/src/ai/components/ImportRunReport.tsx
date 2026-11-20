@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Checkbox, Stack, Typography } from '@mui/material';
+import { Box, Checkbox, Link, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { AiImportChoice, AiImportHostingSite, AiImportReportMessage, AiImportRun } from '../aiTypes';
 import { csvMessageColumn, csvMessageText } from '../../components/csv/csvMessage';
@@ -7,12 +7,31 @@ import { ReportView as BudgetFileReportView } from '../../components/finance/Bud
 import { useAuth } from '../../auth/AuthContext';
 import ImportMatchesView from '../../components/csv/ImportMatchesView';
 import ImportLookalikesView, { applicationLookalikeReason, applicationUpdateChoice } from '../../components/csv/ImportLookalikesView';
-import type { ImportLookalike } from '../../components/csv/csv.types';
+import type { CsvImportUpdate, ImportLookalike } from '../../components/csv/csv.types';
 import { buildEntityUrl } from '../utils/entityUrls';
 
 /** The messages shown of each kind, as the import dialog shows them. */
 const SHOWN_ERRORS = 10;
 const SHOWN_WARNINGS = 5;
+/** The rows that update a record shown under the counts; the others are counted. */
+const SHOWN_UPDATES = 10;
+
+/** The page each import's records open on, by import (`import_key`): the reference of a row it updates links to it. */
+const RECORD_PAGES: Readonly<Record<string, string>> = {
+  applications: 'applications',
+  assets: 'assets',
+  portfolio_projects: 'projects',
+  portfolio_requests: 'requests',
+  tasks: 'tasks',
+  incidents: 'incidents',
+  contracts: 'contracts',
+  suppliers: 'suppliers',
+  contacts: 'contacts',
+  companies: 'companies',
+  departments: 'departments',
+  technology_asset_links: 'technologies',
+  technology_application_links: 'technologies',
+};
 
 const sectionLabelSx = {
   fontSize: 12,
@@ -22,6 +41,8 @@ const sectionLabelSx = {
 
 type ImportRunReportProps = {
   run: AiImportRun;
+  /** The import (`import_key`): the reference of a record a row updates opens its page. */
+  importKey?: string;
   /** The title of each template column in the person's language, to name the column of a message. */
   titles: ReadonlyMap<string, string>;
   /**
@@ -71,6 +92,40 @@ function Messages({ title, items, total, shown, more, titles, tone }: {
 }
 
 /**
+ * The rows of the file that update a record (Q1 of 26.11.9), under the counts: the line of the person's
+ * file, the record's reference, linked to its page (the import's rights read it), then its name.
+ */
+function UpdateLines({ updates, total, importKey }: { updates: CsvImportUpdate[]; total: number; importKey?: string }) {
+  const { t } = useTranslation(['common', 'ops']);
+  const page = importKey ? RECORD_PAGES[importKey] : undefined;
+  const shown = updates.slice(0, SHOWN_UPDATES);
+  return (
+    <Stack spacing={0.25}>
+      <Box component="ul" sx={{ m: 0, pl: 2.25, fontSize: 12, lineHeight: 1.5, color: 'kanap.text.secondary' }}>
+        {shown.map((entry) => {
+          const url = entry.ref && page ? buildEntityUrl(page, entry.ref) : null;
+          return (
+            <Box component="li" key={`${entry.row}-${entry.ref ?? entry.name}`} sx={{ overflowWrap: 'anywhere' }}>
+              {t('common:csv.rowPrefix', { row: entry.row })}{' '}
+              {entry.ref && (
+                <>
+                  {url ? <Link href={url} target="_blank" rel="noopener noreferrer" underline="hover">{entry.ref}</Link> : entry.ref}
+                  {' · '}
+                </>
+              )}
+              {entry.name}
+            </Box>
+          );
+        })}
+      </Box>
+      {total > shown.length && (
+        <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>{t('ops:operations.budgetFile.andMore', { count: total - shown.length })}</Typography>
+      )}
+    </Stack>
+  );
+}
+
+/**
  * How the servers of an import are hosted, in one line (lot I3 of 26.11.9, T-I3f): each site the file
  * names, by its reference and name, with its category (on site, cloud), or its hosting type when the
  * type has none, and its provider.
@@ -94,7 +149,7 @@ function HostingLine({ sites }: { sites: AiImportHostingSite[] }) {
  * approved one: the counts and the messages of the import screen, on the lines of the person's file.
  * The budget file's check shows as its own dialog shows it, under the card's status line.
  */
-function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunReportProps) {
+function ImportRunReport({ run, importKey, titles, onChoices, choicesDisabled }: ImportRunReportProps) {
   const { t, i18n } = useTranslation(['ai', 'common', 'ops']);
   const { hasLevel } = useAuth();
   const [matchesOpen, setMatchesOpen] = React.useState(false);
@@ -147,6 +202,13 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
         {status}
         {counts && <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{' '}{counts}</Box>}
       </Typography>
+      {run.report.kind === 'rows' && (run.report.updates?.length ?? 0) > 0 && (
+        <UpdateLines
+          updates={run.report.updates!}
+          total={Math.max(run.report.updatesTotal ?? 0, run.report.updates!.length)}
+          importKey={importKey}
+        />
+      )}
       {check && (run.cleared ?? 0) > 0 && (
         <Typography sx={{ fontSize: 12, color: 'kanap.text.primary' }}>
           {t('common:csv.valuesWillBeCleared', { count: run.cleared })}

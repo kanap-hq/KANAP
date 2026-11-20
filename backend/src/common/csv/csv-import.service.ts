@@ -34,6 +34,13 @@ import { CsvJsonValidators } from './csv-json-validators';
 import { isRichTextContentRefusal } from '../markdown-limits';
 import { markdownWorkBudget } from '../markdown-worker';
 import { uploadedBytes } from '../upload';
+import { listedUpdates, type ImportUpdate } from '../csv-sheet/master-data';
+
+/** A stored record as the result names it (`CsvEntityConfig.recordLabel`): by default its name or title, no reference. */
+function recordLabelOf(config: CsvEntityConfig, entity: any): { ref: string | null; name: string } {
+  if (config.recordLabel) return config.recordLabel(entity ?? {});
+  return { ref: null, name: String(entity?.name ?? entity?.title ?? '') };
+}
 
 /**
  * Import options
@@ -252,6 +259,8 @@ export class CsvImportService {
     let skipCount = 0;
     let unchangedCount = 0;
     let clearedCount = 0;
+    // The rows that update a stored record, named by its reference and name (Q1 of 26.11.9).
+    const updates: ImportUpdate[] = [];
 
     for (const row of parsedRows) {
       if (row.errors.length > 0 || row.leftOut) {
@@ -275,6 +284,7 @@ export class CsvImportService {
           unchangedCount++;
         } else {
           updateCount++;
+          updates.push({ row: row.rowNumber, ...recordLabelOf(config, row.existingEntity) });
         }
       }
     }
@@ -293,6 +303,7 @@ export class CsvImportService {
         errors: allErrors,
         warnings: allWarnings,
         ...this.matchesOf(context),
+        ...listedUpdates(updates),
       };
     }
 
@@ -331,6 +342,7 @@ export class CsvImportService {
       errors: [],
       warnings: allWarnings,
       ...this.matchesOf(context),
+      ...listedUpdates(updates),
     };
   }
 

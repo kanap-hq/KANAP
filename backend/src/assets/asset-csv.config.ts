@@ -830,6 +830,8 @@ export const assetCsvConfig: CsvEntityConfig = {
   displayName: 'Assets',
   headerLabels: ASSET_CSV_HEADERS,
   upsertKey: ['name'],
+  // How the check names a record a row updates (Q1 of 26.11.9).
+  recordLabel: (entity) => ({ ref: entity.asset_reference || null, name: String(entity.name ?? '') }),
   // Same rule as the unique names: `lower(btrim(name))`.
   upsertKeyIgnoresOuterSpaces: true,
   fields: [

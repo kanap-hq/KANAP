@@ -28,6 +28,7 @@ import type {
   BudgetFileNatureCounts,
 } from '../../spend/budget-file/types';
 import type { ImportLookalikeChoice, ImportLookalikes } from '../../common/csv/csv-lookalikes';
+import type { ImportUpdate } from '../../common/csv-sheet/master-data';
 import type { BudgetNature } from '../../spend/budget-nature';
 import type { ImportNameMatch, ImportRefusedProposal } from '../../common/name-matching';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
@@ -68,6 +69,9 @@ type RowsReport = {
   refusedProposalsTotal?: number;
   /** The applications: the rows that would create one and look like one the person reads, on the lines of the built file (lot I3 of 26.11.9). */
   lookalikes?: ImportLookalikes;
+  /** The rows that update a stored record, the first ones, on the lines of the built file, and their total (Q1 of 26.11.9). */
+  updates?: ImportUpdate[];
+  updatesTotal?: number;
 };
 
 /** The person's choices on a card and the model's proposals, as the imports follow them. */
@@ -447,6 +451,13 @@ export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly n
           }
         : {}),
       ...(lookalikes ? { lookalikes } : {}),
+      // The records the rows update, on the person's lines (Q1 of 26.11.9): the card and the model name them.
+      ...(result.updates?.length
+        ? {
+            updates: result.updates.slice(0, KEPT_WARNINGS).map((entry) => ({ ...entry, row: personLine(entry.row, lines) })),
+            updatesTotal: result.updatesTotal ?? result.updates.length,
+          }
+        : {}),
     },
   };
 }
@@ -478,6 +489,23 @@ function clearedNote(count: number): string {
 
 /** Matches the approval's sentence names; the others are counted ("and N more"). */
 const APPROVAL_FACT_MATCHES = 3;
+
+/** Records updated the approval's sentence names; the others are counted ("and N more"). */
+const APPROVAL_FACT_UPDATES = 10;
+
+/**
+ * The records a row import's check updates, as the card lists them (Q1 of 26.11.9): each by the line of
+ * the person's file and the record's reference, then its name. Empty when the check lists none.
+ */
+function rowsUpdateFacts(report: AiImportRunDto['report'] | undefined, updated: number): string {
+  const updates = report?.kind === 'rows' ? report.updates ?? [] : [];
+  if (updates.length === 0) return '';
+  const total = Math.max(report?.kind === 'rows' ? report.updatesTotal ?? 0 : 0, updated, updates.length);
+  const shown = updates.slice(0, APPROVAL_FACT_UPDATES)
+    .map((entry) => `file line ${entry.row}: ${entry.ref ? `${entry.ref} ${entry.name}` : entry.name}`);
+  const more = total - shown.length;
+  return ` (${shown.join(', ')}${more > 0 ? `, and ${more} more` : ''})`;
+}
 
 /**
  * The card's words for a supplier found by the application's publisher, after the column's title
@@ -513,7 +541,8 @@ function rowsMatchFacts(report: AiImportRunDto['report'] | undefined, titles: Re
 
 /**
  * What the approval of a row import's check does, in one sentence (lot I2 of 26.11.9): the records it
- * creates, updates and leaves unchanged, or that there is nothing to import; the stored values it
+ * creates, updates (each named by its line of the file and its reference, Q1 of 26.11.9) and leaves
+ * unchanged, or that there is nothing to import; the stored values it
  * clears with `-` (D21 of 26.11.9, when there are some); then the values the check matched to existing records, as the card names them (`titles`: the card's column titles, by column).
  */
 export function rowsApprovalFacts(
@@ -535,7 +564,8 @@ export function rowsApprovalFacts(
         : 'The card cannot be approved.');
   }
   const matches = rowsMatchFacts(run.report, card.titles ?? new Map(), card.language ?? 'en');
-  return `On approval: ${run.inserted} records created, ${run.updated} updated, ${run.unchanged} unchanged${clearedNote(run.cleared ?? 0)}${matches}${lookalikes}.`;
+  const updates = rowsUpdateFacts(run.report, run.updated);
+  return `On approval: ${run.inserted} records created, ${run.updated} updated${updates}, ${run.unchanged} unchanged${clearedNote(run.cleared ?? 0)}${matches}${lookalikes}.`;
 }
 
 /**
