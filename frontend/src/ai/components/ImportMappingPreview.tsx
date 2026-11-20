@@ -306,6 +306,7 @@ function ImportMappingPreview({ mapping, onChoices, choicesDisabled }: ImportMap
       {(mapping.result ?? mapping.validation) && (
         <ImportRunReport
           run={(mapping.result ?? mapping.validation)!}
+          importKey={mapping.import_key}
           titles={titleOf}
           onChoices={mapping.result ? undefined : onChoices}
           choicesDisabled={choicesDisabled}

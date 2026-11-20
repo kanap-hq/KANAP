@@ -1,6 +1,6 @@
 import type { CsvReportMessage } from '../components/csv/csvMessage';
 import type { BudgetFileChoice, BudgetFileReport } from '../components/finance/budgetFile';
-import type { CsvImportMatch, CsvImportRefusedProposal, ImportLookalikeChoice, ImportLookalikes } from '../components/csv/csv.types';
+import type { CsvImportMatch, CsvImportRefusedProposal, CsvImportUpdate, ImportLookalikeChoice, ImportLookalikes } from '../components/csv/csv.types';
 
 /**
  * A choice of the person on an import card: a budget file's, a match undone on any import, or a row
@@ -172,6 +172,9 @@ export type AiImportRun = {
       hosting?: AiImportHostingSite[];
       /** An applications import: the rows that look like an existing application, absent when none. */
       lookalikes?: ImportLookalikes;
+      /** The rows that update a stored record, the first ones, and their total; absent when none. */
+      updates?: CsvImportUpdate[];
+      updatesTotal?: number;
     }
     | { kind: 'budget_file'; file: BudgetFileReport | null };
 };
