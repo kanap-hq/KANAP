@@ -70,6 +70,8 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 
 **Exports** (table **Export**) : chaque fichier que Kadratis produit à partir de vos données : exports de listes et de rapports en CSV ou Excel, documents et rapports PDF. La ligne indique ce qui a été exporté et par qui. Ses détails donnent le format, les paramètres de l'export (filtres, recherche, tri, année, etc.) et, pour un fichier de lignes, le nombre de lignes écrites. L'export du journal d'audit est lui aussi enregistré.
 
+**Imports** (table **Import**) : chaque fichier chargé par un import : les listes, le fichier budgétaire, les utilisateurs et l'accès aux données. La ligne indique quelle liste a été importée et par qui : la personne, ou Kad pour cette personne quand l'import a été approuvé dans le chat IA. Ses détails donnent le nom du fichier et le nombre de lignes créées, mises à jour et inchangées. Vérifier un fichier sans le charger n'écrit aucune ligne.
+
 Les lignes de connexion, de session et d'export conservent aussi l'**adresse IP** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans les lignes **Adresse IP** et **Navigateur** de son tableau. Derrière un reverse proxy, c'est l'adresse IP de la personne elle-même, tant que le proxy la transmet (on-premise : voir l'[exemple de reverse proxy](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Les mots de passe, les liens de connexion et les jetons ne sont jamais écrits dans le journal. Quand quelqu'un tente de se connecter avec une adresse e-mail sans compte, la ligne affiche **Compte inconnu** et ne conserve pas l'adresse saisie.

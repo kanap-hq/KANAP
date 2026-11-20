@@ -70,6 +70,8 @@ The Audit Log page keeps the history of data changes and of security events in y
 
 **Exports** (table **Export**): every file Kadratis produces from your data: list and report exports in CSV or Excel, documents and PDF reports. The row says what was exported and by whom. Its details give the format, the parameters of the export (filters, search, sort, year and so on) and, for a file of rows, the number of rows written. Exporting the audit log is recorded too.
 
+**Imports** (table **Import**): every file loaded through an import: the lists, the budget file, users and data access. The row says which list was imported and by whom: the person, or Kad for that person when the import was approved in the AI chat. Its details give the file name and the number of rows created, updated and unchanged. Checking a file without loading it writes no row.
+
 Sign-in, session and export rows also keep the **IP address** the request came from and the **browser** it used. Open the row to read them in the **IP address** and **Browser** rows of its table. Behind a reverse proxy, this is the person's own IP address, as long as the proxy passes it on (on-premise: see the [reverse proxy example](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Passwords, sign-in links and tokens are never written to the log. When someone tries to sign in with an email address that has no account, the row shows **Unknown account** and does not keep the address they typed.
