@@ -35,22 +35,12 @@ export class PortfolioRequestsCsvService {
   private buildCsvConfig(): CsvEntityConfig {
     const baseConfig = portfolioRequestCsvConfig;
 
+    // The purpose and the risks are documents, written after the record (`afterCommit`). They stay on
+    // the record as the properties the file gives (no columns: the save leaves them out), so the
+    // record's history row holds the stored texts and the file's, and tells a change only when they
+    // differ (Q1 of 26.11.9).
     return {
       ...baseConfig,
-      beforeCommit: async (entities: any[], context) => {
-        await baseConfig.beforeCommit?.(entities, context);
-
-        for (const entity of entities) {
-          if (Object.prototype.hasOwnProperty.call(entity, 'purpose')) {
-            (entity as any).__csv_managed_purpose = entity.purpose ?? null;
-            delete entity.purpose;
-          }
-          if (Object.prototype.hasOwnProperty.call(entity, 'risks')) {
-            (entity as any).__csv_managed_risks = entity.risks ?? null;
-            delete entity.risks;
-          }
-        }
-      },
       afterCommit: async (entities: any[], context, written) => {
         const rowOf = new Map((written ?? []).map(({ row, entity }) => [entity, row]));
         for (const entity of entities) {
@@ -63,21 +53,23 @@ export class PortfolioRequestsCsvService {
 
           // A request with no purpose or risks document yet gets it as its screen makes it, first.
           const row = rowOf.get(entity);
-          const repairFirst = async (managed: string, slot: 'purpose' | 'risks_mitigations', stored: 'purpose' | 'risks') => {
-            if (!Object.prototype.hasOwnProperty.call(entity, managed)) return false;
+          const purpose = entity.purpose ?? null;
+          const risks = entity.risks ?? null;
+          const repairFirst = async (property: 'purpose' | 'risks', slot: 'purpose' | 'risks_mitigations') => {
+            if (!Object.prototype.hasOwnProperty.call(entity, property)) return false;
             if (!row || row.isInsert) return true;
             return repairBeforeSlotWrite(
-              this.integratedDocs, 'requests', String(entity.id), slot, (entity as any)[managed], row.existingEntity?.[stored], context,
+              this.integratedDocs, 'requests', String(entity.id), slot, entity[property], row.existingEntity?.[property], context,
             );
           };
-          const writePurpose = await repairFirst('__csv_managed_purpose', 'purpose', 'purpose');
-          const writeRisks = await repairFirst('__csv_managed_risks', 'risks_mitigations', 'risks');
+          const writePurpose = await repairFirst('purpose', 'purpose');
+          const writeRisks = await repairFirst('risks', 'risks_mitigations');
 
           await this.integratedDocs.provisionForRequest(
             source,
             {
-              purpose: (entity as any).__csv_managed_purpose ?? null,
-              risks_mitigations: (entity as any).__csv_managed_risks ?? null,
+              purpose,
+              risks_mitigations: risks,
             },
             context.userId ?? null,
             { manager: context.manager, audit: context.audit },
@@ -88,7 +80,7 @@ export class PortfolioRequestsCsvService {
               'requests',
               source,
               'purpose',
-              (entity as any).__csv_managed_purpose ?? null,
+              purpose,
               context.userId ?? null,
               { manager: context.manager, logSourceActivity: false, audit: context.audit },
             );
@@ -99,7 +91,7 @@ export class PortfolioRequestsCsvService {
               'requests',
               source,
               'risks_mitigations',
-              (entity as any).__csv_managed_risks ?? null,
+              risks,
               context.userId ?? null,
               { manager: context.manager, logSourceActivity: false, audit: context.audit },
             );
@@ -111,9 +103,6 @@ export class PortfolioRequestsCsvService {
             context.userId ?? null,
             { manager: context.manager, audit: context.audit },
           );
-
-          delete (entity as any).__csv_managed_purpose;
-          delete (entity as any).__csv_managed_risks;
         }
 
         await baseConfig.afterCommit?.(entities, context);
