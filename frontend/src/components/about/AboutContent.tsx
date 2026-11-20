@@ -48,7 +48,10 @@ function Sentence({ text, link }: { text: string; link: React.ReactNode }) {
   );
 }
 
-export default function AboutContent({ onNavigate }: { onNavigate?: () => void }) {
+export default function AboutContent({ onNavigate, onPathQuestion }: {
+  onNavigate?: () => void;
+  onPathQuestion?: (open: boolean) => void;
+}) {
   const { t } = useTranslation('settings');
   const { config } = useFeatures();
   const { subscription, claims } = useAuth();
@@ -130,7 +133,7 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
             )}
           </Typography>
         )}
-        <AboutOnboardingLine onNavigate={onNavigate} />
+        <AboutOnboardingLine onNavigate={onNavigate} onPathQuestion={onPathQuestion} />
         <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, pt: 0.5 }}>
           <ExternalLink href={releaseNotesUrl(config.version)}>{t('about.releaseNotes')}</ExternalLink>
           <ExternalLink href={getDocHomeUrl(locale)}>{t('about.docs')}</ExternalLink>

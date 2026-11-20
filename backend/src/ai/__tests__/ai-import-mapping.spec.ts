@@ -908,12 +908,13 @@ async function testNamesOfRecordsBecomeProposals() {
   assert.deepEqual(asset.file.rows, [['srv1', 'LOC-1']]);
   assert.equal(asset.file.proposals, undefined);
 
-  // Every column an import matches is a reference column of its template, and no family's own reference.
+  // Every column an import matches is a reference column of its template, and no family's own reference;
+  // or the servers' type, whose hosting words alone are proposals (D31 of 26.11.9).
   for (const [key, columns] of Object.entries(AI_IMPORT_MATCHED_COLUMNS)) {
     const specs = await AI_IMPORT_TARGETS[key as AiImportKey].columns({} as any);
     for (const column of columns!) {
       const spec = specs.find((entry) => entry.column === column);
-      assert.equal(spec?.kind, 'reference', `${key}.${column}`);
+      assert.equal(spec?.kind, spec?.keepsHostingWords ? 'catalog' : 'reference', `${key}.${column}`);
       assert.equal(spec?.prefix, undefined, `${key}.${column}`);
     }
   }

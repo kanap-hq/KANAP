@@ -142,6 +142,13 @@ export interface CsvImportRefusedProposal {
   count: number;
 }
 
+/** A row of the file that updates a stored record: its line, the record's reference (null when its family has none) and its name. */
+export interface CsvImportUpdate {
+  row: number;
+  ref: string | null;
+  name: string;
+}
+
 /**
  * A value of the file matched to an existing record beyond case (the budget file's matches have the
  * same shape). `lines` are the file's lines (the first ones), `count` all of them. The import takes

@@ -341,11 +341,12 @@ export default function ContributorWorkspacePage() {
         void refreshMe();
       }
       // Keep the optimistic values (an edit made during the request must win);
-      // only the id is taken from the response, which matters for the first
-      // self-service save that creates the config.
+      // only the id and the MEM-n number are taken from the response, which
+      // matters for the first self-service save that creates the config.
       if (savedId) {
+        const savedNumber = normalizeConfig(res.data).item_number;
         queryClient.setQueryData<ContributorConfig | null>(target.queryKey, (previous) => (
-          previous && !previous.id ? { ...previous, id: savedId } : previous
+          previous && !previous.id ? { ...previous, id: savedId, item_number: previous.item_number ?? savedNumber } : previous
         ));
       }
       if (!target.isSelf) {

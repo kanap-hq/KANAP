@@ -29,6 +29,8 @@ import {
   rowError,
   rowProblemErrors,
   storedRecordValues,
+  listedUpdates,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { uploadedBytes } from '../common/upload';
@@ -554,6 +556,7 @@ export class BusinessProcessesService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    const updates: ImportUpdate[] = [];
     const normalized: Array<{
       line: number;
       row: CsvDataRow;
@@ -728,12 +731,15 @@ export class BusinessProcessesService {
       else if (!parentPending && importRowUnchanged(existing, item.body, now)) {
         unchanged += 1;
         continue;
-      } else updated += 1;
+      } else {
+        updated += 1;
+        updates.push({ row: item.line, ref: null, name: existing.name });
+      }
       toWrite.push({ item, existing });
     }
 
     if (dryRun) {
-      return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
+      return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...listedUpdates(updates), ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
     }
 
     // Rows by their depth in the tree after the import, top first: when a row is written, every
@@ -763,6 +769,6 @@ export class BusinessProcessesService {
       processed += 1;
     }
 
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...listedUpdates(updates), ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
   }
 }

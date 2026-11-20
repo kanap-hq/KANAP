@@ -18,6 +18,7 @@ import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/cat
 import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, isReservedIncidentStatusMove } from './incident.entity';
 import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibility';
+import { numberedReference } from '../common/csv-sheet/master-data';
 
 /**
  * The headers of the register's file in each language. The export writes them, and the import
@@ -414,6 +415,8 @@ export const incidentCsvConfig: CsvEntityConfig = {
   displayName: 'Incidents',
   // INC-N is the register's identity; the export writes it, the import matches on it.
   upsertKey: ['item_number'],
+  // How the check names a record a row updates (Q1 of 26.11.9).
+  recordLabel: (entity) => ({ ref: numberedReference('INC', entity.item_number), name: String(entity.title ?? '') }),
   // Column headers in the file's language; the import accepts them as well as the technical names.
   headerLabels: INCIDENT_CSV_HEADERS,
   fields: [

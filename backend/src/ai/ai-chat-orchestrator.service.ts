@@ -78,6 +78,7 @@ import { findMarkdownPathLinks, replaceDataImageTags, replaceMarkdownDataImages 
 import { assertMarkdownSize } from '../common/markdown-limits';
 import { dataAccessRefusalMessage } from '../common/filters/database-error.mapping';
 import { conversationTitleFromMessage } from './ai-conversation-title.util';
+import { ENTITY_URL_BUILDERS } from './ai-page-urls';
 import {
   aiWriteLanguage,
   bulkPreviewsIncompleteText,
@@ -458,39 +459,6 @@ function recordSearchAllProgress(params: {
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-
-/**
- * Frontend deep-link patterns keyed by the entity_type stored on a mutation preview's
- * target. When the user approves a mutation, the executed-state summary contains the
- * entity ref (e.g. "Created DOC-152.") and we rewrite that ref into a markdown link so
- * the assistant's confirmation is one click away from the artifact.
- *
- * Keep this in sync with frontend/src/App.tsx routes. A family without a page of its own (a chart
- * of accounts) stays out, so that no dead link is written.
- */
-const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
-  documents: (id) => `/knowledge/${id}`,
-  tasks: (id) => `/portfolio/tasks/${id}`,
-  projects: (id) => `/portfolio/projects/${id}`,
-  requests: (id) => `/portfolio/requests/${id}`,
-  applications: (id) => `/it/applications/${id}`,
-  assets: (id) => `/it/assets/${id}`,
-  technologies: (id) => `/it/technologies/${id}`,
-  incidents: (id) => `/it/incidents/${id}`,
-  connections: (id) => `/it/connections/${id}`,
-  interfaces: (id) => `/it/interfaces/${id}`,
-  locations: (id) => `/it/locations/${id}`,
-  contracts: (id) => `/ops/contracts/${id}`,
-  budget_lines: (id) => `/ops/budget/${id}`,
-  companies: (id) => `/master-data/companies/${id}`,
-  contacts: (id) => `/master-data/contacts/${id}`,
-  departments: (id) => `/master-data/departments/${id}`,
-  suppliers: (id) => `/master-data/suppliers/${id}`,
-  business_processes: (id) => `/master-data/business-processes/${id}`,
-  accounts: (id) => `/master-data/accounts/${id}`,
-  // A dimension value; the dimensions themselves are at /master-data/analytics/dimensions/:id.
-  analytics_categories: (id) => `/master-data/analytics/${id}`,
-};
 
 const ENTITY_TYPE_FROM_URL_PREFIX: Array<{ prefix: string; entityType: string }> = [
   { prefix: '/knowledge/', entityType: 'documents' },

@@ -444,6 +444,44 @@ async function testIntegratedDocuments(h: Harness, runner: QueryRunner, s: Seed)
 }
 
 /**
+ * Q1 of 26.11.9, pass C: a project or a request imported again with the same purpose (and risks) and
+ * another status. The history row of the update holds the record's fields only, no import marker
+ * (`__csv_managed_*`), and the history lists the status alone; the purpose changed, it says so.
+ * By Kad and on the screen, which share the import service.
+ */
+async function testSamePurposeImportedAgain(h: Harness, runner: QueryRunner, s: Seed) {
+  const statuses: Record<string, [string, string]> = { portfolio_projects: ['planned', 'in_progress'], portfolio_requests: ['pending_review', 'candidate'] };
+  for (const key of ['portfolio_projects', 'portfolio_requests']) {
+    for (const via of ['kad', 'screen'] as const) {
+      const title = `Q1C ${key} ${via}`;
+      const risks = key === 'portfolio_requests';
+      const columns = [name('name', 1), name('purpose', 2), name('status', 3), ...(risks ? [name('risks', 4)] : [])];
+      const header = `Nom;Objectif;Statut${risks ? ';Risques' : ''}`;
+      const line = (purpose: string, status: string) => `${title};${purpose};${status}${risks ? ';Risques Q1C' : ''}`;
+      const load = (lines: string[]) => (via === 'kad'
+        ? byKad(h, runner, s, key, `${key}.csv`, lines, columns)
+        : byScreen(h, runner, s, key, `${key}.csv`, lines, columns));
+      await load([header, line('Objectif Q1C', statuses[key][0])]);
+      const again = await load([header, line('Objectif Q1C', statuses[key][1])]);
+      const update = again.rows.find((row) => row.table_name === key && row.action === 'update');
+      assert.ok(update, `${key} ${via}: ${JSON.stringify(again.rows.map((row) => `${row.table_name} ${row.action}`))}`);
+      const latest = (await history(runner, s, key, update.record_id!))[0];
+      assert.deepEqual(latest.changes.map((change: any) => change.field), ['status'], `${key} ${via}: ${JSON.stringify(latest.changes)}`);
+      for (const payload of [update.before_json, update.after_json]) {
+        assert.deepEqual(Object.keys(payload ?? {}).filter((field) => field.startsWith('__')), [], `${key} ${via}: the trace holds the record's fields only`);
+      }
+
+      const shown = (await history(runner, s, key, update.record_id!)).length;
+      await load([header, line('Objectif Q1C changé', statuses[key][1])]);
+      const after = await history(runner, s, key, update.record_id!);
+      const changes = after.slice(0, after.length - shown).flatMap((item) => item.changes as any[]);
+      assert.deepEqual(changes, [{ field: 'purpose', text: 'purposeChanged' }], `${key} ${via}: the purpose changed, and nothing else`);
+    }
+  }
+  console.log('  a project or a request imported again with the same purpose: the status alone in its history: OK');
+}
+
+/**
  * The technologies an import creates on the way (pass E of lot I5): an unknown operating system and
  * one adopted from the catalog write their technology and version rows with the person, and Kad's card
  * through Kad.
@@ -503,7 +541,7 @@ async function run() {
       const tests = [
         testApplications, testSuppliers, testContracts, testCostCenters, testAccounts, testTechnologyLinks,
         testBudgetFile, testContacts, testServers, testServerOperatingSystemsAndClusters, testTaskOfAContract,
-        testIntegratedDocuments, testTechnologiesCreatedOnTheWay,
+        testIntegratedDocuments, testTechnologiesCreatedOnTheWay, testSamePurposeImportedAgain,
       ];
       // Each family under its own savepoint: one that fails is reported, and the next ones still run.
       for (const test of tests) {

@@ -639,7 +639,7 @@ Der Abschnitt fehlt, wenn die Zeile keinen Lieferanten hat oder es nichts vorzus
 
 ### Verlauf
 
-Der Tab Verlauf listet die Änderungen an der Zeile, die neueste oben. Jeder Eintrag zeigt Datum und Uhrzeit, den Urheber (eine Person, **System**, **Import** oder **Kad für** eine Person) und jedes geänderte Feld mit seinem Wert vorher und nachher. Eine Betragsänderung nennt das Jahr, die Spalte und die Werte vorher und nachher.
+Der Tab Verlauf listet die Änderungen an der Zeile, die neueste oben. Jeder Eintrag zeigt Datum und Uhrzeit, den Urheber (eine Person, **System** oder **Kad für** eine Person; ein Import zeigt die Person, die ihn ausgeführt hat, oder **Import**, wenn keine Person bekannt ist) und jedes geänderte Feld mit seinem Wert vorher und nachher. Eine Betragsänderung nennt das Jahr, die Spalte und die Werte vorher und nachher.
 
 Auch die Änderungen an den Bestandteilen der Zeile erscheinen hier: Beträge, Dimensionen, Zuordnungen, Links, Anhänge, Kontakte, Anwendungen, Technologien, Assets und Aufgaben. Wer die Zeile öffnen kann, kann auch ihren Verlauf lesen. Ein Datensatz aus einem Modul, das Sie nicht lesen können, erscheint nur mit seiner Art, zum Beispiel „ein Vertrag“.
 

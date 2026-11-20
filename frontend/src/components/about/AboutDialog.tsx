@@ -1,3 +1,4 @@
+import React from 'react';
 import { Box, Dialog, IconButton, Typography } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
@@ -6,10 +7,14 @@ import AboutContent from './AboutContent';
 
 export default function AboutDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation(['settings', 'common']);
+  // The path question opened from the window outlives it: a picked path closes the window while
+  // the question, or its confirmation, is still on screen.
+  const [pathQuestion, setPathQuestion] = React.useState(false);
 
   return (
     <Dialog
       open={open}
+      keepMounted={pathQuestion}
       onClose={onClose}
       fullWidth
       maxWidth={false}
@@ -54,7 +59,7 @@ export default function AboutDialog({ open, onClose }: { open: boolean; onClose:
         </IconButton>
       </Box>
       <Box sx={{ px: '20px', py: '18px' }}>
-        <AboutContent onNavigate={onClose} />
+        <AboutContent onNavigate={onClose} onPathQuestion={setPathQuestion} />
       </Box>
     </Dialog>
   );

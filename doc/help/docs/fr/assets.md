@@ -527,7 +527,7 @@ Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d
 
 Certains champs sont calculés et ne peuvent pas être importés :
 - **Fournisseur** : Dérivé automatiquement du site de l'actif, et mis à jour quand le site change
-- **Hébergement** : un serveur est hébergé comme son site, sur site ou dans un cloud. **Cloud** n'est pas un type d'actif : pour une instance cloud, choisissez un site dont le type d'hébergement est un cloud. Quand [Kad](ai-assistant.md#importer-un-tableur) importe des serveurs, son aperçu nomme l'hébergement de chaque site du fichier, par exemple `LOC-4 Datacenter de Paris (sur site)`
+- **Hébergement** : un serveur est hébergé comme son site, sur site ou dans un cloud. **Cloud** n'est pas un type d'actif : pour une instance cloud, choisissez un site dont le type d'hébergement est un cloud. Quand votre fichier donne **Cloud** comme type, Kad demande quel type ont ces serveurs, et la conversion paraît ensuite parmi les rapprochements de son aperçu, avec **Défaire**. Quand [Kad](ai-assistant.md#importer-un-tableur) importe des serveurs, son aperçu nomme l'hébergement de chaque site du fichier, par exemple `LOC-4 Datacenter de Paris (sur site)`
 - **FQDN** : Calculé à partir du nom d'hôte + domaine
 - **Vulnérabilités** : `vulnerabilities_to_review` (les vulnérabilités encore à traiter) et `severe_vulnerabilities` (celles critiques ou élevées), comptées comme dans la colonne de la liste. Export seulement : l'import les ignore. Vides pour un actif retiré. Absentes du fichier quand les vulnérabilités ne sont pas suivies
 

@@ -25,6 +25,39 @@ export const AI_PAGE_ROUTES: Readonly<Record<string, { path: (id: string) => str
   analytics_axes: { path: (id) => `/master-data/analytics/dimensions/${id}`, resource: 'analytics' },
 };
 
+/**
+ * Frontend deep-link patterns keyed by entity type, by id or by business reference (the pages of the
+ * families with a reference open by it). The approved mutation's summary links its target's
+ * reference with them (`ai-chat-orchestrator.service.ts`), and an import names each record it updates
+ * with its page (`ai-import-runner.service.ts`).
+ *
+ * Keep this in sync with frontend/src/App.tsx routes and `frontend/src/ai/utils/entityUrls.ts`. A
+ * family without a page of its own (a chart of accounts) stays out, so that no dead link is written.
+ */
+export const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
+  documents: (id) => `/knowledge/${id}`,
+  tasks: (id) => `/portfolio/tasks/${id}`,
+  projects: (id) => `/portfolio/projects/${id}`,
+  requests: (id) => `/portfolio/requests/${id}`,
+  applications: (id) => `/it/applications/${id}`,
+  assets: (id) => `/it/assets/${id}`,
+  technologies: (id) => `/it/technologies/${id}`,
+  incidents: (id) => `/it/incidents/${id}`,
+  connections: (id) => `/it/connections/${id}`,
+  interfaces: (id) => `/it/interfaces/${id}`,
+  locations: (id) => `/it/locations/${id}`,
+  contracts: (id) => `/ops/contracts/${id}`,
+  budget_lines: (id) => `/ops/budget/${id}`,
+  companies: (id) => `/master-data/companies/${id}`,
+  contacts: (id) => `/master-data/contacts/${id}`,
+  departments: (id) => `/master-data/departments/${id}`,
+  suppliers: (id) => `/master-data/suppliers/${id}`,
+  business_processes: (id) => `/master-data/business-processes/${id}`,
+  accounts: (id) => `/master-data/accounts/${id}`,
+  // A dimension value; the dimensions themselves are at /master-data/analytics/dimensions/:id.
+  analytics_categories: (id) => `/master-data/analytics/${id}`,
+};
+
 /** The sentence the read tools give about `page_url` (chat and MCP share the descriptions). */
 export const AI_PAGE_URL_NOTE = 'A record whose page does not open by its `ref` (business process, account, analytics value, site, connection, role, data access row, chargeback row, which opens its report), and a cost center, working-day calendar or analytics dimension, whose `ref` is its code, carries `page_url`, the address of its page, when the user can open that page: an absolute address over MCP when the workspace address is configured on the server, otherwise a path from the workspace address.';
 

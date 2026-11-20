@@ -51,6 +51,9 @@ import {
   rowError,
   rowProblemErrors,
   storedRecordValues,
+  listedUpdates,
+  numberedReference,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
 import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
@@ -752,6 +755,7 @@ export class DepartmentsService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    const updates: ImportUpdate[] = [];
     // The stored descriptions the rows clear with `-` (a `-` on an empty one is not counted).
     let cleared = 0;
     const toWrite: Array<{ item: Partial<(typeof unique)[number]> & Pick<(typeof unique)[number], 'lifecycle'>; existing: Department | null }> = [];
@@ -849,14 +853,17 @@ export class DepartmentsService {
       ) {
         unchanged += 1;
         continue;
-      } else updated += 1;
+      } else {
+        updated += 1;
+        updates.push({ row: row.line, ref: numberedReference('DEPT', existing.item_number), name: existing.name });
+      }
       toWrite.push({ item, existing });
     }
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...listedUpdates(updates), ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -876,6 +883,6 @@ export class DepartmentsService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...listedUpdates(updates), ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }
