@@ -94,6 +94,9 @@ type BudgetFileAnswer = {
   changes?: { created: number; updated: number; unchanged: number; cleared?: number; byNature?: BudgetFileNatureCounts };
   /** The load: the stored values its `-` cells cleared, as its check counted them. */
   cleared?: number;
+  /** The load: it created suppliers, dimension values (`BudgetFileImportOk`). */
+  createdSuppliers?: boolean;
+  createdDimensionValues?: boolean;
   warnings?: Record<string, unknown>;
   lookalikes?: BudgetFileLookalikes;
 };
@@ -816,6 +819,8 @@ export function budgetBilan(
     issues,
     new_suppliers: answer.creates?.supplierCount ?? 0,
     ...(isCheck && answer.creates?.dimensionValueCount !== undefined ? { new_dimension_values: answer.creates.dimensionValueCount } : {}),
+    ...(!isCheck && answer.createdSuppliers ? { created_suppliers: true } : {}),
+    ...(!isCheck && answer.createdDimensionValues ? { created_dimension_values: true } : {}),
     ...(similar ? { similar_lines: similar } : {}),
     ...(isCheck && answer.matching ? { matching: modelMatching(answer.matching, lines, dimensionValues) } : {}),
     report: { kind: 'budget_file', file: isCheck ? relined(shown, lines) as Record<string, unknown> : null },

@@ -70,8 +70,14 @@ export interface BudgetFileImportOk {
 
 export type BudgetFileImportResult = BudgetFileReport | BudgetFileImportOk;
 
-/** Tables for `analyzeAfterLargeImport`: the line tables, plus a table this load created rows in. */
-export function importAnalyzeTables(scope: BudgetFileScope, result: BudgetFileImportResult): readonly string[] {
+/**
+ * Tables for `analyzeAfterLargeImport`: the line tables, plus a table this load created rows in.
+ * Kad's approval of a budget file passes the flags its card keeps (`ai/import/ai-import-statistics.ts`).
+ */
+export function importAnalyzeTables(
+  scope: BudgetFileScope,
+  result: BudgetFileImportResult | Partial<Pick<BudgetFileImportOk, 'createdSuppliers' | 'createdDimensionValues'>>,
+): readonly string[] {
   const extra: string[] = [];
   if ('createdSuppliers' in result && result.createdSuppliers) extra.push('suppliers');
   if ('createdDimensionValues' in result && result.createdDimensionValues) extra.push('analytics_categories');

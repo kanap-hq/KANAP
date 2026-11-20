@@ -607,6 +607,12 @@ export type AiImportRunDto = {
   /** The budget file's check: the dimension values its load creates, over all dimensions, which the card lists. */
   new_dimension_values?: number;
   /**
+   * The budget file's load: it created suppliers, dimension values. The approval analyses their
+   * tables with the lines' after a large load, as the import dialog does (`importAnalyzeTables`).
+   */
+  created_suppliers?: boolean;
+  created_dimension_values?: boolean;
+  /**
    * The budget file's check: the new rows that look like a line the person reads (`looks_like`, its
    * reference, the `reason` and what the check does with the row, `outcome`) or an earlier row of the
    * file (`looks_like_file_line`), on the lines of the person's file. Present when there are some;
