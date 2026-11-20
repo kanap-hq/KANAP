@@ -35,6 +35,7 @@ import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TasksCsvService } from '../../tasks/tasks-csv.service';
 import { TechnologyLinksCsvService } from '../../technologies/technology-links-csv.service';
 import { WorkingDayProfilesCsvService } from '../../working-day-profiles/working-day-profiles-csv.service';
+import { importCounts } from '../../audit/security-events';
 import { AiPolicyService } from '../ai-policy.service';
 import type { AiExecutionContextWithManager, AiImportReportMessage, AiImportRunDto } from '../ai.types';
 import type { AiImportKey } from './ai-import-access';
@@ -80,6 +81,8 @@ type BudgetFileAnswer = {
   ok: boolean;
   inserted?: number;
   updated?: number;
+  /** The load: the lines of the file that change nothing, as its check counted them. */
+  unchanged?: number;
   skipped?: number;
   snapshot?: unknown;
   fileErrors?: string[];
@@ -771,7 +774,9 @@ export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatc
 }
 
 /**
- * The bilan of the budget file: its check as its dialog shows it, or the counts of its load.
+ * The bilan of the budget file: its check as its dialog shows it, or the counts of its load, those
+ * its import row holds: `importCounts`, as the screen's row (the rows: created, updated, unchanged
+ * and left out).
  * `dimensionValues`: the enabled values of each dimension, by column, for the dimension values the check creates.
  * `language`: the person's, for the card's words the model reads.
  */
@@ -800,6 +805,8 @@ export function budgetBilan(
   const shown: Record<string, unknown> = { ...answer };
   delete shown.snapshot;
   const isCheck = answer.changes !== undefined;
+  // The load: the counts its import row holds, read as the screen's row reads them.
+  const loaded = isCheck ? null : importCounts(answer);
   const similar = isCheck ? similarLines(answer, lines, language) : undefined;
   const nothing = isCheck && nothingToImport({
     ok: answer.ok === true,
@@ -813,10 +820,10 @@ export function budgetBilan(
     ok: answer.ok === true,
     ...(nothing ? { nothing_to_import: true as const } : {}),
     dry_run: dryRun,
-    total: lines.length,
+    total: loaded?.rows ?? lines.length,
     inserted: isCheck ? answer.changes!.created : answer.inserted ?? 0,
     updated: isCheck ? answer.changes!.updated : answer.updated ?? 0,
-    unchanged: isCheck ? answer.changes!.unchanged : 0,
+    unchanged: isCheck ? answer.changes!.unchanged : loaded?.unchanged ?? 0,
     // The stored values the `-` cells clear, as the check counts them; the load repeats its check's count.
     cleared: isCheck ? answer.changes!.cleared ?? 0 : answer.cleared ?? 0,
     // The rows left out because they look like a stored line.

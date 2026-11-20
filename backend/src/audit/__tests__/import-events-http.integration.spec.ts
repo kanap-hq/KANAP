@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import * as http from 'node:http';
 import { AddressInfo } from 'node:net';
 import { INestApplication } from '@nestjs/common';
@@ -170,7 +171,100 @@ async function testEachLoadWritesOneImportRow() {
   }
 }
 
-runSpecs('import-events-http', [testEachLoadWritesOneImportRow]).catch((error) => {
+/**
+ * The budget file's import row says the same through Kad as on the screen (pass D of lot I5): the
+ * same two files loaded on the screen in one workspace and through Kad's cards in another, the
+ * second one updating the lines its rows look like (one unchanged, one updated, one new). The two
+ * rows hold the same `after`, file name included; only the source and `source_ref` differ.
+ */
+async function testKadWritesTheScreensBudgetFileRow() {
+  const svc = buildServices();
+  const { AppModule } = require('../../app.module');
+  const { AiMutationPreviewService } = require('../../ai/ai-mutation-preview.service');
+  const { AiPolicyService } = require('../../ai/ai-policy.service');
+  const { AiAttachmentService } = require('../../ai/ai-attachment.service');
+  const app: INestApplication = await NestFactory.create(AppModule, { logger: ['error'] });
+  applyHttpMiddleware(app);
+  applyTenancyAndPipeline(app, app.get(DataSource));
+  await app.listen(0, '127.0.0.1');
+  const port = (app.getHttpServer().address() as AddressInfo).port;
+  // The AI surface checks and the attachment storage are not under test: stubbed.
+  app.get(AiPolicyService).assertSurfaceAccess = async () => undefined;
+  const files = new Map<string, { name: string; buffer: Buffer }>();
+  const attachments = app.get(AiAttachmentService);
+  attachments.assertAndLoadAttachments = async (ids: string[]) => ids.map((id) => ({ id, kind: 'table', original_filename: files.get(id)!.name }));
+  attachments.loadAttachmentBuffer = async (id: string) => ({ attachment: { id }, buffer: files.get(id)!.buffer });
+  const previews = app.get(AiMutationPreviewService);
+  const tenants: Array<string | undefined> = [];
+  try {
+    const screen = await createActivatedTenant(svc, { tag: 'imp-ev-s', orgName: 'Import events' });
+    tenants.push(screen.tenantId);
+    const kad = await createActivatedTenant(svc, { tag: 'imp-ev-k', orgName: 'Import events' });
+    tenants.push(kad.tenantId);
+    const budgetFiles = async (t: ActivatedTenant) => {
+      const [account] = await inTenant(t.tenantId, (m) => m.query(`SELECT account_number FROM accounts WHERE tenant_id = $1 ORDER BY account_number LIMIT 1`, [t.tenantId]));
+      const row = (name: string, description: string) => `capex,${name},${description},${t.companyName},${account.account_number},EUR`;
+      const header = 'nature,name,description,company_name,account_number,currency';
+      return [
+        { name: 'Budget été.csv', content: [header, row('Hosting', 'Racks'), row('Servers', 'Blades')].join('\n') + '\n' },
+        // Hosting the same, Servers described anew, Network new.
+        { name: 'Budget été.csv', content: [header, row('Hosting', 'Racks'), row('Servers', 'Blades and disks'), row('Network', 'Switches')].join('\n') + '\n' },
+      ];
+    };
+    const updateAll = [{ kind: 'lookalikes', action: 'update' }];
+
+    // The screen: the preflight, then the load with its snapshot, the second file updating the lines its rows look like.
+    const host = `${screen.slug}.lvh.me`;
+    const token = svc.auth.signToken({ id: screen.ownerId, email: screen.ownerEmail, tenant_id: screen.tenantId }).access_token;
+    for (const [index, file] of (await budgetFiles(screen)).entries()) {
+      const fields: Record<string, string> = index === 0 ? {} : { choices: JSON.stringify(updateAll) };
+      const preflight = await upload(port, host, token, '/spend-items/budget-file/preflight?language=en', file, fields);
+      ok(preflight, `screen preflight ${index + 1}`);
+      assert.equal(preflight.body.ok, true, JSON.stringify(preflight.body).slice(0, 2000));
+      const load = await upload(port, host, token, '/spend-items/budget-file/import?language=en', file, { ...fields, snapshot: JSON.stringify(preflight.body.snapshot) });
+      ok(load, `screen load ${index + 1}`);
+    }
+
+    // Kad: the same files attached to a conversation, each card checked and approved.
+    const conversationId = randomUUID();
+    await inTenant(kad.tenantId, (m) => m.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+       VALUES ($1, $2, $3, 'Import events', 'custom', 'import-model', 'custom', now(), now())`,
+      [conversationId, kad.tenantId, kad.ownerId],
+    ));
+    const columns = ['nature', 'name', 'description', 'company_name', 'account_number', 'currency']
+      .map((column, index) => ({ column, source: index + 1, confidence: 'high' }));
+    const cards: string[] = [];
+    for (const [index, file] of (await budgetFiles(kad)).entries()) {
+      await inTenant(kad.tenantId, async (manager) => {
+        const ctx = { tenantId: kad.tenantId, userId: kad.ownerId, isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const, manager, conversationId };
+        const attachmentId = randomUUID();
+        files.set(attachmentId, { name: file.name, buffer: Buffer.from(file.content, 'utf8') });
+        let card = await previews.createPreview(ctx, 'prepare_import_mapping', { attachment_id: attachmentId, entity_type: 'budget_lines', columns });
+        if (index > 0) card = { ...card, ...(await previews.replaceImportChoices(ctx, card.preview_id, updateAll)) };
+        assert.equal(card.import_mapping.validation.ok, true, `Kad check ${index + 1}: ${JSON.stringify(card.import_mapping.validation.issues)}`);
+        const done = await previews.executePreview(ctx, card.preview_id);
+        assert.equal(done.status, 'executed', `Kad load ${index + 1}: ${done.error_message ?? ''}`);
+        cards.push(card.preview_id);
+      });
+    }
+
+    const onScreen = await importRows(screen.tenantId);
+    const byKad = await importRows(kad.tenantId);
+    assert.deepEqual(onScreen.map((row) => row.after_json), [
+      { list: 'budget_lines', filename: 'Budget été.csv', rows: 2, inserted: 2, updated: 0, unchanged: 0 },
+      { list: 'budget_lines', filename: 'Budget été.csv', rows: 3, inserted: 1, updated: 1, unchanged: 1 },
+    ], 'the screen: one unchanged, one updated, one new');
+    assert.deepEqual(byKad.map((row) => row.after_json), onScreen.map((row) => row.after_json), 'Kad writes the counts the screen writes');
+    assert.deepEqual(onScreen.map((row) => [row.source, row.source_ref]), [['user', null], ['user', null]]);
+    assert.deepEqual(byKad.map((row) => [row.source, row.source_ref]), cards.map((id) => ['ai_chat', id]));
+  } finally {
+    await app.close();
+    await cleanupTenants(tenants);
+  }
+}
+
+runSpecs('import-events-http', [testEachLoadWritesOneImportRow, testKadWritesTheScreensBudgetFileRow]).catch((error) => {
   console.error(error);
   process.exit(1);
 });
