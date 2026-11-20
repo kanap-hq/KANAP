@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Checkbox, Stack, Typography } from '@mui/material';
+import { Box, Checkbox, Link, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { AiImportChoice, AiImportHostingSite, AiImportReportMessage, AiImportRun } from '../aiTypes';
 import { csvMessageColumn, csvMessageText } from '../../components/csv/csvMessage';
@@ -7,12 +7,14 @@ import { ReportView as BudgetFileReportView } from '../../components/finance/Bud
 import { useAuth } from '../../auth/AuthContext';
 import ImportMatchesView from '../../components/csv/ImportMatchesView';
 import ImportLookalikesView, { applicationLookalikeReason, applicationUpdateChoice } from '../../components/csv/ImportLookalikesView';
-import type { ImportLookalike } from '../../components/csv/csv.types';
+import type { CsvImportUpdate, ImportLookalike } from '../../components/csv/csv.types';
 import { buildEntityUrl } from '../utils/entityUrls';
 
 /** The messages shown of each kind, as the import dialog shows them. */
 const SHOWN_ERRORS = 10;
 const SHOWN_WARNINGS = 5;
+/** The rows that update a record shown under the counts; the others are counted. */
+const SHOWN_UPDATES = 10;
 
 const sectionLabelSx = {
   fontSize: 12,
@@ -65,6 +67,39 @@ function Messages({ title, items, total, shown, more, titles, tone }: {
       </Box>
       {total > Math.min(shown, items.length) && (
         <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>{more}</Typography>
+      )}
+    </Stack>
+  );
+}
+
+/**
+ * The rows of the file that update a record (Q1 of 26.11.9), under the counts: the line of the person's
+ * file, the record's reference, linked to the address of its page the server gives (`page_url`), then its name.
+ */
+function UpdateLines({ updates, total }: { updates: Array<CsvImportUpdate & { page_url?: string }>; total: number }) {
+  const { t } = useTranslation(['common', 'ops']);
+  const shown = updates.slice(0, SHOWN_UPDATES);
+  return (
+    <Stack spacing={0.25}>
+      <Box component="ul" sx={{ m: 0, pl: 2.25, fontSize: 12, lineHeight: 1.5, color: 'kanap.text.secondary' }}>
+        {shown.map((entry) => {
+          const url = entry.ref ? entry.page_url : undefined;
+          return (
+            <Box component="li" key={`${entry.row}-${entry.ref ?? entry.name}`} sx={{ overflowWrap: 'anywhere' }}>
+              {t('common:csv.rowPrefix', { row: entry.row })}{' '}
+              {entry.ref && (
+                <>
+                  {url ? <Link href={url} target="_blank" rel="noopener noreferrer" underline="hover">{entry.ref}</Link> : entry.ref}
+                  {' · '}
+                </>
+              )}
+              {entry.name}
+            </Box>
+          );
+        })}
+      </Box>
+      {total > shown.length && (
+        <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>{t('ops:operations.budgetFile.andMore', { count: total - shown.length })}</Typography>
       )}
     </Stack>
   );
@@ -147,6 +182,12 @@ function ImportRunReport({ run, titles, onChoices, choicesDisabled }: ImportRunR
         {status}
         {counts && <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{' '}{counts}</Box>}
       </Typography>
+      {run.report.kind === 'rows' && (run.report.updates?.length ?? 0) > 0 && (
+        <UpdateLines
+          updates={run.report.updates!}
+          total={Math.max(run.report.updatesTotal ?? 0, run.report.updates!.length)}
+        />
+      )}
       {check && (run.cleared ?? 0) > 0 && (
         <Typography sx={{ fontSize: 12, color: 'kanap.text.primary' }}>
           {t('common:csv.valuesWillBeCleared', { count: run.cleared })}

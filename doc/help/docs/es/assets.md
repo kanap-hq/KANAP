@@ -529,7 +529,7 @@ Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el I
 
 Algunos campos se calculan y no pueden importarse:
 - **Proveedor**: Derivado automáticamente de la ubicación del activo, y actualizado cuando cambia la ubicación
-- **Alojamiento**: un servidor se aloja como su ubicación, en local o en una nube. **Cloud** no es un tipo de activo: para una instancia en la nube, elija una ubicación cuyo tipo de alojamiento sea una nube. Cuando [Kad](ai-assistant.md#importar-una-hoja-de-calculo) importa servidores, su vista previa nombra el alojamiento de cada ubicación del archivo, por ejemplo `LOC-4 Centro de datos de París (local)`
+- **Alojamiento**: un servidor se aloja como su ubicación, en local o en una nube. **Cloud** no es un tipo de activo: para una instancia en la nube, elija una ubicación cuyo tipo de alojamiento sea una nube. Cuando su archivo indica **Cloud** como tipo, Kad pregunta qué tipo tienen estos servidores, y la conversión aparece después entre las asociaciones de su vista previa, con **Deshacer**. Cuando [Kad](ai-assistant.md#importar-una-hoja-de-calculo) importa servidores, su vista previa nombra el alojamiento de cada ubicación del archivo, por ejemplo `LOC-4 Centro de datos de París (local)`
 - **FQDN**: Calculado a partir del nombre de host + dominio
 - **Vulnerabilidades**: `vulnerabilities_to_review` (las vulnerabilidades aún por revisar) y `severe_vulnerabilities` (las críticas o altas), contadas como en la columna de la lista. Solo exportación: la importación las ignora. Vacías para un activo retirado. Ausentes del archivo cuando no se siguen las vulnerabilidades
 

@@ -639,7 +639,7 @@ La sección no aparece cuando la línea no tiene proveedor o no hay nada que sug
 
 ### Historial
 
-La pestaña Historial lista los cambios hechos en la línea, el más reciente arriba. Cada entrada muestra la fecha y la hora, el autor (una persona, **Sistema**, **Importación** o **Kad para** una persona) y cada campo cambiado con su valor antes y después. Un cambio de importe indica el año, la columna y los valores antes y después.
+La pestaña Historial lista los cambios hechos en la línea, el más reciente arriba. Cada entrada muestra la fecha y la hora, el autor (una persona, **Sistema** o **Kad para** una persona; una importación muestra la persona que la hizo, o **Importación** cuando no se conoce ninguna persona) y cada campo cambiado con su valor antes y después. Un cambio de importe indica el año, la columna y los valores antes y después.
 
 Los cambios en los elementos de la línea también aparecen aquí: importes, dimensiones, asignaciones, enlaces, archivos adjuntos, contactos, aplicaciones, tecnologías, activos y tareas. Cualquier persona que pueda abrir la línea puede leer su historial. Un registro de un módulo que usted no puede leer aparece solo por su tipo, por ejemplo «un contrato».
 

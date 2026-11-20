@@ -235,6 +235,23 @@ describe('ContributorWorkspacePage autosave', () => {
     });
   });
 
+  it('shows the MEM reference on the self route once the first save creates the config', async () => {
+    vi.mocked(api.patch).mockResolvedValue({ data: { id: 'new-config', item_number: 3 } });
+    renderAt('/portfolio/contributors/me');
+    const field = await waitFor(() => notesField());
+    expect(screen.queryByText('MEM-3')).toBeNull();
+    fireEvent.change(field, { target: { value: 'hello' } });
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/portfolio/team-members/me', { notes: 'hello' }), { timeout: 2000 });
+    expect(await screen.findByText('MEM-3')).toBeTruthy();
+    expect(screen.getByTestId('location').textContent).toBe('/portfolio/contributors/me');
+  });
+
+  it('shows the MEM reference on the self route when the config exists', async () => {
+    mockGets(contributor({ user_id: 'user-1' }));
+    renderAt('/portfolio/contributors/me');
+    expect(await screen.findByText(CONTRIBUTOR_REF)).toBeTruthy();
+  });
+
   it('redirects legacy /defaults links to the general tab', async () => {
     renderAt(`/portfolio/contributors/${CONTRIBUTOR_REF}/defaults`);
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe(`/portfolio/contributors/${CONTRIBUTOR_REF}`));

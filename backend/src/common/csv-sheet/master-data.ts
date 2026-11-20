@@ -61,6 +61,30 @@ export interface ImportReportError {
 }
 
 /**
+ * A row of the file that updates a stored record (Q1 of 26.11.9): its line, and the record by its
+ * business reference (`PRJ-4`, `SUP-3`), null when its family has none, and its name. Every row import
+ * lists them, so that the check names the records it updates.
+ */
+export interface ImportUpdate {
+  row: number;
+  ref: string | null;
+  name: string;
+}
+
+/** The rows that update a record an import's result lists: the first ones, as the card keeps its warnings. */
+export const UPDATE_LIST_LIMIT = 20;
+
+/** The rows that update a record, for an import's result: the first ones and their total; nothing when none. */
+export function listedUpdates(updates: readonly ImportUpdate[]): { updates?: ImportUpdate[]; updatesTotal?: number } {
+  return updates.length > 0 ? { updates: updates.slice(0, UPDATE_LIST_LIMIT), updatesTotal: updates.length } : {};
+}
+
+/** A record's business reference from its prefix and number (`SUP-3`), null when it has no number. */
+export function numberedReference(prefix: string, itemNumber: number | string | null | undefined): string | null {
+  return itemNumber === null || itemNumber === undefined || itemNumber === '' ? null : `${prefix}-${Number(itemNumber)}`;
+}
+
+/**
  * What the import of a master-data file answers, at the check (`dryRun`) and at the load, with
  * the same counts. `cleared`: the stored values the rows clear with `-` (D21 of 26.11.9), the
  * supplier contact links a `-` removes included; a `-` on a value already empty is not counted.
@@ -79,6 +103,9 @@ export interface MasterDataImportResult {
   errors: ImportReportError[];
   /** Rows that import, with a note (a name matched in another case, a rename, a move). */
   warnings?: ImportReportError[];
+  /** The rows that update a stored record, the first ones (`listedUpdates`), and their total; absent when none. */
+  updates?: ImportUpdate[];
+  updatesTotal?: number;
   /** The unknown headers the file carried, and what the shared layer noticed. */
   ignoredColumns: string[];
   notices: MasterDataFileRead['notices'];

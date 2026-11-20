@@ -24,7 +24,9 @@ export {
   fieldAmounts,
   headerMismatchError,
   invalidEndOfValidity,
+  listedUpdates,
   nameMatchedWarning,
+  numberedReference,
   readMasterDataFile,
   referenceEmailWarning,
   referenceMoveWarning,
@@ -84,4 +86,4 @@ export type {
 export type { AmountConventionDecision, DecimalMark } from './amount';
 export type { CsvWriteRequest } from './write';
 export type { CsvProfile } from './language';
-export type { ImportReportError, MasterDataFileRead, MasterDataImportResult, MasterDataFileRequest, ReferenceFamily, ReferenceParent } from './master-data';
+export type { ImportReportError, ImportUpdate, MasterDataFileRead, MasterDataImportResult, MasterDataFileRequest, ReferenceFamily, ReferenceParent } from './master-data';

@@ -1,6 +1,7 @@
 import type { CsvLanguage } from '../common/csv-sheet';
 import { assetEnvironmentCode } from './asset-environments';
 import { findCatalogOption, requireImportCatalogs, resolveCatalogCode } from '../it-ops-settings/catalog-resolve';
+import { shippedLabelIn } from '../it-ops-settings/catalog-shipped-labels';
 import {
   ArrayStrategy,
   CsvEntityConfig,
@@ -470,6 +471,48 @@ async function previewOperatingSystems(rows: ImportRow[], context: CsvImportCont
 }
 
 /**
+ * Kad's proposals for the servers' type (D31 of 26.11.9): a value of the file the type catalog does
+ * not read (a hosting word, "Cloud") and the type the person named in the conversation. Taken when it
+ * names one type of the catalog (its code, or its name in any language) and the person has not undone
+ * it: the row carries that type, and the match is listed (origin model, undoable), named by the type's
+ * name in the file's language. Refused (listed) otherwise; the value then follows the screen's rule
+ * (`asset_kind_invalid`). The model's value map never converts a hosting word: only this listed match does.
+ */
+function takeKindProposals(rows: CsvImportRow[], context: CsvImportContext, settings: ItOpsSettings): void {
+  const { params } = context;
+  if (!params.proposals?.kind) return;
+  const options = settings.serverKinds ?? [];
+  const typeOf = (value: string) => {
+    try {
+      return findCatalogOption(value, options) ?? null;
+    } catch {
+      return 'several' as const;
+    }
+  };
+  for (const row of rows) {
+    const cell = cellText(row, 'kind');
+    if (!cell || typeOf(cell) !== null || undoneMatch(params.unmatched, 'kind', cell)) continue;
+    const proposal = proposalFor(params.proposals, 'kind', cell);
+    if (proposal === undefined) continue;
+    const type = typeOf(proposal);
+    if (type === null || type === 'several') {
+      if (context.refusedProposals) {
+        noteRefusedProposal(context.refusedProposals, { column: 'kind', name: null, value: cell, target: proposal, reason: 'missing' }, row.rowNumber);
+      }
+      continue;
+    }
+    row.raw.kind = type.code;
+    row.parsed.kind = type.code;
+    if (context.nameMatches) {
+      noteNameMatch(context.nameMatches, {
+        column: 'kind', name: null, value: cell, target: shippedLabelIn('serverKinds', type, context.language ?? 'en') ?? (type.label || type.code),
+        code: type.code, ref: null, origin: 'model', reason: 'model', undoable: true,
+      }, row.rowNumber);
+    }
+  }
+}
+
+/**
  * Settings-backed fields (kind, status, domain, admin_zone) accept a code or a name;
  * ambiguity is refused. The operating system stays a label for the resolver.
  * IP addresses get their type resolved and their values trimmed.
@@ -527,6 +570,7 @@ function resolveAssetCatalogs(entity: any, settings: ItOpsSettings): void {
  */
 async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const settings = await requireImportCatalogs(context);
+  takeKindProposals(rows, context, settings);
   const fail = (row: CsvImportRow, code: string, message: string, params: Record<string, string | number>, column: string) =>
     row.errors.push({ row: row.rowNumber, column, message, code, params });
   const catalog = (row: CsvImportRow, column: string, options: Parameters<typeof findCatalogOption>[1], code: string, label: string) => {
@@ -830,6 +874,8 @@ export const assetCsvConfig: CsvEntityConfig = {
   displayName: 'Assets',
   headerLabels: ASSET_CSV_HEADERS,
   upsertKey: ['name'],
+  // How the check names a record a row updates (Q1 of 26.11.9).
+  recordLabel: (entity) => ({ ref: entity.asset_reference || null, name: String(entity.name ?? '') }),
   // Same rule as the unique names: `lower(btrim(name))`.
   upsertKeyIgnoresOuterSpaces: true,
   fields: [

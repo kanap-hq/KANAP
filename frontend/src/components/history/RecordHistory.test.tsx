@@ -116,7 +116,7 @@ describe('RecordHistory', () => {
           changes: [],
         }),
         item({
-          id: 'import', action: 'update', actor: { kind: 'import', name: 'Ava Reader' },
+          id: 'import', action: 'update', actor: { kind: 'import', name: null },
           subject: { kind: 'record' },
           changes: [{ field: 'currency', before: 'EUR', after: 'USD' }],
         }),

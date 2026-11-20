@@ -98,6 +98,11 @@ export interface ImportNameMatch {
   value: string;
   /** The name of the existing record it stands for. */
   target: string;
+  /**
+   * The code of the fixed list's entry it stands for, when `target` is that entry's name (the servers'
+   * type, D31 of 26.11.9): the file built for the screen's import writes it, as the rows the column reads.
+   */
+  code?: string;
   /** The record's business reference (`SUP-3`) when its family has one; null otherwise. Absent in the budget file. */
   ref?: string | null;
   /**

@@ -9,6 +9,7 @@ import type { AiImportMappingPreviewDto } from '../ai.types';
 import { clip, isBlank, TABLE_SUMMARY_MAX_COLUMNS, TableGrid } from '../attachments/table-attachment';
 import { AI_IMPORT_CLEARING_RULE, type AiImportKey } from './ai-import-access';
 import { isImportMatchedColumn } from './ai-import-targets';
+import { accentFreeKey, proposalFor } from '../../common/name-matching';
 import type { CsvEntityConfig } from '../../common/csv/csv-field.types';
 import { numberedListColumnOf, numberedListHeader } from '../../common/csv/csv-numbered-lists';
 import { AiImportCellResult, AiImportColumnKind, AiImportColumnReadError, AiImportColumnRule, columnReader } from './ai-import-convert';
@@ -256,12 +257,17 @@ export function buildImportMapping(
     // proposal; the cell keeps the person's text. "" still leaves the cell blank, and, under the
     // clearing rule, `-` clears (never a record named "-" to propose). A fixed list, a catalog, a
     // code or an e-mail reads the model's values as before.
+    // In the servers' type column (D31 of 26.11.9), only a hosting word is a proposal, checked against
+    // the type catalog; the column's reader never converts one, and the other values convert as in
+    // any catalog column.
     const staysInCell = (to: string) => String(to).trim() === '' || (clearMark && readImportCell(String(to)).kind === 'clear');
+    const hosting = column.asWritten ? new Set(column.asWritten.map(accentFreeKey)) : null;
+    const proposes = ([from, to]: [string, string]) => !staysInCell(to) && (!hosting || hosting.has(accentFreeKey(from)));
     let values = entry.values;
     if (entry.source != null && values && isImportMatchedColumn(request.importKey, column.column)) {
-      const proposed = Object.entries(values).filter(([, to]) => !staysInCell(to));
+      const proposed = Object.entries(values).filter(proposes);
       if (proposed.length > 0) proposals[column.column] = Object.fromEntries(proposed);
-      values = Object.fromEntries(Object.entries(values).filter(([, to]) => staysInCell(to)));
+      values = Object.fromEntries(Object.entries(values).filter((pair) => !proposes(pair)));
     }
     const hints = { dateOrder: entry.date_order, decimalMark: entry.decimal_mark, values, clearMark };
     const note = entry.note ? oneLine(entry.note) || null : null;
@@ -294,7 +300,11 @@ export function buildImportMapping(
     let unread = 0;
     const examples: string[] = [];
     const results: AiImportCellResult[] = cells.map((cell, index) => {
-      const result = reader.read(cell);
+      const read = reader.read(cell);
+      // A value the column does not read and Kad proposes a target for: the person's text, for the check.
+      const result: AiImportCellResult = read.status === 'unread' && proposalFor(proposals, column.column, read.raw) !== undefined
+        ? { status: 'converted', value: read.raw }
+        : read;
       if (result.status !== 'blank') filled += 1;
       if (result.status === 'unread') {
         unread += 1;
@@ -335,7 +345,7 @@ export function buildImportMapping(
 
   // A column the import matches without the file mapping it (an application's supplier found by its publisher).
   const matchedTitles = Object.fromEntries(template
-    .filter((column) => !entries.has(column.column) && isImportMatchedColumn(request.importKey, column.column))
+    .filter((column) => !entries.has(column.column) && !column.asWritten && isImportMatchedColumn(request.importKey, column.column))
     .map((column) => [column.column, column.title]));
   return {
     preview: {

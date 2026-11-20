@@ -529,7 +529,7 @@ If you include the `id` column with a valid UUID, matching uses ID first, then f
 
 Some fields are computed and cannot be imported:
 - **Provider**: Automatically derived from the asset's location, and updated when the location changes
-- **Hosting**: a server is hosted as its location is, on site or in a cloud. **Cloud** is no asset type: for a cloud instance, choose a location whose hosting type is a cloud. When [Kad](ai-assistant.md#importing-a-spreadsheet) imports servers, its preview names the hosting of each location of the file, for example `LOC-4 Paris data center (on-prem)`
+- **Hosting**: a server is hosted as its location is, on site or in a cloud. **Cloud** is no asset type: for a cloud instance, choose a location whose hosting type is a cloud. When your file gives **Cloud** as the type, Kad asks which type these servers are, and the conversion then shows among the matches of its preview, with **Undo**. When [Kad](ai-assistant.md#importing-a-spreadsheet) imports servers, its preview names the hosting of each location of the file, for example `LOC-4 Paris data center (on-prem)`
 - **FQDN**: Computed from hostname + domain
 - **Vulnerabilities**: `vulnerabilities_to_review` (the vulnerabilities still to review) and `severe_vulnerabilities` (those critical or high), as the list column counts them. Export only: the import ignores them. Empty for a retired asset. Left out of the file when vulnerabilities are not followed
 

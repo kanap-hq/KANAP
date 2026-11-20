@@ -639,7 +639,7 @@ La section est absente quand la ligne n'a pas de fournisseur ou qu'il n'y a rien
 
 ### Historique
 
-L'onglet Historique liste les modifications apportées à la ligne, la plus récente en haut. Chaque entrée indique la date et l'heure, l'auteur (une personne, **Système**, **Import** ou **Kad pour** une personne) et chaque champ modifié avec sa valeur avant et après. Une modification de montant indique l'année, la colonne et les valeurs avant et après.
+L'onglet Historique liste les modifications apportées à la ligne, la plus récente en haut. Chaque entrée indique la date et l'heure, l'auteur (une personne, **Système** ou **Kad pour** une personne ; un import montre la personne qui l'a lancé, ou **Import** quand aucune personne n'est connue) et chaque champ modifié avec sa valeur avant et après. Une modification de montant indique l'année, la colonne et les valeurs avant et après.
 
 Les modifications des éléments de la ligne y figurent aussi : montants, dimensions, ventilations, liens, pièces jointes, contacts, applications, technologies, actifs et tâches. Toute personne qui peut ouvrir la ligne peut lire son historique. Une fiche d'un module que vous ne pouvez pas lire apparaît seulement par son type, par exemple « un contrat ».
 
