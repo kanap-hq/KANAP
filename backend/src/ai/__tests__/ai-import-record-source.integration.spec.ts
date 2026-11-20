@@ -29,7 +29,7 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 type Harness = { app: any; dataSource: DataSource; previews: any; mapping: any; runner: any; files: Map<string, { name: string; buffer: Buffer }> };
 type Seed = { tenantId: string; userId: string; email: string; conversationId: string };
 type Column = { column: string; source?: number; value?: string; confidence: string; values?: Record<string, string> };
-type AuditRow = { id: string; table_name: string; record_id: string | null; action: string; source: string; source_ref: string | null; before_json: any; after_json: any; parent_table: string | null; parent_id: string | null };
+type AuditRow = { id: string; table_name: string; record_id: string | null; action: string; source: string; source_ref: string | null; user_id: string | null; before_json: any; after_json: any; parent_table: string | null; parent_id: string | null };
 
 async function createHarness(): Promise<Harness> {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for ai-import-record-source.integration.spec.ts.');
@@ -107,7 +107,7 @@ async function mark(runner: QueryRunner, s: Seed): Promise<Set<string>> {
 /** The record rows a step wrote: every audit row since `before` but the import's own row (pass A's subject). */
 async function written(runner: QueryRunner, s: Seed, before: Set<string>): Promise<AuditRow[]> {
   const rows: AuditRow[] = await runner.query(
-    `SELECT id::text AS id, table_name, record_id::text AS record_id, action, source, source_ref, before_json, after_json, parent_table, parent_id::text AS parent_id
+    `SELECT id::text AS id, table_name, record_id::text AS record_id, action, source, source_ref, user_id::text AS user_id, before_json, after_json, parent_table, parent_id::text AS parent_id
        FROM audit_log WHERE tenant_id = $1 AND table_name <> 'import' ORDER BY created_at, id`,
     [s.tenantId],
   );
@@ -406,6 +406,41 @@ async function testServerOperatingSystemsAndClusters(h: Harness, runner: QueryRu
   console.log('  a server\'s operating system and clusters, imported and written by Kad: Kad\'s card; on the screen, the person: OK');
 }
 
+/**
+ * The integrated documents a project, a request or an incident import creates (pass E of lot I5): their
+ * rows carry Kad's card through Kad, the person on the screen, as the record's own row.
+ */
+async function testIntegratedDocuments(h: Harness, runner: QueryRunner, s: Seed) {
+  for (const [key, titleColumn, textColumn] of [['portfolio_projects', 'name', 'purpose'], ['portfolio_requests', 'name', 'purpose'], ['incidents', 'title', 'review']]) {
+    for (const [via, tag] of [['kad', 'k'], ['screen', 'e']] as const) {
+      const check = (label: string, run: { cardId: string | null; rows: AuditRow[] }) => {
+        if (via === 'kad') assertKad(label, run.rows, run.cardId!, ['documents']);
+        else assertScreen(label, run.rows, ['documents']);
+        for (const row of run.rows) assert.equal(row.user_id, s.userId, `${label}: ${row.table_name} ${row.action} names the person`);
+        return run.rows.map((row) => `${row.table_name} ${row.action}`);
+      };
+      const load = (lines: string[], columns: Column[]) => (via === 'kad'
+        ? byKad(h, runner, s, key, `${key}.csv`, lines, columns)
+        : byScreen(h, runner, s, key, `${key}.csv`, lines, columns).then((run) => ({ cardId: null, ...run })));
+      const title = `${key} E5 ${tag}`;
+      if (key === 'incidents') {
+        // An incident is created by each row (the template has no reference): its review provisioned,
+        // then written with the row's text.
+        const run = await load(['Titre;Gravité;Analyse', `${title};major;Analyse E5 ${tag}`], [name(titleColumn, 1), name('severity', 2), name(textColumn, 3)]);
+        const actions = check(`${key} ${via}`, run);
+        assert.ok(actions.includes('incidents create') && actions.includes('documents create') && actions.includes('documents update'), `${key} ${via}: ${JSON.stringify(actions)}`);
+        continue;
+      }
+      // A project or a request created with its documents, then matched by its name: its purpose written anew.
+      const created = check(`${key} ${via}, created`, await load(['Nom', title], [name(titleColumn, 1)]));
+      assert.ok(created.includes(`${key} create`) && created.includes('documents create'), `${key} ${via}: ${JSON.stringify(created)}`);
+      const updated = check(`${key} ${via}, updated`, await load(['Nom;Objectif', `${title};Objectif E5 ${tag}`], [name(titleColumn, 1), name(textColumn, 2)]));
+      assert.ok(updated.includes('documents update'), `${key} ${via}: ${JSON.stringify(updated)}`);
+    }
+  }
+  console.log('  the integrated documents of an imported project, request or incident: Kad\'s card; on the screen, the person: OK');
+}
+
 async function testTaskOfAContract(h: Harness, runner: QueryRunner, s: Seed) {
   const [company] = await runner.query(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Société T5', 'FR', 'Lyon') RETURNING id`, [s.tenantId]);
   const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Fournisseur X5') RETURNING id`, [s.tenantId]);
@@ -436,6 +471,7 @@ async function run() {
       const tests = [
         testApplications, testSuppliers, testContracts, testCostCenters, testAccounts, testTechnologyLinks,
         testBudgetFile, testContacts, testServers, testServerOperatingSystemsAndClusters, testTaskOfAContract,
+        testIntegratedDocuments,
       ];
       // Each family under its own savepoint: one that fails is reported, and the next ones still run.
       for (const test of tests) {

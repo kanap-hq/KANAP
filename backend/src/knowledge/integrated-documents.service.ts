@@ -35,7 +35,7 @@ import {
   INTEGRATED_DOCUMENT_SLOT_DEFINITIONS,
   IntegratedDocumentSlotKey,
 } from './integrated-document.constants';
-import { DocumentSourceGrant, KnowledgeService, RelationEntityType } from './knowledge.service';
+import { DocumentSourceGrant, KnowledgeService, RelationEntityType, type KnowledgeAuditOptions } from './knowledge.service';
 import {
   DocumentSourceAccessContext,
   buildIncidentReviewImportContext,
@@ -1492,6 +1492,7 @@ export class IntegratedDocumentsService {
     tenantId: string,
     userId: string | null | undefined,
     manager: EntityManager,
+    audit?: KnowledgeAuditOptions,
   ): Promise<void> {
     // Interfaces, applications and incidents keep no per-edit entry: the incident
     // journal records lifecycle events, not review content edits.
@@ -1524,6 +1525,8 @@ export class IntegratedDocumentsService {
         before: null,
         after: { slot: slotKey },
         userId: userId || null,
+        source: audit?.source,
+        sourceRef: audit?.sourceRef ?? null,
       });
     }
   }
@@ -2223,6 +2226,8 @@ export class IntegratedDocumentsService {
         documentId: string,
         manager: EntityManager,
       ) => Promise<{ content_markdown?: string | null } | void>;
+      /** The source of the document's history row (an import by Kad: its card). */
+      audit?: KnowledgeAuditOptions;
     },
   ): Promise<ManagedWriteResult> {
     const existingBinding = await this.findBinding(sourceEntityType, source.id, slotKey, manager);
@@ -2277,6 +2282,7 @@ export class IntegratedDocumentsService {
         // A blank explicit content leaves the template, a stored content, in place.
         storedContent: opts?.storedContent
           || (!String(explicitContent ?? '').trim() && opts?.useTemplateWhenBlank !== false),
+        audit: opts?.audit,
       },
     );
     await this.ensurePrimaryOwnerContributor(created.id, opts?.ownerUserId ?? null, manager);
@@ -2316,15 +2322,17 @@ export class IntegratedDocumentsService {
       risks_mitigations?: string | null;
     },
     userId: string | null | undefined,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: KnowledgeAuditOptions },
   ): Promise<void> {
     const manager = this.getManager(opts);
     const ownerUserId = await this.loadPreferredOwnerUserId('requests', source.id, manager);
     await this.ensureBoundDocument('requests', source, 'purpose', body?.purpose, userId, manager, {
       ownerUserId,
+      audit: opts?.audit,
     });
     await this.ensureBoundDocument('requests', source, 'risks_mitigations', body?.risks_mitigations, userId, manager, {
       ownerUserId,
+      audit: opts?.audit,
     });
   }
 
@@ -2334,12 +2342,13 @@ export class IntegratedDocumentsService {
       purpose?: string | null;
     },
     userId: string | null | undefined,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: KnowledgeAuditOptions },
   ): Promise<void> {
     const manager = this.getManager(opts);
     const ownerUserId = await this.loadPreferredOwnerUserId('projects', source.id, manager);
     await this.ensureBoundDocument('projects', source, 'purpose', body?.purpose, userId, manager, {
       ownerUserId,
+      audit: opts?.audit,
     });
   }
 
@@ -2385,12 +2394,13 @@ export class IntegratedDocumentsService {
   async provisionForIncident(
     incidentId: string,
     userId: string | null | undefined,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: KnowledgeAuditOptions },
   ): Promise<void> {
     const manager = this.getManager(opts);
     const context = await this.loadSourceRecoveryContext('incidents', incidentId, manager);
     await this.ensureBoundDocument('incidents', context.source, 'review', await this.incidentReviewStart(userId, manager), userId, manager, {
       ownerUserId: context.ownerUserId,
+      audit: opts?.audit,
     });
   }
 
@@ -2421,7 +2431,7 @@ export class IntegratedDocumentsService {
   async snapshotReviewForIncidentTransition(
     incidentId: string,
     userId: string | null | undefined,
-    opts?: { manager?: EntityManager; changeNote?: string | null },
+    opts?: { manager?: EntityManager; changeNote?: string | null; audit?: KnowledgeAuditOptions },
   ): Promise<{ document_id: string; version_number: number; revision: number }> {
     const manager = this.getManager(opts);
     const slotKey: IntegratedDocumentSlotKey = 'review';
@@ -2430,7 +2440,7 @@ export class IntegratedDocumentsService {
     if (!binding) {
       // Eager provisioning happens at create; a missing binding here is an
       // integrity gap and is repaired explicitly rather than silently skipped.
-      await this.provisionForIncident(incidentId, userId, { manager });
+      await this.provisionForIncident(incidentId, userId, { manager, audit: opts?.audit });
       binding = await this.findBinding('incidents', incidentId, slotKey, manager);
     }
     if (!binding) {
@@ -2470,7 +2480,7 @@ export class IntegratedDocumentsService {
     incidentId: string,
     content: string | null | undefined,
     userId: string | null | undefined,
-    opts?: { manager?: EntityManager; changeNote?: string | null; activityContent?: string | null },
+    opts?: { manager?: EntityManager; changeNote?: string | null; activityContent?: string | null; audit?: KnowledgeAuditOptions },
   ): Promise<{ document_id: string; changed: boolean; version_number: number | null; revision: number | null }> {
     const manager = this.getManager(opts);
     const normalizedUserId = this.normalizeUserId(userId);
@@ -2484,7 +2494,7 @@ export class IntegratedDocumentsService {
     if (!binding) {
       // An imported incident may already be closed: provision explicitly rather
       // than going through the lazy repair, which refuses frozen incidents.
-      await this.provisionForIncident(incidentId, normalizedUserId, { manager });
+      await this.provisionForIncident(incidentId, normalizedUserId, { manager, audit: opts?.audit });
       binding = await this.findBinding('incidents', incidentId, slotKey, manager);
     }
     if (!binding) {
@@ -2521,7 +2531,7 @@ export class IntegratedDocumentsService {
         activity_content: opts?.activityContent ?? 'Document updated',
       },
       normalizedUserId,
-      { manager, sourceContext: importContext },
+      { manager, sourceContext: importContext, audit: opts?.audit },
     );
 
     const saved = await this.getDocumentOrThrow(documentId, manager);
@@ -2541,7 +2551,7 @@ export class IntegratedDocumentsService {
     slotKey: IntegratedDocumentSlotKey,
     content: string | null | undefined,
     userId: string | null | undefined,
-    opts?: { manager?: EntityManager; logSourceActivity?: boolean },
+    opts?: { manager?: EntityManager; logSourceActivity?: boolean; audit?: KnowledgeAuditOptions },
   ): Promise<ManagedWriteResult> {
     const manager = this.getManager(opts);
     this.assertSupportedSlot(sourceEntityType, slotKey);
@@ -2559,10 +2569,11 @@ export class IntegratedDocumentsService {
         {
           useTemplateWhenBlank: false,
           ownerUserId,
+          audit: opts?.audit,
         },
       );
       if (created.changed && opts?.logSourceActivity !== false) {
-        await this.logSourceSemanticActivity(sourceEntityType, source.id, slotKey, source.tenant_id, userId, manager);
+        await this.logSourceSemanticActivity(sourceEntityType, source.id, slotKey, source.tenant_id, userId, manager, opts?.audit);
       }
       return created;
     }
@@ -2596,11 +2607,12 @@ export class IntegratedDocumentsService {
           sourceEntityType, source.id, slotKey, existingBinding.document_id, userId, manager, sourceContext,
         ),
         systemOperation: !String(userId || '').trim(),
+        audit: opts?.audit,
       },
     );
 
     if (opts?.logSourceActivity !== false) {
-      await this.logSourceSemanticActivity(sourceEntityType, source.id, slotKey, source.tenant_id, userId, manager);
+      await this.logSourceSemanticActivity(sourceEntityType, source.id, slotKey, source.tenant_id, userId, manager, opts?.audit);
     }
 
     return {
@@ -2621,7 +2633,7 @@ export class IntegratedDocumentsService {
     sourceEntityType: SourceScopedEntityType,
     source: SourceDescriptor,
     userId: string | null | undefined,
-    opts?: { manager?: EntityManager; allowFrozenIncident?: boolean },
+    opts?: { manager?: EntityManager; allowFrozenIncident?: boolean; audit?: KnowledgeAuditOptions },
   ): Promise<number> {
     const manager = this.getManager(opts);
     const bindings = await manager.getRepository(IntegratedDocumentBinding).find({
@@ -2662,6 +2674,7 @@ export class IntegratedDocumentsService {
             sourceEntityType, source.id, slotKey, binding.document_id, userId, manager, sourceContext,
           ),
           systemOperation: !String(userId || '').trim(),
+          audit: opts?.audit,
         },
       );
       updatedCount += 1;
@@ -2821,6 +2834,7 @@ export class IntegratedDocumentsService {
     ownerUserId: string | null,
     actorUserId: string | null | undefined,
     manager: EntityManager,
+    audit?: KnowledgeAuditOptions,
   ): Promise<ManagedWriteResult> {
     const importChangeNote = this.getImportChangeNote(sourceEntityType);
     const initialContent = await this.resolveRecoveredInitialContent(legacyContent);
@@ -2839,6 +2853,7 @@ export class IntegratedDocumentsService {
         storedContent: true,
         changeNote: importChangeNote,
         activityContent: importChangeNote,
+        audit,
         initializer: async (documentId, initializerManager) => {
           const imported = await this.importRecoveredInlineImages(
             sourceEntityType,
@@ -2944,7 +2959,7 @@ export class IntegratedDocumentsService {
     sourceEntityType: SourceScopedEntityType,
     sourceEntityId: string,
     slotKey: IntegratedDocumentSlotKey,
-    opts?: { manager?: EntityManager; actorUserId?: string | null; allowFrozenIncident?: boolean },
+    opts?: { manager?: EntityManager; actorUserId?: string | null; allowFrozenIncident?: boolean; audit?: KnowledgeAuditOptions },
   ): Promise<RepairSourceSlotResult> {
     const manager = this.getManager(opts);
     const actorUserId = this.normalizeOptionalUserId(opts?.actorUserId);
@@ -2971,6 +2986,7 @@ export class IntegratedDocumentsService {
     if (sourceEntityType === 'incidents') {
       return this.repairIncidentReviewSlot(sourceEntityId, slotKey, actorUserId, manager, {
         allowFrozenIncident: opts?.allowFrozenIncident === true,
+        audit: opts?.audit,
       });
     }
 
@@ -2998,6 +3014,7 @@ export class IntegratedDocumentsService {
         context.ownerUserId,
         actorUserId,
         manager,
+        opts?.audit,
       );
     } else {
       const initialContent = await this.resolveRecoveredInitialContent(recovered.content);
@@ -3015,6 +3032,7 @@ export class IntegratedDocumentsService {
           storedContent: true,
           changeNote: 'Recovered from audit log after integrated-doc migration',
           activityContent: 'Recovered from audit log after integrated-doc migration',
+          audit: opts?.audit,
           initializer: needsDataImageRecovery
             ? async (documentId, initializerManager) => {
               const imported = await this.importRecoveredInlineImages(
@@ -3107,7 +3125,7 @@ export class IntegratedDocumentsService {
     slotKey: IntegratedDocumentSlotKey,
     actorUserId: string | null,
     manager: EntityManager,
-    opts?: { allowFrozenIncident?: boolean },
+    opts?: { allowFrozenIncident?: boolean; audit?: KnowledgeAuditOptions },
   ): Promise<RepairSourceSlotResult> {
     const context = await this.loadSourceRecoveryContext('incidents', incidentId, manager);
 
@@ -3138,6 +3156,7 @@ export class IntegratedDocumentsService {
     await this.ensureBoundDocument('incidents', context.source, slotKey, null, actorUserId, manager, {
       ownerUserId: context.ownerUserId,
       useTemplateWhenBlank: true,
+      audit: opts?.audit,
     });
 
     const binding = await this.findBinding('incidents', incidentId, slotKey, manager);

@@ -500,7 +500,7 @@ export class ApplicationsCsvService {
    * A renamed application: its description document's title follows (`APP-4 - New name - Overview`),
    * as on a rename from the workspace.
    */
-  private async syncRenamedDocumentTitles(namesBefore: Map<string, string>, written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+  private async syncRenamedDocumentTitles(namesBefore: Map<string, string>, written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null; audit?: AuditSourceOptions }) {
     if (!this.integratedDocuments) return;
     const renamed = [...written].filter((id) => namesBefore.has(id));
     if (renamed.length === 0) return;
@@ -516,7 +516,7 @@ export class ApplicationsCsvService {
         item_number: null,
         name: row.name,
         reference_label: String(row.sequential_id || '').trim() || row.id,
-      }, opts.userId ?? null, { manager: opts.manager });
+      }, opts.userId ?? null, { manager: opts.manager, audit: opts.audit });
     }
   }
 

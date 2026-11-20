@@ -73,7 +73,7 @@ export class PortfolioProjectsCsvService {
               purpose: (entity as any).__csv_managed_purpose ?? null,
             },
             context.userId ?? null,
-            { manager: context.manager },
+            { manager: context.manager, audit: context.audit },
           );
 
           if (writePurpose) {
@@ -83,7 +83,7 @@ export class PortfolioProjectsCsvService {
               'purpose',
               (entity as any).__csv_managed_purpose ?? null,
               context.userId ?? null,
-              { manager: context.manager, logSourceActivity: false },
+              { manager: context.manager, logSourceActivity: false, audit: context.audit },
             );
           }
 
@@ -91,7 +91,7 @@ export class PortfolioProjectsCsvService {
             'projects',
             source,
             context.userId ?? null,
-            { manager: context.manager },
+            { manager: context.manager, audit: context.audit },
           );
 
           delete (entity as any).__csv_managed_purpose;

@@ -4452,6 +4452,8 @@ export class KnowledgeService {
        * slot settings name and bound to a source record whose permission the caller checked.
        */
       boundToSource?: boolean;
+      /** The source of the document's history row (Kad's card); without it, the person's. */
+      audit?: KnowledgeAuditOptions;
     } & DocumentAccessOptions,
   ): Promise<Document> {
     const manager = this.getManager(opts);
@@ -4569,7 +4571,7 @@ export class KnowledgeService {
       this.buildDocumentChanges(null, saved, ['title', 'status']),
     );
 
-    await this.auditDocumentChange('create', saved.id, null, saved, userId, manager);
+    await this.auditDocumentChange('create', saved.id, null, saved, userId, manager, opts?.audit);
 
     return saved;
   }
@@ -4585,7 +4587,7 @@ export class KnowledgeService {
       create_version?: boolean;
     },
     userId: string | null,
-    opts?: { manager?: EntityManager; systemOperation?: boolean } & DocumentAccessOptions,
+    opts?: { manager?: EntityManager; systemOperation?: boolean; audit?: KnowledgeAuditOptions } & DocumentAccessOptions,
   ): Promise<Document> {
     const manager = this.getManager(opts);
     const id = await this.resolveDocumentId(idOrRef, manager);
@@ -4679,7 +4681,7 @@ export class KnowledgeService {
       );
     }
 
-    await this.auditDocumentChange('update', saved.id, before, saved, userId, manager);
+    await this.auditDocumentChange('update', saved.id, before, saved, userId, manager, opts?.audit);
 
     return saved;
   }
