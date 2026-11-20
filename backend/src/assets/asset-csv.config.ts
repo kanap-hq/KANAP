@@ -1284,7 +1284,7 @@ export const assetCsvConfig: CsvEntityConfig = {
       if (!entity.id || !operatingSystems) continue;
       // A version match the person undid (named as the check lists it, spaces collapsed): the version is created as written.
       const exactVersion = !!label && undoneMatch(context.params.unmatched, 'operating_system', label.replace(/\s+/g, ' '));
-      const resolved = await operatingSystems.resolve(context.manager, context.tenantId, label, { create: true, exactVersion });
+      const resolved = await operatingSystems.resolve(context.manager, context.tenantId, label, { create: true, exactVersion, userId: context.userId, audit: context.audit });
       await operatingSystems.setOperatingSystem(context.manager, context.tenantId, entity.id, resolved, 'import', context.userId, context.audit);
     }
     await writeClusterMemberships(entities, context);

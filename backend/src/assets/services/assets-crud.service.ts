@@ -62,7 +62,7 @@ export class AssetsCrudService extends AssetsBaseService {
     opts?: ServiceOpts,
   ): Promise<void> {
     const mg = this.getManager(opts);
-    const resolved = await this.operatingSystems.resolve(mg, tenantId, value == null ? null : String(value), { create: true });
+    const resolved = await this.operatingSystems.resolve(mg, tenantId, value == null ? null : String(value), { create: true, userId, audit: opts?.audit });
     await this.operatingSystems.setOperatingSystem(mg, tenantId, assetId, resolved, this.osSource(opts), userId, opts?.audit);
   }
 

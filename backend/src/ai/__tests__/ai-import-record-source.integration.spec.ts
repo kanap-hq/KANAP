@@ -348,6 +348,8 @@ async function testServers(h: Harness, runner: QueryRunner, s: Seed) {
 
 /** The rows of the server's operating-system links and of the clusters' memberships among `rows`. */
 const linkRows = (rows: AuditRow[]) => rows.filter((row) => row.table_name === 'asset_technologies' || row.table_name === 'asset_cluster_members');
+/** The link rows, and those of the technologies and versions created on the way (pass E of lot I5). */
+const operatingSystemRows = (rows: AuditRow[]) => rows.filter((row) => linkRows([row]).length > 0 || row.table_name === 'technologies' || row.table_name === 'technology_versions');
 
 /**
  * A server's operating system and clusters (pass D of lot I5): the rows of its operating-system link
@@ -371,11 +373,10 @@ async function testServerOperatingSystemsAndClusters(h: Harness, runner: QueryRu
       const run = via === 'kad'
         ? await byKad(h, runner, s, 'assets', 'Serveurs.csv', file, columns)
         : { cardId: null, ...(await byScreen(h, runner, s, 'assets', 'Serveurs.csv', file, columns)) };
-      const links = linkRows(run.rows);
-      actions.push(links.map((row) => `${row.table_name} ${row.action}`));
-      for (const row of links) {
-        const expected = via === 'kad' ? ['ai_chat', run.cardId] : ['user', null];
-        assert.deepEqual([row.source, row.source_ref], expected, `${via}, ${step}: ${row.table_name} ${row.action} written as ${row.source} ${row.source_ref}`);
+      actions.push(linkRows(run.rows).map((row) => `${row.table_name} ${row.action}`));
+      for (const row of operatingSystemRows(run.rows)) {
+        const expected = via === 'kad' ? ['ai_chat', run.cardId, s.userId] : ['user', null, s.userId];
+        assert.deepEqual([row.source, row.source_ref, row.user_id], expected, `${via}, ${step}: ${row.table_name} ${row.action} written as ${row.source} ${row.source_ref} ${row.user_id}`);
       }
     }
     assert.deepEqual(actions, [
@@ -397,10 +398,11 @@ async function testServerOperatingSystemsAndClusters(h: Harness, runner: QueryRu
     const card = await h.previews.createPreview(ctx(runner, s), 'update_business_record', { entity_type: 'assets', ref: server.id, fields: { operating_system: system } });
     const done = await h.previews.executePreview(ctx(runner, s), card.preview_id);
     assert.equal(done.status, 'executed', done.error_message ?? '');
-    const links = linkRows(await written(runner, s, before));
-    assert.ok(links.length > 0, `${system}: the link is written`);
-    for (const row of links) {
-      assert.deepEqual([row.source, row.source_ref], ['ai_chat', card.preview_id], `${system}: ${row.table_name} ${row.action} written as ${row.source} ${row.source_ref}`);
+    const rows = operatingSystemRows(await written(runner, s, before));
+    assert.ok(rows.some((row) => row.table_name === 'asset_technologies'), `${system}: the link is written`);
+    assert.ok(rows.some((row) => row.table_name === 'technologies'), `${system}: the technology is created`);
+    for (const row of rows) {
+      assert.deepEqual([row.source, row.source_ref, row.user_id], ['ai_chat', card.preview_id, s.userId], `${system}: ${row.table_name} ${row.action} written as ${row.source} ${row.source_ref} ${row.user_id}`);
     }
   }
   console.log('  a server\'s operating system and clusters, imported and written by Kad: Kad\'s card; on the screen, the person: OK');
@@ -441,6 +443,36 @@ async function testIntegratedDocuments(h: Harness, runner: QueryRunner, s: Seed)
   console.log('  the integrated documents of an imported project, request or incident: Kad\'s card; on the screen, the person: OK');
 }
 
+/**
+ * The technologies an import creates on the way (pass E of lot I5): an unknown operating system and
+ * one adopted from the catalog write their technology and version rows with the person, and Kad's card
+ * through Kad.
+ */
+async function testTechnologiesCreatedOnTheWay(h: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query(`INSERT INTO locations (tenant_id, location_reference, name, hosting_type) VALUES ($1, 'LOC-5502', 'Salle E5', 'on_prem')`, [s.tenantId]);
+  const columns = [name('name', 1), name('kind', 2), name('environment', 3), name('operating_system', 4), name('location_reference', 5)];
+  const header = 'Nom;Type;Environnement;Système;Site';
+  // An unknown system with its version (both created), and one of the catalog (adopted with its versions).
+  const systems = { kad: ['Zorglux zzk5 9', 'Ubuntu 22.04'], screen: ['Zorglux zze5 9', 'Debian 12'] };
+  for (const via of ['kad', 'screen'] as const) {
+    for (const system of systems[via]) {
+      const file = [header, `srv-tech-${system.replace(/\W/g, '')};virtual_machine;prod;${system};LOC-5502`];
+      const run = via === 'kad'
+        ? await byKad(h, runner, s, 'assets', 'Serveurs.csv', file, columns)
+        : { cardId: null, ...(await byScreen(h, runner, s, 'assets', 'Serveurs.csv', file, columns)) };
+      const rows = operatingSystemRows(run.rows);
+      for (const table of ['technologies', 'technology_versions', 'asset_technologies']) {
+        assert.ok(rows.some((row) => row.table_name === table), `${via}, ${system}: a ${table} row is written (${JSON.stringify(run.rows.map((row) => row.table_name))})`);
+      }
+      const expected = via === 'kad' ? ['ai_chat', run.cardId, s.userId] : ['user', null, s.userId];
+      for (const row of rows) {
+        assert.deepEqual([row.source, row.source_ref, row.user_id], expected, `${via}, ${system}: ${row.table_name} ${row.action} written as ${row.source} ${row.source_ref} ${row.user_id}`);
+      }
+    }
+  }
+  console.log('  the technologies an import creates on the way: the person, and Kad\'s card through Kad: OK');
+}
+
 async function testTaskOfAContract(h: Harness, runner: QueryRunner, s: Seed) {
   const [company] = await runner.query(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Société T5', 'FR', 'Lyon') RETURNING id`, [s.tenantId]);
   const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Fournisseur X5') RETURNING id`, [s.tenantId]);
@@ -471,7 +503,7 @@ async function run() {
       const tests = [
         testApplications, testSuppliers, testContracts, testCostCenters, testAccounts, testTechnologyLinks,
         testBudgetFile, testContacts, testServers, testServerOperatingSystemsAndClusters, testTaskOfAContract,
-        testIntegratedDocuments,
+        testIntegratedDocuments, testTechnologiesCreatedOnTheWay,
       ];
       // Each family under its own savepoint: one that fails is reported, and the next ones still run.
       for (const test of tests) {

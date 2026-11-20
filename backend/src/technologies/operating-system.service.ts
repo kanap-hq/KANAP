@@ -52,6 +52,12 @@ export type ResolveOptions = {
    * import whose version match the person undid (lot I3 of 26.11.9). Missing, it is created as written.
    */
   exactVersion?: boolean;
+  /**
+   * Whose write it is, and its source (Kad's card; left out on the screen): the history rows of a
+   * technology or a version created on the way (adopted from the catalog, or new) carry them.
+   */
+  userId?: string | null;
+  audit?: AuditSourceOptions;
 };
 
 /**
@@ -190,23 +196,23 @@ export class OperatingSystemService {
     const prefixed = await this.prefixTechnology(mg, tenantId, text);
     const fromCatalog = this.prefixProduct(text);
     if (prefixed && (!fromCatalog || prefixed.length >= fromCatalog.length)) {
-      const versionId = await this.ensureVersion(mg, tenantId, prefixed.id, prefixed.remainder, true, EMPTY_DATES, undefined, !opts.exactVersion);
+      const versionId = await this.ensureVersion(mg, tenantId, prefixed.id, prefixed.remainder, true, EMPTY_DATES, undefined, !opts.exactVersion, opts);
       return { technology_id: prefixed.id, technology_version_id: versionId };
     }
 
     if (fromCatalog) {
-      const technologyId = await this.adopt(mg, tenantId, fromCatalog.product.key);
+      const technologyId = await this.adopt(mg, tenantId, fromCatalog.product.key, opts);
       if (!fromCatalog.remainder) return { technology_id: technologyId, technology_version_id: null };
-      const versionId = await this.ensureVersion(mg, tenantId, technologyId, fromCatalog.remainder, true, EMPTY_DATES, undefined, !opts.exactVersion);
+      const versionId = await this.ensureVersion(mg, tenantId, technologyId, fromCatalog.remainder, true, EMPTY_DATES, undefined, !opts.exactVersion, opts);
       return { technology_id: technologyId, technology_version_id: versionId };
     }
 
     if (!opts.create) return null;
     const split = splitOperatingSystemLabel(text);
     if (!split.name) return null;
-    const technologyId = await this.createTechnology(mg, tenantId, split.name);
+    const technologyId = await this.createTechnology(mg, tenantId, split.name, opts);
     const versionId = split.version
-      ? await this.ensureVersion(mg, tenantId, technologyId, split.version, true, EMPTY_DATES)
+      ? await this.ensureVersion(mg, tenantId, technologyId, split.version, true, EMPTY_DATES, undefined, true, opts)
       : null;
     return { technology_id: technologyId, technology_version_id: versionId };
   }
@@ -484,7 +490,7 @@ export class OperatingSystemService {
     const technologyId = String(body?.technology_id ?? '').trim();
     if (!technologyId) return this.setOperatingSystem(mg, tenantId, assetId, null, source, userId);
     const tech = await readTechnology(mg, tenantId, technologyId);
-    const versionId = await this.versionFromBody(mg, tenantId, tech.id, body ?? {});
+    const versionId = await this.versionFromBody(mg, tenantId, tech.id, body ?? {}, userId);
     return this.setOperatingSystem(
       mg, tenantId, assetId,
       { technology_id: tech.id, technology_version_id: versionId },
@@ -500,12 +506,14 @@ export class OperatingSystemService {
   ): Promise<ResolvedOperatingSystem> {
     const product = this.catalog.shippedProduct(shipped.product);
     if (!product) throw new BadRequestException(`Unknown operating system product: ${shipped.product}.`);
-    const technologyId = await this.adopt(mg, tenantId, product.key);
+    const technologyId = await this.adopt(mg, tenantId, product.key, opts);
     const version = product.versions.find((item) => item.label.toLowerCase() === shipped.version.toLowerCase());
     const dates = this.datesOf(version, shipped);
     const versionId = await this.ensureVersion(
       mg, tenantId, technologyId, version?.label ?? shipped.version, true, dates,
       version ? { ...version, catalog_key: `${product.key}:${version.key}` } : undefined,
+      true,
+      opts,
     );
     return { technology_id: technologyId, technology_version_id: versionId };
   }
@@ -518,8 +526,9 @@ export class OperatingSystemService {
     };
   }
 
-  private async adopt(mg: EntityManager, tenantId: string, key: string): Promise<string> {
-    const result = await this.catalog.adopt(key, { manager: mg, tenantId, userId: null, language: 'en' });
+  /** The product adopted as the screen adopts it, by the person (and Kad's card); descriptions in English. */
+  private async adopt(mg: EntityManager, tenantId: string, key: string, by: WrittenBy): Promise<string> {
+    const result = await this.catalog.adopt(key, { manager: mg, tenantId, userId: by.userId ?? null, audit: by.audit, language: 'en' });
     return result.technology.id;
   }
 
@@ -556,7 +565,7 @@ export class OperatingSystemService {
     return { product: matches[0], remainder: label.slice(matches[0].name.length).trim(), length: matches[0].name.length };
   }
 
-  private async createTechnology(mg: EntityManager, tenantId: string, name: string): Promise<string> {
+  private async createTechnology(mg: EntityManager, tenantId: string, name: string, by: WrittenBy): Promise<string> {
     if (name.length > 200) throw new BadRequestException('Name is longer than 200 characters.');
     const settings = await this.itOps.getSettings(tenantId, { manager: mg });
     const family = (settings.technologyFamilies ?? []).some((item) => item.code === 'operating_system')
@@ -579,7 +588,7 @@ export class OperatingSystemService {
     if (inserted[0]) {
       const after = await readTechnology(mg, tenantId, id);
       await this.audit.log({
-        table: 'technologies', recordId: id, action: 'create', before: null, after, userId: null,
+        table: 'technologies', recordId: id, action: 'create', before: null, after, userId: by.userId ?? null, ...auditSource(by.audit),
       }, { manager: mg });
     }
     return id;
@@ -601,6 +610,7 @@ export class OperatingSystemService {
     dates: Dates,
     shipped?: CatalogVersion & { catalog_key: string },
     prefix = true,
+    by: WrittenBy = {},
   ): Promise<string | null> {
     const text = shipped?.label ?? label.trim();
     if (!text) return null;
@@ -635,7 +645,15 @@ export class OperatingSystemService {
         shipped?.catalog_key ?? null,
       ],
     );
-    if (inserted[0]) return inserted[0].id;
+    if (inserted[0]) {
+      // Its own history row, `recordId` the technology, as the Versions tab writes it.
+      await this.audit.log({
+        table: 'technology_versions', recordId: technologyId, action: 'create', before: null,
+        after: { id: inserted[0].id, technology_id: technologyId, label: text },
+        userId: by.userId ?? null, ...auditSource(by.audit),
+      }, { manager: mg });
+      return inserted[0].id;
+    }
     const resolved = await resolveVersionLabel(mg, tenantId, technologyId, text, { create: false, prefix: false });
     return resolved?.id ?? null;
   }
@@ -663,6 +681,7 @@ export class OperatingSystemService {
     tenantId: string,
     technologyId: string,
     body: { technology_version_id?: unknown; version_label?: unknown },
+    userId?: string | null,
   ): Promise<string | null> {
     const rawId = body.technology_version_id;
     if (rawId !== undefined && rawId !== null && String(rawId).trim() !== '') {
@@ -677,7 +696,7 @@ export class OperatingSystemService {
     }
     const versionLabel = body.version_label;
     if (versionLabel !== undefined && versionLabel !== null && String(versionLabel).trim() !== '') {
-      return this.ensureVersion(mg, tenantId, technologyId, String(versionLabel), true, EMPTY_DATES);
+      return this.ensureVersion(mg, tenantId, technologyId, String(versionLabel), true, EMPTY_DATES, undefined, true, { userId });
     }
     return null;
   }
@@ -798,6 +817,9 @@ export class OperatingSystemService {
     }
   }
 }
+
+/** Who writes a technology or a version created on the way, and its source (`ResolveOptions`). */
+type WrittenBy = { userId?: string | null; audit?: AuditSourceOptions };
 
 /** The source of a link's history row: Kad's card, or nothing (the person's, `user`). */
 function auditSource(audit?: AuditSourceOptions): AuditSourceOptions {
