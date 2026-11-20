@@ -103,15 +103,22 @@ function creationFieldValue(connection: ConnectionDetail | null, key: string): u
 function missingOf(connection: ConnectionDetail | null): string[] {
   if (!connection) return [];
   const fields: string[] = [];
-  if ((connection.protocol_codes || []).length === 0) fields.push('protocols');
   if (connection.topology === 'multi_server') {
     if ((connection.servers || []).length < 2) fields.push('servers');
   } else {
     if (!connection.source_asset_id && !connection.source_entity_code) fields.push('source');
     if (!connection.destination_asset_id && !connection.destination_entity_code) fields.push('destination');
   }
+  if ((connection.protocol_codes || []).length === 0) fields.push('protocols');
   return fields;
 }
+
+/** The ends, then the protocols: the order of the fields on the overview tab. */
+const SCREEN_ORDER = ['source', 'destination', 'servers', 'protocols'];
+const screenRank = (key: string) => {
+  const rank = SCREEN_ORDER.indexOf(key);
+  return rank === -1 ? SCREEN_ORDER.length : rank;
+};
 
 /** The connection a new page shows dimmed under its title: the one the title will create. */
 const DRAFT_CONNECTION: ConnectionDetail = {
@@ -569,7 +576,9 @@ export default function ConnectionWorkspacePage() {
     try {
       const fields = await creation.completeCreation();
       missingMarks.mark(fields ?? []);
-      if (fields) focusField(fields[0]);
+      // The server names the fields in its own order: the focus goes to the first one on screen.
+      const first = fields ? [...fields].sort((a, b) => screenRank(a) - screenRank(b))[0] : undefined;
+      if (first) focusField(first);
     } catch (e) {
       setError(getApiErrorMessage(e, t, t('workspace.connection.creation.completeFailed')));
     }

@@ -189,15 +189,15 @@ describe('Connection creation at the title', () => {
     expect(location()).toBe('/it/connections/CONN-7/overview');
   });
 
-  it('marks what the connection lacks on Create, focuses the first field and stays', async () => {
+  it('marks what the connection lacks on Create, focuses the first field on screen and stays', async () => {
     await createConnection();
+    // The server names the fields in its own order; the focus follows the screen: Source first.
     mocked.post.mockRejectedValueOnce({
       response: { status: 400, data: { code: 'CREATION_INCOMPLETE', params: { fields: ['protocols', 'source', 'destination'] } } },
     });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    // The protocol picker, first of the missing fields.
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'workspace.connection.layers.source' })).toHaveFocus());
     const protocols = screen.getByPlaceholderText('workspace.connection.overview.addProtocol');
-    await waitFor(() => expect(protocols).toHaveFocus());
     expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
     expect(location()).toBe('/it/connections/CONN-7/overview');
     // One signal: the labels in red and the fields invalid, no banner.
@@ -230,7 +230,10 @@ describe('Connection creation at the title', () => {
     await createConnection();
     fireEvent.click(screen.getByRole('button', { name: 'pages.connections.title' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/workspace\.connection\.creation\.missing/)).toBeTruthy();
+    // The question names the missing fields in screen order: Source, Destination, then Protocols.
+    expect(within(dialog).getByText(/workspace\.connection\.creation\.missing/).textContent).toMatch(
+      /workspace\.connection\.layers\.source.*workspace\.connection\.layers\.destination.*workspace\.connection\.overview\.protocols/,
+    );
     fireEvent.click(within(dialog).getByRole('button', { name: 'it:workspace.connection.creation.leaveComplete' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(location()).toBe('/it/connections/CONN-7/overview');
