@@ -132,6 +132,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + '(none when it says 0), and call a matched value matched. '
       + 'Name each record the approval updates as that sentence and the check\'s `validation.report.updates` name it (file line, reference, name), '
       + 'never from memory or from your reading of the file: an update the check does not list is not one. '
+      + 'Link its name to its `page_url` as the sentence does, and name a record without one without a link. '
       + 'When it says "Nothing to import", say so: the card cannot be approved (`validation.nothing_to_import`). '
       + 'Give no count of what the approval creates or updates (by nature included) other than the counts of that sentence, '
       + 'and never count the lines of the file yourself; lines in error, line numbers and amounts stay yours to cite. '

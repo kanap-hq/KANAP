@@ -38,6 +38,7 @@ import { TechnologyLinksCsvService } from '../../technologies/technology-links-c
 import { WorkingDayProfilesCsvService } from '../../working-day-profiles/working-day-profiles-csv.service';
 import { importCounts } from '../../audit/security-events';
 import { AiPolicyService } from '../ai-policy.service';
+import { ENTITY_URL_BUILDERS } from '../ai-page-urls';
 import type { AiExecutionContextWithManager, AiImportReportMessage, AiImportRunDto } from '../ai.types';
 import type { AiImportKey } from './ai-import-access';
 import { isImportMatchedColumn, type ImportCardChoice } from './ai-import-targets';
@@ -390,6 +391,34 @@ function personLineLookalikes(lookalikes: ImportLookalikes, lines: readonly numb
 }
 
 /**
+ * The page each import's records open on, by import, as the card's link of a record a row updates
+ * (`RECORD_PAGES` of `frontend/src/ai/components/ImportRunReport.tsx`): by its business reference.
+ * An import whose records the card links to no page (cost centers, accounts) is absent.
+ */
+const IMPORT_RECORD_PAGES: Readonly<Partial<Record<AiImportKey, string>>> = {
+  applications: 'applications',
+  assets: 'assets',
+  portfolio_projects: 'projects',
+  portfolio_requests: 'requests',
+  tasks: 'tasks',
+  incidents: 'incidents',
+  contracts: 'contracts',
+  suppliers: 'suppliers',
+  contacts: 'contacts',
+  companies: 'companies',
+  departments: 'departments',
+  technology_asset_links: 'technologies',
+  technology_application_links: 'technologies',
+};
+
+/** The address of the page of a record an import of `key` updates, the card's link; none without a reference or a page. */
+function updatePageUrl(key: AiImportKey, ref: string | null): string | null {
+  const page = IMPORT_RECORD_PAGES[key];
+  const builder = page ? ENTITY_URL_BUILDERS[page] : undefined;
+  return ref && builder ? builder(ref) : null;
+}
+
+/**
  * The bilan of a row import: its counts, its messages on the person's lines, and their tally for the
  * model; the names it found beyond case and Kad's proposals it refused, on the person's lines (the
  * card shows them from lot I3's fifth pass).
@@ -398,7 +427,8 @@ function personLineLookalikes(lookalikes: ImportLookalikes, lines: readonly numb
  * The card of a row import (lot I3 of 26.11.9, fifth pass): a match is undoable there only in a column
  * the card's choice route takes for the import, and the report gives back the matches the person undid
  * on the card (`undone`), for it to send the whole list with the next one, as a budget file's card
- * sends its choices.
+ * sends its choices. Each record a row updates carries the address of its page (`page_url`, pass D of
+ * Q1 of 26.11.9), the card's link, for the model to link its name: without it, the model made one up.
  */
 export function rowsCard(key: AiImportKey, run: AiImportRunDto, choices: readonly ImportCardChoice[]): AiImportRunDto {
   if (run.report.kind !== 'rows') return run;
@@ -406,7 +436,14 @@ export function rowsCard(key: AiImportKey, run: AiImportRunDto, choices: readonl
   const matches = run.report.matches?.map((match) => (
     match.undoable && !isImportMatchedColumn(key, match.column) ? { ...match, undoable: false } : match
   ));
-  return { ...run, report: { ...run.report, ...(matches ? { matches } : {}), ...(undone.length > 0 ? { undone } : {}) } };
+  const updates = run.report.updates?.map((entry) => {
+    const pageUrl = updatePageUrl(key, entry.ref);
+    return pageUrl ? { ...entry, page_url: pageUrl } : entry;
+  });
+  return {
+    ...run,
+    report: { ...run.report, ...(matches ? { matches } : {}), ...(updates ? { updates } : {}), ...(undone.length > 0 ? { undone } : {}) },
+  };
 }
 
 export function rowsBilan(result: RowsReport, dryRun: boolean, lines: readonly number[], language: CsvLanguage = 'en'): AiImportRunDto {
@@ -495,14 +532,18 @@ const APPROVAL_FACT_UPDATES = 10;
 
 /**
  * The records a row import's check updates, as the card lists them (Q1 of 26.11.9): each by the line of
- * the person's file and the record's reference, then its name. Empty when the check lists none.
+ * the person's file and the record's reference, then its name, linked to its page when it has one
+ * (`page_url`, the card's link). Empty when the check lists none.
  */
 function rowsUpdateFacts(report: AiImportRunDto['report'] | undefined, updated: number): string {
   const updates = report?.kind === 'rows' ? report.updates ?? [] : [];
   if (updates.length === 0) return '';
   const total = Math.max(report?.kind === 'rows' ? report.updatesTotal ?? 0 : 0, updated, updates.length);
   const shown = updates.slice(0, APPROVAL_FACT_UPDATES)
-    .map((entry) => `file line ${entry.row}: ${entry.ref ? `${entry.ref} ${entry.name}` : entry.name}`);
+    .map((entry) => {
+      const name = entry.page_url ? `[${entry.name.replace(/[[\]]/g, '\\$&')}](${entry.page_url})` : entry.name;
+      return `file line ${entry.row}: ${entry.ref ? `${entry.ref} ${name}` : name}`;
+    });
   const more = total - shown.length;
   return ` (${shown.join(', ')}${more > 0 ? `, and ${more} more` : ''})`;
 }

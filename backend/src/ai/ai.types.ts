@@ -679,9 +679,10 @@ export type AiImportRunDto = {
       /**
        * The rows that update a stored record (Q1 of 26.11.9), the first ones: the line of the person's
        * file, the record's reference (null when its family has none) and its name; `updatesTotal` counts
-       * them all. Absent when none. The card lists them, and the model names the updates from them.
+       * them all. Absent when none. The card lists them, and the model names the updates from them,
+       * each linked to `page_url`, the address of its page, when its family has one (`rowsCard`).
        */
-      updates?: ImportUpdate[];
+      updates?: Array<ImportUpdate & { page_url?: string }>;
       updatesTotal?: number;
     }
     /** The budget file's check, as its dialog shows it (`BudgetFileReport` without its snapshot). */

@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { rowsApprovalFacts, rowsBilan } from '../import/ai-import-runner.service';
+import { rowsApprovalFacts, rowsBilan, rowsCard } from '../import/ai-import-runner.service';
 
 // Lot I3 of 26.11.9, correctifs L: on dev, Kad imported `applications-vendor.xlsx` and wrote that the
 // "Vendor" column filled no supplier, while the card listed six suppliers matched by the publisher
@@ -78,8 +78,31 @@ function testTheUpdatesAreNamed() {
   console.log('  the records updated, named by line and reference, then how many more: OK');
 }
 
+// Q1 of 26.11.9, pass D: on dev, Kad wrote "[PRJ-20](R9 Q1 Projet C)", a link whose address is the
+// project's name. Each record updated carries the address of its page when its family has one (the
+// page the card links), and the sentence links its name to it; a cost center, which the card links
+// to no page, is named without an address.
+function testTheUpdatesCarryTheirPage() {
+  const updating = (key: 'portfolio_projects' | 'cost_centers', entry: { ref: string | null; name: string }) => rowsCard(key, rowsBilan({
+    ok: true, total: 1, inserted: 0, updated: 1, unchanged: 0, errors: [], warnings: [], updates: [{ row: 2, ...entry }], updatesTotal: 1,
+  } as any, true, [2]), []);
+  const project = updating('portfolio_projects', { ref: 'PRJ-20', name: 'R9 Q1 Projet C' });
+  assert.deepEqual(project.report.kind === 'rows' && project.report.updates,
+    [{ row: 2, ref: 'PRJ-20', name: 'R9 Q1 Projet C', page_url: '/portfolio/projects/PRJ-20' }]);
+  assert.equal(rowsApprovalFacts(project),
+    'On approval: 0 records created, 1 updated (file line 2: PRJ-20 [R9 Q1 Projet C](/portfolio/projects/PRJ-20)), 0 unchanged.');
+  // A bracket of the name would close the link early: it is escaped.
+  assert.match(rowsApprovalFacts(updating('portfolio_projects', { ref: 'PRJ-21', name: 'Cave [pilote]' })),
+    /file line 2: PRJ-21 \[Cave \\\[pilote\\\]\]\(\/portfolio\/projects\/PRJ-21\)\)/);
+  const costCenter = updating('cost_centers', { ref: null, name: 'CC-01 Finance' });
+  assert.deepEqual(costCenter.report.kind === 'rows' && costCenter.report.updates, [{ row: 2, ref: null, name: 'CC-01 Finance' }]);
+  assert.equal(rowsApprovalFacts(costCenter), 'On approval: 0 records created, 1 updated (file line 2: CC-01 Finance), 0 unchanged.');
+  console.log('  each record updated carries the address of its page, when its family has one: OK');
+}
+
 testThePublishersMatchesAreSaid();
 testTheFirstMatchesThenHowManyMore();
 testTheUpdatesAreNamed();
+testTheUpdatesCarryTheirPage();
 testACheckWithoutMatchesKeepsItsSentence();
 testTheClearedValuesAreSaid();

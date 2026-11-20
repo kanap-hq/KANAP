@@ -406,7 +406,7 @@ async function testApplicationsClear(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual([check.updated, check.unchanged, check.cleared], [1, 1, 1]);
   const [effacement] = await runner.query(`SELECT sequential_id FROM applications WHERE tenant_id = $1 AND name = 'Effacement I6'`, [s.tenantId]);
   assert.equal(card.import_mapping.on_approval,
-    `On approval: 0 records created, 1 updated (file line 2: ${effacement.sequential_id} Effacement I6), 1 unchanged; 1 stored value cleared (cells holding "-").`);
+    `On approval: 0 records created, 1 updated (file line 2: ${effacement.sequential_id} [Effacement I6](/it/applications/${effacement.sequential_id})), 1 unchanged; 1 stored value cleared (cells holding "-").`);
   const done = await h.previews.executePreview(admin, card.preview_id);
   assert.equal(done.status, 'executed', done.error_message ?? '');
   assert.equal(done.import_mapping.result.cleared, 1);
@@ -453,7 +453,7 @@ async function testSuppliers(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(check.ok, true, JSON.stringify(check));
   assert.deepEqual([check.inserted, check.updated, check.cleared], [1, 1, 0]);
   const [lactalis] = await runner.query(`SELECT item_number FROM suppliers WHERE tenant_id = $1 AND name = 'Lactalis'`, [s.tenantId]);
-  assert.equal(updating.import_mapping.on_approval, `On approval: 1 records created, 1 updated (file line 2: SUP-${lactalis.item_number} Lactalis), 0 unchanged.`);
+  assert.equal(updating.import_mapping.on_approval, `On approval: 1 records created, 1 updated (file line 2: SUP-${lactalis.item_number} [Lactalis](/master-data/suppliers/SUP-${lactalis.item_number})), 0 unchanged.`);
   await assertSameAsTheRoute(h, runner, s, { attachment_id: update, entity_type: 'suppliers', columns }, check);
   const updated = await h.previews.executePreview(admin, updating.preview_id);
   assert.equal(updated.status, 'executed', updated.error_message ?? '');
@@ -471,7 +471,7 @@ async function testSuppliers(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(clears.ok, true, JSON.stringify(clears));
   assert.deepEqual([clears.updated, clears.unchanged, clears.cleared], [1, 1, 1]);
   assert.equal(clearing.import_mapping.on_approval,
-    `On approval: 0 records created, 1 updated (file line 2: SUP-${lactalis.item_number} Lactalis), 1 unchanged; 1 stored value cleared (cells holding "-").`);
+    `On approval: 0 records created, 1 updated (file line 2: SUP-${lactalis.item_number} [Lactalis](/master-data/suppliers/SUP-${lactalis.item_number})), 1 unchanged; 1 stored value cleared (cells holding "-").`);
   await assertSameAsTheRoute(h, runner, s, { attachment_id: dash, entity_type: 'suppliers', columns: notesColumns }, clears);
   const cleared = await h.previews.executePreview(admin, clearing.preview_id);
   assert.equal(cleared.status, 'executed', cleared.error_message ?? '');
@@ -1190,9 +1190,11 @@ async function testUpdatesNamed(h: Harness, runner: QueryRunner, s: Seed) {
   const projectCheck = projects.validation;
   assert.equal(projectCheck.ok, true, JSON.stringify(projectCheck));
   assert.deepEqual([projectCheck.inserted, projectCheck.updated, projectCheck.unchanged], [0, 1, 4]);
-  assert.deepEqual(projectCheck.report.updates, [{ row: 6, ref: `PRJ-${project.item_number}`, name: 'Q1 Étiquettes' }]);
+  assert.deepEqual(projectCheck.report.updates, [{
+    row: 6, ref: `PRJ-${project.item_number}`, name: 'Q1 Étiquettes', page_url: `/portfolio/projects/PRJ-${project.item_number}`,
+  }]);
   assert.equal(projectCheck.report.updatesTotal, 1);
-  assert.equal(projects.on_approval, `On approval: 0 records created, 1 updated (file line 6: PRJ-${project.item_number} Q1 Étiquettes), 4 unchanged.`);
+  assert.equal(projects.on_approval, `On approval: 0 records created, 1 updated (file line 6: PRJ-${project.item_number} [Q1 Étiquettes](/portfolio/projects/PRJ-${project.item_number})), 4 unchanged.`);
 
   // Applications: the same, by their APP-n reference.
   const appFile = (criticality: string) => ['Appli;Criticité', 'Q1 Atlas;Faible', ';', `Q1 Hermes;${criticality}`, 'Q1 Iris;Faible'];
@@ -1203,21 +1205,25 @@ async function testUpdatesNamed(h: Harness, runner: QueryRunner, s: Seed) {
   const [app] = await runner.query(`SELECT sequential_id FROM applications WHERE tenant_id = $1 AND name = 'Q1 Hermes'`, [s.tenantId]);
   assert.match(app.sequential_id, /^APP-\d+$/);
   assert.deepEqual([apps.validation.updated, apps.validation.unchanged], [1, 2]);
-  assert.deepEqual(apps.validation.report.updates, [{ row: 4, ref: app.sequential_id, name: 'Q1 Hermes' }]);
+  assert.deepEqual(apps.validation.report.updates, [{ row: 4, ref: app.sequential_id, name: 'Q1 Hermes', page_url: `/it/applications/${app.sequential_id}` }]);
 
   // A master-data import (suppliers, SUP-n), and one whose family has no reference (cost centers, by name).
   const supplierColumns = [{ column: 'name', source: 1, confidence: 'high' }, { column: 'erp_supplier_id', source: 2, confidence: 'high' }];
   const suppliers = await twice('suppliers', 'fournisseurs Q1.csv', supplierColumns,
     ['Fournisseur;ERP', 'Q1 Lactalis;Q1-1', 'Q1 Savencia;Q1-2'], ['Fournisseur;ERP', 'Q1 Lactalis;Q1-1', 'Q1 Savencia;Q1-3']);
   const [supplier] = await runner.query(`SELECT item_number FROM suppliers WHERE tenant_id = $1 AND name = 'Q1 Savencia'`, [s.tenantId]);
-  assert.deepEqual(suppliers.validation.report.updates, [{ row: 3, ref: `SUP-${supplier.item_number}`, name: 'Q1 Savencia' }]);
+  assert.deepEqual(suppliers.validation.report.updates, [{
+    row: 3, ref: `SUP-${supplier.item_number}`, name: 'Q1 Savencia', page_url: `/master-data/suppliers/SUP-${supplier.item_number}`,
+  }]);
   const centerColumns = [
     { column: 'code', source: 1, confidence: 'high' }, { column: 'name', source: 2, confidence: 'high' }, { column: 'kind', source: 3, confidence: 'high' },
   ];
   const centers = await twice('cost_centers', 'centres Q1.csv', centerColumns,
     ['Code;Nom;Type', 'Q1-CC1;Q1 Caves;group', 'Q1-CC2;Q1 Siège;group'],
     ['Code;Nom;Type', 'Q1-CC1;Q1 Caves;group', 'Q1-CC2;Q1 Siège social;group']);
-  assert.deepEqual(centers.validation.report.updates?.map((entry: any) => [entry.row, entry.ref]), [[3, null]]);
+  // A cost center opens no page by a reference: no address, and the facts name it without a link.
+  assert.deepEqual(centers.validation.report.updates?.map((entry: any) => [entry.row, entry.ref, entry.page_url]), [[3, null, undefined]]);
+  assert.match(centers.on_approval, /\(file line 3: Q1-CC2 Q1 Siège\), /);
   console.log('  updates named: projects, applications, suppliers, cost centers on the person\'s lines: OK');
 }
 
