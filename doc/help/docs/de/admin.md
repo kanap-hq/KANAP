@@ -70,6 +70,8 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 
 **Exporte** (Tabelle **Export**): jede Datei, die Kadratis aus Ihren Daten erzeugt: Listen- und Berichtsexporte als CSV oder Excel, Dokumente und PDF-Berichte. Die Zeile zeigt, was exportiert wurde und von wem. Ihre Details nennen das Format, die Parameter des Exports (Filter, Suche, Sortierung, Jahr usw.) und, bei einer Datei mit Zeilen, die Zahl der geschriebenen Zeilen. Auch der Export des Audit-Protokolls wird aufgezeichnet.
 
+**Importe** (Tabelle **Import**): jede Datei, die über einen Import geladen wird: die Listen, die Budgetdatei, Benutzer und Datenzugriff. Die Zeile zeigt, welche Liste importiert wurde und von wem: von der Person selbst oder von Kad für diese Person, wenn der Import im KI-Chat genehmigt wurde. Ihre Details nennen den Dateinamen und die Zahl der erstellten, aktualisierten und unveränderten Zeilen. Eine Datei nur zu prüfen, ohne sie zu laden, schreibt keine Zeile.
+
 Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides in den Zeilen **IP-Adresse** und **Browser** ihrer Tabelle zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Passwörter, Anmelde-Links und Tokens werden nie ins Protokoll geschrieben. Versucht sich jemand mit einer E-Mail-Adresse anzumelden, zu der es kein Konto gibt, zeigt die Zeile **Unbekanntes Konto** und speichert die eingegebene Adresse nicht.

@@ -839,7 +839,8 @@ export class AccountsService {
        */
       mode?: CsvImportMode;
     },
-    opts?: { manager?: EntityManager; targetCoaId?: string | undefined; allowCoaCodeColumn?: boolean; updateExisting?: boolean },
+    /** `audit`: the source of each account's history row (Kad's card); without it, the person's. */
+    opts?: { manager?: EntityManager; targetCoaId?: string | undefined; allowCoaCodeColumn?: boolean; updateExisting?: boolean; audit?: AuditSourceOptions },
   ): Promise<MasterDataImportResult> {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
@@ -1032,18 +1033,18 @@ export class AccountsService {
           // skip updating existing rows
           continue;
         }
-        const saved = await this.updateAccount(existing, { ...item, coa_id: targetCoaId }, userId, mg, undefined, consolidation);
+        const saved = await this.updateAccount(existing, { ...item, coa_id: targetCoaId }, userId, mg, opts?.audit, consolidation);
         if (saved) processed += 1;
       } else {
-        const saved = await this.createAccount({ ...item, coa_id: targetCoaId }, userId, mg, undefined, consolidation);
+        const saved = await this.createAccount({ ...item, coa_id: targetCoaId }, userId, mg, opts?.audit, consolidation);
         if (saved) processed += 1;
       }
     }
-    await insertAccountAudits(mg, consolidation.audits ?? [], { userId });
+    await insertAccountAudits(mg, consolidation.audits ?? [], { userId, audit: opts?.audit });
     // An import into the consolidation chart: the accounts mapped to its numbers take their
     // names and descriptions, in one statement.
     if (chartId && targetCoaId === chartId) {
-      await resyncFromChart(mg, chartId, { userId });
+      await resyncFromChart(mg, chartId, { userId, audit: opts?.audit });
     }
     return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
   }

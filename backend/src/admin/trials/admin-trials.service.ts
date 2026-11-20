@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { withTenant } from '../../common/tenant-runner';
-import { AUTH_EVENT_TABLE } from '../../audit/security-events';
+import { AUTH_EVENT_TABLE, IMPORT_EVENT_ACTION, IMPORT_EVENT_TABLE } from '../../audit/security-events';
 import { RECORD_HISTORY } from '../../audit/record-history.inventory';
 import { DiscoveryCall, DISCOVERY_CALL_AUDIT_TABLE, DiscoveryCallService } from '../../discovery-call/discovery-call.service';
 import { isOnboardingAngle, isOnboardingMode, ONBOARDING_PATHS } from '../../onboarding/onboarding-paths';
@@ -231,9 +231,9 @@ export class AdminTrialsService {
    *   person's name (audit row, question to Plaid), that long after the first sign-in (a session
    *   lasts several days without a new sign-in); a visit that writes nothing leaves no trace;
    * - first record: a creation in the person's name (not `system` nor `webhook`) of a record the
-   *   history knows, after `cutoff`; first import: a row written by the budget file or another
-   *   import source (`source` naming `import`), after `cutoff`; CSV imports of most families write
-   *   no audit row and do not show;
+   *   history knows, after `cutoff`; first import: the `import` row every import writes, by a
+   *   screen or by Plaid (audit/security-events.ts), or a row written by the budget file or
+   *   another import source (`source` naming `import`), in the person's name, after `cutoff`;
    * - first invitation: a user whose audit row says `invited`;
    * - first question to Plaid: the first `user` message of a conversation;
    * - conversion: the first audit row of the subscription linked to Stripe;
@@ -268,7 +268,8 @@ export class AdminTrialsService {
              AND coalesce(source, 'user') NOT IN ('system', 'webhook') AND created_at > $5) AS first_record_at,
          (SELECT min(created_at) FROM audit_log
            WHERE tenant_id = $1 AND user_id IS NOT NULL
-             AND (source = 'budget_file' OR source ~ '(^|_)import($|_)') AND created_at > $5) AS first_import_at,
+             AND ((table_name = $7 AND action = $8) OR source = 'budget_file' OR source ~ '(^|_)import($|_)')
+             AND created_at > $5) AS first_import_at,
          (SELECT min(created_at) FROM audit_log
            WHERE tenant_id = $1 AND table_name = 'users' AND user_id IS NOT NULL
              AND after_json->>'status' = 'invited') AS first_invitation_at,
@@ -279,7 +280,7 @@ export class AdminTrialsService {
          (SELECT created_at FROM first_click) AS first_click_at,
          (SELECT placement FROM first_click) AS first_click_placement
        FROM first_sign_in f`,
-      [tenantId, AUTH_EVENT_TABLE, SIGN_IN_ACTIONS, RECORD_LABELS, cutoff ?? new Date(0), DISCOVERY_CALL_AUDIT_TABLE],
+      [tenantId, AUTH_EVENT_TABLE, SIGN_IN_ACTIONS, RECORD_LABELS, cutoff ?? new Date(0), DISCOVERY_CALL_AUDIT_TABLE, IMPORT_EVENT_TABLE, IMPORT_EVENT_ACTION],
     );
     return row;
   }

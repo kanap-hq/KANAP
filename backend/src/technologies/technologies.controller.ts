@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -263,6 +264,7 @@ export class TechnologiesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('technology_asset_links')
   @Post('asset-links/import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   importAssetLinks(
@@ -297,6 +299,7 @@ export class TechnologiesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('technology_application_links')
   @Post('application-links/import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importApplicationLinks(

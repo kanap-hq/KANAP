@@ -28,7 +28,8 @@ import { createRequestCommitThenRun } from '../common/import-connection';
  * its transaction). A failure is a warning: autovacuum analyses the tables later anyway.
  *
  * It is the last call of the budget file load routes (`POST /spend-items/budget-file/import`
- * and the CAPEX twin).
+ * and the CAPEX twin). A budget file load approved in Kad gets the same ANALYZE once the
+ * approval's transaction is committed (`AiChatOrchestratorService.analyzeLargeImportsAfterApproval`).
  */
 export const ANALYZE_AFTER_IMPORT_ROWS = 1000;
 

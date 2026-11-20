@@ -1049,7 +1049,7 @@ export class CompaniesService {
       /** What a row does to a company it updates (`CsvImportMode`); without it, `replace`. */
       mode?: CsvImportMode;
     },
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ): Promise<MasterDataImportResult> {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
@@ -1415,9 +1415,9 @@ export class CompaniesService {
       const lifecycle = csvItemLifecycle(item.lifecycle.status, item.lifecycle.disabled_at, !!existing);
       const body = { ...item.company, ...withClearedEndOfValidity(lifecycle, !!existing && item.lifecycle.clearsEnd) };
       if (existing) {
-        saved = await this.update(existing.id, body as any, userId ?? undefined, { manager: opts?.manager });
+        saved = await this.update(existing.id, body as any, userId ?? undefined, { manager: opts?.manager, audit: opts?.audit });
       } else {
-        saved = await this.create(body as any, userId ?? undefined, { manager: opts?.manager });
+        saved = await this.create(body as any, userId ?? undefined, { manager: opts?.manager, audit: opts?.audit });
       }
       if (saved) {
         processed += 1;

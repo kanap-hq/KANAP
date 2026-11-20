@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { parseString } from '@fast-csv/parse';
 import { EntityManager } from 'typeorm';
+import type { ImportCounts } from '../../audit/security-events';
 import {
   csvSeparatorOf,
   readImportText,
@@ -59,6 +60,18 @@ export type IncidentJournalImportResult = {
   skipped: number;
   entries: number;
 };
+
+/**
+ * The counts of the journal's `import` row (`@ImportRoute`, audit/security-events.ts): the journal
+ * has no check, so every answer is a load; its rows are the entries of the file, the entries
+ * written are inserted, the entries already in the timeline unchanged.
+ */
+export function journalImportCounts(result: unknown): ImportCounts | null {
+  const answer = result as Partial<IncidentJournalImportResult> | null | undefined;
+  if (answer?.ok !== true) return null;
+  const count = (value: unknown) => (Number.isSafeInteger(value) && (value as number) >= 0 ? (value as number) : 0);
+  return { rows: count(answer.entries), inserted: count(answer.imported), updated: 0, unchanged: count(answer.skipped) };
+}
 
 /**
  * Imports a journal file into the append-only timeline, with the author and

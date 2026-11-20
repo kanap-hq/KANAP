@@ -599,7 +599,7 @@ export class DepartmentsService {
       /** What a row does to a department it updates (`CsvImportMode`); without it, `replace`. */
       mode?: CsvImportMode;
     },
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ): Promise<MasterDataImportResult> {
     if (!file) throw new BadRequestException('No file uploaded');
     const readLanguage = language ?? 'en';
@@ -869,10 +869,10 @@ export class DepartmentsService {
         ...withClearedEndOfValidity(csvItemLifecycle(written.status, written.disabled_at, !!existing), !!existing && clearsEnd),
       };
       if (existing) {
-        const saved = await this.update(existing.id, body, userId ?? undefined, { manager: opts?.manager });
+        const saved = await this.update(existing.id, body, userId ?? undefined, { manager: opts?.manager, audit: opts?.audit });
         if (saved) processed += 1;
       } else {
-        const saved = await this.create(body, userId ?? undefined, { manager: opts?.manager });
+        const saved = await this.create(body, userId ?? undefined, { manager: opts?.manager, audit: opts?.audit });
         if (saved) processed += 1;
       }
     }

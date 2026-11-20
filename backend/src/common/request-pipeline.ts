@@ -3,6 +3,7 @@ import { HttpAdapterHost, Reflector } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { DataSource } from 'typeorm';
 import { ExportEventsInterceptor } from '../audit/export-events.interceptor';
+import { ImportEventsInterceptor } from '../audit/import-events.interceptor';
 import { ReleaseTenantRunnerFilter } from './filters/release-tenant-runner.filter';
 import { ListContextInterceptor } from './list-context/list-context.interceptor';
 import { ListContextsService } from './list-context/list-contexts.service';
@@ -21,8 +22,11 @@ import { TenantInterceptor } from './tenant.interceptor';
  * 4. ExportEventsInterceptor, inside that transaction: a route whose path ends
  *    with `/export`, or marked `@ExportRoute()`, writes its `export` row to the
  *    audit log;
- * 5. the pipes (class-validator DTOs, Zod DTOs), on the merged query;
- * 6. ReleaseTenantRunnerFilter, on an error: releases a transaction left open.
+ * 5. ImportEventsInterceptor, inside that transaction: a route marked
+ *    `@ImportRoute('<list>')` writes its `import` row to the audit log once its
+ *    load has succeeded, before the commit;
+ * 6. the pipes (class-validator DTOs, Zod DTOs), on the merged query;
+ * 7. ReleaseTenantRunnerFilter, on an error: releases a transaction left open.
  */
 export function useRequestPipeline(app: INestApplication, dataSource: DataSource): void {
   const reflector = app.get(Reflector);
@@ -35,6 +39,7 @@ export function useRequestPipeline(app: INestApplication, dataSource: DataSource
     new TenantInterceptor(dataSource, reflector),
     new ListContextInterceptor(app.get(ListContextsService)),
     new ExportEventsInterceptor(),
+    new ImportEventsInterceptor(),
   );
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new ReleaseTenantRunnerFilter(httpAdapter));

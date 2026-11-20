@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { languageOf } from '../common/csv-sheet';
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { requestContextMissing, businessContributorNoAccess, businessContributorScope } from '../auth/module-right-required';
@@ -703,6 +704,7 @@ export class ApplicationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('applications')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

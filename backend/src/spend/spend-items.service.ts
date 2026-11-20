@@ -462,7 +462,11 @@ export class SpendItemsService {
   async create(
     body: SpendItemUpsertDto | Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; source?: string; fields?: ItemWriteFields; native?: boolean; creation?: boolean },
+    opts?: {
+      manager?: EntityManager; itemNumber?: number; legacyNumber?: number; source?: string; fields?: ItemWriteFields; native?: boolean; creation?: boolean;
+      /** The audit row's source and reference only (Kad's card): the row's values stay as they are. */
+      audit?: { source: string; sourceRef: string | null };
+    },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendItem);
@@ -496,7 +500,7 @@ export class SpendItemsService {
       await this.audit.log({
         table: auditTableOf(this.nature, 'spend_items'), recordId: saved.id, action: 'create', before: null,
         after: { ...auditLine(this.nature, saved), ...itemAnalyticsAuditFields(created.analytics_values), ...(opts?.source ? { source: opts.source } : {}) },
-        userId, source: opts?.source,
+        userId, source: opts?.audit?.source ?? opts?.source, ...(opts?.audit ? { sourceRef: opts.audit.sourceRef } : {}),
       }, { manager: mg });
       return created;
     }
@@ -506,7 +510,7 @@ export class SpendItemsService {
     await this.audit.log({
       table: auditTableOf(this.nature, 'spend_items'), recordId: saved.id, action: 'create', before: null,
       after: { ...(opts?.native ? presentNativeLine(persisted) : auditLine(this.nature, persisted)), ...itemAnalyticsAuditFields(analyticsValues), ...(opts?.source ? { source: opts.source } : {}) },
-      userId, source: opts?.source,
+      userId, source: opts?.audit?.source ?? opts?.source, ...(opts?.audit ? { sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
     return this.present({ ...persisted, ...itemAnalyticsFields(analyticsValues) }, opts?.native);
   }

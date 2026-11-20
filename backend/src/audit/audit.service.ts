@@ -72,8 +72,8 @@ export type AuditEntry = {
 /**
  * Writes one `audit_log` row with `manager`, whose transaction carries the tenant
  * (`app.current_tenant`, the default of `tenant_id`). `AuditService.log` and the security
- * events (security-events.service.ts, export-events.interceptor.ts) write through here. Returns
- * the new row's id.
+ * events (security-events.service.ts, export-events.interceptor.ts, writeImportEvent) write
+ * through here. Returns the new row's id.
  */
 export async function writeAuditLog(manager: EntityManager, params: AuditEntry): Promise<string | null> {
   const result = await manager.getRepository(AuditLog).insert(await auditLogRow(manager, params));

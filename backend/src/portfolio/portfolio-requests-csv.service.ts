@@ -1,4 +1,5 @@
 import type { CsvLanguage } from '../common/csv-sheet';
+import type { AuditSourceOptions } from '../audit/audit.service';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
@@ -79,7 +80,7 @@ export class PortfolioRequestsCsvService {
               risks_mitigations: (entity as any).__csv_managed_risks ?? null,
             },
             context.userId ?? null,
-            { manager: context.manager },
+            { manager: context.manager, audit: context.audit },
           );
 
           if (writePurpose) {
@@ -89,7 +90,7 @@ export class PortfolioRequestsCsvService {
               'purpose',
               (entity as any).__csv_managed_purpose ?? null,
               context.userId ?? null,
-              { manager: context.manager, logSourceActivity: false },
+              { manager: context.manager, logSourceActivity: false, audit: context.audit },
             );
           }
 
@@ -100,7 +101,7 @@ export class PortfolioRequestsCsvService {
               'risks_mitigations',
               (entity as any).__csv_managed_risks ?? null,
               context.userId ?? null,
-              { manager: context.manager, logSourceActivity: false },
+              { manager: context.manager, logSourceActivity: false, audit: context.audit },
             );
           }
 
@@ -108,7 +109,7 @@ export class PortfolioRequestsCsvService {
             'requests',
             source,
             context.userId ?? null,
-            { manager: context.manager },
+            { manager: context.manager, audit: context.audit },
           );
 
           delete (entity as any).__csv_managed_purpose;
@@ -229,6 +230,8 @@ export class PortfolioRequestsCsvService {
       manager: EntityManager;
       tenantId: string;
       userId?: string | null;
+      /** The source of each record's history row (Kad's card); without it, the person's. */
+      audit?: AuditSourceOptions;
       /** The screen language: a status the file names wrongly is refused with the names of this language. */
       language?: CsvLanguage;
       /** The person's rights: a name is found beyond case in the families they read. */

@@ -2,7 +2,8 @@ import { isIP } from 'node:net';
 import { SetMetadata } from '@nestjs/common';
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { clientAddress } from '../common/client-address';
-import type { AuditEntry } from './audit.service';
+import type { EntityManager } from 'typeorm';
+import { writeAuditLog, type AuditEntry, type AuditSourceOptions } from './audit.service';
 
 /**
  * Security events in the tenant's audit log (`audit_log`), next to the data changes:
@@ -18,10 +19,15 @@ import type { AuditEntry } from './audit.service';
  *   sends) (export-events.interceptor.ts): every route whose path ends with
  *   `/export`, and the other routes that send a file the server produces, marked
  *   `@ExportRoute()`. Never the request body.
- * - imports run by Plaid from a file attached to the chat: `table_name = 'import'`,
- *   `action = 'import'`, `source = 'ai_chat'`, the approved preview in `source_ref`, the person in
+ * - imports: one row per load that succeeded (never for a check, a refused file or a failed
+ *   request), `table_name = 'import'`, `action = 'import'`, no `record_id`, the person in
  *   `user_id`, and `after_json = { list, filename, rows, inserted, updated, unchanged }` (`list`:
- *   the import, `applications`). The records keep the rows their import writes.
+ *   the import, `applications`; `filename`: the file sent; `rows`: the data rows of the file).
+ *   Written by `writeImportEvent` alone: for an import of a screen, by ImportEventsInterceptor
+ *   (import-events.interceptor.ts) for every route marked `@ImportRoute('<list>')`, with the
+ *   source `user`; for an import Plaid runs from a file attached to the chat, on approval of its
+ *   card, with `source = 'ai_chat'` and the approved preview in `source_ref`. The records keep the
+ *   rows their import writes.
  */
 
 export const AUTH_EVENT_TABLE = 'auth';
@@ -301,4 +307,95 @@ export function exportEventEntry(routePath: string, req: ExportRequest): AuditEn
     source: 'user',
     sourceRef: null,
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Imports
+
+/** The lists only a screen imports (Plaid's are AI_IMPORT_KEYS, ai/import/ai-import-access.ts). */
+export const SCREEN_IMPORT_LISTS = ['users', 'data_access', 'incident_journal'] as const;
+
+/** What an import row counts: the data rows of the file, and the records created, updated and left unchanged. */
+export type ImportCounts = { rows: number; inserted: number; updated: number; unchanged: number };
+
+/** Reads the counts of a load from a route's answer; null when the answer is not a load that succeeded. */
+export type ImportCountsReader = (result: unknown) => ImportCounts | null;
+
+const count = (value: unknown): number => (Number.isSafeInteger(value) && (value as number) >= 0 ? (value as number) : 0);
+
+/**
+ * The counts of an import's answer `{ ok, dryRun, total, inserted, updated, unchanged }`, the
+ * answer of the shared import dialog, of the reference lists and of the users (which add
+ * `processed`, not read). Null unless `ok` is true and `dryRun` is false: a check, a refused file
+ * and an answer that does not say it loaded write no row. Without `total` (the budget file's
+ * load), the rows are the records created, updated and unchanged plus the rows left out
+ * (`skipped`). A count that is missing or not a whole number reads as 0.
+ */
+export function importCounts(result: unknown): ImportCounts | null {
+  if (!result || typeof result !== 'object') return null;
+  const answer = result as Record<string, unknown>;
+  if (answer.ok !== true || answer.dryRun !== false) return null;
+  const inserted = count(answer.inserted);
+  const updated = count(answer.updated);
+  const unchanged = count(answer.unchanged);
+  const rows = answer.total === undefined ? inserted + updated + unchanged + count(answer.skipped) : count(answer.total);
+  return { rows, inserted, updated, unchanged };
+}
+
+export const IMPORT_ROUTE_METADATA = 'kanap:import-route';
+
+export type ImportRouteMetadata = { list: string; counts: ImportCountsReader };
+
+/**
+ * Marks a route that loads a file into a list of the workspace: ImportEventsInterceptor writes its
+ * `import` row under `list` (one of AI_IMPORT_KEYS for an import Plaid also runs, else one of
+ * SCREEN_IMPORT_LISTS), with the counts `counts` reads from the route's answer (importCounts by
+ * default). The guard spec (security-events.spec.ts) fails for a route whose path names an import
+ * and that has neither this decorator nor its place among the routes that load no data.
+ */
+export const ImportRoute = (list: string, counts: ImportCountsReader = importCounts): MethodDecorator =>
+  SetMetadata(IMPORT_ROUTE_METADATA, { list, counts } satisfies ImportRouteMetadata);
+
+/** The list and the counts reader of a route marked `@ImportRoute()`, else undefined. */
+export function importRouteOf(handler: object): ImportRouteMetadata | undefined {
+  const value = Reflect.getMetadata(IMPORT_ROUTE_METADATA, handler);
+  return value && typeof value.list === 'string' && typeof value.counts === 'function' ? value : undefined;
+}
+
+/** A path that names an import: a segment `import`, or one that starts with `import-` (`import-journal`). */
+export function isImportRoutePath(path: string): boolean {
+  return path.split('/').some((segment) => segment === 'import' || segment.startsWith('import-'));
+}
+
+export type ImportEvent = {
+  list: string;
+  filename: string | null;
+  counts: ImportCounts;
+  userId: string | null;
+} & AuditSourceOptions;
+
+/** The audit row of an import (the shape above); the source `user` unless given. */
+export function importEventEntry(event: ImportEvent): AuditEntry {
+  return {
+    table: IMPORT_EVENT_TABLE,
+    recordId: null,
+    action: IMPORT_EVENT_ACTION,
+    before: null,
+    after: {
+      list: event.list,
+      filename: event.filename,
+      rows: event.counts.rows,
+      inserted: event.counts.inserted,
+      updated: event.counts.updated,
+      unchanged: event.counts.unchanged,
+    },
+    userId: event.userId ?? null,
+    source: event.source ?? 'user',
+    sourceRef: event.sourceRef ?? null,
+  };
+}
+
+/** Writes the `import` row of a load, on `manager` (the transaction of the load). The one writer of that row. */
+export async function writeImportEvent(manager: EntityManager, event: ImportEvent): Promise<void> {
+  await writeAuditLog(manager, importEventEntry(event));
 }

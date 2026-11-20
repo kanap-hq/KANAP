@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import {
   Body,
   Controller,
@@ -70,6 +71,7 @@ export class DataAccessController {
   }
 
   /** `POST /data-access/import?dryRun=` (spec §7.5): dry run by default, nothing written on any error. */
+  @ImportRoute('data_access')
   @Post('import')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')

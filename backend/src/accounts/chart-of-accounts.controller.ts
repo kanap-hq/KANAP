@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { exportListQuery } from '../common/pagination';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -149,6 +150,7 @@ export class ChartOfAccountsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('accounts')
   @Post(':id/accounts/import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importAccounts(

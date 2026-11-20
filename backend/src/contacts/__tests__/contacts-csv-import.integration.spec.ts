@@ -7,6 +7,8 @@ import { ContactsService } from '../contacts.service';
 import { ExternalContact } from '../external-contact.entity';
 import { SupplierContactLink } from '../supplier-contact.entity';
 import { Supplier } from '../../suppliers/supplier.entity';
+import { AuditService } from '../../audit/audit.service';
+import { AuditLog } from '../../audit/audit.entity';
 
 // A re-imported contact equal to the stored one counts as unchanged and is not
 // written. The check and the load give the same counts.
@@ -33,7 +35,8 @@ function contactsService(manager: QueryRunner['manager']): ContactsService {
     manager.getRepository(SupplierContactLink),
     manager.getRepository(Supplier),
     undefined as any,
-    undefined as any,
+    // Each contact the import writes has its history row.
+    new AuditService(manager.getRepository(AuditLog)),
   );
 }
 

@@ -1,4 +1,5 @@
 import type { CsvLanguage } from '../csv-sheet/types';
+import type { AuditSourceOptions } from '../../audit/audit.service';
 import type { ExportFileFormat } from '../xlsx/format';
 import type { ImportNameMatch, ImportProposals, ImportRefusedProposal } from '../name-matching';
 import type { ImportLookalikeChoice, ImportLookalikes } from './csv-lookalikes';
@@ -358,6 +359,8 @@ export interface CsvImportContext {
   resolverCache: Map<string, Map<string, any>>;
   /** User ID performing the import */
   userId?: string | null;
+  /** The source of each record's history row (Kad's card); without it, the person's. */
+  audit?: AuditSourceOptions;
   /** True when the importer is incidents:admin (or Administrator). */
   isAdmin?: boolean;
   /** Register viewer (userId + incidents:admin). Used to hide confidential incidents. */

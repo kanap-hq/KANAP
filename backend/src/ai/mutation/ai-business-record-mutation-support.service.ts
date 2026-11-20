@@ -2361,7 +2361,7 @@ export class AiBusinessRecordMutationSupportService {
       case 'applications':
         return this.applications.create(fields as any, context.userId, { manager: context.manager, tenantId: context.tenantId });
       case 'assets':
-        return this.assets.create(fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, osSource: 'ai' });
+        return this.assets.create(fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, osSource: 'ai', audit });
       case 'contracts':
         return this.contracts.create(fields as any, context.userId, { manager: context.manager });
       case 'projects':
@@ -2397,7 +2397,7 @@ export class AiBusinessRecordMutationSupportService {
       case 'applications':
         return this.applications.update(id, fields as any, context.userId, { manager: context.manager, tenantId: context.tenantId });
       case 'assets':
-        return this.assets.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, osSource: 'ai' });
+        return this.assets.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, osSource: 'ai', audit });
       case 'contracts':
         return this.contracts.update(id, fields as any, context.userId, { manager: context.manager });
       case 'projects':

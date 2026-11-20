@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { Body, Controller, Delete, Get, InternalServerErrorException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { exportListQuery } from '../common/pagination';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -112,6 +113,7 @@ export class ContactsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('contacts')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

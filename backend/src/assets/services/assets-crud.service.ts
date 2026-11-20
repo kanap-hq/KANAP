@@ -62,8 +62,8 @@ export class AssetsCrudService extends AssetsBaseService {
     opts?: ServiceOpts,
   ): Promise<void> {
     const mg = this.getManager(opts);
-    const resolved = await this.operatingSystems.resolve(mg, tenantId, value == null ? null : String(value), { create: true });
-    await this.operatingSystems.setOperatingSystem(mg, tenantId, assetId, resolved, this.osSource(opts), userId);
+    const resolved = await this.operatingSystems.resolve(mg, tenantId, value == null ? null : String(value), { create: true, userId, audit: opts?.audit });
+    await this.operatingSystems.setOperatingSystem(mg, tenantId, assetId, resolved, this.osSource(opts), userId, opts?.audit);
   }
 
   /** The readable label, after the asset audit has already snapshotted the columns. */
@@ -524,6 +524,7 @@ export class AssetsCrudService extends AssetsBaseService {
    * `cluster_os_with_members` (`os`) when a cluster that carries an operating system gets members.
    * With `removeOperatingSystem`, that operating system is removed instead, in the same
    * transaction as the members (`OperatingSystemService.setOperatingSystem`, its own audit).
+   * `opts.audit`: the source of the memberships' and the link's history rows (Kad's card).
    */
   async replaceClusterMembers(
     clusterId: string,
@@ -565,7 +566,7 @@ export class AssetsCrudService extends AssetsBaseService {
         const os = locked.os;
         if (os && !removeOperatingSystem) throw clusterOsWithMembersRefusal(os);
         if (os) {
-          await this.operatingSystems.setOperatingSystem(trx, tenant, clusterId, null, this.osSource(opts), userId);
+          await this.operatingSystems.setOperatingSystem(trx, tenant, clusterId, null, this.osSource(opts), userId, opts?.audit);
         }
       }
 
@@ -595,6 +596,7 @@ export class AssetsCrudService extends AssetsBaseService {
           before: { members: existingMembers },
           after: { members: normalizedIds },
           userId,
+          ...(opts?.audit?.source ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
         },
         { manager: trx },
       );

@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { exportListQuery } from '../common/pagination';
 import {
   BadRequestException,
@@ -154,6 +155,7 @@ export class AnalyticsCategoriesController {
   @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('analytics_categories')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

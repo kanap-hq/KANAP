@@ -111,8 +111,9 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
 };
 
 /**
- * The list an import row filled (`after_json.list`, the import of backend `ai/import/ai-import-access.ts`),
- * to the label key of its export (`auditLogs.exportResources.<key>`): the same list.
+ * The list an import row filled (`after_json.list`: the import of backend `ai/import/ai-import-access.ts`,
+ * or one of `SCREEN_IMPORT_LISTS`, `audit/security-events.ts`), to the label key of its export
+ * (`auditLogs.exportResources.<key>`): the same list.
  */
 export const IMPORT_LIST_KEYS: Readonly<Record<string, string>> = {
   applications: 'applications',
@@ -134,6 +135,10 @@ export const IMPORT_LIST_KEYS: Readonly<Record<string, string>> = {
   working_day_calendars: 'workingDayCalendars',
   technology_asset_links: 'technologyServerLinks',
   technology_application_links: 'technologyApplicationLinks',
+  // The imports of a screen alone.
+  users: 'users',
+  data_access: 'dataAccess',
+  incident_journal: 'incidentJournal',
 };
 
 /** The label key of an import row's list, or null for a list without one. */

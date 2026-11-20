@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { exportListQuery } from '../common/pagination';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards, UploadedFile, UseInterceptors, ParseUUIDPipe } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
@@ -130,6 +131,7 @@ export class CompaniesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('companies')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

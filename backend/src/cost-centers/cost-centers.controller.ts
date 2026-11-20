@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { exportListQuery } from '../common/pagination';
 import {
   BadRequestException,
@@ -148,6 +149,7 @@ export class CostCentersController {
   @ReservedToUnscopedDataAccess()
   @RequireLevel('cost_centers', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('cost_centers')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

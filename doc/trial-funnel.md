@@ -17,7 +17,7 @@ One row per trial sign-up (`trial_signups`), with its workspace when the activat
 | Sample data | `tenants.metadata.demo.ever_loaded_at` |
 | First record | The first `create` audit row of a record the history knows (`record-history.inventory.ts`), in a person's name (not `system` nor `webhook`) |
 | First question to Plaid | The first `user` message in `ai_messages` |
-| First import | The first audit row written by the budget file (`source = 'budget_file'`) or another import source (`source` naming `import`). CSV imports of most families write no audit row and do not show |
+| First import | The first `import` audit row (`table_name = 'import'`, `action = 'import'`), which every import writes once per load, from a screen or through Plaid; or a row written by the budget file (`source = 'budget_file'`) or another import source (`source` naming `import`). Only rows in a person's name count |
 | First invitation | The first `users` audit row whose `after_json.status` is `invited` |
 | Back after 1 day, after 7 days | The first activity at least that long after the first sign-in: a sign-in, an audit row in a person's name or a question to Plaid. A session lasts several days without a new sign-in, and a visit that writes nothing leaves no trace. "No" once the window has passed |
 | Trial end, converted | `subscriptions.trial_end`; the first `subscriptions` audit row linked to Stripe |

@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { languageOf } from '../common/csv-sheet';
 import {
   Body, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
@@ -234,6 +235,7 @@ export class PortfolioProjectsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_projects', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('portfolio_projects')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importCsv(

@@ -6,7 +6,7 @@ import { AccountsService } from '../../accounts/accounts.service';
 import { AnalyticsCategoriesCsvService } from '../../analytics/analytics-categories-csv.service';
 import { ApplicationsCsvService } from '../../applications/applications-csv.service';
 import { AssetsCsvService } from '../../assets/assets-csv.service';
-import { AuditService } from '../../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../../audit/audit.service';
 import { resolveBusinessContributorScopeForUser } from '../../auth/business-contributor-scope';
 import { BusinessProcessesService } from '../../business-processes/business-processes.service';
 import { CompaniesService } from '../../companies/companies.service';
@@ -35,6 +35,7 @@ import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TasksCsvService } from '../../tasks/tasks-csv.service';
 import { TechnologyLinksCsvService } from '../../technologies/technology-links-csv.service';
 import { WorkingDayProfilesCsvService } from '../../working-day-profiles/working-day-profiles-csv.service';
+import { importCounts } from '../../audit/security-events';
 import { AiPolicyService } from '../ai-policy.service';
 import type { AiExecutionContextWithManager, AiImportReportMessage, AiImportRunDto } from '../ai.types';
 import type { AiImportKey } from './ai-import-access';
@@ -80,6 +81,8 @@ type BudgetFileAnswer = {
   ok: boolean;
   inserted?: number;
   updated?: number;
+  /** The load: the lines of the file that change nothing, as its check counted them. */
+  unchanged?: number;
   skipped?: number;
   snapshot?: unknown;
   fileErrors?: string[];
@@ -94,6 +97,9 @@ type BudgetFileAnswer = {
   changes?: { created: number; updated: number; unchanged: number; cleared?: number; byNature?: BudgetFileNatureCounts };
   /** The load: the stored values its `-` cells cleared, as its check counted them. */
   cleared?: number;
+  /** The load: it created suppliers, dimension values (`BudgetFileImportOk`). */
+  createdSuppliers?: boolean;
+  createdDimensionValues?: boolean;
   warnings?: Record<string, unknown>;
   lookalikes?: BudgetFileLookalikes;
 };
@@ -106,13 +112,16 @@ type ImportCall = {
   context: AiExecutionContextWithManager;
   /** The person's choices on the card (a budget file's, the matches undone of any import, an application's lookalikes) and the model's proposals. */
   matching?: CardMatching;
+  /** The source of each record's history row: Kad's card at the load, none at the check (which writes nothing). */
+  audit?: AuditSourceOptions;
 };
 
 /**
  * The imports of the screens, called as their routes call them (lot I3 of the Plaid import): the same
  * services, the same options (the screen's "merge" mode, the clearing rule of every import (D21 of
  * 26.11.9), the person's language, the decimal point the file is written with), in the transaction of the person's call, which carries their data access.
- * Plaid writes nothing itself. The answers become one bilan, whose row numbers are the lines of the
+ * Plaid writes nothing itself; the history row of each record the load writes names Kad's card
+ * (`audit`) instead of the person alone. The answers become one bilan, whose row numbers are the lines of the
  * person's own file.
  */
 @Injectable()
@@ -145,12 +154,13 @@ export class AiImportRunnerService {
 
   /**
    * Checks (`dryRun`) or loads the file through the import of `key`. `lines` gives the line of the
-   * person's file of each data row of the built file, in order.
+   * person's file of each data row of the built file, in order. `audit`: the source of the history
+   * row of each record the load writes (Kad's card); without it, the person's (the screen's).
    */
   async run(
     key: AiImportKey,
     content: Buffer,
-    options: { dryRun: boolean; language: CsvLanguage; lines: readonly number[]; matching?: CardMatching },
+    options: { dryRun: boolean; language: CsvLanguage; lines: readonly number[]; matching?: CardMatching; audit?: AuditSourceOptions },
     context: AiExecutionContextWithManager,
   ): Promise<AiImportRunDto> {
     const file = {
@@ -165,7 +175,8 @@ export class AiImportRunnerService {
     const matching = options.matching
       ? { ...options.matching, choices: builtLineChoices(options.matching.choices ?? [], options.lines) }
       : undefined;
-    const call: ImportCall = { file, dryRun: options.dryRun, language: options.language, context, matching };
+    const audit = options.dryRun ? undefined : options.audit;
+    const call: ImportCall = { file, dryRun: options.dryRun, language: options.language, context, matching, audit };
     if (key === 'budget_lines') {
       const answer = await this.runBudgetFile(call);
       // A dimension value the check would create comes with its dimension's values, for the model to read.
@@ -176,7 +187,7 @@ export class AiImportRunnerService {
     return rowsCard(key, rowsBilan(await this.runRows(key, call), options.dryRun, options.lines, options.language), options.matching?.choices ?? []);
   }
 
-  private async runRows(key: Exclude<AiImportKey, 'budget_lines'>, { file, dryRun, language, context, matching }: ImportCall): Promise<RowsReport> {
+  private async runRows(key: Exclude<AiImportKey, 'budget_lines'>, { file, dryRun, language, context, matching, audit }: ImportCall): Promise<RowsReport> {
     const manager = context.manager as EntityManager;
     const { tenantId, userId } = context;
     // The matches the person undid on the card, by column and value (no line: nothing to carry back),
@@ -191,49 +202,49 @@ export class AiImportRunnerService {
     const read = { language, decimalMark: '.' as const, mode: 'enrich' as const };
     // The screen's recommended preset: add the new records, update the matched ones, keep what a blank cell does not say.
     const merge = { dryRun, operation: 'upsert' as const, ...names };
-    const caller = { manager, tenantId, userId: userId || null };
+    const caller = { manager, tenantId, userId: userId || null, audit };
     // The person's rights, read once: a name is found beyond case in the families they read, as on the screen.
     const rights = () => this.policy.effectiveAccess(context, manager);
     switch (key) {
       case 'applications': {
         // The rows that look like an application: the person's choices on the card (lot I3 of 26.11.9).
         const lookalikes = (matching?.choices ?? []).filter((choice) => choice.kind === 'lookalike' || choice.kind === 'lookalikes') as ImportLookalikeChoice[];
-        return this.applications.import(file, { ...merge, lookalikes }, { manager, tenantId, userId, language, access: await rights() });
+        return this.applications.import(file, { ...merge, lookalikes }, { manager, tenantId, userId, language, access: await rights(), audit });
       }
       case 'assets':
-        return this.assets.import(file, merge, { manager, tenantId, userId, language, access: await rights() });
+        return this.assets.import(file, merge, { manager, tenantId, userId, language, access: await rights(), audit });
       case 'portfolio_projects':
-        return this.projects.import(file, merge, { manager, tenantId, userId, language, access: await rights() });
+        return this.projects.import(file, merge, { manager, tenantId, userId, language, access: await rights(), audit });
       case 'portfolio_requests':
-        return this.requests.import(file, merge, { manager, tenantId, userId, language, access: await rights() });
+        return this.requests.import(file, merge, { manager, tenantId, userId, language, access: await rights(), audit });
       case 'tasks': {
         const access = await rights();
-        return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: incidentViewerFromContext({ userId, ...access }), language, access });
+        return this.tasks.import(file, merge, { manager, tenantId, userId, viewer: incidentViewerFromContext({ userId, ...access }), language, access, audit });
       }
       case 'incidents': {
         const access = await rights();
         const viewer = incidentViewerFromContext({ userId, ...access });
-        return this.incidents.import(file, merge, { manager, tenantId, userId: userId || null, isAdmin: viewer.isAdmin, viewer, language, access });
+        return this.incidents.import(file, merge, { manager, tenantId, userId: userId || null, isAdmin: viewer.isAdmin, viewer, language, access, audit });
       }
       case 'suppliers':
-        return this.suppliers.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
+        return this.suppliers.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager, audit });
       case 'contacts':
         return this.contacts.importCsv({ file, dryRun, ...read, access: await rights(), ...names }, caller);
       case 'contracts':
-        return this.contracts.importCsv({ file, dryRun, userId: userId || null, ...read, access: await rights(), ...names }, { manager });
+        return this.contracts.importCsv({ file, dryRun, userId: userId || null, ...read, access: await rights(), ...names }, { manager, audit });
       case 'companies':
-        return this.companies.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
+        return this.companies.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager, audit });
       case 'departments':
-        return this.departments.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager });
+        return this.departments.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager, audit });
       case 'cost_centers':
         return this.costCenters.importCsv({ file, dryRun, ...read, access: await rights(), ...names }, caller);
       case 'accounts':
         // The chart of each row is named by its `coa_code` column, as the import of the accounts page.
-        return this.accounts.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager, allowCoaCodeColumn: true });
+        return this.accounts.importCsv({ file, dryRun, userId: userId || null, ...read }, { manager, allowCoaCodeColumn: true, audit });
       case 'analytics_categories':
         return this.analytics.importCsv({ file, dryRun, ...read }, caller);
       case 'business_processes':
-        return this.businessProcesses.importCsv({ file, dryRun, userId: userId || null, ...read, ...names }, { manager });
+        return this.businessProcesses.importCsv({ file, dryRun, userId: userId || null, ...read, ...names }, { manager, audit });
       case 'working_day_calendars':
         return this.calendars.importCsv({ file, dryRun, ...read }, caller);
       case 'technology_asset_links':
@@ -254,7 +265,7 @@ export class AiImportRunnerService {
    * unticked it (a `create_suppliers` choice); it creates suppliers only for a person who may. The
    * person's undone matches and the model's proposals go to the check and to the load alike.
    */
-  private async runBudgetFile({ file, dryRun, language, context, matching }: ImportCall): Promise<BudgetFileAnswer> {
+  private async runBudgetFile({ file, dryRun, language, context, matching, audit }: ImportCall): Promise<BudgetFileAnswer> {
     const manager = context.manager as EntityManager;
     const caller = { manager, tenantId: context.tenantId, userId: context.userId || null };
     const access = await this.policy.effectiveAccess(context, manager);
@@ -276,6 +287,8 @@ export class AiImportRunnerService {
       items: { opex: this.opexItems, capex: this.capexItems },
       audit: this.audit,
       freeze: this.freeze,
+      // Kad's card: every history row of the load carries it, instead of the screen's `budget_file`.
+      source: audit?.source ? { source: audit.source, sourceRef: audit.sourceRef ?? null } : undefined,
     });
   }
 
@@ -761,7 +774,9 @@ export function approvalFacts(answer: BudgetFileAnswer, matching: BudgetFileMatc
 }
 
 /**
- * The bilan of the budget file: its check as its dialog shows it, or the counts of its load.
+ * The bilan of the budget file: its check as its dialog shows it, or the counts of its load, those
+ * its import row holds: `importCounts`, as the screen's row (the rows: created, updated, unchanged
+ * and left out).
  * `dimensionValues`: the enabled values of each dimension, by column, for the dimension values the check creates.
  * `language`: the person's, for the card's words the model reads.
  */
@@ -790,6 +805,8 @@ export function budgetBilan(
   const shown: Record<string, unknown> = { ...answer };
   delete shown.snapshot;
   const isCheck = answer.changes !== undefined;
+  // The load: the counts its import row holds, read as the screen's row reads them.
+  const loaded = isCheck ? null : importCounts(answer);
   const similar = isCheck ? similarLines(answer, lines, language) : undefined;
   const nothing = isCheck && nothingToImport({
     ok: answer.ok === true,
@@ -803,10 +820,10 @@ export function budgetBilan(
     ok: answer.ok === true,
     ...(nothing ? { nothing_to_import: true as const } : {}),
     dry_run: dryRun,
-    total: lines.length,
+    total: loaded?.rows ?? lines.length,
     inserted: isCheck ? answer.changes!.created : answer.inserted ?? 0,
     updated: isCheck ? answer.changes!.updated : answer.updated ?? 0,
-    unchanged: isCheck ? answer.changes!.unchanged : 0,
+    unchanged: isCheck ? answer.changes!.unchanged : loaded?.unchanged ?? 0,
     // The stored values the `-` cells clear, as the check counts them; the load repeats its check's count.
     cleared: isCheck ? answer.changes!.cleared ?? 0 : answer.cleared ?? 0,
     // The rows left out because they look like a stored line.
@@ -816,6 +833,8 @@ export function budgetBilan(
     issues,
     new_suppliers: answer.creates?.supplierCount ?? 0,
     ...(isCheck && answer.creates?.dimensionValueCount !== undefined ? { new_dimension_values: answer.creates.dimensionValueCount } : {}),
+    ...(!isCheck && answer.createdSuppliers ? { created_suppliers: true } : {}),
+    ...(!isCheck && answer.createdDimensionValues ? { created_dimension_values: true } : {}),
     ...(similar ? { similar_lines: similar } : {}),
     ...(isCheck && answer.matching ? { matching: modelMatching(answer.matching, lines, dimensionValues) } : {}),
     report: { kind: 'budget_file', file: isCheck ? relined(shown, lines) as Record<string, unknown> : null },

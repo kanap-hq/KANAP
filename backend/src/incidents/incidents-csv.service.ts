@@ -1,4 +1,5 @@
 import type { CsvLanguage } from '../common/csv-sheet';
+import type { AuditSourceOptions } from '../audit/audit.service';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
@@ -230,7 +231,7 @@ export class IncidentsCsvService {
       entity.id,
       review,
       context.userId ?? null,
-      { manager, changeNote: IMPORT_REVIEW_CHANGE_NOTE, activityContent: IMPORT_REVIEW_CHANGE_NOTE },
+      { manager, changeNote: IMPORT_REVIEW_CHANGE_NOTE, activityContent: IMPORT_REVIEW_CHANGE_NOTE, audit: context.audit },
     );
     if (!written.changed) return;
 
@@ -262,7 +263,7 @@ export class IncidentsCsvService {
         name: String(entity.title ?? ''),
       },
       context.userId ?? null,
-      { manager: context.manager, allowFrozenIncident: true },
+      { manager: context.manager, allowFrozenIncident: true, audit: context.audit },
     );
   }
 
@@ -275,7 +276,7 @@ export class IncidentsCsvService {
       // An inserted row never went through IncidentsService.create, so the
       // review document is provisioned here, from the template (§3.2).
       // Idempotent: a no-op when `writeReviewForRow` already created it.
-      await this.integratedDocs.provisionForIncident(entity.id, context.userId ?? null, { manager });
+      await this.integratedDocs.provisionForIncident(entity.id, context.userId ?? null, { manager, audit: context.audit });
     }
 
     const nextStatus = String(entity.status ?? '');
@@ -329,6 +330,7 @@ export class IncidentsCsvService {
     return this.integratedDocs.snapshotReviewForIncidentTransition(entity.id, context.userId ?? null, {
       manager: context.manager,
       changeNote,
+      audit: context.audit,
     });
   }
 
@@ -354,6 +356,8 @@ export class IncidentsCsvService {
       manager: EntityManager;
       tenantId: string;
       userId?: string | null;
+      /** The source of each record's history row (Kad's card); without it, the person's. */
+      audit?: AuditSourceOptions;
       isAdmin?: boolean;
       viewer?: IncidentViewer;
       /** The file's language: the names a refusal gives to the statuses. */

@@ -404,7 +404,7 @@ async function writeClusterMemberships(entities: any[], context: CsvImportContex
     );
     const members = existing.map((row) => row.asset_id).filter((id) => !leaves.get(clusterId)?.has(id));
     for (const id of joins.get(clusterId) ?? []) if (!members.includes(id)) members.push(id);
-    await writer.replaceClusterMembers(clusterId, members, tenantId, context.userId ?? null, { manager, osSource: 'import' });
+    await writer.replaceClusterMembers(clusterId, members, tenantId, context.userId ?? null, { manager, osSource: 'import', audit: context.audit });
   }
 }
 
@@ -1284,8 +1284,8 @@ export const assetCsvConfig: CsvEntityConfig = {
       if (!entity.id || !operatingSystems) continue;
       // A version match the person undid (named as the check lists it, spaces collapsed): the version is created as written.
       const exactVersion = !!label && undoneMatch(context.params.unmatched, 'operating_system', label.replace(/\s+/g, ' '));
-      const resolved = await operatingSystems.resolve(context.manager, context.tenantId, label, { create: true, exactVersion });
-      await operatingSystems.setOperatingSystem(context.manager, context.tenantId, entity.id, resolved, 'import', context.userId);
+      const resolved = await operatingSystems.resolve(context.manager, context.tenantId, label, { create: true, exactVersion, userId: context.userId, audit: context.audit });
+      await operatingSystems.setOperatingSystem(context.manager, context.tenantId, entity.id, resolved, 'import', context.userId, context.audit);
     }
     await writeClusterMemberships(entities, context);
   },

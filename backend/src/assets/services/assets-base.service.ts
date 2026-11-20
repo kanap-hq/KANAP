@@ -32,6 +32,12 @@ export interface ServiceOpts extends AuditSourceOptions {
    * which is the audit entry of the asset row.
    */
   osSource?: LinkSource;
+  /**
+   * The source of the history rows the write adds beside the asset's own: its operating-system
+   * link, a cluster's memberships (Kad's card). Without it, the person's. Separate from `source`,
+   * the asset row's.
+   */
+  audit?: AuditSourceOptions;
 }
 
 /**

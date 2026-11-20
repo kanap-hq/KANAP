@@ -61,6 +61,8 @@ function createMockManager(data: Record<string, any[]>) {
         if (typeof target === 'string') saved.push(...arr);
         return arr;
       },
+      // The audit lines (`writeAuditLogs`).
+      insert: async () => ({ identifiers: [] }),
     }),
     getSaved: () => saved,
   } as any;

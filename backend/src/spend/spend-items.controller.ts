@@ -1,3 +1,5 @@
+import { ImportRoute } from '../audit/security-events';
+import { recordImport } from '../audit/import-events.interceptor';
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { canReadResource } from '../common/record-usages';
 import { moduleRightRequired } from '../auth/module-right-required';
@@ -200,10 +202,11 @@ export class SpendItemsController {
     });
   }
 
-  /** The load (C2b). Not a read. `analyzeAfterLargeImport` is the last call. */
+  /** The load (C2b). Not a read. `analyzeAfterLargeImport` is the last call, after the import row. */
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('budget_lines')
   @Post('budget-file/import')
   @HttpCode(200)
   @UseInterceptors(BudgetFileSizeInterceptor, FileInterceptor('file', budgetFileMulterOptions))
@@ -232,6 +235,8 @@ export class SpendItemsController {
       ...readableLists(ctx),
       matching: { choices: budgetFileChoices(choices) },
     }, { items: { opex: this.svc, capex: this.capexSvc }, audit: this.audit, freeze: this.freeze });
+    // Its import row first: above the threshold, the ANALYZE commits the request.
+    await recordImport(req, result);
     await analyzeAfterLargeImport(req, importAnalyzeTables('opex', result), result);
     return result;
   }

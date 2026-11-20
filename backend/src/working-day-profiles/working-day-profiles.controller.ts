@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { exportListQuery } from '../common/pagination';
 import {
   BadRequestException,
@@ -151,6 +152,7 @@ export class WorkingDayProfilesController {
 
   @RequireLevel('working_day_profiles', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('working_day_calendars')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

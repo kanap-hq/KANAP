@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { writeAuditLog } from '../../../audit/audit.service';
-import { IMPORT_EVENT_ACTION, IMPORT_EVENT_TABLE } from '../../../audit/security-events';
+import { writeImportEvent } from '../../../audit/security-events';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiImportMappingPreviewDto } from '../../ai.types';
 import {
@@ -332,28 +331,21 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     if (!mapping?.validation?.ok) throw new Error(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE);
     const input = preview.mutation_input as unknown as PrepareImportMappingInput;
     const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
+    // Each record the import writes carries the card in its history, as Kad's other writes do.
     const result = await this.mapping.runImport(
       { ...context, conversationId: context.conversationId ?? preview.conversation_id ?? null },
       input,
       language,
+      buildAiMutationAudit(preview),
     );
     // Refused by the load: the card keeps its check, which gives the reason of each row refused.
     if (!result.ok) throw new AiPreviewExecutionRefusal(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE, { import_mapping: { ...mapping, result } });
 
     preview.current_values = { ...preview.current_values, import_mapping: { ...mapping, result } };
-    await writeAuditLog(context.manager, {
-      table: IMPORT_EVENT_TABLE,
-      recordId: null,
-      action: IMPORT_EVENT_ACTION,
-      before: null,
-      after: {
-        list: input.entity_type,
-        filename: stringOf(preview.mutation_input?.filename),
-        rows: result.total,
-        inserted: result.inserted,
-        updated: result.updated,
-        unchanged: result.unchanged,
-      },
+    await writeImportEvent(context.manager, {
+      list: input.entity_type,
+      filename: stringOf(preview.mutation_input?.filename),
+      counts: { rows: result.total, inserted: result.inserted, updated: result.updated, unchanged: result.unchanged },
       userId: context.userId,
       ...buildAiMutationAudit(preview),
     });

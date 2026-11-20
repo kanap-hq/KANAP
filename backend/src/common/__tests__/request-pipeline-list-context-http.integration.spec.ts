@@ -7,6 +7,7 @@ import { NestFactory } from '@nestjs/core';
 import { IsOptional, IsString } from 'class-validator';
 import dataSource from '../../data-source';
 import { ExportEventsInterceptor } from '../../audit/export-events.interceptor';
+import { ImportEventsInterceptor } from '../../audit/import-events.interceptor';
 import { Public } from '../../auth/public.decorator';
 import { createRaceTenant, dropRaceTenant } from '../../spend/__tests__/race-harness';
 import { ListContextInterceptor } from '../list-context/list-context.interceptor';
@@ -96,9 +97,10 @@ async function main() {
     };
 
     // The registration order main.ts gets: the context interceptor right after TenantInterceptor,
-    // then the export events (audit/export-events.interceptor.ts), inside the same transaction.
+    // then the export events (audit/export-events.interceptor.ts) and the import events
+    // (audit/import-events.interceptor.ts), inside the same transaction.
     const interceptors = (app as any).config.getGlobalInterceptors().map((i: object) => i.constructor);
-    assert.deepEqual(interceptors, [TenantInterceptor, ListContextInterceptor, ExportEventsInterceptor]);
+    assert.deepEqual(interceptors, [TenantInterceptor, ListContextInterceptor, ExportEventsInterceptor, ImportEventsInterceptor]);
     console.log('ok - registered right after TenantInterceptor');
 
     // Before the pipes: the DTO, validated with whitelist + transform, holds the saved filters.

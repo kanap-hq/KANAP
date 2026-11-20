@@ -53,6 +53,7 @@ export async function repairBeforeSlotWrite(
   const repaired = await documents.repairSourceSlot(sourceEntityType, recordId, slot, {
     manager: context.manager,
     actorUserId: context.userId ?? null,
+    audit: context.audit,
   });
   return !repaired.created || (value ?? '') !== (stored ?? '');
 }
