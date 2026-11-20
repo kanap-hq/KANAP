@@ -38,6 +38,8 @@ import {
   rowError,
   rowProblemErrors,
   storedRecordValues,
+  listedUpdates,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import { csvLifecycleConflict } from '../spend/item-write.util';
 import { duplicateNameException } from '../common/duplicate-name';
@@ -626,6 +628,7 @@ export class SuppliersService {
       !email || storedLinks.has(`${supplierId}:${role}:${email}`);
     let unchanged = 0;
     let cleared = 0;
+    const updates: ImportUpdate[] = [];
     const removedLinks = (supplierId: string, roles: SupplierContactRole[]) =>
       roles.flatMap((role) => linksOfRole.get(`${supplierId}:${role}`) ?? []);
     const toWrite: typeof unique = [];
@@ -645,11 +648,14 @@ export class SuppliersService {
       ) {
         unchanged += 1;
         continue;
-      } else updated += 1;
+      } else {
+        updated += 1;
+        updates.push({ row: item.row.line, ref: supplierReference(existing.item_number), name: existing.name });
+      }
       toWrite.push(item);
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...listedUpdates(updates), ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit changes
     let processed = 0;
@@ -682,7 +688,7 @@ export class SuppliersService {
         if (saved) processed += 1;
       }
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...listedUpdates(updates), ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 
   /** The tenant's contacts among these e-mails (lowercase), by e-mail. */

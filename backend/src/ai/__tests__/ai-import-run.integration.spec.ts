@@ -404,7 +404,9 @@ async function testApplicationsClear(h: Harness, runner: QueryRunner, s: Seed) {
   const check = card.import_mapping.validation;
   assert.equal(check.ok, true, JSON.stringify(check));
   assert.deepEqual([check.updated, check.unchanged, check.cleared], [1, 1, 1]);
-  assert.equal(card.import_mapping.on_approval, 'On approval: 0 records created, 1 updated, 1 unchanged; 1 stored value cleared (cells holding "-").');
+  const [effacement] = await runner.query(`SELECT sequential_id FROM applications WHERE tenant_id = $1 AND name = 'Effacement I6'`, [s.tenantId]);
+  assert.equal(card.import_mapping.on_approval,
+    `On approval: 0 records created, 1 updated (file line 2: ${effacement.sequential_id} Effacement I6), 1 unchanged; 1 stored value cleared (cells holding "-").`);
   const done = await h.previews.executePreview(admin, card.preview_id);
   assert.equal(done.status, 'executed', done.error_message ?? '');
   assert.equal(done.import_mapping.result.cleared, 1);
@@ -450,7 +452,8 @@ async function testSuppliers(h: Harness, runner: QueryRunner, s: Seed) {
   const check = updating.import_mapping.validation;
   assert.equal(check.ok, true, JSON.stringify(check));
   assert.deepEqual([check.inserted, check.updated, check.cleared], [1, 1, 0]);
-  assert.equal(updating.import_mapping.on_approval, 'On approval: 1 records created, 1 updated, 0 unchanged.');
+  const [lactalis] = await runner.query(`SELECT item_number FROM suppliers WHERE tenant_id = $1 AND name = 'Lactalis'`, [s.tenantId]);
+  assert.equal(updating.import_mapping.on_approval, `On approval: 1 records created, 1 updated (file line 2: SUP-${lactalis.item_number} Lactalis), 0 unchanged.`);
   await assertSameAsTheRoute(h, runner, s, { attachment_id: update, entity_type: 'suppliers', columns }, check);
   const updated = await h.previews.executePreview(admin, updating.preview_id);
   assert.equal(updated.status, 'executed', updated.error_message ?? '');
@@ -467,7 +470,8 @@ async function testSuppliers(h: Harness, runner: QueryRunner, s: Seed) {
   const clears = clearing.import_mapping.validation;
   assert.equal(clears.ok, true, JSON.stringify(clears));
   assert.deepEqual([clears.updated, clears.unchanged, clears.cleared], [1, 1, 1]);
-  assert.equal(clearing.import_mapping.on_approval, 'On approval: 0 records created, 1 updated, 1 unchanged; 1 stored value cleared (cells holding "-").');
+  assert.equal(clearing.import_mapping.on_approval,
+    `On approval: 0 records created, 1 updated (file line 2: SUP-${lactalis.item_number} Lactalis), 1 unchanged; 1 stored value cleared (cells holding "-").`);
   await assertSameAsTheRoute(h, runner, s, { attachment_id: dash, entity_type: 'suppliers', columns: notesColumns }, clears);
   const cleared = await h.previews.executePreview(admin, clearing.preview_id);
   assert.equal(cleared.status, 'executed', cleared.error_message ?? '');
@@ -1080,6 +1084,66 @@ async function testFiveOwners(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  applications: five owners by their titles, the five stored, none cleared: OK');
 }
 
+/**
+ * Q1 of 26.11.9: the check of a row import names the records it updates, by the line of the person's
+ * file and the record's reference (its name when its family has none), and nothing for the rows that
+ * change nothing; the facts of the approval name them too. The same file imported twice by Kad, with
+ * one value changed and a blank row that shifts the person's lines.
+ */
+async function testUpdatesNamed(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const twice = async (entity: string, name: string, columns: any[], first: string[], second: string[]) => {
+    const created = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attach(h, name, first.join('\n')), entity_type: entity, columns });
+    assert.equal(created.import_mapping.validation.ok, true, JSON.stringify(created.import_mapping.validation));
+    assert.equal(created.import_mapping.validation.report.updates, undefined, `${entity}: a first import updates nothing`);
+    assert.equal((await h.previews.executePreview(admin, created.preview_id)).status, 'executed');
+    const again = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attach(h, name, second.join('\n')), entity_type: entity, columns });
+    return again.import_mapping;
+  };
+
+  // Projects: five rows, the fourth changes its status; a blank row puts it on the person's line 5.
+  const projectRows = ['Q1 Cave', 'Q1 Affinage', 'Q1 Wi-Fi des entrepôts', 'Q1 Étiquettes', 'Q1 Traçabilité'];
+  const projectFile = (onHold: string) => ['Projet;Statut', ...projectRows.slice(0, 2).map((row) => `${row};Planifié`), ';',
+    ...projectRows.slice(2).map((row) => `${row};${row === 'Q1 Étiquettes' ? onHold : 'Planifié'}`)];
+  const projects = await twice('portfolio_projects', 'projets Q1.csv', [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'status', source: 2, confidence: 'high', values: { 'Planifié': 'planned', 'En attente': 'on_hold' } },
+  ], projectFile('Planifié'), projectFile('En attente'));
+  const [project] = await runner.query(`SELECT item_number FROM portfolio_projects WHERE tenant_id = $1 AND name = 'Q1 Étiquettes'`, [s.tenantId]);
+  const projectCheck = projects.validation;
+  assert.equal(projectCheck.ok, true, JSON.stringify(projectCheck));
+  assert.deepEqual([projectCheck.inserted, projectCheck.updated, projectCheck.unchanged], [0, 1, 4]);
+  assert.deepEqual(projectCheck.report.updates, [{ row: 6, ref: `PRJ-${project.item_number}`, name: 'Q1 Étiquettes' }]);
+  assert.equal(projectCheck.report.updatesTotal, 1);
+  assert.equal(projects.on_approval, `On approval: 0 records created, 1 updated (file line 6: PRJ-${project.item_number} Q1 Étiquettes), 4 unchanged.`);
+
+  // Applications: the same, by their APP-n reference.
+  const appFile = (criticality: string) => ['Appli;Criticité', 'Q1 Atlas;Faible', ';', `Q1 Hermes;${criticality}`, 'Q1 Iris;Faible'];
+  const apps = await twice('applications', 'applications Q1.csv', [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'criticality', source: 2, confidence: 'high', values: { Faible: 'Low', Critique: 'Critical' } },
+  ], appFile('Faible'), appFile('Critique'));
+  const [app] = await runner.query(`SELECT sequential_id FROM applications WHERE tenant_id = $1 AND name = 'Q1 Hermes'`, [s.tenantId]);
+  assert.match(app.sequential_id, /^APP-\d+$/);
+  assert.deepEqual([apps.validation.updated, apps.validation.unchanged], [1, 2]);
+  assert.deepEqual(apps.validation.report.updates, [{ row: 4, ref: app.sequential_id, name: 'Q1 Hermes' }]);
+
+  // A master-data import (suppliers, SUP-n), and one whose family has no reference (cost centers, by name).
+  const supplierColumns = [{ column: 'name', source: 1, confidence: 'high' }, { column: 'erp_supplier_id', source: 2, confidence: 'high' }];
+  const suppliers = await twice('suppliers', 'fournisseurs Q1.csv', supplierColumns,
+    ['Fournisseur;ERP', 'Q1 Lactalis;Q1-1', 'Q1 Savencia;Q1-2'], ['Fournisseur;ERP', 'Q1 Lactalis;Q1-1', 'Q1 Savencia;Q1-3']);
+  const [supplier] = await runner.query(`SELECT item_number FROM suppliers WHERE tenant_id = $1 AND name = 'Q1 Savencia'`, [s.tenantId]);
+  assert.deepEqual(suppliers.validation.report.updates, [{ row: 3, ref: `SUP-${supplier.item_number}`, name: 'Q1 Savencia' }]);
+  const centerColumns = [
+    { column: 'code', source: 1, confidence: 'high' }, { column: 'name', source: 2, confidence: 'high' }, { column: 'kind', source: 3, confidence: 'high' },
+  ];
+  const centers = await twice('cost_centers', 'centres Q1.csv', centerColumns,
+    ['Code;Nom;Type', 'Q1-CC1;Q1 Caves;group', 'Q1-CC2;Q1 Siège;group'],
+    ['Code;Nom;Type', 'Q1-CC1;Q1 Caves;group', 'Q1-CC2;Q1 Siège social;group']);
+  assert.deepEqual(centers.validation.report.updates?.map((entry: any) => [entry.row, entry.ref]), [[3, null]]);
+  console.log('  updates named: projects, applications, suppliers, cost centers on the person\'s lines: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -1107,6 +1171,7 @@ async function run() {
       await testServerVersionAndHosting(harness, runner, s);
       await testHostingNeedsTheSites(harness, runner, s);
       await testPreparedFileKeepsEveryProposal(harness, runner, s);
+      await testUpdatesNamed(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

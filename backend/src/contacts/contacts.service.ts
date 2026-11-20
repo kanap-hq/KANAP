@@ -33,6 +33,8 @@ import {
   rowError,
   rowProblemErrors,
   storedRecordValues,
+  listedUpdates,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { assertSetFilterModes, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type FilterTargetConfig } from '../common/ag-grid-filtering';
@@ -756,7 +758,7 @@ export class ContactsService {
     const firstLineById = new Map<string, number>();
     const firstLineByEmail = new Map<string, number>();
     /** A row to compare: its contact's values, and the supplier and type it gives the contact when they change. */
-    type Compared = { item: Norm; existing: ExternalContact | undefined; supplier: { supplier_id?: string | null; supplier_role: SupplierContactRole | null } | null };
+    type Compared = { line: number; item: Norm; existing: ExternalContact | undefined; supplier: { supplier_id?: string | null; supplier_role: SupplierContactRole | null } | null };
     const toCompare: Compared[] = [];
     // The stored values the rows clear with `-` (a `-` on an empty value is not counted).
     let cleared = 0;
@@ -825,22 +827,26 @@ export class ContactsService {
         if (readdressed) warnings.push(readdressed);
       }
       cleared += clearedValueCount(existing, row.row, mode, CLEARABLE_CONTACT_FIELDS);
-      toCompare.push({ item, existing, supplier });
+      toCompare.push({ line: row.line, item, existing, supplier });
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...named() };
 
     // A row equal to the stored contact, its supplier and type included, is unchanged and is not written.
     let inserted = 0, updated = 0, unchanged = 0;
+    const updates: ImportUpdate[] = [];
     const toWrite: Array<Compared & { valuesChange: boolean }> = [];
     for (const compared of toCompare) {
       const { item, existing, supplier } = compared;
       const valuesChange = !existing || !sameStoredValues(existing as unknown as Record<string, unknown>, item);
       if (!existing) inserted += 1;
       else if (!valuesChange && !supplier) { unchanged += 1; continue; }
-      else updated += 1;
+      else {
+        updated += 1;
+        updates.push({ row: compared.line, ref: contactReference(existing.item_number), name: contactName(existing) || existing.email });
+      }
       toWrite.push({ ...compared, valuesChange });
     }
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...report, ...named() };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...listedUpdates(updates), ...report, ...named() };
 
     // Each contact as its page writes it, in one call: `update` locks the row, then writes the columns
     // the row gives and the supplier (its main link, propagated); one history row per contact, with
@@ -851,6 +857,6 @@ export class ContactsService {
       if (existing) await this.update(existing.id, body, write);
       else await this.create(body, write);
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...report, ...named() };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...listedUpdates(updates), ...report, ...named() };
   }
 }

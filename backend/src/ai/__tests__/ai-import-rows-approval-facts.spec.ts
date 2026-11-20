@@ -62,7 +62,24 @@ function testTheClearedValuesAreSaid() {
   console.log('  the values cleared with `-`, only when there are some: OK');
 }
 
+// Q1 of 26.11.9: the records the rows update are named, on the person's lines, by reference then name
+// (the name alone when the family has none), the first ten, then how many more.
+function testTheUpdatesAreNamed() {
+  const lines = Array.from({ length: 14 }, (_, index) => index + 3);
+  const updating = (count: number) => rowsBilan({
+    ok: true, total: 14, inserted: 0, updated: count, unchanged: 14 - count, errors: [], warnings: [],
+    updates: Array.from({ length: Math.min(count, 20) }, (_, index) => ({ row: index + 2, ref: index === 1 ? null : `PRJ-${index + 1}`, name: `P${index + 1}` })),
+    updatesTotal: count,
+  } as any, true, lines);
+  const two = updating(2);
+  assert.deepEqual(two.report.kind === 'rows' && two.report.updates, [{ row: 3, ref: 'PRJ-1', name: 'P1' }, { row: 4, ref: null, name: 'P2' }], 'on the person\'s lines');
+  assert.equal(rowsApprovalFacts(two), 'On approval: 0 records created, 2 updated (file line 3: PRJ-1 P1, file line 4: P2), 12 unchanged.');
+  assert.match(rowsApprovalFacts(updating(12)), /file line 12: PRJ-10 P10, and 2 more\), 2 unchanged\.$/);
+  console.log('  the records updated, named by line and reference, then how many more: OK');
+}
+
 testThePublishersMatchesAreSaid();
 testTheFirstMatchesThenHowManyMore();
+testTheUpdatesAreNamed();
 testACheckWithoutMatchesKeepsItsSentence();
 testTheClearedValuesAreSaid();

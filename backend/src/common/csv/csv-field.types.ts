@@ -3,6 +3,7 @@ import type { AuditSourceOptions } from '../../audit/audit.service';
 import type { ExportFileFormat } from '../xlsx/format';
 import type { ImportNameMatch, ImportProposals, ImportRefusedProposal } from '../name-matching';
 import type { ImportLookalikeChoice, ImportLookalikes } from './csv-lookalikes';
+import type { ImportUpdate } from '../csv-sheet/master-data';
 /**
  * CSV Field Type Definitions
  *
@@ -174,6 +175,11 @@ export interface CsvEntityConfig {
    * entity service's follow-up writes would change nothing.
    */
   sameAsStored?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<boolean[]>;
+  /**
+   * How the result names a record a row updates (Q1 of 26.11.9): its business reference (`PRJ-4`,
+   * null when its family has none) and its name, from the stored record.
+   */
+  recordLabel?: (entity: any) => { ref: string | null; name: string };
   /** Hook called before import commit */
   beforeCommit?: (entities: any[], context: CsvImportContext) => Promise<void>;
   /** Hook called after import commit, with each written row and the entity it saved (`id` set). */
@@ -310,6 +316,9 @@ export interface CsvImportResult {
   refusedProposalsTotal?: number;
   /** The rows that would create a record and look like a stored one (lot I3 of 26.11.9, the applications); absent when none. */
   lookalikes?: ImportLookalikes;
+  /** The rows that update a stored record, the first ones (`listedUpdates`), and their total; absent when none. */
+  updates?: ImportUpdate[];
+  updatesTotal?: number;
 }
 
 /**

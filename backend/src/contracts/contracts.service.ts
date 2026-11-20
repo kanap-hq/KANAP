@@ -107,6 +107,8 @@ import {
   type CsvLanguage,
   type DecimalMark,
   type ImportReportError,
+  listedUpdates,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import { Decimal } from '../common/decimal';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
@@ -1644,6 +1646,7 @@ export class ContractsService {
     // Determine inserts/updates by reference, else by composite (name + supplier). A row identical
     // to the stored contract counts as unchanged and is not written: no audit line, no new `updated_at`.
     let inserted = 0; let updated = 0; let unchanged = 0;
+    const updates: ImportUpdate[] = [];
     const toWrite: typeof unique = [];
     const existingOf = new Map<typeof unique[number], Contract | null>();
     // A filled reference that renames its contract or moves it to another supplier is said, without
@@ -1732,7 +1735,10 @@ export class ContractsService {
       else if (importRowUnchanged(exists, values, item.status ?? null, now)) {
         unchanged += 1;
         continue;
-      } else updated += 1;
+      } else {
+        updated += 1;
+        updates.push({ row: item.row.line, ref: contractReference(exists.item_number), name: exists.name });
+      }
       toWrite.push(item);
       // Notes the write would refuse (`create`, `update`): said for the row, dry run included.
       if (values.notes !== undefined) {
@@ -1752,7 +1758,7 @@ export class ContractsService {
       }
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
-    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
+    if (dryRun) return { ok: true, dryRun: true, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...listedUpdates(updates), ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
 
     // Commit
     let processed = 0;
@@ -1767,7 +1773,7 @@ export class ContractsService {
       if (exists) { await this.update(exists.id, payload, userId ?? undefined, { manager: mg, audit: opts?.audit }); processed += 1; }
       else { await this.create(payload, userId ?? undefined, { manager: mg, audit: opts?.audit }); processed += 1; }
     }
-    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
+    return { ok: true, dryRun: false, total: rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...listedUpdates(updates), ...report, ...listedMatches(matches), ...listedRefusedProposals(state.refused) };
   }
 
   // Symmetric linking from OPEX side

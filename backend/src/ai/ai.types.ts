@@ -2,6 +2,7 @@ import { EntityManager } from 'typeorm';
 import { z } from 'zod';
 import type { BudgetFileChoice } from '../spend/budget-file/types';
 import type { ImportLookalikes } from '../common/csv/csv-lookalikes';
+import type { ImportUpdate } from '../common/csv-sheet/master-data';
 import type { ImportNameMatch, ImportRefusedProposal } from '../common/name-matching';
 
 export type AiSurface = 'chat' | 'mcp';
@@ -675,6 +676,13 @@ export type AiImportRunDto = {
        * person's lines, with the choices the check followed (lot I3 of 26.11.9, T-I3d); absent when none.
        */
       lookalikes?: ImportLookalikes;
+      /**
+       * The rows that update a stored record (Q1 of 26.11.9), the first ones: the line of the person's
+       * file, the record's reference (null when its family has none) and its name; `updatesTotal` counts
+       * them all. Absent when none. The card lists them, and the model names the updates from them.
+       */
+      updates?: ImportUpdate[];
+      updatesTotal?: number;
     }
     /** The budget file's check, as its dialog shows it (`BudgetFileReport` without its snapshot). */
     | { kind: 'budget_file'; file: Record<string, unknown> | null };

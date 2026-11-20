@@ -63,6 +63,9 @@ import {
   rowError,
   rowProblemErrors,
   storedRecordValues,
+  listedUpdates,
+  numberedReference,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
 import { FxRateService } from '../currency/fx-rate.service';
@@ -1390,6 +1393,7 @@ export class CompaniesService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    const updates: ImportUpdate[] = [];
     const toWrite: Array<{ item: (typeof normalized)[number]; existing: Company | undefined }> = [];
     for (const item of normalized) {
       const existing = existingOf.get(item);
@@ -1401,11 +1405,14 @@ export class CompaniesService {
       ) {
         unchanged += 1;
         continue;
-      } else updated += 1;
+      } else {
+        updated += 1;
+        updates.push({ row: item.line, ref: numberedReference('COMP', existing.item_number), name: existing.name });
+      }
       toWrite.push({ item, existing });
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total, inserted, updated, unchanged, cleared, errors: [], warnings, ...listedUpdates(updates), ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -1427,6 +1434,6 @@ export class CompaniesService {
         }
       }
     }
-    return { ok: true, dryRun: false, total, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...listedUpdates(updates), ignoredColumns, notices: read.notices };
   }
 }
