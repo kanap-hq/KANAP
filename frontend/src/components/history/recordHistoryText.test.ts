@@ -290,7 +290,9 @@ describe('history lines', () => {
     expect(historyActorText({ kind: 'user', name: 'Ava Reader' }, t)).toBe('Ava Reader');
     expect(historyActorText({ kind: 'user', name: null }, t)).toBe('Unknown person');
     expect(historyActorText({ kind: 'system', name: null }, t)).toBe('System');
-    expect(historyActorText({ kind: 'import', name: 'Ava Reader' }, t)).toBe('Import');
+    // An import names the person who ran it; an import with no person keeps the source.
+    expect(historyActorText({ kind: 'import', name: 'Ava Reader' }, t)).toBe('Ava Reader');
+    expect(historyActorText({ kind: 'import', name: null }, t)).toBe('Import');
     expect(historyActorText({ kind: 'assistant', name: 'Ava Reader' }, t)).toBe(`${AGENT_NAME} for Ava Reader`);
     expect(historyActorText({ kind: 'assistant', name: null }, t)).toBe(AGENT_NAME);
   });

@@ -27,7 +27,8 @@ export function historyActorText(actor: RecordHistoryActor, t: Translate): strin
     case 'system':
       return t('auditLogs.sources.system');
     case 'import':
-      return t('auditLogs.sources.import');
+      // An import names the person who ran it, as any change made on screen; without one, the source.
+      return actor.name || t('auditLogs.sources.import');
     case 'assistant':
       return actor.name
         ? t('auditLogs.history.actors.assistantFor', { name: actor.name })

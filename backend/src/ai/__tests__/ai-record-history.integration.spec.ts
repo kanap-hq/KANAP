@@ -290,7 +290,7 @@ async function testOtherTenant(seeded: Seeded) {
 }
 
 /**
- * An import is the source only, with no name, as the History tab shows it. A reference whose
+ * An import names the person who ran it, as the History tab shows it. A reference whose
  * number is another line's legacy number names the same line in the history and in the detail
  * (`resolveBudgetLine`, what `get_entity_detail` loads): the line number first, then the legacy
  * number.
@@ -302,7 +302,7 @@ async function testImportAndSharedBudgetReference(seeded: Seeded) {
   }));
   const importedPage = await read(seeded.data.tenantId, seeded.reader, { entity_type: 'budget_lines', entity_id: 'BL-1' });
   const imported = importedPage.items.find((item) => item.changes.some((change: any) => change.after === 'after import'));
-  assert.deepEqual(imported?.actor, { kind: 'import', name: null }, 'an import has no name');
+  assert.deepEqual(imported?.actor, { kind: 'import', name: 'Una Unlimited' }, 'an import names the person who ran it');
   const author = importedPage.items.find((item) => item.actor.kind === 'user');
   assert.equal(author?.actor.name, 'Una Unlimited', 'a person keeps their name');
 
