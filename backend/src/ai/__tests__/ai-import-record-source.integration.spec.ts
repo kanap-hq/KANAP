@@ -11,6 +11,9 @@ import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-docum
 // - One family of each path of the source: the applications and their owners and residency (the
 //   shared import), the suppliers (an option the service had), the contracts (the option added), the
 //   cost centers (the caller), the accounts, a server's technology link, the budget file.
+// - The contacts and the servers: one row per record created or changed, read by the record history
+//   with the expected actor; an unchanged row writes none; a contact's supplier changed with its
+//   values is one row.
 // - A task the import attaches to a contract shows in the contract's history, as on the screen.
 // The screen is the same service, called as its route calls it: the import runner without Kad's card.
 // The AI surface checks and the attachment storage are not under test: stubbed.
@@ -251,6 +254,93 @@ async function testBudgetFile(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  the budget file: Kad\'s card through Kad, `budget_file` on the screen: OK');
 }
 
+async function testContacts(h: Harness, runner: QueryRunner, s: Seed) {
+  const insert = async (email: string, job: string) => (await runner.query(
+    `INSERT INTO contacts (tenant_id, email, first_name, last_name, job_title) VALUES ($1, $2, 'Camille', $2, $3) RETURNING id`,
+    [s.tenantId, email, job],
+  ))[0].id as string;
+  await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Fournisseur T5')`, [s.tenantId]);
+  const columns = [name('email', 1), name('job_title', 2), name('supplier_name', 3)];
+  const header = 'Courriel;Fonction;Fournisseur';
+  for (const [via, tag] of [['kad', 'k5'], ['screen', 'e5']] as const) {
+    const changed = await insert(`changed-${tag}@example.test`, 'Ancienne');
+    const same = await insert(`same-${tag}@example.test`, 'Stable');
+    const file = [
+      header,
+      `new-${tag}@example.test;Nouvelle;`,
+      // The values and the main supplier of one contact: one gesture, one row.
+      `changed-${tag}@example.test;Nouvelle;Fournisseur T5`,
+      `same-${tag}@example.test;Stable;`,
+    ];
+    const run = via === 'kad'
+      ? await byKad(h, runner, s, 'contacts', 'Contacts.csv', file, columns)
+      : { cardId: null, ...(await byScreen(h, runner, s, 'contacts', 'Contacts.csv', file, columns)) };
+    const [created] = await runner.query(`SELECT id::text AS id FROM contacts WHERE tenant_id = $1 AND email = $2`, [s.tenantId, `new-${tag}@example.test`]);
+    const contactRows = run.rows.filter((row) => row.table_name === 'contacts');
+    assert.deepEqual(
+      contactRows.map((row) => [row.record_id, row.action]).sort(),
+      [[created.id, 'create'], [changed, 'update']].sort(),
+      `${via}: one row per contact created or changed, none for the unchanged one`,
+    );
+    const update = contactRows.find((row) => row.record_id === changed)!;
+    assert.equal(update.before_json.job_title, 'Ancienne');
+    assert.equal(update.before_json.supplier_id, null);
+    assert.equal(update.after_json.job_title, 'Nouvelle');
+    assert.ok(update.after_json.supplier_id, `${via}: the supplier is in the same row`);
+    assert.ok(run.rows.some((row) => row.table_name === 'supplier_contacts'), `${via}: the main supplier link is audited`);
+    if (via === 'kad') assertKad('contacts', run.rows, run.cardId!, ['contacts']);
+    else assertScreen('contacts', run.rows, ['contacts']);
+    const actor = via === 'kad' ? 'assistant' : 'user';
+    for (const id of [created.id, changed]) {
+      const items = await history(runner, s, 'contacts', id);
+      assert.ok(items.length > 0, `${via}: the contact's history shows the import`);
+      assert.ok(items.every((item) => item.actor.kind === actor), `${via}: ${JSON.stringify(items.map((item) => item.actor))}`);
+      assert.equal(items[0].actor.name, 'Admin Tester');
+    }
+    assert.deepEqual(await history(runner, s, 'contacts', same), [], `${via}: the unchanged contact has no row`);
+  }
+  console.log('  contacts: one row per contact created or changed, the supplier in the same row, read by the history: OK');
+}
+
+async function testServers(h: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query(`INSERT INTO locations (tenant_id, location_reference, name, hosting_type) VALUES ($1, 'LOC-5501', 'Salle K5', 'on_prem')`, [s.tenantId]);
+  const columns = [name('name', 1), name('kind', 2), name('environment', 3), name('location_reference', 4)];
+  const header = 'Nom;Type;Environnement;Site';
+  for (const [via, tag] of [['kad', 'k5'], ['screen', 'e5']] as const) {
+    const [changed] = await runner.query(
+      `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, $2, 'virtual_machine', 'dev') RETURNING id::text AS id`,
+      [s.tenantId, `srv-changed-${tag}`],
+    );
+    const [same] = await runner.query(
+      `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, $2, 'virtual_machine', 'prod') RETURNING id::text AS id`,
+      [s.tenantId, `srv-same-${tag}`],
+    );
+    // A blank site keeps the stored one: only the new server names it.
+    const file = [header, `srv-new-${tag};virtual_machine;prod;LOC-5501`, `srv-changed-${tag};virtual_machine;prod;`, `srv-same-${tag};virtual_machine;prod;`];
+    const run = via === 'kad'
+      ? await byKad(h, runner, s, 'assets', 'Serveurs.csv', file, columns)
+      : { cardId: null, ...(await byScreen(h, runner, s, 'assets', 'Serveurs.csv', file, columns)) };
+    const [created] = await runner.query(`SELECT id::text AS id FROM assets WHERE tenant_id = $1 AND name = $2`, [s.tenantId, `srv-new-${tag}`]);
+    const assetRows = run.rows.filter((row) => row.table_name === 'assets');
+    assert.deepEqual(
+      assetRows.map((row) => [row.record_id, row.action]).sort(),
+      [[created.id, 'create'], [changed.id, 'update']].sort(),
+      `${via}: one row per server created or changed, none for the unchanged one`,
+    );
+    if (via === 'kad') assertKad('servers', run.rows, run.cardId!, ['assets']);
+    else assertScreen('servers', run.rows, ['assets']);
+    const actor = via === 'kad' ? 'assistant' : 'user';
+    const createdItems = await history(runner, s, 'assets', created.id);
+    assert.deepEqual(createdItems.map((item) => [item.action, item.actor.kind]), [['create', actor]]);
+    const changedItems = await history(runner, s, 'assets', changed.id);
+    assert.deepEqual(changedItems.map((item) => [item.action, item.actor.kind]), [['update', actor]]);
+    // Read as a change made on the screen: the environment, from dev to prod.
+    assert.ok(JSON.stringify(changedItems[0].changes).includes('environment'), JSON.stringify(changedItems[0].changes));
+    assert.deepEqual(await history(runner, s, 'assets', same.id), [], `${via}: the unchanged server has no row`);
+  }
+  console.log('  servers: one row per server created or changed, read by the history: OK');
+}
+
 async function testTaskOfAContract(h: Harness, runner: QueryRunner, s: Seed) {
   const [company] = await runner.query(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Société T5', 'FR', 'Lyon') RETURNING id`, [s.tenantId]);
   const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Fournisseur X5') RETURNING id`, [s.tenantId]);
@@ -280,7 +370,7 @@ async function run() {
       const s = await seed(runner);
       const tests = [
         testApplications, testSuppliers, testContracts, testCostCenters, testAccounts, testTechnologyLinks,
-        testBudgetFile, testTaskOfAContract,
+        testBudgetFile, testContacts, testServers, testTaskOfAContract,
       ];
       // Each family under its own savepoint: one that fails is reported, and the next ones still run.
       for (const test of tests) {

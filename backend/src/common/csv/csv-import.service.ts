@@ -127,6 +127,7 @@ export class CsvImportService {
     'applications',
     'portfolio_requests',
     'portfolio_projects',
+    'assets',
   ]);
 
   constructor(
