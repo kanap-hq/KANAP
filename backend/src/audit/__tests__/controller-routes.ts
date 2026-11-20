@@ -7,7 +7,8 @@ import { isExportRoutePath, joinRoutePath } from '../security-events';
 /**
  * A route method of the API, read from the controllers' source with the TypeScript parser:
  * `GET /incidents/:id/report`, whether it is recorded as an export (path ending with `/export`
- * or `@ExportRoute()`), and the signs that it sends a file, found in its body and in the
+ * or `@ExportRoute()`), the list its import is recorded under (`@ImportRoute('<list>')`, null
+ * without the decorator), and the signs that it sends a file, found in its body and in the
  * methods and functions of the same file it calls.
  */
 export type ScannedRoute = {
@@ -15,6 +16,7 @@ export type ScannedRoute = {
   file: string;
   handler: string;
   recordedAsExport: boolean;
+  importList: string | null;
   fileSigns: string[];
 };
 
@@ -148,6 +150,12 @@ export function scanRoutes(): ScannedRoute[] {
           }
         }
         const marked = calls.some((call) => call.name === 'ExportRoute');
+        const importCall = calls.find((call) => call.name === 'ImportRoute');
+        const importArg = importCall?.args[0];
+        if (importCall && !(importArg && ts.isStringLiteralLike(importArg))) {
+          throw new Error(`${relative} ${handler}: @ImportRoute() without a string literal list`);
+        }
+        const importList = importArg && ts.isStringLiteralLike(importArg) ? importArg.text : null;
         const signs = fileSigns(text, names);
         for (const routeCall of routeCalls) {
           for (const base of bases) {
@@ -158,6 +166,7 @@ export function scanRoutes(): ScannedRoute[] {
                 file: relative,
                 handler,
                 recordedAsExport: isExportRoutePath(route) || marked,
+                importList,
                 fileSigns: signs,
               });
             }

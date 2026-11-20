@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { linkedReadsFromContext, removableLinks } from '../common/relations/linked-reads';
 import { assertApplicationsInScope } from './portfolio-linked-reads';
 import { languageOf } from '../common/csv-sheet';
@@ -242,6 +243,7 @@ export class PortfolioRequestsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_requests', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('portfolio_requests')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importCsv(

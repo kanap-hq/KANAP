@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { exportListQuery } from '../common/pagination';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import { csvUnmatched } from '../common/csv/csv-unmatched';
@@ -178,6 +179,7 @@ export class BusinessProcessesController {
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('business_processes')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

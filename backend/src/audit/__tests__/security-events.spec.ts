@@ -27,6 +27,8 @@ import {
   handlerRoutePaths,
   IMPORT_EVENT_ACTION,
   isExportRoutePath,
+  isImportRoutePath,
+  SCREEN_IMPORT_LISTS,
   joinRoutePath,
   USER_AGENT_MAX_LENGTH,
 } from '../security-events';
@@ -563,6 +565,93 @@ async function testEventWriterNeverRejects() {
   assert.equal(runners, 1);
 }
 
+// The data imports of the screens, on 2026-11-20 (lot I5 of 26.11.9): each route is marked
+// `@ImportRoute('<list>')`, and ImportEventsInterceptor writes one `import` row per load, under the
+// list Plaid uses for the same import (both routes of the chart of accounts share `accounts`, both
+// budget files `budget_lines`), or a list of the screen alone (SCREEN_IMPORT_LISTS).
+const KNOWN_IMPORT_ROUTES: Record<string, string> = {
+  'POST /accounts/import': 'accounts',
+  'POST /analytics-categories/import': 'analytics_categories',
+  'POST /applications/import': 'applications',
+  'POST /assets/import': 'assets',
+  'POST /business-processes/import': 'business_processes',
+  'POST /capex-items/budget-file/import': 'budget_lines',
+  'POST /chart-of-accounts/:id/accounts/import': 'accounts',
+  'POST /companies/import': 'companies',
+  'POST /contacts/import': 'contacts',
+  'POST /contracts/import': 'contracts',
+  'POST /cost-centers/import': 'cost_centers',
+  'POST /data-access/import': 'data_access',
+  'POST /departments/import': 'departments',
+  'POST /incidents/import': 'incidents',
+  'POST /incidents/import-journal': 'incident_journal',
+  'POST /portfolio/projects/import': 'portfolio_projects',
+  'POST /portfolio/requests/import': 'portfolio_requests',
+  'POST /spend-items/budget-file/import': 'budget_lines',
+  'POST /suppliers/import': 'suppliers',
+  'POST /tasks/import': 'tasks',
+  'POST /technologies/application-links/import': 'technology_application_links',
+  'POST /technologies/asset-links/import': 'technology_asset_links',
+  'POST /users/import': 'users',
+  'POST /working-day-profiles/import': 'working_day_calendars',
+};
+
+// Routes named like an import that load no data into the workspace's lists, with the reason.
+const DOCUMENT_BODY = 'the body of one document, from a file: the record keeps its own history';
+const INLINE_ATTACHMENT = 'an image pasted into a document, stored as an attachment';
+const NOT_DATA_IMPORTS: Record<string, string> = {
+  'POST /admin/coa-templates/:id/import': 'a chart of accounts template of the platform, outside any workspace',
+  'POST /ai/conversations/:id/previews/:previewId/import-choices': 'the choices of a Plaid import card; the import row is written on approval',
+  'POST /applications/:id/integrated-documents/:slotKey/attachments/inline/import': INLINE_ATTACHMENT,
+  'POST /applications/:id/integrated-documents/:slotKey/import': DOCUMENT_BODY,
+  'POST /chart-of-accounts/import-template/preflight': 'the check of a template load, which writes nothing',
+  'POST /incidents/:id/integrated-documents/:slotKey/attachments/inline/import': INLINE_ATTACHMENT,
+  'POST /incidents/:id/integrated-documents/:slotKey/import': DOCUMENT_BODY,
+  'POST /interfaces/:id/integrated-documents/:slotKey/attachments/inline/import': INLINE_ATTACHMENT,
+  'POST /interfaces/:id/integrated-documents/:slotKey/import': DOCUMENT_BODY,
+  'POST /knowledge/:idOrRef/attachments/inline/import': INLINE_ATTACHMENT,
+  'POST /knowledge/:idOrRef/import': DOCUMENT_BODY,
+  'POST /portfolio/projects/:id/attachments/inline/import': INLINE_ATTACHMENT,
+  'POST /portfolio/projects/:id/integrated-documents/:slotKey/attachments/inline/import': INLINE_ATTACHMENT,
+  'POST /portfolio/projects/:id/integrated-documents/:slotKey/import': DOCUMENT_BODY,
+  'POST /portfolio/requests/:id/attachments/inline/import': INLINE_ATTACHMENT,
+  'POST /portfolio/requests/:id/integrated-documents/:slotKey/attachments/inline/import': INLINE_ATTACHMENT,
+  'POST /portfolio/requests/:id/integrated-documents/:slotKey/import': DOCUMENT_BODY,
+  'POST /tasks/:id/attachments/inline/import': INLINE_ATTACHMENT,
+  'POST /tasks/:id/import': DOCUMENT_BODY,
+};
+
+function testEveryImportRouteIsRecorded() {
+  assert.equal(isImportRoutePath('/users/import'), true);
+  assert.equal(isImportRoutePath('/incidents/import-journal'), true);
+  assert.equal(isImportRoutePath('/chart-of-accounts/import-template/preflight'), true, 'a segment that starts with import-');
+  assert.equal(isImportRoutePath('/import-examples/applications'), true);
+  assert.equal(isImportRoutePath('/spend-items/budget-file/preflight'), false);
+  assert.equal(isImportRoutePath('/reports/important'), false, 'a segment import, or import- and more');
+  assert.equal(isImportRoutePath('/users'), false);
+
+  const routes = scanRoutes();
+  const marked = Object.fromEntries(routes.filter((route) => route.importList !== null).map((route) => [route.route, route.importList]));
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(marked).sort(([a], [b]) => (a < b ? -1 : 1))),
+    KNOWN_IMPORT_ROUTES,
+    'the routes recorded as imports, with their list',
+  );
+  // A route that writes (not GET) and names an import is marked @ImportRoute, or excluded with its reason.
+  const named = [...new Set(routes
+    .filter((route) => !route.route.startsWith('GET ') && isImportRoutePath(route.route.split(' ')[1]))
+    .map((route) => route.route))].sort();
+  const unaccounted = named.filter((route) => !(route in KNOWN_IMPORT_ROUTES) && !(route in NOT_DATA_IMPORTS));
+  assert.deepEqual(unaccounted, [], 'an import route is marked @ImportRoute(\'<list>\') or listed in NOT_DATA_IMPORTS with its reason');
+  for (const route of Object.keys(NOT_DATA_IMPORTS)) {
+    assert.ok(named.includes(route), `${route} still exists`);
+    assert.ok(!(route in marked), `${route} is excluded, not marked`);
+  }
+  // Every list a route records is one the audit log page labels.
+  const lists = new Set([...Object.keys(AI_IMPORT_ACCESS), ...SCREEN_IMPORT_LISTS]);
+  for (const [route, list] of Object.entries(marked)) assert.ok(lists.has(String(list)), `${route}: ${list} is a known list`);
+}
+
 // The audit log page (frontend/src/lib/audit/auditLogLabels.ts, imported here) has a plain label
 // for every action, reason, exported resource and imported list the API writes.
 function testTheAuditLogPageLabelsEveryEvent() {
@@ -570,7 +659,11 @@ function testTheAuditLogPageLabelsEveryEvent() {
   assert.deepEqual([...SCREEN_REASONS].sort(), [...AUTH_EVENT_REASONS].sort(), 'reasons');
   const resources = [...new Set(KNOWN_EXPORT_ROUTES.map((route) => exportResource(route.split(' ')[1])))].sort();
   assert.deepEqual(Object.keys(EXPORT_RESOURCE_KEYS).sort(), resources, 'one label per exported resource');
-  assert.deepEqual(Object.keys(IMPORT_LIST_KEYS).sort(), Object.keys(AI_IMPORT_ACCESS).sort(), 'one label per list Plaid imports');
+  assert.deepEqual(
+    Object.keys(IMPORT_LIST_KEYS).sort(),
+    [...Object.keys(AI_IMPORT_ACCESS), ...SCREEN_IMPORT_LISTS].sort(),
+    'one label per list Plaid or a screen imports',
+  );
 }
 
 async function run() {
@@ -582,6 +675,7 @@ async function run() {
   testRoutePathsComeFromNestMetadata();
   testFileSignsAreFound();
   testEveryRouteThatSendsAFileIsRecorded();
+  testEveryImportRouteIsRecorded();
   testTheAuditLogPageLabelsEveryEvent();
   testExportFormat();
   testExportQuery();

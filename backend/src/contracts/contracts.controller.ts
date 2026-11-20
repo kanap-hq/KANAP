@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { exportListQuery } from '../common/pagination';
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -486,6 +487,7 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('contracts')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

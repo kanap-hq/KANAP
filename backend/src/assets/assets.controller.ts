@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { languageOf } from '../common/csv-sheet';
 import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -119,6 +120,7 @@ export class AssetsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('assets')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importCsv(

@@ -7,7 +7,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { DataSource, EntityManager } from 'typeorm';
-import { ExportRoute } from '../audit/security-events';
+import { ExportRoute, ImportRoute } from '../audit/security-events';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { moduleRightRequired } from '../auth/module-right-required';
@@ -36,6 +36,7 @@ import { InlineImageResolverService } from '../knowledge/inline-image-resolver.s
 import {
   IncidentEntriesService,
   IncidentJournalImportService,
+  journalImportCounts,
   IncidentRelationsService,
   incidentRelationKindOrThrow,
   IncidentReportService,
@@ -208,6 +209,7 @@ export class IncidentsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'contributor')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('incidents')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importCsv(
@@ -250,6 +252,7 @@ export class IncidentsController {
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'admin')
+  @ImportRoute('incident_journal', journalImportCounts)
   @Post('import-journal')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   importJournal(

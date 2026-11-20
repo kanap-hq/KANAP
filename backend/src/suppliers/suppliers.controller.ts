@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { Body, Controller, Delete, Get, InternalServerErrorException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
 import { SuppliersDeleteService } from './suppliers-delete.service';
@@ -112,6 +113,7 @@ export class SuppliersController {
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('suppliers')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

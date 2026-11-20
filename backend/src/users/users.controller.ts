@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { exportListQuery } from '../common/pagination';
 import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Put, Query, Req, Res, UseGuards, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
 import { roleNotFound, UsersService } from './users.service';
@@ -315,6 +316,7 @@ export class UsersController {
 
   @ReservedToUnscopedDataAccess()
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('users')
   @Post('import')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')

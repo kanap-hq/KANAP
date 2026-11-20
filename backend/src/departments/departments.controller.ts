@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { exportListQuery } from '../common/pagination';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors, ParseUUIDPipe } from '@nestjs/common';
 import { DepartmentsService } from './departments.service';
@@ -117,6 +118,7 @@ export class DepartmentsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('departments')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async import(

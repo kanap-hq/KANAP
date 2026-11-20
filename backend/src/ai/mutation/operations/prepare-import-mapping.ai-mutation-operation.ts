@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { writeAuditLog } from '../../../audit/audit.service';
-import { IMPORT_EVENT_ACTION, IMPORT_EVENT_TABLE } from '../../../audit/security-events';
+import { writeImportEvent } from '../../../audit/security-events';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiImportMappingPreviewDto } from '../../ai.types';
 import {
@@ -341,19 +340,10 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     if (!result.ok) throw new AiPreviewExecutionRefusal(PREVIEW_IMPORT_CHECK_FAILED_MESSAGE, { import_mapping: { ...mapping, result } });
 
     preview.current_values = { ...preview.current_values, import_mapping: { ...mapping, result } };
-    await writeAuditLog(context.manager, {
-      table: IMPORT_EVENT_TABLE,
-      recordId: null,
-      action: IMPORT_EVENT_ACTION,
-      before: null,
-      after: {
-        list: input.entity_type,
-        filename: stringOf(preview.mutation_input?.filename),
-        rows: result.total,
-        inserted: result.inserted,
-        updated: result.updated,
-        unchanged: result.unchanged,
-      },
+    await writeImportEvent(context.manager, {
+      list: input.entity_type,
+      filename: stringOf(preview.mutation_input?.filename),
+      counts: { rows: result.total, inserted: result.inserted, updated: result.updated, unchanged: result.unchanged },
       userId: context.userId,
       ...buildAiMutationAudit(preview),
     });

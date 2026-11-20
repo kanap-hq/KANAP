@@ -1,3 +1,4 @@
+import { ImportRoute } from '../audit/security-events';
 import { languageOf } from '../common/csv-sheet';
 import {
   BadRequestException,
@@ -289,6 +290,7 @@ export class TasksController {
   @UseGuards(PermissionGuard)
   @RequireLevel('tasks', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @ImportRoute('tasks')
   @Post('import')
   @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
   async importCsv(
