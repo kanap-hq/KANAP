@@ -159,7 +159,7 @@ Der Tab **Übersicht** enthält den Inhalt der Aufgabe.
 
 ### Eigenschaftenbereich
 
-Der Bereich ist einklappbar (klicken Sie auf die vertikale Registerkarte **Eigenschaften** am rechten Rand zum Öffnen oder Schließen; drücken Sie **P** als Tastenkürzel). Seine Breite und der Öffnungszustand werden lokal gespeichert. Der Bereich enthält vier Gruppen, getrennt durch Trennlinien:
+Der Bereich ist einklappbar (klicken Sie auf die vertikale Registerkarte **Eigenschaften** am rechten Rand zum Öffnen oder Schließen; drücken Sie **P** als Tastenkürzel). Ziehen Sie seinen linken Rand, um ihn zu verbreitern; ein Doppelklick auf diesen Rand stellt die übliche Breite wieder her. Seine Breite und der Öffnungszustand werden lokal gespeichert. Der Bereich enthält vier Gruppen, getrennt durch Trennlinien:
 
 **Kontext**:
   - **Verknüpft mit**: Eigenständig, Projekt, Budget (eine OPEX- oder CAPEX-Zeile), Vertrag oder Vorfall. Sie können den Typ ändern und ein neues Element auswählen; beim Speichern wendet Kadratis alle damit verbundenen Nebeneffekte an (siehe [Aufgaben-Kontext ändern](#aufgaben-kontext-andern))

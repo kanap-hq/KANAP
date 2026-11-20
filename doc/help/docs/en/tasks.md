@@ -159,7 +159,7 @@ The **Overview** tab holds the task content.
 
 ### Properties drawer
 
-The drawer is collapsible (click the vertical **Properties** tab on the right edge to open or close it; press **P** as a shortcut). Its width and open state are remembered locally. The drawer contains four groups, separated by dividers:
+The drawer is collapsible (click the vertical **Properties** tab on the right edge to open or close it; press **P** as a shortcut). Drag its left edge to widen it; a double-click on that edge brings back its usual width. Its width and open state are remembered locally. The drawer contains four groups, separated by dividers:
 
 **Context**:
   - **Related to**: Standalone, Project, Budget (an OPEX or CAPEX line), Contract, or Incident. You can change the type and pick a new item; on save, Kadratis applies any related side effects (see [Changing task context](#changing-task-context))
