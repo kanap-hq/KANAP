@@ -506,7 +506,7 @@ function takeKindProposals(rows: CsvImportRow[], context: CsvImportContext, sett
     if (context.nameMatches) {
       noteNameMatch(context.nameMatches, {
         column: 'kind', name: null, value: cell, target: shippedLabelIn('serverKinds', type, context.language ?? 'en') ?? (type.label || type.code),
-        ref: null, origin: 'model', reason: 'model', undoable: true,
+        code: type.code, ref: null, origin: 'model', reason: 'model', undoable: true,
       }, row.rowNumber);
     }
   }

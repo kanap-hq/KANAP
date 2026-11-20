@@ -982,7 +982,7 @@ async function testServerTypeNamedByThePerson(h: Harness, runner: QueryRunner, s
   const check = named.import_mapping.validation;
   assert.equal(check.ok, true, JSON.stringify(check.report.errors));
   assert.deepEqual(check.report.matches, [{
-    column: 'kind', name: null, value: 'Cloud', target: 'Virtual machine', ref: null,
+    column: 'kind', name: null, value: 'Cloud', target: 'Virtual machine', code: 'virtual_machine', ref: null,
     origin: 'model', reason: 'model', lines: [3, 4], count: 2, undoable: true,
   }]);
   assert.equal(named.import_mapping.columns.find((column: any) => column.column === 'kind').unread, 0);
@@ -1000,13 +1000,14 @@ async function testServerTypeNamedByThePerson(h: Harness, runner: QueryRunner, s
 
   // Approved: the servers are virtual machines.
   const approved = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file(), entity_type: 'assets', columns: columns({ Cloud: 'virtual_machine' }) });
-  // The file downloaded from the card, for the screen's import, writes the type the match took.
+  // The file downloaded from the card, for the screen's import, writes the code of the type the match
+  // took, as on the rows the type column reads (pass D of Q1): never the type's name.
   const { readTableAttachment } = require('../attachments/table-attachment');
   const sent: { body: Buffer | null } = { body: null };
   await controller.download(s.conversations.admin, approved.preview_id, req, tenant, { setHeader: () => undefined, end: (body: Buffer) => { sent.body = body; } });
   const prepared = await readTableAttachment(sent.body!);
   assert.deepEqual(prepared.rows.map((row: any[]) => row.map((cell: any) => cell?.value ?? '').filter((value: string) => /virtual|cloud/i.test(value))),
-    [['virtual_machine'], ['Virtual machine'], ['Virtual machine']]);
+    [['virtual_machine'], ['virtual_machine'], ['virtual_machine']]);
   const done = await h.previews.executePreview(admin, approved.preview_id);
   assert.equal(done.status, 'executed', done.error_message ?? '');
   const stored = await runner.query(`SELECT name, kind FROM assets WHERE tenant_id = $1 AND name LIKE 'srv-f48-%' ORDER BY name`, [s.tenantId]);
