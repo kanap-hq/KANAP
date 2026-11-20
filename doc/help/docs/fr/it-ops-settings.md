@@ -58,7 +58,7 @@ Une liste qui enfreint l'une de ces règles n'est pas enregistrée tant que vous
 
 **Supprimer** efface une valeur que rien n'utilise. Lorsque des enregistrements référencent encore la valeur, Kadratis indique combien (applications, actifs, interfaces, connexions, sites, incidents, sous-réseaux…), avec un lien vers la liste filtrée lorsqu'une liste peut être filtrée sur ce champ, et propose **Ne plus proposer** à la place : la valeur reste visible sur les enregistrements qui l'utilisent déjà et n'est plus proposée pour les nouveaux. Une valeur utilisée n'est jamais supprimée, même via l'API.
 
-Les valeurs intégrées que Kadratis gère lui-même (les quatre statuts de cycle de vie, les domaines Workgroup et N/A) ne peuvent être ni modifiées ni supprimées. Les zones réseau et types d'actif par défaut peuvent être modifiés et retirés, mais pas supprimés : le serveur les recréerait.
+Les valeurs intégrées que Kadratis gère lui-même (les quatre statuts de cycle de vie, les domaines Workgroup et N/A) ne peuvent être ni modifiées ni supprimées. Les zones réseau et types d'actif par défaut, ainsi que le fournisseur cloud Autre, peuvent être modifiés et retirés, mais pas supprimés : le serveur les recréerait.
 
 ### Traduire vos valeurs
 
@@ -73,6 +73,8 @@ Les éditeurs affichent et modifient toujours le texte de base ; lorsque le nom 
 ### Fournisseurs cloud
 
 Fournisseurs cloud utilisés par les serveurs et les sites (ex. : AWS, Azure, GCP).
+
+Autre est une valeur intégrée. Elle peut être retirée, mais pas supprimée, et une liste enregistrée qui ne la contient pas la retrouve. AWS, Azure et GCP peuvent être supprimés.
 
 **Colonnes** : Nom, Ne plus proposer
 

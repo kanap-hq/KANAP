@@ -58,7 +58,7 @@ A list that breaks one of these rules is not saved until you fix it; the row sho
 
 **Remove** deletes a value that nothing uses. When records still reference the value, Kadratis shows how many (applications, assets, interfaces, connections, sites, incidents, subnets…), with a link to the filtered list where a list can be filtered on that field, and offers **No longer offered** instead: the value stays visible on the records that already use it and is no longer proposed for new ones. A value in use is never removed, even through the API.
 
-Built-in values that Kadratis manages itself (the four lifecycle statuses, the Workgroup and N/A domains) cannot be edited or removed. Default network zones and asset types can be edited and retired but not removed: the server would add them back.
+Built-in values that Kadratis manages itself (the four lifecycle statuses, the Workgroup and N/A domains) cannot be edited or removed. Default network zones and asset types, and the cloud provider Other, can be edited and retired but not removed: the server would add them back.
 
 ### Translating your values
 
@@ -73,6 +73,8 @@ Editors always show and edit the base text; when the displayed name differs for 
 ### Cloud providers
 
 Cloud providers used by servers and locations (e.g., AWS, Azure, GCP).
+
+Other is a built-in value. It can be retired but not removed, and a saved list that leaves it out gets it back. AWS, Azure and GCP can be removed.
 
 **Columns**: Name, No longer offered
 

@@ -5,6 +5,10 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import dataSource from '../../data-source';
 import { Tenant } from '../../tenants/tenant.entity';
 import { Location } from '../../locations/location.entity';
+import { Asset } from '../../assets/asset.entity';
+import { AssetClusterMember } from '../../assets/asset-cluster-member.entity';
+import { AssetsCrudService } from '../../assets/services/assets-crud.service';
+import { AssetsValidationService } from '../../assets/services/assets-validation.service';
 import { ItOpsSettingsService } from '../it-ops-settings.service';
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -92,7 +96,7 @@ async function main() {
 
     // Generated codes: names only in, stable slugs out, order preserved, aliases unique across code and name.
     const generated = await settings.updateSettings(tenantId, { serverProviders: [{ label: 'Scaleway Élite' }, { code: 'aws', label: 'AWS' }, { label: 'AWS Gov' }] as any }, { manager: publisher.manager });
-    assert.deepEqual(generated.serverProviders.map((item) => [item.code, item.label]), [['scaleway_elite', 'Scaleway Élite'], ['aws', 'AWS'], ['aws_gov', 'AWS Gov']]);
+    assert.deepEqual(generated.serverProviders.map((item) => [item.code, item.label]), [['scaleway_elite', 'Scaleway Élite'], ['aws', 'AWS'], ['aws_gov', 'AWS Gov'], ['other', 'Other']]);
     await assert.rejects(() => settings.updateSettings(tenantId, { serverProviders: [{ code: 'aws', label: 'Amazon' }, { label: 'aws' }] as any }, { manager: publisher.manager }), /clashes with/);
     await assert.rejects(() => settings.updateSettings(tenantId, { accessMethods: [{ label: 'Web, mobile' }] as any }, { manager: publisher.manager }), /comma/);
     // Reads stay tolerant: a stored duplicate name is served, and only refused when that list is saved again.
@@ -111,6 +115,46 @@ async function main() {
     assert.equal(reloaded.serverProviders.find((item) => item.code === 'aws')?.translations?.fr?.label, 'Amazon Web Services (FR)');
     assert.equal(reloaded.serverProviders.find((item) => item.code === 'aws')?.label, 'AWS', 'the base name is untouched');
     await assert.rejects(() => settings.updateSettings(tenantId, { serverProviders: [...reloaded.serverProviders, { label: 'Amazon Web Services (FR)' }] as any }, { manager: publisher.manager }), /clashes with/);
+
+    // `other` is put back on save and on read. AWS stays removable. A stored empty list still offers it, so an asset can be created.
+    assert.deepEqual((await settings.getSettings(tenantId, { manager: publisher.manager })).protectedCodes?.serverProviders, ['other']);
+    const withoutAws = await settings.updateSettings(tenantId, { serverProviders: [{ code: 'azure', label: 'Azure' }] as any }, { manager: publisher.manager });
+    assert.deepEqual(withoutAws.serverProviders.map((item) => [item.code, item.label]), [['azure', 'Azure'], ['other', 'Other']]);
+    const retiredOther = await settings.updateSettings(tenantId, { serverProviders: [{ code: 'other', label: 'Other', deprecated: true }] as any }, { manager: publisher.manager });
+    assert.equal(retiredOther.serverProviders.find((item) => item.code === 'other')?.deprecated, true);
+    assert.equal(retiredOther.serverProviders.some((item) => item.code === 'aws'), false);
+    const emptied = await settings.updateSettings(tenantId, { serverProviders: [] as any }, { manager: publisher.manager });
+    assert.deepEqual(emptied.serverProviders.map((item) => [item.code, item.label, item.deprecated]), [['other', 'Other', false]]);
+    const [storedProviders] = await publisher.query(`SELECT metadata->'it_ops'->'server_providers' AS providers FROM tenants WHERE id = $1`, [tenantId]);
+    assert.deepEqual(storedProviders.providers.map((item: { code: string }) => item.code), ['other']);
+    // A manager that has not loaded the tenant: the row in the database is empty, the read puts `other` back.
+    await publisher.query(`UPDATE tenants SET metadata = jsonb_set(metadata, '{it_ops,server_providers}', '[]'::jsonb) WHERE id = $1`, [tenantId]);
+    const reader = dataSource.createQueryRunner();
+    await reader.connect();
+    try {
+      await setTenant(reader);
+      const readSettings = service(reader);
+      const readEmpty = await readSettings.getSettings(tenantId, { manager: reader.manager });
+      assert.deepEqual(readEmpty.serverProviders.map((item) => [item.code, item.label]), [['other', 'Other']]);
+      const crud = new AssetsCrudService(
+        reader.manager.getRepository(Asset),
+        reader.manager.getRepository(AssetClusterMember),
+        { log: async () => undefined } as any,
+        new AssetsValidationService(readSettings),
+        { notifyShare: async () => undefined } as any,
+        { labelOf: async () => null } as any,
+      );
+      const created = await crud.create(
+        { name: 'After empty providers', kind: 'virtual_machine', environment: 'prod', provider: 'other', status: 'active', is_cluster: false, hostname: 'after-empty-providers' },
+        tenantId,
+        null,
+        { manager: reader.manager, tenantId },
+        { atTitle: true },
+      );
+      assert.equal(created.provider, 'other');
+    } finally {
+      await reader.release();
+    }
 
     // Order 1: a writer holding the shared lock delays the removal, which then sees the new reference and refuses.
     await writer.startTransaction();

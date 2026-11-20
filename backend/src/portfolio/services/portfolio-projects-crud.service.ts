@@ -33,6 +33,21 @@ import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links'
 import { singleChangedId } from '../../audit/audit-parent-rules';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
 
+const ACTUAL_DATE_FIELDS = ['actual_start', 'actual_end'] as const;
+
+/**
+ * Actual dates come from the status, and from the projects import, which does not call this
+ * service. Creation, update and request conversion refuse them.
+ */
+function refuseActualDates(body: object | null | undefined): void {
+  if (body == null || typeof body !== 'object') return;
+  const present = ACTUAL_DATE_FIELDS.filter((field) => Object.prototype.hasOwnProperty.call(body, field));
+  if (present.length === 0) return;
+  const listed = present.join(' and ');
+  const dates = present.length === 1 ? 'The date comes' : 'The dates come';
+  throw new BadRequestException(`${listed} cannot be set here. ${dates} from the project status.`);
+}
+
 /**
  * Service for core CRUD operations on portfolio projects.
  */
@@ -333,6 +348,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const repo = mg.getRepository(PortfolioProject);
 
     if (!tenantId) throw new BadRequestException('Tenant context is required');
+    refuseActualDates(body);
 
     const name = String(body.name || '').trim();
     if (!name) throw new BadRequestException('name is required');
@@ -408,6 +424,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     userId: string | null,
     opts?: ServiceOpts,
   ) {
+    refuseActualDates(overrides);
     const mg = this.getManager(opts);
     const projectRepo = mg.getRepository(PortfolioProject);
     const requestRepo = mg.getRepository(PortfolioRequest);
@@ -563,6 +580,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
 
     const existing = await repo.findOne({ where: { id } });
     if (!existing) throw new NotFoundException('Project not found');
+    refuseActualDates(body);
 
     const before = { ...existing };
     const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
@@ -594,7 +612,10 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         existing.baseline_end_date = existing.planned_end;
         existing.baseline_effort_it = existing.estimated_effort_it;
         existing.baseline_effort_business = existing.estimated_effort_business;
-        existing.actual_start = new Date();
+        // The actual start is set once, the first time the project moves to In progress.
+        if (existing.actual_start == null) {
+          existing.actual_start = new Date();
+        }
       }
 
       // Set actual end date when transitioning to 'done'
