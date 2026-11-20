@@ -1982,9 +1982,21 @@ export default function RoadmapGenerator({ onApplied }: Props) {
       onApplied?.();
     } catch (e: any) {
       const details = e?.response?.data?.details;
-      if (Array.isArray(details) && details.length > 0) {
-        const first = details[0];
-        setApplyError(t('planning.roadmap.messages.applyFailedFor', { project: first?.projectId || t('planning.roadmap.columns.project'), error: first?.error || t('planning.roadmap.messages.applyFailed') }));
+      const first = Array.isArray(details) ? details[0] : undefined;
+      if (first && typeof first === 'object') {
+        const errorText = typeof first.error === 'string' && first.error !== ''
+          ? first.error
+          : t('planning.roadmap.messages.applyFailed');
+        const projectId = typeof first.projectId === 'string' ? first.projectId : '';
+        // The selected rows supply the name, matched without case. The marker "request" keeps the server's error alone.
+        const named = projectId.toLowerCase() === 'request'
+          ? undefined
+          : selectedVisibleScheduledProjects.find(
+            (project) => project.projectId.toLowerCase() === projectId.toLowerCase(),
+          );
+        setApplyError(named
+          ? t('planning.roadmap.messages.applyFailedFor', { project: named.projectName, error: errorText })
+          : errorText);
       } else {
         setApplyError(getApiErrorMessage(e, t, t('planning.roadmap.messages.applyFailed')));
       }

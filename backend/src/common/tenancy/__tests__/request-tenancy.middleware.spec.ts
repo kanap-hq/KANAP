@@ -232,7 +232,22 @@ async function testWritesRefusedWhileResetting() {
   assert.deepEqual(other.tenant, { slug: 'other', id: 't-2', name: 'Other' });
 }
 
-/** The route path drops trailing slashes in time linear in the path length. */
+/**
+ * Counts `charCodeAt` calls. The bound in `testRoutePathTrimsTrailingSlashes` guards the
+ * `routePath` loop, which reads the path from the end through `charCodeAt`, once per character,
+ * and stops on the first character that is not a slash. A trim written with a regular
+ * expression, `endsWith` or `slice` never calls `charCodeAt`, so this count stays at 0 and the
+ * bound still holds.
+ */
+class CharCodeAtPath extends String {
+  reads = 0;
+  charCodeAt(index: number): number {
+    this.reads += 1;
+    return super.charCodeAt(index);
+  }
+}
+
+/** The route path drops trailing slashes by reading each character at most once. */
 function testRoutePathTrimsTrailingSlashes() {
   assert.equal(routePath({ path: '/health/' }), '/health');
   assert.equal(routePath({ path: '/health///' }), '/health');
@@ -241,12 +256,22 @@ function testRoutePathTrimsTrailingSlashes() {
   assert.equal(routePath({ path: '' }), '/');
   assert.equal(routePath({ path: '/a//b' }), '/a//b');
 
-  const path = `${'/'.repeat(8000)}x`;
-  const started = process.hrtime.bigint();
-  const result = routePath({ path });
-  const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
-  assert.equal(result, path, 'a path ending in a letter is kept as is');
-  assert.ok(elapsedMs < 5, `8,000 slashes then a letter take under 5 ms (took ${elapsedMs.toFixed(2)} ms)`);
+  // Letters then thousands of slashes, and thousands of slashes then a letter.
+  // charCodeAt calls stay within the path length plus one.
+  const lettersThenSlashes = `${'a'.repeat(40)}${'/'.repeat(8000)}`;
+  const slashesThenLetter = `${'/'.repeat(8000)}x`;
+  for (const [path, expected] of [
+    [lettersThenSlashes, 'a'.repeat(40)],
+    [slashesThenLetter, slashesThenLetter],
+  ] as const) {
+    const counted = new CharCodeAtPath(path);
+    const result = routePath({ path: counted as unknown as string });
+    assert.equal(result, expected);
+    assert.ok(
+      counted.reads <= path.length + 1,
+      `${counted.reads} charCodeAt reads for a path of ${path.length} characters, above the length plus one`,
+    );
+  }
 }
 
 async function main() {

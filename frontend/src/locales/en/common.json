@@ -1640,7 +1640,7 @@
         },
         "own_contract": {
           "title": "A linked contract",
-          "hint": "Create your first contract and, where relevant, link it to the budget line you just created."
+          "hint": "Create your first contract, then link it to your budget line in its Budget tab."
         },
         "own_report": {
           "title": "Your first report",
@@ -1677,7 +1677,7 @@
         },
         "own_technologies": {
           "title": "Your technologies",
-          "hint": "Turn on technologies and link them to your applications. {{product}} takes care of the rest."
+          "hint": "Add a technology with New technology, then link it to an application in its Operations tab."
         },
         "own_assets": {
           "title": "Your assets",

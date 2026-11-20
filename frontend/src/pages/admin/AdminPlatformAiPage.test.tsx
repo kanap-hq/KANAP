@@ -62,6 +62,20 @@ function renderPage() {
   );
 }
 
+// The form is shown as soon as the configuration query resolves, still holding
+// the empty form. The loaded values are copied in an effect after that render,
+// so a field can be found while it is still empty. The model is set on every
+// configuration this file loads, including a first identity with no shown name,
+// and the empty form leaves it blank.
+async function renderLoadedPage() {
+  renderPage();
+  const model = config.model;
+  if (typeof model !== 'string' || model.length === 0) {
+    throw new Error('renderLoadedPage waits on the loaded model, which this configuration does not set.');
+  }
+  await screen.findByDisplayValue(model);
+}
+
 const ASK_AGAIN = 'Every workspace that uses the included model will be asked to confirm again before its next AI request.';
 const MISSING = 'Enter the provider name and the processing location shown to customers before saving.';
 
@@ -86,8 +100,8 @@ describe('AdminPlatformAiPage included model identity', () => {
   });
 
   it('shows the provider name and the processing location, with locations named in the interface language', async () => {
-    renderPage();
-    const name = await screen.findByLabelText('Provider name shown to customers');
+    await renderLoadedPage();
+    const name = screen.getByLabelText('Provider name shown to customers');
     expect(name).toHaveValue('Anthropic');
     const location = screen.getByRole('combobox', { name: 'Where data is processed' });
     expect(location).toHaveTextContent('United States');
@@ -100,8 +114,8 @@ describe('AdminPlatformAiPage included model identity', () => {
   });
 
   it('asks before saving a new provider name or location, then saves it', async () => {
-    renderPage();
-    fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'Where data is processed' }));
+    await renderLoadedPage();
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Where data is processed' }));
     fireEvent.click(await screen.findByRole('option', { name: 'European Union' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -114,8 +128,8 @@ describe('AdminPlatformAiPage included model identity', () => {
   });
 
   it('saves a new model without asking: workspaces keep their confirmation', async () => {
-    renderPage();
-    fireEvent.change(await screen.findByLabelText('Model'), { target: { value: 'claude-included-2' } });
+    await renderLoadedPage();
+    fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'claude-included-2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/admin/ai/config', { model: 'claude-included-2' }));
@@ -123,8 +137,8 @@ describe('AdminPlatformAiPage included model identity', () => {
   });
 
   it('sends the shown name and location again with a new endpoint, after asking', async () => {
-    renderPage();
-    fireEvent.change(await screen.findByLabelText('Endpoint URL'), { target: { value: 'https://llm-gateway.example.com/v1' } });
+    await renderLoadedPage();
+    fireEvent.change(screen.getByLabelText('Endpoint URL'), { target: { value: 'https://llm-gateway.example.com/v1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     const dialog = await screen.findByRole('dialog');
@@ -141,8 +155,8 @@ describe('AdminPlatformAiPage included model identity', () => {
 
   it('stops a new endpoint saved without the shown name and location, and flags both fields', async () => {
     config = platformConfig({ disclosure_name: null, disclosure_location: null, disclosure_key: null });
-    renderPage();
-    const location = await screen.findByRole('combobox', { name: 'Where data is processed' });
+    await renderLoadedPage();
+    const location = screen.getByRole('combobox', { name: 'Where data is processed' });
     expect(location).toHaveTextContent('e.g. United States');
     fireEvent.mouseDown(location);
     const listbox = await screen.findByRole('listbox');
@@ -173,8 +187,8 @@ describe('AdminPlatformAiPage included model identity', () => {
   });
 
   it('stops a save that empties the shown name', async () => {
-    renderPage();
-    fireEvent.change(await screen.findByLabelText('Provider name shown to customers'), { target: { value: '  ' } });
+    await renderLoadedPage();
+    fireEvent.change(screen.getByLabelText('Provider name shown to customers'), { target: { value: '  ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText(MISSING)).toBeInTheDocument();
@@ -185,8 +199,8 @@ describe('AdminPlatformAiPage included model identity', () => {
 
   it('fills the identity for the first time without asking', async () => {
     config = platformConfig({ disclosure_name: null, disclosure_location: null, disclosure_key: null });
-    renderPage();
-    fireEvent.change(await screen.findByLabelText('Provider name shown to customers'), { target: { value: ' Anthropic ' } });
+    await renderLoadedPage();
+    fireEvent.change(screen.getByLabelText('Provider name shown to customers'), { target: { value: ' Anthropic ' } });
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Where data is processed' }));
     fireEvent.click(await screen.findByRole('option', { name: 'United States' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));

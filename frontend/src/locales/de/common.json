@@ -1640,7 +1640,7 @@
         },
         "own_contract": {
           "title": "Ein verknüpfter Vertrag",
-          "hint": "Legen Sie Ihren ersten Vertrag an und verknüpfen Sie ihn gegebenenfalls mit der Budgetzeile, die Sie gerade angelegt haben."
+          "hint": "Legen Sie Ihren ersten Vertrag an und verknüpfen Sie ihn im Reiter Budget des Vertrags mit Ihrer Budgetzeile."
         },
         "own_report": {
           "title": "Ihr erster Bericht",
@@ -1677,7 +1677,7 @@
         },
         "own_technologies": {
           "title": "Ihre Technologien",
-          "hint": "Aktivieren Sie Technologien und verknüpfen Sie sie mit Ihren Anwendungen. Um den Rest kümmert sich {{product}}."
+          "hint": "Fügen Sie Technologien mit Neue Technologie hinzu und verknüpfen Sie sie im Reiter Betrieb einer Anwendung."
         },
         "own_assets": {
           "title": "Ihre Assets",

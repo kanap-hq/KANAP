@@ -2,12 +2,13 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../api';
 import { setAccessToken } from '../auth/accessTokenStore';
 import { AUTOSAVE_RETRY_DELAYS_MS } from '../hooks/useAutosave';
 import { releaseLockKeepaliveUrl } from '../lib/releaseLockKeepalive';
 import IntegratedDocumentEditor, { type IntegratedDocumentEditorHandle } from './IntegratedDocumentEditor';
+import { creationKey, markRecordDeleted, resetCreationStore, setCreation } from './workspace/creation/creationStore';
 import { createAppTheme } from '../config/ThemeContext';
 
 vi.mock('../api', () => ({
@@ -127,6 +128,7 @@ async function startEditing() {
 
 describe('IntegratedDocumentEditor — incidents:review', () => {
   beforeEach(() => {
+    resetCreationStore();
     vi.clearAllMocks();
     vi.mocked(api.get).mockResolvedValue(documentPayload('## Description', 3));
     vi.mocked(api.post).mockResolvedValue({ data: { lock_token: 'lock-1', expires_at: null } } as any);
@@ -135,6 +137,10 @@ describe('IntegratedDocumentEditor — incidents:review', () => {
       documentPayload(String(body?.content_markdown ?? ''), 4) as any
     ));
     vi.mocked(api.delete).mockResolvedValue({ data: null } as any);
+  });
+
+  afterEach(() => {
+    resetCreationStore();
   });
 
   it('reads and locks the incident review through the /incidents endpoints', async () => {
@@ -186,6 +192,55 @@ describe('IntegratedDocumentEditor — incidents:review', () => {
       setAccessToken(null);
       vi.unstubAllGlobals();
     }
+  });
+
+  it('sends no lock release on unmount when Cancel has deleted the record', async () => {
+    const { view } = await renderEditor({ autosaveDelayMs: 60_000 });
+    await startEditing();
+    expect(api.delete).not.toHaveBeenCalled();
+
+    markRecordDeleted('inc-1');
+    view.unmount();
+    expect(api.delete).not.toHaveBeenCalled();
+  });
+
+  it('sends no lock release on pagehide when Cancel has deleted the record', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await renderEditor({ autosaveDelayMs: 60_000 });
+      await startEditing();
+      markRecordDeleted('inc-1');
+      window.dispatchEvent(new Event('pagehide'));
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(api.delete).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('still releases the lock on unmount when the record was kept', async () => {
+    const { view } = await renderEditor({ autosaveDelayMs: 60_000 });
+    await startEditing();
+    view.unmount();
+    expect(api.delete).toHaveBeenCalledTimes(1);
+    expect(api.delete).toHaveBeenCalledWith(
+      `${REVIEW_ENDPOINT}/locks`,
+      { headers: { 'X-Lock-Token': 'lock-1' } },
+    );
+  });
+
+  it('sends no lock release when the editor is addressed by the reference of a deleted creation', async () => {
+    // A project or a request created from its title is opened as PRJ-3, while Cancel knows the uuid.
+    const recordId = '0f8b2f0e-7d3a-4c1e-9a55-1c2d3e4f5a6b';
+    setCreation(creationKey('incidents', recordId), { token: 'creation-1', returnTo: '/it/incidents' });
+    const { view } = await renderEditor({ entityId: 'INC-7', autosaveDelayMs: 60_000 });
+    await startEditing();
+    expect(api.post).toHaveBeenCalledWith('/incidents/INC-7/integrated-documents/review/locks');
+
+    markRecordDeleted(recordId);
+    view.unmount();
+    expect(api.delete).not.toHaveBeenCalled();
   });
 
   it('does not release on pagehide when the description is not being edited', async () => {

@@ -33,6 +33,8 @@ vi.mock('../../components/design', async (importOriginal) => ({
   useKanapDialogs: () => dialogs,
 }));
 const nav = vi.hoisted(() => ({ result: null as any, unified: false, calls: [] as Array<{ sort?: string | null; filters?: string | null; enabled?: boolean }> }));
+// What the header was given for the two owners, one entry per render (a line switch must not pair a name with another line's id).
+const headerOwners = vi.hoisted(() => ({ frames: [] as Array<{ itId: string; itName: string; bizId: string; bizName: string }> }));
 vi.mock('../../hooks/useBudgetLineNav', () => ({
   useBudgetLineNav: (params: { sort?: string | null; filters?: string | null; enabled?: boolean }, _nature: string, unified = false) => {
     nav.unified = unified;
@@ -129,19 +131,55 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
 });
 vi.mock('./workspace/BudgetMetadataBar', async () => {
   const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
+  // The real owner pickers: a name missing for the id shown reads GET /users/lookup?ids=.
+  const { default: MetadataUserPicker } = await import('../../components/workspace/MetadataUserPicker');
   return {
-    default: ({ onStatusChange, costCenterId, costCenter, lineRef, disabled }: {
-      onStatusChange: (status: string) => void; costCenterId?: string | null; costCenter?: { id: string } | null; lineRef?: string | null; disabled?: boolean;
+    default: ({ onStatusChange, onOwnerItChange, onOwnerBizChange, ownerItId, ownerBizId, ownerItName, ownerBizName, costCenterId, costCenter, lineRef, disabled }: {
+      onStatusChange: (status: string) => void;
+      onOwnerItChange: (next: string | null) => void;
+      onOwnerBizChange: (next: string | null) => void;
+      ownerItId?: string | null; ownerBizId?: string | null; ownerItName?: string | null; ownerBizName?: string | null;
+      costCenterId?: string | null; costCenter?: { id: string } | null; lineRef?: string | null; disabled?: boolean;
     }) => {
+      headerOwners.frames.push({
+        itId: ownerItId ?? '',
+        itName: ownerItName ?? '',
+        bizId: ownerBizId ?? '',
+        bizName: ownerBizName ?? '',
+      });
       // The budget holder's read, as the bar makes it.
       useCostCenterNode(costCenterId ?? null, (costCenter ?? null) as never);
+      const suggestedFirst = { costCenterId: costCenterId || null, lineRef: lineRef || null };
       return (
         <>
           <span data-testid="metadata-line-ref" data-line-ref={lineRef ?? ''} />
+          <span data-testid="owner-it">
+            <MetadataUserPicker
+              value={ownerItId}
+              displayName={ownerItName}
+              placeholder="opex.metadata.itOwnerMissing"
+              searchPlaceholder="opex.metadata.itOwner"
+              disabled={disabled}
+              onChange={onOwnerItChange}
+              suggestedFirst={suggestedFirst}
+            />
+          </span>
+          <span data-testid="owner-biz">
+            <MetadataUserPicker
+              value={ownerBizId}
+              displayName={ownerBizName}
+              placeholder="opex.metadata.businessOwnerMissing"
+              searchPlaceholder="opex.metadata.businessOwner"
+              disabled={disabled}
+              onChange={onOwnerBizChange}
+              suggestedFirst={suggestedFirst}
+            />
+          </span>
           <button type="button" data-disabled={String(!!disabled)} onClick={() => onStatusChange('disabled')}>disable line</button>
           <button type="button" data-disabled={String(!!disabled)} onClick={() => onStatusChange('enabled')}>enable line</button>
         </>
-      );    },
+      );
+    },
   };
 });
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
@@ -233,6 +271,7 @@ beforeEach(() => {
   resetSharedPatchBuffers();
   nav.result = null;
   nav.unified = false;
+  headerOwners.frames.length = 0;
   auth.canEdit = true;
   auth.admin = true;
   auth.limited = false;
@@ -1898,6 +1937,121 @@ describe('BudgetLinePage cost center across lines', () => {
     await waitFor(() => expect(shown('cc-b')).not.toBeNull());
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(mocked.get.mock.calls.filter(([url]) => String(url).startsWith('/cost-centers'))).toEqual([]);
+  });
+});
+
+describe('BudgetLinePage owners across lines', () => {
+  const LINE_A = 'aaaaaaaa-0000-4000-8000-0000000000a1';
+  const LINE_B = 'bbbbbbbb-0000-4000-8000-0000000000b2';
+  const IT_A = '11111111-0000-4000-8000-0000000000a1';
+  const BIZ_A = '22222222-0000-4000-8000-0000000000a2';
+  const IT_B = '33333333-0000-4000-8000-0000000000b1';
+  const BIZ_B = '44444444-0000-4000-8000-0000000000b2';
+  const NINA = '55555555-0000-4000-8000-0000000000c3';
+  const person = (id: string, first: string, last: string) => ({
+    id, first_name: first, last_name: last, email: null as string | null, status: 'enabled',
+  });
+  const ada = person(IT_A, 'Ada', 'It');
+  const omar = person(BIZ_A, 'Omar', 'Business');
+  const bea = person(IT_B, 'Bea', 'It');
+  const lea = person(BIZ_B, 'Lea', 'Business');
+  const nina = person(NINA, 'Nina', 'New');
+  const line = (id: string, n: number, it: ReturnType<typeof person>, biz: ReturnType<typeof person>) => ({
+    id, item_number: n, product_name: `Line ${n}`, description: '', notes: '',
+    currency: 'EUR', effective_start: '2026-01-01', paying_company_id: 'company-1', account_id: 'account-1',
+    owner_it_id: it.id, owner_business_id: biz.id,
+    references: { owner_it: it, owner_business: biz },
+  });
+
+  function renderLine(id: string) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router: { navigate: NavigateFunction | null } = { navigate: null };
+    function NavigateProbe() {
+      router.navigate = useNavigate();
+      return null;
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={[`/ops/budget/${id}/overview`]} useTransitions={false}>
+            <NavigateProbe />
+            <Routes>
+              <Route path={`/ops/budget/:ref/:tab`} element={<BudgetLinePage nature={nature} />} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    return router;
+  }
+
+  const lookupByIds = () => mocked.get.mock.calls.filter(([url, config]) => {
+    const params = (config as { params?: { ids?: string } } | undefined)?.params;
+    return url === '/users/lookup' && typeof params?.ids === 'string';
+  });
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/budget-lines/${LINE_A}`) return { data: line(LINE_A, 1, ada, omar) };
+      if (url === `/budget-lines/${LINE_B}`) return { data: line(LINE_B, 2, bea, lea) };
+      return { data: {} };
+    });
+    mocked.patch.mockResolvedValue({ data: {} });
+  });
+
+  it('opens line A then line B, each with its own owners, without looking the previous ones up', async () => {
+    const router = renderLine(LINE_A);
+    await waitFor(() => expect(screen.getByTestId('owner-it')).toHaveTextContent('Ada It'));
+    expect(screen.getByTestId('owner-biz')).toHaveTextContent('Omar Business');
+    expect(lookupByIds()).toEqual([]);
+
+    headerOwners.frames.length = 0;
+    act(() => { router.navigate!(`/ops/budget/${LINE_B}/overview`); });
+    await waitFor(() => expect(screen.getByTestId('owner-it')).toHaveTextContent('Bea It'));
+    expect(screen.getByTestId('owner-biz')).toHaveTextContent('Lea Business');
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+
+    expect(lookupByIds()).toEqual([]);
+    // The new detail's owners are named at once: no frame pairs an id with a missing name,
+    // and line B's ids are never shown under line A's names.
+    expect(headerOwners.frames.filter((frame) => (frame.itId && !frame.itName) || (frame.bizId && !frame.bizName))).toEqual([]);
+    expect(headerOwners.frames.filter((frame) => frame.itId === IT_B && frame.itName !== 'Bea It')).toEqual([]);
+    expect(headerOwners.frames.filter((frame) => frame.bizId === BIZ_B && frame.bizName !== 'Lea Business')).toEqual([]);
+  });
+
+  it('saves an owner picked in the header and shows the new name', async () => {
+    let stored = line(LINE_A, 1, ada, omar);
+    mocked.get.mockImplementation(async (url: string, config?: { params?: { q?: string; ids?: string } }) => {
+      if (url === `/budget-lines/${LINE_A}`) return { data: stored };
+      if (url === '/users/lookup') {
+        const q = String(config?.params?.q ?? '').toLowerCase();
+        const items = q ? [nina].filter((user) => `${user.first_name} ${user.last_name}`.toLowerCase().includes(q)) : [nina];
+        return { data: { items, has_more: false } };
+      }
+      if (url === '/budget-lines/owner-suggestions') return { data: { items: [], has_more: false } };
+      return { data: {} };
+    });
+    mocked.patch.mockImplementation(async (_url: string, body: { owner_it_id?: string }) => {
+      if (body.owner_it_id === NINA) stored = { ...stored, owner_it_id: NINA, references: { ...stored.references, owner_it: nina } };
+      return { data: { ...stored, row_version: 2 } };
+    });
+
+    renderLine(LINE_A);
+    await waitFor(() => expect(screen.getByTestId('owner-it')).toHaveTextContent('Ada It'));
+    fireEvent.click(within(screen.getByTestId('owner-it')).getByRole('button', { name: /Ada It/ }));
+    fireEvent.change(screen.getByPlaceholderText('opex.metadata.itOwner'), { target: { value: 'Nina' } });
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Nina New' }));
+
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(
+      `/budget-lines/${LINE_A}`,
+      { owner_it_id: NINA, base: { owner_it_id: IT_A } },
+    ));
+    expect(screen.getByTestId('owner-it')).toHaveTextContent('Nina New');
+    expect(screen.getByTestId('owner-biz')).toHaveTextContent('Omar Business');
+    // The picked name is the one just chosen: the header does not look that person up by id.
+    expect(lookupByIds()).toEqual([]);
   });
 });
 

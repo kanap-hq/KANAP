@@ -1640,7 +1640,7 @@
         },
         "own_contract": {
           "title": "Un contrato vinculado",
-          "hint": "Cree su primer contrato y, si procede, vincúlelo a la línea presupuestaria que acaba de crear."
+          "hint": "Cree su primer contrato y vincúlelo a su línea presupuestaria en su pestaña Presupuesto."
         },
         "own_report": {
           "title": "Su primer informe",
@@ -1677,7 +1677,7 @@
         },
         "own_technologies": {
           "title": "Sus tecnologías",
-          "hint": "Active tecnologías y vincúlelas a sus aplicaciones. {{product}} se encarga del resto."
+          "hint": "Añádalas con Nueva tecnología y vincúlelas a una aplicación, pestaña Operaciones."
         },
         "own_assets": {
           "title": "Sus activos",
