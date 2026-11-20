@@ -32,6 +32,8 @@ type Props = {
   data: InterfaceDetail | null;
   onPatch: (patch: Partial<InterfaceDetail>) => Promise<void>;
   onReplaceLegs: (legs: InterfaceLeg[]) => Promise<void>;
+  /** Fields Create found missing (`source`, `target` here): their labels turn red. */
+  missingFields?: ReadonlySet<string>;
 };
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
@@ -74,6 +76,7 @@ export default function InterfaceFlowTab({
   data,
   onPatch,
   onReplaceLegs,
+  missingFields,
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { byField } = useItOpsEnumOptions();
@@ -160,7 +163,7 @@ export default function InterfaceFlowTab({
       <Box sx={{ maxWidth: 820 }}>
         <SectionHeader>{t('it:workspace.interface.flow.logicalFlow')}</SectionHeader>
         <Stack spacing={1.25}>
-          <PropertyRow label={t('it:workspace.interface.fields.sourceApplication')} required valueSx={{ maxWidth: 560 }}>
+          <PropertyRow label={t('it:workspace.interface.fields.sourceApplication')} required missing={!!missingFields?.has('source')} valueSx={{ maxWidth: 560 }}>
             <Box data-creation-field="source">
               <ApplicationSelect
                 value={data?.source_application_id || null}
@@ -173,7 +176,7 @@ export default function InterfaceFlowTab({
               />
             </Box>
           </PropertyRow>
-          <PropertyRow label={t('it:workspace.interface.fields.targetApplication')} required valueSx={{ maxWidth: 560 }}>
+          <PropertyRow label={t('it:workspace.interface.fields.targetApplication')} required missing={!!missingFields?.has('target')} valueSx={{ maxWidth: 560 }}>
             <Box data-creation-field="target">
               <ApplicationSelect
                 value={data?.target_application_id || null}

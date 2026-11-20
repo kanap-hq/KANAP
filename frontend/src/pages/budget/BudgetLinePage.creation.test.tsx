@@ -89,6 +89,13 @@ function draftEffectiveStart(): string {
   throw new Error('draft effective start missing');
 }
 
+/** The label of a field of the properties panel, by its text. */
+function fieldLabel(text: string): HTMLElement {
+  const label = [...document.querySelectorAll<HTMLElement>('.kanap-field-label')].find((el) => el.textContent?.startsWith(text));
+  if (!label) throw new Error(`no label ${text}`);
+  return label;
+}
+
 function Location() {
   const location = useLocation();
   return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
@@ -322,15 +329,28 @@ describe('Budget line creation at the title', () => {
     await waitFor(() => expect(account()).not.toHaveAttribute('aria-invalid', 'true'));
   });
 
-  it('names the missing fields on Create, marks them and stays on the line', async () => {
+  it('marks the missing fields on Create, puts the cursor in the first one and stays on the line', async () => {
     renderPage(['/start'], { incomplete: ['paying_company', 'account'] });
     fireEvent.click(await screen.findByRole('button', { name: 'new line' }));
     await createMonitoring();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('budget.creation.missing(fields=opex.fields.payingCompany, opex.fields.account)')).toBeTruthy();
+    const company = () => screen.getByRole('textbox', { name: 'opex.fields.payingCompany' });
+    const account = () => screen.getByRole('textbox', { name: 'opex.fields.account' });
+    await waitFor(() => expect(company()).toHaveFocus());
     expect(mocked.post).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}/creation/complete`, { token: 'token-1' });
     expect(location()).toBe('/ops/budget/BL-12/overview');
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'opex.fields.payingCompany' })).toHaveFocus());
+    // One signal: the labels in red and the fields invalid, no banner.
+    expect(fieldLabel('opex.fields.payingCompany')).toHaveAttribute('data-missing');
+    expect(fieldLabel('opex.fields.account')).toHaveAttribute('data-missing');
+    expect(company()).toHaveAttribute('aria-invalid', 'true');
+    expect(account()).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText(/budget\.creation\.missing/)).toBeNull();
+    // A field given a value loses its mark; the other keeps it.
+    fireEvent.change(company(), { target: { value: 'company-1' } });
+    await waitFor(() => expect(fieldLabel('opex.fields.payingCompany')).not.toHaveAttribute('data-missing'));
+    expect(company()).not.toHaveAttribute('aria-invalid', 'true');
+    expect(fieldLabel('opex.fields.account')).toHaveAttribute('data-missing');
   });
 
   it('keeps and closes a complete line on Create, back where the creation started', async () => {
@@ -382,9 +402,11 @@ describe('Budget line creation at the title', () => {
     expect(mocked.delete).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}/creation`, { data: { token: 'token-1' } });
   });
 
-  it('shows what a line left incomplete lacks, and asks before it is left', async () => {
+  it('marks what a line left incomplete lacks, and asks before it is left', async () => {
     renderPage(['/ops/budget/BL-12/overview']);
-    expect(await screen.findByTestId('line-incomplete')).toHaveTextContent('budget.creation.missing(fields=opex.fields.payingCompany, opex.fields.account)');
+    await waitFor(() => expect(fieldLabel('opex.fields.payingCompany')).toHaveAttribute('data-missing'));
+    expect(fieldLabel('opex.fields.account')).toHaveAttribute('data-missing');
+    expect(screen.queryByRole('alert')).toBeNull();
     // Not being created: the close button, no Create or Cancel.
     expect(screen.getByRole('button', { name: 'common:buttons.close' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
@@ -411,7 +433,7 @@ describe('Budget line creation at the title', () => {
   it('says nothing on a line that has its company', async () => {
     renderPage(['/ops/budget/BL-12/overview'], { line: { paying_company_id: 'company-1', account_id: 'account-1' } });
     await screen.findByRole('button', { name: TITLE });
-    expect(screen.queryByTestId('line-incomplete')).toBeNull();
+    expect(document.querySelector('[data-missing]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
     await waitFor(() => expect(location()).toBe('/ops/budget'));
   });

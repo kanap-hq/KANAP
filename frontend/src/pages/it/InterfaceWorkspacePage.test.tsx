@@ -32,10 +32,10 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () =
 vi.mock('./components/InterfaceBindingsMatrix', () => ({ default: () => null }));
 // The draft's fields: each button fills one, as the real pickers would.
 vi.mock('./workspace/InterfaceFlowTab', () => ({
-  default: ({ onPatch }: { onPatch: (patch: Record<string, unknown>) => Promise<void> }) => (
+  default: ({ onPatch, missingFields }: { onPatch: (patch: Record<string, unknown>) => Promise<void>; missingFields?: ReadonlySet<string> }) => (
     <div data-testid="flow-tab">
-      <div data-creation-field="source"><input aria-label="source" /></div>
-      <div data-creation-field="target"><input aria-label="target" /></div>
+      <div data-creation-field="source"><input aria-label="source" data-missing={String(!!missingFields?.has('source'))} /></div>
+      <div data-creation-field="target"><input aria-label="target" data-missing={String(!!missingFields?.has('target'))} /></div>
       <button type="button" onClick={() => void onPatch({ source_application_id: 'app-1' })}>pick source</button>
       <button type="button" onClick={() => void onPatch({ target_application_id: 'app-2' })}>pick target</button>
     </div>
@@ -45,9 +45,9 @@ vi.mock('./workspace/InterfaceMappingTab', () => ({ default: () => null }));
 vi.mock('./workspace/InterfaceMetadataBar', () => ({ default: () => null }));
 vi.mock('./workspace/InterfaceOverviewTab', () => ({ default: () => null }));
 vi.mock('./workspace/InterfacePropertyPanel', () => ({
-  default: ({ onPatch }: { onPatch: (patch: Record<string, unknown>) => Promise<void> }) => (
+  default: ({ onPatch, missingFields }: { onPatch: (patch: Record<string, unknown>) => Promise<void>; missingFields?: ReadonlySet<string> }) => (
     <>
-      <div data-creation-field="data_category"><input aria-label="data category" /></div>
+      <div data-creation-field="data_category"><input aria-label="data category" data-missing={String(!!missingFields?.has('data_category'))} /></div>
       <button type="button" onClick={() => void onPatch({ data_category: 'orders' })}>pick category</button>
     </>
   ),
@@ -205,14 +205,23 @@ describe('InterfaceWorkspacePage (draft)', () => {
     expect(screen.getByTestId('flow-tab')).toBeInTheDocument();
   });
 
-  it('names what the draft lacks on Create and writes nothing', async () => {
+  it('marks what the draft lacks on Create, focuses the first field and writes nothing', async () => {
     renderNew();
     const title = await screen.findByLabelText('title');
     fireEvent.change(title, { target: { value: 'Orders sync' } });
     fireEvent.blur(title);
     fireEvent.click(screen.getByRole('button', { name: 'pick source' }));
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-    expect((await screen.findByTestId('workspace-notices')).textContent).toBe('Missing: target application, data category');
+    await waitFor(() => expect(screen.getByLabelText('target')).toHaveFocus());
+    expect(screen.getByLabelText('target')).toHaveAttribute('data-missing', 'true');
+    expect(screen.getByLabelText('data category')).toHaveAttribute('data-missing', 'true');
+    expect(screen.getByLabelText('source')).toHaveAttribute('data-missing', 'false');
+    // No banner.
+    expect(screen.getByTestId('workspace-notices').textContent).toBe('');
+    // A field given a value loses its mark.
+    fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
+    await waitFor(() => expect(screen.getByLabelText('data category')).toHaveAttribute('data-missing', 'false'));
+    expect(screen.getByLabelText('target')).toHaveAttribute('data-missing', 'true');
     expect(post).not.toHaveBeenCalled();
   });
 

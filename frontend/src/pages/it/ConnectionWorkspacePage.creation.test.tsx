@@ -42,7 +42,7 @@ vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => nul
 vi.mock('../../components/MarkdownEditor', () => ({ default: () => <div data-testid="description-editor" /> }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('./workspace/ConnectionLinkInterfacesDialog', () => ({ default: () => null }));
-vi.mock('./workspace/ConnectionEndpointPicker', () => ({ default: ({ label }: { label: string }) => <input aria-label={label} /> }));
+vi.mock('./workspace/ConnectionEndpointPicker', () => ({ default: ({ label, missing }: { label: string; missing?: boolean }) => <input aria-label={label} data-label-missing={String(!!missing)} /> }));
 vi.mock('./workspace/ConnectionServersPicker', () => ({ default: () => <input aria-label="servers" /> }));
 vi.mock('./workspace/ConnectionProtocolsTable', () => ({ default: () => null }));
 
@@ -171,7 +171,7 @@ describe('Connection creation at the title', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
   });
 
-  it('checks the connection when Create is clicked while the title is typed, and names what it lacks', async () => {
+  it('checks the connection when Create is clicked while the title is typed, and marks what it lacks', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new connection' }));
     const input = await screen.findByRole('textbox', { name: TITLE });
@@ -183,23 +183,32 @@ describe('Connection creation at the title', () => {
     // In a browser the click's mousedown blurs the title first, which commits it.
     fireEvent.blur(input);
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText(/workspace\.connection\.creation\.missing/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'workspace.connection.layers.source' })).toHaveAttribute('data-label-missing', 'true'));
     expect(mocked.post).toHaveBeenCalledWith('/connections/creation', { name: 'Web to db' });
     expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
     expect(location()).toBe('/it/connections/CONN-7/overview');
   });
 
-  it('names what the connection lacks on Create, focuses the first field and stays', async () => {
+  it('marks what the connection lacks on Create, focuses the first field and stays', async () => {
     await createConnection();
     mocked.post.mockRejectedValueOnce({
       response: { status: 400, data: { code: 'CREATION_INCOMPLETE', params: { fields: ['protocols', 'source', 'destination'] } } },
     });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText(/workspace\.connection\.creation\.missing/)).toBeTruthy();
-    expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
     // The protocol picker, first of the missing fields.
-    await waitFor(() => expect(screen.getByPlaceholderText('workspace.connection.overview.addProtocol')).toHaveFocus());
+    const protocols = screen.getByPlaceholderText('workspace.connection.overview.addProtocol');
+    await waitFor(() => expect(protocols).toHaveFocus());
+    expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
     expect(location()).toBe('/it/connections/CONN-7/overview');
+    // One signal: the labels in red and the fields invalid, no banner.
+    expect(protocols).toHaveAttribute('aria-invalid', 'true');
+    for (const side of ['source', 'destination']) {
+      const field = screen.getByRole('textbox', { name: `workspace.connection.layers.${side}` });
+      expect(field).toHaveAttribute('data-label-missing', 'true');
+      expect(field).toHaveAttribute('aria-invalid', 'true');
+    }
+    expect(screen.getByRole('heading', { name: 'workspace.connection.overview.protocols' })).toHaveStyle({ color: createAppTheme('light').palette.error.main });
+    expect(screen.queryByText(/creation\.missing/)).toBeNull();
   });
 
   it('closes a complete connection on Create, back where the creation started', async () => {

@@ -187,6 +187,13 @@ async function createAsset() {
   await screen.findByRole('button', { name: TITLE });
 }
 
+/** The label of the site row. */
+function siteLabel(): HTMLElement {
+  const label = [...document.querySelectorAll<HTMLElement>('.kanap-field-label')].find((el) => el.textContent?.startsWith('workspace.asset.overview.location'));
+  if (!label) throw new Error('no site label');
+  return label;
+}
+
 describe('Asset creation at the title', () => {
   beforeEach(() => {
     cleanup();
@@ -257,7 +264,7 @@ describe('Asset creation at the title', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/creation', expect.objectContaining({ is_cluster: true })));
   });
 
-  it('checks the asset when Create is clicked while the title is typed, and names the site', async () => {
+  it('checks the asset when Create is clicked while the title is typed, and marks the site', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
     const input = await screen.findByRole('textbox', { name: TITLE });
@@ -269,7 +276,7 @@ describe('Asset creation at the title', () => {
     // In a browser the click's mousedown blurs the title first, which commits it.
     fireEvent.blur(input);
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('workspace.asset.creation.missing(fields=workspace.asset.overview.location)')).toBeTruthy();
+    await waitFor(() => expect(siteLabel()).toHaveAttribute('data-missing'));
     expect(mocked.post).toHaveBeenLastCalledWith('/assets/asset-new/creation/complete', { token: 'token-1' });
     expect(location()).toBe('/it/assets/AST-7/overview');
   });
@@ -285,16 +292,19 @@ describe('Asset creation at the title', () => {
     expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
-  it('names the missing site on Create, focuses it and stays', async () => {
+  it('marks the missing site on Create, focuses it and stays', async () => {
     await createAsset();
     mocked.post.mockRejectedValueOnce({
       response: { status: 400, data: { code: 'CREATION_INCOMPLETE', params: { fields: ['location'] } } },
     });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('workspace.asset.creation.missing(fields=workspace.asset.overview.location)')).toBeTruthy();
-    expect(mocked.post).toHaveBeenLastCalledWith('/assets/asset-new/creation/complete', { token: 'token-1' });
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveFocus());
+    expect(mocked.post).toHaveBeenLastCalledWith('/assets/asset-new/creation/complete', { token: 'token-1' });
     expect(location()).toBe('/it/assets/AST-7/overview');
+    // One signal: the label in red and the field invalid, no banner.
+    expect(siteLabel()).toHaveAttribute('data-missing');
+    expect(screen.getByRole('textbox', { name: 'site' })).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.queryByText(/creation\.missing/)).toBeNull();
   });
 
   it('closes the asset on Create once it has a site, back where the creation started', async () => {

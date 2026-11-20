@@ -2853,7 +2853,6 @@
         "noIdentifier": "L'interface a été créée, mais aucun identifiant n'a été renvoyé."
       },
       "creation": {
-        "missing": "Manquant : {{fields}}",
         "record": "L'interface"
       },
       "pii": {

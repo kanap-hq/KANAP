@@ -53,6 +53,8 @@ type Props = {
   onReplaceCompanies: (companyIds: string[]) => Promise<void>;
   onReplaceDataResidency: (codes: string[]) => Promise<void>;
   onReplaceOwners: (ownerType: 'business' | 'it', userIds: string[]) => Promise<void>;
+  /** Fields Create found missing (`data_category` here): their labels turn red. */
+  missingFields?: ReadonlySet<string>;
 };
 
 function ReadOnlyValue({ children }: { children: React.ReactNode }) {
@@ -71,6 +73,7 @@ export default function InterfacePropertyPanel({
   onReplaceCompanies,
   onReplaceDataResidency,
   onReplaceOwners,
+  missingFields,
 }: Props) {
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const { t } = useTranslation(['it', 'common']);
@@ -328,7 +331,7 @@ export default function InterfacePropertyPanel({
             disabled={disabled}
           />
         </PropertyRow>
-        <PropertyRow label={t('it:workspace.interface.fields.dataCategory')} required>
+        <PropertyRow label={t('it:workspace.interface.fields.dataCategory')} required missing={!!missingFields?.has('data_category')}>
           <Box data-creation-field="data_category">
             <EnumAutocomplete
               label={t('it:workspace.interface.fields.dataCategory')}

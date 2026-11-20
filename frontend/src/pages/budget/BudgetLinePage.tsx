@@ -42,7 +42,6 @@ import {
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
-import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/finance/ChangeTypeDialog';
 import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
 import { budgetLinePath, openLineAfterTypeChange, refreshAfterTypeChange } from '../../components/finance/changeTypeNavigation';
@@ -1099,7 +1098,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   }, [currencyLoading, placementDefault.ready, placementReady, setTitleError, t, titleCreation.pending]);
 
   // Create on a line being created: what is still being typed is saved, then the server checks the
-  // fields the line needs. Missing ones are named once, marked, and the first one gets the focus;
+  // fields the line needs. Missing ones are marked on their label and the first one gets the focus;
   // otherwise the line is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
@@ -1113,7 +1112,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       const fields = await creation.completeCreation();
       mark(fields ?? []);
       if (fields) {
-        setSaveError(t('budget.creation.missing', { fields: missingFieldsList(fields.map(fieldLabel), locale) }));
         focusLineField(fields[0]);
       } else {
         invalidateBudgetLists(queryClient);
@@ -1121,7 +1119,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     } catch (e) {
       setSaveError(getApiErrorMessage(e, t, t('budget.creation.completeFailed')));
     }
-  }, [creation, fieldLabel, flushAll, focusLineField, isCreate, mark, queryClient, t, titleCreation, uuid]);
+  }, [creation, flushAll, focusLineField, isCreate, mark, queryClient, t, titleCreation, uuid]);
   // Cancel on a line being created: what is still being typed is saved first, so the confirmation
   // counts it, then the line is deleted (`useRecordCreation`).
   const cancelLine = React.useCallback(async () => {
@@ -1133,11 +1131,16 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     createAfterOpenRef.current = false;
     void createAction();
   }, [createAction, creation.beingCreated, data?.id, form.id]);
-  const markedFields = marks.marked;
-  // A line left without its paying company (a creation never completed) says what it lacks.
-  const incompleteNotice = !isCreate && !creation.beingCreated && canEdit && !!data?.id && form.id === data.id && !form.paying_company_id
+  // A line left without its paying company (a creation never completed) opens with the panel open
+  // and the labels of what it lacks in red.
+  const incompleteFields = !isCreate && !creation.beingCreated && canEdit && !!data?.id && form.id === data.id && !form.paying_company_id
     ? missingOf(form)
     : [];
+  const markedFields = incompleteFields.length > 0 ? new Set([...marks.marked, ...incompleteFields]) : marks.marked;
+  const incompleteLineId = incompleteFields.length > 0 ? data?.id : null;
+  React.useEffect(() => {
+    if (incompleteLineId) setFieldDrawerRequest((n) => n + 1);
+  }, [incompleteLineId]);
 
   const reference = data?.item_number ? formatItemRef('budget', data.item_number) : null;
   useRecordTitle(!isCreate && !stale && reference && data?.product_name ? `${reference} · ${data.product_name}` : null);
@@ -1186,11 +1189,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
               </Alert>
             )}
             {!!saveError && <Alert severity="error" onClose={() => setSaveError(null)}>{saveError}</Alert>}
-            {incompleteNotice.length > 0 && (
-              <Alert severity="warning" data-testid="line-incomplete">
-                {t('budget.creation.missing', { fields: missingFieldsList(incompleteNotice.map(fieldLabel), locale) })}
-              </Alert>
-            )}
             {!isCreate && (
               <EditConflictBanner
                 conflicts={conflicts}
