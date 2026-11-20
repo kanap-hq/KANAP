@@ -5,12 +5,13 @@ import { ContractContactLink, ContactOrigin } from './contract-contact.entity';
 import { ExternalContact } from '../contacts/external-contact.entity';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { Contract } from './contract.entity';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { attachManualContactLink, LINK_REMOVED } from '../contacts/contact-link-attach.util';
 import { assertContractsEditable } from '../data-access/contract-write-checks';
 
 /** The request's tenant: every statement filters on it. */
-type ItemContactsOpts = { manager?: EntityManager; tenantId: string };
+/** `audit`: the source of the history row (Kad's card); without it, the person's. */
+type ItemContactsOpts = { manager?: EntityManager; tenantId: string; audit?: AuditSourceOptions };
 
 @Injectable()
 export class ContractContactsService {
@@ -148,6 +149,8 @@ export class ContractContactsService {
           before: beforeState,
           after: afterState,
           userId: userId ?? null,
+          source: opts.audit?.source,
+          sourceRef: opts.audit?.sourceRef ?? null,
         },
         { manager: opts.manager ?? repo.manager },
       );

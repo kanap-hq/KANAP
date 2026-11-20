@@ -7,7 +7,7 @@ import { readBudgetLineMeta } from '../item-meta';
 import { type BudgetNature } from '../budget-nature';
 import type { ExportFileFormat } from '../../common/xlsx';
 import { buildBudgetExport, parseAmountYears, parseDetail, parseFileColumns, shownFileColumns, writeBudgetFile } from './export-file';
-import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportResult, BudgetFileLineServices, parseBudgetSnapshot } from './import-file';
+import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportResult, BudgetFileLineServices, BudgetFileSource, parseBudgetSnapshot } from './import-file';
 import { readBudgetCsv } from './interpret';
 import { loadExportLines, loadFileDimensions } from './load';
 import { checkBudgetFile } from './check';
@@ -157,7 +157,8 @@ export class BudgetFileService {
 
   /**
    * The load. `deps` are the item service of each nature, the audit log and
-   * the freeze check. The caller runs `analyzeAfterLargeImport` on the result
+   * the freeze check, and Kad's card when the load is Kad's (`source`, the source of every
+   * history row). The caller runs `analyzeAfterLargeImport` on the result
    * and does not query after that.
    */
   async importFile(
@@ -166,7 +167,7 @@ export class BudgetFileService {
     snapshot: unknown,
     caller: BudgetFileCaller,
     options: BudgetFileOptions,
-    deps: { items: BudgetFileLineServices; audit: BudgetFileAudit; freeze: BudgetFileFreeze },
+    deps: { items: BudgetFileLineServices; audit: BudgetFileAudit; freeze: BudgetFileFreeze; source?: BudgetFileSource },
   ): Promise<BudgetFileImportResult> {
     const manager = requireManager(caller.manager);
     const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
@@ -192,6 +193,7 @@ export class BudgetFileService {
       items: deps.items,
       audit: deps.audit,
       freeze: deps.freeze,
+      source: deps.source,
     });
   }
 }

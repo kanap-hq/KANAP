@@ -22,6 +22,7 @@ import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import { clustersWithMembers } from '../assets/asset-rules';
 import { OperatingSystemService } from './operating-system.service';
 import { TechnologyLinksService, type LinkOpts } from './technology-links.service';
+import type { AuditSourceOptions } from '../audit/audit.service';
 import { ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
 import type { CsvCallerAccess } from '../common/csv/csv-field.types';
@@ -105,7 +106,8 @@ export interface TechnologyLinksImportResult {
   refusedProposalsTotal?: number;
 }
 
-export type TechnologyLinksCsvContext = { manager: EntityManager; tenantId: string; userId?: string | null };
+/** `audit`: the source of each link's history row (Kad's card); without it, the person's. */
+export type TechnologyLinksCsvContext = { manager: EntityManager; tenantId: string; userId?: string | null; audit?: AuditSourceOptions };
 
 /** The applications the caller reads: all of them, or a Business Contributor's own (`scope`). */
 export type ApplicationsScope = { scope?: ParticipationAccessScope };
@@ -555,7 +557,7 @@ export class TechnologyLinksCsvService {
 
   /** Through the screens' services. An existing link keeps its provenance (`keepExistingProvenance`). */
   private async write(side: LinkSide, rows: PlannedLink[], provenance: LinkProvenance, ctx: TechnologyLinksCsvContext) {
-    const opts: LinkOpts = { manager: ctx.manager, tenantId: ctx.tenantId, userId: ctx.userId ?? null };
+    const opts: LinkOpts = { manager: ctx.manager, tenantId: ctx.tenantId, userId: ctx.userId ?? null, audit: ctx.audit };
     for (const row of rows) {
       if (!row.writeLink && !row.markOperatingSystem) continue;
       // The version the check found, or the label it announced as created, written as it is.

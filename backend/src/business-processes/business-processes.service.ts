@@ -532,7 +532,7 @@ export class BusinessProcessesService {
       /** What a row does to a process it updates (`CsvImportMode`); without it, `replace`. */
       mode?: CsvImportMode;
     },
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ) {
     const buf = uploadedBytes(file);
     const read = await readMasterDataFile({
@@ -755,9 +755,9 @@ export class BusinessProcessesService {
       const parentId = item.parentName ? idByName.get(item.parentName.toLowerCase()) ?? null : null;
       const body = item.keepsParent && existing ? item.body : { ...item.body, parent_id: parentId };
       if (existing) {
-        await this.update(existing.id, body, userId ?? null, { manager });
+        await this.update(existing.id, body, userId ?? null, { manager, audit: opts?.audit });
       } else {
-        const created = await this.create(body, userId ?? null, { manager });
+        const created = await this.create(body, userId ?? null, { manager, audit: opts?.audit });
         idByName.set(created.name.toLowerCase(), created.id);
       }
       processed += 1;
