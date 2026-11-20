@@ -2018,8 +2018,6 @@
       "meta": {
         "goLive": "Inbetriebnahme"
       },
-      "deleteMessage": "Damit wird {{name}} endgültig gelöscht, mit ihren Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
-      "deleteMessageWithRemoved": "Damit wird {{name}} endgültig gelöscht. Ebenfalls gelöscht werden: {{removed}}. Dies kann nicht rückgängig gemacht werden.",
       "convert": {
         "action": "In Technologie umwandeln",
         "title": "{{name}} in eine Technologie umwandeln",

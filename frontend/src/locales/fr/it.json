@@ -2018,8 +2018,6 @@
       "meta": {
         "goLive": "Mise en service"
       },
-      "deleteMessage": "Cette action supprime définitivement {{name}}, avec ses liens vers d’autres éléments. Elle est irréversible.",
-      "deleteMessageWithRemoved": "Cette action supprime définitivement {{name}}, avec {{removed}}. Elle est irréversible.",
       "convert": {
         "action": "Convertir en technologie",
         "title": "Convertir {{name}} en technologie",

@@ -73,13 +73,15 @@ describe('ApplicationsPage delete', () => {
       expect(errors.APPLICATION_HAS_INTERFACES_other, lang).toContain('{{usages}}');
       const words = it.pages.applications.delete;
       for (const key of ['warningCounted_one', 'warningCounted_other']) expect(words[key], `${lang} ${key}`).toContain('{{removed}}');
-      expect(it.workspace.application.deleteMessageWithRemoved, lang).toContain('{{removed}}');
+      // The application page reads the same words as the list: its own keys are gone.
+      expect(it.workspace.application.deleteMessage, lang).toBeUndefined();
+      expect(it.workspace.application.deleteMessageWithRemoved, lang).toBeUndefined();
       // The kept list names the application above its reason: the reason does not repeat it.
       for (const key of ['keptReason_one', 'keptReason_other']) {
         expect(words[key], `${lang} ${key}`).toContain('{{usages}}');
         expect(words[key], `${lang} ${key}`).not.toContain('{{name}}');
       }
-      for (const text of [words.warning_one, words.warning_other, words.kept_one, words.kept_other, it.workspace.application.deleteMessage]) {
+      for (const text of [words.warning_one, words.warning_other, words.kept_one, words.kept_other, words.warningLinks_one]) {
         expect(text, lang).toBeTruthy();
         expect(text, lang).not.toMatch(/referen|bloqu|blockiert|bloque/i);
       }

@@ -39,9 +39,12 @@ export default function ApplicationDeleteButton({ applicationId, applicationName
     }
     const confirmed = await dialogs.confirm({
       title,
-      message: check?.removes.length
-        ? t('workspace.application.deleteMessageWithRemoved', { name: applicationName, removed: removedWithLinks(check.removes, t('pages.applications.delete.links', { count: 1 }), t, locale) })
-        : t('workspace.application.deleteMessage', { name: applicationName }),
+      // The words of the list: what goes counted, only the links, or (unanswered check) deployments and links.
+      message: !check
+        ? t('pages.applications.delete.warning', { count: 1 })
+        : check.removes.length
+          ? t('pages.applications.delete.warningCounted', { count: 1, removed: removedWithLinks(check.removes, t('pages.applications.delete.links', { count: 1 }), t, locale) })
+          : t('pages.applications.delete.warningLinks', { count: 1 }),
       confirmLabel: t('common:buttons.delete'),
       intent: 'danger',
     });
