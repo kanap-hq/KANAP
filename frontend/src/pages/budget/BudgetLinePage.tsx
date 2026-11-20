@@ -126,6 +126,13 @@ const EMPTY_FORM: BudgetLineForm = {
   notes: '', created_at: null, updated_at: null,
 };
 
+/** The rows of the properties panel, top to bottom; the dimensions come last, in their own order. */
+const SCREEN_ORDER = ['cost_center', 'paying_company', 'account'];
+const screenRank = (key: string) => {
+  const rank = SCREEN_ORDER.indexOf(key);
+  return rank === -1 ? SCREEN_ORDER.length : rank;
+};
+
 /** The year the page shows: `?year=` when the address names a positive year, the current year otherwise. */
 function pageYear(yearParam: string | null): number {
   const y = Number(yearParam);
@@ -808,13 +815,14 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // in screen order, as far as the screen knows them (the server also checks the account's chart).
   const linePlacementFilter = useLinePlacementFilter(!isCreate ? form.paying_company_id || null : null);
   const missingOf = React.useCallback((line: BudgetLineForm): string[] => {
+    // In screen order: the cost center row sits above the paying company, then the account and the dimensions.
     const fields: string[] = [];
+    if (line.paying_company_id && !line.cost_center_id && linePlacementFilter?.costCenterRequired) fields.push('cost_center');
     if (!line.paying_company_id) fields.push('paying_company');
     if (!line.account_id) fields.push('account');
     for (const axis of analyticsAxes.enabled) {
       if (axisRequiredFor(axis, nature) && !line.analytics_values[axis.id]) fields.push(`dimension:${axis.id}`);
     }
-    if (line.paying_company_id && !line.cost_center_id && linePlacementFilter?.costCenterRequired) fields.push('cost_center');
     return fields;
   }, [analyticsAxes.enabled, linePlacementFilter, nature]);
   const fieldLabel = React.useCallback((key: string): string => {
@@ -1112,7 +1120,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       const fields = await creation.completeCreation();
       mark(fields ?? []);
       if (fields) {
-        focusLineField(fields[0]);
+        // The server names the fields in its own order: the focus goes to the first one on screen.
+        focusLineField([...fields].sort((a, b) => screenRank(a) - screenRank(b))[0]);
       } else {
         invalidateBudgetLists(queryClient);
       }

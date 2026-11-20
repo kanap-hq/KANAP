@@ -353,6 +353,16 @@ describe('Budget line creation at the title', () => {
     expect(fieldLabel('opex.fields.account')).toHaveAttribute('data-missing');
   });
 
+  it('puts the cursor in the first missing field on screen: the cost center sits above the account', async () => {
+    // The server names the cost center last; on screen its row comes first.
+    renderPage(['/start'], { incomplete: ['account', 'cost_center'] });
+    fireEvent.click(await screen.findByRole('button', { name: 'new line' }));
+    await createMonitoring();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'opex.fields.costCenter' })).toHaveFocus());
+    expect(fieldLabel('opex.fields.account')).toHaveAttribute('data-missing');
+  });
+
   it('keeps and closes a complete line on Create, back where the creation started', async () => {
     await startNewLine();
     await createMonitoring();
