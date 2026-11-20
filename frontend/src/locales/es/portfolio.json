@@ -152,6 +152,7 @@
     "sidebarTitle": "Propiedades",
     "openProperties": "Abrir propiedades",
     "closeProperties": "Cerrar propiedades",
+    "resizeProperties": "Cambiar el ancho de las propiedades",
     "contributor": {
       "titleFallback": "Colaborador",
       "chart": {

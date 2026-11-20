@@ -17,6 +17,7 @@ import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import EditableTitle from '../../../components/workspace/EditableTitle';
 import { followCreationFields, useCreationFieldFocus } from '../../../components/workspace/creation/creationFieldFocus';
 import RecordHistoryButton from '../../../components/history/RecordHistoryButton';
+import PanelResizeHandle, { usePropertiesPanelWidth } from '../../../components/workspace/PanelResizeHandle';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
 import WorkspaceTabs, { type WorkspaceTab } from './WorkspaceTabs';
 
@@ -106,6 +107,13 @@ const ACTIONS_BOTTOM = 41;
 
 /** The width of the "Properties" handle on the drawer's left edge. */
 const DRAWER_HANDLE_WIDTH = 26;
+
+/** The panel's width sits beside its open state: `kanap.budget.drawerOpen` gives `kanap.budget.drawerWidth`. */
+function drawerWidthKey(drawerStorageKey: string) {
+  return drawerStorageKey.endsWith('.drawerOpen')
+    ? `${drawerStorageKey.slice(0, -'.drawerOpen'.length)}.drawerWidth`
+    : `${drawerStorageKey}.width`;
+}
 
 function getStoredDrawerState(storageKey: string) {
   if (typeof window === 'undefined') return true;
@@ -246,6 +254,9 @@ export default function PortfolioDetailWorkspaceShell({
   // hide them with no visible way back.
   const effectiveDrawerOpen = forceDrawerOpen || drawerOpen || isMobile;
   const hasProperties = properties != null;
+  const bodyRef = React.useRef<HTMLDivElement>(null);
+  const showsDrawerEdge = hasProperties && effectiveDrawerOpen && !isMobile;
+  const panel = usePropertiesPanelWidth(drawerWidthKey(drawerStorageKey), () => bodyRef.current, showsDrawerEdge);
   // The drawer and its tab rise beside the tab row. Without a tab row (a single tab) there is
   // nothing to sit beside: rising would cover the title row and its actions, so they start at
   // the content top.
@@ -254,8 +265,8 @@ export default function PortfolioDetailWorkspaceShell({
   const tabLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.tabTop) : 0;
   // The open drawer and its handle rise beside the tab row: the row keeps their width free
   // (less the title block's own padding, plus a small gap) and scrolls when it still does not fit.
-  const tabRowDrawerReserve = hasProperties && effectiveDrawerOpen && !isMobile
-    ? taskDetailTokens.drawer.panelWidth + DRAWER_HANDLE_WIDTH - parseInt(taskDetailTokens.titleBlock.px, 10) + 8
+  const tabRowDrawerReserve = showsDrawerEdge
+    ? panel.width + DRAWER_HANDLE_WIDTH - parseInt(taskDetailTokens.titleBlock.px, 10) + 8
     : 0;
   const rootRef = React.useRef<HTMLDivElement>(null);
   useCreationFieldFocus(rootRef, `${isCreate ? 'new' : 'record'}:${activeTab}`);
@@ -533,7 +544,7 @@ export default function PortfolioDetailWorkspaceShell({
           ) : null}
 
           {hasTabRow && (
-            <Box data-testid="workspace-tab-row" sx={{ minWidth: 0, mr: `${tabRowDrawerReserve}px` }}>
+            <Box data-testid="workspace-tab-row" sx={{ minWidth: 0 }} style={{ marginRight: `${tabRowDrawerReserve}px` }}>
               <WorkspaceTabs tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />
             </Box>
           )}
@@ -545,6 +556,7 @@ export default function PortfolioDetailWorkspaceShell({
           natural height and the app scroller scrolls the whole page instead of squeezing the
           content between the header and the panel. */}
       <Box
+        ref={bodyRef}
         sx={{
           flex: isMobile ? '1 0 auto' : 1,
           display: 'flex',
@@ -630,6 +642,19 @@ export default function PortfolioDetailWorkspaceShell({
                 <span>{t('workspace.sidebarTitle')}</span>
               </Box>
             </Box>
+            {/* The open panel's left edge widens it. It sits in this anchor, out of the panel a
+                record being created dims, and under the tab, which keeps its clicks. */}
+            {showsDrawerEdge && (
+              <PanelResizeHandle
+                ariaLabel={t('workspace.resizeProperties')}
+                width={panel.width}
+                min={panel.min}
+                max={panel.max}
+                onResize={panel.setWidth}
+                onReset={panel.reset}
+                sx={{ left: 'auto', right: -3, top: -drawerLift }}
+              />
+            )}
           </Box>
         )}
 
@@ -637,8 +662,9 @@ export default function PortfolioDetailWorkspaceShell({
           <Box
             component="aside"
             data-creation-panel="properties"
+            // Inline: a drag gives a new width on each frame, which must not each make a style rule.
+            style={{ width: isMobile ? '100%' : panel.width }}
             sx={(theme) => ({
-              width: isMobile ? '100%' : taskDetailTokens.drawer.panelWidth,
               mt: isMobile ? 0 : `${-drawerLift}px`,
               height: isMobile ? 'auto' : `calc(100% + ${drawerLift}px)`,
               maxHeight: isMobile ? '60vh' : undefined,

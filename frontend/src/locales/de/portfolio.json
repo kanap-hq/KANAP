@@ -152,6 +152,7 @@
     "sidebarTitle": "Eigenschaften",
     "openProperties": "Eigenschaften öffnen",
     "closeProperties": "Eigenschaften schließen",
+    "resizeProperties": "Breite der Eigenschaften ändern",
     "contributor": {
       "titleFallback": "Mitwirkender",
       "chart": {

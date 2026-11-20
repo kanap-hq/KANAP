@@ -152,6 +152,7 @@
     "sidebarTitle": "Properties",
     "openProperties": "Open properties",
     "closeProperties": "Close properties",
+    "resizeProperties": "Resize properties",
     "contributor": {
       "titleFallback": "Contributor",
       "chart": {
