@@ -578,7 +578,7 @@ export class TechnologyLinksCsvService {
       const written = await this.links.addAssetLink(row.technologyId, row.subjectId, body, opts, provenance, write);
       if (row.markOperatingSystem && written.link_id) {
         // Not requested: the service marks the link when the server has no mark, never deletes one.
-        await this.operatingSystems.onAssetLinkAdded(ctx.manager, ctx.tenantId, row.subjectId, written.link_id, provenance.source, opts.userId, false);
+        await this.operatingSystems.onAssetLinkAdded(ctx.manager, ctx.tenantId, row.subjectId, written.link_id, provenance.source, opts.userId, false, ctx.audit);
       }
     }
   }

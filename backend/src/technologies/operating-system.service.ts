@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { clustersWithMembers, osClusterWithMembersRefusal } from '../assets/asset-rules';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { linkProvenance, provenanceParams, type LinkSource } from '../common/link-provenance';
@@ -295,6 +295,8 @@ export class OperatingSystemService {
    * Server 2016 then 2019 leaves 2019 only), unless it is the target link itself. Netbox, the
    * CSV, the assistant and the screen all write through here, so an upgrade never piles up
    * old versions on the server.
+   *
+   * `audit`: the source of the link's history rows (Kad's card); without it, the person's.
    */
   async setOperatingSystem(
     mg: EntityManager,
@@ -303,6 +305,7 @@ export class OperatingSystemService {
     resolved: ResolvedOperatingSystem | null,
     source: LinkSource,
     userId?: string | null,
+    audit?: AuditSourceOptions,
   ): Promise<{ ok: true; link_id: string | null; changed: boolean }> {
     const { id, is_cluster } = await this.lockAsset(mg, tenantId, assetId);
     // A cluster with no declared member keeps its operating system; one with members has none.
@@ -320,7 +323,7 @@ export class OperatingSystemService {
 
     if (!resolved) {
       if (!marked) return { ok: true, link_id: null, changed: false };
-      await this.deleteLink(mg, tenantId, marked, userId);
+      await this.deleteLink(mg, tenantId, marked, userId, audit);
       return { ok: true, link_id: null, changed: true };
     }
 
@@ -353,10 +356,10 @@ export class OperatingSystemService {
       );
     }
     const target = same ?? blank;
-    if (marked && marked.id !== target?.id) await this.deleteLink(mg, tenantId, marked, userId);
+    if (marked && marked.id !== target?.id) await this.deleteLink(mg, tenantId, marked, userId, audit);
 
     if (target) {
-      await this.markLink(mg, tenantId, target, versionId, provenance, userId);
+      await this.markLink(mg, tenantId, target, versionId, provenance, userId, audit);
       if (target.technology_version_id !== versionId) {
         await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: resolved.technology_id, products: [] });
       }
@@ -377,6 +380,7 @@ export class OperatingSystemService {
       table: 'asset_technologies', recordId: resolved.technology_id, action: 'create', before: null,
       after: { id: inserted.id, asset_id: id, technology_version_id: versionId, is_operating_system: true, source: provenance.source },
       userId: userId ?? null,
+      ...auditSource(audit),
     }, { manager: mg });
     await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: resolved.technology_id, products: [] });
     return { ok: true, link_id: inserted.id, changed: true };
@@ -395,9 +399,10 @@ export class OperatingSystemService {
     source: LinkSource,
     userId?: string | null,
     requested?: boolean,
+    audit?: AuditSourceOptions,
   ): Promise<{ ok: true; link_id: string | null; changed: boolean }> {
-    if (requested) return this.markLinkById(mg, tenantId, linkId, source, userId);
-    return this.maybeMarkAddedLink(mg, tenantId, assetId, linkId, userId);
+    if (requested) return this.markLinkById(mg, tenantId, linkId, source, userId, audit);
+    return this.maybeMarkAddedLink(mg, tenantId, assetId, linkId, userId, audit);
   }
 
   /**
@@ -451,6 +456,7 @@ export class OperatingSystemService {
     linkId: string,
     source: LinkSource,
     userId?: string | null,
+    audit?: AuditSourceOptions,
   ): Promise<{ ok: true; link_id: string | null; changed: boolean }> {
     const id = String(linkId || '').trim().toLowerCase();
     if (!UUID_RE.test(id)) throw new NotFoundException('Link not found');
@@ -462,7 +468,7 @@ export class OperatingSystemService {
     return this.setOperatingSystem(
       mg, tenantId, row.asset_id,
       { technology_id: row.technology_id, technology_version_id: row.technology_version_id },
-      source, userId,
+      source, userId, audit,
     );
   }
 
@@ -707,6 +713,7 @@ export class OperatingSystemService {
     assetId: string,
     linkId: string,
     userId?: string | null,
+    audit?: AuditSourceOptions,
   ): Promise<{ ok: true; link_id: string | null; changed: boolean }> {
     const id = String(linkId || '').trim().toLowerCase();
     if (!UUID_RE.test(id)) return { ok: true, link_id: null, changed: false };
@@ -725,7 +732,7 @@ export class OperatingSystemService {
       [tenantId, lockedId, id],
     );
     if (!row || row.family !== 'operating_system') return { ok: true, link_id: id, changed: false };
-    await this.writeMark(mg, tenantId, row, true, userId);
+    await this.writeMark(mg, tenantId, row, true, userId, audit);
     return { ok: true, link_id: row.id, changed: true };
   }
 
@@ -735,6 +742,7 @@ export class OperatingSystemService {
     row: LinkRow,
     marked: boolean,
     userId?: string | null,
+    audit?: AuditSourceOptions,
   ) {
     await mg.query(
       `UPDATE asset_technologies SET is_operating_system = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2`,
@@ -745,6 +753,7 @@ export class OperatingSystemService {
       before: { id: row.id, asset_id: row.asset_id, is_operating_system: !marked },
       after: { id: row.id, asset_id: row.asset_id, is_operating_system: marked },
       userId: userId ?? null,
+      ...auditSource(audit),
     }, { manager: mg });
   }
 
@@ -755,6 +764,7 @@ export class OperatingSystemService {
     versionId: string | null,
     provenance: ReturnType<typeof linkProvenance>,
     userId?: string | null,
+    audit?: AuditSourceOptions,
   ) {
     await mg.query(
       `UPDATE asset_technologies
@@ -768,10 +778,11 @@ export class OperatingSystemService {
       before: { id: row.id, asset_id: row.asset_id, technology_version_id: row.technology_version_id, source: row.source, is_operating_system: false },
       after: { id: row.id, asset_id: row.asset_id, technology_version_id: versionId, source: provenance.source, is_operating_system: true },
       userId: userId ?? null,
+      ...auditSource(audit),
     }, { manager: mg });
   }
 
-  private async deleteLink(mg: EntityManager, tenantId: string, row: LinkRow, userId?: string | null) {
+  private async deleteLink(mg: EntityManager, tenantId: string, row: LinkRow, userId?: string | null, audit?: AuditSourceOptions) {
     const removed: Array<Record<string, unknown>> = await mg.query(
       `WITH d AS (
          DELETE FROM asset_technologies WHERE tenant_id = $1 AND id = $2 RETURNING *
@@ -781,11 +792,16 @@ export class OperatingSystemService {
     if (removed[0]) {
       await this.audit.log({
         table: 'asset_technologies', recordId: row.technology_id, action: 'delete',
-        before: removed[0], after: null, userId: userId ?? null,
+        before: removed[0], after: null, userId: userId ?? null, ...auditSource(audit),
       }, { manager: mg });
       await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: row.technology_id, products: [] });
     }
   }
+}
+
+/** The source of a link's history row: Kad's card, or nothing (the person's, `user`). */
+function auditSource(audit?: AuditSourceOptions): AuditSourceOptions {
+  return audit?.source ? { source: audit.source, sourceRef: audit.sourceRef ?? null } : {};
 }
 
 type LinkRow = {

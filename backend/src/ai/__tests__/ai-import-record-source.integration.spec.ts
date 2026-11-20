@@ -214,11 +214,16 @@ async function testTechnologyLinks(h: Harness, runner: QueryRunner, s: Seed) {
     `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, 'srv-lien-k5', 'virtual_machine', 'prod'), ($1, 'srv-lien-e5', 'virtual_machine', 'prod')`,
     [s.tenantId],
   );
-  await runner.query(`INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 5501, 'Moteur K5', 'other')`, [s.tenantId]);
+  // An operating system on a server that has none: the import marks it (pass D of lot I5).
+  await runner.query(
+    `INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 5501, 'Moteur K5', 'other'), ($1, 5502, 'Système K5', 'operating_system')`,
+    [s.tenantId],
+  );
   const columns = [name('asset_name', 1), name('technology_name', 2)];
-  const kad = await byKad(h, runner, s, 'technology_asset_links', 'Liens.csv', ['Serveur;Technologie', 'srv-lien-k5;Moteur K5'], columns);
+  const kad = await byKad(h, runner, s, 'technology_asset_links', 'Liens.csv', ['Serveur;Technologie', 'srv-lien-k5;Moteur K5', 'srv-lien-k5;Système K5'], columns);
   assertKad('technology links', kad.rows, kad.cardId, ['asset_technologies']);
-  const screen = await byScreen(h, runner, s, 'technology_asset_links', 'Liens.csv', ['Serveur;Technologie', 'srv-lien-e5;Moteur K5'], columns);
+  assert.ok(kad.rows.some((row) => row.table_name === 'asset_technologies' && row.after_json?.is_operating_system === true), 'the operating system is marked');
+  const screen = await byScreen(h, runner, s, 'technology_asset_links', 'Liens.csv', ['Serveur;Technologie', 'srv-lien-e5;Moteur K5', 'srv-lien-e5;Système K5'], columns);
   assertScreen('technology links', screen.rows, ['asset_technologies']);
   console.log('  a server\'s technology link: OK');
 }
@@ -341,6 +346,66 @@ async function testServers(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  servers: one row per server created or changed, read by the history: OK');
 }
 
+/** The rows of the server's operating-system links and of the clusters' memberships among `rows`. */
+const linkRows = (rows: AuditRow[]) => rows.filter((row) => row.table_name === 'asset_technologies' || row.table_name === 'asset_cluster_members');
+
+/**
+ * A server's operating system and clusters (pass D of lot I5): the rows of its operating-system link
+ * (created, marked with a version, deleted when another one takes its place) and of the cluster's
+ * memberships carry Kad's card through Kad, the person on the screen; Kad's direct write of a
+ * server's operating system carries its card too.
+ */
+async function testServerOperatingSystemsAndClusters(h: Harness, runner: QueryRunner, s: Seed) {
+  const columns = [name('name', 1), name('kind', 2), name('environment', 3), name('operating_system', 4), name('cluster', 5)];
+  const header = 'Nom;Type;Environnement;Système;Cluster';
+  for (const [via, tag] of [['kad', 'k5'], ['screen', 'e5']] as const) {
+    await runner.query(
+      `INSERT INTO assets (tenant_id, name, kind, environment, is_cluster) VALUES ($1, $2, 'virtual_machine', 'prod', true), ($1, $3, 'virtual_machine', 'prod', false)`,
+      [s.tenantId, `clu-os-${tag}`, `srv-os-${tag}`],
+    );
+    // A first system and a cluster, then another system (the first link deleted), then its version (the link marked anew).
+    const steps = [`Zorglux ${tag};clu-os-${tag}`, `Quarkos ${tag};clu-os-${tag}`, `Quarkos ${tag} 2;clu-os-${tag}`];
+    const actions: string[][] = [];
+    for (const step of steps) {
+      const file = [header, `srv-os-${tag};virtual_machine;prod;${step}`];
+      const run = via === 'kad'
+        ? await byKad(h, runner, s, 'assets', 'Serveurs.csv', file, columns)
+        : { cardId: null, ...(await byScreen(h, runner, s, 'assets', 'Serveurs.csv', file, columns)) };
+      const links = linkRows(run.rows);
+      actions.push(links.map((row) => `${row.table_name} ${row.action}`));
+      for (const row of links) {
+        const expected = via === 'kad' ? ['ai_chat', run.cardId] : ['user', null];
+        assert.deepEqual([row.source, row.source_ref], expected, `${via}, ${step}: ${row.table_name} ${row.action} written as ${row.source} ${row.source_ref}`);
+      }
+    }
+    assert.deepEqual(actions, [
+      ['asset_technologies create', 'asset_cluster_members update'],
+      ['asset_technologies delete', 'asset_technologies create'],
+      ['asset_technologies update'],
+    ], `${via}: the rows of the operating system and of the cluster`);
+  }
+
+  // Kad's direct write of a server's operating system: its card on the link's rows. (Its card reads a
+  // stored operating system as none, so a server that has one is not the case here.)
+  const [server] = await runner.query(
+    `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, 'srv-os-direct', 'virtual_machine', 'prod') RETURNING id::text AS id`,
+    [s.tenantId],
+  );
+  {
+    const system = 'Zorglux direct';
+    const before = await mark(runner, s);
+    const card = await h.previews.createPreview(ctx(runner, s), 'update_business_record', { entity_type: 'assets', ref: server.id, fields: { operating_system: system } });
+    const done = await h.previews.executePreview(ctx(runner, s), card.preview_id);
+    assert.equal(done.status, 'executed', done.error_message ?? '');
+    const links = linkRows(await written(runner, s, before));
+    assert.ok(links.length > 0, `${system}: the link is written`);
+    for (const row of links) {
+      assert.deepEqual([row.source, row.source_ref], ['ai_chat', card.preview_id], `${system}: ${row.table_name} ${row.action} written as ${row.source} ${row.source_ref}`);
+    }
+  }
+  console.log('  a server\'s operating system and clusters, imported and written by Kad: Kad\'s card; on the screen, the person: OK');
+}
+
 async function testTaskOfAContract(h: Harness, runner: QueryRunner, s: Seed) {
   const [company] = await runner.query(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Société T5', 'FR', 'Lyon') RETURNING id`, [s.tenantId]);
   const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Fournisseur X5') RETURNING id`, [s.tenantId]);
@@ -370,7 +435,7 @@ async function run() {
       const s = await seed(runner);
       const tests = [
         testApplications, testSuppliers, testContracts, testCostCenters, testAccounts, testTechnologyLinks,
-        testBudgetFile, testContacts, testServers, testTaskOfAContract,
+        testBudgetFile, testContacts, testServers, testServerOperatingSystemsAndClusters, testTaskOfAContract,
       ];
       // Each family under its own savepoint: one that fails is reported, and the next ones still run.
       for (const test of tests) {
