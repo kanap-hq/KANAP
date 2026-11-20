@@ -70,6 +70,8 @@ La página de Registro de auditoría conserva el historial de los cambios de dat
 
 **Exportaciones** (tabla **Exportación**): cada archivo que Kadratis genera a partir de sus datos: exportaciones de listas e informes en CSV o Excel, documentos e informes PDF. La fila indica qué se exportó y quién lo hizo. Sus detalles dan el formato, los parámetros de la exportación (filtros, búsqueda, orden, año, etc.) y, para un archivo de filas, el número de filas escritas. La exportación del propio registro de auditoría también se registra.
 
+**Importaciones** (tabla **Importación**): cada archivo cargado mediante una importación: las listas, el archivo de presupuesto, los usuarios y el acceso a los datos. La fila indica qué lista se importó y quién lo hizo: la persona, o Kad para esa persona cuando la importación se aprobó en el chat de IA. Sus detalles dan el nombre del archivo y el número de filas creadas, actualizadas y sin cambios. Comprobar un archivo sin cargarlo no escribe ninguna fila.
+
 Las filas de acceso, de sesión y de exportación guardan además la **dirección IP** desde la que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en las filas **Dirección IP** y **Navegador** de su tabla. Detrás de un proxy inverso, es la dirección IP de la propia persona, siempre que el proxy la transmita (on-premise: consulte el [ejemplo de proxy inverso](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Las contraseñas, los enlaces de acceso y los tokens nunca se escriben en el registro. Cuando alguien intenta iniciar sesión con una dirección de correo electrónico que no tiene cuenta, la fila muestra **Cuenta desconocida** y no conserva la dirección escrita.
