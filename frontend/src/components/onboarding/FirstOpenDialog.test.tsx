@@ -11,6 +11,7 @@ import { createFakeOnboardingServer } from '../../test/fakeOnboardingServer';
 import FirstOpenDialog from './FirstOpenDialog';
 import OnboardingStatusLine from './OnboardingStatusLine';
 import AboutOnboardingLine from './AboutOnboardingLine';
+import AboutDialog from '../about/AboutDialog';
 import { PRODUCT_NAME } from '../../config/product';
 
 const env = vi.hoisted(() => ({
@@ -36,6 +37,11 @@ vi.mock('../../auth/AuthContext', () => ({
     refreshMe: vi.fn().mockResolvedValue(undefined),
   }),
 }));
+// The About window around the path line alone: the rest of its content plays no part here.
+vi.mock('../about/AboutContent', async () => {
+  const { default: Line } = await import('./AboutOnboardingLine');
+  return { default: (props: React.ComponentProps<typeof Line>) => <Line {...props} /> };
+});
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ isPlatformHost: false }) }));
 vi.mock('../../config/FeaturesContext', () => ({
   useFeatures: () => ({ config: { deploymentMode: env.deploymentMode, features: { sampleData: true } } }),
@@ -320,6 +326,38 @@ describe('AboutOnboardingLine', () => {
     renderWith(<AboutOnboardingLine />);
     expect(await screen.findByText('Path: Portfolio · example')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
+  });
+
+  it('closes the About window when the example asks to erase the workspace first, and keeps it closed after a cancel', async () => {
+    env.administrator = true;
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data', holdsData: true });
+    function AboutWindow() {
+      const [open, setOpen] = React.useState(true);
+      return <AboutDialog open={open} onClose={() => setOpen(false)} />;
+    }
+    renderWith(<AboutWindow />);
+    // The dialog on top hides the others from the accessibility tree: the About window is open
+    // when its title is in the page and its modal is not hidden.
+    const aboutOpen = () => {
+      const root = document.getElementById('about-dialog-title')?.closest('.MuiModal-root') as HTMLElement | null;
+      return !!root && !root.classList.contains('MuiModal-hidden');
+    };
+    expect(aboutOpen()).toBe(true);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'The IT budget' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Explore with the complete example' }));
+    const confirm = (await screen.findByText('Erase everything and start over')).closest('[role="dialog"]') as HTMLElement;
+    await waitFor(() => expect(aboutOpen()).toBe(false));
+
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByRole('dialog', { name: 'How do you want to start?' })).toBeInTheDocument();
+    await waitFor(() => expect(aboutOpen()).toBe(false));
+
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'How do you want to start?' })).getByRole('button', { name: 'Close dialog' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByText(/Path:/)).not.toBeInTheDocument();
+    expect(choiceCalls()).toEqual([{ mode: 'example' }]);
   });
 
   it('calls the closing callback when a path is chosen, and not when the dialog is closed without a choice', async () => {
