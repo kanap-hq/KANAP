@@ -21,6 +21,7 @@ import type { CsvCallerAccess, CsvImportParams } from '../common/csv';
 import { hasLevel } from '../common/relations/relations-access';
 import { findRecordByName, noteNameMatch, noteRefusedProposal, proposalFor, takeProposal, undoneMatch, type MatchHow } from '../common/name-matching';
 import { budgetLineReference } from '../spend/budget-nature';
+import { numberedReference } from '../common/csv-sheet/master-data';
 
 /** The label of a contract outside the person's access, as the tasks list writes it (`ops:contracts.outsideYourAccess`). */
 export const CONTRACT_OUTSIDE_ACCESS: Record<CsvLanguage, string> = {
@@ -724,6 +725,8 @@ export const taskCsvConfig: CsvEntityConfig = {
   displayName: 'Tasks',
   // For linked tasks: title + related_object_id. For standalone: title alone (matched via id).
   upsertKey: ['title'],
+  // How the check names a record a row updates (Q1 of 26.11.9).
+  recordLabel: (entity) => ({ ref: numberedReference('T', entity.item_number), name: String(entity.title ?? '') }),
   // A task may have more than four viewers or owners: the export writes them all.
   numberedLists: PEOPLE_LISTS.map(({ prefix, key }) => ({ base: prefix, values: (entity: any, context: CsvExportContext) => peopleEmails(entity[key], context) })),
   fields: [

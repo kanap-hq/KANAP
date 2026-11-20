@@ -211,12 +211,10 @@ export function withStateLabels(
 }
 
 /**
- * The author as the History tab shows them. An import is the source only, with no name, as a
- * system change already is. A person is named, and a person without a name is not given by their
- * email.
+ * The author as the History tab shows them. A person is named, an import by the person who ran
+ * it, and a person without a name is not given by their email.
  */
 function withoutActorEmail(actor: RecordHistoryActor): RecordHistoryActor {
-  if (actor.kind === 'import') return { kind: 'import', name: null };
   return actor.name ? { ...actor, name: personLabel(actor.name) as string } : actor;
 }
 

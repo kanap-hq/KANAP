@@ -7,6 +7,7 @@ import { richTextCell } from '../common/csv/rich-text-cell';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
 import { settleWithSlotBodies } from './portfolio-csv-document-slots';
+import { numberedReference } from '../common/csv-sheet/master-data';
 
 /** The texts of a request that live in bound documents, with the slot of each. */
 const DOCUMENT_SLOTS = { purpose: 'purpose', risks: 'risks_mitigations' } as const;
@@ -50,6 +51,8 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
   tableName: 'portfolio_requests',
   displayName: 'Portfolio Requests',
   upsertKey: ['name'],
+  // How the check names a record a row updates (Q1 of 26.11.9).
+  recordLabel: (entity) => ({ ref: numberedReference('REQ', entity.item_number), name: String(entity.name ?? '') }),
   fields: [
     // === IDENTITY ===
     {

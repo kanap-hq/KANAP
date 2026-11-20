@@ -26,6 +26,8 @@ import {
   readMasterDataFile,
   rowProblemErrors,
   storedRecordValues,
+  listedUpdates,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import {
   AccountAuditRow,
@@ -1000,6 +1002,7 @@ export class AccountsService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    const updates: ImportUpdate[] = [];
     // The stored values the rows clear with `-` (a `-` on an empty value is not counted).
     let cleared = 0;
     const toWrite: AccountUpsertDto[] = [];
@@ -1011,11 +1014,14 @@ export class AccountsService {
       else if (importRowUnchanged(existing, item)) {
         unchanged += 1;
         continue;
-      } else updated += 1;
+      } else {
+        updated += 1;
+        updates.push({ row: rowOf.get(fileItem)!.line, ref: null, name: `${existing.account_number} ${existing.account_name}` });
+      }
       toWrite.push(item);
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total: read.rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...listedUpdates(updates), ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
     // Commit. The consolidation accounts the file refers to are read once, the audit lines of
     // the rows written in one statement at the end.
@@ -1046,6 +1052,6 @@ export class AccountsService {
     if (chartId && targetCoaId === chartId) {
       await resyncFromChart(mg, chartId, { userId, audit: opts?.audit });
     }
-    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total: read.rows.length, inserted, updated, unchanged, cleared, processed, errors: [], warnings, ...listedUpdates(updates), ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 }

@@ -529,7 +529,7 @@ Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der A
 
 Einige Felder werden berechnet und können nicht importiert werden:
 - **Anbieter**: Automatisch vom Standort des Assets abgeleitet und aktualisiert, wenn sich der Standort ändert
-- **Hosting**: Ein Server wird so gehostet wie sein Standort, vor Ort oder in einer Cloud. **Cloud** ist kein Asset-Typ: Wählen Sie für eine Cloud-Instanz einen Standort, dessen Hosting-Typ eine Cloud ist. Wenn [Kad](ai-assistant.md#eine-tabelle-importieren) Server importiert, nennt seine Vorschau das Hosting jedes Standorts der Datei, zum Beispiel `LOC-4 Rechenzentrum Paris (On-Premise)`
+- **Hosting**: Ein Server wird so gehostet wie sein Standort, vor Ort oder in einer Cloud. **Cloud** ist kein Asset-Typ: Wählen Sie für eine Cloud-Instanz einen Standort, dessen Hosting-Typ eine Cloud ist. Wenn Ihre Datei **Cloud** als Typ angibt, fragt Kad, welchen Typ diese Server haben, und die Umwandlung erscheint dann unter den Zuordnungen seiner Vorschau, mit **Rückgängig**. Wenn [Kad](ai-assistant.md#eine-tabelle-importieren) Server importiert, nennt seine Vorschau das Hosting jedes Standorts der Datei, zum Beispiel `LOC-4 Rechenzentrum Paris (On-Premise)`
 - **FQDN**: Aus Hostname + Domäne berechnet
 - **Schwachstellen**: `vulnerabilities_to_review` (die noch zu prüfenden Schwachstellen) und `severe_vulnerabilities` (die kritischen oder hohen davon), gezählt wie in der Spalte der Liste. Nur Export: Der Import ignoriert sie. Leer für ein außer Betrieb genommenes Asset. Fehlen in der Datei, wenn Schwachstellen nicht verfolgt werden
 

@@ -8,13 +8,21 @@ import { useOnboarding, useOnboardingActions, useRunningTrial } from './useOnboa
  * The workspace's path in About: angle and mode, and "Change" for whoever may change them
  * (anyone while one is missing, an administrator afterwards). Shown during the trial, and later
  * once a path was chosen.
+ *
+ * The About window closes (`onNavigate`) as soon as a path is picked, even when a confirmation
+ * follows: the path question lives in this line, so `onPathQuestion` tells the window to keep
+ * its content mounted, out of sight, until the question is closed.
  */
-export default function AboutOnboardingLine({ onNavigate }: { onNavigate?: () => void }) {
+export default function AboutOnboardingLine({ onNavigate, onPathQuestion }: {
+  onNavigate?: () => void;
+  onPathQuestion?: (open: boolean) => void;
+}) {
   const { t } = useTranslation('common');
   const runningTrial = useRunningTrial();
   const { state, apply } = useOnboarding();
   const { undismiss } = useOnboardingActions();
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpenState] = React.useState(false);
+  const setOpen = (next: boolean) => { setOpenState(next); onPathQuestion?.(next); };
   if (!state) return null;
   const answered = state.angle !== null || state.mode !== null;
   if (!answered && !runningTrial) return null;
@@ -50,7 +58,8 @@ export default function AboutOnboardingLine({ onNavigate }: { onNavigate?: () =>
         open={open}
         state={state}
         onClose={() => setOpen(false)}
-        onChosen={(next) => { apply(next); setOpen(false); onNavigate?.(); }}
+        onPicked={onNavigate}
+        onChosen={(next) => { apply(next); setOpen(false); }}
       />
     </Typography>
   );

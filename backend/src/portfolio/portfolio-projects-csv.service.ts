@@ -35,18 +35,11 @@ export class PortfolioProjectsCsvService {
   private buildCsvConfig(): CsvEntityConfig {
     const baseConfig = portfolioProjectCsvConfig;
 
+    // The purpose is a document, written after the record (`afterCommit`). It stays on the record as
+    // the property the file gives (no column: the save leaves it out), so the record's history row
+    // holds the stored purpose and the file's, and tells a change only when they differ (Q1 of 26.11.9).
     return {
       ...baseConfig,
-      beforeCommit: async (entities: any[], context) => {
-        await baseConfig.beforeCommit?.(entities, context);
-
-        for (const entity of entities) {
-          if (Object.prototype.hasOwnProperty.call(entity, 'purpose')) {
-            (entity as any).__csv_managed_purpose = entity.purpose ?? null;
-            delete entity.purpose;
-          }
-        }
-      },
       afterCommit: async (entities: any[], context, written) => {
         const rowOf = new Map((written ?? []).map(({ row, entity }) => [entity, row]));
         for (const entity of entities) {
@@ -59,18 +52,19 @@ export class PortfolioProjectsCsvService {
 
           // A project with no purpose document yet gets it as its screen makes it, first.
           const row = rowOf.get(entity);
-          let writePurpose = Object.prototype.hasOwnProperty.call(entity, '__csv_managed_purpose');
+          const purpose = entity.purpose ?? null;
+          let writePurpose = Object.prototype.hasOwnProperty.call(entity, 'purpose');
           if (writePurpose && row && !row.isInsert) {
             writePurpose = await repairBeforeSlotWrite(
               this.integratedDocs, 'projects', String(entity.id), 'purpose',
-              (entity as any).__csv_managed_purpose, row.existingEntity?.purpose, context,
+              purpose, row.existingEntity?.purpose, context,
             );
           }
 
           await this.integratedDocs.provisionForProject(
             source,
             {
-              purpose: (entity as any).__csv_managed_purpose ?? null,
+              purpose,
             },
             context.userId ?? null,
             { manager: context.manager, audit: context.audit },
@@ -81,7 +75,7 @@ export class PortfolioProjectsCsvService {
               'projects',
               source,
               'purpose',
-              (entity as any).__csv_managed_purpose ?? null,
+              purpose,
               context.userId ?? null,
               { manager: context.manager, logSourceActivity: false, audit: context.audit },
             );
@@ -93,8 +87,6 @@ export class PortfolioProjectsCsvService {
             context.userId ?? null,
             { manager: context.manager, audit: context.audit },
           );
-
-          delete (entity as any).__csv_managed_purpose;
         }
 
         await baseConfig.afterCommit?.(entities, context);

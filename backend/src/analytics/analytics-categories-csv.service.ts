@@ -23,6 +23,8 @@ import {
   rowError,
   rowProblemErrors,
   textCellError,
+  listedUpdates,
+  type ImportUpdate,
 } from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { ANALYTICS_NAME_MAX, AnalyticsContext, normalizeAnalyticsDescription, normalizeAnalyticsName } from './analytics-context';
@@ -300,13 +302,17 @@ export class AnalyticsCategoriesCsvService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    const updates: ImportUpdate[] = [];
     const toWrite: ParsedRow[] = [];
     for (const row of parsedRows) {
       if (!row.existing) inserted += 1;
       else if (categoryValuesEqual(row.existing, row.values)) {
         unchanged += 1;
         continue;
-      } else updated += 1;
+      } else {
+        updated += 1;
+        updates.push({ row: row.line, ref: null, name: row.existing.name });
+      }
       toWrite.push(row);
     }
     if (!dryRun) {
@@ -326,7 +332,7 @@ export class AnalyticsCategoriesCsvService {
         await this.categories.persist(ctx, row.existing, row.values, { name: row.axisName });
       }
     }
-    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun, total: rows.length, inserted, updated, unchanged, cleared, errors: [], warnings, ...listedUpdates(updates), ignoredColumns: read.ignoredColumns, notices: read.notices };
   }
 
   private parseFile(

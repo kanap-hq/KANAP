@@ -105,12 +105,14 @@ function Option({ icon: Icon, label, note, selected, disabled, onClick }: {
  * example in a workspace that holds data asks to erase it first, the workspace name typed.
  * A choice that starts an erasure sends the person to the home page: the screen they are on may
  * show an object that no longer exists. A choice that erases nothing leaves them where they are.
+ * `onPicked` hears the click that sends a choice, before any confirmation it may ask.
  */
-export default function OnboardingChoiceDialog({ open, state, onClose, onChosen }: {
+export default function OnboardingChoiceDialog({ open, state, onClose, onChosen, onPicked }: {
   open: boolean;
   state: OnboardingState;
   onClose: () => void;
   onChosen: (state: OnboardingState) => void;
+  onPicked?: () => void;
 }) {
   const { t } = useTranslation(['common', 'admin', 'errors']);
   const { claims } = useAuth();
@@ -157,6 +159,7 @@ export default function OnboardingChoiceDialog({ open, state, onClose, onChosen 
     if (nextAngle && nextAngle !== state.angle) choice.angle = nextAngle;
     if (mode && mode !== state.mode) choice.mode = mode;
     if (!choice.angle && !choice.mode) { onClose(); return; }
+    onPicked?.();
     choose.mutate(choice);
   };
 

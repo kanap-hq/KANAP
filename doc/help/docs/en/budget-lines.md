@@ -639,7 +639,7 @@ The section is absent when the line has no supplier or there is nothing to sugge
 
 ### History
 
-The History tab lists the changes made to the line, the most recent at the top. Each entry shows the date and time, the author (a person, **System**, **Import**, or **Kad for** a person), and each changed field with its value before and after. A change of amount names the year, the column and the values before and after.
+The History tab lists the changes made to the line, the most recent at the top. Each entry shows the date and time, the author (a person, **System**, or **Kad for** a person; an import shows the person who ran it, or **Import** when no person is known), and each changed field with its value before and after. A change of amount names the year, the column and the values before and after.
 
 The changes to the parts of the line appear here too: amounts, dimensions, allocations, links, attachments, contacts, applications, technologies, assets and tasks. Anyone who can open the line can read its history. A record from a module you cannot read appears by its kind only, for example "a contract".
 
