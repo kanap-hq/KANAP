@@ -409,7 +409,7 @@ export default function WorkspaceDashboardPage() {
             <Button
               variant="outlined"
               startIcon={<AccountBalanceWalletIcon />}
-              // The creation screen lets the person switch the line to CAPEX.
+              // The new page opens on OPEX; its Type menu, beside the title, switches the line to CAPEX.
               onClick={() => navigate('/ops/budget/new?nature=opex')}
               size="small"
               sx={quickActionSx}

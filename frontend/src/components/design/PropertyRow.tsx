@@ -3,6 +3,7 @@ import { Box } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import { FieldLabel } from './FieldLabel';
+import { useInvalidControls } from './invalidControls';
 import InfoHint from '../workspace/InfoHint';
 
 type PropertyRowProps = {
@@ -12,6 +13,11 @@ type PropertyRowProps = {
   hint?: string;
   label: React.ReactNode;
   labelSx?: SxProps<Theme>;
+  /**
+   * A check found the field missing (Create on a record being created): its label turns red and its
+   * control says `aria-invalid`. The page drops it once the field holds a value.
+   */
+  missing?: boolean;
   required?: boolean;
   sx?: SxProps<Theme>;
   valueSx?: SxProps<Theme>;
@@ -35,10 +41,13 @@ export function PropertyRow({
   hint,
   label,
   labelSx,
+  missing = false,
   required = false,
   sx,
   valueSx,
 }: PropertyRowProps) {
+  const valueRef = React.useRef<HTMLDivElement | null>(null);
+  useInvalidControls(valueRef, missing);
   return (
     <Box
       // A new record's Tab goes from its title through the required rows (`PortfolioDetailWorkspaceShell`).
@@ -55,17 +64,18 @@ export function PropertyRow({
     >
       {hint ? (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <FieldLabel required={required} sx={labelSx}>
+          <FieldLabel required={required} missing={missing} sx={labelSx}>
             {label}
           </FieldLabel>
           <InfoHint text={hint} />
         </Box>
       ) : (
-        <FieldLabel required={required} sx={labelSx}>
+        <FieldLabel required={required} missing={missing} sx={labelSx}>
           {label}
         </FieldLabel>
       )}
       <Box
+        ref={valueRef}
         sx={mergeSx(
           drawerFieldValueSx,
           // Bordered fields must not stretch across a wide content tab. 480px

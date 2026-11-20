@@ -59,8 +59,8 @@ vi.mock('../../components/history/RecordHistoryTab', () => ({ default: () => nul
 vi.mock('./workspace/BudgetMetadataBar', () => ({ default: () => <span data-testid="metadata" /> }));
 // The pickers: a plain field named by its label, which gives the typed id.
 const pickers = vi.hoisted(() => ({
-  picker: ({ label, value, onChange, disabled }: { label: string; value?: string | null; onChange: (v: string | null, node?: unknown) => void; disabled?: boolean }) => (
-    <input aria-label={label} value={value ?? ''} disabled={disabled} onChange={(event) => onChange(event.target.value || null, null)} />
+  picker: ({ label, value, onChange, disabled, nature }: { label: string; value?: string | null; onChange: (v: string | null, node?: unknown) => void; disabled?: boolean; nature?: string }) => (
+    <input aria-label={label} value={value ?? ''} disabled={disabled} data-nature={nature} onChange={(event) => onChange(event.target.value || null, null)} />
   ),
 }));
 vi.mock('../../components/fields/SupplierSelect', () => ({ default: pickers.picker }));
@@ -103,20 +103,36 @@ type Options = {
   changes?: { fields: number; children: Record<string, number> };
   incomplete?: string[];
   line?: Record<string, unknown>;
+  /** The account the type change check reads on the line (null: none). */
+  checkAccount?: { id: string; fits: boolean } | null;
 };
+
+/** The line's type as the server holds it: the creation and the type change set it. */
+const server = { nature: 'opex' };
 
 function renderPage(entries: string[], options: Options = {}) {
   const changes = options.changes ?? { fields: 0, children: {} };
   const { creation_token: _token, ...detail } = created;
+  server.nature = 'opex';
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/analytics-axes') return { data: { items: [] } } as never;
-    if (url === '/budget-lines/BL-12' || url === `/budget-lines/${ITEM_ID}`) return { data: { ...detail, ...options.line } } as never;
-    if (url === '/budget-lines/resolve/BL-12') return { data: { id: ITEM_ID, nature: 'opex', reference: 'BL-12' } } as never;
+    if (url === '/budget-lines/BL-12' || url === `/budget-lines/${ITEM_ID}`) return { data: { ...detail, ...options.line, nature: server.nature } } as never;
+    if (url === '/budget-lines/resolve/BL-12') return { data: { id: ITEM_ID, nature: server.nature, reference: 'BL-12' } } as never;
     if (url === `/budget-lines/${ITEM_ID}/creation`) return { data: { changes } } as never;
+    if (url === `/spend-items/${ITEM_ID}/change-type/check` || url === `/capex-items/${ITEM_ID}/change-type/check`) {
+      return { data: { id: ITEM_ID, row_version: 3, account: options.checkAccount ?? null } } as never;
+    }
     return { data: {} } as never;
   });
-  mocked.post.mockImplementation(async (url: string) => {
-    if (url === '/budget-lines/creation') return { data: created } as never;
+  mocked.post.mockImplementation(async (url: string, body?: unknown) => {
+    if (url === '/budget-lines/creation') {
+      server.nature = (body as { nature: string }).nature;
+      return { data: { ...created, nature: server.nature } } as never;
+    }
+    if (url === `/spend-items/${ITEM_ID}/change-type` || url === `/capex-items/${ITEM_ID}/change-type`) {
+      server.nature = url.startsWith('/spend-items') ? 'capex' : 'opex';
+      return { data: { id: ITEM_ID, reference: 'BL-12', nature: server.nature } } as never;
+    }
     if (url === `/budget-lines/${ITEM_ID}/creation/complete`) {
       if (options.incomplete) {
         throw { response: { status: 400, data: { code: 'CREATION_INCOMPLETE', message: 'Missing', params: { fields: options.incomplete } } } };
@@ -235,8 +251,75 @@ describe('Budget line creation at the title', () => {
     expect(screen.queryByTestId('creation-preview')).toBeNull();
     expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
-    // The type comes from the new page's address: no change while it is being created.
+    // While it is being created, the type is a menu: no dialog to change it.
+    expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveTextContent('budget.typeOpex');
     expect(screen.queryByRole('button', { name: 'budget.changeType' })).toBeNull();
+  });
+
+  it('creates a CAPEX line when CAPEX is picked before the title', async () => {
+    await startNewLine();
+    const type = screen.getByRole('combobox', { name: 'budget.type' });
+    // Live beside the title, with the line to come dimmed.
+    expect(type.closest('[data-testid="creation-preview"]')).toBeNull();
+    fireEvent.mouseDown(type);
+    fireEvent.click(await screen.findByRole('option', { name: 'budget.typeCapex' }));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveTextContent('budget.typeCapex'));
+    expect(location()).toBe('/ops/budget/new/overview?nature=capex');
+    const title = await screen.findByRole('textbox', { name: TITLE });
+    expect(title).toHaveAttribute('placeholder', 'capex.workspace.newCapexItem');
+    await commitTitle();
+    await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
+    expect(mocked.post).toHaveBeenCalledWith('/budget-lines/creation', {
+      nature: 'capex', product_name: 'Monitoring', currency: 'CHF', effective_start: YEAR_START,
+    });
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveTextContent('budget.typeCapex'));
+    expect(screen.getByRole('textbox', { name: 'opex.fields.account' })).toHaveAttribute('data-nature', 'capex');
+  });
+
+  it('changes the type in place while the line is being created, and offers the accounts of the new type', async () => {
+    await startNewLine();
+    await createMonitoring();
+    expect(screen.getByRole('textbox', { name: 'opex.fields.account' })).toHaveAttribute('data-nature', 'opex');
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'budget.type' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'budget.typeCapex' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}/change-type`, { row_version: 3 }));
+    expect(mocked.get).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}/change-type/check`);
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'opex.fields.account' })).toHaveAttribute('data-nature', 'capex'));
+    expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveTextContent('budget.typeCapex');
+    // Still being created, on the same line, with no dialog.
+    expect(location()).toBe('/ops/budget/BL-12/overview');
+    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(mocked.delete).not.toHaveBeenCalled();
+  });
+
+  it('applies in place a type picked while the title was writing the line', async () => {
+    await startNewLine();
+    let answer: (value: unknown) => void = () => undefined;
+    const createdOpex = { data: created };
+    mocked.post.mockImplementationOnce(async () => new Promise((resolve) => { answer = resolve; }) as never);
+    await commitTitle();
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/budget-lines/creation', expect.objectContaining({ nature: 'opex' })));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'budget.type' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'budget.typeCapex' }));
+    answer(createdOpex);
+    await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(`/spend-items/${ITEM_ID}/change-type`, { row_version: 3 }));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveTextContent('budget.typeCapex'));
+  });
+
+  it('keeps an account of the old type on a type change, marked until another one is picked', async () => {
+    renderPage(['/ops/budget/new/overview?nature=opex'], { line: { paying_company_id: 'company-1', account_id: 'account-opex' }, checkAccount: { id: 'account-opex', fits: false } });
+    await createMonitoring();
+    const account = () => screen.getByRole('textbox', { name: 'opex.fields.account' });
+    expect(account()).not.toHaveAttribute('aria-invalid', 'true');
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'budget.type' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'budget.typeCapex' }));
+    await waitFor(() => expect(account()).toHaveAttribute('data-nature', 'capex'));
+    expect(account()).toHaveValue('account-opex');
+    await waitFor(() => expect(account()).toHaveAttribute('aria-invalid', 'true'));
+    fireEvent.change(account(), { target: { value: 'account-capex' } });
+    await waitFor(() => expect(account()).not.toHaveAttribute('aria-invalid', 'true'));
   });
 
   it('names the missing fields on Create, marks them and stays on the line', async () => {

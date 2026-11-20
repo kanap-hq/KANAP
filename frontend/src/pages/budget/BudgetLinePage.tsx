@@ -45,13 +45,13 @@ import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/finance/ChangeTypeDialog';
 import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
-import { budgetLinePath, openLineAfterTypeChange } from '../../components/finance/changeTypeNavigation';
+import { budgetLinePath, openLineAfterTypeChange, refreshAfterTypeChange } from '../../components/finance/changeTypeNavigation';
 import { invalidateBudgetLists } from '../../components/finance/budgetFile';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import BudgetMetadataBar from './workspace/BudgetMetadataBar';
 import BudgetPropertiesDrawer, { LINE_FIELD_ATTR, RunBuild } from './workspace/BudgetPropertiesDrawer';
 import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
-import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useMissingMarks, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
@@ -214,6 +214,15 @@ function toForm(data: any): BudgetLineForm {
   };
 }
 
+/** The value of a field `POST :id/creation/complete` may name (`paying_company`, `account`, `cost_center`, `dimension:<id>`). */
+function creationFieldValue(form: BudgetLineForm, key: string): unknown {
+  if (key === 'paying_company') return form.paying_company_id;
+  if (key === 'account') return form.account_id;
+  if (key === 'cost_center') return form.cost_center_id;
+  if (key.startsWith('dimension:')) return form.analytics_values[key.slice('dimension:'.length)] ?? null;
+  return null;
+}
+
 /** The label of each field the server may name in an edit conflict (lot 3C); analytics dimensions by their name. */
 const CONFLICT_FIELD_LABELS: Record<string, string> = {
   product_name: 'opex.columns.productName',
@@ -355,7 +364,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     if (!isCreate) return;
     setPlacementDraft({ paying_company_id: '', cost_center_id: '', followsCostCenter: false });
     setSaveError(null);
-  }, [isCreate, idParam, nature]);
+  }, [isCreate, idParam]);
   // A cost center picked while the paying company is empty brings its company; the company keeps
   // following the cost center until the person picks a company.
   const pickDraftCostCenter = React.useCallback((costCenterId: string, node: CostCenterNode | null) => {
@@ -916,7 +925,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
 
   // ----- Change type (lot M): from the "…" menu; pending edits are saved first (the dialog sends the line's row_version) -----
   const [changeTypeOpen, setChangeTypeOpen] = React.useState(false);
-  // Not while the line is being created: its type comes from the new page's address.
+  // Once the line is created; while it is being created, its type is a menu (below).
   const canChangeType = !isCreate && !stale && !!uuid && canEdit && !creation.beingCreated;
   const openChangeType = React.useCallback(async () => {
     if ((await flushOrAsk()) === 'stay') return;
@@ -995,6 +1004,58 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     });
   }, [costCenterElsewhere, form.account_id, form.paying_company_id, patchNow]);
 
+  // The fields Create found missing, marked on their label until each one gets a value.
+  const marks = useMissingMarks({
+    recordKey: uuid,
+    missingNow: () => missingOf(form),
+    valueOf: (key) => creationFieldValue(form, key),
+  });
+  const { mark } = marks;
+
+  // ----- The type of a line being created: a menu, changed in place by the type change route -----
+  // Nothing given but the line's version: the line keeps its account and values (the change checks
+  // nothing else in place). An account of the old type stays, marked: Create asks for one of the new type.
+  const typeChangingRef = React.useRef(false);
+  const [typeChanging, setTypeChanging] = React.useState(false);
+  const changeTypeWhileCreating = React.useCallback(async (next: LineType) => {
+    const lineId = uuidRef.current;
+    if (!lineId || next === nature || typeChangingRef.current) return;
+    if (!(await flushAll())) return;
+    typeChangingRef.current = true;
+    setTypeChanging(true);
+    setSaveError(null);
+    try {
+      const check = (await api.get<{ row_version: number; account: { fits: boolean } | null }>(`${config.itemsApi}/${lineId}/change-type/check`)).data;
+      await api.post(`${config.itemsApi}/${lineId}/change-type`, { row_version: check.row_version });
+      if (check.account && !check.account.fits) mark(['account'], { add: true });
+      await refreshAfterTypeChange(queryClient, lineId);
+    } catch (e) {
+      setSaveError(getApiErrorMessage(e, t, t('shared.changeType.failed')));
+    } finally {
+      typeChangingRef.current = false;
+      setTypeChanging(false);
+    }
+  }, [config.itemsApi, flushAll, mark, nature, queryClient, t]);
+  const typeMenuWhileCreating = !isCreate && !stale && !!uuid && canEdit && creation.beingCreated;
+
+  // The type picked on the new page goes in its address: the title creates the line with it. Picked
+  // while the title was writing the line, it is applied in place once the line shows.
+  const natureAfterCreationRef = React.useRef<LineType | null>(null);
+  const chooseNewLineType = React.useCallback((next: LineType) => {
+    natureAfterCreationRef.current = next;
+    setSearchParams((prev) => {
+      const sp = new URLSearchParams(prev);
+      sp.set('nature', next);
+      return sp;
+    }, { replace: true });
+  }, [setSearchParams]);
+  React.useEffect(() => {
+    const wanted = natureAfterCreationRef.current;
+    if (isCreate || !wanted || !creation.beingCreated || !data?.id || form.id !== data.id) return;
+    natureAfterCreationRef.current = null;
+    if (wanted !== nature) void changeTypeWhileCreating(wanted);
+  }, [changeTypeWhileCreating, creation.beingCreated, data?.id, form.id, isCreate, nature]);
+
   // ----- The title creates the line; Create and Cancel (lot 1c) -----
   // Create was clicked while the title created the line: its check runs once the line shows.
   const createAfterOpenRef = React.useRef(false);
@@ -1040,7 +1101,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // Create on a line being created: what is still being typed is saved, then the server checks the
   // fields the line needs. Missing ones are named once, marked, and the first one gets the focus;
   // otherwise the line is kept and closed.
-  const [missingFields, setMissingFields] = React.useState<ReadonlySet<string>>(() => new Set());
   const createAction = React.useCallback(async () => {
     if (isCreate) {
       titleCreation.create();
@@ -1051,7 +1111,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     setSaveError(null);
     try {
       const fields = await creation.completeCreation();
-      setMissingFields(new Set(fields ?? []));
+      mark(fields ?? []);
       if (fields) {
         setSaveError(t('budget.creation.missing', { fields: missingFieldsList(fields.map(fieldLabel), locale) }));
         focusLineField(fields[0]);
@@ -1061,7 +1121,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     } catch (e) {
       setSaveError(getApiErrorMessage(e, t, t('budget.creation.completeFailed')));
     }
-  }, [creation, fieldLabel, flushAll, focusLineField, isCreate, queryClient, t, titleCreation, uuid]);
+  }, [creation, fieldLabel, flushAll, focusLineField, isCreate, mark, queryClient, t, titleCreation, uuid]);
   // Cancel on a line being created: what is still being typed is saved first, so the confirmation
   // counts it, then the line is deleted (`useRecordCreation`).
   const cancelLine = React.useCallback(async () => {
@@ -1073,13 +1133,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     createAfterOpenRef.current = false;
     void createAction();
   }, [createAction, creation.beingCreated, data?.id, form.id]);
-  // The marks follow the fields: a field given a value loses its mark.
-  const markedFields = React.useMemo(() => {
-    if (missingFields.size === 0) return missingFields;
-    const now = new Set(missingOf(form));
-    return new Set(Array.from(missingFields).filter((field) => now.has(field)));
-  }, [form, missingFields, missingOf]);
-  React.useEffect(() => { setMissingFields(new Set()); }, [uuid]);
+  const markedFields = marks.marked;
   // A line left without its paying company (a creation never completed) says what it lacks.
   const incompleteNotice = !isCreate && !creation.beingCreated && canEdit && !!data?.id && form.id === data.id && !form.paying_company_id
     ? missingOf(form)
@@ -1290,40 +1344,41 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         )}
         properties={isCreate ? (
           <>
-            {/* The place of a limited person's line comes first, live: the title waits for it. */}
-            {placementAsked && (
-              <BudgetPropertiesDrawer
-                nature={nature}
-                mode="create"
-                section="placement"
-                supplierId=""
-                payingCompanyId={placementDraft.paying_company_id}
-                companyFollowsCostCenter={placementDraft.followsCostCenter}
-                accountId=""
-                currency={draftForm.currency}
-                analyticsValues={{}}
-                costCenterId={placementDraft.cost_center_id}
-                runBuild=""
-                effectiveStart={draftForm.effective_start}
-                onSupplierChange={ignoreDraftChange}
-                onPayingCompanyChange={(v) => setPlacementDraft((prev) => ({
-                  paying_company_id: v,
-                  cost_center_id: costCenterElsewhere(v) ? '' : prev.cost_center_id,
-                  followsCostCenter: false,
-                }))}
-                onAccountChange={ignoreDraftChange}
-                onCurrencyChange={ignoreDraftChange}
-                onAnalyticsValueChange={ignoreDraftChange}
-                onCostCenterChange={pickDraftCostCenter}
-                onRunBuildChange={ignoreDraftChange}
-                onEffectiveStartChange={ignoreDraftChange}
-              />
-            )}
+            {/* Live with the title: the type, and the place of a limited person's line (the title waits for it). */}
+            <BudgetPropertiesDrawer
+              nature={nature}
+              onNatureChange={chooseNewLineType}
+              mode="create"
+              section="head"
+              placeFirst={placementAsked}
+              supplierId=""
+              payingCompanyId={placementDraft.paying_company_id}
+              companyFollowsCostCenter={placementDraft.followsCostCenter}
+              accountId=""
+              currency={draftForm.currency}
+              analyticsValues={{}}
+              costCenterId={placementDraft.cost_center_id}
+              runBuild=""
+              effectiveStart={draftForm.effective_start}
+              onSupplierChange={ignoreDraftChange}
+              onPayingCompanyChange={(v) => setPlacementDraft((prev) => ({
+                paying_company_id: v,
+                cost_center_id: costCenterElsewhere(v) ? '' : prev.cost_center_id,
+                followsCostCenter: false,
+              }))}
+              onAccountChange={ignoreDraftChange}
+              onCurrencyChange={ignoreDraftChange}
+              onAnalyticsValueChange={ignoreDraftChange}
+              onCostCenterChange={pickDraftCostCenter}
+              onRunBuildChange={ignoreDraftChange}
+              onEffectiveStartChange={ignoreDraftChange}
+            />
             <CreationPreview>
               <BudgetPropertiesDrawer
                 nature={nature}
                 mode="edit"
-                section={placementAsked ? 'rest' : 'all'}
+                section="rest"
+                placeFirst={placementAsked}
                 disabled
                 supplierId=""
                 payingCompanyId={placementDefault.companyId ?? ''}
@@ -1352,9 +1407,10 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
           <BudgetPropertiesDrawer
             nature={nature}
             onChangeType={canChangeType ? () => { void openChangeType(); } : undefined}
+            onNatureChange={typeMenuWhileCreating ? (next) => { void changeTypeWhileCreating(next); } : undefined}
             mode="edit"
             lineId={data?.id ?? null}
-            disabled={!canEdit}
+            disabled={!canEdit || typeChanging}
             references={references}
             analyticsOptions={analyticsOptions}
             supplierId={form.supplier_id}

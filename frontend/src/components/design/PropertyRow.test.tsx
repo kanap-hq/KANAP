@@ -22,3 +22,17 @@ describe('PropertyRow hint', () => {
     expect(screen.queryByRole('img')).toBeNull();
   });
 });
+
+describe('PropertyRow missing', () => {
+  it('turns the label red and marks the field invalid while missing, and puts it back after', () => {
+    const theme = createAppTheme('light');
+    const { rerender } = renderRow(<PropertyRow label="Site" required missing><input aria-label="site" /></PropertyRow>);
+    const label = screen.getByText('Site');
+    expect(label).toHaveAttribute('data-missing');
+    expect(label).toHaveStyle({ color: theme.palette.error.main });
+    expect(screen.getByRole('textbox', { name: 'site' })).toHaveAttribute('aria-invalid', 'true');
+    rerender(<ThemeProvider theme={theme}><PropertyRow label="Site" required><input aria-label="site" /></PropertyRow></ThemeProvider>);
+    expect(screen.getByText('Site')).not.toHaveAttribute('data-missing');
+    expect(screen.getByRole('textbox', { name: 'site' })).not.toHaveAttribute('aria-invalid');
+  });
+});
