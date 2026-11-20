@@ -448,7 +448,7 @@ export default function TaskPropertiesDrawer({
     );
   }
 
-  /* ---- Desktop: 280px side panel, no header (tab-anchor handles labeling) ---- */
+  /* ---- Desktop: side panel of 280px or the width its frame gives, no header (tab-anchor handles labeling) ---- */
   const panelTopOffset = taskDetailTokens.drawer.panelTop;
 
   return (
@@ -456,7 +456,7 @@ export default function TaskPropertiesDrawer({
       component="aside"
       data-creation-panel="properties"
       sx={{
-        width: taskDetailTokens.drawer.panelWidth,
+        width: `var(--properties-panel-width, ${taskDetailTokens.drawer.panelWidth}px)`,
         mt: `${panelTopOffset}px`,
         height: `calc(100% + ${Math.abs(panelTopOffset)}px)`,
         flexShrink: 0,

@@ -757,3 +757,88 @@ describe('TaskWorkspacePage tabs', () => {
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks/task-1/history?projectId=project-a&projectTab=tasks'));
   });
 });
+
+// The task panel has its own layout, with the same edge as the other records' panels and its own
+// width (fried, 20/11).
+describe('TaskWorkspacePage panel width', () => {
+  const panelEdge = () => screen.getByRole('separator', { name: 'portfolio:workspace.resizeProperties__0' });
+  const panelWidth = () => screen.getByTestId('properties-panel-frame').style.getPropertyValue('--properties-panel-width');
+
+  function setUp({ narrow = false, stored = {} as Record<string, string> } = {}) {
+    vi.clearAllMocks();
+    translationMock.reset();
+    taskQueryMock.task = makeTask();
+    taskQueryMock.isLoading = false;
+    taskQueryMock.refetch.mockReset();
+    taskQueryMock.refetch.mockResolvedValue(undefined);
+
+    const localStorageMock = createLocalStorageMock();
+    vi.stubGlobal('localStorage', localStorageMock);
+    Object.defineProperty(window, 'localStorage', { value: localStorageMock, configurable: true });
+    window.localStorage.setItem('kanap.taskDetail.drawerOpen', 'true');
+    Object.entries(stored).forEach(([key, value]) => window.localStorage.setItem(key, value));
+    Object.defineProperty(window, 'innerWidth', { value: 1400, configurable: true, writable: true });
+
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: narrow,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  }
+
+  afterEach(() => {
+    Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true, writable: true });
+  });
+
+  it('widens the panel from its edge, within 280px and 520px, and keeps the width for tasks', async () => {
+    setUp();
+    renderTaskAddress('/portfolio/tasks/task-1/overview');
+    await screen.findByTestId('task-properties-drawer');
+
+    expect(panelWidth()).toBe('280px');
+    fireEvent.pointerDown(panelEdge(), { button: 0, pointerId: 1, clientX: 1000 });
+    fireEvent.pointerMove(panelEdge(), { pointerId: 1, clientX: 880 });
+    expect(panelWidth()).toBe('400px');
+    fireEvent.pointerMove(panelEdge(), { pointerId: 1, clientX: 300 });
+    expect(panelWidth()).toBe('520px');
+    fireEvent.pointerMove(panelEdge(), { pointerId: 1, clientX: 1300 });
+    expect(panelWidth()).toBe('280px');
+    fireEvent.pointerMove(panelEdge(), { pointerId: 1, clientX: 900 });
+    fireEvent.pointerUp(panelEdge(), { pointerId: 1, clientX: 900 });
+    expect(panelWidth()).toBe('380px');
+    expect(window.localStorage.getItem('kanap.taskDetail.drawerWidth')).toBe('380');
+  });
+
+  it('takes the stored width back, and returns to 280px on a double-click, an arrow key and Enter', async () => {
+    setUp({ stored: { 'kanap.taskDetail.drawerWidth': '440' } });
+    renderTaskAddress('/portfolio/tasks/task-1/overview');
+    await screen.findByTestId('task-properties-drawer');
+
+    expect(panelWidth()).toBe('440px');
+    fireEvent.doubleClick(panelEdge());
+    expect(panelWidth()).toBe('280px');
+    fireEvent.keyDown(panelEdge(), { key: 'ArrowLeft' });
+    expect(panelWidth()).toBe('296px');
+    fireEvent.keyDown(panelEdge(), { key: 'Enter' });
+    expect(panelWidth()).toBe('280px');
+    expect(window.localStorage.getItem('kanap.taskDetail.drawerWidth')).toBe('280');
+  });
+
+  it('draws no edge below md, and keeps the stored width', async () => {
+    setUp({ narrow: true, stored: { 'kanap.taskDetail.drawerWidth': '440' } });
+    renderTaskAddress('/portfolio/tasks/task-1/overview');
+    await screen.findByTestId('task-properties-drawer');
+
+    expect(screen.queryByRole('separator', { name: 'portfolio:workspace.resizeProperties__0' })).toBeNull();
+    expect(screen.queryByTestId('properties-panel-frame')).toBeNull();
+    expect(window.localStorage.getItem('kanap.taskDetail.drawerWidth')).toBe('440');
+  });
+});
