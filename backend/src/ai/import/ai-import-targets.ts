@@ -68,7 +68,10 @@ export interface AiImportColumnSpec {
   labels?: Readonly<Record<CsvLanguage, Readonly<Record<string, string>>>>;
   /** What the column takes, for the model, when its name does not say it. */
   hint?: string;
-  /** The servers' type column: the model's values never turn a hosting word into a type (`hostingWords`). */
+  /**
+   * The servers' type column: the model's values never turn a hosting word into a type (`hostingWords`);
+   * its values for a hosting word are proposals the import checks (D31 of 26.11.9), as for a name.
+   */
   keepsHostingWords?: boolean;
   titles?: Partial<Record<CsvLanguage, string>>;
 }
@@ -204,9 +207,19 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     ...AI_IMPORT_ACCESS.assets,
     about: 'One row per server or other asset, matched to a stored one by its name. Where a server is hosted (on site, '
       + 'in a cloud) comes from its location (location_reference, LOC-n), never from its type: "Cloud", "AWS" or "Azure" '
-      + 'is no asset type, so never map such a value to a type.',
+      + 'is no asset type, and the check refuses it in the type column. When the type column holds such a value, '
+      + 'suppose nothing: ask the person which type these servers are (a virtual machine, a physical server...), '
+      + 'and say that their hosting comes from their site (location_reference, LOC-n), to fill in. '
+      + 'In a note, an assumption or your answer, never say that a value is read as a type: only the card says it. '
+      + 'Map such a value in the type column\'s `values`, to a type of its `entries`, only once the person has named the type '
+      + 'in the conversation: the card lists it with the matches, and the person may undo it.',
     columns: () => fromCsvConfig(assetCsvConfig, {
-      kind: { ...catalog('serverKinds'), hint: 'the kind of machine (virtual machine, physical server...); "Cloud" is a hosting, not a type', keepsHostingWords: true },
+      kind: {
+        ...catalog('serverKinds'),
+        hint: 'the kind of machine (virtual machine, physical server...); "Cloud" is a hosting, not a type: '
+          + 'map a hosting in `values` only to the type the person named, after asking',
+        keepsHostingWords: true,
+      },
       environment: { kind: 'codes', codes: Object.keys(ASSET_ENVIRONMENT_LABELS.en), labels: ASSET_ENVIRONMENT_LABELS },
       admin_zone: catalog('adminZones'),
       status: catalog('lifecycleStates'),
@@ -502,7 +515,8 @@ const PORTFOLIO_MATCHED_COLUMNS = ['source_name', 'category_name', 'stream_name'
  * them are proposals the import checks (the file keeps the person's text), and a match there may be
  * undone from the card (a choice `unmatch`). The budget file's are `isMatchedColumn`. The other
  * reference columns (codes, references, e-mails, and the names the imports do not match yet) read
- * Kad's `values` as before.
+ * Kad's `values` as before. The servers' type (`kind`, D31 of 26.11.9) is a catalog column: only its
+ * values for a hosting word are proposals (`keepsHostingWords`), checked against the type catalog.
  */
 export const AI_IMPORT_MATCHED_COLUMNS: Readonly<Partial<Record<AiImportKey, readonly string[]>>> = {
   applications: ['supplier_name'],
@@ -513,7 +527,7 @@ export const AI_IMPORT_MATCHED_COLUMNS: Readonly<Partial<Record<AiImportKey, rea
   contacts: ['supplier_name'],
   cost_centers: ['company_name'],
   business_processes: ['parent_name'],
-  assets: ['operating_system', 'cluster'],
+  assets: ['operating_system', 'cluster', 'kind'],
   incidents: ['reporter', 'owner'],
   technology_asset_links: ['asset_name', 'technology_name', 'version'],
   technology_application_links: ['application_name', 'technology_name', 'version'],

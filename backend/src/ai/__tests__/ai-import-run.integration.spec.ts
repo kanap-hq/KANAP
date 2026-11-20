@@ -939,6 +939,83 @@ async function testServerVersionAndHosting(h: Harness, runner: QueryRunner, s: S
   console.log('  servers: Ubuntu 22.04 found as 22.04 LTS and undone from the card; the sites\' hosting said: OK');
 }
 
+// D31 of 26.11.9 (option A): "Cloud" in the type column of a servers file is a hosting, refused as
+// the screen refuses it, until the person names the type. Kad's proposal "Cloud" → that type is then
+// a match of the card (origin model, undoable), and the approval names it; undone, the errors are back.
+async function testServerTypeNamedByThePerson(h: Harness, runner: QueryRunner, s: Seed) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const controller = h.app.get(AiImportFileController);
+  const admin = ctx(runner, s, 'admin');
+  await runner.query(
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type, provider) VALUES ($1, 'LOC-4801', 'Nuage F48', 'public_cloud', 'AWS')`,
+    [s.tenantId],
+  );
+  const file = () => attach(h, 'Serveurs F48.csv', [
+    'Nom;Site;Type;Environnement',
+    'srv-f48-a;LOC-4801;virtual_machine;prod',
+    'srv-f48-b;LOC-4801;Cloud;prod',
+    'srv-f48-c;LOC-4801;Cloud;prod',
+  ].join('\n'));
+  const columns = (values?: Record<string, string>) => [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'location_reference', source: 2, confidence: 'high' },
+    { column: 'kind', source: 3, confidence: 'medium', ...(values ? { values } : {}) },
+    { column: 'environment', source: 4, confidence: 'high' },
+  ];
+  const kindErrors = (check: any) => check.report.errors
+    .filter((error: any) => error.column === 'kind').map((error: any) => [error.row, error.code]);
+
+  // The first card: the two errors, no match, nothing to approve.
+  const first = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file(), entity_type: 'assets', columns: columns() });
+  assert.equal(first.import_mapping.validation.ok, false);
+  assert.deepEqual(kindErrors(first.import_mapping.validation), [[3, 'asset_kind_invalid'], [4, 'asset_kind_invalid']]);
+  assert.equal(first.import_mapping.validation.report.matches, undefined);
+
+  // A proposal that names no type is refused, listed, and the errors stay.
+  const wrong = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file(), entity_type: 'assets', columns: columns({ Cloud: 'Nuage' }) });
+  assert.deepEqual(kindErrors(wrong.import_mapping.validation), [[3, 'asset_kind_invalid'], [4, 'asset_kind_invalid']]);
+  assert.deepEqual(wrong.import_mapping.validation.report.refusedProposals?.map((entry: any) => [entry.column, entry.value, entry.target, entry.lines]),
+    [['kind', 'Cloud', 'Nuage', [3, 4]]]);
+
+  // The person named the type: one match, undoable, no error, and the approval names it.
+  const named = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file(), entity_type: 'assets', columns: columns({ Cloud: 'virtual_machine' }) });
+  const check = named.import_mapping.validation;
+  assert.equal(check.ok, true, JSON.stringify(check.report.errors));
+  assert.deepEqual(check.report.matches, [{
+    column: 'kind', name: null, value: 'Cloud', target: 'Virtual machine', ref: null,
+    origin: 'model', reason: 'model', lines: [3, 4], count: 2, undoable: true,
+  }]);
+  assert.equal(named.import_mapping.columns.find((column: any) => column.column === 'kind').unread, 0);
+  assert.match(named.import_mapping.on_approval, /3 records created.*: Cloud → Virtual machine/);
+
+  // Undone on the card: the errors are back, nothing to approve.
+  const req = { user: { sub: s.users.admin }, headers: {} };
+  const tenant = { manager: runner.manager, tenantId: s.tenantId };
+  const undo = [{ kind: 'unmatch', column: 'kind', value: 'Cloud' }];
+  const undone = await controller.choose(s.conversations.admin, named.preview_id, { choices: undo }, req, tenant);
+  assert.equal(undone.import_mapping.validation.ok, false);
+  assert.deepEqual(kindErrors(undone.import_mapping.validation), [[3, 'asset_kind_invalid'], [4, 'asset_kind_invalid']]);
+  assert.equal(undone.import_mapping.validation.report.matches, undefined);
+  assert.deepEqual(undone.import_mapping.validation.report.undone, undo.map(({ column, value }) => ({ column, value })));
+
+  // Approved: the servers are virtual machines.
+  const approved = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: file(), entity_type: 'assets', columns: columns({ Cloud: 'virtual_machine' }) });
+  // The file downloaded from the card, for the screen's import, writes the type the match took.
+  const { readTableAttachment } = require('../attachments/table-attachment');
+  const sent: { body: Buffer | null } = { body: null };
+  await controller.download(s.conversations.admin, approved.preview_id, req, tenant, { setHeader: () => undefined, end: (body: Buffer) => { sent.body = body; } });
+  const prepared = await readTableAttachment(sent.body!);
+  assert.deepEqual(prepared.rows.map((row: any[]) => row.map((cell: any) => cell?.value ?? '').filter((value: string) => /virtual|cloud/i.test(value))),
+    [['virtual_machine'], ['Virtual machine'], ['Virtual machine']]);
+  const done = await h.previews.executePreview(admin, approved.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const stored = await runner.query(`SELECT name, kind FROM assets WHERE tenant_id = $1 AND name LIKE 'srv-f48-%' ORDER BY name`, [s.tenantId]);
+  assert.deepEqual(stored.map((row: any) => [row.name, row.kind]), [
+    ['srv-f48-a', 'virtual_machine'], ['srv-f48-b', 'virtual_machine'], ['srv-f48-c', 'virtual_machine'],
+  ]);
+  console.log('  servers: "Cloud" refused until the person names the type, then a match of the card, undoable: OK');
+}
+
 /** A person of the workspace with these rights, and a conversation of theirs: the context of their card. */
 async function personWith(runner: QueryRunner, s: Seed, name: string, permissions: Record<string, string>) {
   const role = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, $2, $2)`, [s.tenantId, name]);
@@ -1170,6 +1247,7 @@ async function run() {
       await testLinkServerNameUndoneByTheRoute(harness, runner, s);
       await testServerVersionAndHosting(harness, runner, s);
       await testHostingNeedsTheSites(harness, runner, s);
+      await testServerTypeNamedByThePerson(harness, runner, s);
       await testPreparedFileKeepsEveryProposal(harness, runner, s);
       await testUpdatesNamed(harness, runner, s);
     } finally {
