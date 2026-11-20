@@ -56,8 +56,8 @@ const PrepareImportMappingInputSchema = z.object({
       + 'A row is named by its line of the file, as the summary numbers it (header counted). The card shows the rows and the values '
       + 'not read: do not describe them here.'),
   left_aside: z.array(z.string().trim().min(1).max(200)).max(150).optional()
-    .describe('Only the file columns, by header, that the person\'s message asks to leave out: in the imports where `-` clears, '
-      + 'a column named like a template column is read even when you do not map it. Never a column that holds only `-`, '
+    .describe('Only the file columns, by header, that the person\'s message asks to leave out: a column named like a template '
+      + 'column is read even when you do not map it. Never a column that holds only `-`, '
       + 'an empty column, or a column whose effect the message does not mention.'),
 });
 
@@ -143,12 +143,13 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'The card also shows the import\'s check of the file. When it finds errors, the card cannot be approved: say which columns and lines they are on, '
       + 'a column by its title and a row by its line of the file: the card writes each message in the person\'s language, so never write a code '
       + '(`BUDGET_FILE_...`, `CSV_...`), a template column key (`analytics:...`) or a cell. Help the user correct the mapping or the file, and call again. '
-      + 'On a record the file updates, a blank cell and a column the mapping leaves out keep the stored value; in the imports of master data, '
-      + 'contracts, calendars and technology links, a cell holding `-` clears it (the check counts them, `cleared`, and `on_approval` says it). '
+      + 'On a record the file updates, a blank cell and a column the mapping leaves out keep the stored value; '
+      + 'in every import, the budget file included, a cell holding `-` clears it (the check counts them, `cleared`, and `on_approval` says it). '
       + 'A `-` written in the file is the person asking to clear, as on the screen: map its column like any other and say what the card clears; '
       + 'the person approves or refuses. That `-` reaches the import as it is: never map it in `values`. '
       + 'Write `-` yourself (in `values` or as a value for every row) only when the person asks to clear that value; never turn a blank cell or a value into `-`. '
-      + 'In those imports, a file column named like a template column (its key or its title) is read as on the screen, mapped or not. '
+      + 'Except in a budget file, a file column named like a template column (its key or its title) is read as on the screen, mapped or not, '
+      + 'and so is a numbered column beyond the template\'s (a fifth owner: `business_owner_email_5`, `Business owner 5 email`). '
       + '`left_aside` is only for a column the person\'s message asks to leave out. Never list there a column that holds only `-`, '
       + 'an empty column, or a column whose effect the message does not mention: a column of `-` is the clearing the file asks for, '
       + 'it stays read and the card announces it. '

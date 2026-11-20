@@ -589,15 +589,6 @@
     "andMoreErrors": "…y {{count}} más",
     "ignoredColumns": "Columnas ignoradas: {{columns}}.",
     "importWorkflow": "Lo que hace la importación",
-    "advancedOptions": "Opciones avanzadas",
-    "overridePresetNote": "Estas opciones reemplazan la elección de arriba.",
-    "emptyCellHandling": "Tratamiento de celdas vacías",
-    "preserveExisting": "Conservar existente",
-    "setToNull": "Borrar el valor guardado",
-    "operation": "Operación",
-    "insertAndUpdate": "Insertar y actualizar",
-    "updateOnly": "Solo actualizar",
-    "insertOnly": "Solo insertar",
     "validationPassed_one": "Validación superada. Listo para importar {{count}} fila.",
     "validationPassed_other": "Validación superada. Listo para importar {{count}} filas.",
     "nothingToImport": "Nada que importar.",
@@ -642,10 +633,6 @@
       "insertOnly": {
         "label": "Solo añadir los nuevos",
         "description": "Añade los registros nuevos. Los registros existentes se omiten."
-      },
-      "fullReplace": {
-        "label": "Reemplazo completo",
-        "description": "Reemplaza los valores de las columnas del archivo. Una celda vacía borra el valor guardado. Una columna que falta en el archivo conserva sus valores. Algunos campos no se pueden vaciar: la verificación los señala."
       }
     },
     "exportRows": {

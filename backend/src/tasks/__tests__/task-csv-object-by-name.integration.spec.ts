@@ -41,7 +41,7 @@ async function importCsv(
   access: CsvCallerAccess = ADMIN,
   viewer?: IncidentViewer,
 ): Promise<CsvImportResult> {
-  return service.import(file(csv), { dryRun: true, mode: 'enrich', operation: 'upsert', ...params }, {
+  return service.import(file(csv), { dryRun: true, operation: 'upsert', ...params }, {
     manager,
     tenantId,
     userId: viewer?.userId ?? null,
@@ -98,11 +98,6 @@ async function testExistingTaskObjectByName() {
     const valid = csv.split('\n').filter((_, i) => i !== 3).join('\n');
     const dry = await importCsv(runner.manager, tenantId, valid, {});
     assert.deepEqual([dry.updated, dry.unchanged], [1, 2], 'T dix moves; T onze and T treize are unchanged');
-    // In full replace the blank id cell reads the name the same way.
-    const replace = await importCsv(runner.manager, tenantId, valid, { mode: 'replace' });
-    assert.deepEqual(codes(replace), []);
-    assert.deepEqual([replace.updated, replace.unchanged], [1, 2]);
-
     const load = await importCsv(runner.manager, tenantId, valid, { dryRun: false });
     assert.equal(load.ok, true, JSON.stringify(load.errors));
     const rows = await runner.query(`SELECT item_number, related_object_id FROM tasks WHERE tenant_id = $1 ORDER BY item_number`, [tenantId]);
@@ -117,7 +112,7 @@ async function testExistingTaskObjectByName() {
   });
 }
 
-// Point 2: in merge mode, a task moved to another project without a phase cell (blank or left out),
+// Point 2: a task moved to another project without a phase cell (blank or left out),
 // by its id or by its name. The new project's phase of the same name is taken; a phase the new project
 // does not have is cleared at the check (`CSV_REFERENCE_NOT_FOUND_CLEARED`), and the load passes; moved out of a
 // project, the phase is said removed (`CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT`).
@@ -257,7 +252,9 @@ async function testSameNameAccentsAside() {
       [2, 'related_object_name', 'CSV_NAME_AMBIGUOUS_AMONG'],
       [4, 'phase_name', 'CSV_NAME_AMBIGUOUS_AMONG'],
     ]);
-    assert.deepEqual(check.errors.map((e) => e.params?.names), ['PRJ-1, PRJ-2', 'Récette, Récette']);
+    // The records named are listed in the order they are read: compared as a set.
+    const named = (value: unknown) => String(value).split(', ').sort().join(', ');
+    assert.deepEqual(check.errors.map((e) => named(e.params?.names)), ['PRJ-1, PRJ-2', 'Récette, Récette']);
     const exact = await importCsv(runner.manager, tenantId, csv.split('\n').filter((_, i) => i === 0 || i === 2).join('\n'), { dryRun: false });
     assert.equal(exact.ok, true, JSON.stringify(exact.errors));
     const [task] = await runner.query(`SELECT related_object_id FROM tasks WHERE tenant_id = $1`, [tenantId]);
@@ -268,7 +265,9 @@ async function testSameNameAccentsAside() {
 // Fixes F: a task outside a project, as on the task screen. Moved out of a project without the cells,
 // its phase is cleared and said, and its source, category, stream and company too when it moves to an
 // incident (to none, it keeps them). A phase or a classification the file gives a task that cannot have
-// it is not imported and said on its cell; the row is not refused. In both modes, at the check as at the load.
+// it is not imported and said on its cell; the row is not refused. At the check as at the load. Blank
+// related object cells keep the task's object, and `-` on them is refused (D21 of 26.11.9): the task
+// keeps its object.
 async function testTaskOutsideAProject() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'task-csv-fix-f-outside');
@@ -293,7 +292,7 @@ async function testTaskOutsideAProject() {
     };
     const CLASSIFICATION = ['source_name', 'category_name', 'stream_name', 'company_name'];
 
-    // Moved to an incident in merge mode, the cells blank: everything is cleared and said, by its name.
+    // Moved to an incident, the cells blank: everything is cleared and said, by its name, and counted.
     const q1 = await classified(31, 'Q un');
     const toIncident = [
       'id;title;related_object_type;related_object_id;related_object_name;phase_name;source_name;category_name;stream_name;company_name',
@@ -307,18 +306,24 @@ async function testTaskOutsideAProject() {
       ...CLASSIFICATION.map((column) => [2, column, 'CSV_TASK_CLASSIFICATION_CLEARED']),
     ]);
     assert.deepEqual(check.warnings.map((w) => w.params?.value), ['Build', 'Audit', 'Infra', 'Réseau', 'Fromage SA']);
+    assert.equal(check.cleared, 5);
     const load = await importCsv(runner.manager, tenantId, toIncident, { dryRun: false });
     assert.equal(load.ok, true, JSON.stringify(load.errors));
+    assert.equal(load.cleared, 5);
     assert.deepEqual(await fields(q1), [null, null, null, null, null]);
 
-    // Moved out of its project to none (full replace, the columns left out): the phase only.
+    // The related object cells blank: the task keeps its project and its phase.
     const q2 = await classified(32, 'Q deux');
     const toNone = ['id;title;related_object_type;related_object_id;related_object_name', `${q2};Q deux;;;`].join('\n');
-    const check2 = await importCsv(runner.manager, tenantId, toNone, { mode: 'replace' });
-    assert.deepEqual(codes(check2), []);
-    assert.deepEqual(warned(check2), [[2, 'phase_name', 'CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT']]);
-    const load2 = await importCsv(runner.manager, tenantId, toNone, { mode: 'replace', dryRun: false });
-    assert.equal(load2.ok, true, JSON.stringify(load2.errors));
+    const check2 = await importCsv(runner.manager, tenantId, toNone, {});
+    assert.deepEqual([codes(check2), warned(check2), check2.unchanged], [[], [], 1]);
+    // `-` on them makes the task standalone, as "Make standalone" (pass E of lot I6): the phase goes,
+    // the classification stays; the type, the id and the phase are counted.
+    const detach = ['id;title;related_object_type;related_object_id;related_object_name', `${q2};Q deux;-;-;-`].join('\n');
+    for (const dryRun of [true, false]) {
+      const detached = await importCsv(runner.manager, tenantId, detach, { dryRun });
+      assert.deepEqual([codes(detached), warned(detached), detached.cleared], [[], [[2, 'phase_name', 'CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT']], 3]);
+    }
     assert.deepEqual(await fields(q2), [null, source.id, category.id, stream.id, company.id]);
 
     // The file gives what the task cannot have: not imported, said on its cell, the row kept. A new
@@ -332,9 +337,9 @@ async function testTaskOutsideAProject() {
       `${q1};Q un;incident;${incident.id};;Inconnue;;Inconnue;;`,
       `${q3};Q trois;incident;${incident.id};;Build;Audit;Infra;Réseau;Fromage SA`,
     ].join('\n');
-    for (const mode of ['enrich', 'replace'] as const) {
-      const check3 = await importCsv(runner.manager, tenantId, given, { mode });
-      assert.deepEqual(codes(check3), [], mode);
+    {
+      const check3 = await importCsv(runner.manager, tenantId, given, {});
+      assert.deepEqual(codes(check3), []);
       assert.deepEqual(warned(check3), [
         [2, 'phase_name', 'CSV_TASK_PHASE_OUTSIDE_PROJECT'],
         ...CLASSIFICATION.map((column) => [2, column, 'CSV_TASK_CLASSIFICATION_NOT_ALLOWED']),
@@ -343,8 +348,9 @@ async function testTaskOutsideAProject() {
         [4, 'category_name', 'CSV_TASK_CLASSIFICATION_NOT_ALLOWED'],
         [5, 'phase_name', 'CSV_TASK_PHASE_OUTSIDE_PROJECT'],
         ...CLASSIFICATION.map((column) => [5, column, 'CSV_TASK_CLASSIFICATION_NOT_ALLOWED']),
-      ], mode);
-      assert.deepEqual([check3.inserted, check3.updated, check3.unchanged], [2, 1, 1], mode);
+      ]);
+      // Q trois moves to the incident: its five stored values go (counted); Q un has none left.
+      assert.deepEqual([check3.inserted, check3.updated, check3.unchanged, check3.cleared], [2, 1, 1, 5]);
     }
     const load3 = await importCsv(runner.manager, tenantId, given, { dryRun: false });
     assert.equal(load3.ok, true, JSON.stringify(load3.errors));

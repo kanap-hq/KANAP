@@ -65,7 +65,7 @@ async function exportCsv(runner: QueryRunner, tenantId: string): Promise<string>
 }
 
 async function importCsv(runner: QueryRunner, tenantId: string, csv: string, params: Partial<CsvImportParams>): Promise<CsvImportResult> {
-  return service.import(file(csv), { dryRun: false, mode: 'enrich', operation: 'upsert', ...params }, {
+  return service.import(file(csv), { dryRun: false, operation: 'upsert', ...params }, {
     manager: runner.manager,
     tenantId,
     userId: null,
@@ -100,24 +100,22 @@ async function testExportShowsTheInheritedValues() {
 }
 
 async function testUnchangedExportKeepsTheTaskFollowingItsProject() {
-  for (const mode of ['enrich', 'replace'] as const) {
-    await inRolledBackTransaction(async (runner) => {
-      const { tenantId, ids } = await seed(runner);
-      const csv = await exportCsv(runner, tenantId);
-      const preflight = await importCsv(runner, tenantId, csv, { mode, dryRun: true });
-      assert.deepEqual(preflight.errors, [], `${mode}: preflight`);
-      assert.equal(preflight.unchanged, 1, `${mode}: the exported task is unchanged`);
-      assert.equal(preflight.updated, 0, `${mode}: nothing to update`);
-      const result = await importCsv(runner, tenantId, csv, { mode });
-      assert.equal(result.ok, true, `${mode}: ${JSON.stringify(result.errors)}`);
-      assert.equal(result.unchanged, 1, `${mode}: unchanged at the load`);
-      assert.deepEqual(
-        await ownColumns(runner, ids.task),
-        { source_id: null, category_id: null, stream_id: null, company_id: null },
-        `${mode}: the task's own columns stay empty`,
-      );
-    });
-  }
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, ids } = await seed(runner);
+    const csv = await exportCsv(runner, tenantId);
+    const preflight = await importCsv(runner, tenantId, csv, { dryRun: true });
+    assert.deepEqual(preflight.errors, [], 'preflight');
+    assert.equal(preflight.unchanged, 1, 'the exported task is unchanged');
+    assert.equal(preflight.updated, 0, 'nothing to update');
+    const result = await importCsv(runner, tenantId, csv, {});
+    assert.equal(result.ok, true, `${JSON.stringify(result.errors)}`);
+    assert.equal(result.unchanged, 1, 'unchanged at the load');
+    assert.deepEqual(
+      await ownColumns(runner, ids.task),
+      { source_id: null, category_id: null, stream_id: null, company_id: null },
+      `the task's own columns stay empty`,
+    );
+  });
 }
 
 async function testChangedValueIsWritten() {

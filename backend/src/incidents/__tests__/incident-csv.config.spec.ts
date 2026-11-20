@@ -62,7 +62,7 @@ function mockContext(
         return [];
       },
     },
-    params: { dryRun: true, mode: 'replace', operation: 'upsert' },
+    params: { dryRun: true, operation: 'upsert' },
     resolverCache: new Map(),
     userId: READER,
     isAdmin: viewer?.isAdmin ?? false,
@@ -253,6 +253,31 @@ async function testReservedStatusMoveIsRefusedUnderTheCommitLock(): Promise<void
   );
 }
 
+/**
+ * `-` on a stored incident (D21 of 26.11.9): the review is refused here, as a row error naming it; a
+ * yes/no column and the status are left cleared (null) for the shared import to refuse, never turned
+ * into no, and the status guard does not read a cleared status as a move.
+ */
+async function testDashOnAStoredIncident(): Promise<void> {
+  const row: CsvImportRow = {
+    rowNumber: 2,
+    raw: { ref: '13', status: '-', review: '-', personal_data_affected: '-', confidential: '-' },
+    parsed: { status: null, review: null, personal_data_affected: null, confidential: null },
+    existingEntity: { ...visibleRestrictedRow, status: 'closed', personal_data_affected: true },
+    isInsert: false,
+    errors: [],
+    warnings: [],
+  };
+  await incidentCsvConfig.afterValidate!([row], mockContext([row.existingEntity]));
+  assert.deepEqual(row.errors.map((error) => [error.column, error.code]), [['review', 'CSV_VALUE_CANNOT_BE_CLEARED']]);
+  assert.deepEqual([row.parsed.personal_data_affected, row.parsed.confidential, row.parsed.status], [null, null, null]);
+
+  // On a new incident, `-` is a blank cell: nothing refused.
+  const created: CsvImportRow = { rowNumber: 3, raw: { review: '-' }, parsed: {}, isInsert: true, errors: [], warnings: [] };
+  await incidentCsvConfig.afterValidate!([created], mockContext([]));
+  assert.deepEqual(created.errors, []);
+}
+
 async function run(): Promise<void> {
   assert.ok(incidentCsvConfig.beforeValidate);
   assert.ok(incidentCsvConfig.beforeCommit);
@@ -267,6 +292,7 @@ async function run(): Promise<void> {
   await testAdministratorAndForwardStatusImportsAreAllowed();
   await testInsertOnlySkipsTheStatusGuard();
   await testReservedStatusMoveIsRefusedUnderTheCommitLock();
+  await testDashOnAStoredIncident();
   console.log('incident-csv.config.spec.ts: ok');
 }
 

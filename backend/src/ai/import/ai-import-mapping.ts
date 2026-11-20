@@ -9,6 +9,8 @@ import type { AiImportMappingPreviewDto } from '../ai.types';
 import { clip, isBlank, TABLE_SUMMARY_MAX_COLUMNS, TableGrid } from '../attachments/table-attachment';
 import { AI_IMPORT_CLEARING_RULE, type AiImportKey } from './ai-import-access';
 import { isImportMatchedColumn } from './ai-import-targets';
+import type { CsvEntityConfig } from '../../common/csv/csv-field.types';
+import { numberedListColumnOf, numberedListHeader } from '../../common/csv/csv-numbered-lists';
 import { AiImportCellResult, AiImportColumnKind, AiImportColumnReadError, AiImportColumnRule, columnReader } from './ai-import-convert';
 
 /** The first rows the card shows: rows the model already read in the file's summary. */
@@ -120,19 +122,36 @@ function headerText(grid: TableGrid, position: number): string {
 }
 
 /**
+ * The template's lists written in numbered columns (`business_owner_email_1` to `_4`), as a config the
+ * screen's import reads their further columns by (`numberedListColumnOf`): each list's base, and the
+ * titles of its first column.
+ */
+function numberedListsOf(template: AiImportTemplateColumn[]): CsvEntityConfig {
+  const names = new Set(template.map((column) => column.column));
+  const firsts = template.filter((column) => /_1$/.test(column.column) && names.has(column.column.replace(/_1$/, '_2')));
+  return {
+    fields: [],
+    numberedLists: firsts.map((column) => ({ base: column.column.replace(/_1$/, ''), values: () => [] })),
+    headerLabels: Object.fromEntries(firsts.map((column) => [column.column, column.titles ?? {}])),
+  } as unknown as CsvEntityConfig;
+}
+
+/**
  * The file's columns the screen's import would read and the model's mapping leaves out, under the
  * clearing rule (D21 of 26.11.9): a header that names a template column the mapping does not fill,
  * by its key or one of its titles, recognised as the screen's import recognises them
  * (`classifyHeaders`). Each one is read as a column of high confidence, with no value map, unless the
- * person asked to leave it aside (`leftAside`).
+ * person asked to leave it aside (`leftAside`). A numbered column beyond the template's
+ * (`business_owner_email_5`, `Business owner 5 email`) is read too, as the screen reads it (lot I6 of
+ * 26.11.9, pass F): the template gains it, as its list's first column numbered again (`columns`).
  */
 function screenNamedColumns(
   grid: TableGrid,
   template: AiImportTemplateColumn[],
   request: AiImportMappingRequest,
   language: CsvLanguage,
-): AiImportColumnMappingInput[] {
-  if (!AI_IMPORT_CLEARING_RULE.has(request.importKey as AiImportKey)) return [];
+): { entries: AiImportColumnMappingInput[]; columns: AiImportTemplateColumn[] } {
+  if (!AI_IMPORT_CLEARING_RULE.has(request.importKey as AiImportKey)) return { entries: [], columns: [] };
   const width = describedWidth(grid);
   const headers = Array.from({ length: width }, (_, index) => headerText(grid, index + 1));
   const headerKeys = new Set(headers.map(looseKey).filter((key) => key !== ''));
@@ -149,13 +168,29 @@ function screenNamedColumns(
   const titles = Object.fromEntries(template.filter((column) => column.titles).map((column) => [column.column, column.titles!]));
   const { slots } = classifyHeaders(headers, { fields: template.map((column) => column.column), fieldLabels: labelLists(titles), language });
   const added: AiImportColumnMappingInput[] = [];
+  const columns: AiImportTemplateColumn[] = [];
+  const known = new Set(template.map((column) => column.column));
+  const lists = numberedListsOf(template);
   slots.forEach((slot, index) => {
     const position = index + 1;
-    if (slot?.kind !== 'field' || filled.has(slot.id) || used.has(position) || aside.has(looseKey(headers[index]))) return;
-    filled.add(slot.id);
-    added.push({ column: slot.id, source: position, confidence: 'high' });
+    if (used.has(position) || aside.has(looseKey(headers[index]))) return;
+    if (slot?.kind === 'field') {
+      if (filled.has(slot.id)) return;
+      filled.add(slot.id);
+      added.push({ column: slot.id, source: position, confidence: 'high' });
+      return;
+    }
+    const numbered = headers[index] ? numberedListColumnOf(lists, headers[index]) : undefined;
+    if (!numbered || known.has(numbered) || filled.has(numbered)) return;
+    const base = numbered.replace(/_\d+$/, '');
+    const n = Number(numbered.slice(base.length + 1));
+    const first = template.find((column) => column.column === `${base}_1`)!;
+    const titles = Object.fromEntries((['en', 'fr', 'de', 'es'] as const).map((lang) => [lang, numberedListHeader(lists, base, n, lang)]));
+    columns.push({ ...first, column: numbered, title: numberedListHeader(lists, base, n, language), titles });
+    filled.add(numbered);
+    added.push({ column: numbered, source: position, confidence: 'high' });
   });
-  return added;
+  return { entries: added, columns };
 }
 
 function readAsOf(settled: { dateOrder?: CsvDateOrder; decimalMark?: DecimalMark }): string | null {
@@ -195,7 +230,9 @@ export function buildImportMapping(
   language: CsvLanguage,
 ): AiImportMappingResult {
   assertMappingShape(request, template, grid);
-  const mappedColumns = [...request.columns, ...screenNamedColumns(grid, template, request, language)];
+  const named = screenNamedColumns(grid, template, request, language);
+  template = [...template, ...named.columns];
+  const mappedColumns = [...request.columns, ...named.entries];
   const entries = new Map(mappedColumns.map((entry) => [entry.column, entry]));
   const mapped = template.filter((column) => entries.has(column.column));
   const sampleCount = Math.min(IMPORT_MAPPING_SAMPLE_ROWS, grid.rows.length);
@@ -209,6 +246,9 @@ export function buildImportMapping(
   const fileRows: AiImportFileCell[][] = grid.rows.map(() => []);
   const proposals: Record<string, Record<string, string>> = {};
 
+  // The person's `-` reaches every import as the clearing mark, in every kind of column: the row imports
+  // and the budget file, which reads it by its own reader (lot I6 of 26.11.9, pass F).
+  const clearMark = AI_IMPORT_CLEARING_RULE.has(request.importKey as AiImportKey) || request.importKey === 'budget_lines';
   for (const column of mapped) {
     const entry = entries.get(column.column)!;
     // A name of a record the model proposes (a budget file's supplier or dimension value, an
@@ -216,7 +256,6 @@ export function buildImportMapping(
     // proposal; the cell keeps the person's text. "" still leaves the cell blank, and, under the
     // clearing rule, `-` clears (never a record named "-" to propose). A fixed list, a catalog, a
     // code or an e-mail reads the model's values as before.
-    const clearMark = AI_IMPORT_CLEARING_RULE.has(request.importKey as AiImportKey);
     const staysInCell = (to: string) => String(to).trim() === '' || (clearMark && readImportCell(String(to)).kind === 'clear');
     let values = entry.values;
     if (entry.source != null && values && isImportMatchedColumn(request.importKey, column.column)) {

@@ -113,7 +113,7 @@ async function run() {
       const searched = tableOf((await csv.export({ ...opts, language: 'fr', query: { q: 'Alpha' } })).content);
       assert.deepEqual(searched.map((row) => row.name), ['Alpha']);
 
-      const reimported = await csv.import(fileOf(french.content), { dryRun: false, mode: 'enrich', operation: 'upsert' }, opts);
+      const reimported = await csv.import(fileOf(french.content), { dryRun: false, operation: 'upsert' }, opts);
       assert.equal(reimported.ok, true, JSON.stringify(reimported.errors));
       assert.equal(reimported.errors.length, 0);
       const stored = await runner.query(
@@ -136,7 +136,7 @@ async function run() {
         'De box;LOC-1;Physischer Server;Pré-prod;Aktiv;Tier 0 (Vertrauenskern);Host;10.2.2.2',
         'Es box;LOC-1;Servidor físico;Bac à sable;Activo;Tier 0 (núcleo de confianza);Host;10.3.3.3',
         'En box;LOC-1;Physical server;prod;Active;Tier 0 (core of trust);Host;10.4.4.4',
-      ].join('\n')), { dryRun: false, mode: 'enrich', operation: 'upsert' }, opts);
+      ].join('\n')), { dryRun: false, operation: 'upsert' }, opts);
       assert.equal(labels.ok, true, JSON.stringify(labels.errors));
       const coded = await runner.query(
         `SELECT name, kind, status, environment, admin_zone FROM assets WHERE tenant_id = $1 AND name IN ('De box', 'Es box', 'En box') ORDER BY name`,
@@ -149,7 +149,7 @@ async function run() {
       ]);
       const refused = await csv.import(fileOf(
         'name;location_reference;kind;environment\nNope env;LOC-1;Physical server;atelier',
-      ), { dryRun: true, mode: 'enrich', operation: 'upsert' }, opts);
+      ), { dryRun: true, operation: 'upsert' }, opts);
       assert.equal(refused.ok, false);
       assert.equal(refused.errors.some((error) => error.column === 'environment'), true);
 

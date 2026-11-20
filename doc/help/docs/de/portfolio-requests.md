@@ -359,6 +359,8 @@ Der Export enthält die Anfragen, die die Liste zeigt, mit ihren Filtern, ihrer 
 
 **Spalten**: Die Datei beginnt mit `id` und `reference` (`REQ-12`), dann folgen die Spalten dem Arbeitsbereich, Registerkarte für Registerkarte. Der Import ignoriert `reference`.
 
+**Leere Zellen und `-`**: Bei einer Anfrage, die die Datei aktualisiert, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn, auch den `purpose` und die `risks`. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing).
+
 Verwenden Sie den Export, wenn Sie Portfolio-Berichterstattung oder Offline-Anreicherung benötigen. Verwenden Sie den Import, wenn Sie Anfragen in großen Mengen erstellen oder aktualisieren müssen. Da der Import Erfassungsdatensätze in großem Maßstab ändern kann, ist er absichtlich Administratoren vorbehalten.
 
 ## Tipps

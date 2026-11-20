@@ -164,6 +164,7 @@ claire.dubois@example.com;all;;read
 ```
 
 - A person in the file receives exactly the nodes listed for them, in **Limited to**. A person absent from the file does not change.
+- Each row describes one node, so this file has no value to keep or clear: the rule of [Empty cells and `-`](csv-files.md#empty-cells-and-clearing) does not apply here.
 - An import always limits. To give someone all data again, use the user window.
 - The check comes first and writes nothing. It reports each refused row: unknown person, unknown company or cost center, invalid type or access, a node listed twice for one person, an Administrator, your own account. A file with one error loads nothing.
 - The export writes the same format, for the limited people. A limited person with no node has no row, so importing the file back leaves them as they are.

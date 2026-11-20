@@ -14,7 +14,7 @@ import { inRolledBackTransaction, runSpecs, seedItem, seedTenant } from '../../s
 // The tasks export of a person in limited data access names a task's contract they cannot read by
 // the list's label, and leaves a hidden budget line's id and name empty (lot R4 of 26.11.9). A
 // person with access to all data who reads that file back keeps each task on its stored object, in
-// full replace as in enrich mode, at the preflight as at the load: the label is never a contract's
+// all cases, at the preflight as at the load: the label is never a contract's
 // name. A row that matches no task and carries the label is refused. The viewers and owners pass
 // that follows the import finds each row's task by its id, else by its object (a contract also by
 // its reference `CTR-n`), and never touches a homonym. Each test runs in a transaction rolled back.
@@ -34,7 +34,7 @@ function file(content: string): Express.Multer.File {
 }
 
 async function importCsv(runner: QueryRunner, tenantId: string, csv: string, params: Partial<CsvImportParams>): Promise<CsvImportResult> {
-  return service.import(file(csv), { dryRun: false, mode: 'enrich', operation: 'upsert', ...params }, {
+  return service.import(file(csv), { dryRun: false, operation: 'upsert', ...params }, {
     manager: runner.manager,
     tenantId,
     userId: null,
@@ -75,50 +75,46 @@ async function viewers(runner: QueryRunner, taskId: string): Promise<string[]> {
 
 /** A limited person's file, read back by a person with access to all data: each task keeps its object. */
 async function testHiddenObjectsAreKept() {
-  for (const mode of ['replace', 'enrich'] as const) {
-    for (const language of ['en', 'fr', 'de', 'es'] as const) {
-      await inRolledBackTransaction(async (runner) => {
-        const { tenantId, hidden, line, task } = await seed(runner);
-        const contractTask = await task('Task of the hidden contract', 'contract', hidden, 1);
-        const lineTask = await task('Task of the hidden line', 'spend_item', line, 2);
-        const csv = [
-          HEADER,
-          `${contractTask},Task of the hidden contract,contract,,${CONTRACT_OUTSIDE_ACCESS[language]}`,
-          `${lineTask},Task of the hidden line,spend_item,,`,
-        ].join('\n');
-        const what = `${mode}, ${language}`;
-        const dry = await importCsv(runner, tenantId, csv, { mode, dryRun: true });
-        assert.equal(dry.ok, true, `${what}: preflight ${JSON.stringify(dry.errors)}`);
-        const load = await importCsv(runner, tenantId, csv, { mode });
-        assert.equal(load.ok, true, `${what}: load ${JSON.stringify(load.errors)}`);
-        assert.deepEqual([load.updated, load.unchanged], [dry.updated, dry.unchanged], `${what}: the preflight counts what the load does`);
-        assert.deepEqual(await link(runner, contractTask), ['contract', hidden], `${what}: the task keeps its contract`);
-        assert.deepEqual(await link(runner, lineTask), ['spend_item', line], `${what}: the task keeps its line`);
-      });
-    }
+  for (const language of ['en', 'fr', 'de', 'es'] as const) {
+    await inRolledBackTransaction(async (runner) => {
+      const { tenantId, hidden, line, task } = await seed(runner);
+      const contractTask = await task('Task of the hidden contract', 'contract', hidden, 1);
+      const lineTask = await task('Task of the hidden line', 'spend_item', line, 2);
+      const csv = [
+        HEADER,
+        `${contractTask},Task of the hidden contract,contract,,${CONTRACT_OUTSIDE_ACCESS[language]}`,
+        `${lineTask},Task of the hidden line,spend_item,,`,
+      ].join('\n');
+      const what = language;
+      const dry = await importCsv(runner, tenantId, csv, { dryRun: true });
+      assert.equal(dry.ok, true, `${what}: preflight ${JSON.stringify(dry.errors)}`);
+      const load = await importCsv(runner, tenantId, csv, {});
+      assert.equal(load.ok, true, `${what}: load ${JSON.stringify(load.errors)}`);
+      assert.deepEqual([load.updated, load.unchanged], [dry.updated, dry.unchanged], `${what}: the preflight counts what the load does`);
+      assert.deepEqual(await link(runner, contractTask), ['contract', hidden], `${what}: the task keeps its contract`);
+      assert.deepEqual(await link(runner, lineTask), ['spend_item', line], `${what}: the task keeps its line`);
+    });
   }
 }
 
 /** A labelled row that matches no task is refused, at the preflight as at the load; no contract is linked. */
 async function testLabelNamesNoContract() {
-  for (const mode of ['replace', 'enrich'] as const) {
-    await inRolledBackTransaction(async (runner) => {
-      const { tenantId, decoy } = await seed(runner);
-      const csv = [HEADER, `,New task,contract,,${CONTRACT_OUTSIDE_ACCESS.fr}`].join('\n');
-      for (const dryRun of [true, false]) {
-        const what = `${mode}, ${dryRun ? 'preflight' : 'load'}`;
-        const result = await importCsv(runner, tenantId, csv, { mode, dryRun });
-        assert.equal(result.ok, false, `${what}: refused`);
-        assert.deepEqual(
-          result.errors.map((error) => [error.row, error.column]),
-          [[2, 'related_object_name']],
-          `${what}: the row is refused on its object (${JSON.stringify(result.errors)})`,
-        );
-      }
-      const linked = await runner.query(`SELECT count(*)::int AS n FROM tasks WHERE tenant_id = $1 AND (title = 'New task' OR related_object_id = $2)`, [tenantId, decoy]);
-      assert.equal(linked[0].n, 0, `${mode}: nothing written, the contract named like the label is linked to nothing`);
-    });
-  }
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, decoy } = await seed(runner);
+    const csv = [HEADER, `,New task,contract,,${CONTRACT_OUTSIDE_ACCESS.fr}`].join('\n');
+    for (const dryRun of [true, false]) {
+      const what = dryRun ? 'preflight' : 'load';
+      const result = await importCsv(runner, tenantId, csv, { dryRun });
+      assert.equal(result.ok, false, `${what}: refused`);
+      assert.deepEqual(
+        result.errors.map((error) => [error.row, error.column]),
+        [[2, 'related_object_name']],
+        `${what}: the row is refused on its object (${JSON.stringify(result.errors)})`,
+      );
+    }
+    const linked = await runner.query(`SELECT count(*)::int AS n FROM tasks WHERE tenant_id = $1 AND (title = 'New task' OR related_object_id = $2)`, [tenantId, decoy]);
+    assert.equal(linked[0].n, 0, 'nothing written, the contract named like the label is linked to nothing');
+  });
 }
 
 /** The viewers pass finds each row's task by its id, else by its object; a homonym is never touched. */

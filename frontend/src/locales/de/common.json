@@ -589,15 +589,6 @@
     "andMoreErrors": "…und {{count}} weitere",
     "ignoredColumns": "Ignorierte Spalten: {{columns}}.",
     "importWorkflow": "Was der Import macht",
-    "advancedOptions": "Erweiterte Optionen",
-    "overridePresetNote": "Diese Optionen ersetzen die Auswahl oben.",
-    "emptyCellHandling": "Behandlung leerer Zellen",
-    "preserveExisting": "Vorhandene beibehalten",
-    "setToNull": "Gespeicherten Wert löschen",
-    "operation": "Vorgang",
-    "insertAndUpdate": "Einfügen und aktualisieren",
-    "updateOnly": "Nur aktualisieren",
-    "insertOnly": "Nur einfügen",
     "validationPassed_one": "Validierung bestanden. Bereit zum Import von {{count}} Zeile.",
     "validationPassed_other": "Validierung bestanden. Bereit zum Import von {{count}} Zeilen.",
     "nothingToImport": "Nichts zu importieren.",
@@ -642,10 +633,6 @@
       "insertOnly": {
         "label": "Nur neue hinzufügen",
         "description": "Fügt neue Datensätze hinzu. Vorhandene Datensätze werden übersprungen."
-      },
-      "fullReplace": {
-        "label": "Vollständig ersetzen",
-        "description": "Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert. Eine Spalte, die in der Datei fehlt, behält ihre Werte. Manche Felder können nicht geleert werden: Die Prüfung zeigt sie an."
       }
     },
     "exportRows": {

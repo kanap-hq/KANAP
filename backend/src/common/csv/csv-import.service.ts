@@ -8,7 +8,10 @@ import { CsvDecodeError } from '../csv-sheet/decode';
 import { csvSeparatorOf, readImportText } from '../csv-sheet/read';
 import { looseKey } from '../csv-sheet/text';
 import { labelsForEnum } from '../../ai/import/ai-import-code-labels';
-import { sameStoredValues } from '../csv-sheet/unchanged';
+import { sameStoredValue, sameStoredValues } from '../csv-sheet/unchanged';
+import { GUARDED_DASH } from '../csv-sheet/clear';
+import { importCell, markGuardedDash, noteCleared, refuseClear, removedEntries } from './csv-import-cells';
+import { isNumberedColumn, numberedColumns, numberedListColumnOf } from './csv-numbered-lists';
 import { AuditLog } from '../../audit/audit.entity';
 import { omitAuditSecrets } from '../../audit/audit.service';
 import {
@@ -72,30 +75,35 @@ export interface CsvImportOptions {
 /** A reference cell nothing finds, or that may name several records: what parseFk and the lists do with it. */
 type ReferenceLookup = { id: string } | { many: string[] } | null;
 
-/** What a full replace needs to know of a stored column to empty it. */
+/** What the import needs to know of a stored column to clear it. */
 interface StoredColumn {
   nullable: boolean;
-  hasDefault: boolean;
+  /** A number column: `-` on it, NOT NULL, says to write 0. */
+  numeric: boolean;
   /** The empty value of a NOT NULL list or object column (`[]`, `{}`); undefined for any other. */
   empty?: () => unknown[] | Record<string, never>;
 }
 
-/** A property a blank cell emptied: the column of the cell and the empty value it was given. */
-interface EmptiedProperty {
+/** A property `-` cleared: the column of the cell, the empty value it was given, and whether it counts as one stored value. */
+interface ClearedProperty {
   csvColumn: string;
   value: unknown;
+  /** False for a nested list left empty by its sub-columns, which count themselves. */
+  counted: boolean;
 }
 
 /**
- * Full replace: the columns of the table, the properties a cell never empties (the identity
- * column and the matching key), and, per row, the properties emptied by a blank cell (checked
- * once the entity hooks ran).
+ * The clearing rule (`csv-import-cells.ts`): the columns of the table, read when the file holds a
+ * `-`, and, per row, the properties `-` cleared (checked once the entity hooks ran) and the nested
+ * sub-values it cleared.
  */
-interface ReplaceRules {
+interface ClearRules {
   columns: Map<string, StoredColumn>;
-  kept: Set<string>;
-  emptied: WeakMap<CsvImportRow, Map<string, EmptiedProperty>>;
+  cleared: WeakMap<CsvImportRow, Map<string, ClearedProperty>>;
+  nestedCleared: WeakMap<CsvImportRow, number>;
 }
+
+const NUMERIC_TYPES = new Set(['smallint', 'integer', 'bigint', 'numeric', 'real', 'double precision']);
 
 /**
  * Service for importing entities from CSV format.
@@ -104,7 +112,7 @@ interface ReplaceRules {
  * - Two-phase import: validate all rows, then commit
  * - Identity resolution (id column or natural key)
  * - FK resolution with preloading
- * - enrich vs replace modes
+ * - One clearing rule (`csv-import-cells.ts`): a blank cell keeps, `-` clears
  * - insert_only, update_only, upsert operations
  * - Duplicate detection within same file
  */
@@ -130,7 +138,7 @@ export class CsvImportService {
    *
    * @param config - Entity CSV configuration
    * @param file - Uploaded file
-   * @param params - Import parameters (dryRun, mode, operation)
+   * @param params - Import parameters (dryRun, operation)
    * @param opts - Import options
    * @returns Import result with counts and errors
    */
@@ -162,6 +170,7 @@ export class CsvImportService {
         updated: 0,
         skipped: 0,
         unchanged: 0,
+        cleared: 0,
         errors: headerErrors,
         warnings: headerWarnings,
       };
@@ -195,13 +204,13 @@ export class CsvImportService {
       refusedProposals: new Map(),
     };
 
-    // Full replace empties the cells of the columns the file holds, by the stored column's rules.
-    const replace = params.mode === 'replace'
-      ? await this.loadReplaceRules(config, opts.manager)
+    // `-` clears a value by the stored column's rules, read once when the file holds a `-`.
+    const rules = rows.some((raw) => Object.keys(raw).some((column) => importCell(raw, column).kind === 'clear'))
+      ? await this.loadClearRules(config, opts.manager)
       : null;
 
     // Phase 1: Validate and parse all rows
-    const parsedRows = await this.validateAndParseRows(config, rows, importFields, context, replace);
+    const parsedRows = await this.validateAndParseRows(config, rows, importFields, context, rules);
 
     // Duplicate upsert keys within the file, as the file gives them: the rows the config left out
     // count too, and a config's hooks may not change a row's key after (the applications' "Update
@@ -211,8 +220,8 @@ export class CsvImportService {
     // The rows the config left out (`settleRows`) are neither read nor written.
     const readRows = parsedRows.filter((row) => !row.leftOut);
     if (config.afterValidate) await config.afterValidate(readRows, context);
-    if (replace) this.checkEmptiedColumns(readRows, replace, params.operation);
-    else this.clearKeptReferencesOfChangedOwners(readRows, importFields);
+    if (rules) this.checkClearedColumns(readRows, rules, params.operation);
+    this.clearKeptReferencesOfChangedOwners(readRows, importFields);
 
     // Collect all errors
     const allErrors: CsvImportError[] = [];
@@ -230,7 +239,8 @@ export class CsvImportService {
       const same = config.sameAsStored
         ? await config.sameAsStored(matched, context)
         : matched.map((row) => sameStoredValues(row.existingEntity, row.parsed));
-      matched.forEach((row, i) => { row.unchanged = same[i] === true; });
+      // A row whose hooks declared cleared values (`noteCleared`) writes them.
+      matched.forEach((row, i) => { row.unchanged = same[i] === true && !(row.clearedByConfig ?? 0); });
     }
 
     // Count operations
@@ -238,11 +248,15 @@ export class CsvImportService {
     let updateCount = 0;
     let skipCount = 0;
     let unchangedCount = 0;
+    let clearedCount = 0;
 
     for (const row of parsedRows) {
       if (row.errors.length > 0 || row.leftOut) {
         skipCount++;
         continue;
+      }
+      if (!row.isInsert && params.operation !== 'insert_only' && !row.unchanged) {
+        clearedCount += this.clearedValues(row, importFields, rules);
       }
 
       if (row.isInsert) {
@@ -272,6 +286,7 @@ export class CsvImportService {
         updated: updateCount,
         skipped: skipCount,
         unchanged: unchangedCount,
+        cleared: clearedCount,
         errors: allErrors,
         warnings: allWarnings,
         ...this.matchesOf(context),
@@ -290,6 +305,7 @@ export class CsvImportService {
         updated: 0,
         skipped: rows.length,
         unchanged: 0,
+        cleared: 0,
         errors: [{
           row: 0,
           message: `Import failed: ${error.message}`,
@@ -308,6 +324,7 @@ export class CsvImportService {
       updated: updateCount,
       skipped: skipCount,
       unchanged: unchangedCount,
+      cleared: clearedCount,
       errors: [],
       warnings: allWarnings,
       ...this.matchesOf(context),
@@ -343,7 +360,7 @@ export class CsvImportService {
     let content: string;
     let firstSheetOnly: string | undefined;
     try {
-      const read = await readImportText(buf);
+      const read = await readImportText(buf, { keepsGuardedDash: true });
       content = read.text;
       if (read.format === 'xlsx' && (read.sheetCount ?? 1) > 1) firstSheetOnly = read.sheetName;
     } catch (err) {
@@ -398,6 +415,9 @@ export class CsvImportService {
       const named = readTimeZoneHeader(header);
       const column = headerAliases.get(headerKey(named ? named.column : header));
       if (!column) {
+        // A numbered column beyond the declared ones (`business_owner_email_5`), by its name or a title.
+        const listed = named ? undefined : numberedListColumnOf(config, header);
+        if (listed) return listed;
         // Not a column of this config: keep it as it came, so the ignored-column warning names it.
         if (zonedColumns.has(header)) zoneless.push(header);
         return header;
@@ -437,11 +457,13 @@ export class CsvImportService {
       })
         .on('headers', (headers: string[]) => {
           // Validate headers. The file is matched on the technical key; the report names the title.
-          const missing = expectedHeaders.required
-            .filter((header) => !headers.includes(header))
-            .map(columnTitle);
+          // Only the columns that find the record are required, and none when the file holds the
+          // identity column: a column left out is not touched.
+          const missing = expectedHeaders.identity && headers.includes(expectedHeaders.identity)
+            ? []
+            : expectedHeaders.required.filter((header) => !headers.includes(header)).map(columnTitle);
           const extra = headers.filter(
-            (h) => !expectedHeaders.all.has(h) && !h.startsWith('_'),
+            (h) => !expectedHeaders.all.has(h) && !h.startsWith('_') && !numberedListColumnOf(config, h),
           );
 
           if (missing.length > 0) {
@@ -476,9 +498,15 @@ export class CsvImportService {
         .on('error', (err) => reject(err))
         .on('data', (row: Record<string, string>) => {
           // Strip the protective apostrophe our export prepends to
-          // formula-like values, so export -> import round-trips cleanly.
+          // formula-like values, so export -> import round-trips cleanly. `'-` is the text "-": the
+          // row holds "-" and the cell is noted, for `importCell` to tell it from a `-` that clears.
           for (const key of Object.keys(row)) {
-            row[key] = denormalizeCsvFormulaValue(row[key]);
+            if (String(row[key] ?? '').trim() === GUARDED_DASH) {
+              row[key] = '-';
+              markGuardedDash(row, key);
+            } else {
+              row[key] = denormalizeCsvFormulaValue(row[key]);
+            }
           }
           rows.push(row);
         })
@@ -489,11 +517,14 @@ export class CsvImportService {
   }
 
   /**
-   * Get expected headers from config.
+   * The columns of the config, and those a file must hold to find its records (T-I6i of 26.11.9):
+   * the required columns of the matching key, unless the file holds the identity column. Any other
+   * required value is checked on the rows that create a record.
    */
   private getExpectedHeaders(config: CsvEntityConfig): {
     required: string[];
     all: Set<string>;
+    identity?: string;
   } {
     const importFields = config.fields.filter((f) => f.importable !== false);
     const required: string[] = [];
@@ -517,20 +548,16 @@ export class CsvImportService {
         for (let i = 1; i <= maxItems; i++) {
           const colName = `${baseName}_${i}`;
           all.add(colName);
-          // First column required if field is required
-          if (i === 1 && field.required) {
-            required.push(colName);
-          }
         }
       } else if (!field.arrayIndex) {
         all.add(field.csvColumn);
-        if (field.required) {
+        if (field.required && config.upsertKey.includes(field.entityProperty)) {
           required.push(field.csvColumn);
         }
       }
     }
 
-    return { required, all };
+    return { required, all, identity: config.fields.find((f) => f.isIdentityColumn)?.csvColumn };
   }
 
   /**
@@ -541,7 +568,7 @@ export class CsvImportService {
     rows: Record<string, string>[],
     importFields: CsvFieldDefinition[],
     context: CsvImportContext,
-    replace: ReplaceRules | null,
+    rules: ClearRules | null,
   ): Promise<CsvImportRow[]> {
     const parsedRows: CsvImportRow[] = [];
 
@@ -558,7 +585,7 @@ export class CsvImportService {
     }
 
     // Load existing entities for identity resolution
-    const existingEntities = await this.loadExistingEntities(config, rows, context);
+    const { entities: existingEntities, deleted } = await this.loadExistingEntities(config, rows, context);
     // The record each row updates, by its id or key, before any cell is read; then as the config
     // settles it (another record, or the row left out: lot I3 of 26.11.9).
     const found = rows.map((raw) => this.resolveIdentity(config, raw, existingEntities));
@@ -573,7 +600,7 @@ export class CsvImportService {
       if (settle?.leaveOut) {
         // Only its key is read, for the file's duplicates.
         const keyed: CsvImportRow = { rowNumber, raw, parsed: {}, isInsert: true, errors: [], warnings: [] };
-        for (const field of importFields) if (config.upsertKey.includes(field.entityProperty)) await this.parseField(field, raw, keyed, context, replace);
+        for (const field of importFields) if (config.upsertKey.includes(field.entityProperty)) await this.parseField(config, field, raw, keyed, context, rules);
         parsedRows.push({ rowNumber, raw, parsed: keyed.parsed, isInsert: true, leftOut: true, errors: [], warnings: settle.warnings ?? [] });
         continue;
       }
@@ -591,39 +618,37 @@ export class CsvImportService {
         parsedRow.errors.push(...(settle.errors ?? []));
         parsedRow.warnings.push(...(settle.warnings ?? []));
       }
-
-      // Parse and validate each field
-      for (const field of importFields) {
-        await this.parseField(field, raw, parsedRow, context, replace);
+      if (found[i] && deleted.has(String(found[i].id))) {
+        parsedRow.errors.push({ row: rowNumber, code: 'CSV_RECORD_DELETED', message: 'This record was deleted during the import.' });
       }
 
-      // Resolve identity
+      // The record the row updates, known before its cells are read: `-` and a blank required cell
+      // read differently on a new record.
       const existingEntity = settle ? settle.entity : found[i];
       if (existingEntity) {
         parsedRow.existingEntity = existingEntity;
         parsedRow.isInsert = false;
-        this.keepStoredRichText(importFields, raw, parsedRow, existingEntity);
       }
 
-      // Assemble NESTED fields into their parent objects (full replace: onto the stored list)
-      if (replace) this.replaceNestedFields(importFields, raw, parsedRow, replace);
-      else this.assembleNestedFields(importFields, raw, parsedRow);
+      // Parse and validate each field
+      for (const field of importFields) {
+        await this.parseField(config, field, raw, parsedRow, context, rules);
+      }
 
-      // Apply enrich mode: preserve existing values for empty cells
-      if (context.params.mode === 'enrich' && existingEntity) {
+      if (existingEntity) this.keepStoredRichText(importFields, raw, parsedRow, existingEntity);
+
+      // NESTED fields (`ip_1_type`, ...), applied onto the stored list.
+      this.applyNestedFields(importFields, raw, parsedRow, rules);
+
+      if (existingEntity) {
+        // A blank cell keeps the stored value (also a column the file leaves out, as hooks read the
+        // whole record from `parsed`). Lists and nested fields keep theirs above.
         for (const field of importFields) {
-          // Skip nested fields here - they're handled separately below
-          if (field.type === CsvFieldType.NESTED) {
-            continue;
-          }
-          const rawValue = this.getRawValue(field, raw);
-          if ((rawValue === '' || rawValue === null) && field.entityProperty in existingEntity) {
+          if (field.type === CsvFieldType.NESTED || this.isNumbered(field)) continue;
+          if (importCell(raw, field.csvColumn).kind === 'blank' && field.entityProperty in existingEntity) {
             parsedRow.parsed[field.entityProperty] = existingEntity[field.entityProperty];
           }
         }
-
-        // Handle nested fields: merge CSV values with existing array entries
-        this.mergeNestedFieldsForEnrich(importFields, raw, parsedRow, existingEntity);
 
         // A name nothing finds keeps the stored reference of the record it updates.
         this.keepStoredReferences(importFields, parsedRow, existingEntity);
@@ -639,21 +664,19 @@ export class CsvImportService {
   }
 
   /**
-   * Merge mode (`enrich`, the screen's "complete" and Kad's), on a row that updates a record (lot I3
-   * of 26.11.9): a reference cell whose name nothing finds keeps the stored value instead of emptying
-   * it, and a numbered list with such a cell keeps the stored list whole. Each such cell is said
-   * (`CSV_REFERENCE_NOT_FOUND_KEPT`). A new record, and full replace, are not concerned.
+   * On a row that updates a record (lot I3 of 26.11.9): a reference cell whose name nothing finds
+   * keeps the stored value instead of emptying it, and a numbered list with such a cell keeps the
+   * stored list whole. Each such cell is said (`CSV_REFERENCE_NOT_FOUND_KEPT`). A new record is not
+   * concerned.
    */
   private keepStoredReferences(fields: CsvFieldDefinition[], row: CsvImportRow, existingEntity: any): void {
     for (const field of fields) {
       if (!field.fkEntity || !(field.entityProperty in existingEntity)) continue;
       const numbered = field.type === CsvFieldType.ARRAY && field.arrayStrategy === ArrayStrategy.NUMBERED_COLUMNS;
       const baseName = field.csvColumn.replace(/_\d+$/, '');
-      const columns = numbered
-        ? new Set(Array.from({ length: field.maxItems ?? this.DEFAULT_MAX_ITEMS }, (_, i) => `${baseName}_${i + 1}`))
-        : new Set([field.csvColumn]);
+      const inField = (column: string) => (numbered ? isNumberedColumn(column, baseName) : column === field.csvColumn);
       const code = numbered ? 'CSV_REFERENCE_NOT_FOUND_SKIPPED' : 'CSV_REFERENCE_NOT_FOUND_CLEARED';
-      const missing = row.warnings.filter((warning) => warning.code === code && warning.column !== undefined && columns.has(warning.column));
+      const missing = row.warnings.filter((warning) => warning.code === code && warning.column !== undefined && inField(warning.column));
       if (missing.length === 0) continue;
       row.parsed[field.entityProperty] = existingEntity[field.entityProperty];
       for (const warning of missing) {
@@ -664,10 +687,11 @@ export class CsvImportService {
   }
 
   /**
-   * Merge mode, once the hooks ran: a stored reference kept for a name nothing finds
-   * (`keepStoredReferences`) must still hold for the record as the row leaves it. A reference that
-   * belongs to other properties of the record (`keptWith`) is not kept when the row changes one of
-   * them: it is cleared, and said, as in full replace (`CSV_REFERENCE_NOT_FOUND_CLEARED`).
+   * Once the hooks ran: a stored reference kept for a name nothing finds (`keepStoredReferences`)
+   * must still hold for the record as the row leaves it. A reference that belongs to other
+   * properties of the record (`keptWith`) is not kept when the row changes one of them: it is
+   * cleared, and said (`CSV_REFERENCE_NOT_FOUND_CLEARED`). A stored value it clears counts in
+   * `cleared` (`noteCleared`): this runs at the check as at the load.
    */
   private clearKeptReferencesOfChangedOwners(rows: CsvImportRow[], fields: CsvFieldDefinition[]): void {
     const dependent = fields.filter((field) => field.fkEntity && field.keptWith?.length);
@@ -679,9 +703,12 @@ export class CsvImportService {
       for (const field of dependent) {
         const changed = field.keptWith!.some((property) => Object.prototype.hasOwnProperty.call(row.parsed, property) && !same(row.parsed[property], stored[property]));
         if (!changed) continue;
-        for (const warning of row.warnings) {
-          if (warning.column !== field.csvColumn || warning.code !== 'CSV_REFERENCE_NOT_FOUND_KEPT') continue;
-          row.parsed[field.entityProperty] = null;
+        const kept = row.warnings.filter((warning) => warning.column === field.csvColumn && warning.code === 'CSV_REFERENCE_NOT_FOUND_KEPT');
+        if (kept.length === 0) continue;
+        row.parsed[field.entityProperty] = null;
+        // A stored value cleared, counted at the check as at the load (this runs before both).
+        if (stored[field.entityProperty] != null) noteCleared(row, 1);
+        for (const warning of kept) {
           warning.code = 'CSV_REFERENCE_NOT_FOUND_CLEARED';
           warning.message = `${field.fkEntity} not found: "${warning.params?.value ?? ''}" (set to null)`;
         }
@@ -710,21 +737,21 @@ export class CsvImportService {
   }
 
   /**
-   * Parse a single field from the raw row.
+   * Parse a single field from the raw row, by the clearing rule (`importCell`): a blank cell keeps
+   * (a required one refuses only a new record), `-` clears (refused on the key and on a required
+   * value; a blank cell on a new record), anything else is read by the field's type.
    */
   private async parseField(
+    config: CsvEntityConfig,
     field: CsvFieldDefinition,
     raw: Record<string, string>,
     row: CsvImportRow,
     context: CsvImportContext,
-    replace: ReplaceRules | null,
+    rules: ClearRules | null,
   ): Promise<void> {
     // Handle numbered column arrays
-    if (
-      field.type === CsvFieldType.ARRAY &&
-      field.arrayStrategy === ArrayStrategy.NUMBERED_COLUMNS
-    ) {
-      this.parseNumberedArrayField(field, raw, row, context);
+    if (this.isNumbered(field)) {
+      this.parseNumberedArrayField(field, raw, row, context, rules);
       return;
     }
 
@@ -733,42 +760,39 @@ export class CsvImportService {
       return;
     }
 
-    // Skip NESTED fields (handled by assembleNestedFields)
+    // Skip NESTED fields (handled by applyNestedFields)
     if (field.type === CsvFieldType.NESTED) {
       return;
     }
 
-    // A column the file leaves out is never touched, whatever the mode.
-    if (!this.hasColumn(raw, field.csvColumn)) {
-      return;
-    }
+    // A column the file leaves out reads as a blank cell: never touched, required on a new record.
+    const cell = importCell(raw, field.csvColumn);
 
-    const rawValue = this.getRawValue(field, raw);
-
-    // Required validation
-    if (field.required && (rawValue === '' || rawValue === null)) {
-      row.errors.push({
-        row: row.rowNumber,
-        column: field.csvColumn,
-        message: `${field.csvColumn} is required`,
-        code: 'CSV_VALUE_REQUIRED',
-      });
-      return;
-    }
-
-    // Empty value handling
-    if (rawValue === '' || rawValue === null) {
-      if (replace) {
-        this.emptyField(field.entityProperty, field.csvColumn, row, replace);
+    if (cell.kind === 'clear') {
+      if (field.required || field.isIdentityColumn || config.upsertKey.includes(field.entityProperty)) {
+        refuseClear(row, field.csvColumn);
+      } else if (!row.isInsert && rules) {
+        this.clearField(field.entityProperty, field.csvColumn, row, rules);
       }
-      // In enrich mode, empty cells are handled after identity resolution
+      return;
+    }
+
+    if (cell.kind === 'blank') {
+      if (field.required && row.isInsert) {
+        row.errors.push({
+          row: row.rowNumber,
+          column: field.csvColumn,
+          message: `${field.csvColumn} is required`,
+          code: 'CSV_VALUE_REQUIRED',
+        });
+      }
       return;
     }
 
     // Parse based on type
     try {
       // A transform may be asynchronous (rich text processed in the Markdown workers).
-      const parsedValue = await this.parseValue(field, rawValue, row, context);
+      const parsedValue = await this.parseValue(field, cell.text, row, context);
       if (parsedValue !== undefined) {
         row.parsed[field.entityProperty] = parsedValue;
       }
@@ -785,201 +809,112 @@ export class CsvImportService {
     }
   }
 
+  /** A list written in numbered columns (`owner_email_1` to `_4`). */
+  private isNumbered(field: CsvFieldDefinition): boolean {
+    return field.type === CsvFieldType.ARRAY && field.arrayStrategy === ArrayStrategy.NUMBERED_COLUMNS;
+  }
+
   /**
-   * Assemble NESTED fields into their parent objects.
-   * Handles paths like [0].type, [1].ip into arrays of objects.
+   * NESTED fields (`ip_1_type`, `ip_1_address`, ...), applied onto the stored list of the record
+   * (none for a new one), for the sub-columns the file holds: a blank one keeps its value, `-` clears
+   * its sub-value (one cleared value), any other value sets it; an entry left with no value is taken
+   * out, and a list left empty is cleared. Entries beyond the file's columns are kept.
    */
-  private assembleNestedFields(
+  private applyNestedFields(
     fields: CsvFieldDefinition[],
     raw: Record<string, string>,
     row: CsvImportRow,
+    rules: ClearRules | null,
   ): void {
-    // Group NESTED fields by entityProperty
-    const nestedFields = fields.filter((f) => f.type === CsvFieldType.NESTED && f.nestedPath);
     const byProperty = new Map<string, CsvFieldDefinition[]>();
-
-    for (const field of nestedFields) {
-      const prop = field.entityProperty;
-      if (!byProperty.has(prop)) {
-        byProperty.set(prop, []);
-      }
-      byProperty.get(prop)!.push(field);
+    for (const field of fields) {
+      if (field.type !== CsvFieldType.NESTED || !field.nestedPath) continue;
+      byProperty.set(field.entityProperty, [...(byProperty.get(field.entityProperty) ?? []), field]);
     }
-
-    // Assemble each nested property
-    for (const [prop, propFields] of byProperty) {
-      const result: any[] = [];
-
-      // Find max array index
-      let maxIndex = -1;
-      for (const field of propFields) {
-        const match = field.nestedPath!.match(/^\[(\d+)\]/);
-        if (match) {
-          maxIndex = Math.max(maxIndex, parseInt(match[1], 10));
+    const hasValue = (value: unknown) => value != null && value !== '';
+    for (const [property, propFields] of byProperty) {
+      const held = propFields.filter((field) => this.hasColumn(raw, field.csvColumn));
+      const stored = row.isInsert ? undefined : row.existingEntity?.[property];
+      const entries: Array<Record<string, unknown>> = Array.isArray(stored)
+        ? stored.map((entry) => (entry && typeof entry === 'object' ? { ...entry } : {}))
+        : [];
+      let changed = false;
+      let clearedValues = 0;
+      for (const field of held) {
+        const path = field.nestedPath!.match(/^\[(\d+)\]\.(.+)$/);
+        if (!path) continue;
+        const cell = importCell(raw, field.csvColumn);
+        if (cell.kind === 'blank' || (cell.kind === 'clear' && row.isInsert)) continue;
+        const index = Number(path[1]);
+        while (entries.length <= index) entries.push({});
+        if (cell.kind === 'clear') {
+          if (hasValue(entries[index][path[2]])) clearedValues += 1;
+          delete entries[index][path[2]];
+        } else {
+          entries[index][path[2]] = cell.text;
         }
+        changed = true;
       }
-
-      // Build array entries
-      for (let i = 0; i <= maxIndex; i++) {
-        const entry: Record<string, any> = {};
-        let hasValue = false;
-
-        for (const field of propFields) {
-          const pathMatch = field.nestedPath!.match(/^\[(\d+)\]\.(.+)$/);
-          if (pathMatch && parseInt(pathMatch[1], 10) === i) {
-            const subProp = pathMatch[2];
-            const rawValue = (raw[field.csvColumn] ?? '').trim();
-            if (rawValue !== '') {
-              entry[subProp] = rawValue;
-              hasValue = true;
-            }
-          }
-        }
-
-        if (hasValue) {
-          result.push(entry);
-        }
+      if (!changed) {
+        // Nothing said: the stored list is kept as it is.
+        if (Array.isArray(stored)) row.parsed[property] = stored;
+        continue;
       }
-
-      // Only set if we have values (or clear if we're in replace mode)
-      if (result.length > 0) {
-        row.parsed[prop] = result;
-      }
+      if (clearedValues > 0 && rules) rules.nestedCleared.set(row, (rules.nestedCleared.get(row) ?? 0) + clearedValues);
+      const kept = entries.filter((entry) => Object.values(entry).some(hasValue));
+      if (kept.length > 0) row.parsed[property] = kept;
+      else if (!row.isInsert && rules) this.clearField(property, held[0].csvColumn, row, rules, false);
     }
   }
 
   /**
-   * Merge nested fields with existing entity values in enrich mode.
-   * This preserves existing array entries that weren't specified in CSV.
-   */
-  private mergeNestedFieldsForEnrich(
-    fields: CsvFieldDefinition[],
-    raw: Record<string, string>,
-    row: CsvImportRow,
-    existingEntity: any,
-  ): void {
-    // Group NESTED fields by entityProperty
-    const nestedFields = fields.filter((f) => f.type === CsvFieldType.NESTED && f.nestedPath);
-    const byProperty = new Map<string, CsvFieldDefinition[]>();
-
-    for (const field of nestedFields) {
-      const prop = field.entityProperty;
-      if (!byProperty.has(prop)) {
-        byProperty.set(prop, []);
-      }
-      byProperty.get(prop)!.push(field);
-    }
-
-    // Process each nested property
-    for (const [prop, propFields] of byProperty) {
-      const existingArray = existingEntity[prop];
-      const csvArray = row.parsed[prop];
-
-      // If no existing array, nothing to merge
-      if (!Array.isArray(existingArray) || existingArray.length === 0) {
-        continue;
-      }
-
-      // Check if ALL nested CSV columns for this property are empty
-      const allCsvColumnsEmpty = propFields.every((field) => {
-        const rawValue = (raw[field.csvColumn] ?? '').trim();
-        return rawValue === '';
-      });
-
-      // If all CSV columns are empty, preserve the entire existing array
-      if (allCsvColumnsEmpty) {
-        row.parsed[prop] = existingArray;
-        continue;
-      }
-
-      // Find max array index in the config
-      let maxIndex = -1;
-      for (const field of propFields) {
-        const match = field.nestedPath!.match(/^\[(\d+)\]/);
-        if (match) {
-          maxIndex = Math.max(maxIndex, parseInt(match[1], 10));
-        }
-      }
-
-      // Build merged array: CSV values take precedence, preserve existing entries beyond CSV range
-      const mergedArray: any[] = [];
-
-      for (let i = 0; i <= Math.max(maxIndex, existingArray.length - 1); i++) {
-        const existingEntry = existingArray[i];
-        const csvEntry = Array.isArray(csvArray) ? csvArray.find((_: any, idx: number) => {
-          // Map sparse CSV array back to original indices
-          // CSV array is built densely from entries with values, so we need to check
-          // which original index each entry corresponds to
-          return false; // We'll handle this differently
-        }) : undefined;
-
-        // Check if CSV has any values for this index
-        let csvHasValuesAtIndex = false;
-        const csvEntryForIndex: Record<string, any> = {};
-
-        for (const field of propFields) {
-          const pathMatch = field.nestedPath!.match(/^\[(\d+)\]\.(.+)$/);
-          if (pathMatch && parseInt(pathMatch[1], 10) === i) {
-            const subProp = pathMatch[2];
-            const rawValue = (raw[field.csvColumn] ?? '').trim();
-            if (rawValue !== '') {
-              csvEntryForIndex[subProp] = rawValue;
-              csvHasValuesAtIndex = true;
-            }
-          }
-        }
-
-        if (csvHasValuesAtIndex) {
-          // CSV has values at this index - merge with existing (CSV takes precedence)
-          if (existingEntry && typeof existingEntry === 'object') {
-            mergedArray.push({ ...existingEntry, ...csvEntryForIndex });
-          } else {
-            mergedArray.push(csvEntryForIndex);
-          }
-        } else if (existingEntry) {
-          // No CSV values at this index but existing entry exists - preserve it
-          mergedArray.push(existingEntry);
-        }
-        // If neither CSV nor existing has values at this index, skip (don't add empty entry)
-      }
-
-      // Update parsed with merged result
-      if (mergedArray.length > 0) {
-        row.parsed[prop] = mergedArray;
-      } else if (prop in row.parsed) {
-        // CSV explicitly cleared, keep it cleared
-      } else {
-        row.parsed[prop] = existingArray;
-      }
-    }
-  }
-
-  /**
-   * Parse a numbered array field (e.g., owner_email_1..4).
+   * Parse a numbered array field (e.g., owner_email_1..4, and every further `owner_email_<n>` the file
+   * holds): the cells that hold values are the whole list. Every cell blank keeps the stored list; `-`
+   * with no value clears it (a `-` among values adds nothing to them). A required list refuses only a
+   * new record without a value.
    */
   private parseNumberedArrayField(
     field: CsvFieldDefinition,
     raw: Record<string, string>,
     row: CsvImportRow,
     context: CsvImportContext,
+    rules: ClearRules | null,
   ): void {
     const baseName = field.csvColumn.replace(/_\d+$/, '');
-    const maxItems = field.maxItems ?? this.DEFAULT_MAX_ITEMS;
     const values: any[] = [];
 
     // A list the file leaves out (none of its numbered columns) is never touched.
-    const columns = Array.from({ length: maxItems }, (_, i) => `${baseName}_${i + 1}`);
-    if (!columns.some((colName) => this.hasColumn(raw, colName))) {
+    const columns = numberedColumns(raw, baseName);
+    if (columns.length === 0) {
+      return;
+    }
+    const cells = columns.map((colName) => importCell(raw, colName));
+
+    if (!cells.some((cell) => cell.kind === 'value')) {
+      if (cells.some((cell) => cell.kind === 'clear') && !row.isInsert) {
+        if (field.required) refuseClear(row, `${baseName}_1`);
+        else if (rules) this.clearField(field.entityProperty, `${baseName}_1`, row, rules);
+        return;
+      }
+      if (field.required && row.isInsert) {
+        row.errors.push({
+          row: row.rowNumber,
+          column: `${baseName}_1`,
+          message: `At least one ${baseName} is required`,
+          code: 'CSV_VALUE_ONE_REQUIRED',
+          params: { column: baseName },
+        });
+      } else if (!row.isInsert && field.entityProperty in (row.existingEntity ?? {})) {
+        row.parsed[field.entityProperty] = row.existingEntity[field.entityProperty];
+      }
       return;
     }
 
-    for (let i = 1; i <= maxItems; i++) {
-      const colName = `${baseName}_${i}`;
-      const rawValue = (raw[colName] ?? '').trim();
-
-      if (rawValue === '') {
-        continue;
-      }
+    for (let i = 0; i < columns.length; i++) {
+      const colName = columns[i];
+      const cell = cells[i];
+      if (cell.kind !== 'value') continue;
+      const rawValue = cell.text;
 
       // Resolve FK if needed
       if (field.fkEntity) {
@@ -1014,8 +949,8 @@ export class CsvImportService {
       }
     }
 
-    // Required validation
-    if (field.required && values.length === 0) {
+    // Required validation: a new record needs a value (a stored list keeps itself, keepStoredReferences).
+    if (field.required && values.length === 0 && row.isInsert) {
       row.errors.push({
         row: row.rowNumber,
         column: `${baseName}_1`,
@@ -1036,22 +971,31 @@ export class CsvImportService {
     return (raw[field.csvColumn] ?? '').trim();
   }
 
+  /**
+   * A cell that finds the record (the id, a column of the matching key): its value, the text "-" of
+   * a `'-` included; nothing for a blank cell or a `-`, which never finds a record (`-` on a key is
+   * refused by parseField).
+   */
+  private keyText(raw: Record<string, string>, column: string): string {
+    const cell = importCell(raw, column);
+    return cell.kind === 'value' ? cell.text : '';
+  }
+
   /** Whether the file holds the column: a blank cell is there, a column left out is not. */
   private hasColumn(raw: Record<string, string>, csvColumn: string): boolean {
     return Object.prototype.hasOwnProperty.call(raw, csvColumn);
   }
 
   /**
-   * Full replace: the stored columns of the table and the properties a blank cell never
-   * empties. A property that names no stored column (one the hooks or the entity service
-   * read) is emptied to null, as before.
+   * The clearing rule: the stored columns of the table. A property that names no stored column (one
+   * the hooks or the entity service read) is cleared to null.
    *
    * The rules come from the database, not from the entity metadata: the database decides what
    * a write accepts, and the two disagree (portfolio_projects.priority_override and
    * criteria_values are nullable columns declared NOT NULL on the entity; tenant_id has a
    * default the entity does not declare).
    */
-  private async loadReplaceRules(config: CsvEntityConfig, manager: EntityManager): Promise<ReplaceRules> {
+  private async loadClearRules(config: CsvEntityConfig, manager: EntityManager): Promise<ClearRules> {
     const rows = await manager.query(
       `SELECT column_name, is_nullable, data_type, column_default
          FROM information_schema.columns
@@ -1067,101 +1011,72 @@ export class CsvImportService {
       if (!nullable && row.data_type === 'ARRAY') empty = () => [];
       else if (!nullable && row.data_type === 'jsonb' && /^'\[\]'::jsonb$/.test(fallback)) empty = () => [];
       else if (!nullable && row.data_type === 'jsonb' && /^'\{\}'::jsonb$/.test(fallback)) empty = () => ({});
-      columns.set(row.column_name, { nullable, hasDefault: row.column_default != null, empty });
+      columns.set(row.column_name, { nullable, numeric: NUMERIC_TYPES.has(row.data_type), empty });
     }
     if (columns.size === 0) {
-      throw new Error(`Full replace cannot read the columns of the table "${config.tableName}".`);
+      throw new Error(`The import cannot read the columns of the table "${config.tableName}".`);
     }
-    const kept = new Set<string>(config.upsertKey);
-    for (const field of config.fields) {
-      if (field.isIdentityColumn) kept.add(field.entityProperty);
-    }
-    return { columns, kept, emptied: new WeakMap() };
+    return { columns, cleared: new WeakMap(), nestedCleared: new WeakMap() };
   }
 
   /**
-   * Full replace, a blank cell of a column the file holds: the empty list or object of a NOT
-   * NULL list column, null otherwise. The identity column and the matching key keep their value.
-   * New rows and NOT NULL columns without an empty value are settled once the hooks ran
-   * (checkEmptiedColumns).
+   * `-` on a record the row updates: the empty list or object of a NOT NULL list column, null
+   * otherwise. NOT NULL columns without an empty value are refused once the hooks ran
+   * (checkClearedColumns).
    */
-  private emptyField(property: string, csvColumn: string, row: CsvImportRow, replace: ReplaceRules): void {
-    if (replace.kept.has(property)) return;
-    const value = replace.columns.get(property)?.empty?.() ?? null;
+  private clearField(property: string, csvColumn: string, row: CsvImportRow, rules: ClearRules, counted = true): void {
+    const value = rules.columns.get(property)?.empty?.() ?? null;
     row.parsed[property] = value;
-    let emptied = replace.emptied.get(row);
-    if (!emptied) replace.emptied.set(row, (emptied = new Map()));
-    emptied.set(property, { csvColumn, value });
+    let cleared = rules.cleared.get(row);
+    if (!cleared) rules.cleared.set(row, (cleared = new Map()));
+    cleared.set(property, { csvColumn, value, counted });
   }
 
   /**
-   * Full replace, nested columns (`ip_1_type`, `ip_1_address`, ...): the sub-columns the file
-   * holds are applied onto the stored list of an existing row. A blank one clears its
-   * sub-property, a sub-column the file leaves out keeps its value, and an entry left with no
-   * value is taken out. A list left empty is emptied as any other field.
+   * Once the hooks ran, for the properties `-` cleared and no hook changed: a NOT NULL column with
+   * no empty value is a row error naming the column (`CSV_NUMBER_CANNOT_BE_CLEARED` for a number:
+   * write 0). Rows an insert-only import skips are not checked. It runs after afterValidate, at the
+   * preflight as at the load; beforeCommit never runs at the preflight (it locks rows and allocates
+   * references), so a rule that gives a cleared cell its value belongs in afterValidate.
    */
-  private replaceNestedFields(
-    fields: CsvFieldDefinition[],
-    raw: Record<string, string>,
-    row: CsvImportRow,
-    replace: ReplaceRules,
-  ): void {
-    const byProperty = new Map<string, CsvFieldDefinition[]>();
-    for (const field of fields) {
-      if (field.type !== CsvFieldType.NESTED || !field.nestedPath) continue;
-      byProperty.set(field.entityProperty, [...(byProperty.get(field.entityProperty) ?? []), field]);
-    }
-    for (const [property, propFields] of byProperty) {
-      const held = propFields.filter((field) => this.hasColumn(raw, field.csvColumn));
-      if (held.length === 0) continue;
-      const stored = row.existingEntity?.[property];
-      const entries: Array<Record<string, unknown>> = Array.isArray(stored)
-        ? stored.map((entry) => (entry && typeof entry === 'object' ? { ...entry } : {}))
-        : [];
-      for (const field of held) {
-        const path = field.nestedPath!.match(/^\[(\d+)\]\.(.+)$/);
-        if (!path) continue;
-        const index = Number(path[1]);
-        while (entries.length <= index) entries.push({});
-        const value = (raw[field.csvColumn] ?? '').trim();
-        if (value === '') delete entries[index][path[2]];
-        else entries[index][path[2]] = value;
-      }
-      const kept = entries.filter((entry) => Object.values(entry).some((value) => value != null && value !== ''));
-      if (kept.length > 0) row.parsed[property] = kept;
-      else this.emptyField(property, held[0].csvColumn, row, replace);
-    }
-  }
-
-  /**
-   * Full replace, once the hooks ran, for the properties a blank cell emptied and no hook changed:
-   * a new row takes the column's default; a NOT NULL column with no empty value is a row error.
-   * Rows an insert-only import skips are not checked. It runs after afterValidate, at the
-   * preflight as at the load; beforeCommit never runs at the preflight (it locks rows and
-   * allocates references), so a rule that gives a blank cell its value belongs in afterValidate.
-   */
-  private checkEmptiedColumns(rows: CsvImportRow[], replace: ReplaceRules, operation: CsvImportParams['operation']): void {
+  private checkClearedColumns(rows: CsvImportRow[], rules: ClearRules, operation: CsvImportParams['operation']): void {
     for (const row of rows) {
-      const emptied = replace.emptied.get(row);
-      if (!emptied) continue;
+      const cleared = rules.cleared.get(row);
+      if (!cleared) continue;
       if (operation === 'insert_only' && !row.isInsert) continue;
-      for (const [property, { csvColumn, value }] of emptied) {
+      for (const [property, { csvColumn, value }] of cleared) {
         if (row.parsed[property] !== value) continue;
-        const column = replace.columns.get(property);
-        if (row.isInsert && column?.hasDefault) {
-          delete row.parsed[property];
-          continue;
-        }
+        const column = rules.columns.get(property);
         if (value !== null || !column || column.nullable) continue;
-        row.errors.push({
-          row: row.rowNumber,
-          column: csvColumn,
-          message: `${csvColumn} cannot be emptied. Leave the column out of the file to keep the stored value.`,
-          code: 'CSV_VALUE_CANNOT_BE_EMPTIED',
-          params: { column: csvColumn },
-        });
+        refuseClear(row, csvColumn, { number: column.numeric });
       }
     }
+  }
+
+  /**
+   * The stored values a row clears (`CsvImportResult.cleared`): each value `-` cleared that was not
+   * already empty (the entries of a stored list), the nested sub-values `-` cleared, the stored
+   * entries a filled list no longer holds, and what the config's hooks declared (`noteCleared`).
+   */
+  private clearedValues(row: CsvImportRow, fields: CsvFieldDefinition[], rules: ClearRules | null): number {
+    const stored = row.existingEntity ?? {};
+    let count = row.clearedByConfig ?? 0;
+    const cleared = rules?.cleared.get(row);
+    for (const [property, { value, counted }] of cleared ?? []) {
+      if (!counted || row.parsed[property] !== value || !(property in stored)) continue;
+      const before = stored[property];
+      if (Array.isArray(before)) count += removedEntries(before, []);
+      else if (!sameStoredValue(before, value)) count += 1;
+    }
+    count += rules?.nestedCleared.get(row) ?? 0;
+    const lists = new Set(fields
+      .filter((field) => field.type === CsvFieldType.ARRAY && !cleared?.has(field.entityProperty))
+      .map((field) => field.entityProperty));
+    for (const property of lists) {
+      const next = row.parsed[property];
+      if (Array.isArray(next) && Array.isArray(stored[property])) count += removedEntries(stored[property], next);
+    }
+    return count;
   }
 
   /**
@@ -1481,7 +1396,7 @@ export class CsvImportService {
     config: CsvEntityConfig,
     rows: Record<string, string>[],
     context: CsvImportContext,
-  ): Promise<Map<string, any>> {
+  ): Promise<{ entities: Map<string, any>; deleted: Set<string> }> {
     const entities = new Map<string, any>();
 
     // Get ID field
@@ -1494,7 +1409,7 @@ export class CsvImportService {
     for (const row of rows) {
       // Check for ID
       if (idField) {
-        const id = (row[idField.csvColumn] ?? '').trim();
+        const id = this.keyText(row, idField.csvColumn);
         if (id) {
           ids.push(id);
         }
@@ -1506,7 +1421,7 @@ export class CsvImportService {
         for (const keyField of config.upsertKey) {
           const field = config.fields.find((f) => f.entityProperty === keyField);
           if (field) {
-            keyValues.push((row[field.csvColumn] ?? '').trim().toLowerCase());
+            keyValues.push(this.keyText(row, field.csvColumn).toLowerCase());
           }
         }
         if (keyValues.length === config.upsertKey.length && keyValues.every((v) => v)) {
@@ -1557,7 +1472,32 @@ export class CsvImportService {
       }
     }
 
-    return entities;
+    const deleted = context.params.dryRun ? new Set<string>() : await this.lockExistingEntities(config, entities, context);
+    return { entities, deleted };
+  }
+
+  /**
+   * The load works from records nobody changes before it commits (lot I6 of 26.11.9, passes F and G):
+   * the records the file finds are locked `FOR NO KEY UPDATE` and read again, in one statement in the
+   * order of their ids (two loads that cross the same records wait for each other, never deadlock), in
+   * the load's transaction. Every value the import keeps or derives (a blank cell, a column the file
+   * leaves out, a hook's rule) then comes from the record as it is when written, and a change or a
+   * delete saved on the screen during the load waits for it, then applies. The lock leaves the
+   * record's key alone, as the update itself does: rows that reference the record (time entries,
+   * attachments, activities) are saved without waiting. A record deleted since the first read is
+   * returned in `deleted`: its row is refused (`CSV_RECORD_DELETED`), never inserted again. The check
+   * (`dryRun`) locks nothing.
+   */
+  private async lockExistingEntities(config: CsvEntityConfig, entities: Map<string, any>, context: CsvImportContext): Promise<Set<string>> {
+    const ids = [...new Set([...entities.values()].map((entity) => String(entity.id)))].sort();
+    if (ids.length === 0) return new Set();
+    const locked: any[] = await context.manager.query(
+      `SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
+      [context.tenantId, ids],
+    );
+    const fresh = new Map(locked.map((entity) => [String(entity.id), entity]));
+    for (const [key, entity] of entities) entities.set(key, fresh.get(String(entity.id)) ?? entity);
+    return new Set(ids.filter((id) => !fresh.has(id)));
   }
 
   /**
@@ -1571,7 +1511,7 @@ export class CsvImportService {
     // Check ID first
     const idField = config.fields.find((f) => f.isIdentityColumn);
     if (idField) {
-      const id = (raw[idField.csvColumn] ?? '').trim();
+      const id = this.keyText(raw, idField.csvColumn);
       if (id) {
         const byId = existingEntities.get(`id:${id}`);
         if (byId) {
@@ -1586,7 +1526,7 @@ export class CsvImportService {
       for (const keyField of config.upsertKey) {
         const field = config.fields.find((f) => f.entityProperty === keyField);
         if (field) {
-          keyValues.push((raw[field.csvColumn] ?? '').trim().toLowerCase());
+          keyValues.push(this.keyText(raw, field.csvColumn).toLowerCase());
         }
       }
 

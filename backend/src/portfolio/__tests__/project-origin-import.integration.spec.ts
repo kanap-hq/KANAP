@@ -31,7 +31,7 @@ async function run(
   return importer.import(
     portfolioProjectCsvConfig,
     file(csv),
-    { dryRun: false, mode: 'replace', operation: 'upsert', ...params },
+    { dryRun: false, operation: 'upsert', ...params },
     { manager: runner.manager, tenantId, userId: null, isAdmin: true },
   );
 }

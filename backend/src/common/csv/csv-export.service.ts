@@ -17,6 +17,7 @@ import {
   CsvFieldType,
 } from './csv-field.types';
 import { CsvResolverService } from './csv-resolver.service';
+import { numberedListHeader } from './csv-numbered-lists';
 
 const CSV_FORMULA_TRIGGER = /^[=+\-@\t\r\n]|^\s+[=+\-@]/;
 // A plain negative amount ("-1200.50", "-1200,5") or share ("-3,25%") is a number, not a formula.
@@ -192,15 +193,14 @@ export class CsvExportService {
     // so a filled template is read in the zone its user typed.
     const timeZone = opts.timeZone ?? 'UTC';
     const zoned = new Set(exportFields.filter((f) => f.zonedDateTime).map((f) => f.csvColumn));
-    const headerTexts = columns.map(({ column, header }) => (zoned.has(column) ? timeZoneHeader(header, timeZone) : header));
-    const headerLine = writeCsvHeader(opts.language, headerTexts);
+    const headerTextsOf = (list: typeof columns) => list.map(({ column, header }) => (zoned.has(column) ? timeZoneHeader(header, timeZone) : header));
 
-    // Template export: return headers only
+    // Template export: return headers only, each numbered list with its declared columns.
     if (opts.scope === 'template') {
       return {
         filename: `${config.entityName}_template.csv`,
         contentType: CSV_CONTENT_TYPE,
-        content: headerLine,
+        content: writeCsvHeader(opts.language, headerTextsOf(columns)),
         rows: 0,
         warnings: [],
       } as unknown as CsvExportResult<F>;
@@ -238,9 +238,19 @@ export class CsvExportService {
       }
     }
 
+    // Each numbered list gets as many columns as its longest list in the rows (`csv-numbered-lists.ts`).
+    const lists = this.longerLists(config, exportFields, columns, entities, reverseLookups, context);
+    const headerTexts = headerTextsOf(columns);
+    const headerLine = writeCsvHeader(opts.language, headerTexts);
+
     // Generate CSV content: the shared layer quotes, guards formulas and picks the separator.
-    const rows = entities.map((entity) => {
-      const row = this.buildRow(entity, exportFields, reverseLookups, relationData, context, warnings);
+    const rows = entities.map((entity, index) => {
+      const row = this.buildRow(entity, exportFields, reverseLookups, relationData, context);
+      for (const { base, from, values } of lists) {
+        values[index].forEach((value, i) => {
+          if (i + 1 >= from) row[`${base}_${i + 1}`] = this.neutralizeFormulaValue(value);
+        });
+      }
       return columns.map(({ column }) => row[column] ?? '');
     });
 
@@ -378,6 +388,54 @@ export class CsvExportService {
     return columns;
   }
 
+  /**
+   * The numbered lists of the export whose declared columns are all exported (`numberedLists`, and the
+   * fields in numbered columns): when a row's list is longer, `columns` gets the further columns after
+   * the list's last one, titled as the first (`numberedListHeader`). Each list with its values by row
+   * and the first number its declared columns do not write.
+   */
+  private longerLists(
+    config: CsvEntityConfig,
+    fields: CsvFieldDefinition[],
+    columns: Array<{ column: string; header: string }>,
+    entities: any[],
+    reverseLookups: Map<string, Map<string, string>>,
+    context: CsvExportContext,
+  ): Array<{ base: string; from: number; values: string[][] }> {
+    const lists: Array<{ base: string; declared: number; values: (entity: any) => string[] }> = [];
+    for (const list of config.numberedLists ?? []) {
+      const declared = config.fields.filter((field) => new RegExp(`^${list.base}_\\d+$`).test(field.csvColumn)).length;
+      lists.push({ base: list.base, declared, values: (entity) => list.values(entity, context) });
+    }
+    for (const field of fields) {
+      if (field.type !== CsvFieldType.ARRAY || field.arrayStrategy !== ArrayStrategy.NUMBERED_COLUMNS) continue;
+      const base = field.csvColumn.replace(/_\d+$/, '');
+      if (lists.some((list) => list.base === base)) continue;
+      const lookup = field.fkEntity ? reverseLookups.get(field.fkEntity) : undefined;
+      lists.push({
+        base,
+        declared: field.maxItems ?? this.DEFAULT_MAX_ITEMS,
+        values: (entity) => (Array.isArray(entity[field.entityProperty])
+          ? entity[field.entityProperty].map((item: unknown) => (lookup ? lookup.get(item as string) ?? '' : String(item ?? '')))
+          : []),
+      });
+    }
+    const longer: Array<{ base: string; from: number; values: string[][] }> = [];
+    for (const { base, declared, values } of lists) {
+      const last = columns.findIndex(({ column }) => column === `${base}_${declared}`);
+      const all = Array.from({ length: declared }, (_, i) => `${base}_${i + 1}`).every((name) => columns.some(({ column }) => column === name));
+      if (last < 0 || !all) continue;
+      const byRow = entities.map((entity) => values(entity));
+      const longest = Math.max(declared, ...byRow.map((list) => list.length));
+      if (longest === declared) continue;
+      const further = Array.from({ length: longest - declared }, (_, i) => declared + i + 1)
+        .map((n) => ({ column: `${base}_${n}`, header: numberedListHeader(config, base, n, context.language) }));
+      columns.splice(last + 1, 0, ...further);
+      longer.push({ base, from: declared + 1, values: byRow });
+    }
+    return longer;
+  }
+
   /** The header of a field in `language`, or its technical column when the config translates none. */
   private headerOf(config: CsvEntityConfig, field: CsvFieldDefinition, language: CsvLanguage): string {
     return config.headerLabels?.[field.csvColumn]?.[language] ?? field.csvColumn;
@@ -420,7 +478,6 @@ export class CsvExportService {
     reverseLookups: Map<string, Map<string, string>>,
     relationData: Map<string, Map<string, Record<string, string>>>,
     context: CsvExportContext,
-    warnings: string[],
   ): Record<string, string> {
     const row: Record<string, string> = {};
     const processedArrays = new Set<string>();
@@ -437,7 +494,7 @@ export class CsvExportService {
         }
         processedArrays.add(baseName);
 
-        this.expandArrayToColumns(entity, field, row, reverseLookups, warnings);
+        this.expandArrayToColumns(entity, field, row, reverseLookups);
         continue;
       }
 
@@ -462,7 +519,6 @@ export class CsvExportService {
     field: CsvFieldDefinition,
     row: Record<string, string>,
     reverseLookups: Map<string, Map<string, string>>,
-    warnings: string[],
   ): void {
     const baseName = field.csvColumn.replace(/_\d+$/, '');
     const maxItems = field.maxItems ?? this.DEFAULT_MAX_ITEMS;
@@ -476,14 +532,7 @@ export class CsvExportService {
       return;
     }
 
-    // Check for truncation
-    if (arrayValue.length > maxItems) {
-      warnings.push(
-        `Row ${entity.id}: ${field.entityProperty} has ${arrayValue.length} items, truncated to ${maxItems}`,
-      );
-    }
-
-    // Fill columns
+    // Fill the declared columns: the further ones are written by `longerLists`.
     for (let i = 1; i <= maxItems; i++) {
       const idx = i - 1;
       if (idx < arrayValue.length) {

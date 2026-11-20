@@ -3,6 +3,8 @@ import {
   CsvExportContext,
   CsvFieldType,
   CsvImportContext,
+  importCell,
+  refuseClear,
 } from '../common/csv';
 import { CsvCellError } from '../common/csv/csv-field.types';
 import {
@@ -613,9 +615,11 @@ export const incidentCsvConfig: CsvEntityConfig = {
   },
 
   /**
-   * Blank cells a full replace emptied, by the rules of beforeCommit: a blank boolean is false,
-   * a blank confidential flag keeps the stored one (a new row gets false there). Applied here
-   * too, so the preflight's check of emptied columns sees the same values as the load.
+   * The clearing rule (D21 of 26.11.9, T-I6f): a blank cell keeps the stored value (the shared import
+   * copies it); `-` on the yes/no columns, the status and the detection time is left cleared for the
+   * shared import to refuse (`CSV_VALUE_CANNOT_BE_CLEARED`: they cannot be empty), and `-` on the review
+   * is refused here: the review is a versioned document, emptied on the screen. On a new incident `-`
+   * reads as a blank cell.
    *
    * The forward-only lifecycle is checked here, on the matched stored row: a status that moves
    * backwards, or to `cancelled`, is reserved to `incidents:admin` (Reopen or Cancel). A
@@ -626,13 +630,12 @@ export const incidentCsvConfig: CsvEntityConfig = {
     await keepStoredSlotBodies(rows, context, 'incidents', { [REVIEW_ENTITY_PROPERTY]: 'review' });
     const viewer = importViewer(context);
     for (const row of rows) {
-      for (const column of ['personal_data_affected', 'authority_notification_required']) {
-        if (row.parsed[column] === null) row.parsed[column] = false;
-      }
-      if (row.parsed.confidential === null) delete row.parsed.confidential;
+      // A matched row an insert-only import skips is not checked.
+      if (!row.isInsert && context.params.operation !== 'insert_only' && importCell(row.raw, 'review').kind === 'clear') refuseClear(row, 'review');
 
-      // insert_only skips the matched rows; they cannot move a stored status.
+      // insert_only skips the matched rows; they cannot move a stored status. A cleared status is refused.
       if (viewer.isAdmin || context.params.operation === 'insert_only' || row.isInsert || row.errors.length > 0) continue;
+      if (importCell(row.raw, 'status').kind === 'clear') continue;
       const previous = row.existingEntity?.status;
       const next = row.parsed.status;
       if (!isReservedIncidentStatusMove(next, previous)) continue;
@@ -661,11 +664,6 @@ export const incidentCsvConfig: CsvEntityConfig = {
         if (next[column] instanceof Date && stored[column] instanceof Date
           && Math.floor(stored[column].getTime() / 1000) * 1000 === next[column].getTime()) next[column] = stored[column];
       }
-      // As beforeCommit: blank booleans are false, a blank confidential flag keeps the stored one.
-      for (const column of ['personal_data_affected', 'authority_notification_required']) {
-        if (column in next) next[column] = next[column] ?? false;
-      }
-      if (next.confidential == null) delete next.confidential;
       if (!next.category) return;
       const resolved = findCatalogOption(next.category, categories)?.code;
       if (!resolved) throw new Error(`unknown category "${next.category}"`);
@@ -701,25 +699,15 @@ export const incidentCsvConfig: CsvEntityConfig = {
         entity.category = resolved;
       }
 
-      // Booleans have a false default: a blank cell clears them.
-      entity.personal_data_affected = entity.personal_data_affected ?? false;
-      entity.authority_notification_required = entity.authority_notification_required ?? false;
-      if (!entity.id) {
-        entity.confidential = entity.confidential ?? false;
-      }
-
       if (entity.id) {
+        // A stored incident keeps what a blank cell leaves; `-` on a value that cannot be empty
+        // (the yes/no columns, the status, the detection time) is refused by the shared import.
         entity.updated_by = context.userId ?? null;
-        // Columns the database refuses to clear. Blanking them in replace mode
-        // would silently rewrite the record, so say so instead.
-        for (const column of ['status', 'detected_at'] as const) {
-          if (entity[column] == null) {
-            throw new Error(
-              `${incidentLabel(entity)}: "${column}" cannot be cleared. Provide a value, or import in enrich mode.`,
-            );
-          }
-        }
       } else {
+        // A new incident: the yes/no columns a blank cell leaves are no.
+        entity.personal_data_affected = entity.personal_data_affected ?? false;
+        entity.authority_notification_required = entity.authority_notification_required ?? false;
+        entity.confidential = entity.confidential ?? false;
         entity.created_by = context.userId ?? null;
         entity.status = entity.status ?? 'open';
         entity.detected_at = entity.detected_at ?? new Date();

@@ -184,7 +184,7 @@ async function testIncidentRefAndValueParsing() {
   await incidentCsvConfig.beforeValidate!(rows as any, {
     tenantId: 'tenant-1',
     manager: { query: async () => [] },
-    params: { dryRun: true, mode: 'replace', operation: 'upsert' },
+    params: { dryRun: true, operation: 'upsert' },
     resolverCache: new Map(),
     userId: null,
     isAdmin: false,
@@ -275,7 +275,7 @@ async function testIncidentReviewIsVirtual() {
   const context = {
     tenantId: 't1',
     manager,
-    params: { dryRun: false, mode: 'replace', operation: 'upsert' },
+    params: { dryRun: false, operation: 'upsert' },
     resolverCache: new Map(),
     userId: 'u1',
     itOpsSettings: { incidentCategories: [] },
@@ -308,7 +308,7 @@ async function testIncidentImportHooks() {
   const context = {
     tenantId: 't1',
     manager,
-    params: { dryRun: false, mode: 'replace', operation: 'upsert' },
+    params: { dryRun: false, operation: 'upsert' },
     resolverCache: new Map(),
     userId: 'u1',
     itOpsSettings: { incidentCategories: [{ code: 'security', label: 'Security' }] },
@@ -345,11 +345,12 @@ async function testIncidentImportHooks() {
     /INC-42/,
   );
 
-  // Replace mode must not silently rewrite a NOT NULL column on an update.
-  await assert.rejects(
-    () => incidentCsvConfig.beforeCommit!([{ id: 'i2', item_number: 5, title: 'y', severity: 'low', status: null, detected_at: new Date() }], context),
-    /cannot be cleared/,
-  );
+  // `-` on the status or the detection time of a stored incident is refused by the shared import, at
+  // the check (`CSV_VALUE_CANNOT_BE_CLEARED`, csv-import-clearing-rule.integration.spec): the hook
+  // fills them on a new incident only.
+  const stored = { id: 'i2', item_number: 5, title: 'y', severity: 'low', status: 'resolved', detected_at: new Date(0) };
+  await incidentCsvConfig.beforeCommit!([stored], context);
+  assert.deepEqual([stored.status, stored.detected_at.getTime()], ['resolved', 0], 'a stored incident keeps its status and detection time');
 }
 
 (async () => {

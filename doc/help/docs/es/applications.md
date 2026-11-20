@@ -592,15 +592,14 @@ Desde la lista de Aplicaciones:
 1. **Prepare su archivo**: un archivo CSV o un libro de Excel (`.xlsx`). Guarde un archivo CSV en UTF-8. Las comas y los puntos y coma funcionan, y también un archivo que Excel guardó como CSV simple (Windows-1252). Descargue una plantilla para asegurar los encabezados correctos. El separador, los importes, las fechas y los sí o no de cada idioma están en [Archivos CSV y Excel](csv-files.md).
 
 2. **Elija la configuración de importación**:
-   - **Modo**:
-     - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes: solo actualiza lo que especifique
-     - `Reemplazar`: Reemplaza los valores de las columnas del archivo. Una celda vacía borra el valor guardado, salvo en las columnas de clasificación (use `__CLEAR__`). Una columna que falta en el archivo conserva sus valores. Algunos campos no se pueden vaciar: la **Verificación previa** los señala.
    - **Operación**:
      - `Upsert` (predeterminado): Crear nuevas aplicaciones o actualizar las existentes
      - `Solo actualizar`: Solo modificar aplicaciones existentes, omitir nuevas
      - `Solo insertar`: Solo crear nuevas aplicaciones, omitir existentes
 
      La operación se aplica también a los responsables y a la residencia de datos: una fila que la operación omite los deja como están.
+
+   Una celda vacía conserva el valor guardado, y `-` lo borra. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing) y [Coincidencia y actualizaciones](#coincidencia-y-actualizaciones).
 
 3. **Validar primero**: Haga clic en **Verificación previa** para validar su archivo sin hacer cambios. Revise errores y advertencias.
 
@@ -631,7 +630,7 @@ Un archivo con una sola fila rechazada no carga nada. Consulte [Archivos CSV y E
 | `category` | Propósito principal | No | Acepta código o etiqueta de Configuración. Un valor desconocido hace rechazar la fila |
 | `supplier_name` | Nombre del proveedor | No | Debe coincidir con un proveedor existente |
 | `editor` | Editor del software | No | Texto libre (p. ej., Microsoft, SAP) |
-| `criticality` | Criticidad de negocio | No | Acepta código o etiqueta de Configuración; `__CLEAR__` lo borra |
+| `criticality` | Criticidad de negocio | No | Acepta código o etiqueta de Configuración; `-` lo borra |
 | `lifecycle` | Estado actual | No | Acepta código o etiqueta de Configuración. Un valor desconocido hace rechazar la fila |
 | `is_suite` | Puede tener apps hijas | No | `sí` o `no` |
 
@@ -662,7 +661,7 @@ Un archivo con una sola fila rechazada no carga nada. Consulte [Archivos CSV y E
 | `data_class` | Clasificación de datos | Acepta código o etiqueta de Configuración |
 | `last_dr_test` | Fecha de última prueba DR | Formato de fecha: AAAA-MM-DD |
 | `contains_pii` | Almacena datos personales | `sí` o `no` |
-| `data_residency` | Países de almacenamiento de datos | Códigos de país ISO separados por comas (p. ej., `FR,DE`). En modo `Enriquecer`, una celda vacía conserva los países |
+| `data_residency` | Países de almacenamiento de datos | Códigos de país ISO separados por comas (p. ej., `FR,DE`). Una celda rellenada reemplaza los países guardados, y `-` los borra |
 
 **Campos de clasificación**:
 
@@ -674,16 +673,16 @@ Un archivo con una sola fila rechazada no carga nada. Consulte [Archivos CSV y E
 | `rto_minutes` / `rpo_minutes` | Objetivos de recuperación | Minutos enteros; RPO puede ser cero |
 | `classification_justification` | Justificación | Texto libre |
 
-Una celda de clasificación vacía conserva el valor existente en los modos Enriquecer y Reemplazar; use `__CLEAR__` para borrar una clasificación.
+`-` borra la criticidad, la criticidad cibernética, la clasificación de datos, la ola de recuperación, el RTO, el RPO, la justificación y la última prueba DR. `contains_pii` no se puede borrar: `-` en esa columna rechaza la fila. Un archivo que todavía usa `__CLEAR__` funciona: se lee como `-`.
 
 **Campos de responsables**:
 
 | Columna CSV | Descripción | Notas |
 |-------------|-------------|-------|
-| `business_owner_email_1` hasta `_4` | Correos de responsables de negocio | Deben coincidir con el correo de un usuario existente. Un correo desconocido hace rechazar la fila |
-| `it_owner_email_1` hasta `_4` | Correos de responsables de TI | Deben coincidir con el correo de un usuario existente. Un correo desconocido hace rechazar la fila |
+| `business_owner_email_1`, `business_owner_email_2`, ... | Correos de responsables de negocio | Deben coincidir con el correo de un usuario existente. Un correo desconocido hace rechazar la fila |
+| `it_owner_email_1`, `it_owner_email_2`, ... | Correos de responsables de TI | Deben coincidir con el correo de un usuario existente. Un correo desconocido hace rechazar la fila |
 
-En modo `Enriquecer`, cuando todas las celdas de responsables de un tipo están vacías, la aplicación conserva sus responsables de ese tipo.
+Los responsables de cada tipo siguen sus propias celdas. Cuando todas las celdas de un tipo están vacías, la aplicación conserva sus responsables de ese tipo. Los correos de las celdas son la lista completa de ese tipo y reemplazan los responsables guardados. `-` solo vacía el tipo. Un `-` junto a correos no añade nada.
 
 **Campos solo de exportación** (incluidos en Exportación completa pero no importables):
 
@@ -714,15 +713,13 @@ El sistema normaliza automáticamente los valores durante la importación, por l
 
 ### Coincidencia y actualizaciones
 
-Las aplicaciones se emparejan por **nombre**, sin distinguir mayúsculas de minúsculas e ignorando los espacios al principio y al final. Cuando se encuentra una coincidencia:
-- Con modo `Enriquecer`: Solo los valores CSV no vacíos actualizan la aplicación
-- Con modo `Reemplazar`: Las columnas del archivo se actualizan, y una celda vacía borra el valor guardado. Las columnas que faltan en el archivo conservan sus valores. Una celda de clasificación vacía conserva su valor, y `__CLEAR__` la borra. El nombre, el `id`, el ciclo de vida y los campos obligatorios no se pueden vaciar: la **Verificación previa** señala un error en la fila. Una aplicación nueva recibe los valores predeterminados.
+Las aplicaciones se emparejan por **nombre**, sin distinguir mayúsculas de minúsculas e ignorando los espacios al principio y al final. Cuando se encuentra una coincidencia, una celda vacía conserva el valor guardado, y `-` lo borra. Las columnas que faltan en el archivo conservan sus valores. El nombre, el `id`, el ciclo de vida, la categoría, `is_suite`, `external_facing`, `etl_enabled`, `contains_pii` y los demás campos obligatorios no se pueden borrar: `-` en ellos rechaza la fila, y el mensaje nombra la columna. Una aplicación nueva recibe los valores predeterminados.
 
 Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el ID, luego el nombre como respaldo. Cuando dos aplicaciones existentes tienen el nombre de una fila, la fila se rechaza: añada la columna `id` para elegir una.
 
 Una fila encontrada por su `id` con otro nombre renombra la aplicación. El nuevo nombre debe estar libre. El título del documento de descripción de la aplicación sigue el nuevo nombre.
 
-**Editor y proveedor**: una fila con un editor (`editor`) y sin proveedor se vincula al proveedor de ese nombre, si existe. La comprobación lista esta asociación con los demás valores asociados, y **Deshacer** la quita. En modo `Enriquecer`, una aplicación que ya tiene un proveedor lo conserva. El editor se queda tal como está escrito. Sin el derecho de leer los proveedores, el editor no vincula ningún proveedor.
+**Editor y proveedor**: una fila con un editor (`editor`) y sin proveedor se vincula al proveedor de ese nombre, si existe. La comprobación lista esta asociación con los demás valores asociados, y **Deshacer** la quita. Una aplicación que ya tiene un proveedor lo conserva. `-` en `supplier_name` quita el proveedor, y el editor entonces no vincula ninguno. El editor se queda tal como está escrito. Sin el derecho de leer los proveedores, el editor no vincula ningún proveedor.
 
 ### Filas que se parecen a una aplicación existente { #lookalike-applications }
 
@@ -737,7 +734,7 @@ La comprobación lista estas filas en **Se parece a una aplicación existente**,
 
 - **Descartar**: la fila no se importa. Es la opción por defecto.
 - **Crear de todos modos**: la fila se convierte en una nueva aplicación.
-- **Actualizar APP-12**: la fila actualiza la aplicación a la que se parece, en el modo de la importación, responsables y residencia de datos incluidos. La aplicación conserva su nombre. Señale la fila para ver las columnas que cambian. «Nada cambia en APP-12» significa que el archivo no cambia ninguno de sus valores.
+- **Actualizar APP-12**: la fila actualiza la aplicación a la que se parece, responsables y residencia de datos incluidos. La aplicación conserva su nombre. Señale la fila para ver las columnas que cambian. «Nada cambia en APP-12» significa que el archivo no cambia ninguno de sus valores.
 
 **Crear todas de todos modos**, **Actualizar todas** y **Descartar todas**, encima de la lista, se aplican a todas las filas. Una elección hecha después en una fila solo cambia esa fila. Cada elección vuelve a comprobar el archivo. Con **Solo añadir los nuevos** (la operación `Solo insertar`), la actualización no se ofrece.
 

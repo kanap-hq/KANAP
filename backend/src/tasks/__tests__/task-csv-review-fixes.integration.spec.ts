@@ -14,7 +14,7 @@ import { inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tes
 // Lot I3 of 26.11.9, fixes of the adversarial review. The viewers and owners of a row go to the task
 // the import writes, its related object found as the import found it (Kad's proposal included), with
 // one read of each family per import. Kad's proposal of an incident (`INC-n`) is judged as the cell
-// would be, for a person who reads the incidents. In merge mode, a stored phase (or stream, or
+// would be, for a person who reads the incidents. A stored phase (or stream, or
 // department) is kept for a name nothing finds only while the row leaves its project (category,
 // company) as stored. The lines of a match, a refusal and an undone match are the import's, blank
 // lines aside.
@@ -39,7 +39,7 @@ async function importCsv(
   params: Partial<CsvImportParams>,
   access: CsvCallerAccess = ADMIN,
 ): Promise<CsvImportResult> {
-  return service.import(file(csv), { dryRun: true, mode: 'enrich', operation: 'upsert', ...params }, {
+  return service.import(file(csv), { dryRun: true, operation: 'upsert', ...params }, {
     manager,
     tenantId,
     userId: null,
@@ -143,8 +143,8 @@ async function testIncidentProposal() {
   });
 }
 
-// Constat 4: in merge mode, a row that moves a task to another project and names a phase nothing
-// finds clears the phase (said as in full replace); the load passes. A row that keeps the project
+// Constat 4: a row that moves a task to another project and names a phase nothing
+// finds clears the phase (said cleared); the load passes. A row that keeps the project
 // keeps the stored phase. Same rule for a stream and its category.
 async function testKeptValueOfAChangedOwner() {
   await inRolledBackTransaction(async (runner) => {

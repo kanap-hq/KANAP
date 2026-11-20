@@ -95,7 +95,8 @@ Estos son los nombres estándar. Su organización puede renombrar las cinco colu
 ## Qué significa una celda
 
 - Una celda vacía conserva el valor guardado. Una celda `nature` vacía conserva el tipo de una línea existente.
-- `-` borra un detalle de la línea: descripción, notas, nombre e ID de ERP del proveedor, centro de coste, run o build, un valor de dimensión, un responsable, el proyecto, el fin de validez. En una columna que una línea nueva debe rellenar, y en `nature`, `-` es un error de fila. En una dimensión obligatoria, `-` es un error de fila cuando la línea tiene un valor.
+- `-` borra un detalle de la línea: descripción, notas, nombre e ID de ERP del proveedor, centro de coste, run o build, un valor de dimensión, un responsable, el proyecto, el fin de validez. En una columna que una línea nueva debe rellenar, y en `nature`, `-` es un error de fila. En una dimensión obligatoria, `-` es un error de fila cuando la línea tiene un valor. La comprobación cuenta los valores que la carga borrará, por ejemplo «Se borrarán 3 valores».
+- `'-` es el texto `-`. La exportación escribe así un `-` guardado, de modo que un archivo exportado e importado de nuevo no cambia nada.
 - `0` escribe cero.
 - Un total anual igual al total guardado no escribe nada. Un total distinto se reparte por el periodo de la columna, exactamente como cuando escribe el total en la pestaña **Presupuesto**.
 - Una celda de mes escribe ese mes, y marca la columna como editada a mano, igual que un mes escrito en la pestaña **Presupuesto**.

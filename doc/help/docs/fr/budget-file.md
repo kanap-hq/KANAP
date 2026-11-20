@@ -95,7 +95,8 @@ Ce sont les noms standard. Votre organisation peut renommer les cinq colonnes da
 ## Ce que signifie une cellule
 
 - Une cellule vide conserve la valeur enregistrée. Une cellule `nature` vide conserve le type d'une ligne existante.
-- `-` efface un détail de la ligne : description, notes, nom et ID ERP du fournisseur, centre de coûts, run ou build, une valeur de dimension, un responsable, le projet, la fin de validité. Sur une colonne qu'une nouvelle ligne doit remplir, et sur `nature`, `-` est une erreur de ligne. Sur une dimension obligatoire, `-` est une erreur de ligne lorsque la ligne porte une valeur.
+- `-` efface un détail de la ligne : description, notes, nom et ID ERP du fournisseur, centre de coûts, run ou build, une valeur de dimension, un responsable, le projet, la fin de validité. Sur une colonne qu'une nouvelle ligne doit remplir, et sur `nature`, `-` est une erreur de ligne. Sur une dimension obligatoire, `-` est une erreur de ligne lorsque la ligne porte une valeur. La vérification compte les valeurs que le chargement effacera, par exemple « 3 valeurs seront effacées ».
+- `'-` est le texte `-`. L'export écrit ainsi un `-` enregistré : un fichier exporté puis réimporté ne change rien.
 - `0` écrit zéro.
 - Un total annuel égal au total enregistré n'écrit rien. Un total différent est réparti sur la période de la colonne, exactement comme lorsque vous saisissez le total dans l'onglet **Budget**.
 - Une cellule de mois écrit ce mois, et marque la colonne comme modifiée à la main, comme un mois saisi dans l'onglet **Budget**.

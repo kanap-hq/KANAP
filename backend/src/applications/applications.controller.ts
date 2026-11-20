@@ -708,7 +708,6 @@ export class ApplicationsController {
   async import(
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRun: string = 'true',
-    @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
     @Query('language') languageRaw: string | undefined,
     @Body('unmatched') unmatchedRaw: unknown,
@@ -724,7 +723,6 @@ export class ApplicationsController {
       file,
       {
         dryRun: dryRun !== 'false',
-        mode,
         operation,
         unmatched,
         lookalikes,

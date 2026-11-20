@@ -18,9 +18,9 @@ async function testRoute() {
   const controller = new (TasksController as any)(null, null, null, null, null, null, csv, null, null, null, null);
   const req = { tenant: { id: 't1' }, user: { sub: 'u1' }, queryRunner: { manager: { query: async () => [{ locale: 'de' }] } } };
   const file = { buffer: Buffer.from('title\r\nA\r\n') };
-  await controller.importCsv(file, 'true', 'enrich', 'upsert', 'fr', undefined, req);
+  await controller.importCsv(file, 'true', 'upsert', 'fr', undefined, req);
   assert.equal(csv.calls[0].language, 'fr', 'the screen\'s language');
-  await controller.importCsv(file, 'true', 'enrich', 'upsert', undefined, undefined, req);
+  await controller.importCsv(file, 'true', 'upsert', undefined, undefined, req);
   assert.equal(csv.calls[1].language, 'de', 'the person\'s own when the screen sends none');
 }
 

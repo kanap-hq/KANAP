@@ -359,6 +359,8 @@ L'export contient les demandes que la liste affiche, avec ses filtres, sa recher
 
 **Colonnes** : le fichier commence par `id` et `reference` (`REQ-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. L'import ignore `reference`.
 
+**Cellules vides et `-`** : sur une demande que le fichier met à jour, une cellule vide garde la valeur enregistrée, et `-` l'efface, `purpose` et `risks` compris. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing).
+
 Utilisez l'export quand vous avez besoin de reporting de portefeuille ou d'enrichissement hors ligne. Utilisez l'import quand vous avez besoin de créer ou mettre à jour des demandes en masse. Parce que l'import peut altérer les enregistrements d'intake à grande échelle, il est intentionnellement réservé aux administrateurs.
 
 ## Conseils

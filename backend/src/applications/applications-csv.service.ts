@@ -7,6 +7,7 @@ import { lockApplicationNames, lockApplicationRow } from './application-rules';
 import { requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
 import { noteNameMatch, proposalFor, undoneMatch } from '../common/name-matching';
 import type { CsvImportContext, CsvImportRow, CsvSettledRow, ImportLookalikeChoice } from '../common/csv';
+import { importCell } from '../common/csv/csv-import-cells';
 import {
   ApplicationIndex,
   applicationState,
@@ -36,7 +37,7 @@ import {
   CSV_CONTENT_TYPE,
 } from '../common/csv';
 import type { ExportFileFormat } from '../common/xlsx';
-import { applicationCsvConfig, changedApplicationColumns, csvOwnerKeys, sameKeys, usersByEmail } from './application-csv.config';
+import { applicationCsvConfig, changedApplicationColumns, csvOwnerKeys, csvResidencyCodes, sameKeys, usersByEmail } from './application-csv.config';
 import { inIdOrder } from '../common/pagination';
 import { applicationVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
 import {
@@ -49,7 +50,7 @@ import {
  * Service for importing and exporting Applications via CSV (V2)
  *
  * Uses the standardized CSV infrastructure with:
- * - Numbered owner columns (business_owner_email_1..4, it_owner_email_1..4)
+ * - Numbered owner columns (business_owner_email_1, _2, ..., it_owner_email_1, ...: four at least)
  * - Proper FK resolution
  * - Two-phase import with validation
  */
@@ -90,6 +91,12 @@ type LookalikeState = {
 
 /** A row the load wrote: the application it saved, and its cells (by column), for its owners and data residency. */
 type WrittenRow = { id: string; raw: Record<string, string> };
+
+/** The text of a cell, by the clearing rule: empty for a blank cell and for `-`. */
+function cellValue(raw: Record<string, string>, column: string): string {
+  const cell = importCell(raw, column);
+  return cell.kind === 'value' ? cell.text : '';
+}
 
 @Injectable()
 export class ApplicationsCsvService {
@@ -345,8 +352,8 @@ export class ApplicationsCsvService {
 
     // If successful and not dry run, handle owners and data residency
     if (result.ok && !params.dryRun) {
-      await this.handleOwnerImport(written, params.mode, opts);
-      await this.handleDataResidencyImport(written, params.mode, opts);
+      await this.handleOwnerImport(written, opts);
+      await this.handleDataResidencyImport(written, opts);
       await this.syncRenamedDocumentTitles(namesBefore, new Set(written.map((row) => row.id)), opts);
     }
 
@@ -373,10 +380,10 @@ export class ApplicationsCsvService {
     if (params.operation === 'update_only') return rows.map((row) => ({ entity: row.found }));
     const index = new ApplicationIndex(await storedApplications(context.manager, context.tenantId));
     const decided = decideLookalikes(rows.map((row) => {
-      const name = String(row.raw.name ?? '').trim();
+      const name = cellValue(row.raw, 'name');
       const keys = !name ? null : row.found
         ? { name, supplierId: null, editor: null }
-        : { name, supplierId: this.rowSupplier(row.raw, context), editor: String(row.raw.editor ?? '').trim() || null };
+        : { name, supplierId: this.rowSupplier(row.raw, context), editor: cellValue(row.raw, 'editor') || null };
       return { line: row.rowNumber, foundId: row.found ? String(row.found.id) : null, keys };
     }), index, params.lookalikes ?? [], { updatable: params.operation !== 'insert_only' });
     look.decisions = decided.decisions;
@@ -429,15 +436,17 @@ export class ApplicationsCsvService {
 
   /**
    * The supplier a row names, as the import resolves it (Kad's proposal, the name case aside, then
-   * accents aside for a person who reads the suppliers and did not undo it), else the one its
-   * publisher names (`editorSupplier`); null for none.
+   * accents aside for a person who reads the suppliers and did not undo it), else, for a blank supplier
+   * cell, the one its publisher names (`editorSupplier`); null for none, and for `-`.
    */
   private rowSupplier(raw: Record<string, string>, context: CsvImportContext): string | null {
-    const cell = String(raw.supplier_name ?? '').trim();
-    if (!cell) {
-      const editor = String(raw.editor ?? '').trim();
+    const supplier = importCell(raw, 'supplier_name');
+    if (supplier.kind === 'clear') return null;
+    if (supplier.kind === 'blank') {
+      const editor = cellValue(raw, 'editor');
       return editor ? this.editorSupplier(editor, context)?.id ?? null : null;
     }
+    const cell = supplier.text;
     const undone = undoneMatch(context.params.unmatched, 'supplier_name', cell);
     const reads = this.resolver.matchesBeyondCase('suppliers', context.access);
     const proposal = undone || !reads ? undefined : proposalFor(context.params.proposals, 'supplier_name', cell);
@@ -462,18 +471,18 @@ export class ApplicationsCsvService {
   }
 
   /**
-   * A row that gives a publisher and no supplier is linked to the supplier its publisher names (T-I3k),
-   * a match listed (`origin: 'editor'`) that the person may undo. A supplier stored on the application
-   * the row updates is kept, except by full replace with a blank supplier cell (a file without the
-   * supplier column says nothing of it).
+   * A row that gives a publisher and a blank supplier cell (or no supplier column) is linked to the
+   * supplier its publisher names (T-I3k), a match listed (`origin: 'editor'`) that the person may undo.
+   * A supplier stored on the application the row updates is kept; `-` on the supplier removes it, and
+   * the publisher links none.
    */
   private supplierFromEditor(rows: CsvImportRow[], context: CsvImportContext): void {
     for (const row of rows) {
-      if (row.errors.length > 0 || String(row.raw.supplier_name ?? '').trim() !== '') continue;
-      const editor = String(row.raw.editor ?? '').trim();
+      if (row.errors.length > 0 || importCell(row.raw, 'supplier_name').kind !== 'blank') continue;
+      const editor = cellValue(row.raw, 'editor');
       const existing = row.existingEntity;
       if (!editor) continue;
-      if (existing?.supplier_id && (context.params.mode === 'enrich' || !('supplier_name' in row.raw))) continue;
+      if (existing?.supplier_id) continue;
       const supplier = this.editorSupplier(editor, context);
       if (!supplier) continue;
       row.parsed.supplier_id = supplier.id;
@@ -515,7 +524,6 @@ export class ApplicationsCsvService {
    */
   private async handleOwnerImport(
     written: readonly WrittenRow[],
-    mode: CsvImportParams['mode'],
     opts: { manager: EntityManager; tenantId: string; userId?: string | null },
   ) {
     const { manager, tenantId, userId } = opts;
@@ -529,9 +537,9 @@ export class ApplicationsCsvService {
       const ownerRepo = manager.getRepository(ApplicationOwner);
       const beforeRows = await ownerRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });
 
-      // Owners named by the columns (deduped by owner type + user to avoid unique violations);
-      // empty cells keep the stored owners of their type, except in replace mode.
-      const ownerKeys = csvOwnerKeys(row, userByEmail, beforeRows.map((r) => `${r.owner_type}:${r.user_id}`), mode);
+      // Owners named by the columns (deduped by owner type + user to avoid unique violations); blank
+      // cells keep the stored owners of their type, `-` alone empties it.
+      const ownerKeys = csvOwnerKeys(row, userByEmail, beforeRows.map((r) => `${r.owner_type}:${r.user_id}`));
       if (sameKeys(beforeRows.map((r) => `${r.owner_type}:${r.user_id}`), ownerKeys)) continue;
       const newOwners = ownerKeys.map((key) => {
         const [owner_type, user_id] = key.split(':') as ['business' | 'it', string];
@@ -573,27 +581,18 @@ export class ApplicationsCsvService {
 
   /**
    * The data residency the rows the load wrote give, on the application each row wrote (by its id): a
-   * file without the column leaves residency alone.
+   * file without the column, or a blank cell, leaves residency alone; `-` clears it; the codes of a
+   * filled cell are the whole list.
    */
   private async handleDataResidencyImport(
     written: readonly WrittenRow[],
-    mode: CsvImportParams['mode'],
     opts: { manager: EntityManager; tenantId: string; userId?: string | null },
   ) {
     const { manager, tenantId, userId } = opts;
 
     for (const { id: appId, raw: row } of written) {
-      if (!Object.prototype.hasOwnProperty.call(row, 'data_residency')) continue;
-      const residencyRaw = row['data_residency'] || '';
-
-      // Parse residency codes
-      const codes = residencyRaw
-        .split(',')
-        .map((c) => c.trim().toUpperCase())
-        .filter((c) => c.length === 2);
-
-      // An empty cell keeps the stored residency, except in replace mode, where it clears it.
-      if (codes.length === 0 && mode !== 'replace') continue;
+      const codes = csvResidencyCodes(row);
+      if (!codes) continue;
 
       const residencyRepo = manager.getRepository(ApplicationDataResidency);
       const beforeRows = await residencyRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });

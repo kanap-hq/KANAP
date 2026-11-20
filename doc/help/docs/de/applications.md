@@ -592,15 +592,14 @@ Aus der Anwendungsliste:
 1. **Datei vorbereiten**: eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`). Speichern Sie eine CSV-Datei als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV- und Excel-Dateien](csv-files.md).
 
 2. **Importeinstellungen wählen**:
-   - **Modus**:
-     - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte: nur aktualisieren, was Sie angeben
-     - `Ersetzen`: Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert, außer in den Klassifizierungsspalten (verwenden Sie dort `__CLEAR__`). Eine Spalte, die in der Datei fehlt, behält ihre Werte. Manche Felder können nicht geleert werden: **Preflight** zeigt sie an.
    - **Operation**:
      - `Upsert` (Standard): Neue Anwendungen erstellen oder vorhandene aktualisieren
      - `Nur aktualisieren`: Nur vorhandene Anwendungen ändern, neue überspringen
      - `Nur einfügen`: Nur neue Anwendungen erstellen, vorhandene überspringen
 
      Die Operation gilt auch für die Verantwortlichen und die Datenresidenz: Eine Zeile, die die Operation überspringt, lässt sie unverändert.
+
+   Eine leere Zelle behält den gespeicherten Wert, und `-` leert ihn. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing) und [Abgleich und Updates](#abgleich-und-updates).
 
 3. **Zuerst validieren**: Klicken Sie auf **Preflight**, um Ihre Datei ohne Änderungen zu validieren. Überprüfen Sie Fehler und Warnungen.
 
@@ -631,7 +630,7 @@ Eine Datei mit einer einzigen abgelehnten Zeile lädt nichts. Siehe [CSV- und Ex
 | `category` | Hauptzweck | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen. Ein unbekannter Wert führt zur Ablehnung der Zeile |
 | `supplier_name` | Lieferantenname | Nein | Muss mit vorhandenem Lieferanten übereinstimmen |
 | `editor` | Software-Herausgeber | Nein | Freitext (z. B. Microsoft, SAP) |
-| `criticality` | Geschäftskritikalität | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen; `__CLEAR__` löscht den Wert |
+| `criticality` | Geschäftskritikalität | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen; `-` leert den Wert |
 | `lifecycle` | Aktueller Status | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen. Ein unbekannter Wert führt zur Ablehnung der Zeile |
 | `is_suite` | Kann Unteranwendungen haben | Nein | `ja` oder `nein` |
 
@@ -662,7 +661,7 @@ Eine Datei mit einer einzigen abgelehnten Zeile lädt nichts. Siehe [CSV- und Ex
 | `data_class` | Datenklassifizierung | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `last_dr_test` | Datum des letzten DR-Tests | Datumsformat: YYYY-MM-DD |
 | `contains_pii` | Speichert personenbezogene Daten | `ja` oder `nein` |
-| `data_residency` | Datenspeicherländer | ISO-Ländercodes, komma-getrennt (z. B. `FR,DE`). Im Modus `Anreichern` behält eine leere Zelle die Länder |
+| `data_residency` | Datenspeicherländer | ISO-Ländercodes, komma-getrennt (z. B. `FR,DE`). Eine ausgefüllte Zelle ersetzt die gespeicherten Länder, und `-` leert sie |
 
 **Klassifizierungsfelder**:
 
@@ -674,16 +673,16 @@ Eine Datei mit einer einzigen abgelehnten Zeile lädt nichts. Siehe [CSV- und Ex
 | `rto_minutes` / `rpo_minutes` | Wiederherstellungsziele | Ganze Minuten; RPO darf null sein |
 | `classification_justification` | Begründung | Freitext |
 
-Eine leere Klassifizierungszelle behält im Modus Anreichern und Ersetzen den vorhandenen Wert; verwenden Sie `__CLEAR__`, um eine Klassifizierung zu löschen.
+`-` leert die Kritikalität, die Cyberkritikalität, die Datenklasse, die Wiederanlaufwelle, die RTO, die RPO, die Begründung und den letzten DR-Test. `contains_pii` kann nicht geleert werden: `-` führt dort zur Ablehnung der Zeile. Eine Datei, die noch `__CLEAR__` verwendet, funktioniert: Es wird als `-` gelesen.
 
 **Verantwortlichen-Felder**:
 
 | CSV-Spalte | Beschreibung | Hinweise |
 |------------|-------------|-------|
-| `business_owner_email_1` bis `_4` | E-Mails der Fachverantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
-| `it_owner_email_1` bis `_4` | E-Mails der IT-Verantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
+| `business_owner_email_1`, `business_owner_email_2`, ... | E-Mails der Fachverantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
+| `it_owner_email_1`, `it_owner_email_2`, ... | E-Mails der IT-Verantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
 
-Im Modus `Anreichern` behält die Anwendung ihre Verantwortlichen eines Typs, wenn alle Verantwortlichen-Zellen dieses Typs leer sind.
+Die Verantwortlichen jedes Typs folgen ihren eigenen Zellen. Wenn alle Zellen eines Typs leer sind, behält die Anwendung ihre Verantwortlichen dieses Typs. Die E-Mail-Adressen in den Zellen sind die ganze Liste dieses Typs und ersetzen die gespeicherten Verantwortlichen. `-` allein leert den Typ. Ein `-` neben E-Mail-Adressen fügt nichts hinzu.
 
 **Nur-Export-Felder** (im Vollständigen Export enthalten, aber nicht importierbar):
 
@@ -714,15 +713,13 @@ Das System normalisiert Werte automatisch beim Import, sodass `Line-of-business`
 
 ### Abgleich und Updates
 
-Anwendungen werden nach **Name** abgeglichen, ohne Rücksicht auf Groß- und Kleinschreibung und auf Leerzeichen am Anfang und Ende. Wenn ein Treffer gefunden wird:
-- Mit `Anreichern`-Modus: Nur nicht-leere CSV-Werte aktualisieren die Anwendung
-- Mit `Ersetzen`-Modus: Die Spalten in der Datei werden aktualisiert, und eine leere Zelle löscht den gespeicherten Wert. Spalten, die in der Datei fehlen, behalten ihre Werte. Eine leere Klassifizierungszelle behält ihren Wert, `__CLEAR__` löscht ihn. Name, `id`, Lebenszyklus und Pflichtfelder können nicht geleert werden: **Preflight** meldet einen Fehler in der Zeile. Eine neue Anwendung erhält die Standardwerte.
+Anwendungen werden nach **Name** abgeglichen, ohne Rücksicht auf Groß- und Kleinschreibung und auf Leerzeichen am Anfang und Ende. Wenn ein Treffer gefunden wird, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn. Spalten, die in der Datei fehlen, behalten ihre Werte. Name, `id`, Lebenszyklus, Kategorie, `is_suite`, `external_facing`, `etl_enabled`, `contains_pii` und die anderen Pflichtfelder können nicht geleert werden: `-` führt dort zur Ablehnung der Zeile, und die Meldung nennt die Spalte. Eine neue Anwendung erhält die Standardwerte.
 
 Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf den Namen zurück. Tragen zwei vorhandene Anwendungen den Namen einer Zeile, wird die Zeile abgelehnt: Fügen Sie die Spalte `id` hinzu, um eine auszuwählen.
 
 Eine über ihre `id` gefundene Zeile mit einem anderen Namen benennt die Anwendung um. Der neue Name muss frei sein. Der Titel des Beschreibungsdokuments der Anwendung folgt dem neuen Namen.
 
-**Hersteller und Lieferant**: Eine Zeile mit einem Hersteller (`editor`) und ohne Lieferant wird mit dem Lieferanten dieses Namens verknüpft, sofern es ihn gibt. Die Prüfung listet diese Zuordnung mit den anderen zugeordneten Werten auf, und **Rückgängig** entfernt sie. Im Modus `Anreichern` behält eine Anwendung, die bereits einen Lieferanten hat, diesen. Der Hersteller bleibt so, wie er geschrieben ist. Ohne das Recht, Lieferanten zu lesen, verknüpft der Hersteller keinen Lieferanten.
+**Hersteller und Lieferant**: Eine Zeile mit einem Hersteller (`editor`) und ohne Lieferant wird mit dem Lieferanten dieses Namens verknüpft, sofern es ihn gibt. Die Prüfung listet diese Zuordnung mit den anderen zugeordneten Werten auf, und **Rückgängig** entfernt sie. Eine Anwendung, die bereits einen Lieferanten hat, behält ihn. `-` in `supplier_name` entfernt den Lieferanten, und der Hersteller verknüpft dann keinen. Der Hersteller bleibt so, wie er geschrieben ist. Ohne das Recht, Lieferanten zu lesen, verknüpft der Hersteller keinen Lieferanten.
 
 ### Zeilen, die einer bestehenden Anwendung ähneln { #lookalike-applications }
 
@@ -737,7 +734,7 @@ Die Prüfung listet diese Zeilen unter **Ähnelt einer bestehenden Anwendung** a
 
 - **Auslassen**: Die Zeile wird nicht importiert. Das ist die Voreinstellung.
 - **Trotzdem anlegen**: Die Zeile wird zu einer neuen Anwendung.
-- **APP-12 aktualisieren**: Die Zeile aktualisiert die Anwendung, der sie ähnelt, im Modus des Imports, einschließlich Verantwortlichen und Datenresidenz. Die Anwendung behält ihren Namen. Zeigen Sie auf die Zeile, um die Spalten zu sehen, die sich ändern. „An APP-12 ändert sich nichts“ bedeutet, dass die Datei keinen ihrer Werte ändert.
+- **APP-12 aktualisieren**: Die Zeile aktualisiert die Anwendung, der sie ähnelt, einschließlich Verantwortlichen und Datenresidenz. Die Anwendung behält ihren Namen. Zeigen Sie auf die Zeile, um die Spalten zu sehen, die sich ändern. „An APP-12 ändert sich nichts“ bedeutet, dass die Datei keinen ihrer Werte ändert.
 
 **Alle trotzdem anlegen**, **Alle aktualisieren** und **Alle auslassen** über der Liste gelten für alle Zeilen. Eine danach für eine Zeile getroffene Wahl ändert nur diese Zeile. Jede Wahl prüft die Datei erneut. Mit **Nur neue hinzufügen** (der Vorgang `Nur einfügen`) wird die Aktualisierung nicht angeboten.
 

@@ -19,7 +19,7 @@ import { ApplicationsListService } from '../services/applications-list.service';
 
 // Lot I3 of 26.11.9, pass 3a (T-I3d, T-I3j, T-I3k): a row of the applications import that would create
 // an application and looks like one the person reads is left out by default, with "Create anyway" and
-// "Update APP-n"; the update keeps the application's name, follows the file's mode, and is refused when
+// "Update APP-n"; the update keeps the application's name, follows the clearing rule, and is refused when
 // the application changed since the check; the owners of a row that updates APP-n under another name
 // reach APP-n. A row with a publisher and no supplier is linked to the supplier its publisher names,
 // a match listed and undoable, never for a person who does not read the suppliers.
@@ -80,7 +80,7 @@ async function importCsv(
 ): Promise<CsvImportResult> {
   return ctx.csv.import(
     { buffer: Buffer.from(lines.join('\n') + '\n', encoding), originalname: 'apps.csv' } as Express.Multer.File,
-    { dryRun: false, mode: 'enrich', operation: 'upsert', ...params },
+    { dryRun: false, operation: 'upsert', ...params },
     { manager: ctx.runner.manager, tenantId: ctx.tenantId, access },
   );
 }
@@ -137,7 +137,7 @@ async function testRule() {
   });
 }
 
-/** The choices: left out by default and nothing written; created anyway; APP-n updated, name kept, the file's mode, the fields listed. */
+/** The choices: left out by default and nothing written; created anyway; APP-n updated, name kept, the clearing rule, the fields listed. */
 async function testChoices() {
   await inTenant(async (ctx) => {
     const compta = await app(ctx, 'Comptabilité', { description: 'Ledger', editor: 'Sage' });
@@ -153,7 +153,7 @@ async function testChoices() {
     assert.deepEqual(await names(ctx), ['Comptabilite', 'Comptabilité']);
     await ctx.runner.query(`DELETE FROM applications WHERE tenant_id = $1 AND name = 'Comptabilite'`, [ctx.tenantId]);
 
-    // "Update APP-n": the check lists the fields that change; the load keeps the name and, in "complete", the blank description.
+    // "Update APP-n": the check lists the fields that change; the load keeps the name and, for a blank cell, the description.
     const check = await importCsv(ctx, file, { dryRun: true, lookalikes: [{ kind: 'lookalike', line: 2, action: 'update', id: compta.id }] });
     const entry = check.lookalikes!.lines[0];
     assert.deepEqual([entry.outcome, entry.fields], ['updated', ['editor']]);
@@ -162,8 +162,11 @@ async function testChoices() {
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.deepEqual(await stored(ctx, compta.id), { name: 'Comptabilité', description: 'Ledger', supplier_id: null, editor: 'Cegid' });
 
-    // Full replace: the blank description is cleared.
-    result = await importCsv(ctx, file, { mode: 'replace', lookalikes: [{ kind: 'lookalike', line: 2, action: 'update', id: compta.id }] });
+    // `-` clears the description, announced by the check.
+    const clearing = ['name;description;editor', 'Comptabilite;-;Cegid'];
+    const cleared = await importCsv(ctx, clearing, { dryRun: true, lookalikes: [{ kind: 'lookalike', line: 2, action: 'update', id: compta.id }] });
+    assert.deepEqual([cleared.updated, cleared.cleared], [1, 1]);
+    result = await importCsv(ctx, clearing, { lookalikes: cleared.lookalikes!.choices });
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.equal((await stored(ctx, compta.id)).description, null);
 
@@ -251,13 +254,17 @@ async function testPublisherProposesTheSupplier() {
     const [lyra] = await ctx.runner.query(`SELECT supplier_id::text AS supplier_id FROM applications WHERE tenant_id = $1 AND name = 'Lyra'`, [ctx.tenantId]);
     assert.deepEqual([lyra.supplier_id, result.matches], [sage, undefined]);
 
-    // "Complete" keeps a stored supplier; full replace takes the publisher's for a blank supplier cell.
+    // A blank supplier cell keeps a stored supplier; `-` removes it, and the publisher links none.
     result = await importCsv(ctx, ['name;supplier_name;editor', 'Lyra;;Cegid']);
     assert.equal((await stored(ctx, (await ctx.runner.query(`SELECT id::text AS id FROM applications WHERE tenant_id = $1 AND name = 'Lyra'`, [ctx.tenantId]))[0].id)).supplier_id, sage);
     assert.equal(result.matches, undefined);
-    result = await importCsv(ctx, ['name;supplier_name;editor', 'Lyra;;Cegid'], { mode: 'replace' });
+    result = await importCsv(ctx, ['name;supplier_name;editor', 'Lyra;-;Cegid']);
     const [after] = await ctx.runner.query(`SELECT supplier_id::text AS supplier_id FROM applications WHERE tenant_id = $1 AND name = 'Lyra'`, [ctx.tenantId]);
-    assert.equal(after.supplier_id, cegid);
+    assert.deepEqual([after.supplier_id, result.matches], [null, undefined]);
+    // With no supplier left, a blank cell lets the publisher name one.
+    result = await importCsv(ctx, ['name;supplier_name;editor', 'Lyra;;Cegid']);
+    const [relinked] = await ctx.runner.query(`SELECT supplier_id::text AS supplier_id FROM applications WHERE tenant_id = $1 AND name = 'Lyra'`, [ctx.tenantId]);
+    assert.equal(relinked.supplier_id, cegid);
 
     // Without the right to read the suppliers, nothing happens.
     result = await importCsv(ctx, ['name;editor', 'Nova;Cegid'], {}, NO_SUPPLIERS);

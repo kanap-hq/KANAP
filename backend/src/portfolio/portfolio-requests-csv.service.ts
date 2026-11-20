@@ -17,6 +17,7 @@ import type { ExportFileFormat } from '../common/xlsx';
 import { portfolioRequestCsvConfig } from './portfolio-request-csv.config';
 import { inIdOrder } from '../common/pagination';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
+import { repairBeforeSlotWrite } from './portfolio-csv-document-slots';
 
 /**
  * Service for importing and exporting Portfolio Requests via CSV
@@ -49,7 +50,8 @@ export class PortfolioRequestsCsvService {
           }
         }
       },
-      afterCommit: async (entities: any[], context) => {
+      afterCommit: async (entities: any[], context, written) => {
+        const rowOf = new Map((written ?? []).map(({ row, entity }) => [entity, row]));
         for (const entity of entities) {
           const source = {
             id: entity.id,
@@ -57,6 +59,18 @@ export class PortfolioRequestsCsvService {
             item_number: entity.item_number ?? null,
             name: entity.name || '',
           };
+
+          // A request with no purpose or risks document yet gets it as its screen makes it, first.
+          const row = rowOf.get(entity);
+          const repairFirst = async (managed: string, slot: 'purpose' | 'risks_mitigations', stored: 'purpose' | 'risks') => {
+            if (!Object.prototype.hasOwnProperty.call(entity, managed)) return false;
+            if (!row || row.isInsert) return true;
+            return repairBeforeSlotWrite(
+              this.integratedDocs, 'requests', String(entity.id), slot, (entity as any)[managed], row.existingEntity?.[stored], context,
+            );
+          };
+          const writePurpose = await repairFirst('__csv_managed_purpose', 'purpose', 'purpose');
+          const writeRisks = await repairFirst('__csv_managed_risks', 'risks_mitigations', 'risks');
 
           await this.integratedDocs.provisionForRequest(
             source,
@@ -68,7 +82,7 @@ export class PortfolioRequestsCsvService {
             { manager: context.manager },
           );
 
-          if (Object.prototype.hasOwnProperty.call(entity, '__csv_managed_purpose')) {
+          if (writePurpose) {
             await this.integratedDocs.writeSourceSlotContent(
               'requests',
               source,
@@ -79,7 +93,7 @@ export class PortfolioRequestsCsvService {
             );
           }
 
-          if (Object.prototype.hasOwnProperty.call(entity, '__csv_managed_risks')) {
+          if (writeRisks) {
             await this.integratedDocs.writeSourceSlotContent(
               'requests',
               source,

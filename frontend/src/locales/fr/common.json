@@ -589,15 +589,6 @@
     "andMoreErrors": "…et {{count}} de plus",
     "ignoredColumns": "Colonnes ignorées : {{columns}}.",
     "importWorkflow": "Ce que fait l'import",
-    "advancedOptions": "Options avancées",
-    "overridePresetNote": "Ces options remplacent le choix ci-dessus.",
-    "emptyCellHandling": "Gestion des cellules vides",
-    "preserveExisting": "Conserver l'existant",
-    "setToNull": "Effacer la valeur enregistrée",
-    "operation": "Opération",
-    "insertAndUpdate": "Insertion et mise à jour",
-    "updateOnly": "Mise à jour uniquement",
-    "insertOnly": "Insertion uniquement",
     "validationPassed_one": "Validation réussie. Prêt à importer {{count}} ligne.",
     "validationPassed_other": "Validation réussie. Prêt à importer {{count}} lignes.",
     "nothingToImport": "Rien à importer.",
@@ -642,10 +633,6 @@
       "insertOnly": {
         "label": "Ajouter les nouveaux uniquement",
         "description": "Ajoute les nouveaux enregistrements. Les enregistrements existants sont ignorés."
-      },
-      "fullReplace": {
-        "label": "Remplacement complet",
-        "description": "Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée. Une colonne absente du fichier garde ses valeurs. Certains champs ne peuvent pas être vidés : la vérification les signale."
       }
     },
     "exportRows": {

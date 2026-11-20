@@ -592,15 +592,14 @@ Depuis la liste des Applications :
 1. **Préparez votre fichier** : un fichier CSV ou un classeur Excel (`.xlsx`). Enregistrez un fichier CSV en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV et Excel](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
-   - **Mode** :
-     - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes : ne mettez à jour que ce que vous spécifiez
-     - `Remplacer` : Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée, sauf dans les colonnes de classification (utilisez `__CLEAR__`). Une colonne absente du fichier garde ses valeurs. Certains champs ne peuvent pas être vidés : la **Vérification préalable** les signale.
    - **Opération** :
      - `Upsert` (par défaut) : Créer de nouvelles applications ou mettre à jour les existantes
      - `Mise à jour uniquement` : Ne modifier que les applications existantes, ignorer les nouvelles
      - `Insertion uniquement` : Ne créer que de nouvelles applications, ignorer les existantes
 
      L'opération s'applique aussi aux responsables et à la résidence des données : une ligne que l'opération ignore les laisse tels quels.
+
+   Une cellule vide garde la valeur enregistrée, et `-` l'efface. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing) et [Correspondance et mises à jour](#correspondance-et-mises-a-jour).
 
 3. **Validez d'abord** : Cliquez sur **Vérification préalable** pour valider votre fichier sans apporter de modifications. Examinez les erreurs et avertissements.
 
@@ -631,7 +630,7 @@ Un fichier avec une seule ligne refusée ne charge rien. Voir [Fichiers CSV et E
 | `category` | Objectif principal | Non | Accepte un code ou un libellé depuis les Paramètres. Une valeur inconnue fait refuser la ligne |
 | `supplier_name` | Nom du fournisseur | Non | Doit correspondre à un fournisseur existant |
 | `editor` | Éditeur du logiciel | Non | Texte libre (ex. : Microsoft, SAP) |
-| `criticality` | Criticité business | Non | Accepte un code ou un libellé depuis les Paramètres ; `__CLEAR__` l'efface |
+| `criticality` | Criticité business | Non | Accepte un code ou un libellé depuis les Paramètres ; `-` l'efface |
 | `lifecycle` | Statut actuel | Non | Accepte un code ou un libellé depuis les Paramètres. Une valeur inconnue fait refuser la ligne |
 | `is_suite` | Peut avoir des apps enfants | Non | `oui` ou `non` |
 
@@ -662,7 +661,7 @@ Un fichier avec une seule ligne refusée ne charge rien. Voir [Fichiers CSV et E
 | `data_class` | Classification des données | Accepte un code ou un libellé depuis les Paramètres |
 | `last_dr_test` | Date du dernier test PRA | Format de date : YYYY-MM-DD |
 | `contains_pii` | Stocke des données personnelles | `oui` ou `non` |
-| `data_residency` | Pays de stockage des données | Codes pays ISO séparés par des virgules (ex. `FR,DE`). En mode `Enrichir`, une cellule vide conserve les pays |
+| `data_residency` | Pays de stockage des données | Codes pays ISO séparés par des virgules (ex. `FR,DE`). Une cellule remplie remplace les pays enregistrés, et `-` les efface |
 
 **Champs de classification** :
 
@@ -674,16 +673,16 @@ Un fichier avec une seule ligne refusée ne charge rien. Voir [Fichiers CSV et E
 | `rto_minutes` / `rpo_minutes` | Objectifs de reprise | Minutes entières ; le RPO peut être zéro |
 | `classification_justification` | Justification | Texte libre |
 
-Une cellule de classification vide conserve la valeur existante dans les modes Enrichir et Remplacer ; utilisez `__CLEAR__` pour effacer une classification.
+`-` efface la criticité, la criticité cyber, la classification des données, l'ordre de reprise, le RTO, le RPO, la justification et le dernier test PRA. `contains_pii` ne peut pas être effacé : `-` y fait refuser la ligne. Un fichier qui utilise encore `__CLEAR__` fonctionne : il se lit comme `-`.
 
 **Champs Responsables** :
 
 | Colonne CSV | Description | Notes |
 |-------------|-------------|-------|
-| `business_owner_email_1` à `_4` | E-mails des responsables métier | Doivent correspondre à l'e-mail d'un utilisateur existant. Un e-mail inconnu fait refuser la ligne |
-| `it_owner_email_1` à `_4` | E-mails des responsables IT | Doivent correspondre à l'e-mail d'un utilisateur existant. Un e-mail inconnu fait refuser la ligne |
+| `business_owner_email_1`, `business_owner_email_2`, ... | E-mails des responsables métier | Doivent correspondre à l'e-mail d'un utilisateur existant. Un e-mail inconnu fait refuser la ligne |
+| `it_owner_email_1`, `it_owner_email_2`, ... | E-mails des responsables IT | Doivent correspondre à l'e-mail d'un utilisateur existant. Un e-mail inconnu fait refuser la ligne |
 
-En mode `Enrichir`, quand toutes les cellules de responsables d'un type sont vides, l'application conserve ses responsables de ce type.
+Les responsables de chaque type suivent leurs propres cellules. Quand toutes les cellules d'un type sont vides, l'application garde ses responsables de ce type. Les e-mails des cellules forment la liste entière de ce type et remplacent les responsables enregistrés. `-` seul vide le type. Un `-` à côté d'e-mails n'ajoute rien.
 
 **Champs en export uniquement** (inclus dans Export complet mais non importables) :
 
@@ -714,15 +713,13 @@ Le système normalise automatiquement les valeurs lors de l'import, donc `Métie
 
 ### Correspondance et mises à jour
 
-Les applications sont identifiées par **nom**, sans tenir compte des majuscules et des minuscules ni des espaces au début et à la fin. Lorsqu'une correspondance est trouvée :
-- En mode `Enrichir` : Seules les valeurs CSV non vides mettent à jour l'application
-- En mode `Remplacer` : Les colonnes du fichier sont mises à jour, et une cellule vide efface la valeur enregistrée. Les colonnes absentes du fichier gardent leurs valeurs. Une cellule de classification vide garde sa valeur, et `__CLEAR__` l'efface. Le nom, l'`id`, le cycle de vie et les champs obligatoires ne peuvent pas être vidés : la **Vérification préalable** signale une erreur sur la ligne. Une nouvelle application reçoit les valeurs par défaut.
+Les applications sont identifiées par **nom**, sans tenir compte des majuscules et des minuscules ni des espaces au début et à la fin. Lorsqu'une correspondance est trouvée, une cellule vide garde la valeur enregistrée, et `-` l'efface. Les colonnes absentes du fichier gardent leurs valeurs. Le nom, l'`id`, le cycle de vie, la catégorie, `is_suite`, `external_facing`, `etl_enabled`, `contains_pii` et les autres champs obligatoires ne peuvent pas être effacés : `-` y fait refuser la ligne, et le message nomme la colonne. Une nouvelle application reçoit les valeurs par défaut.
 
 Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur le nom. Quand deux applications existantes portent le nom d'une ligne, la ligne est refusée : ajoutez la colonne `id` pour choisir laquelle.
 
 Une ligne retrouvée par son `id` avec un autre nom renomme l'application. Le nouveau nom doit être libre. Le titre du document de description de l'application suit le nouveau nom.
 
-**Éditeur et fournisseur** : une ligne qui donne un éditeur (`editor`) et aucun fournisseur est liée au fournisseur de ce nom, s'il existe. La vérification liste ce rapprochement avec les autres valeurs rapprochées, et **Défaire** le retire. En mode `Enrichir`, une application qui a déjà un fournisseur le garde. L'éditeur reste tel qu'il est écrit. Sans le droit de lire les fournisseurs, l'éditeur ne lie aucun fournisseur.
+**Éditeur et fournisseur** : une ligne qui donne un éditeur (`editor`) et aucun fournisseur est liée au fournisseur de ce nom, s'il existe. La vérification liste ce rapprochement avec les autres valeurs rapprochées, et **Défaire** le retire. Une application qui a déjà un fournisseur le garde. `-` dans `supplier_name` retire le fournisseur, et l'éditeur n'en lie alors aucun. L'éditeur reste tel qu'il est écrit. Sans le droit de lire les fournisseurs, l'éditeur ne lie aucun fournisseur.
 
 ### Lignes qui ressemblent à une application existante { #lookalike-applications }
 
@@ -737,7 +734,7 @@ La vérification liste ces lignes sous **Ressemble à une application existante*
 
 - **Écarter** : la ligne n'est pas importée. C'est le choix par défaut.
 - **Créer quand même** : la ligne devient une nouvelle application.
-- **Mettre à jour APP-12** : la ligne met à jour l'application à laquelle elle ressemble, dans le mode de l'import, responsables et résidence des données compris. L'application garde son nom. Pointez la ligne pour voir les colonnes qui changent. « Rien ne change sur APP-12 » signifie que le fichier ne change aucune de ses valeurs.
+- **Mettre à jour APP-12** : la ligne met à jour l'application à laquelle elle ressemble, responsables et résidence des données compris. L'application garde son nom. Pointez la ligne pour voir les colonnes qui changent. « Rien ne change sur APP-12 » signifie que le fichier ne change aucune de ses valeurs.
 
 **Tout créer quand même**, **Tout mettre à jour** et **Tout écarter**, au-dessus de la liste, valent pour toutes les lignes. Un choix fait ensuite sur une ligne ne change que cette ligne. Chaque choix vérifie à nouveau le fichier. Avec **Ajouter les nouveaux uniquement** (l'opération `Insertion uniquement`), la mise à jour n'est pas proposée.
 

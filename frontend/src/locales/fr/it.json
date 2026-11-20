@@ -138,7 +138,6 @@
       "exportScope_one": "{{count}} application, selon les filtres de la liste.",
       "exportScope_other": "{{count}} applications, selon les filtres de la liste.",
       "exportScopeAll": "Toutes les applications ({{count}}), hors applications retirées.",
-      "importNote": "Pour vider une valeur de classification, écrivez __CLEAR__ dans la cellule.",
       "copySuffix": "(copie)",
       "copyFailed": "L’application n’a pas pu être copiée.",
       "copyLinksFailed": "La copie est créée, mais ses liens n’ont pas tous pu être copiés.",

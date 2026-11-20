@@ -52,7 +52,9 @@ export async function sameSlotBody(stored: string | undefined, value: unknown, f
  * `sameAsStored` for a CSV import whose texts live in bound documents: each property in `slots`
  * is compared with its document and left out of the column comparison, the rest goes through
  * `normalize` (values as the commit stores them) and `sameStoredValues`. With `blankKeepsDocument`, a
- * blank cell leaves the document as it is (the incident review).
+ * blank cell leaves the document as it is (the incident review). With `columnWithoutDocument`, a record
+ * with no document is compared with the record's own value of that property (projects and requests:
+ * the column the documents replaced, still holding the text of a record never opened since).
  */
 export async function sameAsStoredWithDocuments(
   rows: CsvImportRow[],
@@ -60,7 +62,7 @@ export async function sameAsStoredWithDocuments(
   sourceEntityType: 'projects' | 'requests' | 'incidents',
   slots: Record<string, IntegratedDocumentSlotKey>,
   normalize: (next: Record<string, any>, stored: Record<string, any>) => void,
-  opts: { blankKeepsDocument?: boolean } = {},
+  opts: { blankKeepsDocument?: boolean; columnWithoutDocument?: boolean } = {},
 ): Promise<boolean[]> {
   const bodies = await loadSlotBodies(
     context.manager, context.tenantId, sourceEntityType,
@@ -73,7 +75,9 @@ export async function sameAsStoredWithDocuments(
       delete next[property];
       if (value === undefined) continue;
       if (opts.blankKeepsDocument && (value === null || String(value).trim() === '')) continue;
-      if (!await sameSlotBody(bodies.get(row.existingEntity.id)?.get(slot), value, property)) return false;
+      const stored = bodies.get(row.existingEntity.id)?.get(slot)
+        ?? (opts.columnWithoutDocument ? String(row.existingEntity[property] ?? '') : undefined);
+      if (!await sameSlotBody(stored, value, property)) return false;
     }
     try {
       normalize(next, row.existingEntity);

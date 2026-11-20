@@ -6,6 +6,7 @@ import {
 import { richTextCell } from '../common/csv/rich-text-cell';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
+import { settleWithSlotBodies } from './portfolio-csv-document-slots';
 
 /** The texts of a request that live in bound documents, with the slot of each. */
 const DOCUMENT_SLOTS = { purpose: 'purpose', risks: 'risks_mitigations' } as const;
@@ -347,11 +348,14 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
     },
   ],
 
+  /** The purpose and the risks of the record a row updates are its documents' texts (lot I6 of 26.11.9). */
+  settleRows: (rows, context) => settleWithSlotBodies(rows, context, 'requests', DOCUMENT_SLOTS),
+
   /** A purpose or risks cell that repeats its document is kept as stored, whatever tags it holds. */
   afterValidate: (rows, context) => keepStoredSlotBodies(rows, context, 'requests', DOCUMENT_SLOTS),
 
   /** The purpose and the risks live in bound documents (the CSV service writes them there), the rest in columns. */
-  sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'requests', DOCUMENT_SLOTS, normalizeCodes),
+  sameAsStored: (rows, context) => sameAsStoredWithDocuments(rows, context, 'requests', DOCUMENT_SLOTS, normalizeCodes, { columnWithoutDocument: true }),
 
   /**
    * Hook to normalize status values before commit.

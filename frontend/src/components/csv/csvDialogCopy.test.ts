@@ -10,25 +10,21 @@ import es from '../../locales/es/common.json';
 const COPY = {
   en: {
     importWorkflow: 'What the import does',
-    overridePresetNote: 'These options replace the choice above.',
     exportPreset: 'Fields to export',
     fieldsSelected: '{{selected}} of {{total}} fields selected',
   },
   fr: {
     importWorkflow: "Ce que fait l'import",
-    overridePresetNote: 'Ces options remplacent le choix ci-dessus.',
     exportPreset: 'Champs à exporter',
     fieldsSelected: '{{selected}} champs sélectionnés sur {{total}}',
   },
   de: {
     importWorkflow: 'Was der Import macht',
-    overridePresetNote: 'Diese Optionen ersetzen die Auswahl oben.',
     exportPreset: 'Zu exportierende Felder',
     fieldsSelected: '{{selected}} von {{total}} Feldern ausgewählt',
   },
   es: {
     importWorkflow: 'Lo que hace la importación',
-    overridePresetNote: 'Estas opciones reemplazan la elección de arriba.',
     exportPreset: 'Campos a exportar',
     fieldsSelected: '{{selected}} de {{total}} campos seleccionados',
   },
@@ -62,14 +58,13 @@ const CSV_FILE_NOTE_FLEXIBLE = {
 describe('csv dialog copy', () => {
   const locales = { en, fr, de, es };
 
-  it('names the import choice, the advanced note, the export fields and the counter in plain words', () => {
+  it('names the import choice, the export fields and the counter in plain words', () => {
     for (const language of Object.keys(COPY) as (keyof typeof COPY)[]) {
       const csv = locales[language].csv;
       expect(csv.importWorkflow).toBe(COPY[language].importWorkflow);
-      expect(csv.overridePresetNote).toBe(COPY[language].overridePresetNote);
       expect(csv.exportPreset).toBe(COPY[language].exportPreset);
       expect(csv.fieldsSelected).toBe(COPY[language].fieldsSelected);
-      for (const value of [csv.importWorkflow, csv.overridePresetNote, csv.exportPreset, csv.fieldsSelected]) {
+      for (const value of [csv.importWorkflow, csv.exportPreset, csv.fieldsSelected]) {
         expect(value).not.toMatch(TECHNICAL);
       }
     }

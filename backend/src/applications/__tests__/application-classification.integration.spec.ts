@@ -121,9 +121,12 @@ async function main() {
     assert.equal((await list.classificationSummary({include_inactive:true,filters:supplierFilter},{manager,tenantId:tenantA})).total,(await list.list({include_inactive:true,filters:supplierFilter},{manager,tenantId:tenantA})).total,'supplier filter parity');
     const empty=await list.classificationSummary({filters:JSON.stringify({name:{filterType:'text',type:'equals',filter:'nobody'}})},{manager,tenantId:tenantA}); assert.deepEqual([empty.total,empty.reviewed,empty.stale,empty.incomplete,empty.attention],[0,0,0,0,{critical_without_recent_test:0,critical_without_wave:0,restricted_data_low_cyber:0}]);
     const copied=await crud.copyApplication(app.id,'Copy',userId,{manager}); assert.equal(copied.criticality,'high'); assert.equal(copied.classification_review,null); assert.equal(copied.last_dr_test,null);
-    const context:any={manager,tenantId:tenantA,params:{dryRun:true,mode:'replace',operation:'upsert'},itOpsSettings:await settings.getSettings(tenantA,{manager})};
-    const csvRows:any[]=[{rowNumber:2,raw:{criticality:'__CLEAR__',cyber_criticality:''},parsed:{},existingEntity:updated,errors:[]}];
-    await applicationCsvConfig.afterValidate!(csvRows,context); assert.deepEqual(csvRows[0].errors,[]); assert.equal(csvRows[0].parsed.criticality,null); assert.equal(csvRows[0].parsed.cyber_criticality,undefined);
+    const context:any={manager,tenantId:tenantA,params:{dryRun:true,operation:'upsert'},itOpsSettings:await settings.getSettings(tenantA,{manager})};
+    // The clearing rule (D21): `-` clears, `__CLEAR__` reads as `-`, a blank cell keeps; a yes or no that cannot be empty refuses `-`.
+    const csvRows:any[]=[{rowNumber:2,raw:{criticality:'-',cyber_criticality:'',recovery_wave:'__CLEAR__'},parsed:{},existingEntity:updated,errors:[]}];
+    await applicationCsvConfig.afterValidate!(csvRows,context); assert.deepEqual(csvRows[0].errors,[]); assert.equal(csvRows[0].parsed.criticality,null); assert.equal(csvRows[0].parsed.recovery_wave,null); assert.equal(csvRows[0].parsed.cyber_criticality,undefined);
+    const piiRows:any[]=[{rowNumber:2,raw:{contains_pii:'-'},parsed:{},existingEntity:updated,errors:[]}];
+    await applicationCsvConfig.afterValidate!(piiRows,context); assert.deepEqual(piiRows[0].errors.map((e:any)=>[e.column,e.code]),[['contains_pii','CSV_VALUE_CANNOT_BE_CLEARED']]);
     const byNameRows:any[]=[{rowNumber:3,raw:{criticality:'Elevée'},parsed:{},existingEntity:updated,errors:[]}]; await applicationCsvConfig.afterValidate!(byNameRows,context); assert.deepEqual(byNameRows[0].errors,[]); assert.equal(byNameRows[0].parsed.criticality,'high');
     const badRows:any[]=[{rowNumber:4,raw:{criticality:'no_such_level'},parsed:{},existingEntity:updated,errors:[]}]; await applicationCsvConfig.afterValidate!(badRows,context); assert.match(badRows[0].errors[0].message,/Unknown or ambiguous/);
     const resolver = new CsvResolverService();
@@ -132,15 +135,15 @@ async function main() {
     const residencyRevision = Number((await manager.getRepository(Application).findOneByOrFail({id:app.id})).classification_revision);
     await crud.reviewClassification(app.id,residencyRevision,userId,{manager});
     const residencyNoopFile = {buffer:Buffer.from('name;criticality;data_residency\nAtlas renamed;high;fr, FR\n'),originalname:'residency-noop.csv'} as Express.Multer.File;
-    const residencyNoopDry = await csv.import(residencyNoopFile,{dryRun:true,mode:'enrich',operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(residencyNoopDry.ok,true,JSON.stringify(residencyNoopDry.errors));
-    const residencyNoop = await csv.import(residencyNoopFile,{dryRun:false,mode:'enrich',operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(residencyNoop.ok,true,JSON.stringify(residencyNoop.errors));
+    const residencyNoopDry = await csv.import(residencyNoopFile,{dryRun:true,operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(residencyNoopDry.ok,true,JSON.stringify(residencyNoopDry.errors));
+    const residencyNoop = await csv.import(residencyNoopFile,{dryRun:false,operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(residencyNoop.ok,true,JSON.stringify(residencyNoop.errors));
     let residencyApp:any = await crud.get(app.id,{manager}); assert.equal(Number(residencyApp.classification_revision),residencyRevision); assert.equal(residencyApp.classification_review_state,'reviewed');
     const residencyChangeFile = {buffer:Buffer.from('name;criticality;data_residency\nAtlas renamed;high;DE\n'),originalname:'residency-change.csv'} as Express.Multer.File;
-    const residencyChange = await csv.import(residencyChangeFile,{dryRun:false,mode:'enrich',operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(residencyChange.ok,true,JSON.stringify(residencyChange.errors));
+    const residencyChange = await csv.import(residencyChangeFile,{dryRun:false,operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(residencyChange.ok,true,JSON.stringify(residencyChange.errors));
     residencyApp = await crud.get(app.id,{manager}); assert.ok(Number(residencyApp.classification_revision)>residencyRevision); assert.equal(residencyApp.classification_review_state,'stale');
     const file = {buffer:Buffer.from('name;criticality;cyber_criticality;recovery_wave;rpo_minutes\nCSV Atlas;Critical;High;vital;0\n'),originalname:'test.csv'} as Express.Multer.File;
-    const dry=await csv.import(file,{dryRun:true,mode:'enrich',operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(dry.ok,true,JSON.stringify(dry.errors));
-    const applied=await csv.import(file,{dryRun:false,mode:'enrich',operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(applied.ok,true,JSON.stringify(applied.errors));
+    const dry=await csv.import(file,{dryRun:true,operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(dry.ok,true,JSON.stringify(dry.errors));
+    const applied=await csv.import(file,{dryRun:false,operation:'upsert'},{manager,tenantId:tenantA,userId}); assert.equal(applied.ok,true,JSON.stringify(applied.errors));
     const imported=await manager.getRepository(Application).findOneByOrFail({name:'CSV Atlas',tenant_id:tenantA}); assert.equal(imported.criticality,'business_critical'); assert.equal(imported.cyber_criticality,'high'); assert.equal(imported.rpo_minutes,0);
     const exported=await csv.export({manager,tenantId:tenantA,language:'fr',fields:['name','criticality','cyber_criticality'],query:{filters:JSON.stringify({name:{filterType:'text',type:'equals',filter:'CSV Atlas'}})}}); assert.equal(exported.rows,1); assert.match(exported.content,/CSV Atlas;Critique;Élevée/,'export writes catalog names as the French screen shows them, not codes'); assert.doesNotMatch(exported.content,/business_critical/);
     const importedAudit=await manager.query("SELECT source FROM audit_log WHERE record_id=$1 AND table_name='applications'",[imported.id]); assert.ok(importedAudit.length);

@@ -7,6 +7,9 @@ import {
   CsvFieldType,
   CsvImportContext,
   CsvImportRow,
+  importCell,
+  noteCleared,
+  removedEntries,
 } from '../common/csv';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { richTextCell } from '../common/csv/rich-text-cell';
@@ -63,16 +66,17 @@ function operatingSystemWriter(context: CsvImportContext): OperatingSystemServic
  * The Cluster Membership column names the real clusters of an asset; it is not a column either
  * (the legacy `assets.cluster` text is never read nor written). `afterValidate` resolves the names
  * and keeps the result per import (`clusterCells`); `beforeCommit` moves the names of each saved
- * row here; `afterCommit` writes the memberships through `replaceClusterMembers`.
+ * row here (an empty list for `-`); `afterCommit` writes the memberships through `replaceClusterMembers`.
  */
 const pendingClusters = new WeakMap<object, string[]>();
 
 type ImportRow = Parameters<NonNullable<CsvEntityConfig['afterValidate']>>[0][number];
 
 /**
- * Per import: the names of each matched asset's cell, each checked row's resolved clusters (`null`:
- * one the file creates), and the cluster's own name for a cell name found beyond case or by Kad's
- * proposal (by `nameKey` of the cell name), which the write looks up.
+ * Per import: the whole list of clusters each matched asset's cell gives (empty for `-`; none for a
+ * blank cell, which keeps them), each checked row's resolved clusters (`null`: one the file creates),
+ * and the cluster's own name for a cell name found beyond case or by Kad's proposal (by `nameKey` of
+ * the cell name), which the write looks up.
  */
 const clusterCells = new WeakMap<CsvImportContext, {
   matched: Set<string>;
@@ -106,6 +110,26 @@ function clusterNames(raw: unknown): string[] {
 
 function nameKey(name: unknown): string {
   return String(name ?? '').trim().toLowerCase();
+}
+
+/**
+ * The Cluster Membership cell by the clearing rule (D21 of 26.11.9, T-I6d): the names of a filled
+ * cell are the asset's whole list; `-` takes the asset out of every cluster; a blank cell (or a cell
+ * that names nothing, or no column) keeps them.
+ */
+type ClusterCell = { kind: 'keep' } | { kind: 'clear' } | { kind: 'names'; names: string[] };
+
+function clusterCell(row: ImportRow): ClusterCell {
+  const cell = importCell(row.raw, 'cluster');
+  if (cell.kind === 'clear') return row.isInsert ? { kind: 'keep' } : { kind: 'clear' };
+  const names = cell.kind === 'value' ? clusterNames(cell.text) : [];
+  return names.length > 0 ? { kind: 'names', names } : { kind: 'keep' };
+}
+
+/** A cell's text, by the clearing rule: '' for a blank cell, a `-` or a column the file leaves out. */
+function cellText(row: CsvImportRow, column: string): string {
+  const cell = importCell(row.raw, column);
+  return cell.kind === 'value' ? cell.text : '';
 }
 
 /** The writer of the memberships, built on the import's manager. `replaceClusterMembers` uses neither validation nor notifications. */
@@ -143,8 +167,15 @@ function hasCell(row: ImportRow, key: string): boolean {
  * An empty cell names nothing and is not checked.
  */
 async function checkClusterMemberships(rows: ImportRow[], context: CsvImportContext): Promise<void> {
+  // The cell, never the stored legacy text the shared import copies for a blank cell: only the names of
+  // a new asset's cell go on to the write (`beforeCommit`), the rest is read here.
+  for (const row of rows) {
+    const cell = clusterCell(row);
+    if (row.isInsert && cell.kind === 'names') row.parsed.cluster = cell.names.join(', ');
+    else delete row.parsed.cluster;
+  }
   const written = rows.filter((row) => isWritten(row, context));
-  const naming = written.filter((row) => hasCell(row, 'cluster') && clusterNames(row.parsed.cluster).length > 0);
+  const naming = written.filter((row) => clusterCell(row).kind === 'names');
   const state = {
     matched: new Set<string>(), namesByAsset: new Map<string, string[]>(), resolved: new WeakMap<ImportRow, Array<string | null>>(), renamed: new Map<string, string>(),
   };
@@ -152,12 +183,42 @@ async function checkClusterMemberships(rows: ImportRow[], context: CsvImportCont
   for (const row of written) {
     if (row.isInsert || !row.existingEntity?.id) continue;
     state.matched.add(String(row.existingEntity.id));
-    if (hasCell(row, 'cluster')) state.namesByAsset.set(String(row.existingEntity.id), clusterNames(row.parsed.cluster));
+    const cell = clusterCell(row);
+    if (cell.kind !== 'keep') state.namesByAsset.set(String(row.existingEntity.id), cell.kind === 'names' ? cell.names : []);
   }
-  if (naming.length === 0) return;
+  if (naming.length > 0) await resolveClusterNames(naming, written, context, state);
+  await countClustersLeft(written, context, state);
+}
+
+/**
+ * The links a matched row's cell removes (`noteCleared`): every cluster for `-`, the clusters a filled
+ * cell does not name once its names resolved (a row whose names do not all resolve is refused).
+ */
+async function countClustersLeft(written: ImportRow[], context: CsvImportContext, state: { resolved: WeakMap<ImportRow, Array<string | null>> }): Promise<void> {
+  const changing = written.filter((row) => !row.isInsert && row.existingEntity?.id && row.errors.length === 0 && clusterCell(row).kind !== 'keep');
+  if (changing.length === 0) return;
+  const current = await clusterMembershipsOf(context.manager, context.tenantId, changing.map((row) => String(row.existingEntity.id)));
+  for (const row of changing) {
+    const stored = (current.get(String(row.existingEntity.id)) ?? []).map((c) => c.id);
+    const wanted = clusterCell(row).kind === 'clear' ? [] : state.resolved.get(row);
+    if (wanted) noteCleared(row, removedEntries(stored, wanted));
+  }
+}
+
+/** The names of the rows that name clusters, resolved (`checkClusterMemberships`). */
+async function resolveClusterNames(
+  naming: ImportRow[],
+  written: ImportRow[],
+  context: CsvImportContext,
+  state: { resolved: WeakMap<ImportRow, Array<string | null>>; renamed: Map<string, string> },
+): Promise<void> {
 
   type Candidate = { id: string | null; ref: string | null; row: ImportRow | null; name: string; isCluster: boolean; os: string | null };
-  const named = Array.from(new Set(naming.flatMap((row) => clusterNames(row.parsed.cluster).map(nameKey))));
+  const namesOf = (row: ImportRow) => {
+    const cell = clusterCell(row);
+    return cell.kind === 'names' ? cell.names : [];
+  };
+  const named = Array.from(new Set(naming.flatMap((row) => namesOf(row).map(nameKey))));
   const matched = written.filter((row) => !row.isInsert && row.existingEntity?.id);
   // Every cluster too: a name is found accents aside, or proposed by Kad, in JavaScript (lot I3 of 26.11.9).
   const stored: Array<{ id: string; ref: string | null; name: string; is_cluster: boolean; os: string | null }> = await context.manager.query(
@@ -242,7 +303,7 @@ async function checkClusterMemberships(rows: ImportRow[], context: CsvImportCont
     const self = candidates.find((c) => c.row === row);
     const ownName = self?.name ?? String(row.parsed.name ?? row.existingEntity?.name ?? '');
     const ownCluster = self ? self.isCluster : row.parsed.is_cluster === true;
-    const names = clusterNames(row.parsed.cluster);
+    const names = namesOf(row);
     const error = (refusal: { message: string; code?: string; params?: Record<string, string | number> }) =>
       row.errors.push({ row: row.rowNumber, column: 'cluster', ...refusal });
     if (names.some((name) => nameKey(name) === nameKey(ownName) && clustersNamed(name).every((c) => c.row === row))) {
@@ -275,24 +336,25 @@ async function checkClusterMemberships(rows: ImportRow[], context: CsvImportCont
 }
 
 /**
- * Whether a matched row's Cluster Membership cell leaves the asset's clusters as stored: an empty
- * cell changes nothing; enrich, every named cluster is already one of them; replace, the same set.
+ * Whether a matched row's Cluster Membership cell leaves the asset's clusters as stored: a blank cell
+ * changes nothing; `-`, the asset is in none; a filled cell, the same set.
  */
 function sameClusters(row: ImportRow, current: ReadonlyArray<{ id: string }>, context: CsvImportContext): boolean {
-  if (!hasCell(row, 'cluster') || clusterNames(row.parsed.cluster).length === 0) return true;
+  const cell = clusterCell(row);
+  if (cell.kind === 'keep') return true;
+  if (cell.kind === 'clear') return current.length === 0;
   const resolved = clusterCells.get(context)?.resolved.get(row);
   if (!resolved || resolved.some((id) => id === null)) return false;
   const stored = new Set(current.map((c) => c.id));
   const wanted = new Set(resolved as string[]);
-  if (![...wanted].every((id) => stored.has(id))) return false;
-  return context.params.mode !== 'replace' || wanted.size === stored.size;
+  return wanted.size === stored.size && [...wanted].every((id) => stored.has(id));
 }
 
 /**
  * Writes the memberships of the saved rows, once every row exists: the names resolve against the
  * stored assets (the check resolved them against the same final state). Grouped by cluster, one
- * `replaceClusterMembers` per cluster that changes: enrich adds; replace also takes each asset out
- * of the clusters its cell does not name. A cell left empty changes nothing.
+ * `replaceClusterMembers` per cluster that changes: each asset joins the clusters its cell names and
+ * leaves the others (all of them for `-`). A blank cell changes nothing (no pending list).
  */
 async function writeClusterMemberships(entities: any[], context: CsvImportContext): Promise<void> {
   const entries = entities
@@ -302,11 +364,11 @@ async function writeClusterMemberships(entities: any[], context: CsvImportContex
       pendingClusters.delete(entity);
       return { id: entity.id ? String(entity.id) : '', names };
     })
-    .filter((entry) => entry.id && entry.names.length > 0);
+    .filter((entry) => entry.id);
   if (entries.length === 0) return;
   const { manager, tenantId } = context;
   const keys = Array.from(new Set(entries.flatMap((entry) => entry.names.map(nameKey))));
-  const clusters: Array<{ id: string; key: string }> = await manager.query(
+  const clusters: Array<{ id: string; key: string }> = keys.length === 0 ? [] : await manager.query(
     `SELECT id, lower(btrim(name)) AS key FROM assets
       WHERE tenant_id = $1 AND is_cluster AND lower(btrim(name)) = ANY($2::text[])`,
     [tenantId, keys],
@@ -326,9 +388,7 @@ async function writeClusterMemberships(entities: any[], context: CsvImportContex
     }
     const stored = new Set((current.get(entry.id) ?? []).map((c) => c.id));
     for (const clusterId of wanted) if (!stored.has(clusterId)) add(joins, clusterId, entry.id);
-    if (context.params.mode === 'replace') {
-      for (const clusterId of stored) if (!wanted.has(clusterId)) add(leaves, clusterId, entry.id);
-    }
+    for (const clusterId of stored) if (!wanted.has(clusterId)) add(leaves, clusterId, entry.id);
   }
   const touched = Array.from(new Set([...joins.keys(), ...leaves.keys()])).sort();
   if (touched.length === 0) return;
@@ -461,14 +521,16 @@ function resolveAssetCatalogs(entity: any, settings: ItOpsSettings): void {
  * An impossible day is already refused by the shared date parser (`CSV_DATE_INVALID`).
  * On an existing asset, the host name and each IP address are checked only when the file changes
  * them, as the screen does: a stored value that an older rule let through does not block the row.
+ * The cells are read by the clearing rule (D21 of 26.11.9): a `-` that clears is not checked (the shared
+ * import refuses it where the value cannot be empty), and a blank address cell of a stored asset keeps
+ * its address, so a later one leaves no gap; an earlier address `-` clears does.
  */
 async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const settings = await requireImportCatalogs(context);
   const fail = (row: CsvImportRow, code: string, message: string, params: Record<string, string | number>, column: string) =>
     row.errors.push({ row: row.rowNumber, column, message, code, params });
   const catalog = (row: CsvImportRow, column: string, options: Parameters<typeof findCatalogOption>[1], code: string, label: string) => {
-    if (!(column in row.raw)) return;
-    const value = String(row.raw[column] ?? '').trim();
+    const value = cellText(row, column);
     if (!value) return;
     let found: ReturnType<typeof findCatalogOption> = null;
     try { found = findCatalogOption(value, options); } catch { found = null; }
@@ -477,18 +539,14 @@ async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext
 
   for (const row of rows) {
     const existing = row.existingEntity as { hostname?: string | null; ip_addresses?: Array<{ ip?: unknown }> | null } | undefined;
-    if ('hostname' in row.raw) {
-      const hostname = String(row.raw.hostname ?? '').trim();
-      const unchanged = !!existing && hostname === String(existing.hostname ?? '').trim();
-      if (hostname && !unchanged && !isValidHostname(hostname)) {
-        fail(row, 'asset_hostname_invalid', `"${hostname}" is not a valid host name`, { value: hostname }, 'hostname');
-      }
+    const hostname = cellText(row, 'hostname');
+    const sameHostname = !!existing && hostname === String(existing.hostname ?? '').trim();
+    if (hostname && !sameHostname && !isValidHostname(hostname)) {
+      fail(row, 'asset_hostname_invalid', `"${hostname}" is not a valid host name`, { value: hostname }, 'hostname');
     }
-    if ('environment' in row.raw) {
-      const environment = String(row.raw.environment ?? '').trim();
-      if (environment && !assetEnvironmentCode(environment)) {
-        fail(row, 'asset_environment_invalid', `Unknown environment "${environment}"`, { value: environment }, 'environment');
-      }
+    const environment = cellText(row, 'environment');
+    if (environment && !assetEnvironmentCode(environment)) {
+      fail(row, 'asset_environment_invalid', `Unknown environment "${environment}"`, { value: environment }, 'environment');
     }
     catalog(row, 'kind', settings.serverKinds ?? [], 'asset_kind_invalid', 'asset type');
     catalog(row, 'domain', settings.domains ?? [], 'asset_domain_invalid', 'domain');
@@ -498,16 +556,13 @@ async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext
     for (let slot = 1; slot <= 4; slot++) {
       const typeColumn = `ip_${slot}_type`;
       const addressColumn = `ip_${slot}_address`;
-      if (typeColumn in row.raw) {
-        const type = String(row.raw[typeColumn] ?? '').trim();
-        if (type) {
-          let found: ReturnType<typeof findCatalogOption> = null;
-          try { found = findCatalogOption(type, settings.ipAddressTypes ?? []); } catch { found = null; }
-          if (!found) fail(row, 'asset_ip_type_invalid', `Unknown IP address type "${type}"`, { value: type }, typeColumn);
-        }
+      const type = cellText(row, typeColumn);
+      if (type) {
+        let found: ReturnType<typeof findCatalogOption> = null;
+        try { found = findCatalogOption(type, settings.ipAddressTypes ?? []); } catch { found = null; }
+        if (!found) fail(row, 'asset_ip_type_invalid', `Unknown IP address type "${type}"`, { value: type }, typeColumn);
       }
-      if (!(addressColumn in row.raw)) continue;
-      const address = String(row.raw[addressColumn] ?? '').trim();
+      const address = cellText(row, addressColumn);
       const stored = Array.isArray(existing?.ip_addresses) ? existing.ip_addresses[slot - 1]?.ip : undefined;
       const unchanged = !!existing && address === String(stored ?? '').trim();
       if (address && !unchanged && !isValidIpAddress(address)) {
@@ -515,16 +570,40 @@ async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext
       }
     }
 
+    // The address an earlier slot keeps: the file's, none for `-`, the stored one for a blank cell.
+    const keptAddress = (slot: number) => {
+      const cell = importCell(row.raw, `ip_${slot}_address`);
+      if (cell.kind !== 'blank') return cell.kind === 'value' ? cell.text : '';
+      return row.isInsert || !Array.isArray(existing?.ip_addresses) ? '' : String(existing.ip_addresses[slot - 1]?.ip ?? '').trim();
+    };
     for (let slot = 2; slot <= 4; slot++) {
       const addressColumn = `ip_${slot}_address`;
-      if (!(addressColumn in row.raw) || !String(row.raw[addressColumn] ?? '').trim()) continue;
+      if (!cellText(row, addressColumn)) continue;
       for (let earlier = 1; earlier < slot; earlier++) {
         const earlierColumn = `ip_${earlier}_address`;
-        if (earlierColumn in row.raw && !String(row.raw[earlierColumn] ?? '').trim()) {
+        if (earlierColumn in row.raw && !keptAddress(earlier)) {
           fail(row, 'asset_ip_gap', `IP ${slot} is set while IP ${earlier} is empty`, { slot, earlier }, addressColumn);
           break;
         }
       }
+    }
+    countIpEntriesLeft(row);
+  }
+}
+
+/**
+ * `-` on the address of a stored IP entry takes the entry out (an entry has an address, as on the
+ * screen): its type and subnet go with it. The shared import counts the sub-values `-` clears; the
+ * ones the entry loses this way are counted here.
+ */
+function countIpEntriesLeft(row: CsvImportRow): void {
+  const stored = row.isInsert ? null : row.existingEntity?.ip_addresses;
+  if (!Array.isArray(stored)) return;
+  for (let slot = 1; slot <= 4; slot++) {
+    const entry = stored[slot - 1];
+    if (!entry?.ip || importCell(row.raw, `ip_${slot}_address`).kind !== 'clear') continue;
+    for (const [key, column] of [['type', `ip_${slot}_type`], ['subnet_cidr', `ip_${slot}_subnet_cidr`]]) {
+      if (entry[key] != null && String(entry[key]).trim() !== '' && importCell(row.raw, column).kind !== 'clear') noteCleared(row, 1);
     }
   }
 }
@@ -572,7 +651,7 @@ async function assertAssetIdentityRows(rows: CsvImportRow[], context: CsvImportC
   const settings = await requireImportCatalogs(context);
   const fail = (row: CsvImportRow, code: string, message: string, params: Record<string, string | number>, column: string) =>
     row.errors.push({ row: row.rowNumber, column, message, code, params });
-  const nameKeys = [...new Set(rows.map((row) => assetNameKey(row.raw.name)).filter(Boolean))];
+  const nameKeys = [...new Set(rows.map((row) => assetNameKey(cellText(row, 'name'))).filter(Boolean))];
   const fqdns = new Map<CsvImportRow, string | null | undefined>();
   for (const row of rows) fqdns.set(row, rowFqdn(row, settings));
   const fqdnKeys = [...new Set([...fqdns.values()].filter((fqdn): fqdn is string => !!fqdn).map((fqdn) => assetNameKey(fqdn)))];
@@ -586,7 +665,7 @@ async function assertAssetIdentityRows(rows: CsvImportRow[], context: CsvImportC
   const claimedFqdn = new Map<string, string>();
 
   for (const row of rows) {
-    const name = String(row.raw.name ?? '').trim();
+    const name = cellText(row, 'name');
     const existing = row.existingEntity;
     const named = namesByKey.get(assetNameKey(name)) ?? [];
     const others = named.filter((holder) => holder.id !== String(existing?.id ?? ''));
@@ -629,7 +708,10 @@ async function checkClusterSwitchAndOs(rows: ImportRow[], context: CsvImportCont
     && context.params.operation !== 'insert_only');
   if (checked.length === 0) return;
   const has = (row: (typeof rows)[number], key: string) => Object.prototype.hasOwnProperty.call(row.parsed, key);
-  const finalCluster = (row: (typeof rows)[number]) => (has(row, 'is_cluster') ? row.parsed.is_cluster === true : row.existingEntity.is_cluster === true);
+  // A `-` on the Cluster switch is refused by the shared import: the stored switch stands meanwhile.
+  const finalCluster = (row: (typeof rows)[number]) => (has(row, 'is_cluster') && importCell(row.raw, 'is_cluster').kind !== 'clear'
+    ? row.parsed.is_cluster === true
+    : row.existingEntity.is_cluster === true);
   const switches: ClusterSwitch[] = [];
   for (const row of checked) {
     const from = row.existingEntity.is_cluster === true;
@@ -1083,8 +1165,8 @@ export const assetCsvConfig: CsvEntityConfig = {
   /**
    * The row as the commit stores it: catalog names resolved, provider kept (filled only when blank).
    * The operating system is compared to the marked link's label (or, in a fixture that still
-   * carries the text on the row, to that text), without case. The Cluster Membership cell is
-   * compared to the asset's real clusters (`sameClusters`).
+   * carries the text on the row, to that text), without case; a `-` that removes a link is counted
+   * (`noteCleared`). The Cluster Membership cell is compared to the asset's real clusters (`sameClusters`).
    */
   sameAsStored: async (rows, context) => {
     const settings = await requireImportCatalogs(context);
@@ -1092,10 +1174,17 @@ export const assetCsvConfig: CsvEntityConfig = {
     const labels = ids.length
       ? await operatingSystemWriter(context).labelsOf(context.manager, context.tenantId, ids)
       : new Map<string, string>();
-    const naming = rows.filter((row) => row.existingEntity?.id && hasCell(row, 'cluster') && clusterNames(row.parsed.cluster).length > 0);
+    const naming = rows.filter((row) => row.existingEntity?.id && clusterCell(row).kind !== 'keep');
     const memberships = naming.length
       ? await clusterMembershipsOf(context.manager, context.tenantId, naming.map((row) => String(row.existingEntity.id)))
       : new Map<string, Array<{ id: string; name: string }>>();
+    const currentOs = (stored: any) => {
+      const id = String(stored.id ?? '');
+      return labels.has(id) ? (labels.get(id) ?? '') : (typeof stored.operating_system === 'string' ? stored.operating_system : '');
+    };
+    for (const row of rows) {
+      if (importCell(row.raw, 'operating_system').kind === 'clear' && currentOs(row.existingEntity).trim()) noteCleared(row, 1);
+    }
     return rows.map((row) => {
       const stored = row.existingEntity;
       if (!stored.provider && (row.parsed.location_id ?? stored.location_id)) return false;
@@ -1115,11 +1204,7 @@ export const assetCsvConfig: CsvEntityConfig = {
       // What the label resolves to (`22.04` stored as `22.04 LTS` is the same), else the label.
       const resolved = operatingSystemChecks.get(context)?.get(row);
       const wanted = osRaw == null || String(osRaw).trim() === '' ? '' : resolved?.label ?? String(osRaw).trim();
-      const id = String(stored.id ?? '');
-      const current = labels.has(id)
-        ? (labels.get(id) ?? '')
-        : (typeof stored.operating_system === 'string' ? stored.operating_system : '');
-      return sameOperatingSystem(current, wanted);
+      return sameOperatingSystem(currentOs(stored), wanted);
     });
   },
   /**
@@ -1178,7 +1263,8 @@ export const assetCsvConfig: CsvEntityConfig = {
       if (entity.id && cells?.matched.has(String(entity.id))) {
         const names = cells.namesByAsset.get(String(entity.id));
         if (names) pendingClusters.set(entity, own(names));
-      } else if (Object.prototype.hasOwnProperty.call(entity, 'cluster')) {
+      } else if (!entity.id && Object.prototype.hasOwnProperty.call(entity, 'cluster')) {
+        // A new asset: the names of its cell (`checkClusterMemberships`).
         pendingClusters.set(entity, own(clusterNames(entity.cluster)));
       }
       delete entity.cluster;

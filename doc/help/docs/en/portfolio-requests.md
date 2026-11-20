@@ -359,6 +359,8 @@ The export holds the requests the list shows, with its filters, its search and i
 
 **Columns**: the file starts with `id` and `reference` (`REQ-12`), then the columns follow the workspace, tab by tab. The import ignores `reference`.
 
+**Empty cells and `-`**: on a request the file updates, an empty cell keeps the stored value, and `-` clears it, the `purpose` and the `risks` included. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing).
+
 Use export when you need portfolio reporting or offline enrichment. Use import when you need to create or update requests in bulk. Because import can alter intake records at scale, it is intentionally reserved for administrators.
 
 ## Tips

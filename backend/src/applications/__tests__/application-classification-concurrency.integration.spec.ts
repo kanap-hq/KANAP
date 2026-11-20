@@ -116,7 +116,7 @@ async function main() {
     );
     const csvFailure = csv.import(
       { buffer: Buffer.from('name\nConcurrent Atlas\n'), originalname: 'rollback.csv' } as Express.Multer.File,
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       { manager: csvRunner.manager, tenantId },
     );
     await csvEntered.promise;

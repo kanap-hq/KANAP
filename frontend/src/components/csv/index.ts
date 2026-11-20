@@ -18,6 +18,5 @@ export { default as CsvExportDialogV2 } from './CsvExportDialogV2';
 
 // Subcomponents
 export { CsvImportWorkflowPresets } from './CsvImportWorkflowPresets';
-export { CsvImportAdvancedOptions } from './CsvImportAdvancedOptions';
 export { CsvValidationResults } from './CsvValidationResults';
 export { CsvFieldSelector } from './CsvFieldSelector';

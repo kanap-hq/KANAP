@@ -247,7 +247,6 @@ export class PortfolioRequestsController {
   async importCsv(
     @UploadedFile() file: Express.Multer.File,
     @Query('dryRun') dryRun: string = 'true',
-    @Query('mode') mode: 'replace' | 'enrich' = 'enrich',
     @Query('operation') operation: 'upsert' | 'update_only' | 'insert_only' = 'upsert',
     @Query('language') languageRaw: string | undefined,
     @Body('unmatched') unmatchedRaw: unknown,
@@ -261,7 +260,6 @@ export class PortfolioRequestsController {
       file,
       {
         dryRun: dryRun !== 'false',
-        mode,
         operation,
         unmatched: csvUnmatched(unmatchedRaw),
       },

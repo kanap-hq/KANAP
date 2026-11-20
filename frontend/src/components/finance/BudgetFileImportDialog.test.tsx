@@ -103,6 +103,18 @@ describe('BudgetFileImportDialog', () => {
     });
   });
 
+  it('says how many stored values the file clears, and nothing when it clears none', async () => {
+    const changes = (cleared: number) => ({ created: 0, updated: 1, unchanged: 2, cleared, createdLines: [], updatedLines: [] });
+    post.mockResolvedValueOnce({ data: report({ changes: changes(3) }) });
+    const view = renderDialog();
+    expect(await screen.findByText('common:csv.valuesWillBeClearedSentence:{"count":3}')).toBeInTheDocument();
+    view.unmount();
+    post.mockResolvedValueOnce({ data: report({ changes: changes(0) }) });
+    renderDialog();
+    expect(await screen.findByText(/operations.budgetFile.toUpdate/)).toBeInTheDocument();
+    expect(screen.queryByText(/valuesWillBeClearedSentence/)).not.toBeInTheDocument();
+  });
+
   it('checks again with the other date order when the switch is used', async () => {
     post.mockResolvedValueOnce({ data: report() });
     renderDialog();

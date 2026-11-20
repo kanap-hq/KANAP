@@ -80,7 +80,7 @@ async function seedApp(ctx: Ctx, name: string, extra: Record<string, unknown> = 
 async function importCsv(ctx: Ctx, lines: string[], params: Partial<CsvImportParams> = {}): Promise<CsvImportResult> {
   return ctx.csv.import(
     { buffer: Buffer.from(lines.join('\n') + '\n'), originalname: 'apps.csv' } as Express.Multer.File,
-    { dryRun: false, mode: 'enrich', operation: 'upsert', ...params },
+    { dryRun: false, operation: 'upsert', ...params },
     { manager: ctx.runner.manager, tenantId: ctx.tenantId },
   ).catch((error) => {
     throw new Error(`import refused: ${JSON.stringify(error.getResponse?.() ?? error.message)}`);
@@ -133,14 +133,13 @@ async function testOwnersKeptByEmptyCells() {
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.deepEqual(await ownersOf(ctx, appId), [`business:${ctx.users.ana.id}`, `it:${ctx.users.cleo.id}`].sort(), 'a filled type is replaced, the empty one kept');
 
-    // Replace mode: an empty owner type goes. Checked on the rule itself: a replace load of an
-    // application fails before the owners today (it clears `access_methods`, a NOT NULL column).
+    // The rule itself (D21): blank cells keep a type, `-` alone empties it, absent columns keep it.
     const users = new Map([[ctx.users.ben.email, ctx.users.ben.id]]);
     const stored = [`business:${ctx.users.ana.id}`, `it:${ctx.users.cleo.id}`];
     const raw = { name: 'Atlas', business_owner_email_1: '', it_owner_email_1: ctx.users.ben.email };
-    assert.deepEqual(csvOwnerKeys(raw, users, stored, 'replace'), [`it:${ctx.users.ben.id}`], 'replace: an empty owner type is removed');
-    assert.deepEqual(csvOwnerKeys(raw, users, stored, 'enrich'), [`business:${ctx.users.ana.id}`, `it:${ctx.users.ben.id}`]);
-    assert.deepEqual(csvOwnerKeys({ name: 'Atlas' }, users, stored, 'replace'), stored, 'absent owner columns keep the owners in both modes');
+    assert.deepEqual(csvOwnerKeys(raw, users, stored), [`business:${ctx.users.ana.id}`, `it:${ctx.users.ben.id}`]);
+    assert.deepEqual(csvOwnerKeys({ ...raw, business_owner_email_1: '-' }, users, stored), [`it:${ctx.users.ben.id}`], '`-` empties its owner type');
+    assert.deepEqual(csvOwnerKeys({ name: 'Atlas' }, users, stored), stored, 'absent owner columns keep the owners');
 
     result = await importCsv(ctx, [header, 'Atlas;nobody@example.com;'], { dryRun: true });
     assert.equal(result.ok, false);
@@ -279,7 +278,7 @@ async function testFrenchExportImportsBack() {
     assert.equal(cellOf('classification_review_state'), 'À compléter', 'the review state is named as the screen names it in French');
     const result = await ctx.csv.import(
       { buffer: Buffer.from(exported.content), originalname: 'export.csv' } as Express.Multer.File,
-      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { dryRun: false, operation: 'upsert' },
       { manager: ctx.runner.manager, tenantId: ctx.tenantId },
     );
     assert.deepEqual(result.errors, [], 'the French export imports back without an error');
@@ -371,19 +370,22 @@ async function testEmptyResidencyCell() {
     assert.deepEqual(await residencyOf(), ['DE', 'FR']);
     result = await importCsv(ctx, ['name;data_residency;description', 'Atlas;;Second']);
     assert.equal(result.ok, true, JSON.stringify(result.errors));
-    assert.deepEqual(await residencyOf(), ['DE', 'FR'], 'an empty cell keeps the residency in enrich mode');
-    // Replace mode reads a complete file: start from the export of the application (French: `;`).
+    assert.deepEqual(await residencyOf(), ['DE', 'FR'], 'an empty cell keeps the residency');
+    // From the export of the application (French: `;`).
     const exported = await ctx.csv.export({ manager: ctx.runner.manager, tenantId: ctx.tenantId, language: 'fr', scope: 'data' });
     const [header, line] = exported.content.replace(/^\uFEFF/, '').split(/\r?\n/).map((text) => text.split(';'));
     const column = header.indexOf('Résidence des données (codes pays)');
     assert.ok(column >= 0, 'the export has the residency');
     const without = (cells: string[]) => cells.filter((_, index) => index !== column).join(';');
-    result = await importCsv(ctx, [without(header), without(line)], { mode: 'replace' });
+    result = await importCsv(ctx, [without(header), without(line)], {});
     assert.equal(result.ok, true, JSON.stringify(result.errors));
-    assert.deepEqual(await residencyOf(), ['DE', 'FR'], 'a file without the column leaves it alone, even in replace mode');
-    result = await importCsv(ctx, [header.join(';'), line.map((cell, index) => (index === column ? '' : cell)).join(';')], { mode: 'replace' });
+    assert.deepEqual(await residencyOf(), ['DE', 'FR'], 'a file without the column leaves it alone');
+    result = await importCsv(ctx, [header.join(';'), line.map((cell, index) => (index === column ? '' : cell)).join(';')], {});
     assert.equal(result.ok, true, JSON.stringify(result.errors));
-    assert.deepEqual(await residencyOf(), [], 'an empty cell clears it in replace mode');
+    assert.deepEqual(await residencyOf(), ['DE', 'FR'], 'an empty cell of the exported file keeps it');
+    result = await importCsv(ctx, [header.join(';'), line.map((cell, index) => (index === column ? '-' : cell)).join(';')], {});
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual(await residencyOf(), [], '`-` clears it');
   });
 }
 
@@ -404,7 +406,7 @@ async function testImportRenameSyncsDocumentTitle() {
     );
     const run = (lines: string[], dryRun = false) => csv.import(
       { buffer: Buffer.from(lines.join('\n') + '\n'), originalname: 'apps.csv' } as Express.Multer.File,
-      { dryRun, mode: 'enrich', operation: 'upsert' },
+      { dryRun, operation: 'upsert' },
       { manager, tenantId: ctx.tenantId },
     );
     let result = await run(['id;name', `${atlas};Atlas Prime`], true);

@@ -34,10 +34,11 @@ describe('csv labels', () => {
     expect(fr.csv.presets.assets.enrichment).toBe('Enrichissement des données');
   });
 
-  it('falls back to the server label, without the __CLEAR__ hint, whatever t does with a missing key', () => {
+  it('falls back to the server label, whatever t does with a missing key', () => {
     for (const translate of [t, keyOnly]) {
-      expect(csvFieldLabel(translate, 'applications', { csvColumn: 'cyber_criticality', label: 'cyber_criticality (__CLEAR__ to clear)' })).toBe('cyber_criticality');
-      expect(csvFieldLabel(translate, 'applications', { csvColumn: 'criticality', label: 'Business criticality (code or name; __CLEAR__ to clear)' })).toBe('Business criticality');
+      // The server's labels no longer carry a `__CLEAR__` hint (D21 of 26.11.9: `-` clears in every column).
+      expect(csvFieldLabel(translate, 'applications', { csvColumn: 'rto_minutes', label: 'rto_minutes (integer minutes)' })).toBe('rto_minutes (integer minutes)');
+      expect(csvFieldLabel(translate, 'applications', { csvColumn: 'notes', label: '' })).toBe('notes');
       expect(csvGroupLabel(translate, 'Mystery group')).toBe('Mystery group');
       expect(csvPresetLabel(translate, 'assets', { name: 'x', label: 'Server label' })).toBe('Server label');
     }

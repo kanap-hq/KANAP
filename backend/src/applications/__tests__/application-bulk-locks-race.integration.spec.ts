@@ -180,7 +180,7 @@ async function residencyPageWaitsForTheLoad() {
       return csvService(manager).import(
         // Its IT owner, already stored: the load locks the application before its owners, then writes the residency.
         { buffer: Buffer.from(`name;it_owner_email_1;data_residency\nRace application;ben-${race.tenantId.slice(0, 8)}@example.com;DE\n`), originalname: 'apps.csv' } as Express.Multer.File,
-        { dryRun: false, mode: 'enrich', operation: 'upsert' },
+        { dryRun: false, operation: 'upsert' },
         { manager, tenantId: race.tenantId, access: { isAdmin: true, permissions: {} } },
       );
     });

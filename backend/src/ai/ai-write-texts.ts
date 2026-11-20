@@ -2054,6 +2054,13 @@ export const IMPORT_LOAD_REFUSALS: Record<string, Texts> = {
     de: 'Die bei der Prüfung gewählte Anwendung existiert nicht mehr.',
     es: 'La aplicación elegida en la comprobación ya no existe.',
   },
+  // Any import of the shared service (lot I6 of 26.11.9, pass G): a record deleted while the load ran.
+  CSV_RECORD_DELETED: {
+    en: 'This record was deleted during the import.',
+    fr: "Cette fiche a été supprimée pendant l'import.",
+    de: 'Dieser Datensatz wurde während des Imports gelöscht.',
+    es: 'Este registro se eliminó durante la importación.',
+  },
   CSV_LOOKALIKE_NAME_FOUND: {
     en: '{{ref}} took this name after the check.',
     fr: '{{ref}} a pris ce nom après la vérification.',

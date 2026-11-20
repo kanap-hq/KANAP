@@ -4,20 +4,19 @@ import type { CsvReportMessage } from './csvMessage';
  * CSV Types and Interfaces for Frontend Components
  */
 
-/** Import mode: how to handle empty cells */
-export type ImportMode = 'replace' | 'enrich';
-
 /** Import operation: what actions to perform */
 export type ImportOperation = 'upsert' | 'update_only' | 'insert_only';
 
-/** Workflow preset combining mode and operation */
+/**
+ * A workflow preset: the operation the import runs. Every import reads its cells by one rule (D21 of
+ * 26.11.9): a blank cell keeps the stored value, `-` clears it.
+ */
 export interface WorkflowPreset {
   id: string;
   /** i18n key (common namespace) of the preset name */
   labelKey: string;
   /** i18n key (common namespace) of the preset description */
   descriptionKey: string;
-  mode: ImportMode;
   operation: ImportOperation;
   recommended?: boolean;
 }
@@ -28,7 +27,6 @@ export const WORKFLOW_PRESETS: WorkflowPreset[] = [
     id: 'merge',
     labelKey: 'csv.workflowPresets.merge.label',
     descriptionKey: 'csv.workflowPresets.merge.description',
-    mode: 'enrich',
     operation: 'upsert',
     recommended: true,
   },
@@ -36,22 +34,13 @@ export const WORKFLOW_PRESETS: WorkflowPreset[] = [
     id: 'update_only',
     labelKey: 'csv.workflowPresets.updateOnly.label',
     descriptionKey: 'csv.workflowPresets.updateOnly.description',
-    mode: 'enrich',
     operation: 'update_only',
   },
   {
     id: 'insert_only',
     labelKey: 'csv.workflowPresets.insertOnly.label',
     descriptionKey: 'csv.workflowPresets.insertOnly.description',
-    mode: 'enrich',
     operation: 'insert_only',
-  },
-  {
-    id: 'full_replace',
-    labelKey: 'csv.workflowPresets.fullReplace.label',
-    descriptionKey: 'csv.workflowPresets.fullReplace.description',
-    mode: 'replace',
-    operation: 'upsert',
   },
 ];
 
@@ -65,6 +54,8 @@ export interface CsvImportResult {
   skipped: number;
   /** Matched rows identical to what is stored: not written. */
   unchanged?: number;
+  /** The stored values the import clears (`-`, and the entries a filled list removes): the check says so. */
+  cleared?: number;
   errors: CsvReportMessage[];
   warnings: CsvReportMessage[];
   /**
