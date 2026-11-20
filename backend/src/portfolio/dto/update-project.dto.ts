@@ -60,12 +60,6 @@ export const UpdateProjectSchema = z.object({
   /** Planned end date (YYYY-MM-DD) */
   planned_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').nullable().optional(),
 
-  /** Actual start date (YYYY-MM-DD) */
-  actual_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').nullable().optional(),
-
-  /** Actual end date (YYYY-MM-DD) */
-  actual_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').nullable().optional(),
-
   /** Baseline start date (YYYY-MM-DD) */
   baseline_start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').nullable().optional(),
 
