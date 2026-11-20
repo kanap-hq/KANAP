@@ -44,6 +44,8 @@ function createOrchestrator(options?: {
   cacheCostFactors?: { read: number; write: number };
   /** Attachments of the history's user messages (`listAttachmentsForMessages`). */
   attachmentRows?: any[];
+  /** The pool the ANALYZE after a large approved import runs on. */
+  dataSource?: any;
 }) {
   const persistedMessages: any[] = [];
   let conversationCreated = false;
@@ -380,6 +382,7 @@ function createOrchestrator(options?: {
         return `<attached_table id="${row.id}">summary of ${row.original_filename}</attached_table>`;
       },
     } as any,
+    options?.dataSource as any,
   );
 
   return { orchestrator, persistedMessages, providerCallCount, recordedRequests, systemPromptParams, toolExecuteCount, executedToolCalls, approvalCalls };
@@ -5067,6 +5070,120 @@ async function run() {
   await testProvidersUseLargerDefaultTokenBudget();
   await testChatProviderTimeoutResolver();
   await testToolOutputApprovalMarkerDoesNotCreateDurableApproval();
+  await testLargeImportApprovalAnalysesAfterCommit();
+}
+
+/**
+ * A pool whose connections record the ANALYZE they run (`analyzeTables`), and check that the
+ * approval's transaction is no longer open when one is taken.
+ */
+function analyzeRecorder(transactions: { open: number }) {
+  const analysed: string[][] = [];
+  const dataSource = {
+    createQueryRunner: () => {
+      assert.equal(transactions.open, 0, 'the ANALYZE waits for the approval\'s commit');
+      const batch: string[] = [];
+      analysed.push(batch);
+      let released = false;
+      return {
+        get isReleased() { return released; },
+        isTransactionActive: false,
+        connect: async () => undefined,
+        startTransaction: async () => undefined,
+        commitTransaction: async () => undefined,
+        rollbackTransaction: async () => undefined,
+        release: async () => { released = true; },
+        query: async (sql: string, params?: any[]) => {
+          if (sql.includes('to_regclass')) return (params![0] as string[]).map((name) => ({ name, present: true, owned: true }));
+          const table = /^ANALYZE (\w+)$/.exec(sql)?.[1];
+          if (table) batch.push(table);
+          return [];
+        },
+      };
+    },
+  };
+  return { analysed, dataSource };
+}
+
+// Lot I5 of 26.11.9 (T-I5d): a budget file load approved in Kad that wrote at least 1,000 rows has
+// the screen's tables analysed once the approval's transaction is committed (the dialog's
+// `analyzeAfterLargeImport`), the suppliers and the dimension values too when it created some. A load
+// under the threshold, a failed or rejected card, a card executed earlier, a row import: nothing.
+async function testLargeImportApprovalAnalysesAfterCommit() {
+  const { waitForBackgroundWork } = require('../../common/background-work');
+  const lineTables = ['spend_items', 'spend_item_analytics_values', 'spend_versions', 'spend_amounts', 'spend_round_inputs', 'spend_version_totals'];
+  const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'];
+  type Card = { key?: string; status?: string; inserted?: number; updated?: number; ok?: boolean; executedAgo?: number; suppliers?: boolean; values?: boolean };
+  const card = (id: string, c: Card) => ({
+    preview_id: id,
+    tool_name: 'prepare_import_mapping',
+    status: c.status ?? 'executed',
+    target: { entity_type: 'imports', entity_id: null, ref: null, title: 'Budget.xlsx' },
+    changes: {},
+    import_mapping: {
+      import_key: c.key ?? 'budget_lines',
+      result: {
+        ok: c.ok ?? true, dry_run: false, total: 0, inserted: c.inserted ?? 600, updated: c.updated ?? 400, unchanged: 0, skipped: 0,
+        error_count: 0, warning_count: 0, issues: [], report: { kind: 'budget_file', file: null },
+        ...(c.suppliers ? { created_suppliers: true } : {}),
+        ...(c.values ? { created_dimension_values: true } : {}),
+      },
+    },
+    requires_confirmation: false,
+    actions: [],
+    summary: 'Import done.',
+    error_message: null,
+    conversation_id: 'conv-1',
+    created_at: '2026-03-24T10:00:00.000Z',
+    expires_at: '2026-03-24T10:10:00.000Z',
+    approved_at: new Date(Date.now() - (c.executedAgo ?? 0)).toISOString(),
+    rejected_at: null,
+    executed_at: c.status && c.status !== 'executed' ? null : new Date(Date.now() - (c.executedAgo ?? 0)).toISOString(),
+  });
+  const scenarios: Array<{ name: string; cards: Card[]; marker?: 'reject'; expected: string[][] }> = [
+    { name: 'a load of 1,000 rows', cards: [{ suppliers: true }], expected: [[...lineTables, 'suppliers']] },
+    { name: 'two loads approved together', cards: [{ values: true }, { inserted: 1000, updated: 0, suppliers: true }], expected: [[...lineTables, 'analytics_categories', 'suppliers']] },
+    { name: 'a load of 999 rows', cards: [{ inserted: 599 }], expected: [] },
+    { name: 'a refused load', cards: [{ status: 'failed', ok: false }], expected: [] },
+    { name: 'a card executed by an earlier approval', cards: [{ executedAgo: 60_000 }], expected: [] },
+    { name: 'a row import (applications)', cards: [{ key: 'applications', inserted: 5000 }], expected: [] },
+    { name: 'a rejected card', cards: [{ status: 'rejected' }], marker: 'reject', expected: [] },
+  ];
+  for (const scenario of scenarios) {
+    const transactions = { open: 0 };
+    const { analysed, dataSource } = analyzeRecorder(transactions);
+    const cardIds = ids.slice(0, scenario.cards.length);
+    const { orchestrator } = createOrchestrator({
+      historyMessages: [{ role: 'user', content: 'Import this budget.' }],
+      // A rejection answers with the cards as they are.
+      previewResults: scenario.cards.map((c, index) => card(cardIds[index], c)),
+      dataSource,
+    });
+    const executor = (orchestrator as any).tenantExecutor;
+    const runWithContext = executor.runWithContext;
+    executor.runWithContext = async (...args: any[]) => {
+      transactions.open++;
+      try { return await runWithContext(...args); } finally { transactions.open--; }
+    };
+    // The cards are executed by this approval, after it started.
+    const dispatcher = (orchestrator as any).dispatcher;
+    const execute = dispatcher.execute;
+    dispatcher.execute = async (ctx: any, input: any) => {
+      const dispatched = await execute(ctx, input);
+      if (input.capabilityName !== 'kanap.mutation_preview.execute_approved') return dispatched;
+      return { ...dispatched, output: { ...dispatched.output, results: scenario.cards.map((c, index) => card(cardIds[index], c)) } };
+    };
+    const marker = scenario.marker === 'reject'
+      ? `[REJECT:${cardIds[0]}]`
+      : cardIds.length > 1 ? `[APPROVE_SELECTED:${cardIds.join(',')}]` : `[APPROVE:${cardIds[0]}]`;
+    await collectEvents(orchestrator.stream({
+      context: { tenantId: 'tenant-1', userId: 'user-1', isPlatformHost: false, surface: 'chat', authMethod: 'jwt' },
+      conversationId: 'conv-1',
+      userMessage: marker,
+    }));
+    assert.equal(await waitForBackgroundWork(Date.now() + 5000), 0, `${scenario.name}: the ANALYZE finished`);
+    assert.deepEqual(analysed, scenario.expected, scenario.name);
+  }
 }
 
 void run();

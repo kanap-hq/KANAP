@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { codedForbidden } from '../auth/module-right-required';
-import { EntityManager } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { resolveBudgetLine } from '../common/resolve-item-id';
+import { trackBackgroundWork } from '../common/background-work';
+import { analyzeTables } from '../spend/budget-import-statistics';
+import { importTablesToAnalyze } from './import/ai-import-statistics';
 import { timeZoneOf } from '../common/csv-sheet';
 import { aiScreenLanguage, type AiScreenLanguage } from './ai-unread-families';
 import {
@@ -1296,7 +1299,20 @@ export class AiChatOrchestratorService {
     private readonly approvals: AiApprovalService,
     private readonly systemPrompt: AiSystemPromptService,
     private readonly attachments: AiAttachmentService,
+    private readonly dataSource: DataSource,
   ) {}
+
+  /**
+   * After an approval's transaction is committed: the ANALYZE of the tables a large budget file load
+   * of this approval wrote (`importTablesToAnalyze`), as the import dialog runs it, in the background
+   * on a pooled connection of its own. The answer does not wait for it, and it never throws
+   * (`analyzeTables`). Never before the commit: `spend/budget-import-statistics.ts` says why.
+   */
+  analyzeLargeImportsAfterApproval(previews: readonly AiMutationPreviewDto[], approvedSince: number): void {
+    const tables = importTablesToAnalyze(previews, approvedSince);
+    if (tables.length === 0 || !this.dataSource) return;
+    void trackBackgroundWork(analyzeTables(this.dataSource, tables));
+  }
 
   private parseApprovalAction(userMessage: string): ApprovalAction | null {
     const normalized = String(userMessage || '').trim();
@@ -2136,6 +2152,8 @@ export class AiChatOrchestratorService {
 
     // Step 2: Load/create conversation, persist user message, build system prompt
     const approvalAction = prepared.approvalAction;
+    // The cards this approval executed, analysed once its transaction is committed.
+    const approved: { previews: AiMutationPreviewDto[]; since: number } = { previews: [], since: 0 };
     const {
       conversationId,
       title,
@@ -2258,6 +2276,7 @@ export class AiChatOrchestratorService {
               { ...ctx, conversationId: convId! },
               approvalAction.previewIds,
             );
+            approved.since = Date.now();
             const dispatched = await this.dispatcher.execute<{ results: AiMutationPreviewDto[]; followUpPreviews: AiMutationPreviewDto[] }>(
               { ...ctx, conversationId: convId! },
               {
@@ -2278,6 +2297,7 @@ export class AiChatOrchestratorService {
             modelFollowUpPreviews = execution.followUpPreviews;
             previewResults = modelPreviewResults.map((preview) => shownPreview(preview, shownById));
             followUpPreviews = modelFollowUpPreviews.map((preview) => shownPreview(preview, shownById));
+            approved.previews = previewResults;
           } else {
             await this.approvals.rejectPreviewsFromChat(
               { ...ctx, conversationId: convId! },
@@ -2701,6 +2721,8 @@ export class AiChatOrchestratorService {
           replyLanguage: aiWriteLanguage(currentUser.screenLanguage),
         } satisfies StreamPreparationResult;
       });
+    // Committed: the statistics after a large budget file load, as the import dialog takes them.
+    this.analyzeLargeImportsAfterApproval(approved.previews, approved.since);
 
     // Emit conversation event
     preparationMs = Math.max(0, Date.now() - requestStartedAt);
