@@ -59,7 +59,7 @@ async function testServiceCountsHookClears() {
       }
       return stored.filter((entry) => entry.tenant_id === params[0]);
     },
-    getRepository: () => ({ create: (entity: any) => entity, save: async (entities: any) => entities }),
+    getRepository: () => ({ create: (entity: any) => entity, save: async (entities: any) => entities, insert: async () => ({ identifiers: [] }) }),
   };
   const config: CsvEntityConfig = {
     entityName: 'task',

@@ -137,7 +137,8 @@ function contactsService(runner: QueryRunner) {
     runner.manager.getRepository(SupplierContactLink),
     runner.manager.getRepository(Supplier),
     undefined as any,
-    undefined as any,
+    // Each contact the import writes has its history row.
+    new AuditService(runner.manager.getRepository(AuditLog)),
   );
 }
 
