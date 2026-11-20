@@ -58,7 +58,7 @@ Eine Liste, die gegen eine dieser Regeln verstößt, wird erst gespeichert, wenn
 
 **Entfernen** löscht einen Wert, den nichts verwendet. Wenn noch Datensätze auf den Wert verweisen, zeigt Kadratis an, wie viele (Anwendungen, Assets, Schnittstellen, Verbindungen, Standorte, Vorfälle, Subnetze…), mit einem Link zur gefilterten Liste, sofern sich eine Liste nach diesem Feld filtern lässt, und bietet stattdessen **Nicht mehr anbieten** an: Der Wert bleibt bei den Datensätzen sichtbar, die ihn bereits verwenden, und wird für neue nicht mehr vorgeschlagen. Ein verwendeter Wert wird nie entfernt, auch nicht über die API.
 
-Integrierte Werte, die Kadratis selbst verwaltet (die vier Lebenszyklus-Status, die Domänen Workgroup und N/A), können weder bearbeitet noch entfernt werden. Standard-Netzwerkzonen und -Asset-Typen können bearbeitet und zurückgezogen, aber nicht entfernt werden: Der Server würde sie wieder hinzufügen.
+Integrierte Werte, die Kadratis selbst verwaltet (die vier Lebenszyklus-Status, die Domänen Workgroup und N/A), können weder bearbeitet noch entfernt werden. Standard-Netzwerkzonen und -Asset-Typen sowie der Cloud-Anbieter Sonstiges können bearbeitet und zurückgezogen, aber nicht entfernt werden: Der Server würde sie wieder hinzufügen.
 
 ### Ihre Werte übersetzen
 
@@ -73,6 +73,8 @@ Editoren zeigen und bearbeiten immer den Basistext; wenn der angezeigte Name in 
 ### Cloud-Anbieter
 
 Cloud-Anbieter, die von Servern und Standorten verwendet werden (z. B. AWS, Azure, GCP).
+
+Sonstiges ist ein integrierter Wert. Er kann zurückgezogen, aber nicht entfernt werden, und eine gespeicherte Liste, die ihn auslässt, erhält ihn zurück. AWS, Azure und GCP können entfernt werden.
 
 **Spalten**: Name, Nicht mehr anbieten
 

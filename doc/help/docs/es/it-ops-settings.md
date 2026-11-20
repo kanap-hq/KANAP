@@ -58,7 +58,7 @@ Una lista que incumple una de estas reglas no se guarda hasta que la corrija; la
 
 **Eliminar** borra un valor que nada utiliza. Cuando todavía hay registros que hacen referencia al valor, Kadratis muestra cuántos (aplicaciones, activos, interfaces, conexiones, ubicaciones, incidentes, subredes…), con un enlace a la lista filtrada cuando una lista se puede filtrar por ese campo, y ofrece **Dejar de proponer** en su lugar: el valor sigue visible en los registros que ya lo usan y ya no se propone para los nuevos. Un valor en uso nunca se elimina, ni siquiera a través de la API.
 
-Los valores integrados que Kadratis gestiona por sí mismo (los cuatro estados del ciclo de vida, los dominios Workgroup y N/A) no se pueden editar ni eliminar. Las zonas de red y los tipos de activo predeterminados se pueden editar y retirar, pero no eliminar: el servidor los volvería a añadir.
+Los valores integrados que Kadratis gestiona por sí mismo (los cuatro estados del ciclo de vida, los dominios Workgroup y N/A) no se pueden editar ni eliminar. Las zonas de red y los tipos de activo predeterminados, y el proveedor cloud Otro, se pueden editar y retirar, pero no eliminar: el servidor los volvería a añadir.
 
 ### Traducir sus valores
 
@@ -73,6 +73,8 @@ Los editores siempre muestran y editan el texto base; cuando el nombre mostrado 
 ### Proveedores cloud
 
 Proveedores cloud utilizados por los servidores y las ubicaciones (p. ej., AWS, Azure, GCP).
+
+Otro es un valor integrado. Se puede retirar, pero no eliminar, y una lista guardada que lo omite lo recupera. AWS, Azure y GCP se pueden eliminar.
 
 **Columnas**: Nombre, Dejar de proponer
 
