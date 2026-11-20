@@ -69,7 +69,10 @@ export class PortfolioStatusService extends PortfolioProjectsBaseService {
         project.baseline_end_date = project.planned_end;
         project.baseline_effort_it = project.estimated_effort_it;
         project.baseline_effort_business = project.estimated_effort_business;
-        project.actual_start = new Date();
+        // The actual start is set once, the first time the project moves to In progress.
+        if (project.actual_start == null) {
+          project.actual_start = new Date();
+        }
       }
 
       // Handle 'done' transition - set actual end date

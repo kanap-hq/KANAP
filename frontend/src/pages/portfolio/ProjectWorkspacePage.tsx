@@ -520,6 +520,9 @@ export default function ProjectWorkspacePage() {
       if (canManage) {
         const projectPayload = { ...form };
         delete projectPayload.purpose;
+        // The loaded record still carries these dates. The API refuses them: the status sets them.
+        delete projectPayload.actual_start;
+        delete projectPayload.actual_end;
         await api.patch(`/portfolio/projects/${id}`, projectPayload);
 
         // Save scoring editor data if dirty.
