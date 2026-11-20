@@ -121,6 +121,39 @@ async function testMilestones() {
   }
 }
 
+// Lot I5 of 26.11.9: every import writes one `import` row, by a screen (`user`) or by Plaid
+// (`ai_chat`), and "First import" sees both; neither one written during the sample data load,
+// nor one without a person.
+async function testEveryImportShows() {
+  const svc = buildServices();
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'tf-imp', orgName: 'Funnel Imports', signup: true });
+    const t0 = new Date(Date.now() - 10 * DAY);
+    const at = (ms: number) => new Date(t0.getTime() + ms);
+    await activatedAt(t, t0);
+    await dataSource.query(
+      `UPDATE tenants SET metadata = jsonb_set(coalesce(metadata, '{}'::jsonb), '{demo}', $2::jsonb) WHERE id = $1`,
+      [t.tenantId, JSON.stringify({ status: 'loaded', ever_loaded_at: at(30 * 60_000).toISOString(), loaded_at: at(30 * 60_000).toISOString() })],
+    );
+    const counts = { rows: 2, inserted: 2, updated: 0, unchanged: 0 };
+    await signIn(t, at(HOUR));
+    // The sample data imports its files through the screens' routes, in the person's name.
+    await audit(t, at(10 * 60_000), { table: 'import', action: 'import', after: { list: 'applications', filename: 'a.csv', ...counts } });
+    await audit(t, at(2 * HOUR), { table: 'import', action: 'import', userId: null, after: { list: 'suppliers', filename: 's.csv', ...counts } });
+    assert.equal((await rowOf(t.slug))!.first_import_at, null, 'neither the sample data nor a row without a person');
+
+    await audit(t, at(5 * HOUR), { table: 'import', action: 'import', after: { list: 'suppliers', filename: 's.csv', ...counts } });
+    const date = (value: string | null | undefined) => (value ? new Date(value).getTime() : null);
+    assert.equal(date((await rowOf(t.slug))!.first_import_at), at(5 * HOUR).getTime(), 'an import of a screen');
+
+    await audit(t, at(4 * HOUR), { table: 'import', action: 'import', source: 'ai_chat', after: { list: 'contacts', filename: 'c.xlsx', ...counts } });
+    assert.equal(date((await rowOf(t.slug))!.first_import_at), at(4 * HOUR).getTime(), 'an import by Plaid');
+  } finally {
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
 async function testAttentionAndOrder() {
   const svc = buildServices();
   let silent: ActivatedTenant | undefined;
@@ -201,7 +234,7 @@ async function testDiscoveryCallByHand() {
   }
 }
 
-runSpecs('admin-trials', [testMilestones, testAttentionAndOrder, testDiscoveryCallByHand]).catch((err) => {
+runSpecs('admin-trials', [testMilestones, testEveryImportShows, testAttentionAndOrder, testDiscoveryCallByHand]).catch((err) => {
   console.error(err);
   process.exit(1);
 });
