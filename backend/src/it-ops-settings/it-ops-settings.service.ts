@@ -295,6 +295,9 @@ export class ItOpsSettingsService {
     { code: 'other', label: 'Other' },
   ];
 
+  /** An asset always needs a provider. AWS, Azure and GCP stay removable. */
+  private readonly protectedServerProviderCodes = ['other'];
+
   private readonly defaultServerRoles: ServerRoleOption[] = [
     { code: 'app', label: 'Application server', graph_tier: 'upper' },
     { code: 'backup', label: 'Backup server', graph_tier: 'lower' },
@@ -576,6 +579,22 @@ export class ItOpsSettingsService {
     }
 
     return Array.from(byCode.values());
+  }
+
+  /**
+   * Same shape as `normalizeList`, then any protected provider a saved or stored list left out
+   * is added at the end. A list that was never stored still starts from the shipped providers.
+   */
+  private normalizeServerProviders(list: unknown): ItOpsEnumOption[] {
+    const normalized = this.normalizeList(list, this.defaultServerProviders);
+    const present = new Set(normalized.map((item) => item.code));
+    for (const code of this.protectedServerProviderCodes) {
+      if (present.has(code)) continue;
+      const shipped = this.defaultServerProviders.find((item) => item.code === code);
+      if (!shipped) continue;
+      normalized.push({ code: shipped.code, label: shipped.label, deprecated: false });
+    }
+    return normalized;
   }
 
   private normalizeTieredList<T extends ItOpsEnumOption & { graph_tier?: GraphTier }>(
@@ -970,7 +989,7 @@ export class ItOpsSettingsService {
     const networkSegments = this.normalizeNetworkZones(raw.network_segments, this.defaultNetworkSegments);
     const entities = this.normalizeTieredList(raw.entities, this.defaultEntities);
     const serverKinds = this.normalizeAssetKinds(raw.server_kinds, this.defaultServerKinds);
-    const serverProviders = this.normalizeList(raw.server_providers, this.defaultServerProviders);
+    const serverProviders = this.normalizeServerProviders(raw.server_providers);
     const serverRoles = this.normalizeTieredList(raw.server_roles, this.defaultServerRoles);
     const hostingTypes = this.normalizeHostingTypes(raw.hosting_types, this.defaultHostingTypes);
     const lifecycleStates = this.normalizeLifecycleStates(raw.lifecycle_states, this.defaultLifecycleStates);
@@ -1020,7 +1039,11 @@ export class ItOpsSettingsService {
     const adminZones = this.normalizeAdminZones(raw.admin_zones, this.defaultAdminZones);
     return {
       lockedCodes: { lifecycleStates: [...this.lockedLifecycleCodes], domains: [...this.lockedDomainCodes] },
-      protectedCodes: { networkSegments: this.defaultNetworkSegments.map((item) => item.code), serverKinds: this.defaultServerKinds.map((item) => item.code) },
+      protectedCodes: {
+        networkSegments: this.defaultNetworkSegments.map((item) => item.code),
+        serverKinds: this.defaultServerKinds.map((item) => item.code),
+        serverProviders: [...this.protectedServerProviderCodes],
+      },
       ...catalog,
       applicationCategories,
       dataClasses,
@@ -1170,10 +1193,7 @@ export class ItOpsSettingsService {
       );
     }
     if (patch.serverProviders) {
-      next.serverProviders = this.normalizeList(
-        patch.serverProviders,
-        this.defaultServerProviders,
-      );
+      next.serverProviders = this.normalizeServerProviders(patch.serverProviders);
     }
     if (patch.serverRoles) {
       next.serverRoles = this.normalizeTieredList(
