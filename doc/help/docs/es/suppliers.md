@@ -88,7 +88,7 @@ La pestaña **Contactos** lista los contactos vinculados a este proveedor por ti
 
 **Cómo funciona**:
 - Cada sección lista sus contactos por nombre. Haga clic en un nombre para abrir la página del contacto.
-- **Añadir existente**: busque un contacto por su nombre o por su referencia (`CTCT-4`) y elíjalo. El vínculo se guarda al instante.
+- **Añadir existente**: busque un contacto por su nombre o por su referencia (`CTCT-4`) y elíjalo. El vínculo se guarda al instante. Un contacto que aún no existe se puede crear desde la lista: pertenece a este proveedor, con el tipo de contacto de la sección. Consulte [Contactos](contacts.md#crear-un-contacto-desde-un-campo-de-contacto).
 - **Nuevo contacto**: abre el formulario de contacto con el proveedor y el tipo de contacto ya rellenados. Kadratis le devuelve a esta pestaña una vez creado el contacto.
 - El botón de papelera elimina el vínculo. El contacto sigue en sus contactos. Un mensaje lo confirma, con una acción **Deshacer** que vuelve a vincular el contacto.
 

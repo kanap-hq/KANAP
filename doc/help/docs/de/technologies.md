@@ -252,7 +252,7 @@ Eine Anwendung erscheint auf zwei Wegen:
 
 Wen Sie anrufen und wie Sie Hilfe bekommen:
 
-- **Support**: die Support-Kontakte mit **E-Mail**, **Telefon** und **Rolle**. **Kontakt hinzufügen** öffnet ein kurzes Formular: Wählen Sie den **Kontakt** (Pflicht) und geben Sie optional eine **Rolle** an. Ein Kontakt wird einmal gelistet; ein erneutes Hinzufügen behält seine Rolle. Entfernen Sie einen Kontakt mit dem Kreuz am Ende seiner Zeile.
+- **Support**: die Support-Kontakte mit **E-Mail**, **Telefon** und **Rolle**. **Kontakt hinzufügen** öffnet ein kurzes Formular: Wählen Sie den **Kontakt** (Pflicht) und geben Sie optional eine **Rolle** an. Ein Kontakt, den es noch nicht gibt, lässt sich aus der Liste heraus erstellen (siehe [Kontakte](contacts.md#einen-kontakt-aus-einem-kontaktfeld-erstellen)). Ein Kontakt wird einmal gelistet; ein erneutes Hinzufügen behält seine Rolle. Entfernen Sie einen Kontakt mit dem Kreuz am Ende seiner Zeile.
 - **Support-Notizen**: Freitext, etwa die Nummer des Supportvertrags, die Zeiten der Hotline oder der Eskalationsweg. Sie werden gespeichert, wenn Sie das Feld verlassen.
 
 Die Technologie erscheint dann im Abschnitt **Verwendet in** der Seite jedes Kontakts.

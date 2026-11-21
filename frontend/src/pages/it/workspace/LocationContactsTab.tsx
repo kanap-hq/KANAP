@@ -113,6 +113,11 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
   const [links, setLinks] = React.useState<LinkEntry[]>([]);
   const [internalAdding, setInternalAdding] = React.useState(false);
   const [externalAdding, setExternalAdding] = React.useState(false);
+  // The contact field opened by "Add" takes the focus, and shows its list at once.
+  const externalInputRef = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => {
+    if (externalAdding) externalInputRef.current?.focus();
+  }, [externalAdding]);
   const [error, setError] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
@@ -348,6 +353,8 @@ export default function LocationContactsTab({ locationId, canManage }: Props) {
         {externalAdding && canManage && (
           <Box sx={{ mt: 1, maxWidth: 360 }}>
             <ContactSelect
+              ref={externalInputRef}
+              openOnFocus
               value={null}
               onChange={(id) => {
                 setExternalAdding(false);

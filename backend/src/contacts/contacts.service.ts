@@ -107,6 +107,9 @@ function applyContactSearch(qb: SelectQueryBuilder<ExternalContact>, q: string |
       .where('c.email ILIKE :like', { like })
       .orWhere('c.first_name ILIKE :like', { like })
       .orWhere('c.last_name ILIKE :like', { like })
+      // The full name, both ways: the contact picker types "Anita Patel" (or "Patel Anita").
+      .orWhere(`concat_ws(' ', c.first_name, c.last_name) ILIKE :like`, { like })
+      .orWhere(`concat_ws(' ', c.last_name, c.first_name) ILIKE :like`, { like })
       .orWhere('c.phone ILIKE :like', { like })
       .orWhere('c.mobile ILIKE :like', { like })
       .orWhere('s.name ILIKE :like', { like });
