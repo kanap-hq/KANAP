@@ -5,6 +5,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 import { DataAccessFoundations1854400000000 } from '../../migrations/1854400000000-data-access-foundations';
 import { DataAccessContractPolicies1855400000000 } from '../../migrations/1855400000000-data-access-contract-policies';
 import { Onboarding1856010000000 } from '../../migrations/1856010000000-onboarding';
+import { DataAccessEditByCentre1856250000000 } from '../../migrations/1856250000000-data-access-edit-by-centre';
 import {
   DataAccessSession,
   checkDataAccessAvailability,
@@ -228,9 +229,12 @@ async function testForeignRelations(admin: PgClient): Promise<void> {
     const migration = new DataAccessFoundations1854400000000();
     // Lot 5 policies and triggers depend on contracts.cost_center_id, and the onboarding tables'
     // keys on users (tenant_id, id): both are reverted first, as a real down chain would, then
-    // migrated again after lot 1.
+    // migrated again after lot 1. The edit-by-centre rule (2026-11-21) redefines lot 5's
+    // functions: it goes back first and comes again last.
     const lotFive = new DataAccessContractPolicies1855400000000();
     const onboarding = new Onboarding1856010000000();
+    const editByCentre = new DataAccessEditByCentre1856250000000();
+    await editByCentre.down(queryRunner);
     await onboarding.down(queryRunner);
     await lotFive.down(queryRunner);
     await migration.down(queryRunner);
@@ -243,6 +247,7 @@ async function testForeignRelations(admin: PgClient): Promise<void> {
     await migration.up(queryRunner);
     await lotFive.up(queryRunner);
     await onboarding.up(queryRunner);
+    await editByCentre.up(queryRunner);
     assert.equal(await granted(admin, 'companies'), true, 'up() granted again');
     assert.deepEqual(await checkDataAccessAvailability(savepointSession(admin)), { available: true, missing: [] });
     const { rows } = await admin.query(

@@ -784,7 +784,9 @@ async function testPreview(app: INestApplication) {
     contracts: Number(expected.contracts),
   }, 'the preview equals what Marta sees when applied for real');
   assert.equal(preview.body.lines, 4);
-  assert.equal(preview.body.editable_lines, 3);
+  // L2 (FR on INF-ES) included: her company node unfolds to INF-ES, and an edit node on the centre
+  // is enough to modify a line (amendment of 2026-11-21).
+  assert.equal(preview.body.editable_lines, 4);
   assert.ok(preview.body.contracts >= 2, `Marta sees her contracts: ${preview.text}`);
   assert.equal((await userRow(marta)).data_access_mode, before.data_access_mode, 'mode unchanged');
   assert.equal((await userRow(marta)).data_access_updated_at?.toISOString() ?? null, before.data_access_updated_at?.toISOString() ?? null, 'stamp unchanged');

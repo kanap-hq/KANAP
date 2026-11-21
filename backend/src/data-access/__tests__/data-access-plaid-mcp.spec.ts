@@ -171,8 +171,8 @@ async function seedPlaid(): Promise<void> {
       contractReferences[row.id === contractVisible ? 'visible' : 'hidden'] = `CTR-${row.item_number}`;
     }
     await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, contractVisible, s.lines.L1]);
-    // L3 is read by Rita but read-only: a link that stays is not checked again by a replacement.
-    await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, contractVisible, s.lines.L3]);
+    // L2 is read by Rita but read-only: a link that stays is not checked again by a replacement.
+    await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, contractVisible, s.lines.L2]);
     contractTaskId = (await q(
       `INSERT INTO tasks (tenant_id, title, item_number, related_object_type, related_object_id, creator_id, assignee_user_id)
        VALUES ($1, $2, 7002, 'contract', $3, $4, $5) RETURNING id`,
@@ -440,11 +440,11 @@ async function testPlaidReads(): Promise<void> {
     const outside = (value: unknown) => Number(/"budget_lines_outside_access":(\d+)/.exec(JSON.stringify(value))?.[1] ?? NaN);
     for (const name of ['get_entity_detail', 'get_entity_context']) {
       const ritaView = await tool(rita, name, { entity_type: 'contracts', entity_id: contractVisible });
-      assert.deepEqual(linesIn(ritaView), ['L1', 'L3'], `${name} contract CF: Rita's lines (${JSON.stringify(ritaView)})`);
+      assert.deepEqual(linesIn(ritaView), ['L1', 'L2'], `${name} contract CF: Rita's lines (${JSON.stringify(ritaView)})`);
       assertNoTrace(ritaView, `${name} contract CF (Rita)`);
       assert.equal(outside(ritaView), 1, `${name} contract CF: one line outside Rita's access`);
       const ullaView = await tool(ulla, name, { entity_type: 'contracts', entity_id: contractVisible });
-      assert.deepEqual(linesIn(ullaView), ['L1', 'L3', 'L5'], `${name} contract CF: Ulla's lines`);
+      assert.deepEqual(linesIn(ullaView), ['L1', 'L2', 'L5'], `${name} contract CF: Ulla's lines`);
       assert.equal(outside(ullaView), 0, `${name} contract CF: none outside Ulla's access`);
     }
   } finally {
@@ -630,26 +630,33 @@ async function linkedContractLines(): Promise<Label[]> {
 
 async function testPlaidWrites(): Promise<void> {
   const { rita } = s.persons;
-  // A read-only line (L3): refused when the preview is asked, its fields and its relations.
+  // A read-only line (L2, read through the group INF): refused when the preview is asked, its fields and its relations.
   assertReadOnlyRefusal(
-    await rejection(() => tool(rita, 'update_business_record', { entity_type: 'budget_lines', ref: s.lines.L3, fields: { notes: 'Never written' } })),
-    'update_business_record on read-only L3',
+    await rejection(() => tool(rita, 'update_business_record', { entity_type: 'budget_lines', ref: s.lines.L2, fields: { notes: 'Never written' } })),
+    'update_business_record on read-only L2',
   );
   assertReadOnlyRefusal(
-    await rejection(() => tool(rita, 'update_entity_relations', { entity_type: 'budget_lines', ref: s.lines.L3, relation: 'applications', add: [applicationId] })),
-    'update_entity_relations from read-only L3',
+    await rejection(() => tool(rita, 'update_entity_relations', { entity_type: 'budget_lines', ref: s.lines.L2, relation: 'applications', add: [applicationId] })),
+    'update_entity_relations from read-only L2',
   );
   // A task written on the read-only line: refused when the preview is asked too, whether created
   // there or moved there (the write's trigger would refuse it at the approval).
   assertReadOnlyRefusal(
-    await rejection(() => tool(rita, 'create_task', { title: 'Never created', relation_type: 'budget_line', relation_ref: s.lines.L3 })),
-    'create_task on read-only L3',
+    await rejection(() => tool(rita, 'create_task', { title: 'Never created', relation_type: 'budget_line', relation_ref: s.lines.L2 })),
+    'create_task on read-only L2',
   );
   assertReadOnlyRefusal(
-    await rejection(() => tool(rita, 'update_task_fields', { ref: hiddenTaskId, fields: { relation_type: 'budget_line', relation_ref: s.lines.L3 } })),
-    'update_task_fields moving a task to read-only L3',
+    await rejection(() => tool(rita, 'update_task_fields', { ref: hiddenTaskId, fields: { relation_type: 'budget_line', relation_ref: s.lines.L2 } })),
+    'update_task_fields moving a task to read-only L2',
   );
   await preview(rita, 'create_task', { title: `Task on L1 ${tag}`, relation_type: 'budget_line', relation_ref: s.lines.L1 });
+  // L3 (paid by ES, on her centre INF-FR in Edit) is modified through its centre (amendment of
+  // 2026-11-21): its fields are written and a task is previewed on it.
+  const centreNotes = await preview(rita, 'update_business_record', { entity_type: 'budget_lines', ref: s.lines.L3, fields: { notes: `Rita centre ${tag}` } });
+  assert.equal((await approve(rita, centreNotes.preview_id)).status, 'executed', 'update of L3 through its centre executed');
+  const centreWritten = await inTenant(() => client.query(`SELECT notes FROM spend_items WHERE id = $1`, [s.lines.L3]));
+  assert.equal(centreWritten.rows[0].notes, `Rita centre ${tag}`, 'L3 written through its centre');
+  await preview(rita, 'create_task', { title: `Task on L3 ${tag}`, relation_type: 'budget_line', relation_ref: s.lines.L3 });
   // A hidden line answers as a missing one.
   const missingId = randomUUID();
   sameRefusal(
@@ -726,6 +733,46 @@ async function testPlaidLineDeleteReserved(): Promise<void> {
   console.log('  Plaid line delete: a limited budget administrator refused before any preview: OK');
 }
 
+/**
+ * The role stays the ceiling (amendment of 2026-11-21, case 11): with the budget reader level,
+ * Rita's edit node on INF-FR gives her no write on L1 or L3, both modified through it otherwise.
+ * The refusal comes from the role, before any data-access check or preview.
+ */
+async function testPlaidRoleCeiling(): Promise<void> {
+  const { rita } = s.persons;
+  const roleId = (await inTenant(() => client.query(`SELECT role_id FROM users WHERE id = $1`, [rita]))).rows[0].role_id;
+  const previous = (await inTenant(() => client.query(
+    `SELECT level FROM role_permissions WHERE tenant_id = $1 AND role_id = $2 AND resource = 'budget'`,
+    [s.tenantId, roleId],
+  ))).rows[0]?.level ?? 'member';
+  await inTenant(() => client.query(
+    `UPDATE role_permissions SET level = 'reader' WHERE tenant_id = $1 AND role_id = $2 AND resource = 'budget'`,
+    [s.tenantId, roleId],
+  ));
+  try {
+    for (const label of ['L1', 'L3'] as const) {
+      const before = (await inTenant(() => client.query(`SELECT notes FROM spend_items WHERE id = $1`, [s.lines[label]]))).rows[0].notes;
+      const refused = await rejection(() => tool(rita, 'update_business_record', { entity_type: 'budget_lines', ref: s.lines[label], fields: { notes: `Reader ${tag}` } }));
+      assert.ok(refused instanceof HttpException, `budget reader on ${label}: ${refused?.stack ?? refused}`);
+      assert.equal(refused.getStatus(), 403, `budget reader on ${label}: refused`);
+      assert.notEqual((refused.getResponse() as any)?.code, 'DATA_ACCESS_LIMITED', `budget reader on ${label}: refused by the role, not by the data access`);
+      const after = (await inTenant(() => client.query(`SELECT notes FROM spend_items WHERE id = $1`, [s.lines[label]]))).rows[0].notes;
+      assert.equal(after, before, `budget reader on ${label}: nothing written`);
+    }
+    const previews = await inTenant(() => client.query(
+      `SELECT count(*)::int AS n FROM ai_mutation_previews WHERE tenant_id = $1 AND tool_name = 'update_business_record' AND mutation_input::text LIKE $2`,
+      [s.tenantId, `%Reader ${tag}%`],
+    ));
+    assert.equal(previews.rows[0].n, 0, 'no preview for a budget reader');
+  } finally {
+    await inTenant(() => client.query(
+      `UPDATE role_permissions SET level = $3 WHERE tenant_id = $1 AND role_id = $2 AND resource = 'budget'`,
+      [s.tenantId, roleId, previous],
+    ));
+  }
+  console.log('  Plaid role ceiling: a budget reader with an edit node writes no line, refused by the role: OK');
+}
+
 async function testPlaidRelationWrites(): Promise<void> {
   const { rita, ulla } = s.persons;
   const relation = (extra: Record<string, unknown>) => ({ entity_type: 'applications', ref: applicationId, relation: 'budget_lines', ...extra });
@@ -746,42 +793,62 @@ async function testPlaidRelationWrites(): Promise<void> {
   assertNoTrace(removal, 'relation preview (Rita)');
   assert.equal((await approve(rita, removal.preview_id)).status, 'executed', 'removal of L1 executed');
   assert.deepEqual(await linkedLines(), ['L5'], 'the hidden link to L5 stays');
-  // A line read in the access (L3, read only) can be linked from the application (spec §5.4).
-  const addition = await preview(rita, 'update_entity_relations', relation({ add: [s.lines.L3] }));
+  // A line read in the access (L2, read only) can be linked from the application (spec §5.4).
+  const addition = await preview(rita, 'update_entity_relations', relation({ add: [s.lines.L2] }));
   assertNoTrace(addition, 'relation preview, addition (Rita)');
-  assert.equal((await approve(rita, addition.preview_id)).status, 'executed', 'link to read-only L3 executed');
-  assert.deepEqual(await linkedLines(), ['L3', 'L5'], 'L3 linked, L5 kept');
+  assert.equal((await approve(rita, addition.preview_id)).status, 'executed', 'link to read-only L2 executed');
+  assert.deepEqual(await linkedLines(), ['L2', 'L5'], 'L2 linked, L5 kept');
   // Ulla sees both links in a preview of her own.
   const ullaPreview = await preview(ulla, 'update_entity_relations', relation({ add: [s.lines.L1] }));
   assertShows(ullaPreview, 'L5', 'relation preview (Ulla)');
   assert.equal((await approve(ulla, ullaPreview.preview_id)).status, 'executed', 'Ulla links L1 back');
-  assert.deepEqual(await linkedLines(), ['L1', 'L3', 'L5'], 'Ulla: L1 linked, the rest kept');
+  assert.deepEqual(await linkedLines(), ['L1', 'L2', 'L5'], 'Ulla: L1 linked, the rest kept');
 
-  // A contract carries L1 (modifiable) and L3 (read-only): a replacement checks only the targets
+  // A contract carries L1 (modifiable) and L2 (read-only): a replacement checks only the targets
   // added and removes only the links asked, so the read-only link that stays is never rewritten.
   const contractRelation = (extra: Record<string, unknown>) => ({
     entity_type: 'contracts', ref: contractVisible, relation: 'budget_lines', ...extra,
   });
-  assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'the contract links L1 and the read-only L3');
+  assert.deepEqual(await linkedContractLines(), ['L1', 'L2'], 'the contract links L1 and the read-only L2');
   const keepReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L1] }));
-  assert.equal((await approve(rita, keepReadOnly.preview_id)).status, 'executed', 'removing L1 while L3 stays executed');
-  assert.deepEqual(await linkedContractLines(), ['L3'], 'L1 unlinked, the read-only L3 kept');
-  // Adding a new line read-only (L2) is a write on it: refused, and nothing changes.
-  const addReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ add: [s.lines.L2] }));
+  assert.equal((await approve(rita, keepReadOnly.preview_id)).status, 'executed', 'removing L1 while L2 stays executed');
+  assert.deepEqual(await linkedContractLines(), ['L2'], 'L1 unlinked, the read-only L2 kept');
+  // Adding a new line read-only (L4) is a write on it: refused, and nothing changes.
+  const addReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ add: [s.lines.L4] }));
   const addedReadOnly = await approve(rita, addReadOnly.preview_id);
-  assert.equal(addedReadOnly.status, 'failed', 'Plaid adds read-only L2 to the contract');
-  assert.equal(addedReadOnly.error_message, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Plaid adds read-only L2 to the contract');
-  assert.deepEqual(await linkedContractLines(), ['L3'], 'the refusal left the links untouched');
-  // Adding an editable line back beside L3: only L1 is inserted.
+  assert.equal(addedReadOnly.status, 'failed', 'Plaid adds read-only L4 to the contract');
+  assert.equal(addedReadOnly.error_message, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Plaid adds read-only L4 to the contract');
+  assert.deepEqual(await linkedContractLines(), ['L2'], 'the refusal left the links untouched');
+  // Adding an editable line back beside L2: only L1 is inserted.
   const addEditable = await preview(rita, 'update_entity_relations', contractRelation({ add: [s.lines.L1] }));
-  assert.equal((await approve(rita, addEditable.preview_id)).status, 'executed', 'adding L1 back beside L3 executed');
-  assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'L1 linked again, L3 kept');
-  // Removing the read-only link is a write on L3: refused.
-  const removeReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L3] }));
+  assert.equal((await approve(rita, addEditable.preview_id)).status, 'executed', 'adding L1 back beside L2 executed');
+  assert.deepEqual(await linkedContractLines(), ['L1', 'L2'], 'L1 linked again, L2 kept');
+  // L3 is modified through its centre (amendment of 2026-11-21): linked, then unlinked.
+  const addCentre = await preview(rita, 'update_entity_relations', contractRelation({ add: [s.lines.L3] }));
+  assert.equal((await approve(rita, addCentre.preview_id)).status, 'executed', 'adding L3 through its centre executed');
+  assert.deepEqual(await linkedContractLines(), ['L1', 'L2', 'L3'], 'L3 linked through its centre');
+  // Back to L1 and L2, a set already asked in this conversation: a fresh conversation, so the
+  // removal is a new preview instead of the executed one it matches.
+  const conversationBeforeCentre = conversations[rita];
+  conversations[rita] = randomUUID();
+  await inTenant(() => client.query(
+    `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+     VALUES ($1, $2, $3, 'Data access centre unlink', 'custom', 'da-4d-model', 'custom', now(), now())`,
+    [conversations[rita], s.tenantId, rita],
+  ));
+  try {
+    const removeCentre = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L3] }));
+    assert.equal((await approve(rita, removeCentre.preview_id)).status, 'executed', 'removing L3 through its centre executed');
+    assert.deepEqual(await linkedContractLines(), ['L1', 'L2'], 'L3 unlinked through its centre');
+  } finally {
+    conversations[rita] = conversationBeforeCentre;
+  }
+  // Removing the read-only link is a write on L2: refused.
+  const removeReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L2] }));
   const removedReadOnly = await approve(rita, removeReadOnly.preview_id);
-  assert.equal(removedReadOnly.status, 'failed', 'Plaid removes read-only L3 from the contract');
-  assert.equal(removedReadOnly.error_message, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Plaid removes read-only L3 from the contract');
-  assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'the refusal left the links untouched');
+  assert.equal(removedReadOnly.status, 'failed', 'Plaid removes read-only L2 from the contract');
+  assert.equal(removedReadOnly.error_message, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Plaid removes read-only L2 from the contract');
+  assert.deepEqual(await linkedContractLines(), ['L1', 'L2'], 'the refusal left the links untouched');
   // A hidden line linked to the visible contract: a replacement reads the stored links through
   // `spend_items`, so it leaves the hidden link alone instead of deleting it (the link trigger
   // would refuse that 42501). Rita adds an editable line and removes it again beside the hidden one.
@@ -801,10 +868,10 @@ async function testPlaidRelationWrites(): Promise<void> {
     try {
       const removeBesideHidden = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L1] }));
       assert.equal((await approve(rita, removeBesideHidden.preview_id)).status, 'executed', 'removing L1 beside a hidden link executed');
-      assert.deepEqual(await linkedContractLines(), ['L3', 'L5'], 'the hidden link stays after the removal');
+      assert.deepEqual(await linkedContractLines(), ['L2', 'L5'], 'the hidden link stays after the removal');
       const addBesideHidden = await preview(rita, 'update_entity_relations', contractRelation({ add: [s.lines.L1] }));
       assert.equal((await approve(rita, addBesideHidden.preview_id)).status, 'executed', 'adding L1 beside a hidden link executed');
-      assert.deepEqual(await linkedContractLines(), ['L1', 'L3', 'L5'], 'the hidden link stays after the addition');
+      assert.deepEqual(await linkedContractLines(), ['L1', 'L2', 'L5'], 'the hidden link stays after the addition');
     } finally {
       conversations[rita] = previousConversation;
     }
@@ -1106,6 +1173,7 @@ async function run(): Promise<void> {
     await testGlobalSearch();
     await testPlaidWrites();
     await testPlaidLineDeleteReserved();
+    await testPlaidRoleCeiling();
     await testPlaidRelationWrites();
     await testMcp();
     await testTasksExport();

@@ -5,8 +5,9 @@ import { BudgetFileLinePlan, BudgetFileReport } from './types';
 
 /**
  * The budget file within a limited person's access (planning/data-scoped-access spec §4.2). The
- * rules stay in the database: the lines the person may modify (`data_access_line_editable`) and
- * the places a line may go (`data_access_placable_line`) are the answers of the SQL functions of
+ * rules stay in the database: the lines the person may modify (`data_access_line_editable`: an
+ * edit node on the paying company or on the cost center, or a responsible person) and the places a
+ * line may go (`data_access_placable_line`) are the answers of the SQL functions of
  * lots 2 and 3, the same ones the line write gate (`item-write.util.ts`) and the policies call.
  * The plan (`preflight.ts`) reads them from `BudgetFileAccess`. An unscoped person gets no access
  * object and costs no query: the file behaves as before.
