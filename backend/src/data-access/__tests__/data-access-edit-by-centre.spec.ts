@@ -239,6 +239,43 @@ async function testLines(f: Fixture): Promise<void> {
   console.log('  lines: an edit node on the centre modifies a line paid by another company; create, move, delete as before (cases 1-9): OK');
 }
 
+/**
+ * Case 15 (spec §5.1): a line without a paying company follows its cost centre. The nodes that
+ * cover the centre read it, an edit node modifies it and may give it the centre's company and no
+ * other; without a centre, no node reads it.
+ */
+async function testLineWithoutCompany(f: Fixture): Promise<void> {
+  await apply(f, 'ulla');
+  const insert = async (centre: string | null, name: string) => (await q(
+    `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, paying_company_id, cost_center_id)
+     VALUES (app_current_tenant(), $1, 'EUR', '2026-01-01', $2, NULL, $3) RETURNING id`,
+    [name, nextItemNumber(), centre],
+  ))[0].id as string;
+  const onX = await insert(f.x, 'No company, on X');
+  const nowhere = await insert(null, 'No company, no centre');
+  const seen = async () => (await q(
+    `SELECT i.id, ${lineEditableSql('i.')} AS editable FROM spend_items i WHERE i.id = ANY($1::uuid[])`, [[onX, nowhere]],
+  )).map((row) => [row.id, row.editable]);
+
+  for (const [person, who] of EDITORS) {
+    await apply(f, person);
+    assert.deepEqual(await seen(), [[onX, true]], `${who}: case 15, reads and may edit the line without a company on X, not the one without a centre`);
+    assert.equal(await attempt(`UPDATE spend_items SET description = 'x' WHERE id = $1`, [onX]), 1, `${who}: case 15, updates it`);
+    assert.equal(await attempt(`UPDATE spend_items SET paying_company_id = $2 WHERE id = $1`, [onX, f.b]), 1, `${who}: case 15, gives it the company of X`);
+    assert.equal(await attempt(`UPDATE spend_items SET paying_company_id = $2 WHERE id = $1`, [onX, f.a]), '42501', `${who}: case 15, cannot give it another company`);
+    assert.equal(await attempt(`UPDATE spend_items SET description = 'x' WHERE id = $1`, [nowhere]), 0, `${who}: case 15, updates no row of the line without a centre`);
+  }
+  await apply(f, 'q');
+  assert.deepEqual(await seen(), [[onX, false]], 'case 15, Q (X in Read) reads the line without a company on X, not editable');
+  assert.equal(await attempt(`UPDATE spend_items SET description = 'x' WHERE id = $1`, [onX]), 0, 'case 15, Q updates no row of it');
+  await apply(f, 'r');
+  assert.deepEqual(await seen(), [], 'case 15, R (a centre elsewhere) reads neither');
+  await apply(f, 'ulla');
+  assert.equal((await seen()).length, 2, 'case 15, mode all reads both');
+  await q(`DELETE FROM spend_items WHERE id = ANY($1::uuid[])`, [[onX, nowhere]]);
+  console.log('  lines without a company: read and modified through their centre, invisible to the nodes without one (case 15): OK');
+}
+
 /** Case 12 and 13 for a person whose edit node covers the contract's place but not its company. */
 async function testContractEditor(f: Fixture, person: Person, who: string): Promise<void> {
   await apply(f, person);
@@ -358,6 +395,7 @@ async function run(): Promise<void> {
       const f = await seedFixture();
       await testLineEditableValues(f);
       await testLines(f);
+      await testLineWithoutCompany(f);
       await testContracts(f);
       await testLinks(f);
       await testTaskMoves(f);

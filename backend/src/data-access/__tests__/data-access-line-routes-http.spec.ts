@@ -35,7 +35,7 @@ import { SpendItemsService } from '../../spend/spend-items.service';
 import { SpendItem } from '../../spend/spend-item.entity';
 import { DATA_ACCESS_READ_ONLY_LINE_MESSAGE } from '../line-write-checks';
 import { LIMITED_ROLE, PgClient, APP_URL, connect, roleExists } from './data-access-test-helpers';
-import { Seed, seed } from './data-access-line-seed';
+import { Seed, nextItemNumber, seed } from './data-access-line-seed';
 
 /**
  * Data-scoped access, lot 3 (planning/data-scoped-access/spec.md §4.4, §6.7, §6.8): the task routes
@@ -509,7 +509,34 @@ async function testLineRoutes(app: INestApplication) {
   const toFr = await call(app, 'PATCH', `budget-lines/${lines.L3}`, rita, { paying_company_id: fr });
   assert.equal(toFr.status, 200, `Rita gives the line the company of its centre: ${toFr.text}`);
   assert.deepEqual(await lineRow(lines.L3), { ...changed, paying_company_id: fr });
-  console.log('  line routes: through the centre 200, move 403 placement, read-only 403, delete 403 reserved, creation 403 / 201, company of the centre 200: OK');
+
+  // 8. A line without a paying company (spec §5.1) follows its cost center: Rita, INF-FR in Edit,
+  // modifies it, and the save gives it the company of INF-FR. Paul, INF in Read, only reads it.
+  const withoutCompany = (name: string, centre: string | null, ownerIt: string | null) => inTenant(async () => (await client.query(
+    `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, paying_company_id, cost_center_id, owner_it_id)
+     VALUES (app_current_tenant(), $1, 'EUR', '2026-01-01', $2, NULL, $3, $4) RETURNING id`,
+    [name, nextItemNumber(), centre, ownerIt],
+  )).rows[0].id as string);
+  const onCentre = await withoutCompany('DA HTTP no company on INF-FR', infFr, null);
+  const byPaul = await call(app, 'PATCH', `budget-lines/${onCentre}`, persons.paul, { description: 'Changed by Paul' });
+  expectRefused(byPaul, 'readOnlyLine', 'Paul modifies a line without a company on a centre he reads');
+  const byRita = await call(app, 'PATCH', `budget-lines/${onCentre}`, rita, { description: 'Changed by Rita' });
+  assert.equal(byRita.status, 200, `Rita modifies a line without a company through its centre: ${byRita.text}`);
+  assert.deepEqual(await lineRow(onCentre), { description: 'Changed by Rita', paying_company_id: fr, cost_center_id: infFr },
+    'the save gives the line the company of its centre');
+
+  // 9. A person named on such a line and with no node on its centre reads it; her save would give
+  // it the company of the centre, which a participation never places.
+  const namedOnCentre = await withoutCompany('DA HTTP no company on INF-FR, Nina owner', infFr, persons.nina);
+  const byNina = await call(app, 'PATCH', `budget-lines/${namedOnCentre}`, persons.nina, { description: 'Changed by Nina' });
+  expectRefused(byNina, 'placement', 'Nina saves a line without a company on a centre outside her access');
+  assert.deepEqual(await lineRow(namedOnCentre), { description: null, paying_company_id: null, cost_center_id: infFr }, 'the line is unchanged');
+
+  // 10. With no cost center either, the named person modifies the line and it stays without a company.
+  const byOwner = await call(app, 'PATCH', `budget-lines/${lines.L6}`, persons.nina, { description: 'Changed by its owner' });
+  assert.equal(byOwner.status, 200, `Nina modifies L6, which names her: ${byOwner.text}`);
+  assert.deepEqual(await lineRow(lines.L6), { description: 'Changed by its owner', paying_company_id: null, cost_center_id: null });
+  console.log('  line routes: through the centre 200, move 403 placement, read-only 403, delete 403 reserved, creation 403 / 201, company of the centre 200, without a company 200 / 403: OK');
 }
 
 // ---------------------------------------------------------------------------------------------
