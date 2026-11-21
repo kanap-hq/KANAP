@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -12,9 +12,11 @@ import api from '../../api';
 import AssetWorkspacePage from './AssetWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
 
-// Creation at the title (lot 3): the name committed in the header creates the asset with the type,
-// environment, provider and lifecycle shown, without a site; Create names the site while it is
-// missing and focuses it, or closes the asset; Cancel deletes it.
+// An asset is born complete (lot L3b of 26.11.9): its title, its type and its site are open on the
+// new page, the rest is dimmed; nothing is written until the three are given, in any order, then one
+// POST /assets writes it (the server gives the site's provider) and the page is the asset, with Done
+// and Cancel. Create marks the type and the site still missing and puts the cursor in the first,
+// without a call. Leaving writes nothing.
 
 const translation = {
   t: (key: string, opts?: Record<string, unknown>) => {
@@ -63,19 +65,6 @@ vi.mock('../../hooks/useItOpsEnumOptions', async () => {
   const { useSyncExternalStore } = await import('react');
   return { default: () => useSyncExternalStore(settingsStore.subscribe, settingsStore.get) ?? enumOptions };
 });
-// The provider catalog of a workspace created in 26.11: no `on_prem`.
-const cloudCatalog = {
-  ...enumOptions,
-  byField: {
-    ...enumOptions.byField,
-    serverProvider: ['aws', 'azure', 'gcp', 'other'].map((code) => ({ code, label: code })),
-  },
-};
-const loadingSettings = {
-  settings: null,
-  byField: {},
-  labelFor: (_field: string, code: string) => code,
-};
 vi.mock('../../hooks/useAssetNav', () => ({
   useAssetNav: () => ({ total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
@@ -87,10 +76,11 @@ vi.mock('./workspace/AssetDependenciesTab', () => ({ default: () => null }));
 vi.mock('./components/AssetTechnologiesSection', async (importOriginal) => ({ ...(await importOriginal<any>()), default: () => null }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('../../components/fields/LocationSelect', () => ({
-  default: ({ onChange }: { onChange: (value: string | null) => void }) => (
+  default: ({ onChange, helperText }: { onChange: (value: string | null) => void; helperText?: React.ReactNode }) => (
     <>
       <input aria-label="site" />
       <button type="button" onClick={() => onChange('loc-1')}>pick-location</button>
+      {helperText ? <span>{helperText}</span> : null}
     </>
   ),
 }));
@@ -110,7 +100,7 @@ const created = {
   status: 'active',
   is_cluster: false,
   hostname: 'web-1',
-  location_id: null,
+  location_id: 'loc-1',
   creation_token: 'token-1',
 };
 const detail = {
@@ -126,6 +116,8 @@ const detail = {
   notes: '',
   external_links: [],
 };
+// An asset written before 26.11.9 at its title, without a site.
+const siteless = { ...detail, id: 'asset-old', asset_reference: 'AST-9', name: 'Old 1', location_id: null };
 
 function Location() {
   const location = useLocation();
@@ -140,16 +132,20 @@ function StartPage() {
 function renderPage(entries: string[]) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/assets/by-ref/AST-7' || url === '/assets/asset-new') return { data: detail } as never;
+    if (url === '/assets/by-ref/AST-9' || url === '/assets/asset-old') return { data: siteless } as never;
     if (url === '/assets/asset-new/creation') return { data: { changes: { fields: 0, children: {} } } } as never;
+    if (url === '/locations') return { data: { items: [{ id: 'loc-1', location_reference: 'LOC-1', name: 'Paris' }] } } as never;
     if (url === '/locations/loc-1') return { data: { id: 'loc-1', location_reference: 'LOC-1', name: 'Paris', hosting_type: 'on_prem' } } as never;
     if (url.endsWith('/sub-items')) return { data: [] } as never;
     return { data: { items: [], outgoing: [], incoming: [] } } as never;
   });
   mocked.post.mockImplementation(async (url: string) => {
-    if (url === '/assets/creation') return { data: created } as never;
+    if (url === '/assets') return { data: { ...created } } as never;
     return { data: { ok: true } } as never;
   });
-  mocked.patch.mockImplementation(async (_url: string, body?: unknown) => ({ data: { ...detail, ...(body as object) } }) as never);
+  mocked.patch.mockImplementation(async (url: string, body?: unknown) => (
+    { data: { ...(url === '/assets/asset-old' ? siteless : detail), ...(body as object) } }
+  ) as never);
   mocked.delete.mockResolvedValue({ data: undefined } as never);
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -180,22 +176,47 @@ async function typeTitle(value: string) {
   fireEvent.keyDown(input, { key: 'Enter' });
 }
 
-async function createAsset() {
+function pickSite() {
+  fireEvent.click(screen.getByRole('button', { name: 'pick-location' }));
+}
+
+/** The type field of the properties panel. */
+const typeField = () => screen.getByPlaceholderText<HTMLInputElement>('workspace.asset.overview.searchAssetTypes');
+
+/** Chooses a type in the list of the type field. */
+async function pickType(label = 'Virtual machine') {
+  fireEvent.keyDown(typeField(), { key: 'ArrowDown' });
+  fireEvent.click(await screen.findByRole('option', { name: label }));
+}
+
+async function startNewAsset() {
   renderPage(['/start']);
   fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
-  await typeTitle('Web 1');
-  await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
-  await screen.findByRole('button', { name: TITLE });
+  await screen.findByRole('textbox', { name: TITLE_FIELD });
 }
 
-/** The label of the site row. */
-function siteLabel(): HTMLElement {
-  const label = [...document.querySelectorAll<HTMLElement>('.kanap-field-label')].find((el) => el.textContent?.startsWith('workspace.asset.overview.location'));
-  if (!label) throw new Error('no site label');
+/** A new asset given its name, its type and its site: written, and open with Done. */
+async function createAsset() {
+  await startNewAsset();
+  await typeTitle('Web 1');
+  await pickType();
+  pickSite();
+  await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+  await screen.findByRole('button', { name: 'common:buttons.done' });
+}
+
+/** The label of a property row. */
+function rowLabel(key: string): HTMLElement {
+  const label = [...document.querySelectorAll<HTMLElement>('.kanap-field-label')].find((el) => el.textContent?.startsWith(key));
+  if (!label) throw new Error(`no label ${key}`);
   return label;
 }
+const siteLabel = () => rowLabel('workspace.asset.overview.location');
+const typeLabel = () => rowLabel('workspace.asset.overview.assetType');
+const dimmed = (el: Element) => !!el.closest('[data-testid="creation-preview"]');
+const assetPosts = () => mocked.post.mock.calls.filter(([url]) => url === '/assets');
 
-describe('Asset creation at the title', () => {
+describe('An asset born complete', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -204,15 +225,36 @@ describe('Asset creation at the title', () => {
     settingsStore.set(null);
   });
 
-  it('opens with the title to type and the asset to come dimmed, nothing written', async () => {
+  it('opens with its title, its type and its site to give, every other row dimmed and out of reach, nothing written', async () => {
     renderPage(['/it/assets/new/overview']);
     const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
     expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'common.close' })).toBeNull();
+    // The site: its row of the properties panel and its menu in the metadata bar.
+    expect(dimmed(screen.getByRole('textbox', { name: 'site' }))).toBe(false);
+    expect(dimmed(siteLabel())).toBe(false);
+    const siteMenu = screen.getByTitle('workspace.asset.meta.editLocation');
+    expect(dimmed(siteMenu)).toBe(false);
+    expect(siteMenu.tagName).toBe('BUTTON');
+    // The type: its row, empty with no type chosen for the person, and its item in the metadata bar.
+    expect(dimmed(typeField())).toBe(false);
+    expect(typeField().value).toBe('');
+    expect(dimmed(typeLabel())).toBe(false);
+    expect(typeLabel().closest('[data-required-field]')).toBeTruthy();
+    const typeMenu = screen.getByTitle('workspace.asset.meta.editAssetType');
+    expect(dimmed(typeMenu)).toBe(false);
+    expect(typeMenu.tagName).toBe('BUTTON');
+    // With no type, the item says what it is: "not set" alone names nothing.
+    expect(typeMenu.textContent).toContain('workspace.asset.overview.assetType');
+    // The rest, row by row.
+    for (const key of ['workspace.asset.meta.cluster', 'workspace.asset.technical.environment', 'workspace.asset.overview.lifecycle', 'workspace.asset.overview.goLiveDate']) {
+      expect(dimmed(rowLabel(key))).toBe(true);
+    }
+    expect(dimmed(screen.getByTestId('description-editor'))).toBe(true);
     const previews = screen.getAllByTestId('creation-preview');
-    expect(previews.length).toBeGreaterThan(0);
+    expect(previews.length).toBeGreaterThan(3);
     for (const preview of previews) {
       expect(preview).toHaveAttribute('inert');
       expect(within(preview).queryAllByRole('textbox')).toHaveLength(0);
@@ -222,115 +264,253 @@ describe('Asset creation at the title', () => {
     expect(mocked.patch).not.toHaveBeenCalled();
   });
 
-  it('creates the asset from its title, as a virtual machine in production, and opens it', async () => {
+  it('writes nothing for a name alone', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    fireEvent.keyDown(await screen.findByRole('textbox', { name: TITLE_FIELD }), { key: 'Tab' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(location()).toBe('/it/assets/new/overview');
+  });
+
+  it('writes nothing for a site alone', async () => {
+    await startNewAsset();
+    pickSite();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('writes nothing for a name and a site without a type', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    pickSite();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(location()).toBe('/it/assets/new/overview');
+  });
+
+  it('writes nothing for a name and a type without a site', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    await pickType();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(location()).toBe('/it/assets/new/overview');
+  });
+
+  it('writes the asset with the type chosen, whatever the order the three are given in', async () => {
+    await startNewAsset();
+    pickSite();
+    await pickType('Physical server');
+    expect(mocked.post).not.toHaveBeenCalled();
+    await typeTitle('Web 1');
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(assetPosts()).toHaveLength(1);
+    expect(assetPosts()[0][1]).toMatchObject({ name: 'Web 1', kind: 'physical_server', location_id: 'loc-1' });
+  });
+
+  it('writes the asset when its type is chosen last, in the metadata bar', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    pickSite();
+    const typeMenu = screen.getByTitle('workspace.asset.meta.editAssetType');
+    fireEvent.focusOut(screen.getByRole('textbox', { name: TITLE_FIELD }), { relatedTarget: typeMenu });
+    fireEvent.click(typeMenu);
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Physical server' }));
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(assetPosts()).toHaveLength(1);
+    expect(assetPosts()[0][1]).toMatchObject({ kind: 'physical_server' });
+  });
+
+  it('marks nothing when a choice in the metadata bar leaves the draft incomplete', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    const siteMenu = screen.getByTitle('workspace.asset.meta.editLocation');
+    fireEvent.focusOut(screen.getByRole('textbox', { name: TITLE_FIELD }), { relatedTarget: siteMenu });
+    fireEvent.click(siteMenu);
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Paris/ }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(typeLabel()).not.toHaveAttribute('data-missing');
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('writes the asset once with its name and its site, then shows it with Done and Cancel', async () => {
     await createAsset();
-    expect(mocked.post).toHaveBeenCalledTimes(1);
-    expect(mocked.post).toHaveBeenCalledWith('/assets/creation', {
+    expect(assetPosts()).toHaveLength(1);
+    expect(mocked.post).toHaveBeenCalledWith('/assets', {
       name: 'Web 1',
       kind: 'virtual_machine',
       environment: 'prod',
-      provider: 'on_prem',
       status: 'active',
       is_cluster: false,
       hostname: 'web-1',
+      location_id: 'loc-1',
     });
+    // The provider is the site's: the server sets it, the screen names none.
+    expect(assetPosts()[0][1]).not.toHaveProperty('provider');
+    expect(mocked.post).not.toHaveBeenCalledWith('/assets/creation', expect.anything());
     expect(screen.queryByTestId('creation-preview')).toBeNull();
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: TITLE })).toHaveTextContent('Web 1');
+    expect(mocked.patch).not.toHaveBeenCalled();
   });
 
-  it('creates the asset with a provider of the workspace catalog, `other` when it has one', async () => {
-    settingsStore.set(cloudCatalog);
-    renderPage(['/it/assets/new/overview']);
+  it('writes the asset when its site is chosen in the metadata bar', async () => {
+    await startNewAsset();
     await typeTitle('Web 1');
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/creation', expect.objectContaining({ provider: 'other' })));
+    await pickType();
+    const siteMenu = screen.getByTitle('workspace.asset.meta.editLocation');
+    // A press on the bar takes the focus from the title: a leave of the title, which gives nothing.
+    fireEvent.focusOut(screen.getByRole('textbox', { name: TITLE_FIELD }), { relatedTarget: siteMenu });
+    fireEvent.click(siteMenu);
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Paris/ }));
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(assetPosts()).toHaveLength(1);
+    expect(assetPosts()[0][1]).toMatchObject({ name: 'Web 1', location_id: 'loc-1' });
   });
 
-  it('waits for the settings when the title is committed before they load', async () => {
-    settingsStore.set(loadingSettings);
-    renderPage(['/it/assets/new/overview']);
+  it('writes the asset when the site is given before the name', async () => {
+    await startNewAsset();
+    await pickType();
+    pickSite();
     await typeTitle('Web 1');
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(assetPosts()).toHaveLength(1);
+  });
+
+  it('marks the type and the site on Create without them and puts the cursor in the type, without a call', async () => {
+    await startNewAsset();
+    const input = screen.getByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(input, { target: { value: 'Web 1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(typeField()).toHaveFocus());
+    expect(typeLabel()).toHaveAttribute('data-missing');
+    expect(typeField()).toHaveAttribute('aria-invalid', 'true');
+    expect(siteLabel()).toHaveAttribute('data-missing');
     expect(mocked.post).not.toHaveBeenCalled();
-    act(() => settingsStore.set(cloudCatalog));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/creation', expect.objectContaining({
-      kind: 'virtual_machine',
-      provider: 'other',
-    })));
-    expect(mocked.post).toHaveBeenCalledTimes(1);
-  });
-
-  it('creates a cluster when the list asked for one', async () => {
-    renderPage(['/it/assets/new/overview?cluster=1']);
-    await typeTitle('Web 1');
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/creation', expect.objectContaining({ is_cluster: true })));
-  });
-
-  it('creates the asset on Create clicked just after the title, and opens it with Done, the cursor in its site', async () => {
-    renderPage(['/start']);
-    fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
-    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
-    fireEvent.change(input, { target: { value: 'Web 1' } });
-    const create = screen.getByRole('button', { name: 'common:buttons.create' });
-    // In a browser the press takes the focus from the title, which writes nothing; Create writes the name typed.
-    fireEvent.pointerDown(create);
-    create.focus();
-    fireEvent.blur(input);
-    fireEvent.click(create);
-    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
-    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    // The type given: its mark goes; Create again goes to the site.
+    await pickType();
+    await waitFor(() => expect(typeLabel()).not.toHaveAttribute('data-missing'));
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveFocus());
-    // No check yet: the site is not marked, nothing asked of the server.
-    expect(siteLabel()).not.toHaveAttribute('data-missing');
-    expect(mocked.post).toHaveBeenCalledTimes(1);
-  });
-
-  it('creates the asset on Tab out of the title and puts the focus on its site', async () => {
-    renderPage(['/start']);
-    fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
-    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
-    fireEvent.change(input, { target: { value: 'Web 1' } });
-    fireEvent.keyDown(input, { key: 'Tab' });
-    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveFocus());
-    expect(mocked.post).toHaveBeenCalledTimes(1);
-  });
-
-  it('marks the missing site on Done, focuses it and stays, without asking the server', async () => {
-    await createAsset();
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveFocus());
-    expect(mocked.post).not.toHaveBeenCalledWith('/assets/asset-new/creation/complete', expect.anything());
-    expect(location()).toBe('/it/assets/AST-7/overview');
-    // One signal: the label in red and the field invalid, no banner.
     expect(siteLabel()).toHaveAttribute('data-missing');
     expect(screen.getByRole('textbox', { name: 'site' })).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.queryByText(/creation\.missing(?!Mark|Fields)/)).toBeNull();
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(location()).toBe('/it/assets/new/overview');
+    // The site given: the mark goes and the asset is written.
+    pickSite();
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(assetPosts()).toHaveLength(1);
   });
 
-  it('closes the asset on Done once it has a site, back where the creation started', async () => {
-    await createAsset();
-    fireEvent.click(screen.getAllByText('pick-location')[0]);
-    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/assets/asset-new', { location_id: 'loc-1', sub_location_id: null }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
+  it('writes a cluster when the list asked for one, once its type is given too', async () => {
+    renderPage(['/it/assets/new/overview?cluster=1']);
+    await typeTitle('Web 1');
+    pickSite();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    await pickType();
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets', expect.objectContaining({ is_cluster: true, kind: 'virtual_machine', location_id: 'loc-1' })));
+  });
+
+  it('shows a refusal of the type under the type, and does not send the same draft again', async () => {
+    await startNewAsset();
+    mocked.post.mockRejectedValueOnce({ response: { status: 400, data: { message: 'Invalid kind "virtual_machine"' } } });
+    await typeTitle('Web 1');
+    await pickType();
+    pickSite();
+    await waitFor(() => expect(typeLabel().closest('[data-required-field]')?.textContent).toMatch(/Invalid kind/));
+    expect(screen.queryByRole('alert')).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(assetPosts()).toHaveLength(1);
+    // Another type is a new draft: written.
+    await pickType('Physical server');
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(assetPosts()[1][1]).toMatchObject({ kind: 'physical_server' });
+  });
+
+  it('shows a refusal of the name under the title, keeps the draft and does not send it again', async () => {
+    await startNewAsset();
+    mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'asset_name_taken', message: 'An asset already has this name: AST-2', params: { ref: 'AST-2' } } } });
+    await typeTitle('Web 1');
+    await pickType();
+    pickSite();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/asset_name_taken/);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(assetPosts()).toHaveLength(1);
+    expect(location()).toBe('/it/assets/new/overview');
+    // Another name is a new draft: written.
+    await typeTitle('Web 2');
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(assetPosts()).toHaveLength(2);
+    expect(assetPosts()[1][1]).toMatchObject({ name: 'Web 2', location_id: 'loc-1' });
+  });
+
+  it('shows a refusal of the site on the site', async () => {
+    await startNewAsset();
+    mocked.post.mockRejectedValueOnce({ response: { status: 400, data: { message: 'Invalid location_id' } } });
+    await typeTitle('Web 1');
+    await pickType();
+    pickSite();
+    await waitFor(() => expect(siteLabel().closest('[data-required-field]')?.textContent).toMatch(/Invalid location_id/));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(assetPosts()).toHaveLength(1);
+  });
+
+  it('leaves a new asset by the way back with nothing written and no question', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    fireEvent.click(screen.getByRole('button', { name: 'pages.assets.title' }));
     await waitFor(() => expect(location()).toBe('/start'));
-    expect(mocked.post).toHaveBeenLastCalledWith('/assets/asset-new/creation/complete', { token: 'token-1' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(mocked.post).not.toHaveBeenCalled();
     expect(mocked.delete).not.toHaveBeenCalled();
   });
 
-  it('deletes the asset on Cancel and goes back where it started', async () => {
+  it('closes the asset on Done, back where the creation started, with no other call', async () => {
+    await createAsset();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(assetPosts()).toHaveLength(1);
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+    expect(mocked.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes the asset on Cancel just after it is written and goes back where it started', async () => {
     await createAsset();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.delete).toHaveBeenCalledWith('/assets/asset-new/creation', { data: { token: 'token-1' } });
+    // The asset is gone: the page does not read it again on its way out.
+    const deletedAt = mocked.delete.mock.invocationCallOrder[0];
+    const readsAfter = mocked.get.mock.calls.filter(([url], i) => (
+      mocked.get.mock.invocationCallOrder[i] > deletedAt && (url === '/assets/by-ref/AST-7' || url === '/assets/asset-new')
+    ));
+    expect(readsAfter).toEqual([]);
   });
 
-  it('asks before leaving an asset being created without a site, and deletes it on Delete', async () => {
+  it('does not read the asset again when Done closes it', async () => {
     await createAsset();
+    const readsBefore = mocked.get.mock.calls.filter(([url]) => url === '/assets/by-ref/AST-7').length;
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.get.mock.calls.filter(([url]) => url === '/assets/by-ref/AST-7')).toHaveLength(readsBefore);
+  });
+
+  it('opens an asset written without a site with its site marked missing, and takes one', async () => {
+    renderPage(['/it/assets/AST-9/overview']);
+    await screen.findByRole('button', { name: TITLE });
+    await waitFor(() => expect(siteLabel()).toHaveAttribute('data-missing'));
+    expect(screen.queryByTestId('creation-preview')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.done' })).toBeNull();
+    pickSite();
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/assets/asset-old', { location_id: 'loc-1', sub_location_id: null }));
+    await waitFor(() => expect(siteLabel()).not.toHaveAttribute('data-missing'));
+    // Leaving asks nothing.
     fireEvent.click(screen.getByRole('button', { name: 'pages.assets.title' }));
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('it:workspace.asset.creation.missing(fields=workspace.asset.overview.location)')).toBeTruthy();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'it:workspace.asset.creation.leaveDelete' }));
     await waitFor(() => expect(location()).toBe('/it/assets'));
-    expect(mocked.delete).toHaveBeenCalledWith('/assets/asset-new/creation', { data: { token: 'token-1' } });
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

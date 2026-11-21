@@ -190,7 +190,6 @@ export class AssetsCrudService extends AssetsBaseService {
     tenantId: string,
     userId: string | null,
     opts?: ServiceOpts,
-    creation?: { atTitle?: boolean },
   ) {
     const tenant = this.ensureTenantId(tenantId);
     const repo = this.getRepo(opts?.manager);
@@ -201,15 +200,17 @@ export class AssetsCrudService extends AssetsBaseService {
     if (!name) throw new BadRequestException('name is required');
     if (body.environment == null) throw new BadRequestException('environment is required');
     if (body.kind == null) throw new BadRequestException('kind is required');
-    if (body.provider == null) throw new BadRequestException('provider is required');
 
     const environment = this.normalizeEnvironment(body.environment);
     const kind = await this.validation.resolveKind(body.kind, tenant, opts?.manager);
-    const provider = await this.validation.resolveProvider(body.provider, tenant, opts?.manager);
     const status = await this.validation.normalizeLifecycleStatus(body.status, tenant, opts?.manager, 'active');
     const location_id = await this.resolveLocationId((body as any).location_id, tenant, opts?.manager);
-    // The screen creates an asset at its title (`POST /assets/creation`): its site is checked at "Create".
-    if (!location_id && !creation?.atTitle) throw locationRequired();
+    if (!location_id) throw locationRequired();
+    // A body that names no provider (the screen's) takes its site's, as an update that moves the asset does.
+    const provider = body.provider != null
+      ? await this.validation.resolveProvider(body.provider, tenant, opts?.manager)
+      : await this.validation.providerForSite(location_id, tenant, this.getManager(opts));
+    if (!provider) throw new BadRequestException('provider is required');
     const sub_location_id = await this.resolveSubLocationId((body as any).sub_location_id, location_id, tenant, opts?.manager);
     const setsOperatingSystem = Object.prototype.hasOwnProperty.call(body, 'operating_system');
     const is_cluster = body.is_cluster === undefined ? false : this.normalizeBooleanFlag((body as any).is_cluster, 'is_cluster');
