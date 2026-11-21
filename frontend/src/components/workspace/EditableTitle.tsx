@@ -61,6 +61,15 @@ export function titleToGiveSx(theme: Theme, empty: boolean) {
   } as const;
 }
 
+/**
+ * The message under a title (`FormHelperText error`). `kanap.danger` follows the mode (a lighter red
+ * on the dark page); `error.main` stays #DC2626 and fails 4.5:1 there. `.Mui-error` outranks MUI's own rule.
+ */
+export const titleMessageSx = (theme: Theme) => ({
+  mt: 0.5,
+  '&.Mui-error': { color: theme.palette.kanap.danger },
+});
+
 function titleColor(theme: Theme, placeholder: boolean, muted: boolean) {
   if (placeholder) return theme.palette.kanap.text.tertiary;
   if (muted) return theme.palette.kanap.text.secondary;
@@ -353,7 +362,7 @@ export default function EditableTitle({
   // Any message under the title is announced and tied to the field, which says it is invalid while it shows.
   const messageId = React.useId();
   const messageNode = message
-    ? <FormHelperText error id={messageId} role="alert" sx={{ mt: 0.5 }}>{message}</FormHelperText>
+    ? <FormHelperText error id={messageId} role="alert" sx={titleMessageSx}>{message}</FormHelperText>
     : null;
 
   if (!editing) {
