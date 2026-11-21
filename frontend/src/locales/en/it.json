@@ -2389,13 +2389,7 @@
         "placementLinked": "Link placed on {{cluster}}."
       },
       "creation": {
-        "record": "The asset",
-        "missing": "Missing: {{fields}}",
-        "leaveTitle": "This asset is incomplete",
-        "leaveComplete": "Complete it",
-        "leaveDelete": "Delete it",
-        "leaveAnyway": "Leave anyway",
-        "completeFailed": "The asset could not be checked."
+        "record": "The asset"
       }
     },
     "technology": {
@@ -2744,6 +2738,10 @@
         "messageWithBindingsAndHops_one": "This will permanently delete this connection and {{hops}}, and unlink it from {{count}} interface binding. The interfaces themselves are not deleted.",
         "messageWithBindingsAndHops_other": "This will permanently delete this connection and {{hops}}, and unlink it from {{count}} interface bindings. The interfaces themselves are not deleted."
       },
+      "discardDialog": {
+        "title": "Discard connection draft",
+        "message": "This connection has not been created yet. Closing the workspace will discard the draft."
+      },
       "topologyDialog": {
         "title": "Change topology?",
         "toMultiServer": "Switching to multi-server will clear the source and destination endpoints.",
@@ -2813,13 +2811,7 @@
         "reorderFailed": "Failed to reorder hops"
       },
       "creation": {
-        "record": "The connection",
-        "missing": "Missing: {{fields}}",
-        "leaveTitle": "This connection is incomplete",
-        "leaveComplete": "Complete it",
-        "leaveDelete": "Delete it",
-        "leaveAnyway": "Leave anyway",
-        "completeFailed": "The connection could not be checked."
+        "record": "The connection"
       }
     },
     "interface": {

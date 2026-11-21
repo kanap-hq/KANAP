@@ -6,16 +6,13 @@ Verbindungen dokumentieren die Netzwerkpfade auf Infrastrukturebene zwischen Ser
 
 Navigieren Sie zu **IT-Landschaft > Verbindungen**, um Ihr Verbindungsverzeichnis zu sehen. So erstellen Sie eine Verbindung:
 
-1. Klicken Sie auf **Verbindung hinzufügen**. Die Seite der Verbindung öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+1. Klicken Sie auf **Verbindung hinzufügen**. Die Seite der Verbindung öffnet sich mit einem leeren Titel in der Kopfzeile. Titel, Topologie, Endpunkte und Protokolle sind geöffnet. Der Rest der Seite ist abgeblendet.
 2. Geben Sie einen beschreibenden Namen ein.
-3. Drücken Sie die Eingabe- oder Tabulatortaste, oder klicken Sie auf **Erstellen**. Kadratis erstellt die Verbindung sofort, als Server zu Server, ohne Protokolle und Endpunkte. Ihre Referenz (`CONN-12`) erscheint und alle Reiter öffnen sich.
+3. Wählen Sie die **Topologie** in der Leiste unter dem Titel: **Server zu Server** oder **Multi-Server**.
+4. Wählen Sie die **Endpunkte**: eine Quelle und ein Ziel für **Server zu Server** (jeweils ein Server, ein Cluster oder eine Entität) oder mindestens zwei Server für **Multi-Server**.
+5. Fügen Sie unter **Protokolle** mindestens ein Netzwerkprotokoll hinzu.
 
-Danach speichert jedes Feld für sich. Eine Verbindung braucht:
-  - **Topologie**: Server zu Server oder Multi-Server
-  - **Endpunkte**: Eine Quelle und ein Ziel für Server zu Server (jeweils ein Server, ein Cluster oder eine Entität) oder mindestens zwei Server für Multi-Server
-  - **Protokolle**: Mindestens ein Netzwerkprotokoll
-
-Escape im Titel, ein Klick auf **Abbrechen** oder das Verlassen der Seite erstellt nichts, auch wenn Sie schon einen Namen eingegeben haben.
+Sie können sie in beliebiger Reihenfolge ausfüllen. Nichts wird gespeichert, solange Name, Endpunkte und ein Protokoll nicht angegeben sind. Sobald sie es sind, erstellt Kadratis die Verbindung mit allem, was Sie eingegeben haben, und vergibt ihre Referenz (`CONN-12`). Der Rest der Seite öffnet sich, mit den Reitern **Pfad** und **Verlauf**.
 
 **Tipp**: Verbindungen können mit Schnittstellen-Bindungen verknüpft werden, um zu zeigen, welche Infrastruktur jede Anwendungsintegration unterstützt.
 
@@ -23,11 +20,14 @@ Escape im Titel, ein Klick auf **Abbrechen** oder das Verlassen der Seite erstel
 
 Solange die Verbindung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Verbindung verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
-- **Erstellen** wirkt wie die Eingabetaste: Es erstellt die Verbindung und lässt sie geöffnet, mit ihrer Referenz. Der Cursor springt in das erste noch leere Pflichtfeld. Bei leerem Titel verlangt der Titel einen
-- Sobald die Verbindung erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und prüft, ob die Verbindung mindestens ein Protokoll und beide Endpunkte hat, oder zwei Server bei einer Multi-Server-Verbindung. Die Beschriftung jedes fehlenden Felds wird rot mit einem Warnsymbol, und das erste erhält den Fokus. Fehlt nichts, kehren Sie dorthin zurück, wo Sie begonnen haben
-- **Abbrechen** löscht die Verbindung. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Verbindungen abbrechen
+- **Erstellen** speichert die Verbindung, sobald der Entwurf vollständig ist, und lässt sie geöffnet. Fehlt noch etwas, wird nichts gespeichert: Ein leerer Titel zeigt seine Meldung, die Beschriftung jedes fehlenden Felds wird rot mit einem Warnsymbol, und der Titel oder das erste fehlende Feld erhält den Fokus
+- Lehnt Kadratis die Verbindung ab, zum Beispiel mit demselben Asset auf beiden Seiten, erscheint die Meldung unter dem betroffenen Feld. Der Entwurf bleibt unverändert
+- Sobald die Verbindung erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben
+- **Abbrechen** löscht die Verbindung. Wenn Sie sie nach der Erstellung geändert haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Verbindungen abbrechen
 
-Verlassen Sie die Verbindung auf andere Weise, solange etwas fehlt, fragt Kadratis nach. **Vervollständigen** lässt Sie auf der Verbindung, im ersten fehlenden Feld. **Löschen** löscht die Verbindung. Wenn Sie die Seite neu laden oder den Tab schließen, solange der neuen Verbindung noch ein Feld fehlt, bittet Ihr Browser um Bestätigung. Verlassen Sie die Seite trotzdem, wird die Verbindung gelöscht.
+Verlassen Sie die Verbindung auf andere Weise (über das Menü oder den Zurück-Pfeil), bleibt sie erhalten: Sie ist vollständig.
+
+Bevor die Verbindung erstellt ist, verlassen **Abbrechen**, der Zurück-Pfeil oder Escape im Titel die Seite, ohne zu speichern. Enthält der Entwurf mehr als seinen Namen, fragt eine Bestätigung, bevor er verworfen wird. Ein Link im Menü fragt ebenso.
 
 ---
 

@@ -18,6 +18,8 @@ type Props = {
   disabled?: boolean;
   /** Called (debounced) with the full next protocol set when a port is edited. */
   onProtocolsChange?: (next: ConnectionProtocol[]) => void;
+  /** Set to a function that gives at once a port still waiting for its delay (a draft about to be written, Create). */
+  flushRef?: React.MutableRefObject<(() => void) | null>;
 };
 
 /**
@@ -31,6 +33,7 @@ export default function ConnectionProtocolsTable({
   editable = false,
   disabled = false,
   onProtocolsChange,
+  flushRef,
 }: Props) {
   const { t } = useTranslation(['it']);
   const { settings } = useItOpsEnumOptions();
@@ -81,6 +84,11 @@ export default function ConnectionProtocolsTable({
     run?.();
   }, []);
   React.useEffect(() => flushPending, [connectionKey, flushPending]);
+  React.useEffect(() => {
+    if (!flushRef) return undefined;
+    flushRef.current = flushPending;
+    return () => { flushRef.current = null; };
+  }, [flushRef, flushPending]);
 
   const handlePortChange = (code: string, raw: string) => {
     if (!onProtocolsChange) return;

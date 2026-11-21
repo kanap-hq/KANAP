@@ -9,6 +9,7 @@ import {
   applicationParticipantCondition,
   resolveBusinessContributorScopeForUser,
 } from '../../auth/business-contributor-scope';
+import { connectionSameEndpointRefusal, connectionSideRefusal } from '../../connections/connection-cluster-rules';
 import { ConnectionsService } from '../../connections/services/connections.service';
 import { ContractsService } from '../../contracts/contracts.service';
 import { InterfacesService } from '../../interfaces/services/interfaces.service';
@@ -196,6 +197,33 @@ const BILLING_FREQUENCIES = ['monthly', 'quarterly', 'annual', 'other'] as const
 const RUN_BUILD = ['run', 'build'] as const;
 const INTERFACE_ROUTES = ['direct', 'via_middleware'] as const;
 const CONNECTION_TOPOLOGIES = ['server_to_server', 'multi_server'] as const;
+
+/**
+ * The write's rule (`ConnectionsCrudService.create`), checked at preview: a server-to-server
+ * connection (the default) names both ends, an asset or an entity each, never the same asset on
+ * both; a multi-server one names at least two servers (the write may still absorb a member into
+ * its cluster).
+ */
+function assertConnectionEnds(fields: Record<string, unknown>): void {
+  const given = (value: unknown) => value != null && value !== '';
+  if (fields.topology === 'multi_server') {
+    const servers = new Set((Array.isArray(fields.servers) ? fields.servers : []).filter(given));
+    if (servers.size < 2) throw new BadRequestException('At least two servers are required for multi-server connection creation (`servers`).');
+    return;
+  }
+  const text = (value: unknown) => (given(value) ? String(value) : null);
+  for (const [side, label] of [['source', 'Source'], ['destination', 'Destination']] as const) {
+    const assetId = text(fields[`${side}_asset_id`]);
+    const entityCode = text(fields[`${side}_entity_code`]);
+    if (!assetId && !entityCode) {
+      throw new BadRequestException(`${label} is required for connection creation: an asset (\`${side}_asset_id\`) or an entity (\`${side}_entity_code\`).`);
+    }
+    const refused = connectionSideRefusal(side, assetId, entityCode);
+    if (refused) throw refused;
+  }
+  const sourceAsset = text(fields.source_asset_id);
+  if (sourceAsset && sourceAsset === text(fields.destination_asset_id)) throw connectionSameEndpointRefusal();
+}
 const RISK_MODES = ['manual', 'derived'] as const;
 
 const COMMON_PORTFOLIO_FIELDS = {
@@ -1097,6 +1125,7 @@ export class AiBusinessRecordMutationSupportService {
           throw new BadRequestException(`${analyticsAxisLabel(missing)} is required for ${config.labelSingular} creation.`);
         }
       }
+      if (entityType === 'connections') assertConnectionEnds(fields);
       if (entityType === 'projects' && fields.origin === 'standard') {
         throw new BadRequestException('Standard projects must be created by converting an approved request. Use origin fast_track or legacy.');
       }

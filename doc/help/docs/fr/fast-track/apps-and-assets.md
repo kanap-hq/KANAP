@@ -172,13 +172,12 @@ Allez dans **Cartographie SI > Actifs** et cliquez sur **Ajouter un actif**.
 
 ### Onglet Vue d'ensemble
 
-Remplissez les champs principaux :
+Saisissez le **Nom** dans le titre (par exemple `PROD-WEB-01`), puis choisissez le **Type d'actif** (par exemple `Machine virtuelle`) et le **Site** (par exemple `Datacenter Paris`) dans le panneau **Propriétés**. Kadratis crée l'actif dès qu'il a les trois. Le reste de la page reste grisé jusque-là.
+
+Remplissez ensuite les autres champs principaux :
 
 | Champ | Quoi saisir | Exemple |
 |-------|--------------|---------|
-| **Nom** | Nom d'hôte ou identifiant | `PROD-WEB-01` |
-| **Type d'actif** | Le type de serveur (liste déroulante) | `Machine virtuelle` |
-| **Site** | Où il est hébergé (obligatoire) | `Datacenter Paris` |
 | **Environnement** | L'environnement qu'il sert | `Prod` |
 | **Description** | Tout contexte supplémentaire |  |
 
@@ -194,7 +193,7 @@ Le panneau **Propriétés** à droite contient le reste : l'interrupteur **Clust
 
 ### Onglet Réseau
 
-L'onglet **Réseau** est ouvert pendant la création de l'actif. Remplissez :
+L'onglet **Réseau** s'ouvre une fois l'actif créé. Remplissez :
 
 | Section | Champs | Détails |
 |---------|--------|---------|

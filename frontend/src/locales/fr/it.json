@@ -2389,13 +2389,7 @@
         "placementLinked": "Lien posé sur {{cluster}}."
       },
       "creation": {
-        "record": "L’actif",
-        "missing": "Manquant : {{fields}}",
-        "leaveTitle": "Cet actif est incomplet",
-        "leaveComplete": "Le compléter",
-        "leaveDelete": "Le supprimer",
-        "leaveAnyway": "Quitter quand même",
-        "completeFailed": "L’actif n’a pas pu être vérifié."
+        "record": "L’actif"
       }
     },
     "technology": {
@@ -2744,6 +2738,10 @@
         "messageWithBindingsAndHops_one": "Cette connexion sera définitivement supprimée, ainsi que {{hops}}, et détachée de {{count}} liaison d'interface. Les interfaces elles-mêmes ne sont pas supprimées.",
         "messageWithBindingsAndHops_other": "Cette connexion sera définitivement supprimée, ainsi que {{hops}}, et détachée de {{count}} liaisons d'interface. Les interfaces elles-mêmes ne sont pas supprimées."
       },
+      "discardDialog": {
+        "title": "Abandonner le brouillon de connexion",
+        "message": "Cette connexion n'a pas encore été créée. Fermer l'espace de travail abandonnera le brouillon."
+      },
       "topologyDialog": {
         "title": "Changer la topologie ?",
         "toMultiServer": "Passer en multi-serveur effacera les endpoints source et destination.",
@@ -2813,13 +2811,7 @@
         "reorderFailed": "Échec du réordonnancement des sauts"
       },
       "creation": {
-        "record": "La connexion",
-        "missing": "Manquant : {{fields}}",
-        "leaveTitle": "Cette connexion est incomplète",
-        "leaveComplete": "La compléter",
-        "leaveDelete": "La supprimer",
-        "leaveAnyway": "Quitter quand même",
-        "completeFailed": "La connexion n’a pas pu être vérifiée."
+        "record": "La connexion"
       }
     },
     "interface": {

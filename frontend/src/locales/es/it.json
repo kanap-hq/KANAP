@@ -2389,13 +2389,7 @@
         "placementLinked": "Vínculo colocado en {{cluster}}."
       },
       "creation": {
-        "record": "El activo",
-        "missing": "Falta: {{fields}}",
-        "leaveTitle": "Este activo está incompleto",
-        "leaveComplete": "Completarlo",
-        "leaveDelete": "Eliminarlo",
-        "leaveAnyway": "Salir de todos modos",
-        "completeFailed": "No se pudo comprobar el activo."
+        "record": "El activo"
       }
     },
     "technology": {
@@ -2744,6 +2738,10 @@
         "messageWithBindingsAndHops_one": "Esta conexión se eliminará de forma permanente, junto con {{hops}}, y se desvinculará de {{count}} enlace de interfaz. Las interfaces en sí no se eliminan.",
         "messageWithBindingsAndHops_other": "Esta conexión se eliminará de forma permanente, junto con {{hops}}, y se desvinculará de {{count}} enlaces de interfaz. Las interfaces en sí no se eliminan."
       },
+      "discardDialog": {
+        "title": "Descartar el borrador de conexión",
+        "message": "Esta conexión aún no se ha creado. Al cerrar el espacio de trabajo se descartará el borrador."
+      },
       "topologyDialog": {
         "title": "¿Cambiar la topología?",
         "toMultiServer": "Al cambiar a multi-servidor se borrarán los endpoints de origen y destino.",
@@ -2813,13 +2811,7 @@
         "reorderFailed": "No se pudieron reordenar los saltos"
       },
       "creation": {
-        "record": "La conexión",
-        "missing": "Falta: {{fields}}",
-        "leaveTitle": "Esta conexión está incompleta",
-        "leaveComplete": "Completarla",
-        "leaveDelete": "Eliminarla",
-        "leaveAnyway": "Salir de todos modos",
-        "completeFailed": "No se pudo comprobar la conexión."
+        "record": "La conexión"
       }
     },
     "interface": {

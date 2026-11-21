@@ -9,6 +9,7 @@ import { AssetsValidationService } from '../services/assets-validation.service';
 
 // Changing an asset's site rewrites the provider the way the screen does, unless the request names one.
 // The same site leaves the provider as stored. A cloud site keeps its catalog provider; on premises uses other.
+// A create that names no provider takes its site's the same way (the screen's draft names none).
 // A create without a site, or an update that clears it, is refused (asset_location_required).
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
@@ -65,6 +66,18 @@ async function run() {
         opts,
       );
       assert.equal(asset.provider, 'other');
+
+      // A create that names no provider takes its site's, as an update that moves the asset does.
+      const born = async (name: string, location_id: string) => (await crud.create(
+        { name, kind: 'vm', environment: 'prod', location_id } as any,
+        tenantId,
+        null,
+        opts,
+      )).provider;
+      assert.equal(await born('Born on AWS', aws), 'aws');
+      assert.equal(await born('Born on odd cloud', odd), 'other');
+      assert.equal(await born('Born in the cave', premAws), 'other');
+      assert.equal(await born('Born in Paris', onPrem), 'other');
 
       const moved = await crud.update(asset.id, { location_id: aws } as any, tenantId, null, opts);
       assert.equal(moved.provider, 'aws');

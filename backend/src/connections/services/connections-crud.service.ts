@@ -22,6 +22,7 @@ import {
   AbsorbedServer,
   absorbClusterMembers,
   connectionSameEndpointRefusal,
+  connectionSideRefusal,
   connectionServersMinRefusal,
 } from '../connection-cluster-rules';
 
@@ -143,20 +144,17 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
   /**
    * Create a new connection.
    */
-  async create(body: any, tenantId: string, userId: string | null, opts?: ServiceOpts, creation?: { atTitle?: boolean }) {
+  async create(body: any, tenantId: string, userId: string | null, opts?: ServiceOpts) {
     const tenant = this.ensureTenantId(tenantId);
-    // The screen creates a connection at its title (`POST /connections/creation`): server to server,
-    // without protocol nor end, which "Create" checks (`connection-creation.ts`).
-    const atTitle = !!creation?.atTitle;
     const mg = opts?.manager ?? this.connRepo.manager;
     if (!body || typeof body !== 'object') throw new BadRequestException('Body is required');
 
     const name = this.normalizeRequiredText(body.name, 'name');
     // The description is rich text.
     const description = await normalizeMarkdownRichText(this.normalizeNullable(body.description), { fieldName: 'description' });
-    const topology = body.topology && !atTitle ? this.normalizeTopology(body.topology) : 'server_to_server';
+    const topology = body.topology ? this.normalizeTopology(body.topology) : 'server_to_server';
     const lifecycle = await this.normalizeLifecycle(body.lifecycle, tenant, mg, 'active');
-    const protocols = atTitle ? [] : await this.normalizeProtocols(body.protocols ?? body.protocol_codes, tenant, mg);
+    const protocols = await this.normalizeProtocols(body.protocols ?? body.protocol_codes, tenant, mg);
     const criticality = await this.normalizeCriticality(body.criticality ?? null, tenant, mg);
     const data_class = await this.normalizeDataClass(body.data_class ?? null, tenant, mg);
     const contains_pii = this.normalizeContainsPii(body.contains_pii);
@@ -172,9 +170,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     let multiAssetIds: string[] = [];
     let absorbed: AbsorbedServer[] = [];
 
-    if (atTitle) {
-      // No end yet.
-    } else if (topology === 'server_to_server') {
+    if (topology === 'server_to_server') {
       const normalizeSide = async (
         assetId: unknown,
         entityCode: unknown,
@@ -183,8 +179,8 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         const aid = this.normalizeNullable(assetId);
         const eidRaw = this.normalizeNullable(entityCode);
         const eid = eidRaw ? eidRaw.toLowerCase() : null;
-        if (aid && eid) throw new BadRequestException(`${label}: choose either asset or entity, not both`);
-        if (!aid && !eid) throw new BadRequestException(`${label}: select an asset or an entity`);
+        const refused = connectionSideRefusal(label, aid, eid);
+        if (refused) throw refused;
         if (aid) {
           await this.ensureAsset(aid, tenant, mg);
           return { asset: aid, entity: null };
@@ -324,8 +320,8 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     // Load existing protocols to compute next set
     const protoRepo = this.getConnProtocolRepo(mg);
     const existingProtocols = await protoRepo.find({ where: { connection_id: id } });
-    // A connection that lacks a protocol or an end (created at its title, `connection-creation.ts`)
-    // may stay lacking; a complete one stays complete.
+    // A connection that lacks a protocol or an end (created at its title before 26.11.9,
+    // `connection-creation.ts`) may stay lacking; a complete one stays complete.
     const wasIncomplete = missingConnectionFields({
       ...existing,
       protocolCount: existingProtocols.length,
@@ -377,11 +373,9 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         const hasEntity = entityCode !== undefined;
         const candidateAsset = hasAsset ? this.normalizeNullable(assetId) : fallbackAsset;
         const candidateEntity = hasEntity ? this.normalizeNullable(entityCode)?.toLowerCase() ?? null : fallbackEntity;
-        if (candidateAsset && candidateEntity) throw new BadRequestException(`${label}: choose either asset or entity, not both`);
-        if (!candidateAsset && !candidateEntity) {
-          if (wasIncomplete) return { asset: null, entity: null };
-          throw new BadRequestException(`${label}: select an asset or an entity`);
-        }
+        if (!candidateAsset && !candidateEntity && wasIncomplete) return { asset: null, entity: null };
+        const refused = connectionSideRefusal(label, candidateAsset, candidateEntity);
+        if (refused) throw refused;
         if (candidateAsset) {
           await this.ensureAsset(candidateAsset, tenant, mg);
           return { asset: candidateAsset, entity: null };
