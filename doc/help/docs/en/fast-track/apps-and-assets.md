@@ -172,13 +172,12 @@ Go to **IT Landscape → Assets** and click **Add asset**.
 
 ### Overview tab
 
-Type the **Name** in the title (for example `PROD-WEB-01`), then choose the **Location** in the **Properties** panel (for example `Paris Datacenter`). Kadratis creates the asset as soon as it has both. The rest of the page stays dimmed until then.
+Type the **Name** in the title (for example `PROD-WEB-01`), then choose the **Asset type** (for example `Virtual Machine`) and the **Location** (for example `Paris Datacenter`) in the **Properties** panel. Kadratis creates the asset as soon as it has all three. The rest of the page stays dimmed until then.
 
 Then fill in the other core fields:
 
 | Field | What to enter | Example |
 |-------|--------------|---------|
-| **Asset type** | The server type (dropdown) | `Virtual Machine` |
 | **Environment** | Which environment it serves | `Prod` |
 | **Description** | Any additional context | |
 

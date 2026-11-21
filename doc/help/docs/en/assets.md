@@ -6,24 +6,24 @@ Assets document your infrastructure inventory: physical servers, virtual machine
 
 Navigate to **IT Landscape > Assets** to see your asset inventory. To create an asset:
 
-1. Click **Add asset**, then **Add asset** or **Add cluster**. The asset page opens with an empty title in the header. Only the title and the **Location** are open. The rest of the page is dimmed.
+1. Click **Add asset**, then **Add asset** or **Add cluster**. The asset page opens with an empty title in the header. Only the title, the **Asset type** and the **Location** are open. The rest of the page is dimmed.
 2. Type the name of the asset, up to 200 characters.
-3. Choose its **Location**, in the properties drawer or in the bar under the title. You can also choose it before the name.
+3. Choose its **Asset type** and its **Location**, in the properties drawer or in the bar under the title. The order does not matter.
 
-Kadratis creates the asset as soon as it has both. Its reference (`AST-12`) shows and all tabs open.
+Kadratis creates the asset as soon as it has all three. Its reference (`AST-12`) shows and all tabs open.
 
-The new asset is a virtual machine in the Prod environment, with the lifecycle Active. When your asset types have no virtual machine, it takes the first type of the list. **Add cluster** creates it with the **Cluster** switch on. Once the asset is created, you can change its type and its environment. Each field then saves on its own.
+The new asset is in the Prod environment, with the lifecycle Active. It has no type until you choose one. **Add cluster** opens the same page with the **Cluster** switch on. Once the asset is created, you can change its type and its environment. Each field then saves on its own.
 
 **Required fields**:
 - **Name**: The asset name or hostname, up to 200 characters
-- **Asset type**: Web server, Virtual machine, Physical server, Container, etc. (configurable in **IT Landscape > Settings**)
+- **Asset type**: Web server, Virtual machine, Physical server, Container, etc. (configurable in **IT Landscape > Settings**). The asset is created once it has one
 - **Location**: Where the asset is hosted (determines provider, hosting type, and country). The asset is created once it has one
 
 **Strongly recommended**:
 - **Lifecycle**: Current status (Active, Deprecated, Retired, etc.)
 - **Environment**: Which environment this asset belongs to (Prod, Pre-prod, QA, Test, Dev, Sandbox)
 
-Until the asset has its name and its location, nothing is saved. Clicking **Cancel** or leaving the page then creates nothing and asks nothing. A refused name shows under the title, a refused location on the **Location** field.
+Until the asset has its name, its type and its location, nothing is saved. Clicking **Cancel** or leaving the page then creates nothing and asks nothing. A refused name shows under the title, a refused location on the **Location** field.
 
 **Unique names**: two assets cannot share a name or an FQDN. Letter case and spaces at either end do not count. Kadratis refuses the duplicate and names the asset that already has it (`AST-12`). Duplicates recorded earlier stay editable as long as you leave that value unchanged.
 
@@ -38,7 +38,7 @@ Until the asset has its name and its location, nothing is saved. Clicking **Canc
 
 While the asset is being created, its header shows **Create** and **Cancel** in place of the close button. They stay until you leave the asset. **Ctrl+S** works like the button shown.
 
-- **Create** creates the asset when it has its name and its location. Without a location, nothing is saved: the **Location** label turns red with an alert icon and the cursor goes to the field. With an empty title, the title asks for one
+- **Create** creates the asset when it has its name, its type and its location. When one is missing, nothing is saved: a missing **Asset type** or **Location** label turns red with an alert icon, and the cursor goes to the first one missing. With an empty title, the title asks for one
 - Once the asset is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started
 - **Cancel** before the asset is created leaves without saving anything. After, it deletes the asset. If you changed the asset since, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete assets
 
@@ -164,7 +164,7 @@ Click any row to open the workspace. The workspace has a **header** with quick m
 
 An address that names no asset opens an **Asset not found** page, with a link back to the list.
 
-The tabs are **Overview**, **Operations**, **Network**, **Hardware** (physical asset types only), **Dependencies**, **Relations** and **History** (the changes made to the asset, see [Record history](record-history.md)). A new asset shows only its title and its location. All tabs open once the asset is created.
+The tabs are **Overview**, **Operations**, **Network**, **Hardware** (physical asset types only), **Dependencies**, **Relations** and **History** (the changes made to the asset, see [Record history](record-history.md)). A new asset shows only its title, its type and its location. All tabs open once the asset is created.
 
 ### Header
 
@@ -182,13 +182,13 @@ The header shows:
 The drawer shows the asset's identity card on every tab. Edits save automatically. The fields come in three groups.
 
 **Type and zone**:
-- **Asset type** (required)
+- **Asset type** (required): a new asset asks for it before it is created
 - **Cluster**: turn it on to mark the asset as a cluster. The change saves at once and removes nothing. It is refused for a cluster that has members, and for a member of a cluster. See [Clusters](#clusters)
 - **Environment**: Prod, Pre-prod, QA, Test, Dev, Sandbox
 - **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**, or **No zone**. The asset then appears in that zone on the [Administration zones](administration-view.md) page
 
 **Location**:
-- **Location** (required): a new asset is created once it has its name and its location. An asset created by an import or the assistant needs it too. When the location does not exist yet, type its name and choose **+ Create location "…"**: give its hosting type, and the new location goes into the field. On a new asset, the asset is then created with it. This needs `locations:member`
+- **Location** (required): a new asset is created once it has its name, its type and its location. An asset created by an import or the assistant needs it too. When the location does not exist yet, type its name and choose **+ Create location "…"**: give its hosting type, and the new location goes into the field. On a new asset, the asset is then created with it. This needs `locations:member`
 - **Sub-location** (when the location has sub-locations defined)
 - **Hosting type**, **Operating company** or **Cloud provider**, **Country**, **City**: read-only, derived from the location. They follow when you change the location
 
