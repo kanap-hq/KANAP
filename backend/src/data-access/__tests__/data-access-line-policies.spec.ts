@@ -259,6 +259,11 @@ async function testPlacement(s: Seed): Promise<void> {
     ['marta', 'L3', 'cost_center_id', s.infEs, 'ok'],
     ['rita', 'L1', 'cost_center_id', s.infEs, '42501'],
     ['rita', 'L1', 'paying_company_id', s.es, '42501'],
+    // L3 (ES on INF-FR), modified through its centre: back to the centre's company only.
+    ['rita', 'L3', 'description', 'edited through its centre', 'ok'],
+    ['rita', 'L3', 'paying_company_id', s.fr, 'ok'],
+    ['rita', 'L3', 'cost_center_id', s.infEs, '42501'],
+    ['rita', 'L3', 'cost_center_id', null, '42501'],
     ['nina', 'L6', 'paying_company_id', s.fr, '42501'], // owner: the trigger refuses the move
     ['nina', 'L6', 'description', 'edited by its owner', 'ok'],
     ['nina', 'L7', 'description', 'edited by its business owner', 'ok'],
@@ -286,7 +291,8 @@ async function testPlacement(s: Seed): Promise<void> {
   assert.equal(await affected(`UPDATE spend_items SET description = 'x' WHERE id = $1`, [s.lines.L5]), 0, 'paul: a line out of access is not updated');
   assert.equal(await affected(`UPDATE spend_items SET description = 'x' WHERE id = $1`, [s.lines.L1]), 0, 'paul: a read-only line is not updated');
   await apply(s.persons.rita);
-  assert.equal(await affected(`UPDATE spend_items SET description = 'x' WHERE id = $1`, [s.lines.L3]), 0, 'rita: L3, paid by another company than its centre, is read only');
+  assert.equal(await affected(`UPDATE spend_items SET description = 'x' WHERE id = $1`, [s.lines.L3]), 1, 'rita: L3, paid by another company than its centre, is modified through the centre (amendment of 2026-11-21)');
+  assert.equal(await affected(`UPDATE spend_items SET description = 'x' WHERE id = $1`, [s.lines.L2]), 0, 'rita: L2, read through her group in read, is read only');
   await apply(s.persons.ulla);
 
   // The trigger does nothing outside the limited mode.

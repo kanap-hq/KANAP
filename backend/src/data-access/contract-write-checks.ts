@@ -23,7 +23,11 @@ import {
 /** A contract read but not modifiable (an owner out of the edit nodes, a contract opened through a visible line). */
 export const DATA_ACCESS_READ_ONLY_CONTRACT_MESSAGE = 'This contract is read only in your access.';
 
-/** modifiable_contrat (spec §6.4) on the contract aliased `c.` (with its dot), by the SQL function of lot 5. */
+/**
+ * modifiable_contrat (spec §6.4, amended 2026-11-21) on the contract aliased `c.` (with its dot), by
+ * the SQL function of lot 5: an edit node on its company or on its place in the tree, whatever its
+ * company, or its owner. Wider than placing a contract there (`assertContractPlacement`).
+ */
 export function contractEditableSql(alias: string): string {
   return `data_access_contract_modifiable(${alias}id)`;
 }

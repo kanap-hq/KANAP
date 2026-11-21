@@ -50,28 +50,29 @@ void runSpecs('data-access-line-bulk-update', [
     }
     const s = await seed(client);
     const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Limited bulk supplier') RETURNING id`, [s.tenantId]);
-    // Marta (company ES, edit) reads L2 to L5 and modifies L3 to L5.
-    await runner.query(`SELECT data_access_apply($1)`, [s.persons.marta]);
+    // Rita (INF-FR edit, INF read) reads L1 to L4 and modifies L1 and L3 (paid by ES, charged to
+    // INF-FR: modified through its centre since the amendment of 2026-11-21); L2 and L4 are read only.
+    await runner.query(`SELECT data_access_apply($1)`, [s.persons.rita]);
     const svc = service();
     const opts = { manager: runner.manager };
     const body = { all: true, filters: {}, changes: { supplier_id: supplier.id } };
-    const dry = await svc.bulkUpdate({ ...body, dry_run: true }, s.persons.marta, opts);
+    const dry = await svc.bulkUpdate({ ...body, dry_run: true }, s.persons.rita, opts);
     assert.equal(dry.rows, 4, 'only the lines she reads are counted');
-    assert.equal(dry.changes, 3);
-    assert.deepEqual(dry.refused, { read_only: 1 });
-    const done = await svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, s.persons.marta, opts);
-    assert.equal(done.changed, 3);
-    assert.deepEqual(done.refused, { read_only: 1 });
+    assert.equal(dry.changes, 2);
+    assert.deepEqual(dry.refused, { read_only: 2 });
+    const done = await svc.bulkUpdate({ ...body, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, s.persons.rita, opts);
+    assert.equal(done.changed, 2);
+    assert.deepEqual(done.refused, { read_only: 2 });
     // A line she cannot read, named by id: the same answer as an id that names nothing.
-    const hidden = await svc.bulkUpdate({ ids: [s.lines.L1, randomUUID()], changes: { supplier_id: supplier.id }, dry_run: true }, s.persons.marta, opts);
+    const hidden = await svc.bulkUpdate({ ids: [s.lines.L5, randomUUID()], changes: { supplier_id: supplier.id }, dry_run: true }, s.persons.rita, opts);
     assert.deepEqual(hidden, { ...hidden, rows: 2, changes: 0, refused: { not_found: 2 } });
     // Moving one of her lines to a company outside her access.
-    const moved = await svc.bulkUpdate({ ids: [s.lines.L4], changes: { paying_company_id: s.fr }, dry_run: true }, s.persons.marta, opts);
+    const moved = await svc.bulkUpdate({ ids: [s.lines.L1], changes: { paying_company_id: s.es }, dry_run: true }, s.persons.rita, opts);
     assert.deepEqual(moved.refused, { placement: 1 });
     await runner.query('RESET ROLE');
     await setTenant(runner, s.tenantId);
     const supplierOf = async (label: Label) => (await runner.query(`SELECT supplier_id::text AS v FROM spend_items WHERE id = $1`, [s.lines[label]]))[0]?.v ?? null;
-    for (const label of ['L3', 'L4', 'L5'] as const) assert.equal(await supplierOf(label), supplier.id);
-    for (const label of ['L1', 'L2', 'L6', 'L7'] as const) assert.equal(await supplierOf(label), null, `${label} untouched`);
+    for (const label of ['L1', 'L3'] as const) assert.equal(await supplierOf(label), supplier.id);
+    for (const label of ['L2', 'L4', 'L5', 'L6', 'L7'] as const) assert.equal(await supplierOf(label), null, `${label} untouched`);
   })],
 ]);

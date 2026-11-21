@@ -41,8 +41,9 @@ import { Seed, seed } from './data-access-line-seed';
  * request), exception filter, controllers and task service, on the reference example of lot 2
  * (`data-access-line-seed.ts`), committed for the requests and purged after.
  *
- * Rita (INF-FR edit, INF read) modifies L1, reads L3 only, does not read L5. Paul (INF read)
- * modifies nothing. Marta (ES edit) reads L2 only, modifies L4, does not read L1. Ulla has access
+ * Rita (INF-FR edit, INF read) modifies L1 and L3 (paid by ES, through its centre INF-FR since the
+ * amendment of 2026-11-21), reads L2 only, does not read L5. Paul (INF read) modifies nothing.
+ * Marta (ES edit) modifies L2 to L5 (L2 through INF-ES), does not read L1. Ulla has access
  * to all data.
  *
  * - `PATCH /tasks/:id` of a task that keeps its line: the line is neither looked up nor locked (the
@@ -72,6 +73,7 @@ type Tasks = {
   ritaAssigneeL5: string;
   ritaOwnerL5: string;
   paulAssigneeL1: string;
+  ritaObserverL2: string;
   ritaObserverL3: string;
   ritaAssigneeL1: string;
   ullaL5: string;
@@ -236,6 +238,7 @@ async function seedTasks(): Promise<Tasks> {
       ritaAssigneeL5: await task(lines.L5, { assignee: persons.rita }),
       ritaOwnerL5: await task(lines.L5, { owners: [persons.rita] }),
       paulAssigneeL1: await task(lines.L1, { assignee: persons.paul }),
+      ritaObserverL2: await task(lines.L2, { viewers: [persons.rita] }),
       ritaObserverL3: await task(lines.L3, { viewers: [persons.rita] }),
       ritaAssigneeL1: await task(lines.L1, { assignee: persons.rita }),
       ullaL5: await task(lines.L5, {}),
@@ -304,14 +307,20 @@ async function testTaskUpdates(app: INestApplication) {
   assert.equal(row.title, 'Renamed by Paul');
   console.log('  assignee of a task of a read-only line: status and title 200: OK');
 
-  // Rita observes a task of L3 (read only for her): refused.
-  const observer = await call(app, 'PATCH', `tasks/${tasks.ritaObserverL3}`, persons.rita, { title: 'Renamed by Rita' });
+  // Rita observes a task of L2 (read only for her): refused.
+  const observer = await call(app, 'PATCH', `tasks/${tasks.ritaObserverL2}`, persons.rita, { title: 'Renamed by Rita' });
   expectLimited(observer, DATA_ACCESS_READ_ONLY_TASK_MESSAGE, 'Rita, observer on a read-only line');
-  assert.equal((await taskRow(tasks.ritaObserverL3)).title, 'DA HTTP task');
+  assert.equal((await taskRow(tasks.ritaObserverL2)).title, 'DA HTTP task');
   console.log('  observer of a task of a read-only line: 403 DATA_ACCESS_LIMITED: OK');
 
-  // Moves of Rita's task of L1 (editable): to L3 (read only) 403, to L5 (hidden) 404 as a random id.
-  const toReadOnly = await call(app, 'PATCH', `tasks/${tasks.ritaAssigneeL1}`, persons.rita, { related_object_type: 'spend_item', related_object_id: lines.L3 });
+  // A task of L3 (paid by ES, charged to INF-FR): modified through the centre.
+  const throughCentre = await call(app, 'PATCH', `tasks/${tasks.ritaObserverL3}`, persons.rita, { title: 'Renamed through the centre' });
+  assert.equal(throughCentre.status, 200, `Rita, task of a line modified through its centre: ${throughCentre.text}`);
+  assert.equal((await taskRow(tasks.ritaObserverL3)).title, 'Renamed through the centre');
+  console.log('  task of a line paid by another company, through the centre: 200: OK');
+
+  // Moves of Rita's task of L1 (editable): to L2 (read only) 403, to L5 (hidden) 404 as a random id.
+  const toReadOnly = await call(app, 'PATCH', `tasks/${tasks.ritaAssigneeL1}`, persons.rita, { related_object_type: 'spend_item', related_object_id: lines.L2 });
   expectLimited(toReadOnly, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Rita moves her task to a read-only line');
   const toHidden = await call(app, 'PATCH', `tasks/${tasks.ritaAssigneeL1}`, persons.rita, { related_object_type: 'spend_item', related_object_id: lines.L5 });
   const toMissing = await call(app, 'PATCH', `tasks/${tasks.ritaAssigneeL1}`, persons.rita, { related_object_type: 'spend_item', related_object_id: randomUUID() });
@@ -320,6 +329,11 @@ async function testTaskUpdates(app: INestApplication) {
   assert.equal(toHidden.body?.message, toMissing.body?.message, 'a hidden line answers as a missing one');
   assert.equal((await taskRow(tasks.ritaAssigneeL1)).related_object_id, lines.L1);
   console.log('  move to a read-only line 403, to a hidden line 404 as a missing one: OK');
+  // To L3, modified through its centre INF-FR: moved.
+  const toCentre = await call(app, 'PATCH', `tasks/${tasks.ritaAssigneeL1}`, persons.rita, { related_object_type: 'spend_item', related_object_id: lines.L3 });
+  assert.equal(toCentre.status, 200, `Rita moves her task to a line modified through its centre: ${toCentre.text}`);
+  assert.equal((await taskRow(tasks.ritaAssigneeL1)).related_object_id, lines.L3);
+  console.log('  move to a line paid by another company, through the centre: 200: OK');
 
   // Ulla (access to all data): served as before.
   const ulla = await call(app, 'PATCH', `tasks/${tasks.ullaL5}`, persons.ulla, { title: 'Renamed by Ulla', status: 'in_progress' });
@@ -333,8 +347,10 @@ async function testTaskUpdates(app: INestApplication) {
 
 async function testTaskCreation(app: INestApplication) {
   const { persons, lines } = s;
-  const readOnly = await call(app, 'POST', `spend-items/${lines.L3}/tasks`, persons.rita, { title: 'New on L3' });
+  const readOnly = await call(app, 'POST', `spend-items/${lines.L2}/tasks`, persons.rita, { title: 'New on L2' });
   expectLimited(readOnly, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Rita creates a task on a read-only line');
+  const throughCentre = await call(app, 'POST', `spend-items/${lines.L3}/tasks`, persons.rita, { title: 'New on L3' });
+  assert.equal(throughCentre.status, 201, `Rita creates a task on a line modified through its centre: ${throughCentre.text}`);
   const editable = await call(app, 'POST', `spend-items/${lines.L1}/tasks`, persons.rita, { title: 'New on L1' });
   assert.equal(editable.status, 201, `Rita creates a task on an editable line: ${editable.text}`);
   assert.equal(editable.body.related_object_id, lines.L1);
@@ -357,15 +373,23 @@ const LINKS: Record<keyof Targets, [string, string]> = {
 async function testRelations(app: INestApplication) {
   const { persons, lines } = s;
   const marta = persons.marta;
+  const rita = persons.rita;
   for (const kind of Object.keys(LINKS) as Array<keyof Targets>) {
     const [table, ownerColumn] = LINKS[kind];
     const target = targets[kind];
-    // L2: read only for Marta.
-    const add = await call(app, 'POST', `budget-lines/${lines.L2}/relations/${kind}`, marta, { id: target });
-    expectLimited(add, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `Marta adds ${kind} to a read-only line`);
-    const remove = await call(app, 'DELETE', `budget-lines/${lines.L2}/relations/${kind}/${target}`, marta);
-    expectLimited(remove, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `Marta removes ${kind} from a read-only line`);
+    // L2: read only for Rita (her group INF in read).
+    const add = await call(app, 'POST', `budget-lines/${lines.L2}/relations/${kind}`, rita, { id: target });
+    expectLimited(add, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `Rita adds ${kind} to a read-only line`);
+    const remove = await call(app, 'DELETE', `budget-lines/${lines.L2}/relations/${kind}/${target}`, rita);
+    expectLimited(remove, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `Rita removes ${kind} from a read-only line`);
     assert.equal(await linkCount(table, ownerColumn, lines.L2), 1, `${kind}: the link of L2 is kept`);
+    // L3 (paid by ES): Rita modifies it through its centre INF-FR.
+    const addedL3 = await call(app, 'POST', `budget-lines/${lines.L3}/relations/${kind}`, rita, { id: target });
+    assert.equal(addedL3.status, 201, `Rita adds ${kind} to a line modified through its centre: ${addedL3.text}`);
+    assert.equal(await linkCount(table, ownerColumn, lines.L3), 1);
+    const removedL3 = await call(app, 'DELETE', `budget-lines/${lines.L3}/relations/${kind}/${target}`, rita);
+    assert.equal(removedL3.status, 200, `Rita removes ${kind} from a line modified through its centre: ${removedL3.text}`);
+    assert.equal(await linkCount(table, ownerColumn, lines.L3), 0);
     // L4: editable.
     const added = await call(app, 'POST', `budget-lines/${lines.L4}/relations/${kind}`, marta, { id: target });
     assert.equal(added.status, 201, `Marta adds ${kind} to an editable line: ${added.text}`);
