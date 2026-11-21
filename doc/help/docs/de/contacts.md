@@ -94,9 +94,9 @@ Klicken Sie auf eine Zeile, um die zugehörige Seite zu öffnen. Eine Liste zeig
 
 ### Einen Kontakt erstellen
 
-Klicken Sie in der Liste auf **Neu**. Die Seite des neuen Kontakts öffnet sich. Geben Sie Vor- und Nachnamen nebeneinander in der Kopfzeile ein, dann die E-Mail. Der Kontakt wird erstellt, wenn Sie das E-Mail-Feld mit einer gültigen E-Mail verlassen. Auch die Telefonnummern müssen gültig sein. Die Wahl eines Lieferanten setzt den Kontakttyp auf **Vertrieb**, den Sie ändern können. Ein Kontakt mit Lieferant braucht einen Typ. Dann werden alle Reiter verfügbar, und die übrigen Felder werden automatisch gespeichert. Drücken Sie Escape, solange der Name leer ist, um die Seite zu verlassen, ohne etwas zu erstellen.
+Klicken Sie in der Liste auf **Neu**. Die Seite des neuen Kontakts öffnet sich. Geben Sie Vor- und Nachnamen nebeneinander in der Kopfzeile ein, dann die E-Mail. Der Kontakt wird erstellt, wenn Sie das E-Mail-Feld mit einer gültigen E-Mail verlassen. Auch die Telefonnummern müssen gültig sein. Die Wahl eines Lieferanten setzt den Kontakttyp auf **Vertrieb**, den Sie ändern können. Ein Kontakt mit Lieferant braucht einen Typ. Dann werden alle Reiter verfügbar, und die übrigen Felder werden automatisch gespeichert. Drücken Sie Escape im Namen, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben.
 
-Solange der Kontakt erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält den Kontakt und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste, zum vorherigen Bildschirm oder zum Lieferanten, von dem aus Sie begonnen haben. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Kontakt wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Kontakten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Kontakt bestehen.
+Solange der Kontakt erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche. **Erstellen** speichert den Kontakt, sobald die Pflichtfelder angegeben sind, und lässt ihn geöffnet. Fehlt noch eines, wird seine Beschriftung rot, und der Cursor springt dorthin. Sobald der Kontakt erstellt ist, wird **Erstellen** zu **Fertig**: Es speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben, zur Liste, zum vorherigen Bildschirm oder zum Lieferanten, von dem aus Sie begonnen haben. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Kontakt wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Kontakten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Kontakt bestehen.
 
 ---
 
@@ -111,7 +111,7 @@ Jeder Lieferant hat einen **Kontakte**-Tab, der alle mit diesem Anbieter verknü
 1. Öffnen Sie den Lieferanten-Arbeitsbereich und gehen Sie zum **Kontakte**-Tab.
 2. Klicken Sie auf **Neuer Kontakt** neben einem Kontakttyp.
 3. Füllen Sie die Kontaktdetails aus: Lieferant und Kontakttyp sind vorausgefüllt.
-4. Klicken Sie auf **Erstellen**: Sie kehren zum Reiter **Kontakte** des Lieferanten zurück.
+4. Klicken Sie auf **Erstellen**, dann auf **Fertig**: Sie kehren zum Reiter **Kontakte** des Lieferanten zurück.
 
 ### Anwendungs-Support
 

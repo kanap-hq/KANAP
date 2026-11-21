@@ -78,7 +78,7 @@ Direct project creation is for work that should enter execution without a separa
 2. Type the name of the project.
 3. Press Enter, or click outside the title. Kadratis creates the project at once, with the origin **Fast-track**. Its reference (`PRJ-12`) shows and all tabs open.
 
-Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape on the empty title to leave without creating anything.
+Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape in the title to leave without creating anything, even with a name typed.
 
 A project created this way can switch between **Fast-track** and **Legacy** in the Properties drawer. A project converted from a request keeps the **Request** origin and its source linkage.
 
@@ -86,9 +86,10 @@ Use **Fast-track** for work that is genuinely being introduced directly into del
 
 ### Creating or cancelling { #cancelling-a-creation }
 
-While the project is being created, its header shows **Create** and **Cancel**. They stay until you leave the project.
+While the project is being created, its header shows **Create** and **Cancel**. They stay until you leave the project. **Ctrl+S** works like the button shown.
 
-- **Create** keeps the project and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Create** does the same as Enter: it creates the project and leaves it open with its reference. With an empty title, the title asks for one
+- Once the project is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started: the list or the previous screen
 - **Cancel** closes without keeping anything. On a project already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without any delete right
 
 **Cancel** is the only way to delete a project. Once you leave the project, it stays: set its status to **Cancelled** if it does not go ahead. A project linked to a request cannot be deleted. The reference of a cancelled project is not used again.
@@ -113,7 +114,7 @@ The workspace header is a control strip, not decoration.
 - A compact metadata row: **Status**, **Score**, **Progress**, **IT Lead**, **Planned End**, and **Origin** (or the source request reference for request-origin projects)
 - **Previous** and **Next** move through the current list result set, not through every project in the system
 - **Share** emails the current project URL with an optional message
-- **Create** and **Cancel**, while the project is being created. See [Creating or cancelling](#cancelling-a-creation)
+- **Create** (then **Done**) and **Cancel**, while the project is being created. See [Creating or cancelling](#cancelling-a-creation)
 
 Sending a link does not grant access. It only shares the location. Permissions remain exactly as they were before the email was sent.
 

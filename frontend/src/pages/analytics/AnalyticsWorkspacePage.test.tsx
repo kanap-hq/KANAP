@@ -67,6 +67,7 @@ vi.mock('../../hooks/useAnalyticsNav', () => ({
   useAnalyticsDimensionNav: () => ({ ids: [], index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
 
+import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/analytics';
 import AnalyticsWorkspacePage from './AnalyticsWorkspacePage';
 import AnalyticsDimensionWorkspacePage from './AnalyticsDimensionWorkspacePage';
@@ -453,10 +454,14 @@ describe('AnalyticsWorkspacePage', () => {
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenLastCalledWith(expect.objectContaining({ axis_id: 'ax-nature', applies_to: 'capex' })));
   });
 
-  it('refuses to create without a name', async () => {
+  it('refuses to create without a name: the message under the title, the cursor in it, no sentence under a field', async () => {
     renderAt('/master-data/analytics/new/overview?axis=ax-nature');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('analytics.messages.nameRequired')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    // The dimension always has one: the page's, else the default.
+    expect(markedLabels()).toEqual([]);
+    expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['analytics.messages.nameRequired']);
     expect(mocked.createAnalyticsValue).not.toHaveBeenCalled();
   });
 

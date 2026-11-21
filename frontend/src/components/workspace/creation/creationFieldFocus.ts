@@ -1,8 +1,9 @@
 import React from 'react';
+import focusWhenMounted from './focusWhenMounted';
 
 /**
- * What a person types or chooses in. Buttons (a hint, the properties handle, Create and Cancel)
- * are not fields.
+ * What a person types or chooses in. Buttons (a hint, the properties handle, Create or Done and
+ * Cancel) are not fields.
  */
 const ENTRY_FIELDS = [
   'input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="file"]):not([type="image"]):not([disabled]):not([tabindex="-1"]):not([aria-hidden="true"])',
@@ -104,36 +105,64 @@ function findFirstCreationField(root: ParentNode): HTMLElement | null {
   return stop ? fieldsOf(stop.el)[0] ?? null : null;
 }
 
-// Armed by a Tab along the creation. When the page shows something else (the record the title
-// created, a tab the page opened), it places the focus once. Cleared then, or after a few seconds.
+/**
+ * Puts the cursor in the first field a check marked missing (its label's `data-missing`,
+ * `FieldLabel`), in screen order as Tab follows it, once the marks are on screen.
+ */
+export function focusFirstMissingField(): void {
+  focusWhenMounted(() => {
+    const label = document.querySelector<HTMLElement>('[data-missing]');
+    const row = label?.closest<HTMLElement>(REQUIRED_STOPS) ?? label?.parentElement;
+    return row ? fieldsOf(row)[0] : null;
+  });
+}
+
+// Armed by a Tab along the creation, or by the press of Create (`CreationActions`). When the page
+// shows something else (the record the title created, a tab the page opened), it places the focus
+// once. Cleared then, or after a few seconds.
 let armedUntil = 0;
 
 export function clearCreationFieldFocus(): void {
   armedUntil = 0;
 }
 
-function armCreationFieldFocus(): void {
+export function armCreationFieldFocus(): void {
   armedUntil = Date.now() + 8000;
 }
 
-/** Focus nobody chose yet: nowhere, the page scroller Layout focuses after a navigation, or the title. */
+/** For a page that places the cursor itself once its record is created: whether it is armed, cleared. */
+export function takeCreationFieldFocus(): boolean {
+  const live = Date.now() < armedUntil;
+  clearCreationFieldFocus();
+  return live;
+}
+
+/**
+ * Focus nobody chose yet: nowhere, the page scroller Layout focuses after a navigation, the title,
+ * or Create, which the press that created the record focused.
+ */
 function atStart(root: ParentNode, active: Element | null): boolean {
   if (!active || active === document.body || active === document.documentElement) return true;
   if (active instanceof HTMLElement && (active.hasAttribute('data-primary-scroll') || active.classList.contains('kanap-app-scroll'))) return true;
+  if (active.closest('[data-creation-actions]')) return true;
   return !!root.querySelector('[data-creation-title]')?.contains(active);
 }
 
 /**
- * Focuses the creation's first field once it is on screen. Until the person types or clicks, for
- * a few seconds, the focus follows that field as the record loads: an editor arrives, a default
- * fills a required field a moment after it shows, Layout hands the focus to the page scroller.
- * The focus somewhere else (the page's choice) ends it too.
+ * Focuses the creation's first field once it is on screen. Until the person types in a field or
+ * clicks, for a few seconds, the focus follows that field as the record loads: an editor arrives,
+ * a default fills a required field a moment after it shows, Layout hands the focus to the page
+ * scroller. The focus somewhere else (the page's choice) ends it too. A key typed while the focus
+ * is nowhere yet chooses nothing: the field it was meant for still gets the cursor.
  */
 function placeFirstField(root: HTMLElement): void {
   const started = Date.now();
   let placed: HTMLElement | null = null;
   let acted = false;
-  const act = () => { acted = true; };
+  const act = (event: Event) => {
+    if (event.type === 'keydown' && atStart(root, document.activeElement)) return;
+    acted = true;
+  };
   document.addEventListener('keydown', act, true);
   document.addEventListener('pointerdown', act, true);
   const stop = () => {
@@ -158,7 +187,7 @@ function placeFirstField(root: HTMLElement): void {
 }
 
 /**
- * Tab in a record being created (new, or created and still showing Create and Cancel) follows
+ * Tab in a record being created (new, or created and still showing Done and Cancel) follows
  * the fields to fill: from the title to each required field still empty, in screen order, then
  * to the description (or the first free text). Shift+Tab goes back from a required field through
  * the others and the title. A field of several inputs (first and last name, a date and its time)
@@ -180,7 +209,7 @@ export function followCreationFields(event: React.KeyboardEvent<HTMLElement>, on
   if (!edge || !edge.contains(target)) return;
 
   if (event.shiftKey) {
-    // From the description the browser's own way back reaches Create and Cancel.
+    // From the description the browser's own way back reaches Done and Cancel.
     if (stops[index].kind === 'description') return;
     const previous = previousStop(stops, index);
     const field = previous ? fieldsOf(previous.el).pop() : undefined;

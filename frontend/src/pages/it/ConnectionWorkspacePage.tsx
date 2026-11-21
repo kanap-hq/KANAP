@@ -543,28 +543,26 @@ export default function ConnectionWorkspacePage() {
   );
 
   // The name committed in the header creates the connection at once (server to server, no protocol
-  // nor end yet); the page moves to it, every tab open, with Create and Cancel. Create clicked
-  // meanwhile checks it there.
-  const creationCheckRef = React.useRef(false);
+  // nor end yet); the page moves to it, every tab open, with Done and Cancel.
   const titleCreation = useTitleCreation<ConnectionDetail>({
     isCreate,
     requiredMessage: t('messages.nameRequired'),
     post: async (name) => (await api.post<ConnectionDetail & { creation_token: string }>('/connections/creation', { name })).data,
-    onCreated: (created, token, check) => {
+    onCreated: (created, token) => {
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       // The page keeps its header while the full connection loads.
       setData({ ...DRAFT_CONNECTION, ...created });
       setLegs([]);
       navigate(`/it/connections/${created.connection_reference || created.id}/overview`, { replace: true });
-      creationCheckRef.current = check;
     },
     errorMessage: (e) => getApiErrorMessage(e, t, t('messages.saveConnectionFailed')),
     onStart: () => setError(null),
   });
 
-  // Create: on the new page, the title is the only field; on a connection being created, what is
-  // still being typed is saved, then the server checks what the connection needs. Missing fields are
-  // marked on their label and the first one gets the focus; otherwise the connection is kept and closed.
+  // Create on the new page, where the title is the only field; Done on a connection being created:
+  // what is still being typed is saved, then what the connection needs is checked. Missing fields are
+  // marked on their label and the first one on screen gets the focus; otherwise the connection is
+  // kept and closed. The fields the screen sees missing are marked at once; the server checks the rest.
   const createAction = async () => {
     if (isCreate) {
       titleCreation.create();
@@ -573,6 +571,12 @@ export default function ConnectionWorkspacePage() {
     if (!data?.id || !creation.token || creation.completing) return;
     await descriptionFlushRef.current?.();
     setError(null);
+    const seen = missingOf(dataRef.current);
+    if (seen.length > 0) {
+      missingMarks.mark(seen);
+      focusField(seen[0]);
+      return;
+    }
     try {
       const fields = await creation.completeCreation();
       missingMarks.mark(fields ?? []);
@@ -583,13 +587,6 @@ export default function ConnectionWorkspacePage() {
       setError(getApiErrorMessage(e, t, t('workspace.connection.creation.completeFailed')));
     }
   };
-
-  // Create clicked while the title created the connection: the check runs once it is on screen.
-  React.useEffect(() => {
-    if (!creationCheckRef.current || !data?.id || !creation.beingCreated) return;
-    creationCheckRef.current = false;
-    void createAction();
-  });
 
   // Cancel on a connection being created: what is still being typed is saved first, so the
   // confirmation counts it, then the connection is deleted (`useRecordCreation`).
@@ -752,6 +749,7 @@ export default function ConnectionWorkspacePage() {
       )}
       {(isCreate || creation.beingCreated) && (
         <CreationActions
+          done={!isCreate}
           busy={creation.cancelling || creation.completing}
           writing={titleCreation.writing}
           onCreate={() => { void createAction(); }}

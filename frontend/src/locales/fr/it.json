@@ -3442,7 +3442,6 @@
     "loadServerAssignmentsFailed": "Échec du chargement des affectations",
     "createVersionFailed": "Échec de la création de la version",
     "locationRequired": "Le site est requis.",
-    "codeRequired": "Le code est requis.",
     "nameRequired": "Le nom est requis.",
     "locationNameTaken": "Un autre site porte déjà ce nom.",
     "subLocationNameTaken": "Un autre sous-site de ce site porte déjà ce nom.",

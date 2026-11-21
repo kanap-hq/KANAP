@@ -54,13 +54,14 @@ La nouvelle application est **Active**, dans la catégorie par défaut. Modifiez
 - **Licences** et **Notes** : conditions de licence et notes internes libres
 - **Peut avoir des apps enfants** : utiliser cette application comme une « suite » regroupant d'autres applications
 
-Appuyez sur Échap dans le titre vide pour partir sans rien créer. Un nom déjà utilisé par une autre application est refusé, avec un message sous le titre.
+Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi. Un nom déjà utilisé par une autre application est refusé, avec un message sous le titre.
 
 ### Créer ou annuler { #cancelling-a-creation }
 
-Tant que l'application est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'application.
+Tant que l'application est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'application. **Ctrl+S** agit comme le bouton affiché.
 
-- **Créer** conserve l'application et la ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Créer** fait comme Entrée : il crée l'application et la laisse ouverte, avec sa référence. Avec un titre vide, le titre en demande un
+- Une fois l'application créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ : la liste ou l'écran précédent
 - **Annuler** ferme sans rien conserver. Sur une application déjà créée, il la supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des applications
 
 Si vous quittez l'application autrement, elle est conservée. Supprimez-la comme toute autre application. La référence d'une application annulée n'est pas réutilisée.
@@ -181,7 +182,7 @@ L'en-tête affiche :
 - **Partager** : copier un lien partageable vers cet espace de travail
 - **Nouvelle version** : lancer l'assistant de migration de version (voir [Gestion des versions](#gestion-des-versions))
 - **Convertir en technologie** (`applications:admin` et `infrastructure:member`) : voir [Convertir une application en technologie](#convertir-une-application-en-technologie)
-- **Créer** et **Annuler** : affichés tant que l'application est en cours de création, à la place du bouton de fermeture. Voir [Créer ou annuler](#cancelling-a-creation)
+- **Créer** (puis **Terminé**) et **Annuler** : affichés tant que l'application est en cours de création, à la place du bouton de fermeture. Voir [Créer ou annuler](#cancelling-a-creation)
 - **Supprimer**, une icône corbeille avec son nom en infobulle (`applications:admin`) : une application qui a des interfaces reçoit le refus et sa raison, avec seulement Fermer. Sinon, la confirmation nomme l’application et compte les déploiements supprimés avec elle, ainsi que ses liens vers d’autres éléments
 - **Précédent / Suivant** : parcourir la liste filtrée sans revenir à la grille
 

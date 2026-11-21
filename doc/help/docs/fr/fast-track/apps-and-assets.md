@@ -52,7 +52,7 @@ Complétez ensuite l'essentiel dans l'en-tête et le tiroir des propriétés :
 | **Criticité business** | Importance métier | `Critique métier` |
 | **Cycle de vie** | Statut actuel (Actif à la création) | `Actif` |
 
-Tant que vous êtes sur sa page, **Créer** dans l'en-tête conserve la nouvelle application et la ferme, et **Annuler** la supprime.
+Tant que vous êtes sur sa page, **Terminé** dans l'en-tête enregistre la nouvelle application et vous ramène en arrière, et **Annuler** la supprime.
 
 !!! tip "Conseil : Commencez avec ce que vous savez"
     Description, éditeur, version, licences : tout est utile, mais optionnel à ce stade. Vous pourrez enrichir plus tard. L'objectif est d'enregistrer l'app dans le système.
@@ -204,7 +204,7 @@ L'onglet **Réseau** est ouvert pendant la création de l'actif. Remplissez :
 !!! info "Plusieurs adresses IP"
     Un serveur peut avoir plusieurs adresses IP : ajoutez-en autant que nécessaire (ex. : interface de management, VLAN de production, réseau de sauvegarde). Chaque entrée peut avoir son propre type et sous-réseau, et la zone réseau et le VLAN sont dérivés automatiquement.
 
-Cliquez sur **Créer** pour déverrouiller l'espace de travail complet. L'onglet **Vue d'ensemble** gagne alors une section **Support** pour le contrat de support fournisseur et les contacts. Pour les types d'actifs physiques, un onglet **Matériel** suit les numéros de série et les détails du fabricant.
+Une fois l'actif créé, l'espace de travail complet s'ouvre. L'onglet **Vue d'ensemble** gagne alors une section **Support** pour le contrat de support fournisseur et les contacts. Pour les types d'actifs physiques, un onglet **Matériel** suit les numéros de série et les détails du fabricant.
 
 ### Onglet Exploitation
 

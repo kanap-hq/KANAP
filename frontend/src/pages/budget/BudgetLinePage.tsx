@@ -1063,13 +1063,10 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     if (wanted !== nature) void changeTypeWhileCreating(wanted);
   }, [changeTypeWhileCreating, creation.beingCreated, data?.id, form.id, isCreate, nature]);
 
-  // ----- The title creates the line; Create and Cancel (lot 1c) -----
-  // Create was clicked while the title created the line: its check runs once the line shows.
-  const createAfterOpenRef = React.useRef(false);
-
+  // ----- The title creates the line; Done and Cancel (lot 1c) -----
   // The title creates the line at once with the defaults (the tenant's currency, 1 January of the
   // year the page shows, the type of the address) and, for a person with limited access, its place;
-  // the page moves to it, every tab open, with Create and Cancel.
+  // the page moves to it, every tab open, with Done and Cancel.
   // A title committed before the currency and the person's place were known waits for them.
   const titleCreation = useTitleCreation<{ id: string; nature?: string; reference?: string; item_number: number }>({
     isCreate,
@@ -1084,9 +1081,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       });
       return res.data ?? {};
     },
-    onCreated: (created, token, finish) => {
+    onCreated: (created, token) => {
       const lineReference = (created.reference || formatItemRef('budget', created.item_number)) as string;
-      if (finish) createAfterOpenRef.current = true;
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       // The page keeps its header while it moves to the line: no wait on the resolve and the detail.
       queryClient.setQueryData(['budget-line-resolve', lineReference], { id: created.id, nature: created.nature ?? nature, reference: lineReference });
@@ -1105,9 +1101,10 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     if (titleCreation.pending && placementDefault.ready && !currencyLoading && !placementReady) setTitleError(t('budget.creation.placeFirst'));
   }, [currencyLoading, placementDefault.ready, placementReady, setTitleError, t, titleCreation.pending]);
 
-  // Create on a line being created: what is still being typed is saved, then the server checks the
-  // fields the line needs. Missing ones are marked on their label and the first one gets the focus;
-  // otherwise the line is kept and closed.
+  // Create on the new page; Done on a line being created: what is still being typed is saved, then
+  // the fields the line needs are checked. Missing ones are marked on their label and the first one
+  // on screen gets the focus; otherwise the line is kept and closed. The fields the screen sees
+  // missing are marked at once; the server checks the rest (the account's chart, a cost center).
   const createAction = React.useCallback(async () => {
     if (isCreate) {
       titleCreation.create();
@@ -1116,6 +1113,12 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     if (!uuid || !creation.token || creation.completing) return;
     if (!(await flushAll())) return;
     setSaveError(null);
+    const seen = missingOf(formRef.current);
+    if (seen.length > 0) {
+      mark(seen);
+      focusLineField(seen[0]);
+      return;
+    }
     try {
       const fields = await creation.completeCreation();
       mark(fields ?? []);
@@ -1128,18 +1131,13 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     } catch (e) {
       setSaveError(getApiErrorMessage(e, t, t('budget.creation.completeFailed')));
     }
-  }, [creation, flushAll, focusLineField, isCreate, mark, queryClient, t, titleCreation, uuid]);
+  }, [creation, flushAll, focusLineField, isCreate, mark, missingOf, queryClient, t, titleCreation, uuid]);
   // Cancel on a line being created: what is still being typed is saved first, so the confirmation
   // counts it, then the line is deleted (`useRecordCreation`).
   const cancelLine = React.useCallback(async () => {
     if (!(await flushAll())) return;
     await creation.cancelCreation();
   }, [creation, flushAll]);
-  React.useEffect(() => {
-    if (!createAfterOpenRef.current || !creation.beingCreated || !data?.id || form.id !== data.id) return;
-    createAfterOpenRef.current = false;
-    void createAction();
-  }, [createAction, creation.beingCreated, data?.id, form.id]);
   // A line left without its paying company (a creation never completed) opens with the panel open
   // and the labels of what it lacks in red.
   const incompleteFields = !isCreate && !creation.beingCreated && canEdit && !!data?.id && form.id === data.id && !form.paying_company_id
@@ -1337,6 +1335,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             )}
             {isCreate || creation.beingCreated ? (
               <CreationActions
+                done={!isCreate}
                 busy={creation.cancelling || creation.completing}
                 writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}

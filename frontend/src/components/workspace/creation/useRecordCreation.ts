@@ -82,8 +82,8 @@ export function creationChangeCount(changes: CreationChanges): number {
 /**
  * The creation of a record created at its title (lot 1a): `startCreation` keeps the token of the
  * create route and the starting address; `beingCreated` holds while the person stays on that
- * record, which then shows Create and Cancel (`CreationActions`). `finishCreation` (Create) ends
- * the creation and goes back where it started, the record kept (`completeCreation` first asks the
+ * record, which then shows Done and Cancel (`CreationActions`). `finishCreation` (Done) ends the
+ * creation and goes back where it started, the record kept (`completeCreation` first asks the
  * server whether the record is complete, for the families that check it); `cancelCreation` (Cancel) deletes
  * it, after a confirmation when more than the title was given, and goes back there too, unless
  * `{ leave: false }` (a leave already on its way elsewhere). Leaving the record otherwise (another
@@ -134,7 +134,7 @@ export default function useRecordCreation({
   }, [key, listPath, navigate]);
 
   /**
-   * Create on a family the server checks (`POST <apiBase>/:id/creation/complete`): the creation ends
+   * Done on a family the server checks (`POST <apiBase>/:id/creation/complete`): the creation ends
    * as `finishCreation` and null comes back, or the keys of the fields still missing
    * (`CREATION_INCOMPLETE`). Any other refusal throws.
    */

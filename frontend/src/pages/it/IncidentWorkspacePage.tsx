@@ -359,9 +359,8 @@ export function IncidentWorkspacePage() {
     onError: setError,
   });
   // The title committed in the header creates the incident at once, with the defaults of
-  // `draftValues`; the page moves to it, every tab open, with Create and Cancel (or closes it,
-  // kept, when Create was clicked meanwhile). It is not confidential, so its creator always keeps
-  // access to it.
+  // `draftValues`; the page moves to it, every tab open, with Done and Cancel. It is not
+  // confidential, so its creator always keeps access to it.
   const titleCreation = useTitleCreation<Incident>({
     isCreate,
     requiredMessage: t('common:creation.titleRequired'),
@@ -372,12 +371,8 @@ export function IncidentWorkspacePage() {
       detected_at: new Date().toISOString(),
       reporter_user_id: draftValues.reporter_user_id,
     }),
-    onCreated: (saved, token, finish) => {
+    onCreated: (saved, token) => {
       void queryClient.invalidateQueries({ queryKey: ['incidents-ids'] });
-      if (finish) {
-        navigate(creationReturn, { replace: true });
-        return;
-      }
       creation.startCreation({ recordId: saved.id, token, returnTo: creationReturn });
       const savedRef = formatItemRef('incident', saved.item_number);
       queryClient.setQueryData<Incident>(['incident', savedRef], saved);
@@ -404,8 +399,8 @@ export function IncidentWorkspacePage() {
     await creation.cancelCreation();
   }, [creation, flushAll]);
 
-  // Create: on the new page, the title is the only field; on an incident being created, what is
-  // still being typed is saved, then the incident is kept and closed.
+  // Create on the new page, where the title is the only field; Done on an incident being created:
+  // what is still being typed is saved, then the incident is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
       titleCreation.create();
@@ -670,6 +665,7 @@ export function IncidentWorkspacePage() {
       )}
       {((isCreate && canEdit) || creation.beingCreated) && (
         <CreationActions
+          done={!isCreate}
           busy={creation.cancelling}
           writing={titleCreation.writing}
           onCreate={() => { void createAction(); }}

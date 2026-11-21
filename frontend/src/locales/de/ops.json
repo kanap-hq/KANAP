@@ -475,11 +475,6 @@
       "saveFailed": "Die Änderung konnte nicht gespeichert werden.",
       "createFailed": "Der Vertrag konnte nicht erstellt werden.",
       "nameRequired": "Geben Sie einen Namen ein.",
-      "supplierRequired": "Wählen Sie einen Lieferanten.",
-      "companyRequired": "Wählen Sie ein Unternehmen.",
-      "startRequired": "Geben Sie das Beginndatum ein.",
-      "durationRequired": "Geben Sie eine Laufzeit von mindestens einem Monat ein.",
-      "currencyRequired": "Wählen Sie eine Währung.",
       "invalidMonths": "Geben Sie eine ganze Zahl von Monaten ein.",
       "invalidAmount": "Geben Sie einen Betrag mit höchstens zwei Dezimalstellen ein."
     },

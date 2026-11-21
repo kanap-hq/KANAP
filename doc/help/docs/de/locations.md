@@ -4,9 +4,9 @@ Standorte dokumentieren, wo Ihre IT-Infrastruktur gehostet wird: Rechenzentren, 
 
 ## Erste Schritte
 
-Navigieren Sie zu **IT-Landschaft > Standorte**, um das Standortverzeichnis zu öffnen. Klicken Sie auf **Standort hinzufügen**, um einen neuen Eintrag zu erstellen: Die Seite des neuen Standorts öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein. Der Standort wird erstellt, sobald er seinen Namen und seinen **Hosting-Typ** hat, der zunächst auf dem ersten Typ der Liste steht. Dann werden alle Reiter verfügbar, und die übrigen Felder werden automatisch gespeichert. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+Navigieren Sie zu **IT-Landschaft > Standorte**, um das Standortverzeichnis zu öffnen. Klicken Sie auf **Standort hinzufügen**, um einen neuen Eintrag zu erstellen: Die Seite des neuen Standorts öffnet sich mit geöffnetem Eigenschaftenbereich. Geben Sie den Namen im Titel oben auf der Seite ein. Der Standort wird erstellt, sobald er seinen Namen und seinen **Hosting-Typ** hat, der zunächst auf dem ersten Typ der Liste steht. Dann werden alle Reiter verfügbar, und die übrigen Felder werden automatisch gespeichert. Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben.
 
-Solange der Standort erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Erstellen** behält den Standort und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Fehlt noch ein Pflichtfeld, wird es stattdessen markiert. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Standort wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Standorten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Standort bestehen.
+Solange der Standort erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche. **Erstellen** speichert den Standort, sobald die Pflichtfelder angegeben sind, und lässt ihn geöffnet. Fehlt noch eines, wird seine Beschriftung rot, und der Cursor springt dorthin. Sobald der Standort erstellt ist, wird **Erstellen** zu **Fertig**: Es speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben, zur Liste oder zum vorherigen Bildschirm. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Standort wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Standorten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Standort bestehen.
 
 **Pflichtfelder**:
 - **Name**: Ein beschreibender Anzeigename
@@ -81,7 +81,7 @@ Jeder Unter-Standort hat:
 - **Name**: Eine kurze Bezeichnung (z. B. „Gebäude A, Raum 1, Rack 5")
 - **Beschreibung**: Optionale zusätzliche Details
 
-Unter-Standorte sind verfügbar, sobald der Standort existiert (nachdem Sie auf **Erstellen** geklickt haben). Jede Zeile wird einzeln gespeichert, wenn Sie das Feld verlassen, und das Löschen eines Unter-Standorts muss zuerst bestätigt werden.
+Unter-Standorte sind verfügbar, sobald der Standort erstellt ist. Jede Zeile wird einzeln gespeichert, wenn Sie das Feld verlassen, und das Löschen eines Unter-Standorts muss zuerst bestätigt werden.
 
 Assets können einem bestimmten Unter-Standort innerhalb eines Standorts zugewiesen werden, um genau zu verfolgen, wo Hardware steht. Der Reiter Beziehungen zeigt den Unter-Standort jedes Assets, das einen hat.
 

@@ -182,16 +182,29 @@ describe('Incident creation at the title', () => {
     expect(location()).toBe('/it/incidents/new/overview');
   });
 
-  it('takes Ctrl+S in a title still being typed as Create: the incident is created and closed', async () => {
+  it('takes Ctrl+S in a title still being typed as Create: the incident is created and stays open with Done', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
     const input = await screen.findByRole('textbox', { name: TITLE });
     input.focus();
     fireEvent.change(input, { target: { value: 'Mail outage' } });
     fireEvent.keyDown(input, { key: 's', ctrlKey: true });
-    await waitFor(() => expect(location()).toBe('/start'));
+    await waitFor(() => expect(location()).toBe('/it/incidents/INC-4/overview'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/it/incidents/INC-4/overview');
     expect(incidents.create).toHaveBeenCalledTimes(1);
     expect(incidents.create.mock.calls[0][0]).toMatchObject({ title: 'Mail outage' });
+  });
+
+  it('takes Ctrl+S as Done on the incident being created, back where the creation started', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
+    await createMailOutage();
+    await screen.findByRole('button', { name: 'common:buttons.done' });
+    fireEvent.keyDown(document.body, { key: 's', ctrlKey: true });
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(incidents.create).toHaveBeenCalledTimes(1);
   });
 
   it('creates the incident, severity minor, when the title is committed, then opens every tab', async () => {
@@ -279,13 +292,28 @@ describe('Incident creation at the title', () => {
     expect(location()).not.toBe('/start');
   });
 
-  it('keeps the record being created and closes it on Create, back where the creation started', async () => {
+  it('keeps the record being created and closes it on Done, back where the creation started', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
     await createMailOutage();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.delete).not.toHaveBeenCalled();
+    expect(incidents.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates the incident on Create clicked just after the title, and keeps it open with Done', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Mail outage' } });
+    // In a browser the click's press blurs the title first, which commits it.
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/it/incidents/INC-4/overview'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/it/incidents/INC-4/overview');
     expect(incidents.create).toHaveBeenCalledTimes(1);
   });
 });

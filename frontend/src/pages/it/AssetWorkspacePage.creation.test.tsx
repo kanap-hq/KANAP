@@ -264,21 +264,23 @@ describe('Asset creation at the title', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/creation', expect.objectContaining({ is_cluster: true })));
   });
 
-  it('checks the asset when Create is clicked while the title is typed, and marks the site', async () => {
+  it('creates the asset on Create clicked just after the title, and opens it with Done, the cursor in its site', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
     const input = await screen.findByRole('textbox', { name: TITLE });
     fireEvent.change(input, { target: { value: 'Web 1' } });
-    mocked.post.mockImplementation(async (url: string) => {
-      if (url === '/assets/creation') return { data: created } as never;
-      throw { response: { status: 400, data: { code: 'CREATION_INCOMPLETE', params: { fields: ['location'] } } } };
-    });
-    // In a browser the click's mousedown blurs the title first, which commits it.
+    const create = screen.getByRole('button', { name: 'common:buttons.create' });
+    // In a browser the click's press blurs the title first, which commits it.
+    fireEvent.pointerDown(create);
+    create.focus();
     fireEvent.blur(input);
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(siteLabel()).toHaveAttribute('data-missing'));
-    expect(mocked.post).toHaveBeenLastCalledWith('/assets/asset-new/creation/complete', { token: 'token-1' });
-    expect(location()).toBe('/it/assets/AST-7/overview');
+    fireEvent.click(create);
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveFocus());
+    // No check yet: the site is not marked, nothing asked of the server.
+    expect(siteLabel()).not.toHaveAttribute('data-missing');
+    expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
   it('creates the asset on Tab out of the title and puts the focus on its site', async () => {
@@ -292,14 +294,11 @@ describe('Asset creation at the title', () => {
     expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
-  it('marks the missing site on Create, focuses it and stays', async () => {
+  it('marks the missing site on Done, focuses it and stays, without asking the server', async () => {
     await createAsset();
-    mocked.post.mockRejectedValueOnce({
-      response: { status: 400, data: { code: 'CREATION_INCOMPLETE', params: { fields: ['location'] } } },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveFocus());
-    expect(mocked.post).toHaveBeenLastCalledWith('/assets/asset-new/creation/complete', { token: 'token-1' });
+    expect(mocked.post).not.toHaveBeenCalledWith('/assets/asset-new/creation/complete', expect.anything());
     expect(location()).toBe('/it/assets/AST-7/overview');
     // One signal: the label in red and the field invalid, no banner.
     expect(siteLabel()).toHaveAttribute('data-missing');
@@ -307,11 +306,11 @@ describe('Asset creation at the title', () => {
     expect(screen.queryByText(/creation\.missing/)).toBeNull();
   });
 
-  it('closes the asset on Create once it has a site, back where the creation started', async () => {
+  it('closes the asset on Done once it has a site, back where the creation started', async () => {
     await createAsset();
     fireEvent.click(screen.getAllByText('pick-location')[0]);
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/assets/asset-new', { location_id: 'loc-1', sub_location_id: null }));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).toHaveBeenLastCalledWith('/assets/asset-new/creation/complete', { token: 'token-1' });
     expect(mocked.delete).not.toHaveBeenCalled();

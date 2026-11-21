@@ -15,13 +15,13 @@ Das neue Asset ist eine virtuelle Maschine in der Umgebung Prod, mit dem Lebensz
 **Pflichtfelder**:
 - **Name**: Der Asset-Name oder Hostname, höchstens 200 Zeichen
 - **Asset-Typ**: Webserver, virtuelle Maschine, physischer Server, Container usw. (konfigurierbar in **IT-Landschaft > Einstellungen**)
-- **Standort**: Wo das Asset gehostet wird (bestimmt Anbieter, Hosting-Typ und Land). **Erstellen** verlangt ihn
+- **Standort**: Wo das Asset gehostet wird (bestimmt Anbieter, Hosting-Typ und Land). **Fertig** verlangt ihn
 
 **Dringend empfohlen**:
 - **Lebenszyklus**: Aktueller Status (Aktiv, Veraltet, Außer Betrieb usw.)
 - **Umgebung**: Zu welcher Umgebung dieses Asset gehört (Prod, Pre-prod, QA, Test, Dev, Sandbox)
 
-Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen. Ein abgelehnter Name erscheint unter dem Titel.
+Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben. Ein abgelehnter Name erscheint unter dem Titel.
 
 **Eindeutige Namen**: Zwei Assets können weder denselben Namen noch denselben FQDN haben. Groß- und Kleinschreibung sowie Leerzeichen am Anfang oder Ende zählen nicht. Kadratis lehnt das Duplikat ab und nennt das Asset, das den Wert bereits hat (`AST-12`). Früher erfasste Duplikate bleiben bearbeitbar, solange Sie diesen Wert nicht ändern.
 
@@ -34,9 +34,10 @@ Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu er
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange das Asset erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen** anstelle der Schaltfläche zum Schließen. Beide bleiben, bis Sie das Asset verlassen.
+Solange das Asset erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen** anstelle der Schaltfläche zum Schließen. Beide bleiben, bis Sie das Asset verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
-- **Erstellen** prüft, ob das Asset einen Standort hat. Ohne Standort wird die Beschriftung **Standort** im Eigenschaftenbereich rot, und das Feld erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort behält Kadratis das Asset und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben
+- **Erstellen** wirkt wie die Eingabetaste: Es erstellt das Asset und lässt es geöffnet, mit seiner Referenz. Ist **Standort** leer, springt der Cursor dorthin. Bei leerem Titel verlangt der Titel einen
+- Sobald das Asset erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und prüft, ob das Asset einen Standort hat. Ohne Standort wird die Beschriftung **Standort** im Eigenschaftenbereich rot, und das Feld erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort kehren Sie dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** löscht das Asset. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Assets abbrechen
 
 Verlassen Sie das Asset auf andere Weise (Zurück-Pfeil, Menü, ein anderes Asset), solange es keinen Standort hat, fragt Kadratis nach. **Vervollständigen** lässt Sie auf dem Asset, im Feld **Standort**. **Löschen** löscht das Asset. Wenn Sie die Seite neu laden oder den Tab schließen, solange das neue Asset keinen Standort hat, bittet Ihr Browser um Bestätigung. Verlassen Sie die Seite trotzdem, wird das Asset gelöscht.
@@ -185,7 +186,7 @@ Der Bereich zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen
 - **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller und den Hypervisor, auf dem er läuft. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen oder **Keine Zone**. Das Asset erscheint dann in dieser Zone auf der Seite [Administrationszonen](administration-view.md)
 
 **Standort**:
-- **Standort** (erforderlich): **Erstellen** verlangt ihn bei einem neuen Asset. Ein Asset, das ein Import oder der Assistent anlegt, braucht ihn sofort. Gibt es den Standort noch nicht, geben Sie seinen Namen ein und wählen Sie **+ Standort „…“ anlegen**: Geben Sie die Hosting-Art an, und der neue Standort wird ins Feld übernommen. Dafür ist `locations:member` nötig
+- **Standort** (erforderlich): **Fertig** verlangt ihn bei einem neuen Asset. Ein Asset, das ein Import oder der Assistent anlegt, braucht ihn sofort. Gibt es den Standort noch nicht, geben Sie seinen Namen ein und wählen Sie **+ Standort „…“ anlegen**: Geben Sie die Hosting-Art an, und der neue Standort wird ins Feld übernommen. Dafür ist `locations:member` nötig
 - **Unterstandort** (wenn der Standort definierte Unterstandorte hat)
 - **Hosting-Typ**, **Betreiberunternehmen** oder **Cloud-Anbieter**, **Land**, **Stadt**: schreibgeschützt, vom Standort abgeleitet. Sie folgen, wenn Sie den Standort ändern
 

@@ -475,11 +475,6 @@
       "saveFailed": "La modification n'a pas pu être enregistrée.",
       "createFailed": "Le contrat n'a pas pu être créé.",
       "nameRequired": "Saisissez un nom.",
-      "supplierRequired": "Choisissez un fournisseur.",
-      "companyRequired": "Choisissez une société.",
-      "startRequired": "Saisissez la date de début.",
-      "durationRequired": "Saisissez une durée d'au moins un mois.",
-      "currencyRequired": "Choisissez une devise.",
       "invalidMonths": "Saisissez un nombre entier de mois.",
       "invalidAmount": "Saisissez un montant avec deux décimales au plus."
     },

@@ -86,7 +86,7 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 - une bande de métadonnées avec **Statut**, **Score**, **Demandeur**, **Responsable IT**, **Date de livraison cible** et (lorsque applicable) la **Tâche source** depuis laquelle la demande a été créée
 - **Partager** pour envoyer un lien vers la demande
 - **Convertir en projet** lorsque la demande est **Approuvée** ou **Convertie**
-- **Créer** et **Annuler**, tant que la demande est en cours de création. Voir [Créer ou annuler](#cancelling-a-creation)
+- **Créer** (puis **Terminé**) et **Annuler**, tant que la demande est en cours de création. Voir [Créer ou annuler](#cancelling-a-creation)
 - **Supprimer**, une icône corbeille, pour les administrateurs (lorsque la demande n'est pas encore convertie). Une demande convertie reste l'origine de son projet et ne peut pas être supprimée
 - navigation précédent/suivant basée sur le contexte exact de la liste d'où vous venez
 
@@ -96,13 +96,14 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 2. Saisissez le nom de la demande.
 3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée la demande aussitôt, au statut **En attente de revue** et avec vous comme demandeur. Sa référence (`REQ-42`) apparaît et tous les onglets s'ouvrent.
 
-Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi.
 
 ### Créer ou annuler { #cancelling-a-creation }
 
-Tant que la demande est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez la demande.
+Tant que la demande est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez la demande. **Ctrl+S** agit comme le bouton affiché.
 
-- **Créer** conserve la demande et la ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Créer** fait comme Entrée : il crée la demande et la laisse ouverte, avec sa référence. Avec un titre vide, le titre en demande un
+- Une fois la demande créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ : la liste ou l'écran précédent
 - **Annuler** ferme sans rien conserver. Sur une demande déjà créée, il la supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des demandes
 
 Si vous quittez la demande autrement, elle reste. Un administrateur peut alors la supprimer avec **Supprimer**. La référence d'une demande annulée n'est pas réutilisée.

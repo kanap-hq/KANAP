@@ -54,13 +54,14 @@ Die neue Anwendung ist **Aktiv**, in der Standardkategorie. Ändern Sie beides i
 - **Lizenzierung** und **Notizen**: Lizenzbedingungen und interne Freitext-Notizen
 - **Kann Unteranwendungen haben**: diese Anwendung als „Suite" verwenden, die andere Anwendungen gruppiert
 
-Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen. Ein Name, den bereits eine andere Anwendung trägt, wird abgelehnt, mit einer Meldung unter dem Titel.
+Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben. Ein Name, den bereits eine andere Anwendung trägt, wird abgelehnt, mit einer Meldung unter dem Titel.
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange die Anwendung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Anwendung verlassen.
+Solange die Anwendung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Anwendung verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
-- **Erstellen** behält die Anwendung und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Erstellen** wirkt wie die Eingabetaste: Es erstellt die Anwendung und lässt sie geöffnet, mit ihrer Referenz. Bei leerem Titel verlangt der Titel einen
+- Sobald die Anwendung erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm
 - **Abbrechen** schließt, ohne etwas zu behalten. Eine bereits erstellte Anwendung wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anwendungen abbrechen
 
 Verlassen Sie die Anwendung auf andere Weise, bleibt sie bestehen. Löschen Sie sie dann wie jede andere Anwendung. Die Referenz einer abgebrochenen Anwendung wird nicht wiederverwendet.
@@ -181,7 +182,7 @@ Die Kopfzeile zeigt:
 - **Teilen**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
 - **Neue Version**: Den Versionsmigrations-Assistenten starten (siehe [Versionsverwaltung](#versionsverwaltung))
 - **In Technologie umwandeln** (`applications:admin` und `infrastructure:member`): siehe [Eine Anwendung in eine Technologie umwandeln](#eine-anwendung-in-eine-technologie-umwandeln)
-- **Erstellen** und **Abbrechen**: sichtbar, solange die Anwendung erstellt wird, anstelle der Schließen-Schaltfläche. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
+- **Erstellen** (dann **Fertig**) und **Abbrechen**: sichtbar, solange die Anwendung erstellt wird, anstelle der Schließen-Schaltfläche. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
 - **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`applications:admin`): eine Anwendung mit Schnittstellen erhält die Ablehnung und den Grund, nur mit Schließen. Sonst nennt die Bestätigung die Anwendung und zählt die Bereitstellungen, die mit ihr gelöscht werden, zusammen mit ihren Verknüpfungen zu anderen Einträgen
 - **Vorherige / Nächste**: Durch die gefilterte Liste navigieren, ohne zum Raster zurückzukehren
 

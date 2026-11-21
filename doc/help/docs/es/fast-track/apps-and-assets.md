@@ -52,7 +52,7 @@ Luego complete lo esencial en el encabezado y el panel de propiedades:
 | **Criticidad de negocio** | Importancia para el negocio | `Crítica para el negocio` |
 | **Ciclo de vida** | Estado actual (Activo al crearla) | `Activo` |
 
-Mientras siga en su página, **Crear** en el encabezado conserva la nueva aplicación y la cierra, y **Cancelar** la elimina.
+Mientras siga en su página, **Listo** en el encabezado guarda la nueva aplicación y le lleva de vuelta, y **Cancelar** la elimina.
 
 !!! tip "Empiece con lo que sabe"
     Descripción, editor, versión, licencia: todo útil, pero opcional en esta etapa. Puede enriquecer más tarde. El objetivo es tener la app en el sistema.
@@ -204,7 +204,7 @@ La pestaña **Red** está abierta mientras crea el activo. Complete:
 !!! info "Varias direcciones IP"
     Un servidor puede tener varias direcciones IP: añada tantas como necesite (p. ej., interfaz de gestión, VLAN de producción, red de copias de seguridad). Cada entrada puede tener su propio tipo y subred, y la zona de red y la VLAN se derivan automáticamente.
 
-Haga clic en **Crear** para desbloquear el espacio de trabajo completo. La pestaña **Vista general** gana entonces una sección **Soporte** para el contrato de soporte del proveedor y sus contactos. Para tipos de activos físicos, una pestaña **Hardware** hace seguimiento de los números de serie y los detalles del fabricante.
+Una vez creado el activo, se abre el espacio de trabajo completo. La pestaña **Vista general** gana entonces una sección **Soporte** para el contrato de soporte del proveedor y sus contactos. Para tipos de activos físicos, una pestaña **Hardware** hace seguimiento de los números de serie y los detalles del fabricante.
 
 ### Pestaña Operaciones
 

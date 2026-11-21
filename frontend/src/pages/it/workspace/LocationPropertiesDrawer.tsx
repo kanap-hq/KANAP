@@ -22,6 +22,8 @@ type Props = {
   data: LocationDrawerData;
   category: 'on_prem' | 'cloud';
   disabled?: boolean;
+  /** The required fields Create found missing: their label turns red. */
+  missing?: ReadonlySet<string>;
   onHostingTypeChange: (next: string) => void;
   onOperatingCompanyChange: (companyId: string | null) => void;
   onProviderChange: (next: string) => void;
@@ -34,6 +36,7 @@ export default function LocationPropertiesDrawer({
   data,
   category,
   disabled = false,
+  missing,
   onHostingTypeChange,
   onOperatingCompanyChange,
   onProviderChange,
@@ -56,7 +59,7 @@ export default function LocationPropertiesDrawer({
   return (
     <>
       <PropertyGroup>
-        <PropertyRow label={t('pages.locations.columns.hostingType')} required>
+        <PropertyRow label={t('pages.locations.columns.hostingType')} required missing={!!missing?.has('hosting_type')}>
           <TextField
             select
             value={data.hosting_type || ''}

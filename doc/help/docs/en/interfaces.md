@@ -18,9 +18,10 @@ You can fill them in any order. Nothing is saved until all four are filled. As s
 
 ### Creating or cancelling { #cancelling-a-creation }
 
-While the interface is being created, its header shows **Create** and **Cancel**. They stay until you leave the interface.
+While the interface is being created, its header shows **Create** and **Cancel**. They stay until you leave the interface. **Ctrl+S** works like the button shown.
 
-- **Create** keeps the interface and takes you back to where you started. If something is still missing, an empty title shows its message, the label of each missing field turns red, and the title or the first missing field gets the focus. If the draft is complete, Kadratis creates the interface and takes you back at once
+- **Create** writes the interface when the draft is complete and leaves it open. If something is still missing, an empty title shows its message, the label of each missing field turns red, and the title or the first missing field gets the focus
+- Once the interface is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started
 - **Cancel** deletes the interface. If you added anything after it was created, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete interfaces
 
 Leaving the interface another way (the menu, the back arrow) keeps it: it is complete.

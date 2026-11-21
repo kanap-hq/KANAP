@@ -26,7 +26,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 **Was Sie tun.** Importieren Sie Ihre Budgetdatei, oder legen Sie eine erste Zeile von Hand an.
 
 - **Eine Datei importieren.** Klicken Sie auf **Importieren**, dann auf **Beispiel herunterladen**: eine Mappe mit einigen Beispielzeilen und dem, was jede Spalte aufnimmt. Tragen Sie Ihre Zeilen ein und importieren Sie die Datei. Bei einer leeren Liste liefert **Exportieren** nur die Kopfzeile.
-- **Eine Zeile anlegen.** Klicken Sie auf **Neue Zeile**, geben Sie ihren Namen im Titel ein und drücken Sie die Eingabetaste. Füllen Sie das Panel **Eigenschaften** aus: zahlendes Unternehmen, Konto, Währung. Erfassen Sie die Beträge im Reiter **Budget** und klicken Sie dann auf **Erstellen**. **Abbrechen** verwirft die Zeile.
+- **Eine Zeile anlegen.** Klicken Sie auf **Neue Zeile**, geben Sie ihren Namen im Titel ein und drücken Sie die Eingabetaste. Füllen Sie das Panel **Eigenschaften** aus: zahlendes Unternehmen, Konto, Währung. Erfassen Sie die Beträge im Reiter **Budget** und klicken Sie dann auf **Fertig**. **Abbrechen** verwirft die Zeile.
 
 **Was Sie sehen.** Ein Import prüft die ganze Datei und meldet die Zeilen, die angelegt, geändert oder unverändert bleiben. Eine Datei mit einem Fehler lädt nichts. Eine von Hand angelegte Zeile erscheint in der Liste mit ihren Beträgen für das Jahr.
 
@@ -34,7 +34,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Budgetverwaltung > Verträge**
 
-**Was Sie tun.** Klicken Sie auf **Neuer Vertrag**, füllen Sie das Formular aus und dann **Erstellen**. Verknüpfen Sie im Reiter **Budget** des Vertrags die Zeile, die er bezahlt, mit der Auswahl unter der Tabelle.
+**Was Sie tun.** Klicken Sie auf **Neuer Vertrag**, geben Sie seinen Namen und die Pflichtfelder ein und klicken Sie dann auf **Fertig**. Verknüpfen Sie im Reiter **Budget** des Vertrags die Zeile, die er bezahlt, mit der Auswahl unter der Tabelle.
 
 **Was Sie sehen.** Der Vertrag datiert jede Laufzeit, sagt, wann eine Verlängerungsentscheidung fällig ist, und vergleicht, was er bindet, mit den verknüpften Budgetzeilen.
 

@@ -37,13 +37,14 @@ The new incident is **Open**, with severity **Minor**, detected now, and you as 
 - **Category**: infrastructure, security, application, data, supplier, other (configurable, see [Categories](#categories))
 - **Owner**: who is responsible for handling it
 
-Both dates accept past values, so an incident discovered on Monday morning can be recorded as having started on Saturday night. Press Escape on the empty title to leave without logging anything.
+Both dates accept past values, so an incident discovered on Monday morning can be recorded as having started on Saturday night. Press Escape in the title to leave without logging anything, even with a title typed.
 
 ### Creating or cancelling { #cancelling-a-creation }
 
-While the incident is being created, its header shows **Create** and **Cancel**. They stay until you leave the incident.
+While the incident is being created, its header shows **Create** and **Cancel**. They stay until you leave the incident. **Ctrl+S** works like the button shown.
 
-- **Create** keeps the incident and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Create** does the same as Enter: it creates the incident and leaves it open with its reference. With an empty title, the title asks for one
+- Once the incident is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started: the list or the previous screen
 - **Cancel** closes without keeping anything. On an incident already created, it deletes it. If you entered more than the title, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete incidents
 
 **Cancel incident** is hidden while the incident is being created. Cancelling a creation is refused once the incident is closed or cancelled, or holds regulatory reporting data (see [Deleting an incident](#deleting-an-incident)). Leaving the incident any other way keeps it in the register. The reference of a cancelled creation is not used again.

@@ -26,7 +26,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 **What to do.** Either import the list of your applications, or create them one by one.
 
 - **Import a file.** Click **Import**, then **Download an example**: a workbook with a few applications and what each column takes. Fill in yours, then **Import** the file.
-- **Create an application.** Click **New application**, type its name in the title and press Enter. Fill in the properties panel, then click **Create**. **Cancel** drops it.
+- **Create an application.** Click **New application**, type its name in the title and press Enter. Fill in the properties panel, then click **Done**. **Cancel** drops it.
 
 **What you see.** One record per application. Complete the criticality and the **IT owners** of the most important ones first.
 
@@ -42,7 +42,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **IT landscape > Assets**
 
-**What to do.** Click **Add asset**, or **Import** a file for many assets. Choose the asset type and the location, then **Create**. To link an asset to an application, open the application, **Deployments** tab: **Add deployment** for the environment, then **Add server**.
+**What to do.** Click **Add asset**, or **Import** a file for many assets. Type its name and press Enter, choose the asset type and the location, then click **Done**. To link an asset to an application, open the application, **Deployments** tab: **Add deployment** for the environment, then **Add server**.
 
 **What you see.** The application's deployment block lists its servers, and the asset lists the application under **Hosted applications** in its **Operations** tab. The end of support of its technologies now reaches the asset. The vulnerabilities of an operating system are not in the alerts at first, because Kadratis does not know a server's patch level. To see them, open **IT landscape > Vulnerabilities** and choose **Excluded** in the **Alerts** filter, or **Show the excluded ones** when the list is empty.
 

@@ -77,7 +77,7 @@ function StartPage() {
 
 function renderPage(
   entries: string[],
-  options: { changes?: { fields: number; children: Record<string, number> }; classification?: Promise<unknown> } = {},
+  options: { changes?: { fields: number; children: Record<string, number> }; classification?: Promise<unknown>; staleTime?: number } = {},
 ) {
   const changes = options.changes ?? { fields: 0, children: {} };
   mocked.get.mockImplementation(async (url: string) => {
@@ -89,7 +89,7 @@ function renderPage(
   mocked.post.mockImplementation(async (url: string) => (url === '/portfolio/requests' ? { data: created } : { data: {} }) as never);
   mocked.delete.mockResolvedValue({ data: undefined } as never);
   return render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: options.staleTime ?? 0 } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={entries}>
@@ -163,6 +163,14 @@ describe('Request creation at the title', () => {
     expect(urls.filter((url) => /undefined|null|\/\/|\/portfolio\/requests\/new\b/.test(url))).toEqual([]);
     expect(mocked.post).not.toHaveBeenCalled();
     expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('reads the created request in full once created', async () => {
+    // The app keeps a read fresh for 30 s (lib/queryClient): the header the creation shows at once
+    // must not stand for the request, whose read holds its team, links and what this person may read.
+    renderPage(['/portfolio/requests/new/summary'], { staleTime: 30_000 });
+    await createDataPlatform();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/portfolio/requests/REQ-9', expect.anything()));
   });
 
   it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {
@@ -257,14 +265,29 @@ describe('Request creation at the title', () => {
     expect(location()).not.toBe('/start');
   });
 
-  it('keeps the record being created and closes it on Create, back where the creation started', async () => {
+  it('keeps the record being created and closes it on Done, back where the creation started', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new request' }));
     await createDataPlatform();
     expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.delete).not.toHaveBeenCalled();
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates the request on Create clicked just after the title, and keeps it open with Done', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new request' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Data platform' } });
+    // In a browser the click's press blurs the title first, which commits it.
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/portfolio/requests/REQ-9/summary'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/portfolio/requests/REQ-9/summary');
     expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 });

@@ -126,4 +126,52 @@ describe('useCreationFieldFocus', () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(screen.getByRole('button', { name: 'Elsewhere' })).toHaveFocus();
   });
+
+  it('keeps placing the focus after a key typed while the focus is nowhere yet', async () => {
+    tabFromTitle();
+    const loading = <Record><div data-creation-panel="main"><div data-creation-description="" /></div></Record>;
+    const view = render(loading);
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'q' });
+    view.rerender(
+      <Record>
+        <div data-creation-panel="main">
+          <div data-creation-description=""><div aria-label="description" contentEditable suppressContentEditableWarning /></div>
+        </div>
+      </Record>,
+    );
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+  });
+
+  it('stops placing the focus after a press of the pointer elsewhere', async () => {
+    tabFromTitle();
+    const view = render(<Record><div data-creation-panel="main"><div data-creation-description="" /></div></Record>);
+    fireEvent.pointerDown(document.body);
+    view.rerender(
+      <Record>
+        <div data-creation-panel="main">
+          <div data-creation-description=""><div aria-label="description" contentEditable suppressContentEditableWarning /></div>
+        </div>
+      </Record>,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(screen.getByLabelText('description')).not.toHaveFocus();
+  });
+
+  it('leaves the cursor in the field it placed once the person types there', async () => {
+    tabFromTitle();
+    const fields = (type: string) => (
+      <Record>
+        <div data-creation-panel="properties">
+          <div data-required-field=""><input aria-label="type" value={type} onChange={() => undefined} /></div>
+          <div data-required-field=""><input aria-label="site" /></div>
+        </div>
+      </Record>
+    );
+    const view = render(fields(''));
+    await waitFor(() => expect(screen.getByLabelText('type')).toHaveFocus());
+    fireEvent.keyDown(screen.getByLabelText('type'), { key: 'S' });
+    view.rerender(fields('Server'));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(screen.getByLabelText('type')).toHaveFocus();
+  });
 });

@@ -13,9 +13,9 @@ import api from '../../api';
 import { formatShortDate } from '../../lib/dateFormat';
 import BudgetLineRoute from './BudgetLineRoute';
 
-// Creation at the title (lot 1c): the title creates the line with its defaults, every tab opens,
-// and Create checks the fields the line needs before it closes it; Cancel deletes it. Leaving the
-// line otherwise asks while a field is missing. A person with limited access places it first.
+// Creation at the title (lot 1c): the title (or Create) creates the line with its defaults and
+// every tab opens; Done checks the fields the line needs before it closes it; Cancel deletes it.
+// Leaving the line otherwise asks while a field is missing. A person with limited access places it first.
 
 const translation = {
   t: (key: string, opts?: unknown) => {
@@ -256,7 +256,7 @@ describe('Budget line creation at the title', () => {
     });
     for (const tab of screen.getAllByRole('tab')) expect(tab).not.toBeDisabled();
     expect(screen.queryByTestId('creation-preview')).toBeNull();
-    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
     // While it is being created, the type is a menu: no dialog to change it.
     expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveTextContent('budget.typeOpex');
@@ -295,7 +295,7 @@ describe('Budget line creation at the title', () => {
     expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveTextContent('budget.typeCapex');
     // Still being created, on the same line, with no dialog.
     expect(location()).toBe('/ops/budget/BL-12/overview');
-    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(mocked.delete).not.toHaveBeenCalled();
   });
@@ -329,15 +329,16 @@ describe('Budget line creation at the title', () => {
     await waitFor(() => expect(account()).not.toHaveAttribute('aria-invalid', 'true'));
   });
 
-  it('marks the missing fields on Create, puts the cursor in the first one and stays on the line', async () => {
+  it('marks the missing fields on Done, puts the cursor in the first one and stays on the line', async () => {
     renderPage(['/start'], { incomplete: ['paying_company', 'account'] });
     fireEvent.click(await screen.findByRole('button', { name: 'new line' }));
     await createMonitoring();
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     const company = () => screen.getByRole('textbox', { name: 'opex.fields.payingCompany' });
     const account = () => screen.getByRole('textbox', { name: 'opex.fields.account' });
     await waitFor(() => expect(company()).toHaveFocus());
-    expect(mocked.post).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}/creation/complete`, { token: 'token-1' });
+    // The screen sees what is missing: no call that the server would refuse.
+    expect(mocked.post).not.toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}/creation/complete`, expect.anything());
     expect(location()).toBe('/ops/budget/BL-12/overview');
     // One signal: the labels in red and the fields invalid, no banner.
     expect(fieldLabel('opex.fields.payingCompany')).toHaveAttribute('data-missing');
@@ -353,22 +354,63 @@ describe('Budget line creation at the title', () => {
     expect(fieldLabel('opex.fields.account')).toHaveAttribute('data-missing');
   });
 
-  it('puts the cursor in the first missing field on screen: the cost center sits above the account', async () => {
-    // The server names the cost center last; on screen its row comes first.
-    renderPage(['/start'], { incomplete: ['account', 'cost_center'] });
+  it('marks what only the server sees missing, the first field on screen first: the cost center sits above the account', async () => {
+    // The screen sees nothing missing; the server refuses the account (another chart) and asks for
+    // a cost center, which it names last although its row comes first.
+    renderPage(['/start'], { incomplete: ['account', 'cost_center'], line: { paying_company_id: 'company-1', account_id: 'account-1' } });
     fireEvent.click(await screen.findByRole('button', { name: 'new line' }));
     await createMonitoring();
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'opex.fields.costCenter' })).toHaveFocus());
+    expect(mocked.post).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}/creation/complete`, { token: 'token-1' });
     expect(fieldLabel('opex.fields.account')).toHaveAttribute('data-missing');
+    expect(location()).toBe('/ops/budget/BL-12/overview');
   });
 
-  it('keeps and closes a complete line on Create, back where the creation started', async () => {
-    await startNewLine();
+  it('keeps and closes a complete line on Done, back where the creation started', async () => {
+    renderPage(['/start'], { line: { paying_company_id: 'company-1', account_id: 'account-1' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'new line' }));
     await createMonitoring();
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.post).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}/creation/complete`, { token: 'token-1' });
     expect(mocked.delete).not.toHaveBeenCalled();
+  });
+
+  it('creates the line on Create clicked just after the title, opens it with Done and the cursor in its first field', async () => {
+    await startNewLine();
+    const input = screen.getByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Monitoring' } });
+    const create = screen.getByRole('button', { name: 'common:buttons.create' });
+    // In a browser the press blurs the title first, which commits it.
+    fireEvent.pointerDown(create);
+    create.focus();
+    fireEvent.blur(input);
+    fireEvent.click(create);
+    await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'opex.fields.payingCompany' })).toHaveFocus());
+    // No check yet: nothing marked, nothing asked of the server.
+    expect(document.querySelector('[data-missing]')).toBeNull();
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('takes Ctrl+S as Done on the line being created', async () => {
+    renderPage(['/start'], { line: { paying_company_id: 'company-1', account_id: 'account-1' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'new line' }));
+    await createMonitoring();
+    fireEvent.keyDown(document.body, { key: 's', ctrlKey: true });
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.post).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}/creation/complete`, { token: 'token-1' });
+  });
+
+  it('leaves the new page on one Escape with a title typed, nothing created', async () => {
+    const input = await startNewLine();
+    fireEvent.change(input, { target: { value: 'Monitoring' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    await waitFor(() => expect(location()).toBe('/start'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 
   it('deletes a line with only its title on Cancel, without asking', async () => {

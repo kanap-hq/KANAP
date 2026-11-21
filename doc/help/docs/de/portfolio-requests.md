@@ -86,7 +86,7 @@ Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu v
 - eine Metadatenleiste mit **Status**, **Bewertung**, **Anforderer**, **IT-Verantwortlicher**, **Ziel-Lieferdatum** und (falls zutreffend) der **Quell-Aufgabe**, aus der die Anfrage erstellt wurde
 - **Teilen**, um einen Link zur Anfrage zu senden
 - **In Projekt umwandeln**, wenn die Anfrage **Genehmigt** oder **Konvertiert** ist
-- **Erstellen** und **Abbrechen**, solange die Anfrage erstellt wird. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
+- **Erstellen** (dann **Fertig**) und **Abbrechen**, solange die Anfrage erstellt wird. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
 - **Löschen**, ein Papierkorbsymbol, für Administratoren (wenn die Anfrage noch nicht konvertiert ist). Eine konvertierte Anfrage bleibt der Ursprung ihres Projekts und kann nicht gelöscht werden
 - Vorherige/Nächste-Navigation basierend auf dem genauen Listenkontext, aus dem Sie kamen
 
@@ -96,13 +96,14 @@ Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu v
 2. Geben Sie den Namen der Anfrage ein.
 3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt die Anfrage sofort, mit dem Status **Prüfung ausstehend** und Ihnen als Anforderer. Ihre Referenz (`REQ-42`) erscheint und alle Reiter öffnen sich.
 
-Füllen Sie dann den Eigenschaftenbereich und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+Füllen Sie dann den Eigenschaftenbereich und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben.
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange die Anfrage erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Anfrage verlassen.
+Solange die Anfrage erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Anfrage verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
-- **Erstellen** behält die Anfrage und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Erstellen** wirkt wie die Eingabetaste: Es erstellt die Anfrage und lässt sie geöffnet, mit ihrer Referenz. Bei leerem Titel verlangt der Titel einen
+- Sobald die Anfrage erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm
 - **Abbrechen** schließt, ohne etwas zu behalten. Eine bereits erstellte Anfrage wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anfragen abbrechen
 
 Verlassen Sie die Anfrage auf andere Weise, bleibt sie bestehen. Ein Administrator kann sie dann mit **Löschen** löschen. Die Referenz einer abgebrochenen Anfrage wird nicht wiederverwendet.

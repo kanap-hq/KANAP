@@ -229,7 +229,7 @@ export default function WorkingDayCalendarWorkspacePage() {
   };
 
   // The draft is created once it has its name and code (a country fills both); the calendar then
-  // opens, its days and every tab available, with Create (kept, back where the creation started)
+  // opens, its days and every tab available, with Done (kept, back where the creation started)
   // and Cancel (deleted).
   const leave = useCreationLeave(handleClose);
   const title = useCreationTitle({
@@ -274,6 +274,9 @@ export default function WorkingDayCalendarWorkspacePage() {
     recordLabel: t('workingDayCalendars.creationRecord'),
     queryKeyPrefixes: ['working-day-profiles'],
     ready: () => !!title.current().trim() && !!draftRef.current.code,
+    // The code is the one field a calendar requires besides its name: Create marks it on its label.
+    missing: () => ((isCreate ? draftRef.current : stored)?.code ? [] : ['code']),
+    valueOf: () => (isCreate ? draftRef.current : stored)?.code,
     post: async () => {
       const form = { ...draftRef.current, name: title.current().trim() };
       setPageError(null);
@@ -331,16 +334,8 @@ export default function WorkingDayCalendarWorkspacePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => { attemptCreation(); }, [creation.attempt, draft]);
   const handleCreate = () => {
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
-    }
-    if (!canEdit) return;
-    const name = title.require();
-    const { code } = draftRef.current;
-    if (!code) setErrors((prev) => ({ ...prev, code: t('workingDayCalendars.messages.codeRequired') }));
-    if (!name || !code) return;
-    void creation.createAndLeave();
+    if (!canEdit && !creation.beingCreated) return;
+    creation.create(title.require);
   };
 
   const usage = data && !isCreate ? calendarUsageLine(t, data.opex_count ?? 0, data.capex_count ?? 0) : null;
@@ -355,6 +350,7 @@ export default function WorkingDayCalendarWorkspacePage() {
       onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
       busy={!canEdit || creation.cancelling}
       writing={creation.writing}
+      done={!isCreate}
     />
   ) : canDelete && data ? (
     <DeleteIconButton onClick={() => void handleDelete()} disabled={deleting || !!deleteBlock} />
@@ -406,6 +402,7 @@ export default function WorkingDayCalendarWorkspacePage() {
             calendar={data}
             disabled={disabled}
             errors={errors}
+            missing={creation.marked}
             onCodeCommit={(code) => void patch({ code }, 'code')}
             onDisabledAtChange={(disabledAt) => {
               if (disabledAt === data.disabled_at) return;

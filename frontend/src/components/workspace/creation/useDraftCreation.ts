@@ -2,6 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import useCreationReturn from './useCreationReturn';
 import useRecordCreation from './useRecordCreation';
+import useMissingMarks from './useMissingMarks';
+import { focusFirstMissingField } from './creationFieldFocus';
 
 /**
  * The record the draft created: its uuid, the token of its create route, and its page. `reference`
@@ -30,6 +32,13 @@ type Options = {
   ready: () => boolean;
   /** Writes the draft. Null when refused: the page shows why (under the title or the field). */
   post: () => Promise<DraftCreated | null>;
+  /**
+   * The required fields the screen sees empty now, by key (the title aside): the draft's, then the
+   * created record's. Create marks them (`marked`).
+   */
+  missing?: () => string[];
+  /** The value a field holds now, by key: its mark goes once it changes (`useMissingMarks`). */
+  valueOf?: (key: string) => unknown;
   /** A refusal of Cancel, as for a delete. */
   onError?: (message: string) => void;
 };
@@ -38,40 +47,41 @@ type Options = {
  * A new record's draft created as soon as it has its title and its required fields (reference
  * data and contracts, lot V2; interfaces, lot V3): `attempt()` (after the title commits, after
  * each change of the draft) writes it once `ready()`, and the page moves to the record, every tab
- * open, with Create and Cancel (`useRecordCreation`). `createAndLeave()` is Create on a complete
- * draft: it writes the draft, or waits for the write under way, and goes back where the creation
- * started, the record kept.
+ * open, with Done and Cancel (`useRecordCreation`).
+ *
+ * `create(requireTitle)` is the primary pill (`CreationActions`). On the draft it is Create: the
+ * title is checked (`requireTitle`, which shows its own message and takes the focus), the required
+ * fields `missing()` names are marked on their label (`marked`, until each one gets a value) and the
+ * cursor goes to the first one; a complete draft is written and opens as with `attempt()`, the
+ * person stays on it. On the record it created it is Done: a required field the screen sees
+ * emptied is marked the same way and the person stays; otherwise the creation ends and the page
+ * goes back where it started (`finishCreation`).
  */
-export default function useDraftCreation({ isCreate, ready, post, returnTo: knownReturn, ...record }: Options) {
+export default function useDraftCreation({ isCreate, ready, post, missing, valueOf, returnTo: knownReturn, ...record }: Options) {
   const navigate = useNavigate();
   const startedFrom = useCreationReturn(record.listPath);
   const returnTo = knownReturn || startedFrom;
   const creation = useRecordCreation({ ...record, recordId: isCreate ? null : record.recordId });
-  const latest = React.useRef({ ready, post, returnTo, startCreation: creation.startCreation });
-  latest.current = { ready, post, returnTo, startCreation: creation.startCreation };
+  const latest = React.useRef({ ready, post, missing, returnTo, startCreation: creation.startCreation });
+  latest.current = { ready, post, missing, returnTo, startCreation: creation.startCreation };
+  const marks = useMissingMarks({
+    recordKey: isCreate ? 'new' : record.recordId,
+    missingNow: () => missing?.() ?? [],
+    valueOf: (key) => valueOf?.(key),
+  });
   const running = React.useRef(false);
-  const finishAfter = React.useRef(false);
   // The draft is written: the page is moving to the record, nothing more is sent.
   const written = React.useRef(false);
   const [writing, setWriting] = React.useState(false);
 
-  const write = React.useCallback(async (finish: boolean) => {
-    if (written.current) return;
-    if (running.current) {
-      if (finish) finishAfter.current = true;
-      return;
-    }
+  const write = React.useCallback(async () => {
+    if (written.current || running.current) return;
     running.current = true;
-    finishAfter.current = finish;
     setWriting(true);
     try {
       const created = await latest.current.post();
       if (!created) return;
       written.current = true;
-      if (finishAfter.current) {
-        navigate(latest.current.returnTo, { replace: true });
-        return;
-      }
       latest.current.startCreation({ recordId: created.id, token: created.token, returnTo: latest.current.returnTo, reference: created.reference });
       navigate(created.path, { replace: true });
     } finally {
@@ -81,18 +91,35 @@ export default function useDraftCreation({ isCreate, ready, post, returnTo: know
   }, [navigate]);
 
   const attempt = React.useCallback(() => {
-    if (isCreate && latest.current.ready()) void write(false);
+    if (isCreate && latest.current.ready()) void write();
   }, [isCreate, write]);
 
-  const createAndLeave = React.useCallback(() => write(true), [write]);
+  const { beingCreated, finishCreation } = creation;
+  const { mark } = marks;
+  const create = React.useCallback((requireTitle?: () => unknown) => {
+    if (!isCreate && !beingCreated) return;
+    const titled = !isCreate || !requireTitle || !!requireTitle();
+    const fields = latest.current.missing?.() ?? [];
+    mark(fields);
+    // An empty title has the cursor: it comes first on the screen.
+    if (!titled) return;
+    if (fields.length > 0) {
+      focusFirstMissingField();
+      return;
+    }
+    if (beingCreated) finishCreation();
+    else if (latest.current.ready()) void write();
+  }, [beingCreated, finishCreation, isCreate, mark, write]);
 
   return {
     beingCreated: creation.beingCreated,
-    /** The draft is being written (`CreationActions`' `writing`: a Create clicked meanwhile still counts). */
+    /** The draft is being written (`CreationActions`' `writing`: Cancel and Escape wait). */
     writing,
     cancelling: creation.cancelling,
+    /** The required fields Create found missing: their `PropertyRow` says `missing`. */
+    marked: marks.marked,
     attempt,
-    createAndLeave,
+    create,
     finishCreation: creation.finishCreation,
     cancelCreation: creation.cancelCreation,
   };

@@ -127,14 +127,14 @@ Haga clic en cualquier celda para abrir el espacio de trabajo del valor.
 
 ### Crear una dimensión
 
-Haga clic en **Nuevo** en la barra de selección. Se abre la página de la dimensión nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página. La dimensión se crea, activada, en cuanto tiene su nombre y su **Código**. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente. Pulse Escape en el título vacío para salir sin crear nada.
+Haga clic en **Nuevo** en la barra de selección. Se abre la página de la dimensión nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página. La dimensión se crea, activada, en cuanto tiene su nombre y su **Código**. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente. Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
 
 - **Código** se propone a partir del nombre: en minúsculas, sin acentos y con los espacios sustituidos por `-`. Puede cambiarlo.
 - **Usada para** empieza en **OPEX y CAPEX**. Consulte [Dimensiones OPEX o CAPEX](#dimensiones-opex-o-capex).
 - **Obligatoria** empieza desactivado. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
 - **Descripción** es opcional.
 
-Mientras la dimensión se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva la dimensión y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En una dimensión ya creada, la elimina. Si introdujo algo más que lo necesario para crearla, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar dimensiones. Si sale de la página de otra forma, la dimensión se conserva.
+Mientras la dimensión se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Ctrl+S** funciona como el botón mostrado. **Crear** guarda la dimensión cuando sus campos obligatorios están indicados y la deja abierta. Si falta alguno, su etiqueta se pone en rojo y el cursor va a él. Una vez creada la dimensión, **Crear** pasa a ser **Listo**: guarda lo que está escribiendo y le lleva de vuelta al punto de partida, la lista o la pantalla anterior. **Cancelar** sale sin conservar nada. En una dimensión ya creada, la elimina. Si introdujo algo más que lo necesario para crearla, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar dimensiones. Si sale de la página de otra forma, la dimensión se conserva.
 
 Una dimensión nueva se coloca la última en el orden de las dimensiones. Después vuelva a la página para añadir sus valores.
 
@@ -208,7 +208,7 @@ Los dos ajustes deben ser coherentes. Una dimensión no puede limitarse a un tip
 
 Active **Obligatoria** cuando cada línea de presupuesto deba estar clasificada en una dimensión. Kadratis comprueba entonces las líneas de los tipos para los que se usa la dimensión:
 
-- **Una línea nueva necesita un valor en la dimensión.** Un archivo de presupuesto, Kad y la API no crean una línea sin valor, con el mensaje "The Tipo de coste dimension is required. Choose a value." En la pantalla de líneas presupuestarias, una línea existe desde su título, y **Crear** indica la dimensión como faltante hasta que tenga un valor.
+- **Una línea nueva necesita un valor en la dimensión.** Un archivo de presupuesto, Kad y la API no crean una línea sin valor, con el mensaje "The Tipo de coste dimension is required. Choose a value." En la pantalla de líneas presupuestarias, una línea existe desde su título, y **Listo** marca la dimensión como faltante hasta que tenga un valor.
 - **Una línea que tiene un valor no puede perderlo.** Puede elegir otro valor. El campo no se puede vaciar.
 - **Una línea creada antes de activar el ajuste sigue funcionando.** Si no tiene valor en la dimensión, sigue siendo editable y puede guardar otros cambios en ella. Su campo está marcado como obligatorio. En las pantallas OPEX y CAPEX, al salir de una línea así después de modificarla se le pide primero que elija un valor, con **Quedarse** y **Salir de todos modos**. Abrirla sin cambiar nada nunca pregunta.
 
@@ -243,9 +243,9 @@ Para conservar los valores en las líneas, desactive la dimensión en su lugar.
 
 ### Crear un valor
 
-Haga clic en **Nuevo valor**. Se abre la página del valor nuevo, con su panel de propiedades abierto. El campo **Dimensión** empieza en la dimensión seleccionada en la página y solo ofrece las dimensiones activadas. Escriba el nombre en el título de la parte superior de la página. El valor se crea, activado, en cuanto tiene su nombre y su **Dimensión**. La dimensión se define una sola vez, al crear el valor. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente: una **Descripción** si lo desea, y **Usada para**, que empieza en **OPEX y CAPEX** (cámbielo si el valor solo sirve para un tipo de línea). Pulse Escape en el título vacío para salir sin crear nada.
+Haga clic en **Nuevo valor**. Se abre la página del valor nuevo, con su panel de propiedades abierto. El campo **Dimensión** empieza en la dimensión seleccionada en la página y solo ofrece las dimensiones activadas. Escriba el nombre en el título de la parte superior de la página. El valor se crea, activado, en cuanto tiene su nombre y su **Dimensión**. La dimensión se define una sola vez, al crear el valor. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente: una **Descripción** si lo desea, y **Usada para**, que empieza en **OPEX y CAPEX** (cámbielo si el valor solo sirve para un tipo de línea). Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
 
-Mientras el valor se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva el valor y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En un valor ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar valores. Si sale de la página de otra forma, el valor se conserva.
+Mientras el valor se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Ctrl+S** funciona como el botón mostrado. **Crear** guarda el valor cuando sus campos obligatorios están indicados y lo deja abierto. Si falta alguno, su etiqueta se pone en rojo y el cursor va a él. Una vez creado el valor, **Crear** pasa a ser **Listo**: guarda lo que está escribiendo y le lleva de vuelta al punto de partida, la lista o la pantalla anterior. **Cancelar** sale sin conservar nada. En un valor ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar valores. Si sale de la página de otra forma, el valor se conserva.
 
 ### El espacio de trabajo del valor
 
@@ -335,7 +335,7 @@ La dimensión por defecto no se puede desactivar.
 En el panel de propiedades de una línea OPEX o CAPEX, y al crear una, cada dimensión activada que se usa para ese tipo de línea tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. La dimensión por defecto se muestra como **Dimensión analítica** hasta que le dé un nombre.
 
 - Elija un valor, o vacíe el campo para dejar la línea sin valor en esa dimensión. El cambio se guarda de inmediato.
-- El campo de una dimensión obligatoria está marcado con un asterisco. En una línea que se está creando, **Crear** la indica como faltante hasta que tenga un valor. En una línea que tiene un valor, el campo no tiene botón para vaciarlo: solo puede elegir otro valor. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
+- El campo de una dimensión obligatoria está marcado con un asterisco. En una línea que se está creando, **Listo** la marca como faltante hasta que tenga un valor. En una línea que tiene un valor, el campo no tiene botón para vaciarlo: solo puede elegir otro valor. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
 - El campo lista los valores activados de su dimensión que se usan para este tipo de línea. Un valor desactivado, o un valor solo para el otro tipo de línea, sigue mostrándose en las líneas que lo tienen. Consulte [Valores OPEX o CAPEX](#valores-opex-o-capex).
 - En una dimensión con [valores abiertos](#open-values), el campo ofrece **Añadir «…»** para un nombre que no existe. En las demás dimensiones, el campo no puede crear un valor: cree los valores en la página Dimensiones analíticas, o deje que los cree el archivo de presupuesto.
 - Un valor se aplica a toda la línea, en todos los años.

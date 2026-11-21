@@ -47,6 +47,7 @@ vi.mock('../../components/history/RecordHistory', () => ({
   default: ({ table, recordId }: { table: string; recordId: string }) => <div>{`${table}:${recordId}`}</div>,
 }));
 
+import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import frMasterData from '../../locales/fr/master-data.json';
 import deMasterData from '../../locales/de/master-data.json';
@@ -362,40 +363,44 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.queryByText('Address refused.')).toBeNull();
   });
 
-  it('clears a create error as soon as that field changes', async () => {
+  it('marks the missing fields on Create, without a sentence under them, and drops each mark once the field has a value', async () => {
     renderAt('/master-data/companies/new/overview');
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('companies.messages.nameRequired')).toBeInTheDocument();
-    expect(screen.getByText('companies.messages.countryRequired')).toBeInTheDocument();
-    expect(screen.getByText('companies.messages.currencyRequired')).toBeInTheDocument();
-    expect(screen.getByText('companies.messages.cityRequired')).toBeInTheDocument();
-
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Acme' } });
-    expect(screen.queryByText('companies.messages.nameRequired')).toBeNull();
-    expect(screen.getByText('companies.messages.countryRequired')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(markedLabels()).toEqual(['companies.fields.city', 'companies.fields.country', 'companies.fields.baseCurrency']);
+    expect(screen.getByLabelText('companies.fields.country')).toHaveAttribute('aria-invalid', 'true');
+    // The cursor goes to the first one on the screen: the city, in the page before the panel.
+    await waitFor(() => expect(screen.getByLabelText('companies.fields.city')).toHaveFocus());
+    expect(screen.queryAllByText(/Required$/)).toHaveLength(0);
+    expect(mocked.post).not.toHaveBeenCalled();
 
     // The country brings its currency: both marks go.
     await pickOption('companies.fields.country', 'Germ', 'Germany (DE)');
-    expect(screen.queryByText('companies.messages.countryRequired')).toBeNull();
-    expect(screen.queryByText('companies.messages.currencyRequired')).toBeNull();
+    expect(markedLabels()).toEqual(['companies.fields.city']);
     expect(screen.getByLabelText('companies.fields.baseCurrency')).toHaveValue('EUR · Euro');
-    expect(screen.getByText('companies.messages.cityRequired')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
-    expect(screen.queryByText('companies.messages.cityRequired')).toBeNull();
-    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.blur(screen.getByLabelText('companies.fields.city'));
+    expect(markedLabels()).toEqual([]);
   });
 
-  it('names what is missing on Create, then creates the company once complete, the chart preselected from the country', async () => {
+  it('keeps the message under the empty title on Create, the cursor in it, and marks the fields still missing', async () => {
+    renderAt('/master-data/companies/new/overview');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('companies.messages.nameRequired')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(markedLabels()).toEqual(['companies.fields.city', 'companies.fields.country', 'companies.fields.baseCurrency']);
+    expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['companies.messages.nameRequired']);
+  });
+
+  it('marks what is missing on Create, then creates the company once complete, the chart preselected from the country', async () => {
     mocked.post.mockResolvedValue({ data: { ...COMPANY, id: 'co-new', creation_token: 'token-1' } });
     renderAt('/master-data/companies/new/overview?year=2026');
     // The company's own page: country and currency sit in its Properties drawer.
     expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('companies.fields.country'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('companies.messages.nameRequired')).toBeInTheDocument();
-    expect(screen.getByText('companies.messages.countryRequired')).toBeInTheDocument();
-    expect(screen.getByText('companies.messages.currencyRequired')).toBeInTheDocument();
-    expect(screen.getByText('companies.messages.cityRequired')).toBeInTheDocument();
+    expect(markedLabels()).toEqual(['companies.fields.city', 'companies.fields.country', 'companies.fields.baseCurrency']);
     expect(mocked.post).not.toHaveBeenCalled();
 
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));

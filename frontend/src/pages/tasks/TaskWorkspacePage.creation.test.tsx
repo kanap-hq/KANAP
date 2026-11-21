@@ -390,6 +390,22 @@ describe('Task creation at the title', () => {
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
+  it('waits on the way back while the new task is being written, as Cancel does', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new task' }));
+    let release: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }) as never);
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Order cheese' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('link', { name: /^←/ }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/portfolio/tasks/new/overview');
+    release({ data: created });
+    await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview'));
+  });
+
   it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new task' }));
@@ -409,17 +425,32 @@ describe('Task creation at the title', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
   });
 
-  it('keeps the task being created and closes it on Create, back where the creation started', async () => {
+  it('keeps the task being created and closes it on Done, back where the creation started', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new task' }));
     await createOrderCheese();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.delete).not.toHaveBeenCalled();
     expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
-  it('sends Tab from the title to the description, and Shift+Tab reaches Create', async () => {
+  it('creates the task on Create clicked just after the title, and keeps it open with Done', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new task' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Order cheese' } });
+    // In a browser the click's press blurs the title first, which commits it.
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/portfolio/tasks/T-9/overview');
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends Tab from the title to the description, and Shift+Tab reaches Done', async () => {
     const user = userEvent.setup();
     renderPage(['/portfolio/tasks/new/overview']);
     const input = await screen.findByRole('textbox', { name: TITLE });
@@ -430,10 +461,10 @@ describe('Task creation at the title', () => {
     await waitFor(() => expect(document.activeElement?.closest('[data-creation-description]')).toBeTruthy());
     expect(document.activeElement).toHaveAttribute('data-testid', 'task-description');
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).not.toHaveFocus();
-    const create = screen.getByRole('button', { name: 'common:buttons.create' });
-    for (let i = 0; i < 20 && document.activeElement !== create; i += 1) {
+    const done = screen.getByRole('button', { name: 'common:buttons.done' });
+    for (let i = 0; i < 20 && document.activeElement !== done; i += 1) {
       await user.tab({ shift: true });
     }
-    expect(create).toHaveFocus();
+    expect(done).toHaveFocus();
   });
 });

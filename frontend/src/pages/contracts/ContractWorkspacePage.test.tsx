@@ -48,6 +48,7 @@ vi.mock('../../components/MarkdownEditor', () => ({
   ),
 }));
 
+import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import ContractWorkspacePage from './ContractWorkspacePage';
 import { addMonthsYmd, computeContractTerms, utcTodayYmd } from './contractTerms';
@@ -721,17 +722,16 @@ describe('ContractWorkspacePage', () => {
     // The name is typed in the header title, which gets the focus; the form has no name field.
     expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
     expect(screen.queryByLabelText('contracts.fields.name')).toBeNull();
-    expect(screen.getByText('contracts.messages.supplierRequired')).toBeInTheDocument();
-    expect(screen.getByText('contracts.messages.companyRequired')).toBeInTheDocument();
-    expect(screen.getByText('contracts.messages.startRequired')).toBeInTheDocument();
-    expect(screen.getByText('contracts.messages.durationRequired')).toBeInTheDocument();
+    // The fields it lacks are marked on their label, with no sentence under them.
+    expect(markedLabels()).toEqual(['contracts.fields.supplier', 'contracts.fields.company', 'contracts.fields.startDate', 'contracts.fields.durationMonths']);
+    expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['contracts.messages.nameRequired']);
     expect(mocked.post).not.toHaveBeenCalled();
     // The fields sit in the open drawer, as on a contract; typing one clears its mark.
     const drawer = screen.getByRole('complementary');
     const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
     fireEvent.change(duration, { target: { value: '36' } });
     fireEvent.blur(duration);
-    expect(screen.queryByText('contracts.messages.durationRequired')).toBeNull();
+    expect(markedLabels()).toEqual(['contracts.fields.supplier', 'contracts.fields.company', 'contracts.fields.startDate']);
     // The other tabs wait for the contract; the deadlines read as on a contract without a start.
     expect(screen.getByRole('tab', { name: 'contracts.tabs.budget' })).toBeDisabled();
     expect(screen.getByText('contracts.deadlines.noStart')).toBeInTheDocument();

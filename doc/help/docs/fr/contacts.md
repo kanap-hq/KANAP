@@ -94,9 +94,9 @@ Cliquez sur une ligne pour ouvrir sa fiche. Une liste montre jusqu'à 50 éléme
 
 ### Créer un contact
 
-Cliquez sur **Nouveau** dans la liste. La page du nouveau contact s'ouvre. Saisissez le prénom et le nom côte à côte dans l'en-tête, puis l'e-mail. Le contact est créé quand vous quittez le champ e-mail avec un e-mail valide. Les numéros de téléphone doivent aussi être valides. Choisir un fournisseur règle le type de contact sur **Commercial**, que vous pouvez changer. Un contact lié à un fournisseur a besoin d'un type. Tous ses onglets deviennent alors disponibles, et les autres champs s'enregistrent automatiquement. Appuyez sur Échap tant que le nom est vide pour partir sans rien créer.
+Cliquez sur **Nouveau** dans la liste. La page du nouveau contact s'ouvre. Saisissez le prénom et le nom côte à côte dans l'en-tête, puis l'e-mail. Le contact est créé quand vous quittez le champ e-mail avec un e-mail valide. Les numéros de téléphone doivent aussi être valides. Choisir un fournisseur règle le type de contact sur **Commercial**, que vous pouvez changer. Un contact lié à un fournisseur a besoin d'un type. Tous ses onglets deviennent alors disponibles, et les autres champs s'enregistrent automatiquement. Appuyez sur Échap dans le nom pour partir sans rien créer, même avec un nom saisi.
 
-Tant que le contact est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve le contact et vous ramène à votre point de départ : la liste, l'écran précédent ou le fournisseur depuis lequel vous l'avez commencé. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur un contact déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des contacts. Si vous quittez la page autrement, le contact est conservé.
+Tant que le contact est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Ctrl+S** agit comme le bouton affiché. **Créer** enregistre le contact quand ses champs obligatoires sont renseignés et le laisse ouvert. S'il en manque un, son libellé passe en rouge et le curseur y va. Une fois le contact créé, **Créer** devient **Terminé** : il enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ, la liste, l'écran précédent ou le fournisseur depuis lequel vous l'avez commencé. **Annuler** part sans rien conserver. Sur un contact déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des contacts. Si vous quittez la page autrement, le contact est conservé.
 
 ---
 
@@ -111,7 +111,7 @@ Chaque fournisseur dispose d'un onglet **Contacts** affichant tous les contacts 
 1. Ouvrez l'espace de travail du fournisseur et allez dans l'onglet **Contacts**.
 2. Cliquez sur **Nouveau contact** à côté d'un type de contact.
 3. Remplissez les détails du contact : le fournisseur et le type de contact sont pré-remplis.
-4. Cliquez sur **Créer** : vous revenez à l'onglet **Contacts** du fournisseur.
+4. Cliquez sur **Créer**, puis sur **Terminé** : vous revenez à l'onglet **Contacts** du fournisseur.
 
 ### Support applicatif
 

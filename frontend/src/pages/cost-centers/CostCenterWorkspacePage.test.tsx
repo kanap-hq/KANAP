@@ -59,6 +59,7 @@ vi.mock('../../components/fields/UserSelect', () => ({
   ),
 }));
 
+import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/costCenters';
 import CostCenterWorkspacePage from './CostCenterWorkspacePage';
 
@@ -162,15 +163,18 @@ describe('CostCenterWorkspacePage', () => {
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/cost-centers/cc-new/overview?sort=path%3AASC', { replace: true }));
   });
 
-  it('refuses to create a cost center without a company', async () => {
+  it('marks the code and the company on Create and puts the cursor in the code, with no sentence under them', async () => {
     renderAt('/master-data/cost-centers/new/overview');
     // The cost center's own page: the code sits in its Properties drawer.
     expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('costCenters.fields.code'));
-    fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: 'IT-400' } });
-    fireEvent.blur(screen.getByLabelText('costCenters.fields.code'));
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Workplace' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('costCenters.messages.companyRequired')).toBeInTheDocument();
+    expect(markedLabels()).toEqual(['costCenters.fields.code', 'costCenters.fields.company']);
+    await waitFor(() => expect(screen.getByLabelText('costCenters.fields.code')).toHaveFocus());
+    expect(screen.queryAllByText(/Required$/)).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: 'IT-400' } });
+    fireEvent.blur(screen.getByLabelText('costCenters.fields.code'));
+    expect(markedLabels()).toEqual(['costCenters.fields.company']);
     expect(mocked.createCostCenter).not.toHaveBeenCalled();
   });
 

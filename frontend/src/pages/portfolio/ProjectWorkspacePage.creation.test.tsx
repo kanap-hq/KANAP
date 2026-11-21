@@ -41,7 +41,9 @@ vi.mock('./workspace/portfolioRelations', () => ({
   portfolioLinksKey: (entity: string, id: string) => ['portfolio-links', entity, id],
   usePortfolioRelationsBadge: () => 0,
 }));
-vi.mock('../../components/IntegratedDocumentEditor', () => ({ default: () => <div data-testid="purpose-editor" /> }));
+vi.mock('../../components/IntegratedDocumentEditor', () => ({
+  default: (props: { disabled?: boolean }) => <div data-testid="purpose-editor" data-disabled={String(!!props.disabled)} />,
+}));
 vi.mock('./workspace/project/ProjectActivityTab', () => ({ default: () => <div data-testid="project-activity" /> }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchProjectTasksCount: async () => 0 }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
@@ -63,7 +65,7 @@ const CLASSIFICATION = {
   streams: [{ id: 'str-1', name: 'Digital', category_id: 'cat-1', is_active: true }],
 };
 const created = { id: 'prj-new', item_number: 9, name: 'Data platform', status: 'waiting_list', origin: 'fast_track', creation_token: 'token-1' };
-const detail = { ...created, creation_token: undefined, activities: [], source_id: 'src-1', category_id: 'cat-1', stream_id: 'str-1', company_id: 'co-1' };
+const detail = { ...created, creation_token: undefined, activities: [], source_id: 'src-1', category_id: 'cat-1', stream_id: 'str-1', company_id: 'co-1', can_contribute: true };
 
 function Location() {
   const location = useLocation();
@@ -77,7 +79,7 @@ function StartPage() {
 
 function renderPage(
   entries: string[],
-  options: { changes?: { fields: number; children: Record<string, number> }; classification?: Promise<unknown> } = {},
+  options: { changes?: { fields: number; children: Record<string, number> }; classification?: Promise<unknown>; staleTime?: number } = {},
 ) {
   const changes = options.changes ?? { fields: 0, children: {} };
   mocked.get.mockImplementation(async (url: string) => {
@@ -89,7 +91,7 @@ function renderPage(
   mocked.post.mockImplementation(async (url: string) => (url === '/portfolio/projects' ? { data: created } : { data: {} }) as never);
   mocked.delete.mockResolvedValue({ data: undefined } as never);
   return render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: options.staleTime ?? 0 } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={entries}>
@@ -162,6 +164,15 @@ describe('Project creation at the title', () => {
     expect(urls.filter((url) => /undefined|null|\/\/|\/portfolio\/projects\/new\b/.test(url))).toEqual([]);
     expect(mocked.post).not.toHaveBeenCalled();
     expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('reads the created project in full, so its purpose opens for typing right away', async () => {
+    // The app keeps a read fresh for 30 s (lib/queryClient): the header the creation shows at once
+    // must not stand for the project, whose read says whether this person may write its purpose.
+    renderPage(['/portfolio/projects/new/summary'], { staleTime: 30_000 });
+    await createDataPlatform();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/portfolio/projects/PRJ-9', expect.anything()));
+    await waitFor(() => expect(screen.getByTestId('purpose-editor')).toHaveAttribute('data-disabled', 'false'));
   });
 
   it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {
@@ -244,14 +255,46 @@ describe('Project creation at the title', () => {
     expect(location()).not.toBe('/start');
   });
 
-  it('keeps the record being created and closes it on Create, back where the creation started', async () => {
+  it('keeps the record being created and closes it on Done, back where the creation started', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new project' }));
     await createDataPlatform();
     expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.delete).not.toHaveBeenCalled();
     expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates the project on Create clicked just after the title, and keeps it open with Done', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new project' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Data platform' } });
+    // In a browser the click's press blurs the title first, which commits it.
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/portfolio/projects/PRJ-9/summary'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/portfolio/projects/PRJ-9/summary');
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits on Escape while the committed title writes the project, then opens it', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    renderPage(['/start']);
+    fireEvent.click(screen.getByRole('button', { name: 'new project' }));
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Data platform' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    // The project is being written: Escape leaves nothing, as Cancel waits.
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(location()).toBe('/portfolio/projects/new/summary');
+    answer({ data: created });
+    await waitFor(() => expect(location()).toBe('/portfolio/projects/PRJ-9/summary'));
+    expect(screen.getByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
   });
 });

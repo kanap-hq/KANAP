@@ -15,15 +15,16 @@ Después, cada campo se guarda por sí solo. Una conexión necesita:
   - **Endpoints**: Un origen y un destino para Servidor a servidor (cada uno un servidor, un clúster o una entidad), o al menos dos servidores para Multi-servidor
   - **Protocolos**: Al menos un protocolo de red
 
-Pulse Escape en el título vacío para salir sin crear nada.
+Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
 
 **Consejo**: Las conexiones pueden vincularse a enlaces de interfaz para mostrar qué infraestructura soporta cada integración de aplicaciones.
 
 ### Crear o cancelar { #cancelling-a-creation }
 
-Mientras la conexión se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la conexión.
+Mientras la conexión se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la conexión. **Ctrl+S** funciona como el botón mostrado.
 
-- **Crear** comprueba que la conexión tenga al menos un protocolo y sus dos endpoints, o dos servidores en una conexión multi-servidor. La etiqueta de cada campo que falta se pone en rojo, y el primero recibe el foco. Cuando no falta nada, Kadratis conserva la conexión y la cierra. Vuelve al punto de partida
+- **Crear** funciona como Intro: crea la conexión y la deja abierta, con su referencia. El cursor va al primer campo obligatorio aún vacío. Con el título vacío, el título pide uno
+- Una vez creada la conexión, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba que la conexión tenga al menos un protocolo y sus dos endpoints, o dos servidores en una conexión multi-servidor. La etiqueta de cada campo que falta se pone en rojo, y el primero recibe el foco. Cuando no falta nada, vuelve al punto de partida
 - **Cancelar** elimina la conexión. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar conexiones
 
 Si sale de la conexión de otra forma mientras falta algo, Kadratis le pregunta qué hacer. **Completarla** le deja en la conexión, en el primer campo que falta. **Eliminarla** elimina la conexión. Si recarga la página o cierra la pestaña mientras a la conexión nueva todavía le falta un campo, su navegador pide confirmación. Si sale de todos modos, la conexión se elimina.

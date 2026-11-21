@@ -94,9 +94,9 @@ Click a row to open that page. A list shows up to 50 items and says how many the
 
 ### Creating a contact
 
-Click **New** in the list. The page of the new contact opens. Type the first and last name side by side in the header, then the email. The contact is created when you leave the email field with a valid email. Phone numbers must be valid too. Choosing a supplier sets the contact type to **Commercial**, which you can change. A contact with a supplier needs a type. Every tab then becomes available, and the other fields save automatically. Press Escape while the name is empty to leave without creating anything.
+Click **New** in the list. The page of the new contact opens. Type the first and last name side by side in the header, then the email. The contact is created when you leave the email field with a valid email. Phone numbers must be valid too. Choosing a supplier sets the contact type to **Commercial**, which you can change. A contact with a supplier needs a type. Every tab then becomes available, and the other fields save automatically. Press Escape in the name to leave without creating anything, even with a name typed.
 
-While the contact is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the contact and takes you back to where you started: the list, the previous screen, or the supplier you started from. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the contact if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete contacts. Leaving the contact any other way keeps it.
+While the contact is being created, the header shows **Create** and **Cancel** until you leave it. **Ctrl+S** works like the button shown. **Create** writes the contact when its required fields are given and leaves it open. If one is still missing, its label turns red and the cursor goes to it. Once the contact is created, **Create** becomes **Done**: it saves what you are still typing and takes you back to where you started, the list, the previous screen, or the supplier you started from. **Cancel** leaves without keeping anything, and deletes the contact if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete contacts. Leaving the contact any other way keeps it.
 
 ---
 
@@ -111,7 +111,7 @@ Each supplier has a **Contacts** tab showing all contacts linked to that vendor.
 1. Open the supplier workspace and go to the **Contacts** tab.
 2. Click **New contact** next to a contact type.
 3. Fill in the contact details: the supplier and contact type are pre-filled.
-4. Click **Create**: you return to the supplier's **Contacts** tab.
+4. Click **Create**, then **Done**: you return to the supplier's **Contacts** tab.
 
 ### Application support
 

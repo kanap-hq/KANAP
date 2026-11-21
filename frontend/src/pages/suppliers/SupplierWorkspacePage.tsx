@@ -257,7 +257,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   };
 
   // The draft is created once it has its name; the supplier then opens, every tab available, with
-  // Create (kept, back where the creation started) and Cancel (deleted).
+  // Done (kept, back where the creation started) and Cancel (deleted).
   const leave = useCreationLeave(close);
   const title = useCreationTitle({
     requiredMessage: t('suppliers.messages.nameRequired'),
@@ -317,14 +317,12 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
     onError: setCreateError,
   });
   React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
+  // Create on the draft (its name is all it needs), Done on the supplier being created: the notes
+  // being typed are saved first.
   const handleCreate = async () => {
     await autosave.flush();
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
-    }
-    if (!canEdit || !title.require()) return;
-    void creation.createAndLeave();
+    if (!canEdit && !creation.beingCreated) return;
+    creation.create(title.require);
   };
 
   React.useEffect(() => {
@@ -493,6 +491,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
             onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
             busy={!canEdit || creation.cancelling}
             writing={creation.writing}
+            done={!isCreate}
           />
         ) : (
           <>

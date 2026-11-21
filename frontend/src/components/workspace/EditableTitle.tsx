@@ -4,6 +4,7 @@ import { alpha, type Theme } from '@mui/material/styles';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useTranslation } from 'react-i18next';
 import { taskDetailTypography } from '../../pages/tasks/theme/taskDetailTokens';
+import { isCreationWriting } from './creation/CreationActions';
 
 /** Marks the pencil so the resting and hover rules can show or hide it. */
 const CUE_CLASS = 'editable-title-cue';
@@ -195,7 +196,11 @@ export type EditableTitleProps = {
   maxLength?: number;
   /** Fired on each keystroke, so the caller can drop a refusal that the draft has answered. */
   onDraftChange?: (draft: string) => void;
-  /** Escape in the empty field opened by `autoEdit`: the person leaves without naming anything. */
+  /**
+   * Escape in the field of a title still to give (`autoEdit`): the person leaves without creating
+   * anything, a name typed or not, in one press. The blur that follows sends nothing. While the
+   * record is being written (`CreationActions` `writing`), Escape waits as Cancel does.
+   */
   onCancel?: () => void;
   onSave?: (nextTitle: string) => void;
   /**
@@ -317,9 +322,12 @@ export default function EditableTitle({
 
   const cancel = () => {
     if (pendingTitle) {
-      if (!draft.trim()) onCancel?.();
-      else {
-        // A typed name is dropped first; a second Escape leaves.
+      // The record is being written: the page will open it, Escape waits as Cancel does.
+      if (onCancel && isCreationWriting(inputRef.current)) return;
+      if (onCancel) {
+        closing.current = true;
+        onCancel();
+      } else {
         submitted.current = null;
         setDraft('');
         onDraftChange?.('');
@@ -372,6 +380,8 @@ export default function EditableTitle({
           const next = event.target.value;
           setDraft(next);
           setEmptyError(false);
+          // Typing again after an Escape that did not leave: the field counts again.
+          closing.current = false;
           submitted.current = null;
           onDraftChange?.(next);
         }}

@@ -15,15 +15,16 @@ Danach speichert jedes Feld für sich. Eine Verbindung braucht:
   - **Endpunkte**: Eine Quelle und ein Ziel für Server zu Server (jeweils ein Server, ein Cluster oder eine Entität) oder mindestens zwei Server für Multi-Server
   - **Protokolle**: Mindestens ein Netzwerkprotokoll
 
-Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben.
 
 **Tipp**: Verbindungen können mit Schnittstellen-Bindungen verknüpft werden, um zu zeigen, welche Infrastruktur jede Anwendungsintegration unterstützt.
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange die Verbindung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Verbindung verlassen.
+Solange die Verbindung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Verbindung verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
-- **Erstellen** prüft, ob die Verbindung mindestens ein Protokoll und beide Endpunkte hat, oder zwei Server bei einer Multi-Server-Verbindung. Die Beschriftung jedes fehlenden Felds wird rot, und das erste erhält den Fokus. Fehlt nichts, behält Kadratis die Verbindung und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben
+- **Erstellen** wirkt wie die Eingabetaste: Es erstellt die Verbindung und lässt sie geöffnet, mit ihrer Referenz. Der Cursor springt in das erste noch leere Pflichtfeld. Bei leerem Titel verlangt der Titel einen
+- Sobald die Verbindung erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und prüft, ob die Verbindung mindestens ein Protokoll und beide Endpunkte hat, oder zwei Server bei einer Multi-Server-Verbindung. Die Beschriftung jedes fehlenden Felds wird rot, und das erste erhält den Fokus. Fehlt nichts, kehren Sie dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** löscht die Verbindung. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Verbindungen abbrechen
 
 Verlassen Sie die Verbindung auf andere Weise, solange etwas fehlt, fragt Kadratis nach. **Vervollständigen** lässt Sie auf der Verbindung, im ersten fehlenden Feld. **Löschen** löscht die Verbindung. Wenn Sie die Seite neu laden oder den Tab schließen, solange der neuen Verbindung noch ein Feld fehlt, bittet Ihr Browser um Bestätigung. Verlassen Sie die Seite trotzdem, wird die Verbindung gelöscht.

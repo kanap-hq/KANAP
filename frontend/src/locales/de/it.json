@@ -3442,7 +3442,6 @@
     "loadServerAssignmentsFailed": "Fehler beim Laden der Zuordnungen",
     "createVersionFailed": "Fehler beim Erstellen der Version",
     "locationRequired": "Standort ist erforderlich.",
-    "codeRequired": "Code ist erforderlich.",
     "nameRequired": "Name ist erforderlich.",
     "locationNameTaken": "Ein anderer Standort hat bereits diesen Namen.",
     "subLocationNameTaken": "Ein anderer Unterstandort dieses Standorts hat bereits diesen Namen.",

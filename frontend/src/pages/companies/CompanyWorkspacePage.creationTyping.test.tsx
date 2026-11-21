@@ -148,4 +148,59 @@ describe('CompanyWorkspacePage typing while the company is created', () => {
     fireEvent.blur(shown);
     await until(() => { if (patchesWith('notes', 'Main entity').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
   });
+
+  /** A new company with its country, currency and city set and its name typed, not yet committed: Create writes it. */
+  async function fillAllButTheNameCommit() {
+    renderNew();
+    const country = await screen.findByLabelText('companies.fields.country');
+    fireEvent.change(country, { target: { value: 'Germ' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Germany (DE)' }));
+    const city = screen.getByLabelText('companies.fields.city');
+    fireEvent.change(city, { target: { value: 'Berlin' } });
+    fireEvent.blur(city);
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Acme Germany' } });
+    expect(mocked.post).not.toHaveBeenCalled();
+  }
+
+  it('creates a complete company on Create and stays on it with Done, which goes back where the creation started', async () => {
+    mocked.post.mockResolvedValue({ data: { ...STORED, creation_token: 'tok' } });
+    await fillAllButTheNameCommit();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/master-data/companies/COMP-7/overview'));
+    const done = await screen.findByRole('button', { name: 'common:buttons.done' });
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+    fireEvent.click(done);
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/master-data\/companies$/));
+  });
+
+  it('never closes the company on a double-click of Create on a complete draft', async () => {
+    mocked.post.mockResolvedValue({ data: { ...STORED, creation_token: 'tok' } });
+    await fillAllButTheNameCommit();
+    const create = screen.getByRole('button', { name: 'common:buttons.create' });
+    fireEvent.pointerDown(create);
+    fireEvent.click(create, { detail: 1 });
+    // The company comes back between the two clicks: the pill says Done.
+    const done = await screen.findByRole('button', { name: 'common:buttons.done' });
+    fireEvent.pointerDown(done);
+    fireEvent.click(done, { detail: 2 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByTestId('where')).toHaveTextContent('/master-data/companies/COMP-7/overview');
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts back the city a person empties before Done, then closes the complete company', async () => {
+    mocked.post.mockResolvedValue({ data: { ...STORED, creation_token: 'tok' } });
+    await fillAllButTheNameCommit();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    const done = await screen.findByRole('button', { name: 'common:buttons.done' });
+    // A company's city cannot be emptied: the field takes it back, and Done closes the complete company.
+    const city = await screen.findByLabelText('companies.fields.city');
+    await until(() => { if ((city as HTMLInputElement).value !== 'Berlin') throw new Error('city not shown'); });
+    fireEvent.change(city, { target: { value: '' } });
+    fireEvent.blur(city);
+    expect((city as HTMLInputElement).value).toBe('Berlin');
+    fireEvent.click(done);
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/master-data\/companies$/));
+  });
 });
+

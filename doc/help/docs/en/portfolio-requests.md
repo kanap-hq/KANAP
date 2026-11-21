@@ -86,7 +86,7 @@ The workspace header gives you operational context without leaving the page:
 - a metadata strip with **Status**, **Score**, **Requestor**, **IT owner**, **Target Delivery Date**, and (when applicable) the **Source Task** the request was created from
 - **Share** to send a link to the request
 - **Convert to Project** when the request is **Approved** or **Converted**
-- **Create** and **Cancel**, while the request is being created. See [Creating or cancelling](#cancelling-a-creation)
+- **Create** (then **Done**) and **Cancel**, while the request is being created. See [Creating or cancelling](#cancelling-a-creation)
 - **Delete**, a trash icon, for administrators (when the request is not yet converted). A converted request stays as the origin of its project and cannot be deleted
 - previous/next navigation based on the exact list context you came from
 
@@ -96,13 +96,14 @@ The workspace header gives you operational context without leaving the page:
 2. Type the name of the request.
 3. Press Enter, or click outside the title. Kadratis creates the request at once, with status **Pending Review** and you as the requestor. Its reference (`REQ-42`) shows and all tabs open.
 
-Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape on the empty title to leave without creating anything.
+Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape in the title to leave without creating anything, even with a name typed.
 
 ### Creating or cancelling { #cancelling-a-creation }
 
-While the request is being created, its header shows **Create** and **Cancel**. They stay until you leave the request.
+While the request is being created, its header shows **Create** and **Cancel**. They stay until you leave the request. **Ctrl+S** works like the button shown.
 
-- **Create** keeps the request and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Create** does the same as Enter: it creates the request and leaves it open with its reference. With an empty title, the title asks for one
+- Once the request is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started: the list or the previous screen
 - **Cancel** closes without keeping anything. On a request already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete requests
 
 Leaving the request any other way keeps it. An administrator can then delete it with **Delete**. The reference of a cancelled request is not used again.

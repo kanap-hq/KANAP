@@ -247,7 +247,7 @@ export default function CostCenterWorkspacePage() {
   const disabled = !canEdit;
 
   // The draft is created once it has its name, its code and, for a cost center, its company; the
-  // node then opens, every tab available, with Create (kept, back where the creation started) and
+  // node then opens, every tab available, with Done (kept, back where the creation started) and
   // Cancel (deleted).
   const leave = useCreationLeave(handleClose);
   const title = useCreationTitle({
@@ -255,12 +255,11 @@ export default function CostCenterWorkspacePage() {
     onCancel: leave,
     onCommit: () => creation.attempt(),
   });
-  const missingFields = (form: CostCenterDetail): FieldErrors => {
-    const missing: FieldErrors = {};
-    if (!form.code) missing.code = t('costCenters.messages.codeRequired');
-    if (form.kind === 'cost_center' && !form.company_id) missing.company_id = t('costCenters.messages.companyRequired');
-    return missing;
-  };
+  // The required fields the node still lacks: Create marks them on their label.
+  const missingOf = (form: CostCenterDetail | undefined): CostCenterField[] => (form ? ([
+    !form.code && 'code' as const,
+    form.kind === 'cost_center' && !form.company_id && 'company_id' as const,
+  ] as Array<CostCenterField | false>).filter((key): key is CostCenterField => !!key) : []);
   /** The draft as Create sends it: the trimmed name, the company only for a cost center. */
   const draftAsSent = (): CostCenterDetail => ({
     ...draftRef.current,
@@ -275,7 +274,9 @@ export default function CostCenterWorkspacePage() {
     listPath: `${LIST_PATH}${listContext ? `?${listContext}` : ''}`,
     recordLabel: t('costCenters.creationRecord'),
     queryKeyPrefixes: ['cost-centers'],
-    ready: () => !!title.current().trim() && Object.keys(missingFields(draftRef.current)).length === 0,
+    ready: () => !!title.current().trim() && missingOf(draftRef.current).length === 0,
+    missing: () => missingOf(isCreate ? draftRef.current : stored),
+    valueOf: (key) => (isCreate ? draftRef.current : stored)?.[key as 'code' | 'company_id'],
     post: async () => {
       const form = draftAsSent();
       setPageError(null);
@@ -326,16 +327,8 @@ export default function CostCenterWorkspacePage() {
   });
   React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
   const handleCreate = () => {
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
-    }
-    if (!canEdit) return;
-    const name = title.require();
-    const missing = missingFields(draftRef.current);
-    setErrors((prev) => ({ ...prev, ...missing }));
-    if (!name || Object.keys(missing).length > 0) return;
-    void creation.createAndLeave();
+    if (!canEdit && !creation.beingCreated) return;
+    creation.create(title.require);
   };
 
   const actions = isCreate || creation.beingCreated ? (
@@ -344,6 +337,7 @@ export default function CostCenterWorkspacePage() {
       onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
       busy={!canEdit || creation.cancelling}
       writing={creation.writing}
+      done={!isCreate}
     />
   ) : canDelete && data ? (
     <DeleteIconButton onClick={() => void handleDelete()} disabled={deleting || !!deleteBlock} />
@@ -399,6 +393,7 @@ export default function CostCenterWorkspacePage() {
             kind={effectiveKind}
             disabled={disabled}
             errors={errors}
+            missing={creation.marked}
             excludeParentIds={excludeParentIds}
             // A group that contains nodes cannot become a cost center, so the choice is not offered.
             unavailableKinds={data.kind === 'group' && childCount > 0 ? UNAVAILABLE_FOR_PARENT : NO_KINDS}

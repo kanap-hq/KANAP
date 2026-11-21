@@ -29,9 +29,9 @@ Lorsque vous cliquez sur **Nouvelle**, la page de la tâche s'ouvre avec un titr
    - **Dates** : Définir les dates de début et d'échéance
    - **Assignée à**, **Statut**, **Priorité** : Modifiez-les si nécessaire
 
-4. Cliquez sur **Créer** pour garder la tâche. Vous revenez là où vous avez commencé : une tâche commencée depuis l'onglet **Tâches** d'un projet revient à cet onglet. Cliquez sur **Annuler** pour supprimer la tâche à la place. Kadratis demande d'abord confirmation lorsque vous avez saisi plus que le titre.
+4. Cliquez sur **Terminé** une fois la saisie finie. Vous revenez là où vous avez commencé : une tâche commencée depuis l'onglet **Tâches** d'un projet revient à cet onglet. Cliquez sur **Annuler** pour supprimer la tâche à la place. Kadratis demande d'abord confirmation lorsque vous avez saisi plus que le titre.
 
-Appuyer sur **Échap** sur le titre vide équivaut à **Annuler**. Quitter la tâche de toute autre façon la conserve.
+Appuyer sur **Échap** dans le titre d'une nouvelle tâche permet de partir sans rien créer, même avec un titre saisi. Quitter la tâche de toute autre façon la conserve.
 
 **Conseil** : Vous pouvez coller des images directement dans la description. Elles se téléversent automatiquement.
 

@@ -92,9 +92,13 @@ function StartPage() {
   return <button type="button" onClick={() => navigate('/it/connections/new/overview')}>new connection</button>;
 }
 
+/** What the server holds on the connection beyond its name (a complete one: its ends and a protocol). */
+let held: Record<string, unknown> = {};
+const COMPLETE = { source_entity_code: 'web', destination_entity_code: 'db', protocol_codes: ['https'] };
+
 function renderPage(entries: string[], changes: { fields: number; children: Record<string, number> } = { fields: 0, children: {} }) {
   mocked.get.mockImplementation(async (url: string) => {
-    if (url === '/connections/CONN-7' || url === '/connections/conn-new') return { data: detail } as never;
+    if (url === '/connections/CONN-7' || url === '/connections/conn-new') return { data: { ...detail, ...held } } as never;
     if (url === '/connections/conn-new/creation') return { data: { changes } } as never;
     return { data: { items: [], total: 0 } } as never;
   });
@@ -142,6 +146,7 @@ describe('Connection creation at the title', () => {
     vi.clearAllMocks();
     resetCreationStore();
     resetNavigationTracker();
+    held = {};
   });
 
   it('opens with the title to type and the connection to come dimmed, nothing read or written', async () => {
@@ -171,34 +176,29 @@ describe('Connection creation at the title', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
   });
 
-  it('checks the connection when Create is clicked while the title is typed, and marks what it lacks', async () => {
+  it('creates the connection on Create clicked just after the title, and opens it with Done, nothing marked', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new connection' }));
     const input = await screen.findByRole('textbox', { name: TITLE });
     fireEvent.change(input, { target: { value: 'Web to db' } });
-    mocked.post.mockImplementation(async (url: string) => {
-      if (url === '/connections/creation') return { data: created } as never;
-      throw { response: { status: 400, data: { code: 'CREATION_INCOMPLETE', params: { fields: ['protocols', 'source', 'destination'] } } } };
-    });
-    // In a browser the click's mousedown blurs the title first, which commits it.
+    // In a browser the click's press blurs the title first, which commits it.
     fireEvent.blur(input);
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'workspace.connection.layers.source' })).toHaveAttribute('data-label-missing', 'true'));
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByRole('textbox', { name: 'workspace.connection.layers.source' })).not.toHaveAttribute('data-label-missing', 'true');
+    expect(mocked.post).toHaveBeenCalledTimes(1);
     expect(mocked.post).toHaveBeenCalledWith('/connections/creation', { name: 'Web to db' });
-    expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
     expect(location()).toBe('/it/connections/CONN-7/overview');
   });
 
-  it('marks what the connection lacks on Create, focuses the first field on screen and stays', async () => {
+  it('marks what the connection lacks on Done, focuses the first field on screen and stays, without asking the server', async () => {
     await createConnection();
-    // The server names the fields in its own order; the focus follows the screen: Source first.
-    mocked.post.mockRejectedValueOnce({
-      response: { status: 400, data: { code: 'CREATION_INCOMPLETE', params: { fields: ['protocols', 'source', 'destination'] } } },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'workspace.connection.layers.source' })).toHaveFocus());
     const protocols = screen.getByPlaceholderText('workspace.connection.overview.addProtocol');
-    expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
+    expect(mocked.post).not.toHaveBeenCalledWith('/connections/conn-new/creation/complete', expect.anything());
     expect(location()).toBe('/it/connections/CONN-7/overview');
     // One signal: the labels in red and the fields invalid, no banner.
     expect(protocols).toHaveAttribute('aria-invalid', 'true');
@@ -211,9 +211,27 @@ describe('Connection creation at the title', () => {
     expect(screen.queryByText(/creation\.missing/)).toBeNull();
   });
 
-  it('closes a complete connection on Create, back where the creation started', async () => {
+  it('marks what only the server sees missing on Done, the first field on screen first', async () => {
+    held = COMPLETE;
     await createConnection();
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/connections/CONN-7', expect.anything()));
+    // The server names the fields in its own order; the focus follows the screen: Source first.
+    mocked.post.mockRejectedValueOnce({
+      response: { status: 400, data: { code: 'CREATION_INCOMPLETE', params: { fields: ['protocols', 'source'] } } },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'workspace.connection.layers.source' })).toHaveFocus());
+    expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
+    expect(location()).toBe('/it/connections/CONN-7/overview');
+  });
+
+  it('closes a complete connection on Done, back where the creation started', async () => {
+    held = COMPLETE;
+    await createConnection();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/connections/CONN-7', expect.anything()));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
     expect(mocked.delete).not.toHaveBeenCalled();

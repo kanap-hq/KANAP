@@ -158,8 +158,6 @@
       "deleteFailed": "Error al eliminar la empresa.",
       "nameRequired": "Introduzca un nombre.",
       "nameTaken": "Otra empresa ya tiene este nombre.",
-      "countryRequired": "Elija un país.",
-      "currencyRequired": "Elija una moneda base.",
       "cityRequired": "Introduzca una ciudad.",
       "headcountInvalid": "Introduzca un número entero, 0 o más.",
       "itUsersInvalid": "Introduzca un número entero, 0 o más, o deje el campo vacío.",
@@ -213,7 +211,6 @@
       "createFailed": "Error al crear el departamento.",
       "nameRequired": "Introduzca un nombre.",
       "nameTaken": "Otro departamento de esta empresa ya tiene este nombre.",
-      "companyRequired": "Elija una empresa.",
       "headcountInvalid": "Introduzca un número entero, 0 o más.",
       "deleteFailed": "Error al eliminar el departamento."
     },
@@ -288,9 +285,7 @@
       "saveFailed": "Error al guardar el centro de coste.",
       "createFailed": "Error al crear el centro de coste.",
       "deleteFailed": "Error al eliminar el centro de coste.",
-      "codeRequired": "Introduzca un código.",
       "nameRequired": "Introduzca un nombre.",
-      "companyRequired": "Elija una empresa.",
       "chooseCompany": "Elija la empresa para convertir este grupo en un centro de coste."
     },
     "delete": {
@@ -391,7 +386,6 @@
       "saveFailed": "Error al guardar el calendario.",
       "createFailed": "Error al crear el calendario.",
       "deleteFailed": "Error al eliminar el calendario.",
-      "codeRequired": "Introduzca un código.",
       "nameRequired": "Introduzca un nombre."
     },
     "delete": {
@@ -737,7 +731,6 @@
     "messages": {
       "saveFailed": "Error al guardar la cuenta.",
       "createFailed": "Error al crear la cuenta.",
-      "chartRequired": "Elija un plan de cuentas.",
       "numberInvalid": "Introduzca un número entero mayor que cero, de {{max}} dígitos como máximo.",
       "nameRequired": "Introduzca un nombre."
     },
@@ -900,9 +893,7 @@
       "dimensionCreateFailed": "Error al crear la dimensión.",
       "dimensionDeleteFailed": "Error al eliminar la dimensión.",
       "nameRequired": "Introduzca un nombre.",
-      "codeRequired": "Introduzca un código.",
       "codeInvalid": "Use letras minúsculas, dígitos, - o _ (40 como máximo).",
-      "dimensionRequired": "Elija una dimensión.",
       "valueAddFailed": "No se pudo añadir el valor."
     },
     "recommended": {

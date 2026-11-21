@@ -265,7 +265,7 @@ export default function AccountWorkspacePage() {
   };
 
   // The draft is created once it has its name, its chart and a valid number; the account then
-  // opens, every tab available, with Create (kept, back where the creation started) and Cancel
+  // opens, every tab available, with Done (kept, back where the creation started) and Cancel
   // (deleted).
   const leave = useCreationLeave(handleClose);
   const title = useCreationTitle({
@@ -273,14 +273,14 @@ export default function AccountWorkspacePage() {
     onCancel: leave,
     onCommit: () => creation.attempt(),
   });
-  const missingFields = (): FieldErrors => {
-    const missing: FieldErrors = {};
-    if (!newCoaIdRef.current) missing.coa_id = t('accounts.messages.chartRequired');
-    if (parseAccountNumber(String(draftRef.current.account_number)) == null) {
-      missing.account_number = t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS });
-    }
-    return missing;
-  };
+  // The required fields the account still lacks: Create marks them on their label. A number typed
+  // but not valid is said under its field.
+  const missingOf = (values: Account | undefined, coaId: string | null | undefined): AccountField[] => (values ? ([
+    !coaId && 'coa_id' as const,
+    !String(values.account_number ?? '').trim() && 'account_number' as const,
+  ] as Array<AccountField | false>).filter((key): key is AccountField => !!key) : []);
+  const numberInvalid = () => !!String(draftRef.current.account_number).trim()
+    && parseAccountNumber(String(draftRef.current.account_number)) == null;
   // The chart the draft holds, or the one preselected: read by the creation in the event that sets it.
   const newCoaIdRef = React.useRef(newCoaId);
   newCoaIdRef.current = draftRef.current.coa_id ?? preselectedCoaId;
@@ -308,7 +308,9 @@ export default function AccountWorkspacePage() {
     listPath: withContext(LIST_PATH),
     recordLabel: t('accounts.creationRecord'),
     queryKeyPrefixes: ['accounts'],
-    ready: () => !!title.current().trim() && Object.keys(missingFields()).length === 0,
+    ready: () => !!title.current().trim() && missingOf(draftRef.current, newCoaIdRef.current).length === 0 && !numberInvalid(),
+    missing: () => (isCreate ? missingOf(draftRef.current, newCoaIdRef.current) : missingOf(stored, stored?.coa_id)),
+    valueOf: (key) => (key === 'coa_id' ? (isCreate ? newCoaIdRef.current : stored?.coa_id) : (isCreate ? draftRef.current : stored)?.account_number),
     post: async () => {
       const sent = draftAsSent();
       const coaId = sent.coa_id;
@@ -360,16 +362,11 @@ export default function AccountWorkspacePage() {
   });
   React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft, preselectedCoaId]);
   const handleCreate = () => {
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
+    if (!canEdit && !creation.beingCreated) return;
+    if (isCreate && numberInvalid()) {
+      setErrors((prev) => ({ ...prev, account_number: t('accounts.messages.numberInvalid', { max: ACCOUNT_NUMBER_MAX_DIGITS }) }));
     }
-    if (!canEdit) return;
-    const name = title.require();
-    const missing = missingFields();
-    setErrors((prev) => ({ ...prev, ...missing }));
-    if (!name || Object.keys(missing).length > 0) return;
-    void creation.createAndLeave();
+    creation.create(title.require);
   };
 
   const disabled = !canEdit;
@@ -378,7 +375,7 @@ export default function AccountWorkspacePage() {
   const properties = data ? (
     <>
       <PropertyGroup>
-        <PropertyRow label={t('accounts.fields.chartOfAccounts')} required>
+        <PropertyRow label={t('accounts.fields.chartOfAccounts')} required missing={creation.marked.has('coa_id')}>
           <ChartSelect
             coas={coas}
             value={data.coa_id}
@@ -394,6 +391,7 @@ export default function AccountWorkspacePage() {
           value={String(data.account_number)}
           disabled={disabled}
           error={errors.account_number}
+          missing={creation.marked.has('account_number')}
           onCommit={commitNumber}
         />
         <PropertyRow label={t('accounts.fields.nature')}>
@@ -467,6 +465,7 @@ export default function AccountWorkspacePage() {
             onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
             busy={!canEdit || creation.cancelling}
             writing={creation.writing}
+            done={!isCreate}
           />
         ) : undefined}
         nav={!isCreate && shownNav ? {
@@ -601,11 +600,13 @@ function AccountNumberRow({
   value,
   disabled,
   error,
+  missing,
   onCommit,
 }: {
   value: string;
   disabled: boolean;
   error?: string;
+  missing?: boolean;
   onCommit: (raw: string) => void;
 }) {
   const { t } = useTranslation(['master-data']);
@@ -613,7 +614,7 @@ function AccountNumberRow({
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   const label = t('accounts.fields.accountNumber');
   return (
-    <PropertyRow label={label} required>
+    <PropertyRow label={label} required missing={missing}>
       <TextField
         value={draft}
         onChange={(event) => setDraft(event.target.value)}

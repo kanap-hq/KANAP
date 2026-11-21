@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import EditableTitle from '../../../components/workspace/EditableTitle';
 import { followCreationFields, useCreationFieldFocus } from '../../../components/workspace/creation/creationFieldFocus';
+import { isCreationWriting } from '../../../components/workspace/creation/CreationActions';
 import RecordHistoryButton from '../../../components/history/RecordHistoryButton';
 import PanelResizeHandle, { usePropertiesPanelWidth } from '../../../components/workspace/PanelResizeHandle';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
@@ -269,6 +270,12 @@ export default function PortfolioDetailWorkspaceShell({
     ? panel.width + DRAWER_HANDLE_WIDTH - parseInt(taskDetailTokens.titleBlock.px, 10) + 8
     : 0;
   const rootRef = React.useRef<HTMLDivElement>(null);
+  // The new record is being written: the page will open it, so the way back (the arrow, Escape)
+  // waits as Cancel does.
+  const back = React.useCallback(() => {
+    if (isCreationWriting(rootRef.current)) return;
+    onBack();
+  }, [onBack]);
   useCreationFieldFocus(rootRef, `${isCreate ? 'new' : 'record'}:${activeTab}`);
 
   React.useEffect(() => {
@@ -341,7 +348,7 @@ export default function PortfolioDetailWorkspaceShell({
           break;
         case 'Escape':
           event.preventDefault();
-          onBack();
+          back();
           break;
         case 'p':
         case '.':
@@ -354,7 +361,7 @@ export default function PortfolioDetailWorkspaceShell({
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [forceDrawerOpen, isCreate, nav, onBack, onSaveShortcut]);
+  }, [back, forceDrawerOpen, isCreate, nav, onSaveShortcut]);
 
   return (
     <Box
@@ -380,7 +387,7 @@ export default function PortfolioDetailWorkspaceShell({
             <Box
               component="button"
               type="button"
-              onClick={onBack}
+              onClick={back}
               aria-label={backLabel}
               sx={(theme) => ({
                 display: 'inline-flex',

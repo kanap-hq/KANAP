@@ -58,11 +58,12 @@ The list shows all business processes for your tenant.
 2. Type the process name, ideally with its short code (e.g. "Order-to-Cash (O2C)").
 3. Press Enter, or click outside the title. Kadratis creates the process at once, enabled, and all tabs open.
 
-Press Escape on the empty title to leave without creating anything. Two processes cannot share a name, whatever the case: a name already used is refused, with a message under the title.
+Press Escape in the title to leave without creating anything, even with a name typed. Two processes cannot share a name, whatever the case: a name already used is refused, with a message under the title.
 
-While the process is being created, its header shows **Create** and **Cancel**. They stay until you leave the process.
+While the process is being created, its header shows **Create** and **Cancel**. They stay until you leave the process. **Ctrl+S** works like the button shown.
 
-- **Create** keeps the process and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one.
+- **Create** does the same as Enter: it creates the process and leaves it open. With an empty title, the title asks for one.
+- Once the process is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started: the list or the previous screen.
 - **Cancel** closes without keeping anything. On a process already created, it deletes it, with the application links you added. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete processes.
 
 Leaving the process any other way keeps it.

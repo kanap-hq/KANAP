@@ -26,7 +26,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 **Was Sie tun.** Importieren Sie die Liste Ihrer Anwendungen, oder legen Sie sie einzeln an.
 
 - **Eine Datei importieren.** Klicken Sie auf **Importieren**, dann auf **Beispiel herunterladen**: eine Mappe mit einigen Anwendungen und dem, was jede Spalte aufnimmt. Tragen Sie Ihre ein und **importieren** Sie die Datei.
-- **Eine Anwendung anlegen.** Klicken Sie auf **Neue Anwendung**, geben Sie ihren Namen im Titel ein und drücken Sie die Eingabetaste. Füllen Sie den Eigenschaftenbereich aus und klicken Sie dann auf **Erstellen**. **Abbrechen** verwirft sie.
+- **Eine Anwendung anlegen.** Klicken Sie auf **Neue Anwendung**, geben Sie ihren Namen im Titel ein und drücken Sie die Eingabetaste. Füllen Sie den Eigenschaftenbereich aus und klicken Sie dann auf **Fertig**. **Abbrechen** verwirft sie.
 
 **Was Sie sehen.** Ein Datensatz je Anwendung. Ergänzen Sie bei den wichtigsten zuerst die Kritikalität und das Feld **IT-Verantwortliche**.
 
@@ -42,7 +42,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **IT-Landschaft > Assets**
 
-**Was Sie tun.** Klicken Sie auf **Asset hinzufügen**, oder **importieren** Sie eine Datei für viele Assets. Wählen Sie den Asset-Typ und den Standort, dann **Erstellen**. Um ein Asset mit einer Anwendung zu verknüpfen, öffnen Sie die Anwendung, Reiter **Bereitstellungen**: **Bereitstellung hinzufügen** für die Umgebung, dann **Server hinzufügen**.
+**Was Sie tun.** Klicken Sie auf **Asset hinzufügen**, oder **importieren** Sie eine Datei für viele Assets. Geben Sie seinen Namen ein und drücken Sie die Eingabetaste, wählen Sie den Asset-Typ und den Standort, dann klicken Sie auf **Fertig**. Um ein Asset mit einer Anwendung zu verknüpfen, öffnen Sie die Anwendung, Reiter **Bereitstellungen**: **Bereitstellung hinzufügen** für die Umgebung, dann **Server hinzufügen**.
 
 **Was Sie sehen.** Der Bereitstellungsblock der Anwendung listet ihre Server, und das Asset listet die Anwendung unter **Gehostete Anwendungen** in seinem Reiter **Betrieb**. Das Supportende seiner Technologien reicht nun bis zum Asset. Die Schwachstellen eines Betriebssystems stehen zunächst nicht in den Warnungen, weil Kadratis den Patchstand eines Servers nicht kennt. Um sie zu sehen, öffnen Sie **IT-Landschaft > Schwachstellen** und wählen Sie im Filter **Warnungen** den Wert **Ausgeschlossen**, oder **Ausgeschlossene anzeigen**, wenn die Liste leer ist.
 

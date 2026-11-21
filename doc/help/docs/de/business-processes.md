@@ -58,11 +58,12 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 2. Geben Sie den Namen des Prozesses ein, am besten mit seinem Kurzcode (z. B. „Order-to-Cash (O2C)“).
 3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt den Prozess sofort, aktiviert, und alle Reiter öffnen sich.
 
-Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen. Zwei Prozesse können nicht denselben Namen tragen, unabhängig von Groß- und Kleinschreibung: Ein bereits verwendeter Name wird abgelehnt, mit einer Meldung unter dem Titel.
+Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben. Zwei Prozesse können nicht denselben Namen tragen, unabhängig von Groß- und Kleinschreibung: Ein bereits verwendeter Name wird abgelehnt, mit einer Meldung unter dem Titel.
 
-Solange der Prozess erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie den Prozess verlassen.
+Solange der Prozess erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie den Prozess verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
-- **Erstellen** behält den Prozess und schließt ihn. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen.
+- **Erstellen** wirkt wie die Eingabetaste: Es erstellt den Prozess und lässt ihn geöffnet. Bei leerem Titel verlangt der Titel einen.
+- Sobald der Prozess erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm.
 - **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstellter Prozess wird gelöscht, mit den Verknüpfungen zu Anwendungen, die Sie hinzugefügt haben. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Prozessen abbrechen.
 
 Verlassen Sie den Prozess auf andere Weise, bleibt er bestehen.

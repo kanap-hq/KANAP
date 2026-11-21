@@ -43,7 +43,7 @@ import { releaseLockKeepalive } from '../../lib/releaseLockKeepalive';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { classifyKnowledgeLoadError, isKnowledgeDocumentAddress } from './knowledgeLoadError';
 import EditableTitle from '../../components/workspace/EditableTitle';
-import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, takeCreationFieldFocus, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 
@@ -1748,7 +1748,7 @@ export default function KnowledgeWorkspacePage() {
   const libraryListUrl = `/knowledge?library=${encodeURIComponent(workspaceLibrarySlug || '')}&allLibraries=0`;
 
   // Creation at the title: the new page creates the document when its title is committed, then the
-  // document shows Create and Cancel until the person leaves it.
+  // document shows Done and Cancel until the person leaves it.
   const creationReturn = useCreationReturn(libraryListUrl);
   const creation = useRecordCreation({
     family: 'documents',
@@ -1759,11 +1759,17 @@ export default function KnowledgeWorkspacePage() {
     queryKeyPrefixes: ['knowledge'],
     onError: setError,
   });
-  // Tab from the title of a new document: the text gets the focus once the document is created.
+  // Tab from the title of a new document, or the press of Create (`CreationActions`): the text
+  // gets the focus once the document is created.
   const contentFocusPendingRef = React.useRef(false);
+  const wasCreateRef = React.useRef(isCreate);
   // The editor takes the focus once it is enabled (it waits while the lock is being taken).
   React.useEffect(() => {
-    if (isCreate || !contentFocusPendingRef.current) return;
+    const created = wasCreateRef.current && !isCreate;
+    wasCreateRef.current = isCreate;
+    if (!created) return;
+    const armed = takeCreationFieldFocus();
+    if (!contentFocusPendingRef.current && !armed) return;
     contentFocusPendingRef.current = false;
     setContentFocusNonce((n) => n + 1);
   }, [isCreate]);
@@ -1775,8 +1781,7 @@ export default function KnowledgeWorkspacePage() {
 
   // The title creates the document with what the former Save sent (the template's content and
   // type, the folder, the relations of the address, the person as owner), then takes its lock and
-  // moves to it, still in edit mode (React Router keeps this instance), or closes it, kept, when
-  // Create was clicked meanwhile.
+  // moves to it, still in edit mode (React Router keeps this instance).
   const titleCreation = useTitleCreation<{ id: string; item_ref?: string; item_number?: number }>({
     isCreate,
     requiredMessage: t('common:creation.titleRequired'),
@@ -1797,11 +1802,7 @@ export default function KnowledgeWorkspacePage() {
       };
       return (await api.post('/knowledge', payload)).data || {};
     },
-    onCreated: async (created, token, finish) => {
-      if (finish) {
-        navigate(creationReturn, { replace: true });
-        return;
-      }
+    onCreated: async (created, token) => {
       try {
         const lockRes = await api.post(`/knowledge/${created.id}/locks`);
         setLockToken(lockRes.data?.lock_token || null);
@@ -1826,8 +1827,9 @@ export default function KnowledgeWorkspacePage() {
     onStart: () => setError(null),
   });
 
-  // Create: on the new page, the title is the only field; on the document being created, what is
-  // pending is saved and the lock released, as Done does, then the document is kept and closed.
+  // Create on the new page, where the title is the only field; Done on the document being created:
+  // what is pending is saved and the lock released, as the editing Done does, then the document is
+  // kept and closed.
   const createAction = React.useCallback(() => {
     if (isCreate) {
       titleCreation.create();
@@ -2043,6 +2045,7 @@ export default function KnowledgeWorkspacePage() {
           />
           {(isCreate ? canManageDocumentGlobal : creation.beingCreated) && (
             <CreationActions
+              done={!isCreate}
               busy={creation.cancelling || doneEditingPending}
               writing={titleCreation.writing}
               onCreate={createAction}

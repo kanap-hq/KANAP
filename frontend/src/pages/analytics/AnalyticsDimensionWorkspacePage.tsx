@@ -198,7 +198,7 @@ export default function AnalyticsDimensionWorkspacePage() {
   };
 
   // The draft is created once it has its name and a valid code (proposed from the name); the
-  // dimension then opens, every tab available, with Create (kept, back where the creation started)
+  // dimension then opens, every tab available, with Done (kept, back where the creation started)
   // and Cancel (deleted, with the values added meanwhile).
   const leave = useCreationLeave(handleClose);
   const title = useCreationTitle({
@@ -207,11 +207,8 @@ export default function AnalyticsDimensionWorkspacePage() {
     onChange: setNewName,
     onCommit: () => creation.attempt(),
   });
-  const codeError = (code: string) => {
-    if (!code) return t('analytics.messages.codeRequired');
-    if (!DIMENSION_CODE_PATTERN.test(code)) return t('analytics.messages.codeInvalid');
-    return undefined;
-  };
+  // A code typed but not valid is said under it; an empty one is marked on its label by Create.
+  const codeInvalid = (code: string) => !!code && !DIMENSION_CODE_PATTERN.test(code);
   /** The draft as Create sends it: the trimmed name, and the code typed or the one the name proposes. */
   const draftAsSent = (): AnalyticsAxisDetail => ({
     ...draftRef.current,
@@ -227,7 +224,9 @@ export default function AnalyticsDimensionWorkspacePage() {
     listPath: ANALYTICS_LIST_PATH,
     recordLabel: t('analytics.dimensionCreationRecord'),
     queryKeyPrefixes: ['analytics'],
-    ready: () => !!title.current().trim() && !codeError(newCode.trim()),
+    ready: () => !!title.current().trim() && !!newCode.trim() && !codeInvalid(newCode.trim()),
+    missing: () => ((isCreate ? newCode : stored?.code ?? '').trim() ? [] : ['code']),
+    valueOf: () => (isCreate ? newCode : stored?.code),
     post: async () => {
       const form = draftAsSent();
       setPageError(null);
@@ -277,16 +276,9 @@ export default function AnalyticsDimensionWorkspacePage() {
   // Not on each keystroke of the name: the code it proposes is read when the name is committed.
   React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
   const handleCreate = () => {
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
-    }
-    if (!canEdit) return;
-    const name = title.require();
-    const error = codeError(newCode.trim());
-    if (error) setErrors((prev) => ({ ...prev, code: error }));
-    if (!name || error) return;
-    void creation.createAndLeave();
+    if (!canEdit && !creation.beingCreated) return;
+    if (isCreate && codeInvalid(newCode.trim())) setErrors((prev) => ({ ...prev, code: t('analytics.messages.codeInvalid') }));
+    creation.create(title.require);
   };
 
   const isDefault = !!data?.is_default;
@@ -307,6 +299,7 @@ export default function AnalyticsDimensionWorkspacePage() {
       onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
       busy={!canEdit || creation.cancelling}
       writing={creation.writing}
+      done={!isCreate}
     />
   ) : canDelete && data && !isDefault ? (
     <DeleteIconButton onClick={() => setConfirmOpen(true)} disabled={deleting} />
@@ -357,6 +350,7 @@ export default function AnalyticsDimensionWorkspacePage() {
             defaultLabel={t('analytics.analyticsCategoryFallback')}
             disabled={disabled}
             errors={errors}
+            missing={creation.marked}
             onNameCommit={(name) => void patch({ name }, 'name')}
             onCodeCommit={(code) => void patch({ code }, 'code')}
             onAppliesToChange={(appliesTo) => void patch({ applies_to: appliesTo }, 'applies_to')}
@@ -429,6 +423,7 @@ function DimensionProperties({
   defaultLabel,
   disabled,
   errors,
+  missing,
   onNameCommit,
   onCodeCommit,
   onAppliesToChange,
@@ -443,6 +438,8 @@ function DimensionProperties({
   defaultLabel: string;
   disabled: boolean;
   errors: FieldErrors;
+  /** The required fields Create found missing. */
+  missing: ReadonlySet<string>;
   onNameCommit: (name: string | null) => void;
   onCodeCommit: (code: string) => void;
   onAppliesToChange: (appliesTo: LineType | null) => void;
@@ -528,6 +525,7 @@ function DimensionProperties({
         <PropertyRow
           label={t('analytics.fields.code')}
           required
+          missing={missing.has('code')}
           // The format matters before typing: shown under the field in creation, in a tooltip afterwards.
           helperText={axis.id ? undefined : t('analytics.hints.codeCreate')}
           hint={axis.id ? t(axis.is_default ? 'analytics.hints.codeDefault' : 'analytics.hints.code', { code: axis.code }) : undefined}

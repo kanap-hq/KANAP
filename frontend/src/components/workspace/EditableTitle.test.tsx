@@ -250,16 +250,23 @@ describe('EditableTitle', () => {
     expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
 
-  it('fires onCancel on Escape in the empty autoEdit field; a typed name is cleared first', () => {
+  it('fires onCancel on Escape in the empty autoEdit field', () => {
     const onCancel = vi.fn();
-    renderTitle({ value: '', autoEdit: true, onCancel });
+    const { onSave } = renderTitle({ value: '', autoEdit: true, onCancel });
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('fires onCancel on one Escape with a name typed, and the blur that follows sends nothing', () => {
+    const onCancel = vi.fn();
+    const { onSave } = renderTitle({ value: '', autoEdit: true, onCancel });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'Bill' } });
     fireEvent.keyDown(input, { key: 'Escape' });
-    expect(onCancel).not.toHaveBeenCalled();
-    expect(screen.getByRole('textbox')).toHaveValue('');
-    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledTimes(1);
+    fireEvent.blur(input);
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it('does not fire onCancel without autoEdit', () => {

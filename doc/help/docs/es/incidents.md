@@ -37,13 +37,14 @@ El nuevo incidente queda **Abierto**, con gravedad **Media**, detectado ahora y 
 - **Categoría**: infraestructura, seguridad, aplicación, datos, proveedor, otros (configurable, véase [Categorías](#categorias))
 - **Responsable**: quién se encarga de gestionarlo
 
-Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche. Pulse Escape en el título vacío para salir sin registrar nada.
+Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche. Pulse Escape en el título para salir sin registrar nada, aunque ya haya escrito un título.
 
 ### Crear o cancelar { #cancelling-a-creation }
 
-Mientras el incidente se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del incidente.
+Mientras el incidente se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del incidente. **Ctrl+S** funciona como el botón mostrado.
 
-- **Crear** conserva el incidente y lo cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Crear** funciona como Intro: crea el incidente y lo deja abierto, con su referencia. Con el título vacío, el título pide uno
+- Una vez creado el incidente, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le lleva de vuelta al punto de partida: la lista o la pantalla anterior
 - **Cancelar** cierra sin conservar nada. En un incidente ya creado, lo elimina. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar incidentes
 
 **Cancelar incidente** permanece oculto mientras el incidente se está creando. La cancelación de la creación se rechaza en cuanto el incidente está cerrado o cancelado, o contiene datos de notificación reglamentaria (consulte [Eliminar un incidente](#eliminar-un-incidente)). Si sale del incidente de otra forma, este permanece en el registro. La referencia de una creación cancelada no se reutiliza.

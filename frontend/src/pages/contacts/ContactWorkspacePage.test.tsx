@@ -52,6 +52,7 @@ vi.mock('../../components/fields/SupplierSelect', () => ({
   ),
 }));
 
+import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import ContactWorkspacePage from './ContactWorkspacePage';
 
@@ -453,6 +454,16 @@ describe('ContactWorkspacePage create', () => {
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
     fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
     expect(screen.queryByText('master-data:contacts.messages.emailInvalid')).toBeNull();
+  });
+
+  it('marks the empty email on Create and puts the cursor in it, with no sentence under it', async () => {
+    renderAt('/master-data/contacts/new/overview');
+    fireEvent.change(screen.getByLabelText('contacts.fields.firstName'), { target: { value: 'Sam' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(markedLabels()).toEqual(['contacts.fields.email']));
+    await waitFor(() => expect(screen.getByLabelText('contacts.fields.email')).toHaveFocus());
+    expect(screen.queryAllByText(/Required$|Invalid$/)).toHaveLength(0);
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 
   it('opens with first and last name to type in the header, and no name fields in the form', () => {

@@ -34,6 +34,7 @@ import ConvertToRequestDialog from './components/ConvertToRequestDialog';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { isCreationWriting } from '../../components/workspace/creation/CreationActions';
 import { followCreationFields, useCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import { ResizablePropertiesPanel } from '../../components/workspace/PanelResizeHandle';
 import { TASK_STATUS_OPTIONS } from './task.constants';
@@ -1105,6 +1106,8 @@ export default function TaskWorkspacePage() {
     }
   };
   const handleBack = async () => {
+    // The new task is being written: the page will open it, so the way back waits as Cancel does.
+    if (isCreationWriting(workspaceRef.current)) return;
     if (!(await confirmUnsavedLeave())) return;
     navigate(originPath);
   };
@@ -1212,7 +1215,7 @@ export default function TaskWorkspacePage() {
   ], [t]);
 
   // Creation at the title: the new page creates the task when its title is committed, then the task
-  // shows Create and Cancel until the person leaves it.
+  // shows Done and Cancel until the person leaves it.
   const creationReturn = useCreationReturn(originPath);
   const creation = useRecordCreation({
     family: 'tasks',
@@ -1274,9 +1277,8 @@ export default function TaskWorkspacePage() {
   } : null), [canReadApplications, canReadAssets, createClassification, createRelation, createRelationPreviewName, defaultTaskTypeId, form, isCreate]);
 
   // The title creates the task through the route of its relation, with the defaults the creation
-  // form sent with only a title; the page moves to it, every tab open, with Create and Cancel (or
-  // closes it, kept, when Create was clicked meanwhile). A title committed before the defaults are
-  // read waits for them.
+  // form sent with only a title; the page moves to it, every tab open, with Done and Cancel. A title
+  // committed before the defaults are read waits for them.
   const titleCreation = useTitleCreation<TaskData>({
     isCreate,
     requiredMessage: t('common:creation.titleRequired'),
@@ -1314,15 +1316,11 @@ export default function TaskWorkspacePage() {
       }
       return (await api.post<TaskData & { creation_token: string }>(endpoint, payload)).data;
     },
-    onCreated: async (created, token, finish) => {
+    onCreated: async (created, token) => {
       const relation = createRelation;
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
       if (relation.type === 'project' && relation.id) {
         void queryClient.invalidateQueries({ queryKey: ['project-tasks', relation.id] });
-      }
-      if (finish) {
-        navigate(creationReturn, { replace: true });
-        return;
       }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const reference = created.item_number ? formatItemRef('task', created.item_number) : created.id;
@@ -1344,7 +1342,7 @@ export default function TaskWorkspacePage() {
     onStart: () => setError(null),
   });
 
-  // What is still being typed or queued on the task being created: saved before Create and Cancel.
+  // What is still being typed or queued on the task being created: saved before Done and Cancel.
   const flushCreatedTask = React.useCallback(async () => {
     if (descAutosaveTimerRef.current) {
       clearTimeout(descAutosaveTimerRef.current);
@@ -1356,8 +1354,8 @@ export default function TaskWorkspacePage() {
     await waitForSidebarSaves();
   }, [description, handleDescriptionAutosave, waitForSidebarSaves]);
 
-  // Create: on the new page, the title is the only field; on the task being created, what is still
-  // being typed is saved, then the task is kept and closed.
+  // Create on the new page, where the title is the only field; Done on the task being created: what
+  // is still being typed is saved, then the task is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
       titleCreation.create();
@@ -1667,6 +1665,7 @@ export default function TaskWorkspacePage() {
         onTabChange={(next) => { void handleTabChange(next); }}
         creationActions={creating ? (
           <CreationActions
+            done={!isCreate}
             busy={creation.cancelling}
             writing={titleCreation.writing}
             onCreate={() => { void createAction(); }}

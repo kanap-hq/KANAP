@@ -58,11 +58,12 @@ La liste affiche tous les processus métier de votre tenant.
 2. Saisissez le nom du processus, idéalement avec son code court (par ex. « Order-to-Cash (O2C) »).
 3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée le processus aussitôt, activé, et tous les onglets s'ouvrent.
 
-Appuyez sur Échap dans le titre vide pour partir sans rien créer. Deux processus ne peuvent pas porter le même nom, quelle que soit la casse : un nom déjà utilisé est refusé, avec un message sous le titre.
+Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi. Deux processus ne peuvent pas porter le même nom, quelle que soit la casse : un nom déjà utilisé est refusé, avec un message sous le titre.
 
-Tant que le processus est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez le processus.
+Tant que le processus est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez le processus. **Ctrl+S** agit comme le bouton affiché.
 
-- **Créer** conserve le processus et le ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un.
+- **Créer** fait comme Entrée : il crée le processus et le laisse ouvert. Avec un titre vide, le titre en demande un.
+- Une fois le processus créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ : la liste ou l'écran précédent.
 - **Annuler** ferme sans rien conserver. Sur un processus déjà créé, il le supprime, avec les liens vers les applications que vous avez ajoutés. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des processus.
 
 Si vous quittez le processus autrement, il est conservé.

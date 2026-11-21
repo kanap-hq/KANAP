@@ -352,7 +352,7 @@ export default function CompanyWorkspacePage() {
   };
 
   // The draft is created once it has its name, country, currency and city; the company then opens,
-  // every tab available, with Create (kept, back where the creation started) and Cancel (deleted).
+  // every tab available, with Done (kept, back where the creation started) and Cancel (deleted).
   const leave = useCreationLeave(handleClose);
   const title = useCreationTitle({
     requiredMessage: t('companies.messages.nameRequired'),
@@ -360,14 +360,12 @@ export default function CompanyWorkspacePage() {
     onCommit: () => creation.attempt(),
   });
   const [createError, setCreateError] = React.useState<string | null>(null);
-  const missingFields = (): FieldErrors => {
-    const values = draftRef.current;
-    const missing: FieldErrors = {};
-    if (!values.country_iso) missing.country_iso = t('companies.messages.countryRequired');
-    if (!values.base_currency) missing.base_currency = t('companies.messages.currencyRequired');
-    if (!values.city) missing.city = t('companies.messages.cityRequired');
-    return missing;
-  };
+  // The required fields a company still lacks: Create marks them on their label.
+  const missingOf = (values: Company | undefined): CompanyField[] => (values ? ([
+    !values.country_iso && 'country_iso' as const,
+    !values.base_currency && 'base_currency' as const,
+    !values.city && 'city' as const,
+  ] as Array<CompanyField | false>).filter((key): key is CompanyField => !!key) : []);
   const creation = useDraftCreation({
     isCreate,
     family: 'companies',
@@ -376,7 +374,9 @@ export default function CompanyWorkspacePage() {
     listPath: withContext(LIST_PATH),
     recordLabel: t('companies.creationRecord'),
     queryKeyPrefixes: ['companies'],
-    ready: () => !!title.current().trim() && Object.keys(missingFields()).length === 0,
+    ready: () => !!title.current().trim() && missingOf(draftRef.current).length === 0,
+    missing: () => missingOf(isCreate ? draftRef.current : stored),
+    valueOf: (key) => (isCreate ? draftRef.current : stored)?.[key as CompanyField],
     post: async () => {
       setCreateError(null);
       try {
@@ -421,16 +421,8 @@ export default function CompanyWorkspacePage() {
   });
   React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
   const handleCreate = () => {
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
-    }
-    if (!canEdit) return;
-    const name = title.require();
-    const missing = missingFields();
-    setErrors((prev) => ({ ...prev, ...missing }));
-    if (!name || Object.keys(missing).length > 0) return;
-    void creation.createAndLeave();
+    if (!canEdit && !creation.beingCreated) return;
+    creation.create(title.require);
   };
 
   const disabled = !canEdit;
@@ -470,7 +462,7 @@ export default function CompanyWorkspacePage() {
 
   const properties = data ? (
     <PropertyGroup>
-      <PropertyRow label={t('companies.fields.country')} required>
+      <PropertyRow label={t('companies.fields.country')} required missing={creation.marked.has('country_iso')}>
         <CountryField
           value={data.country_iso}
           onChange={changeCountry}
@@ -479,7 +471,7 @@ export default function CompanyWorkspacePage() {
           error={errors.country_iso}
         />
       </PropertyRow>
-      <PropertyRow label={t('companies.fields.baseCurrency')} required>
+      <PropertyRow label={t('companies.fields.baseCurrency')} required missing={creation.marked.has('base_currency')}>
         <CurrencyField
           value={data.base_currency ?? ''}
           onChange={(currency) => {
@@ -534,6 +526,7 @@ export default function CompanyWorkspacePage() {
       label={row.label}
       placeholder={row.placeholder}
       required={row.required}
+      missing={creation.marked.has(row.field)}
       value={row.field === 'city' ? displayedCompanyCity(data?.[row.field]) : (data?.[row.field] ?? '')}
       disabled={disabled}
       error={errors[row.field]}
@@ -604,6 +597,7 @@ export default function CompanyWorkspacePage() {
             onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
             busy={!canEdit || creation.cancelling}
             writing={creation.writing}
+            done={!isCreate}
           />
         ) : (fieldSaves > 0 || fieldSaved || (data && canDelete)) ? (
           <>
@@ -783,6 +777,7 @@ function CompanyTextRow({
   label,
   placeholder,
   required,
+  missing,
   value,
   disabled,
   error,
@@ -792,6 +787,7 @@ function CompanyTextRow({
   label: string;
   placeholder: string;
   required?: boolean;
+  missing?: boolean;
   value: string;
   disabled: boolean;
   error?: string;
@@ -800,7 +796,7 @@ function CompanyTextRow({
 }) {
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   return (
-    <PropertyRow label={label} required={required}>
+    <PropertyRow label={label} required={required} missing={missing}>
       <TextField
         value={draft}
         onChange={(event) => {

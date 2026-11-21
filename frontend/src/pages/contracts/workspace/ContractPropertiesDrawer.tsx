@@ -36,14 +36,15 @@ export type ContractFormValues = {
   updated_at: string | null;
 };
 
-/** The required fields a new contract lacks, when Create is clicked. */
-export type ContractFieldErrors = Partial<Record<'supplier_id' | 'company_id' | 'start_date' | 'duration_months' | 'currency', string>>;
+/** The fields a contract requires: Create marks the ones it lacks. */
+export type ContractRequiredField = 'supplier_id' | 'company_id' | 'start_date' | 'duration_months' | 'currency';
 
 type Props = {
   values: ContractFormValues;
   /** A new contract: no creation or update dates yet. */
   isCreate?: boolean;
-  errors?: ContractFieldErrors;
+  /** The required fields Create found missing: their label turns red. */
+  missing?: ReadonlySet<string>;
   names: { supplier: string | null; company: string | null; owner: string | null };
   /** The saved supplier as its picker shows it (the detail's `supplier_option`, reference included). */
   supplierOption?: SupplierOption | null;
@@ -64,12 +65,10 @@ const hideInnerLabelSx = {
 
 const twoColumnsSx = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: '10px' } as const;
 
-const errorLine = (message: string | undefined) => (
-  message ? <Box component="span" sx={{ color: 'error.main' }}>{message}</Box> : undefined
-);
+const NONE_MISSING: ReadonlySet<string> = new Set();
 
 /** The contract's properties panel: parties, duration, amount, lifecycle. Every field saves itself. */
-export default function ContractPropertiesDrawer({ values, isCreate = false, errors = {}, names, supplierOption, disabled, onPatch, onTyped, onCommit }: Props) {
+export default function ContractPropertiesDrawer({ values, isCreate = false, missing = NONE_MISSING, names, supplierOption, disabled, onPatch, onTyped, onCommit }: Props) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const placement = useContractPlacementFilter(values.company_id || null, values.cost_center_id || null);
@@ -82,7 +81,7 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, err
   return (
     <>
       <PropertyGroup>
-        <PropertyRow label={t('contracts.fields.supplier')} required>
+        <PropertyRow label={t('contracts.fields.supplier')} required missing={missing.has('supplier_id')}>
           <Box sx={hideInnerLabelSx}>
             <SupplierSelect
               hideLabel
@@ -91,13 +90,11 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, err
               onChange={(next) => { if (next && next !== values.supplier_id) onPatch({ supplier_id: next }); }}
               disabled={disabled}
               required
-              error={!!errors.supplier_id}
-              helperText={errors.supplier_id}
               selectedOption={matching(supplierOption, values.supplier_id)}
             />
           </Box>
         </PropertyRow>
-        <PropertyRow label={t('contracts.fields.company')} required>
+        <PropertyRow label={t('contracts.fields.company')} required missing={missing.has('company_id')}>
           <Box sx={hideInnerLabelSx}>
             <CompanySelect
               hideLabel
@@ -107,8 +104,6 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, err
               allowedCompanyIds={placement?.companyIds}
               disabled={disabled}
               required
-              error={!!errors.company_id}
-              helperText={errors.company_id}
               disableClearable
               selectedOption={values.company_id && names.company ? { id: values.company_id, name: names.company } : null}
             />
@@ -145,7 +140,7 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, err
       </PropertyGroup>
 
       <PropertyGroup>
-        <PropertyRow label={t('contracts.fields.startDate')} required>
+        <PropertyRow label={t('contracts.fields.startDate')} required missing={missing.has('start_date')}>
           <Box sx={hideInnerLabelSx}>
             <DateEUField
               label=""
@@ -153,13 +148,11 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, err
               onChangeYmd={(next) => { if (next && next !== values.start_date) onPatch({ start_date: next }); }}
               disabled={disabled}
               required
-              error={!!errors.start_date}
-              helperText={errors.start_date}
             />
           </Box>
         </PropertyRow>
         <Box sx={twoColumnsSx}>
-          <PropertyRow label={t('contracts.fields.durationMonths')} required helperText={errorLine(errors.duration_months)}>
+          <PropertyRow label={t('contracts.fields.durationMonths')} required missing={missing.has('duration_months')}>
             <NumberField
               kind="months"
               value={values.duration_months}
@@ -202,7 +195,7 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, err
           />
         </PropertyRow>
         <Box sx={twoColumnsSx}>
-          <PropertyRow label={t('contracts.fields.currency')} required helperText={errorLine(errors.currency)}>
+          <PropertyRow label={t('contracts.fields.currency')} required missing={missing.has('currency')}>
             <CurrencyField
               value={values.currency}
               onChange={(next) => { if (next !== values.currency) onPatch({ currency: next }); }}

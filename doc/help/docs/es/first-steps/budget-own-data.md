@@ -26,7 +26,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 **Qué hacer.** Importe su archivo de presupuesto, o cree una primera línea a mano.
 
 - **Importar un archivo.** Haga clic en **Importar** y luego en **Descargar un ejemplo**: un libro con algunas líneas de ejemplo y lo que admite cada columna. Rellene sus líneas e importe el archivo. Con la lista vacía, **Exportar** solo da la fila de títulos.
-- **Crear una línea.** Haga clic en **Nueva línea**, escriba su nombre en el título y pulse Intro. Rellene el panel **Propiedades**: empresa pagadora, cuenta, moneda. Introduzca los importes en la pestaña **Presupuesto** y haga clic en **Crear**. **Cancelar** descarta la línea.
+- **Crear una línea.** Haga clic en **Nueva línea**, escriba su nombre en el título y pulse Intro. Rellene el panel **Propiedades**: empresa pagadora, cuenta, moneda. Introduzca los importes en la pestaña **Presupuesto** y haga clic en **Listo**. **Cancelar** descarta la línea.
 
 **Qué ve.** Una importación comprueba todo el archivo e indica las líneas que se crearán, las que se actualizarán y las que no cambian. Un archivo con un error no carga nada. Una línea creada a mano aparece en la lista con sus importes del año.
 
@@ -34,7 +34,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Gestión presupuestaria > Contratos**
 
-**Qué hacer.** Haga clic en **Nuevo contrato**, rellene el formulario y luego **Crear**. En la pestaña **Presupuesto** del contrato, vincule la línea que paga con el selector bajo la tabla.
+**Qué hacer.** Haga clic en **Nuevo contrato**, indique su nombre y los campos obligatorios, y luego haga clic en **Listo**. En la pestaña **Presupuesto** del contrato, vincule la línea que paga con el selector bajo la tabla.
 
 **Qué ve.** El contrato fecha cada periodo, indica cuándo vence una decisión de renovación y compara lo que compromete con las líneas presupuestarias vinculadas.
 

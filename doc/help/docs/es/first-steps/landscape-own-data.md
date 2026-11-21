@@ -26,7 +26,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 **Qué hacer.** Importe la lista de sus aplicaciones, o créelas una a una.
 
 - **Importar un archivo.** Haga clic en **Importar** y luego en **Descargar un ejemplo**: un libro con algunas aplicaciones y lo que admite cada columna. Rellene las suyas e **importe** el archivo.
-- **Crear una aplicación.** Haga clic en **Nueva aplicación**, escriba su nombre en el título y pulse Intro. Rellene el panel de propiedades y haga clic en **Crear**. **Cancelar** la descarta.
+- **Crear una aplicación.** Haga clic en **Nueva aplicación**, escriba su nombre en el título y pulse Intro. Rellene el panel de propiedades y haga clic en **Listo**. **Cancelar** la descarta.
 
 **Qué ve.** Una ficha por aplicación. Complete primero la criticidad y los **Responsables IT** de las más importantes.
 
@@ -42,7 +42,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Panorama IT > Activos**
 
-**Qué hacer.** Haga clic en **Añadir activo**, o **importe** un archivo para muchos activos. Elija el tipo de activo y la ubicación, y luego **Crear**. Para vincular un activo con una aplicación, abra la aplicación, pestaña **Despliegues**: **Añadir despliegue** para el entorno, y luego **Añadir servidor**.
+**Qué hacer.** Haga clic en **Añadir activo**, o **importe** un archivo para muchos activos. Escriba su nombre y pulse Intro, elija el tipo de activo y la ubicación, y luego haga clic en **Listo**. Para vincular un activo con una aplicación, abra la aplicación, pestaña **Despliegues**: **Añadir despliegue** para el entorno, y luego **Añadir servidor**.
 
 **Qué ve.** El bloque de despliegue de la aplicación lista sus servidores, y el activo lista la aplicación en **Aplicaciones alojadas**, en su pestaña **Operaciones**. El fin de soporte de sus tecnologías llega ahora hasta el activo. Las vulnerabilidades de un sistema operativo no están en las alertas al principio, porque Kadratis no conoce el nivel de parches de un servidor. Para verlas, abra **Panorama IT > Vulnerabilidades** y elija **Excluidas** en el filtro **Alertas**, o **Mostrar las excluidas** cuando la lista esté vacía.
 

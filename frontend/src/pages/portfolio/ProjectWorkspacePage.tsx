@@ -824,22 +824,19 @@ export default function ProjectWorkspacePage() {
   }, [creation]);
   // The name committed in the header creates the project at once, with the classification
   // defaults the form would have sent (once they are read); the page moves to it, every tab open,
-  // with Create and Cancel (or closes it, kept, when Create was clicked meanwhile).
+  // with Done and Cancel.
   const titleCreation = useTitleCreation<{ id: string; item_number: number }>({
     isCreate,
     requiredMessage: t('common:creation.titleRequired'),
     ready: classificationReady,
     post: async (name) => (await api.post('/portfolio/projects', { ...withClassificationDefaults(form), origin: 'fast_track', name })).data,
-    onCreated: (created, token, finish) => {
+    onCreated: (created, token) => {
       void queryClient.invalidateQueries({ queryKey: ['portfolio-projects'], refetchType: 'none' });
-      if (finish) {
-        navigate(creationReturn, { replace: true });
-        return;
-      }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const reference = formatItemRef('project', created.item_number);
-      // The page keeps its header while the full project loads.
-      queryClient.setQueryData(['portfolio-project', reference, getProjectWorkspaceInclude('summary')], { activities: [], ...created });
+      // The page keeps its header while the full project loads. The header is not the project (no
+      // `can_contribute`, which opens the purpose for typing): stale at once, so the page reads it.
+      queryClient.setQueryData(['portfolio-project', reference, getProjectWorkspaceInclude('summary')], { activities: [], ...created }, { updatedAt: 0 });
       const qs = searchParams.toString();
       navigate(`/portfolio/projects/${reference}/summary${qs ? `?${qs}` : ''}`, { replace: true });
     },
@@ -865,8 +862,8 @@ export default function ProjectWorkspacePage() {
     navigate(listPath);
   }, [creationReturn, dialogs, handleSave, handleReset, hasUnsavedChanges, isCreate, listPath, navigate, t]);
 
-  // Create: on the new page, the title is the only field; on a project being created, what is still
-  // being typed is saved, then the project is kept and closed.
+  // Create on the new page, where the title is the only field; Done on a project being created: what
+  // is still being typed is saved, then the project is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
       titleCreation.create();
@@ -1056,6 +1053,7 @@ export default function ProjectWorkspacePage() {
             )}
             {isCreate || creation.beingCreated ? (
               <CreationActions
+                done={!isCreate}
                 busy={creation.cancelling}
                 writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}

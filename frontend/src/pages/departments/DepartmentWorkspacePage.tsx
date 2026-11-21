@@ -205,7 +205,7 @@ export default function DepartmentWorkspacePage() {
   };
 
   // The draft is created once it has its name and company; the department then opens, every tab
-  // available, with Create (kept, back where the creation started) and Cancel (deleted).
+  // available, with Done (kept, back where the creation started) and Cancel (deleted).
   const leave = useCreationLeave(handleClose);
   const title = useCreationTitle({
     requiredMessage: t('departments.messages.nameRequired'),
@@ -222,6 +222,9 @@ export default function DepartmentWorkspacePage() {
     recordLabel: t('departments.creationRecord'),
     queryKeyPrefixes: ['departments'],
     ready: () => !!title.current().trim() && !!draftRef.current.company_id,
+    // The company is the one field a department requires: Create marks it on its label.
+    missing: () => ((isCreate ? draftRef.current : stored)?.company_id ? [] : ['company_id']),
+    valueOf: () => (isCreate ? draftRef.current : stored)?.company_id,
     post: async () => {
       setCreateError(null);
       try {
@@ -269,16 +272,8 @@ export default function DepartmentWorkspacePage() {
   });
   React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
   const handleCreate = () => {
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
-    }
-    if (!canEdit) return;
-    const name = title.require();
-    const { company_id } = draftRef.current;
-    if (!company_id) setErrors((prev) => ({ ...prev, company_id: t('departments.messages.companyRequired') }));
-    if (!name || !company_id) return;
-    void creation.createAndLeave();
+    if (!canEdit && !creation.beingCreated) return;
+    creation.create(title.require);
   };
 
   const disabled = !canEdit;
@@ -290,7 +285,7 @@ export default function DepartmentWorkspacePage() {
 
   const properties = data ? (
     <PropertyGroup>
-      <PropertyRow label={t('departments.fields.company')} required>
+      <PropertyRow label={t('departments.fields.company')} required missing={creation.marked.has('company_id')}>
         <CompanySelect
           hideLabel
           label={t('departments.fields.company')}
@@ -385,6 +380,7 @@ export default function DepartmentWorkspacePage() {
             onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
             busy={!canEdit || creation.cancelling}
             writing={creation.writing}
+            done={!isCreate}
           />
         ) : data && canDelete ? (
           <RecordDeleteButton

@@ -4,9 +4,9 @@ Las Ubicaciones documentan dónde está alojada su infraestructura IT: centros d
 
 ## Primeros pasos
 
-Navegue a **Panorama IT > Ubicaciones** para abrir el registro de ubicaciones. Haga clic en **Añadir ubicación** para crear una nueva entrada: se abre la página de la ubicación nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página. La ubicación se crea en cuanto tiene su nombre y su **Tipo de alojamiento**, que empieza en el primer tipo de la lista. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente. Pulse Escape en el título vacío para salir sin crear nada.
+Navegue a **Panorama IT > Ubicaciones** para abrir el registro de ubicaciones. Haga clic en **Añadir ubicación** para crear una nueva entrada: se abre la página de la ubicación nueva, con su panel de propiedades abierto. Escriba el nombre en el título de la parte superior de la página. La ubicación se crea en cuanto tiene su nombre y su **Tipo de alojamiento**, que empieza en el primer tipo de la lista. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente. Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
 
-Mientras la ubicación se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva la ubicación y le lleva de vuelta al punto de partida: la lista o la pantalla anterior. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En una ubicación ya creada, la elimina. Si introdujo algo más que lo necesario para crearla, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar ubicaciones. Si sale de la página de otra forma, la ubicación se conserva.
+Mientras la ubicación se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Ctrl+S** funciona como el botón mostrado. **Crear** guarda la ubicación cuando sus campos obligatorios están indicados y la deja abierta. Si falta alguno, su etiqueta se pone en rojo y el cursor va a él. Una vez creada la ubicación, **Crear** pasa a ser **Listo**: guarda lo que está escribiendo y le lleva de vuelta al punto de partida, la lista o la pantalla anterior. **Cancelar** sale sin conservar nada. En una ubicación ya creada, la elimina. Si introdujo algo más que lo necesario para crearla, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar ubicaciones. Si sale de la página de otra forma, la ubicación se conserva.
 
 **Campos obligatorios**:
 - **Nombre**: Un nombre descriptivo para mostrar
@@ -81,7 +81,7 @@ Cada sub-ubicación tiene:
 - **Nombre**: Una etiqueta corta (p. ej., "Edificio A, Sala 1, Rack 5")
 - **Descripción**: Detalle adicional opcional
 
-Las sub-ubicaciones están disponibles en cuanto la ubicación existe (después de hacer clic en **Crear**). Cada fila se guarda por sí sola al salir del campo, y eliminar una sub-ubicación pide confirmación primero.
+Las sub-ubicaciones están disponibles en cuanto la ubicación está creada. Cada fila se guarda por sí sola al salir del campo, y eliminar una sub-ubicación pide confirmación primero.
 
 Los activos pueden asignarse a una sub-ubicación específica dentro de una ubicación, lo que le permite rastrear exactamente dónde se encuentra el hardware. La pestaña Relaciones muestra la sub-ubicación de cada activo que tiene una.
 

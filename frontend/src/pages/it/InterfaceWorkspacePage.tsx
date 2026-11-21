@@ -538,8 +538,8 @@ export default function InterfaceWorkspacePage() {
   // Where the creation started: a new interface created, cancelled or left goes back there.
   const creationReturn = useCreationReturn(listPath);
   // The draft creates the interface once it has its title, both applications and its data category:
-  // the page moves to it, every tab open, with Create and Cancel. Create on the draft creates it and
-  // goes back where the creation started.
+  // the page moves to it, every tab open, with Done and Cancel. Create on a complete draft creates it
+  // the same way.
   const creation = useDraftCreation({
     isCreate,
     family: 'interfaces',
@@ -640,7 +640,8 @@ export default function InterfaceWorkspacePage() {
   }, [canManage, createForm, isCreate]);
 
   // Create marks what is missing and focuses the title or the first field; on a complete draft it
-  // creates the interface, on an interface being created it ends the creation.
+  // creates the interface and opens it. Done on an interface being created marks what the screen sees
+  // missing the same way, else ends the creation.
   const handleCreate = () => {
     if (!canManage || creation.cancelling) return;
     const state = isCreate ? createFormRef.current : getCurrentState();
@@ -655,8 +656,7 @@ export default function InterfaceWorkspacePage() {
       focusField(missing[0]);
       return;
     }
-    if (isCreate) void creation.createAndLeave();
-    else creation.finishCreation();
+    creation.create();
   };
 
   // The tab reports what it lists once open; until then the detail's own lists count.
@@ -728,6 +728,7 @@ export default function InterfaceWorkspacePage() {
         <CreationActions
           busy={creation.cancelling}
           writing={creation.writing}
+          done={!isCreate}
           onCreate={handleCreate}
           onCancel={() => { void (isCreate ? closeWorkspace() : creation.cancelCreation()); }}
         />

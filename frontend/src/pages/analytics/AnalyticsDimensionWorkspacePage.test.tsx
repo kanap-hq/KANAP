@@ -61,6 +61,7 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   };
 });
 
+import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/analytics';
 import AnalyticsDimensionWorkspacePage from './AnalyticsDimensionWorkspacePage';
 
@@ -631,12 +632,27 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(code.closest('.MuiFormControl-root')).toContainElement(message);
   });
 
-  it('refuses to create without a name', async () => {
+  it('refuses to create without a name: the message under the title, the empty code marked, no sentence under it', async () => {
     renderAt('/master-data/analytics/dimensions/new/overview');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('analytics.messages.nameRequired')).toBeInTheDocument();
-    expect(await screen.findByText('analytics.messages.codeRequired')).toBeInTheDocument();
+    expect(markedLabels()).toEqual(['analytics.fields.code']);
+    expect(screen.getByLabelText('analytics.fields.code')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['analytics.messages.nameRequired']);
     expect(mocked.createAnalyticsAxis).not.toHaveBeenCalled();
+  });
+
+  it('puts the cursor in the empty code on Create when the name proposes none', async () => {
+    renderAt('/master-data/analytics/dimensions/new/overview');
+    const code = screen.getByLabelText('analytics.fields.code');
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: '***' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(markedLabels()).toEqual(['analytics.fields.code']);
+    await waitFor(() => expect(code).toHaveFocus());
+    fireEvent.change(code, { target: { value: 'nature' } });
+    fireEvent.blur(code);
+    expect(markedLabels()).toEqual([]);
   });
 
   it('turns open values on and off from its switch, off by default, with what it means', async () => {

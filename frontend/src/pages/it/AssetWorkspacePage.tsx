@@ -1613,8 +1613,7 @@ function AssetWorkspaceRoute() {
   };
 
   // The name committed in the header creates the asset at once (its type, environment, provider and
-  // lifecycle as shown, no site yet), and the page moves to it with Create and Cancel. Create clicked
-  // meanwhile checks it there.
+  // lifecycle as shown, no site yet), and the page moves to it with Done and Cancel.
   const titleCreation = useTitleCreation<AssetRecord>({
     isCreate,
     requiredMessage: t('messages.nameRequired'),
@@ -1629,19 +1628,16 @@ function AssetWorkspaceRoute() {
       is_cluster: isCluster,
       hostname: sanitizeHostname(assetName) || null,
     })).data,
-    onCreated: (created, token, check) => {
+    onCreated: (created, token) => {
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
-      navigate(`/it/assets/${created.asset_reference || created.id}/overview`, {
-        replace: true,
-        state: check ? { ...(routerLocation.state as object | null), creationCheck: true } : routerLocation.state,
-      });
+      navigate(`/it/assets/${created.asset_reference || created.id}/overview`, { replace: true, state: routerLocation.state });
     },
     errorMessage: (e) => getApiErrorMessage(e, t, t('messages.saveAssetFailed')),
     onStart: () => setError(null),
   });
 
-  // Create on an asset being created: the server checks its site. Without one, the site is marked
-  // and gets the focus; otherwise the asset is kept and closed.
+  // Create on the new page; Done on an asset being created: without a site, the site is marked and
+  // gets the focus; otherwise the server checks the asset, which is then kept and closed.
   const createAction = async () => {
     if (isCreate) {
       titleCreation.create();
@@ -1650,6 +1646,11 @@ function AssetWorkspaceRoute() {
     if (!dataRef.current?.id || !creation.token || creation.completing) return;
     await flushNotes();
     setError(null);
+    if (!locationIdRef.current) {
+      missingMarks.mark(['location']);
+      focusField('location');
+      return;
+    }
     try {
       const fields = await creation.completeCreation();
       missingMarks.mark(fields ?? []);
@@ -1658,14 +1659,6 @@ function AssetWorkspaceRoute() {
       setError(getApiErrorMessage(e, t, t('workspace.asset.creation.completeFailed')));
     }
   };
-  // Create clicked while the title created the asset: the check runs once the asset is on screen.
-  const creationCheckRef = React.useRef((routerLocation.state as { creationCheck?: boolean } | null)?.creationCheck === true);
-  React.useEffect(() => {
-    if (!creationCheckRef.current || !data || !creation.beingCreated) return;
-    creationCheckRef.current = false;
-    void createAction();
-  });
-
   // Cancel on an asset being created deletes it (`useRecordCreation`), once its description is saved.
   const cancelAction = async () => {
     if (isCreate) {
@@ -1832,6 +1825,7 @@ function AssetWorkspaceRoute() {
       )}
       {isCreate || creation.beingCreated ? (
         <CreationActions
+          done={!isCreate}
           busy={creation.cancelling || creation.completing}
           writing={titleCreation.writing}
           onCreate={() => { void createAction(); }}

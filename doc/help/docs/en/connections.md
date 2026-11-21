@@ -15,15 +15,16 @@ Each field then saves on its own. A connection needs:
   - **Endpoints**: A source and a destination for Server to server (each a server, a cluster or an entity), or at least two servers for Multi-server
   - **Protocols**: At least one network protocol
 
-Press Escape on the empty title to leave without creating anything.
+Press Escape in the title to leave without creating anything, even with a name typed.
 
 **Tip**: Connections can be linked to interface bindings to show which infrastructure supports each application integration.
 
 ### Creating or cancelling { #cancelling-a-creation }
 
-While the connection is being created, its header shows **Create** and **Cancel**. They stay until you leave the connection.
+While the connection is being created, its header shows **Create** and **Cancel**. They stay until you leave the connection. **Ctrl+S** works like the button shown.
 
-- **Create** checks that the connection has at least one protocol and both endpoints, or two servers for a multi-server connection. The label of each missing field turns red, and the first one gets the focus. When nothing is missing, Kadratis keeps the connection and closes it. You go back to where you started
+- **Create** does the same as Enter: it creates the connection and leaves it open with its reference. The cursor goes to the first required field still empty. With an empty title, the title asks for one
+- Once the connection is created, **Create** becomes **Done**. **Done** saves what you are still typing and checks that the connection has at least one protocol and both endpoints, or two servers for a multi-server connection. The label of each missing field turns red, and the first one gets the focus. When nothing is missing, you go back to where you started
 - **Cancel** deletes the connection. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete connections
 
 Leaving the connection another way while something is missing asks what to do. **Complete it** keeps you on the connection, on the first missing field. **Delete it** deletes the connection. Reloading the page or closing the tab while the new connection still lacks a field asks your browser to confirm. If you leave anyway, the connection is deleted.
