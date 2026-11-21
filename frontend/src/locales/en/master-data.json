@@ -473,6 +473,8 @@
     "entity": "contact",
     "newContact": "New contact",
     "contactFallback": "Contact",
+    "createOption": "+ Create contact \"{{name}}\"",
+    "noContactAskAdmin": "No contact found. Ask an administrator of your workspace to create it.",
     "columns": {
       "reference": "Reference",
       "lastName": "Last name",
@@ -528,6 +530,7 @@
     "messages": {
       "emailInvalid": "Enter a valid email address.",
       "emailTaken": "Another contact already uses this email.",
+      "emailRequired": "Enter the email address.",
       "phoneInvalid": "Enter a dial code and a number of 7 to 15 digits in all.",
       "typeRequired": "Choose a contact type for this supplier.",
       "saveFailed": "Failed to save the contact.",

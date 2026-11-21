@@ -473,6 +473,8 @@
     "entity": "contacto",
     "newContact": "Nuevo contacto",
     "contactFallback": "Contacto",
+    "createOption": "+ Crear el contacto «{{name}}»",
+    "noContactAskAdmin": "No se encontró ningún contacto. Pida a un administrador de su espacio de trabajo que lo cree.",
     "columns": {
       "reference": "Referencia",
       "lastName": "Apellido",
@@ -528,6 +530,7 @@
     "messages": {
       "emailInvalid": "Introduzca una dirección de correo electrónico válida.",
       "emailTaken": "Otro contacto ya usa este correo electrónico.",
+      "emailRequired": "Introduzca la dirección de correo electrónico.",
       "phoneInvalid": "Introduzca un prefijo y un número de 7 a 15 dígitos en total.",
       "typeRequired": "Elija un tipo de contacto para este proveedor.",
       "saveFailed": "No se pudo guardar el contacto.",
