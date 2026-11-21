@@ -52,7 +52,7 @@ Füllen Sie dann das Wesentliche in der Kopfzeile und im Eigenschaftenbereich au
 | **Geschäftskritikalität** | Geschäftliche Bedeutung | `Geschäftskritisch` |
 | **Lebenszyklus** | Aktueller Status (bei der Erstellung Aktiv) | `Aktiv` |
 
-Solange Sie auf ihrer Seite sind, behält **Erstellen** in der Kopfzeile die neue Anwendung und schließt sie, und **Abbrechen** löscht sie.
+Solange Sie auf ihrer Seite sind, speichert **Fertig** in der Kopfzeile die neue Anwendung und bringt Sie zurück, und **Abbrechen** löscht sie.
 
 !!! tip "Beginnen Sie mit dem, was Sie wissen"
     Beschreibung, Herausgeber, Version, Lizenzierung: alles nützlich, aber in diesem Stadium optional. Sie können später anreichern. Das Ziel ist, die App ins System zu bekommen.
@@ -204,7 +204,7 @@ Der Tab **Netzwerk** ist geöffnet, während Sie das Asset erstellen. Füllen Si
 !!! info "Mehrere IP-Adressen"
     Ein Server kann mehrere IP-Adressen haben. Fügen Sie so viele wie nötig hinzu (z. B. Management-Schnittstelle, Produktions-VLAN, Backup-Netz). Jeder Eintrag kann seinen eigenen Typ und sein eigenes Subnetz haben, Netzwerkzone und VLAN werden automatisch abgeleitet.
 
-Klicken Sie auf **Erstellen**, um den vollständigen Arbeitsbereich freizuschalten. Der Tab **Übersicht** erhält dann einen Abschnitt **Support** für den Support-Vertrag des Lieferanten und die Kontakte. Für physische Asset-Typen erfasst ein Tab **Hardware** Seriennummern und Herstellerdetails.
+Sobald das Asset erstellt ist, öffnet sich der vollständige Arbeitsbereich. Der Tab **Übersicht** erhält dann einen Abschnitt **Support** für den Support-Vertrag des Lieferanten und die Kontakte. Für physische Asset-Typen erfasst ein Tab **Hardware** Seriennummern und Herstellerdetails.
 
 ### Betriebs-Tab
 

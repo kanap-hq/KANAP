@@ -29,9 +29,9 @@ Wenn Sie auf **Neu** klicken, öffnet sich die Aufgabenseite mit einem leeren Ti
    - **Daten**: Start- und Fälligkeitsdaten festlegen
    - **Verantwortlicher**, **Status**, **Priorität**: Bei Bedarf ändern
 
-4. Klicken Sie auf **Erstellen**, um die Aufgabe zu behalten. Sie kehren dorthin zurück, wo Sie begonnen haben: Eine im Reiter **Aufgaben** eines Projekts begonnene Aufgabe kehrt zu diesem Reiter zurück. Klicken Sie stattdessen auf **Abbrechen**, um die Aufgabe zu löschen. Kadratis fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben.
+4. Klicken Sie auf **Fertig**, wenn Sie die Eingabe abgeschlossen haben. Sie kehren dorthin zurück, wo Sie begonnen haben: Eine im Reiter **Aufgaben** eines Projekts begonnene Aufgabe kehrt zu diesem Reiter zurück. Klicken Sie stattdessen auf **Abbrechen**, um die Aufgabe zu löschen. Kadratis fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben.
 
-**Escape** im leeren Titel wirkt wie **Abbrechen**. Wenn Sie die Aufgabe auf andere Weise verlassen, bleibt sie erhalten.
+**Escape** im Titel einer neuen Aufgabe verlässt die Seite, ohne etwas zu erstellen, auch wenn Sie schon einen Titel eingegeben haben. Wenn Sie die Aufgabe auf andere Weise verlassen, bleibt sie erhalten.
 
 **Tipp**: Sie können Bilder direkt in die Beschreibung einfügen. Sie werden automatisch hochgeladen.
 

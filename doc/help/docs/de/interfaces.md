@@ -18,9 +18,10 @@ Sie können sie in beliebiger Reihenfolge ausfüllen. Nichts wird gespeichert, s
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange die Schnittstelle erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Schnittstelle verlassen.
+Solange die Schnittstelle erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Schnittstelle verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
-- **Erstellen** behält die Schnittstelle und bringt Sie dorthin zurück, wo Sie begonnen haben. Fehlt noch etwas, zeigt ein leerer Titel seine Meldung, die Beschriftung jedes fehlenden Felds wird rot, und der Titel oder das erste fehlende Feld erhält den Fokus. Ist der Entwurf vollständig, erstellt Kadratis die Schnittstelle und bringt Sie sofort zurück
+- **Erstellen** speichert die Schnittstelle, sobald der Entwurf vollständig ist, und lässt sie geöffnet. Fehlt noch etwas, zeigt ein leerer Titel seine Meldung, die Beschriftung jedes fehlenden Felds wird rot, und der Titel oder das erste fehlende Feld erhält den Fokus
+- Sobald die Schnittstelle erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** löscht die Schnittstelle. Wenn Sie nach ihrer Erstellung etwas hinzugefügt haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Schnittstellen abbrechen
 
 Verlassen Sie die Schnittstelle auf andere Weise (über das Menü oder den Zurück-Pfeil), bleibt sie erhalten: Sie ist vollständig.

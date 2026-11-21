@@ -37,13 +37,14 @@ Der neue Vorfall ist **Offen**, mit dem Schweregrad **Mittel**, jetzt erkannt, u
 - **Kategorie**: Infrastruktur, Sicherheit, Anwendung, Daten, Lieferant, Sonstiges (konfigurierbar, siehe [Kategorien](#kategorien))
 - **Verantwortlicher**: wer die Bearbeitung übernimmt
 
-Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erfassen.
+Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden. Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erfassen, auch wenn Sie schon einen Titel eingegeben haben.
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange der Vorfall erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie den Vorfall verlassen.
+Solange der Vorfall erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie den Vorfall verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
-- **Erstellen** behält den Vorfall und schließt ihn. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Erstellen** wirkt wie die Eingabetaste: Es erstellt den Vorfall und lässt ihn geöffnet, mit seiner Referenz. Bei leerem Titel verlangt der Titel einen
+- Sobald der Vorfall erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm
 - **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstellter Vorfall wird gelöscht. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Vorfällen abbrechen
 
 **Vorfall abbrechen** ist ausgeblendet, solange der Vorfall erstellt wird. Das Abbrechen der Erstellung wird abgelehnt, sobald der Vorfall geschlossen oder abgebrochen ist oder Daten zur behördlichen Meldung enthält (siehe [Einen Vorfall löschen](#einen-vorfall-loschen)). Verlassen Sie den Vorfall auf andere Weise, bleibt er im Register. Die Referenz einer abgebrochenen Erstellung wird nicht wiederverwendet.

@@ -78,7 +78,7 @@ Die direkte Projekterstellung ist für Arbeit gedacht, die ohne separate Anfrage
 2. Geben Sie den Namen des Projekts ein.
 3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt das Projekt sofort, mit der Herkunft **Fast-track**. Seine Referenz (`PRJ-12`) erscheint und alle Reiter öffnen sich.
 
-Füllen Sie dann den Eigenschaftenbereich und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+Füllen Sie dann den Eigenschaftenbereich und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben.
 
 Ein so erstelltes Projekt kann im Eigenschaftenbereich zwischen **Fast-track** und **Altbestand** wechseln. Ein aus einer Anfrage umgewandeltes Projekt behält die Herkunft **Anfrage** und seine Quellverknüpfung.
 
@@ -86,9 +86,10 @@ Verwenden Sie **Fast-track** für Arbeit, die wirklich direkt in die Lieferung e
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange das Projekt erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie das Projekt verlassen.
+Solange das Projekt erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie das Projekt verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
-- **Erstellen** behält das Projekt und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Erstellen** wirkt wie die Eingabetaste: Es erstellt das Projekt und lässt es geöffnet, mit seiner Referenz. Bei leerem Titel verlangt der Titel einen
+- Sobald das Projekt erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm
 - **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstelltes Projekt wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne jedes Löschrecht abbrechen
 
 Nur mit **Abbrechen** lässt sich ein Projekt löschen. Sobald Sie das Projekt verlassen, bleibt es bestehen: Setzen Sie seinen Status auf **Abgebrochen**, wenn es nicht zustande kommt. Ein mit einer Anfrage verknüpftes Projekt kann nicht gelöscht werden. Die Referenz eines abgebrochenen Projekts wird nicht wiederverwendet.
@@ -113,7 +114,7 @@ Die Arbeitsbereichs-Kopfzeile ist eine Steuerungsleiste, keine Dekoration.
 - Eine kompakte Metadatenzeile: **Status**, **Bewertung**, **Fortschritt**, **IT-Leiter**, **Geplantes Ende** und **Herkunft** (oder die Quell-Anfragen-Referenz für Projekte mit Anfragenherkunft)
 - **Vorherige** und **Nächste** bewegen sich durch das aktuelle Listenergebnis, nicht durch jedes Projekt im System
 - **Teilen** sendet die aktuelle Projekt-URL per E-Mail mit einer optionalen Nachricht
-- **Erstellen** und **Abbrechen**, solange das Projekt erstellt wird. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
+- **Erstellen** (dann **Fertig**) und **Abbrechen**, solange das Projekt erstellt wird. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
 
 Das Senden eines Links gewährt keinen Zugriff. Es teilt nur den Standort. Berechtigungen bleiben genau so, wie sie vor dem Versenden der E-Mail waren.
 
