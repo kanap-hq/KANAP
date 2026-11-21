@@ -8,14 +8,14 @@ Naviguez vers **Cartographie SI > Connexions** pour voir votre registre de conne
 
 1. Cliquez sur **Ajouter une connexion**. La page de la connexion s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez un nom descriptif.
-3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée la connexion aussitôt, de serveur à serveur, sans protocole ni endpoints. Sa référence (`CONN-12`) s'affiche et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée la connexion aussitôt, de serveur à serveur, sans protocole ni endpoints. Sa référence (`CONN-12`) s'affiche et tous les onglets s'ouvrent.
 
 Chaque champ s'enregistre ensuite de lui-même. Une connexion a besoin de :
   - **Topologie** : Serveur à serveur ou Multi-serveur
   - **Endpoints** : Une source et une destination pour Serveur à serveur (chacune un serveur, un cluster ou une entité), ou au moins deux serveurs pour Multi-serveur
   - **Protocoles** : Au moins un protocole réseau
 
-Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi.
+Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi.
 
 **Conseil** : Les connexions peuvent être liées aux liaisons d'interfaces pour montrer quelle infrastructure supporte chaque intégration applicative.
 

@@ -8,7 +8,7 @@ Navigate to **IT Landscape > Assets** to see your asset inventory. To create an 
 
 1. Click **Add asset**, then **Add asset** or **Add cluster**. The asset page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type the name of the asset, up to 200 characters.
-3. Press Enter, or click outside the title. Kadratis creates the asset at once. Its reference (`AST-12`) shows and all tabs open.
+3. Press Enter or Tab, or click **Create**. Kadratis creates the asset at once. Its reference (`AST-12`) shows and all tabs open.
 
 The new asset is a virtual machine in the Prod environment, with the lifecycle Active. When your asset types have no virtual machine, it takes the first type of the list. **Add cluster** creates it with the **Cluster** switch on. Each field then saves on its own, so you can change the type or the environment right away.
 
@@ -21,7 +21,7 @@ The new asset is a virtual machine in the Prod environment, with the lifecycle A
 - **Lifecycle**: Current status (Active, Deprecated, Retired, etc.)
 - **Environment**: Which environment this asset belongs to (Prod, Pre-prod, QA, Test, Dev, Sandbox)
 
-Press Escape in the title to leave without creating anything, even with a name typed. A refused name shows under the title.
+Pressing Escape in the title, clicking **Cancel** or leaving the page creates nothing, even with a name typed. A refused name shows under the title.
 
 **Unique names**: two assets cannot share a name or an FQDN. Letter case and spaces at either end do not count. Kadratis refuses the duplicate and names the asset that already has it (`AST-12`). Duplicates recorded earlier stay editable as long as you leave that value unchanged.
 

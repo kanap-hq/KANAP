@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -111,14 +111,14 @@ describe('ContractWorkspacePage creation', () => {
     await waitFor(() => expect(within(drawer).getByRole('combobox', { name: 'contracts.fields.currency' })).toHaveValue('EUR · Euro'));
     expect(mocked.post).not.toHaveBeenCalled();
 
-    // A keystroke creates nothing; leaving the last required field does.
+    // A keystroke creates nothing; moving on from the last required field to another field does.
     const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
     fireEvent.change(duration, { target: { value: '24' } });
     expect(mocked.post).not.toHaveBeenCalled();
     // The contract has no id yet: nothing asks for its renewal.
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mocked.get.mock.calls.filter(([url]) => String(url).includes('/renewal'))).toEqual([]);
-    fireEvent.blur(duration);
+    fireEvent.blur(duration, { relatedTarget: title });
 
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts', {
       name: 'Oracle support',
@@ -152,15 +152,16 @@ describe('ContractWorkspacePage creation', () => {
     fireEvent.change(within(drawer).getByLabelText('start-date'), { target: { value: '2026-01-01' } });
     await waitFor(() => expect(within(drawer).getByRole('combobox', { name: 'contracts.fields.currency' })).toHaveValue('EUR · Euro'));
     const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
+    const place = within(drawer).getByLabelText('contracts.fields.costCenter');
     fireEvent.change(duration, { target: { value: '24' } });
-    fireEvent.blur(duration);
+    fireEvent.blur(duration, { relatedTarget: place });
     // Every usual required field is given, the place is not: nothing is sent, the server would refuse it.
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mocked.post).not.toHaveBeenCalled();
 
-    const place = within(drawer).getByLabelText('contracts.fields.costCenter');
+    // Moving on from the place to another field creates the contract.
     fireEvent.change(place, { target: { value: 'cc-1' } });
-    fireEvent.blur(place);
+    fireEvent.blur(place, { relatedTarget: title });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts', expect.objectContaining({
       company_id: 'co-1',
       cost_center_id: 'cc-1',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -542,7 +542,9 @@ describe('AccountWorkspacePage', () => {
     expect(mocked.post).not.toHaveBeenCalled();
     const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Telecom' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/accounts', {
       coa_id: 'coa-fr',
       account_number: 606300,

@@ -8,7 +8,7 @@ Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actif
 
 1. Cliquez sur **Ajouter un actif**, puis sur **Ajouter un actif** ou **Ajouter un cluster**. La page de l'actif s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom de l'actif, de 200 caractères au plus.
-3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée l'actif aussitôt. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée l'actif aussitôt. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
 
 Le nouvel actif est une machine virtuelle de l'environnement Prod, au cycle de vie Actif. Si vos types d'actifs ne comptent pas de machine virtuelle, il prend le premier type de la liste. **Ajouter un cluster** le crée avec l'interrupteur **Cluster** activé. Chaque champ s'enregistre ensuite de lui-même : vous pouvez changer le type ou l'environnement tout de suite.
 
@@ -21,7 +21,7 @@ Le nouvel actif est une machine virtuelle de l'environnement Prod, au cycle de v
 - **Cycle de vie** : Statut actuel (Actif, Obsolète, Retiré, etc.)
 - **Environnement** : À quel environnement cet actif appartient (Prod, Pré-prod, QA, Test, Dev, Sandbox)
 
-Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi. Un nom refusé s'affiche sous le titre.
+Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi. Un nom refusé s'affiche sous le titre.
 
 **Noms uniques** : deux actifs ne peuvent pas avoir le même nom ni le même FQDN. La casse et les espaces en début ou en fin ne comptent pas. Kadratis refuse le doublon et nomme l'actif qui porte déjà la valeur (`AST-12`). Les doublons enregistrés auparavant restent modifiables tant que vous ne changez pas cette valeur.
 

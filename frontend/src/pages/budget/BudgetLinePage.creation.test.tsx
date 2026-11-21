@@ -1,8 +1,8 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
@@ -158,6 +158,7 @@ function renderPage(entries: string[], options: Options = {}) {
           <MemoryRouter initialEntries={entries}>
             <NavigationTracker />
             <Location />
+            <nav><Link to="/start">menu start</Link></nav>
             <React.Suspense fallback={null}>
               <Routes>
                 <Route path="/start" element={<StartPage />} />
@@ -388,10 +389,9 @@ describe('Budget line creation at the title', () => {
     const input = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Monitoring' } });
     const create = screen.getByRole('button', { name: 'common:buttons.create' });
-    // In a browser the press blurs the title first, which commits it.
+    // In a browser the press takes the focus from the title; Create writes the name typed.
     fireEvent.pointerDown(create);
-    create.focus();
-    fireEvent.blur(input);
+    act(() => create.focus());
     fireEvent.click(create);
     await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
     expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
@@ -408,6 +408,22 @@ describe('Budget line creation at the title', () => {
     fireEvent.keyDown(document.body, { key: 's', ctrlKey: true });
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}/creation/complete`, { token: 'token-1' });
+  });
+
+  it('deletes, with its token, a line written after the person left by the menu', async () => {
+    await startNewLine();
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(async () => new Promise((resolve) => { answer = resolve; }) as never);
+    await commitTitle();
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/budget-lines/creation', expect.objectContaining({ product_name: 'Monitoring' })));
+    // The way back waits for the write; the menu does not.
+    fireEvent.click(screen.getByRole('link', { name: 'menu start' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    await act(async () => { answer({ data: created }); });
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}/creation`, { data: { token: 'token-1' } }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/start');
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('leaves the new page on one Escape with a title typed, nothing created', async () => {

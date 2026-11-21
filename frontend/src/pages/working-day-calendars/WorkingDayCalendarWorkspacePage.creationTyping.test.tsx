@@ -118,10 +118,13 @@ describe('WorkingDayCalendarWorkspacePage typing while the calendar is created',
     renderNew();
     const code = screen.getByLabelText('workingDayCalendars.fields.code');
     fireEvent.change(code, { target: { value: 'CAL-02' } });
-    fireEvent.blur(code);
+    // The code gives way to the title.
+    fireEvent.blur(code, { relatedTarget: screen.getByRole('textbox', { name: TITLE_FIELD }) });
     const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Contractors' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ ...STORED, creation_token: 'tok' }); });

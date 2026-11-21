@@ -107,11 +107,14 @@ describe('CostCenterWorkspacePage typing while the cost center is created', () =
     renderNew();
     const code = screen.getByLabelText('costCenters.fields.code');
     fireEvent.change(code, { target: { value: 'CC-77' } });
-    fireEvent.blur(code);
+    // The code gives way to the title.
+    fireEvent.blur(code, { relatedTarget: screen.getByRole('textbox', { name: TITLE_FIELD }) });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Paris' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });

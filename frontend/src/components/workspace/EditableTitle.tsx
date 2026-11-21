@@ -192,10 +192,16 @@ export function EditableTitleDisplay({
 export type EditableTitleProps = {
   /**
    * Opens in typing state at mount: the title is the field the person came to fill (a new record).
-   * While the title is still empty, a committed name stays in the field until the caller's `value`
-   * arrives (the record is created), or a refusal comes back under it.
+   * While the title is still empty, a name is sent by Enter or Tab only, and stays in the field until
+   * the caller's `value` arrives (the record is created), or a refusal comes back under it. Its blur
+   * sends nothing, wherever the focus goes: the name stays in the field (`onBlurDraft` aside).
    */
   autoEdit?: boolean;
+  /**
+   * The blur of a title still to give, on a record that has other fields to give (a draft,
+   * `useCreationTitle`): the typed name goes to the draft, which decides whether the blur gives it.
+   */
+  onBlurDraft?: (name: string) => void;
   canEdit: boolean;
   /** While typing an empty title: the light blue field of a title still to give. */
   emphasizeEmpty?: boolean;
@@ -217,7 +223,7 @@ export type EditableTitleProps = {
   onCancel?: () => void;
   onSave?: (nextTitle: string) => void;
   /**
-   * Tab in the field with a title typed: the title is committed as on a blur, and the caller moves
+   * Tab in the field with a title typed: the title is committed as on Enter, and the caller moves
    * the focus to what follows the title (the document's text). The title does not take it back
    * when a title still to give is created.
    */
@@ -241,6 +247,7 @@ export default function EditableTitle({
   onDraftChange,
   onCancel,
   onSave,
+  onBlurDraft,
   onTab,
   requiredMessage,
   typography = workspaceTitleTypography,
@@ -256,12 +263,12 @@ export default function EditableTitle({
   const closing = React.useRef(false);
   const pendingFocus = React.useRef(false);
   // A title still to give (`autoEdit` on an empty value): the name sent to the caller, kept in the
-  // field until the value arrives. The blur that follows an Enter does not send it twice.
+  // field until the value arrives.
   const pendingTitle = autoEdit && !value;
   const submitted = React.useRef<string | null>(null);
   // The name was sent by Tab: the focus has gone on (`onTab`, or the record's creation), the title does not take it back.
   const tabbed = React.useRef(false);
-  // The name was sent by Enter: the focus comes back to the title once it rests. Sent by a blur, the focus is elsewhere and stays there.
+  // The name was sent by Enter: the focus comes back to the title once it rests. Sent by Tab, the focus is elsewhere and stays there.
   const sentByEnter = React.useRef(false);
 
   React.useEffect(() => {
@@ -404,7 +411,15 @@ export default function EditableTitle({
           submitted.current = null;
           onDraftChange?.(next);
         }}
-        onBlur={() => finish(false)}
+        onBlur={() => {
+          if (!pendingTitle) {
+            finish(false);
+            return;
+          }
+          // A title still to give: leaving it creates nothing, the name stays in the field.
+          const typed = draft.trim();
+          if (typed && !closing.current) onBlurDraft?.(typed);
+        }}
         onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
           if (event.key === 'Enter') {
             event.preventDefault();

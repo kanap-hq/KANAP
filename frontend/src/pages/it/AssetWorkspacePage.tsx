@@ -1616,6 +1616,8 @@ function AssetWorkspaceRoute() {
   // lifecycle as shown, no site yet), and the page moves to it with Done and Cancel.
   const titleCreation = useTitleCreation<AssetRecord>({
     isCreate,
+    // Written after the person left: the incomplete record is deleted, no page is left to ask.
+    discardApiBase: '/assets',
     requiredMessage: t('messages.nameRequired'),
     // A title committed before the settings load waits for the type and provider they give.
     ready: !!kind && !!provider,
@@ -2170,7 +2172,7 @@ function AssetWorkspaceRoute() {
           setName(next);
           savePatch({ name: next });
         }}
-        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
+        onTitleDraftChange={isCreate ? titleCreation.onTitleDraftChange : undefined}
         titleRequiredMessage={t('messages.nameRequired')}
         titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -452,7 +452,8 @@ describe('CompanyWorkspacePage', () => {
     expect(mocked.post).not.toHaveBeenCalled();
     // The city is the last field the company needs.
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
-    fireEvent.blur(screen.getByLabelText('companies.fields.city'));
+    // The city gives way to another field of the page.
+    fireEvent.blur(screen.getByLabelText('companies.fields.city'), { relatedTarget: screen.getByLabelText('companies.fields.vatNumber') });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/companies', {
       name: 'Acme Germany',
       coa_id: 'coa-de',

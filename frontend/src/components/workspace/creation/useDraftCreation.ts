@@ -4,6 +4,7 @@ import useCreationReturn from './useCreationReturn';
 import useRecordCreation from './useRecordCreation';
 import useMissingMarks from './useMissingMarks';
 import { focusFirstMissingField } from './creationFieldFocus';
+import { useCreationPresence, watchCreationFocus } from './creationDeparture';
 
 /**
  * The record the draft created: its uuid, the token of its create route, and its page. `reference`
@@ -49,6 +50,12 @@ type Options = {
  * each change of the draft) writes it once `ready()`, and the page moves to the record, every tab
  * open, with Done and Cancel (`useRecordCreation`).
  *
+ * A field is given by a choice in a list, by Enter or Tab, by the passage to another field of the
+ * page, or by Create. Leaving gives nothing (`watchCreationFocus`): a field committed as the focus
+ * leaves for a button, a link, the menu, another window or nowhere stays in the draft, unwritten,
+ * and the next field given writes it. Cancel leaves without writing. A write that ends after the
+ * person left the page brings nobody back: the record, complete, is kept.
+ *
  * `create(requireTitle)` is the primary pill (`CreationActions`). On the draft it is Create: the
  * title is checked (`requireTitle`, which shows its own message and takes the focus), the required
  * fields `missing()` names are marked on their label (`marked`, until each one gets a value) and the
@@ -73,26 +80,52 @@ export default function useDraftCreation({ isCreate, ready, post, missing, value
   // The draft is written: the page is moving to the record, nothing more is sent.
   const written = React.useRef(false);
   const [writing, setWriting] = React.useState(false);
+  const stillHere = useCreationPresence(isCreate);
+  // The focus last left a field by a departure: what it committed on the way is not written.
+  const away = React.useRef(false);
+  // A complete draft a departure kept from being written: the next field given writes it.
+  const held = React.useRef(false);
 
   const write = React.useCallback(async () => {
     if (written.current || running.current) return;
+    held.current = false;
     running.current = true;
     setWriting(true);
     try {
       const created = await latest.current.post();
       if (!created) return;
       written.current = true;
+      // The person left while it was written: the record is kept, and nobody is brought back.
+      if (!stillHere()) return;
       latest.current.startCreation({ recordId: created.id, token: created.token, returnTo: latest.current.returnTo, reference: created.reference });
       navigate(created.path, { replace: true });
     } finally {
       running.current = false;
       setWriting(false);
     }
-  }, [navigate]);
+  }, [navigate, stillHere]);
 
   const attempt = React.useCallback(() => {
-    if (isCreate && latest.current.ready()) void write();
+    if (!isCreate || !latest.current.ready()) return;
+    if (away.current) held.current = true;
+    else void write();
   }, [isCreate, write]);
+  const attemptRef = React.useRef(attempt);
+  attemptRef.current = attempt;
+
+  React.useEffect(() => {
+    if (!isCreate) return undefined;
+    return watchCreationFocus({
+      onExit: (passage) => {
+        away.current = !passage;
+        // The field committing now is seen once the page has rendered it.
+        if (passage && held.current) window.setTimeout(() => attemptRef.current(), 0);
+      },
+      onReturn: () => {
+        away.current = false;
+      },
+    });
+  }, [isCreate]);
 
   const { beingCreated, finishCreation } = creation;
   const { mark } = marks;

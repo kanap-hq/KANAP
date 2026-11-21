@@ -8,14 +8,14 @@ Navigieren Sie zu **IT-Landschaft > Verbindungen**, um Ihr Verbindungsverzeichni
 
 1. Klicken Sie auf **Verbindung hinzufügen**. Die Seite der Verbindung öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie einen beschreibenden Namen ein.
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt die Verbindung sofort, als Server zu Server, ohne Protokolle und Endpunkte. Ihre Referenz (`CONN-12`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabe- oder Tabulatortaste, oder klicken Sie auf **Erstellen**. Kadratis erstellt die Verbindung sofort, als Server zu Server, ohne Protokolle und Endpunkte. Ihre Referenz (`CONN-12`) erscheint und alle Reiter öffnen sich.
 
 Danach speichert jedes Feld für sich. Eine Verbindung braucht:
   - **Topologie**: Server zu Server oder Multi-Server
   - **Endpunkte**: Eine Quelle und ein Ziel für Server zu Server (jeweils ein Server, ein Cluster oder eine Entität) oder mindestens zwei Server für Multi-Server
   - **Protokolle**: Mindestens ein Netzwerkprotokoll
 
-Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben.
+Escape im Titel, ein Klick auf **Abbrechen** oder das Verlassen der Seite erstellt nichts, auch wenn Sie schon einen Namen eingegeben haben.
 
 **Tipp**: Verbindungen können mit Schnittstellen-Bindungen verknüpft werden, um zu zeigen, welche Infrastruktur jede Anwendungsintegration unterstützt.
 

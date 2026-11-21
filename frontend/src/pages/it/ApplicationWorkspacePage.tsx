@@ -1603,7 +1603,7 @@ export default function ApplicationWorkspacePage() {
     return work;
   }, [queryClient, updateApplicationCache, t]);
 
-  // The name committed in the header (Enter, Tab, its blur, Create) creates the application at once
+  // The name given in the header (Enter, Tab or Create) creates the application at once
   // (category and lifecycle take the server defaults); the page moves to it, every tab open, with
   // Done and Cancel.
   const titleCreation = useTitleCreation<Partial<ApplicationDetail> & { id: string; name: string }>({
@@ -1739,7 +1739,7 @@ export default function ApplicationWorkspacePage() {
           }
           void patchApplication({ name: value });
         }}
-        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
+        onTitleDraftChange={isCreate ? titleCreation.onTitleDraftChange : undefined}
         titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? closeWorkspace : undefined}

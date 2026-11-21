@@ -1,9 +1,9 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { MemoryRouter, Route, Routes, useLocation, useNavigate, type InitialEntry } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate, type InitialEntry } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
@@ -88,6 +88,7 @@ function renderPage(entries: InitialEntry[], changes: { fields: number; children
           <MemoryRouter initialEntries={entries}>
             <NavigationTracker />
             <Location />
+            <nav><Link to="/portfolio/projects">menu projects</Link></nav>
             <Routes>
               <Route path="/start" element={<StartPage />} />
               <Route path="/portfolio/projects" element={<div data-testid="projects" />} />
@@ -318,9 +319,11 @@ describe('Application creation at the title', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
     const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Billing' } });
-    // In a browser the click's press blurs the title first, which commits it.
-    fireEvent.blur(input);
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    // In a browser the press takes the focus from the title; Create writes the name typed.
+    const create = screen.getByRole('button', { name: 'common:buttons.create' });
+    fireEvent.pointerDown(create);
+    act(() => create.focus());
+    fireEvent.click(create, { detail: 1 });
     await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
     expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -328,7 +331,28 @@ describe('Application creation at the title', () => {
     expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
-  it('never closes the application on a double-click of Create while the title writes it', async () => {
+  it('creates the application on Create when the press leaves the focus in the title (Safari)', async () => {
+    renderPage(['/it/applications/new/overview']);
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    // No blur before the click: Create reads the name itself.
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }), { detail: 1 });
+    await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+    expect(mocked.post).toHaveBeenCalledWith('/applications', { name: 'Billing' });
+  });
+
+  it('creates the application on Ctrl+S with the name typed', async () => {
+    renderPage(['/it/applications/new/overview']);
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    fireEvent.keyDown(input, { key: 's', ctrlKey: true });
+    await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+    expect(mocked.post).toHaveBeenCalledWith('/applications', { name: 'Billing' });
+  });
+
+  it('never closes the application on a double-click of Create while the record is written', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
     let answer: (value: unknown) => void = () => undefined;
@@ -337,7 +361,6 @@ describe('Application creation at the title', () => {
     fireEvent.change(input, { target: { value: 'Billing' } });
     const create = screen.getByRole('button', { name: 'common:buttons.create' });
     fireEvent.pointerDown(create);
-    fireEvent.blur(input);
     fireEvent.click(create, { detail: 1 });
     fireEvent.pointerDown(create);
     fireEvent.click(create, { detail: 2 });
@@ -355,16 +378,81 @@ describe('Application creation at the title', () => {
     const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Billing' } });
     fireEvent.pointerDown(screen.getByRole('button', { name: 'common:buttons.create' }));
-    fireEvent.blur(input);
-    // The record comes back before the first click lands.
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }), { detail: 1 });
+    // The record comes back before the second click lands.
     await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
     const done = await screen.findByRole('button', { name: 'common:buttons.done' });
-    fireEvent.click(done, { detail: 1 });
     fireEvent.pointerDown(done);
     fireEvent.click(done, { detail: 2 });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(location()).toBe('/it/applications/APP-7/overview');
     expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a typed name in the title when the focus goes nowhere, nothing created', async () => {
+    renderPage(['/it/applications/new/overview']);
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    // A click on the page's background, the dimmed page, or another window.
+    fireEvent.blur(input);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveValue('Billing');
+    expect(location()).toBe('/it/applications/new/overview');
+  });
+
+  it('leaves on one click of Cancel with a name typed, nothing created', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    const cancel = screen.getByRole('button', { name: 'common:buttons.cancel' });
+    fireEvent.pointerDown(cancel);
+    act(() => cancel.focus());
+    fireEvent.click(cancel);
+    await waitFor(() => expect(location()).toBe('/start'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/start');
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('leaves by the back arrow or a link of the menu with a name typed, nothing created', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    let input = await screen.findByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    const back = screen.getByRole('button', { name: 'pages.applications.title' });
+    act(() => back.focus());
+    fireEvent.click(back);
+    await waitFor(() => expect(location()).toBe('/start'));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    input = await screen.findByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    const menu = screen.getByRole('link', { name: 'menu projects' });
+    act(() => menu.focus());
+    fireEvent.click(menu);
+    await waitFor(() => expect(location()).toBe('/portfolio/projects'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/portfolio/projects');
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('stays where the person went when the write ends after they left, and keeps the application', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(async () => new Promise((resolve) => { answer = resolve; }) as never);
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('link', { name: 'menu projects' }));
+    await waitFor(() => expect(location()).toBe('/portfolio/projects'));
+    await act(async () => { answer({ data: created }); });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/portfolio/projects');
+    expect(mocked.delete).not.toHaveBeenCalled();
   });
 
   it('leaves the new page on one Escape with a name typed, nothing created', async () => {

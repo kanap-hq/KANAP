@@ -106,7 +106,9 @@ describe('AnalyticsWorkspacePage typing while the value is created', () => {
     renderNew();
     const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Hardware' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ ...STORED, creation_token: 'tok' }); });

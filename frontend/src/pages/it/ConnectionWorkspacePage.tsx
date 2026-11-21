@@ -546,6 +546,8 @@ export default function ConnectionWorkspacePage() {
   // nor end yet); the page moves to it, every tab open, with Done and Cancel.
   const titleCreation = useTitleCreation<ConnectionDetail>({
     isCreate,
+    // Written after the person left: the incomplete record is deleted, no page is left to ask.
+    discardApiBase: '/connections',
     requiredMessage: t('messages.nameRequired'),
     post: async (name) => (await api.post<ConnectionDetail & { creation_token: string }>('/connections/creation', { name })).data,
     onCreated: (created, token) => {
@@ -837,7 +839,7 @@ export default function ConnectionWorkspacePage() {
         titleFallback={isCreate ? t('workspace.connection.newTitle') : t('workspace.connection.untitled')}
         canEditTitle={canManage}
         onTitleSave={handleTitleSave}
-        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
+        onTitleDraftChange={isCreate ? titleCreation.onTitleDraftChange : undefined}
         titleRequiredMessage={t('messages.nameRequired')}
         titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}

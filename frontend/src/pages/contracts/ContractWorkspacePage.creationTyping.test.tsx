@@ -140,7 +140,8 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
     await waitFor(() => expect(within(drawer).getByRole('combobox', { name: 'contracts.fields.currency' })).toHaveValue('EUR · Euro'));
     const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
     fireEvent.change(duration, { target: { value: '24' } });
-    fireEvent.blur(duration);
+    // The duration gives way to another field of the page.
+    fireEvent.blur(duration, { relatedTarget: title });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     return { drawer, finish: () => act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); }) };
   }
@@ -181,7 +182,8 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
     await waitFor(() => expect(within(drawer).getByRole('combobox', { name: 'contracts.fields.currency' })).toHaveValue('EUR · Euro'));
     const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
     fireEvent.change(duration, { target: { value: '24' } });
-    fireEvent.blur(duration);
+    // The duration gives way to another field of the page.
+    fireEvent.blur(duration, { relatedTarget: title });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
 
     // The person moves on to the amount while the contract is being written.

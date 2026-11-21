@@ -137,7 +137,9 @@ describe('LocationWorkspacePage hosting category change', () => {
     renderAt('/it/locations/new/overview');
     const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Lyon DC' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/locations/LOC-9/overview'));
     fireEvent.click(await screen.findByText('pick-cloud'));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });

@@ -8,14 +8,14 @@ Navegue a **Panorama IT > Conexiones** para ver su registro de conexiones. Para 
 
 1. Haga clic en **Añadir conexión**. La página de la conexión se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba un nombre descriptivo.
-3. Pulse Intro o haga clic fuera del título. Kadratis crea la conexión de inmediato, de servidor a servidor, sin protocolos ni endpoints. Su referencia (`CONN-12`) aparece y se abren todas las pestañas.
+3. Pulse Intro o Tab, o haga clic en **Crear**. Kadratis crea la conexión de inmediato, de servidor a servidor, sin protocolos ni endpoints. Su referencia (`CONN-12`) aparece y se abren todas las pestañas.
 
 Después, cada campo se guarda por sí solo. Una conexión necesita:
   - **Topología**: Servidor a servidor o Multi-servidor
   - **Endpoints**: Un origen y un destino para Servidor a servidor (cada uno un servidor, un clúster o una entidad), o al menos dos servidores para Multi-servidor
   - **Protocolos**: Al menos un protocolo de red
 
-Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
+Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre.
 
 **Consejo**: Las conexiones pueden vincularse a enlaces de interfaz para mostrar qué infraestructura soporta cada integración de aplicaciones.
 

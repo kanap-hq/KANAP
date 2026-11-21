@@ -104,7 +104,9 @@ describe('DepartmentWorkspacePage typing while the department is created', () =>
     renderNew();
     const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Finance' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {

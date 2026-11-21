@@ -271,7 +271,7 @@ describe('Asset creation at the title', () => {
     const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Web 1' } });
     const create = screen.getByRole('button', { name: 'common:buttons.create' });
-    // In a browser the click's press blurs the title first, which commits it.
+    // In a browser the press takes the focus from the title, which writes nothing; Create writes the name typed.
     fireEvent.pointerDown(create);
     create.focus();
     fireEvent.blur(input);

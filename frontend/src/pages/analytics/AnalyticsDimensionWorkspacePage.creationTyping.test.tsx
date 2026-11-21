@@ -106,7 +106,9 @@ describe('AnalyticsDimensionWorkspacePage typing while the dimension is created'
     renderNew();
     const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Cost nature' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ ...STORED, creation_token: 'tok' }); });
