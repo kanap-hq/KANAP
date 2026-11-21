@@ -18,7 +18,7 @@ const RETIRED = ['ppe_type', 'investment_type', 'priority'];
 async function setup(runner: QueryRunner) {
   const tenantId = await seedTenant(runner, 'c1-api');
   await ensureCapexDimensions(runner.manager, tenantId);
-  const { companyId } = await seedCompany(runner, tenantId, 'Criteria company');
+  const { companyId, accountId } = await seedCompany(runner, tenantId, 'Criteria company');
   const rows: Array<{ axis: string; code: string; value: string; name: string }> = await runner.query(
     `SELECT a.id AS axis, a.code, c.id AS value, c.name
        FROM analytics_axes a JOIN analytics_categories c ON c.axis_id = a.id AND c.tenant_id = a.tenant_id
@@ -27,7 +27,7 @@ async function setup(runner: QueryRunner) {
   );
   const axis = (code: string) => rows.find((row) => row.code === code)!.axis;
   const value = (code: string, name: string) => rows.find((row) => row.code === code && row.name === name)!.value;
-  const body = { description: 'Criteria line', paying_company_id: companyId, currency: 'EUR', effective_start: '2026-01-01' };
+  const body = { description: 'Criteria line', paying_company_id: companyId, account_id: accountId, currency: 'EUR', effective_start: '2026-01-01' };
   const values = {
     [axis('ppe_type')]: value('ppe_type', 'Hardware'),
     [axis('investment_type')]: value('investment_type', 'Capacity'),

@@ -29,8 +29,13 @@ type Seeded = { itemId: string; versionId: string; companies: string[]; axisId: 
 async function seed(race: Race): Promise<Seeded> {
   return race.seedWith(async (runner) => {
     const companies: string[] = [];
-    for (const [i, name] of ['Company 1', 'Company 2'].entries()) companies.push((await seedCompany(runner, race.tenantId, name, 6001 + i)).companyId);
-    const line = await itemService('opex').create(lineBody('opex', 'Lock order line', { paying_company_id: companies[0] }), undefined, { manager: runner.manager });
+    const accounts: string[] = [];
+    for (const [i, name] of ['Company 1', 'Company 2'].entries()) {
+      const seeded = await seedCompany(runner, race.tenantId, name, 6001 + i);
+      companies.push(seeded.companyId);
+      accounts.push(seeded.accountId);
+    }
+    const line = await itemService('opex').create(lineBody('opex', 'Lock order line', { paying_company_id: companies[0], account_id: accounts[0] }), undefined, { manager: runner.manager });
     const versionId = await seedVersion(runner, 'opex', race.tenantId, line.id, YEAR);
     await runner.query(`UPDATE spend_versions SET allocation_method = 'manual_pct' WHERE id = $1`, [versionId]);
     await seedMonths(runner, 'opex', race.tenantId, versionId, YEAR, { planned: repeat('100', 12) });

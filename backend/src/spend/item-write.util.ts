@@ -294,10 +294,6 @@ export async function resolveItemWrite(
     contractId: 'contract_id' in values ? (values.contract_id as string | null) : undefined,
   });
   const accountId = next('account_id');
-  // A new line has an account, whatever the door (API, aliases, Kad, the budget file, a dated change
-  // of type); an update leaves a line stored without one as it is. Checked after the data-access
-  // placement, so a limited person out of place is told that first.
-  if (!existing && !accountId && !options.creation) throw new BadRequestException(ACCOUNT_REQUIRED);
   const storedOf = (column: string) => ((existing?.[column] as string | null | undefined) ?? null);
   const checkChart = !!accountId && (!existing || companyId !== storedOf('paying_company_id') || accountId !== storedOf('account_id'));
   const checkNature = !!accountId && (!existing || accountId !== storedOf('account_id'));
@@ -336,6 +332,10 @@ export async function resolveItemWrite(
     const id = column in values ? (values[column] as string | null) : null;
     if (id && !found.has(`${ref.table}:${id}`)) throw new BadRequestException(`${ref.label} not found.`);
   }
+  // A new line has an account, whatever the door (API, aliases, Kad, the budget file, a dated change
+  // of type); an update leaves a line stored without one as it is. Checked after the data-access
+  // placement and the ids, so a limited person out of place, or an id naming nothing, is told first.
+  if (!existing && !accountId && !options.creation) throw new BadRequestException(ACCOUNT_REQUIRED);
 
   if (checkChart) {
     const account = found.get(`accounts:${accountId}`);

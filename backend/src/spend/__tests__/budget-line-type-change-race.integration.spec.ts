@@ -47,8 +47,9 @@ async function seedRace(race: { tenantId: string; seedWith: <T>(fn: (runner: any
   });
 }
 
-const datedBody = (w: { requiredAxis: { id: string; first: string } }, rowVersion: number) => ({
-  row_version: rowVersion, from_year: SET, analytics_values: { [w.requiredAxis.id]: w.requiredAxis.first },
+// The new line of a dated change needs an account (the OPEX one is not carried to CAPEX).
+const datedBody = (w: { requiredAxis: { id: string; first: string }; accounts: { capex: string } }, rowVersion: number) => ({
+  row_version: rowVersion, from_year: SET, account_id: w.accounts.capex, analytics_values: { [w.requiredAxis.id]: w.requiredAxis.first },
 });
 
 async function cellAfterChange() {
