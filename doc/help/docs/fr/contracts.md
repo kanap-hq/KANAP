@@ -125,7 +125,7 @@ L'en-tête affiche la référence du contrat (`CTR-5`, cliquez dessus pour la co
 
 Le panneau **Propriétés**, à droite, contient tous les champs du contrat : les parties, **Début**, **Durée (mois)**, **Préavis (mois)**, **Reconduction tacite**, **Montant annuel**, **Devise**, **Facturation**, puis **Cycle de vie** (**Statut** et **Fin de validité**), **Créé** et **Mis à jour**. Ouvrez-le ou fermez-le avec son bouton ; Kadratis retient votre choix.
 
-**Centre de coûts ou groupe** est facultatif. Il place le contrat sous un centre de coûts ou un groupe pour l'[accès aux données](data-access.md) : les personnes limitées à ce nœud, ou à un groupe au-dessus, voient le contrat, comme celles qui sont limitées à sa société.
+**Centre de coûts ou groupe** est facultatif. Il place le contrat sous un centre de coûts ou un groupe pour l'[accès aux données](data-access.md) : les personnes limitées à ce nœud, ou à un groupe au-dessus, voient le contrat, comme celles qui sont limitées à sa société. Avec ce nœud en Saisie, elles modifient le contrat, quelle que soit sa société.
 
 Chaque modification s'enregistre d'elle-même : listes et dates aussitôt, valeurs saisies et notes après une courte pause, le nom quand vous quittez le champ. « Enregistrement... » puis « Enregistré » s'affiche dans l'en-tête. Deux personnes qui modifient le même contrat ne sont pas averties : la dernière modification l'emporte.
 

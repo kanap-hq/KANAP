@@ -125,7 +125,7 @@ The header shows the contract reference (`CTR-5`, click it to copy it) and the c
 
 The **Properties** panel on the right holds every field of the contract: the parties, **Start**, **Duration (months)**, **Notice (months)**, **Tacit renewal**, **Yearly amount**, **Currency**, **Billing**, then **Lifecycle** (**Status** and **End of validity**), **Created** and **Updated**. Open or close it with its button; Kadratis remembers your choice.
 
-**Cost center or group** is optional. It places the contract under a cost center or a group for [data access](data-access.md): the people limited to that node, or to a group above it, see the contract as well as those limited to its company.
+**Cost center or group** is optional. It places the contract under a cost center or a group for [data access](data-access.md): the people limited to that node, or to a group above it, see the contract as well as those limited to its company. With that node in Edit, they edit the contract, whatever its company.
 
 Every change saves itself: lists and dates at once, typed values and notes after a short pause, the name when you leave the field. "Saving…" then "Saved" appears in the header. Two people editing the same contract are not warned: the last change wins.
 
