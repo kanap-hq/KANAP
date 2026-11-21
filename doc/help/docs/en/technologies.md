@@ -252,7 +252,7 @@ An application appears in two ways:
 
 Who to call and how to get help:
 
-- **Support**: the support contacts, with their **Email**, **Phone** and **Role**. **Add contact** opens a short form: choose the **Contact** (required) and give an optional **Role**. A contact is listed once; adding it again keeps its role. Remove a contact with the cross at the end of its row.
+- **Support**: the support contacts, with their **Email**, **Phone** and **Role**. **Add contact** opens a short form: choose the **Contact** (required) and give an optional **Role**. A contact that does not exist yet can be created from the list (see [Contacts](contacts.md#creating-a-contact-from-a-contact-field)). A contact is listed once; adding it again keeps its role. Remove a contact with the cross at the end of its row.
 - **Support notes**: free text, such as the support contract number, the hotline hours or the escalation path. It saves when you leave the field.
 
 The technology then appears in the **Used by** section of each contact's page.

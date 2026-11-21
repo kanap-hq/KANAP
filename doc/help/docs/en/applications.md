@@ -227,7 +227,7 @@ The Overview tab is the application's narrative. It contains:
 
 **Support**:
 - A table of support contacts pulled from your Contacts master data. Each row shows the contact name, email, phone, and a free-text role (e.g., Account Manager, L1 Support).
-- **Add contact** opens a dialog to pick a contact and set a role.
+- **Add contact** opens a dialog to pick a contact and set a role. A contact that does not exist yet can be created from the list. See [Contacts](contacts.md#creating-a-contact-from-a-contact-field).
 - **Support notes**: free-form text for support arrangements (SLA, escalation paths, on-call info).
 
 ---
