@@ -143,20 +143,17 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
   /**
    * Create a new connection.
    */
-  async create(body: any, tenantId: string, userId: string | null, opts?: ServiceOpts, creation?: { atTitle?: boolean }) {
+  async create(body: any, tenantId: string, userId: string | null, opts?: ServiceOpts) {
     const tenant = this.ensureTenantId(tenantId);
-    // The screen creates a connection at its title (`POST /connections/creation`): server to server,
-    // without protocol nor end, which "Create" checks (`connection-creation.ts`).
-    const atTitle = !!creation?.atTitle;
     const mg = opts?.manager ?? this.connRepo.manager;
     if (!body || typeof body !== 'object') throw new BadRequestException('Body is required');
 
     const name = this.normalizeRequiredText(body.name, 'name');
     // The description is rich text.
     const description = await normalizeMarkdownRichText(this.normalizeNullable(body.description), { fieldName: 'description' });
-    const topology = body.topology && !atTitle ? this.normalizeTopology(body.topology) : 'server_to_server';
+    const topology = body.topology ? this.normalizeTopology(body.topology) : 'server_to_server';
     const lifecycle = await this.normalizeLifecycle(body.lifecycle, tenant, mg, 'active');
-    const protocols = atTitle ? [] : await this.normalizeProtocols(body.protocols ?? body.protocol_codes, tenant, mg);
+    const protocols = await this.normalizeProtocols(body.protocols ?? body.protocol_codes, tenant, mg);
     const criticality = await this.normalizeCriticality(body.criticality ?? null, tenant, mg);
     const data_class = await this.normalizeDataClass(body.data_class ?? null, tenant, mg);
     const contains_pii = this.normalizeContainsPii(body.contains_pii);
@@ -172,9 +169,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     let multiAssetIds: string[] = [];
     let absorbed: AbsorbedServer[] = [];
 
-    if (atTitle) {
-      // No end yet.
-    } else if (topology === 'server_to_server') {
+    if (topology === 'server_to_server') {
       const normalizeSide = async (
         assetId: unknown,
         entityCode: unknown,
@@ -324,8 +319,8 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     // Load existing protocols to compute next set
     const protoRepo = this.getConnProtocolRepo(mg);
     const existingProtocols = await protoRepo.find({ where: { connection_id: id } });
-    // A connection that lacks a protocol or an end (created at its title, `connection-creation.ts`)
-    // may stay lacking; a complete one stays complete.
+    // A connection that lacks a protocol or an end (created at its title before 26.11.9,
+    // `connection-creation.ts`) may stay lacking; a complete one stays complete.
     const wasIncomplete = missingConnectionFields({
       ...existing,
       protocolCount: existingProtocols.length,
