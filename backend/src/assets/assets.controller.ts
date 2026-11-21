@@ -1,6 +1,6 @@
 import { ImportRoute } from '../audit/security-events';
 import { languageOf } from '../common/csv-sheet';
-import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -25,9 +25,8 @@ import { hasLevel } from '../technologies/technologies.controller';
 import { requireManager } from '../technologies/technology-rows';
 import { AssetImpactService } from './services/asset-impact.service';
 import type { EntityManager } from 'typeorm';
-import { assertCreationToken, cancelCreation, creationContextOf, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
+import { cancelCreation, creationContextOf, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 import { countEditedManagedDocuments, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
-import { creationIncomplete } from '../common/creation/creation-incomplete';
 import { buildRelationsAccess } from '../common/relations/relations-access';
 import { canReadResource } from '../common/record-usages';
 import { incidentViewerFromContext, incidentViewerFromRequest } from '../incidents/incident-visibility';
@@ -595,42 +594,27 @@ export class AssetsController {
     });
   }
 
-  @UseGuards(PermissionGuard)
-  @RequireLevel('infrastructure', 'member')
-  @Post()
-  create(@Body() body: any, @Req() req: any) {
-    const tenantId: string | undefined = req?.tenant?.id;
-    return this.svc.create(body, tenantId ?? '', req.user?.sub ?? null, {
-      manager: req?.queryRunner?.manager,
-      tenantId,
-    });
-  }
-
   /**
-   * The screen creates an asset at its title: the fields of `POST /assets` but the site, which
-   * "Create" checks (`POST :id/creation/complete`). Hands the creator a creation token
-   * (`common/creation`) for "Create" and "Cancel" (`DELETE :id/creation`), on this asset and for this
-   * person only. `POST /assets` keeps the site required.
+   * The screen writes a new asset once, with its name and its site (born complete). Hands the creator
+   * a creation token (`common/creation`) for "Cancel" (`DELETE :id/creation`), on this asset and for
+   * this person only.
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
-  @Post('creation')
-  async createAtTitle(@Body() body: any, @Req() req: any) {
-    const tenantId: string = req?.tenant?.id ?? '';
-    const userId: string = req.user?.sub ?? '';
-    const picked: Record<string, unknown> = {};
-    for (const key of ['name', 'kind', 'environment', 'provider', 'status', 'is_cluster', 'hostname']) {
-      if (body && Object.prototype.hasOwnProperty.call(body, key)) picked[key] = body[key];
-    }
-    const manager = req?.queryRunner?.manager;
-    const created = await this.svc.createAtTitle(picked, tenantId, userId || null, { manager, tenantId });
+  @Post()
+  async create(@Body() body: any, @Req() req: any) {
+    const ctx = creationContextOf(req);
+    const created = await this.svc.create(body, ctx.tenantId, ctx.userId || null, {
+      manager: ctx.manager,
+      tenantId: ctx.tenantId,
+    });
     // The database gives the reference on insert, after the row is built: the page opens the asset under it.
-    const [row]: Array<{ asset_reference: string | null }> = await manager.query(
+    const [row]: Array<{ asset_reference: string | null }> = await (ctx.manager as EntityManager).query(
       'SELECT asset_reference FROM assets WHERE id = $1 AND tenant_id = $2',
-      [created.id, tenantId],
+      [created.id, ctx.tenantId],
     );
     Object.assign(created, { asset_reference: row?.asset_reference ?? created.asset_reference ?? null });
-    return withCreationToken('assets', created, { tenantId, userId });
+    return withCreationToken('assets', created, ctx);
   }
 
   /**
@@ -652,23 +636,6 @@ export class AssetsController {
         return withChildCount(changes, 'attachment', total);
       },
     });
-  }
-
-  /** "Create" of an asset being created: 400 `CREATION_INCOMPLETE` (`params.fields`: `location`) while it has no site. */
-  @UseGuards(PermissionGuard)
-  @RequireLevel('infrastructure', 'member')
-  @Post(':id/creation/complete')
-  @HttpCode(200)
-  async completeCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<{ ok: true }> {
-    const ctx = creationContextOf(req);
-    assertCreationToken('assets', id, body?.token, ctx);
-    const [row]: Array<{ location_id: string | null }> = await (ctx.manager as EntityManager).query(
-      'SELECT location_id FROM assets WHERE id = $1 AND tenant_id = $2',
-      [id, ctx.tenantId],
-    );
-    if (!row) throw new NotFoundException('Asset not found');
-    if (!row.location_id) throw creationIncomplete(['location'], ['site']);
-    return { ok: true };
   }
 
   /**
