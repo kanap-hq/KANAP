@@ -95,9 +95,9 @@ Click any cell to open the workspace.
 
 Click **New**. The page of the new node opens, its properties panel open. Type the name in the title at the top of the page and fill in the **Code**. The **Type** starts on **Cost center**, which also needs a **Company**. Choose **Group** to create a group: the **Company** field then disappears.
 
-The node is created, enabled, as soon as it has its name, its **Code** and, for a cost center, its **Company**. Every tab then becomes available, and the other fields save automatically. Press Escape on the empty title to leave without creating anything.
+The node is created, enabled, as soon as it has its name, its **Code** and, for a cost center, its **Company**. Every tab then becomes available, and the other fields save automatically. Press Escape in the title to leave without creating anything, even with a name typed.
 
-While the node is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the node and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the node if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete cost centers. Leaving the node any other way keeps it.
+While the node is being created, the header shows **Create** and **Cancel** until you leave it. **Ctrl+S** works like the button shown. **Create** writes the node when its required fields are given and leaves it open. If one is still missing, its label turns red and the cursor goes to it. Once the node is created, **Create** becomes **Done**: it saves what you are still typing and takes you back to where you started, the list or the previous screen. **Cancel** leaves without keeping anything, and deletes the node if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete cost centers. Leaving the node any other way keeps it.
 
 ---
 

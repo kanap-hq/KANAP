@@ -29,9 +29,9 @@ When you click **New**, the task page opens with an empty title in its header, s
    - **Dates**: Set start and due dates
    - **Assignee**, **Status**, **Priority**: Change them if needed
 
-4. Click **Create** to keep the task. You return to where you started: a task started from a project's **Tasks** tab returns to that tab. Click **Cancel** to delete the task instead. Kadratis asks first when you entered more than the title.
+4. Click **Done** when you have finished. You return to where you started: a task started from a project's **Tasks** tab returns to that tab. Click **Cancel** to delete the task instead. Kadratis asks first when you entered more than the title.
 
-Pressing **Escape** on the empty title works as **Cancel**. Leaving the task any other way keeps it.
+Pressing **Escape** in the title of a new task leaves without creating anything, even with a title typed. Leaving the task any other way keeps it.
 
 **Tip**: You can paste images directly into the description. They upload automatically.
 

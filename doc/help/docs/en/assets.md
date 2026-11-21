@@ -15,13 +15,13 @@ The new asset is a virtual machine in the Prod environment, with the lifecycle A
 **Required fields**:
 - **Name**: The asset name or hostname, up to 200 characters
 - **Asset type**: Web server, Virtual machine, Physical server, Container, etc. (configurable in **IT Landscape > Settings**)
-- **Location**: Where the asset is hosted (determines provider, hosting type, and country). **Create** asks for it
+- **Location**: Where the asset is hosted (determines provider, hosting type, and country). **Done** asks for it
 
 **Strongly recommended**:
 - **Lifecycle**: Current status (Active, Deprecated, Retired, etc.)
 - **Environment**: Which environment this asset belongs to (Prod, Pre-prod, QA, Test, Dev, Sandbox)
 
-Press Escape on the empty title to leave without creating anything. A refused name shows under the title.
+Press Escape in the title to leave without creating anything, even with a name typed. A refused name shows under the title.
 
 **Unique names**: two assets cannot share a name or an FQDN. Letter case and spaces at either end do not count. Kadratis refuses the duplicate and names the asset that already has it (`AST-12`). Duplicates recorded earlier stay editable as long as you leave that value unchanged.
 
@@ -34,9 +34,10 @@ Press Escape on the empty title to leave without creating anything. A refused na
 
 ### Creating or cancelling { #cancelling-a-creation }
 
-While the asset is being created, its header shows **Create** and **Cancel** in place of the close button. They stay until you leave the asset.
+While the asset is being created, its header shows **Create** and **Cancel** in place of the close button. They stay until you leave the asset. **Ctrl+S** works like the button shown.
 
-- **Create** checks that the asset has a location. Without one, the **Location** label turns red in the properties drawer and the field gets the focus. The asset stays open. With a location, Kadratis keeps the asset and closes it. You go back to where you started
+- **Create** does the same as Enter: it creates the asset and leaves it open with its reference. The cursor goes to **Location** when it is empty. With an empty title, the title asks for one
+- Once the asset is created, **Create** becomes **Done**. **Done** saves what you are still typing and checks that the asset has a location. Without one, the **Location** label turns red in the properties drawer and the field gets the focus. The asset stays open. With a location, you go back to where you started
 - **Cancel** deletes the asset. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete assets
 
 Leaving the asset another way (the back arrow, the menu, another asset) while it has no location asks what to do. **Complete it** keeps you on the asset, on the **Location** field. **Delete it** deletes the asset. Reloading the page or closing the tab while the new asset has no location asks your browser to confirm. If you leave anyway, the asset is deleted.
@@ -185,7 +186,7 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 - **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**, or **No zone**. The asset then appears in that zone on the [Administration zones](administration-view.md) page
 
 **Location**:
-- **Location** (required): **Create** asks for it on a new asset. An asset created by an import or the assistant needs it at once. When the location does not exist yet, type its name and choose **+ Create location "…"**: give its hosting type, and the new location goes into the field. This needs `locations:member`
+- **Location** (required): **Done** asks for it on a new asset. An asset created by an import or the assistant needs it at once. When the location does not exist yet, type its name and choose **+ Create location "…"**: give its hosting type, and the new location goes into the field. This needs `locations:member`
 - **Sub-location** (when the location has sub-locations defined)
 - **Hosting type**, **Operating company** or **Cloud provider**, **Country**, **City**: read-only, derived from the location. They follow when you change the location
 

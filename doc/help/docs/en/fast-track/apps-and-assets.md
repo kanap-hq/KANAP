@@ -52,7 +52,7 @@ Then fill in the essentials in the header and the properties drawer:
 | **Business criticality** | Business importance | `Business critical` |
 | **Lifecycle** | Current status (Active when created) | `Active` |
 
-While you are still on its page, **Create** in the header keeps the new application and closes it, and **Cancel** deletes it.
+While you are still on its page, **Done** in the header saves the new application and takes you back, and **Cancel** deletes it.
 
 !!! tip "Start with what you know"
     Description, publisher, version, licensing: all useful, but optional at this stage. You can enrich later. The goal is to get the app into the system.
@@ -204,7 +204,7 @@ The **Network** tab is open while you create the asset. Fill in:
 !!! info "Multiple IP addresses"
     A server can have several IP addresses. Add as many as needed (e.g., management interface, production VLAN, backup network). Each entry can have its own type and subnet, and the Network zone and VLAN are derived automatically.
 
-Click **Create** to unlock the full workspace. The **Overview** tab then gains a **Support** section for the vendor support contract and contacts. For physical asset types, a **Hardware** tab tracks serial numbers and manufacturer details.
+Once the asset is created, the full workspace opens. The **Overview** tab then gains a **Support** section for the vendor support contract and contacts. For physical asset types, a **Hardware** tab tracks serial numbers and manufacturer details.
 
 ### Operations tab
 

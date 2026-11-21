@@ -4,9 +4,9 @@ Locations document where your IT infrastructure is hosted: data centers, cloud r
 
 ## Getting started
 
-Navigate to **IT Landscape -> Locations** to open the location registry. Click **Add Location** to create a new entry: the page of the new location opens, its properties panel open. Type the name in the title at the top of the page. The location is created as soon as it has its name and **Hosting Type**, which starts on the first type of the list. Every tab then becomes available, and the other fields save automatically. Press Escape on the empty title to leave without creating anything.
+Navigate to **IT Landscape -> Locations** to open the location registry. Click **Add Location** to create a new entry: the page of the new location opens, its properties panel open. Type the name in the title at the top of the page. The location is created as soon as it has its name and **Hosting Type**, which starts on the first type of the list. Every tab then becomes available, and the other fields save automatically. Press Escape in the title to leave without creating anything, even with a name typed.
 
-While the location is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the location and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the location if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete locations. Leaving the location any other way keeps it.
+While the location is being created, the header shows **Create** and **Cancel** until you leave it. **Ctrl+S** works like the button shown. **Create** writes the location when its required fields are given and leaves it open. If one is still missing, its label turns red and the cursor goes to it. Once the location is created, **Create** becomes **Done**: it saves what you are still typing and takes you back to where you started, the list or the previous screen. **Cancel** leaves without keeping anything, and deletes the location if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete locations. Leaving the location any other way keeps it.
 
 **Required fields**:
 - **Name**: A descriptive display name
@@ -81,7 +81,7 @@ Each sub-location has:
 - **Name**: A short label (e.g., "Building A, Room 1, Rack 5")
 - **Description**: Optional additional detail
 
-Sub-locations are available once the location exists (after you click **Create**). Each row saves on its own when you leave the field, and deleting a sub-location asks for confirmation first.
+Sub-locations are available once the location is created. Each row saves on its own when you leave the field, and deleting a sub-location asks for confirmation first.
 
 Assets can be assigned to a specific sub-location within a location, which lets you track exactly where hardware sits. The Relations tab shows the sub-location of each asset that has one.
 

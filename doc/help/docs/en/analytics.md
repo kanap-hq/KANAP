@@ -127,14 +127,14 @@ Click any cell to open the value's workspace.
 
 ### Creating a dimension
 
-Click **New** in the selector bar. The page of the new dimension opens, its properties panel open. Type the name in the title at the top of the page. The dimension is created, enabled, as soon as it has its name and **Code**. Every tab then becomes available, and the other fields save automatically. Press Escape on the empty title to leave without creating anything.
+Click **New** in the selector bar. The page of the new dimension opens, its properties panel open. Type the name in the title at the top of the page. The dimension is created, enabled, as soon as it has its name and **Code**. Every tab then becomes available, and the other fields save automatically. Press Escape in the title to leave without creating anything, even with a name typed.
 
 - **Code** is proposed from the name: lowercase, accents removed, spaces replaced by `-`. You can change it.
 - **Used for** starts on **OPEX and CAPEX**. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions).
 - **Required** starts off. See [Required dimensions](#required-dimensions).
 - **Description** is optional.
 
-While the dimension is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the dimension and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the dimension if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete dimensions. Leaving the dimension any other way keeps it.
+While the dimension is being created, the header shows **Create** and **Cancel** until you leave it. **Ctrl+S** works like the button shown. **Create** writes the dimension when its required fields are given and leaves it open. If one is still missing, its label turns red and the cursor goes to it. Once the dimension is created, **Create** becomes **Done**: it saves what you are still typing and takes you back to where you started, the list or the previous screen. **Cancel** leaves without keeping anything, and deletes the dimension if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete dimensions. Leaving the dimension any other way keeps it.
 
 A new dimension goes last in the order of the dimensions. Then go back to the page to add its values.
 
@@ -208,7 +208,7 @@ The two settings must agree. A dimension cannot be set to one kind of line while
 
 Turn on **Required** when every budget line must be classified on a dimension. Kadratis then checks the lines of the kinds the dimension is used for:
 
-- **A new line needs a value on the dimension.** A budget file, Kad and the API do not create a line without one, with the message "The Cost pool dimension is required. Choose a value." On the budget line screen, a line exists from its title, and **Create** lists the dimension as missing until it has a value.
+- **A new line needs a value on the dimension.** A budget file, Kad and the API do not create a line without one, with the message "The Cost pool dimension is required. Choose a value." On the budget line screen, a line exists from its title, and **Done** marks the dimension as missing until it has a value.
 - **A line that holds a value cannot lose it.** You can pick another value. The field cannot be cleared.
 - **A line created before you turned the setting on keeps working.** If it has no value on the dimension, it stays editable and you can save other changes on it. Its field is marked as required. On the OPEX and CAPEX screens, leaving such a line after changing it asks you to choose a value first, with **Stay** and **Leave anyway**. Opening it without changing anything never asks.
 
@@ -243,9 +243,9 @@ To keep the values on the lines instead, disable the dimension.
 
 ### Creating a value
 
-Click **New value**. The page of the new value opens, its properties panel open. The **Dimension** field starts on the dimension selected on the page and offers the enabled dimensions only. Type the name in the title at the top of the page. The value is created, enabled, as soon as it has its name and **Dimension**. The dimension is set once, at creation. Every tab then becomes available, and the other fields save automatically: a **Description** if you like, and **Used for**, which starts on **OPEX and CAPEX** (change it if the value suits one kind of line only). Press Escape on the empty title to leave without creating anything.
+Click **New value**. The page of the new value opens, its properties panel open. The **Dimension** field starts on the dimension selected on the page and offers the enabled dimensions only. Type the name in the title at the top of the page. The value is created, enabled, as soon as it has its name and **Dimension**. The dimension is set once, at creation. Every tab then becomes available, and the other fields save automatically: a **Description** if you like, and **Used for**, which starts on **OPEX and CAPEX** (change it if the value suits one kind of line only). Press Escape in the title to leave without creating anything, even with a name typed.
 
-While the value is being created, the header shows **Create** and **Cancel** until you leave it. **Create** keeps the value and takes you back to where you started: the list or the previous screen. If a required field is still missing, it is marked instead. **Cancel** leaves without keeping anything, and deletes the value if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete values. Leaving the value any other way keeps it.
+While the value is being created, the header shows **Create** and **Cancel** until you leave it. **Ctrl+S** works like the button shown. **Create** writes the value when its required fields are given and leaves it open. If one is still missing, its label turns red and the cursor goes to it. Once the value is created, **Create** becomes **Done**: it saves what you are still typing and takes you back to where you started, the list or the previous screen. **Cancel** leaves without keeping anything, and deletes the value if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete values. Leaving the value any other way keeps it.
 
 ### The value workspace
 
@@ -335,7 +335,7 @@ The default dimension cannot be disabled.
 In the **Properties** panel of an OPEX or CAPEX line, and when you create one, each enabled dimension used for that kind of line has its own field, named after the dimension, in dimension order. The default dimension shows as **Analytics dimension** until you rename it.
 
 - Pick a value, or clear the field to leave the line without a value on that dimension. The change saves at once.
-- A required dimension's field is marked with an asterisk. On a line being created, **Create** lists it as missing until it has a value. On a line that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
+- A required dimension's field is marked with an asterisk. On a line being created, **Done** marks it as missing until it has a value. On a line that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
 - The field lists the enabled values of its dimension that are used for this kind of line. A disabled value, or a value used for the other kind of line only, stays shown on the lines that have it. See [OPEX or CAPEX values](#opex-or-capex-values).
 - On a dimension with [open values](#open-values), the field offers **Add “…”** for a name that does not exist. On the other dimensions, the field cannot create a value: create values on the Analytics dimensions page, or let the budget file create them.
 - A value applies to the whole line, across all years.

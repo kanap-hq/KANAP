@@ -26,7 +26,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 **What to do.** Either import your budget file, or create a first line by hand.
 
 - **Import a file.** Click **Import**, then **Download an example**: a workbook with a few sample lines and what each column takes. Fill in your lines and import the file. On an empty list, **Export** gives the header row alone.
-- **Create a line.** Click **New line**, type its name in the title and press Enter. Fill in the **Properties** panel: paying company, account, currency. Enter the amounts in the **Budget** tab, then click **Create**. **Cancel** drops the line.
+- **Create a line.** Click **New line**, type its name in the title and press Enter. Fill in the **Properties** panel: paying company, account, currency. Enter the amounts in the **Budget** tab, then click **Done**. **Cancel** drops the line.
 
 **What you see.** An import checks the whole file and reports the lines to create, to update and those unchanged. A file with one error loads nothing. A line created by hand shows in the list with its amounts for the year.
 
@@ -34,7 +34,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **Budget management > Contracts**
 
-**What to do.** Click **New contract**, fill in the form, then **Create**. In the contract's **Budget** tab, link the line it pays for with the picker under the table.
+**What to do.** Click **New contract**, fill in its name and required fields, then click **Done**. In the contract's **Budget** tab, link the line it pays for with the picker under the table.
 
 **What you see.** The contract dates each term, tells you when a renewal decision is due, and compares what it commits with the budget lines linked to it.
 
