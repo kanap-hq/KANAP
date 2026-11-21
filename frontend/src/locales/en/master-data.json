@@ -474,6 +474,7 @@
     "newContact": "New contact",
     "contactFallback": "Contact",
     "createOption": "+ Create contact \"{{name}}\"",
+    "newContactOption": "+ New contact",
     "noContactAskAdmin": "No contact found. Ask an administrator of your workspace to create it.",
     "columns": {
       "reference": "Reference",

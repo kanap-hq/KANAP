@@ -474,6 +474,7 @@
     "newContact": "Neuer Kontakt",
     "contactFallback": "Kontakt",
     "createOption": "+ Kontakt „{{name}}“ erstellen",
+    "newContactOption": "+ Neuer Kontakt",
     "noContactAskAdmin": "Kein Kontakt gefunden. Bitten Sie einen Administrator Ihres Arbeitsbereichs, ihn zu erstellen.",
     "columns": {
       "reference": "Referenz",

@@ -55,7 +55,7 @@ describe('ContactSelect', () => {
   it('lists names only under their supplier, the email standing in for a contact with no name', async () => {
     renderSelect();
     fireEvent.mouseDown(screen.getByRole('combobox'));
-    await waitFor(() => expect(optionTexts()).toEqual(['Anna Berg', 'desk@acme.test']));
+    await waitFor(() => expect(optionTexts()).toEqual(['Anna Berg', 'desk@acme.test', 'master-data:contacts.newContactOption']));
     expect(screen.getByText('Acme')).toBeTruthy();
     expect(screen.queryByText(/anna\.berg@acme\.test/)).toBeNull();
   });
@@ -79,7 +79,7 @@ describe('ContactSelect', () => {
   it('names the supplier on the same line when the list is not grouped', async () => {
     renderSelect({ groupByCompany: false });
     fireEvent.mouseDown(screen.getByRole('combobox'));
-    await waitFor(() => expect(optionTexts()).toEqual(['Anna Berg (Acme)', 'desk@acme.test (Acme)']));
+    await waitFor(() => expect(optionTexts()).toEqual(['Anna Berg (Acme)', 'desk@acme.test (Acme)', 'master-data:contacts.newContactOption']));
   });
 
   it('shows the chosen contact as its name and supplier, without its email', async () => {
@@ -118,6 +118,37 @@ describe('ContactSelect', () => {
       typeInto('Zed');
       expect(await screen.findByRole('option', { name: 'master-data:contacts.createOption:Zed' })).toBeTruthy();
       expect(optionTexts()).toEqual(['Anna Berg', 'desk@acme.test', 'master-data:contacts.createOption:Zed']);
+    });
+
+    // Lot A1 of 26.11.9 (Fried, 21/11): the option closes the list before anything is typed too.
+    it('ends the list with the option to create a contact with nothing typed, on a list of matches and on an empty one', async () => {
+      renderSelect();
+      fireEvent.mouseDown(screen.getByRole('combobox'));
+      await waitFor(() => expect(optionTexts()).toEqual(['Anna Berg', 'desk@acme.test', 'master-data:contacts.newContactOption']));
+      cleanup();
+      noMatch();
+      renderSelect();
+      fireEvent.mouseDown(screen.getByRole('combobox'));
+      await waitFor(() => expect(optionTexts()).toEqual(['master-data:contacts.newContactOption']));
+    });
+
+    it('opens an empty dialog from that option, the cursor in the first name', async () => {
+      renderSelect();
+      fireEvent.mouseDown(screen.getByRole('combobox'));
+      fireEvent.click(await screen.findByRole('option', { name: 'master-data:contacts.newContactOption' }));
+      await screen.findByRole('dialog');
+      const first = screen.getByRole('textbox', { name: 'master-data:contacts.fields.firstName' });
+      expect(first).toHaveValue('');
+      expect(screen.getByRole('textbox', { name: 'master-data:contacts.fields.lastName' })).toHaveValue('');
+      expect(screen.getByRole('textbox', { name: 'master-data:contacts.fields.email' })).toHaveValue('');
+      await waitFor(() => expect(first).toHaveFocus());
+    });
+
+    it('offers no creation with nothing typed to a person who may not create', async () => {
+      hasLevel.mockReturnValue(false);
+      renderSelect();
+      fireEvent.mouseDown(screen.getByRole('combobox'));
+      await waitFor(() => expect(optionTexts()).toEqual(['Anna Berg', 'desk@acme.test']));
     });
 
     it('does not offer it when a contact already has exactly that name', async () => {

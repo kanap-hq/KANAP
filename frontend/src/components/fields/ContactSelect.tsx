@@ -14,6 +14,7 @@ import { formatItemRef } from '../../utils/item-ref';
 import OptionWithHint from './OptionWithHint';
 import type { Contact as ContactRecord } from '../../pages/contacts/contactModel';
 import CreateContactDialog, { type CreateContactRequest, type CreateContactSupplier } from './CreateContactDialog';
+import { contactName, isContactReference } from './contactNames';
 
 type Contact = {
   id: string;
@@ -46,19 +47,12 @@ type ContactSelectProps = {
   createSupplier?: CreateContactSupplier;
 };
 
-/** The option that offers to create the typed contact: not a row, it is never the field's value. */
+/** The option that offers to create a contact (the typed one, or a new one while nothing is typed): not a row, it is never the field's value. */
 type CreateRow = { id: typeof LOOKUP_CREATE_ID; lookupCreateText: string; lookupCreateLabel: string };
 type Row = Contact | CreateRow;
 const isCreateRow = (row: Row): row is CreateRow => lookupCreateText(row) !== null;
 /** The group of the create row: it closes the list under no supplier heading. */
 const CREATE_GROUP = '\u0000create';
-/** A typed reference (`CTCT-12`) names a contact to find, never one to create. */
-const CONTACT_REFERENCE = new RegExp(`^${formatItemRef('contact', 0).replace(/0$/, '')}\\d+$`, 'i');
-
-/** A contact is named, never shown by email: the email only stands in for a contact with no name. */
-function contactName(c: Contact): string {
-  return [c.first_name, c.last_name].filter(Boolean).join(' ').trim() || c.email;
-}
 
 /** "Name (supplier)", the one line a contact takes in the field and in the list. */
 function formatLabel(c: Contact): string {
@@ -133,12 +127,14 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
 
   const selected = mergedOptions.find((c) => c.id === value) || null;
 
-  // The create row closes the list once the search for the typed text has answered and no contact
-  // has exactly that name.
+  // The create row closes the list once the search has answered: "new contact" while nothing is
+  // typed, the typed name when no contact has exactly that name (never for a typed reference).
   const typed = input.trim();
   const settled = !isFetching && !isPlaceholderData;
   const createRow = React.useMemo<CreateRow | null>(() => {
-    if (!canCreate || !settled || !typed || CONTACT_REFERENCE.test(typed)) return null;
+    if (!canCreate || !settled) return null;
+    if (!typed) return { id: LOOKUP_CREATE_ID, lookupCreateText: '', lookupCreateLabel: t('master-data:contacts.newContactOption') };
+    if (isContactReference(typed)) return null;
     const needle = foldText(typed);
     if (mergedOptions.some((c) => foldText(contactName(c)) === needle || foldText(formatLabel(c)) === needle)) return null;
     return { id: LOOKUP_CREATE_ID, lookupCreateText: typed, lookupCreateLabel: t('master-data:contacts.createOption', { name: typed }) };
