@@ -834,8 +834,9 @@ export default function ProjectWorkspacePage() {
       void queryClient.invalidateQueries({ queryKey: ['portfolio-projects'], refetchType: 'none' });
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const reference = formatItemRef('project', created.item_number);
-      // The page keeps its header while the full project loads.
-      queryClient.setQueryData(['portfolio-project', reference, getProjectWorkspaceInclude('summary')], { activities: [], ...created });
+      // The page keeps its header while the full project loads. The header is not the project (no
+      // `can_contribute`, which opens the purpose for typing): stale at once, so the page reads it.
+      queryClient.setQueryData(['portfolio-project', reference, getProjectWorkspaceInclude('summary')], { activities: [], ...created }, { updatedAt: 0 });
       const qs = searchParams.toString();
       navigate(`/portfolio/projects/${reference}/summary${qs ? `?${qs}` : ''}`, { replace: true });
     },

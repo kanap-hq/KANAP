@@ -41,7 +41,9 @@ vi.mock('./workspace/portfolioRelations', () => ({
   portfolioLinksKey: (entity: string, id: string) => ['portfolio-links', entity, id],
   usePortfolioRelationsBadge: () => 0,
 }));
-vi.mock('../../components/IntegratedDocumentEditor', () => ({ default: () => <div data-testid="purpose-editor" /> }));
+vi.mock('../../components/IntegratedDocumentEditor', () => ({
+  default: (props: { disabled?: boolean }) => <div data-testid="purpose-editor" data-disabled={String(!!props.disabled)} />,
+}));
 vi.mock('./workspace/project/ProjectActivityTab', () => ({ default: () => <div data-testid="project-activity" /> }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchProjectTasksCount: async () => 0 }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
@@ -63,7 +65,7 @@ const CLASSIFICATION = {
   streams: [{ id: 'str-1', name: 'Digital', category_id: 'cat-1', is_active: true }],
 };
 const created = { id: 'prj-new', item_number: 9, name: 'Data platform', status: 'waiting_list', origin: 'fast_track', creation_token: 'token-1' };
-const detail = { ...created, creation_token: undefined, activities: [], source_id: 'src-1', category_id: 'cat-1', stream_id: 'str-1', company_id: 'co-1' };
+const detail = { ...created, creation_token: undefined, activities: [], source_id: 'src-1', category_id: 'cat-1', stream_id: 'str-1', company_id: 'co-1', can_contribute: true };
 
 function Location() {
   const location = useLocation();
@@ -77,7 +79,7 @@ function StartPage() {
 
 function renderPage(
   entries: string[],
-  options: { changes?: { fields: number; children: Record<string, number> }; classification?: Promise<unknown> } = {},
+  options: { changes?: { fields: number; children: Record<string, number> }; classification?: Promise<unknown>; staleTime?: number } = {},
 ) {
   const changes = options.changes ?? { fields: 0, children: {} };
   mocked.get.mockImplementation(async (url: string) => {
@@ -89,7 +91,7 @@ function renderPage(
   mocked.post.mockImplementation(async (url: string) => (url === '/portfolio/projects' ? { data: created } : { data: {} }) as never);
   mocked.delete.mockResolvedValue({ data: undefined } as never);
   return render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: options.staleTime ?? 0 } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={entries}>
@@ -162,6 +164,15 @@ describe('Project creation at the title', () => {
     expect(urls.filter((url) => /undefined|null|\/\/|\/portfolio\/projects\/new\b/.test(url))).toEqual([]);
     expect(mocked.post).not.toHaveBeenCalled();
     expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('reads the created project in full, so its purpose opens for typing right away', async () => {
+    // The app keeps a read fresh for 30 s (lib/queryClient): the header the creation shows at once
+    // must not stand for the project, whose read says whether this person may write its purpose.
+    renderPage(['/portfolio/projects/new/summary'], { staleTime: 30_000 });
+    await createDataPlatform();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/portfolio/projects/PRJ-9', expect.anything()));
+    await waitFor(() => expect(screen.getByTestId('purpose-editor')).toHaveAttribute('data-disabled', 'false'));
   });
 
   it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {
