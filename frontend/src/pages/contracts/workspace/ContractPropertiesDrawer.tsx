@@ -72,6 +72,9 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, mis
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const placement = useContractPlacementFilter(values.company_id || null, values.cost_center_id || null);
+  // A company outside the edit companies holds the contract only through its place: as on a line
+  // whose cost center is required, the place is marked required and cannot be cleared.
+  const placeRequired = placement?.placeRequired === true;
   // A place in another company than the contract's is kept; the hint only says so, as on a line.
   const costCenter = useCostCenterNode(values.cost_center_id || null);
   const costCenterHint = costCenter?.company_id && values.company_id && costCenter.company_id !== values.company_id
@@ -109,7 +112,7 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, mis
             />
           </Box>
         </PropertyRow>
-        <PropertyRow label={t('contracts.fields.costCenter')} helperText={costCenterHint}>
+        <PropertyRow label={t('contracts.fields.costCenter')} helperText={costCenterHint} required={placeRequired}>
           <Box sx={hideInnerLabelSx}>
             <CostCenterSelect
               hideLabel
@@ -120,6 +123,8 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, mis
                 if ((next ?? '') !== values.cost_center_id) onPatch({ cost_center_id: next });
               }}
               isAllowed={placement?.isCostCenterAllowed}
+              required={placeRequired}
+              disableClearable={placeRequired}
               disabled={disabled}
             />
           </Box>

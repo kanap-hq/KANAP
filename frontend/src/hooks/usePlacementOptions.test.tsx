@@ -124,6 +124,7 @@ describe('useContractPlacementFilter', () => {
     // FR is an edit company: any group or centre, even another company's.
     expect(result.current!.isCostCenterAllowed(node('inf-fr', 'fr'))).toBe(true);
     expect(result.current!.isCostCenterAllowed(node('grp-es', null))).toBe(true);
+    expect(result.current!.placeRequired).toBe(false);
     // ES comes only from the edit node company: the unfolded edit nodes of the group, sub-group included.
     rerender({ company: 'es', place: 'grp-es' });
     expect([...result.current!.companyIds].sort()).toEqual(['es', 'fr']);
@@ -131,12 +132,44 @@ describe('useContractPlacementFilter', () => {
     expect(result.current!.isCostCenterAllowed(node('sub-es', null))).toBe(true);
     expect(result.current!.isCostCenterAllowed(node('inf-es', 'es'))).toBe(true);
     expect(result.current!.isCostCenterAllowed(node('fin-es', 'es'))).toBe(false);
+    // The contract holds only through its place: the server refuses it without one.
+    expect(result.current!.placeRequired).toBe(true);
     // A place outside the edit nodes leaves only the edit companies offered; a company of the edit
     // nodes keeps its unfolded places (the server accepts that pair), other places are refused.
     rerender({ company: 'es', place: 'elsewhere' });
     expect([...result.current!.companyIds]).toEqual(['fr']);
     expect(result.current!.isCostCenterAllowed(node('inf-es', 'es'))).toBe(true);
     expect(result.current!.isCostCenterAllowed(node('fin-es', 'es'))).toBe(false);
+  });
+
+  it('offers no other place for a contract of a company outside the access, edited through its place', async () => {
+    state.limited = true;
+    // Edit on the centres X and Y of company B only; the contract belongs to company A, placed on X.
+    state.get.mockResolvedValue({
+      data: {
+        limited: true,
+        all: false,
+        companies: [],
+        costCenters: [{ id: 'x', companyId: 'b' }, { id: 'y', companyId: 'b' }],
+        editNodes: [{ id: 'x', companyId: 'b' }, { id: 'y', companyId: 'b' }],
+        editNodeCompanies: ['b'],
+      },
+    });
+    const { result, rerender } = renderHook(({ company, place }) => useContractPlacementFilter(company, place), {
+      wrapper,
+      initialProps: { company: 'a' as string | null, place: 'x' as string | null },
+    });
+    await waitFor(() => expect(result.current).not.toBeNull());
+    // The server refuses (A, Y) and (A, no place): no place is offered and the place cannot be cleared.
+    expect(result.current!.isCostCenterAllowed(node('x', 'b'))).toBe(false);
+    expect(result.current!.isCostCenterAllowed(node('y', 'b'))).toBe(false);
+    expect(result.current!.isCostCenterAllowed(node('other-a', 'a'))).toBe(false);
+    expect(result.current!.placeRequired).toBe(true);
+    // Before a company is chosen, the edit nodes stay offered and nothing is required yet.
+    rerender({ company: null, place: null });
+    expect(result.current!.isCostCenterAllowed(node('x', 'b'))).toBe(true);
+    expect(result.current!.isCostCenterAllowed(node('y', 'b'))).toBe(true);
+    expect(result.current!.placeRequired).toBe(false);
   });
 
   it('filters nothing for Edit on everything', async () => {
