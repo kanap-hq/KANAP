@@ -252,7 +252,7 @@ describe('InterfaceWorkspacePage (draft)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
     const title = screen.getByLabelText('title');
     fireEvent.change(title, { target: { value: 'Orders sync' } });
-    // In a browser the click's mousedown blurs the title first, which commits it.
+    // In a browser the click's mousedown blurs the title first, which puts the name in the draft.
     fireEvent.blur(title);
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/INT-9/flow'));

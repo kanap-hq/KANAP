@@ -26,7 +26,7 @@ Vaya a **Panorama IT > Incidentes** para ver el registro. Para registrar un inci
 
 1. Haga clic en **Nuevo incidente**. La página del incidente se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba un resumen breve y objetivo, p. ej.: «Servicio de correo no disponible en la oficina de Lyon».
-3. Pulse Intro o haga clic fuera del título. Kadratis registra el incidente de inmediato. Su referencia (`INC-14`) aparece y se abren todas las pestañas.
+3. Pulse Intro o Tab, o haga clic en **Crear**. Kadratis registra el incidente de inmediato. Su referencia (`INC-14`) aparece y se abren todas las pestañas.
 
 El nuevo incidente queda **Abierto**, con gravedad **Media**, detectado ahora y con usted como notificante. Complete después el resto como en cualquier incidente:
 
@@ -37,7 +37,7 @@ El nuevo incidente queda **Abierto**, con gravedad **Media**, detectado ahora y 
 - **Categoría**: infraestructura, seguridad, aplicación, datos, proveedor, otros (configurable, véase [Categorías](#categorias))
 - **Responsable**: quién se encarga de gestionarlo
 
-Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche. Pulse Escape en el título para salir sin registrar nada, aunque ya haya escrito un título.
+Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche. Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no registra nada, aunque ya haya escrito un título.
 
 ### Crear o cancelar { #cancelling-a-creation }
 

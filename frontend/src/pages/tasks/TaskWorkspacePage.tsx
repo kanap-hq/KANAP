@@ -1316,17 +1316,19 @@ export default function TaskWorkspacePage() {
       }
       return (await api.post<TaskData & { creation_token: string }>(endpoint, payload)).data;
     },
-    onCreated: async (created, token) => {
+    onCreated: async (created, token, stillHere) => {
       const relation = createRelation;
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
       if (relation.type === 'project' && relation.id) {
         void queryClient.invalidateQueries({ queryKey: ['project-tasks', relation.id] });
       }
-      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const reference = created.item_number ? formatItemRef('task', created.item_number) : created.id;
       // The create answers with the row alone (no names of its linked records): the page opens on
       // the task as read, or on that row with what the new page knew if the read fails.
       const full = await api.get<TaskData>(`/tasks/${created.id}`).then((r) => r.data).catch(() => null);
+      // The person left meanwhile: the task is kept, nobody is brought back to it.
+      if (!stillHere()) return;
+      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       queryClient.setQueryData(['tasks', reference], full || {
         ...created,
         application_ids: null,
@@ -1675,7 +1677,7 @@ export default function TaskWorkspacePage() {
         titleToGive={isCreate}
         titleError={isCreate ? titleCreation.titleError : undefined}
         titleFocusRequest={titleCreation.focusRequest}
-        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
+        onTitleDraftChange={isCreate ? titleCreation.onTitleDraftChange : undefined}
         onTitleCancel={isCreate ? () => { void cancelAction(); } : undefined}
       />
 

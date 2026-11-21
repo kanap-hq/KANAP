@@ -26,7 +26,7 @@ Gehen Sie zu **IT-Landschaft > Vorfälle**, um das Register zu sehen. So erfasse
 
 1. Klicken Sie auf **Neuer Vorfall**. Die Seite des Vorfalls öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie eine kurze, sachliche Zusammenfassung ein, z. B. „Mail-Dienst am Standort Lyon nicht verfügbar".
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erfasst den Vorfall sofort. Seine Referenz (`INC-14`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabe- oder Tabulatortaste, oder klicken Sie auf **Erstellen**. Kadratis erfasst den Vorfall sofort. Seine Referenz (`INC-14`) erscheint und alle Reiter öffnen sich.
 
 Der neue Vorfall ist **Offen**, mit dem Schweregrad **Mittel**, jetzt erkannt, und Sie sind der Melder. Füllen Sie dann den Rest aus wie bei jedem Vorfall:
 
@@ -37,7 +37,7 @@ Der neue Vorfall ist **Offen**, mit dem Schweregrad **Mittel**, jetzt erkannt, u
 - **Kategorie**: Infrastruktur, Sicherheit, Anwendung, Daten, Lieferant, Sonstiges (konfigurierbar, siehe [Kategorien](#kategorien))
 - **Verantwortlicher**: wer die Bearbeitung übernimmt
 
-Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden. Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erfassen, auch wenn Sie schon einen Titel eingegeben haben.
+Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden. Escape im Titel, ein Klick auf **Abbrechen** oder das Verlassen der Seite erfasst nichts, auch wenn Sie schon einen Titel eingegeben haben.
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 

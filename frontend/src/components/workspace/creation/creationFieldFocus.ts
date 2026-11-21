@@ -26,6 +26,11 @@ function reachable(el: Element): boolean {
   return !el.closest('[inert], [data-testid="creation-preview"]');
 }
 
+/** A field a person types or chooses in, within reach (`useDraftCreation` tells a passage to it from a departure). */
+export function isCreationField(el: Element | null): el is HTMLElement {
+  return el instanceof HTMLElement && el.matches(ENTRY_FIELDS) && reachable(el);
+}
+
 function fieldsOf(scope: HTMLElement): HTMLElement[] {
   if (scope.matches(ENTRY_FIELDS)) return reachable(scope) ? [scope] : [];
   return Array.from(scope.querySelectorAll<HTMLElement>(ENTRY_FIELDS)).filter(reachable);

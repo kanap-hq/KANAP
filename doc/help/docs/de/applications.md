@@ -40,7 +40,7 @@ Navigieren Sie zu **IT-Landschaft > Anwendungen**, um Ihre Liste zu sehen. So er
 
 1. Klicken Sie auf **Neue Anwendung**. Die Seite der Anwendung öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen der Anwendung oder des Dienstes ein, höchstens 200 Zeichen. Siehe [Eindeutige Namen](#unique-names).
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt die Anwendung sofort. Ihre Referenz (`APP-12`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabe- oder Tabulatortaste, oder klicken Sie auf **Erstellen**. Kadratis erstellt die Anwendung sofort. Ihre Referenz (`APP-12`) erscheint und alle Reiter öffnen sich.
 
 Die neue Anwendung ist **Aktiv**, in der Standardkategorie. Ändern Sie beides in der Kopfzeile und im Eigenschaftenbereich, dann füllen Sie den Rest aus:
 
@@ -54,7 +54,7 @@ Die neue Anwendung ist **Aktiv**, in der Standardkategorie. Ändern Sie beides i
 - **Lizenzierung** und **Notizen**: Lizenzbedingungen und interne Freitext-Notizen
 - **Kann Unteranwendungen haben**: diese Anwendung als „Suite" verwenden, die andere Anwendungen gruppiert
 
-Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben. Ein Name, den bereits eine andere Anwendung trägt, wird abgelehnt, mit einer Meldung unter dem Titel.
+Escape im Titel, ein Klick auf **Abbrechen** oder das Verlassen der Seite erstellt nichts, auch wenn Sie schon einen Namen eingegeben haben. Ein Name, den bereits eine andere Anwendung trägt, wird abgelehnt, mit einer Meldung unter dem Titel.
 
 ### Erstellen oder abbrechen { #cancelling-a-creation }
 

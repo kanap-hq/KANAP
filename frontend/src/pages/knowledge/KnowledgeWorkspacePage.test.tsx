@@ -11,6 +11,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { releaseLockKeepaliveUrl } from '../../lib/releaseLockKeepalive';
 import KnowledgeWorkspacePage from './KnowledgeWorkspacePage';
 import { classifyKnowledgeLoadError, isKnowledgeDocumentAddress } from './knowledgeLoadError';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const navigateMock = vi.hoisted(() => vi.fn());
 
@@ -90,7 +91,7 @@ const EDIT_TITLE = 'common:buttons.editTitle';
 /** Opens the title, types `value` and commits it with Enter. */
 async function commitTitle(value: string) {
   fireEvent.click(await screen.findByRole('button', { name: EDIT_TITLE }));
-  const input = screen.getByRole('textbox', { name: EDIT_TITLE });
+  const input = screen.getByRole('textbox', { name: TITLE_FIELD });
   fireEvent.change(input, { target: { value } });
   fireEvent.keyDown(input, { key: 'Enter' });
 }
@@ -477,7 +478,7 @@ describe('KnowledgeWorkspacePage — title', () => {
     expect(await screen.findByText('Runbook')).toBeTruthy();
     expect(screen.queryByText('workspace.actions.edit')).toBeNull();
     expect(screen.queryByRole('button', { name: EDIT_TITLE })).toBeNull();
-    expect(screen.queryByRole('textbox', { name: EDIT_TITLE })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: TITLE_FIELD })).toBeNull();
   });
 });
 

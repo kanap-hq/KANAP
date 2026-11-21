@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -63,7 +63,9 @@ function renderNew() {
         <KanapDialogProvider>
           <MemoryRouter initialEntries={['/master-data/contacts/new/overview']}>
             <Where />
+            <nav><Link to="/elsewhere">menu</Link></nav>
             <Routes>
+              <Route path="/elsewhere" element={<div data-testid="elsewhere" />} />
               <Route path="/master-data/contacts/:id/:tab" element={<ContactWorkspacePage />} />
             </Routes>
           </MemoryRouter>
@@ -97,8 +99,10 @@ describe('ContactWorkspacePage typing while the contact is created', () => {
     renderNew();
     const drawer = screen.getByRole('complementary');
     const email = within(drawer).getByLabelText('contacts.fields.email');
+    act(() => email.focus());
     fireEvent.change(email, { target: { value: 'alex@example.com' } });
-    fireEvent.blur(email);
+    // Enter gives the email, the contact's last required field.
+    fireEvent.keyDown(email, { key: 'Enter' });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });
@@ -156,5 +160,83 @@ describe('ContactWorkspacePage typing while the contact is created', () => {
     expect(shown.value).toBe('Prefers email');
     fireEvent.blur(shown);
     await until(() => { if (patchesWith('notes', 'Prefers email').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
+  });
+});
+
+describe('ContactWorkspacePage draft: leaving writes nothing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetCreationStore();
+    server = { ...STORED };
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/contacts/c-new' || url === '/contacts/CTCT-7') return { data: server };
+      if (url.endsWith('/usages')) return { data: { total: 0, groups: [] } };
+      return { data: { items: [] } };
+    });
+    mocked.post.mockImplementation(async () => ({ data: { ...STORED, creation_token: 'tok' } }));
+    mocked.patch.mockImplementation(async (_url: string, body: object) => ({ data: { ...server, ...body } }));
+  });
+
+  /** The names and the email typed, the email still in its field. */
+  function typeContact() {
+    renderNew();
+    const first = screen.getByLabelText('contacts.fields.firstName');
+    act(() => first.focus());
+    fireEvent.change(first, { target: { value: 'Alex' } });
+    const drawer = screen.getByRole('complementary');
+    const email = within(drawer).getByLabelText('contacts.fields.email');
+    act(() => email.focus());
+    fireEvent.change(email, { target: { value: 'alex@example.com' } });
+    return { drawer, email };
+  }
+
+  const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+  const where = () => screen.getByTestId('where').textContent;
+
+  it('writes nothing when the email loses the focus to the menu, and leaves', async () => {
+    typeContact();
+    const menu = screen.getByRole('link', { name: 'menu' });
+    act(() => menu.focus());
+    await settle();
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(menu);
+    await settle();
+    expect(where()).toBe('/elsewhere');
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('writes nothing when the email loses the focus to nowhere (another window)', async () => {
+    const { email } = typeContact();
+    fireEvent.blur(email);
+    await settle();
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(where()).toBe('/master-data/contacts/new/overview');
+  });
+
+  it('writes the contact when the email gives way to another field of the page', async () => {
+    const { drawer } = typeContact();
+    act(() => within(drawer).getByLabelText('contacts.fields.jobTitle').focus());
+    await waitFor(() => expect(where()).toBe('/master-data/contacts/CTCT-7/overview'));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+    expect(mocked.post.mock.calls[0][1]).toMatchObject({ email: 'alex@example.com', first_name: 'Alex' });
+  });
+
+  it('writes the contact on Enter in the email', async () => {
+    const { email } = typeContact();
+    fireEvent.keyDown(email, { key: 'Enter' });
+    await waitFor(() => expect(where()).toBe('/master-data/contacts/CTCT-7/overview'));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves on one click of Cancel, the email just typed, nothing written', async () => {
+    typeContact();
+    const cancel = screen.getByRole('button', { name: 'common:buttons.cancel' });
+    fireEvent.pointerDown(cancel);
+    act(() => cancel.focus());
+    fireEvent.click(cancel);
+    await settle();
+    expect(where()).not.toBe('/master-data/contacts/new/overview');
+    expect(where()).not.toBe('/master-data/contacts/CTCT-7/overview');
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 });

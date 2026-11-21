@@ -12,7 +12,7 @@ Wenn Sie auf **Neu** klicken, öffnet sich die Aufgabenseite mit einem leeren Ti
 
 1. **Geben Sie den Titel ein** (erforderlich), in der Kopfzeile.
 
-2. **Drücken Sie die Eingabetaste**, oder verlassen Sie das Feld. Kadratis erstellt die Aufgabe sofort, mit diesen Standardwerten:
+2. **Drücken Sie die Eingabetaste** oder die Tabulatortaste, oder klicken Sie auf **Erstellen**. Kadratis erstellt die Aufgabe sofort, mit diesen Standardwerten:
    - **Status**: **Offen**
    - **Priorität**: **Normal**
    - **Verantwortlicher** und **Antragsteller**: Sie
@@ -31,7 +31,7 @@ Wenn Sie auf **Neu** klicken, öffnet sich die Aufgabenseite mit einem leeren Ti
 
 4. Klicken Sie auf **Fertig**, wenn Sie die Eingabe abgeschlossen haben. Sie kehren dorthin zurück, wo Sie begonnen haben: Eine im Reiter **Aufgaben** eines Projekts begonnene Aufgabe kehrt zu diesem Reiter zurück. Klicken Sie stattdessen auf **Abbrechen**, um die Aufgabe zu löschen. Kadratis fragt zuerst nach, wenn Sie mehr als den Titel eingegeben haben.
 
-**Escape** im Titel einer neuen Aufgabe verlässt die Seite, ohne etwas zu erstellen, auch wenn Sie schon einen Titel eingegeben haben. Wenn Sie die Aufgabe auf andere Weise verlassen, bleibt sie erhalten.
+**Escape** im Titel einer neuen Aufgabe, ein Klick auf **Abbrechen** oder das Verlassen der Seite erstellt nichts, auch wenn Sie schon einen Titel eingegeben haben. Ist die Aufgabe erstellt, bleibt sie erhalten, wenn Sie sie anders als mit **Abbrechen** verlassen.
 
 **Tipp**: Sie können Bilder direkt in die Beschreibung einfügen. Sie werden automatisch hochgeladen.
 

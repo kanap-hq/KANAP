@@ -76,9 +76,9 @@ La creación directa de proyectos es para trabajo que debe entrar en ejecución 
 
 1. Haga clic en **Nuevo proyecto**. La página del proyecto se abre en **Resumen** con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba el nombre del proyecto.
-3. Pulse Intro o haga clic fuera del título. Kadratis crea el proyecto de inmediato, con el origen **Fast-track**. Su referencia (`PRJ-12`) aparece y se abren todas las pestañas.
+3. Pulse Intro o Tab, o haga clic en **Crear**. Kadratis crea el proyecto de inmediato, con el origen **Fast-track**. Su referencia (`PRJ-12`) aparece y se abren todas las pestañas.
 
-Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
+Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre.
 
 Un proyecto creado así puede pasar de **Fast-track** a **Histórico** y viceversa en el panel de Propiedades. Un proyecto convertido desde una solicitud conserva el origen **Solicitud** y su vinculación de fuente.
 

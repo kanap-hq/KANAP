@@ -176,7 +176,7 @@ export default function BusinessProcessWorkspacePage() {
     queryKeyPrefixes: ['business-processes'],
     onError: setSaveError,
   });
-  // The name committed in the header (Enter, Tab, its blur, Create) creates the process at once,
+  // The name given in the header (Enter, Tab or Create) creates the process at once,
   // enabled; the page moves to it, every tab open, with Done and Cancel.
   const titleCreation = useTitleCreation<BusinessProcess>({
     isCreate,
@@ -296,7 +296,7 @@ export default function BusinessProcessWorkspacePage() {
           }
           if (value !== process?.name) void patch({ name: value });
         }}
-        onTitleDraftChange={() => (isCreate ? titleCreation.setTitleError(null) : setTitleError(null))}
+        onTitleDraftChange={(draft) => (isCreate ? titleCreation.onTitleDraftChange(draft) : setTitleError(null))}
         titleError={isCreate ? titleCreation.titleError : titleError}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? close : undefined}

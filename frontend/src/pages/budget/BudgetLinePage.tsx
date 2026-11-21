@@ -1070,6 +1070,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // A title committed before the currency and the person's place were known waits for them.
   const titleCreation = useTitleCreation<{ id: string; nature?: string; reference?: string; item_number: number }>({
     isCreate,
+    // Written after the person left: the incomplete record is deleted, no page is left to ask.
+    discardApiBase: '/budget-lines',
     requiredMessage: t('common:creation.titleRequired'),
     ready: placementDefault.ready && !currencyLoading && placementReady,
     post: async (name) => {
@@ -1240,7 +1242,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             void patchNow({ product_name: value });
           }
         }}
-        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        onTitleDraftChange={isCreate ? titleCreation.onTitleDraftChange : undefined}
         titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}

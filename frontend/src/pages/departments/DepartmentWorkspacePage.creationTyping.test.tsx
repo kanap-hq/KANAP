@@ -37,6 +37,7 @@ vi.mock('../../components/fields/CompanySelect', () => ({
 import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import DepartmentWorkspacePage from './DepartmentWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -101,9 +102,11 @@ describe('DepartmentWorkspacePage typing while the department is created', () =>
     let answer: (value: unknown) => void = () => undefined;
     mocked.post.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
     renderNew();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Finance' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
@@ -149,7 +152,7 @@ describe('DepartmentWorkspacePage typing while the department is created', () =>
 
   it('marks the company on Create and puts the cursor in it, with no sentence under it', async () => {
     renderNew();
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Finance' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Finance' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(markedLabels()).toEqual(['departments.fields.company']);
     await waitFor(() => expect(screen.getByLabelText('company')).toHaveFocus());
