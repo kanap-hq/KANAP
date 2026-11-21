@@ -6,16 +6,13 @@ Las Conexiones documentan las rutas de red a nivel de infraestructura entre serv
 
 Navegue a **Panorama IT > Conexiones** para ver su registro de conexiones. Para crear una conexión:
 
-1. Haga clic en **Añadir conexión**. La página de la conexión se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
+1. Haga clic en **Añadir conexión**. La página de la conexión se abre con un título vacío en el encabezado. El título, la topología, los endpoints y los protocolos están abiertos. El resto de la página aparece atenuado.
 2. Escriba un nombre descriptivo.
-3. Pulse Intro o Tab, o haga clic en **Crear**. Kadratis crea la conexión de inmediato, de servidor a servidor, sin protocolos ni endpoints. Su referencia (`CONN-12`) aparece y se abren todas las pestañas.
+3. Elija la **Topología** en la barra bajo el título: **Servidor a servidor** o **Multi-servidor**.
+4. Elija los **Endpoints**: un origen y un destino para **Servidor a servidor** (cada uno un servidor, un clúster o una entidad), o al menos dos servidores para **Multi-servidor**.
+5. Añada al menos un protocolo de red en **Protocolos**.
 
-Después, cada campo se guarda por sí solo. Una conexión necesita:
-  - **Topología**: Servidor a servidor o Multi-servidor
-  - **Endpoints**: Un origen y un destino para Servidor a servidor (cada uno un servidor, un clúster o una entidad), o al menos dos servidores para Multi-servidor
-  - **Protocolos**: Al menos un protocolo de red
-
-Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre.
+Puede rellenarlos en cualquier orden. No se guarda nada hasta que se indiquen el nombre, los endpoints y un protocolo. En cuanto se indican, Kadratis crea la conexión con todo lo que ha introducido y le asigna su referencia (`CONN-12`). El resto de la página se abre, con las pestañas **Ruta** e **Historial**.
 
 **Consejo**: Las conexiones pueden vincularse a enlaces de interfaz para mostrar qué infraestructura soporta cada integración de aplicaciones.
 
@@ -23,11 +20,14 @@ Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no
 
 Mientras la conexión se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la conexión. **Ctrl+S** funciona como el botón mostrado.
 
-- **Crear** funciona como Intro: crea la conexión y la deja abierta, con su referencia. El cursor va al primer campo obligatorio aún vacío. Con el título vacío, el título pide uno
-- Una vez creada la conexión, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba que la conexión tenga al menos un protocolo y sus dos endpoints, o dos servidores en una conexión multi-servidor. La etiqueta de cada campo que falta se pone en rojo con un icono de alerta, y el primero recibe el foco. Cuando no falta nada, vuelve al punto de partida
-- **Cancelar** elimina la conexión. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar conexiones
+- **Crear** guarda la conexión cuando el borrador está completo y la deja abierta. Si todavía falta algo, no se guarda nada: un título vacío muestra su mensaje, la etiqueta de cada campo que falta se pone en rojo con un icono de alerta, y el título o el primer campo que falta recibe el foco
+- Cuando Kadratis rechaza la conexión, por ejemplo con el mismo activo en ambos lados, el mensaje aparece bajo el campo afectado. El borrador se queda como está
+- Una vez creada la conexión, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le devuelve al punto de partida
+- **Cancelar** elimina la conexión. Si la modificó después de crearla, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar conexiones
 
-Si sale de la conexión de otra forma mientras falta algo, Kadratis le pregunta qué hacer. **Completarla** le deja en la conexión, en el primer campo que falta. **Eliminarla** elimina la conexión. Si recarga la página o cierra la pestaña mientras a la conexión nueva todavía le falta un campo, su navegador pide confirmación. Si sale de todos modos, la conexión se elimina.
+Si sale de la conexión de otra forma (el menú, la flecha de retroceso), se conserva: está completa.
+
+Antes de que se cree la conexión, **Cancelar**, la flecha de retroceso o Escape en el título salen sin guardar. Cuando el borrador contiene algo más que su nombre, una confirmación pregunta antes de descartarlo. Un enlace del menú pregunta lo mismo.
 
 ---
 

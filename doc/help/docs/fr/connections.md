@@ -6,16 +6,13 @@ Les connexions documentent les chemins réseau de niveau infrastructure entre le
 
 Naviguez vers **Cartographie SI > Connexions** pour voir votre registre de connexions. Pour créer une connexion :
 
-1. Cliquez sur **Ajouter une connexion**. La page de la connexion s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+1. Cliquez sur **Ajouter une connexion**. La page de la connexion s'ouvre avec un titre vide dans l'en-tête. Le titre, la topologie, les endpoints et les protocoles sont ouverts. Le reste de la page est grisé.
 2. Saisissez un nom descriptif.
-3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée la connexion aussitôt, de serveur à serveur, sans protocole ni endpoints. Sa référence (`CONN-12`) s'affiche et tous les onglets s'ouvrent.
+3. Choisissez la **Topologie** dans la barre sous le titre : **Serveur à serveur** ou **Multi-serveur**.
+4. Choisissez les **Endpoints** : une source et une destination pour **Serveur à serveur** (chacune un serveur, un cluster ou une entité), ou au moins deux serveurs pour **Multi-serveur**.
+5. Ajoutez au moins un protocole réseau sous **Protocoles**.
 
-Chaque champ s'enregistre ensuite de lui-même. Une connexion a besoin de :
-  - **Topologie** : Serveur à serveur ou Multi-serveur
-  - **Endpoints** : Une source et une destination pour Serveur à serveur (chacune un serveur, un cluster ou une entité), ou au moins deux serveurs pour Multi-serveur
-  - **Protocoles** : Au moins un protocole réseau
-
-Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi.
+Vous pouvez les remplir dans l'ordre de votre choix. Rien n'est enregistré tant que le nom, les endpoints et un protocole ne sont pas donnés. Dès qu'ils le sont, Kadratis crée la connexion avec tout ce que vous avez saisi et lui attribue sa référence (`CONN-12`). Le reste de la page s'ouvre, avec les onglets **Chemin** et **Historique**.
 
 **Conseil** : Les connexions peuvent être liées aux liaisons d'interfaces pour montrer quelle infrastructure supporte chaque intégration applicative.
 
@@ -23,11 +20,14 @@ Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne 
 
 Tant que la connexion est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez la connexion. **Ctrl+S** agit comme le bouton affiché.
 
-- **Créer** fait comme Entrée : il crée la connexion et la laisse ouverte, avec sa référence. Le curseur va au premier champ obligatoire encore vide. Avec un titre vide, le titre en demande un
-- Une fois la connexion créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vérifie que la connexion a au moins un protocole et ses deux endpoints, ou deux serveurs pour une connexion multi-serveur. Le libellé de chaque champ manquant passe en rouge avec une icône d'alerte, et le premier prend le focus. Quand rien ne manque, vous revenez à votre point de départ
-- **Annuler** supprime la connexion. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des connexions
+- **Créer** enregistre la connexion quand le brouillon est complet et la laisse ouverte. S'il manque encore quelque chose, rien n'est enregistré : un titre vide affiche son message, le libellé de chaque champ manquant passe en rouge avec une icône d'alerte, et le titre ou le premier champ manquant prend le focus
+- Quand Kadratis refuse la connexion, par exemple avec le même actif des deux côtés, le message s'affiche sous le champ concerné. Le brouillon reste tel quel
+- Une fois la connexion créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ
+- **Annuler** supprime la connexion. Si vous l'avez modifiée après sa création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des connexions
 
-Si vous quittez la connexion autrement alors qu'il manque quelque chose, Kadratis vous demande quoi faire. **La compléter** vous garde sur la connexion, sur le premier champ manquant. **La supprimer** supprime la connexion. Recharger la page ou fermer l'onglet alors qu'il manque encore un champ à la nouvelle connexion fait demander une confirmation par votre navigateur. Si vous partez quand même, la connexion est supprimée.
+Si vous quittez la connexion autrement (le menu, la flèche de retour), elle est conservée : elle est complète.
+
+Avant la création de la connexion, **Annuler**, la flèche de retour ou Échap dans le titre partent sans rien enregistrer. Quand le brouillon contient plus que son nom, une confirmation est demandée avant de l'abandonner. Un lien du menu demande la même chose.
 
 ---
 
