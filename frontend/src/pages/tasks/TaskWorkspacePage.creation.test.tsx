@@ -228,6 +228,16 @@ describe('Task creation at the title', () => {
     expect(mocked.patch).not.toHaveBeenCalled();
   });
 
+  it('lets the properties panel of the task to come be widened, its edge out of the dimmed preview', async () => {
+    renderPage(['/portfolio/tasks/new/overview']);
+    await screen.findByRole('textbox', { name: TITLE });
+    const edge = screen.getByRole('separator', { name: 'portfolio:workspace.resizeProperties' });
+    for (const preview of screen.getAllByTestId('creation-preview')) expect(preview).not.toContainElement(edge);
+
+    fireEvent.keyDown(edge, { key: 'ArrowLeft' });
+    expect(screen.getByTestId('properties-panel-frame').style.getPropertyValue('--properties-panel-width')).toBe('296px');
+  });
+
   it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {
     renderPage(['/portfolio/tasks/new/overview']);
     const input = await screen.findByRole('textbox', { name: TITLE });

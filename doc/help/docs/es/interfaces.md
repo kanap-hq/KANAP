@@ -78,7 +78,7 @@ La cabecera lleva **Eliminar**, un icono de papelera con su nombre en una inform
 
 ### Propiedades de la interfaz (panel lateral)
 
-El panel lateral permanece visible en cada pestaña. Haga clic en su pestaña **Propiedades** para plegarlo o desplegarlo. Contiene tres grupos de campos:
+El panel lateral permanece visible en cada pestaña. Haga clic en su pestaña **Propiedades** para plegarlo o desplegarlo. Arrastre su borde izquierdo para ensancharlo; un doble clic en ese borde le devuelve su anchura habitual, y su navegador recuerda la anchura elegida. Contiene tres grupos de campos:
 
 **Identificación**:
 

@@ -78,7 +78,7 @@ The header carries **Delete**, a trash icon with its name in a tooltip (`applica
 
 ### Interface properties (side panel)
 
-The side panel stays visible across every tab. Click its **Properties** tab to collapse or expand it. It holds three groups of fields:
+The side panel stays visible across every tab. Click its **Properties** tab to collapse or expand it. Drag its left edge to widen it; a double-click on that edge brings back its usual width, and your browser remembers the width you chose. It holds three groups of fields:
 
 **Identification**:
 

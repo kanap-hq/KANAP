@@ -174,6 +174,19 @@ const DocumentEditorForOneSlot = React.forwardRef<
   const [contentResetNonce, setContentResetNonce] = React.useState(0);
   const [contentFocusNonce, setContentFocusNonce] = React.useState(0);
   const startEditPendingRef = React.useRef(false);
+  // Editing started from the text (a Tab, a click) gives the editor the focus once the lock is held
+  // and the editor is loaded. A person who has gone elsewhere meanwhile keeps their place.
+  const focusOnStartRef = React.useRef(false);
+  React.useEffect(() => {
+    const onFocusIn = (event: FocusEvent) => {
+      if (!focusOnStartRef.current) return;
+      if (event.target instanceof Node && containerRef.current?.contains(event.target)) return;
+      focusOnStartRef.current = false;
+      setContentFocusNonce(0);
+    };
+    document.addEventListener('focusin', onFocusIn);
+    return () => document.removeEventListener('focusin', onFocusIn);
+  }, []);
 
   // Mirrors read by the save pipeline: a save started from an imperative handle
   // must use the very latest draft/lock, not the values captured by the render
@@ -321,12 +334,14 @@ const DocumentEditorForOneSlot = React.forwardRef<
     focusAfterStart?: boolean;
   }) => {
     if (!canEdit || isDraftMode || startEditPendingRef.current) return;
+    if (opts?.focusAfterStart) focusOnStartRef.current = true;
+    const focusContent = () => {
+      window.setTimeout(() => {
+        if (focusOnStartRef.current) setContentFocusNonce((prev) => prev + 1);
+      }, 0);
+    };
     if (editMode && lockToken) {
-      if (opts?.focusAfterStart) {
-        window.setTimeout(() => {
-          setContentFocusNonce((prev) => prev + 1);
-        }, 0);
-      }
+      if (opts?.focusAfterStart) focusContent();
       return;
     }
     startEditPendingRef.current = true;
@@ -338,11 +353,7 @@ const DocumentEditorForOneSlot = React.forwardRef<
       }
       setActiveLockInfo(null);
       setEditMode(true);
-      if (opts?.focusAfterStart) {
-        window.setTimeout(() => {
-          setContentFocusNonce((prev) => prev + 1);
-        }, 0);
-      }
+      if (opts?.focusAfterStart) focusContent();
     } catch (e: any) {
       const status = Number(e?.response?.status || 0);
       const lockInfo = parseLockInfoFromError(e) || parseLockInfo(doc?.edit_lock);

@@ -159,7 +159,7 @@ La pestaña **Vista general** contiene el contenido de la tarea.
 
 ### Panel de Propiedades
 
-El panel es plegable (haga clic en la pestaña vertical **Propiedades** en el borde derecho para abrirlo o cerrarlo; pulse **P** como atajo). Su anchura y estado abierto se recuerdan localmente. El panel contiene cuatro grupos, separados por divisores:
+El panel es plegable (haga clic en la pestaña vertical **Propiedades** en el borde derecho para abrirlo o cerrarlo; pulse **P** como atajo). Arrastre su borde izquierdo para ensancharlo; un doble clic en ese borde le devuelve su anchura habitual. Su anchura y estado abierto se recuerdan localmente. El panel contiene cuatro grupos, separados por divisores:
 
 **Contexto**:
   - **Relacionado con**: Independiente, Proyecto, Presupuesto (una línea OPEX o CAPEX), Contrato o Incidente. Puede cambiar el tipo y elegir un nuevo elemento; al guardar, Kadratis aplica cualquier efecto secundario relacionado (consulte [Cambiar el contexto de la tarea](#cambiar-el-contexto-de-la-tarea))

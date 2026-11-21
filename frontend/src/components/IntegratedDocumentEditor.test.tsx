@@ -32,15 +32,27 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
 }));
 
+// While `pending` is set, the editor's code is still loading: the editor suspends.
+const editorCode = vi.hoisted(() => ({ pending: null as Promise<void> | null }));
+
 vi.mock('./MarkdownEditor', () => ({
-  default: ({ value, onChange, disabled }: any) => (
-    <textarea
-      aria-label="markdown-editor"
-      value={value}
-      disabled={disabled}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  ),
+  default: function MockMarkdownEditor({ value, onChange, disabled, focusNonce }: any) {
+    if (editorCode.pending) throw editorCode.pending;
+    const ref = React.useRef<HTMLTextAreaElement>(null);
+    // The real editor takes the focus each time `focusNonce` rises, and on mount when it is set.
+    React.useEffect(() => {
+      if (!disabled && focusNonce >= 1) ref.current?.focus();
+    }, [focusNonce, disabled]);
+    return (
+      <textarea
+        ref={ref}
+        aria-label="markdown-editor"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    );
+  },
 }));
 
 vi.mock('./MarkdownContent', () => ({
@@ -564,5 +576,86 @@ describe('IntegratedDocumentEditor — incidents:review', () => {
       await ref.current!.save();
     });
     expect(api.patch).toHaveBeenCalledTimes(1);
+  });
+
+  describe('focus when editing starts from the keyboard', () => {
+    let elsewhere: HTMLButtonElement;
+    beforeEach(() => {
+      elsewhere = document.createElement('button');
+      elsewhere.textContent = 'Next field';
+      document.body.appendChild(elsewhere);
+    });
+    afterEach(() => {
+      elsewhere.remove();
+      editorCode.pending = null;
+    });
+
+    /** Tab onto the read-only description: editing starts and asks for the lock. */
+    async function tabOntoDescription() {
+      await act(async () => {
+        screen.getByLabelText('Incident review').focus();
+      });
+    }
+
+    it('gives the editor the focus once the lock is held', async () => {
+      await renderEditor({ autosaveDelayMs: 60_000 });
+      await tabOntoDescription();
+
+      const editor = await screen.findByLabelText('markdown-editor');
+      await waitFor(() => expect(editor).toHaveFocus());
+    });
+
+    it('leaves the focus where the person went while the lock was being acquired', async () => {
+      const lock = deferred<any>();
+      vi.mocked(api.post).mockReturnValueOnce(lock.promise);
+      await renderEditor({ autosaveDelayMs: 60_000 });
+      await tabOntoDescription();
+
+      // The next Tab moves on before the server answers.
+      await act(async () => {
+        elsewhere.focus();
+      });
+      await act(async () => {
+        lock.resolve({ data: { lock_token: 'lock-1', expires_at: null } });
+      });
+
+      const editor = await screen.findByLabelText('markdown-editor');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      });
+      expect(editor).not.toHaveFocus();
+      expect(elsewhere).toHaveFocus();
+    });
+
+    it('leaves the focus where the person went while the editor was loading', async () => {
+      let loaded!: () => void;
+      editorCode.pending = new Promise<void>((resolve) => {
+        loaded = () => {
+          editorCode.pending = null;
+          resolve();
+        };
+      });
+      await renderEditor({ autosaveDelayMs: 60_000 });
+      await tabOntoDescription();
+      // The lock is held and the focus asked for; the editor's code is still on its way.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      });
+      expect(screen.queryByLabelText('markdown-editor')).toBeNull();
+
+      await act(async () => {
+        elsewhere.focus();
+      });
+      await act(async () => {
+        loaded();
+      });
+
+      const editor = await screen.findByLabelText('markdown-editor');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      });
+      expect(editor).not.toHaveFocus();
+      expect(elsewhere).toHaveFocus();
+    });
   });
 });

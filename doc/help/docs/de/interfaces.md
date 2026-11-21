@@ -78,7 +78,7 @@ Die Kopfzeile enthält **Löschen**, ein Papierkorbsymbol mit seinem Namen im To
 
 ### Schnittstelleneigenschaften (Seitenpanel)
 
-Das Seitenpanel bleibt in jedem Reiter sichtbar. Klicken Sie auf seinen Reiter **Eigenschaften**, um es ein- oder auszuklappen. Es enthält drei Feldgruppen:
+Das Seitenpanel bleibt in jedem Reiter sichtbar. Klicken Sie auf seinen Reiter **Eigenschaften**, um es ein- oder auszuklappen. Ziehen Sie seinen linken Rand, um es zu verbreitern; ein Doppelklick auf diesen Rand stellt die übliche Breite wieder her, und Ihr Browser merkt sich die gewählte Breite. Es enthält drei Feldgruppen:
 
 **Identifikation**:
 

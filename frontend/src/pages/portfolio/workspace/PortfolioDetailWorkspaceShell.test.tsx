@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -183,6 +183,152 @@ describe('PortfolioDetailWorkspaceShell scrolling', () => {
     expect(getComputedStyle(body).flexDirection).toBe('column');
     // Below md the properties are forced open and stack under the content.
     expect(body).toContainElement(screen.getByRole('complementary'));
+  });
+});
+
+function stubLocalStorage(initial: Record<string, string> = {}) {
+  const store = new Map(Object.entries(initial));
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, String(value)); },
+    removeItem: (key: string) => { store.delete(key); },
+    clear: () => store.clear(),
+  };
+  vi.stubGlobal('localStorage', storage);
+  return store;
+}
+
+function setWindowWidth(width: number) {
+  Object.defineProperty(window, 'innerWidth', { value: width, configurable: true, writable: true });
+}
+
+// The panel can be too narrow for the options of its lists (fried, 20/11): its left edge widens it,
+// from 280px to 520px, the content column keeping 480px, and each family of records keeps its width.
+describe('PortfolioDetailWorkspaceShell panel width', () => {
+  const twoTabs = [{ key: 'overview', label: 'Overview' }, { key: 'history', label: 'History' }];
+  const panelEdge = () => screen.getByRole('separator', { name: 'workspace.resizeProperties' });
+  const panel = () => screen.getByRole('complementary');
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    setWindowWidth(1024);
+  });
+
+  it('widens the panel and the tab row reserve as its edge is dragged, and keeps the width for the family', () => {
+    stubMatchMedia(false);
+    setWindowWidth(1400);
+    const store = stubLocalStorage();
+    renderShell({ tabs: twoTabs, properties: <div>drawer fields</div>, drawerStorageKey: 'kanap.budget.drawerOpen' });
+
+    expect(panel()).toHaveStyle({ width: '280px' });
+    expect(panelEdge()).toHaveAttribute('aria-orientation', 'vertical');
+    expect(panelEdge()).toHaveAttribute('aria-valuenow', '280');
+    fireEvent.pointerDown(panelEdge(), { button: 0, pointerId: 1, clientX: 1000 });
+    fireEvent.pointerMove(panelEdge(), { pointerId: 1, clientX: 900 });
+    fireEvent.pointerUp(panelEdge(), { pointerId: 1, clientX: 900 });
+
+    expect(panel()).toHaveStyle({ width: '380px' });
+    expect(panelEdge()).toHaveAttribute('aria-valuenow', '380');
+    expect(screen.getByTestId('workspace-tab-row')).toHaveStyle({ marginRight: '382px' });
+    expect(store.get('kanap.budget.drawerWidth')).toBe('380');
+    expect(store.get('kanap.budget.drawerOpen')).toBe('true');
+  });
+
+  it('stays between 280px and 520px', () => {
+    stubMatchMedia(false);
+    setWindowWidth(1600);
+    stubLocalStorage();
+    renderShell({ properties: <div>drawer fields</div> });
+
+    fireEvent.pointerDown(panelEdge(), { button: 0, pointerId: 1, clientX: 1000 });
+    fireEvent.pointerMove(panelEdge(), { pointerId: 1, clientX: 400 });
+    expect(panel()).toHaveStyle({ width: '520px' });
+    fireEvent.pointerMove(panelEdge(), { pointerId: 1, clientX: 1200 });
+    expect(panel()).toHaveStyle({ width: '280px' });
+    expect(panelEdge()).toHaveAttribute('aria-valuemin', '280');
+    expect(panelEdge()).toHaveAttribute('aria-valuemax', '520');
+  });
+
+  it('leaves the content column 480px, and follows the window', () => {
+    stubMatchMedia(false);
+    setWindowWidth(900);
+    stubLocalStorage({ 'kanap.test.drawerWidth': '500' });
+    renderShell({ properties: <div>drawer fields</div> });
+
+    // A 900px row: the panel stops at 420px and the stored 500px waits for room.
+    expect(panel()).toHaveStyle({ width: '420px' });
+    expect(panelEdge()).toHaveAttribute('aria-valuemax', '420');
+    act(() => {
+      setWindowWidth(1400);
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(panel()).toHaveStyle({ width: '500px' });
+  });
+
+  it('comes back to 280px on a double-click of its edge', () => {
+    stubMatchMedia(false);
+    setWindowWidth(1400);
+    const store = stubLocalStorage({ 'kanap.test.drawerWidth': '450' });
+    renderShell({ properties: <div>drawer fields</div> });
+
+    expect(panel()).toHaveStyle({ width: '450px' });
+    fireEvent.doubleClick(panelEdge());
+    expect(panel()).toHaveStyle({ width: '280px' });
+    expect(store.get('kanap.test.drawerWidth')).toBe('280');
+  });
+
+  it('moves with the arrow keys and comes back with Enter, without leaving the record', () => {
+    stubMatchMedia(false);
+    setWindowWidth(1400);
+    stubLocalStorage();
+    const onPrev = vi.fn();
+    const onNext = vi.fn();
+    renderShell({
+      properties: <div>drawer fields</div>,
+      nav: { currentIndex: 2, totalCount: 3, hasPrev: true, hasNext: true, onPrev, onNext, previousLabel: 'Previous', nextLabel: 'Next' },
+    });
+
+    panelEdge().focus();
+    fireEvent.keyDown(panelEdge(), { key: 'ArrowLeft' });
+    fireEvent.keyDown(panelEdge(), { key: 'ArrowLeft' });
+    expect(panel()).toHaveStyle({ width: '312px' });
+    fireEvent.keyDown(panelEdge(), { key: 'ArrowRight' });
+    expect(panel()).toHaveStyle({ width: '296px' });
+    fireEvent.keyDown(panelEdge(), { key: 'Enter' });
+    expect(panel()).toHaveStyle({ width: '280px' });
+    expect(onPrev).not.toHaveBeenCalled();
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it('resizes the panel of a record being created too', () => {
+    stubMatchMedia(false);
+    setWindowWidth(1400);
+    stubLocalStorage({ 'kanap.test.drawerOpen': 'false' });
+    renderShell({ tabs: twoTabs, properties: <div>drawer fields</div>, forceDrawerOpen: true, isCreate: true });
+
+    fireEvent.keyDown(panelEdge(), { key: 'ArrowLeft' });
+    expect(panel()).toHaveStyle({ width: '296px' });
+    expect(screen.getByTestId('workspace-tab-row')).toHaveStyle({ marginRight: '298px' });
+  });
+
+  it('draws no edge to drag below md, and keeps the stored width for a wide screen', () => {
+    stubMatchMedia(true);
+    const store = stubLocalStorage({ 'kanap.test.drawerWidth': '450' });
+    renderShell({ tabs: twoTabs, properties: <div>drawer fields</div> });
+
+    expect(screen.queryByRole('separator')).toBeNull();
+    expect(panel()).toHaveStyle({ width: '100%' });
+    expect(screen.getByTestId('workspace-tab-row')).toHaveStyle({ marginRight: '0px' });
+    expect(store.get('kanap.test.drawerWidth')).toBe('450');
+  });
+
+  it('draws no edge while the panel is closed', () => {
+    stubMatchMedia(false);
+    stubLocalStorage({ 'kanap.test.drawerOpen': 'false', 'kanap.test.drawerWidth': '450' });
+    renderShell({ tabs: twoTabs, properties: <div>drawer fields</div> });
+
+    expect(screen.queryByRole('complementary')).toBeNull();
+    expect(screen.queryByRole('separator')).toBeNull();
   });
 });
 

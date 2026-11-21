@@ -1,8 +1,8 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ArtifactPanel from '../components/ArtifactPanel';
 import { createAppTheme } from '../../config/ThemeContext';
 
@@ -284,5 +284,109 @@ describe('ArtifactPanel', () => {
     // Read just before the actions, not hidden under them.
     expect(actions).not.toContainElement(lookalike);
     expect(lookalike.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+// Its edge became the one of the properties panels (lot N2 of 26.11.9): same gestures, its own
+// bounds (320px, 70% of the window) and key.
+describe('ArtifactPanel width', () => {
+  const theme = createAppTheme('light');
+  const preview = {
+    preview_id: 'card-1',
+    tool_name: 'create_task' as const,
+    status: 'pending' as const,
+    target: { entity_type: 'tasks', entity_id: null, ref: null, title: 'Task 1' },
+    changes: { title: { label: 'Title', from: null, to: 'Task 1', format: 'text' as const } },
+    requires_confirmation: true,
+    actions: ['approve', 'reject'] as Array<'approve' | 'reject'>,
+    summary: 'Create task 1.',
+    error_message: null,
+    conversation_id: 'conversation-1',
+    created_at: '2026-03-28T17:00:00.000Z',
+    expires_at: '2026-03-28T17:10:00.000Z',
+    approved_at: null,
+    rejected_at: null,
+    executed_at: null,
+  };
+  const edge = () => screen.getByRole('separator', { name: 'artifactPanel.resize' });
+  const panel = () => edge().parentElement as HTMLElement;
+
+  function setUp(windowWidth: number, stored: Record<string, string> = {}) {
+    const store = new Map(Object.entries(stored));
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, String(value)); },
+      removeItem: (key: string) => { store.delete(key); },
+    });
+    Object.defineProperty(window, 'innerWidth', { value: windowWidth, configurable: true, writable: true });
+    render(
+      <ThemeProvider theme={theme}>
+        <ArtifactPanel
+          previews={[preview]}
+          selectedId="card-1"
+          open
+          onToggle={() => undefined}
+          onSelect={() => undefined}
+          onApprove={() => undefined}
+          onReject={() => undefined}
+          onApproveMany={() => undefined}
+          onRejectMany={() => undefined}
+        />
+      </ThemeProvider>,
+    );
+    return store;
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true, writable: true });
+  });
+
+  it('follows its edge between 320px and 70% of the window, and keeps the width', () => {
+    const store = setUp(1000);
+    expect(panel()).toHaveStyle({ width: '480px' });
+
+    fireEvent.pointerDown(edge(), { button: 0, pointerId: 1, clientX: 500 });
+    fireEvent.pointerMove(edge(), { pointerId: 1, clientX: 440 });
+    expect(panel()).toHaveStyle({ width: '540px' });
+    fireEvent.pointerMove(edge(), { pointerId: 1, clientX: 100 });
+    expect(panel()).toHaveStyle({ width: '700px' });
+    fireEvent.pointerMove(edge(), { pointerId: 1, clientX: 900 });
+    expect(panel()).toHaveStyle({ width: '320px' });
+    fireEvent.pointerUp(edge(), { pointerId: 1, clientX: 900 });
+    expect(store.get('kanap.ai.artifactPanelWidth')).toBe('320');
+    expect(edge()).toHaveAttribute('aria-valuemin', '320');
+    expect(edge()).toHaveAttribute('aria-valuemax', '700');
+  });
+
+  it('comes back to 480px on a double-click or Enter, and moves with the arrow keys', () => {
+    const store = setUp(1400, { 'kanap.ai.artifactPanelWidth': '600' });
+    expect(panel()).toHaveStyle({ width: '600px' });
+
+    fireEvent.doubleClick(edge());
+    expect(panel()).toHaveStyle({ width: '480px' });
+    fireEvent.keyDown(edge(), { key: 'ArrowLeft' });
+    expect(panel()).toHaveStyle({ width: '496px' });
+    fireEvent.keyDown(edge(), { key: 'ArrowRight' });
+    fireEvent.keyDown(edge(), { key: 'ArrowRight' });
+    expect(panel()).toHaveStyle({ width: '464px' });
+    fireEvent.keyDown(edge(), { key: 'Enter' });
+    expect(panel()).toHaveStyle({ width: '480px' });
+    expect(store.get('kanap.ai.artifactPanelWidth')).toBe('480');
+  });
+
+  it('narrows with the window and takes its width back when the window grows', () => {
+    setUp(1400, { 'kanap.ai.artifactPanelWidth': '800' });
+    expect(panel()).toHaveStyle({ width: '800px' });
+    act(() => {
+      Object.defineProperty(window, 'innerWidth', { value: 1000, configurable: true, writable: true });
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(panel()).toHaveStyle({ width: '700px' });
+    act(() => {
+      Object.defineProperty(window, 'innerWidth', { value: 1400, configurable: true, writable: true });
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(panel()).toHaveStyle({ width: '800px' });
   });
 });

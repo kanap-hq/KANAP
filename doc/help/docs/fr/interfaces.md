@@ -78,7 +78,7 @@ L'en-tête porte **Supprimer**, une icône corbeille avec son nom en infobulle (
 
 ### Propriétés de l'interface (panneau latéral)
 
-Le panneau latéral reste visible sur chaque onglet. Cliquez sur son onglet **Propriétés** pour le replier ou le déplier. Il regroupe ses champs en trois blocs :
+Le panneau latéral reste visible sur chaque onglet. Cliquez sur son onglet **Propriétés** pour le replier ou le déplier. Faites glisser son bord gauche pour l'élargir ; un double-clic sur ce bord lui rend sa largeur habituelle, et votre navigateur retient la largeur choisie. Il regroupe ses champs en trois blocs :
 
 **Identification** :
 

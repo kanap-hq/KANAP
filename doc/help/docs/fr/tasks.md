@@ -159,7 +159,7 @@ L'onglet **Vue d'ensemble** contient le contenu de la tâche.
 
 ### Tiroir des propriétés
 
-Le tiroir est rétractable (cliquez sur l'onglet vertical **Propriétés** sur le bord droit pour ouvrir ou fermer ; appuyez sur **P** comme raccourci). Sa largeur et son état d'ouverture sont mémorisés localement. Le tiroir contient quatre groupes, séparés par des séparateurs :
+Le tiroir est rétractable (cliquez sur l'onglet vertical **Propriétés** sur le bord droit pour ouvrir ou fermer ; appuyez sur **P** comme raccourci). Faites glisser son bord gauche pour l'élargir ; un double-clic sur ce bord lui rend sa largeur habituelle. Sa largeur et son état d'ouverture sont mémorisés localement. Le tiroir contient quatre groupes, séparés par des séparateurs :
 
 **Contexte** :
   - **Lié à** : Autonome, Projet, Budget (une ligne OPEX ou CAPEX), Contrat ou Incident. Vous pouvez changer le type et choisir un nouvel élément ; à l'enregistrement, Kadratis applique tous les effets secondaires associés (voir [Changer le contexte d'une tâche](#changer-le-contexte-dune-tache))

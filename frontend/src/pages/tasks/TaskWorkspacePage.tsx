@@ -35,6 +35,7 @@ import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTa
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import { followCreationFields, useCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
+import { ResizablePropertiesPanel } from '../../components/workspace/PanelResizeHandle';
 import { TASK_STATUS_OPTIONS } from './task.constants';
 import type { TaskStatus } from './task.constants';
 import { useTranslation } from 'react-i18next';
@@ -1590,6 +1591,20 @@ export default function TaskWorkspacePage() {
       projectWorkspaceLink={sidebarProjectWorkspaceLink}
     />
   ) : null;
+  // The new page's panel is the draft's, out of reach. On a wide screen its left edge widens it,
+  // the new page's too.
+  const previewedDrawer = isCreate && propertiesDrawer
+    ? <CreationPreview sx={{ display: 'flex', flexShrink: 0 }}>{propertiesDrawer}</CreationPreview>
+    : propertiesDrawer;
+  const drawerArea = !previewedDrawer || isMobile ? previewedDrawer : (
+    <ResizablePropertiesPanel
+      ariaLabel={t('portfolio:workspace.resizeProperties')}
+      storageKey="kanap.taskDetail.drawerWidth"
+      lift={Math.abs(taskDetailTokens.drawer.panelTop)}
+    >
+      {previewedDrawer}
+    </ResizablePropertiesPanel>
+  );
 
   return (
     <Box ref={workspaceRef} data-workspace-shell="" onKeyDownCapture={followCreationFields} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -1761,10 +1776,8 @@ export default function TaskWorkspacePage() {
           </Box>
         )}
 
-        {/* Properties drawer, on the right; the new page's is the draft's, out of reach */}
-        {isCreate && propertiesDrawer
-          ? <CreationPreview sx={{ display: 'flex', flexShrink: 0 }}>{propertiesDrawer}</CreationPreview>
-          : propertiesDrawer}
+        {/* Properties drawer, on the right */}
+        {drawerArea}
       </Box>
 
       {task && (
