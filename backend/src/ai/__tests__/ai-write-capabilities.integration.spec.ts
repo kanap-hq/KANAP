@@ -30,6 +30,8 @@ type SeededTenant = {
   userId: string;
   limitedUserId: string;
   companyId: string;
+  /** An account of the company's chart: a new budget line needs one. */
+  accountId: string;
   departmentId: string;
   supplierId: string;
   contactId: string;
@@ -271,6 +273,16 @@ async function seedGraph(runner: QueryRunner): Promise<SeededTenant> {
      )`,
     [companyId, tenantId, `PLAID Capability Company ${tag}`],
   );
+  const [chart] = await runner.query(
+    `INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, $2, $3, 'FR') RETURNING id`,
+    [tenantId, `CAP-${tag}`, `PLAID Capability Chart ${tag}`],
+  );
+  await runner.query(`UPDATE companies SET coa_id = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, companyId, chart.id]);
+  const [account] = await runner.query(
+    `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) VALUES ($1, $2, 6100, $3) RETURNING id`,
+    [tenantId, chart.id, `PLAID Capability Account ${tag}`],
+  );
+  const accountId = account.id as string;
   await runner.query(
     `INSERT INTO company_metrics (
        id, tenant_id, company_id, fiscal_year, headcount, it_users, turnover,
@@ -432,6 +444,7 @@ async function seedGraph(runner: QueryRunner): Promise<SeededTenant> {
     userId,
     limitedUserId,
     companyId,
+    accountId,
     departmentId,
     supplierId,
     contactId,
@@ -694,12 +707,20 @@ async function testRelationWritesAndSupplierPropagationUndo(harness: Harness) {
 async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const businessCtx = context(seed, runner, 'business-record');
+    // A new line needs its account, as by every door: the preview refuses it before writing.
+    await expectRejects(
+      () => harness.tools.execute(businessCtx, 'create_business_record', {
+        entity_type: 'budget_lines',
+        fields: { nature: 'opex', product_name: `PLAID No Account ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-02-01' },
+      }),
+      /^Account is required for budget line creation\.$/,
+    );
     const spendPreview = await executeToolPreview(harness, businessCtx, 'create_business_record', {
       entity_type: 'budget_lines',
       fields: {
         nature: 'opex',
         product_name: `PLAID Created Spend ${seed.tag}`,
-        paying_company_id: seed.companyId,
+        paying_company_id: seed.companyId, account_id: seed.accountId,
         supplier_id: seed.supplierId,
         currency: 'EUR',
         effective_start: '2026-02-01',
@@ -946,7 +967,7 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
         fields: {
           nature: 'capex',
           product_name: `Forbidden CAPEX ${seed.tag}`,
-          paying_company_id: seed.companyId,
+          paying_company_id: seed.companyId, account_id: seed.accountId,
           currency: 'EUR',
           effective_start: '2026-01-01',
         },
@@ -1229,7 +1250,7 @@ async function testItemAnalyticsDimensions(harness: Harness) {
         entityType: 'budget_lines', nature: 'opex', itemId: seed.spendItemId, linkTable: 'spend_item_analytics_values', labelPlural: 'budget lines',
         lineType: 'OPEX', otherType: 'CAPEX', ownAxis: recurrence, ownCode: 'recurrence', ownValue: monthly, ownName: 'Monthly',
         otherCode: 'asset-class', otherName: 'Asset class', otherValueName: 'Servers',
-        createFields: { nature: 'opex', product_name: `Dimensions ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
+        createFields: { nature: 'opex', product_name: `Dimensions ${seed.tag}`, paying_company_id: seed.companyId, account_id: seed.accountId, currency: 'EUR', effective_start: '2026-01-01' },
       },
       {
         entityType: 'budget_lines', nature: 'capex', itemId: seed.capexItemId, linkTable: 'spend_item_analytics_values', labelPlural: 'budget lines',
@@ -1237,7 +1258,7 @@ async function testItemAnalyticsDimensions(harness: Harness) {
         otherCode: 'recurrence', otherName: 'Recurrence', otherValueName: 'Monthly',
         createFields: {
           nature: 'capex', product_name: `Dimensions ${seed.tag}`,
-          paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01',
+          paying_company_id: seed.companyId, account_id: seed.accountId, currency: 'EUR', effective_start: '2026-01-01',
         },
       },
     ]) {
@@ -1423,7 +1444,7 @@ async function testCapexCriteriaAreDimensions(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     await ensureCapexDimensions(runner.manager, seed.tenantId);
     const ctx = context(seed, runner, 'capex-criteria');
-    const fields = { nature: 'capex', product_name: `Criteria ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' };
+    const fields = { nature: 'capex', product_name: `Criteria ${seed.tag}`, paying_company_id: seed.companyId, account_id: seed.accountId, currency: 'EUR', effective_start: '2026-01-01' };
     const create = (extra: Record<string, unknown>) =>
       harness.tools.execute(ctx, 'create_business_record', { entity_type: 'budget_lines', fields: { ...fields, ...extra } });
 
@@ -1478,13 +1499,13 @@ async function testItemRequiredDimensions(harness: Harness) {
     for (const line of [
       {
         entityType: 'budget_lines', nature: 'opex', itemId: seed.spendItemId, linkTable: 'spend_item_analytics_values', label: 'budget line', other: 'capex',
-        createFields: { nature: 'opex', product_name: `Required ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
+        createFields: { nature: 'opex', product_name: `Required ${seed.tag}`, paying_company_id: seed.companyId, account_id: seed.accountId, currency: 'EUR', effective_start: '2026-01-01' },
       },
       {
         entityType: 'budget_lines', nature: 'capex', itemId: seed.capexItemId, linkTable: 'spend_item_analytics_values', label: 'budget line', other: 'opex',
         createFields: {
           nature: 'capex', product_name: `Required ${seed.tag}`,
-          paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01',
+          paying_company_id: seed.companyId, account_id: seed.accountId, currency: 'EUR', effective_start: '2026-01-01',
         },
       },
     ]) {
@@ -1694,7 +1715,7 @@ async function testLineCreatedWithItsAmountInOneApproval(harness: Harness) {
     const fields = {
       nature: 'opex',
       product_name: `QA Test ${seed.tag}`,
-      paying_company_id: seed.companyId,
+      paying_company_id: seed.companyId, account_id: seed.accountId,
       currency: 'EUR',
       effective_start: '2026-01-01',
     };
@@ -1789,7 +1810,7 @@ async function testBudgetLineUpdateHistoryByKad(harness: Harness) {
 async function testBudgetLineSingleFamilyWrites(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'budget-family');
-    const base = { paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' };
+    const base = { paying_company_id: seed.companyId, account_id: seed.accountId, currency: 'EUR', effective_start: '2026-01-01' };
 
     await expectRejects(
       () => harness.tools.execute(ctx, 'create_business_record', {

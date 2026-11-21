@@ -472,7 +472,8 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       description: { label: 'Description', kind: 'text', nullable: true },
       supplier_id: { label: 'Supplier', kind: 'relation', nullable: true, relationTarget: 'suppliers', aliases: ['supplier'] },
       paying_company_id: { label: 'Paying Company', kind: 'relation', requiredOnCreate: true, relationTarget: 'companies', aliases: ['company', 'paying_company'] },
-      account_id: { label: 'Account', kind: 'relation', nullable: true, relationTarget: 'accounts', aliases: ['account'] },
+      // Required on create, as by every door (`spend/item-write.util.ts`); an update may still clear it.
+      account_id: { label: 'Account', kind: 'relation', nullable: true, requiredOnCreate: true, relationTarget: 'accounts', aliases: ['account'] },
       currency: { label: 'Currency', kind: 'upper3', requiredOnCreate: true },
       effective_start: { label: 'Effective Start', kind: 'date', requiredOnCreate: true },
       // Deprecated alias of disabled_at for one release: fills an empty end of validity, never clears it.
