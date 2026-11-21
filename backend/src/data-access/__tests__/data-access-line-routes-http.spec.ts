@@ -31,6 +31,8 @@ import { SpendTasksController } from '../../spend/spend-tasks.controller';
 import { SpendTasksService } from '../../spend/spend-tasks.service';
 import { BudgetLinesController } from '../../spend/budget-lines.controller';
 import { BudgetLinesService } from '../../spend/budget-lines.service';
+import { SpendItemsService } from '../../spend/spend-items.service';
+import { SpendItem } from '../../spend/spend-item.entity';
 import { DATA_ACCESS_READ_ONLY_LINE_MESSAGE } from '../line-write-checks';
 import { LIMITED_ROLE, PgClient, APP_URL, connect, roleExists } from './data-access-test-helpers';
 import { Seed, seed } from './data-access-line-seed';
@@ -54,6 +56,11 @@ import { Seed, seed } from './data-access-line-seed';
  * - A move of a task to a read-only line: 403; to a hidden line: 404, as a missing one.
  * - `POST /spend-items/:id/tasks`: read-only line 403, editable line 201, hidden line 404.
  * - Ulla is served as before.
+ * - The line itself (`PATCH /budget-lines/:id`, `POST /budget-lines`, `DELETE /budget-lines/bulk`):
+ *   Rita modifies L3 through its centre (200), but moving it (another centre, a company that is not
+ *   its centre's) is a placement (403); setting its company to its centre's places it (200). She
+ *   creates a line on INF-FR paid by FR, not paid by ES (403 placement). L2 is read only (403). The
+ *   delete of lines is reserved to people with access to all data (403 reserved).
  * - The Relations tab of a line (`/budget-lines/:id/relations/:kind`): an application, a technology
  *   or a project added to or removed from a read-only line 403, an editable line 201 / 200, a hidden
  *   line 404 as a missing one (the owner lock passes the UPDATE policy, `owned-link.ts`).
@@ -132,11 +139,25 @@ function testModule(): any {
     stub() as any,
     stub() as any,
   );
+  const opexItems = new SpendItemsService(
+    dataSource.getRepository(SpendItem),
+    stub() as any,
+    stub() as any,
+    audit,
+    stub() as any,
+    stub() as any,
+    stub() as any,
+    stub() as any,
+    stub() as any,
+    stub() as any,
+    new ItemNumberService(),
+  );
   const real = new Map<unknown, unknown>([
     [TasksUnifiedService, unified],
     [SpendTasksService, new SpendTasksService(unified)],
-    // The Relations tab needs the audit only (`setRelation`).
-    [BudgetLinesService, new BudgetLinesService(null as any, null as any, null as any, null as any, null as any, null as any, audit)],
+    // The Relations tab needs the audit only (`setRelation`); the update and the creation of a line,
+    // the service of the OPEX nature (no supplier or status change here: no contacts, no email).
+    [BudgetLinesService, new BudgetLinesService(null as any, null as any, null as any, null as any, opexItems, null as any, audit)],
     [DataSource, dataSource],
   ]);
   const enhancers = new Set<any>();
@@ -416,6 +437,81 @@ async function testRelations(app: INestApplication) {
   console.log('  Relations tab (applications, technologies, projects): read-only line 403, editable 201 / 200, hidden 404 as a missing one: OK');
 }
 
+type LineRow = { description: string | null; paying_company_id: string | null; cost_center_id: string | null };
+
+async function lineRow(id: string): Promise<LineRow | undefined> {
+  return inTenant(async () => (await client.query(
+    `SELECT description, paying_company_id, cost_center_id FROM spend_items WHERE id = $1`, [id],
+  )).rows[0]);
+}
+
+async function linesNamed(name: string): Promise<LineRow[]> {
+  return inTenant(async () => (await client.query(
+    `SELECT description, paying_company_id, cost_center_id FROM spend_items WHERE product_name = $1`, [name],
+  )).rows);
+}
+
+function expectRefused(res: Answer, reason: string, what: string): void {
+  assert.equal(res.status, 403, `${what}: ${res.text}`);
+  assert.equal(res.body?.code, 'DATA_ACCESS_LIMITED', `${what}: ${res.text}`);
+  assert.equal(res.body?.reason, reason, `${what}: ${res.text}`);
+}
+
+/** Run last: L3 ends paid by FR (its centre's company), which the other scenarios do not expect. */
+async function testLineRoutes(app: INestApplication) {
+  const { persons, lines, fr, es, infFr, infEs } = s;
+  const rita = persons.rita;
+  const other = await inTenant(async () => (await client.query(
+    `INSERT INTO companies (tenant_id, name, country_iso, city, status) VALUES (app_current_tenant(), 'Alpha Italia HTTP', 'IT', 'Milano', 'enabled') RETURNING id`,
+  )).rows[0].id as string);
+  const seeded: LineRow = { description: null, paying_company_id: es, cost_center_id: infFr };
+  assert.deepEqual(await lineRow(lines.L3), seeded, 'L3 as seeded: paid by ES on INF-FR');
+
+  // 1. L3 (paid by ES, charged to INF-FR): Rita modifies it through its centre.
+  const described = await call(app, 'PATCH', `budget-lines/${lines.L3}`, rita, { description: 'Changed through the centre' });
+  assert.equal(described.status, 200, `Rita modifies a line through its centre: ${described.text}`);
+  const changed: LineRow = { ...seeded, description: 'Changed through the centre' };
+  assert.deepEqual(await lineRow(lines.L3), changed);
+
+  // 2. Moving it to a centre outside her edit nodes is a placement.
+  const toInfEs = await call(app, 'PATCH', `budget-lines/${lines.L3}`, rita, { cost_center_id: infEs });
+  expectRefused(toInfEs, 'placement', 'Rita moves the line to INF-ES');
+  assert.deepEqual(await lineRow(lines.L3), changed, 'L3 unchanged');
+
+  // 3. So is a paying company that is not the company of INF-FR.
+  const toOther = await call(app, 'PATCH', `budget-lines/${lines.L3}`, rita, { paying_company_id: other });
+  expectRefused(toOther, 'placement', 'Rita gives the line a third paying company');
+  assert.deepEqual(await lineRow(lines.L3), changed, 'L3 unchanged');
+
+  // 6. L2 (paid by FR on INF-ES): read only for Rita.
+  const l2Before = await lineRow(lines.L2);
+  const readOnly = await call(app, 'PATCH', `budget-lines/${lines.L2}`, rita, { description: 'Changed by Rita' });
+  expectRefused(readOnly, 'readOnlyLine', 'Rita modifies a read-only line');
+  assert.deepEqual(await lineRow(lines.L2), l2Before, 'L2 unchanged');
+
+  // 7. The delete of lines (the bulk route, the only one outside a creation's Cancel) is reserved.
+  const deleted = await call(app, 'DELETE', 'budget-lines/bulk', rita, { ids: [lines.L3] });
+  expectRefused(deleted, 'reserved', 'Rita deletes a line she modifies through its centre');
+  assert.ok(await lineRow(lines.L3), 'L3 kept');
+
+  // 5. A new line on INF-FR: paid by ES refused, paid by FR created.
+  const create = (name: string, company: string) => call(app, 'POST', 'budget-lines', rita, {
+    nature: 'opex', product_name: name, currency: 'EUR', effective_start: '2026-01-01', paying_company_id: company, cost_center_id: infFr,
+  });
+  const paidByEs = await create('DA HTTP line paid by ES', es);
+  expectRefused(paidByEs, 'placement', 'Rita creates a line on INF-FR paid by ES');
+  assert.deepEqual(await linesNamed('DA HTTP line paid by ES'), [], 'no line created');
+  const paidByFr = await create('DA HTTP line paid by FR', fr);
+  assert.equal(paidByFr.status, 201, `Rita creates a line on INF-FR paid by FR: ${paidByFr.text}`);
+  assert.deepEqual(await linesNamed('DA HTTP line paid by FR'), [{ description: null, paying_company_id: fr, cost_center_id: infFr }]);
+
+  // 4. Last: the paying company of INF-FR places the line there.
+  const toFr = await call(app, 'PATCH', `budget-lines/${lines.L3}`, rita, { paying_company_id: fr });
+  assert.equal(toFr.status, 200, `Rita gives the line the company of its centre: ${toFr.text}`);
+  assert.deepEqual(await lineRow(lines.L3), { ...changed, paying_company_id: fr });
+  console.log('  line routes: through the centre 200, move 403 placement, read-only 403, delete 403 reserved, creation 403 / 201, company of the centre 200: OK');
+}
+
 // ---------------------------------------------------------------------------------------------
 // Run.
 
@@ -454,6 +550,7 @@ async function run() {
     await testTaskUpdates(app);
     await testTaskCreation(app);
     await testRelations(app);
+    await testLineRoutes(app);
     console.log('data access line routes over HTTP: all scenarios passed');
   } finally {
     if (app) await app.close();
