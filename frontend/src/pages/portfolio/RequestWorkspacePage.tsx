@@ -870,8 +870,9 @@ export default function RequestWorkspacePage() {
       void queryClient.invalidateQueries({ queryKey: ['portfolio-requests'], refetchType: 'none' });
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const reference = formatItemRef('request', created.item_number);
-      // The page keeps its header while the full request loads.
-      queryClient.setQueryData(['portfolio-request', reference, getRequestWorkspaceInclude('summary')], { activities: [], ...created });
+      // The page keeps its header while the full request loads. The header is not the request (no
+      // team, links, nor what this person may read of them): stale at once, so the page reads it.
+      queryClient.setQueryData(['portfolio-request', reference, getRequestWorkspaceInclude('summary')], { activities: [], ...created }, { updatedAt: 0 });
       const qs = searchParams.toString();
       navigate(`/portfolio/requests/${reference}/summary${qs ? `?${qs}` : ''}`, { replace: true });
     },

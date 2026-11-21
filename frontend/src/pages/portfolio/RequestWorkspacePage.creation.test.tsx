@@ -77,7 +77,7 @@ function StartPage() {
 
 function renderPage(
   entries: string[],
-  options: { changes?: { fields: number; children: Record<string, number> }; classification?: Promise<unknown> } = {},
+  options: { changes?: { fields: number; children: Record<string, number> }; classification?: Promise<unknown>; staleTime?: number } = {},
 ) {
   const changes = options.changes ?? { fields: 0, children: {} };
   mocked.get.mockImplementation(async (url: string) => {
@@ -89,7 +89,7 @@ function renderPage(
   mocked.post.mockImplementation(async (url: string) => (url === '/portfolio/requests' ? { data: created } : { data: {} }) as never);
   mocked.delete.mockResolvedValue({ data: undefined } as never);
   return render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: options.staleTime ?? 0 } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={entries}>
@@ -163,6 +163,14 @@ describe('Request creation at the title', () => {
     expect(urls.filter((url) => /undefined|null|\/\/|\/portfolio\/requests\/new\b/.test(url))).toEqual([]);
     expect(mocked.post).not.toHaveBeenCalled();
     expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('reads the created request in full once created', async () => {
+    // The app keeps a read fresh for 30 s (lib/queryClient): the header the creation shows at once
+    // must not stand for the request, whose read holds its team, links and what this person may read.
+    renderPage(['/portfolio/requests/new/summary'], { staleTime: 30_000 });
+    await createDataPlatform();
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/portfolio/requests/REQ-9', expect.anything()));
   });
 
   it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {
