@@ -13,7 +13,7 @@ import { formatItemRef } from '../../utils/item-ref';
 import OptionWithHint from './OptionWithHint';
 import type { Contact as ContactRecord } from '../../pages/contacts/contactModel';
 import CreateContactDialog, { type CreateContactRequest, type CreateContactSupplier } from './CreateContactDialog';
-import { contactName, isContactReference } from './contactNames';
+import { contactName, isContactReference, isSameContactName } from './contactNames';
 import { pickerItemSx } from '../workspace/RelationAddPicker';
 
 type Contact = {
@@ -157,7 +157,7 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
     if (!typed) return { id: LOOKUP_CREATE_ID, lookupCreateText: '', lookupCreateLabel: t('master-data:contacts.newContactOption') };
     if (isContactReference(typed)) return null;
     const needle = foldText(typed);
-    if (mergedOptions.some((c) => foldText(contactName(c)) === needle || foldText(formatLabel(c)) === needle)) return null;
+    if (mergedOptions.some((c) => isSameContactName(contactName(c), typed) || foldText(formatLabel(c)) === needle)) return null;
     return { id: LOOKUP_CREATE_ID, lookupCreateText: typed, lookupCreateLabel: t('master-data:contacts.createOption', { name: typed }) };
   }, [canCreate, settled, typed, mergedOptions, t]);
   const options = React.useMemo<Row[]>(() => (createRow ? [...mergedOptions, createRow] : mergedOptions), [mergedOptions, createRow]);

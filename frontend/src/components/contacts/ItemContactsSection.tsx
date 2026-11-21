@@ -13,9 +13,8 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import CreateContactDialog, { type CreateContactRequest } from '../fields/CreateContactDialog';
-import { contactName, isContactReference } from '../fields/contactNames';
+import { contactName, isContactReference, isSameContactName } from '../fields/contactNames';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { foldText } from '../../utils/foldText';
 import { formatItemRef, itemAddress } from '../../utils/item-ref';
 import RelationAddPicker, { pickerItemSx, type RelationOption } from '../workspace/RelationAddPicker';
 import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../workspace/RelationsTable';
@@ -223,8 +222,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
     label: (text: string, options: RelationOption[]) => {
       if (!text) return t('master-data:contacts.newContactOption');
       if (isContactReference(text)) return null;
-      const needle = foldText(text);
-      if (options.some((option) => foldText(option.label) === needle)) return null;
+      if (options.some((option) => isSameContactName(option.label, text))) return null;
       return t('master-data:contacts.createOption', { name: text });
     },
     onChoose: (text: string) => {

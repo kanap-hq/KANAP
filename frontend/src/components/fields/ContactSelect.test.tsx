@@ -172,6 +172,14 @@ describe('ContactSelect', () => {
       await waitFor(() => expect(optionTexts()).toEqual(['Anna Berg', 'desk@acme.test']));
     });
 
+    it('does not offer it when a contact has that name typed last name first', async () => {
+      renderSelect();
+      typeInto('berg  anna');
+      await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/contacts', { params: { limit: 20, q: 'berg  anna' } }));
+      await waitFor(() => expect(screen.queryByRole('progressbar')).toBeNull());
+      expect(screen.queryByRole('option', { name: /createOption/ })).toBeNull();
+    });
+
     it('does not offer it for a typed reference, which names a contact and never one to create', async () => {
       renderSelect();
       typeInto('ctct-99');
