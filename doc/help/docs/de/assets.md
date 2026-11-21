@@ -8,7 +8,7 @@ Navigieren Sie zu **IT-Landschaft > Assets**, um Ihr Asset-Inventar zu sehen. So
 
 1. Klicken Sie auf **Asset hinzufügen**, dann auf **Asset hinzufügen** oder **Cluster hinzufügen**. Die Seite des Assets öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen des Assets ein, höchstens 200 Zeichen.
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt das Asset sofort. Seine Referenz (`AST-12`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabe- oder Tabulatortaste, oder klicken Sie auf **Erstellen**. Kadratis erstellt das Asset sofort. Seine Referenz (`AST-12`) erscheint und alle Reiter öffnen sich.
 
 Das neue Asset ist eine virtuelle Maschine in der Umgebung Prod, mit dem Lebenszyklus Aktiv. Haben Ihre Asset-Typen keine virtuelle Maschine, erhält es den ersten Typ der Liste. **Cluster hinzufügen** erstellt es mit eingeschaltetem Schalter **Cluster**. Danach speichert jedes Feld für sich, sodass Sie Typ oder Umgebung sofort ändern können.
 
@@ -21,7 +21,7 @@ Das neue Asset ist eine virtuelle Maschine in der Umgebung Prod, mit dem Lebensz
 - **Lebenszyklus**: Aktueller Status (Aktiv, Veraltet, Außer Betrieb usw.)
 - **Umgebung**: Zu welcher Umgebung dieses Asset gehört (Prod, Pre-prod, QA, Test, Dev, Sandbox)
 
-Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben. Ein abgelehnter Name erscheint unter dem Titel.
+Escape im Titel, ein Klick auf **Abbrechen** oder das Verlassen der Seite erstellt nichts, auch wenn Sie schon einen Namen eingegeben haben. Ein abgelehnter Name erscheint unter dem Titel.
 
 **Eindeutige Namen**: Zwei Assets können weder denselben Namen noch denselben FQDN haben. Groß- und Kleinschreibung sowie Leerzeichen am Anfang oder Ende zählen nicht. Kadratis lehnt das Duplikat ab und nennt das Asset, das den Wert bereits hat (`AST-12`). Früher erfasste Duplikate bleiben bearbeitbar, solange Sie diesen Wert nicht ändern.
 

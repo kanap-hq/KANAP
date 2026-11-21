@@ -76,9 +76,9 @@ Die direkte Projekterstellung ist für Arbeit gedacht, die ohne separate Anfrage
 
 1. Klicken Sie auf **Neues Projekt**. Die Seite des Projekts öffnet sich auf **Zusammenfassung** mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen des Projekts ein.
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt das Projekt sofort, mit der Herkunft **Fast-track**. Seine Referenz (`PRJ-12`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabe- oder Tabulatortaste, oder klicken Sie auf **Erstellen**. Kadratis erstellt das Projekt sofort, mit der Herkunft **Fast-track**. Seine Referenz (`PRJ-12`) erscheint und alle Reiter öffnen sich.
 
-Füllen Sie dann den Eigenschaftenbereich und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben.
+Füllen Sie dann den Eigenschaftenbereich und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Escape im Titel, ein Klick auf **Abbrechen** oder das Verlassen der Seite erstellt nichts, auch wenn Sie schon einen Namen eingegeben haben.
 
 Ein so erstelltes Projekt kann im Eigenschaftenbereich zwischen **Fast-track** und **Altbestand** wechseln. Ein aus einer Anfrage umgewandeltes Projekt behält die Herkunft **Anfrage** und seine Quellverknüpfung.
 

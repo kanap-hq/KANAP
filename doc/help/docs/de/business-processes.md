@@ -56,9 +56,9 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 
 1. Klicken Sie in der Liste auf **Neu**. Die Seite des Prozesses öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen des Prozesses ein, am besten mit seinem Kurzcode (z. B. „Order-to-Cash (O2C)“).
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt den Prozess sofort, aktiviert, und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabe- oder Tabulatortaste, oder klicken Sie auf **Erstellen**. Kadratis erstellt den Prozess sofort, aktiviert, und alle Reiter öffnen sich.
 
-Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben. Zwei Prozesse können nicht denselben Namen tragen, unabhängig von Groß- und Kleinschreibung: Ein bereits verwendeter Name wird abgelehnt, mit einer Meldung unter dem Titel.
+Escape im Titel, ein Klick auf **Abbrechen** oder das Verlassen der Seite erstellt nichts, auch wenn Sie schon einen Namen eingegeben haben. Zwei Prozesse können nicht denselben Namen tragen, unabhängig von Groß- und Kleinschreibung: Ein bereits verwendeter Name wird abgelehnt, mit einer Meldung unter dem Titel.
 
 Solange der Prozess erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie den Prozess verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
