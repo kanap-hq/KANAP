@@ -64,14 +64,21 @@ vi.mock('./workspace/ConnectionServersPicker', () => ({
     </>
   ),
 }));
-vi.mock('./workspace/ConnectionProtocolsTable', () => ({
-  default: ({ onProtocolsChange }: { onProtocolsChange: (next: Array<{ code: string; port_override: string | null }>) => void }) => (
+// The table itself (its ports wait 900 ms before they are given), with buttons that give protocols at once.
+vi.mock('./workspace/ConnectionProtocolsTable', async (importOriginal) => {
+  const Actual = ((await importOriginal()) as { default: React.ComponentType<any> }).default;
+  return { default: (props: { onProtocolsChange: (next: Array<{ code: string; port_override: string | null }>) => void }) => {
+  const { onProtocolsChange } = props;
+  return (
     <>
+      <Actual {...props} />
+      <button type="button" onClick={() => onProtocolsChange([{ code: 'https', port_override: null }])}>add bare https</button>
       <button type="button" onClick={() => onProtocolsChange([{ code: 'https', port_override: '8443' }])}>add https</button>
       <button type="button" onClick={() => onProtocolsChange([{ code: 'https', port_override: '8443' }, { code: 'ssh', port_override: null }])}>add ssh</button>
     </>
-  ),
-}));
+  );
+  } };
+});
 
 const mocked = vi.mocked(api);
 const TITLE = 'common:buttons.editTitle';
@@ -355,6 +362,69 @@ describe('Connection born complete', () => {
     // The connection shown carries both, before and after it is read again.
     await settle();
     expect(screen.getByRole('button', { name: /workspace\.connection\.overview\.protocols/ }).textContent).toMatch(/ssh/i);
+  });
+
+  it('writes a port typed just before the last field is given', async () => {
+    await typeName();
+    click('workspace.connection.layers.source web');
+    click('add bare https');
+    await settle();
+    fireEvent.change(screen.getByPlaceholderText('it:workspace.connection.protocolsTable.portPlaceholder'), { target: { value: '8443' } });
+    // The destination comes well within the port's delay.
+    click('workspace.connection.layers.destination internet');
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    await settle();
+    const sent = [connectionPosts()[0][1], ...mocked.patch.mock.calls.map(([, body]) => body)] as Array<{ protocols?: unknown }>;
+    expect(sent.some((body) => JSON.stringify(body.protocols) === JSON.stringify([{ code: 'https', port_override: '8443' }]))).toBe(true);
+  });
+
+  it('saves on the connection an answer to the cluster question that comes after it was written', async () => {
+    await typeName();
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
+    mocked.patch.mockResolvedValue({ data: { ...detail, source_asset_id: 'clu', source_server: { id: 'clu', name: 'Cluster A', is_cluster: true }, absorbed: [] } } as never);
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    click('workspace.connection.layers.source node');
+    const dialog = await screen.findByRole('dialog');
+    answer({ data: { ...created } });
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'components.clusterConnection.connectToCluster' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/connections/conn-new', { source_asset_id: 'clu', source_entity_code: null }));
+  });
+
+  it('asks before a topology change drops the ends of the draft, then the draft follows the new topology', async () => {
+    await typeName('Cluster sync');
+    click('workspace.connection.layers.source web');
+    await settle();
+    fireEvent.click(screen.getByRole('button', { name: /enums\.topology\.serverToServer/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'it:enums.topology.multiServer' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('workspace.connection.topologyDialog.toMultiServer')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.continue' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByRole('textbox', { name: 'workspace.connection.layers.source' })).toBeNull();
+    click('two servers');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    expect(connectionPosts()[0][1]).toMatchObject({ topology: 'multi_server', servers: ['a', 'b'] });
+    expect(connectionPosts()[0][1]).not.toHaveProperty('source_asset_id');
+  });
+
+  it('says under the servers that fewer than two are left once the cluster members are absorbed', async () => {
+    await typeName('Cluster sync');
+    mocked.post.mockRejectedValueOnce({
+      response: { status: 400, data: { code: 'connection_min_servers', message: 'Select at least two assets for a multi-server connection' } },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /enums\.topology\.serverToServer/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'it:enums.topology.multiServer' }));
+    click('two servers');
+    click('add https');
+    const servers = screen.getByRole('textbox', { name: 'servers' }).closest('[data-creation-field]') as HTMLElement;
+    await waitFor(() => expect(within(servers).getByRole('alert').textContent).toMatch(/connection_min_servers|two assets/));
+    expect(location()).toBe('/it/connections/new/overview');
   });
 
   it('closes the connection on Done, back where the creation started', async () => {

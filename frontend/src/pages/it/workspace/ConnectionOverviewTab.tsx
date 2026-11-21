@@ -92,6 +92,8 @@ type Props = {
   onDescriptionSaved?: (next: string, connectionId: string) => void;
   /** Set to a function that saves a description still waiting for its debounce ("Create", "Cancel"). */
   descriptionFlushRef?: React.MutableRefObject<(() => Promise<void>) | null>;
+  /** Set to a function that gives at once a port still waiting for its delay (`ConnectionProtocolsTable`). */
+  protocolsFlushRef?: React.MutableRefObject<(() => void) | null>;
   onEndpointChange: (
     side: 'source' | 'destination',
     next: { asset_id: string | null; entity_code: string | null },
@@ -154,6 +156,7 @@ export default function ConnectionOverviewTab({
   refusals,
   onDescriptionSaved,
   descriptionFlushRef,
+  protocolsFlushRef,
   onEndpointChange,
   onMultiServerChange,
   onProtocolsChange,
@@ -444,6 +447,7 @@ export default function ConnectionOverviewTab({
               editable
               disabled={!canManage}
               onProtocolsChange={onProtocolsChange}
+              flushRef={protocolsFlushRef}
             />
           </Box>
         </Box>

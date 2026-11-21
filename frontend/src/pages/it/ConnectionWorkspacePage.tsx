@@ -230,6 +230,13 @@ export default function ConnectionWorkspacePage() {
   const [refusal, setRefusal] = React.useState<{ field: string; message: string } | null>(null);
 
   const descriptionFlushRef = React.useRef<(() => Promise<void>) | null>(null);
+  const protocolsFlushRef = React.useRef<(() => void) | null>(null);
+  // The id the draft was written under: a field given after the write (a port that waited for its
+  // delay, a late answer to the cluster question) is saved on the connection, not in the draft.
+  const writtenIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (isCreate) writtenIdRef.current = null;
+  }, [isCreate]);
   const notify = useNotify();
   const notifyAbsorbed = React.useCallback((items: AbsorbedAsset[] | undefined) => {
     if (!items?.length) return;
@@ -280,6 +287,8 @@ export default function ConnectionWorkspacePage() {
     }
   }, [isCreate, routeId, t]);
 
+  const loadRef = React.useRef(load);
+  loadRef.current = load;
   React.useEffect(() => { void load(); }, [load]);
 
   React.useEffect(() => {
@@ -326,18 +335,19 @@ export default function ConnectionWorkspacePage() {
     ) => {
       const local = localPatch ?? patch;
       // One way for every field: the draft of a new connection, the connection itself otherwise.
-      if (isCreate) {
+      if (isCreate && !writtenIdRef.current) {
         draftRef.current = { ...draftRef.current, ...(local as Partial<ConnectionDetail>) };
         setDraft(draftRef.current);
         setCreateDirty(true);
         setRefusal(null);
         return;
       }
-      if (!connectionId) return;
+      const id = isCreate ? writtenIdRef.current : connectionId;
+      if (!id) return;
       setSaving(true);
       setData((prev) => (prev ? { ...prev, ...(local as any) } as ConnectionDetail : prev));
       try {
-        const res = await api.patch<ConnectionDetail & { absorbed?: AbsorbedAsset[] }>(`/connections/${connectionId}`, patch);
+        const res = await api.patch<ConnectionDetail & { absorbed?: AbsorbedAsset[] }>(`/connections/${id}`, patch);
         const { absorbed: absorbedItems, ...saved } = res.data;
         setData((prev) => (prev ? { ...prev, ...saved } : saved as ConnectionDetail));
         notifyAbsorbed(absorbedItems);
@@ -345,13 +355,13 @@ export default function ConnectionWorkspacePage() {
       } catch (e: any) {
         const message = getApiErrorMessage(e, t, t('messages.saveConnectionFailed'));
         // The reload clears the page error: say why the write was refused once it is done.
-        await load();
+        await loadRef.current();
         setError(message);
       } finally {
         setSaving(false);
       }
     },
-    [connectionId, isCreate, load, notifyAbsorbed, t],
+    [connectionId, isCreate, notifyAbsorbed, t],
   );
 
   const listContextParams = React.useMemo(() => {
@@ -395,11 +405,14 @@ export default function ConnectionWorkspacePage() {
     post: async () => {
       setError(null);
       setRefusal(null);
+      // A port still waiting for its delay goes into the draft before it is sent.
+      protocolsFlushRef.current?.();
       const sent = draftRef.current;
       const name = title.current().trim();
       try {
         const res = await api.post<ConnectionDetail & { creation_token: string; absorbed?: AbsorbedAsset[] }>('/connections', createPayload(sent, name));
         const { creation_token: token, absorbed, ...saved } = res.data;
+        writtenIdRef.current = saved.id;
         notifyAbsorbed(absorbed);
         // The page keeps the connection in hand while it loads under its reference.
         setData({ ...sent, ...saved, name });
@@ -637,6 +650,7 @@ export default function ConnectionWorkspacePage() {
   // otherwise the draft is written, or the connection closed, kept.
   const createAction = async () => {
     if (!isCreate) await descriptionFlushRef.current?.();
+    protocolsFlushRef.current?.();
     setError(null);
     creation.create(title.require);
   };
@@ -827,6 +841,7 @@ export default function ConnectionWorkspacePage() {
       missingFields={creation.marked}
       refusals={refusal ? { [refusal.field]: refusal.message } : undefined}
       descriptionFlushRef={connection.id ? descriptionFlushRef : undefined}
+      protocolsFlushRef={protocolsFlushRef}
       onDescriptionSaved={(next, savedId) => setData((prev) => (prev && prev.id === savedId ? { ...prev, description: next } : prev))}
       onEndpointChange={handleEndpointChange}
       onMultiServerChange={handleMultiServerChange}
