@@ -43,7 +43,7 @@ import { releaseLockKeepalive } from '../../lib/releaseLockKeepalive';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { classifyKnowledgeLoadError, isKnowledgeDocumentAddress } from './knowledgeLoadError';
 import EditableTitle from '../../components/workspace/EditableTitle';
-import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, takeCreationFieldFocus, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 
@@ -1759,11 +1759,17 @@ export default function KnowledgeWorkspacePage() {
     queryKeyPrefixes: ['knowledge'],
     onError: setError,
   });
-  // Tab from the title of a new document: the text gets the focus once the document is created.
+  // Tab from the title of a new document, or the press of Create (`CreationActions`): the text
+  // gets the focus once the document is created.
   const contentFocusPendingRef = React.useRef(false);
+  const wasCreateRef = React.useRef(isCreate);
   // The editor takes the focus once it is enabled (it waits while the lock is being taken).
   React.useEffect(() => {
-    if (isCreate || !contentFocusPendingRef.current) return;
+    const created = wasCreateRef.current && !isCreate;
+    wasCreateRef.current = isCreate;
+    if (!created) return;
+    const armed = takeCreationFieldFocus();
+    if (!contentFocusPendingRef.current && !armed) return;
     contentFocusPendingRef.current = false;
     setContentFocusNonce((n) => n + 1);
   }, [isCreate]);

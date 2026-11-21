@@ -7,6 +7,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import NavigationTracker, { resetNavigationTracker } from '../../components/navigation/NavigationTracker';
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
+import { clearCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import api from '../../api';
 import KnowledgeWorkspacePage from './KnowledgeWorkspacePage';
 
@@ -27,11 +28,18 @@ vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'user-1' } }) }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'acme' }) }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: () => undefined }) }));
-vi.mock('../../components/MarkdownEditor', () => ({
-  default: (props: { value: string; onChange: (value: string) => void }) => (
-    <textarea aria-label="Document body" value={props.value} onChange={(event) => props.onChange(event.target.value)} />
-  ),
-}));
+vi.mock('../../components/MarkdownEditor', async () => {
+  const React = await import('react');
+  // As the editor: a new focus request focuses it once it is editable.
+  function Editor(props: { value: string; onChange: (value: string) => void; focusNonce?: number; disabled?: boolean }) {
+    const ref = React.useRef<HTMLTextAreaElement>(null);
+    React.useEffect(() => {
+      if (!props.disabled && (props.focusNonce ?? 0) >= 1) ref.current?.focus();
+    }, [props.focusNonce, props.disabled]);
+    return <textarea ref={ref} aria-label="Document body" value={props.value} onChange={(event) => props.onChange(event.target.value)} />;
+  }
+  return { default: Editor };
+});
 vi.mock('./components/FolderTreePanel', () => ({ default: () => <div data-testid="folder-tree" /> }));
 vi.mock('./components/KnowledgeSidebar', () => ({
   default: (props: { isCreate: boolean }) => <div data-testid="document-sidebar">{props.isCreate ? 'new' : 'live'}</div>,
@@ -128,6 +136,7 @@ describe('Document creation at the title', () => {
     cleanup();
     vi.clearAllMocks();
     resetCreationStore();
+    clearCreationFieldFocus();
     resetNavigationTracker();
     const storage = createLocalStorage();
     vi.stubGlobal('localStorage', storage);
@@ -291,6 +300,34 @@ describe('Document creation at the title', () => {
     expect(mocked.patch).toHaveBeenCalledTimes(2);
     expect(mocked.patch.mock.calls[1][1]).toEqual(expect.objectContaining({ revision: 2, content_markdown: 'Heat the sugar. Stop at the colour.' }));
   }, 10000);
+
+  it('puts the cursor in the text of the document Create created, as Tab from the title does', async () => {
+    renderPage(['/knowledge/new?library=runbooks']);
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Cheese cellar runbook' } });
+    const create = screen.getByRole('button', { name: 'common:buttons.create' });
+    fireEvent.pointerDown(create);
+    fireEvent.blur(input);
+    fireEvent.click(create);
+    await waitFor(() => expect(location()).toBe('/knowledge/DOC-9?library=runbooks&allLibraries=0'));
+    await waitFor(() => expect(screen.getByLabelText('Document body')).toHaveFocus());
+  });
+
+  it('puts the cursor in the text of the document Tab from the title created', async () => {
+    renderPage(['/knowledge/new?library=runbooks']);
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Cheese cellar runbook' } });
+    fireEvent.keyDown(input, { key: 'Tab' });
+    await waitFor(() => expect(location()).toBe('/knowledge/DOC-9?library=runbooks&allLibraries=0'));
+    await waitFor(() => expect(screen.getByLabelText('Document body')).toHaveFocus());
+  });
+
+  it('leaves the text alone when Enter created the document', async () => {
+    renderPage(['/knowledge/new?library=runbooks']);
+    await createRunbook();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.getByLabelText('Document body')).not.toHaveFocus();
+  });
 
   it('shows the error under the empty title on Create, nothing created', async () => {
     renderPage(['/knowledge/new?library=runbooks']);

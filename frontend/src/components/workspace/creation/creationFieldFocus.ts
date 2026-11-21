@@ -130,6 +130,13 @@ export function armCreationFieldFocus(): void {
   armedUntil = Date.now() + 8000;
 }
 
+/** For a page that places the cursor itself once its record is created: whether it is armed, cleared. */
+export function takeCreationFieldFocus(): boolean {
+  const live = Date.now() < armedUntil;
+  clearCreationFieldFocus();
+  return live;
+}
+
 /**
  * Focus nobody chose yet: nowhere, the page scroller Layout focuses after a navigation, the title,
  * or Create, which the press that created the record focused.
