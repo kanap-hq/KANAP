@@ -80,7 +80,9 @@ const readable: Record<LimitedPerson, ContractLabel[]> = {
   nina: ['CE', 'CN'],
 };
 const modifiable: Record<LimitedPerson, ContractLabel[]> = {
-  marta: ['CE'],
+  // CX (FR, place INF-ES) through the centre her company node unfolds: the place is enough,
+  // whatever the contract's company (amendment of 2026-11-21).
+  marta: ['CE', 'CX'],
   paul: [],
   rita: ['CF'],
   claire: ALL_CONTRACTS,
@@ -273,7 +275,9 @@ async function testPlacement(s: ContractSeed): Promise<void> {
     ['nina', 'CN', 'company_id', s.es, '42501'],
     ['nina', 'CN', 'cost_center_id', s.infFr, '42501'],
     ['nina', 'CN', 'name', 'Renamed by its owner', 1],
-    ['marta', 'CX', 'name', 'Renamed by Marta', 0], // readable through its node, not modifiable
+    ['marta', 'CX', 'name', 'Renamed by Marta', 1], // modified through its place INF-ES, whatever its company
+    ['marta', 'CX', 'company_id', s.es, 1], // back to the company of the place: placable
+    ['marta', 'CX', 'cost_center_id', null, '42501'], // FR without a place: not placable
     ['rita', 'CE', 'name', 'Renamed by Rita', 0], // read through L1, not modifiable
     ['paul', 'CF', 'name', 'Renamed by Paul', 0],
     ['rita', 'CF', 'cost_center_id', null, '42501'], // moving CF out of its edit node: not placable
@@ -326,11 +330,20 @@ async function testLinkTriggers(s: ContractSeed): Promise<void> {
   assert.equal(hiddenLine.code, '23503', 'a hidden line: 23503');
   assert.deepEqual(missingLine, hiddenLine, 'a random line: the same SQLSTATE and message');
 
-  const readOnlyLine = await attempt(
+  // L3 (ES on INF-FR) is modified through its centre (amendment of 2026-11-21): Rita links it.
+  const lineThroughCentre = await attempt(
     `INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`,
     [s.contracts.CF, s.lines.L3],
   );
+  assert.equal(lineThroughCentre.code, 'ok', 'a line modifiable through its centre, paid by another company: linked');
+  // Paul reads L2 through his group in read, and never modifies it.
+  await apply(s.persons.paul);
+  const readOnlyLine = await attempt(
+    `INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`,
+    [s.contracts.CF, s.lines.L2],
+  );
   assert.equal(readOnlyLine.code, '42501', 'a readable but read-only line: 42501');
+  await apply(s.persons.rita);
 
   // Paul reads L1 (linked to CF) but never modifies it; Rita reads CE and not L5.
   await apply(s.persons.paul);

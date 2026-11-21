@@ -34,7 +34,7 @@ Eine Zeile ist sichtbar, wenn ein Unternehmen der Liste sie bezahlt oder wenn si
 
 Ein Beispiel. Der Arbeitsbereich hat zwei Unternehmen, Alpha France und Alpha Spain, und eine Gruppe Infrastruktur mit INF-FR (Frankreich) und INF-ES (Spanien).
 
-- Marta, begrenzt auf **Alpha Spain (Bearbeiten)**, sieht und bearbeitet die Zeilen, die Alpha Spain bezahlt.
+- Marta, begrenzt auf **Alpha Spain (Bearbeiten)**, sieht und bearbeitet die Zeilen, die Alpha Spain bezahlt, und die Zeilen auf seinen Kostenstellen wie INF-ES, unabhängig vom zahlenden Unternehmen.
 - Paul, begrenzt auf **Infrastruktur (Lesen)**, liest die Zeilen auf INF-FR und INF-ES. Eine spanische Zeile ohne Kostenstelle bleibt ihm verborgen.
 - Claire, mit **Alle Daten**, sieht alles.
 
@@ -42,20 +42,31 @@ Ein Beispiel. Der Arbeitsbereich hat zwei Unternehmen, Alpha France und Alpha Sp
 
 Knoten addieren sich. Decken zwei Knoten dieselbe Zeile ab, gilt der weitere Zugriff: Mit Netzwerke auf Lesen und NET-01 auf Bearbeiten sind die Zeilen von NET-01 bearbeitbar und der Rest von Netzwerke schreibgeschützt. Ein Knoten kann keinen seiner Unterknoten ausschließen.
 
-### Eine Zeile oder einen Vertrag anlegen und verschieben
+### Eine Zeile oder einen Vertrag bearbeiten, anlegen und verschieben
+
+Um eine Zeile zu bearbeiten, muss ein Knoten mit Bearbeiten sie abdecken, über ihr zahlendes Unternehmen oder über ihre Kostenstelle, unabhängig davon, welches Unternehmen sie bezahlt. Eine Kostenstelle mit Bearbeiten, oder eine Gruppe darüber, öffnet also jede Zeile auf dieser Kostenstelle: Beträge, Versionen, Zuordnungen, Beschreibung, Anhänge und Aufgaben. Ein Vertrag wird auf dieselbe Weise bearbeitet, über sein Unternehmen oder sein Feld **Kostenstelle oder Gruppe**, unabhängig vom Unternehmen des Vertrags.
 
 Um eine Zeile anzulegen oder ihr Unternehmen oder ihre Kostenstelle zu ändern, muss das Unternehmen zu einem Knoten mit Bearbeiten passen:
 
 - Das zahlende Unternehmen ist ein Unternehmen mit Bearbeiten, oder
 - die Kostenstelle der Zeile ist mit Bearbeiten abgedeckt, und die Zeile wird vom Unternehmen dieser Kostenstelle bezahlt.
 
-Ein Kostenstellenknoten erlaubt also, die Zeilen dieser Kostenstelle anzulegen, bezahlt von ihrem Unternehmen. Er erlaubt nicht, ein anderes Unternehmen zahlen zu lassen. Eine Zeile, die ein anderes Unternehmen als das ihrer Kostenstelle bezahlt, wird über die Kostenstelle gelesen und nur über ihr zahlendes Unternehmen bearbeitet.
+Ein Kostenstellenknoten erlaubt also, die Zeilen dieser Kostenstelle anzulegen, bezahlt von ihrem Unternehmen. Er erlaubt nicht, ein anderes Unternehmen zahlen zu lassen.
 
-Verträge folgen derselben Regel mit ihrem Unternehmen und ihrem Feld **Kostenstelle oder Gruppe**. Die Auswahlen für Unternehmen und Kostenstelle bieten nur die Werte an, die die Person verwenden darf. Ein anderer Wert wird mit „Dieses Unternehmen oder diese Kostenstelle gehört nicht zu Ihrem Zugriff.“ abgelehnt.
+Ein Beispiel: Eine Zeile wird von Alpha France bezahlt und INF-ES zugeordnet. Eine Person, begrenzt auf **INF-ES (Bearbeiten)**, bearbeitet sie. Sie kann eine solche Zeile nicht anlegen, und sie kann das zahlende Unternehmen nur auf Alpha Spain ändern.
+
+Verträge folgen derselben Regel mit ihrem Unternehmen und ihrem Feld **Kostenstelle oder Gruppe**, wenn sie angelegt oder verschoben werden. Die Auswahlen für Unternehmen und Kostenstelle bieten nur die Werte an, die die Person verwenden darf. Ein anderer Wert wird mit „Dieses Unternehmen oder diese Kostenstelle gehört nicht zu Ihrem Zugriff.“ abgelehnt.
+
+Das Löschen einer Zeile oder eines Vertrags ist Personen mit allen Daten vorbehalten (siehe unten).
 
 ### Zeilen ohne Unternehmen
 
-Ältere Zeilen können ohne Unternehmen sein. Sie sind nur für Personen mit allen Daten, für Personen mit einem Knoten **Alles** und für die darauf benannten Personen sichtbar. **Administration > Datenzugriff** zählt sie, mit einem Link zur Liste.
+Eine Budgetzeile kann ohne zahlendes Unternehmen sein: eine ältere Zeile oder eine neue Zeile, deren zahlendes Unternehmen noch nicht gewählt ist.
+
+- Ist sie einer Kostenstelle zugeordnet, folgt sie dieser Kostenstelle: Die Personen, deren Knoten die Kostenstelle abdecken, lesen die Zeile, und ein Knoten mit Bearbeiten erlaubt ihnen, sie zu bearbeiten. Beim Speichern erhält sie das Unternehmen ihrer Kostenstelle.
+- Ohne Kostenstelle ist sie nur für Personen mit allen Daten, für Personen mit einem Knoten **Alles** und für die darauf benannten Personen sichtbar.
+
+**Administration > Datenzugriff** zählt die Zeilen ohne Unternehmen, mit einem Link zur Liste.
 
 ## Die Rolle sagt was, die Knoten sagen wo
 
@@ -78,7 +89,7 @@ Eine begrenzte Person sieht immer, wo sie benannt ist, auch außerhalb ihrer Kno
 | Zugewiesene Person oder Verantwortlicher einer Aufgabe | Bearbeiten |
 | Person, die einer Aufgabe folgt | Lesen |
 
-Eine Aufgabe anzulegen zählt nicht. Die Benennung öffnet das Element. Sie erlaubt nicht, es einem Unternehmen oder einer Kostenstelle außerhalb der Knoten mit Bearbeiten zuzuordnen oder es zu löschen. Eine Änderung, die eine Zeile aus dem Zugriff der Person nehmen würde, wird mit „Diese Änderung würde die Zeile aus Ihrem Zugriff nehmen. Bleiben Sie einer ihrer Verantwortlichen, oder fragen Sie jemanden mit Zugriff auf ihr Unternehmen.“ abgelehnt.
+Eine Aufgabe anzulegen zählt nicht. Die Benennung öffnet das Element. Sie erlaubt nicht, es einem Unternehmen oder einer Kostenstelle zuzuordnen, die nach der Regel oben nicht erlaubt sind, oder es zu löschen. Eine Änderung, die eine Zeile aus dem Zugriff der Person nehmen würde, wird mit „Diese Änderung würde die Zeile aus Ihrem Zugriff nehmen. Bleiben Sie einer ihrer Verantwortlichen, oder fragen Sie jemanden mit Zugriff auf ihr Unternehmen.“ abgelehnt.
 
 Eine begrenzte Person ohne Knoten sieht nur, wo sie benannt ist. Eine leere Liste wird nie wieder zu allen Daten.
 
@@ -102,7 +113,7 @@ Der Reiter **Datenzugriff** des Benutzerfensters enthält:
 - Die Vorschau, zum Beispiel „Mit diesem Zugriff: 312 Budgetzeilen, davon 280 bearbeitbar; 45 Verträge.“
 - Wer den Zugriff zuletzt geändert hat, und wann.
 
-Die Vorschau folgt jeder Änderung, vor dem Speichern. Sie misst die Knoten, nicht die Rollen: **bearbeitbar** zählt die mit Bearbeiten geöffneten Zeilen, auch wenn die Rollen der Person das Bearbeiten nicht erlauben.
+Die Vorschau folgt jeder Änderung, vor dem Speichern. Sie misst die Knoten, nicht die Rollen: **bearbeitbar** zählt die Zeilen, die ein Knoten mit Bearbeiten abdeckt, über ihr zahlendes Unternehmen oder ihre Kostenstelle, auch wenn die Rollen der Person das Bearbeiten nicht erlauben.
 
 Die Rückkehr zu **Alle Daten** verlangt eine Bestätigung, zum Beispiel „Marta Ruiz sieht alle Budget- und Vertragsdaten.“
 

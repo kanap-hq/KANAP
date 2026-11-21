@@ -588,10 +588,13 @@ async function testTaskPlacement(s: Seed2): Promise<void> {
     ['paul', 'tAssignee', 'contract', s.contracts.CE, '42501'],
     ['paul', 'tAssignee', 'contract', s.contracts.CN, '42501'],
     ['paul', 'tAssignee', 'capex_item', s.lines.L5, 'ok'], // the same object: no move
-    // Marta modifies L3, L4, L5 and CE.
+    // Marta modifies L2 to L5 (L2 through INF-ES, amendment of 2026-11-21) and CE.
     ['marta', 'tL4', 'spend_item', s.lines.L3, 'ok'],
     ['marta', 'tL4', 'spend_item', s.lines.L1, '42501'],
-    ['marta', 'tL4', 'spend_item', s.lines.L2, '42501'], // readable only
+    ['marta', 'tL4', 'spend_item', s.lines.L2, 'ok'], // paid by FR, modified through INF-ES
+    // Rita modifies L1 and L3 (paid by ES, through INF-FR); L2 she reads only.
+    ['rita', 'tL1', 'spend_item', s.lines.L3, 'ok'],
+    ['rita', 'tL1', 'spend_item', s.lines.L2, '42501'], // readable only
     ['marta', 'tL4', 'contract', s.contracts.CE, 'ok'],
     ['marta', 'tL4', 'contract', s.contracts.CF, '42501'],
     ['marta', 'tProject', 'spend_item', s.lines.L1, '42501'], // from another type

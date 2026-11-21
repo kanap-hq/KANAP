@@ -166,12 +166,15 @@ export type LimitedPerson = 'marta' | 'paul' | 'rita' | 'claire' | 'rob' | 'nina
 export type Expectation = { readable: Label[]; modifiable: Label[] };
 export const ALL: Label[] = [...LABELS];
 export const EXPECTED: Record<LimitedPerson, Expectation> = {
-  // Company ES: the lines it pays, and those of its centre INF-ES (L2); modifies what it pays.
-  marta: { readable: ['L2', 'L3', 'L4', 'L5'], modifiable: ['L3', 'L4', 'L5'] },
+  // Company ES: the lines it pays, and those of its centre INF-ES (L2). It modifies them all: the
+  // company node unfolds to its centres, and an edit node on the centre is enough to modify L2,
+  // paid by FR (amendment of 2026-11-21).
+  marta: { readable: ['L2', 'L3', 'L4', 'L5'], modifiable: ['L2', 'L3', 'L4', 'L5'] },
   // Group INF in read: its centres' lines, not the Spanish line without centre, nothing to modify.
   paul: { readable: ['L1', 'L2', 'L3', 'L4'], modifiable: [] },
-  // INF-FR edit inside INF read: the widest access wins on L1; L3 (paid by ES on INF-FR) is read only.
-  rita: { readable: ['L1', 'L2', 'L3', 'L4'], modifiable: ['L1'] },
+  // INF-FR edit inside INF read: the widest access wins on L1; L3 (paid by ES on INF-FR) is
+  // modified through its centre (amendment of 2026-11-21); L2 and L4 are read only.
+  rita: { readable: ['L1', 'L2', 'L3', 'L4'], modifiable: ['L1', 'L3'] },
   claire: { readable: ALL, modifiable: ALL },
   rob: { readable: ALL, modifiable: [] },
   // No node: only the lines it owns, as IT owner (L6) or business owner (L7): responsible, read

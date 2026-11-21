@@ -190,6 +190,7 @@ Une personne limitée à une partie du budget utilise le fichier dans son accès
 - L'export contient les lignes qu'elle voit.
 - Une ligne du fichier qui désigne une ligne qu'elle ne voit pas est traitée comme une ligne qui n'existe pas. Dans un fichier issu d'un export, le message est « BL-12 n'est plus disponible depuis l'export. », le même que pour une ligne supprimée depuis.
 - Une ligne qu'elle voit en Lecture passe quand sa ligne du fichier est inchangée. Une modification est refusée avec « BL-12 est en lecture seule dans votre accès. »
+- Une ligne que l'un de ses nœuds en Saisie couvre, par sa société qui paie ou par son centre de coûts, peut être mise à jour, quelle que soit la société qui la paie.
 - Une nouvelle ligne, ou une nouvelle société ou un nouveau centre de coûts sur une ligne, doit correspondre à l'un de ses nœuds en Saisie. Sinon la ligne du fichier est refusée avec « Cette société ou ce centre de coûts ne fait pas partie de votre accès. »
 - Une valeur inconnue n'est créée que sur une dimension à valeurs ouvertes. Sur les autres dimensions, c'est une erreur de ligne.
 - Une ligne du fichier qui ressemble à une ligne existante ne propose **Mettre à jour BL-12** que si la personne peut modifier cette ligne budgétaire.
