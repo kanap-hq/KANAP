@@ -36,7 +36,7 @@ Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu er
 
 Solange das Asset erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen** anstelle der Schaltfläche zum Schließen. Beide bleiben, bis Sie das Asset verlassen.
 
-- **Erstellen** prüft, ob das Asset einen Standort hat. Ohne Standort nennt eine Meldung den fehlenden Standort, und das Feld **Standort** des Eigenschaftenbereichs erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort behält Kadratis das Asset und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben
+- **Erstellen** prüft, ob das Asset einen Standort hat. Ohne Standort wird die Beschriftung **Standort** im Eigenschaftenbereich rot, und das Feld erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort behält Kadratis das Asset und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** löscht das Asset. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Assets abbrechen
 
 Verlassen Sie das Asset auf andere Weise (Zurück-Pfeil, Menü, ein anderes Asset), solange es keinen Standort hat, fragt Kadratis nach. **Vervollständigen** lässt Sie auf dem Asset, im Feld **Standort**. **Löschen** löscht das Asset. Wenn Sie die Seite neu laden oder den Tab schließen, solange das neue Asset keinen Standort hat, bittet Ihr Browser um Bestätigung. Verlassen Sie die Seite trotzdem, wird das Asset gelöscht.

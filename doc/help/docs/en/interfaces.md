@@ -20,7 +20,7 @@ You can fill them in any order. Nothing is saved until all four are filled. As s
 
 While the interface is being created, its header shows **Create** and **Cancel**. They stay until you leave the interface.
 
-- **Create** keeps the interface and takes you back to where you started. If something is still missing, a message names it, and the title or the first missing field gets the focus. If the draft is complete, Kadratis creates the interface and takes you back at once
+- **Create** keeps the interface and takes you back to where you started. If something is still missing, an empty title shows its message, the label of each missing field turns red, and the title or the first missing field gets the focus. If the draft is complete, Kadratis creates the interface and takes you back at once
 - **Cancel** deletes the interface. If you added anything after it was created, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete interfaces
 
 Leaving the interface another way (the menu, the back arrow) keeps it: it is complete.

@@ -42,8 +42,7 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, focusWhenMounted, useCreationReturn, useDraftCreation } from '../../components/workspace/creation';
-import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
+import { CreationActions, focusWhenMounted, useCreationReturn, useDraftCreation, useMissingMarks } from '../../components/workspace/creation';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 
 type WorkspaceTabKey = 'overview' | 'flow' | 'environments' | 'data-mapping' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
@@ -153,7 +152,7 @@ function buildCreatePayload(current: Partial<InterfaceDetail>) {
 }
 
 export default function InterfaceWorkspacePage() {
-  const { t, i18n } = useTranslation(['it', 'common']);
+  const { t } = useTranslation(['it', 'common']);
   const dialogs = useKanapDialogs();
   const { hasLevel } = useAuth();
   const params = useParams();
@@ -608,11 +607,6 @@ export default function InterfaceWorkspacePage() {
 
   const [titleFocusRequest, setTitleFocusRequest] = React.useState(0);
   const [fieldDrawerRequest, setFieldDrawerRequest] = React.useState(0);
-  const fieldLabel = (key: string): string => {
-    if (key === 'source') return t('workspace.interface.fields.sourceApplication');
-    if (key === 'target') return t('workspace.interface.fields.targetApplication');
-    return t('workspace.interface.fields.dataCategory');
-  };
   // The first field Create names gets the focus: source and target on Flow, the data category in the panel.
   const focusField = (key: string) => {
     if (key === 'data_category') setFieldDrawerRequest((n) => n + 1);
@@ -628,6 +622,13 @@ export default function InterfaceWorkspacePage() {
     !state.data_category && 'data_category',
   ].filter((key): key is string => !!key);
   const isComplete = (state: Partial<InterfaceDetail>) => !!String(state.name || '').trim() && missingOf(state).length === 0;
+  // The fields Create found missing, marked on their label until each one gets a value.
+  const shownState = (current || {}) as Partial<InterfaceDetail>;
+  const missingMarks = useMissingMarks({
+    recordKey: isCreate ? 'new' : current?.id,
+    missingNow: () => missingOf(shownState),
+    valueOf: (key) => (key === 'source' ? shownState.source_application_id : key === 'target' ? shownState.target_application_id : shownState.data_category) ?? null,
+  });
 
   // A refused creation is not tried again until the draft changes.
   const triedFormRef = React.useRef<Partial<InterfaceDetail> | null>(null);
@@ -638,15 +639,13 @@ export default function InterfaceWorkspacePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canManage, createForm, isCreate]);
 
-  // Create names what is missing and focuses the title or the first field; on a complete draft it
+  // Create marks what is missing and focuses the title or the first field; on a complete draft it
   // creates the interface, on an interface being created it ends the creation.
   const handleCreate = () => {
     if (!canManage || creation.cancelling) return;
     const state = isCreate ? createFormRef.current : getCurrentState();
     const missing = missingOf(state);
-    setError(missing.length > 0
-      ? t('workspace.interface.creation.missing', { fields: missingFieldsList(missing.map(fieldLabel), i18n.resolvedLanguage || i18n.language) })
-      : null);
+    missingMarks.mark(missing);
     if (!String(state.name || '').trim()) {
       setCreateTitleError(t('messages.nameRequired'));
       setTitleFocusRequest((n) => n + 1);
@@ -828,6 +827,7 @@ export default function InterfaceWorkspacePage() {
             onReplaceCompanies={persistCompanies}
             onReplaceDataResidency={persistDataResidency}
             onReplaceOwners={persistOwners}
+            missingFields={missingMarks.marked}
           />
         )}
       >
@@ -847,6 +847,7 @@ export default function InterfaceWorkspacePage() {
             data={current}
             onPatch={persistPatch}
             onReplaceLegs={persistLegs}
+            missingFields={missingMarks.marked}
           />
         )}
 

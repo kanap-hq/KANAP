@@ -519,14 +519,44 @@ describe('BudgetPropertiesDrawer analytics dimensions', () => {
     expect(onChangeType).toHaveBeenCalledOnce();
   });
 
-  it('offers both Types on create and reports the selected nature', () => {
+  it.each(['create', 'edit'] as const)('offers both Types as a menu when the type may be picked (%s), and reports the selected nature', (mode) => {
     const onNatureChange = vi.fn();
-    renderDrawer({ mode: 'create', onNatureChange });
+    renderDrawer({ mode, onNatureChange, onChangeType: vi.fn() });
     const select = screen.getByRole('combobox', { name: 'budget.type' });
     expect(select).toHaveTextContent(BUDGET_NATURE_CONFIG[nature].typeLabel);
+    // A menu, not the badge with its dialog.
+    expect(screen.queryByRole('button', { name: 'budget.changeType' })).toBeNull();
     fireEvent.mouseDown(select);
     fireEvent.click(screen.getByRole('option', { name: BUDGET_NATURE_CONFIG[otherNature()].typeLabel }));
     expect(onNatureChange).toHaveBeenCalledWith(otherNature());
+  });
+
+  it('draws the head of a new line apart: its type, and its place when it comes first', () => {
+    const { unmount } = renderDrawer({ mode: 'create', section: 'head', onNatureChange: vi.fn() });
+    expect(screen.getByRole('combobox', { name: 'budget.type' })).toBeInTheDocument();
+    expect(screen.queryByTestId('company-select')).toBeNull();
+    expect(screen.queryByTestId('account-select')).toBeNull();
+    unmount();
+    const head = renderDrawer({ mode: 'create', section: 'head', placeFirst: true, onNatureChange: vi.fn() });
+    expect(screen.getByTestId('company-select')).toBeInTheDocument();
+    expect(screen.getByTestId('cost-center-select')).toBeInTheDocument();
+    head.unmount();
+    // The rest: no type; the place only when it is not in the head.
+    const rest = renderDrawer({ mode: 'edit', section: 'rest' });
+    expect(screen.queryByText('budget.type')).toBeNull();
+    expect(screen.getByTestId('company-select')).toBeInTheDocument();
+    expect(screen.getByTestId('account-select')).toHaveAttribute('data-nature', nature);
+    rest.unmount();
+    renderDrawer({ mode: 'edit', section: 'rest', placeFirst: true });
+    expect(screen.queryByTestId('company-select')).toBeNull();
+    expect(screen.getByTestId('account-select')).toBeInTheDocument();
+  });
+
+  it('marks the label of a missing field and its control', () => {
+    renderDrawer({ mode: 'edit', missingFields: new Set(['account']) });
+    const label = (text: string) => [...document.querySelectorAll('.kanap-field-label')].find((el) => el.textContent?.startsWith(text))!;
+    expect(label('opex.fields.account')).toHaveAttribute('data-missing');
+    expect(label('opex.fields.payingCompany')).not.toHaveAttribute('data-missing');
   });
 
 });

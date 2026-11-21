@@ -11,16 +11,16 @@ Ambos tipos están en una sola lista y se abren en el mismo espacio de trabajo, 
 
 Navegue a **Gestión presupuestaria > Líneas presupuestarias** para ver la lista. Haga clic en **Nueva línea** para crear una línea.
 
-El espacio de trabajo se abre en una línea nueva, con el título **Nueva línea OPEX** o **Nueva línea CAPEX**. Su tipo es aquel por el que está filtrada la lista en su columna **Tipo** y, si no, **OPEX**. No se puede cambiar mientras la línea se está creando. Escriba el nombre de la línea en el título de arriba y pulse Intro. La línea existe de inmediato, con la moneda de su espacio de trabajo y la fecha de hoy como inicio de vigencia, y todas las pestañas se abren, **Presupuesto** incluida. Complete el panel de propiedades: cada cambio se guarda al instante.
+El espacio de trabajo se abre en una línea nueva, con el título **Nueva línea OPEX** o **Nueva línea CAPEX**. Su **Tipo** aparece primero en el panel de propiedades, junto al título: el tipo por el que está filtrada la lista en su columna **Tipo** y, si no, **OPEX**. Elija allí el otro tipo, antes o después del título. Escriba el nombre de la línea en el título de arriba y pulse Intro. La línea existe de inmediato, con la moneda de su espacio de trabajo y el 1 de enero del año que está viendo como inicio de vigencia, y todas las pestañas se abren, **Presupuesto** incluida. Complete el panel de propiedades: cada cambio se guarda al instante. Hasta que haga clic en **Crear**, **Tipo** sigue siendo un menú: la línea cambia de tipo en el sitio y conserva lo que introdujo. Una cuenta que no corresponde al nuevo tipo se queda en la línea, con su etiqueta en rojo, hasta que elija otra.
 
 Si su acceso a los datos se limita a una empresa, la empresa pagadora se completa con ella. Si debe elegir, elija la empresa pagadora o el centro de coste antes de escribir el título.
 
 Mientras la línea se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre:
 
-- **Crear** comprueba los campos obligatorios indicados abajo. Si falta alguno, un mensaje los enumera, se marcan en el panel de propiedades y el cursor va al primero. Si no, la línea se cierra y vuelve al punto de partida: la pantalla anterior o, si no, la lista
+- **Crear** comprueba los campos obligatorios indicados abajo. Si falta alguno, su etiqueta se pone en rojo en el panel de propiedades y el cursor va al primero. Una etiqueta vuelve a la normalidad en cuanto su campo tiene un valor. Si no, la línea se cierra y vuelve al punto de partida: la pantalla anterior o, si no, la lista
 - **Cancelar** elimina la línea y todo lo que se introdujo en ella, importes incluidos. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar líneas. Una línea con importes en una columna congelada no se puede cancelar
 
-Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Si recarga la página o cierra la pestaña mientras a la línea nueva todavía le falta un campo obligatorio, su navegador pide confirmación y la línea se elimina si sale de todos modos. Una línea que se dejó sin empresa pagadora muestra una advertencia con los campos que faltan y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título vacío para salir sin crear nada.
+Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Si recarga la página o cierra la pestaña mientras a la línea nueva todavía le falta un campo obligatorio, su navegador pide confirmación y la línea se elimina si sale de todos modos. Una línea que se dejó sin empresa pagadora se abre con el panel de propiedades abierto y las etiquetas de sus campos que faltan en rojo, y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título vacío para salir sin crear nada.
 
 **Campos obligatorios**:
 
@@ -28,7 +28,7 @@ Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pr
 - **Empresa pagadora**: Qué empresa paga (obligatorio para contabilidad)
 - **Cuenta**: La cuenta contable. Solo aparecen las cuentas del plan de cuentas de la empresa pagadora, y solo las que corresponden al tipo de la línea en [Planes de cuentas y gestión de cuentas](chart-of-accounts.md#cuentas-opex-o-capex): **OPEX y CAPEX**, o bien **Solo OPEX** para una línea OPEX y **Solo CAPEX** para una línea CAPEX. Una línea que ya tiene una cuenta del otro tipo la conserva y sigue siendo editable. Elegir una cuenta así en una línea nueva, o al cambiar la cuenta, se rechaza
 - **Moneda**: Código ISO (p. ej., USD, EUR). Por defecto la moneda de su espacio de trabajo; puede cambiarla por línea
-- **Inicio de vigencia**: Cuándo comienza este gasto (DD/MM/AAAA). Por defecto, el día en que crea la línea
+- **Inicio de vigencia**: Cuándo comienza este gasto (DD/MM/AAAA). Por defecto, el 1 de enero del año que está viendo
 - **Dimensiones obligatorias**: un campo por cada dimensión obligatoria para el tipo de la línea. Un espacio de trabajo nuevo no tiene ninguna dimensión obligatoria. Consulte [Dimensiones recomendadas](#dimensiones-recomendadas)
 - **Centro de coste**, cuando su acceso a los datos exige uno
 
@@ -232,7 +232,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dir
 - **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir**, **Eliminar** (icono de papelera, `budget:admin`, acceso a todos los datos) y el botón de cierre. Mientras la línea se está creando, **Crear** y **Cancelar** sustituyen a **Eliminar** y al botón de cierre
 - **Barra de metadatos** bajo el título: **Estado**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio. Cuando el centro de coste de la línea tiene un responsable del presupuesto, **Responsable del presupuesto** aparece a continuación. Es de solo lectura y se deriva del centro de coste, no se almacena en la línea: pase el cursor por encima para ver de qué centro de coste procede, y cámbielo en el centro de coste (consulte [Centros de coste](cost-centers.md#responsable-del-presupuesto-en-las-lineas-de-presupuesto))
 - **Cinco pestañas**: **Vista general**, **Presupuesto**, **Asignaciones**, **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la línea) e **Historial**
-- **Panel de propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (con **Cambiar el tipo…** junto a él en cuanto la línea deja de estar en creación, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
+- **Panel de propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (un menú mientras la línea se está creando y, después, **Cambiar el tipo…** junto a él, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
 
 **Elección de responsables**:
 
@@ -280,7 +280,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 
 **Panel de propiedades**:
 
-- **Tipo**: **OPEX** o **CAPEX**. En cuanto la línea deja de estar en creación, **Cambiar el tipo…** junto a él abre el diálogo descrito en [Cambiar el tipo](#cambiar-el-tipo)
+- **Tipo**: **OPEX** o **CAPEX**. Mientras la línea se está creando, es un menú y la línea cambia de tipo en el sitio. Una vez creada la línea, **Cambiar el tipo…** junto a él abre el diálogo descrito en [Cambiar el tipo](#cambiar-el-tipo)
 - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora y el tipo de la línea), **Moneda** (solo las monedas permitidas en su espacio de trabajo), un campo por dimensión analítica usada para el tipo de la línea, **Run o build** e **Inicio de vigencia**
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
 - Fechas **Creado** y **Actualizado** (solo lectura)
@@ -304,7 +304,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 - Cada campo lista los valores activados de su dimensión. Un valor desactivado se mantiene en las líneas que ya lo tienen y no se puede elegir para otra línea
 - Un valor usado solo para el otro tipo no se ofrece, y elegirlo como valor nuevo se rechaza. Una línea que ya lo tiene lo conserva y sigue siendo editable. Consulte [Valores OPEX o CAPEX](analytics.md#valores-opex-o-capex)
 - El campo no puede crear un valor: créelo en [Dimensiones analíticas](analytics.md) o deje que lo cree una importación
-- Una dimensión obligatoria está marcada con un asterisco. Una línea que se está creando necesita un valor en ella: **Crear** la indica como faltante hasta que elija uno. En una línea que tiene un valor, el campo no se puede vaciar, solo cambiar. Una línea sin valor sigue siendo editable. Si modifica una línea así, al salir se le pregunta primero: "El campo Tipo de coste es obligatorio. Elija un valor antes de salir." **Quedarse** coloca el cursor en el campo que falta. **Salir de todos modos** sale de la línea. Consulte [Dimensiones obligatorias](analytics.md#dimensiones-obligatorias)
+- Una dimensión obligatoria está marcada con un asterisco. Una línea que se está creando necesita un valor en ella: **Crear** la marca como faltante hasta que elija uno. En una línea que tiene un valor, el campo no se puede vaciar, solo cambiar. Una línea sin valor sigue siendo editable. Si modifica una línea así, al salir se le pregunta primero: "El campo Tipo de coste es obligatorio. Elija un valor antes de salir." **Quedarse** coloca el cursor en el campo que falta. **Salir de todos modos** sale de la línea. Consulte [Dimensiones obligatorias](analytics.md#dimensiones-obligatorias)
 - Si las dimensiones no se pueden cargar, una línea sustituye a estos campos: "No se pudieron cargar las dimensiones."
 
 **Consejo**: Una cuenta fuera del plan de cuentas de la empresa pagadora se rechaza al elegirla. Una línea existente cuya cuenta está fuera del plan de su empresa se puede seguir editando: el plan solo se comprueba cuando cambia la empresa o la cuenta, y cuando hace clic en **Crear** en una línea que se está creando.

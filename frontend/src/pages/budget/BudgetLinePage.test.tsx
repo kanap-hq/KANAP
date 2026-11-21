@@ -82,7 +82,7 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
   const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
   return { default: (props: {
     costCenterId?: string;
-    nature: string; onNatureChange: (v: string) => void; onChangeType?: () => void;
+    nature: string; onNatureChange?: (v: string) => void; onChangeType?: () => void; section?: string;
     mode: string; payingCompanyId: string; companyFollowsCostCenter?: boolean; accountId: string; onPayingCompanyChange: (v: string) => void;
     onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void;
     onRunBuildChange: (v: string) => void; analyticsValues: Record<string, string | null>;
@@ -94,14 +94,14 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
     <div
       data-cost-center={props.costCenterId}
       data-disabled={String(!!props.disabled)}
-      data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
+      data-mode={props.mode} data-section={props.section ?? 'all'} data-company={props.payingCompanyId} data-account={props.accountId}
       data-company-follows={String(!!props.companyFollowsCostCenter)}
       data-analytics={JSON.stringify(props.analyticsValues)}
       data-references={JSON.stringify(props.references ?? null)}
       data-analytics-options={JSON.stringify(props.analyticsOptions ?? null)}
     >
-      {props.mode === 'create' ? (
-        <select aria-label="budget.type" value={props.nature} onChange={(e) => props.onNatureChange(e.target.value)}>
+      {props.onNatureChange ? (
+        <select aria-label="budget.type" value={props.nature} onChange={(e) => props.onNatureChange?.(e.target.value)}>
           <option value="opex">OPEX</option><option value="capex">CAPEX</option>
         </select>
       ) : <span data-testid="line-type">{props.nature}</span>}
@@ -371,9 +371,12 @@ describe('BudgetLinePage create', () => {
   it('creates the line from its title alone, with the defaults, opens it and refreshes the dashboard tiles', async () => {
     const { queryClient } = renderAt(`/ops/budget/new/overview`);
     seedDashboard(queryClient);
-    // The page to come is dimmed: the properties in their edit layout, no picker of a create form.
-    expect(document.querySelector('[data-testid="creation-preview"] [data-mode="edit"]')).not.toBeNull();
-    expect(document.querySelector('[data-mode="create"]')).toBeNull();
+    // The page to come is dimmed: the properties in their edit layout, but the head of the line
+    // (its type), live beside the title.
+    expect(document.querySelector('[data-testid="creation-preview"] [data-mode="edit"][data-section="rest"]')).not.toBeNull();
+    const head = document.querySelector('[data-mode="create"]');
+    expect(head).toHaveAttribute('data-section', 'head');
+    expect(head!.closest('[data-testid="creation-preview"]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post).toHaveBeenCalledWith('/budget-lines/creation', {

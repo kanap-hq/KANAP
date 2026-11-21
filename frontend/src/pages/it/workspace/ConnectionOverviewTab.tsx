@@ -26,6 +26,7 @@ import EntityKnowledgePanel from '../../../components/EntityKnowledgePanel';
 // below was already in place.
 const MarkdownEditor = React.lazy(() => import('../../../components/MarkdownEditor'));
 import ConnectionEndpointPicker from './ConnectionEndpointPicker';
+import { FieldLabel, MissingFieldBox } from '../../../components/design';
 import ConnectionLinkInterfacesDialog from './ConnectionLinkInterfacesDialog';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
 import ConnectionServersPicker from './ConnectionServersPicker';
@@ -77,6 +78,8 @@ type Props = {
   linkedInterfacesLoading: boolean;
   linkedInterfacesError: string | null;
   derivedInterfaceCount: number;
+  /** Fields Create found missing (`protocols`, `source`, `destination`, `servers`): their labels turn red. */
+  missingFields?: ReadonlySet<string>;
   /** The text just saved, with the connection it was saved on (it may no longer be the one shown). */
   onDescriptionSaved?: (next: string, connectionId: string) => void;
   /** Set to a function that saves a description still waiting for its debounce ("Create", "Cancel"). */
@@ -91,7 +94,7 @@ type Props = {
   onLinkedInterfacesChanged: () => void;
 };
 
-function SectionHeader({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+function SectionHeader({ children, action, missing = false }: { children: React.ReactNode; action?: React.ReactNode; missing?: boolean }) {
   return (
     <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.25 }}>
       <Typography
@@ -101,7 +104,7 @@ function SectionHeader({ children, action }: { children: React.ReactNode; action
           fontSize: 14,
           fontWeight: 500,
           lineHeight: 1.4,
-          color: theme.palette.kanap.text.primary,
+          color: missing ? theme.palette.error.main : theme.palette.kanap.text.primary,
         })}
       >
         {children}
@@ -126,6 +129,7 @@ export default function ConnectionOverviewTab({
   linkedInterfacesLoading,
   linkedInterfacesError,
   derivedInterfaceCount,
+  missingFields,
   onDescriptionSaved,
   descriptionFlushRef,
   onEndpointChange,
@@ -133,6 +137,7 @@ export default function ConnectionOverviewTab({
   onProtocolsChange,
   onLinkedInterfacesChanged,
 }: Props) {
+  const missing = (field: string) => !!missingFields?.has(field);
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const CRITICALITIES = [{ code: '', label: classificationText('Not set') }, ...(classificationCatalog?.businessCriticalityLevels || [])];
   const { t } = useTranslation(['it', 'common']);
@@ -337,28 +342,30 @@ export default function ConnectionOverviewTab({
         <SectionHeader>{t('workspace.connection.create.endpoints')}</SectionHeader>
         {topology === 'server_to_server' ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2.5, maxWidth: 760 }}>
-            <Box data-creation-field="source">
+            <MissingFieldBox missing={missing('source')} data-creation-field="source">
             <ConnectionEndpointPicker
               label={t('workspace.connection.layers.source')}
+              missing={missing('source')}
               value={source}
               disabled={!canManage}
               initialAsset={source.asset_id ? assetMap[source.asset_id] : null}
               onChange={(next, asset) => onEndpointChange('source', next, asset)}
             />
-            </Box>
-            <Box data-creation-field="destination">
+            </MissingFieldBox>
+            <MissingFieldBox missing={missing('destination')} data-creation-field="destination">
             <ConnectionEndpointPicker
               label={t('workspace.connection.layers.destination')}
+              missing={missing('destination')}
               value={destination}
               disabled={!canManage}
               initialAsset={destination.asset_id ? assetMap[destination.asset_id] : null}
               onChange={(next, asset) => onEndpointChange('destination', next, asset)}
             />
-            </Box>
+            </MissingFieldBox>
           </Box>
         ) : (
-          <Box sx={{ maxWidth: 760 }} data-creation-field="servers">
-            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.25 }}>{t('workspace.connection.overview.serversMin')}</Typography>
+          <MissingFieldBox missing={missing('servers')} data-creation-field="servers" style={{ maxWidth: 760 }}>
+            <FieldLabel missing={missing('servers')} sx={{ mb: 0.25 }}>{t('workspace.connection.overview.serversMin')}</FieldLabel>
             <ConnectionServersPicker
               value={multiServerOptions}
               onChange={onMultiServerChange}
@@ -370,37 +377,39 @@ export default function ConnectionOverviewTab({
                 {t('workspace.connection.overview.needTwoServers')}
               </Typography>
             )}
-          </Box>
+          </MissingFieldBox>
         )}
       </Box>
 
       <Box>
-        <SectionHeader>{t('workspace.connection.overview.protocols')}</SectionHeader>
+        <SectionHeader missing={missing('protocols')}>{t('workspace.connection.overview.protocols')}</SectionHeader>
         <Box sx={{ maxWidth: 760 }} data-creation-field="protocols">
-          <Autocomplete
-            size="small"
-            multiple
-            disableClearable
-            disabled={!canManage}
-            options={connectionTypes}
-            getOptionLabel={(opt) => opt.label}
-            isOptionEqualToValue={(opt, val) => opt.code === val.code}
-            value={selectedProtocols}
-            onChange={(_, val) => handleProtocolsSelected(val.map((v) => v.code))}
-            renderTags={(value, getTagProps) =>
-              value.map((opt, index) => (
-                <Chip {...getTagProps({ index })} key={opt.code} label={opt.label} size="small" />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                variant="standard"
-                placeholder={t('workspace.connection.overview.addProtocol')}
-                sx={{ '& input': { fontSize: 13, padding: '4px 0 !important' } }}
-              />
-            )}
-          />
+          <MissingFieldBox missing={missing('protocols')}>
+            <Autocomplete
+              size="small"
+              multiple
+              disableClearable
+              disabled={!canManage}
+              options={connectionTypes}
+              getOptionLabel={(opt) => opt.label}
+              isOptionEqualToValue={(opt, val) => opt.code === val.code}
+              value={selectedProtocols}
+              onChange={(_, val) => handleProtocolsSelected(val.map((v) => v.code))}
+              renderTags={(value, getTagProps) =>
+                value.map((opt, index) => (
+                  <Chip {...getTagProps({ index })} key={opt.code} label={opt.label} size="small" />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="standard"
+                  placeholder={t('workspace.connection.overview.addProtocol')}
+                  sx={{ '& input': { fontSize: 13, padding: '4px 0 !important' } }}
+                />
+              )}
+            />
+          </MissingFieldBox>
           <Box sx={{ mt: 1.5 }}>
             <ConnectionProtocolsTable
               protocols={protocols}

@@ -27,9 +27,8 @@ import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { connectionDeleteMessage } from './connectionDeleteMessage';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useMissingMarks, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
-import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 
 type TabKey = 'overview' | 'path' | typeof RECORD_HISTORY_TAB_KEY;
@@ -90,19 +89,36 @@ type ConnectionDetail = {
 };
 
 
+/** The value of a field `POST :id/creation/complete` may name, to tell when it changed. */
+function creationFieldValue(connection: ConnectionDetail | null, key: string): unknown {
+  if (!connection) return null;
+  if (key === 'protocols') return connection.protocol_codes || [];
+  if (key === 'servers') return (connection.servers || []).map((server) => server?.id);
+  if (key === 'source') return [connection.source_asset_id, connection.source_entity_code];
+  if (key === 'destination') return [connection.destination_asset_id, connection.destination_entity_code];
+  return null;
+}
+
 /** What a connection needs before its creation ends (`connection-creation.ts` on the server), in screen order. */
 function missingOf(connection: ConnectionDetail | null): string[] {
   if (!connection) return [];
   const fields: string[] = [];
-  if ((connection.protocol_codes || []).length === 0) fields.push('protocols');
   if (connection.topology === 'multi_server') {
     if ((connection.servers || []).length < 2) fields.push('servers');
   } else {
     if (!connection.source_asset_id && !connection.source_entity_code) fields.push('source');
     if (!connection.destination_asset_id && !connection.destination_entity_code) fields.push('destination');
   }
+  if ((connection.protocol_codes || []).length === 0) fields.push('protocols');
   return fields;
 }
+
+/** The ends, then the protocols: the order of the fields on the overview tab. */
+const SCREEN_ORDER = ['source', 'destination', 'servers', 'protocols'];
+const screenRank = (key: string) => {
+  const rank = SCREEN_ORDER.indexOf(key);
+  return rank === -1 ? SCREEN_ORDER.length : rank;
+};
 
 /** The connection a new page shows dimmed under its title: the one the title will create. */
 const DRAFT_CONNECTION: ConnectionDetail = {
@@ -136,7 +152,7 @@ const DRAFT_CONNECTION: ConnectionDetail = {
 const ignoreDraft = () => undefined;
 
 export default function ConnectionWorkspacePage() {
-  const { t, i18n } = useTranslation(['it', 'common']);
+  const { t } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const navigate = useNavigate();
   const params = useParams();
@@ -318,6 +334,12 @@ export default function ConnectionWorkspacePage() {
   }, [t]);
   const dataRef = React.useRef(data);
   dataRef.current = data;
+  // The fields Create found missing, marked on their label until each one gets a value.
+  const missingMarks = useMissingMarks({
+    recordKey: isCreate ? null : data?.id,
+    missingNow: () => missingOf(data),
+    valueOf: (key) => creationFieldValue(data, key),
+  });
   const focusField = React.useCallback((key: string) => {
     if (validTab !== 'overview') navigate(`/it/connections/${workspaceRouteId}/overview${searchParams.toString() ? `?${searchParams.toString()}` : ''}`);
     focusWhenMounted(() => document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input, [data-creation-field="${key}"] [role="combobox"]`));
@@ -542,7 +564,7 @@ export default function ConnectionWorkspacePage() {
 
   // Create: on the new page, the title is the only field; on a connection being created, what is
   // still being typed is saved, then the server checks what the connection needs. Missing fields are
-  // named once and the first one gets the focus; otherwise the connection is kept and closed.
+  // marked on their label and the first one gets the focus; otherwise the connection is kept and closed.
   const createAction = async () => {
     if (isCreate) {
       titleCreation.create();
@@ -553,10 +575,10 @@ export default function ConnectionWorkspacePage() {
     setError(null);
     try {
       const fields = await creation.completeCreation();
-      if (fields) {
-        setError(t('workspace.connection.creation.missing', { fields: missingFieldsList(fields.map(fieldLabel), i18n.resolvedLanguage || i18n.language) }));
-        focusField(fields[0]);
-      }
+      missingMarks.mark(fields ?? []);
+      // The server names the fields in its own order: the focus goes to the first one on screen.
+      const first = fields ? [...fields].sort((a, b) => screenRank(a) - screenRank(b))[0] : undefined;
+      if (first) focusField(first);
     } catch (e) {
       setError(getApiErrorMessage(e, t, t('workspace.connection.creation.completeFailed')));
     }
@@ -755,6 +777,7 @@ export default function ConnectionWorkspacePage() {
       linkedInterfacesLoading={linkedInterfacesLoading}
       linkedInterfacesError={linkedInterfacesError}
       derivedInterfaceCount={connection.derived_interface_count || 0}
+      missingFields={missingMarks.marked}
       descriptionFlushRef={connection.id ? descriptionFlushRef : undefined}
       onDescriptionSaved={(next, savedId) => setData((prev) => (prev && prev.id === savedId ? { ...prev, description: next } : prev))}
       onEndpointChange={connection.id ? handleEndpointChange : ignoreDraft}

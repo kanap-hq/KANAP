@@ -23,7 +23,7 @@ Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu er
 
 Solange die Verbindung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Verbindung verlassen.
 
-- **Erstellen** prüft, ob die Verbindung mindestens ein Protokoll und beide Endpunkte hat, oder zwei Server bei einer Multi-Server-Verbindung. Eine Meldung nennt, was fehlt, und das erste fehlende Feld erhält den Fokus. Fehlt nichts, behält Kadratis die Verbindung und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben
+- **Erstellen** prüft, ob die Verbindung mindestens ein Protokoll und beide Endpunkte hat, oder zwei Server bei einer Multi-Server-Verbindung. Die Beschriftung jedes fehlenden Felds wird rot, und das erste erhält den Fokus. Fehlt nichts, behält Kadratis die Verbindung und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** löscht die Verbindung. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Verbindungen abbrechen
 
 Verlassen Sie die Verbindung auf andere Weise, solange etwas fehlt, fragt Kadratis nach. **Vervollständigen** lässt Sie auf der Verbindung, im ersten fehlenden Feld. **Löschen** löscht die Verbindung. Wenn Sie die Seite neu laden oder den Tab schließen, solange der neuen Verbindung noch ein Feld fehlt, bittet Ihr Browser um Bestätigung. Verlassen Sie die Seite trotzdem, wird die Verbindung gelöscht.

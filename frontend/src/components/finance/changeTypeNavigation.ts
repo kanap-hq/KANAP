@@ -19,6 +19,15 @@ export function openLineAfterTypeChange(
   navigate: (to: string) => void,
   line: { id: string; reference: string | null; nature: LineType },
 ): void {
+  void refreshAfterTypeChange(queryClient, line.id);
+  navigate(budgetLinePath(line));
+}
+
+/**
+ * The queries a change of type makes stale, marked so, and those that show the line `lineId` read
+ * again at once: a line changed in place while it is being created stays on its page.
+ */
+export function refreshAfterTypeChange(queryClient: QueryClient, lineId: string): Promise<void> {
   void queryClient.invalidateQueries({
     predicate: (query) => {
       const head = query.queryKey[0];
@@ -26,12 +35,11 @@ export function openLineAfterTypeChange(
     },
     refetchType: 'none',
   });
-  void queryClient.refetchQueries({
+  return queryClient.refetchQueries({
     type: 'active',
     predicate: (query) => LINE_QUERIES.has(query.queryKey[0] as string)
-      && (query.state.data as { id?: string } | undefined)?.id === line.id,
+      && (query.state.data as { id?: string } | undefined)?.id === lineId,
   });
-  navigate(budgetLinePath(line));
 }
 
 /** The workspace of a line of either type, by its BL reference (its id without one). */

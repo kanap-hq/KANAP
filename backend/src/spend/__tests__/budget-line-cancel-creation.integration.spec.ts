@@ -17,6 +17,7 @@ import { CapexItemsDeleteService, SpendItemsDeleteService } from '../spend-items
 import { SpendItem } from '../spend-item.entity';
 import { itemService, refusal, seedCompany, seedCostCenter, seedUser } from './cost-center.fixtures';
 import { deps } from './budget-lines.fixtures';
+import { typeChangeService } from './budget-line-type-change.fixtures';
 import { inRolledBackTransaction, runSpecs, seedTenant, setTenant } from './round-inputs.fixtures';
 
 // A budget line created at its title (lot 1c of the creation frame):
@@ -219,6 +220,67 @@ async function testTitleCreationCompleteAndCancel() {
   });
 }
 
+// The type of a line being created (sprint 26.11.9, lot N1): the title creates a CAPEX line, and the
+// screen changes its type in place through the type change route, with no account or value given.
+async function testTypeAtTitleAndInPlaceWhileCreating() {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await seed(runner);
+    const { svc, controller } = services(runner);
+    const typeChange = typeChangeService(runner);
+    const asCreator = ctx(s, s.creatorId, runner);
+    const opts = { manager: runner.manager, tenantId: s.tenantId };
+    const natureOf = async (id: string) => (await runner.query(
+      `SELECT nature, item_number, legacy_number FROM spend_items WHERE tenant_id = $1 AND id = $2`,
+      [s.tenantId, id],
+    ))[0];
+
+    // CAPEX at the title: no company, account or value, a CPX number as any CAPEX creation.
+    const created: any = await controller.createAtTitle(titleBody('Server', { nature: 'capex' }), asCreator);
+    const first = await natureOf(created.id);
+    assert.equal(first.nature, 'capex');
+    assert.match(String(first.legacy_number), /^CPX-\d+$/);
+    assert.deepEqual(
+      await incompleteFields(controller.completeCreation(created.id, { token: created.creation_token }, asCreator)),
+      ['paying_company', 'account', `dimension:${s.axisId}`],
+    );
+
+    // No year given: the change is in place, nothing blocks it, nothing is asked for in place.
+    const check = await typeChange.check('capex', created.id, {}, opts);
+    assert.equal(check.mode, 'in_place');
+    assert.equal(check.from_year, check.first_year, 'the line\'s first year, or none');
+    assert.deepEqual(check.blockers, []);
+    assert.ok(check.dimensions.every((dimension) => !dimension.required), 'nothing required in place');
+    const toOpex = await typeChange.change('capex', created.id, { row_version: check.row_version }, s.creatorId, opts);
+    assert.deepEqual({ id: toOpex.id, nature: toOpex.nature }, { id: created.id, nature: 'opex' });
+    const second = await natureOf(created.id);
+    assert.equal(second.nature, 'opex');
+    assert.equal(second.item_number, first.item_number, 'the BL number stays');
+
+    // An OPEX-only account chosen, then the type back to CAPEX: the account stays on the line, and
+    // Create names it, since it does not suit the new type.
+    const [opexAccount] = await runner.query(
+      `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name, nature)
+       SELECT tenant_id, coa_id, 6200, 'Opex only', 'opex' FROM companies WHERE tenant_id = $1 AND id = $2 RETURNING id`,
+      [s.tenantId, s.companyId],
+    );
+    await svc.update(created.id, { paying_company_id: s.companyId, account_id: opexAccount.id, analytics_values: { [s.axisId]: s.categoryId } }, s.creatorId, { manager: runner.manager });
+    assert.deepEqual(await controller.completeCreation(created.id, { token: created.creation_token }, asCreator), { ok: true });
+    const back = await typeChange.check('opex', created.id, {}, opts);
+    assert.equal(back.account?.fits, false, 'the check says the account does not suit CAPEX');
+    await typeChange.change('opex', created.id, { row_version: back.row_version }, s.creatorId, opts);
+    const third = await natureOf(created.id);
+    assert.equal(third.nature, 'capex');
+    assert.equal(third.legacy_number, first.legacy_number, 'its CPX number again');
+    const [kept] = await runner.query(`SELECT account_id FROM spend_items WHERE tenant_id = $1 AND id = $2`, [s.tenantId, created.id]);
+    assert.equal(kept.account_id, opexAccount.id, 'the account is kept');
+    assert.deepEqual(await incompleteFields(controller.completeCreation(created.id, { token: created.creation_token }, asCreator)), ['account']);
+
+    // The creator's own type changes keep the cancel open: the line goes, under its creator.
+    await controller.cancelCreation(created.id, { token: created.creation_token }, asCreator);
+    assert.equal(await lineCount(runner, s, created.id), 0, 'the line is gone');
+  });
+}
+
 async function testLimitedPerson() {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner);
@@ -283,5 +345,6 @@ async function testLimitedPerson() {
 void runSpecs('budget-line-cancel-creation.integration.spec', [
   ['routes need the member level', async () => testRoutesNeedTheMemberLevel()],
   ['title creation, updates, complete and cancel', testTitleCreationCompleteAndCancel],
+  ['type at the title, changed in place while creating', testTypeAtTitleAndInPlaceWhileCreating],
   ['limited person', testLimitedPerson],
 ]);

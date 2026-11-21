@@ -71,9 +71,8 @@ import { isValidHostname, sanitizeHostname } from '../../utils/hostname';
 import { KanapDialog, PropertyGroup, PropertyRow, useKanapDialogs } from '../../components/design';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useMissingMarks, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
-import { missingFieldsList } from '../../components/workspace/creation/missingFieldsList';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
@@ -1575,6 +1574,12 @@ function AssetWorkspaceRoute() {
   const locationIdRef = React.useRef(locationId);
   locationIdRef.current = locationId;
   const missingNow = () => (locationIdRef.current ? [] : [{ key: 'location', label: t('workspace.asset.overview.location') }]);
+  // The site Create found missing, marked on its label until it gets a value.
+  const missingMarks = useMissingMarks({
+    recordKey: isCreate ? null : data?.id,
+    missingNow: () => (locationId ? [] : ['location']),
+    valueOf: (key) => (key === 'location' ? locationId ?? null : null),
+  });
   const incompleteLeave = useIncompleteLeave({
     keys: 'it:workspace.asset.creation',
     beingCreated: creation.beingCreated,
@@ -1635,7 +1640,7 @@ function AssetWorkspaceRoute() {
     onStart: () => setError(null),
   });
 
-  // Create on an asset being created: the server checks its site. Without one, the site is named
+  // Create on an asset being created: the server checks its site. Without one, the site is marked
   // and gets the focus; otherwise the asset is kept and closed.
   const createAction = async () => {
     if (isCreate) {
@@ -1647,11 +1652,8 @@ function AssetWorkspaceRoute() {
     setError(null);
     try {
       const fields = await creation.completeCreation();
-      if (fields) {
-        const labels = fields.map((key) => (key === 'location' ? t('workspace.asset.overview.location') : key));
-        setValidationError('locationRequired', t('workspace.asset.creation.missing', { fields: missingFieldsList(labels, i18n.resolvedLanguage || i18n.language) }));
-        focusField(fields[0]);
-      }
+      missingMarks.mark(fields ?? []);
+      if (fields) focusField(fields[0]);
     } catch (e) {
       setError(getApiErrorMessage(e, t, t('workspace.asset.creation.completeFailed')));
     }
@@ -1943,7 +1945,7 @@ function AssetWorkspaceRoute() {
       </PropertyGroup>
 
       <PropertyGroup>
-        <PropertyRow label={t('workspace.asset.overview.location')} required>
+        <PropertyRow label={t('workspace.asset.overview.location')} required missing={missingMarks.marked.has('location')}>
           <Box sx={drawerFieldValueSx} data-creation-field="location">
             <LocationSelect
               value={locationId}

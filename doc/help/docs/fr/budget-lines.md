@@ -11,16 +11,16 @@ Les deux types se trouvent dans une seule liste et s'ouvrent dans le même espac
 
 Rendez-vous dans **Gestion budgétaire > Lignes budgétaires** pour voir la liste. Cliquez sur **Nouvelle ligne** pour créer une ligne.
 
-L'espace de travail s'ouvre sur une nouvelle ligne, intitulée **Nouvelle ligne OPEX** ou **Nouvelle ligne CAPEX**. Son type est celui sur lequel la liste est filtrée dans sa colonne **Type**, sinon **OPEX**. Il ne peut pas être changé tant que la ligne est en cours de création. Saisissez le nom de la ligne dans le titre en haut et appuyez sur Entrée. La ligne existe aussitôt, avec la devise de votre espace de travail et la date du jour comme début d'effet, et tous les onglets s'ouvrent, **Budget** compris. Remplissez le panneau **Propriétés** : chaque modification est enregistrée aussitôt.
+L'espace de travail s'ouvre sur une nouvelle ligne, intitulée **Nouvelle ligne OPEX** ou **Nouvelle ligne CAPEX**. Son **Type** vient en premier dans le panneau **Propriétés**, à côté du titre : le type sur lequel la liste est filtrée dans sa colonne **Type**, sinon **OPEX**. Choisissez-y l'autre type, avant ou après le titre. Saisissez le nom de la ligne dans le titre en haut et appuyez sur Entrée. La ligne existe aussitôt, avec la devise de votre espace de travail et le 1er janvier de l'année affichée comme début d'effet, et tous les onglets s'ouvrent, **Budget** compris. Remplissez le panneau **Propriétés** : chaque modification est enregistrée aussitôt. Jusqu'à ce que vous cliquiez sur **Créer**, **Type** reste un menu : la ligne change de type sur place et garde ce que vous avez saisi. Un compte qui ne convient pas au nouveau type reste sur la ligne, son libellé en rouge, jusqu'à ce que vous en choisissiez un autre.
 
 Si votre accès aux données est limité à une société, la société payeuse est remplie avec elle. Si vous devez choisir, choisissez la société payeuse ou le centre de coûts avant de saisir le titre.
 
 Tant que la ligne est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture :
 
-- **Créer** vérifie les champs obligatoires ci-dessous. S'il en manque, un message les liste, ils sont signalés dans le panneau **Propriétés** et le curseur va au premier. Sinon, la ligne se ferme et vous revenez à votre point de départ : l'écran précédent, sinon la liste
+- **Créer** vérifie les champs obligatoires ci-dessous. S'il en manque un, son libellé passe en rouge dans le panneau **Propriétés** et le curseur va au premier. Un libellé redevient normal dès que son champ a une valeur. Sinon, la ligne se ferme et vous revenez à votre point de départ : l'écran précédent, sinon la liste
 - **Annuler** supprime la ligne et tout ce qui y a été saisi, montants compris. Si vous avez saisi plus que le titre, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des lignes. Une ligne qui a des montants dans une colonne gelée ne peut pas être annulée
 
-Quitter la ligne autrement alors qu'un champ obligatoire manque vous demande de la compléter ou de la supprimer. Recharger la page ou fermer l'onglet alors qu'il manque encore un champ obligatoire à la nouvelle ligne fait demander une confirmation par votre navigateur, et la ligne est supprimée si vous partez quand même. Une ligne laissée sans société payeuse affiche un avertissement qui liste les champs manquants, et repose la question chaque fois que vous la quittez. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+Quitter la ligne autrement alors qu'un champ obligatoire manque vous demande de la compléter ou de la supprimer. Recharger la page ou fermer l'onglet alors qu'il manque encore un champ obligatoire à la nouvelle ligne fait demander une confirmation par votre navigateur, et la ligne est supprimée si vous partez quand même. Une ligne laissée sans société payeuse s'ouvre avec le panneau **Propriétés** ouvert et les libellés de ses champs manquants en rouge, et repose la question chaque fois que vous la quittez. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
 
 **Champs obligatoires** :
 
@@ -28,7 +28,7 @@ Quitter la ligne autrement alors qu'un champ obligatoire manque vous demande de 
 - **Société payeuse** : Quelle société paie (obligatoire pour la comptabilité)
 - **Compte** : Le compte du grand livre. Seuls les comptes du plan comptable de la société payeuse apparaissent, et seulement ceux qui conviennent au type de la ligne dans [Plans comptables et gestion des comptes](chart-of-accounts.md#comptes-opex-ou-capex) : **OPEX et CAPEX**, ou **OPEX uniquement** pour une ligne OPEX et **CAPEX uniquement** pour une ligne CAPEX. Une ligne qui a déjà un compte réservé à l'autre type le conserve et reste modifiable. Choisir un tel compte sur une nouvelle ligne, ou en changeant le compte, est refusé
 - **Devise** : Code ISO (ex. : USD, EUR). Par défaut la devise de votre espace de travail ; modifiable par ligne
-- **Début d'effet** : Quand cette dépense commence (JJ/MM/AAAA). Par défaut le jour où vous créez la ligne
+- **Début d'effet** : Quand cette dépense commence (JJ/MM/AAAA). Par défaut le 1er janvier de l'année affichée
 - **Dimensions obligatoires** : un champ par dimension obligatoire pour le type de la ligne. Un nouvel espace de travail n'a aucune dimension obligatoire. Voir [Dimensions recommandées](#dimensions-recommandees)
 - **Centre de coûts**, lorsque votre accès aux données en exige un
 
@@ -232,7 +232,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. 
 - **En-tête** : la référence de la ligne (ex. : `BL-12`) avec un bouton de copie, le titre de la ligne (cliquez dessus pour la renommer), **Préc.** / **Suiv.**, **Partager**, **Supprimer** (icône corbeille, `budget:admin`, accès à toutes les données) et le bouton de fermeture. Tant que la ligne est en cours de création, **Créer** et **Annuler** remplacent **Supprimer** et le bouton de fermeture
 - **Barre de métadonnées** sous le titre : **Statut**, **Responsable IT** et **Responsable métier**, modifiables sur place. Lorsque le centre de coûts de la ligne a un responsable budgétaire, **Responsable budgétaire** vient ensuite. Il est en lecture seule. Il vient du centre de coûts, et la ligne ne l'enregistre pas : survolez-le pour voir de quel centre de coûts il provient, et modifiez-le sur le centre de coûts (voir [Centres de coûts](cost-centers.md#responsable-budgetaire-sur-les-lignes-budgetaires))
 - **Cinq onglets** : **Vue d'ensemble**, **Budget**, **Ventilations**, **Relations** (l'onglet Relations indique le nombre de liens de la ligne) et **Historique**
-- **Panneau Propriétés** à droite : les champs principaux de la ligne, en commençant par **Type** (avec **Changer le type...** à côté dès que la ligne n'est plus en cours de création, voir [Changer le type](#changer-le-type)). Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
+- **Panneau Propriétés** à droite : les champs principaux de la ligne, en commençant par **Type** (un menu tant que la ligne est en cours de création, puis **Changer le type...** à côté, voir [Changer le type](#changer-le-type)). Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
 
 **Choix des responsables** :
 
@@ -280,7 +280,7 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 
 **Panneau Propriétés** :
 
-- **Type** : **OPEX** ou **CAPEX**. Dès que la ligne n'est plus en cours de création, **Changer le type...** à côté ouvre la fenêtre décrite dans [Changer le type](#changer-le-type)
+- **Type** : **OPEX** ou **CAPEX**. Tant que la ligne est en cours de création, c'est un menu et la ligne change de type sur place. Une fois la ligne créée, **Changer le type...** à côté ouvre la fenêtre décrite dans [Changer le type](#changer-le-type)
 - **Fournisseur**, **Centre de coûts**, **Société payeuse**, **Compte** (filtré par le plan comptable de la société payeuse et le type de la ligne), **Devise** (seulement les devises autorisées dans votre espace de travail), un champ par dimension analytique utilisée pour le type de la ligne, **Run ou build** et **Début d'effet**
 - **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
 - Dates **Créé** et **Mis à jour** (lecture seule)

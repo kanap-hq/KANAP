@@ -3,6 +3,7 @@ import { Autocomplete, Box, MenuItem, TextField, Typography } from '@mui/materia
 import { useTranslation } from 'react-i18next';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import ClusterMark from '../../../components/workspace/ClusterMark';
+import { FieldLabel } from '../../../components/design';
 import { renderServerOption, type ServerOption } from '../../../components/fields/serverOptionRender';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import useAssetPickerOptions from './useAssetPickerOptions';
@@ -18,6 +19,8 @@ type Props = {
   onChange: (next: EndpointValue, asset?: ServerOption) => void;
   disabled?: boolean;
   initialAsset?: ServerOption | null;
+  /** A check found the endpoint missing: its label turns red. */
+  missing?: boolean;
 };
 
 const fieldSx = {
@@ -36,6 +39,7 @@ export default function ConnectionEndpointPicker({
   onChange,
   disabled = false,
   initialAsset = null,
+  missing = false,
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { settings, labelFor } = useItOpsEnumOptions();
@@ -78,7 +82,7 @@ export default function ConnectionEndpointPicker({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{label}</Typography>
+        <FieldLabel missing={missing}>{label}</FieldLabel>
         <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
           <Box
             component="button"

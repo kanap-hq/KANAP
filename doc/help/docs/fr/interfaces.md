@@ -20,7 +20,7 @@ Vous pouvez les remplir dans l'ordre de votre choix. Rien n'est enregistré tant
 
 Tant que l'interface est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'interface.
 
-- **Créer** conserve l'interface et vous ramène à votre point de départ. S'il manque encore quelque chose, un message le nomme, et le titre ou le premier champ manquant prend le focus. Si le brouillon est complet, Kadratis crée l'interface et vous ramène aussitôt
+- **Créer** conserve l'interface et vous ramène à votre point de départ. S'il manque encore quelque chose, un titre vide affiche son message, le libellé de chaque champ manquant passe en rouge, et le titre ou le premier champ manquant prend le focus. Si le brouillon est complet, Kadratis crée l'interface et vous ramène aussitôt
 - **Annuler** supprime l'interface. Si vous avez ajouté quelque chose après sa création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des interfaces
 
 Si vous quittez l'interface autrement (le menu, la flèche de retour), elle est conservée : elle est complète.
