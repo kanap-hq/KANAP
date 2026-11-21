@@ -142,16 +142,20 @@ function atStart(root: ParentNode, active: Element | null): boolean {
 }
 
 /**
- * Focuses the creation's first field once it is on screen. Until the person types or clicks, for
- * a few seconds, the focus follows that field as the record loads: an editor arrives, a default
- * fills a required field a moment after it shows, Layout hands the focus to the page scroller.
- * The focus somewhere else (the page's choice) ends it too.
+ * Focuses the creation's first field once it is on screen. Until the person types in a field or
+ * clicks, for a few seconds, the focus follows that field as the record loads: an editor arrives,
+ * a default fills a required field a moment after it shows, Layout hands the focus to the page
+ * scroller. The focus somewhere else (the page's choice) ends it too. A key typed while the focus
+ * is nowhere yet chooses nothing: the field it was meant for still gets the cursor.
  */
 function placeFirstField(root: HTMLElement): void {
   const started = Date.now();
   let placed: HTMLElement | null = null;
   let acted = false;
-  const act = () => { acted = true; };
+  const act = (event: Event) => {
+    if (event.type === 'keydown' && atStart(root, document.activeElement)) return;
+    acted = true;
+  };
   document.addEventListener('keydown', act, true);
   document.addEventListener('pointerdown', act, true);
   const stop = () => {
