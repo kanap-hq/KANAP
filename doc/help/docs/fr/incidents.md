@@ -26,7 +26,7 @@ Rendez-vous dans **Cartographie SI > Incidents** pour voir le registre. Pour enr
 
 1. Cliquez sur **Nouvel incident**. La page de l'incident s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez un résumé court et factuel, ex. : « Messagerie indisponible sur le site de Lyon ».
-3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis enregistre l'incident aussitôt. Sa référence (`INC-14`) apparaît et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis enregistre l'incident aussitôt. Sa référence (`INC-14`) apparaît et tous les onglets s'ouvrent.
 
 Le nouvel incident est **Ouvert**, de gravité **Mineure**, détecté maintenant, avec vous comme déclarant. Complétez ensuite le reste comme sur tout incident :
 
@@ -37,7 +37,7 @@ Le nouvel incident est **Ouvert**, de gravité **Mineure**, détecté maintenant
 - **Catégorie** : infrastructure, sécurité, application, données, fournisseur, autre (configurable, voir [Catégories](#categories))
 - **Responsable** : qui prend l'incident en charge
 
-Les deux dates acceptent des valeurs passées : un incident découvert le lundi matin peut être enregistré comme ayant commencé le samedi soir. Appuyez sur Échap dans le titre pour partir sans rien enregistrer, même avec un titre saisi.
+Les deux dates acceptent des valeurs passées : un incident découvert le lundi matin peut être enregistré comme ayant commencé le samedi soir. Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page n'enregistre rien, même avec un titre saisi.
 
 ### Créer ou annuler { #cancelling-a-creation }
 

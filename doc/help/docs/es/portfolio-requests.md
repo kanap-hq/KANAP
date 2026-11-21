@@ -94,9 +94,9 @@ El encabezado del espacio de trabajo le da contexto operativo sin salir de la p�
 
 1. Haga clic en **Nueva solicitud**. La página de la solicitud se abre en **Resumen** con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba el nombre de la solicitud.
-3. Pulse Intro o haga clic fuera del título. Kadratis crea la solicitud de inmediato, con el estado **Pendiente de revisión** y con usted como solicitante. Su referencia (`REQ-42`) aparece y se abren todas las pestañas.
+3. Pulse Intro o Tab, o haga clic en **Crear**. Kadratis crea la solicitud de inmediato, con el estado **Pendiente de revisión** y con usted como solicitante. Su referencia (`REQ-42`) aparece y se abren todas las pestañas.
 
-Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
+Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre.
 
 ### Crear o cancelar { #cancelling-a-creation }
 

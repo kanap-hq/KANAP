@@ -4,7 +4,7 @@ import { Box, FormHelperText, TextField, Typography } from '@mui/material';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { PropertyRow } from '../../components/design';
-import { EditableTitleDisplay } from '../../components/workspace/EditableTitle';
+import { EditableTitleDisplay, titleMessageSx } from '../../components/workspace/EditableTitle';
 
 export const sectionLabelSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1 } as const;
 
@@ -33,8 +33,12 @@ export function SupplierNameTitle({
   // Enter, Escape and the blur that follows may all end the edit: only the first one counts.
   const openRef = React.useRef(false);
   const shownError = requiredError ? t('suppliers.messages.nameRequired') : error;
+  // The message is announced and tied to the title while it shows.
+  const messageId = React.useId();
 
-  const helper = shownError ? <FormHelperText error sx={{ mt: 0.5 }}>{shownError}</FormHelperText> : null;
+  const helper = shownError
+    ? <FormHelperText error id={messageId} role="alert" sx={titleMessageSx}>{shownError}</FormHelperText>
+    : null;
 
   if (!editing) {
     return (
@@ -42,6 +46,7 @@ export function SupplierNameTitle({
         <EditableTitleDisplay
           canEdit={canEdit}
           placeholder={!name}
+          describedBy={shownError ? messageId : undefined}
           onEdit={() => {
             setDraft(name);
             openRef.current = true;
@@ -82,6 +87,7 @@ export function SupplierNameTitle({
         placeholder={t('suppliers.placeholders.name')}
         aria-label={t('suppliers.fields.name')}
         aria-invalid={shownError ? true : undefined}
+        aria-describedby={shownError ? messageId : undefined}
         onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
           setDraft(event.target.value);
           if (event.target.value.trim()) setRequiredError(false);
@@ -99,13 +105,13 @@ export function SupplierNameTitle({
           color: 'inherit',
           bgcolor: 'transparent',
           border: 'none',
-          borderBottom: `1px solid ${shownError ? theme.palette.error.main : theme.palette.kanap.border.default}`,
+          borderBottom: `1px solid ${shownError ? theme.palette.kanap.danger : theme.palette.kanap.border.default}`,
           outline: 'none',
           p: 0,
           m: 0,
           width: '100%',
           '&::placeholder': { color: theme.palette.kanap.text.tertiary, opacity: 1 },
-          '&:focus': { borderBottomColor: shownError ? theme.palette.error.main : theme.palette.kanap.teal },
+          '&:focus': { borderBottomColor: shownError ? theme.palette.kanap.danger : theme.palette.kanap.teal },
         })}
       />
       {helper}

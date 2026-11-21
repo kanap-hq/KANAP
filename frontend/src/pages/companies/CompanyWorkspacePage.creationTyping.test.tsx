@@ -27,6 +27,7 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
 
 import api from '../../api';
 import CompanyWorkspacePage from './CompanyWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -98,7 +99,7 @@ describe('CompanyWorkspacePage typing while the company is created', () => {
     let answer: (value: unknown) => void = () => undefined;
     mocked.post.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
     renderNew();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Acme Germany' } });
     fireEvent.blur(title);
     const country = await screen.findByLabelText('companies.fields.country');
@@ -106,7 +107,8 @@ describe('CompanyWorkspacePage typing while the company is created', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'Germany (DE)' }));
     const city = screen.getByLabelText('companies.fields.city');
     fireEvent.change(city, { target: { value: 'Berlin' } });
-    fireEvent.blur(city);
+    // The city gives way to another field of the page.
+    fireEvent.blur(city, { relatedTarget: title });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });
@@ -158,7 +160,7 @@ describe('CompanyWorkspacePage typing while the company is created', () => {
     const city = screen.getByLabelText('companies.fields.city');
     fireEvent.change(city, { target: { value: 'Berlin' } });
     fireEvent.blur(city);
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Acme Germany' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Acme Germany' } });
     expect(mocked.post).not.toHaveBeenCalled();
   }
 

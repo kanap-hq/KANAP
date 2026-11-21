@@ -1802,7 +1802,7 @@ export default function KnowledgeWorkspacePage() {
       };
       return (await api.post('/knowledge', payload)).data || {};
     },
-    onCreated: async (created, token) => {
+    onCreated: async (created, token, stillHere) => {
       try {
         const lockRes = await api.post(`/knowledge/${created.id}/locks`);
         setLockToken(lockRes.data?.lock_token || null);
@@ -1810,11 +1810,13 @@ export default function KnowledgeWorkspacePage() {
       } catch {
         // No lock: the person can enter edit mode again by hand.
       }
-      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const itemRef = created.item_ref || `DOC-${created.item_number}`;
       // The create answers with the row alone, without its owner, relations and classifications:
       // the page opens on the document as read, its first state (the row if the read fails).
       const full = await api.get(`/knowledge/${created.id}`).then((r) => r.data).catch(() => null);
+      // The person left meanwhile: the document is kept, nobody is brought back to it.
+      if (!stillHere()) return;
+      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       qc.setQueryData(['knowledge', itemRef], full || created);
       const sp = new URLSearchParams();
       if (workspaceLibrarySlug) sp.set('library', workspaceLibrarySlug);
@@ -2144,7 +2146,7 @@ export default function KnowledgeWorkspacePage() {
                     emphasizeEmpty={isCreate}
                     error={isCreate ? titleCreation.titleError : undefined}
                     focusRequest={titleCreation.focusRequest}
-                    onDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
+                    onDraftChange={isCreate ? titleCreation.onTitleDraftChange : undefined}
                     onCancel={isCreate ? () => { void cancelAction(); } : undefined}
                     onSave={(value) => {
                       if (isCreate) {

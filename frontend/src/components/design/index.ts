@@ -1,6 +1,6 @@
 export { PropertyGroup, PropertyRow } from './PropertyRow';
 export { StatusDot } from './StatusDot';
-export { FieldLabel, RequiredMark, mergeSx } from './FieldLabel';
+export { FieldLabel, MissingIcon, RequiredMark, mergeSx } from './FieldLabel';
 export { MissingFieldBox, useInvalidControls } from './invalidControls';
 export { default as KanapDialog } from './KanapDialog';
 export type { KanapDialogProps } from './KanapDialog';

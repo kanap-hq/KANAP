@@ -12,6 +12,7 @@ import { resetCreationStore } from '../../components/workspace/creation/creation
 import { clearCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import api from '../../api';
 import TaskWorkspacePage from './TaskWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 // Creation at the title (lot V4): the title committed in the header creates the task through the
 // route of its relation, with the defaults of the former creation form; the page moves to it with
@@ -174,7 +175,7 @@ function location() {
 }
 
 async function commitTitle() {
-  const input = await screen.findByRole('textbox', { name: TITLE });
+  const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
   fireEvent.change(input, { target: { value: 'Order cheese' } });
   fireEvent.keyDown(input, { key: 'Enter' });
 }
@@ -201,7 +202,7 @@ describe('Task creation at the title', () => {
 
   it('opens with the title to type and the task to come dimmed, its properties panel open', async () => {
     renderPage(['/portfolio/tasks/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'portfolio:workspace.task.title.placeholder');
     // Create and Cancel in place of the close button.
@@ -230,7 +231,7 @@ describe('Task creation at the title', () => {
 
   it('lets the properties panel of the task to come be widened, its edge out of the dimmed preview', async () => {
     renderPage(['/portfolio/tasks/new/overview']);
-    await screen.findByRole('textbox', { name: TITLE });
+    await screen.findByRole('textbox', { name: TITLE_FIELD });
     const edge = screen.getByRole('separator', { name: 'portfolio:workspace.resizeProperties' });
     for (const preview of screen.getAllByTestId('creation-preview')) expect(preview).not.toContainElement(edge);
 
@@ -240,7 +241,7 @@ describe('Task creation at the title', () => {
 
   it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {
     renderPage(['/portfolio/tasks/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.keyDown(input, { key: 's', ctrlKey: true });
     expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
     expect(mocked.post).not.toHaveBeenCalled();
@@ -297,7 +298,7 @@ describe('Task creation at the title', () => {
 
   it('opens on a project the person contributes to', async () => {
     renderPage(['/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks'], { projectExtra: { can_contribute: true } });
-    expect(await screen.findByRole('textbox', { name: TITLE })).toBeInTheDocument();
+    expect(await screen.findByRole('textbox', { name: TITLE_FIELD })).toBeInTheDocument();
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/portfolio/projects/project-a'));
     expect(location()).toBe('/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks');
   });
@@ -314,7 +315,7 @@ describe('Task creation at the title', () => {
     const projectRead = new Promise<typeof PROJECT>((resolve) => { release = resolve; });
     renderPage(['/portfolio/tasks/new/overview?projectId=project-a&projectTab=tasks'], { projectRead, projectExtra: { can_contribute: false } });
     expect(await screen.findByText('portfolio:workspace.task.messages.loading')).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: TITLE })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: TITLE_FIELD })).toBeNull();
     expect(screen.queryByTestId('task-properties')).toBeNull();
     release(PROJECT);
     await waitFor(() => expect(location()).toBe('/403'));
@@ -337,7 +338,7 @@ describe('Task creation at the title', () => {
     // The init effect has been cancelled by the strict re-render; the read is still pending: the
     // page waits, nothing of the new task shows.
     expect(await screen.findByText('portfolio:workspace.task.messages.loading')).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: TITLE })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: TITLE_FIELD })).toBeNull();
     expect(screen.queryByTestId('task-properties')).toBeNull();
     release(PROJECT);
     await waitFor(() => expect(screen.getByTestId('task-properties')).toHaveTextContent('related:Project A'));
@@ -384,7 +385,7 @@ describe('Task creation at the title', () => {
   it('leaves an empty new task on Escape, to the previous address', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new task' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).not.toHaveBeenCalled();
@@ -395,7 +396,7 @@ describe('Task creation at the title', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'new task' }));
     let release: (value: unknown) => void = () => undefined;
     mocked.post.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }) as never);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Order cheese' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
@@ -409,10 +410,10 @@ describe('Task creation at the title', () => {
   it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new task' }));
-    await screen.findByRole('textbox', { name: TITLE });
+    await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
-    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus());
     expect(mocked.post).not.toHaveBeenCalled();
     expect(location()).not.toBe('/start');
   });
@@ -438,9 +439,9 @@ describe('Task creation at the title', () => {
   it('creates the task on Create clicked just after the title, and keeps it open with Done', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new task' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Order cheese' } });
-    // In a browser the click's press blurs the title first, which commits it.
+    // In a browser the press takes the focus from the title, which writes nothing; Create writes the name typed.
     fireEvent.blur(input);
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview'));
@@ -453,7 +454,7 @@ describe('Task creation at the title', () => {
   it('sends Tab from the title to the description, and Shift+Tab reaches Done', async () => {
     const user = userEvent.setup();
     renderPage(['/portfolio/tasks/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     await user.type(input, 'Order cheese');
     await user.tab();
     await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview'));

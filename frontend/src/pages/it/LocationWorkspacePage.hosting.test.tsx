@@ -43,6 +43,7 @@ vi.mock('./workspace/LocationRelationsTab', () => ({ default: () => null }));
 import api from '../../api';
 import { KanapDialogProvider } from '../../components/design';
 import LocationWorkspacePage from './LocationWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -134,9 +135,11 @@ describe('LocationWorkspacePage hosting category change', () => {
     serve(SITE);
     mocked.post.mockResolvedValue({ data: { ...SITE, id: 'loc-9', location_reference: 'LOC-9', name: 'Lyon DC', creation_token: 'tok' } });
     renderAt('/it/locations/new/overview');
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Lyon DC' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/locations/LOC-9/overview'));
     fireEvent.click(await screen.findByText('pick-cloud'));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
