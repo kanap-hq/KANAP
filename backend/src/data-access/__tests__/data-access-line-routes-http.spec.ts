@@ -494,9 +494,21 @@ async function testLineRoutes(app: INestApplication) {
   expectRefused(deleted, 'reserved', 'Rita deletes a line she modifies through its centre');
   assert.ok(await lineRow(lines.L3), 'L3 kept');
 
-  // 5. A new line on INF-FR: paid by ES refused, paid by FR created.
+  // 5. A new line on INF-FR: paid by ES refused, paid by FR created. A line is written complete:
+  // it names an account, here of the chart of FR.
+  const account = await inTenant(async () => {
+    const chart = (await client.query(
+      `INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES (app_current_tenant(), 'DA-HTTP-FR', 'Alpha France chart', 'FR') RETURNING id`,
+    )).rows[0].id as string;
+    await client.query(`UPDATE companies SET coa_id = $1 WHERE id = $2`, [chart, fr]);
+    return (await client.query(
+      `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) VALUES (app_current_tenant(), $1, 615000, 'Maintenance') RETURNING id`,
+      [chart],
+    )).rows[0].id as string;
+  });
   const create = (name: string, company: string) => call(app, 'POST', 'budget-lines', rita, {
     nature: 'opex', product_name: name, currency: 'EUR', effective_start: '2026-01-01', paying_company_id: company, cost_center_id: infFr,
+    account_id: account,
   });
   const paidByEs = await create('DA HTTP line paid by ES', es);
   expectRefused(paidByEs, 'placement', 'Rita creates a line on INF-FR paid by ES');
