@@ -184,6 +184,7 @@ export default function SupplierContactsTab({ supplierId, supplierAddress, canMa
                     label={t('suppliers.contacts.selectContact', { role: role.label })}
                     placeholder={t('suppliers.contacts.searchPlaceholder')}
                     value={null}
+                    createSupplier={{ id: supplierId, role: role.value }}
                     onChange={(contactId) => { void attach(role.value, contactId); }}
                   />
                 </Box>
