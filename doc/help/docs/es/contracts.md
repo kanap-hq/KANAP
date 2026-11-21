@@ -245,7 +245,7 @@ Una aplicación o un activo desactivado o retirado sigue en la lista con el nomb
 
 La sección no aparece cuando no hay nada que sugerir.
 
-**Contactos**: personas de este contrato, cada una con un rol (Comercial, Técnico, Soporte u Otro). **Agregar los contactos del proveedor** copia los contactos del proveedor con un clic. Un contacto que aún no existe se puede crear desde la lista y recibir después su rol. Consulte [Contactos](contacts.md#crear-un-contacto-desde-un-campo-de-contacto).
+**Contactos**: personas de este contrato, cada una con un rol (Comercial, Técnico, Soporte u Otro). **Agregar los contactos del proveedor** copia los contactos del proveedor con un clic. **Añadir** abre bajo el botón la lista de contactos, con su referencia, su nombre y su proveedor. Busque en ella, o cree un contacto desde la última opción de la lista (consulte [Contactos](contacts.md#crear-un-contacto-desde-un-campo-de-contacto)). Los roles del contacto elegido o creado aparecen luego en el mismo lugar: al elegir un rol se añade el contacto. Escape cierra la lista sin añadir nada.
 
 **Enlaces y archivos**: los enlaces web del contrato (el PDF firmado en línea, el portal del proveedor) y sus archivos, una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `contracts:member`:
 
