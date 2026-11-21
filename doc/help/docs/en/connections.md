@@ -8,14 +8,14 @@ Navigate to **IT Landscape > Connections** to see your connection registry. To c
 
 1. Click **Add connection**. The connection page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type a descriptive name.
-3. Press Enter, or click outside the title. Kadratis creates the connection at once, server to server, without protocols or endpoints. Its reference (`CONN-12`) shows and all tabs open.
+3. Press Enter or Tab, or click **Create**. Kadratis creates the connection at once, server to server, without protocols or endpoints. Its reference (`CONN-12`) shows and all tabs open.
 
 Each field then saves on its own. A connection needs:
   - **Topology**: Server to server or Multi-server
   - **Endpoints**: A source and a destination for Server to server (each a server, a cluster or an entity), or at least two servers for Multi-server
   - **Protocols**: At least one network protocol
 
-Press Escape in the title to leave without creating anything, even with a name typed.
+Pressing Escape in the title, clicking **Cancel** or leaving the page creates nothing, even with a name typed.
 
 **Tip**: Connections can be linked to interface bindings to show which infrastructure supports each application integration.
 

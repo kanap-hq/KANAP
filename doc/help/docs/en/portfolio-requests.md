@@ -94,9 +94,9 @@ The workspace header gives you operational context without leaving the page:
 
 1. Click **New request**. The request page opens on **Summary** with an empty title in the header. The rest of the page is dimmed.
 2. Type the name of the request.
-3. Press Enter, or click outside the title. Kadratis creates the request at once, with status **Pending Review** and you as the requestor. Its reference (`REQ-42`) shows and all tabs open.
+3. Press Enter or Tab, or click **Create**. Kadratis creates the request at once, with status **Pending Review** and you as the requestor. Its reference (`REQ-42`) shows and all tabs open.
 
-Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape in the title to leave without creating anything, even with a name typed.
+Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Pressing Escape in the title, clicking **Cancel** or leaving the page creates nothing, even with a name typed.
 
 ### Creating or cancelling { #cancelling-a-creation }
 

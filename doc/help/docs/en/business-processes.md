@@ -56,9 +56,9 @@ The list shows all business processes for your tenant.
 
 1. Click **New** on the list. The process page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type the process name, ideally with its short code (e.g. "Order-to-Cash (O2C)").
-3. Press Enter, or click outside the title. Kadratis creates the process at once, enabled, and all tabs open.
+3. Press Enter or Tab, or click **Create**. Kadratis creates the process at once, enabled, and all tabs open.
 
-Press Escape in the title to leave without creating anything, even with a name typed. Two processes cannot share a name, whatever the case: a name already used is refused, with a message under the title.
+Pressing Escape in the title, clicking **Cancel** or leaving the page creates nothing, even with a name typed. Two processes cannot share a name, whatever the case: a name already used is refused, with a message under the title.
 
 While the process is being created, its header shows **Create** and **Cancel**. They stay until you leave the process. **Ctrl+S** works like the button shown.
 

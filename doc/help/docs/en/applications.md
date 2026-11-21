@@ -40,7 +40,7 @@ Navigate to **IT Landscape > Applications** to see your list. To create an appli
 
 1. Click **New application**. The application page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type the name of the application or service, up to 200 characters. See [Unique names](#unique-names).
-3. Press Enter, or click outside the title. Kadratis creates the application at once. Its reference (`APP-12`) shows and all tabs open.
+3. Press Enter or Tab, or click **Create**. Kadratis creates the application at once. Its reference (`APP-12`) shows and all tabs open.
 
 The new application is **Active**, in the default category. Change them in the header and the properties drawer, then fill in the rest:
 
@@ -54,7 +54,7 @@ The new application is **Active**, in the default category. Change them in the h
 - **Licensing** and **Notes**: license terms and free-form internal notes
 - **Can have child apps**: use this application as a "suite" that groups other applications
 
-Press Escape in the title to leave without creating anything, even with a name typed. A name that another application already uses is refused, with a message under the title.
+Pressing Escape in the title, clicking **Cancel** or leaving the page creates nothing, even with a name typed. A name that another application already uses is refused, with a message under the title.
 
 ### Creating or cancelling { #cancelling-a-creation }
 

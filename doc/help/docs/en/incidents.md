@@ -26,7 +26,7 @@ Navigate to **IT Landscape > Incidents** to see the register. To log an incident
 
 1. Click **New incident**. The incident page opens with an empty title in the header. The rest of the page is dimmed.
 2. Type a short factual summary, e.g. "Mail service unavailable at the Lyon office".
-3. Press Enter, or click outside the title. Kadratis logs the incident at once. Its reference (`INC-14`) shows and all tabs open.
+3. Press Enter or Tab, or click **Create**. Kadratis logs the incident at once. Its reference (`INC-14`) shows and all tabs open.
 
 The new incident is **Open**, with severity **Minor**, detected now, and you as the reporter. Then fill in the rest like on any incident:
 
@@ -37,7 +37,7 @@ The new incident is **Open**, with severity **Minor**, detected now, and you as 
 - **Category**: infrastructure, security, application, data, supplier, other (configurable, see [Categories](#categories))
 - **Owner**: who is responsible for handling it
 
-Both dates accept past values, so an incident discovered on Monday morning can be recorded as having started on Saturday night. Press Escape in the title to leave without logging anything, even with a title typed.
+Both dates accept past values, so an incident discovered on Monday morning can be recorded as having started on Saturday night. Pressing Escape in the title, clicking **Cancel** or leaving the page logs nothing, even with a title typed.
 
 ### Creating or cancelling { #cancelling-a-creation }
 
