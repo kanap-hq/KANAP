@@ -37,6 +37,7 @@ vi.mock('../../components/fields/CostCenterSelect', () => ({ default: () => <div
 
 import api from '../../api';
 import CostCenterWorkspacePage from './CostCenterWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -108,7 +109,7 @@ describe('CostCenterWorkspacePage typing while the cost center is created', () =
     fireEvent.change(code, { target: { value: 'CC-77' } });
     fireEvent.blur(code);
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Paris' } });
     fireEvent.blur(title);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));

@@ -12,6 +12,7 @@ import { resetSharedPatchBuffers } from '../../hooks/patchBuffer';
 import api from '../../api';
 import { formatShortDate } from '../../lib/dateFormat';
 import BudgetLineRoute from './BudgetLineRoute';
+import { TITLE_FIELD } from '../../test/titleField';
 
 // Creation at the title (lot 1c): the title (or Create) creates the line with its defaults and
 // every tab opens; Done checks the fields the line needs before it closes it; Cancel deletes it.
@@ -178,11 +179,11 @@ function location() {
 async function startNewLine() {
   renderPage(['/start']);
   fireEvent.click(await screen.findByRole('button', { name: 'new line' }));
-  return screen.findByRole('textbox', { name: TITLE });
+  return screen.findByRole('textbox', { name: TITLE_FIELD });
 }
 
 async function commitTitle() {
-  const input = await screen.findByRole('textbox', { name: TITLE });
+  const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
   fireEvent.change(input, { target: { value: 'Monitoring' } });
   fireEvent.keyDown(input, { key: 'Enter' });
 }
@@ -231,7 +232,7 @@ describe('Budget line creation at the title', () => {
 
   it('starts the line on 1 January of the year in the address', async () => {
     renderPage(['/ops/budget/new/overview?nature=opex&year=2027']);
-    await screen.findByRole('textbox', { name: TITLE });
+    await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(draftEffectiveStart()).toBe(formatShortDate('2027-01-01', 'en', { year: 'always' }));
     await commitTitle();
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/budget-lines/creation', {
@@ -243,7 +244,7 @@ describe('Budget line creation at the title', () => {
     await startNewLine();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
-    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus());
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
@@ -272,7 +273,7 @@ describe('Budget line creation at the title', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'budget.typeCapex' }));
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'budget.type' })).toHaveTextContent('budget.typeCapex'));
     expect(location()).toBe('/ops/budget/new/overview?nature=capex');
-    const title = await screen.findByRole('textbox', { name: TITLE });
+    const title = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(title).toHaveAttribute('placeholder', 'capex.workspace.newCapexItem');
     await commitTitle();
     await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
@@ -347,6 +348,11 @@ describe('Budget line creation at the title', () => {
     expect(account()).toHaveAttribute('aria-invalid', 'true');
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText(/budget\.creation\.missing/)).toBeNull();
+    // Beyond the colour: an icon named Missing on each label, the fields said once, in screen order, by the page's one status.
+    expect(screen.getAllByRole('img', { name: 'common:creation.missingMark' })).toHaveLength(2);
+    await waitFor(() => expect(screen.getAllByRole('status').map((node) => node.textContent).join('')).toContain(
+      'common:creation.missingFields(fields=opex.fields.payingCompany, opex.fields.account)',
+    ));
     // A field given a value loses its mark; the other keeps it.
     fireEvent.change(company(), { target: { value: 'company-1' } });
     await waitFor(() => expect(fieldLabel('opex.fields.payingCompany')).not.toHaveAttribute('data-missing'));
@@ -379,7 +385,7 @@ describe('Budget line creation at the title', () => {
 
   it('creates the line on Create clicked just after the title, opens it with Done and the cursor in its first field', async () => {
     await startNewLine();
-    const input = screen.getByRole('textbox', { name: TITLE });
+    const input = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Monitoring' } });
     const create = screen.getByRole('button', { name: 'common:buttons.create' });
     // In a browser the press blurs the title first, which commits it.

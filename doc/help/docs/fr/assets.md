@@ -37,7 +37,7 @@ Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom
 Tant que l'actif est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture. Ils restent jusqu'à ce que vous quittiez l'actif. **Ctrl+S** agit comme le bouton affiché.
 
 - **Créer** fait comme Entrée : il crée l'actif et le laisse ouvert, avec sa référence. Le curseur va au champ **Site** s'il est vide. Avec un titre vide, le titre en demande un
-- Une fois l'actif créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vérifie que l'actif a un site. Sans site, le libellé **Site** passe en rouge dans le tiroir des propriétés et le champ prend le focus. L'actif reste ouvert. Avec un site, vous revenez à votre point de départ
+- Une fois l'actif créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vérifie que l'actif a un site. Sans site, le libellé **Site** passe en rouge avec une icône d'alerte dans le tiroir des propriétés et le champ prend le focus. L'actif reste ouvert. Avec un site, vous revenez à votre point de départ
 - **Annuler** supprime l'actif. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des actifs
 
 Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, Kadratis vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif. Recharger la page ou fermer l'onglet alors que le nouvel actif n'a pas de site fait demander une confirmation par votre navigateur. Si vous partez quand même, l'actif est supprimé.

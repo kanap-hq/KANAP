@@ -36,6 +36,7 @@ vi.mock('../../hooks/useAnalyticsNav', () => ({
 
 import * as service from '../../services/analytics';
 import AnalyticsDimensionWorkspacePage from './AnalyticsDimensionWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
   getAnalyticsAxis: ReturnType<typeof vi.fn>;
@@ -103,7 +104,7 @@ describe('AnalyticsDimensionWorkspacePage typing while the dimension is created'
     let answer: (value: unknown) => void = () => undefined;
     mocked.createAnalyticsAxis.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
     renderNew();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Cost nature' } });
     fireEvent.blur(title);
     await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledTimes(1));

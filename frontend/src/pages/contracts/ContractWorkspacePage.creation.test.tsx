@@ -50,6 +50,7 @@ vi.mock('../../components/fields/DateEUField', () => ({
 
 import api from '../../api';
 import ContractWorkspacePage from './ContractWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -82,7 +83,7 @@ describe('ContractWorkspacePage creation', () => {
 
   it('creates the contract once its name and required fields are given, then opens it', async () => {
     renderNew();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: ' Oracle support ' } });
     fireEvent.blur(title);
     const drawer = screen.getByRole('complementary');

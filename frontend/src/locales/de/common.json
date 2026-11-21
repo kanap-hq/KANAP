@@ -1731,6 +1731,8 @@
     }
   },
   "creation": {
+    "missingMark": "Fehlt",
+    "missingFields": "Fehlt: {{fields}}",
     "confirmTitle": "Erstellung abbrechen",
     "confirmMessage": "{{record}} und was Sie hinzugefügt haben ({{changes}}) werden gelöscht.",
     "keep": "Behalten",

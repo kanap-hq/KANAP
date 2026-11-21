@@ -1,4 +1,5 @@
 import React from 'react';
+import { notifyFieldsMarked } from './missingAnnouncement';
 
 type Options = {
   /** The record shown: its marks go when another one shows. */
@@ -23,8 +24,9 @@ export default function useMissingMarks({ recordKey, missingNow, valueOf }: Opti
   latest.current = valueOf;
   React.useEffect(() => { setMarks(new Map()); }, [recordKey]);
 
-  /** Marks these fields, with the value each one holds now; `add` keeps the marks already there. */
+  /** Marks these fields, with the value each one holds now; `add` keeps the marks already there. The page's announcement then names the marked fields (`CreationActions`). */
   const mark = React.useCallback((fields: readonly string[], options?: { add?: boolean }) => {
+    if (fields.length > 0) notifyFieldsMarked();
     setMarks((current) => {
       const next = new Map(options?.add ? current : []);
       for (const field of fields) next.set(field, snapshot(latest.current(field)));

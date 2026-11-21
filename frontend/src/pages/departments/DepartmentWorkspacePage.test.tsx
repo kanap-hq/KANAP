@@ -42,6 +42,7 @@ vi.mock('../../components/fields/CompanySelect', () => ({
 
 import api from '../../api';
 import DepartmentWorkspacePage from './DepartmentWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
@@ -171,17 +172,17 @@ describe('DepartmentWorkspacePage', () => {
     fireEvent.change(input, { target: { value: 'legal' } });
     fireEvent.blur(input);
     expect(await screen.findByText('departments.messages.nameTaken')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('departments.messages.nameTaken');
   });
 
   it('says another department has the name, under the header title, when a create is refused as a duplicate', async () => {
     mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Taken.' } } });
     renderAt('/master-data/departments/new/overview');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'legal' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'legal' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('departments.messages.nameTaken')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
@@ -222,7 +223,7 @@ describe('DepartmentWorkspacePage', () => {
   it('creates the department once it has its name and company, then opens it', async () => {
     mocked.post.mockResolvedValue({ data: { ...DEPARTMENT, id: 'dep-new', creation_token: 'token-1' } });
     renderAt('/master-data/departments/new/overview?year=2026');
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Legal' } });
     fireEvent.blur(title);
     expect(mocked.post).not.toHaveBeenCalled();

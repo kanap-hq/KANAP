@@ -26,7 +26,7 @@ import EntityKnowledgePanel from '../../../components/EntityKnowledgePanel';
 // below was already in place.
 const MarkdownEditor = React.lazy(() => import('../../../components/MarkdownEditor'));
 import ConnectionEndpointPicker from './ConnectionEndpointPicker';
-import { FieldLabel, MissingFieldBox } from '../../../components/design';
+import { FieldLabel, MissingFieldBox, MissingIcon } from '../../../components/design';
 import ConnectionLinkInterfacesDialog from './ConnectionLinkInterfacesDialog';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
 import ConnectionServersPicker from './ConnectionServersPicker';
@@ -99,15 +99,17 @@ function SectionHeader({ children, action, missing = false }: { children: React.
     <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.25 }}>
       <Typography
         component="h2"
+        data-missing={missing ? '' : undefined}
         sx={(theme) => ({
           m: 0,
           fontSize: 14,
           fontWeight: 500,
           lineHeight: 1.4,
-          color: missing ? theme.palette.error.main : theme.palette.kanap.text.primary,
+          color: missing ? theme.palette.kanap.danger : theme.palette.kanap.text.primary,
         })}
       >
         {children}
+        {missing && <MissingIcon />}
       </Typography>
       {action}
     </Stack>

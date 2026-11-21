@@ -10,6 +10,7 @@ import NavigationTracker, { resetNavigationTracker } from '../../components/navi
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
 import api from '../../api';
 import AssetWorkspacePage from './AssetWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 // Creation at the title (lot 3): the name committed in the header creates the asset with the type,
 // environment, provider and lifecycle shown, without a site; Create names the site while it is
@@ -174,7 +175,7 @@ function location() {
 }
 
 async function typeTitle(value: string) {
-  const input = await screen.findByRole('textbox', { name: TITLE });
+  const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
   fireEvent.change(input, { target: { value } });
   fireEvent.keyDown(input, { key: 'Enter' });
 }
@@ -205,7 +206,7 @@ describe('Asset creation at the title', () => {
 
   it('opens with the title to type and the asset to come dimmed, nothing written', async () => {
     renderPage(['/it/assets/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
     expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
@@ -267,7 +268,7 @@ describe('Asset creation at the title', () => {
   it('creates the asset on Create clicked just after the title, and opens it with Done, the cursor in its site', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Web 1' } });
     const create = screen.getByRole('button', { name: 'common:buttons.create' });
     // In a browser the click's press blurs the title first, which commits it.
@@ -286,7 +287,7 @@ describe('Asset creation at the title', () => {
   it('creates the asset on Tab out of the title and puts the focus on its site', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Web 1' } });
     fireEvent.keyDown(input, { key: 'Tab' });
     await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
@@ -303,7 +304,7 @@ describe('Asset creation at the title', () => {
     // One signal: the label in red and the field invalid, no banner.
     expect(siteLabel()).toHaveAttribute('data-missing');
     expect(screen.getByRole('textbox', { name: 'site' })).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.queryByText(/creation\.missing/)).toBeNull();
+    expect(screen.queryByText(/creation\.missing(?!Mark|Fields)/)).toBeNull();
   });
 
   it('closes the asset on Done once it has a site, back where the creation started', async () => {

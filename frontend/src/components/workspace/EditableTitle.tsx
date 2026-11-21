@@ -27,6 +27,8 @@ type EditableTitleDisplayProps = {
   muted?: boolean;
   onEdit: () => void;
   buttonRef?: React.RefObject<HTMLButtonElement | null>;
+  /** The message under the title (its id), for a screen reader. */
+  describedBy?: string;
   /** Resting size. Callers on a page header pass that header's type scale. */
   typography?: EditableTitleTypography;
   children: React.ReactNode;
@@ -59,6 +61,15 @@ export function titleToGiveSx(theme: Theme, empty: boolean) {
   } as const;
 }
 
+/**
+ * The message under a title (`FormHelperText error`). `kanap.danger` follows the mode (a lighter red
+ * on the dark page); `error.main` stays #DC2626 and fails 4.5:1 there. `.Mui-error` outranks MUI's own rule.
+ */
+export const titleMessageSx = (theme: Theme) => ({
+  mt: 0.5,
+  '&.Mui-error': { color: theme.palette.kanap.danger },
+});
+
 function titleColor(theme: Theme, placeholder: boolean, muted: boolean) {
   if (placeholder) return theme.palette.kanap.text.tertiary;
   if (muted) return theme.palette.kanap.text.secondary;
@@ -76,6 +87,7 @@ export function EditableTitleDisplay({
   muted = false,
   onEdit,
   buttonRef,
+  describedBy,
   typography = workspaceTitleTypography,
   children,
 }: EditableTitleDisplayProps) {
@@ -116,6 +128,7 @@ export function EditableTitleDisplay({
       ref={buttonRef}
       tabIndex={0}
       aria-label={t('common:buttons.editTitle')}
+      aria-describedby={describedBy}
       onClick={onEdit}
       onKeyDown={(event: React.KeyboardEvent<HTMLButtonElement>) => {
         if (event.key === 'Enter') {
@@ -346,8 +359,10 @@ export default function EditableTitle({
   // A refusal of a title still to give stays under the name it refused, until the person types.
   const externalMessage = error && (pendingTitle || !(editing && draft.trim())) ? error : null;
   const message = ownMessage || externalMessage;
+  // Any message under the title is announced and tied to the field, which says it is invalid while it shows.
+  const messageId = React.useId();
   const messageNode = message
-    ? <FormHelperText error role={ownMessage ? 'alert' : undefined} sx={{ mt: 0.5 }}>{message}</FormHelperText>
+    ? <FormHelperText error id={messageId} role="alert" sx={titleMessageSx}>{message}</FormHelperText>
     : null;
 
   if (!editing) {
@@ -358,6 +373,7 @@ export default function EditableTitle({
           placeholder={!value}
           onEdit={open}
           buttonRef={buttonRef}
+          describedBy={message ? messageId : undefined}
           typography={typography}
         >
           {value || fallback}
@@ -373,8 +389,11 @@ export default function EditableTitle({
         component="input"
         ref={inputRef}
         value={draft}
-        aria-label={t('common:buttons.editTitle')}
-        aria-invalid={emptyError || undefined}
+        // A title still to give is named by its prompt ("New application"), and is required.
+        aria-label={pendingTitle ? fallback : t('common:buttons.editTitle')}
+        aria-required={pendingTitle ? true : undefined}
+        aria-invalid={emptyError || message ? true : undefined}
+        aria-describedby={message ? messageId : undefined}
         {...(maxLength ? { maxLength } : {})}
         onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
           const next = event.target.value;

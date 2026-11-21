@@ -37,7 +37,7 @@ Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un 
 Mientras el activo se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre. Permanecen hasta que salga del activo. **Ctrl+S** funciona como el botón mostrado.
 
 - **Crear** funciona como Intro: crea el activo y lo deja abierto, con su referencia. El cursor va a **Ubicación** si está vacía. Con el título vacío, el título pide uno
-- Una vez creado el activo, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba que el activo tenga una ubicación. Sin ella, la etiqueta **Ubicación** se pone en rojo en el panel de propiedades y el campo recibe el foco. El activo sigue abierto. Con una ubicación, vuelve al punto de partida
+- Una vez creado el activo, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba que el activo tenga una ubicación. Sin ella, la etiqueta **Ubicación** se pone en rojo con un icono de alerta en el panel de propiedades y el campo recibe el foco. El activo sigue abierto. Con una ubicación, vuelve al punto de partida
 - **Cancelar** elimina el activo. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar activos
 
 Si sale del activo de otra forma (la flecha de retroceso, el menú, otro activo) mientras no tiene ubicación, Kadratis le pregunta qué hacer. **Completarlo** le deja en el activo, en el campo **Ubicación**. **Eliminarlo** elimina el activo. Si recarga la página o cierra la pestaña mientras el activo nuevo no tiene ubicación, su navegador pide confirmación. Si sale de todos modos, el activo se elimina.
