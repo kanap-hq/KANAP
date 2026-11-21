@@ -20,9 +20,10 @@ import { inRolledBackTransaction, runSpecs, seedTenant } from './round-inputs.fi
 // gate (`resolveItemWrite`) refuses a create without one, 400 `Account is required.`, on
 // `POST /budget-lines` and on the legacy aliases `POST /spend-items` and `POST /capex-items`, for
 // both types. With an account, `POST /budget-lines` hands its creator a creation token, as the
-// families created from a draft; the aliases do not. The creation at the title of the screen
-// (`POST /budget-lines/creation`) still creates without one until pass B. A line already stored
-// without an account (inserted before this rule) still takes updates without being given one.
+// families created from a draft; the aliases do not. No door is exempted: the screen creates a line
+// from its draft through `POST /budget-lines` (pass B), and the creation at the title is gone. A line
+// already stored without an account (inserted before this rule) still takes updates without being
+// given one.
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'budget-line-account-required-spec-secret';
 
@@ -101,13 +102,14 @@ async function testAliasesNeedAnAccountWithoutToken() {
   });
 }
 
-async function testTitleCreationStillCreatesWithoutAccount() {
+async function testNoDoorIsExempted() {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner);
     const { lines } = doors(runner);
-    const created: any = await lines.createAtTitle({ nature: 'opex', product_name: 'At its title', currency: 'EUR', effective_start: TODAY }, ctx(s, runner));
-    assert.deepEqual([created.account_id ?? null, created.paying_company_id ?? null], [null, null], 'created at its title without company or account (until pass B)');
-    assert.equal(typeof created.creation_token, 'string');
+    assert.equal(typeof (lines as any).createAtTitle, 'undefined', 'no creation at the title');
+    const body = { nature: 'opex', product_name: 'At its title', currency: 'EUR', effective_start: TODAY, paying_company_id: s.companyId };
+    const refused = await refusal(runner, () => lines.create(body, ctx(s, runner)));
+    assert.equal(refused.message, REQUIRED, 'the screen\'s create needs the account like every door');
   });
 }
 
@@ -132,6 +134,6 @@ async function testStoredLineWithoutAccountStillUpdates() {
 runSpecs('budget-line-account-required', [
   ['POST /budget-lines needs an account, OPEX and CAPEX, and hands a creation token', testBudgetLinesNeedAnAccountAndHandAToken],
   ['the legacy aliases need an account and hand no token', testAliasesNeedAnAccountWithoutToken],
-  ['the creation at the title still creates without account', testTitleCreationStillCreatesWithoutAccount],
+  ['no door creates a line without account', testNoDoorIsExempted],
   ['a stored line without account still takes updates', testStoredLineWithoutAccountStillUpdates],
 ]);

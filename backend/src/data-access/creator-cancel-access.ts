@@ -3,7 +3,7 @@ import { applyDataAccess } from './data-access';
 
 /**
  * Data-scoped access: "Cancel" of a budget line or a contract being created, for its creator when
- * their access is limited (`DELETE /budget-lines/:id/creation`, `budget-line-creation.ts`;
+ * their access is limited (`DELETE /budget-lines/:id/creation`, `BudgetLinesService.cancelCreation`;
  * `DELETE /contracts/:id/creation`, `ContractsDeleteService.cancelCreation`).
  *
  * The delete of a line or a contract is reserved to unscoped persons (spec §2.7): the DELETE policy

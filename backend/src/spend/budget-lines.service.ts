@@ -23,13 +23,7 @@ import { withCreatorCancelAccess } from '../data-access/creator-cancel-access';
 import { assertCreatorAloneSinceCreation, countChangesSinceCreation, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
 import { creationCancelExpired } from '../common/creation/creation-token';
 import { assertCreationToken } from '../common/creation/creation-routes';
-import { creationIncomplete } from '../common/creation/creation-incomplete';
-import {
-  BUDGET_LINE_CREATION,
-  creationBody,
-  hasSuccessorLine,
-  missingCreationFields,
-} from './budget-line-creation';
+import { BUDGET_LINE_CREATION, hasSuccessorLine } from './budget-line-creation';
 import { lockBudgetLine } from './budget-locks';
 import { bulkUpdateBudgetLines } from './budget-line-bulk-edit';
 import type { BulkEditOptions } from '../common/bulk-edit/bulk-edit';
@@ -88,19 +82,6 @@ export class BudgetLinesService {
   }
 
   /**
-   * A line created at its title on the screen (`budget-line-creation.ts`): the title, the type, the
-   * currency, the start date and, when given, its place; no paying company or required dimension
-   * yet. The data-access placement rule still applies (a limited person gives a place).
-   */
-  async createAtTitle(body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
-    const nature = (body as any)?.nature;
-    if (nature !== 'opex' && nature !== 'capex') throw new BadRequestException('nature must be opex or capex.');
-    const input = creationBody(body);
-    const created = await this.items(nature).create(input, userId, { ...opts, fields: 'columns', native: true, creation: true });
-    return this.get(created.id, opts);
-  }
-
-  /**
    * What was written on the line and its children since its creation, before "Cancel" (nothing is
    * written); 403 `CREATION_CANCEL_EXPIRED` when "Cancel" would be refused: another person wrote on
    * it, or a line continues it.
@@ -120,15 +101,6 @@ export class BudgetLinesService {
       [tenantId, id],
     );
     return { changes: withChildCount(changes, 'attachment', total) };
-  }
-
-  /** The screen's "Create": 400 `CREATION_INCOMPLETE` while the line lacks a field it needs. */
-  async completeCreation(id: string, opts: { manager: EntityManager }): Promise<{ ok: true }> {
-    const tenantId = await summaryTenantId(opts.manager);
-    const missing = await missingCreationFields(opts.manager, tenantId, id);
-    if (!missing) throw new NotFoundException('Budget line not found');
-    if (missing.fields.length > 0) throw creationIncomplete(missing.fields, missing.names);
-    return { ok: true };
   }
 
   /**
