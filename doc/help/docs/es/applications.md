@@ -40,7 +40,7 @@ Navegue a **Panorama IT > Aplicaciones** para ver su lista. Para crear una aplic
 
 1. Haga clic en **Nueva aplicación**. La página de la aplicación se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba el nombre de la aplicación o servicio, de 200 caracteres como máximo. Consulte [Nombres únicos](#unique-names).
-3. Pulse Intro o haga clic fuera del título. Kadratis crea la aplicación de inmediato. Su referencia (`APP-12`) aparece y se abren todas las pestañas.
+3. Pulse Intro o Tab, o haga clic en **Crear**. Kadratis crea la aplicación de inmediato. Su referencia (`APP-12`) aparece y se abren todas las pestañas.
 
 La nueva aplicación está **Activa**, en la categoría por defecto. Cámbielas en el encabezado y el panel de propiedades, y complete el resto:
 
@@ -54,7 +54,7 @@ La nueva aplicación está **Activa**, en la categoría por defecto. Cámbielas 
 - **Licencia** y **Notas**: términos de licencia y notas internas de texto libre
 - **Puede tener apps hijas**: usar esta aplicación como una "suite" que agrupa otras aplicaciones
 
-Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre. Un nombre que ya usa otra aplicación se rechaza, con un mensaje bajo el título.
+Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre. Un nombre que ya usa otra aplicación se rechaza, con un mensaje bajo el título.
 
 ### Crear o cancelar { #cancelling-a-creation }
 

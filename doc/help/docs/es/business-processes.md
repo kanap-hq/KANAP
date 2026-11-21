@@ -56,9 +56,9 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 1. Haga clic en **Nuevo** en la lista. La página del proceso se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba el nombre del proceso, idealmente con su código corto (p. ej., "Order-to-Cash (O2C)").
-3. Pulse Intro o haga clic fuera del título. Kadratis crea el proceso de inmediato, activado, y se abren todas las pestañas.
+3. Pulse Intro o Tab, o haga clic en **Crear**. Kadratis crea el proceso de inmediato, activado, y se abren todas las pestañas.
 
-Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre. Dos procesos no pueden tener el mismo nombre, sin distinguir mayúsculas de minúsculas: un nombre ya usado se rechaza, con un mensaje bajo el título.
+Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre. Dos procesos no pueden tener el mismo nombre, sin distinguir mayúsculas de minúsculas: un nombre ya usado se rechaza, con un mensaje bajo el título.
 
 Mientras el proceso se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del proceso. **Ctrl+S** funciona como el botón mostrado.
 

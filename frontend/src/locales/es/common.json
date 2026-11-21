@@ -1731,6 +1731,8 @@
     }
   },
   "creation": {
+    "missingMark": "Falta",
+    "missingFields": "Falta: {{fields}}",
     "confirmTitle": "Cancelar la creación",
     "confirmMessage": "{{record}} y lo que ha añadido ({{changes}}) se eliminarán.",
     "keep": "Conservar",

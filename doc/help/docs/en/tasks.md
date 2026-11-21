@@ -12,7 +12,7 @@ When you click **New**, the task page opens with an empty title in its header, s
 
 1. **Type the title** (required) in the header.
 
-2. **Press Enter**, or leave the field. Kadratis creates the task at once, with these defaults:
+2. **Press Enter** or Tab, or click **Create**. Kadratis creates the task at once, with these defaults:
    - **Status**: **Open**
    - **Priority**: **Normal**
    - **Assignee** and **Requestor**: you
@@ -31,7 +31,7 @@ When you click **New**, the task page opens with an empty title in its header, s
 
 4. Click **Done** when you have finished. You return to where you started: a task started from a project's **Tasks** tab returns to that tab. Click **Cancel** to delete the task instead. Kadratis asks first when you entered more than the title.
 
-Pressing **Escape** in the title of a new task leaves without creating anything, even with a title typed. Leaving the task any other way keeps it.
+Pressing **Escape** in the title of a new task, clicking **Cancel** or leaving the page creates nothing, even with a title typed. Once the task exists, leaving it any other way than **Cancel** keeps it.
 
 **Tip**: You can paste images directly into the description. They upload automatically.
 

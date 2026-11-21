@@ -52,6 +52,7 @@ import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import ContractWorkspacePage from './ContractWorkspacePage';
 import { addMonthsYmd, computeContractTerms, utcTodayYmd } from './contractTerms';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
@@ -720,7 +721,7 @@ describe('ContractWorkspacePage', () => {
     fireEvent.click(create);
     expect(await screen.findByText('contracts.messages.nameRequired')).toBeInTheDocument();
     // The name is typed in the header title, which gets the focus; the form has no name field.
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     expect(screen.queryByLabelText('contracts.fields.name')).toBeNull();
     // The fields it lacks are marked on their label, with no sentence under them.
     expect(markedLabels()).toEqual(['contracts.fields.supplier', 'contracts.fields.company', 'contracts.fields.startDate', 'contracts.fields.durationMonths']);

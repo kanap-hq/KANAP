@@ -792,6 +792,8 @@ export default function InterfaceWorkspacePage() {
         titleFallback={isCreate ? t('workspace.interface.newTitle') : t('workspace.interface.untitled')}
         canEditTitle={canManage}
         onTitleSave={handleTitleSave}
+        // The name left in the title goes to the draft; leaving the page does not write it.
+        onTitleBlurDraft={isCreate ? handleTitleSave : undefined}
         onTitleDraftChange={isCreate ? (draft) => { if (draft.trim()) setCreateTitleError(null); } : undefined}
         titleRequiredMessage={isCreate && canManage ? t('messages.nameRequired') : undefined}
         titleError={isCreate ? createTitleError : null}

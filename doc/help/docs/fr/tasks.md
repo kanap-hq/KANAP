@@ -12,7 +12,7 @@ Lorsque vous cliquez sur **Nouvelle**, la page de la tâche s'ouvre avec un titr
 
 1. **Saisissez le titre** (obligatoire) dans l'en-tête.
 
-2. **Appuyez sur Entrée**, ou quittez le champ. Kadratis crée la tâche aussitôt, avec ces valeurs par défaut :
+2. **Appuyez sur Entrée** ou Tab, ou cliquez sur **Créer**. Kadratis crée la tâche aussitôt, avec ces valeurs par défaut :
    - **Statut** : **Ouverte**
    - **Priorité** : **Normale**
    - **Assignée à** et **Demandeur** : vous
@@ -31,7 +31,7 @@ Lorsque vous cliquez sur **Nouvelle**, la page de la tâche s'ouvre avec un titr
 
 4. Cliquez sur **Terminé** une fois la saisie finie. Vous revenez là où vous avez commencé : une tâche commencée depuis l'onglet **Tâches** d'un projet revient à cet onglet. Cliquez sur **Annuler** pour supprimer la tâche à la place. Kadratis demande d'abord confirmation lorsque vous avez saisi plus que le titre.
 
-Appuyer sur **Échap** dans le titre d'une nouvelle tâche permet de partir sans rien créer, même avec un titre saisi. Quitter la tâche de toute autre façon la conserve.
+Appuyer sur **Échap** dans le titre d'une nouvelle tâche, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un titre saisi. Une fois la tâche créée, la quitter autrement que par **Annuler** la conserve.
 
 **Conseil** : Vous pouvez coller des images directement dans la description. Elles se téléversent automatiquement.
 

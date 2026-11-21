@@ -3,7 +3,7 @@ import { Box } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import { FieldLabel } from './FieldLabel';
-import { useInvalidControls } from './invalidControls';
+import { MissingDescription, useInvalidControls } from './invalidControls';
 import InfoHint from '../workspace/InfoHint';
 
 type PropertyRowProps = {
@@ -14,8 +14,8 @@ type PropertyRowProps = {
   label: React.ReactNode;
   labelSx?: SxProps<Theme>;
   /**
-   * A check found the field missing (Create on a record being created): its label turns red and its
-   * control says `aria-invalid`. The page drops it once the field holds a value.
+   * A check found the field missing (Create on a record being created): its label turns red with an alert icon after it and its
+   * control says `aria-invalid`, described by "Missing". The page drops it once the field holds a value.
    */
   missing?: boolean;
   required?: boolean;
@@ -47,7 +47,8 @@ export function PropertyRow({
   valueSx,
 }: PropertyRowProps) {
   const valueRef = React.useRef<HTMLDivElement | null>(null);
-  useInvalidControls(valueRef, missing);
+  const descriptionId = React.useId();
+  useInvalidControls(valueRef, missing, descriptionId);
   return (
     <Box
       // A new record's Tab goes from its title through the required rows (`PortfolioDetailWorkspaceShell`).
@@ -86,6 +87,7 @@ export function PropertyRow({
       >
         {children}
       </Box>
+      {missing ? <MissingDescription id={descriptionId} /> : null}
       {helperText ? (
         <Box
           sx={(theme) => ({

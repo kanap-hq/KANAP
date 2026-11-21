@@ -20,7 +20,7 @@ Puede rellenarlos en cualquier orden. No se guarda nada hasta que los cuatro est
 
 Mientras la interfaz se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la interfaz. **Ctrl+S** funciona como el botón mostrado.
 
-- **Crear** guarda la interfaz cuando el borrador está completo y la deja abierta. Si todavía falta algo, un título vacío muestra su mensaje, la etiqueta de cada campo que falta se pone en rojo, y el título o el primer campo que falta recibe el foco
+- **Crear** guarda la interfaz cuando el borrador está completo y la deja abierta. Si todavía falta algo, un título vacío muestra su mensaje, la etiqueta de cada campo que falta se pone en rojo con un icono de alerta, y el título o el primer campo que falta recibe el foco
 - Una vez creada la interfaz, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le devuelve al punto de partida
 - **Cancelar** elimina la interfaz. Si añadió algo después de su creación, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar interfaces
 

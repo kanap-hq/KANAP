@@ -940,7 +940,7 @@ export default function ProjectWorkspacePage() {
           }
           void persistPanelPatch({ name: value });
         }}
-        onTitleDraftChange={isCreate ? () => titleCreation.setTitleError(null) : undefined}
+        onTitleDraftChange={isCreate ? titleCreation.onTitleDraftChange : undefined}
         titleError={isCreate ? titleCreation.titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}

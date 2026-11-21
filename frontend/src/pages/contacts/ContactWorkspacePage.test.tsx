@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -404,7 +404,8 @@ describe('ContactWorkspacePage create', () => {
     fireEvent.blur(screen.getByLabelText('contacts.fields.lastName'));
     expect(mocked.post).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
-    fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
+    // The email gives way to another field of the page.
+    fireEvent.blur(screen.getByLabelText('contacts.fields.email'), { relatedTarget: screen.getByLabelText('contacts.fields.jobTitle') });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][1]).toMatchObject({
       email: 'sam@example.com',
@@ -432,7 +433,8 @@ describe('ContactWorkspacePage create', () => {
     renderAt('/master-data/contacts/new/overview?sort=last_name%3AASC');
     fireEvent.click(screen.getByRole('button', { name: 'pick supplier' }));
     fireEvent.change(screen.getByLabelText('contacts.fields.email'), { target: { value: 'sam@example.com' } });
-    fireEvent.blur(screen.getByLabelText('contacts.fields.email'));
+    // The email gives way to another field of the page.
+    fireEvent.blur(screen.getByLabelText('contacts.fields.email'), { relatedTarget: screen.getByLabelText('contacts.fields.jobTitle') });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][1]).toMatchObject({ supplier_id: 's-2', supplier_role: 'commercial' });
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts/c-9/overview?sort=last_name%3AASC', { replace: true }));

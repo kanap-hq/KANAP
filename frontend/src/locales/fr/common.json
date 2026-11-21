@@ -1731,6 +1731,8 @@
     }
   },
   "creation": {
+    "missingMark": "Manquant",
+    "missingFields": "Manquant : {{fields}}",
     "confirmTitle": "Annuler la création",
     "confirmMessage": "{{record}} et ce que vous avez ajouté ({{changes}}) seront supprimés.",
     "keep": "Conserver",

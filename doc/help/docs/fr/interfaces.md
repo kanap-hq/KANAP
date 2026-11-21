@@ -20,7 +20,7 @@ Vous pouvez les remplir dans l'ordre de votre choix. Rien n'est enregistré tant
 
 Tant que l'interface est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'interface. **Ctrl+S** agit comme le bouton affiché.
 
-- **Créer** enregistre l'interface quand le brouillon est complet et la laisse ouverte. S'il manque encore quelque chose, un titre vide affiche son message, le libellé de chaque champ manquant passe en rouge, et le titre ou le premier champ manquant prend le focus
+- **Créer** enregistre l'interface quand le brouillon est complet et la laisse ouverte. S'il manque encore quelque chose, un titre vide affiche son message, le libellé de chaque champ manquant passe en rouge avec une icône d'alerte, et le titre ou le premier champ manquant prend le focus
 - Une fois l'interface créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ
 - **Annuler** supprime l'interface. Si vous avez ajouté quelque chose après sa création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des interfaces
 
