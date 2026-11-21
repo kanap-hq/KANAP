@@ -61,7 +61,12 @@ Eliminar una línea o un contrato está reservado a las personas con todos los d
 
 ### Líneas sin empresa
 
-Las líneas antiguas pueden no tener empresa. Solo las ven las personas con todos los datos, las personas con un nodo **Todo** y las personas nombradas en ellas. **Administración > Acceso a los datos** las cuenta, con un enlace a la lista.
+Una línea presupuestaria puede no tener empresa pagadora: una línea antigua, o una línea nueva cuya empresa pagadora aún no se ha elegido.
+
+- Imputada a un centro de coste, sigue a ese centro de coste: las personas cuyos nodos cubren el centro de coste la leen, y un nodo en Edición les permite modificarla. Al guardarla, recibe la empresa de su centro de coste.
+- Sin centro de coste, solo la ven las personas con todos los datos, las personas con un nodo **Todo** y las personas nombradas en ella.
+
+**Administración > Acceso a los datos** cuenta las líneas sin empresa, con un enlace a la lista.
 
 ## El rol dice qué, los nodos dicen dónde
 
