@@ -174,7 +174,7 @@ describe('ContactSelect', () => {
       fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
       await waitFor(() => expect(onChange).toHaveBeenCalledWith('c-9'));
       expect(apiPost).toHaveBeenCalledWith('/contacts', {
-        email: 'Zed@Acme.test', first_name: null, last_name: 'Zed', supplier_id: null, supplier_role: null,
+        email: 'Zed@Acme.test', first_name: null, last_name: 'Zed', job_title: null, supplier_id: null, supplier_role: null,
       });
       expect(onContactChange).toHaveBeenCalledWith(expect.objectContaining({ id: 'c-9' }));
       await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());

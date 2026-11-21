@@ -25,8 +25,8 @@ export function splitTypedName(typed: string): { first: string; last: string } {
 }
 
 /**
- * The few fields a contact needs to exist (its email, the names the picker's text gives, and the
- * type for a supplier contact), written as the contact's page writes them (`POST /contacts`).
+ * The few fields a contact needs to exist (its email, the names the picker's text gives, an
+ * optional job title, and the type for a supplier contact), written as the contact's page writes them (`POST /contacts`).
  * Nothing here saves the record the person was filling in: resolving hands the new contact back to
  * the field, or null when the person cancels.
  */
@@ -46,6 +46,7 @@ export default function CreateContactDialog({
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
   const [email, setEmail] = React.useState('');
+  const [jobTitle, setJobTitle] = React.useState('');
   const [role, setRole] = React.useState<ContactRole>(DEFAULT_CONTACT_ROLE);
   const [emailMessage, setEmailMessage] = React.useState<string | null>(null);
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -57,6 +58,7 @@ export default function CreateContactDialog({
     setFirstName(name.first);
     setLastName(name.last);
     setEmail('');
+    setJobTitle('');
     setRole(supplier?.role ?? DEFAULT_CONTACT_ROLE);
     setEmailMessage(null);
     setServerError(null);
@@ -88,6 +90,7 @@ export default function CreateContactDialog({
         email: address,
         first_name: firstName.trim() || null,
         last_name: lastName.trim() || null,
+        job_title: jobTitle.trim() || null,
         supplier_id: supplier?.id ?? null,
         supplier_role: supplier ? (supplier.role ?? role) : null,
       });
@@ -151,6 +154,16 @@ export default function CreateContactDialog({
           helperText={emailMessage}
           inputRef={emailRef}
           inputProps={{ 'aria-label': t('master-data:contacts.fields.email'), autoComplete: 'off' }}
+        />
+      </PropertyRow>
+      <PropertyRow label={t('master-data:contacts.fields.jobTitle')}>
+        <TextField
+          value={jobTitle}
+          onChange={(event) => setJobTitle(event.target.value)}
+          variant="standard"
+          fullWidth
+          placeholder={t('master-data:contacts.placeholders.jobTitle')}
+          inputProps={{ 'aria-label': t('master-data:contacts.fields.jobTitle'), autoComplete: 'off' }}
         />
       </PropertyRow>
       {supplier && !supplier.role ? (
