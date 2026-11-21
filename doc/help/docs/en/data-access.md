@@ -61,7 +61,7 @@ Deleting a line or a contract is reserved to people with all data (see below).
 
 ### Lines without a company
 
-A budget line can have no paying company: an older line, or a new line whose paying company is not chosen yet.
+An older budget line can have no paying company.
 
 - Charged to a cost center, it follows that cost center: the people whose nodes cover the cost center read it, and an Edit node lets them edit it. Saving it gives it the company of its cost center.
 - With no cost center, it is visible only to people with all data, to people with an **Everything** node, and to the people named on it.
