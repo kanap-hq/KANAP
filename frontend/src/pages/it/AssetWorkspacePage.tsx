@@ -375,7 +375,13 @@ function loadAssetRecord(url: string, fresh = false): Promise<AssetLoadResult> {
 export default function AssetWorkspacePage() {
   const routeId = String(useParams().id || '');
   // The asset its draft has just written keeps the page of the draft: the field the person is in stays.
-  const fromDraft = useCreatedFromDraft('assets', routeId);
+  // It keeps it while its address stays: Done and Cancel end the creation before the page leaves,
+  // and a new mount then would read the asset again (a 404 once Cancel has deleted it).
+  const createdFromDraft = useCreatedFromDraft('assets', routeId);
+  const draftAddress = React.useRef<string | null>(null);
+  if (createdFromDraft) draftAddress.current = routeId;
+  else if (draftAddress.current !== routeId) draftAddress.current = null;
+  const fromDraft = draftAddress.current === routeId;
   // A new asset in the address remounts the fiche. Timers, fields and a response
   // still in flight stay with the asset that was on screen, so they cannot paint
   // over the next one or be saved onto it.

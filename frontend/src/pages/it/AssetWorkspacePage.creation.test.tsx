@@ -400,6 +400,20 @@ describe('An asset born complete', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.delete).toHaveBeenCalledWith('/assets/asset-new/creation', { data: { token: 'token-1' } });
+    // The asset is gone: the page does not read it again on its way out.
+    const deletedAt = mocked.delete.mock.invocationCallOrder[0];
+    const readsAfter = mocked.get.mock.calls.filter(([url], i) => (
+      mocked.get.mock.invocationCallOrder[i] > deletedAt && (url === '/assets/by-ref/AST-7' || url === '/assets/asset-new')
+    ));
+    expect(readsAfter).toEqual([]);
+  });
+
+  it('does not read the asset again when Done closes it', async () => {
+    await createAsset();
+    const readsBefore = mocked.get.mock.calls.filter(([url]) => url === '/assets/by-ref/AST-7').length;
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.get.mock.calls.filter(([url]) => url === '/assets/by-ref/AST-7')).toHaveLength(readsBefore);
   });
 
   it('opens an asset written without a site with its site marked missing, and takes one', async () => {
